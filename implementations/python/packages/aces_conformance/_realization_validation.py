@@ -145,15 +145,7 @@ def _expected_observation_diagnostics(
                 "The realization observation is weaker than the configuration requires.",
             )
         )
-    binding = (
-        item.operation_id == address
-        and item.probe_digest == request.probe_digest
-        and item.envelope_digest == request.envelope_digest
-        and item.configuration_digest == request.configuration_digest
-        and item.observer_version == request.observer_version
-        and item.binding_verified
-    )
-    if not binding:
+    if not _observation_binding_valid(item, address, request):
         diagnostics.append(
             diagnostic(
                 "conformance.observation-binding-invalid",
@@ -178,6 +170,21 @@ def _expected_observation_diagnostics(
             )
         )
     return diagnostics
+
+
+def _observation_binding_valid(
+    item: RealizationObservation,
+    address: str,
+    request: RealizationProbeRequest,
+) -> bool:
+    return (
+        item.operation_id == address
+        and item.probe_digest == request.probe_digest
+        and item.envelope_digest == request.envelope_digest
+        and item.configuration_digest == request.configuration_digest
+        and item.observer_version == request.observer_version
+        and item.binding_verified
+    )
 
 
 def transformation_diagnostics(evidence: RealizationProbeEvidence) -> list[Diagnostic]:

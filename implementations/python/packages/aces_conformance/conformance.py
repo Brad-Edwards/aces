@@ -1365,6 +1365,137 @@ class _TargetConformanceOptions:
     native_conformance: bool = False
 
 
+def _unknown_profile_report(
+    target: RuntimeTarget,
+    profile: BackendProfileSelector,
+    fixture_report: BackendConformanceReport,
+) -> BackendConformanceReport:
+    profile_id = _to_profile_id(profile)
+    diagnostics = (
+        *fixture_report.diagnostics,
+        _diagnostic(
+            "conformance.profile-runtime-surface-unknown",
+            profile_id,
+            (
+                f"Target conformance cannot certify profile {profile_id!r}: this "
+                "implementation does not know the runtime-surface contract for the "
+                "profile. Known runtime surfaces: "
+                + ", ".join(sorted(item.value for item in BackendCapabilityProfile))
+                + ". Use run_fixture_suite() for fixture-only validation, or extend "
+                "BackendCapabilityProfile to declare this profile's runtime surfaces."
+            ),
+        ),
+    )
+    return BackendConformanceReport(
+        profile=profile_id,
+        passed=False,
+        claim=_bounded_conformance_claim(
+            profile=profile_id,
+            cases=fixture_report.cases,
+            left_carrier_ref=f"backend-target:{target.name}",
+        ),
+        cases=fixture_report.cases,
+        contract_versions=dict(fixture_report.contract_versions),
+        diagnostics=diagnostics,
+    )
+
+
+def _gap_diagnostics(
+    target: RuntimeTarget,
+    profile: BackendProfileSelector,
+    contract_gaps: tuple[str, ...],
+    surface_gaps: tuple[str, ...],
+    claim_gaps: tuple[str, ...],
+) -> list[Diagnostic]:
+    diagnostics: list[Diagnostic] = []
+    if contract_gaps:
+        diagnostics.append(
+            _diagnostic(
+                "conformance.unsupported-contract-declaration",
+                target.name,
+                f"Target does not declare required contracts for {_to_profile_id(profile)}: {', '.join(contract_gaps)}",
+            )
+        )
+    if surface_gaps:
+        diagnostics.append(
+            _diagnostic(
+                "conformance.unsupported-surface",
+                target.name,
+                "Target is missing required runtime surfaces: " + ", ".join(surface_gaps),
+            )
+        )
+    if claim_gaps:
+        diagnostics.append(
+            _diagnostic(
+                "conformance.unsupported-capability-claim",
+                target.name,
+                "Target declares participant capability claims without required contract surfaces: "
+                + "; ".join(claim_gaps),
+            )
+        )
+    return diagnostics
+
+
+def _known_profile_report(
+    target: RuntimeTarget,
+    profile: BackendProfileSelector,
+    fixture_report: BackendConformanceReport,
+    options: _TargetConformanceOptions,
+) -> BackendConformanceReport:
+    contract_gaps = _declared_contract_gaps(profile, target.manifest, profiles_root=options.profiles_root)
+    surface_gaps = _capability_gaps(profile, target)
+    claim_gaps = (
+        *participant_runtime_capability_contract_gaps(target.manifest),
+        *observation_capability_contract_gaps(target.manifest),
+    )
+    capability_gaps = (*surface_gaps, *claim_gaps)
+    diagnostics = [
+        *fixture_report.diagnostics,
+        *_gap_diagnostics(target, profile, contract_gaps, surface_gaps, claim_gaps),
+    ]
+    adapter_cases = _target_adapter_cases(
+        target,
+        profile,
+        reference_scenario=options.reference_scenario,
+    )
+    if target.manifest.realization_envelope is not None:
+        adapter_cases = adapter_cases[:1]
+    target_cases = tuple(replace(case, execution_basis=options.execution_basis.value) for case in adapter_cases)
+    realization_run = run_realization_conformance(
+        target,
+        harness=options.realization_harness,
+        execution_basis=options.execution_basis,
+        envelope=options.realization_envelope,
+        observer_version=options.observer_version,
+        native_conformance=options.native_conformance,
+    )
+    realization_cases = tuple(_realization_case_result(case) for case in realization_run.cases)
+    cases = (*fixture_report.cases, *target_cases, *realization_cases)
+    passed = (
+        fixture_report.passed
+        and not contract_gaps
+        and not capability_gaps
+        and all(case.passed for case in (*target_cases, *realization_cases))
+    )
+    profile_id = _to_profile_id(profile)
+    return BackendConformanceReport(
+        profile=profile_id,
+        passed=passed,
+        claim=_bounded_conformance_claim(
+            profile=profile_id,
+            cases=cases,
+            left_carrier_ref=realization_run.target_binding or f"backend-target:{target.name}",
+        ),
+        cases=cases,
+        contract_versions=dict(fixture_report.contract_versions),
+        unsupported_contract_gaps=contract_gaps,
+        unsupported_capability_gaps=capability_gaps,
+        diagnostics=tuple(diagnostics),
+        probe_set_digest=realization_run.probe_set_digest,
+        native_conformance=passed and realization_run.native_conformance,
+    )
+
+
 def run_target_conformance(target: RuntimeTarget, **option_values: Any) -> BackendConformanceReport:
     """Run fixture conformance for a target's declared runtime surface.
 
@@ -1390,127 +1521,10 @@ def run_target_conformance(target: RuntimeTarget, **option_values: Any) -> Backe
         profiles_root=options.profiles_root,
     )
     if any(diag.code == "conformance.profile-load-failed" for diag in fixture_report.diagnostics):
-        # The published profile is the contract set we are supposed to validate
-        # against. With no profile loaded we must NOT mutate the backend via
-        # ``_target_adapter_cases`` — there is nothing to validate against. The
-        # fixture report already carries the structured profile-load
-        # diagnostic and ``passed=False``; surface it as the conformance
-        # result for this target.
         return fixture_report
     if _to_known_profile(effective_profile) is None:
-        # Target conformance enforces runtime-surface gates (which capability
-        # roles the target must implement, which target probes to run). Those
-        # gates depend on knowing the profile's runtime surface contract. For
-        # an unknown profile id we have NO runtime-surface authority — letting
-        # the run continue would silently certify a target that's missing every
-        # required role (orchestrator/evaluator/participant_runtime) just
-        # because the diff added a profile JSON we don't yet understand.
-        # Refuse explicitly so the gap is visible to CI and the JSON corpus is
-        # forced to land its runtime-surface contract before target conformance
-        # can certify against it.
-        profile_id = _to_profile_id(effective_profile)
-        diagnostics = (
-            *fixture_report.diagnostics,
-            _diagnostic(
-                "conformance.profile-runtime-surface-unknown",
-                profile_id,
-                (
-                    f"Target conformance cannot certify profile {profile_id!r}: this "
-                    "implementation does not know the runtime-surface contract for the "
-                    "profile. Known runtime surfaces: "
-                    + ", ".join(sorted(p.value for p in BackendCapabilityProfile))
-                    + ". Use run_fixture_suite() for fixture-only validation, or extend "
-                    "BackendCapabilityProfile to declare this profile's runtime surfaces."
-                ),
-            ),
-        )
-        return BackendConformanceReport(
-            profile=profile_id,
-            passed=False,
-            claim=_bounded_conformance_claim(
-                profile=profile_id,
-                cases=fixture_report.cases,
-                left_carrier_ref=f"backend-target:{target.name}",
-            ),
-            cases=fixture_report.cases,
-            contract_versions=dict(fixture_report.contract_versions),
-            diagnostics=diagnostics,
-        )
-    contract_gaps = _declared_contract_gaps(
-        effective_profile,
-        target.manifest,
-        profiles_root=options.profiles_root,
-    )
-    surface_gaps = _capability_gaps(effective_profile, target)
-    participant_claim_gaps = participant_runtime_capability_contract_gaps(target.manifest)
-    observation_claim_gaps = observation_capability_contract_gaps(target.manifest)
-    claim_gaps = (*participant_claim_gaps, *observation_claim_gaps)
-    capability_gaps = (*surface_gaps, *claim_gaps)
-    passed = fixture_report.passed and not contract_gaps and not capability_gaps
-    diagnostics = list(fixture_report.diagnostics)
-    if contract_gaps:
-        diagnostics.append(
-            _diagnostic(
-                "conformance.unsupported-contract-declaration",
-                target.name,
-                f"Target does not declare required contracts for {_to_profile_id(effective_profile)}: {', '.join(contract_gaps)}",
-            )
-        )
-    if surface_gaps:
-        diagnostics.append(
-            _diagnostic(
-                "conformance.unsupported-surface",
-                target.name,
-                "Target is missing required runtime surfaces: " + ", ".join(surface_gaps),
-            )
-        )
-    if claim_gaps:
-        diagnostics.append(
-            _diagnostic(
-                "conformance.unsupported-capability-claim",
-                target.name,
-                "Target declares participant capability claims without required contract surfaces: "
-                + "; ".join(claim_gaps),
-            )
-        )
-    adapter_cases = _target_adapter_cases(
-        target,
-        effective_profile,
-        reference_scenario=options.reference_scenario,
-    )
-    if target.manifest.realization_envelope is not None:
-        # Envelope-bound targets use the generated honesty probes below. The
-        # historic caller-supplied/default reference scenario remains only for
-        # targets that do not yet carry the governed envelope contract.
-        adapter_cases = adapter_cases[:1]
-    target_cases = tuple(replace(case, execution_basis=options.execution_basis.value) for case in adapter_cases)
-    realization_run = run_realization_conformance(
-        target,
-        harness=options.realization_harness,
-        execution_basis=options.execution_basis,
-        envelope=options.realization_envelope,
-        observer_version=options.observer_version,
-        native_conformance=options.native_conformance,
-    )
-    realization_cases = tuple(_realization_case_result(case) for case in realization_run.cases)
-    cases = (*fixture_report.cases, *target_cases, *realization_cases)
-    passed = passed and all(case.passed for case in (*target_cases, *realization_cases))
-    return BackendConformanceReport(
-        profile=_to_profile_id(effective_profile),
-        passed=passed,
-        claim=_bounded_conformance_claim(
-            profile=_to_profile_id(effective_profile),
-            cases=cases,
-            left_carrier_ref=realization_run.target_binding or f"backend-target:{target.name}",
-        ),
-        cases=cases,
-        contract_versions=dict(fixture_report.contract_versions),
-        unsupported_contract_gaps=contract_gaps,
-        unsupported_capability_gaps=capability_gaps,
-        diagnostics=tuple(diagnostics),
-        probe_set_digest=realization_run.probe_set_digest,
-        native_conformance=passed and realization_run.native_conformance,
-    )
+        return _unknown_profile_report(target, effective_profile, fixture_report)
+    return _known_profile_report(target, effective_profile, fixture_report, options)
 
 
 def _realization_case_result(case: RealizationProbeCase) -> ConformanceCaseResult:
