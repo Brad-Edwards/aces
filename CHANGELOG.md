@@ -8,6 +8,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 PRs do **not** edit this file directly. release-please maintains it from the
 Conventional Commit history on `main` (#684).
 
+## [0.21.0](https://github.com/Brad-Edwards/aces/compare/v0.20.0...v0.21.0) (2026-07-14)
+
+
+### Features
+
+* add scoped realization posture cascade ([#766](https://github.com/Brad-Edwards/aces/issues/766)) ([7776866](https://github.com/Brad-Edwards/aces/commit/77768667242a23728a96aeed9294f62fca30831a))
+* define behavioral relation taxonomy and claim discipline ([#770](https://github.com/Brad-Edwards/aces/issues/770)) ([feed07d](https://github.com/Brad-Edwards/aces/commit/feed07d303dbcbbb9bf4230a72ea5ca9c49f279f))
+
+
+### Bug Fixes
+
+* define node service reachability semantics ([#764](https://github.com/Brad-Edwards/aces/issues/764)) ([2c3fa06](https://github.com/Brad-Edwards/aces/commit/2c3fa06a40f69095191b029fcb1062ebfe3b5f60))
+* preserve explicitness provenance at runtime ([#762](https://github.com/Brad-Edwards/aces/issues/762)) ([1b63b2a](https://github.com/Brad-Edwards/aces/commit/1b63b2a0b10dcd80e29b8bad14558ad9c6b706d0))
+* **sdl:** separate runtime contract from observed evidence ([#761](https://github.com/Brad-Edwards/aces/issues/761)) ([69acb69](https://github.com/Brad-Edwards/aces/commit/69acb691435c72f4a831358d7ee2f83ab3fcf663))
+
+
+### Documentation
+
+* rebuild related-work comparison from reproducible evidence ([#765](https://github.com/Brad-Edwards/aces/issues/765)) ([ed9577a](https://github.com/Brad-Edwards/aces/commit/ed9577aecbe65de19953a45744d3bdc219d9af0b))
+
 ## [0.20.0](https://github.com/Brad-Edwards/aces/compare/v0.19.1...v0.20.0) (2026-07-13)
 
 
