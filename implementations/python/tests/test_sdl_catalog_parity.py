@@ -14,6 +14,7 @@ from tools.check_sdl_catalog_parity import (  # noqa: E402
     CatalogParseError,
     evaluate_sdl_catalog_parity,
     main,
+    parse_reference_catalog,
     parse_top_level_catalog,
 )
 
@@ -21,6 +22,10 @@ _CATALOG_PATHS = (
     "specs/sdl/sections.md",
     "specs/sdl/references.md",
     "specs/sdl/runtime-inventory.md",
+    "specs/sdl/document-model.md",
+    "specs/sdl/variables-and-instantiation.md",
+    "specs/sdl/diagnostics.md",
+    "specs/formal/sdl-phases/README.md",
     "contracts/schemas/sdl/sdl-authoring-input-v1.json",
 )
 
@@ -66,6 +71,39 @@ def test_checked_summary_drift_is_flagged(tmp_path: Path) -> None:
     assert "sdl-catalog-summary" in _rule_ids(repo)
 
 
+def test_phase_lifecycle_membership_drift_is_flagged(tmp_path: Path) -> None:
+    repo = _seed_repo(tmp_path)
+    _replace(
+        repo,
+        "specs/sdl/sections.md",
+        "| `realization` | composition | mapping | normalized |",
+        "| `realization` | composition | mapping | normalized, expanded |",
+    )
+    assert "sdl-catalog-lifecycle" in _rule_ids(repo)
+
+
+def test_phase_member_catalog_drift_is_flagged(tmp_path: Path) -> None:
+    repo = _seed_repo(tmp_path)
+    _replace(
+        repo,
+        "specs/formal/sdl-phases/README.md",
+        "| `realization` | optional | forbidden | forbidden |",
+        "| `realization` | optional | optional | forbidden |",
+    )
+    assert "sdl-catalog-phase-membership" in _rule_ids(repo)
+
+
+def test_realization_transfer_prose_drift_is_flagged(tmp_path: Path) -> None:
+    repo = _seed_repo(tmp_path)
+    _replace(
+        repo,
+        "specs/formal/sdl-phases/README.md",
+        "`expansion_provenance.realization_designations` and later `instantiation_provenance.realization_designations`",
+        "`expansion_provenance.realization_designations`",
+    )
+    assert "sdl-catalog-phase-transfer" in _rule_ids(repo)
+
+
 def test_identity_classification_drift_is_flagged(tmp_path: Path) -> None:
     repo = _seed_repo(tmp_path)
     _replace(repo, "specs/sdl/sections.md", "| `map_key` | catalogued |", "| `node_id` | catalogued |")
@@ -88,8 +126,8 @@ def test_non_completion_reference_domain_drift_is_flagged(tmp_path: Path) -> Non
     _replace(
         repo,
         "specs/sdl/references.md",
-        "| `action_contracts.*.interactions.*.related_action_ref` | `action_contracts` |",
-        "| `action_contracts.*.interactions.*.related_action_ref` | `any` |",
+        "| `action_contracts.*.interactions.*.related_actions[]` | `action_contracts` |",
+        "| `action_contracts.*.interactions.*.related_actions[]` | `any` |",
     )
     assert "sdl-catalog-reference-row" in _rule_ids(repo)
 
@@ -98,7 +136,11 @@ def test_non_completion_reference_domain_drift_is_flagged(tmp_path: Path) -> Non
     ("old", "new"),
     [
         ("| `features` | semantic validation |", "| `features` | |"),
-        ("| fatal dangling or ambiguous | [node validator]", "| | [node validator]"),
+        (
+            "| fatal dangling or ambiguous | [reference rules](#5-cross-section-reference-edge-catalog) | "
+            "[node validator]",
+            "| | [reference rules](#5-cross-section-reference-edge-catalog) | [node validator]",
+        ),
         ("[node validator](../../implementations/python/packages/aces_sdl/validator/_nodes_infra_network.py)", ""),
     ],
 )
@@ -117,6 +159,78 @@ def test_missing_behavior_reference_edge_is_flagged(tmp_path: Path) -> None:
         "| `behavior_profiles.*.participant_refs[]` |",
     )
     assert "sdl-catalog-behavior-edge" in _rule_ids(repo)
+
+
+def test_missing_live_reference_edges_are_flagged(tmp_path: Path) -> None:
+    repo = _seed_repo(tmp_path)
+    _replace(
+        repo,
+        "specs/sdl/references.md",
+        "| `features.*.vulnerabilities[]` |",
+        "| `features.*.vulnerability_refs[]` |",
+    )
+    rule_ids = _rule_ids(repo)
+    assert "sdl-catalog-reference-row" in rule_ids
+    assert "sdl-catalog-reference-path" in rule_ids
+
+
+def test_reference_catalog_uses_live_nested_model_paths() -> None:
+    rows = parse_reference_catalog((REPO_ROOT / "specs/sdl/references.md").read_text(encoding="utf-8"))
+    paths = {row.source_path for row in rows}
+    assert {
+        "nodes.*.features.*",
+        "nodes.*.conditions.*",
+        "nodes.*.injects.*",
+        "action_contracts.*.temporal_contracts.*.backend_disclosure_refs[]",
+        "action_contracts.*.backend_timing_disclosures.*.affected_temporal_ids[]",
+        "action_contracts.*.interactions.*.related_actions[]",
+        "outcome_interpretation_rules.*.source_bindings.*.ref",
+        "outcome_interpretation_rules.*.target_bindings.*.ref",
+    } <= paths
+    assert {
+        "outcome_interpretation_rules.*.source_ref",
+        "outcome_interpretation_rules.*.target_ref",
+        "action_contracts.*.interactions.*.related_action_ref",
+    }.isdisjoint(paths)
+
+
+def test_implementation_evidence_cannot_be_normative_owner(tmp_path: Path) -> None:
+    repo = _seed_repo(tmp_path)
+    _replace(
+        repo,
+        "specs/sdl/references.md",
+        "[reference rules](#5-cross-section-reference-edge-catalog)",
+        "[implementation](../../implementations/python/packages/aces_sdl/scenario.py)",
+    )
+    assert "sdl-catalog-reference-owner" in _rule_ids(repo)
+
+
+def test_normative_owner_resolution_is_independent_of_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    repo = _seed_repo(tmp_path / "repo")
+    monkeypatch.chdir(tmp_path)
+    assert "sdl-catalog-reference-owner" not in _rule_ids(repo)
+
+
+def test_missing_internal_markdown_target_is_flagged(tmp_path: Path) -> None:
+    repo = _seed_repo(tmp_path)
+    _replace(
+        repo,
+        "specs/sdl/sections.md",
+        "[README](README.md)",
+        "[README](missing-authority.md)",
+    )
+    assert "sdl-catalog-link-target" in _rule_ids(repo)
+
+
+def test_implementation_specific_diagnostic_term_must_be_marked_nonnormative(tmp_path: Path) -> None:
+    repo = _seed_repo(tmp_path)
+    _replace(
+        repo,
+        "specs/sdl/diagnostics.md",
+        "> these as `SDLParseError`, `SDLValidationError`, and `SDLInstantiationError`;",
+        "these as `SDLParseError`, `SDLValidationError`, and `SDLInstantiationError`;",
+    )
+    assert "sdl-catalog-normative-layer" in _rule_ids(repo)
 
 
 def test_runtime_child_tree_drift_is_flagged(tmp_path: Path) -> None:

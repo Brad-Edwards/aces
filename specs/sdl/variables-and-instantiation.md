@@ -105,13 +105,15 @@ An instantiated document is concrete. It **MUST NOT** contain:
 1. unresolved `${…}` placeholders (§3 step 8); and
 2. a `variables` member, even an empty one;
 3. an `imports` member, even an empty one; or
-4. a `module` member, even a null one.
+4. a `module` member, even a null one; or
+5. a `realization` member, even a null one.
 
 This is the authoring → instantiated distinction: a value that exists only to
 be substituted (a `${…}` reference) and the machinery that substitutes it (the
 `variables` definitions) do not survive into the instantiated form. `module`
-is packaging metadata and `imports` are composition instructions; verified
-resolution evidence survives under provenance instead.
+is packaging metadata, `imports` are composition instructions, and `realization`
+is an authoring designation block. Verified resolution facts and normalized
+realization-designation records survive under provenance instead.
 
 Every `instantiated-scenario-v1` payload **MUST** carry a closed
 `instantiation_provenance` object. Its members are:
@@ -124,6 +126,7 @@ Every `instantiated-scenario-v1` payload **MUST** carry a closed
 | `imports` | Verified resolved imports in declared preorder. Each carries namespace segments, requested and resolved identities, available digests, signer id, and module-local bindings. |
 | `capability_constraints` | Finite domains retained only for concrete `nodes.<id>.os` and `infrastructure.<id>.count` fields, addressed by RFC 6901 pointer and qualified parameter identity. |
 | `explicitness` | Portable SEM-218 model-path classifications whose parameter identities remain resolvable after variable definitions are removed. |
+| `realization_designations` | Portable SEM-218 root/scoped posture records. Each carries a namespace, RFC 6901 field pointer, and `closed`, `open`, or `unspecified` posture after the authoring-only `realization` block is removed. |
 
 A qualified imported binding identity is the import's `namespace` tuple
 concatenated with its one-segment local parameter identity. Root and qualified
@@ -141,6 +144,11 @@ paths or registry credentials. Trust-policy contents, request headers, cache
 locations, raw signatures, and source documents are excluded. A signer id and
 digest are resolution evidence, not a replacement for a signature or an
 independently chosen trust policy.
+
+Realization designation identities are unique by namespace and field pointer.
+They preserve the authored cascade across expansion and instantiation but do not
+claim that downstream realization occurred or turn the authoring block into
+executable scenario content.
 
 The provenance supplies selected inputs and verification anchors for replay. It
 does not make replay self-contained or prove that the described transformation

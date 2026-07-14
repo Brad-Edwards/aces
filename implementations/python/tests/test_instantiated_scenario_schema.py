@@ -92,7 +92,7 @@ def test_instantiated_model_rejects_unresolved_variables(payload: dict) -> None:
 
 @pytest.mark.parametrize(
     ("field", "value"),
-    (("variables", {}), ("imports", []), ("module", None)),
+    (("variables", {}), ("imports", []), ("module", None), ("realization", None)),
 )
 def test_instantiated_model_rejects_authoring_fields_even_when_empty(field: str, value: object) -> None:
     with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
@@ -136,6 +136,7 @@ def test_bundle_instantiated_schema_accepts_concrete_scenario() -> None:
         {**_CONCRETE, "variables": {}},
         {**_CONCRETE, "imports": []},
         {**_CONCRETE, "module": None},
+        {**_CONCRETE, "realization": None},
     ),
 )
 def test_bundle_instantiated_schema_enforces_closed_phase_shape(payload: dict) -> None:

@@ -22,7 +22,7 @@ Let:
 The phase shapes are:
 
 ```text
-fields(A) subset-of C union {module, imports, variables}
+fields(A) subset-of C union {module, imports, realization, variables}
 fields(E) subset-of C union {variables, expansion_provenance}
 fields(I) subset-of C union {instantiation_provenance}
 fields(S) = {profile, scenario}
@@ -32,6 +32,23 @@ The subset relation accounts for optional members of a closed shape. No member
 outside the relevant set is admitted. `name` is required in `A`, `E`, and `I`;
 `instantiation_provenance` is additionally required in `I`; both `profile` and
 `scenario` are required in `S`.
+
+## Phase-specific member catalog
+
+This table is the complete phase-specific member partition. `C` members are
+excluded because they are shared executable content. The table is mechanically
+checked against the closed phase models; `optional`, `required`, and `forbidden`
+describe member admission, not whether an author chose to write an optional
+value.
+
+| Member | Normalized authoring | Expanded authoring | Instantiated | Transfer disposition |
+| --- | --- | --- | --- | --- |
+| `module` | optional | forbidden | forbidden | Consumed by expansion; verified module facts are represented by `expansion_provenance.imports` when imports are resolved. |
+| `imports` | optional | forbidden | forbidden | Consumed by expansion; resolved imports move to `expansion_provenance.imports` and later `instantiation_provenance.imports`. |
+| `realization` | optional | forbidden | forbidden | Normalized designation records move to `expansion_provenance.realization_designations` and later `instantiation_provenance.realization_designations`. |
+| `variables` | optional | optional | forbidden | Selected values move to provenance bindings; variable definitions do not survive instantiation. |
+| `expansion_provenance` | forbidden | optional | forbidden | Its portable import, constraint, explicitness, and realization records feed instantiation provenance. |
+| `instantiation_provenance` | forbidden | forbidden | required | Required portable derivation context for an instantiated artifact. |
 
 ## Transition Relations
 
@@ -53,13 +70,18 @@ transition from `I` back to `A` or `E`, and no parser treats `S` as source.
 ### P1: Phase exclusion
 
 ```text
-{module, imports} intersect fields(E) = empty
-{module, imports, variables} intersect fields(I) = empty
-{module, imports, variables} intersect fields(S) = empty
+{module, imports, realization} intersect fields(E) = empty
+{module, imports, realization, variables} intersect fields(I) = empty
+{module, imports, realization, variables} intersect fields(S) = empty
 ```
 
 The last line applies to snapshot-envelope members; the nested `scenario` must
 itself satisfy the instantiated rule.
+
+The authored `realization` block is therefore authoring machinery, not
+executable content. Its normalized designation records survive under provenance
+so downstream realization can resolve the scoped cascade without admitting the
+source block into `E` or `I`.
 
 ### P2: Concreteness
 

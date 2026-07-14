@@ -14,9 +14,13 @@ import argparse
 import json
 import re
 import sys
+import types
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Union, get_args, get_origin
+
+from pydantic import BaseModel
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PYTHON_PACKAGES = REPO_ROOT / "implementations" / "python" / "packages"
@@ -31,7 +35,13 @@ from aces_sdl._runtime_service_families import (
     RUNTIME_SERVICE_FAMILIES,
     RuntimeReferenceChild,
 )
-from aces_sdl.scenario import Scenario
+from aces_sdl.phase_contracts import ExpansionProvenance, InstantiationProvenance
+from aces_sdl.scenario import (
+    ExpandedScenario,
+    InstantiatedScenario,
+    Scenario,
+    ScenarioContent,
+)
 from tools.policy.common import (
     PolicyFailure,
     apply_exceptions,
@@ -42,11 +52,16 @@ from tools.policy.common import (
 SECTIONS_PATH = "specs/sdl/sections.md"
 REFERENCES_PATH = "specs/sdl/references.md"
 RUNTIME_PATH = "specs/sdl/runtime-inventory.md"
+DOCUMENT_MODEL_PATH = "specs/sdl/document-model.md"
+VARIABLES_PATH = "specs/sdl/variables-and-instantiation.md"
+DIAGNOSTICS_PATH = "specs/sdl/diagnostics.md"
+PHASES_PATH = "specs/formal/sdl-phases/README.md"
 SCHEMA_PATH = "contracts/schemas/sdl/sdl-authoring-input-v1.json"
 
 _TOP_LEVEL_HEADING = "## Complete top-level field catalog"
 _REFERENCE_HEADING = "## 6. Machine-checkable reference-edge index"
 _RUNTIME_HEADING = "## 2. Family index"
+_PHASE_HEADING = "## Phase-specific member catalog"
 _SUMMARY_RE = re.compile(
     r"<!-- sdl-catalog-summary "
     r"top-level=(?P<top>\d+) metadata-composition=(?P<meta>\d+) "
@@ -54,9 +69,14 @@ _SUMMARY_RE = re.compile(
 )
 _SEPARATOR_RE = re.compile(r"^:?-{2,}:?$")
 _BACKTICK_RE = re.compile(r"`([^`]+)`")
+_MARKDOWN_LINK_RE = re.compile(r"(?<!!)\[[^\]]+\]\((?P<target>[^)]+)\)")
+_IMPLEMENTATION_TERM_RE = re.compile(
+    r"\b(?:Python|Pydantic|ValidationError|SDLParseError|SDLInstantiationError|SDLValidationError|"
+    r"SDLMigrationPolicy)\b"
+)
 _VALID_KINDS = frozenset({"metadata", "composition", "section"})
 _VALID_SHAPES = frozenset({"scalar", "mapping", "map", "list"})
-_VALID_LIFECYCLE = frozenset({"normalized", "expanded", "instantiated", "expanded-empty", "instantiated-empty"})
+_VALID_LIFECYCLE = frozenset({"normalized", "expanded", "instantiated"})
 _MAX_CATALOG_BYTES = 512 * 1024
 _MAX_CATALOG_ROWS = 512
 _METADATA_FIELDS = frozenset({"name", "version", "description"})
@@ -76,6 +96,10 @@ _ACCOUNT_VALIDATOR = (
 _RELATIONSHIP_VALIDATOR = (
     "[relationship validator](../../implementations/python/packages/aces_sdl/validator/_relationships.py)"
 )
+_RELATIONSHIP_PROXY_VALIDATOR = (
+    "[proxy relationship validator](../../implementations/python/packages/aces_sdl/validator/_relationships_proxy.py)"
+)
+_MAIL_VALIDATOR = "[mail validator](../../implementations/python/packages/aces_sdl/validator/_runtime_mail.py)"
 _DOMAIN_TOPOLOGY_SEMANTICS = (
     "[domain topology semantics](../../implementations/python/packages/aces_sdl/semantics/domain_topology.py)"
 )
@@ -94,14 +118,21 @@ _BEHAVIOR_SEMANTICS = (
 _BEHAVIOR_VALIDATOR = (
     "[behavior validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py)"
 )
-_BEHAVIOR_MODEL = "[behavior model](behavior-specifications.md)"
+_BEHAVIOR_MODEL = "[behavior model](../../implementations/python/packages/aces_sdl/participant_behavior.py)"
 _EVIDENCE_VALIDATOR = (
     "[evidence validator](../../implementations/python/packages/aces_sdl/validator/_evidence_requirements.py)"
 )
-_OBJECTIVE_SEMANTICS = "[objective semantics](objective-semantics.md)"
-_WORKFLOW_SEMANTICS = "[workflow semantics](workflow-semantics.md)"
+_OBJECTIVE_SEMANTICS = (
+    "[objective semantics](../../implementations/python/packages/aces_sdl/semantics/objective_semantics.py)"
+)
+_WORKFLOW_SEMANTICS = (
+    "[workflow validator](../../implementations/python/packages/aces_sdl/validator/_workflows_verify.py)"
+)
 _PROPOSITION_VALIDATOR = (
     "[proposition validator](../../implementations/python/packages/aces_sdl/validator/_propositions.py)"
+)
+_PARTICIPANT_TEMPORAL_MODEL = (
+    "[temporal model](../../implementations/python/packages/aces_sdl/participant_temporal_semantics.py)"
 )
 _SEMANTIC = "semantic validation"
 _STRUCTURAL = "structural validation"
@@ -112,7 +143,19 @@ _DANGLING = "fatal dangling or ambiguous"
 # either authority requires an explicit, reviewable reconciliation.
 _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
     "nodes.*.features[]": ("features", _SEMANTIC, _DANGLING, _NODE_VALIDATOR),
+    "nodes.*.features.*": (
+        "derived:node_roles",
+        _SEMANTIC,
+        "fatal dangling role when non-empty",
+        _NODE_VALIDATOR,
+    ),
     "nodes.*.conditions[]": ("conditions", _SEMANTIC, _DANGLING, _NODE_VALIDATOR),
+    "nodes.*.conditions.*": (
+        "derived:node_roles",
+        _SEMANTIC,
+        "fatal dangling role when non-empty",
+        _NODE_VALIDATOR,
+    ),
     "conditions.*.proposition": (
         "propositions",
         _SEMANTIC,
@@ -138,16 +181,52 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         _PROPOSITION_VALIDATOR,
     ),
     "nodes.*.injects[]": ("injects", _SEMANTIC, _DANGLING, _NODE_VALIDATOR),
+    "nodes.*.injects.*": (
+        "derived:node_roles",
+        _SEMANTIC,
+        "fatal dangling role when non-empty",
+        _NODE_VALIDATOR,
+    ),
     "nodes.*.vulnerabilities[]": (
         "vulnerabilities",
         _SEMANTIC,
         _DANGLING,
         _NODE_VALIDATOR,
     ),
+    "nodes.*.roles.*.entities[]": (
+        "entities",
+        _SEMANTIC,
+        _DANGLING,
+        _SECTION_VALIDATOR,
+    ),
+    "infrastructure.*.$key": (
+        "nodes",
+        _SEMANTIC,
+        "fatal when no same-named node exists",
+        _INFRASTRUCTURE_VALIDATOR,
+    ),
     "infrastructure.*.links[]": (
         "infrastructure",
         _SEMANTIC,
         _DANGLING,
+        _INFRASTRUCTURE_VALIDATOR,
+    ),
+    "infrastructure.*.properties[].*": (
+        "infrastructure",
+        _SEMANTIC,
+        "fatal unless the key names a linked switch-backed entry",
+        _INFRASTRUCTURE_VALIDATOR,
+    ),
+    "infrastructure.*.acls[].from_net": (
+        "infrastructure",
+        _SEMANTIC,
+        "fatal unless the target is switch-backed",
+        _INFRASTRUCTURE_VALIDATOR,
+    ),
+    "infrastructure.*.acls[].to_net": (
+        "infrastructure",
+        _SEMANTIC,
+        "fatal unless the target is switch-backed",
         _INFRASTRUCTURE_VALIDATOR,
     ),
     "infrastructure.*.dependencies[]": (
@@ -162,12 +241,19 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         "fatal dangling, ambiguous, or cyclic",
         _SECTION_VALIDATOR,
     ),
+    "features.*.vulnerabilities[]": (
+        "vulnerabilities",
+        _SEMANTIC,
+        _DANGLING,
+        _SECTION_VALIDATOR,
+    ),
     "entities.*.vulnerabilities[]": (
         "vulnerabilities",
         _SEMANTIC,
         _DANGLING,
         _SECTION_VALIDATOR,
     ),
+    "entities.*.events[]": ("events", _SEMANTIC, _DANGLING, _SECTION_VALIDATOR),
     "injects.*.from_entity": ("entities", _SEMANTIC, _DANGLING, _SECTION_VALIDATOR),
     "injects.*.to_entities[]": ("entities", _SEMANTIC, _DANGLING, _SECTION_VALIDATOR),
     "events.*.assertions[]": (
@@ -215,6 +301,72 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         "fatal dangling or ambiguous; subtype may narrow domain",
         _RELATIONSHIP_VALIDATOR,
     ),
+    "relationships.*.database_access.role_ref": (
+        "derived:database_roles",
+        _SEMANTIC,
+        "fatal outside the target database service",
+        _RELATIONSHIP_VALIDATOR,
+    ),
+    "relationships.*.mail_access.listener_ref": (
+        "derived:mail_listeners",
+        _SEMANTIC,
+        "fatal outside the target mail service",
+        _MAIL_VALIDATOR,
+    ),
+    "relationships.*.mail_access.mailbox_ref": (
+        "derived:mailboxes",
+        _SEMANTIC,
+        "fatal outside the target mail service",
+        _MAIL_VALIDATOR,
+    ),
+    "relationships.*.mail_access.domain_ref": (
+        "derived:mail_domains",
+        _SEMANTIC,
+        "fatal outside the target mail service",
+        _MAIL_VALIDATOR,
+    ),
+    "relationships.*.forwarding_edge.forwarder_ref": (
+        "runtime:forwarding_agents",
+        _SEMANTIC,
+        "fatal dangling or ambiguous across scenario and node scopes",
+        _RELATIONSHIP_VALIDATOR,
+    ),
+    "relationships.*.service_integration.consumer_ref": (
+        "runtime:platform_applications",
+        _SEMANTIC,
+        _DANGLING,
+        _RELATIONSHIP_VALIDATOR,
+    ),
+    "relationships.*.service_integration.engine_ref": (
+        "runtime:platform_applications",
+        _SEMANTIC,
+        _DANGLING,
+        _RELATIONSHIP_VALIDATOR,
+    ),
+    "relationships.*.service_integration.auth_principal_ref": (
+        "derived:engine_authorization_principals",
+        _SEMANTIC,
+        "fatal outside the engine authorization scope",
+        _RELATIONSHIP_VALIDATOR,
+    ),
+    "relationships.*.proxy_upstream.route_ref": (
+        "derived:source_application_routes",
+        _SEMANTIC,
+        "fatal outside the source application",
+        _RELATIONSHIP_PROXY_VALIDATOR,
+    ),
+    "relationships.*.proxy_upstream.upstream_node_ref": (
+        "nodes",
+        _SEMANTIC,
+        _DANGLING,
+        _RELATIONSHIP_PROXY_VALIDATOR,
+    ),
+    "relationships.*.proxy_upstream.upstream_service_ref": (
+        "derived:upstream_node_services",
+        _SEMANTIC,
+        "fatal without a resolvable upstream node and service",
+        _RELATIONSHIP_PROXY_VALIDATOR,
+    ),
     "relationships.*.domain_join.controller_refs[]": (
         "nodes",
         _SEMANTIC,
@@ -222,6 +374,12 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         _DOMAIN_TOPOLOGY_SEMANTICS,
     ),
     "agents.*.entity": ("entities", _SEMANTIC, _DANGLING, _PARTICIPANT_VALIDATOR),
+    "agents.*.actions[]": (
+        "action_contracts",
+        _SEMANTIC,
+        _DANGLING,
+        _PARTICIPANT_SEMANTICS,
+    ),
     "agents.*.starting_accounts[]": (
         "accounts",
         _SEMANTIC,
@@ -234,22 +392,118 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         "fatal dangling, ambiguous, or non-precondition role",
         _PROPOSITION_VALIDATOR,
     ),
-    "action_contracts.*.interactions.*.related_action_ref": (
+    "agents.*.initial_knowledge.hosts[]": (
+        "nodes",
+        _SEMANTIC,
+        "fatal unless the target is a vm node",
+        _PARTICIPANT_VALIDATOR,
+    ),
+    "agents.*.initial_knowledge.subnets[]": (
+        "infrastructure",
+        _SEMANTIC,
+        "fatal unless the target is switch-backed",
+        _PARTICIPANT_VALIDATOR,
+    ),
+    "agents.*.initial_knowledge.services[]": (
+        "derived:node_services",
+        _SEMANTIC,
+        _DANGLING,
+        _PARTICIPANT_VALIDATOR,
+    ),
+    "agents.*.initial_knowledge.accounts[]": (
+        "accounts",
+        _SEMANTIC,
+        _DANGLING,
+        _PARTICIPANT_VALIDATOR,
+    ),
+    "agents.*.allowed_subnets[]": (
+        "infrastructure",
+        _SEMANTIC,
+        "fatal unless the target is switch-backed",
+        _PARTICIPANT_VALIDATOR,
+    ),
+    "agents.*.authority_anchors[]": (
+        "declared",
+        _SEMANTIC,
+        _DANGLING,
+        _PARTICIPANT_VALIDATOR,
+    ),
+    "agents.*.operating_scope[]": (
+        "derived:operating_scope",
+        _SEMANTIC,
+        "fatal dangling or ambiguous outside vm nodes, switch-backed infrastructure, services, and content",
+        _PARTICIPANT_VALIDATOR,
+    ),
+    "agents.*.observation_boundaries[]": (
+        "observation_boundaries",
+        _SEMANTIC,
+        _DANGLING,
+        _PARTICIPANT_SEMANTICS,
+    ),
+    "action_contracts.*.interactions.*.related_actions[]": (
         "action_contracts",
         _SEMANTIC,
         _DANGLING,
         _PARTICIPANT_SEMANTICS,
     ),
-    "observation_boundaries.*.view_rules.*.information_refs[]": (
+    "action_contracts.*.interactions.*.target": (
+        "targetable",
+        _SEMANTIC,
+        _DANGLING,
+        _PARTICIPANT_VALIDATOR,
+    ),
+    "action_contracts.*.interactions.*.shared_state_refs[]": (
+        "targetable",
+        _SEMANTIC,
+        _DANGLING,
+        _PARTICIPANT_VALIDATOR,
+    ),
+    "action_contracts.*.temporal_contracts.*.backend_disclosure_refs[]": (
+        "derived:backend_timing_disclosures",
+        _STRUCTURAL,
+        "fatal dangling local disclosure id",
+        _PARTICIPANT_TEMPORAL_MODEL,
+    ),
+    "action_contracts.*.backend_timing_disclosures.*.affected_temporal_ids[]": (
+        "derived:temporal_contracts",
+        _STRUCTURAL,
+        "fatal dangling local temporal id",
+        _PARTICIPANT_TEMPORAL_MODEL,
+    ),
+    "observation_boundaries.*.view_rules.*.information_ref": (
         "derived:boundary_information",
         _SEMANTIC,
         "fatal outside declared boundary information",
         _PARTICIPANT_SEMANTICS,
     ),
-    "outcome_interpretation_rules.*.source_ref": (
+    "observation_boundaries.*.view_rules.*.evidence_refs[]": (
+        "derived:boundary_evidence",
+        _SEMANTIC,
+        "fatal outside declared boundary evidence",
+        _PARTICIPANT_SEMANTICS,
+    ),
+    "observation_boundaries.*.view_transitions.*.information_ref": (
+        "derived:boundary_view_rules",
+        _SEMANTIC,
+        "fatal without a matching view rule",
+        _PARTICIPANT_SEMANTICS,
+    ),
+    "observation_boundaries.*.view_transitions.*.evidence_refs[]": (
+        "derived:boundary_evidence",
+        _SEMANTIC,
+        "fatal outside declared boundary evidence",
+        _PARTICIPANT_SEMANTICS,
+    ),
+    "outcome_interpretation_rules.*.source_bindings.*.ref": (
         "action_contracts,objectives,workflows",
         _SEMANTIC,
-        _DANGLING,
+        "fatal dangling for sdl-bound layers",
+        _OUTCOME_SEMANTICS,
+    ),
+    "outcome_interpretation_rules.*.target_bindings.*.ref": (
+        "objectives,workflows",
+        _SEMANTIC,
+        "fatal dangling for sdl-bound layers",
         _OUTCOME_SEMANTICS,
     ),
     "behavior_specifications.*.participant_refs[]": (
@@ -356,6 +610,12 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
     ),
     "objectives.*.agent": ("agents", _SEMANTIC, _DANGLING, _OBJECTIVE_SEMANTICS),
     "objectives.*.entity": ("entities", _SEMANTIC, _DANGLING, _OBJECTIVE_SEMANTICS),
+    "objectives.*.actions[]": (
+        "derived:agent_actions",
+        _SEMANTIC,
+        "fatal outside the bound agent action contracts",
+        _OBJECTIVE_SEMANTICS,
+    ),
     "objectives.*.targets[]": (
         "targetable",
         _SEMANTIC,
@@ -374,6 +634,36 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         "fatal dangling, ambiguous, or cyclic",
         _OBJECTIVE_SEMANTICS,
     ),
+    "objectives.*.window.stories[]": (
+        "stories",
+        _SEMANTIC,
+        _DANGLING,
+        _OBJECTIVE_SEMANTICS,
+    ),
+    "objectives.*.window.scripts[]": (
+        "scripts",
+        _SEMANTIC,
+        "fatal dangling or outside referenced stories",
+        _OBJECTIVE_SEMANTICS,
+    ),
+    "objectives.*.window.events[]": (
+        "events",
+        _SEMANTIC,
+        "fatal dangling or outside referenced scripts",
+        _OBJECTIVE_SEMANTICS,
+    ),
+    "objectives.*.window.workflows[]": (
+        "workflows",
+        _SEMANTIC,
+        _DANGLING,
+        _OBJECTIVE_SEMANTICS,
+    ),
+    "objectives.*.window.steps[]": (
+        "workflow_steps",
+        _SEMANTIC,
+        "fatal malformed, dangling, or outside referenced workflows",
+        _OBJECTIVE_SEMANTICS,
+    ),
     "workflows.*.start": (
         "workflow_steps",
         _SEMANTIC,
@@ -384,6 +674,114 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         "assertions",
         _SEMANTIC,
         "fatal dangling, ambiguous, or non-precondition role",
+        _WORKFLOW_SEMANTICS,
+    ),
+    "workflows.*.steps.*.when.objectives[]": (
+        "objectives",
+        _SEMANTIC,
+        _DANGLING,
+        _WORKFLOW_SEMANTICS,
+    ),
+    "workflows.*.steps.*.when.steps.*.step": (
+        "workflow_steps",
+        _SEMANTIC,
+        "fatal dangling, self-referential, non-executable, or unavailable before evaluation",
+        _WORKFLOW_SEMANTICS,
+    ),
+    "workflows.*.steps.*.cases.*.when.assertions[]": (
+        "assertions",
+        _SEMANTIC,
+        "fatal dangling, ambiguous, or non-precondition role",
+        _WORKFLOW_SEMANTICS,
+    ),
+    "workflows.*.steps.*.cases.*.when.objectives[]": (
+        "objectives",
+        _SEMANTIC,
+        _DANGLING,
+        _WORKFLOW_SEMANTICS,
+    ),
+    "workflows.*.steps.*.cases.*.when.steps.*.step": (
+        "workflow_steps",
+        _SEMANTIC,
+        "fatal dangling, self-referential, non-executable, or unavailable before evaluation",
+        _WORKFLOW_SEMANTICS,
+    ),
+    "workflows.*.steps.*.objective": (
+        "objectives",
+        _SEMANTIC,
+        _DANGLING,
+        _WORKFLOW_SEMANTICS,
+    ),
+    "workflows.*.steps.*.next": (
+        "workflow_steps",
+        _SEMANTIC,
+        "fatal dangling, cyclic, or unreachable",
+        _WORKFLOW_SEMANTICS,
+    ),
+    "workflows.*.steps.*.on_success": (
+        "workflow_steps",
+        _SEMANTIC,
+        "fatal dangling, cyclic, or unreachable",
+        _WORKFLOW_SEMANTICS,
+    ),
+    "workflows.*.steps.*.on_failure": (
+        "workflow_steps",
+        _SEMANTIC,
+        "fatal dangling, cyclic, or unreachable",
+        _WORKFLOW_SEMANTICS,
+    ),
+    "workflows.*.steps.*.on_exhausted": (
+        "workflow_steps",
+        _SEMANTIC,
+        "fatal dangling, cyclic, or unreachable",
+        _WORKFLOW_SEMANTICS,
+    ),
+    "workflows.*.steps.*.then": (
+        "workflow_steps",
+        _SEMANTIC,
+        "fatal dangling, cyclic, or unreachable",
+        _WORKFLOW_SEMANTICS,
+    ),
+    "workflows.*.steps.*.else": (
+        "workflow_steps",
+        _SEMANTIC,
+        "fatal dangling, cyclic, or unreachable",
+        _WORKFLOW_SEMANTICS,
+    ),
+    "workflows.*.steps.*.cases.*.next": (
+        "workflow_steps",
+        _SEMANTIC,
+        "fatal dangling, cyclic, or unreachable",
+        _WORKFLOW_SEMANTICS,
+    ),
+    "workflows.*.steps.*.default": (
+        "workflow_steps",
+        _SEMANTIC,
+        "fatal dangling, cyclic, or unreachable",
+        _WORKFLOW_SEMANTICS,
+    ),
+    "workflows.*.steps.*.branches[]": (
+        "workflow_steps",
+        _SEMANTIC,
+        "fatal dangling or outside a closed parallel branch",
+        _WORKFLOW_SEMANTICS,
+    ),
+    "workflows.*.steps.*.join": (
+        "workflow_steps",
+        _SEMANTIC,
+        "fatal dangling, non-join, multiply owned, or outside branch closure",
+        _WORKFLOW_SEMANTICS,
+    ),
+    "workflows.*.steps.*.workflow": (
+        "workflows",
+        _SEMANTIC,
+        "fatal dangling or cyclic",
+        _WORKFLOW_SEMANTICS,
+    ),
+    "workflows.*.steps.*.compensate_with": (
+        "workflows",
+        _SEMANTIC,
+        "fatal dangling, cyclic, or invalid as a compensation target",
         _WORKFLOW_SEMANTICS,
     ),
 }
@@ -412,7 +810,8 @@ class ReferenceRow:
     domain: str
     phase: str
     failure: str
-    owner: str
+    normative_owner: str
+    evidence: str
     line_no: int
 
     @property
@@ -428,6 +827,16 @@ class RuntimeRow:
     primary_id: str
     child_paths: tuple[str, ...]
     owner: str
+    line_no: int
+
+
+@dataclass(frozen=True)
+class PhaseMemberRow:
+    member: str
+    normalized: str
+    expanded: str
+    instantiated: str
+    transfer: str
     line_no: int
 
 
@@ -514,16 +923,13 @@ def parse_reference_catalog(text: str) -> list[ReferenceRow]:
             domain=_unquote(cells[1]),
             phase=cells[2].strip().lower(),
             failure=cells[3].strip().lower(),
-            owner=cells[4].strip(),
+            normative_owner=cells[4].strip(),
+            evidence=cells[5].strip(),
             line_no=line_no,
         )
-        for line_no, cells in _table(text, _REFERENCE_HEADING, 5)
+        for line_no, cells in _table(text, _REFERENCE_HEADING, 6)
     ]
-    seen: dict[tuple[str, str], int] = {}
-    for row in rows:
-        if row.key in seen:
-            raise CatalogParseError(f"duplicate reference edge {row.key!r} at lines {seen[row.key]} and {row.line_no}")
-        seen[row.key] = row.line_no
+    _unique(rows, "source_path", "reference edge")
     return rows
 
 
@@ -540,6 +946,22 @@ def parse_runtime_catalog(text: str) -> list[RuntimeRow]:
         for line_no, cells in _table(text, _RUNTIME_HEADING, 5)
     ]
     _unique(rows, "key", "runtime family")
+    return rows
+
+
+def parse_phase_member_catalog(text: str) -> list[PhaseMemberRow]:
+    rows = [
+        PhaseMemberRow(
+            member=_unquote(cells[0]),
+            normalized=cells[1].strip().lower(),
+            expanded=cells[2].strip().lower(),
+            instantiated=cells[3].strip().lower(),
+            transfer=cells[4].strip(),
+            line_no=line_no,
+        )
+        for line_no, cells in _table(text, _PHASE_HEADING, 5)
+    ]
+    _unique(rows, "member", "phase-specific member")
     return rows
 
 
@@ -598,6 +1020,15 @@ def _expected_identity(field: str, shape: str) -> str:
     if shape == "map":
         return "map_key"
     return "none"
+
+
+def _expected_lifecycle(field: str) -> tuple[str, ...]:
+    phase_models = (
+        ("normalized", Scenario),
+        ("expanded", ExpandedScenario),
+        ("instantiated", InstantiatedScenario),
+    )
+    return tuple(phase for phase, model in phase_models if field in model.model_fields)
 
 
 def _flatten_children(children: tuple[RuntimeReferenceChild, ...], prefix: str = "") -> tuple[str, ...]:
@@ -672,11 +1103,12 @@ def _check_top_level(text: str, schema: dict[str, Any]) -> tuple[list[PolicyFail
                     SECTIONS_PATH,
                 )
             )
-        if not row.lifecycle or not set(row.lifecycle) <= _VALID_LIFECYCLE:
+        expected_lifecycle = _expected_lifecycle(field)
+        if row.lifecycle != expected_lifecycle or not set(row.lifecycle) <= _VALID_LIFECYCLE:
             failures.append(
                 _failure(
                     "sdl-catalog-lifecycle",
-                    f"{field!r} has invalid lifecycle tokens {row.lifecycle!r}",
+                    f"{field!r} lifecycle is {expected_lifecycle!r}, catalog says {row.lifecycle!r}",
                     SECTIONS_PATH,
                 )
             )
@@ -734,13 +1166,13 @@ def _check_top_level(text: str, schema: dict[str, Any]) -> tuple[list[PolicyFail
     return failures, rows
 
 
-def _check_references(text: str, top_rows: list[TopLevelRow]) -> list[PolicyFailure]:
+def _check_references(text: str, top_rows: list[TopLevelRow], repo_root: Path) -> list[PolicyFailure]:
     try:
         rows = parse_reference_catalog(text)
     except CatalogParseError as exc:
         return [_failure("sdl-catalog-reference-parse", str(exc), REFERENCES_PATH)]
     failures: list[PolicyFailure] = []
-    by_source = {row.source_path: (row.domain, row.phase, row.failure, row.owner) for row in rows}
+    by_source = {row.source_path: (row.domain, row.phase, row.failure, row.evidence) for row in rows}
     if by_source != _REFERENCE_EDGE_EXPECTATIONS:
         differing = sorted(
             source
@@ -754,15 +1186,31 @@ def _check_references(text: str, top_rows: list[TopLevelRow]) -> list[PolicyFail
                 REFERENCES_PATH,
             )
         )
-    by_key = {row.key: row for row in rows}
     for key, domain in sorted(REFERENCE_COMPLETION_TARGETS.items()):
-        row = by_key.get(key)
-        if row is None or row.domain != domain:
-            actual = None if row is None else row.domain
+        matching = [row for row in rows if row.key == key and row.domain == domain]
+        if not matching:
+            actual = sorted({row.domain for row in rows if row.key == key}) or None
             failures.append(
                 _failure(
                     "sdl-catalog-reference-domain",
                     f"{key!r} expects domain {domain!r}, catalog says {actual!r}",
+                    REFERENCES_PATH,
+                )
+            )
+    for row in rows:
+        if not _reference_source_path_exists(row.source_path):
+            failures.append(
+                _failure(
+                    "sdl-catalog-reference-path",
+                    f"{row.source_path!r} does not traverse the typed SDL model",
+                    REFERENCES_PATH,
+                )
+            )
+        if not _is_normative_reference_owner(row.normative_owner, repo_root):
+            failures.append(
+                _failure(
+                    "sdl-catalog-reference-owner",
+                    f"{row.source_path!r} has no normative prose/ADR owner",
                     REFERENCES_PATH,
                 )
             )
@@ -804,6 +1252,86 @@ def _check_references(text: str, top_rows: list[TopLevelRow]) -> list[PolicyFail
     return failures
 
 
+def _annotation_members(annotation: Any) -> tuple[Any, ...]:
+    if get_origin(annotation) in (Union, types.UnionType):
+        return tuple(member for option in get_args(annotation) for member in _annotation_members(option))
+    return (annotation,)
+
+
+def _unwrap_reference_container(annotation: Any) -> tuple[Any, ...]:
+    members: list[Any] = []
+    for option in _annotation_members(annotation):
+        origin = get_origin(option)
+        if not isinstance(origin, type):
+            continue
+        arguments = get_args(option)
+        if issubclass(origin, Mapping) and len(arguments) == 2:
+            members.append(arguments[1])
+        elif issubclass(origin, Sequence) and origin is not str and arguments:
+            members.append(arguments[0])
+    return tuple(members)
+
+
+def _model_field_annotations(annotation: Any, field_name: str) -> tuple[Any, ...]:
+    annotations: list[Any] = []
+    for option in _annotation_members(annotation):
+        if not isinstance(option, type) or not issubclass(option, BaseModel):
+            continue
+        for model_name, field in option.model_fields.items():
+            aliases = {model_name}
+            for alias in (field.alias, field.serialization_alias):
+                if isinstance(alias, str):
+                    aliases.add(alias)
+            if field_name in aliases:
+                annotations.append(field.annotation)
+    return tuple(annotations)
+
+
+def _reference_source_path_exists(source_path: str) -> bool:
+    annotations: tuple[Any, ...] = (Scenario,)
+    segments = source_path.split(".")
+    for index, segment in enumerate(segments):
+        if segment == "$key":
+            return index == len(segments) - 1 and index > 0 and segments[index - 1] == "*"
+        if segment == "*":
+            annotations = tuple(
+                member for annotation in annotations for member in _unwrap_reference_container(annotation)
+            )
+        else:
+            is_collection = segment.endswith("[]")
+            field_name = segment[:-2] if is_collection else segment
+            annotations = tuple(
+                member for annotation in annotations for member in _model_field_annotations(annotation, field_name)
+            )
+            if is_collection:
+                annotations = tuple(
+                    member for annotation in annotations for member in _unwrap_reference_container(annotation)
+                )
+        if not annotations:
+            return False
+    return True
+
+
+def _is_normative_reference_owner(owner: str, repo_root: Path) -> bool:
+    targets = [match.group("target").strip() for match in _MARKDOWN_LINK_RE.finditer(owner)]
+    if len(targets) != 1:
+        return False
+    target = targets[0]
+    if target.startswith("#"):
+        relative = REFERENCES_PATH
+    elif target.startswith(("http://", "https://", "mailto:")):
+        return False
+    else:
+        target_path = target.split("#", 1)[0]
+        root = repo_root.resolve()
+        resolved = (root / Path(REFERENCES_PATH).parent / target_path).resolve()
+        try:
+            relative = resolved.relative_to(root).as_posix()
+        except ValueError:
+            return False
+    return relative.startswith("specs/") or relative.startswith("docs/decisions/adrs/")
+
+
 def _check_runtime(text: str) -> list[PolicyFailure]:
     try:
         rows = parse_runtime_catalog(text)
@@ -830,9 +1358,148 @@ def _check_runtime(text: str) -> list[PolicyFailure]:
     return []
 
 
+def _phase_status(model: type[ScenarioContent], member: str) -> str:
+    field = model.model_fields.get(member)
+    if field is None:
+        return "forbidden"
+    return "required" if field.is_required() else "optional"
+
+
+def _check_phase_members(text: str) -> list[PolicyFailure]:
+    try:
+        rows = parse_phase_member_catalog(text)
+    except CatalogParseError as exc:
+        return [_failure("sdl-catalog-phase-parse", str(exc), PHASES_PATH)]
+
+    phase_models: tuple[tuple[str, type[ScenarioContent]], ...] = (
+        ("normalized", Scenario),
+        ("expanded", ExpandedScenario),
+        ("instantiated", InstantiatedScenario),
+    )
+    shared = set(ScenarioContent.model_fields)
+    expected_members = set().union(*(set(model.model_fields) - shared for _phase, model in phase_models))
+    by_member = {row.member: row for row in rows}
+    failures: list[PolicyFailure] = []
+    if set(by_member) != expected_members:
+        failures.append(
+            _failure(
+                "sdl-catalog-phase-members",
+                "phase-specific member set differs: "
+                f"catalog-only={sorted(set(by_member) - expected_members)}, "
+                f"model-only={sorted(expected_members - set(by_member))}",
+                PHASES_PATH,
+            )
+        )
+
+    for member in sorted(set(by_member) & expected_members):
+        row = by_member[member]
+        actual = (row.normalized, row.expanded, row.instantiated)
+        expected = tuple(_phase_status(model, member) for _phase, model in phase_models)
+        if actual != expected:
+            failures.append(
+                _failure(
+                    "sdl-catalog-phase-membership",
+                    f"{member!r} phase membership is {expected!r}, catalog says {actual!r}",
+                    PHASES_PATH,
+                )
+            )
+        if not row.transfer:
+            failures.append(
+                _failure(
+                    "sdl-catalog-phase-transfer",
+                    f"{member!r} has no phase-transfer disposition",
+                    PHASES_PATH,
+                )
+            )
+
+    realization = by_member.get("realization")
+    if realization is not None:
+        designation_fields = (
+            ("expansion_provenance", ExpansionProvenance),
+            ("instantiation_provenance", InstantiationProvenance),
+        )
+        required_paths = {
+            f"{provenance_field}.{field_name}"
+            for provenance_field, model in designation_fields
+            for field_name in model.model_fields
+            if field_name == "realization_designations"
+        }
+        missing = sorted(path for path in required_paths if f"`{path}`" not in realization.transfer)
+        if missing:
+            failures.append(
+                _failure(
+                    "sdl-catalog-phase-transfer",
+                    f"realization transfer omits portable designation paths: {missing}",
+                    PHASES_PATH,
+                )
+            )
+    return failures
+
+
+def _check_internal_links(repo_root: Path, relative_paths: tuple[str, ...]) -> list[PolicyFailure]:
+    root = repo_root.resolve()
+    failures: list[PolicyFailure] = []
+    for relative in relative_paths:
+        source = repo_root / relative
+        text = source.read_text(encoding="utf-8")
+        for match in _MARKDOWN_LINK_RE.finditer(text):
+            target = match.group("target").strip()
+            if target.startswith(("#", "http://", "https://", "mailto:")):
+                continue
+            target_path = target.split("#", 1)[0]
+            if not target_path:
+                continue
+            resolved = (source.parent / target_path).resolve()
+            try:
+                resolved.relative_to(root)
+            except ValueError:
+                exists = False
+            else:
+                exists = resolved.exists()
+            if not exists:
+                line_no = text.count("\n", 0, match.start()) + 1
+                failures.append(
+                    _failure(
+                        "sdl-catalog-link-target",
+                        f"internal Markdown target at line {line_no} does not exist: {target_path}",
+                        relative,
+                    )
+                )
+    return failures
+
+
+def _check_diagnostic_normative_layer(text: str) -> list[PolicyFailure]:
+    failures: list[PolicyFailure] = []
+    in_implementation_evidence = False
+    for line_no, line in enumerate(text.splitlines(), start=1):
+        is_quote = line.startswith(">")
+        if is_quote and "Implementation evidence (non-normative)" in line:
+            in_implementation_evidence = True
+        elif not is_quote:
+            in_implementation_evidence = False
+        if _IMPLEMENTATION_TERM_RE.search(line) and not (is_quote and in_implementation_evidence):
+            failures.append(
+                _failure(
+                    "sdl-catalog-normative-layer",
+                    f"implementation-specific diagnostic term at line {line_no} is not marked non-normative",
+                    DIAGNOSTICS_PATH,
+                )
+            )
+    return failures
+
+
 def evaluate_sdl_catalog_parity(repo_root: Path) -> list[PolicyFailure]:
     """Return deterministic parity failures for the normative SDL catalogs."""
-    required_paths = (SECTIONS_PATH, REFERENCES_PATH, RUNTIME_PATH, SCHEMA_PATH)
+    prose_paths = (
+        SECTIONS_PATH,
+        REFERENCES_PATH,
+        RUNTIME_PATH,
+        DOCUMENT_MODEL_PATH,
+        VARIABLES_PATH,
+        DIAGNOSTICS_PATH,
+        PHASES_PATH,
+    )
+    required_paths = (*prose_paths, SCHEMA_PATH)
     missing = [relative for relative in required_paths if not (repo_root / relative).is_file()]
     if missing:
         return [
@@ -850,8 +1517,11 @@ def evaluate_sdl_catalog_parity(repo_root: Path) -> list[PolicyFailure]:
     sections_text = (repo_root / SECTIONS_PATH).read_text(encoding="utf-8")
     top_failures, top_rows = _check_top_level(sections_text, schema)
     failures = list(top_failures)
-    failures.extend(_check_references((repo_root / REFERENCES_PATH).read_text(encoding="utf-8"), top_rows))
+    failures.extend(_check_references((repo_root / REFERENCES_PATH).read_text(encoding="utf-8"), top_rows, repo_root))
     failures.extend(_check_runtime((repo_root / RUNTIME_PATH).read_text(encoding="utf-8")))
+    failures.extend(_check_phase_members((repo_root / PHASES_PATH).read_text(encoding="utf-8")))
+    failures.extend(_check_diagnostic_normative_layer((repo_root / DIAGNOSTICS_PATH).read_text(encoding="utf-8")))
+    failures.extend(_check_internal_links(repo_root, prose_paths))
     return failures
 
 
