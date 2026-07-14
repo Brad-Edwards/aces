@@ -21,6 +21,7 @@ from aces_processor.compiler import compile_runtime_model
 from aces_processor.models import resource_payload
 from aces_processor.planner import plan
 from aces_processor.semantics.realization import realization_disclosure
+from aces_reference_backend import create_reference_backend_manifest
 from aces_runtime.control_plane import RuntimeControlPlane
 from aces_sdl import SDLParseError, SDLValidationError, parse_sdl, parse_sdl_file
 from aces_sdl.language_service import language_completions
@@ -520,6 +521,16 @@ def test_planner_accepts_explicitly_supported_domain_profile() -> None:
     execution_plan = plan(model, _manifest_with_domain_profiles("active_directory"))
 
     assert not any("domain-profile" in diagnostic.code for diagnostic in execution_plan.diagnostics)
+
+
+def test_reference_backend_rejects_unrealized_domain_topology_and_spn() -> None:
+    model = compile_runtime_model(_parse_payload(_valid_payload()))
+
+    execution_plan = plan(model, create_reference_backend_manifest())
+
+    codes = {diagnostic.code for diagnostic in execution_plan.diagnostics}
+    assert "provisioner.unsupported-domain-profile" in codes
+    assert "provisioner.unsupported-account-feature" in codes
 
 
 def test_libvirt_capability_envelope_rejects_domain_profile_independently() -> None:
