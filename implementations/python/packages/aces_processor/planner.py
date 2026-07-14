@@ -1,5 +1,7 @@
 """Planner for compiled SDL runtime models."""
 
+from dataclasses import replace
+
 from aces_backend_protocols.account_features import provisioner_account_features
 from aces_backend_protocols.capabilities import BackendManifest
 from aces_sdl.infrastructure import MINIMUM_NODE_COUNT
@@ -33,7 +35,13 @@ from .semantics.planner import (
     resource_dependency_cycles,
     resource_topological_order,
 )
-from .semantics.realization import realization_disclosure, realization_support_diagnostics
+from .semantics.realization import (
+    ApparatusRealizationDefaultResolver,
+    materialize_realization_requirements,
+    realization_disclosure,
+    realization_envelope_diagnostics,
+    realization_support_diagnostics,
+)
 
 __all__ = ["plan", "realization_disclosure", "snapshot_delete_order"]
 
@@ -55,111 +63,26 @@ def _planned_resource(address: str, domain: RuntimeDomain, resource_type: str, r
 def _collect_resources(model: RuntimeModel) -> dict[str, PlannedResource]:
     resources: dict[str, PlannedResource] = {}
 
-    for address, resource in model.networks.items():
-        resources[address] = _planned_resource(
-            address,
-            RuntimeDomain.PROVISIONING,
-            "network",
-            resource,
-        )
-    for address, resource in model.node_deployments.items():
-        resources[address] = _planned_resource(
-            address,
-            RuntimeDomain.PROVISIONING,
-            "node",
-            resource,
-        )
-    for address, resource in model.feature_bindings.items():
-        resources[address] = _planned_resource(
-            address,
-            RuntimeDomain.PROVISIONING,
-            "feature-binding",
-            resource,
-        )
-    for address, resource in model.content_placements.items():
-        resources[address] = _planned_resource(
-            address,
-            RuntimeDomain.PROVISIONING,
-            "content-placement",
-            resource,
-        )
-    for address, resource in model.account_placements.items():
-        resources[address] = _planned_resource(
-            address,
-            RuntimeDomain.PROVISIONING,
-            "account-placement",
-            resource,
-        )
-    for address, resource in model.inject_bindings.items():
-        resources[address] = _planned_resource(
-            address,
-            RuntimeDomain.ORCHESTRATION,
-            "inject-binding",
-            resource,
-        )
-    for address, resource in model.injects.items():
-        resources[address] = _planned_resource(
-            address,
-            RuntimeDomain.ORCHESTRATION,
-            "inject",
-            resource,
-        )
-    for address, resource in model.events.items():
-        resources[address] = _planned_resource(
-            address,
-            RuntimeDomain.ORCHESTRATION,
-            "event",
-            resource,
-        )
-    for address, resource in model.scripts.items():
-        resources[address] = _planned_resource(
-            address,
-            RuntimeDomain.ORCHESTRATION,
-            "script",
-            resource,
-        )
-    for address, resource in model.stories.items():
-        resources[address] = _planned_resource(
-            address,
-            RuntimeDomain.ORCHESTRATION,
-            "story",
-            resource,
-        )
-    for address, resource in model.workflows.items():
-        resources[address] = _planned_resource(
-            address,
-            RuntimeDomain.ORCHESTRATION,
-            "workflow",
-            resource,
-        )
-    for address, resource in model.condition_bindings.items():
-        resources[address] = _planned_resource(
-            address,
-            RuntimeDomain.EVALUATION,
-            "condition-binding",
-            resource,
-        )
-    for address, resource in model.propositions.items():
-        resources[address] = _planned_resource(
-            address,
-            RuntimeDomain.EVALUATION,
-            "proposition",
-            resource,
-        )
-    for address, resource in model.assertions.items():
-        resources[address] = _planned_resource(
-            address,
-            RuntimeDomain.EVALUATION,
-            "assertion",
-            resource,
-        )
-    for address, resource in model.objectives.items():
-        resources[address] = _planned_resource(
-            address,
-            RuntimeDomain.EVALUATION,
-            "objective",
-            resource,
-        )
+    resource_groups = (
+        (model.networks, RuntimeDomain.PROVISIONING, "network"),
+        (model.node_deployments, RuntimeDomain.PROVISIONING, "node"),
+        (model.feature_bindings, RuntimeDomain.PROVISIONING, "feature-binding"),
+        (model.content_placements, RuntimeDomain.PROVISIONING, "content-placement"),
+        (model.account_placements, RuntimeDomain.PROVISIONING, "account-placement"),
+        (model.inject_bindings, RuntimeDomain.ORCHESTRATION, "inject-binding"),
+        (model.injects, RuntimeDomain.ORCHESTRATION, "inject"),
+        (model.events, RuntimeDomain.ORCHESTRATION, "event"),
+        (model.scripts, RuntimeDomain.ORCHESTRATION, "script"),
+        (model.stories, RuntimeDomain.ORCHESTRATION, "story"),
+        (model.workflows, RuntimeDomain.ORCHESTRATION, "workflow"),
+        (model.condition_bindings, RuntimeDomain.EVALUATION, "condition-binding"),
+        (model.propositions, RuntimeDomain.EVALUATION, "proposition"),
+        (model.assertions, RuntimeDomain.EVALUATION, "assertion"),
+        (model.objectives, RuntimeDomain.EVALUATION, "objective"),
+    )
+    for group, domain, resource_type in resource_groups:
+        for address, resource in group.items():
+            resources[address] = _planned_resource(address, domain, resource_type, resource)
 
     return resources
 
@@ -429,6 +352,17 @@ def _validate_manifest(model: RuntimeModel, manifest: BackendManifest) -> list[D
     diagnostics: list[Diagnostic] = []
     provisioner = manifest.provisioner
 
+    for resource in [*model.networks.values(), *model.node_deployments.values()]:
+        if resource.spec.get("infrastructure", {}).get("acls") and not provisioner.supports_acls:
+            diagnostics.append(
+                Diagnostic(
+                    code="provisioner.acls-unsupported",
+                    domain="provisioning",
+                    address=resource.address,
+                    message="Provisioner does not support ACL declarations.",
+                )
+            )
+
     for network in model.networks.values():
         if "switch" not in provisioner.supported_node_types:
             diagnostics.append(
@@ -439,16 +373,6 @@ def _validate_manifest(model: RuntimeModel, manifest: BackendManifest) -> list[D
                     message="Provisioner does not support switch/network nodes.",
                 )
             )
-        if network.spec.get("infrastructure", {}).get("acls") and not provisioner.supports_acls:
-            diagnostics.append(
-                Diagnostic(
-                    code="provisioner.acls-unsupported",
-                    domain="provisioning",
-                    address=network.address,
-                    message="Provisioner does not support ACL declarations.",
-                )
-            )
-
     for node in model.node_deployments.values():
         if node.node_type and node.node_type not in provisioner.supported_node_types:
             diagnostics.append(
@@ -833,20 +757,34 @@ def plan(
     snapshot: RuntimeSnapshot | None = None,
     *,
     target_name: str | None = None,
+    apparatus_realization_default: ApparatusRealizationDefaultResolver | None = None,
 ) -> ExecutionPlan:
     """Reconcile a compiled runtime model against the current snapshot."""
 
     snapshot = snapshot or RuntimeSnapshot()
-    resources = _collect_resources(model)
+    effective_requirements = materialize_realization_requirements(
+        model.realization_requirements,
+        manifest,
+        apparatus_default=apparatus_realization_default,
+    )
+    effective_model = replace(model, realization_requirements=effective_requirements)
+    resources = _collect_resources(effective_model)
     envelope_diagnostics = (
-        list(member(model.realization_instance, manifest.realization_envelope.expression).diagnostics)
-        if manifest.realization_envelope is not None and model.realization_instance is not None
+        list(member(effective_model.realization_instance, manifest.realization_envelope.expression).diagnostics)
+        if manifest.realization_envelope is not None and effective_model.realization_instance is not None
         else []
     )
     diagnostics = [
-        *model.diagnostics,
-        *_validate_manifest(model, manifest),
-        *realization_support_diagnostics(model.realization_requirements, manifest),
+        *effective_model.diagnostics,
+        *_validate_manifest(effective_model, manifest),
+        *realization_support_diagnostics(
+            effective_requirements,
+            manifest,
+        ),
+        *realization_envelope_diagnostics(
+            effective_requirements,
+            manifest,
+        ),
         *envelope_diagnostics,
         *_ordering_cycle_diagnostics(resources),
     ]
@@ -861,7 +799,7 @@ def plan(
         manifest=manifest,
         base_snapshot=snapshot,
         scenario_name=model.scenario_name,
-        model=model,
+        model=effective_model,
         provisioning=provisioning,
         orchestration=orchestration,
         evaluation=evaluation,

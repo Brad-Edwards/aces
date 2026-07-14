@@ -1,4 +1,4 @@
-"""Observed runtime software component inventory models for SDL nodes."""
+"""Declarative runtime software component requirements for SDL nodes."""
 
 from enum import Enum
 
@@ -15,7 +15,7 @@ from .runtime_values import (
 
 
 class RuntimeSoftwareComponentType(str, Enum):
-    """Portable type for a software component observed on a runtime node."""
+    """Portable type for a software component required on a runtime node."""
 
     APPLICATION = "application"
     FRAMEWORK = "framework"
@@ -33,15 +33,11 @@ class RuntimeSoftwareComponentType(str, Enum):
 
 
 class RuntimeSoftwareComponentProvenance(str, Enum):
-    """Origin class for an observed runtime software component fact."""
+    """Required source origin for a runtime software component."""
 
     PACKAGE_MANAGER = "package_manager"
     DEPENDENCY_MANIFEST = "dependency_manifest"
-    SBOM = "sbom"
-    SCANNER = "scanner"
     IMAGE_METADATA = "image_metadata"
-    FILESYSTEM = "filesystem"
-    PROCESS_INSPECTION = "process_inspection"
     OPERATOR = "operator"
     SELF_REPORTED = "self_reported"
     UNKNOWN = "unknown"
@@ -49,7 +45,7 @@ class RuntimeSoftwareComponentProvenance(str, Enum):
 
 
 class RuntimeSoftwareComponentHash(SDLModel):
-    """Digest attached to an observed runtime software component."""
+    """Digest required for a runtime software component."""
 
     algorithm: str
     value: str
@@ -63,7 +59,7 @@ class RuntimeSoftwareComponentHash(SDLModel):
 
 
 class RuntimeSoftwareComponent(SDLModel):
-    """A software component observed as part of a runtime node's state."""
+    """A software component required as part of a runtime node's state."""
 
     component_id: str
     name: str

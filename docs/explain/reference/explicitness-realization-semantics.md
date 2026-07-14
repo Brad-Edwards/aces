@@ -52,6 +52,8 @@ Build on these existing surfaces before adding anything new:
 
 - SDL parsing and closed models: `aces_sdl.parser`, `aces_sdl.SDLModel`, and
   Pydantic `extra="forbid"` model boundaries
+- scoped author intent: `aces_sdl.realization_designation`, plus the
+  designation records in expansion and instantiation provenance
 - static semantics: `SemanticValidator` and `SDLValidationError`
 - instantiation: `instantiate_scenario()` and `SDLInstantiationError`
 - shared semantic helpers: `aces_sdl.semantics.*` and
@@ -89,7 +91,9 @@ The implementation must pass every layer it touches:
 - instantiation gate: defaults and parameters may fill open concerns only when
   the owning semantic rule permits it; concrete scenarios must be revalidated.
 - contract/schema gate: external payload shape belongs in `ContractModel`
-  descendants and generated schemas. Do not hand-edit `contracts/schemas/`.
+  descendants and the coordinated hand-governed/reference-model schema
+  surface. Reconcile model, schema, publication manifest, and generator parity
+  in one change.
 - manifest/profile gate: supported contract versions, concept bindings,
   binding scopes, realization support modes, exact requirement kinds, and
   controlled vocabulary terms must resolve through existing authority helpers.
@@ -123,6 +127,41 @@ additional exact requirement kinds for other artifact families; that should
 require adding governed terms and shared semantic checks, not rewriting planner
 or conformance call sites.
 
+Explicit root delegation reaches planning through the injected
+`apparatus_realization_default` resolver. Its current fallback is closed; a
+future typed apparatus-default contract can supply a different choice without
+changing SDL cascade rules or backend implementations.
+
+## Scoped Default Cascade
+
+The one author-facing inherited-default surface is the optional scenario-root
+`realization` block. It carries a `default` posture and zero or more typed scope
+entries. Each scope identity is a namespace tuple plus a canonical RFC 6901
+field pointer; dotted paths, wildcards, and JSONPath are not accepted author
+syntax.
+
+Resolution preserves these distinctions:
+
+- an explicit exact, constrained, or open leaf is authoritative;
+- otherwise the most-specific concrete scoped posture wins, independent of
+  source order;
+- `unspecified` inherits an enclosing concrete posture, or delegates the root
+  decision to the selected-apparatus resolver;
+- omitting `realization` preserves the legacy closed behavior and is not the
+  same state as explicit root delegation.
+
+Composition rewrites declaration pointers through the import symbol map and
+qualifies designation records with the import namespace. A module default can
+therefore govern that module's declarations without leaking to its host or a
+sibling module. The authoring block itself is removed during expansion and
+instantiation; typed records travel in the existing phase-provenance aggregates
+and then in compiled realization requirements.
+
+Open affects only registered realization concerns. It does not relax closed
+Pydantic shapes, invent topology, bypass references, or make every absent
+optional field backend-realizable. The apparatus support mode remains a
+capability disclosure rather than author intent.
+
 ## Authoring Specificity
 
 `classify_authoring_specificity()` is the DSL-115 helper for reviewing
@@ -148,11 +187,18 @@ author-intent source.
 
 Planner rejection belongs in the existing `aces_processor.planner.plan()` /
 `ExecutionPlan.diagnostics` path. Unsupported exact or constrained requirement
-kinds should be reported as stable `Diagnostic` objects that name the compiled
+kinds and open demand without explicit `OPEN_REALIZATION` support should be
+reported as stable `Diagnostic` objects that name the compiled
 resource address, SDL field path or equivalent field identifier, requirement
 kind, and missing `realization_support` capability. Do not introduce a
 SEM-218-specific exception hierarchy or throw from normal planning for this
 case.
+
+When a backend publishes a finer realization envelope, project that offer onto
+the compiled open concern paths and evaluate it with the canonical
+`subsumes(offered, requested)` relation. Keep unrelated offered bindings out of
+the projection so a constraint on an exact, unrelated field cannot narrow the
+author's open concern by accident.
 
 Keep realization-support matching as one manifest-bound helper over
 `BackendManifest.realization_support` / `RealizationSupportDeclaration`.
@@ -170,6 +216,7 @@ Avoid:
 - using `realization_support` as a substitute for authoring semantics
 - treating `open-realization` as permission to ignore exact declarations
 - treating missing data as equivalent to backend freedom
+- accepting dotted, partially tokenized, wildcard, or JSONPath scope targets
 - silently downgrading an exact requirement into a constrained or best-effort
   realization
 - adding a second exception hierarchy, schema registry, vocabulary table, or
@@ -187,17 +234,10 @@ Avoid:
 
 This note is implementation guidance for the SEM-218 normative spec at
 {download}`specs/formal/realization/explicitness-and-realization.md <../../../specs/formal/realization/explicitness-and-realization.md>`.
-It does not itself add SDL syntax, define exact-requirement-kinds, or
-change manifest payloads — those are governed by the spec and by the
-controlled-vocabulary / reference-model authorities. The PR that
-introduced the spec promoted the SEM-218 row in the SEM-200 coverage
-table to `partial` and transitioned the requirement from `DRAFT` to
-`ACTIVE` in Ground Control. The staged work that lifted the row from
-`partial` to `active` — the SEM-218 classifier in `SemanticValidator`,
-the typed compiler emission, the planner gate, the runtime
-non-approximation gate (`aces_processor.semantics.realization`, invoked
-from the `aces_runtime` adapter boundary), and the
-SEM-218 `realization_provenance` fields on the runtime snapshot envelope —
-is now complete, and the coverage row reads `active`. Treat the prose
-above as architecture guidance for that work; treat the spec as the
-binding contract.
+It does not itself define exact-requirement-kind vocabularies or change
+manifest payloads — those are governed by the spec and by the
+controlled-vocabulary / reference-model authorities. The SEM-218 coverage row
+is `active`: the classifier, typed scoped designation cascade, compiler carrier,
+planner gate, runtime non-approximation/disclosure gate, and snapshot
+provenance delivery are implemented together. Treat the prose above as
+architecture guidance for those surfaces and the spec as the binding contract.

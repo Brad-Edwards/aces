@@ -348,6 +348,16 @@
       "title": "AssetValueLevel",
       "type": "string"
     },
+    "AuthorRealizationPosture": {
+      "description": "Authored default posture, distinct from capability support modes.",
+      "enum": [
+        "closed",
+        "open",
+        "unspecified"
+      ],
+      "title": "AuthorRealizationPosture",
+      "type": "string"
+    },
     "BehaviorSpecificationExtensionValue": {
       "anyOf": [
         {
@@ -5015,6 +5025,63 @@
       "title": "PropositionBasis",
       "type": "string"
     },
+    "RealizationDesignation": {
+      "additionalProperties": false,
+      "description": "Scenario-root SEM-218 designation table.",
+      "properties": {
+        "default": {
+          "$ref": "#/$defs/AuthorRealizationPosture",
+          "default": "unspecified"
+        },
+        "scopes": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/RealizationScopeDesignation"
+          },
+          "title": "Scopes",
+          "type": "array"
+        }
+      },
+      "title": "RealizationDesignation",
+      "type": "object"
+    },
+    "RealizationScopeDesignation": {
+      "additionalProperties": false,
+      "description": "One typed lexical override at a canonical composed-model scope.",
+      "properties": {
+        "field_pointer": {
+          "maxLength": 4096,
+          "minLength": 1,
+          "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+          "title": "Field Pointer",
+          "type": "string"
+        },
+        "namespace": {
+          "default": [],
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            },
+            "pattern": "^[a-z0-9]",
+            "type": "string"
+          },
+          "maxItems": 31,
+          "title": "Namespace",
+          "type": "array"
+        },
+        "posture": {
+          "$ref": "#/$defs/AuthorRealizationPosture"
+        }
+      },
+      "required": [
+        "field_pointer",
+        "posture"
+      ],
+      "title": "RealizationScopeDesignation",
+      "type": "object"
+    },
     "Relationship": {
       "additionalProperties": false,
       "description": "A typed directed edge between two named scenario elements.\n\nSource and target can reference any named element in the scenario:\nnodes, features, accounts, entities, or infrastructure entries.\nThe validator checks that both endpoints resolve.\n\nThe ``properties`` dict carries type-specific metadata (e.g.,\n``trust_type: parent-child`` for AD trusts, ``protocol: SAML``\nfor federation). It's a flat dict rather than typed sub-models\nbecause relationship properties vary widely and we don't want\nto gate expressiveness on pre-modeling every variant.\n\n``database_access`` and ``mail_access`` are typed exceptions where\nprotocol/auth details need structural validation rather than prose.\n``forwarding_edge``, ``service_integration``, and ``proxy_upstream`` are\nthe same kind of typed exception for, respectively, a forwarding /\nintel-sync agent's inter-node trust edge (SCN-010 \u00a75.7), a platform\nconsumer-to-engine service integration, and a reverse-proxy/gateway\nroute-to-origin upstream hop. Each keeps protocol/auth/topology facts\nstructurally validated and cross-referable rather than buried in prose.",
@@ -6462,7 +6529,7 @@
     },
     "RuntimeConfiguration": {
       "additionalProperties": false,
-      "description": "Observed runtime configuration facts attached to a VM node.",
+      "description": "Declarative runtime state required by a VM node.\n\nCaptured observations remain in evidence records unless an author\ndeliberately promotes the fact to one of these contract fields.",
       "properties": {
         "app_authorizations": {
           "items": {
@@ -6563,17 +6630,6 @@
           "title": "Forwarding Agents",
           "type": "array"
         },
-        "health": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/RuntimeHealthObservation"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        },
         "identity_authorities": {
           "items": {
             "$ref": "#/$defs/RuntimeIdentityAuthority"
@@ -6667,13 +6723,6 @@
           "title": "Orchestration Authorities",
           "type": "array"
         },
-        "package_vulnerabilities": {
-          "items": {
-            "$ref": "#/$defs/RuntimePackageVulnerabilityFinding"
-          },
-          "title": "Package Vulnerabilities",
-          "type": "array"
-        },
         "packages": {
           "items": {
             "$ref": "#/$defs/RuntimePackage"
@@ -6743,7 +6792,7 @@
     },
     "RuntimeContainerConfiguration": {
       "additionalProperties": false,
-      "description": "Observed container runtime host and security configuration facts.",
+      "description": "Required container runtime host and security configuration facts.",
       "properties": {
         "autoremove": {
           "anyOf": [
@@ -8460,7 +8509,7 @@
     },
     "RuntimeDependencyManifest": {
       "additionalProperties": false,
-      "description": "A dependency manifest visible in the realized runtime artifact.",
+      "description": "A dependency manifest required in the runtime artifact.",
       "properties": {
         "ecosystem": {
           "title": "Ecosystem",
@@ -8495,7 +8544,7 @@
     },
     "RuntimeDeviceMapping": {
       "additionalProperties": false,
-      "description": "A host device mapping observed in runtime configuration.",
+      "description": "A host device mapping required in runtime configuration.",
       "properties": {
         "container_path": {
           "title": "Container Path",
@@ -8640,7 +8689,7 @@
       "type": "object"
     },
     "RuntimeEnvironmentValueClassification": {
-      "description": "Sensitivity classification for an observed runtime environment value.",
+      "description": "Sensitivity classification for a required runtime environment value.",
       "enum": [
         "plain",
         "redacted",
@@ -8654,7 +8703,7 @@
     },
     "RuntimeEnvironmentVariable": {
       "additionalProperties": false,
-      "description": "Observed runtime environment variable with provenance and sensitivity.",
+      "description": "Required runtime environment variable with provenance and sensitivity.",
       "properties": {
         "description": {
           "default": "",
@@ -8707,7 +8756,7 @@
       "type": "object"
     },
     "RuntimeEnvironmentVariableProvenance": {
-      "description": "Origin class for an observed runtime environment variable.",
+      "description": "Required origin class for a runtime environment variable.",
       "enum": [
         "compose",
         "image",
@@ -8722,7 +8771,7 @@
     },
     "RuntimeExtraHost": {
       "additionalProperties": false,
-      "description": "An observed extra host mapping in runtime configuration.",
+      "description": "A required extra host mapping in runtime configuration.",
       "properties": {
         "address": {
           "title": "Address",
@@ -10142,116 +10191,6 @@
       "title": "RuntimeForwardingTransformKind",
       "type": "string"
     },
-    "RuntimeHealthObservation": {
-      "additionalProperties": false,
-      "description": "Observed runtime health status and healthcheck log facts.",
-      "properties": {
-        "description": {
-          "default": "",
-          "title": "Description",
-          "type": "string"
-        },
-        "failing_streak": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Failing Streak"
-        },
-        "log": {
-          "items": {
-            "$ref": "#/$defs/RuntimeHealthcheckLog"
-          },
-          "title": "Log",
-          "type": "array"
-        },
-        "status": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/RuntimeHealthStatus"
-            },
-            {
-              "type": "string"
-            }
-          ],
-          "default": "unknown",
-          "title": "Status"
-        }
-      },
-      "title": "RuntimeHealthObservation",
-      "type": "object"
-    },
-    "RuntimeHealthStatus": {
-      "description": "Observed health status for a runtime node or container.",
-      "enum": [
-        "none",
-        "starting",
-        "healthy",
-        "unhealthy",
-        "unknown",
-        "other"
-      ],
-      "title": "RuntimeHealthStatus",
-      "type": "string"
-    },
-    "RuntimeHealthcheckLog": {
-      "additionalProperties": false,
-      "description": "An observed runtime healthcheck log entry.",
-      "properties": {
-        "end": {
-          "default": "",
-          "title": "End",
-          "type": "string"
-        },
-        "exit_code": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Exit Code"
-        },
-        "output": {
-          "default": "",
-          "title": "Output",
-          "type": "string"
-        },
-        "output_redacted": {
-          "anyOf": [
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "string"
-            }
-          ],
-          "default": false,
-          "title": "Output Redacted"
-        },
-        "start": {
-          "default": "",
-          "title": "Start",
-          "type": "string"
-        }
-      },
-      "title": "RuntimeHealthcheckLog",
-      "type": "object"
-    },
     "RuntimeIdentityAttribute": {
       "additionalProperties": false,
       "description": "Observed identity attribute or bounded setting.\n\nSecret-bearing names must not carry raw values. This keeps directory\npasswords, Kerberos keys, keytabs, tokens, and client secrets out of\nfixtures, diagnostics, schemas, and generated runtime artifacts.",
@@ -10805,7 +10744,7 @@
     },
     "RuntimeInitProcess": {
       "additionalProperties": false,
-      "description": "Observed backend-injected container init / PID-1 reaper configuration.\n\nModels authored container runtime intent \u2014 for example Docker Compose\n``init: true`` causing PID 1 to be ``/sbin/docker-init`` (tini). This is\ndistinct from the observed PID-1 process recorded in\n``runtime.processes``; see ADR-027.",
+      "description": "Required backend-injected container init / PID-1 reaper configuration.\n\nModels authored container runtime intent \u2014 for example Docker Compose\n``init: true`` causing PID 1 to be ``/sbin/docker-init`` (tini). This is\ndistinct from the observed PID-1 process recorded in\n``runtime.processes``; see ADR-027.",
       "properties": {
         "argv": {
           "items": {
@@ -12328,7 +12267,7 @@
     },
     "RuntimeNamespaceConfiguration": {
       "additionalProperties": false,
-      "description": "Observed namespace modes for a runtime node or container.",
+      "description": "Required namespace modes for a runtime node or container.",
       "properties": {
         "cgroup": {
           "default": "",
@@ -12361,7 +12300,7 @@
     },
     "RuntimeNetworkBackendDetail": {
       "additionalProperties": false,
-      "description": "Observed backend network driver and IPAM detail for an endpoint's network.\n\n``driver_options`` and ``ipam_options`` are the bounded extension seam for\nbackend-native key/value facts; raw backend inspect payloads are not stored.",
+      "description": "Required backend network driver and IPAM detail for an endpoint's network.\n\n``driver_options`` and ``ipam_options`` are the bounded extension seam for\nbackend-native key/value facts; raw backend inspect payloads are not stored.",
       "properties": {
         "description": {
           "default": "",
@@ -13010,7 +12949,7 @@
       "type": "string"
     },
     "RuntimeNetworkDriver": {
-      "description": "Observed backend network driver class for a realized network.",
+      "description": "Backend network driver class required by the scenario.",
       "enum": [
         "bridge",
         "overlay",
@@ -13026,7 +12965,7 @@
     },
     "RuntimeNetworkEndpoint": {
       "additionalProperties": false,
-      "description": "An observed container network endpoint (per-network attachment).\n\n``network`` references a declared switch-backed infrastructure network by\nname. Per-network ``aliases``, observed ``dns_names``, and backend-generated\n``generated_dns_names`` are kept as three distinct lists; generated names\nare not stable scenario identity.",
+      "description": "A required container network attachment.\n\n``network`` references a declared switch-backed infrastructure network by\nname. Runtime-generated identifiers and names are capture evidence, not\ndeclaration identity.",
       "properties": {
         "aliases": {
           "items": {
@@ -13046,21 +12985,6 @@
           ],
           "default": null
         },
-        "backend_generated": {
-          "anyOf": [
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Backend Generated"
-        },
         "description": {
           "default": "",
           "title": "Description",
@@ -13073,34 +12997,10 @@
           "title": "Dns Names",
           "type": "array"
         },
-        "endpoint_id": {
-          "default": "",
-          "title": "Endpoint Id",
-          "type": "string"
-        },
-        "endpoint_id_stability": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/RuntimeNetworkIdStability"
-            },
-            {
-              "type": "string"
-            }
-          ],
-          "default": "unknown",
-          "title": "Endpoint Id Stability"
-        },
         "gateway": {
           "default": "",
           "title": "Gateway",
           "type": "string"
-        },
-        "generated_dns_names": {
-          "items": {
-            "type": "string"
-          },
-          "title": "Generated Dns Names",
-          "type": "array"
         },
         "ip_address": {
           "default": "",
@@ -13130,23 +13030,6 @@
         "network": {
           "title": "Network",
           "type": "string"
-        },
-        "network_id": {
-          "default": "",
-          "title": "Network Id",
-          "type": "string"
-        },
-        "network_id_stability": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/RuntimeNetworkIdStability"
-            },
-            {
-              "type": "string"
-            }
-          ],
-          "default": "unknown",
-          "title": "Network Id Stability"
         }
       },
       "required": [
@@ -13155,20 +13038,9 @@
       "title": "RuntimeNetworkEndpoint",
       "type": "object"
     },
-    "RuntimeNetworkIdStability": {
-      "description": "Stability class for a backend-generated network or endpoint identifier.\n\nDistinct from :class:`RuntimeFilesystemStability`: filesystem stability and\nbackend-identifier stability are different concepts (ADR-025).",
-      "enum": [
-        "stable",
-        "ephemeral",
-        "unknown",
-        "other"
-      ],
-      "title": "RuntimeNetworkIdStability",
-      "type": "string"
-    },
     "RuntimeNetworkRealization": {
       "additionalProperties": false,
-      "description": "Observed container network realization facts for a node.\n\n``hostname`` and ``domainname`` are the container's network identity facts,\nkept distinct from per-network aliases and DNS names.",
+      "description": "Declarative container network state for a node.\n\n``hostname`` and ``domainname`` are required container network identities,\nkept distinct from per-network aliases and DNS names.",
       "properties": {
         "description": {
           "default": "",
@@ -13389,7 +13261,7 @@
     },
     "RuntimeOperationalPolicy": {
       "additionalProperties": false,
-      "description": "Observed restart and resource-limit policy for a runtime node.",
+      "description": "Required restart and resource-limit policy for a runtime node.",
       "properties": {
         "description": {
           "default": "",
@@ -13686,7 +13558,7 @@
     },
     "RuntimePackage": {
       "additionalProperties": false,
-      "description": "A package observed in a runtime image or node.",
+      "description": "A package required in a runtime image or node.",
       "properties": {
         "architecture": {
           "default": "",
@@ -13723,91 +13595,6 @@
       ],
       "title": "RuntimePackage",
       "type": "object"
-    },
-    "RuntimePackageVulnerabilityFinding": {
-      "additionalProperties": false,
-      "description": "A scanner-derived CVE/advisory finding for an observed package.",
-      "properties": {
-        "advisory_url": {
-          "default": "",
-          "title": "Advisory Url",
-          "type": "string"
-        },
-        "fixed_version": {
-          "default": "",
-          "title": "Fixed Version",
-          "type": "string"
-        },
-        "id": {
-          "title": "Id",
-          "type": "string"
-        },
-        "image_digest": {
-          "title": "Image Digest",
-          "type": "string"
-        },
-        "installed_version": {
-          "title": "Installed Version",
-          "type": "string"
-        },
-        "package_name": {
-          "title": "Package Name",
-          "type": "string"
-        },
-        "scan_time": {
-          "title": "Scan Time",
-          "type": "string"
-        },
-        "scanner": {
-          "title": "Scanner",
-          "type": "string"
-        },
-        "scanner_database": {
-          "default": "",
-          "title": "Scanner Database",
-          "type": "string"
-        },
-        "scanner_version": {
-          "default": "",
-          "title": "Scanner Version",
-          "type": "string"
-        },
-        "severity": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/RuntimePackageVulnerabilitySeverity"
-            },
-            {
-              "type": "string"
-            }
-          ],
-          "default": "unknown",
-          "title": "Severity"
-        }
-      },
-      "required": [
-        "id",
-        "package_name",
-        "installed_version",
-        "scanner",
-        "image_digest",
-        "scan_time"
-      ],
-      "title": "RuntimePackageVulnerabilityFinding",
-      "type": "object"
-    },
-    "RuntimePackageVulnerabilitySeverity": {
-      "description": "Scanner-derived package finding severity.",
-      "enum": [
-        "unknown",
-        "low",
-        "medium",
-        "high",
-        "critical",
-        "other"
-      ],
-      "title": "RuntimePackageVulnerabilitySeverity",
-      "type": "string"
     },
     "RuntimePlatformApplication": {
       "additionalProperties": false,
@@ -14597,7 +14384,7 @@
     },
     "RuntimePublishedPort": {
       "additionalProperties": false,
-      "description": "An observed host-published port binding for a container endpoint.\n\nHost IP, host port, container port, and protocol are kept distinct; this is\na runtime/host exposure fact, not a node service declaration (ADR-025).",
+      "description": "A required host-published port binding for a container endpoint.\n\nHost IP, host port, container port, and protocol are kept distinct; this is\na runtime/host exposure fact, not a node service declaration (ADR-025).",
       "properties": {
         "container_port": {
           "anyOf": [
@@ -14696,7 +14483,7 @@
     },
     "RuntimeResourceLimits": {
       "additionalProperties": false,
-      "description": "Observed runtime/cgroup resource limits for a node.",
+      "description": "Required runtime/cgroup resource limits for a node.",
       "properties": {
         "cpu": {
           "anyOf": [
@@ -14783,7 +14570,7 @@
       "type": "object"
     },
     "RuntimeRestartPolicy": {
-      "description": "Portable restart policy classification observed at runtime.",
+      "description": "Portable restart policy required by the scenario.",
       "enum": [
         "no",
         "always",
@@ -16257,7 +16044,7 @@
     },
     "RuntimeSoftwareComponent": {
       "additionalProperties": false,
-      "description": "A software component observed as part of a runtime node's state.",
+      "description": "A software component required as part of a runtime node's state.",
       "properties": {
         "component_id": {
           "title": "Component Id",
@@ -16360,7 +16147,7 @@
     },
     "RuntimeSoftwareComponentHash": {
       "additionalProperties": false,
-      "description": "Digest attached to an observed runtime software component.",
+      "description": "Digest required for a runtime software component.",
       "properties": {
         "algorithm": {
           "title": "Algorithm",
@@ -16379,15 +16166,11 @@
       "type": "object"
     },
     "RuntimeSoftwareComponentProvenance": {
-      "description": "Origin class for an observed runtime software component fact.",
+      "description": "Required source origin for a runtime software component.",
       "enum": [
         "package_manager",
         "dependency_manifest",
-        "sbom",
-        "scanner",
         "image_metadata",
-        "filesystem",
-        "process_inspection",
         "operator",
         "self_reported",
         "unknown",
@@ -16397,7 +16180,7 @@
       "type": "string"
     },
     "RuntimeSoftwareComponentType": {
-      "description": "Portable type for a software component observed on a runtime node.",
+      "description": "Portable type for a software component required on a runtime node.",
       "enum": [
         "application",
         "framework",
@@ -16901,7 +16684,7 @@
     },
     "ServicePort": {
       "additionalProperties": false,
-      "description": "A network service exposed by a node. From OCSF NetworkEndpoint.",
+      "description": "Authored identity of a node-local transport binding.\n\nA service declaration does not authorize traffic, prove a live listener,\npublish a host port, or classify an internal/external audience. Traffic\nauthorization belongs to infrastructure ACLs; observed bind state and host\npublication belong to their dedicated runtime surfaces.",
       "properties": {
         "description": {
           "default": "",
@@ -18337,6 +18120,18 @@
       },
       "title": "Propositions",
       "type": "object"
+    },
+    "realization": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RealizationDesignation"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "x-aces-realization-dimension": false
     },
     "relationships": {
       "additionalProperties": {

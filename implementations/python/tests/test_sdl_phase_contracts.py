@@ -57,7 +57,7 @@ def _provenance(
 def test_phase_models_have_disjoint_authoring_and_instantiated_fields() -> None:
     shared = set(ScenarioContent.model_fields)
     assert not issubclass(InstantiatedScenario, Scenario)
-    assert set(Scenario.model_fields) == shared | {"module", "imports", "variables"}
+    assert set(Scenario.model_fields) == shared | {"module", "imports", "realization", "variables"}
     assert set(ExpandedScenario.model_fields) == shared | {"variables", "expansion_provenance"}
     assert set(InstantiatedScenario.model_fields) == shared | {"instantiation_provenance"}
     assert "ExpandedScenario" not in aces_sdl.__all__
@@ -384,6 +384,57 @@ def test_import_provenance_rejects_host_paths_and_registry_credentials(
         ResolvedImportProvenance.model_validate(payload)
 
 
+def test_imported_explicitness_projects_only_surviving_namespaced_fields(tmp_path) -> None:
+    for module_name in ("first", "second"):
+        (tmp_path / f"{module_name}.yaml").write_text(
+            f"""
+name: {module_name}
+version: 1.0.0
+module:
+  id: aces/{module_name}
+  version: 1.0.0
+  exports: {{nodes: [host]}}
+behavior_specifications: {{}}
+nodes:
+  host:
+    type: vm
+    os: linux
+    resources: {{ram: 1 gib, cpu: 1}}
+""",
+            encoding="utf-8",
+        )
+    root = tmp_path / "root.yaml"
+    root.write_text(
+        """
+name: root
+version: 1.0.0
+imports:
+  - path: first.yaml
+    namespace: first
+    version: 1.0.0
+  - path: second.yaml
+    namespace: second
+    version: 1.0.0
+""",
+        encoding="utf-8",
+    )
+
+    expanded = parse_sdl_file(root)
+    paths = [record.model_path for record in expanded.expansion_provenance.explicitness]
+
+    assert len(paths) == len(set(paths))
+    assert {"name", "version", "behavior_specifications"}.isdisjoint(paths)
+    assert {
+        "nodes.first.host.os",
+        "nodes.second.host.os",
+    }.issubset(paths)
+    assert all(path.startswith("nodes.") for path in paths)
+
+    concrete = instantiate_scenario(expanded)
+    instantiated_paths = {record.model_path for record in concrete.instantiation_provenance.explicitness}
+    assert set(paths).issubset(instantiated_paths)
+
+
 def test_nested_import_provenance_is_ordered_portable_and_replay_complete(tmp_path) -> None:
     inner = tmp_path / "inner.yaml"
     inner.write_text(
@@ -440,7 +491,11 @@ imports:
         encoding="utf-8",
     )
 
-    concrete = instantiate_scenario(parse_sdl_file(root))
+    expanded = parse_sdl_file(root)
+    portable_explicitness = {record.model_path: record for record in expanded.expansion_provenance.explicitness}
+    assert portable_explicitness["nodes.outer.inner.host.os"].parameters == (("outer", "inner", "image"),)
+
+    concrete = instantiate_scenario(expanded)
     imports = concrete.instantiation_provenance.imports
 
     assert [record.namespace for record in imports] == [("outer",), ("outer", "inner")]
@@ -456,3 +511,5 @@ imports:
     constraint = concrete.instantiation_provenance.capability_constraints[0]
     assert constraint.parameter == ("outer", "inner", "image")
     assert constraint.field_pointer == "/nodes/outer.inner.host/os"
+    instantiated_explicitness = {record.model_path: record for record in concrete.instantiation_provenance.explicitness}
+    assert instantiated_explicitness["nodes.outer.inner.host.os"] == portable_explicitness["nodes.outer.inner.host.os"]

@@ -58,6 +58,21 @@ ignores extras it does not use.
   (a partial failure rolls back what succeeded), and containers are attached to
   every network their plan declares.
 
+### Service and ACL boundary
+
+The interpreter preserves each authored `Node.services[]` entry as a typed
+service descriptor on the portable container specification, including unnamed
+services and non-TCP protocols. Both bundled drivers treat those descriptors as
+descriptor-only: they do not publish host ports, configure daemons, synthesize
+allow rules, or claim that a listener exists. Reachability therefore never
+follows from a service declaration.
+
+Traffic authorization remains the separate `infrastructure.*.acls` concern.
+The reference backend declares `supports_acls=false` because neither bundled
+driver enforces ACLs; the planner rejects such a plan before apply. A future
+driver that realizes services or ACLs must use the existing realization-concern
+and diagnostic surfaces and provide evidence for the runtime effect it claims.
+
 ```python
 from aces_reference_backend import create_reference_backend_target
 from aces_reference_backend.drivers.oci import OciDeploymentDriver

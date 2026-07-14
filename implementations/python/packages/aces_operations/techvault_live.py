@@ -104,6 +104,7 @@ def validate_techvault_live(
         scenario, plan_check = _plan_scenario(target, scenario_path)
         del scenario
         checks.append(plan_check)
+        snapshot: Mapping[str, object] = {}
         if plan_check.passed:
             boot_check = _apply_plan(target, scenario_path, driver)
             checks.append(boot_check)
@@ -113,20 +114,20 @@ def validate_techvault_live(
                 checks.append(_surface_check(snapshot))
                 cleanup_ok, cleanup_diagnostics = cleanup_native_snapshot(driver, snapshot)
                 checks.append(LiveCheck("verified_native_cleanup", cleanup_ok, cleanup_diagnostics))
-            manifest_path = _write_manifest(
-                output_dir,
-                run_id,
-                scenario_path,
-                snapshot,
-                checks,
+        manifest_path = _write_manifest(
+            output_dir,
+            run_id,
+            scenario_path,
+            snapshot,
+            checks,
+        )
+        checks.append(
+            LiveCheck(
+                "run_archive_manifest",
+                manifest_path is not None,
+                () if manifest_path else ("manifest write failed",),
             )
-            checks.append(
-                LiveCheck(
-                    "run_archive_manifest",
-                    manifest_path is not None,
-                    () if manifest_path else ("manifest write failed",),
-                )
-            )
+        )
     return TechVaultLiveReport(str(scenario_path), str(output_dir), run_id, tuple(checks), manifest_path)
 
 

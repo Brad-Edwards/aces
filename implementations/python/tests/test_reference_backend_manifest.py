@@ -36,6 +36,12 @@ def test_manifest_declares_orchestrator_evaluator_participant_runtime_and_observ
     assert manifest.has_observation
 
 
+def test_manifest_does_not_claim_unimplemented_acl_enforcement():
+    manifest = create_reference_backend_manifest()
+
+    assert manifest.provisioner.supports_acls is False
+
+
 def test_manifest_accepts_and_ignores_extra_config_kwargs():
     # Config kwargs flow to both factories; the manifest factory must accept
     # and ignore extras such as ``driver``.

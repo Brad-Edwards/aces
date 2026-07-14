@@ -27,6 +27,7 @@ adr_refs:
   - ADR-007
   - ADR-018
   - ADR-078
+  - ADR-081
 
 # Registry of classified formal-spec subsystems. Every immediate subdirectory of
 # specs/formal/ carrying a README.md must appear here (the checker fails on any
@@ -67,6 +68,9 @@ subsystems:
     fm_level: FM2
   - id: sdl-phases
     path: specs/formal/sdl-phases
+    fm_level: FM2
+  - id: behavioral-relations
+    path: specs/formal/behavioral-relations
     fm_level: FM2
 
 # Fulfillment, keyed by subsystem id. delivered_artifacts name a concrete,
@@ -251,7 +255,7 @@ entries:
       - kind: unit_tests
         path: implementations/python/tests/test_runtime_conformance.py
       - kind: typed_ir_or_contract_coverage
-        path: implementations/python/packages/aces_processor/models.py
+        path: implementations/python/packages/aces_processor/models/history_event.py
     waived_artifacts:
       - kind: unit_tests
         date: 2026-06-23
@@ -366,4 +370,16 @@ entries:
         path: implementations/python/packages/aces_sdl/phase_contracts.py
       - kind: property_based_or_differential_tests
         path: implementations/python/tests/test_sdl_phase_contracts.py
+    waived_artifacts: []
+
+  - subsystem: behavioral-relations
+    delivered_artifacts:
+      - kind: invariant_list
+        path: specs/formal/behavioral-relations/README.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_behavioral_relations.py
+      - kind: typed_ir_or_contract_coverage
+        path: implementations/python/packages/aces_contracts/behavioral_relations.py
+      - kind: property_based_or_differential_tests
+        path: implementations/python/tests/test_behavioral_relations.py
     waived_artifacts: []

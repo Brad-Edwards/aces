@@ -90,7 +90,7 @@ The participant behavior evidence set is
 ## Implementation Mapping
 
 - shared result constraints: `implementations/python/packages/aces_processor/semantics/workflow.py`
-- typed result models: `implementations/python/packages/aces_processor/models.py`
+- typed result models: `implementations/python/packages/aces_processor/models/`
 - manager contract validation: `implementations/python/packages/aces_processor/manager.py`
 - backend example: `implementations/python/packages/aces_backend_stubs/stubs.py`
 - participant capability contract model:

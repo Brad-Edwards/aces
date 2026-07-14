@@ -12,6 +12,7 @@ from pydantic import ConfigDict, Field, model_validator
 from ._base import SDLModel
 from ._identifiers import PortableIdentifier, QualifiedName, require_module_identifier
 from .explicitness import ExplicitnessClass, ExplicitnessProvenance
+from .realization_designation import RealizationDesignationRecord
 
 _DIGEST_PATTERN = r"^sha256:[a-f0-9]{64}$"
 _JSON_POINTER_RE = re.compile(r"^(?:/(?:[^~/]|~[01])*)*$")
@@ -136,6 +137,7 @@ class ExpansionProvenance(FrozenPhaseModel):
     imports: tuple[ResolvedImportProvenance, ...] = ()
     capability_constraints: tuple[CapabilityConstraint, ...] = ()
     explicitness: tuple[ExplicitnessProvenanceRecord, ...] = ()
+    realization_designations: tuple[RealizationDesignationRecord, ...] = ()
 
     @model_validator(mode="after")
     def _validate_unique_identities(self) -> ExpansionProvenance:
@@ -143,6 +145,7 @@ class ExpansionProvenance(FrozenPhaseModel):
             imports=self.imports,
             constraints=self.capability_constraints,
             explicitness=self.explicitness,
+            realization_designations=self.realization_designations,
         )
         return self
 
@@ -156,6 +159,7 @@ class InstantiationProvenance(FrozenPhaseModel):
     imports: tuple[ResolvedImportProvenance, ...] = ()
     capability_constraints: tuple[CapabilityConstraint, ...] = ()
     explicitness: tuple[ExplicitnessProvenanceRecord, ...] = ()
+    realization_designations: tuple[RealizationDesignationRecord, ...] = ()
 
     @model_validator(mode="after")
     def _validate_unique_identities(self) -> InstantiationProvenance:
@@ -168,6 +172,7 @@ class InstantiationProvenance(FrozenPhaseModel):
             imports=self.imports,
             constraints=self.capability_constraints,
             explicitness=self.explicitness,
+            realization_designations=self.realization_designations,
             root_bindings=self.bindings,
         )
         return self
@@ -184,6 +189,7 @@ def _validate_derivation_collections(
     imports: tuple[ResolvedImportProvenance, ...],
     constraints: tuple[CapabilityConstraint, ...],
     explicitness: tuple[ExplicitnessProvenanceRecord, ...],
+    realization_designations: tuple[RealizationDesignationRecord, ...],
     root_bindings: tuple[ParameterBinding, ...] = (),
 ) -> None:
     _require_unique(
@@ -197,6 +203,10 @@ def _validate_derivation_collections(
     _require_unique(
         (record.model_path for record in explicitness),
         "explicitness records must have unique model paths",
+    )
+    _require_unique(
+        ((record.namespace, record.field_pointer) for record in realization_designations),
+        "realization designation records must have unique scope identities",
     )
 
     binding_values = _binding_environment(imports, root_bindings)
@@ -297,5 +307,6 @@ __all__ = [
     "InstantiationProvenance",
     "ParameterBinding",
     "ResolvedImportProvenance",
+    "RealizationDesignationRecord",
     "SemanticDigest",
 ]

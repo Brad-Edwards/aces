@@ -94,7 +94,10 @@ def _libvirt_surface_coverage(artifact: Mapping[str, Any]) -> dict[str, str]:
         "participant_implementation_provenance": "recorded",
         "participant_episode_history": "recorded",
         "participant_behavior_history": "recorded",
-        "participant_terminal_observation": "recorded (behavior-history-equivalent)",
+        "participant_terminal_observation": (
+            "recorded (participant-projected history under the artifact's named observation boundary; "
+            "no equivalence comparison)"
+        ),
         "evaluator_wazuh_evidence": f"recorded (evaluator-only; {defensive_source})",
         "outcome_interpretation_evidence": "recorded",
     }

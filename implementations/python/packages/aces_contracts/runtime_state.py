@@ -66,6 +66,7 @@ class RealizationProvenanceEntry:
     requirement_kind: str
     explicitness: ExplicitnessClass
     provenance: ExplicitnessProvenance
+    governing_scope: str | None = None
 
 
 @dataclass

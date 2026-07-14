@@ -47,6 +47,7 @@ REFERENCE_COMPLETION_TARGETS = {
 }
 
 SECTION_FIELD_COMPLETIONS = {
+    "realization": ("default", "scopes"),
     "nodes": ("type", "description", "os", "resources", "features", "conditions", "services", "roles"),
     "infrastructure": ("count", "links", "dependencies", "properties"),
     "features": ("type", "source", "version", "dependencies"),

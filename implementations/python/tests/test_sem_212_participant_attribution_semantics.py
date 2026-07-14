@@ -16,6 +16,7 @@ from aces_processor.models import (
     ParticipantAttributionOrderingBasis,
     ParticipantBehaviorHistoryEvent,
     ParticipantBehaviorHistoryEventType,
+    ParticipantHistoryAddressScope,
     ParticipantObservationBoundaryRuntime,
     ParticipantObservationStatus,
     iter_participant_behavior_history_violations,
@@ -262,8 +263,10 @@ def test_attribution_evidence_refs_must_be_authorized_by_participant_boundary() 
     violations = list(
         iter_participant_behavior_history_violations(
             _history_payloads(edge),
-            action_contract_addresses={ACTION_ADDRESS},
-            observation_boundary_addresses={OBSERVATION_ADDRESS},
+            address_scope=ParticipantHistoryAddressScope(
+                action_contract_addresses={ACTION_ADDRESS},
+                observation_boundary_addresses={OBSERVATION_ADDRESS},
+            ),
             observation_boundaries={OBSERVATION_ADDRESS: boundary},
         )
     )

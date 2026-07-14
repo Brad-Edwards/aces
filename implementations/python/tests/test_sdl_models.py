@@ -80,7 +80,6 @@ from aces.core.sdl.nodes import (
     RuntimeFilesystemEntryType,
     RuntimeFilesystemPresence,
     RuntimeFilesystemStability,
-    RuntimeHealthStatus,
     RuntimeIdentityAttribute,
     RuntimeIdentityAuthorityKind,
     RuntimeIdentityAuthorityProtocol,
@@ -97,9 +96,7 @@ from aces.core.sdl.nodes import (
     RuntimeNetworkBackendDetail,
     RuntimeNetworkDriver,
     RuntimeNetworkEndpoint,
-    RuntimeNetworkIdStability,
     RuntimeNetworkRealization,
-    RuntimePackageVulnerabilitySeverity,
     RuntimeProcessCapabilityOverride,
     RuntimeProcessRole,
     RuntimePublishedPort,
@@ -446,7 +443,7 @@ class TestNode:
                         "name": "shuffle-backend",
                         "version": "1.2.3",
                         "component_type": "application",
-                        "provenance": "scanner",
+                        "provenance": "package_manager",
                         "ecosystem": "go",
                         "purl": "pkg:golang/github.com/frikky/shuffle@1.2.3",
                         "cpe": "cpe:2.3:a:shuffle:shuffle:1.2.3:*:*:*:*:*:*:*",
@@ -463,18 +460,6 @@ class TestNode:
                         "ecosystem": "go",
                         "path": "/app/go.mod",
                         "format": "go-module",
-                    }
-                ],
-                "package_vulnerabilities": [
-                    {
-                        "id": "CVE-2026-12345",
-                        "package_name": "musl",
-                        "installed_version": "1.2.4-r2",
-                        "fixed_version": "1.2.5-r0",
-                        "severity": "high",
-                        "scanner": "trivy",
-                        "image_digest": "sha256:abc123",
-                        "scan_time": "2026-05-20T12:00:00Z",
                     }
                 ],
             },
@@ -504,7 +489,7 @@ class TestNode:
         assert runtime.software_components[0].name == "shuffle-backend"
         assert runtime.software_components[0].version == "1.2.3"
         assert runtime.software_components[0].component_type == RuntimeSoftwareComponentType.APPLICATION
-        assert runtime.software_components[0].provenance == RuntimeSoftwareComponentProvenance.SCANNER
+        assert runtime.software_components[0].provenance == RuntimeSoftwareComponentProvenance.PACKAGE_MANAGER
         assert runtime.software_components[0].ecosystem == "go"
         assert runtime.software_components[0].purl == "pkg:golang/github.com/frikky/shuffle@1.2.3"
         assert runtime.software_components[0].cpe == "cpe:2.3:a:shuffle:shuffle:1.2.3:*:*:*:*:*:*:*"
@@ -517,14 +502,106 @@ class TestNode:
         assert runtime.dependency_manifests[0].ecosystem == "go"
         assert runtime.dependency_manifests[0].path == "/app/go.mod"
         assert runtime.dependency_manifests[0].format == "go-module"
-        assert runtime.package_vulnerabilities[0].id == "CVE-2026-12345"
-        assert runtime.package_vulnerabilities[0].package_name == "musl"
-        assert runtime.package_vulnerabilities[0].installed_version == "1.2.4-r2"
-        assert runtime.package_vulnerabilities[0].fixed_version == "1.2.5-r0"
-        assert runtime.package_vulnerabilities[0].severity == RuntimePackageVulnerabilitySeverity.HIGH
-        assert runtime.package_vulnerabilities[0].scanner == "trivy"
-        assert runtime.package_vulnerabilities[0].image_digest == "sha256:abc123"
-        assert runtime.package_vulnerabilities[0].scan_time == "2026-05-20T12:00:00Z"
+
+    @pytest.mark.parametrize(
+        "runtime",
+        [
+            {"health": {"status": "healthy"}},
+            {
+                "package_vulnerabilities": [
+                    {
+                        "id": "CVE-2026-12345",
+                        "package_name": "musl",
+                        "installed_version": "1.2.4-r2",
+                        "scanner": "trivy",
+                        "image_digest": "sha256:abc123",
+                        "scan_time": "2026-05-20T12:00:00Z",
+                    }
+                ]
+            },
+            {
+                "network": {
+                    "endpoints": [
+                        {"network": "aptl-dmz", "network_id": "docker-network-id"},
+                    ]
+                }
+            },
+            {
+                "network": {
+                    "endpoints": [
+                        {"network": "aptl-dmz", "network_id_stability": "ephemeral"},
+                    ]
+                }
+            },
+            {
+                "network": {
+                    "endpoints": [
+                        {"network": "aptl-dmz", "endpoint_id": "docker-endpoint-id"},
+                    ]
+                }
+            },
+            {
+                "network": {
+                    "endpoints": [
+                        {"network": "aptl-dmz", "endpoint_id_stability": "ephemeral"},
+                    ]
+                }
+            },
+            {
+                "network": {
+                    "endpoints": [
+                        {"network": "aptl-dmz", "backend_generated": True},
+                    ]
+                }
+            },
+            {
+                "network": {
+                    "endpoints": [
+                        {"network": "aptl-dmz", "generated_dns_names": ["generated-id"]},
+                    ]
+                }
+            },
+            {
+                "software_components": [
+                    {
+                        "component_id": "shuffle-backend-app",
+                        "name": "shuffle-backend",
+                        "provenance": "scanner",
+                    }
+                ]
+            },
+            {
+                "software_components": [
+                    {
+                        "component_id": "shuffle-backend-app",
+                        "name": "shuffle-backend",
+                        "provenance": "sbom",
+                    }
+                ]
+            },
+            {
+                "software_components": [
+                    {
+                        "component_id": "shuffle-backend-app",
+                        "name": "shuffle-backend",
+                        "provenance": "filesystem",
+                    }
+                ]
+            },
+            {
+                "software_components": [
+                    {
+                        "component_id": "shuffle-backend-app",
+                        "name": "shuffle-backend",
+                        "provenance": "process_inspection",
+                    }
+                ]
+            },
+        ],
+    )
+    def test_vm_runtime_rejects_observation_only_capture_facts(self, runtime):
+        with pytest.raises(ValidationError):
+            Node(type="vm", runtime=runtime)
 
     def test_vm_runtime_rejects_duplicate_software_component_id(self):
         with pytest.raises(ValidationError, match="Duplicate runtime software component 'webapp'"):
@@ -949,24 +1026,6 @@ class TestNode:
                     "dns_search": ["techvault.local"],
                     "group_add": ["adm", "101"],
                 },
-                "health": {
-                    "status": "healthy",
-                    "failing_streak": "0",
-                    "log": [
-                        {
-                            "start": "2026-05-20T12:00:00Z",
-                            "end": "2026-05-20T12:00:01Z",
-                            "exit_code": "0",
-                            "output": "ok",
-                        },
-                        {
-                            "start": "2026-05-20T12:01:00Z",
-                            "end": "2026-05-20T12:01:01Z",
-                            "exit_code": 1,
-                            "output_redacted": True,
-                        },
-                    ],
-                },
             },
         )
 
@@ -997,11 +1056,6 @@ class TestNode:
         assert runtime.container.init_process.reaps_children is True
         assert runtime.container.init_process.argv == ["/sbin/docker-init", "--", "/entrypoint.sh"]
         assert runtime.container.init_process.argv_redacted is False
-        assert runtime.health is not None
-        assert runtime.health.status == RuntimeHealthStatus.HEALTHY
-        assert runtime.health.failing_streak == 0
-        assert runtime.health.log[0].exit_code == 0
-        assert runtime.health.log[1].output_redacted is True
 
     @pytest.mark.parametrize(
         ("runtime", "message"),
@@ -1063,7 +1117,6 @@ class TestNode:
                 {"container": {"seccomp_profile": "default", "security_opt": ["seccomp:unconfined"]}},
                 "seccomp_profile",
             ),
-            ({"health": {"log": [{"output": "secret", "output_redacted": True}]}}, "redacted healthcheck output"),
             (
                 {
                     "environment": [
@@ -1777,18 +1830,12 @@ class TestRuntimeNetworkRealization:
                     "endpoints": [
                         {
                             "network": "aptl-dmz",
-                            "network_id": "net-a1b2c3d4e5f6",
-                            "network_id_stability": "stable",
-                            "endpoint_id": "ep-1a2b3c4d5e6f",
-                            "endpoint_id_stability": "ephemeral",
-                            "backend_generated": True,
                             "ip_address": "172.20.0.20",
                             "ip_prefix_length": 24,
                             "gateway": "172.20.0.1",
                             "mac_address": "02:42:ac:14:00:14",
                             "aliases": ["aptl-webapp", "webapp"],
                             "dns_names": ["aptl-webapp", "webapp"],
-                            "generated_dns_names": ["a1b2c3d4e5f6"],
                             "backend": {
                                 "driver": "bridge",
                                 "ipam_driver": "default",
@@ -1819,24 +1866,17 @@ class TestRuntimeNetworkRealization:
         assert net.domainname == "techvault.local"
         ep = net.endpoints[0]
         assert ep.network == "aptl-dmz"
-        assert ep.network_id == "net-a1b2c3d4e5f6"
-        assert ep.network_id_stability == RuntimeNetworkIdStability.STABLE
-        assert ep.endpoint_id_stability == RuntimeNetworkIdStability.EPHEMERAL
-        assert ep.backend_generated is True
         assert ep.ip_address == "172.20.0.20"
         assert ep.ip_prefix_length == 24
         assert ep.gateway == "172.20.0.1"
         assert ep.mac_address == "02:42:ac:14:00:14"
         assert ep.aliases == ["aptl-webapp", "webapp"]
         assert ep.dns_names == ["aptl-webapp", "webapp"]
-        assert ep.generated_dns_names == ["a1b2c3d4e5f6"]
         assert ep.backend.driver == RuntimeNetworkDriver.BRIDGE
         assert ep.backend.ipam_driver == "default"
         assert ep.backend.driver_options == {"com.docker.network.bridge.name": "br-dmz"}
         assert ep.backend.ipam_options == {"foo": "bar"}
-        # Defaults on a sparsely-observed endpoint.
-        assert net.endpoints[1].network_id == ""
-        assert net.endpoints[1].network_id_stability == RuntimeNetworkIdStability.UNKNOWN
+        # Defaults on a sparsely-specified endpoint.
         assert net.endpoints[1].backend is None
         binding = net.published_ports[0]
         assert binding.container_port == 8080
@@ -2510,6 +2550,10 @@ class TestServicePort:
     def test_placeholder(self):
         sp = ServicePort(port="${service_port}", name="https")
         assert sp.port == "${service_port}"
+
+    def test_rejects_unmodeled_role_as_reachability_policy(self):
+        with pytest.raises(ValidationError, match="role"):
+            ServicePort.model_validate({"port": 80, "protocol": "tcp", "name": "http", "role": "internal"})
 
 
 class TestConditionExtensions:

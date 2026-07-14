@@ -178,7 +178,7 @@ Avoid:
 - compiled runtime objective resource, canonical addresses, diagnostics, and
   ordering/refresh derivation:
   - `implementations/python/packages/aces_processor/compiler.py`
-  - `implementations/python/packages/aces_processor/models.py` (`ObjectiveRuntime`,
+  - `implementations/python/packages/aces_processor/models/` (`ObjectiveRuntime`,
     `Diagnostic`)
 - planner ordering/refresh reconciliation over the compiled edges:
   - `implementations/python/packages/aces_processor/planner.py`

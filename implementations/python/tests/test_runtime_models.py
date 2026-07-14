@@ -165,14 +165,6 @@ nodes:
         dns_options: ndots:0
         dns_search: [techvault.local]
         group_add: [adm, "101"]
-      health:
-        status: healthy
-        failing_streak: "0"
-        log:
-          - start: "2026-05-20T12:00:00Z"
-            end: "2026-05-20T12:00:01Z"
-            exit_code: "0"
-            output: ok
       packages:
         - manager: apk
           name: musl
@@ -182,7 +174,7 @@ nodes:
           name: shuffle-backend
           version: 1.2.3
           component_type: application
-          provenance: scanner
+          provenance: package-manager
           ecosystem: go
           purl: "pkg:golang/github.com/frikky/shuffle@1.2.3"
           package_manager: apk
@@ -197,15 +189,6 @@ nodes:
         - ecosystem: go
           path: /app/go.mod
           format: go-module
-      package_vulnerabilities:
-        - id: CVE-2026-12345
-          package_name: musl
-          installed_version: 1.2.4-r2
-          fixed_version: 1.2.5-r0
-          severity: high
-          scanner: trivy
-          image_digest: sha256:abc123
-          scan_time: "2026-05-20T12:00:00Z"
 """)
         )
 
@@ -257,16 +240,13 @@ nodes:
         assert runtime["container"]["extra_hosts"][0]["hostname"] == "wazuh-manager"
         assert runtime["container"]["dns_options"] == ["ndots:0"]
         assert runtime["container"]["group_add"] == ["adm", "101"]
-        assert runtime["health"]["status"] == "healthy"
-        assert runtime["health"]["failing_streak"] == 0
-        assert runtime["health"]["log"][0]["exit_code"] == 0
         assert runtime["packages"][0]["manager"] == "apk"
         assert runtime["packages"][0]["name"] == "musl"
         assert runtime["packages"][0]["version"] == "1.2.4-r2"
         assert runtime["software_components"][0]["component_id"] == "shuffle-backend-app"
         assert runtime["software_components"][0]["name"] == "shuffle-backend"
         assert runtime["software_components"][0]["component_type"] == "application"
-        assert runtime["software_components"][0]["provenance"] == "scanner"
+        assert runtime["software_components"][0]["provenance"] == "package_manager"
         assert runtime["software_components"][0]["package_manager"] == "apk"
         assert runtime["software_components"][0]["manifest_path"] == "/app/go.mod"
         assert runtime["software_components"][0]["installed_paths"] == ["/app/shufflebackend", "/app/go.mod"]
@@ -274,14 +254,6 @@ nodes:
         assert runtime["dependency_manifests"][0]["ecosystem"] == "go"
         assert runtime["dependency_manifests"][0]["path"] == "/app/go.mod"
         assert runtime["dependency_manifests"][0]["format"] == "go-module"
-        assert runtime["package_vulnerabilities"][0]["id"] == "CVE-2026-12345"
-        assert runtime["package_vulnerabilities"][0]["package_name"] == "musl"
-        assert runtime["package_vulnerabilities"][0]["installed_version"] == "1.2.4-r2"
-        assert runtime["package_vulnerabilities"][0]["fixed_version"] == "1.2.5-r0"
-        assert runtime["package_vulnerabilities"][0]["severity"] == "high"
-        assert runtime["package_vulnerabilities"][0]["scanner"] == "trivy"
-        assert runtime["package_vulnerabilities"][0]["image_digest"] == "sha256:abc123"
-        assert runtime["package_vulnerabilities"][0]["scan_time"] == "2026-05-20T12:00:00Z"
         assert not model.diagnostics
 
     def test_node_runtime_preserves_identity_authority_inventory(self):

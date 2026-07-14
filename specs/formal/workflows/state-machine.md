@@ -70,5 +70,5 @@ derived from that envelope after validation.
 - validation and visibility checks: `implementations/python/packages/aces_sdl/validator/`
 - compiled step contracts: `implementations/python/packages/aces_processor/compiler.py`
 - typed runtime envelopes and result validation:
-  - `implementations/python/packages/aces_processor/models.py`
+  - `implementations/python/packages/aces_processor/models/`
   - `implementations/python/packages/aces_processor/manager.py`

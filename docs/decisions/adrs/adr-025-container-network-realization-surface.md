@@ -208,3 +208,4 @@ creating a second network schema elsewhere.
 | Date | Commit/PR | Summary |
 |------|-----------|---------|
 | 2026-05-25 | 4b959c3 | Corrected the control-plane API cross-reference from `aces_processor.control_plane_api` to `aces_runtime.control_plane_api`. |
+| 2026-07-13 | #417 | Corrected the carrier boundary: deliberately required addresses, names, MACs, backend configuration, and published bindings remain declarative runtime contract state, while generated network/endpoint IDs, stability metadata, generated DNS identities, and incidental inspect output move to evidence and mapping ledgers. |

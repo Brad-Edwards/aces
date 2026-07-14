@@ -96,6 +96,20 @@ instead they must declare non-empty `extension_scope`, `relation_rules`, and
 provenance, and governance concepts explicit without letting them silently fork
 shared cyber-domain concepts.
 
+## Behavioral-Relation Authority
+
+The `behavioral-relations-v1` schema publishes the closed, revisioned relation
+catalog used by validation, SDL transformations, backend realization and
+comparison, participant-visible behavior, multi-agent claims, and independent
+adequacy studies. It separates relation identity from evidence and assurance,
+requires formal dimension treatment, and carries revision-pinned bibliography
+coordinates and executable counterexamples.
+
+The canonical catalog lives at
+`contracts/concept-authority/behavioral-relations-v1.json`; consumer claims use
+the shared `BehavioralClaimBindingModel` rather than copying relation meaning.
+Finite evidence cannot be bound to a universal quantifier.
+
 ## UCO Alignment Evidence
 
 The `uco-alignment-v1` schema publishes the machine-readable UCO alignment

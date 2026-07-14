@@ -29,7 +29,7 @@ This directory holds the repo-native formal artifacts for SDL workflow control s
 - validator enforcement: `implementations/python/packages/aces_sdl/validator/`
 - compiled contracts: `implementations/python/packages/aces_processor/compiler.py`
 - typed runtime results and contract checks:
-  - `implementations/python/packages/aces_processor/models.py`
+  - `implementations/python/packages/aces_processor/models/`
   - `implementations/python/packages/aces_processor/manager.py`
 - smoke/regression coverage:
   - `implementations/python/tests/test_sdl_validator.py`

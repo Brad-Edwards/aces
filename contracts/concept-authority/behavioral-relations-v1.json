@@ -1,0 +1,2211 @@
+{
+  "schema_version": "behavioral-relations/v1",
+  "taxonomy_id": "aces-behavioral-relations",
+  "taxonomy_revision": "rev1",
+  "bibliography": [
+    {
+      "source_id": "park-1981",
+      "title": "Concurrency and Automata on Infinite Sequences",
+      "authors": [
+        "David M. R. Park"
+      ],
+      "publication_year": 1981,
+      "publication_venue": "Theoretical Computer Science, LNCS 104",
+      "edition_or_version": "published conference chapter",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.1007/BFb0017309"
+      }
+    },
+    {
+      "source_id": "milner-1980",
+      "title": "A Calculus of Communicating Systems",
+      "authors": [
+        "Robin Milner"
+      ],
+      "publication_year": 1980,
+      "publication_venue": "Lecture Notes in Computer Science 92",
+      "edition_or_version": "first edition",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.1007/3-540-10235-3"
+      }
+    },
+    {
+      "source_id": "van-glabbeek-1990",
+      "title": "The Linear Time-Branching Time Spectrum",
+      "authors": [
+        "Rob J. van Glabbeek"
+      ],
+      "publication_year": 1990,
+      "publication_venue": "CONCUR 1990, LNCS 458",
+      "edition_or_version": "published conference chapter",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.1007/BFb0039066"
+      }
+    },
+    {
+      "source_id": "abadi-lamport-1991",
+      "title": "The Existence of Refinement Mappings",
+      "authors": [
+        "Martín Abadi",
+        "Leslie Lamport"
+      ],
+      "publication_year": 1991,
+      "publication_venue": "Theoretical Computer Science 82(2)",
+      "edition_or_version": "version of record",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.1016/0304-3975(91)90224-P"
+      }
+    },
+    {
+      "source_id": "lynch-vaandrager-1995",
+      "title": "Forward and Backward Simulations, Part I: Untimed Systems",
+      "authors": [
+        "Nancy A. Lynch",
+        "Frits W. Vaandrager"
+      ],
+      "publication_year": 1995,
+      "publication_venue": "Information and Computation 121(2)",
+      "edition_or_version": "version of record",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.1006/inco.1995.1134"
+      }
+    },
+    {
+      "source_id": "fagin-halpern-moses-vardi-1995",
+      "title": "Reasoning About Knowledge",
+      "authors": [
+        "Ronald Fagin",
+        "Joseph Y. Halpern",
+        "Yoram Moses",
+        "Moshe Y. Vardi"
+      ],
+      "publication_year": 1995,
+      "publication_venue": "MIT Press",
+      "edition_or_version": "hardcover first edition",
+      "immutable_locator": {
+        "kind": "isbn",
+        "value": "9780262061629"
+      }
+    },
+    {
+      "source_id": "alur-henzinger-kupferman-vardi-1998",
+      "title": "Alternating Refinement Relations",
+      "authors": [
+        "Rajeev Alur",
+        "Thomas A. Henzinger",
+        "Orna Kupferman",
+        "Moshe Y. Vardi"
+      ],
+      "publication_year": 1998,
+      "publication_venue": "CONCUR 1998, LNCS 1466",
+      "edition_or_version": "published conference chapter",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.1007/BFb0055622"
+      }
+    },
+    {
+      "source_id": "alur-henzinger-kupferman-2002",
+      "title": "Alternating-Time Temporal Logic",
+      "authors": [
+        "Rajeev Alur",
+        "Thomas A. Henzinger",
+        "Orna Kupferman"
+      ],
+      "publication_year": 2002,
+      "publication_venue": "Journal of the ACM 49(5)",
+      "edition_or_version": "version of record",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.1145/585265.585270"
+      }
+    },
+    {
+      "source_id": "larsen-skou-1991",
+      "title": "Bisimulation Through Probabilistic Testing",
+      "authors": [
+        "Kim G. Larsen",
+        "Arne Skou"
+      ],
+      "publication_year": 1991,
+      "publication_venue": "Information and Computation 94(1)",
+      "edition_or_version": "version of record",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.1016/0890-5401(91)90030-6"
+      }
+    },
+    {
+      "source_id": "wellek-2010",
+      "title": "Testing Statistical Hypotheses of Equivalence and Noninferiority",
+      "authors": [
+        "Stefan Wellek"
+      ],
+      "publication_year": 2010,
+      "publication_venue": "Chapman and Hall/CRC",
+      "edition_or_version": "second edition",
+      "immutable_locator": {
+        "kind": "isbn",
+        "value": "9781439808184"
+      }
+    },
+    {
+      "source_id": "bueno-1997",
+      "title": "Empirical Adequacy: A Partial Structures Approach",
+      "authors": [
+        "Otávio Bueno"
+      ],
+      "publication_year": 1997,
+      "publication_venue": "Studies in History and Philosophy of Science Part A 28(4)",
+      "edition_or_version": "version of record",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.1016/S0039-3681(97)00012-5"
+      }
+    }
+  ],
+  "relations": {
+    "structural-validity": {
+      "relation_id": "structural-validity",
+      "display_name": "Structural validity",
+      "relation_class": "predicate",
+      "definition": "A single artifact satisfies its published closed structural schema.",
+      "left_carrier": "An artifact payload.",
+      "right_carrier": "The published schema selected by the artifact discriminator.",
+      "initial_states": "Not applicable; this is a unary predicate.",
+      "transition_signature": {
+        "applicability": "not-applicable",
+        "labels": "not applicable",
+        "transition_relation": "not applicable",
+        "observable_actions": "not applicable",
+        "hidden_actions": "not applicable",
+        "stuttering_actions": "not applicable",
+        "not_applicable_rationale": "Schema validity is a predicate over an artifact and schema, not a transition-system relation."
+      },
+      "observation_projection": {
+        "applicability": "not-applicable",
+        "subject": "Schema validator",
+        "policy_ref": "behavioral-relations/catalog",
+        "policy_revision": "rev1",
+        "redaction_scope": "No redaction beyond the named projection.",
+        "order_treatment": "Sequence order is preserved.",
+        "simultaneity_treatment": "Simultaneity is preserved only when declared."
+      },
+      "projection_required": false,
+      "direction": "unary",
+      "quantification": {
+        "states": "For one artifact payload and one schema revision.",
+        "traces": "outside scope",
+        "schedulers": "outside scope",
+        "strategies": "outside scope",
+        "environments": "outside scope",
+        "observations": "outside scope"
+      },
+      "dimensions": {
+        "nondeterminism": {
+          "status": "outside-scope",
+          "treatment": "The predicate does not quantify over branching choices."
+        },
+        "concurrency": {
+          "status": "outside-scope",
+          "treatment": "The predicate does not compare concurrent executions."
+        },
+        "probability": {
+          "status": "outside-scope",
+          "treatment": "The predicate does not compare probability measures."
+        },
+        "time": {
+          "status": "outside-scope",
+          "treatment": "The predicate does not compare timed behavior."
+        },
+        "partial_order": {
+          "status": "outside-scope",
+          "treatment": "The predicate does not compare event partial orders."
+        }
+      },
+      "preservation": {
+        "property": "Conformance to the declared structural shape.",
+        "proof_obligation": "Validate the complete payload against the named published schema."
+      },
+      "bounded_evidence": [
+        "JSON Schema and closed-model validation of named artifacts."
+      ],
+      "explicit_non_claims": [
+        "Does not establish semantic validity, executability, or behavioral equivalence."
+      ],
+      "incompatible_claim_surfaces": [
+        "Backend equivalence",
+        "Participant strategic behavior"
+      ],
+      "assurance": {
+        "definition_status": "defined",
+        "implementation_status": "implemented",
+        "test_status": "tested",
+        "proof_status": "not-applicable",
+        "evidence_refs": [
+          "contracts/schemas/"
+        ]
+      },
+      "source_refs": [
+        "milner-1980"
+      ]
+    },
+    "semantic-validity": {
+      "relation_id": "semantic-validity",
+      "display_name": "Semantic validity",
+      "relation_class": "predicate",
+      "definition": "A structurally admitted artifact satisfies the named cross-reference and domain invariants.",
+      "left_carrier": "A parsed ACES artifact.",
+      "right_carrier": "The named semantic invariant set.",
+      "initial_states": "Not applicable; this is a unary predicate.",
+      "transition_signature": {
+        "applicability": "not-applicable",
+        "labels": "not applicable",
+        "transition_relation": "not applicable",
+        "observable_actions": "not applicable",
+        "hidden_actions": "not applicable",
+        "stuttering_actions": "not applicable",
+        "not_applicable_rationale": "Semantic validity checks a static artifact model rather than matching transitions."
+      },
+      "observation_projection": {
+        "applicability": "not-applicable",
+        "subject": "Semantic validator",
+        "policy_ref": "behavioral-relations/catalog",
+        "policy_revision": "rev1",
+        "redaction_scope": "No redaction beyond the named projection.",
+        "order_treatment": "Sequence order is preserved.",
+        "simultaneity_treatment": "Simultaneity is preserved only when declared."
+      },
+      "projection_required": false,
+      "direction": "unary",
+      "quantification": {
+        "states": "For one admitted artifact and one invariant revision.",
+        "traces": "outside scope",
+        "schedulers": "outside scope",
+        "strategies": "outside scope",
+        "environments": "outside scope",
+        "observations": "outside scope"
+      },
+      "dimensions": {
+        "nondeterminism": {
+          "status": "outside-scope",
+          "treatment": "The predicate does not quantify over branching choices."
+        },
+        "concurrency": {
+          "status": "outside-scope",
+          "treatment": "The predicate does not compare concurrent executions."
+        },
+        "probability": {
+          "status": "outside-scope",
+          "treatment": "The predicate does not compare probability measures."
+        },
+        "time": {
+          "status": "outside-scope",
+          "treatment": "The predicate does not compare timed behavior."
+        },
+        "partial_order": {
+          "status": "outside-scope",
+          "treatment": "The predicate does not compare event partial orders."
+        }
+      },
+      "preservation": {
+        "property": "The named static semantic invariants.",
+        "proof_obligation": "Run every invariant in the declared semantic profile without error."
+      },
+      "bounded_evidence": [
+        "SemanticValidator results and invariant mutation tests."
+      ],
+      "explicit_non_claims": [
+        "Does not establish realization, execution success, trace inclusion, or bisimulation."
+      ],
+      "incompatible_claim_surfaces": [
+        "Runtime conformance",
+        "Backend comparison"
+      ],
+      "assurance": {
+        "definition_status": "defined",
+        "implementation_status": "implemented",
+        "test_status": "tested",
+        "proof_status": "deliberately-unproved",
+        "evidence_refs": [
+          "implementations/python/packages/aces_sdl/validator/"
+        ]
+      },
+      "source_refs": [
+        "abadi-lamport-1991"
+      ]
+    },
+    "capability-declaration": {
+      "relation_id": "capability-declaration",
+      "display_name": "Capability declaration",
+      "relation_class": "predicate",
+      "definition": "An apparatus declares support for governed capability and contract identifiers.",
+      "left_carrier": "A processor, backend, or participant manifest.",
+      "right_carrier": "The governed capability and contract vocabulary.",
+      "initial_states": "Not applicable; this is a declaration predicate.",
+      "transition_signature": {
+        "applicability": "not-applicable",
+        "labels": "not applicable",
+        "transition_relation": "not applicable",
+        "observable_actions": "not applicable",
+        "hidden_actions": "not applicable",
+        "stuttering_actions": "not applicable",
+        "not_applicable_rationale": "A declaration is not execution behavior."
+      },
+      "observation_projection": {
+        "applicability": "not-applicable",
+        "subject": "Manifest consumer",
+        "policy_ref": "behavioral-relations/catalog",
+        "policy_revision": "rev1",
+        "redaction_scope": "No redaction beyond the named projection.",
+        "order_treatment": "Sequence order is preserved.",
+        "simultaneity_treatment": "Simultaneity is preserved only when declared."
+      },
+      "projection_required": false,
+      "direction": "unary",
+      "quantification": {
+        "states": "For one manifest revision.",
+        "traces": "outside scope",
+        "schedulers": "outside scope",
+        "strategies": "outside scope",
+        "environments": "outside scope",
+        "observations": "outside scope"
+      },
+      "dimensions": {
+        "nondeterminism": {
+          "status": "outside-scope",
+          "treatment": "The predicate does not quantify over branching choices."
+        },
+        "concurrency": {
+          "status": "outside-scope",
+          "treatment": "The predicate does not compare concurrent executions."
+        },
+        "probability": {
+          "status": "outside-scope",
+          "treatment": "The predicate does not compare probability measures."
+        },
+        "time": {
+          "status": "outside-scope",
+          "treatment": "The predicate does not compare timed behavior."
+        },
+        "partial_order": {
+          "status": "outside-scope",
+          "treatment": "The predicate does not compare event partial orders."
+        }
+      },
+      "preservation": {
+        "property": "Portable declared support metadata.",
+        "proof_obligation": "Validate the manifest and resolve every governed identifier."
+      },
+      "bounded_evidence": [
+        "Manifest schema validation and capability-gap conformance cases."
+      ],
+      "explicit_non_claims": [
+        "Does not prove that a declared capability works for every input."
+      ],
+      "incompatible_claim_surfaces": [
+        "Universal backend behavior"
+      ],
+      "assurance": {
+        "definition_status": "defined",
+        "implementation_status": "implemented",
+        "test_status": "tested",
+        "proof_status": "not-applicable",
+        "evidence_refs": [
+          "implementations/python/packages/aces_contracts/manifest_authority.py"
+        ]
+      },
+      "source_refs": [
+        "abadi-lamport-1991"
+      ]
+    },
+    "profile-satisfaction": {
+      "relation_id": "profile-satisfaction",
+      "display_name": "Profile satisfaction",
+      "relation_class": "predicate",
+      "definition": "An artifact bundle satisfies every required concern in a named profile revision.",
+      "left_carrier": "An artifact or bundle.",
+      "right_carrier": "A governed profile with required concerns.",
+      "initial_states": "Not applicable; this is a profile predicate.",
+      "transition_signature": {
+        "applicability": "not-applicable",
+        "labels": "not applicable",
+        "transition_relation": "not applicable",
+        "observable_actions": "not applicable",
+        "hidden_actions": "not applicable",
+        "stuttering_actions": "not applicable",
+        "not_applicable_rationale": "Profile satisfaction aggregates named gates; it is not a behavioral matching relation."
+      },
+      "observation_projection": {
+        "applicability": "not-applicable",
+        "subject": "Profile evaluator",
+        "policy_ref": "behavioral-relations/catalog",
+        "policy_revision": "rev1",
+        "redaction_scope": "No redaction beyond the named projection.",
+        "order_treatment": "Sequence order is preserved.",
+        "simultaneity_treatment": "Simultaneity is preserved only when declared."
+      },
+      "projection_required": false,
+      "direction": "unary",
+      "quantification": {
+        "states": "For one artifact bundle and one profile revision.",
+        "traces": "outside scope",
+        "schedulers": "outside scope",
+        "strategies": "outside scope",
+        "environments": "outside scope",
+        "observations": "outside scope"
+      },
+      "dimensions": {
+        "nondeterminism": {
+          "status": "outside-scope",
+          "treatment": "The predicate does not quantify over branching choices."
+        },
+        "concurrency": {
+          "status": "outside-scope",
+          "treatment": "The predicate does not compare concurrent executions."
+        },
+        "probability": {
+          "status": "outside-scope",
+          "treatment": "The predicate does not compare probability measures."
+        },
+        "time": {
+          "status": "outside-scope",
+          "treatment": "The predicate does not compare timed behavior."
+        },
+        "partial_order": {
+          "status": "outside-scope",
+          "treatment": "The predicate does not compare event partial orders."
+        }
+      },
+      "preservation": {
+        "property": "The conjunction of the profile's required concerns.",
+        "proof_obligation": "Evaluate every required concern with the profile's named validator."
+      },
+      "bounded_evidence": [
+        "Scientific completeness and backend-profile case results."
+      ],
+      "explicit_non_claims": [
+        "Does not promote profile satisfaction to behavioral equivalence or empirical adequacy."
+      ],
+      "incompatible_claim_surfaces": [
+        "Behavioral equivalence",
+        "Scientific adequacy"
+      ],
+      "assurance": {
+        "definition_status": "defined",
+        "implementation_status": "implemented",
+        "test_status": "tested",
+        "proof_status": "deliberately-unproved",
+        "evidence_refs": [
+          "contracts/profiles/"
+        ]
+      },
+      "source_refs": [
+        "wellek-2010"
+      ]
+    },
+    "bounded-probe-success": {
+      "relation_id": "bounded-probe-success",
+      "display_name": "Bounded fixture or probe success",
+      "relation_class": "empirical",
+      "definition": "Every named finite fixture or probe in the disclosed run produced its expected result.",
+      "left_carrier": "A concrete implementation run.",
+      "right_carrier": "A finite, enumerated fixture or probe set.",
+      "initial_states": "The concrete initial state selected by each named case.",
+      "transition_signature": {
+        "applicability": "applicable",
+        "labels": "The actions exercised by the named cases.",
+        "transition_relation": "Only transitions actually exercised by the finite cases.",
+        "observable_actions": "Case outputs and sanitized diagnostics.",
+        "hidden_actions": "No hidden action unless a governed projection declares one.",
+        "stuttering_actions": "Stuttering is explicit and relation-specific."
+      },
+      "observation_projection": {
+        "applicability": "parameterized",
+        "subject": "Case reporter",
+        "policy_ref": "behavioral-relations/bounded-probe-projection",
+        "policy_revision": "rev1",
+        "redaction_scope": "No redaction beyond the named projection.",
+        "order_treatment": "Sequence order is preserved.",
+        "simultaneity_treatment": "Simultaneity is preserved only when declared."
+      },
+      "projection_required": true,
+      "direction": "left-to-right",
+      "quantification": {
+        "states": "Only states reached by named cases.",
+        "traces": "Only enumerated finite traces.",
+        "schedulers": "Only schedulers exercised by the harness.",
+        "strategies": "Only strategies exercised by the harness.",
+        "environments": "Only named environments.",
+        "observations": "Only observations emitted by named cases."
+      },
+      "dimensions": {
+        "nondeterminism": {
+          "status": "parameterized",
+          "treatment": "Schedulers and branch quantifiers must be stated."
+        },
+        "concurrency": {
+          "status": "parameterized",
+          "treatment": "Interleaving, step, or true-concurrency semantics must be stated."
+        },
+        "probability": {
+          "status": "outside-scope",
+          "treatment": "Probability is excluded unless a probabilistic relation is named."
+        },
+        "time": {
+          "status": "parameterized",
+          "treatment": "Timed claims require an explicit clock and time model."
+        },
+        "partial_order": {
+          "status": "abstracted",
+          "treatment": "Default traces linearize order; partial-order claims require a separate declared model."
+        }
+      },
+      "preservation": {
+        "property": "Success of the enumerated cases.",
+        "proof_obligation": "Execute every named case and compare its bounded expected result."
+      },
+      "bounded_evidence": [
+        "Fixture-suite and target-probe reports with exact case identifiers."
+      ],
+      "explicit_non_claims": [
+        "Does not quantify over untested transitions, schedulers, strategies, or environments.",
+        "Does not establish trace equivalence, simulation, or bisimulation."
+      ],
+      "incompatible_claim_surfaces": [
+        "Universal conformance",
+        "Backend equivalence"
+      ],
+      "assurance": {
+        "definition_status": "defined",
+        "implementation_status": "implemented",
+        "test_status": "tested",
+        "proof_status": "not-applicable",
+        "evidence_refs": [
+          "implementations/python/packages/aces_conformance/conformance.py"
+        ]
+      },
+      "source_refs": [
+        "park-1981",
+        "van-glabbeek-1990"
+      ]
+    },
+    "canonical-artifact-identity": {
+      "relation_id": "canonical-artifact-identity",
+      "display_name": "Canonical artifact identity",
+      "relation_class": "predicate",
+      "definition": "Two artifacts have identical canonical bytes or digest under one named serialization profile.",
+      "left_carrier": "One canonical artifact.",
+      "right_carrier": "Another canonical artifact under the same profile.",
+      "initial_states": "Not applicable; this is artifact identity.",
+      "transition_signature": {
+        "applicability": "not-applicable",
+        "labels": "not applicable",
+        "transition_relation": "not applicable",
+        "observable_actions": "not applicable",
+        "hidden_actions": "not applicable",
+        "stuttering_actions": "not applicable",
+        "not_applicable_rationale": "Digest identity compares canonical representations, not enabled behavior."
+      },
+      "observation_projection": {
+        "applicability": "identity",
+        "subject": "Canonical serializer",
+        "policy_ref": "behavioral-relations/catalog",
+        "policy_revision": "rev1",
+        "redaction_scope": "No redaction beyond the named projection.",
+        "order_treatment": "Sequence order is preserved.",
+        "simultaneity_treatment": "Simultaneity is preserved only when declared."
+      },
+      "projection_required": false,
+      "direction": "symmetric",
+      "quantification": {
+        "states": "For the two named canonical artifacts.",
+        "traces": "outside scope",
+        "schedulers": "outside scope",
+        "strategies": "outside scope",
+        "environments": "outside scope",
+        "observations": "outside scope"
+      },
+      "dimensions": {
+        "nondeterminism": {
+          "status": "outside-scope",
+          "treatment": "The predicate does not quantify over branching choices."
+        },
+        "concurrency": {
+          "status": "outside-scope",
+          "treatment": "The predicate does not compare concurrent executions."
+        },
+        "probability": {
+          "status": "outside-scope",
+          "treatment": "The predicate does not compare probability measures."
+        },
+        "time": {
+          "status": "outside-scope",
+          "treatment": "The predicate does not compare timed behavior."
+        },
+        "partial_order": {
+          "status": "outside-scope",
+          "treatment": "The predicate does not compare event partial orders."
+        }
+      },
+      "preservation": {
+        "property": "Canonical byte identity under the named profile.",
+        "proof_obligation": "Canonicalize both artifacts with the same revision and compare bytes or collision-resistant digests."
+      },
+      "bounded_evidence": [
+        "Canonicalization and digest equality tests."
+      ],
+      "explicit_non_claims": [
+        "Does not establish common provenance, equal executions, or behavioral equivalence."
+      ],
+      "incompatible_claim_surfaces": [
+        "Trace comparison",
+        "Backend behavior"
+      ],
+      "assurance": {
+        "definition_status": "defined",
+        "implementation_status": "implemented",
+        "test_status": "tested",
+        "proof_status": "not-applicable",
+        "evidence_refs": [
+          "implementations/python/packages/aces_sdl/canonical.py"
+        ]
+      },
+      "source_refs": [
+        "abadi-lamport-1991"
+      ]
+    },
+    "realization-envelope-membership": {
+      "relation_id": "realization-envelope-membership",
+      "display_name": "Realization-envelope membership",
+      "relation_class": "set-relation",
+      "definition": "A concrete or requested point belongs to a governed realization envelope.",
+      "left_carrier": "A realization point.",
+      "right_carrier": "A closed realization-envelope set.",
+      "initial_states": "Not applicable; this is set membership.",
+      "transition_signature": {
+        "applicability": "not-applicable",
+        "labels": "not applicable",
+        "transition_relation": "not applicable",
+        "observable_actions": "not applicable",
+        "hidden_actions": "not applicable",
+        "stuttering_actions": "not applicable",
+        "not_applicable_rationale": "Envelope membership is set-theoretic support, not a transition match."
+      },
+      "observation_projection": {
+        "applicability": "not-applicable",
+        "subject": "Realization-envelope validator",
+        "policy_ref": "behavioral-relations/catalog",
+        "policy_revision": "rev1",
+        "redaction_scope": "No redaction beyond the named projection.",
+        "order_treatment": "Sequence order is preserved.",
+        "simultaneity_treatment": "Simultaneity is preserved only when declared."
+      },
+      "projection_required": false,
+      "direction": "left-to-right",
+      "quantification": {
+        "states": "For one point and one envelope revision.",
+        "traces": "outside scope",
+        "schedulers": "outside scope",
+        "strategies": "outside scope",
+        "environments": "outside scope",
+        "observations": "outside scope"
+      },
+      "dimensions": {
+        "nondeterminism": {
+          "status": "outside-scope",
+          "treatment": "The predicate does not quantify over branching choices."
+        },
+        "concurrency": {
+          "status": "outside-scope",
+          "treatment": "The predicate does not compare concurrent executions."
+        },
+        "probability": {
+          "status": "outside-scope",
+          "treatment": "The predicate does not compare probability measures."
+        },
+        "time": {
+          "status": "outside-scope",
+          "treatment": "The predicate does not compare timed behavior."
+        },
+        "partial_order": {
+          "status": "outside-scope",
+          "treatment": "The predicate does not compare event partial orders."
+        }
+      },
+      "preservation": {
+        "property": "Membership in the declared support set.",
+        "proof_obligation": "Evaluate every envelope dimension and closure rule for the point."
+      },
+      "bounded_evidence": [
+        "Witness and negative-probe envelope tests."
+      ],
+      "explicit_non_claims": [
+        "Does not establish that execution succeeds or that behavior refines an abstract runtime."
+      ],
+      "incompatible_claim_surfaces": [
+        "Runtime trace inclusion",
+        "Backend equivalence"
+      ],
+      "assurance": {
+        "definition_status": "defined",
+        "implementation_status": "implemented",
+        "test_status": "tested",
+        "proof_status": "deliberately-unproved",
+        "evidence_refs": [
+          "specs/formal/realization/envelope-semantics.md"
+        ]
+      },
+      "source_refs": [
+        "abadi-lamport-1991"
+      ]
+    },
+    "realization-envelope-subsumption": {
+      "relation_id": "realization-envelope-subsumption",
+      "display_name": "Realization-envelope subsumption",
+      "relation_class": "set-relation",
+      "definition": "Every point admitted by one realization envelope is admitted by another under the named closure rules.",
+      "left_carrier": "One realization-envelope set.",
+      "right_carrier": "Another realization-envelope set.",
+      "initial_states": "Not applicable; this is set inclusion.",
+      "transition_signature": {
+        "applicability": "not-applicable",
+        "labels": "not applicable",
+        "transition_relation": "not applicable",
+        "observable_actions": "not applicable",
+        "hidden_actions": "not applicable",
+        "stuttering_actions": "not applicable",
+        "not_applicable_rationale": "Envelope subsumption compares support sets rather than transition systems."
+      },
+      "observation_projection": {
+        "applicability": "not-applicable",
+        "subject": "Realization-envelope validator",
+        "policy_ref": "behavioral-relations/catalog",
+        "policy_revision": "rev1",
+        "redaction_scope": "No redaction beyond the named projection.",
+        "order_treatment": "Sequence order is preserved.",
+        "simultaneity_treatment": "Simultaneity is preserved only when declared."
+      },
+      "projection_required": false,
+      "direction": "left-to-right",
+      "quantification": {
+        "states": "Universally over points in the left envelope.",
+        "traces": "outside scope",
+        "schedulers": "outside scope",
+        "strategies": "outside scope",
+        "environments": "outside scope",
+        "observations": "outside scope"
+      },
+      "dimensions": {
+        "nondeterminism": {
+          "status": "outside-scope",
+          "treatment": "The predicate does not quantify over branching choices."
+        },
+        "concurrency": {
+          "status": "outside-scope",
+          "treatment": "The predicate does not compare concurrent executions."
+        },
+        "probability": {
+          "status": "outside-scope",
+          "treatment": "The predicate does not compare probability measures."
+        },
+        "time": {
+          "status": "outside-scope",
+          "treatment": "The predicate does not compare timed behavior."
+        },
+        "partial_order": {
+          "status": "outside-scope",
+          "treatment": "The predicate does not compare event partial orders."
+        }
+      },
+      "preservation": {
+        "property": "Set inclusion of declared realization support.",
+        "proof_obligation": "Prove or decide inclusion for every governed envelope dimension."
+      },
+      "bounded_evidence": [
+        "Finite witness and mutation tests for current envelope operators."
+      ],
+      "explicit_non_claims": [
+        "Does not establish behavioral refinement, trace inclusion, or bisimulation."
+      ],
+      "incompatible_claim_surfaces": [
+        "Runtime behavior",
+        "Participant behavior"
+      ],
+      "assurance": {
+        "definition_status": "defined",
+        "implementation_status": "implemented",
+        "test_status": "tested",
+        "proof_status": "deliberately-unproved",
+        "evidence_refs": [
+          "implementations/python/packages/aces_contracts/realization_envelope.py"
+        ]
+      },
+      "source_refs": [
+        "abadi-lamport-1991"
+      ]
+    },
+    "trace-inclusion": {
+      "relation_id": "trace-inclusion",
+      "display_name": "Projected trace inclusion",
+      "relation_class": "behavioral",
+      "definition": "Every projected concrete trace belongs to the abstract trace set under a declared projection.",
+      "left_carrier": "Concrete implementation transition system.",
+      "right_carrier": "Abstract ACES transition system.",
+      "initial_states": "Related concrete and abstract initial states.",
+      "transition_signature": {
+        "applicability": "applicable",
+        "labels": "Labels in the declared concrete and abstract alphabets.",
+        "transition_relation": "Concrete and abstract labelled transition relations.",
+        "observable_actions": "Actions retained by the governed projection.",
+        "hidden_actions": "Only actions explicitly hidden by the projection.",
+        "stuttering_actions": "Concrete stuttering must be permitted by the abstract obligation."
+      },
+      "observation_projection": {
+        "applicability": "required",
+        "subject": "Named observer or abstraction",
+        "policy_ref": "participant-observation-boundary",
+        "policy_revision": "rev1",
+        "redaction_scope": "No redaction beyond the named projection.",
+        "order_treatment": "Sequence order is preserved.",
+        "simultaneity_treatment": "Simultaneity is preserved only when declared."
+      },
+      "projection_required": true,
+      "direction": "left-to-right",
+      "quantification": {
+        "states": "All reachable related states.",
+        "traces": "Universally over projected concrete traces.",
+        "schedulers": "All admitted schedulers unless narrowed.",
+        "strategies": "Outside scope unless the systems are strategic.",
+        "environments": "All admitted environments unless narrowed.",
+        "observations": "Through the named projection only."
+      },
+      "dimensions": {
+        "nondeterminism": {
+          "status": "parameterized",
+          "treatment": "Schedulers and branch quantifiers must be stated."
+        },
+        "concurrency": {
+          "status": "parameterized",
+          "treatment": "Interleaving, step, or true-concurrency semantics must be stated."
+        },
+        "probability": {
+          "status": "outside-scope",
+          "treatment": "Probability is excluded unless a probabilistic relation is named."
+        },
+        "time": {
+          "status": "parameterized",
+          "treatment": "Timed claims require an explicit clock and time model."
+        },
+        "partial_order": {
+          "status": "abstracted",
+          "treatment": "Default traces linearize order; partial-order claims require a separate declared model."
+        }
+      },
+      "preservation": {
+        "property": "Abstract trace safety for projected concrete executions.",
+        "proof_obligation": "Show Proj(Traces_concrete) is a subset of Traces_abstract under stated fairness and divergence assumptions."
+      },
+      "bounded_evidence": [
+        "Finite target probes can falsify but cannot prove universal inclusion."
+      ],
+      "explicit_non_claims": [
+        "Does not establish completeness, reverse inclusion, trace equivalence, or bisimulation."
+      ],
+      "incompatible_claim_surfaces": [
+        "Current backend conformance report"
+      ],
+      "assurance": {
+        "definition_status": "defined",
+        "implementation_status": "partial",
+        "test_status": "bounded",
+        "proof_status": "deliberately-unproved",
+        "evidence_refs": [
+          "specs/formal/participant-runtime/README.md"
+        ]
+      },
+      "source_refs": [
+        "van-glabbeek-1990",
+        "abadi-lamport-1991",
+        "lynch-vaandrager-1995"
+      ]
+    },
+    "trace-equivalence": {
+      "relation_id": "trace-equivalence",
+      "display_name": "Trace equivalence",
+      "relation_class": "behavioral",
+      "definition": "Two systems have equal projected trace sets under the same declared alphabet and projection.",
+      "left_carrier": "One labelled transition system.",
+      "right_carrier": "Another labelled transition system.",
+      "initial_states": "Paired initial states.",
+      "transition_signature": {
+        "applicability": "applicable",
+        "labels": "A shared declared label alphabet.",
+        "transition_relation": "The two labelled transition relations.",
+        "observable_actions": "Labels retained by the common projection.",
+        "hidden_actions": "Labels hidden by the common projection.",
+        "stuttering_actions": "Stuttering treatment must be identical."
+      },
+      "observation_projection": {
+        "applicability": "required",
+        "subject": "Named comparison observer",
+        "policy_ref": "behavioral-relations/catalog",
+        "policy_revision": "rev1",
+        "redaction_scope": "No redaction beyond the named projection.",
+        "order_treatment": "Sequence order is preserved.",
+        "simultaneity_treatment": "Simultaneity is preserved only when declared."
+      },
+      "projection_required": true,
+      "direction": "symmetric",
+      "quantification": {
+        "states": "All reachable states contributing traces.",
+        "traces": "Universally over both trace sets.",
+        "schedulers": "All admitted schedulers.",
+        "strategies": "Outside scope unless strategies are encoded.",
+        "environments": "All declared environments.",
+        "observations": "Through one common projection."
+      },
+      "dimensions": {
+        "nondeterminism": {
+          "status": "parameterized",
+          "treatment": "Schedulers and branch quantifiers must be stated."
+        },
+        "concurrency": {
+          "status": "parameterized",
+          "treatment": "Interleaving, step, or true-concurrency semantics must be stated."
+        },
+        "probability": {
+          "status": "outside-scope",
+          "treatment": "Probability is excluded unless a probabilistic relation is named."
+        },
+        "time": {
+          "status": "parameterized",
+          "treatment": "Timed claims require an explicit clock and time model."
+        },
+        "partial_order": {
+          "status": "abstracted",
+          "treatment": "Default traces linearize order; partial-order claims require a separate declared model."
+        }
+      },
+      "preservation": {
+        "property": "Equality of projected trace languages.",
+        "proof_obligation": "Prove both projected trace inclusions under identical assumptions."
+      },
+      "bounded_evidence": [
+        "Finite trace comparison may refute but cannot establish equality."
+      ],
+      "explicit_non_claims": [
+        "Does not preserve branching structure and does not imply bisimulation."
+      ],
+      "incompatible_claim_surfaces": [
+        "Finite backend comparison"
+      ],
+      "assurance": {
+        "definition_status": "defined",
+        "implementation_status": "not-implemented",
+        "test_status": "not-tested",
+        "proof_status": "future",
+        "evidence_refs": []
+      },
+      "source_refs": [
+        "van-glabbeek-1990"
+      ]
+    },
+    "forward-simulation": {
+      "relation_id": "forward-simulation",
+      "display_name": "Forward simulation",
+      "relation_class": "behavioral",
+      "definition": "A relation maps each concrete step to an abstract matching path while preserving related states.",
+      "left_carrier": "Concrete implementation states.",
+      "right_carrier": "Abstract specification states.",
+      "initial_states": "Every concrete initial state relates to an abstract initial state.",
+      "transition_signature": {
+        "applicability": "applicable",
+        "labels": "Concrete and abstract labels under a declared matching function.",
+        "transition_relation": "Concrete and abstract step relations.",
+        "observable_actions": "Labels exposed by the abstraction.",
+        "hidden_actions": "Labels mapped to hidden or stuttering abstract behavior.",
+        "stuttering_actions": "Explicit abstract stuttering where allowed."
+      },
+      "observation_projection": {
+        "applicability": "parameterized",
+        "subject": "Abstraction observer",
+        "policy_ref": "behavioral-relations/catalog",
+        "policy_revision": "rev1",
+        "redaction_scope": "No redaction beyond the named projection.",
+        "order_treatment": "Sequence order is preserved.",
+        "simultaneity_treatment": "Simultaneity is preserved only when declared."
+      },
+      "projection_required": true,
+      "direction": "left-to-right",
+      "quantification": {
+        "states": "Universally over related reachable states.",
+        "traces": "All concrete traces induced by matched steps.",
+        "schedulers": "All admitted concrete choices.",
+        "strategies": "Outside scope unless extended strategically.",
+        "environments": "All admitted environments.",
+        "observations": "Under the named abstraction."
+      },
+      "dimensions": {
+        "nondeterminism": {
+          "status": "parameterized",
+          "treatment": "Schedulers and branch quantifiers must be stated."
+        },
+        "concurrency": {
+          "status": "parameterized",
+          "treatment": "Interleaving, step, or true-concurrency semantics must be stated."
+        },
+        "probability": {
+          "status": "outside-scope",
+          "treatment": "Probability is excluded unless a probabilistic relation is named."
+        },
+        "time": {
+          "status": "parameterized",
+          "treatment": "Timed claims require an explicit clock and time model."
+        },
+        "partial_order": {
+          "status": "abstracted",
+          "treatment": "Default traces linearize order; partial-order claims require a separate declared model."
+        }
+      },
+      "preservation": {
+        "property": "Usually projected trace inclusion and named safety properties.",
+        "proof_obligation": "Supply a simulation relation and discharge initiality plus step-correspondence obligations."
+      },
+      "bounded_evidence": [
+        "Tests may exercise candidate obligations on finite models only."
+      ],
+      "explicit_non_claims": [
+        "Successful probes do not establish a simulation relation."
+      ],
+      "incompatible_claim_surfaces": [
+        "Current conformance results"
+      ],
+      "assurance": {
+        "definition_status": "defined",
+        "implementation_status": "not-implemented",
+        "test_status": "not-tested",
+        "proof_status": "future",
+        "evidence_refs": []
+      },
+      "source_refs": [
+        "lynch-vaandrager-1995",
+        "abadi-lamport-1991"
+      ]
+    },
+    "backward-simulation": {
+      "relation_id": "backward-simulation",
+      "display_name": "Backward simulation",
+      "relation_class": "behavioral",
+      "definition": "A relation reasons from abstract successor possibilities back to concrete predecessors to establish implementation inclusion where forward simulation is insufficient.",
+      "left_carrier": "Concrete implementation states.",
+      "right_carrier": "Abstract specification states.",
+      "initial_states": "Initial and reachable-state coverage follow the selected backward-simulation theorem.",
+      "transition_signature": {
+        "applicability": "applicable",
+        "labels": "Concrete and abstract labels under the theorem's matching rule.",
+        "transition_relation": "Concrete and abstract step relations.",
+        "observable_actions": "Declared external labels.",
+        "hidden_actions": "Declared internal labels.",
+        "stuttering_actions": "History, prophecy, and stuttering treatment must be explicit."
+      },
+      "observation_projection": {
+        "applicability": "parameterized",
+        "subject": "Abstraction observer",
+        "policy_ref": "behavioral-relations/catalog",
+        "policy_revision": "rev1",
+        "redaction_scope": "No redaction beyond the named projection.",
+        "order_treatment": "Sequence order is preserved.",
+        "simultaneity_treatment": "Simultaneity is preserved only when declared."
+      },
+      "projection_required": true,
+      "direction": "left-to-right",
+      "quantification": {
+        "states": "Universally over theorem-defined related states.",
+        "traces": "All represented implementation behaviors.",
+        "schedulers": "All admitted nondeterministic choices.",
+        "strategies": "Outside scope unless extended strategically.",
+        "environments": "All admitted environments.",
+        "observations": "Under the named abstraction."
+      },
+      "dimensions": {
+        "nondeterminism": {
+          "status": "parameterized",
+          "treatment": "Schedulers and branch quantifiers must be stated."
+        },
+        "concurrency": {
+          "status": "parameterized",
+          "treatment": "Interleaving, step, or true-concurrency semantics must be stated."
+        },
+        "probability": {
+          "status": "outside-scope",
+          "treatment": "Probability is excluded unless a probabilistic relation is named."
+        },
+        "time": {
+          "status": "parameterized",
+          "treatment": "Timed claims require an explicit clock and time model."
+        },
+        "partial_order": {
+          "status": "abstracted",
+          "treatment": "Default traces linearize order; partial-order claims require a separate declared model."
+        }
+      },
+      "preservation": {
+        "property": "Implementation behavior inclusion under the cited theorem's assumptions.",
+        "proof_obligation": "Supply a backward simulation relation and discharge its reachability, initiality, and step obligations."
+      },
+      "bounded_evidence": [
+        "Finite model tests can exercise examples but do not prove a backend relation."
+      ],
+      "explicit_non_claims": [
+        "Does not follow from result equality or a forward-only sampled trace."
+      ],
+      "incompatible_claim_surfaces": [
+        "Current backend conformance"
+      ],
+      "assurance": {
+        "definition_status": "defined",
+        "implementation_status": "not-implemented",
+        "test_status": "not-tested",
+        "proof_status": "future",
+        "evidence_refs": []
+      },
+      "source_refs": [
+        "lynch-vaandrager-1995"
+      ]
+    },
+    "data-refinement": {
+      "relation_id": "data-refinement",
+      "display_name": "Data refinement",
+      "relation_class": "behavioral",
+      "definition": "Concrete data states represent abstract states through a retrieve relation while operations preserve that relation.",
+      "left_carrier": "Concrete state and operation space.",
+      "right_carrier": "Abstract state and operation space.",
+      "initial_states": "Concrete and abstract initial states related by the retrieve relation.",
+      "transition_signature": {
+        "applicability": "applicable",
+        "labels": "Operation invocations and observations.",
+        "transition_relation": "Concrete and abstract operation relations.",
+        "observable_actions": "Client-visible operation effects.",
+        "hidden_actions": "Internal representation steps.",
+        "stuttering_actions": "Stuttering and enabledness obligations are method-specific."
+      },
+      "observation_projection": {
+        "applicability": "parameterized",
+        "subject": "Client observation",
+        "policy_ref": "behavioral-relations/catalog",
+        "policy_revision": "rev1",
+        "redaction_scope": "No redaction beyond the named projection.",
+        "order_treatment": "Sequence order is preserved.",
+        "simultaneity_treatment": "Simultaneity is preserved only when declared."
+      },
+      "projection_required": true,
+      "direction": "left-to-right",
+      "quantification": {
+        "states": "All states satisfying the retrieve relation.",
+        "traces": "All operation histories covered by the refinement method.",
+        "schedulers": "All admitted operation nondeterminism.",
+        "strategies": "Outside scope unless strategies are modeled.",
+        "environments": "All client environments under stated preconditions.",
+        "observations": "Client-visible results only."
+      },
+      "dimensions": {
+        "nondeterminism": {
+          "status": "parameterized",
+          "treatment": "Schedulers and branch quantifiers must be stated."
+        },
+        "concurrency": {
+          "status": "parameterized",
+          "treatment": "Interleaving, step, or true-concurrency semantics must be stated."
+        },
+        "probability": {
+          "status": "outside-scope",
+          "treatment": "Probability is excluded unless a probabilistic relation is named."
+        },
+        "time": {
+          "status": "parameterized",
+          "treatment": "Timed claims require an explicit clock and time model."
+        },
+        "partial_order": {
+          "status": "abstracted",
+          "treatment": "Default traces linearize order; partial-order claims require a separate declared model."
+        }
+      },
+      "preservation": {
+        "property": "The abstract operation contract and selected client-observable properties.",
+        "proof_obligation": "Define the retrieve relation and discharge initialization, applicability/enabledness, and correctness obligations."
+      },
+      "bounded_evidence": [
+        "Contract and operation tests are bounded evidence only."
+      ],
+      "explicit_non_claims": [
+        "An SDL transformation function is not data refinement without these obligations."
+      ],
+      "incompatible_claim_surfaces": [
+        "SDL phase transformation"
+      ],
+      "assurance": {
+        "definition_status": "defined",
+        "implementation_status": "not-implemented",
+        "test_status": "not-tested",
+        "proof_status": "future",
+        "evidence_refs": []
+      },
+      "source_refs": [
+        "abadi-lamport-1991",
+        "lynch-vaandrager-1995"
+      ]
+    },
+    "strong-bisimulation": {
+      "relation_id": "strong-bisimulation",
+      "display_name": "Strong Park-Milner bisimulation",
+      "relation_class": "behavioral",
+      "definition": "A symmetric relation matches every labelled step immediately in both directions.",
+      "left_carrier": "One labelled transition system.",
+      "right_carrier": "Another labelled transition system.",
+      "initial_states": "The two initial states belong to the bisimulation relation.",
+      "transition_signature": {
+        "applicability": "applicable",
+        "labels": "A common label alphabet including internal labels.",
+        "transition_relation": "Both labelled transition relations.",
+        "observable_actions": "Every label is matched exactly.",
+        "hidden_actions": "Hidden labels are still labels and must match immediately.",
+        "stuttering_actions": "Only explicitly labelled stuttering steps can match."
+      },
+      "observation_projection": {
+        "applicability": "identity",
+        "subject": "External comparison observer",
+        "policy_ref": "behavioral-relations/catalog",
+        "policy_revision": "rev1",
+        "redaction_scope": "No redaction beyond the named projection.",
+        "order_treatment": "Sequence order is preserved.",
+        "simultaneity_treatment": "Simultaneity is preserved only when declared."
+      },
+      "projection_required": false,
+      "direction": "symmetric",
+      "quantification": {
+        "states": "Universally over every related state pair.",
+        "traces": "All branching continuations.",
+        "schedulers": "All nondeterministic branches.",
+        "strategies": "Outside scope unless lifted to games.",
+        "environments": "All transition-system environments encoded in state.",
+        "observations": "Identity observation of labels."
+      },
+      "dimensions": {
+        "nondeterminism": {
+          "status": "parameterized",
+          "treatment": "Schedulers and branch quantifiers must be stated."
+        },
+        "concurrency": {
+          "status": "parameterized",
+          "treatment": "Interleaving, step, or true-concurrency semantics must be stated."
+        },
+        "probability": {
+          "status": "outside-scope",
+          "treatment": "Probability is excluded unless a probabilistic relation is named."
+        },
+        "time": {
+          "status": "parameterized",
+          "treatment": "Timed claims require an explicit clock and time model."
+        },
+        "partial_order": {
+          "status": "abstracted",
+          "treatment": "Default traces linearize order; partial-order claims require a separate declared model."
+        }
+      },
+      "preservation": {
+        "property": "Branching structure and modal properties under the chosen semantics.",
+        "proof_obligation": "Exhibit a symmetric relation closed under immediate labelled steps in both directions."
+      },
+      "bounded_evidence": [
+        "Finite algorithms can decide the relation only for supplied finite models."
+      ],
+      "explicit_non_claims": [
+        "One shared trace, result, digest, or terminal observation is insufficient."
+      ],
+      "incompatible_claim_surfaces": [
+        "Finite probes",
+        "Digest comparison"
+      ],
+      "assurance": {
+        "definition_status": "defined",
+        "implementation_status": "not-implemented",
+        "test_status": "not-tested",
+        "proof_status": "future",
+        "evidence_refs": []
+      },
+      "source_refs": [
+        "park-1981",
+        "milner-1980"
+      ]
+    },
+    "weak-bisimulation": {
+      "relation_id": "weak-bisimulation",
+      "display_name": "Weak or observational bisimulation",
+      "relation_class": "behavioral",
+      "definition": "A symmetric relation matches visible actions through closure over explicitly hidden tau steps.",
+      "left_carrier": "One labelled transition system with tau.",
+      "right_carrier": "Another labelled transition system with tau.",
+      "initial_states": "Initial states related after the selected tau closure.",
+      "transition_signature": {
+        "applicability": "applicable",
+        "labels": "A common visible alphabet plus the declared tau label.",
+        "transition_relation": "Both labelled transition relations.",
+        "observable_actions": "Visible labels match through weak transitions.",
+        "hidden_actions": "Only the explicitly governed tau label is hidden.",
+        "stuttering_actions": "Tau closure and stuttering are explicit; divergence treatment is declared."
+      },
+      "observation_projection": {
+        "applicability": "required",
+        "subject": "Observer that hides tau",
+        "policy_ref": "behavioral-relations/tau-projection",
+        "policy_revision": "rev1",
+        "redaction_scope": "No redaction beyond the named projection.",
+        "order_treatment": "Sequence order is preserved.",
+        "simultaneity_treatment": "Simultaneity is preserved only when declared."
+      },
+      "projection_required": true,
+      "direction": "symmetric",
+      "quantification": {
+        "states": "Universally over related states under tau closure.",
+        "traces": "All weak traces and branching continuations.",
+        "schedulers": "All nondeterministic tau and visible branches.",
+        "strategies": "Outside scope unless lifted to games.",
+        "environments": "All encoded environments.",
+        "observations": "Through the named hiding projection."
+      },
+      "dimensions": {
+        "nondeterminism": {
+          "status": "parameterized",
+          "treatment": "Schedulers and branch quantifiers must be stated."
+        },
+        "concurrency": {
+          "status": "parameterized",
+          "treatment": "Interleaving, step, or true-concurrency semantics must be stated."
+        },
+        "probability": {
+          "status": "outside-scope",
+          "treatment": "Probability is excluded unless a probabilistic relation is named."
+        },
+        "time": {
+          "status": "parameterized",
+          "treatment": "Timed claims require an explicit clock and time model."
+        },
+        "partial_order": {
+          "status": "abstracted",
+          "treatment": "Default traces linearize order; partial-order claims require a separate declared model."
+        }
+      },
+      "preservation": {
+        "property": "Observation-preserving branching behavior under stated divergence and termination semantics.",
+        "proof_obligation": "Exhibit a weak bisimulation relation and discharge both directional weak-step obligations."
+      },
+      "bounded_evidence": [
+        "The catalog's hidden-action example demonstrates the definition on a finite toy model."
+      ],
+      "explicit_non_claims": [
+        "Backend-internal work is not tau unless a governed projection declares it."
+      ],
+      "incompatible_claim_surfaces": [
+        "Undeclared backend hiding"
+      ],
+      "assurance": {
+        "definition_status": "defined",
+        "implementation_status": "not-implemented",
+        "test_status": "bounded",
+        "proof_status": "future",
+        "evidence_refs": [
+          "contracts/concept-authority/behavioral-relations-v1.json#worked_examples"
+        ]
+      },
+      "source_refs": [
+        "milner-1980",
+        "van-glabbeek-1990"
+      ]
+    },
+    "participant-projected-history-equivalence": {
+      "relation_id": "participant-projected-history-equivalence",
+      "display_name": "Participant-projected history equivalence",
+      "relation_class": "epistemic",
+      "definition": "Two finite or complete histories have equal projections for one participant under one observation-boundary revision.",
+      "left_carrier": "One global or backend history.",
+      "right_carrier": "Another global or backend history.",
+      "initial_states": "The compared histories share a declared participant and starting information state.",
+      "transition_signature": {
+        "applicability": "applicable",
+        "labels": "Participant-visible events after projection.",
+        "transition_relation": "Underlying history extension relations.",
+        "observable_actions": "Events admitted by the participant observation boundary.",
+        "hidden_actions": "Events removed or redacted by the boundary.",
+        "stuttering_actions": "No additional stuttering assumption beyond projected history equality."
+      },
+      "observation_projection": {
+        "applicability": "required",
+        "subject": "Named participant",
+        "policy_ref": "participant-observation-boundary",
+        "policy_revision": "rev1",
+        "redaction_scope": "No redaction beyond the named projection.",
+        "order_treatment": "Sequence order is preserved.",
+        "simultaneity_treatment": "Simultaneity is preserved only when declared."
+      },
+      "projection_required": true,
+      "direction": "symmetric",
+      "quantification": {
+        "states": "States represented in the compared histories.",
+        "traces": "Finite histories unless a universal claim is separately proved.",
+        "schedulers": "Only schedulers represented in the histories.",
+        "strategies": "No strategic quantification.",
+        "environments": "Only the named environment/run context.",
+        "observations": "One participant and one policy revision."
+      },
+      "dimensions": {
+        "nondeterminism": {
+          "status": "parameterized",
+          "treatment": "Schedulers and branch quantifiers must be stated."
+        },
+        "concurrency": {
+          "status": "parameterized",
+          "treatment": "Interleaving, step, or true-concurrency semantics must be stated."
+        },
+        "probability": {
+          "status": "outside-scope",
+          "treatment": "Probability is excluded unless a probabilistic relation is named."
+        },
+        "time": {
+          "status": "parameterized",
+          "treatment": "Timed claims require an explicit clock and time model."
+        },
+        "partial_order": {
+          "status": "abstracted",
+          "treatment": "Default traces linearize order; partial-order claims require a separate declared model."
+        }
+      },
+      "preservation": {
+        "property": "Equality or indistinguishability of the named participant's projected histories.",
+        "proof_obligation": "Apply the existing participant observation boundary to both histories and compare the resulting ordered visible records."
+      },
+      "bounded_evidence": [
+        "Participant behavior-history and observation-envelope tests on named histories."
+      ],
+      "explicit_non_claims": [
+        "Does not imply equality of global state, future behavior, knowledge, or strategy."
+      ],
+      "incompatible_claim_surfaces": [
+        "Global-state comparison",
+        "Strategic equivalence"
+      ],
+      "assurance": {
+        "definition_status": "defined",
+        "implementation_status": "implemented",
+        "test_status": "bounded",
+        "proof_status": "deliberately-unproved",
+        "evidence_refs": [
+          "specs/formal/participant-runtime/README.md"
+        ]
+      },
+      "source_refs": [
+        "fagin-halpern-moses-vardi-1995",
+        "milner-1980"
+      ]
+    },
+    "epistemic-indistinguishability": {
+      "relation_id": "epistemic-indistinguishability",
+      "display_name": "Epistemic indistinguishability",
+      "relation_class": "epistemic",
+      "definition": "Two worlds are indistinguishable to an agent when they occupy the same governed information set.",
+      "left_carrier": "One epistemic world/state.",
+      "right_carrier": "Another epistemic world/state.",
+      "initial_states": "Worlds in the same agent-indexed accessibility or information relation.",
+      "transition_signature": {
+        "applicability": "applicable",
+        "labels": "Optional temporal or action labels of the epistemic model.",
+        "transition_relation": "The declared interpreted-system or Kripke transition relation.",
+        "observable_actions": "Agent-observable propositions and events.",
+        "hidden_actions": "Facts excluded by the information projection.",
+        "stuttering_actions": "Stuttering is model-specific."
+      },
+      "observation_projection": {
+        "applicability": "required",
+        "subject": "Named agent",
+        "policy_ref": "participant-observation-boundary",
+        "policy_revision": "rev1",
+        "redaction_scope": "No redaction beyond the named projection.",
+        "order_treatment": "Sequence order is preserved.",
+        "simultaneity_treatment": "Simultaneity is preserved only when declared."
+      },
+      "projection_required": true,
+      "direction": "symmetric",
+      "quantification": {
+        "states": "All worlds in the selected information relation.",
+        "traces": "Histories only when the interpreted-system model includes them.",
+        "schedulers": "All schedulers represented in the model.",
+        "strategies": "Strategies are outside the relation itself.",
+        "environments": "All environments represented by possible worlds.",
+        "observations": "One agent or explicitly named group."
+      },
+      "dimensions": {
+        "nondeterminism": {
+          "status": "parameterized",
+          "treatment": "Schedulers and branch quantifiers must be stated."
+        },
+        "concurrency": {
+          "status": "parameterized",
+          "treatment": "Interleaving, step, or true-concurrency semantics must be stated."
+        },
+        "probability": {
+          "status": "outside-scope",
+          "treatment": "Probability is excluded unless a probabilistic relation is named."
+        },
+        "time": {
+          "status": "parameterized",
+          "treatment": "Timed claims require an explicit clock and time model."
+        },
+        "partial_order": {
+          "status": "abstracted",
+          "treatment": "Default traces linearize order; partial-order claims require a separate declared model."
+        }
+      },
+      "preservation": {
+        "property": "Truth of formulas invariant over the selected information set, subject to the logic.",
+        "proof_obligation": "Define possible worlds, the agent-indexed indistinguishability relation, valuation, and any temporal interaction."
+      },
+      "bounded_evidence": [
+        "Equal projected finite histories may be evidence for a bounded information-state comparison."
+      ],
+      "explicit_non_claims": [
+        "Does not follow from global-state equality and does not establish strategic equivalence."
+      ],
+      "incompatible_claim_surfaces": [
+        "Current participant conformance"
+      ],
+      "assurance": {
+        "definition_status": "defined",
+        "implementation_status": "not-implemented",
+        "test_status": "not-tested",
+        "proof_status": "future",
+        "evidence_refs": []
+      },
+      "source_refs": [
+        "fagin-halpern-moses-vardi-1995"
+      ]
+    },
+    "alternating-strategic-equivalence": {
+      "relation_id": "alternating-strategic-equivalence",
+      "display_name": "Alternating or strategic equivalence",
+      "relation_class": "strategic",
+      "definition": "Two game structures preserve the abilities of named coalitions under explicit strategy and environment quantifiers.",
+      "left_carrier": "One concurrent or alternating game structure.",
+      "right_carrier": "Another concurrent or alternating game structure.",
+      "initial_states": "Related initial game states.",
+      "transition_signature": {
+        "applicability": "applicable",
+        "labels": "Joint actions, chance outcomes, and state transitions.",
+        "transition_relation": "Both game transition functions or relations.",
+        "observable_actions": "Player observations and public actions.",
+        "hidden_actions": "Hidden information under the named observation partitions.",
+        "stuttering_actions": "Stuttering, simultaneous moves, and scheduler steps are explicit."
+      },
+      "observation_projection": {
+        "applicability": "required",
+        "subject": "Named players or coalition",
+        "policy_ref": "participant-observation-boundary",
+        "policy_revision": "rev1",
+        "redaction_scope": "No redaction beyond the named projection.",
+        "order_treatment": "Sequence order is preserved.",
+        "simultaneity_treatment": "Simultaneity is preserved only when declared."
+      },
+      "projection_required": true,
+      "direction": "symmetric",
+      "quantification": {
+        "states": "Universally over related game states.",
+        "traces": "Outcome paths induced by quantified strategies.",
+        "schedulers": "Schedulers and chance kernels explicitly quantified.",
+        "strategies": "Coalitions and strategy classes universally/existentially quantified as declared.",
+        "environments": "Adversarial environment choices explicitly quantified.",
+        "observations": "Player-indexed observation partitions."
+      },
+      "dimensions": {
+        "nondeterminism": {
+          "status": "parameterized",
+          "treatment": "Environment and scheduler choices are explicit."
+        },
+        "concurrency": {
+          "status": "supported",
+          "treatment": "Joint and simultaneous moves are part of the game structure."
+        },
+        "probability": {
+          "status": "parameterized",
+          "treatment": "Chance kernels must be declared when present."
+        },
+        "time": {
+          "status": "parameterized",
+          "treatment": "Timed strategies require an explicit clock model."
+        },
+        "partial_order": {
+          "status": "parameterized",
+          "treatment": "Concurrent action order is part of the declared game semantics."
+        }
+      },
+      "preservation": {
+        "property": "Coalition ability for the stated objective class.",
+        "proof_obligation": "Define players, legal joint actions, observations, strategy class, coalitions, chance, scheduler/fairness, objectives, and an alternating relation in both directions."
+      },
+      "bounded_evidence": [
+        "Finite recorded joint-action traces can only falsify selected cases."
+      ],
+      "explicit_non_claims": [
+        "Capability declarations and shared probe outcomes do not establish strategic equivalence."
+      ],
+      "incompatible_claim_surfaces": [
+        "Current multi-agent conformance"
+      ],
+      "assurance": {
+        "definition_status": "defined",
+        "implementation_status": "not-implemented",
+        "test_status": "not-tested",
+        "proof_status": "future",
+        "evidence_refs": []
+      },
+      "source_refs": [
+        "alur-henzinger-kupferman-vardi-1998",
+        "alur-henzinger-kupferman-2002"
+      ]
+    },
+    "probabilistic-bisimulation": {
+      "relation_id": "probabilistic-bisimulation",
+      "display_name": "Probabilistic bisimulation",
+      "relation_class": "behavioral",
+      "definition": "Related states match labelled probability distributions over equivalence classes under the selected probabilistic process model.",
+      "left_carrier": "One probabilistic labelled transition system.",
+      "right_carrier": "Another probabilistic labelled transition system.",
+      "initial_states": "Initial states belong to the probabilistic bisimulation relation.",
+      "transition_signature": {
+        "applicability": "applicable",
+        "labels": "Shared visible and hidden labels of the probabilistic model.",
+        "transition_relation": "Labelled transitions to probability distributions.",
+        "observable_actions": "Labels retained by the projection.",
+        "hidden_actions": "Declared hidden labels.",
+        "stuttering_actions": "Weak variants require an explicit probabilistic tau closure."
+      },
+      "observation_projection": {
+        "applicability": "parameterized",
+        "subject": "Probabilistic process observer",
+        "policy_ref": "behavioral-relations/catalog",
+        "policy_revision": "rev1",
+        "redaction_scope": "No redaction beyond the named projection.",
+        "order_treatment": "Sequence order is preserved.",
+        "simultaneity_treatment": "Simultaneity is preserved only when declared."
+      },
+      "projection_required": true,
+      "direction": "symmetric",
+      "quantification": {
+        "states": "Universally over related states.",
+        "traces": "All probabilistic traces or branching distributions required by the variant.",
+        "schedulers": "All nondeterministic schedulers explicitly quantified.",
+        "strategies": "Outside scope unless combined with games.",
+        "environments": "All admitted probabilistic environments.",
+        "observations": "Through the named projection."
+      },
+      "dimensions": {
+        "nondeterminism": {
+          "status": "parameterized",
+          "treatment": "Scheduler quantification is mandatory."
+        },
+        "concurrency": {
+          "status": "parameterized",
+          "treatment": "The process-composition semantics must be named."
+        },
+        "probability": {
+          "status": "supported",
+          "treatment": "Probability distributions are matched over relation classes."
+        },
+        "time": {
+          "status": "outside-scope",
+          "treatment": "Continuous or timed probability needs another variant."
+        },
+        "partial_order": {
+          "status": "outside-scope",
+          "treatment": "The base relation uses labelled branching structure."
+        }
+      },
+      "preservation": {
+        "property": "Probability mass over related behavior classes.",
+        "proof_obligation": "Exhibit a relation whose matched transitions assign equal probability to every relation-closed class under the chosen variant."
+      },
+      "bounded_evidence": [
+        "Statistical samples may refute parameters but do not prove distributional branching equivalence."
+      ],
+      "explicit_non_claims": [
+        "Statistical similarity or equal sample means is not probabilistic bisimulation."
+      ],
+      "incompatible_claim_surfaces": [
+        "Ordinary empirical study"
+      ],
+      "assurance": {
+        "definition_status": "defined",
+        "implementation_status": "not-implemented",
+        "test_status": "not-tested",
+        "proof_status": "future",
+        "evidence_refs": []
+      },
+      "source_refs": [
+        "larsen-skou-1991"
+      ]
+    },
+    "statistical-similarity": {
+      "relation_id": "statistical-similarity",
+      "display_name": "Statistical similarity",
+      "relation_class": "empirical",
+      "definition": "A predeclared metric over sampled populations lies within a stated similarity criterion with uncertainty.",
+      "left_carrier": "One sampled population or system output distribution.",
+      "right_carrier": "Another sampled population, target distribution, or reference data.",
+      "initial_states": "The preregistered sampling frame and apparatus context.",
+      "transition_signature": {
+        "applicability": "not-applicable",
+        "labels": "not applicable",
+        "transition_relation": "not applicable",
+        "observable_actions": "not applicable",
+        "hidden_actions": "not applicable",
+        "stuttering_actions": "not applicable",
+        "not_applicable_rationale": "Statistical similarity compares sampled measures, not transition systems unless a separate model binds them."
+      },
+      "observation_projection": {
+        "applicability": "parameterized",
+        "subject": "Study analyst",
+        "policy_ref": "experiment-study-v1",
+        "policy_revision": "rev1",
+        "redaction_scope": "No redaction beyond the named projection.",
+        "order_treatment": "Sequence order is preserved.",
+        "simultaneity_treatment": "Simultaneity is preserved only when declared."
+      },
+      "projection_required": true,
+      "direction": "symmetric",
+      "quantification": {
+        "states": "Sampled observations only.",
+        "traces": "Sampled run outcomes only.",
+        "schedulers": "Schedulers represented by the sampling design.",
+        "strategies": "Strategies represented by the sampling design.",
+        "environments": "The preregistered population and apparatus.",
+        "observations": "The named metric/estimand projection."
+      },
+      "dimensions": {
+        "nondeterminism": {
+          "status": "abstracted",
+          "treatment": "Variation is represented through the sampling model."
+        },
+        "concurrency": {
+          "status": "abstracted",
+          "treatment": "Concurrency matters only through measured outcomes."
+        },
+        "probability": {
+          "status": "supported",
+          "treatment": "The sampling distribution and uncertainty method are explicit."
+        },
+        "time": {
+          "status": "parameterized",
+          "treatment": "Sampling windows and time domains are declared."
+        },
+        "partial_order": {
+          "status": "outside-scope",
+          "treatment": "Event partial order is not inferred from aggregate metrics."
+        }
+      },
+      "preservation": {
+        "property": "The stated similarity criterion for the named estimand and population.",
+        "proof_obligation": "Predeclare population, sampling frame, metric, criterion, uncertainty method, and decision rule; then execute the study."
+      },
+      "bounded_evidence": [
+        "Experiment runs, derived measures, and uncertainty intervals."
+      ],
+      "explicit_non_claims": [
+        "Does not establish behavioral, epistemic, strategic, or probabilistic bisimulation."
+      ],
+      "incompatible_claim_surfaces": [
+        "Universal backend behavior"
+      ],
+      "assurance": {
+        "definition_status": "defined",
+        "implementation_status": "partial",
+        "test_status": "bounded",
+        "proof_status": "deliberately-unproved",
+        "evidence_refs": [
+          "specs/formal/experiment-core/README.md"
+        ]
+      },
+      "source_refs": [
+        "wellek-2010"
+      ]
+    },
+    "statistical-equivalence": {
+      "relation_id": "statistical-equivalence",
+      "display_name": "Statistical equivalence",
+      "relation_class": "empirical",
+      "definition": "A preregistered equivalence test supports that a named estimand lies within a stated equivalence margin for the sampled population.",
+      "left_carrier": "One sampled population or treatment.",
+      "right_carrier": "Another sampled population, treatment, or reference.",
+      "initial_states": "The preregistered sampling frame, allocation, and apparatus context.",
+      "transition_signature": {
+        "applicability": "not-applicable",
+        "labels": "not applicable",
+        "transition_relation": "not applicable",
+        "observable_actions": "not applicable",
+        "hidden_actions": "not applicable",
+        "stuttering_actions": "not applicable",
+        "not_applicable_rationale": "A statistical equivalence test does not compare enabled transitions."
+      },
+      "observation_projection": {
+        "applicability": "parameterized",
+        "subject": "Study analyst",
+        "policy_ref": "experiment-study-v1",
+        "policy_revision": "rev1",
+        "redaction_scope": "No redaction beyond the named projection.",
+        "order_treatment": "Sequence order is preserved.",
+        "simultaneity_treatment": "Simultaneity is preserved only when declared."
+      },
+      "projection_required": true,
+      "direction": "symmetric",
+      "quantification": {
+        "states": "Sampled units only.",
+        "traces": "Sampled run outcomes only.",
+        "schedulers": "Schedulers represented by allocation/sampling.",
+        "strategies": "Strategies represented by sampled conditions.",
+        "environments": "The stated target population.",
+        "observations": "The named estimand and measurement projection."
+      },
+      "dimensions": {
+        "nondeterminism": {
+          "status": "abstracted",
+          "treatment": "Variation is handled by the statistical model."
+        },
+        "concurrency": {
+          "status": "abstracted",
+          "treatment": "Concurrency is only a measured covariate unless modeled."
+        },
+        "probability": {
+          "status": "supported",
+          "treatment": "Equivalence margins, error rates, and uncertainty are explicit."
+        },
+        "time": {
+          "status": "parameterized",
+          "treatment": "Study windows and time domains are declared."
+        },
+        "partial_order": {
+          "status": "outside-scope",
+          "treatment": "Aggregate equivalence does not preserve event order."
+        }
+      },
+      "preservation": {
+        "property": "Equivalence of the named estimand within the preregistered margin.",
+        "proof_obligation": "Specify the equivalence hypotheses, margin, error control, sampling design, and analysis before observing results."
+      },
+      "bounded_evidence": [
+        "Experiment-study analysis and derived measures."
+      ],
+      "explicit_non_claims": [
+        "Statistical equivalence is not behavioral equivalence or proof of implementation conformance."
+      ],
+      "incompatible_claim_surfaces": [
+        "Bisimulation claim"
+      ],
+      "assurance": {
+        "definition_status": "defined",
+        "implementation_status": "partial",
+        "test_status": "bounded",
+        "proof_status": "deliberately-unproved",
+        "evidence_refs": [
+          "specs/formal/experiment-core/README.md"
+        ]
+      },
+      "source_refs": [
+        "wellek-2010"
+      ]
+    },
+    "empirical-adequacy": {
+      "relation_id": "empirical-adequacy",
+      "display_name": "Empirical adequacy",
+      "relation_class": "empirical",
+      "definition": "Observed evidence supports a purpose-relative, bounded adequacy claim for a named phenomenon and intended use.",
+      "left_carrier": "A model, language, implementation, or method under study.",
+      "right_carrier": "A defined empirical target, task, or phenomenon.",
+      "initial_states": "The preregistered study population, tasks, and apparatus.",
+      "transition_signature": {
+        "applicability": "not-applicable",
+        "labels": "not applicable",
+        "transition_relation": "not applicable",
+        "observable_actions": "not applicable",
+        "hidden_actions": "not applicable",
+        "stuttering_actions": "not applicable",
+        "not_applicable_rationale": "Empirical adequacy may study behavior but is not itself a transition-system equivalence."
+      },
+      "observation_projection": {
+        "applicability": "parameterized",
+        "subject": "Study audience",
+        "policy_ref": "experiment-study-v1",
+        "policy_revision": "rev1",
+        "redaction_scope": "No redaction beyond the named projection.",
+        "order_treatment": "Sequence order is preserved.",
+        "simultaneity_treatment": "Simultaneity is preserved only when declared."
+      },
+      "projection_required": true,
+      "direction": "left-to-right",
+      "quantification": {
+        "states": "Observed study units.",
+        "traces": "Observed runs and tasks.",
+        "schedulers": "Schedulers represented by the protocol.",
+        "strategies": "Strategies represented by participant/task sampling.",
+        "environments": "The named target population and intended use.",
+        "observations": "The preregistered measures and coding projection."
+      },
+      "dimensions": {
+        "nondeterminism": {
+          "status": "abstracted",
+          "treatment": "Uncontrolled variation is handled as a validity limitation."
+        },
+        "concurrency": {
+          "status": "abstracted",
+          "treatment": "Concurrency is measured only when the protocol names it."
+        },
+        "probability": {
+          "status": "parameterized",
+          "treatment": "Sampling and uncertainty must be reported."
+        },
+        "time": {
+          "status": "parameterized",
+          "treatment": "Study period and temporal validity are explicit."
+        },
+        "partial_order": {
+          "status": "outside-scope",
+          "treatment": "Adequacy does not imply partial-order preservation."
+        }
+      },
+      "preservation": {
+        "property": "Fitness for the explicitly stated empirical purpose within the study boundary.",
+        "proof_obligation": "Predeclare tasks, population, measures, success/falsification criteria, analysis, limitations, and evidence lineage."
+      },
+      "bounded_evidence": [
+        "Independent parser, authoring, review, and diagnostic-recovery studies."
+      ],
+      "explicit_non_claims": [
+        "Repeated bounded observations do not establish universal semantics, conformance, or behavioral equivalence."
+      ],
+      "incompatible_claim_surfaces": [
+        "Universal language equivalence"
+      ],
+      "assurance": {
+        "definition_status": "defined",
+        "implementation_status": "not-implemented",
+        "test_status": "not-tested",
+        "proof_status": "future",
+        "evidence_refs": []
+      },
+      "source_refs": [
+        "bueno-1997",
+        "wellek-2010"
+      ]
+    }
+  },
+  "claim_surfaces": [
+    {
+      "surface_id": "sdl-transformation",
+      "intended_relation_ids": [
+        "structural-validity",
+        "semantic-validity",
+        "canonical-artifact-identity"
+      ],
+      "evidence_boundary": "Deterministic phase functions and finite invariant, round-trip, canonicalization, and property tests.",
+      "prohibited_relation_ids": [
+        "data-refinement",
+        "forward-simulation",
+        "trace-equivalence",
+        "strong-bisimulation"
+      ],
+      "explicit_non_claims": [
+        "No universal behavioral refinement or equivalence is currently proved."
+      ]
+    },
+    {
+      "surface_id": "backend-realization",
+      "intended_relation_ids": [
+        "realization-envelope-membership",
+        "bounded-probe-success",
+        "trace-inclusion"
+      ],
+      "evidence_boundary": "Envelope checks and named target probes are bounded evidence; projected trace inclusion is the intended universal obligation and remains deliberately unproved.",
+      "prohibited_relation_ids": [
+        "trace-equivalence",
+        "backward-simulation",
+        "strong-bisimulation"
+      ],
+      "explicit_non_claims": [
+        "Provisioning, snapshots, witnesses, and negative probes do not prove behavioral equivalence."
+      ]
+    },
+    {
+      "surface_id": "backend-comparison",
+      "intended_relation_ids": [
+        "bounded-probe-success",
+        "statistical-similarity",
+        "canonical-artifact-identity"
+      ],
+      "evidence_boundary": "Only named invariants, probes, digests, populations, metrics, and uncertainty procedures are compared.",
+      "prohibited_relation_ids": [
+        "trace-equivalence",
+        "strong-bisimulation",
+        "alternating-strategic-equivalence"
+      ],
+      "explicit_non_claims": [
+        "A shared result, digest, or finite trace is not universal same behavior."
+      ]
+    },
+    {
+      "surface_id": "participant-visible-behavior",
+      "intended_relation_ids": [
+        "participant-projected-history-equivalence"
+      ],
+      "evidence_boundary": "Comparison is parameterized by participant, observation-boundary policy revision, redaction, order, simultaneity, and run context.",
+      "prohibited_relation_ids": [
+        "epistemic-indistinguishability",
+        "alternating-strategic-equivalence"
+      ],
+      "explicit_non_claims": [
+        "Equal projected histories do not expose hidden global state or prove future knowledge or strategy equivalence."
+      ]
+    },
+    {
+      "surface_id": "multi-agent-interaction",
+      "intended_relation_ids": [
+        "bounded-probe-success",
+        "alternating-strategic-equivalence",
+        "probabilistic-bisimulation"
+      ],
+      "evidence_boundary": "Current evidence is structural and finite; strategic and probabilistic relations are definitions for future governed models.",
+      "prohibited_relation_ids": [
+        "trace-equivalence",
+        "strong-bisimulation"
+      ],
+      "explicit_non_claims": [
+        "Current joint-action, chance, simultaneous-move, and mean-field records do not prove strategic equivalence."
+      ]
+    },
+    {
+      "surface_id": "independent-adequacy-study",
+      "intended_relation_ids": [
+        "empirical-adequacy",
+        "statistical-similarity",
+        "statistical-equivalence"
+      ],
+      "evidence_boundary": "Claims bind to a preregistered population, task set, metric or coding scheme, uncertainty, falsification criteria, and limitations.",
+      "prohibited_relation_ids": [
+        "trace-equivalence",
+        "strong-bisimulation",
+        "alternating-strategic-equivalence"
+      ],
+      "explicit_non_claims": [
+        "Bounded observations and statistical findings cannot be promoted to universal behavioral proof."
+      ]
+    }
+  ],
+  "worked_examples": {
+    "finite-probe-counterexample": {
+      "example_id": "finite-probe-counterexample",
+      "purpose": "Two implementations pass the same finite visible probe a, but the left system has an additional enabled b transition that the right system cannot match.",
+      "left_system": {
+        "states": [
+          "l0",
+          "l1",
+          "l2"
+        ],
+        "initial_state": "l0",
+        "transitions": [
+          {
+            "source": "l0",
+            "action": "a",
+            "target": "l1"
+          },
+          {
+            "source": "l0",
+            "action": "b",
+            "target": "l2"
+          }
+        ]
+      },
+      "right_system": {
+        "states": [
+          "r0",
+          "r1"
+        ],
+        "initial_state": "r0",
+        "transitions": [
+          {
+            "source": "r0",
+            "action": "a",
+            "target": "r1"
+          }
+        ]
+      },
+      "tested_visible_trace": [
+        "a"
+      ],
+      "hidden_action": "tau",
+      "expected_strong_bisimulation": false,
+      "expected_weak_matching": false,
+      "evidence_boundary": "The shared a probe is evidence only for that finite trace; the unmatched b branch refutes strong bisimulation.",
+      "explicit_non_claims": [
+        "This toy counterexample is not evidence about any ACES backend."
+      ]
+    },
+    "hidden-action-counterexample": {
+      "example_id": "hidden-action-counterexample",
+      "purpose": "The abstract system performs visible send directly; the backend performs governed hidden tau and then send.",
+      "left_system": {
+        "states": [
+          "a0",
+          "a1"
+        ],
+        "initial_state": "a0",
+        "transitions": [
+          {
+            "source": "a0",
+            "action": "send",
+            "target": "a1"
+          }
+        ]
+      },
+      "right_system": {
+        "states": [
+          "b0",
+          "b1",
+          "b2"
+        ],
+        "initial_state": "b0",
+        "transitions": [
+          {
+            "source": "b0",
+            "action": "tau",
+            "target": "b1"
+          },
+          {
+            "source": "b1",
+            "action": "send",
+            "target": "b2"
+          }
+        ]
+      },
+      "tested_visible_trace": [
+        "send"
+      ],
+      "hidden_action": "tau",
+      "expected_strong_bisimulation": false,
+      "expected_weak_matching": true,
+      "evidence_boundary": "Strong matching fails on tau; weak visible-trace matching succeeds only under the declared tau-hiding projection and finite termination assumptions.",
+      "explicit_non_claims": [
+        "The example does not declare arbitrary backend-internal work hidden and does not prove an ACES backend relation."
+      ]
+    }
+  }
+}

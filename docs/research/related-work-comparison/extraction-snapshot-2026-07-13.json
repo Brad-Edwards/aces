@@ -1,0 +1,2973 @@
+{
+  "snapshot_id": "snapshot-2026-07-13",
+  "protocol_revision": "protocol-v1",
+  "frozen_at": "2026-07-13T05:40:00Z",
+  "assessor": "Repository research extraction for issue 728",
+  "review_status": "awaiting-independent-replication",
+  "limitations": [
+    "External authoring cases are source walkthroughs; normal CI does not fetch or execute compared systems.",
+    "No independent author population, blinded second extraction, or adjudication was available for this snapshot.",
+    "Ordinal levels summarize axis-specific evidence and are not interval measurements or a universal quality scale.",
+    "Repository and documentation activity is not treated as independent adoption evidence."
+  ],
+  "sources": [
+    {
+      "source_id": "aces-authoring-schema",
+      "system_id": "aces",
+      "kind": "repository-internal",
+      "title": "ACES SDL authoring input schema",
+      "locator": "https://github.com/Brad-Edwards/aces/blob/1b63b2a0b10dcd80e29b8bad14558ad9c6b706d0/contracts/schemas/sdl/sdl-authoring-input-v1.json",
+      "version": "pre-change dev revision",
+      "revision": "1b63b2a0b10dcd80e29b8bad14558ad9c6b706d0",
+      "retrieved_at": "2026-07-13",
+      "content_sha256": "56e04827667774e707263d5cfc2db57ce814af291c60d875ce5eb2602d4dff38",
+      "artifact_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+      "primary": true,
+      "evidence_class": "normative",
+      "license_note": "Repository-owned content under the project license."
+    },
+    {
+      "source_id": "aces-parser-runtime",
+      "system_id": "aces",
+      "kind": "repository-internal",
+      "title": "ACES production SDL parser",
+      "locator": "https://github.com/Brad-Edwards/aces/blob/1b63b2a0b10dcd80e29b8bad14558ad9c6b706d0/implementations/python/packages/aces_sdl/parser.py",
+      "version": "pre-change dev revision",
+      "revision": "1b63b2a0b10dcd80e29b8bad14558ad9c6b706d0",
+      "retrieved_at": "2026-07-13",
+      "content_sha256": "52bc5c496ecb99ba5e3f76b085d5b73b38faf7fc3bf8f7623f969b6fd052d001",
+      "artifact_path": "implementations/python/packages/aces_sdl/parser.py",
+      "primary": true,
+      "evidence_class": "executable",
+      "license_note": "Repository-owned content under the project license."
+    },
+    {
+      "source_id": "aces-parser-tests",
+      "system_id": "aces",
+      "kind": "repository-internal",
+      "title": "ACES SDL parser tests",
+      "locator": "https://github.com/Brad-Edwards/aces/blob/1b63b2a0b10dcd80e29b8bad14558ad9c6b706d0/implementations/python/tests/test_sdl_parser.py",
+      "version": "pre-change dev revision",
+      "revision": "1b63b2a0b10dcd80e29b8bad14558ad9c6b706d0",
+      "retrieved_at": "2026-07-13",
+      "content_sha256": "ccd17a2de4f1ab8e9e423a313d1d0edcd4f276e29d7bab3c7804365502475f3c",
+      "artifact_path": "implementations/python/tests/test_sdl_parser.py",
+      "primary": true,
+      "evidence_class": "executable",
+      "license_note": "Repository-owned content under the project license."
+    },
+    {
+      "source_id": "aces-participant-semantics",
+      "system_id": "aces",
+      "kind": "repository-internal",
+      "title": "ACES formal participant semantics",
+      "locator": "https://github.com/Brad-Edwards/aces/blob/1b63b2a0b10dcd80e29b8bad14558ad9c6b706d0/specs/formal/participant-semantics/README.md",
+      "version": "pre-change dev revision",
+      "revision": "1b63b2a0b10dcd80e29b8bad14558ad9c6b706d0",
+      "retrieved_at": "2026-07-13",
+      "content_sha256": "d138b80c59429f6088d3429ab0d9fbbf9555926077274b1520cb0bff2b055265",
+      "artifact_path": "specs/formal/participant-semantics/README.md",
+      "primary": true,
+      "evidence_class": "normative",
+      "license_note": "Repository-owned content under the project license."
+    },
+    {
+      "source_id": "aces-experiment-study",
+      "system_id": "aces",
+      "kind": "repository-internal",
+      "title": "ACES experiment study contract",
+      "locator": "https://github.com/Brad-Edwards/aces/blob/1b63b2a0b10dcd80e29b8bad14558ad9c6b706d0/contracts/schemas/experiment-core/experiment-study-v1.json",
+      "version": "pre-change dev revision",
+      "revision": "1b63b2a0b10dcd80e29b8bad14558ad9c6b706d0",
+      "retrieved_at": "2026-07-13",
+      "content_sha256": "cace7ada489fa94485d050c6a360a72d36dce8613c06842ee350d33943d6eabf",
+      "artifact_path": "contracts/schemas/experiment-core/experiment-study-v1.json",
+      "primary": true,
+      "evidence_class": "normative",
+      "license_note": "Repository-owned content under the project license."
+    },
+    {
+      "source_id": "aces-scientific-assessment",
+      "system_id": "aces",
+      "kind": "repository-internal",
+      "title": "ACES scientific-scenario delivery assessment",
+      "locator": "https://github.com/Brad-Edwards/aces/blob/1b63b2a0b10dcd80e29b8bad14558ad9c6b706d0/contracts/profiles/scientific-completeness/delivery-assessment-2026-07-12.json",
+      "version": "pre-change dev revision",
+      "revision": "1b63b2a0b10dcd80e29b8bad14558ad9c6b706d0",
+      "retrieved_at": "2026-07-13",
+      "content_sha256": "aea4e86e5aac6740611258ffa854ba1ab69cd09d6806e9fee6d32e40613daa9f",
+      "artifact_path": "contracts/profiles/scientific-completeness/delivery-assessment-2026-07-12.json",
+      "primary": true,
+      "evidence_class": "normative",
+      "license_note": "Repository-owned content under the project license."
+    },
+    {
+      "source_id": "aces-composition-spec",
+      "system_id": "aces",
+      "kind": "repository-internal",
+      "title": "ACES SDL document and composition model",
+      "locator": "https://github.com/Brad-Edwards/aces/blob/1b63b2a0b10dcd80e29b8bad14558ad9c6b706d0/specs/sdl/document-model.md",
+      "version": "pre-change dev revision",
+      "revision": "1b63b2a0b10dcd80e29b8bad14558ad9c6b706d0",
+      "retrieved_at": "2026-07-13",
+      "content_sha256": "ff4cce428d152f6101e34d02a8547876309b461d36e4743183875a518f7b0d84",
+      "artifact_path": "specs/sdl/document-model.md",
+      "primary": true,
+      "evidence_class": "normative",
+      "license_note": "Repository-owned content under the project license."
+    },
+    {
+      "source_id": "aces-lineage-ledger",
+      "system_id": "aces",
+      "kind": "repository-internal",
+      "title": "ACES revision-pinned SDL lineage ledger",
+      "locator": "https://github.com/Brad-Edwards/aces/blob/1b63b2a0b10dcd80e29b8bad14558ad9c6b706d0/contracts/provenance/sdl-lineage-ledger-v1.json",
+      "version": "pre-change dev revision",
+      "revision": "1b63b2a0b10dcd80e29b8bad14558ad9c6b706d0",
+      "retrieved_at": "2026-07-13",
+      "content_sha256": "a322c68cee90b3186cfa0faaee5e1aa9bafe9d0e2e96e0146461ea81b0247eab",
+      "artifact_path": "contracts/provenance/sdl-lineage-ledger-v1.json",
+      "primary": true,
+      "evidence_class": "normative",
+      "license_note": "Repository-owned content under the project license."
+    },
+    {
+      "source_id": "aces-backend-profiles",
+      "system_id": "aces",
+      "kind": "repository-internal",
+      "title": "ACES backend conformance profiles",
+      "locator": "https://github.com/Brad-Edwards/aces/blob/1b63b2a0b10dcd80e29b8bad14558ad9c6b706d0/contracts/profiles/backend/orchestration-capable.json",
+      "version": "pre-change dev revision",
+      "revision": "1b63b2a0b10dcd80e29b8bad14558ad9c6b706d0",
+      "retrieved_at": "2026-07-13",
+      "content_sha256": "f70b8505a5c0055416db86c533e2e5bf08b11e5a514f076223b6d6c36215a092",
+      "artifact_path": "contracts/profiles/backend/orchestration-capable.json",
+      "primary": true,
+      "evidence_class": "normative",
+      "license_note": "Repository-owned content under the project license."
+    },
+    {
+      "source_id": "aces-getting-started",
+      "system_id": "aces",
+      "kind": "repository-internal",
+      "title": "ACES author getting-started guide",
+      "locator": "https://github.com/Brad-Edwards/aces/blob/1b63b2a0b10dcd80e29b8bad14558ad9c6b706d0/docs/explain/getting-started.md",
+      "version": "pre-change dev revision",
+      "revision": "1b63b2a0b10dcd80e29b8bad14558ad9c6b706d0",
+      "retrieved_at": "2026-07-13",
+      "content_sha256": "ae0565cb19e2d4968f99455137ba3c516559acc2054d27742d254d367efeb750",
+      "artifact_path": "docs/explain/getting-started.md",
+      "primary": true,
+      "evidence_class": "documentation",
+      "license_note": "Repository-owned content under the project license."
+    },
+    {
+      "source_id": "aces-authority-adr",
+      "system_id": "aces",
+      "kind": "repository-internal",
+      "title": "ADR-009 normative authority boundary",
+      "locator": "https://github.com/Brad-Edwards/aces/blob/1b63b2a0b10dcd80e29b8bad14558ad9c6b706d0/docs/decisions/adrs/adr-009-normative-artifact-authority-and-repository-structure.md",
+      "version": "pre-change dev revision",
+      "revision": "1b63b2a0b10dcd80e29b8bad14558ad9c6b706d0",
+      "retrieved_at": "2026-07-13",
+      "content_sha256": "557dc1e25c3d9abecb7b3bd8b5bbeb272e907cba04125b59a3e9b71d321b6e07",
+      "artifact_path": "docs/decisions/adrs/adr-009-normative-artifact-authority-and-repository-structure.md",
+      "primary": true,
+      "evidence_class": "normative",
+      "license_note": "Repository-owned content under the project license."
+    },
+    {
+      "source_id": "ocr-parser-source",
+      "system_id": "ocr-sdl",
+      "kind": "git",
+      "title": "Open Cyber Range SDL parser source",
+      "locator": "https://github.com/Open-Cyber-Range/SDL-parser/tree/fe83e8281fc4b954967fbaa5a0d099007ddcb06c",
+      "version": "repository snapshot",
+      "revision": "fe83e8281fc4b954967fbaa5a0d099007ddcb06c",
+      "retrieved_at": "2026-07-13",
+      "content_sha256": null,
+      "artifact_path": "sdl-parser/src",
+      "primary": true,
+      "evidence_class": "source-code",
+      "license_note": "Metadata and precise source locators only; source bytes are not copied."
+    },
+    {
+      "source_id": "ocr-sdl-reference",
+      "system_id": "ocr-sdl",
+      "kind": "official-doc",
+      "title": "Open Cyber Range SDL Reference Guide",
+      "locator": "https://documentation.opencyberrange.ee/docs/sdl/reference/",
+      "version": "retrieved documentation snapshot",
+      "revision": "retrieved-2026-07-13",
+      "retrieved_at": "2026-07-13",
+      "content_sha256": "96d4585aec45b92548d6615de8b0db3c2a076a9d8ddec4877edc0f6098cfcbc4",
+      "artifact_path": null,
+      "primary": true,
+      "evidence_class": "documentation",
+      "license_note": "Digest and paraphrased findings only; documentation bytes are not archived here."
+    },
+    {
+      "source_id": "cyborg-source",
+      "system_id": "cyborg",
+      "kind": "git",
+      "title": "CybORG source and scenario corpus",
+      "locator": "https://github.com/cage-challenge/CybORG/tree/2742b5e0ce4330c9b14006b38acd3b5ebe00d6fd",
+      "version": "repository snapshot",
+      "revision": "2742b5e0ce4330c9b14006b38acd3b5ebe00d6fd",
+      "retrieved_at": "2026-07-13",
+      "content_sha256": null,
+      "artifact_path": "CybORG",
+      "primary": true,
+      "evidence_class": "source-code",
+      "license_note": "Metadata and precise source locators only; source bytes are not copied."
+    },
+    {
+      "source_id": "cyborg-paper",
+      "system_id": "cyborg",
+      "kind": "publication",
+      "title": "CybORG: A Gym for the Development of Autonomous Cyber Agents",
+      "locator": "https://arxiv.org/pdf/2108.09118v1",
+      "version": "arXiv version 1",
+      "revision": "arXiv:2108.09118v1",
+      "retrieved_at": "2026-07-13",
+      "content_sha256": "69fc40a8ca959adb3333a2716fa4bc6f52bf1e3bebf76129fcf42fe9891ed783",
+      "artifact_path": null,
+      "primary": true,
+      "evidence_class": "publication",
+      "license_note": "Digest and paraphrased findings only; paper bytes are not archived here."
+    },
+    {
+      "source_id": "cacao-standard",
+      "system_id": "cacao-v2",
+      "kind": "standard",
+      "title": "CACAO Security Playbooks Version 2.0",
+      "locator": "https://docs.oasis-open.org/cacao/security-playbooks/v2.0/cs01/security-playbooks-v2.0-cs01.pdf",
+      "version": "Committee Specification 01, 27 November 2023",
+      "revision": "CACAO-v2.0-CS01",
+      "retrieved_at": "2026-07-13",
+      "content_sha256": "584eae31ad4be42b6363a600d433d22d460b1f749916a0e3c4cca90ab8b2f428",
+      "artifact_path": null,
+      "primary": true,
+      "evidence_class": "normative",
+      "license_note": "Digest and paraphrased findings only; OASIS notices remain authoritative."
+    },
+    {
+      "source_id": "cyber-dem-standard",
+      "system_id": "cyber-dem",
+      "kind": "standard",
+      "title": "SISO Cyber Data Exchange Model",
+      "locator": "https://cdn.ymaws.com/www.sisostandards.org/resource/resmgr/standards_products/siso-std-025-2023_cyberdem.pdf",
+      "version": "SISO-STD-025-2023",
+      "revision": "SISO-STD-025-2023",
+      "retrieved_at": "2026-07-13",
+      "content_sha256": "e351e2c73ede003cea62c1ec0c22acb4430220b4d033c4de625645c6a8560e72",
+      "artifact_path": null,
+      "primary": true,
+      "evidence_class": "normative",
+      "license_note": "Digest and paraphrased findings only; standard bytes are not archived here."
+    },
+    {
+      "source_id": "cyber-dem-source",
+      "system_id": "cyber-dem",
+      "kind": "git",
+      "title": "Cyber DEM Python reference implementation",
+      "locator": "https://github.com/cmu-sei/cyberdem-python/tree/577543d53fa9ffb2b818a91e0ed61881c9bd7bfa",
+      "version": "repository snapshot",
+      "revision": "577543d53fa9ffb2b818a91e0ed61881c9bd7bfa",
+      "retrieved_at": "2026-07-13",
+      "content_sha256": null,
+      "artifact_path": "cyberdem",
+      "primary": true,
+      "evidence_class": "source-code",
+      "license_note": "Metadata and precise source locators only; source bytes are not copied."
+    },
+    {
+      "source_id": "cyber-fom-standard",
+      "system_id": "cyber-fom",
+      "kind": "standard",
+      "title": "SISO Cyber Federation Object Model",
+      "locator": "https://www.sisostandards.org/page/StandardsProducts",
+      "version": "SISO-STD-025.3-2024",
+      "revision": "SISO-STD-025.3-2024",
+      "retrieved_at": "2026-07-13",
+      "content_sha256": null,
+      "artifact_path": null,
+      "primary": true,
+      "evidence_class": "normative",
+      "license_note": "Exact standard identity and paraphrased findings only; standard bytes are not archived here."
+    },
+    {
+      "source_id": "crack-paper",
+      "system_id": "crack",
+      "kind": "publication",
+      "title": "Building next generation Cyber Ranges with CRACK",
+      "locator": "https://doi.org/10.1016/j.cose.2020.101837",
+      "version": "Computers & Security 95, article 101837",
+      "revision": "doi:10.1016/j.cose.2020.101837",
+      "retrieved_at": "2026-07-13",
+      "content_sha256": null,
+      "artifact_path": null,
+      "primary": true,
+      "evidence_class": "publication",
+      "license_note": "Bibliographic metadata and paraphrased findings only; paper bytes are not archived here."
+    },
+    {
+      "source_id": "crack-source",
+      "system_id": "crack",
+      "kind": "git",
+      "title": "CRACK TOSCA type and runtime definitions",
+      "locator": "https://github.com/enricorusso/CRACK/tree/1f22c729a379d09001f446d19e01a5561eed6ca9",
+      "version": "repository snapshot",
+      "revision": "1f22c729a379d09001f446d19e01a5561eed6ca9",
+      "retrieved_at": "2026-07-13",
+      "content_sha256": null,
+      "artifact_path": "types",
+      "primary": true,
+      "evidence_class": "source-code",
+      "license_note": "Metadata and precise source locators only; source bytes are not copied."
+    },
+    {
+      "source_id": "vsdl-paper",
+      "system_id": "vsdl",
+      "kind": "publication",
+      "title": "Automating the Generation of Cyber Range Virtual Scenarios with VSDL",
+      "locator": "https://arxiv.org/pdf/2001.06681v1",
+      "version": "arXiv version 1",
+      "revision": "arXiv:2001.06681v1",
+      "retrieved_at": "2026-07-13",
+      "content_sha256": "d8b505602afee6962c39f02d6691fc5ab7aba77acb3ea35760bb8211e85381b4",
+      "artifact_path": null,
+      "primary": true,
+      "evidence_class": "publication",
+      "license_note": "Digest and paraphrased findings only; paper bytes are not archived here."
+    }
+  ],
+  "observations": [
+    {
+      "system_id": "aces",
+      "axis_id": "expressive-breadth",
+      "applicability": "applicable",
+      "score": 3,
+      "measure": "strong",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "The closed authoring schema covers topology, runtime inventory, objectives, workflows, variables, imports, and related concern families.",
+      "evidence_refs": [
+        {
+          "source_id": "aces-authoring-schema",
+          "locator": "properties and closed object definitions"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "aces",
+      "axis_id": "semantic-precision",
+      "applicability": "applicable",
+      "score": 3,
+      "measure": "strong",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Closed schemas, reference catalogs, and semantic specifications define meaning beyond field presence.",
+      "evidence_refs": [
+        {
+          "source_id": "aces-authoring-schema",
+          "locator": "x-aces-invariants and reference-bearing properties"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "aces",
+      "axis_id": "formal-analyzability",
+      "applicability": "applicable",
+      "score": 1,
+      "measure": "limited",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Formal fragments exist for participants, workflows, objectives, and other surfaces, but full solver-backed scenario verification is absent.",
+      "evidence_refs": [
+        {
+          "source_id": "aces-participant-semantics",
+          "locator": "formal model, invariants, and conformance boundaries"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "Full solver-backed whole-scenario verification remains outside the current implementation."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "aces",
+      "axis_id": "concrete-syntax-soundness",
+      "applicability": "applicable",
+      "score": 3,
+      "measure": "strong",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "The production parser enforces bounded UTF-8/YAML input, closed models, reference validation, and negative controls.",
+      "evidence_refs": [
+        {
+          "source_id": "aces-parser-runtime",
+          "locator": "parse_sdl and parse_sdl_file production boundary"
+        },
+        {
+          "source_id": "aces-parser-tests",
+          "locator": "negative parser and source-profile tests"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "aces",
+      "axis_id": "composition-versioning",
+      "applicability": "applicable",
+      "score": 3,
+      "measure": "strong",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Module/import expansion, identities, digests, provenance, and evolution rules are explicit.",
+      "evidence_refs": [
+        {
+          "source_id": "aces-composition-spec",
+          "locator": "module expansion and normalized/instantiated document forms"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "aces",
+      "axis_id": "experiment-design",
+      "applicability": "applicable",
+      "score": 2,
+      "measure": "substantial",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Experiment contracts cover tasks, factors, studies, runs, measures, and provenance, while several scientific concerns remain external or incomplete.",
+      "evidence_refs": [
+        {
+          "source_id": "aces-experiment-study",
+          "locator": "study, task, run, factor, and analysis-plan bindings"
+        },
+        {
+          "source_id": "aces-scientific-assessment",
+          "locator": "factor through study-record delivery rows"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "Controlled allocation and factor/study concerns live in experiment contracts, and several delivery rows remain external or incomplete."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "aces",
+      "axis_id": "participant-modeling",
+      "applicability": "applicable",
+      "score": 2,
+      "measure": "substantial",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Actions, observations, visibility, and episode semantics exist, but budgets, trajectories, adjudication, and information-flow admission remain incomplete.",
+      "evidence_refs": [
+        {
+          "source_id": "aces-participant-semantics",
+          "locator": "actions, observations, visibility, episodes, and outcomes"
+        },
+        {
+          "source_id": "aces-scientific-assessment",
+          "locator": "participant declaration through verifier/adjudication rows"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "Participant budgets, reference trajectories, hidden benchmark assets, and verifier/adjudication remain missing or partial."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "aces",
+      "axis_id": "provenance-evidence",
+      "applicability": "applicable",
+      "score": 3,
+      "measure": "strong",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Revision-pinned lineage plus experiment evidence references and derivation surfaces provide broad provenance coverage.",
+      "evidence_refs": [
+        {
+          "source_id": "aces-lineage-ledger",
+          "locator": "revision-pinned citations and derivation claims"
+        },
+        {
+          "source_id": "aces-experiment-study",
+          "locator": "evidence and analysis-plan references"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "aces",
+      "axis_id": "interoperability",
+      "applicability": "applicable",
+      "score": 2,
+      "measure": "substantial",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Published backend profiles and conformance apparatus define a portable boundary, but independent multi-vendor evidence remains limited.",
+      "evidence_refs": [
+        {
+          "source_id": "aces-backend-profiles",
+          "locator": "backend profile corpus and conformance declarations"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "Published profiles exist, but independent multi-vendor conformance and substitution evidence remains limited."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "aces",
+      "axis_id": "usability",
+      "applicability": "applicable",
+      "score": 1,
+      "measure": "limited",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "A maintained guide and examples exist, but no independent authoring-task study with effort/error measures is present.",
+      "evidence_refs": [
+        {
+          "source_id": "aces-getting-started",
+          "locator": "current author workflow and validation commands"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "No independent author population, completion-time, effort, or error study is frozen in this corpus."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "aces",
+      "axis_id": "implementation-maturity",
+      "applicability": "applicable",
+      "score": 1,
+      "measure": "limited",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Parser and validation behavior ship with tests, while the delivery assessment records numerous partial, missing, external, and excluded concerns.",
+      "evidence_refs": [
+        {
+          "source_id": "aces-parser-runtime",
+          "locator": "shipping production parser"
+        },
+        {
+          "source_id": "aces-parser-tests",
+          "locator": "executable parser regression corpus"
+        },
+        {
+          "source_id": "aces-scientific-assessment",
+          "locator": "implemented, partial, missing, external, and excluded rows"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "The delivery assessment retains partial, missing, external-contract, and deliberately-excluded concerns; formal prose is not counted as shipped behavior."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "aces",
+      "axis_id": "governance-community",
+      "applicability": "applicable",
+      "score": 1,
+      "measure": "limited",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Repository ADR and authority governance is explicit but remains project-led rather than a standards-body or broad independent community process.",
+      "evidence_refs": [
+        {
+          "source_id": "aces-authority-adr",
+          "locator": "repository authority and decision process"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "Governance is explicit but project-led; standardization and independent adoption are not claimed."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "ocr-sdl",
+      "axis_id": "expressive-breadth",
+      "applicability": "applicable",
+      "score": 2,
+      "measure": "substantial",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "The language covers VMs, switches, features, vulnerabilities, stories, events, injects, metrics, objectives, and roles, with narrower runtime/experiment semantics.",
+      "evidence_refs": [
+        {
+          "source_id": "ocr-sdl-reference",
+          "locator": "Nodes, Infrastructure, Features, Stories, Scripts, Metrics, TLOs, and Goals"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "ocr-sdl",
+      "axis_id": "semantic-precision",
+      "applicability": "applicable",
+      "score": 1,
+      "measure": "limited",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "The parser defines structural and reference rules, while many meanings remain tied to platform behavior rather than a formal semantic model.",
+      "evidence_refs": [
+        {
+          "source_id": "ocr-parser-source",
+          "locator": "sdl-parser/src entity, infrastructure, evaluation, and reference checks"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "ocr-sdl",
+      "axis_id": "formal-analyzability",
+      "applicability": "applicable",
+      "score": 0,
+      "measure": "absent",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "No solver, formal transition system, or executable whole-scenario formal analysis was observed in the pinned parser and reference.",
+      "evidence_refs": [
+        {
+          "source_id": "ocr-parser-source",
+          "locator": "parser source; no solver or formal-analysis layer found"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "ocr-sdl",
+      "axis_id": "concrete-syntax-soundness",
+      "applicability": "applicable",
+      "score": 2,
+      "measure": "substantial",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "A revision-pinned Rust parser and parser snapshots cover the YAML surface and common invalid references.",
+      "evidence_refs": [
+        {
+          "source_id": "ocr-parser-source",
+          "locator": "sdl-parser/src and snapshot-backed parser tests"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "ocr-sdl",
+      "axis_id": "composition-versioning",
+      "applicability": "applicable",
+      "score": 1,
+      "measure": "limited",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Versioned digital-library sources are supported, but reusable scenario composition and compatibility semantics are limited.",
+      "evidence_refs": [
+        {
+          "source_id": "ocr-parser-source",
+          "locator": "Node/Feature source name and semantic version fields"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "ocr-sdl",
+      "axis_id": "experiment-design",
+      "applicability": "applicable",
+      "score": 1,
+      "measure": "limited",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Metrics, evaluations, TLOs, and narrative timelines support training evaluation without controlled allocation, factor, or study semantics.",
+      "evidence_refs": [
+        {
+          "source_id": "ocr-sdl-reference",
+          "locator": "Metrics, Evaluations, TLOs, Goals, Stories, and Scripts"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "ocr-sdl",
+      "axis_id": "participant-modeling",
+      "applicability": "applicable",
+      "score": 1,
+      "measure": "limited",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Roles, entities, and inject delivery model participants statically, without action/observation/reward episode contracts.",
+      "evidence_refs": [
+        {
+          "source_id": "ocr-sdl-reference",
+          "locator": "Node roles, Entities, Stories, and event/inject delivery"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "ocr-sdl",
+      "axis_id": "provenance-evidence",
+      "applicability": "applicable",
+      "score": 1,
+      "measure": "limited",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Events, inject outputs, timestamps, and metrics provide bounded records but not a full evidence identity and derivation chain.",
+      "evidence_refs": [
+        {
+          "source_id": "ocr-parser-source",
+          "locator": "event, inject, and metric source structures"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "ocr-sdl",
+      "axis_id": "interoperability",
+      "applicability": "applicable",
+      "score": 1,
+      "measure": "limited",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "The parser and handler boundary support platform integration, but an independent conformance suite was not found.",
+      "evidence_refs": [
+        {
+          "source_id": "ocr-parser-source",
+          "locator": "parser library and exported language bindings"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "ocr-sdl",
+      "axis_id": "usability",
+      "applicability": "applicable",
+      "score": 2,
+      "measure": "substantial",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "The official reference and complete example support author walkthroughs; no independent effort/error study was found.",
+      "evidence_refs": [
+        {
+          "source_id": "ocr-sdl-reference",
+          "locator": "SDL Reference Guide and complete example"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "ocr-sdl",
+      "axis_id": "implementation-maturity",
+      "applicability": "applicable",
+      "score": 2,
+      "measure": "substantial",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "A maintained parser and operational platform documentation support deployed use, without broad independent conformance evidence.",
+      "evidence_refs": [
+        {
+          "source_id": "ocr-parser-source",
+          "locator": "revision-pinned Rust parser and tests"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "ocr-sdl",
+      "axis_id": "governance-community",
+      "applicability": "applicable",
+      "score": 1,
+      "measure": "limited",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Public project governance is maintainer-led and does not establish a formal multi-party standards process.",
+      "evidence_refs": [
+        {
+          "source_id": "ocr-parser-source",
+          "locator": "repository metadata and maintainer-owned source"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cyborg",
+      "axis_id": "expressive-breadth",
+      "applicability": "applicable",
+      "score": 2,
+      "measure": "substantial",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Scenarios, hosts, services, processes, agents, actions, observations, rewards, and episodes provide broad simulation-environment coverage.",
+      "evidence_refs": [
+        {
+          "source_id": "cyborg-paper",
+          "locator": "paper sections 2-3: scenario, simulation, emulation, agents, and environment"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cyborg",
+      "axis_id": "semantic-precision",
+      "applicability": "applicable",
+      "score": 2,
+      "measure": "substantial",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "The common interface and simulator classes define behavior precisely in code, with less language-level normative semantics.",
+      "evidence_refs": [
+        {
+          "source_id": "cyborg-paper",
+          "locator": "paper environment and agent interface definitions"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cyborg",
+      "axis_id": "formal-analyzability",
+      "applicability": "applicable",
+      "score": 1,
+      "measure": "limited",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "The environment is executable and analyzable through simulation, but it does not provide solver-backed scenario semantics.",
+      "evidence_refs": [
+        {
+          "source_id": "cyborg-source",
+          "locator": "source reward/action/state machinery; no scenario solver"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cyborg",
+      "axis_id": "concrete-syntax-soundness",
+      "applicability": "applicable",
+      "score": 2,
+      "measure": "substantial",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Scenario YAML is parsed by FileReaderScenarioGenerator with executable tests, though it is not a published closed interchange schema.",
+      "evidence_refs": [
+        {
+          "source_id": "cyborg-source",
+          "locator": "FileReaderScenarioGenerator and scenario_files/Scenario1b.yaml"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cyborg",
+      "axis_id": "composition-versioning",
+      "applicability": "applicable",
+      "score": 2,
+      "measure": "substantial",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "ScenarioGenerator enables reusable generation and reset behavior; explicit compatibility/migration semantics are limited.",
+      "evidence_refs": [
+        {
+          "source_id": "cyborg-source",
+          "locator": "ScenarioGenerator and repository release/source organization"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cyborg",
+      "axis_id": "experiment-design",
+      "applicability": "applicable",
+      "score": 3,
+      "measure": "strong",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Rewards, resets, seeds, scenarios, and episodes support controlled agent experiments, with study-level provenance handled externally.",
+      "evidence_refs": [
+        {
+          "source_id": "cyborg-source",
+          "locator": "scenario generator, reward calculators, reset, and episode controls"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cyborg",
+      "axis_id": "participant-modeling",
+      "applicability": "applicable",
+      "score": 3,
+      "measure": "strong",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Actions, role-filtered observations, rewards, partial observability, and bounded episodes are central executable constructs.",
+      "evidence_refs": [
+        {
+          "source_id": "cyborg-source",
+          "locator": "Actions, Observation, RewardCalculator, agents, and episodes"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cyborg",
+      "axis_id": "provenance-evidence",
+      "applicability": "applicable",
+      "score": 1,
+      "measure": "limited",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Scenario and result structures preserve bounded context, but a first-class evidence lineage and custody contract is not present.",
+      "evidence_refs": [
+        {
+          "source_id": "cyborg-source",
+          "locator": "result/observation structures and scenario source"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cyborg",
+      "axis_id": "interoperability",
+      "applicability": "applicable",
+      "score": 2,
+      "measure": "substantial",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "A common interface spans simulation and emulation, but a published independent conformance standard is not evidenced.",
+      "evidence_refs": [
+        {
+          "source_id": "cyborg-paper",
+          "locator": "paper common simulation/emulation interface"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cyborg",
+      "axis_id": "usability",
+      "applicability": "applicable",
+      "score": 2,
+      "measure": "substantial",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Tutorials and scenarios support users, while no disclosed independent author-task effort/error study was found.",
+      "evidence_refs": [
+        {
+          "source_id": "cyborg-source",
+          "locator": "tutorials and scenario generator source"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cyborg",
+      "axis_id": "implementation-maturity",
+      "applicability": "applicable",
+      "score": 3,
+      "measure": "strong",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "The pinned source contains a working simulator, scenario corpus, tests, and challenge use.",
+      "evidence_refs": [
+        {
+          "source_id": "cyborg-source",
+          "locator": "executable simulator, tests, and scenario corpus"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cyborg",
+      "axis_id": "governance-community",
+      "applicability": "applicable",
+      "score": 2,
+      "measure": "substantial",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "An originating research program and public challenge community exist without formal standards-body governance.",
+      "evidence_refs": [
+        {
+          "source_id": "cyborg-paper",
+          "locator": "originating paper and public challenge repository"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cacao-v2",
+      "axis_id": "expressive-breadth",
+      "applicability": "applicable",
+      "score": 1,
+      "measure": "limited",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "The standard is broad for security playbooks, workflow steps, commands, variables, agents, targets, markings, and signatures, not range topology.",
+      "evidence_refs": [
+        {
+          "source_id": "cacao-standard",
+          "locator": "sections 1-10 object classes and workflow steps"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cacao-v2",
+      "axis_id": "semantic-precision",
+      "applicability": "applicable",
+      "score": 3,
+      "measure": "strong",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Normative object/property requirements, identifiers, and conformance clauses define precise playbook semantics.",
+      "evidence_refs": [
+        {
+          "source_id": "cacao-standard",
+          "locator": "normative property tables and conformance language"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cacao-v2",
+      "axis_id": "formal-analyzability",
+      "applicability": "applicable",
+      "score": 1,
+      "measure": "limited",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Machine-readable structural rules exist, but no solver or formal behavioral analysis is part of the standard.",
+      "evidence_refs": [
+        {
+          "source_id": "cacao-standard",
+          "locator": "sections 3-11; no formal solver or model analysis"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cacao-v2",
+      "axis_id": "concrete-syntax-soundness",
+      "applicability": "applicable",
+      "score": 3,
+      "measure": "strong",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Normative JSON object constraints, mandatory properties, identifier rules, and conformance classes provide a strong syntax boundary.",
+      "evidence_refs": [
+        {
+          "source_id": "cacao-standard",
+          "locator": "normative JSON object requirements and conformance section"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cacao-v2",
+      "axis_id": "composition-versioning",
+      "applicability": "applicable",
+      "score": 3,
+      "measure": "strong",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Playbook references, identifiers, modified versions, variables, extensions, and version compatibility are explicit.",
+      "evidence_refs": [
+        {
+          "source_id": "cacao-standard",
+          "locator": "sections 1.2.1, 3.1, 4, and 11.1.1"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cacao-v2",
+      "axis_id": "experiment-design",
+      "applicability": "out-of-scope",
+      "score": null,
+      "measure": "not-applicable",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Controlled experiment design is outside the security-playbook standard's declared scope.",
+      "evidence_refs": [
+        {
+          "source_id": "cacao-standard",
+          "locator": "scope in section 1; experiment design is outside the playbook standard"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cacao-v2",
+      "axis_id": "participant-modeling",
+      "applicability": "out-of-scope",
+      "score": null,
+      "measure": "not-applicable",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Agents and targets dispatch commands; participant action/observation/reward episodes are outside scope.",
+      "evidence_refs": [
+        {
+          "source_id": "cacao-standard",
+          "locator": "agents and targets in section 7; participant episodes are outside scope"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cacao-v2",
+      "axis_id": "provenance-evidence",
+      "applicability": "applicable",
+      "score": 3,
+      "measure": "strong",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Digital signatures, data markings, created-by identity, and external references provide strong provenance/disclosure support.",
+      "evidence_refs": [
+        {
+          "source_id": "cacao-standard",
+          "locator": "sections 2.4, 2.5, 9, and 10.15 data markings and signatures"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cacao-v2",
+      "axis_id": "interoperability",
+      "applicability": "applicable",
+      "score": 3,
+      "measure": "strong",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Producer/consumer conformance and standardized exchange across organizational boundaries are explicit.",
+      "evidence_refs": [
+        {
+          "source_id": "cacao-standard",
+          "locator": "section 11 producer/consumer conformance"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cacao-v2",
+      "axis_id": "usability",
+      "applicability": "applicable",
+      "score": 2,
+      "measure": "substantial",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Detailed normative examples and property tables support authoring, but no independent author-task study was found.",
+      "evidence_refs": [
+        {
+          "source_id": "cacao-standard",
+          "locator": "normative examples and object property tables"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cacao-v2",
+      "axis_id": "implementation-maturity",
+      "applicability": "applicable",
+      "score": 3,
+      "measure": "strong",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "An approved OASIS Committee Specification with mandatory features provides strong maturity evidence for the standard surface.",
+      "evidence_refs": [
+        {
+          "source_id": "cacao-standard",
+          "locator": "Committee Specification 01 and mandatory features"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cacao-v2",
+      "axis_id": "governance-community",
+      "applicability": "applicable",
+      "score": 3,
+      "measure": "strong",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "OASIS TC process, named participation, ballots, and a published Committee Specification provide formal governance.",
+      "evidence_refs": [
+        {
+          "source_id": "cacao-standard",
+          "locator": "OASIS TC, Committee Specification status, and participant list"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cyber-dem",
+      "axis_id": "expressive-breadth",
+      "applicability": "applicable",
+      "score": 2,
+      "measure": "substantial",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "The model covers cyber objects, relationships, events, effects, data, services, and networks for runtime exchange rather than scenario authoring.",
+      "evidence_refs": [
+        {
+          "source_id": "cyber-dem-source",
+          "locator": "cyberdem/base object, event, relationship, and effect classes"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cyber-dem",
+      "axis_id": "semantic-precision",
+      "applicability": "applicable",
+      "score": 3,
+      "measure": "strong",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "A SISO standard and typed reference implementation define object/event meaning and enumerations.",
+      "evidence_refs": [
+        {
+          "source_id": "cyber-dem-standard",
+          "locator": "SISO-STD-025-2023 model definitions"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cyber-dem",
+      "axis_id": "formal-analyzability",
+      "applicability": "applicable",
+      "score": 1,
+      "measure": "limited",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Typed model validation exists, but no scenario-level solver or formal behavioral analyzer is part of the DEM.",
+      "evidence_refs": [
+        {
+          "source_id": "cyber-dem-source",
+          "locator": "reference-model enumerations and validation; no scenario solver"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cyber-dem",
+      "axis_id": "concrete-syntax-soundness",
+      "applicability": "applicable",
+      "score": 2,
+      "measure": "substantial",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "The standard and reference implementation provide typed representation, though concrete interchange validation evidence is less complete than a conformance suite.",
+      "evidence_refs": [
+        {
+          "source_id": "cyber-dem-standard",
+          "locator": "standard representation plus Python type validation"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cyber-dem",
+      "axis_id": "composition-versioning",
+      "applicability": "applicable",
+      "score": 2,
+      "measure": "substantial",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "The numbered standard family provides version identity and related object/event models, with limited authored composition semantics.",
+      "evidence_refs": [
+        {
+          "source_id": "cyber-dem-standard",
+          "locator": "standard model family and version identity"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cyber-dem",
+      "axis_id": "experiment-design",
+      "applicability": "out-of-scope",
+      "score": null,
+      "measure": "not-applicable",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Experiment design is outside the runtime data-exchange model's scope.",
+      "evidence_refs": [
+        {
+          "source_id": "cyber-dem-standard",
+          "locator": "standard scope; experiment design is not a DEM concern"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cyber-dem",
+      "axis_id": "participant-modeling",
+      "applicability": "out-of-scope",
+      "score": null,
+      "measure": "not-applicable",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Participant action/observation episodes are outside the data-exchange model's scope.",
+      "evidence_refs": [
+        {
+          "source_id": "cyber-dem-standard",
+          "locator": "standard scope; agent episodes are not a DEM concern"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cyber-dem",
+      "axis_id": "provenance-evidence",
+      "applicability": "applicable",
+      "score": 1,
+      "measure": "limited",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Sensitivity and event/data metadata are present, but evidence identity, custody, and derivation are not first-class.",
+      "evidence_refs": [
+        {
+          "source_id": "cyber-dem-source",
+          "locator": "Data sensitivity/status and event metadata in cyberdem/base"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cyber-dem",
+      "axis_id": "interoperability",
+      "applicability": "applicable",
+      "score": 3,
+      "measure": "strong",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "The solution-independent model is explicitly designed for unambiguous translation among simulation interoperability solutions.",
+      "evidence_refs": [
+        {
+          "source_id": "cyber-dem-standard",
+          "locator": "SISO-STD-025-2023 solution-independent translation boundary"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cyber-dem",
+      "axis_id": "usability",
+      "applicability": "applicable",
+      "score": 1,
+      "measure": "limited",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "A standard and reference implementation exist, but no independent author-task study was located.",
+      "evidence_refs": [
+        {
+          "source_id": "cyber-dem-standard",
+          "locator": "standard and reference implementation documentation"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cyber-dem",
+      "axis_id": "implementation-maturity",
+      "applicability": "applicable",
+      "score": 2,
+      "measure": "substantial",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "A published standard plus a reference implementation provide maintained delivery evidence, with limited independent implementation evidence in this snapshot.",
+      "evidence_refs": [
+        {
+          "source_id": "cyber-dem-source",
+          "locator": "published standard and Python reference implementation"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cyber-dem",
+      "axis_id": "governance-community",
+      "applicability": "applicable",
+      "score": 3,
+      "measure": "strong",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "The SISO standards-product process provides recognized multi-party governance.",
+      "evidence_refs": [
+        {
+          "source_id": "cyber-dem-standard",
+          "locator": "SISO standards-product process and product identity"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cyber-fom",
+      "axis_id": "expressive-breadth",
+      "applicability": "applicable",
+      "score": 2,
+      "measure": "substantial",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "The FOM realizes Cyber DEM objects/events for HLA federation exchange; its breadth is bounded by that runtime purpose.",
+      "evidence_refs": [
+        {
+          "source_id": "cyber-fom-standard",
+          "locator": "SISO-STD-025.3-2024 HLA-specific implementation of Cyber DEM"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cyber-fom",
+      "axis_id": "semantic-precision",
+      "applicability": "applicable",
+      "score": 3,
+      "measure": "strong",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "The HLA-specific standard defines a precise federation object-model binding.",
+      "evidence_refs": [
+        {
+          "source_id": "cyber-fom-standard",
+          "locator": "standardized HLA object-model binding"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cyber-fom",
+      "axis_id": "formal-analyzability",
+      "applicability": "applicable",
+      "score": 2,
+      "measure": "substantial",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "HLA/FOM structural and federation constraints provide substantial analyzability, without scenario-design solver semantics.",
+      "evidence_refs": [
+        {
+          "source_id": "cyber-fom-standard",
+          "locator": "HLA FOM structural and federation constraints"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cyber-fom",
+      "axis_id": "concrete-syntax-soundness",
+      "applicability": "applicable",
+      "score": 3,
+      "measure": "strong",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "A standardized HLA federation object model provides a strong concrete exchange definition.",
+      "evidence_refs": [
+        {
+          "source_id": "cyber-fom-standard",
+          "locator": "HLA federation object-model standard"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cyber-fom",
+      "axis_id": "composition-versioning",
+      "applicability": "applicable",
+      "score": 3,
+      "measure": "strong",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "The FOM is explicitly versioned and derived from the Cyber DEM within a standard family.",
+      "evidence_refs": [
+        {
+          "source_id": "cyber-fom-standard",
+          "locator": "Cyber DEM derivation and HLA FOM version identity"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cyber-fom",
+      "axis_id": "experiment-design",
+      "applicability": "out-of-scope",
+      "score": null,
+      "measure": "not-applicable",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Experiment design is outside the HLA federation object model's scope.",
+      "evidence_refs": [
+        {
+          "source_id": "cyber-fom-standard",
+          "locator": "standard scope; experiment design is not a Cyber FOM concern"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cyber-fom",
+      "axis_id": "participant-modeling",
+      "applicability": "out-of-scope",
+      "score": null,
+      "measure": "not-applicable",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Participant action/observation episodes are outside the federation object model's scope.",
+      "evidence_refs": [
+        {
+          "source_id": "cyber-fom-standard",
+          "locator": "standard scope; participant episodes are not a Cyber FOM concern"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cyber-fom",
+      "axis_id": "provenance-evidence",
+      "applicability": "applicable",
+      "score": 1,
+      "measure": "limited",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Cyber DEM event/data metadata is carried into federation exchange, but evidence lineage and custody are not first-class.",
+      "evidence_refs": [
+        {
+          "source_id": "cyber-fom-standard",
+          "locator": "inherited Cyber DEM event/data attributes; no evidence-chain contract"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cyber-fom",
+      "axis_id": "interoperability",
+      "applicability": "applicable",
+      "score": 3,
+      "measure": "strong",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "This is the standardized HLA-specific implementation of the solution-independent Cyber DEM.",
+      "evidence_refs": [
+        {
+          "source_id": "cyber-fom-standard",
+          "locator": "HLA-specific standardized federation implementation"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cyber-fom",
+      "axis_id": "usability",
+      "applicability": "applicable",
+      "score": 1,
+      "measure": "limited",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Standard documentation exists, but no independent author-task study was located.",
+      "evidence_refs": [
+        {
+          "source_id": "cyber-fom-standard",
+          "locator": "standard product documentation; no author study located"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cyber-fom",
+      "axis_id": "implementation-maturity",
+      "applicability": "applicable",
+      "score": 3,
+      "measure": "strong",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "A published HLA-specific SISO standard provides mature standardized delivery evidence.",
+      "evidence_refs": [
+        {
+          "source_id": "cyber-fom-standard",
+          "locator": "published HLA-specific SISO standard"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "cyber-fom",
+      "axis_id": "governance-community",
+      "applicability": "applicable",
+      "score": 3,
+      "measure": "strong",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "The SISO standards-product process provides recognized multi-party governance.",
+      "evidence_refs": [
+        {
+          "source_id": "cyber-fom-standard",
+          "locator": "SISO standards-product process"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "crack",
+      "axis_id": "expressive-breadth",
+      "applicability": "applicable",
+      "score": 2,
+      "measure": "substantial",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "CRACK covers TOSCA-modeled systems, software, users, principals, goals, invariants, vulnerabilities, runtime predicates, and deployment.",
+      "evidence_refs": [
+        {
+          "source_id": "crack-paper",
+          "locator": "paper design, verification, generation, and automated-test scope"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "crack",
+      "axis_id": "semantic-precision",
+      "applicability": "applicable",
+      "score": 3,
+      "measure": "strong",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Datalog encoding gives precise meaning to goals, invariants, and verification predicates.",
+      "evidence_refs": [
+        {
+          "source_id": "crack-paper",
+          "locator": "paper Datalog encoding and verification model"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "crack",
+      "axis_id": "formal-analyzability",
+      "applicability": "applicable",
+      "score": 3,
+      "measure": "strong",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Scenario specifications are encoded into Datalog, checked against validation goals, and used to derive runtime tests.",
+      "evidence_refs": [
+        {
+          "source_id": "crack-paper",
+          "locator": "paper Datalog validation goals and verification traces"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "crack",
+      "axis_id": "concrete-syntax-soundness",
+      "applicability": "applicable",
+      "score": 2,
+      "measure": "substantial",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "TOSCA type definitions and the framework pipeline provide implemented syntax validation, though no independent negative corpus is frozen here.",
+      "evidence_refs": [
+        {
+          "source_id": "crack-source",
+          "locator": "types/sdl*.yaml TOSCA types and validation pipeline"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "crack",
+      "axis_id": "composition-versioning",
+      "applicability": "applicable",
+      "score": 2,
+      "measure": "substantial",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "TOSCA inheritance and plugins support reuse; explicit revision compatibility and migration semantics are limited.",
+      "evidence_refs": [
+        {
+          "source_id": "crack-source",
+          "locator": "TOSCA type inheritance and plugin composition"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "crack",
+      "axis_id": "experiment-design",
+      "applicability": "applicable",
+      "score": 0,
+      "measure": "absent",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Goals and principals support exercise intent, but factors, allocation, measures, and study/run design are absent.",
+      "evidence_refs": [
+        {
+          "source_id": "crack-source",
+          "locator": "goals/principals support exercise intent but not controlled study design"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "crack",
+      "axis_id": "participant-modeling",
+      "applicability": "applicable",
+      "score": 1,
+      "measure": "limited",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Principals carry roles/knowledge and goals, without action/observation/reward episode semantics.",
+      "evidence_refs": [
+        {
+          "source_id": "crack-source",
+          "locator": "types/sdl-principal.yaml and sdl-goal.yaml"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "crack",
+      "axis_id": "provenance-evidence",
+      "applicability": "applicable",
+      "score": 0,
+      "measure": "absent",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Verification traces become runtime tests, but a structured evidence identity and derivation contract is not present.",
+      "evidence_refs": [
+        {
+          "source_id": "crack-source",
+          "locator": "runtime predicate/test generation; no evidence-lineage object"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "crack",
+      "axis_id": "interoperability",
+      "applicability": "applicable",
+      "score": 0,
+      "measure": "absent",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "The pinned implementation targets OpenStack and does not publish an independent backend conformance boundary.",
+      "evidence_refs": [
+        {
+          "source_id": "crack-source",
+          "locator": "OpenStack-specific plugin and deployment types"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "crack",
+      "axis_id": "usability",
+      "applicability": "applicable",
+      "score": 1,
+      "measure": "limited",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "The paper and examples provide a maintainer workflow; no independent author-task study was found.",
+      "evidence_refs": [
+        {
+          "source_id": "crack-source",
+          "locator": "paper workflow and repository examples; no author study located"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "crack",
+      "axis_id": "implementation-maturity",
+      "applicability": "applicable",
+      "score": 1,
+      "measure": "limited",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "A working research prototype and source snapshot exist, without current release or independent adoption evidence in this corpus.",
+      "evidence_refs": [
+        {
+          "source_id": "crack-paper",
+          "locator": "paper prototype and pinned source snapshot"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "crack",
+      "axis_id": "governance-community",
+      "applicability": "applicable",
+      "score": 0,
+      "measure": "absent",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "The evidence is an originating-author project and publication, not a formal standards or broad community process.",
+      "evidence_refs": [
+        {
+          "source_id": "crack-paper",
+          "locator": "originating-author project and publication record"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "vsdl",
+      "axis_id": "expressive-breadth",
+      "applicability": "applicable",
+      "score": 2,
+      "measure": "substantial",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "VSDL represents networks, nodes, hardware, software, files, users, privileges, vulnerabilities, temporal changes, and deployment intent.",
+      "evidence_refs": [
+        {
+          "source_id": "vsdl-paper",
+          "locator": "sections 4-5: nodes, networks, hardware, software, data, users, vulnerabilities, and time"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "vsdl",
+      "axis_id": "semantic-precision",
+      "applicability": "applicable",
+      "score": 3,
+      "measure": "strong",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "QFLIA assertions define scenario meaning and distinctness constraints precisely.",
+      "evidence_refs": [
+        {
+          "source_id": "vsdl-paper",
+          "locator": "section 4.2 QFLIA translation and distinctness invariants"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "vsdl",
+      "axis_id": "formal-analyzability",
+      "applicability": "applicable",
+      "score": 3,
+      "measure": "strong",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "The compiler translates VSDL to SMT and uses satisfiability/model generation as the central validation mechanism.",
+      "evidence_refs": [
+        {
+          "source_id": "vsdl-paper",
+          "locator": "sections 3-5 SMT satisfiability and model generation"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "vsdl",
+      "axis_id": "concrete-syntax-soundness",
+      "applicability": "applicable",
+      "score": 2,
+      "measure": "substantial",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "A grammar and compiler workflow are described with examples, but a pinned public source/negative fixture corpus was not located.",
+      "evidence_refs": [
+        {
+          "source_id": "vsdl-paper",
+          "locator": "section 4.1 grammar excerpt and compiler workflow"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "vsdl",
+      "axis_id": "composition-versioning",
+      "applicability": "applicable",
+      "score": 3,
+      "measure": "strong",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Statements and infrastructures compose additively with satisfiability checks; explicit version compatibility/migration is absent.",
+      "evidence_refs": [
+        {
+          "source_id": "vsdl-paper",
+          "locator": "paper compositionality claim and additive scenario statements"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "vsdl",
+      "axis_id": "experiment-design",
+      "applicability": "applicable",
+      "score": 0,
+      "measure": "absent",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "The language supports training infrastructures but not controlled factor, allocation, measure, or study/run contracts.",
+      "evidence_refs": [
+        {
+          "source_id": "vsdl-paper",
+          "locator": "paper training setting; no controlled experiment-design contract"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "vsdl",
+      "axis_id": "participant-modeling",
+      "applicability": "applicable",
+      "score": 1,
+      "measure": "limited",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Red/blue timing appears in examples, without portable participant action/observation/reward episode semantics.",
+      "evidence_refs": [
+        {
+          "source_id": "vsdl-paper",
+          "locator": "red/blue team timing in examples, without action/observation episodes"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "vsdl",
+      "axis_id": "provenance-evidence",
+      "applicability": "applicable",
+      "score": 0,
+      "measure": "absent",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Generated SMT models and scripts are outputs, but no evidence identity, lineage, or custody contract is defined.",
+      "evidence_refs": [
+        {
+          "source_id": "vsdl-paper",
+          "locator": "generated model/scripts; no structured evidence-lineage surface"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "vsdl",
+      "axis_id": "interoperability",
+      "applicability": "applicable",
+      "score": 0,
+      "measure": "absent",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Generated OpenStack/Terraform/Packer scripts bind to one realization stack rather than an independent conformance boundary.",
+      "evidence_refs": [
+        {
+          "source_id": "vsdl-paper",
+          "locator": "OpenStack/Terraform/Packer output rather than independent conformance"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "vsdl",
+      "axis_id": "usability",
+      "applicability": "applicable",
+      "score": 1,
+      "measure": "limited",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "Worked examples show the authoring process, but no disclosed independent effort/error study was found.",
+      "evidence_refs": [
+        {
+          "source_id": "vsdl-paper",
+          "locator": "worked examples; no disclosed author-task study"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "vsdl",
+      "axis_id": "implementation-maturity",
+      "applicability": "applicable",
+      "score": 1,
+      "measure": "limited",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "The paper describes a working prototype; no pinned maintained source release or independent deployment corpus is included.",
+      "evidence_refs": [
+        {
+          "source_id": "vsdl-paper",
+          "locator": "working prototype described in the originating paper"
+        }
+      ],
+      "confidence": "moderate",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    },
+    {
+      "system_id": "vsdl",
+      "axis_id": "governance-community",
+      "applicability": "applicable",
+      "score": 0,
+      "measure": "absent",
+      "extraction_method": "pinned-source-and-document-review",
+      "rationale": "The originating publication supplies peer-review evidence, not standards-body or sustained community governance.",
+      "evidence_refs": [
+        {
+          "source_id": "vsdl-paper",
+          "locator": "originating publication; no standards/community governance found"
+        }
+      ],
+      "confidence": "high",
+      "limitations": [
+        "This ordinal result is a source-grounded single-assessor extraction, not an independent usability or adoption study."
+      ],
+      "review_status": "single-assessor-awaiting-independent-replication"
+    }
+  ],
+  "task_observations": [
+    {
+      "system_id": "aces",
+      "case_id": "author-multihost-objective",
+      "applicability": "applicable",
+      "outcome": "supported",
+      "method": "repository-execution",
+      "rationale": "Schema-backed topology, participants, objectives, and validation provide a native artifact path.",
+      "evidence_refs": [
+        {
+          "source_id": "aces-authoring-schema",
+          "locator": "case walkthrough: author-multihost-objective"
+        }
+      ],
+      "limitations": [
+        "Repository execution covers existing production/tests only; it is not an independent author study."
+      ]
+    },
+    {
+      "system_id": "aces",
+      "case_id": "author-versioned-composition",
+      "applicability": "applicable",
+      "outcome": "supported",
+      "method": "source-walkthrough",
+      "rationale": "Module/import expansion records identities, digests, namespaces, and resolved composition provenance.",
+      "evidence_refs": [
+        {
+          "source_id": "aces-composition-spec",
+          "locator": "case walkthrough: author-versioned-composition"
+        }
+      ],
+      "limitations": [
+        "Repository execution covers existing production/tests only; it is not an independent author study."
+      ]
+    },
+    {
+      "system_id": "aces",
+      "case_id": "author-controlled-experiment",
+      "applicability": "applicable",
+      "outcome": "partial",
+      "method": "source-walkthrough",
+      "rationale": "Experiment contracts cover the design, while the delivery assessment keeps allocation and related obligations bounded.",
+      "evidence_refs": [
+        {
+          "source_id": "aces-experiment-study",
+          "locator": "case walkthrough: author-controlled-experiment"
+        }
+      ],
+      "limitations": [
+        "Repository execution covers existing production/tests only; it is not an independent author study."
+      ]
+    },
+    {
+      "system_id": "aces",
+      "case_id": "negative-dangling-reference",
+      "applicability": "applicable",
+      "outcome": "supported",
+      "method": "repository-execution",
+      "rationale": "Production parser and semantic tests reject undeclared references.",
+      "evidence_refs": [
+        {
+          "source_id": "aces-parser-tests",
+          "locator": "case walkthrough: negative-dangling-reference"
+        }
+      ],
+      "limitations": [
+        "Repository execution covers existing production/tests only; it is not an independent author study."
+      ]
+    },
+    {
+      "system_id": "aces",
+      "case_id": "negative-contradictory-constraints",
+      "applicability": "applicable",
+      "outcome": "partial",
+      "method": "source-walkthrough",
+      "rationale": "Structural and semantic contradictions are checked in bounded domains, but no universal solver covers the whole SDL.",
+      "evidence_refs": [
+        {
+          "source_id": "aces-participant-semantics",
+          "locator": "case walkthrough: negative-contradictory-constraints"
+        }
+      ],
+      "limitations": [
+        "Repository execution covers existing production/tests only; it is not an independent author study."
+      ]
+    },
+    {
+      "system_id": "ocr-sdl",
+      "case_id": "author-multihost-objective",
+      "applicability": "applicable",
+      "outcome": "supported",
+      "method": "source-walkthrough",
+      "rationale": "Nodes, infrastructure, roles, Goals/TLOs, and stories cover the brief within the OCR deployment model.",
+      "evidence_refs": [
+        {
+          "source_id": "ocr-sdl-reference",
+          "locator": "case walkthrough: author-multihost-objective"
+        }
+      ],
+      "limitations": [
+        "External-system cases are reproducible source walkthroughs, not execution of third-party code or an independent author study."
+      ]
+    },
+    {
+      "system_id": "ocr-sdl",
+      "case_id": "author-versioned-composition",
+      "applicability": "applicable",
+      "outcome": "partial",
+      "method": "source-walkthrough",
+      "rationale": "Digital-library source versions support component reuse, but scenario composition/compatibility is not explicit.",
+      "evidence_refs": [
+        {
+          "source_id": "ocr-sdl-reference",
+          "locator": "case walkthrough: author-versioned-composition"
+        }
+      ],
+      "limitations": [
+        "External-system cases are reproducible source walkthroughs, not execution of third-party code or an independent author study."
+      ]
+    },
+    {
+      "system_id": "ocr-sdl",
+      "case_id": "author-controlled-experiment",
+      "applicability": "applicable",
+      "outcome": "partial",
+      "method": "source-walkthrough",
+      "rationale": "Metrics and TLOs support evaluation, while factor allocation, study identity, and evidence lineage are absent.",
+      "evidence_refs": [
+        {
+          "source_id": "ocr-sdl-reference",
+          "locator": "case walkthrough: author-controlled-experiment"
+        }
+      ],
+      "limitations": [
+        "External-system cases are reproducible source walkthroughs, not execution of third-party code or an independent author study."
+      ]
+    },
+    {
+      "system_id": "ocr-sdl",
+      "case_id": "negative-dangling-reference",
+      "applicability": "applicable",
+      "outcome": "supported",
+      "method": "source-walkthrough",
+      "rationale": "Parser reference checks require declared nodes, scripts, events, metrics, and related objects.",
+      "evidence_refs": [
+        {
+          "source_id": "ocr-parser-source",
+          "locator": "case walkthrough: negative-dangling-reference"
+        }
+      ],
+      "limitations": [
+        "External-system cases are reproducible source walkthroughs, not execution of third-party code or an independent author study."
+      ]
+    },
+    {
+      "system_id": "ocr-sdl",
+      "case_id": "negative-contradictory-constraints",
+      "applicability": "applicable",
+      "outcome": "partial",
+      "method": "source-walkthrough",
+      "rationale": "Several structural conflicts are rejected, but no general semantic contradiction analysis is evidenced.",
+      "evidence_refs": [
+        {
+          "source_id": "ocr-parser-source",
+          "locator": "case walkthrough: negative-contradictory-constraints"
+        }
+      ],
+      "limitations": [
+        "External-system cases are reproducible source walkthroughs, not execution of third-party code or an independent author study."
+      ]
+    },
+    {
+      "system_id": "cyborg",
+      "case_id": "author-multihost-objective",
+      "applicability": "applicable",
+      "outcome": "partial",
+      "method": "source-walkthrough",
+      "rationale": "Scenario files and agents cover hosts, services, roles, and objectives through rewards, but not a portable authored objective language.",
+      "evidence_refs": [
+        {
+          "source_id": "cyborg-source",
+          "locator": "case walkthrough: author-multihost-objective"
+        }
+      ],
+      "limitations": [
+        "External-system cases are reproducible source walkthroughs, not execution of third-party code or an independent author study."
+      ]
+    },
+    {
+      "system_id": "cyborg",
+      "case_id": "author-versioned-composition",
+      "applicability": "applicable",
+      "outcome": "partial",
+      "method": "source-walkthrough",
+      "rationale": "ScenarioGenerator supports reuse, while explicit revision compatibility is external to the artifact.",
+      "evidence_refs": [
+        {
+          "source_id": "cyborg-source",
+          "locator": "case walkthrough: author-versioned-composition"
+        }
+      ],
+      "limitations": [
+        "External-system cases are reproducible source walkthroughs, not execution of third-party code or an independent author study."
+      ]
+    },
+    {
+      "system_id": "cyborg",
+      "case_id": "author-controlled-experiment",
+      "applicability": "applicable",
+      "outcome": "partial",
+      "method": "source-walkthrough",
+      "rationale": "Episodes, rewards, resets, and seeds support experiments, while first-class factor/study/evidence declarations are incomplete.",
+      "evidence_refs": [
+        {
+          "source_id": "cyborg-source",
+          "locator": "case walkthrough: author-controlled-experiment"
+        }
+      ],
+      "limitations": [
+        "External-system cases are reproducible source walkthroughs, not execution of third-party code or an independent author study."
+      ]
+    },
+    {
+      "system_id": "cyborg",
+      "case_id": "negative-dangling-reference",
+      "applicability": "applicable",
+      "outcome": "partial",
+      "method": "source-walkthrough",
+      "rationale": "FileReaderScenarioGenerator checks many references, but this snapshot does not freeze a dedicated dangling-reference result.",
+      "evidence_refs": [
+        {
+          "source_id": "cyborg-source",
+          "locator": "case walkthrough: negative-dangling-reference"
+        }
+      ],
+      "limitations": [
+        "External-system cases are reproducible source walkthroughs, not execution of third-party code or an independent author study."
+      ]
+    },
+    {
+      "system_id": "cyborg",
+      "case_id": "negative-contradictory-constraints",
+      "applicability": "applicable",
+      "outcome": "partial",
+      "method": "source-walkthrough",
+      "rationale": "Executable simulator invariants catch bounded conflicts, without a declared whole-scenario contradiction contract.",
+      "evidence_refs": [
+        {
+          "source_id": "cyborg-source",
+          "locator": "case walkthrough: negative-contradictory-constraints"
+        }
+      ],
+      "limitations": [
+        "External-system cases are reproducible source walkthroughs, not execution of third-party code or an independent author study."
+      ]
+    },
+    {
+      "system_id": "cacao-v2",
+      "case_id": "author-multihost-objective",
+      "applicability": "applicable",
+      "outcome": "partial",
+      "method": "source-walkthrough",
+      "rationale": "Playbook steps, agents, targets, and goals cover workflow intent but not multi-host range topology.",
+      "evidence_refs": [
+        {
+          "source_id": "cacao-standard",
+          "locator": "case walkthrough: author-multihost-objective"
+        }
+      ],
+      "limitations": [
+        "External-system cases are reproducible source walkthroughs, not execution of third-party code or an independent author study."
+      ]
+    },
+    {
+      "system_id": "cacao-v2",
+      "case_id": "author-versioned-composition",
+      "applicability": "applicable",
+      "outcome": "supported",
+      "method": "source-walkthrough",
+      "rationale": "Sub-playbooks, identifiers, modified versions, variables, and compatibility clauses provide explicit composition.",
+      "evidence_refs": [
+        {
+          "source_id": "cacao-standard",
+          "locator": "case walkthrough: author-versioned-composition"
+        }
+      ],
+      "limitations": [
+        "External-system cases are reproducible source walkthroughs, not execution of third-party code or an independent author study."
+      ]
+    },
+    {
+      "system_id": "cacao-v2",
+      "case_id": "author-controlled-experiment",
+      "applicability": "out-of-scope",
+      "outcome": "not-applicable",
+      "method": "source-walkthrough",
+      "rationale": "Controlled participant experiments are outside the playbook standard's scope.",
+      "evidence_refs": [
+        {
+          "source_id": "cacao-standard",
+          "locator": "case walkthrough: author-controlled-experiment"
+        }
+      ],
+      "limitations": [
+        "External-system cases are reproducible source walkthroughs, not execution of third-party code or an independent author study."
+      ]
+    },
+    {
+      "system_id": "cacao-v2",
+      "case_id": "negative-dangling-reference",
+      "applicability": "applicable",
+      "outcome": "supported",
+      "method": "source-walkthrough",
+      "rationale": "Normative identifier/reference requirements require resolvable playbook objects.",
+      "evidence_refs": [
+        {
+          "source_id": "cacao-standard",
+          "locator": "case walkthrough: negative-dangling-reference"
+        }
+      ],
+      "limitations": [
+        "External-system cases are reproducible source walkthroughs, not execution of third-party code or an independent author study."
+      ]
+    },
+    {
+      "system_id": "cacao-v2",
+      "case_id": "negative-contradictory-constraints",
+      "applicability": "applicable",
+      "outcome": "partial",
+      "method": "source-walkthrough",
+      "rationale": "Workflow constraints reject bounded invalid structures, while general logical satisfiability is not defined.",
+      "evidence_refs": [
+        {
+          "source_id": "cacao-standard",
+          "locator": "case walkthrough: negative-contradictory-constraints"
+        }
+      ],
+      "limitations": [
+        "External-system cases are reproducible source walkthroughs, not execution of third-party code or an independent author study."
+      ]
+    },
+    {
+      "system_id": "cyber-dem",
+      "case_id": "author-multihost-objective",
+      "applicability": "out-of-scope",
+      "outcome": "not-applicable",
+      "method": "source-walkthrough",
+      "rationale": "Scenario authoring is outside the runtime exchange model's scope.",
+      "evidence_refs": [
+        {
+          "source_id": "cyber-dem-standard",
+          "locator": "case walkthrough: author-multihost-objective"
+        }
+      ],
+      "limitations": [
+        "External-system cases are reproducible source walkthroughs, not execution of third-party code or an independent author study."
+      ]
+    },
+    {
+      "system_id": "cyber-dem",
+      "case_id": "author-versioned-composition",
+      "applicability": "out-of-scope",
+      "outcome": "not-applicable",
+      "method": "source-walkthrough",
+      "rationale": "Reusable authored-unit composition is outside the runtime exchange model's scope.",
+      "evidence_refs": [
+        {
+          "source_id": "cyber-dem-standard",
+          "locator": "case walkthrough: author-versioned-composition"
+        }
+      ],
+      "limitations": [
+        "External-system cases are reproducible source walkthroughs, not execution of third-party code or an independent author study."
+      ]
+    },
+    {
+      "system_id": "cyber-dem",
+      "case_id": "author-controlled-experiment",
+      "applicability": "out-of-scope",
+      "outcome": "not-applicable",
+      "method": "source-walkthrough",
+      "rationale": "Controlled experiment design is outside the runtime exchange model's scope.",
+      "evidence_refs": [
+        {
+          "source_id": "cyber-dem-standard",
+          "locator": "case walkthrough: author-controlled-experiment"
+        }
+      ],
+      "limitations": [
+        "External-system cases are reproducible source walkthroughs, not execution of third-party code or an independent author study."
+      ]
+    },
+    {
+      "system_id": "cyber-dem",
+      "case_id": "negative-dangling-reference",
+      "applicability": "applicable",
+      "outcome": "partial",
+      "method": "source-walkthrough",
+      "rationale": "Typed relationship/object identifiers constrain references, but no frozen executable negative case is included.",
+      "evidence_refs": [
+        {
+          "source_id": "cyber-dem-source",
+          "locator": "case walkthrough: negative-dangling-reference"
+        }
+      ],
+      "limitations": [
+        "External-system cases are reproducible source walkthroughs, not execution of third-party code or an independent author study."
+      ]
+    },
+    {
+      "system_id": "cyber-dem",
+      "case_id": "negative-contradictory-constraints",
+      "applicability": "applicable",
+      "outcome": "partial",
+      "method": "source-walkthrough",
+      "rationale": "Normative object/event constraints cover bounded conflicts, without scenario satisfiability analysis.",
+      "evidence_refs": [
+        {
+          "source_id": "cyber-dem-standard",
+          "locator": "case walkthrough: negative-contradictory-constraints"
+        }
+      ],
+      "limitations": [
+        "External-system cases are reproducible source walkthroughs, not execution of third-party code or an independent author study."
+      ]
+    },
+    {
+      "system_id": "cyber-fom",
+      "case_id": "author-multihost-objective",
+      "applicability": "out-of-scope",
+      "outcome": "not-applicable",
+      "method": "source-walkthrough",
+      "rationale": "Scenario authoring is outside the HLA federation object model's scope.",
+      "evidence_refs": [
+        {
+          "source_id": "cyber-fom-standard",
+          "locator": "case walkthrough: author-multihost-objective"
+        }
+      ],
+      "limitations": [
+        "External-system cases are reproducible source walkthroughs, not execution of third-party code or an independent author study."
+      ]
+    },
+    {
+      "system_id": "cyber-fom",
+      "case_id": "author-versioned-composition",
+      "applicability": "out-of-scope",
+      "outcome": "not-applicable",
+      "method": "source-walkthrough",
+      "rationale": "Reusable authored-unit composition is outside the HLA federation object model's scope.",
+      "evidence_refs": [
+        {
+          "source_id": "cyber-fom-standard",
+          "locator": "case walkthrough: author-versioned-composition"
+        }
+      ],
+      "limitations": [
+        "External-system cases are reproducible source walkthroughs, not execution of third-party code or an independent author study."
+      ]
+    },
+    {
+      "system_id": "cyber-fom",
+      "case_id": "author-controlled-experiment",
+      "applicability": "out-of-scope",
+      "outcome": "not-applicable",
+      "method": "source-walkthrough",
+      "rationale": "Controlled experiment design is outside the HLA federation object model's scope.",
+      "evidence_refs": [
+        {
+          "source_id": "cyber-fom-standard",
+          "locator": "case walkthrough: author-controlled-experiment"
+        }
+      ],
+      "limitations": [
+        "External-system cases are reproducible source walkthroughs, not execution of third-party code or an independent author study."
+      ]
+    },
+    {
+      "system_id": "cyber-fom",
+      "case_id": "negative-dangling-reference",
+      "applicability": "applicable",
+      "outcome": "partial",
+      "method": "source-walkthrough",
+      "rationale": "FOM class/object references are normatively constrained, but no frozen executable negative case is included.",
+      "evidence_refs": [
+        {
+          "source_id": "cyber-fom-standard",
+          "locator": "case walkthrough: negative-dangling-reference"
+        }
+      ],
+      "limitations": [
+        "External-system cases are reproducible source walkthroughs, not execution of third-party code or an independent author study."
+      ]
+    },
+    {
+      "system_id": "cyber-fom",
+      "case_id": "negative-contradictory-constraints",
+      "applicability": "applicable",
+      "outcome": "partial",
+      "method": "source-walkthrough",
+      "rationale": "HLA/FOM constraints cover bounded federation-model conflicts, not scenario satisfiability.",
+      "evidence_refs": [
+        {
+          "source_id": "cyber-fom-standard",
+          "locator": "case walkthrough: negative-contradictory-constraints"
+        }
+      ],
+      "limitations": [
+        "External-system cases are reproducible source walkthroughs, not execution of third-party code or an independent author study."
+      ]
+    },
+    {
+      "system_id": "crack",
+      "case_id": "author-multihost-objective",
+      "applicability": "applicable",
+      "outcome": "supported",
+      "method": "source-walkthrough",
+      "rationale": "TOSCA system/software/user/principal/goal types and deployment generation cover the representative scenario.",
+      "evidence_refs": [
+        {
+          "source_id": "crack-source",
+          "locator": "case walkthrough: author-multihost-objective"
+        }
+      ],
+      "limitations": [
+        "External-system cases are reproducible source walkthroughs, not execution of third-party code or an independent author study."
+      ]
+    },
+    {
+      "system_id": "crack",
+      "case_id": "author-versioned-composition",
+      "applicability": "applicable",
+      "outcome": "partial",
+      "method": "source-walkthrough",
+      "rationale": "TOSCA inheritance/plugins support reuse, while revision compatibility and migration are implicit.",
+      "evidence_refs": [
+        {
+          "source_id": "crack-source",
+          "locator": "case walkthrough: author-versioned-composition"
+        }
+      ],
+      "limitations": [
+        "External-system cases are reproducible source walkthroughs, not execution of third-party code or an independent author study."
+      ]
+    },
+    {
+      "system_id": "crack",
+      "case_id": "author-controlled-experiment",
+      "applicability": "applicable",
+      "outcome": "partial",
+      "method": "source-walkthrough",
+      "rationale": "Goals and principals support exercise intent, while factors, allocation, measures, and study boundaries are absent.",
+      "evidence_refs": [
+        {
+          "source_id": "crack-paper",
+          "locator": "case walkthrough: author-controlled-experiment"
+        }
+      ],
+      "limitations": [
+        "External-system cases are reproducible source walkthroughs, not execution of third-party code or an independent author study."
+      ]
+    },
+    {
+      "system_id": "crack",
+      "case_id": "negative-dangling-reference",
+      "applicability": "applicable",
+      "outcome": "supported",
+      "method": "source-walkthrough",
+      "rationale": "Datalog verification and TOSCA reference structure detect invalid scenario relationships.",
+      "evidence_refs": [
+        {
+          "source_id": "crack-paper",
+          "locator": "case walkthrough: negative-dangling-reference"
+        }
+      ],
+      "limitations": [
+        "External-system cases are reproducible source walkthroughs, not execution of third-party code or an independent author study."
+      ]
+    },
+    {
+      "system_id": "crack",
+      "case_id": "negative-contradictory-constraints",
+      "applicability": "applicable",
+      "outcome": "supported",
+      "method": "source-walkthrough",
+      "rationale": "The Datalog encoding reports unsatisfied validation goals and produces verification traces.",
+      "evidence_refs": [
+        {
+          "source_id": "crack-paper",
+          "locator": "case walkthrough: negative-contradictory-constraints"
+        }
+      ],
+      "limitations": [
+        "External-system cases are reproducible source walkthroughs, not execution of third-party code or an independent author study."
+      ]
+    },
+    {
+      "system_id": "vsdl",
+      "case_id": "author-multihost-objective",
+      "applicability": "applicable",
+      "outcome": "supported",
+      "method": "source-walkthrough",
+      "rationale": "VSDL nodes, networks, software, users, temporal guards, and constraints cover the representative infrastructure brief.",
+      "evidence_refs": [
+        {
+          "source_id": "vsdl-paper",
+          "locator": "case walkthrough: author-multihost-objective"
+        }
+      ],
+      "limitations": [
+        "External-system cases are reproducible source walkthroughs, not execution of third-party code or an independent author study."
+      ]
+    },
+    {
+      "system_id": "vsdl",
+      "case_id": "author-versioned-composition",
+      "applicability": "applicable",
+      "outcome": "partial",
+      "method": "source-walkthrough",
+      "rationale": "Statements and infrastructures compose, while revision identity and compatibility are not explicit.",
+      "evidence_refs": [
+        {
+          "source_id": "vsdl-paper",
+          "locator": "case walkthrough: author-versioned-composition"
+        }
+      ],
+      "limitations": [
+        "External-system cases are reproducible source walkthroughs, not execution of third-party code or an independent author study."
+      ]
+    },
+    {
+      "system_id": "vsdl",
+      "case_id": "author-controlled-experiment",
+      "applicability": "applicable",
+      "outcome": "partial",
+      "method": "source-walkthrough",
+      "rationale": "The language builds training infrastructure but does not model factors, allocation, measures, or study/run evidence.",
+      "evidence_refs": [
+        {
+          "source_id": "vsdl-paper",
+          "locator": "case walkthrough: author-controlled-experiment"
+        }
+      ],
+      "limitations": [
+        "External-system cases are reproducible source walkthroughs, not execution of third-party code or an independent author study."
+      ]
+    },
+    {
+      "system_id": "vsdl",
+      "case_id": "negative-dangling-reference",
+      "applicability": "applicable",
+      "outcome": "partial",
+      "method": "source-walkthrough",
+      "rationale": "Compiler translation implies declared identifiers, but the paper does not freeze a dedicated dangling-reference diagnostic.",
+      "evidence_refs": [
+        {
+          "source_id": "vsdl-paper",
+          "locator": "case walkthrough: negative-dangling-reference"
+        }
+      ],
+      "limitations": [
+        "External-system cases are reproducible source walkthroughs, not execution of third-party code or an independent author study."
+      ]
+    },
+    {
+      "system_id": "vsdl",
+      "case_id": "negative-contradictory-constraints",
+      "applicability": "applicable",
+      "outcome": "supported",
+      "method": "source-walkthrough",
+      "rationale": "Contradictory QFLIA constraints produce an unsatisfiable solver result before deployment generation.",
+      "evidence_refs": [
+        {
+          "source_id": "vsdl-paper",
+          "locator": "case walkthrough: negative-contradictory-constraints"
+        }
+      ],
+      "limitations": [
+        "External-system cases are reproducible source walkthroughs, not execution of third-party code or an independent author study."
+      ]
+    }
+  ]
+}

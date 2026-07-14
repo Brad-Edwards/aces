@@ -1,4 +1,4 @@
-"""Observed runtime configuration models for SDL nodes."""
+"""Declarative runtime contract models for SDL nodes."""
 
 from collections.abc import Iterable
 from enum import Enum
@@ -39,9 +39,6 @@ from .runtime_container import (
     RuntimeContainerConfiguration,
     RuntimeDeviceMapping,
     RuntimeExtraHost,
-    RuntimeHealthcheckLog,
-    RuntimeHealthObservation,
-    RuntimeHealthStatus,
     RuntimeInitProcess,
     RuntimeNamespaceConfiguration,
 )
@@ -72,7 +69,6 @@ from .runtime_network import (
     RuntimeNetworkBackendDetail,
     RuntimeNetworkDriver,
     RuntimeNetworkEndpoint,
-    RuntimeNetworkIdStability,
     RuntimeNetworkRealization,
     RuntimePublishedPort,
 )
@@ -117,9 +113,6 @@ __all__ = [
     "RuntimeFilesystemEntryType",
     "RuntimeFilesystemPresence",
     "RuntimeFilesystemStability",
-    "RuntimeHealthObservation",
-    "RuntimeHealthStatus",
-    "RuntimeHealthcheckLog",
     "RuntimeIdentityProvenance",
     "RuntimeInitProcess",
     "RuntimeLocalGroup",
@@ -132,12 +125,9 @@ __all__ = [
     "RuntimeNetworkBackendDetail",
     "RuntimeNetworkDriver",
     "RuntimeNetworkEndpoint",
-    "RuntimeNetworkIdStability",
     "RuntimeNetworkRealization",
     "RuntimeOperationalPolicy",
     "RuntimePackage",
-    "RuntimePackageVulnerabilityFinding",
-    "RuntimePackageVulnerabilitySeverity",
     "RuntimeProcessCapabilityOverride",
     "RuntimeProcessIdentity",
     "RuntimeProcessRole",
@@ -164,19 +154,8 @@ __all__ = [
 ]
 
 
-class RuntimePackageVulnerabilitySeverity(str, Enum):
-    """Scanner-derived package finding severity."""
-
-    UNKNOWN = "unknown"
-    LOW = "low"
-    MEDIUM = "medium"
-    HIGH = "high"
-    CRITICAL = "critical"
-    OTHER = "other"
-
-
 class RuntimeEnvironmentValueClassification(str, Enum):
-    """Sensitivity classification for an observed runtime environment value."""
+    """Sensitivity classification for a required runtime environment value."""
 
     PLAIN = "plain"
     REDACTED = "redacted"
@@ -193,7 +172,7 @@ _ENV_REDACTED_CLASSIFICATIONS = (
 
 
 class RuntimeEnvironmentVariableProvenance(str, Enum):
-    """Origin class for an observed runtime environment variable."""
+    """Required origin class for a runtime environment variable."""
 
     COMPOSE = "compose"
     IMAGE = "image"
@@ -205,7 +184,7 @@ class RuntimeEnvironmentVariableProvenance(str, Enum):
 
 
 class RuntimeRestartPolicy(str, Enum):
-    """Portable restart policy classification observed at runtime."""
+    """Portable restart policy required by the scenario."""
 
     NO = "no"
     ALWAYS = "always"
@@ -216,7 +195,7 @@ class RuntimeRestartPolicy(str, Enum):
 
 
 class RuntimeEnvironmentVariable(SDLModel):
-    """Observed runtime environment variable with provenance and sensitivity."""
+    """Required runtime environment variable with provenance and sensitivity."""
 
     name: str
     value: str = ""
@@ -267,7 +246,7 @@ class RuntimeEnvironmentVariable(SDLModel):
 
 
 class RuntimeResourceLimits(SDLModel):
-    """Observed runtime/cgroup resource limits for a node."""
+    """Required runtime/cgroup resource limits for a node."""
 
     memory: int | str | None = None
     memory_swap: int | str | None = None
@@ -293,7 +272,7 @@ class RuntimeResourceLimits(SDLModel):
 
 
 class RuntimeOperationalPolicy(SDLModel):
-    """Observed restart and resource-limit policy for a runtime node."""
+    """Required restart and resource-limit policy for a runtime node."""
 
     restart: RuntimeRestartPolicy | str = RuntimeRestartPolicy.UNKNOWN
     resource_limits: RuntimeResourceLimits | None = None
@@ -308,7 +287,7 @@ class RuntimeOperationalPolicy(SDLModel):
 
 
 class RuntimePackage(SDLModel):
-    """A package observed in a runtime image or node."""
+    """A package required in a runtime image or node."""
 
     manager: str
     name: str
@@ -319,7 +298,7 @@ class RuntimePackage(SDLModel):
 
 
 class RuntimeDependencyManifest(SDLModel):
-    """A dependency manifest visible in the realized runtime artifact."""
+    """A dependency manifest required in the runtime artifact."""
 
     ecosystem: str
     path: str
@@ -331,30 +310,6 @@ class RuntimeDependencyManifest(SDLModel):
     @classmethod
     def validate_path(cls, v: str) -> str:
         return _abs_path_or_var(v, field_name="path")
-
-
-class RuntimePackageVulnerabilityFinding(SDLModel):
-    """A scanner-derived CVE/advisory finding for an observed package."""
-
-    id: str
-    package_name: str
-    installed_version: str
-    severity: RuntimePackageVulnerabilitySeverity | str = RuntimePackageVulnerabilitySeverity.UNKNOWN
-    scanner: str
-    image_digest: str
-    scan_time: str
-    fixed_version: str = ""
-    advisory_url: str = ""
-    scanner_version: str = ""
-    scanner_database: str = ""
-
-    @field_validator("severity", mode="before")
-    @classmethod
-    def normalize_severity(
-        cls,
-        v: RuntimePackageVulnerabilitySeverity | str,
-    ) -> RuntimePackageVulnerabilitySeverity | str:
-        return _parse_runtime_enum_or_var(v, RuntimePackageVulnerabilitySeverity, field_name="severity")
 
 
 def _reject_duplicate_keys(items: Iterable[object], *, attr: str, label: str) -> None:
@@ -370,7 +325,11 @@ def _reject_duplicate_keys(items: Iterable[object], *, attr: str, label: str) ->
 
 
 class RuntimeConfiguration(SDLModel):
-    """Observed runtime configuration facts attached to a VM node."""
+    """Declarative runtime state required by a VM node.
+
+    Captured observations remain in evidence records unless an author
+    deliberately promotes the fact to one of these contract fields.
+    """
 
     mounts: list[RuntimeMount] = Field(default_factory=list)
     filesystem_inventory: list[RuntimeFilesystemEntry] = Field(default_factory=list)
@@ -380,7 +339,6 @@ class RuntimeConfiguration(SDLModel):
     linux_capabilities: RuntimeCapabilityPolicy | None = None
     operational_policy: RuntimeOperationalPolicy | None = None
     container: RuntimeContainerConfiguration | None = None
-    health: RuntimeHealthObservation | None = None
     local_identity: RuntimeLocalIdentityInventory | None = None
     identity_authorities: list[_runtime_directory_identity.RuntimeIdentityAuthority] = Field(default_factory=list)
     file_services: list[_runtime_file_service.RuntimeFileService] = Field(default_factory=list)
@@ -408,7 +366,6 @@ class RuntimeConfiguration(SDLModel):
     packages: list[RuntimePackage] = Field(default_factory=list)
     software_components: list[RuntimeSoftwareComponent] = Field(default_factory=list)
     dependency_manifests: list[RuntimeDependencyManifest] = Field(default_factory=list)
-    package_vulnerabilities: list[RuntimePackageVulnerabilityFinding] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_unique_runtime_entries(self) -> "RuntimeConfiguration":

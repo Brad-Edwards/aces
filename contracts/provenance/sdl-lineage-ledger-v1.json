@@ -1,6 +1,6 @@
 {
   "schema_version": "sdl-lineage-ledger/v1",
-  "reviewed_on": "2026-07-12",
+  "reviewed_on": "2026-07-13",
   "citations": [
     {
       "citation_id": "ocr-sdl-v0.21.2",
@@ -1185,6 +1185,37 @@
       ]
     },
     {
+      "subject_id": "sdl-field:realization",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/realization",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/realization"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/formal/realization/explicitness-and-realization.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
       "subject_id": "sdl-field:relationships",
       "subject_kind": "top_level_field",
       "disposition": "current",
@@ -2166,6 +2197,36 @@
           "citation_refs": [],
           "internal_authority_refs": [
             "specs/concept-authority/concept-authority.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "concept-family:behavioral-relations",
+      "subject_kind": "concept_family",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/concept-authority/concept-families-v1.json",
+        "pointer": "#/families/behavioral-relations"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/concept-authority/concept-families-v1.json",
+              "symbol_or_pointer": "#/families/behavioral-relations"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external publications define individual formal relations but do not define the ACES claim-binding and assurance policy.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/formal/behavioral-relations/README.md"
           ],
           "compatibility_direction": "not_applicable"
         }

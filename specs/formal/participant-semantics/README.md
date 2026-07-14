@@ -721,7 +721,7 @@ Current implementation artifacts for the `SEM-208` slice:
 - `implementations/python/packages/aces_processor/compiler.py` maps authored
   participants to compiled participant action, observation, and behavior
   addresses;
-- `implementations/python/packages/aces_processor/models.py` defines
+- `implementations/python/packages/aces_processor/models/` defines
   participant behavior-history events and validates action/observation/state
   transition totality over compiled addresses;
 - `implementations/python/tests/test_sem_208_participant_behavior.py` covers
@@ -764,7 +764,7 @@ Current implementation artifacts for the `SEM-209` slice:
 - `implementations/python/packages/aces_processor/compiler.py` carries declared
   interaction classes and shared-state references into compiled participant
   action contracts;
-- `implementations/python/packages/aces_processor/models.py` records
+- `implementations/python/packages/aces_processor/models/` records
   `joint_action_set_id`, `realized_order`, interaction class, interaction
   reference, and shared-state references in participant behavior history, and
   rejects duplicate realized orders within one joint action set;
@@ -838,7 +838,7 @@ Current implementation artifacts for the `SEM-210` slice:
   evidence-only, and realized-view disclosure metadata into compiled
   participant observation boundaries, including an ordered
   `view_relation_timeline` snapshot series for `V_p,t`;
-- `implementations/python/packages/aces_processor/models.py` exposes the
+- `implementations/python/packages/aces_processor/models/` exposes the
   compiled visibility metadata for runtime planning, snapshots, and
   conformance consumers, and validates observation detail refs against the
   corresponding timeline snapshot;
@@ -910,7 +910,7 @@ Current implementation artifacts for the `SEM-211` slice:
 - `implementations/python/packages/aces_processor/compiler.py` carries the
   typed precondition classes, effect classes, failure classes, and backend
   failure mappings into compiled participant action contracts;
-- `implementations/python/packages/aces_processor/models.py` defines typed
+- `implementations/python/packages/aces_processor/models/` defines typed
   action precondition results, action effect results, action results,
   fail-closed validation for unsatisfied or unresolved preconditions, behavior
   history action-result embedding, compiled-contract validation for declared
@@ -951,10 +951,10 @@ Current implementation artifacts for the first `SEM-212` slice:
 - `implementations/python/packages/aces_sdl/participant_attribution_semantics.py`
   defines controlled candidate, ordering-basis, and support-class
   vocabularies;
-- `implementations/python/packages/aces_processor/models.py` defines typed
+- `implementations/python/packages/aces_processor/models/` defines typed
   attribution candidates, ordering bases, evidence bases, and attribution
   edges on participant behavior-history observation events;
-- `implementations/python/packages/aces_processor/models.py` validates
+- `implementations/python/packages/aces_processor/models/` validates
   participant/episode/observation scope, explicit ordering and evidence
   bases, outcome interpretation-rule refs, timestamp-adjacency limits for
   strong causal support, effect grounding in actual observations/action
@@ -1007,7 +1007,7 @@ Current implementation artifacts for the first `SEM-213` slice:
 - `implementations/python/packages/aces_processor/compiler.py` carries temporal
   contract ids, kinds, time domains, clock authorities, and backend timing
   disclosures into compiled participant action contracts;
-- `implementations/python/packages/aces_processor/models.py` defines runtime
+- `implementations/python/packages/aces_processor/models/` defines runtime
   temporal context on participant behavior-history events, validates it
   against the compiled action contract, and exposes an abstract state-machine
   checker for cadence, deadline, dwell, timeout, reset, and replay interactions;

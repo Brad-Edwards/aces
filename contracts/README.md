@@ -8,6 +8,8 @@ The goal of this bucket is organizational clarity:
 - `fixtures/` contains valid and invalid payload corpora for those contracts
 - `profiles/` contains capability profiles and separately versioned
   scientific-completeness taxonomy/assessment declarations
+- `concept-authority/` contains canonical concept, vocabulary, reference-model,
+  and behavioral-relation catalogs
 - `realization-envelopes/` contains configuration-bound backend realization
   declarations whose identity is carried through manifests, plans, and snapshots
 
@@ -68,7 +70,10 @@ apparatus-context, study/collection, capture specification, raw evidence record,
 and derived measure schemas under `contracts/schemas/experiment-core/`. These
 contracts are archival design artifacts for scientific experiment records; they
 do not add runtime execution, capture, storage, scheduling, statistical engines,
-or API behavior by themselves.
+or API behavior by themselves. Claim-bearing study and benchmark records bind
+their conclusions to `aces-behavioral-relations@rev1`, including population or
+case scope, measurement projection, evidence boundary, limitations, and
+explicit nonclaims.
 
 `experiment-run-v1` is the canonical run provenance record. It carries the
 task/run/apparatus context, result and evidence pointers, traceability links to

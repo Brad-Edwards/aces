@@ -1,16 +1,8 @@
-"""Observed container network realization models for SDL nodes.
+"""Declarative container network contract models for SDL nodes.
 
-These models express the container network facts observable from inside a
-realized range or by a harness (see ADR-025) — per-network aliases and DNS
-names, container hostname/domain identity, endpoint MAC addresses, realized
-per-endpoint IP/prefix/gateway, backend network and endpoint identifiers with
-explicit stability classification, host-published port bindings, and observable
-backend driver/IPAM detail.
-
-This is observed runtime state attached to ``Node.runtime``. It is distinct
-from the ``infrastructure`` topology declaration: an endpoint may *reference* a
-declared switch-backed network by name, but backend-generated identifiers,
-aliases, and harness-only observations are never topology declarations.
+Values authored here are exact, constrained, or explicitly open scenario
+requirements. Generated backend identifiers and harness-only observations
+belong in evidence records instead.
 """
 
 import re
@@ -27,7 +19,6 @@ from ._base import (
 from .runtime_values import (
     coerce_string_list,
     ip_address_or_var,
-    parse_optional_bool_or_var,
     parse_runtime_enum_or_var,
 )
 
@@ -35,7 +26,6 @@ __all__ = [
     "RuntimeNetworkBackendDetail",
     "RuntimeNetworkDriver",
     "RuntimeNetworkEndpoint",
-    "RuntimeNetworkIdStability",
     "RuntimeNetworkRealization",
     "RuntimePublishedPort",
 ]
@@ -47,21 +37,8 @@ _MIN_PORT = 1
 _MAX_PORT = 65535
 
 
-class RuntimeNetworkIdStability(str, Enum):
-    """Stability class for a backend-generated network or endpoint identifier.
-
-    Distinct from :class:`RuntimeFilesystemStability`: filesystem stability and
-    backend-identifier stability are different concepts (ADR-025).
-    """
-
-    STABLE = "stable"
-    EPHEMERAL = "ephemeral"
-    UNKNOWN = "unknown"
-    OTHER = "other"
-
-
 class RuntimeNetworkDriver(str, Enum):
-    """Observed backend network driver class for a realized network."""
+    """Backend network driver class required by the scenario."""
 
     BRIDGE = "bridge"
     OVERLAY = "overlay"
@@ -74,7 +51,7 @@ class RuntimeNetworkDriver(str, Enum):
 
 
 def _mac_address_or_var(value: str, *, field_name: str) -> str:
-    """Validate an observed MAC address, allowing empty and ``${var}`` values."""
+    """Validate a required MAC address, allowing empty and ``${var}`` values."""
     if not value or is_variable_ref(value):
         return value
     if not isinstance(value, str) or not _MAC_ADDRESS_RE.fullmatch(value):
@@ -83,7 +60,7 @@ def _mac_address_or_var(value: str, *, field_name: str) -> str:
 
 
 class RuntimeNetworkBackendDetail(SDLModel):
-    """Observed backend network driver and IPAM detail for an endpoint's network.
+    """Required backend network driver and IPAM detail for an endpoint's network.
 
     ``driver_options`` and ``ipam_options`` are the bounded extension seam for
     backend-native key/value facts; raw backend inspect payloads are not stored.
@@ -102,7 +79,7 @@ class RuntimeNetworkBackendDetail(SDLModel):
 
 
 class RuntimePublishedPort(SDLModel):
-    """An observed host-published port binding for a container endpoint.
+    """A required host-published port binding for a container endpoint.
 
     Host IP, host port, container port, and protocol are kept distinct; this is
     a runtime/host exposure fact, not a node service declaration (ADR-025).
@@ -142,27 +119,20 @@ class RuntimePublishedPort(SDLModel):
 
 
 class RuntimeNetworkEndpoint(SDLModel):
-    """An observed container network endpoint (per-network attachment).
+    """A required container network attachment.
 
     ``network`` references a declared switch-backed infrastructure network by
-    name. Per-network ``aliases``, observed ``dns_names``, and backend-generated
-    ``generated_dns_names`` are kept as three distinct lists; generated names
-    are not stable scenario identity.
+    name. Runtime-generated identifiers and names are capture evidence, not
+    declaration identity.
     """
 
     network: str
-    network_id: str = ""
-    network_id_stability: RuntimeNetworkIdStability | str = RuntimeNetworkIdStability.UNKNOWN
-    endpoint_id: str = ""
-    endpoint_id_stability: RuntimeNetworkIdStability | str = RuntimeNetworkIdStability.UNKNOWN
-    backend_generated: bool | str | None = None
     ip_address: str = ""
     ip_prefix_length: int | str | None = None
     gateway: str = ""
     mac_address: str = ""
     aliases: list[str] = Field(default_factory=list)
     dns_names: list[str] = Field(default_factory=list)
-    generated_dns_names: list[str] = Field(default_factory=list)
     backend: RuntimeNetworkBackendDetail | None = None
     description: str = ""
 
@@ -172,20 +142,6 @@ class RuntimeNetworkEndpoint(SDLModel):
         if not isinstance(v, str) or not v.strip():
             raise ValueError("network must be a non-empty string")
         return v
-
-    @field_validator("network_id_stability", "endpoint_id_stability", mode="before")
-    @classmethod
-    def normalize_id_stability(
-        cls,
-        v: RuntimeNetworkIdStability | str,
-        info: ValidationInfo,
-    ) -> RuntimeNetworkIdStability | str:
-        return parse_runtime_enum_or_var(v, RuntimeNetworkIdStability, field_name=info.field_name)
-
-    @field_validator("backend_generated", mode="before")
-    @classmethod
-    def parse_backend_generated(cls, v: bool | str | None) -> bool | str | None:
-        return parse_optional_bool_or_var(v, field_name="backend_generated")
 
     @field_validator("ip_address", "gateway")
     @classmethod
@@ -204,14 +160,14 @@ class RuntimeNetworkEndpoint(SDLModel):
     def validate_mac_address(cls, v: str) -> str:
         return _mac_address_or_var(v, field_name="mac_address")
 
-    @field_validator("aliases", "dns_names", "generated_dns_names", mode="before")
+    @field_validator("aliases", "dns_names", mode="before")
     @classmethod
     def coerce_name_lists(cls, v: Any) -> list[str]:
         return coerce_string_list(v)
 
     @model_validator(mode="after")
     def validate_unique_names(self) -> "RuntimeNetworkEndpoint":
-        for field_name in ("aliases", "dns_names", "generated_dns_names"):
+        for field_name in ("aliases", "dns_names"):
             values = getattr(self, field_name)
             if len(values) != len(set(values)):
                 raise ValueError(f"Duplicate runtime network {field_name} entry on endpoint '{self.network}'")
@@ -219,9 +175,9 @@ class RuntimeNetworkEndpoint(SDLModel):
 
 
 class RuntimeNetworkRealization(SDLModel):
-    """Observed container network realization facts for a node.
+    """Declarative container network state for a node.
 
-    ``hostname`` and ``domainname`` are the container's network identity facts,
+    ``hostname`` and ``domainname`` are required container network identities,
     kept distinct from per-network aliases and DNS names.
     """
 
