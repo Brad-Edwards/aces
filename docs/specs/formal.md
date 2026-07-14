@@ -28,6 +28,10 @@ formal artifacts are warranted.
   realization boundaries, backend realization support, and proposed
   realization-envelope membership, subsumption, witness, and negative
   conformance semantics
+- **Behavioral Relations** (`specs/formal/behavioral-relations/`) -- Revisioned
+  validity, conformance, trace, simulation, refinement, bisimulation,
+  participant-projection, strategic, probabilistic, statistical, and empirical
+  claim semantics with explicit evidence and assurance boundaries
 
 ## FM Classification
 

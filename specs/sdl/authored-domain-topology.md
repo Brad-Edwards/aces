@@ -2,7 +2,7 @@
 
 Status: **normative**. This specification defines the SDL realization-intent
 surface established by
-[ADR-081](../../docs/decisions/adrs/adr-081-authored-identity-domain-topology.md).
+[ADR-082](../../docs/decisions/adrs/adr-082-authored-identity-domain-topology.md).
 It is distinct from the observed runtime directory identity inventory governed
 by ADR-032.
 

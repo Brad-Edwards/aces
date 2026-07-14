@@ -125,7 +125,8 @@ adr-077-associated-artifact-manifest-boundary
 adr-078-closed-sdl-phase-contracts-and-portable-derivation-evidence
 adr-079-backend-neutral-proposition-and-truth-semantics
 adr-080-revision-pinned-sdl-lineage-and-provenance-ledger
-adr-081-authored-identity-domain-topology
+adr-081-behavioral-relation-taxonomy-and-claim-discipline
+adr-082-authored-identity-domain-topology
 ```
 
 | ADR | Title | Status | Date |
@@ -211,4 +212,5 @@ adr-081-authored-identity-domain-topology
 | [078](adr-078-closed-sdl-phase-contracts-and-portable-derivation-evidence.md) | Closed SDL Phase Contracts and Portable Derivation Evidence | accepted | 2026-07-12 |
 | [079](adr-079-backend-neutral-proposition-and-truth-semantics.md) | Backend-Neutral Proposition and Truth Semantics | accepted | 2026-07-12 |
 | [080](adr-080-revision-pinned-sdl-lineage-and-provenance-ledger.md) | Revision-Pinned SDL Lineage And Provenance Ledger | accepted | 2026-07-12 |
-| [081](adr-081-authored-identity-domain-topology.md) | Authored Identity-Domain Topology | accepted | 2026-07-13 |
+| [081](adr-081-behavioral-relation-taxonomy-and-claim-discipline.md) | Behavioral-Relation Taxonomy And Claim Discipline | accepted | 2026-07-13 |
+| [082](adr-082-authored-identity-domain-topology.md) | Authored Identity-Domain Topology | accepted | 2026-07-13 |

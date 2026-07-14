@@ -10,6 +10,24 @@
   "research_questions": [
     "How often does the baseline participant policy achieve initial foothold under the fixed task protocol?"
   ],
+  "behavioral_claims": [
+    {
+      "taxonomy_id": "aces-behavioral-relations",
+      "taxonomy_revision": "rev1",
+      "relation_id": "empirical-adequacy",
+      "subject": "TechVault baseline study",
+      "left_carrier_ref": "study-techvault-baseline@1.0.0",
+      "observation_projection_ref": "analysis-plan:baseline-proportion",
+      "observation_projection_revision": "experiment-study/v1",
+      "quantifier_scope": "sampled-population",
+      "evidence_scope": "statistical",
+      "evidence_boundary": "The one predeclared baseline condition and included evaluation runs.",
+      "assurance_status": "deliberately-unproved",
+      "evidence_refs": ["analysis-plan:baseline-proportion"],
+      "limitations": ["The fixture has one run and cannot establish population adequacy."],
+      "explicit_non_claims": ["No behavioral equivalence or generalizability claim."]
+    }
+  ],
   "membership": {
     "task": {
       "target_ref": {

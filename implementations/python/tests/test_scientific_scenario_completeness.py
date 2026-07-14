@@ -80,7 +80,10 @@ def test_both_completeness_contracts_are_in_the_published_schema_bundle() -> Non
     assessment_invariants = {
         item["id"] for item in bundle["scientific-completeness-assessment-v1"]["x-aces-invariants"]
     }
-    assert taxonomy_invariants == {"scientific-completeness-taxonomy-rectangular"}
+    assert taxonomy_invariants == {
+        "scientific-completeness-behavioral-claim-resolution",
+        "scientific-completeness-taxonomy-rectangular",
+    }
     assert assessment_invariants == {
         "scientific-completeness-assessment-status-evidence",
         "scientific-completeness-taxonomy-assessment-join",

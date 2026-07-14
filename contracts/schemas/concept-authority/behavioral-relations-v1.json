@@ -1,0 +1,791 @@
+{
+  "$defs": {
+    "BehavioralBibliographySourceModel": {
+      "additionalProperties": false,
+      "properties": {
+        "authors": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Authors",
+          "type": "array"
+        },
+        "edition_or_version": {
+          "minLength": 1,
+          "title": "Edition Or Version",
+          "type": "string"
+        },
+        "immutable_locator": {
+          "$ref": "#/$defs/ImmutablePublicationLocatorModel"
+        },
+        "publication_venue": {
+          "minLength": 1,
+          "title": "Publication Venue",
+          "type": "string"
+        },
+        "publication_year": {
+          "maximum": 2100,
+          "minimum": 1900,
+          "title": "Publication Year",
+          "type": "integer"
+        },
+        "source_id": {
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "title": "Source Id",
+          "type": "string"
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_id",
+        "title",
+        "authors",
+        "publication_year",
+        "publication_venue",
+        "edition_or_version",
+        "immutable_locator"
+      ],
+      "title": "BehavioralBibliographySourceModel",
+      "type": "object"
+    },
+    "BehavioralClaimSurfaceModel": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_boundary": {
+          "minLength": 1,
+          "title": "Evidence Boundary",
+          "type": "string"
+        },
+        "explicit_non_claims": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Explicit Non Claims",
+          "type": "array"
+        },
+        "intended_relation_ids": {
+          "items": {
+            "pattern": "^[a-z][a-z0-9-]*$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Intended Relation Ids",
+          "type": "array"
+        },
+        "prohibited_relation_ids": {
+          "items": {
+            "pattern": "^[a-z][a-z0-9-]*$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Prohibited Relation Ids",
+          "type": "array"
+        },
+        "surface_id": {
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "title": "Surface Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "surface_id",
+        "intended_relation_ids",
+        "evidence_boundary",
+        "prohibited_relation_ids",
+        "explicit_non_claims"
+      ],
+      "title": "BehavioralClaimSurfaceModel",
+      "type": "object"
+    },
+    "BehavioralRelationDefinitionModel": {
+      "additionalProperties": false,
+      "properties": {
+        "assurance": {
+          "$ref": "#/$defs/RelationAssuranceModel"
+        },
+        "bounded_evidence": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Bounded Evidence",
+          "type": "array"
+        },
+        "definition": {
+          "minLength": 1,
+          "title": "Definition",
+          "type": "string"
+        },
+        "dimensions": {
+          "$ref": "#/$defs/RelationDimensionsModel"
+        },
+        "direction": {
+          "enum": [
+            "unary",
+            "left-to-right",
+            "right-to-left",
+            "symmetric"
+          ],
+          "title": "Direction",
+          "type": "string"
+        },
+        "display_name": {
+          "minLength": 1,
+          "title": "Display Name",
+          "type": "string"
+        },
+        "explicit_non_claims": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Explicit Non Claims",
+          "type": "array"
+        },
+        "incompatible_claim_surfaces": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Incompatible Claim Surfaces",
+          "type": "array"
+        },
+        "initial_states": {
+          "minLength": 1,
+          "title": "Initial States",
+          "type": "string"
+        },
+        "left_carrier": {
+          "minLength": 1,
+          "title": "Left Carrier",
+          "type": "string"
+        },
+        "observation_projection": {
+          "$ref": "#/$defs/ObservationProjectionModel"
+        },
+        "preservation": {
+          "$ref": "#/$defs/RelationPreservationModel"
+        },
+        "projection_required": {
+          "title": "Projection Required",
+          "type": "boolean"
+        },
+        "quantification": {
+          "$ref": "#/$defs/RelationQuantificationModel"
+        },
+        "relation_class": {
+          "enum": [
+            "predicate",
+            "set-relation",
+            "behavioral",
+            "epistemic",
+            "strategic",
+            "empirical"
+          ],
+          "title": "Relation Class",
+          "type": "string"
+        },
+        "relation_id": {
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "title": "Relation Id",
+          "type": "string"
+        },
+        "right_carrier": {
+          "minLength": 1,
+          "title": "Right Carrier",
+          "type": "string"
+        },
+        "source_refs": {
+          "items": {
+            "pattern": "^[a-z][a-z0-9-]*$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Source Refs",
+          "type": "array"
+        },
+        "transition_signature": {
+          "$ref": "#/$defs/TransitionSignatureModel"
+        }
+      },
+      "required": [
+        "relation_id",
+        "display_name",
+        "relation_class",
+        "definition",
+        "left_carrier",
+        "right_carrier",
+        "initial_states",
+        "transition_signature",
+        "observation_projection",
+        "projection_required",
+        "direction",
+        "quantification",
+        "dimensions",
+        "preservation",
+        "bounded_evidence",
+        "explicit_non_claims",
+        "incompatible_claim_surfaces",
+        "assurance",
+        "source_refs"
+      ],
+      "title": "BehavioralRelationDefinitionModel",
+      "type": "object"
+    },
+    "BehavioralWorkedExampleModel": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_boundary": {
+          "minLength": 1,
+          "title": "Evidence Boundary",
+          "type": "string"
+        },
+        "example_id": {
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "title": "Example Id",
+          "type": "string"
+        },
+        "expected_strong_bisimulation": {
+          "title": "Expected Strong Bisimulation",
+          "type": "boolean"
+        },
+        "expected_weak_matching": {
+          "title": "Expected Weak Matching",
+          "type": "boolean"
+        },
+        "explicit_non_claims": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Explicit Non Claims",
+          "type": "array"
+        },
+        "hidden_action": {
+          "minLength": 1,
+          "title": "Hidden Action",
+          "type": "string"
+        },
+        "left_system": {
+          "$ref": "#/$defs/ExampleTransitionSystemModel"
+        },
+        "purpose": {
+          "minLength": 1,
+          "title": "Purpose",
+          "type": "string"
+        },
+        "right_system": {
+          "$ref": "#/$defs/ExampleTransitionSystemModel"
+        },
+        "tested_visible_trace": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Tested Visible Trace",
+          "type": "array"
+        }
+      },
+      "required": [
+        "example_id",
+        "purpose",
+        "left_system",
+        "right_system",
+        "tested_visible_trace",
+        "hidden_action",
+        "expected_strong_bisimulation",
+        "expected_weak_matching",
+        "evidence_boundary",
+        "explicit_non_claims"
+      ],
+      "title": "BehavioralWorkedExampleModel",
+      "type": "object"
+    },
+    "ExampleTransitionModel": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "minLength": 1,
+          "title": "Action",
+          "type": "string"
+        },
+        "source": {
+          "minLength": 1,
+          "title": "Source",
+          "type": "string"
+        },
+        "target": {
+          "minLength": 1,
+          "title": "Target",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source",
+        "action",
+        "target"
+      ],
+      "title": "ExampleTransitionModel",
+      "type": "object"
+    },
+    "ExampleTransitionSystemModel": {
+      "additionalProperties": false,
+      "properties": {
+        "initial_state": {
+          "minLength": 1,
+          "title": "Initial State",
+          "type": "string"
+        },
+        "states": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "States",
+          "type": "array"
+        },
+        "transitions": {
+          "items": {
+            "$ref": "#/$defs/ExampleTransitionModel"
+          },
+          "minItems": 1,
+          "title": "Transitions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "states",
+        "initial_state",
+        "transitions"
+      ],
+      "title": "ExampleTransitionSystemModel",
+      "type": "object"
+    },
+    "ImmutablePublicationLocatorModel": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "doi",
+            "isbn"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "value": {
+          "minLength": 1,
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "value"
+      ],
+      "title": "ImmutablePublicationLocatorModel",
+      "type": "object"
+    },
+    "ObservationProjectionModel": {
+      "additionalProperties": false,
+      "properties": {
+        "applicability": {
+          "enum": [
+            "required",
+            "parameterized",
+            "identity",
+            "not-applicable"
+          ],
+          "title": "Applicability",
+          "type": "string"
+        },
+        "order_treatment": {
+          "minLength": 1,
+          "title": "Order Treatment",
+          "type": "string"
+        },
+        "policy_ref": {
+          "minLength": 1,
+          "title": "Policy Ref",
+          "type": "string"
+        },
+        "policy_revision": {
+          "minLength": 1,
+          "title": "Policy Revision",
+          "type": "string"
+        },
+        "redaction_scope": {
+          "minLength": 1,
+          "title": "Redaction Scope",
+          "type": "string"
+        },
+        "simultaneity_treatment": {
+          "minLength": 1,
+          "title": "Simultaneity Treatment",
+          "type": "string"
+        },
+        "subject": {
+          "minLength": 1,
+          "title": "Subject",
+          "type": "string"
+        }
+      },
+      "required": [
+        "applicability",
+        "subject",
+        "policy_ref",
+        "policy_revision",
+        "redaction_scope",
+        "order_treatment",
+        "simultaneity_treatment"
+      ],
+      "title": "ObservationProjectionModel",
+      "type": "object"
+    },
+    "RelationAssuranceModel": {
+      "additionalProperties": false,
+      "properties": {
+        "definition_status": {
+          "enum": [
+            "defined",
+            "future"
+          ],
+          "title": "Definition Status",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "implementation_status": {
+          "enum": [
+            "implemented",
+            "partial",
+            "not-implemented",
+            "not-applicable"
+          ],
+          "title": "Implementation Status",
+          "type": "string"
+        },
+        "proof_status": {
+          "enum": [
+            "proved",
+            "model-checked",
+            "deliberately-unproved",
+            "future",
+            "not-applicable"
+          ],
+          "title": "Proof Status",
+          "type": "string"
+        },
+        "test_status": {
+          "enum": [
+            "tested",
+            "bounded",
+            "not-tested",
+            "not-applicable"
+          ],
+          "title": "Test Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "definition_status",
+        "implementation_status",
+        "test_status",
+        "proof_status"
+      ],
+      "title": "RelationAssuranceModel",
+      "type": "object"
+    },
+    "RelationDimensionTreatmentModel": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "supported",
+            "parameterized",
+            "abstracted",
+            "outside-scope"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "treatment": {
+          "minLength": 1,
+          "title": "Treatment",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "treatment"
+      ],
+      "title": "RelationDimensionTreatmentModel",
+      "type": "object"
+    },
+    "RelationDimensionsModel": {
+      "additionalProperties": false,
+      "properties": {
+        "concurrency": {
+          "$ref": "#/$defs/RelationDimensionTreatmentModel"
+        },
+        "nondeterminism": {
+          "$ref": "#/$defs/RelationDimensionTreatmentModel"
+        },
+        "partial_order": {
+          "$ref": "#/$defs/RelationDimensionTreatmentModel"
+        },
+        "probability": {
+          "$ref": "#/$defs/RelationDimensionTreatmentModel"
+        },
+        "time": {
+          "$ref": "#/$defs/RelationDimensionTreatmentModel"
+        }
+      },
+      "required": [
+        "nondeterminism",
+        "concurrency",
+        "probability",
+        "time",
+        "partial_order"
+      ],
+      "title": "RelationDimensionsModel",
+      "type": "object"
+    },
+    "RelationPreservationModel": {
+      "additionalProperties": false,
+      "properties": {
+        "proof_obligation": {
+          "minLength": 1,
+          "title": "Proof Obligation",
+          "type": "string"
+        },
+        "property": {
+          "minLength": 1,
+          "title": "Property",
+          "type": "string"
+        }
+      },
+      "required": [
+        "property",
+        "proof_obligation"
+      ],
+      "title": "RelationPreservationModel",
+      "type": "object"
+    },
+    "RelationQuantificationModel": {
+      "additionalProperties": false,
+      "properties": {
+        "environments": {
+          "minLength": 1,
+          "title": "Environments",
+          "type": "string"
+        },
+        "observations": {
+          "minLength": 1,
+          "title": "Observations",
+          "type": "string"
+        },
+        "schedulers": {
+          "minLength": 1,
+          "title": "Schedulers",
+          "type": "string"
+        },
+        "states": {
+          "minLength": 1,
+          "title": "States",
+          "type": "string"
+        },
+        "strategies": {
+          "minLength": 1,
+          "title": "Strategies",
+          "type": "string"
+        },
+        "traces": {
+          "minLength": 1,
+          "title": "Traces",
+          "type": "string"
+        }
+      },
+      "required": [
+        "states",
+        "traces",
+        "schedulers",
+        "strategies",
+        "environments",
+        "observations"
+      ],
+      "title": "RelationQuantificationModel",
+      "type": "object"
+    },
+    "TransitionSignatureModel": {
+      "additionalProperties": false,
+      "properties": {
+        "applicability": {
+          "enum": [
+            "applicable",
+            "not-applicable"
+          ],
+          "title": "Applicability",
+          "type": "string"
+        },
+        "hidden_actions": {
+          "minLength": 1,
+          "title": "Hidden Actions",
+          "type": "string"
+        },
+        "labels": {
+          "minLength": 1,
+          "title": "Labels",
+          "type": "string"
+        },
+        "not_applicable_rationale": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Not Applicable Rationale"
+        },
+        "observable_actions": {
+          "minLength": 1,
+          "title": "Observable Actions",
+          "type": "string"
+        },
+        "stuttering_actions": {
+          "minLength": 1,
+          "title": "Stuttering Actions",
+          "type": "string"
+        },
+        "transition_relation": {
+          "minLength": 1,
+          "title": "Transition Relation",
+          "type": "string"
+        }
+      },
+      "required": [
+        "applicability",
+        "labels",
+        "transition_relation",
+        "observable_actions",
+        "hidden_actions",
+        "stuttering_actions"
+      ],
+      "title": "TransitionSignatureModel",
+      "type": "object"
+    }
+  },
+  "$id": "https://aces.dev/schemas/behavioral-relations-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "bibliography": {
+      "items": {
+        "$ref": "#/$defs/BehavioralBibliographySourceModel"
+      },
+      "minItems": 1,
+      "title": "Bibliography",
+      "type": "array"
+    },
+    "claim_surfaces": {
+      "items": {
+        "$ref": "#/$defs/BehavioralClaimSurfaceModel"
+      },
+      "minItems": 1,
+      "title": "Claim Surfaces",
+      "type": "array"
+    },
+    "relations": {
+      "minProperties": 1,
+      "patternProperties": {
+        "^[a-z][a-z0-9-]*$": {
+          "$ref": "#/$defs/BehavioralRelationDefinitionModel"
+        }
+      },
+      "title": "Relations",
+      "type": "object"
+    },
+    "schema_version": {
+      "const": "behavioral-relations/v1",
+      "default": "behavioral-relations/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "taxonomy_id": {
+      "const": "aces-behavioral-relations",
+      "default": "aces-behavioral-relations",
+      "title": "Taxonomy Id",
+      "type": "string"
+    },
+    "taxonomy_revision": {
+      "pattern": "^[a-z0-9][a-z0-9.-]*$",
+      "title": "Taxonomy Revision",
+      "type": "string"
+    },
+    "worked_examples": {
+      "minProperties": 1,
+      "patternProperties": {
+        "^[a-z][a-z0-9-]*$": {
+          "$ref": "#/$defs/BehavioralWorkedExampleModel"
+        }
+      },
+      "title": "Worked Examples",
+      "type": "object"
+    }
+  },
+  "required": [
+    "taxonomy_revision",
+    "bibliography",
+    "relations",
+    "claim_surfaces",
+    "worked_examples"
+  ],
+  "title": "BehavioralRelationCatalogModel",
+  "type": "object",
+  "x-aces-invariants": [
+    {
+      "description": "Relation map keys, bibliography references, claim-surface relation references, and worked-example keys must resolve exactly inside one taxonomy revision.",
+      "id": "behavioral-relations-reference-resolution",
+      "inputs": [
+        {
+          "contract_id": "behavioral-relations-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_contracts.behavioral_relations.BehavioralRelationCatalogModel"
+    }
+  ],
+  "x-aces-semantic-profile": {
+    "contract_id": "behavioral-relations-v1",
+    "entry_schema_contract_id": "aces-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
+    "id": "aces-semantic-invariants-v1",
+    "keyword": "x-aces-invariants",
+    "required": true,
+    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+  }
+}

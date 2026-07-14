@@ -47,6 +47,7 @@ def _report_payload(report: BackendConformanceReport) -> dict[str, object]:
     return {
         "profile": report.profile,
         "passed": report.passed,
+        "claim": report.claim.model_dump(mode="json"),
         "cases": [
             {
                 "name": case.name,

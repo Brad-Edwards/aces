@@ -48,6 +48,15 @@ def test_backend_conformance_cli_passes_for_provisioning_only_profile():
     payload = json.loads(result.output)
     assert payload["profile"] == "provisioning-only"
     assert payload["passed"] is True
+    claim = payload["claim"]
+    assert claim["taxonomy_id"] == "aces-behavioral-relations"
+    assert claim["taxonomy_revision"] == "rev1"
+    assert claim["relation_id"] == "bounded-probe-success"
+    assert claim["quantifier_scope"] == "finite-cases"
+    assert claim["evidence_scope"] == "finite"
+    assert claim["observation_projection_ref"] == "backend-conformance-case-report"
+    assert claim["evidence_refs"]
+    assert any("equivalence" in nonclaim for nonclaim in claim["explicit_non_claims"])
     contract_names = {case["contract_name"] for case in payload["cases"]}
     assert contract_names == {
         "backend-manifest-v2",

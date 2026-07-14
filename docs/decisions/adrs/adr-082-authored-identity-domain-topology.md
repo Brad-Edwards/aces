@@ -1,4 +1,4 @@
-# ADR-081: Authored Identity-Domain Topology
+# ADR-082: Authored Identity-Domain Topology
 
 ## Status
 

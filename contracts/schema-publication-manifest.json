@@ -59,6 +59,16 @@
       }
     },
     {
+      "contract_id": "behavioral-relations-v1",
+      "schema_path": "contracts/schemas/concept-authority/behavioral-relations-v1.json",
+      "stability": "draft",
+      "content_hash": "6527fb300e23678a778fd44282f6fa12c8c86119b707ab0874bd4cf19ddb5e29",
+      "last_change": {
+        "summary": "Initial publication of the ADR-081 revisioned behavioral-relation taxonomy, formal dimensions, claim surfaces, assurance states, source identities, and counterexamples (issue #747).",
+        "content_hash": "6527fb300e23678a778fd44282f6fa12c8c86119b707ab0874bd4cf19ddb5e29"
+      }
+    },
+    {
       "contract_id": "concept-families-v1",
       "schema_path": "contracts/schemas/concept-authority/concept-families-v1.json",
       "stability": "draft",
@@ -160,10 +170,10 @@
       "contract_id": "experiment-study-v1",
       "schema_path": "contracts/schemas/experiment-core/experiment-study-v1.json",
       "stability": "draft",
-      "content_hash": "d180220068358f42d6ae850eccb9991dc9284db4b244ef70960837ea68d9b098",
+      "content_hash": "48f758096bf386e097ffa1f9e7e4e9a32781925428be47b42e2f430ba7e681e3",
       "last_change": {
-        "summary": "Extended shared experiment artifact roles and typed references for associated-artifact parents (ADR-077, issue #738).",
-        "content_hash": "d180220068358f42d6ae850eccb9991dc9284db4b244ef70960837ea68d9b098"
+        "summary": "Required revisioned, evidence-bounded behavioral or empirical claim bindings for claim-bearing studies and benchmarks (ADR-081, issue #747).",
+        "content_hash": "48f758096bf386e097ffa1f9e7e4e9a32781925428be47b42e2f430ba7e681e3"
       }
     },
     {
@@ -436,10 +446,10 @@
       "contract_id": "scientific-completeness-taxonomy-v1",
       "schema_path": "contracts/schemas/profiles/scientific-completeness-taxonomy-v1.json",
       "stability": "draft",
-      "content_hash": "87eabab61eb27b6d66288ebce40b628e7405ba3c66ad116fd98b493c4b9bff21",
+      "content_hash": "d1c83d89fc161199208d2eb82f7f5ddebd61ffc9af6d67c9ddac4d84e0a03328",
       "last_change": {
-        "summary": "Initial publication of the REV1 scientific-scenario completeness taxonomy, atomic concern, intended-use disposition, and explicit non-claim contract for GOV-942.",
-        "content_hash": "87eabab61eb27b6d66288ebce40b628e7405ba3c66ad116fd98b493c4b9bff21"
+        "summary": "Bound every REV1 intended-use claim and nonclaim to the ADR-081 behavioral-relation taxonomy (issue #747).",
+        "content_hash": "d1c83d89fc161199208d2eb82f7f5ddebd61ffc9af6d67c9ddac4d84e0a03328"
       }
     },
     {

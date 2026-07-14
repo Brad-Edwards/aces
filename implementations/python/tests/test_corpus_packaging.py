@@ -35,7 +35,7 @@ _FAMILY_PROBES = {
     "profiles": "aces_contracts/_corpus/profiles/backend/provisioning-only.json",
     "scientific-completeness": "aces_contracts/_corpus/profiles/scientific-completeness/scientific-scenario-completeness-rev1.json",
     "fixtures": "aces_contracts/_corpus/fixtures/",
-    "concept-authority": "aces_contracts/_corpus/concept-authority/controlled-vocabularies-v1.json",
+    "concept-authority": "aces_contracts/_corpus/concept-authority/behavioral-relations-v1.json",
     "schemas": "aces_contracts/_corpus/schemas/",
     "provenance": "aces_contracts/_corpus/provenance/sdl-lineage-ledger-v1.json",
 }
