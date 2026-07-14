@@ -71,6 +71,22 @@
         "Run or study concepts must not be used to classify nodes, accounts, observables, tools, or events."
       ]
     },
+    "behavioral-relations": {
+      "title": "Behavioral Relations",
+      "description": "Revisioned predicates and relations used to state validation, conformance, comparison, refinement, equivalence, and empirical claims.",
+      "provenance": "native",
+      "extension_scope": "ACES claim semantics that bind a named relation to carriers, transition and observation policies, quantifier scope, evidence boundary, assurance status, and explicit nonclaims.",
+      "relation_rules": [
+        "May classify claims about `scenarios`, `apparatus-declarations`, `realization-and-disclosure`, `tasks-runs-studies`, participant histories, and `provenance-and-evidence` without reclassifying the underlying artifacts.",
+        "Must bind participant-visible comparisons to the governed observation projection and must keep finite evidence separate from universal trace, simulation, refinement, or bisimulation obligations.",
+        "Must use `actions-and-events` and `observables` for the labels and observations carried by a transition system; this family classifies the relation over carriers, not those cyber-domain objects."
+      ],
+      "non_ambiguity_constraints": [
+        "Must not be used as a synonym for structural validity, schema conformance, execution success, artifact identity, profile satisfaction, or empirical adequacy; each is a distinct governed relation.",
+        "A relation name without its carrier, projection, quantifier, evidence boundary, and assurance status must not be treated as a behavioral claim.",
+        "Bounded probes, equal digests, equal result tuples, and shared projected observations must not be promoted to behavioral, epistemic, strategic, probabilistic, timed, or partial-order equivalence."
+      ]
+    },
     "episodes": {
       "title": "Episodes",
       "description": "Participant runtime episode identity, lifecycle state, and history boundaries.",

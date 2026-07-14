@@ -130,6 +130,7 @@ ecosystem-specific concerns.
 |--------|-------|
 | `scenarios` | SDL scenarios, compositions, modules, and authoring constructs. |
 | `tasks-runs-studies` | Execution lifecycle, run records, and study organization. |
+| `behavioral-relations` | Revisioned validation, conformance, comparison, refinement, equivalence, and empirical claim semantics. |
 | `episodes` | Participant runtime episode identity, lifecycle state, and history boundaries. |
 | `runtime-inventory` | Observed and declared runtime configuration state attached to scenario nodes. |
 | `apparatus-declarations` | Processor, backend, and participant-implementation manifests. |
@@ -154,6 +155,14 @@ Individual inventory fields that denote a narrower cyber-domain object — an
 asset, identity, observable, tool, artifact, or relationship — still bind to
 that narrower family. Runtime inventory records the observed or declared state,
 never the actions or events that produce, change, or react to it.
+
+The `behavioral-relations` family is native because ACES must govern how its
+artifacts bind formal and empirical relations to carriers, observation
+projections, quantifiers, evidence boundaries, and assurance states. The
+individual mathematical relations retain their revision-pinned publication
+lineage in the behavioral-relation catalog; this family owns ACES's claim
+discipline, not a replacement definition of actions, observations, scenarios,
+apparatuses, runs, studies, or evidence.
 
 ## Extension Discipline
 

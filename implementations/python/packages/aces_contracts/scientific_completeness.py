@@ -10,7 +10,12 @@ from typing import Annotated, Literal
 
 from pydantic import AfterValidator, Field, model_validator
 
-from .contracts import ContractModel, NonEmptyString
+from .contracts import (
+    BehavioralClaimBindingModel,
+    BehavioralRelationId,
+    ContractModel,
+    NonEmptyString,
+)
 from .corpus import PROFILES, corpus_family_root
 from .versions import (
     SCIENTIFIC_COMPLETENESS_ASSESSMENT_SCHEMA_VERSION,
@@ -77,8 +82,29 @@ class CompletenessProfileModel(ContractModel):
     title: NonEmptyString
     intended_claim: NonEmptyString
     explicit_non_claims: list[NonEmptyString] = Field(min_length=1)
+    behavioral_claims: list[BehavioralClaimBindingModel] = Field(min_length=1)
+    non_claimed_relation_ids: list[BehavioralRelationId] = Field(min_length=1)
     dispositions: dict[ConcernId, ProfileDisposition]
     example_refs: list[RepoPath] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_behavioral_claims(self) -> CompletenessProfileModel:
+        from .behavioral_relations import load_behavioral_relation_catalog, validate_behavioral_claim_binding
+
+        catalog = load_behavioral_relation_catalog()
+        claimed_ids = [claim.relation_id for claim in self.behavioral_claims]
+        if len(claimed_ids) != len(set(claimed_ids)):
+            raise ValueError("scientific-completeness behavioral claim relation ids must be unique")
+        nonclaimed_ids = set(self.non_claimed_relation_ids)
+        missing = sorted(nonclaimed_ids - set(catalog.relations))
+        if missing:
+            raise ValueError(f"scientific-completeness profile references unknown relations: {missing}")
+        overlap = sorted(set(claimed_ids) & nonclaimed_ids)
+        if overlap:
+            raise ValueError(f"relations cannot be both claimed and explicitly non-claimed: {overlap}")
+        for claim in self.behavioral_claims:
+            validate_behavioral_claim_binding(claim, catalog)
+        return self
 
 
 class ScientificCompletenessTaxonomyModel(ContractModel):

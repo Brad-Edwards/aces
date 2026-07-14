@@ -2203,6 +2203,36 @@
       ]
     },
     {
+      "subject_id": "concept-family:behavioral-relations",
+      "subject_kind": "concept_family",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/concept-authority/concept-families-v1.json",
+        "pointer": "#/families/behavioral-relations"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/concept-authority/concept-families-v1.json",
+              "symbol_or_pointer": "#/families/behavioral-relations"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external publications define individual formal relations but do not define the ACES claim-binding and assurance policy.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/formal/behavioral-relations/README.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
       "subject_id": "concept-family:episodes",
       "subject_kind": "concept_family",
       "disposition": "current",

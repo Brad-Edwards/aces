@@ -14,7 +14,9 @@ The current assessment is deliberately conservative. Only
 `valid-sdl-fragment` is complete. The four stronger profiles expose their
 blocking concerns directly, including authored/observed-state binding,
 specificity, teardown, credentials, time and clocks, participant budgets,
-verifiers, hidden assets, trajectories, and behavioral-relation semantics.
+verifiers, hidden assets, and trajectories. Behavioral-relation semantics are
+now implemented as `aces-behavioral-relations@rev1`, while the stronger formal
+relations it defines retain their honest unproved or future assurance states.
 
 These profiles are scope contracts, not validators that silently strengthen
 ordinary SDL parsing. They also do not certify a backend, an experiment result,

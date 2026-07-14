@@ -3860,8 +3860,13 @@ to the supported conclusion scope or explicitly record
 
 ## Refinement And Conformance Obligations
 
-An implementation refines this design when there is a projection from concrete
-backend traces to valid abstract ACES traces.
+The intended universal relation is `trace-inclusion`: under the named
+participant observation projection, every admitted concrete backend trace must
+map to a valid abstract ACES trace. This section defines that obligation; it
+does not establish it. Current executable evidence is bounded to named fixtures
+and target probes, so no simulation, data-refinement, trace-equivalence, or
+bisimulation claim follows. The evidence boundary for each executed check must
+be carried by its conformance report.
 
 Required preservation properties:
 

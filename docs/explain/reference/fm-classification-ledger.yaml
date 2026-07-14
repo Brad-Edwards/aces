@@ -469,3 +469,16 @@ entries:
       - kind: unit_tests
         path: implementations/python/tests/test_sdl_lineage.py
     waived_artifacts: []
+  - adr: ADR-081
+    surface: Behavioral-relation taxonomy and claim discipline
+    fm_level: FM2
+    delivered_artifacts:
+      - kind: invariant_list
+        path: specs/formal/behavioral-relations/README.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_behavioral_relations.py
+      - kind: typed_ir_or_contract_coverage
+        path: implementations/python/packages/aces_contracts/behavioral_relations.py
+      - kind: property_based_or_differential_tests
+        path: implementations/python/tests/test_behavioral_relations.py
+    waived_artifacts: []

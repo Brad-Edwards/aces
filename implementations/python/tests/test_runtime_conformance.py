@@ -38,6 +38,12 @@ def test_fixture_suite_passes_for_orchestration_evaluation_profile():
     report = run_fixture_suite(profile=BackendCapabilityProfile.ORCHESTRATION_EVALUATION)
 
     assert report.passed is True
+    assert report.claim.relation_id == "bounded-probe-success"
+    assert report.claim.right_carrier_ref == "backend-profile:orchestration-evaluation"
+    assert report.claim.quantifier_scope == "finite-cases"
+    assert set(report.claim.evidence_refs) == {
+        f"conformance-case:{case.contract_name}:{case.name}" for case in report.cases
+    }
     assert report.cases
     assert not report.diagnostics
     assert required_contracts(report.profile)
@@ -48,6 +54,9 @@ def test_target_conformance_passes_for_stub_target():
 
     assert report.profile == BackendCapabilityProfile.FULL_REMOTE_CONTROL_PLANE
     assert report.passed is True
+    assert report.claim.left_carrier_ref == "backend-target:stub"
+    assert report.claim.observation_projection_revision == "rev1"
+    assert "Does not establish trace equivalence or bisimulation." in report.claim.explicit_non_claims
     assert not report.unsupported_contract_gaps
     assert not report.unsupported_capability_gaps
     # RUN-311 finding 4: the live probe must actually drive every

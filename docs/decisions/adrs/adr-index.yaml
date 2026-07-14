@@ -358,3 +358,6 @@ adrs:
   - id: ADR-080
     path: docs/decisions/adrs/adr-080-revision-pinned-sdl-lineage-and-provenance-ledger.md
     pin: e5b44525b5c2bfcef5516e3661c6d3d3a6cb816c10d4c4bb05d720554cea6663
+  - id: ADR-081
+    path: docs/decisions/adrs/adr-081-behavioral-relation-taxonomy-and-claim-discipline.md
+    pin: c8e096b85edb7ca97217a8bb0ac74b8817f966b9cf42b66f114dc3a45ed83a90

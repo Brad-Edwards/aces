@@ -353,11 +353,36 @@ def _terminal_observation_section(snapshot: TerminalSnapshot) -> dict[str, Any]:
         addr: _redact_behavior_history(events) for addr, events in snapshot.participant_behavior_history.items()
     }
     return {
-        "form": "behavior-history-equivalent",
+        "form": "participant-projected-history",
+        "taxonomy": {
+            "taxonomy_id": "aces-behavioral-relations",
+            "taxonomy_revision": "rev1",
+            "non_claimed_relation_ids": [
+                "participant-projected-history-equivalence",
+                "epistemic-indistinguishability",
+                "alternating-strategic-equivalence",
+            ],
+        },
+        "observation_projection": {
+            "subject": "the participant addressed by each behavior-history stream",
+            "policy_ref": "participant-observation-boundary",
+            "policy_revision": "participant-observation-envelope/v1",
+            "redaction_scope": "Only the fields retained by _redact_behavior_history are disclosed.",
+            "order_treatment": "Recorded participant sequence order is preserved.",
+            "simultaneity_treatment": "No simultaneity equivalence is inferred from the serialized order.",
+        },
+        "evidence_boundary": (
+            "The terminal snapshot's named participant behavior-history streams for this single run; "
+            "no second execution or universal trace set is compared."
+        ),
         "disclosure": (
             "The libvirt participant runtime emits a behavior-history event stream rather than a standalone SEM-210 "
-            "observation envelope; the terminal participant view is reported as the behavior-history equivalent."
+            "observation envelope; the terminal participant view is reported as a bounded participant projection."
         ),
+        "explicit_non_claims": [
+            "This single projected record does not establish participant-projected-history-equivalence.",
+            "It does not establish epistemic or strategic equivalence.",
+        ],
         "behavior_history": behavior_history,
     }
 

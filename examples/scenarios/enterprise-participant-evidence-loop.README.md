@@ -98,7 +98,8 @@ substrate realization #601, backend manifest/capability contracts, and the
 experiment/evaluation contracts) into one artifact carrying scenario+compiled
 identity, backend manifest/capability profile and realization provenance, the
 realized/planned topology and network-attachment matrix, the participant action
-proof, the terminal behavior-history-equivalent observation, evaluator-only
+proof, the terminal participant-projected history under the named observation
+boundary (explicitly not an equivalence comparison), evaluator-only
 Wazuh/SOC evidence, negative boundary checks, an evaluator outcome record, and
 redaction/provenance metadata. Embedded published-contract payloads
 (`BackendManifestV2Model`, `EvaluationResultStateModel`,
