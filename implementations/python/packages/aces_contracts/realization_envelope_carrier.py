@@ -86,6 +86,7 @@ class RealizerConfigurationModel(ContractModel):
     supported_os_families: list[NonEmptyString] = Field(min_length=1)
     supported_content_types: list[NonEmptyString] = Field(default_factory=list)
     supported_account_features: list[NonEmptyString] = Field(default_factory=list)
+    supported_domain_profiles: list[NonEmptyString] = Field(default_factory=list)
     supports_acls: bool = False
     memory_mib: IntegerBoundsModel
     vcpus: IntegerBoundsModel
@@ -97,6 +98,7 @@ class RealizerConfigurationModel(ContractModel):
             "supported_os_families",
             "supported_content_types",
             "supported_account_features",
+            "supported_domain_profiles",
         ):
             values = getattr(self, field_name)
             if len(values) != len(set(values)):
@@ -116,6 +118,7 @@ class RealizerConfigurationModel(ContractModel):
             "supported_os_families",
             "supported_content_types",
             "supported_account_features",
+            "supported_domain_profiles",
         ):
             properties[field_name]["uniqueItems"] = True
         return json_schema

@@ -2,9 +2,9 @@
 
 import re
 from enum import Enum
-from typing import Any
+from typing import Annotated, Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import AfterValidator, BaseModel, ConfigDict, WithJsonSchema
 
 from ._identifiers import PORTABLE_IDENTIFIER_PATTERN
 
@@ -31,11 +31,32 @@ VARIABLE_NAME_RE = re.compile(r"^" + VARIABLE_NAME_PATTERN + r"$")
 VARIABLE_TOKEN_PATTERN = r"\$\{(" + _VARIABLE_NAME_PATTERN + r")\}"
 VARIABLE_TOKEN_RE = re.compile(VARIABLE_TOKEN_PATTERN)
 _VARIABLE_REF_RE = re.compile(r"^" + VARIABLE_TOKEN_PATTERN + r"$")
+VARIABLE_REFERENCE_SCHEMA_MARKER = "x-aces-variable-reference"
 
 
 def is_variable_ref(v: Any) -> bool:
     """Return whether ``v`` is a full ``${var_name}`` placeholder."""
     return isinstance(v, str) and _VARIABLE_REF_RE.fullmatch(v) is not None
+
+
+def _validate_whole_field_variable_reference(value: str) -> str:
+    if not is_variable_ref(value):
+        raise ValueError("value must be a whole-field ${name} variable reference")
+    return value
+
+
+WholeFieldVariableReference = Annotated[
+    str,
+    AfterValidator(_validate_whole_field_variable_reference),
+    WithJsonSchema(
+        {
+            "type": "string",
+            "pattern": "^" + VARIABLE_TOKEN_PATTERN + "$",
+            "not": {"pattern": r"[\r\n]"},
+            VARIABLE_REFERENCE_SCHEMA_MARKER: True,
+        }
+    ),
+]
 
 
 def is_variable_name(v: object) -> bool:

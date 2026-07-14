@@ -8,6 +8,7 @@ from aces_backend_protocols.capabilities import (
     WorkflowFeature,
     WorkflowStatePredicateFeature,
 )
+from aces_backend_protocols.domain_topology import DomainTopologyBinding
 from aces_contracts.addressing import render_compiled_address
 from aces_contracts.versions import WORKFLOW_STATE_SCHEMA_VERSION
 from aces_sdl import build_declaration_index
@@ -23,6 +24,12 @@ from aces_sdl.participant_outcome_semantics import (
 )
 from aces_sdl.realization_designation import resolve_realization_designation
 from aces_sdl.scenario import ExpandedScenario, InstantiatedScenario, Scenario
+from aces_sdl.semantics.domain_topology import (
+    DomainNodeBinding,
+    DomainNodeRole,
+    DomainTopologyAnalysis,
+    analyze_domain_topology,
+)
 from aces_sdl.semantics.objective_semantics import (
     OBJECTIVE_WINDOW_DEPENDENCY_ROLES,
     partition_objective_dependencies,
@@ -31,6 +38,7 @@ from aces_sdl.semantics.objectives import analyze_objective_window
 from aces_sdl.semantics.workflow import (
     workflow_step_semantic_contract,
 )
+from aces_sdl.value_parsing import is_variable_ref
 
 from .models import (
     AccountPlacement,
@@ -225,6 +233,40 @@ def _content_item_address(content_name: str, item_name: str) -> str:
 
 def _account_address(name: str) -> str:
     return _address("provision", "account", name)
+
+
+def _section_ref_name(ref: str, section: str, declarations: Mapping[str, object]) -> str:
+    """Return the declaration key denoted by a bare or section-qualified ref."""
+
+    if ref in declarations:
+        return ref
+    prefix = f"{section}."
+    candidate = ref[len(prefix) :] if ref.startswith(prefix) else ""
+    if candidate in declarations:
+        return candidate
+    raise ValueError(f"validated {section} reference must resolve")
+
+
+def _compiled_domain_binding(
+    scenario: InstantiatedScenario,
+    binding: DomainNodeBinding,
+) -> DomainTopologyBinding:
+    domain = scenario.identity_domains[binding.domain_name]
+    authority_name = _section_ref_name(
+        domain.authority_account_ref,
+        "accounts",
+        scenario.accounts,
+    )
+    profile = getattr(domain.profile, "value", domain.profile)
+    return DomainTopologyBinding(
+        domain_id=binding.domain_name,
+        profile=str(profile),
+        dns_name=domain.dns_name,
+        netbios_name=domain.netbios_name,
+        authority_account_address=_account_address(authority_name),
+        role=binding.role.value,
+        controller_addresses=tuple(_node_address(name) for name in binding.controller_names),
+    )
 
 
 def _service_address(node_name: str, service_name: str) -> str:
@@ -907,12 +949,20 @@ def _node_dependency_addresses(
     return addresses
 
 
+@dataclass(frozen=True)
+class _NodeRuntimeTargets:
+    networks: dict[str, NetworkRuntime]
+    node_deployments: dict[str, NodeRuntime]
+
+
 def _compile_node_runtimes(
     scenario: InstantiatedScenario,
     diagnostics: list[Diagnostic],
+    domain_analysis: DomainTopologyAnalysis,
 ) -> tuple[dict[str, NetworkRuntime], dict[str, NodeRuntime]]:
     networks: dict[str, NetworkRuntime] = {}
     node_deployments: dict[str, NodeRuntime] = {}
+    targets = _NodeRuntimeTargets(networks=networks, node_deployments=node_deployments)
     for node_name, node in scenario.nodes.items():
         node_spec = _dump(node)
         infra = scenario.infrastructure.get(node_name)
@@ -940,14 +990,20 @@ def _compile_node_runtimes(
                     require_switch=True,
                 )
             )
+        domain_binding = domain_analysis.node_bindings.get(node_name)
+        compiled_domain_binding = (
+            _compiled_domain_binding(scenario, domain_binding) if domain_binding is not None else None
+        )
+        if domain_binding is not None and domain_binding.role is DomainNodeRole.MEMBER:
+            dependency_addresses.extend(_node_address(name) for name in domain_binding.controller_names)
         _record_node_runtime(
             node_name=node_name,
             node_type=node.type,
             node_spec=node_spec,
             infra_spec=infra_spec,
             dependency_addresses=dependency_addresses,
-            networks=networks,
-            node_deployments=node_deployments,
+            domain_topology=compiled_domain_binding,
+            targets=targets,
         )
     return networks, node_deployments
 
@@ -959,12 +1015,12 @@ def _record_node_runtime(
     node_spec: dict[str, Any],
     infra_spec: dict[str, Any],
     dependency_addresses: list[str],
-    networks: dict[str, NetworkRuntime],
-    node_deployments: dict[str, NodeRuntime],
+    domain_topology: DomainTopologyBinding | None,
+    targets: _NodeRuntimeTargets,
 ) -> None:
     spec = {"node": node_spec, "infrastructure": infra_spec}
     if node_type == NodeType.SWITCH:
-        networks[_network_address(node_name)] = NetworkRuntime(
+        targets.networks[_network_address(node_name)] = NetworkRuntime(
             address=_network_address(node_name),
             name=node_name,
             node_name=node_name,
@@ -973,13 +1029,14 @@ def _record_node_runtime(
             refresh_dependencies=_dedupe(dependency_addresses),
         )
         return
-    node_deployments[_node_address(node_name)] = NodeRuntime(
+    targets.node_deployments[_node_address(node_name)] = NodeRuntime(
         address=_node_address(node_name),
         name=node_name,
         node_name=node_name,
         node_type=node_spec.get("type", ""),
         os_family=node_spec.get("os", "") or "",
         count=infra_spec.get("count"),
+        domain_topology=domain_topology,
         spec=spec,
         ordering_dependencies=_dedupe(dependency_addresses),
         refresh_dependencies=_dedupe(dependency_addresses),
@@ -1237,6 +1294,7 @@ def _compile_content_placements(
 def _compile_account_placements(
     scenario: InstantiatedScenario,
     diagnostics: list[Diagnostic],
+    domain_analysis: DomainTopologyAnalysis,
 ) -> dict[str, AccountPlacement]:
     account_placements: dict[str, AccountPlacement] = {}
     for name, account in scenario.accounts.items():
@@ -1253,12 +1311,21 @@ def _compile_account_placements(
         diagnostics.extend(target_diagnostics)
         if target_address is None:
             continue
+        account_domain_binding = domain_analysis.account_bindings.get(name)
+        node_domain_binding = (
+            domain_analysis.node_bindings.get(account_domain_binding.node_name)
+            if account_domain_binding is not None
+            else None
+        )
         account_placements[address] = AccountPlacement(
             address=address,
             name=name,
             account_name=name,
             node_name=account.node,
             target_address=target_address,
+            domain_topology=(
+                _compiled_domain_binding(scenario, node_domain_binding) if node_domain_binding is not None else None
+            ),
             ordering_dependencies=(target_address,),
             refresh_dependencies=(target_address,),
             spec=_dump(account),
@@ -2422,6 +2489,7 @@ def _realization_requirement_address(
 
 def _compile_realization_requirements(
     scenario: InstantiatedScenario,
+    domain_analysis: DomainTopologyAnalysis,
 ) -> tuple[CompiledRealizationRequirement, ...]:
     """SEM-218 typed compiler emission: lower each authored realization concern
     into a compiled requirement carrying its classifier explicitness class.
@@ -2482,6 +2550,27 @@ def _compile_realization_requirements(
                 delegated=delegated,
             )
         )
+    domain_carriers = [
+        *(
+            (_node_address(node_name), binding.domain_name)
+            for node_name, binding in domain_analysis.node_bindings.items()
+        ),
+        *(
+            (_account_address(account_name), binding.domain_name)
+            for account_name, binding in domain_analysis.account_bindings.items()
+        ),
+    ]
+    for address, domain_name in domain_carriers:
+        requirements.append(
+            CompiledRealizationRequirement(
+                field_path=f"identity_domains.{domain_name}.topology",
+                address=address,
+                domain=REALIZATION_DOMAIN,
+                requirement_kind="domain-topology",
+                explicitness=ExplicitnessClass.EXACT,
+                provenance=ExplicitnessProvenance.PROCESSOR_DERIVED,
+            )
+        )
     return tuple(requirements)
 
 
@@ -2511,6 +2600,13 @@ def compile_runtime_model(scenario: Scenario | ExpandedScenario | InstantiatedSc
     )
     build_declaration_index(scenario)
     diagnostics: list[Diagnostic] = []
+    domain_analysis = analyze_domain_topology(
+        identity_domains=scenario.identity_domains,
+        nodes=scenario.nodes,
+        accounts=scenario.accounts,
+        relationships=scenario.relationships,
+        is_unresolved=is_variable_ref,
+    )
 
     (
         feature_templates,
@@ -2520,7 +2616,7 @@ def compile_runtime_model(scenario: Scenario | ExpandedScenario | InstantiatedSc
     ) = _compile_templates(scenario)
     entity_specs, agent_specs, relationship_specs = _metadata_specs(scenario)
 
-    networks, node_deployments = _compile_node_runtimes(scenario, diagnostics)
+    networks, node_deployments = _compile_node_runtimes(scenario, diagnostics, domain_analysis)
     feature_bindings = _compile_feature_bindings(scenario, feature_templates, diagnostics)
     propositions = _compile_propositions(scenario)
     assertions = _compile_assertions(scenario)
@@ -2533,7 +2629,7 @@ def compile_runtime_model(scenario: Scenario | ExpandedScenario | InstantiatedSc
     injects = _compile_inject_runtimes(inject_templates)
     inject_bindings = _compile_inject_bindings(scenario, inject_templates, diagnostics)
     content_placements = _compile_content_placements(scenario, diagnostics)
-    account_placements = _compile_account_placements(scenario, diagnostics)
+    account_placements = _compile_account_placements(scenario, diagnostics, domain_analysis)
     action_contracts = _compile_action_contracts(scenario)
     observation_boundaries = _compile_observation_boundaries(scenario)
     outcome_interpretation_rules = _compile_outcome_interpretation_rules(scenario)
@@ -2576,6 +2672,6 @@ def compile_runtime_model(scenario: Scenario | ExpandedScenario | InstantiatedSc
         workflows=workflows,
         objectives=objectives,
         diagnostics=diagnostics,
-        realization_requirements=_compile_realization_requirements(scenario),
+        realization_requirements=_compile_realization_requirements(scenario, domain_analysis),
         realization_instance=scenario,
     )

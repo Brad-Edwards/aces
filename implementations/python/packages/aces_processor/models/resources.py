@@ -4,6 +4,7 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from aces_backend_protocols.domain_topology import DomainTopologyBinding
 from aces_contracts.diagnostics import Diagnostic
 from aces_contracts.evaluation import EvaluationExecutionContract, EvaluationResultContract
 from aces_contracts.participant_episode import PARTICIPANT_EPISODE_CONTROL_EVENTS, PARTICIPANT_EPISODE_TERMINAL_EVENTS
@@ -58,6 +59,7 @@ class NodeRuntime(ResolvedResource):
     node_type: str = ""
     os_family: str = ""
     count: int | str | None = None
+    domain_topology: DomainTopologyBinding | None = None
 
 
 @dataclass(frozen=True)
@@ -140,6 +142,7 @@ class AccountPlacement(ResolvedResource):
     account_name: str = ""
     node_name: str = ""
     target_address: str = ""
+    domain_topology: DomainTopologyBinding | None = None
 
 
 @dataclass(frozen=True)

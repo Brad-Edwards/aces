@@ -1078,7 +1078,19 @@ content:
     path: C:\\Support\\session.ini
     text: tenant=hospital\naccess=vpn\nprofile=imaging-support
     sensitive: true
+identity_domains:
+  hospital:
+    profile: active_directory
+    dns_name: hospital.local
+    netbios_name: HOSPITAL
+    authority_account_ref: domain-admin
 accounts:
+  domain-admin:
+    username: Administrator
+    node: ad01
+    groups:
+    - Domain Admins
+    password_strength: strong
   nurse-user:
     username: nurse.jane
     node: exchange01
@@ -1105,6 +1117,7 @@ accounts:
     - AppServices
     password_strength: weak
     spn: HTTP/ehr.hospital.local
+    domain_ref: hospital
   svc-sql:
     username: ehrsql
     node: ehr-db
@@ -1112,6 +1125,7 @@ accounts:
     - DBA
     password_strength: weak
     spn: POSTGRES/ehr-db.hospital.local
+    domain_ref: hospital
   backup-operator:
     username: backupops
     node: backup-vault
@@ -1131,6 +1145,25 @@ accounts:
     - SOC
     password_strength: strong
 relationships:
+  ad01-controls-hospital-domain:
+    type: domain_controller_for
+    source: ad01
+    target: hospital
+    domain_controller: {}
+  ehr-frontend-joins-hospital-domain:
+    type: joins_domain
+    source: ehr-frontend
+    target: hospital
+    domain_join:
+      controller_refs:
+      - ad01
+  ehr-db-joins-hospital-domain:
+    type: joins_domain
+    source: ehr-db
+    target: hospital
+    domain_join:
+      controller_refs:
+      - ad01
   exchange-auths-ad:
     type: authenticates_with
     source: exchange-mailbox

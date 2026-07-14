@@ -136,6 +136,8 @@ probe implementations; propositions and assertions carry portable truth.
 | `infrastructure` | node / link / dependency | `nodes` / switch-backed `infrastructure` |
 | `content` | target | `nodes` (VM) |
 | `accounts` | node | `nodes` (VM) |
+| `accounts` | domain | `identity_domains` |
+| `identity_domains` | authority account | `accounts` |
 
 ### Agents, objectives, participant surfaces
 
@@ -201,6 +203,8 @@ any role-bearing refs
 | `forwarding_edge` | `forwarder_ref` → exactly one `forwarding_agents` element (node-scoped or scenario-level); protocol/role MUST agree with a declared ship target |
 | `service_integration` | consumer/engine refs → `platform_applications`; auth-principal ref → a declared app-authorization on the engine's node |
 | `proxy_upstream` | upstream → a resolved runtime application/endpoint |
+| `domain_controller_for` | `source` → a VM node; `target` → an `identity_domains` entry |
+| `joins_domain` | `source` → a VM node; `target` → an `identity_domains` entry; controller refs → controller nodes for the same domain |
 
 ### Variables
 
@@ -242,8 +246,11 @@ generic symbol lookup.
 | `stories.*.scripts[]` | `scripts` | semantic validation | fatal dangling or ambiguous | [section validator](../../implementations/python/packages/aces_sdl/validator/_sections.py) |
 | `content.*.target` | `nodes` | semantic validation | fatal unless target is a VM node | [content validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py) |
 | `accounts.*.node` | `nodes` | semantic validation | fatal unless target is a VM node | [account validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py) |
+| `accounts.*.domain_ref` | `identity_domains` | semantic validation | fatal dangling, ambiguous, or inconsistent topology | [domain topology semantics](../../implementations/python/packages/aces_sdl/semantics/domain_topology.py) |
+| `identity_domains.*.authority_account_ref` | `accounts` | semantic validation | fatal dangling, ambiguous, or authority outside domain controllers | [domain topology semantics](../../implementations/python/packages/aces_sdl/semantics/domain_topology.py) |
 | `relationships.*.source` | `targetable` | semantic validation | fatal dangling or ambiguous; subtype may narrow domain | [relationship validator](../../implementations/python/packages/aces_sdl/validator/_relationships.py) |
 | `relationships.*.target` | `targetable` | semantic validation | fatal dangling or ambiguous; subtype may narrow domain | [relationship validator](../../implementations/python/packages/aces_sdl/validator/_relationships.py) |
+| `relationships.*.domain_join.controller_refs[]` | `nodes` | semantic validation | fatal dangling, ambiguous, or controller outside target domain | [domain topology semantics](../../implementations/python/packages/aces_sdl/semantics/domain_topology.py) |
 | `agents.*.entity` | `entities` | semantic validation | fatal dangling or ambiguous | [participant validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py) |
 | `agents.*.starting_accounts[]` | `accounts` | semantic validation | fatal dangling or ambiguous | [participant validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py) |
 | `agents.*.starting_assertions[]` | `assertions` | semantic validation | fatal dangling, ambiguous, or non-precondition role | [proposition validator](../../implementations/python/packages/aces_sdl/validator/_propositions.py) |

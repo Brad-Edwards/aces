@@ -46,7 +46,31 @@
         "node",
         "groups",
         "auth_method",
+        "domain_ref",
         "disabled"
+      ]
+    },
+    "scenario-identity-domain": {
+      "title": "Scenario Identity Domain",
+      "description": "Shared reference model for authored identity-domain realization topology.",
+      "concept_family": "identities",
+      "authoritative_schema": {
+        "contract_id": "sdl-authoring-input-v1",
+        "schema_pointer": "#/$defs/IdentityDomain",
+        "instance_path": "identity_domains.*"
+      },
+      "reused_schemas": [
+        {
+          "contract_id": "instantiated-scenario-v1",
+          "schema_pointer": "#/$defs/IdentityDomain",
+          "instance_path": "identity_domains.*"
+        }
+      ],
+      "key_fields": [
+        "profile",
+        "dns_name",
+        "netbios_name",
+        "authority_account_ref"
       ]
     },
     "scenario-relationship": {
@@ -69,7 +93,9 @@
         "type",
         "source",
         "target",
-        "properties"
+        "properties",
+        "domain_controller",
+        "domain_join"
       ]
     },
     "scenario-condition": {

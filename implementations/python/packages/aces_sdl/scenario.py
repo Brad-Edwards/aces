@@ -34,6 +34,7 @@ from .entities import Entity
 from .evidence_requirements import EvidenceRequirement
 from .explicitness import ExplicitnessRecord
 from .features import Feature
+from .identity_domains import IdentityDomain
 from .infrastructure import InfraNode
 from .nodes import Node
 from .objectives import Objective
@@ -272,6 +273,7 @@ class ScenarioContent(SDLModel):
     # --- Extended sections ---
     content: dict[str, Content] = Field(default_factory=dict)
     accounts: dict[str, Account] = Field(default_factory=dict)
+    identity_domains: dict[str, IdentityDomain] = Field(default_factory=dict)
     relationships: dict[str, Relationship] = Field(default_factory=dict)
     forwarding_agents: list[RuntimeForwardingAgent] = Field(default_factory=list)
     agents: dict[str, Agent] = Field(default_factory=dict)

@@ -145,6 +145,9 @@
         "shell",
         "spn"
       ],
+      "supported_domain_profiles": [
+        "active_directory"
+      ],
       "supported_content_types": [
         "dataset",
         "directory",
@@ -186,6 +189,10 @@
     {
       "family": "identities",
       "scope": "capabilities.provisioner.supported_account_features"
+    },
+    {
+      "family": "identities",
+      "scope": "capabilities.provisioner.supported_domain_profiles"
     },
     {
       "family": "actions-and-events",

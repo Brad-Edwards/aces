@@ -674,6 +674,14 @@
           "title": "Supported Content Types",
           "type": "array"
         },
+        "supported_domain_profiles": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Supported Domain Profiles",
+          "type": "array"
+        },
         "supported_node_types": {
           "items": {
             "minLength": 1,
