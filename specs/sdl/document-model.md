@@ -220,9 +220,9 @@ forbidden rather than represented by an empty compatibility shell.
 | Form | Required/phase-specific members | Forbidden authoring machinery | Publication |
 |------|---------------------------------|-------------------------------|-------------|
 | Source | YAML presentation governed by `sdl-yaml/v1` | n/a | source profile and YAML fixtures |
-| Normalized authoring | executable sections; `name`; optional `module`, `imports`, `variables` | none | `sdl-authoring-input-v1` |
-| Expanded authoring | executable sections; `name`; root `variables`; typed `expansion_provenance` | `module`, `imports` | internal trusted representation |
-| Instantiated | executable sections; `name`; required `instantiation_provenance` | `module`, `imports`, `variables`, any `${…}` token | `instantiated-scenario-v1` |
+| Normalized authoring | executable sections; `name`; optional `module`, `imports`, `realization`, `variables` | none | `sdl-authoring-input-v1` |
+| Expanded authoring | executable sections; `name`; root `variables`; typed `expansion_provenance` | `module`, `imports`, `realization` | internal trusted representation |
+| Instantiated | executable sections; `name`; required `instantiation_provenance` | `module`, `imports`, `realization`, `variables`, any `${…}` token | `instantiated-scenario-v1` |
 | Canonical instantiated snapshot | required `profile` and admitted `scenario` | all authoring machinery at the envelope; the nested scenario obeys the instantiated row | `instantiated-scenario-snapshot-v1` |
 
 The **normalized authoring object** exists after safe source construction,
@@ -236,17 +236,20 @@ namespace rewriting but before final root-variable binding. Public exports have
 their declared namespace prefix and non-exported declarations have the generated
 `__private` prefix
 ([ADR-053](../../docs/decisions/adrs/adr-053-sdl-module-composition-for-inventory-backed-scenarios.md)).
-Composition consumes `module` and `imports`; their verified resolution facts
-move into typed expansion provenance. Only the composition path may create this
+Composition consumes `module`, `imports`, and the authored `realization` block.
+Verified resolution facts and normalized realization-designation records move
+into typed expansion provenance. Only the composition path may create this
 internal representation or generated qualified declaration keys. Full semantic
 validation applies to it.
 
 The **instantiated scenario** exists after the public binding operation has
 validated its input, selected and checked every binding, substituted values,
 rebuilt the closed concrete shape, checked provenance consistency, and rerun
-semantic validation. Its provenance is part of the portable artifact, not
-Python-private context. Direct/deserialized artifacts must pass the same
-structural and semantic admission before compilation.
+semantic validation. Its provenance retains the normalized realization
+designations without retaining the authoring block. Provenance is part of the
+portable artifact, not implementation-private context. Direct/deserialized
+artifacts must pass the same structural and semantic admission before
+compilation.
 
 The **canonical instantiated snapshot** is a sealed identity envelope, not
 input to source parsing, composition, or substitution. Its profile is
@@ -258,8 +261,8 @@ authoring/instantiation model of
 the runtime-layering boundary of
 [ADR-004](../../docs/decisions/adrs/adr-004-sdl-runtime-layer.md) and
 [ADR-036](../../docs/decisions/adrs/adr-036-sdl-processor-runtime-module-boundaries.md):
-delivery-level realisation is downstream of, and out of scope for, the authoring
-model.
+delivery-level realisation remains downstream of the author-facing realization
+designation and is out of scope for the authoring model.
 
 ## 8. Canonical semantic identity
 
