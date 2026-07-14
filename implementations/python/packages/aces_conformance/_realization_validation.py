@@ -12,7 +12,11 @@ from aces_contracts.realization_envelope import (
 )
 from aces_contracts.realization_observation import RealizationObservation
 
-from ._realization_models import RealizationProbeEvidence, RealizationProbeRequest
+from ._realization_models import (
+    ExpectedRealizationObservation,
+    RealizationProbeEvidence,
+    RealizationProbeRequest,
+)
 
 _DOMAIN = "conformance"
 _RESOURCE_CONCERNS: dict[str, frozenset[RealizationConcern]] = {
@@ -102,59 +106,77 @@ def observation_diagnostics(
         observed.setdefault((item.address, item.field_path, item.concern), []).append(item)
     diagnostics: list[Diagnostic] = []
     for expected in evidence.expected_observations:
-        key = (expected.address, expected.field_path, expected.concern)
-        candidates = observed.get(key, [])
-        if len(candidates) != 1 or candidates[0].value != expected.value:
-            diagnostics.append(
-                diagnostic(
-                    "conformance.observation-missing",
-                    expected.address,
-                    "A required addressed realization observation is missing, duplicated, or mismatched.",
-                )
+        diagnostics.extend(
+            _expected_observation_diagnostics(
+                expected,
+                observed.get((expected.address, expected.field_path, expected.concern), []),
+                request,
+                evidence.baseline_sequence,
+                strengths,
             )
-            continue
-        item = candidates[0]
-        required = strengths.get(expected.concern, ObservationStrength.NONE)
-        if _STRENGTH_RANK[item.source] < _STRENGTH_RANK[required]:
-            diagnostics.append(
-                diagnostic(
-                    "conformance.observation-strength-insufficient",
-                    expected.address,
-                    "The realization observation is weaker than the configuration requires.",
-                )
-            )
-        binding = (
-            item.operation_id == expected.address
-            and item.probe_digest == request.probe_digest
-            and item.envelope_digest == request.envelope_digest
-            and item.configuration_digest == request.configuration_digest
-            and item.observer_version == request.observer_version
-            and item.binding_verified
         )
-        if not binding:
-            diagnostics.append(
-                diagnostic(
-                    "conformance.observation-binding-invalid",
-                    expected.address,
-                    "The realization observation is not bound to this operation, probe, envelope, and observer.",
-                )
+    return diagnostics
+
+
+def _expected_observation_diagnostics(
+    expected: ExpectedRealizationObservation,
+    candidates: list[RealizationObservation],
+    request: RealizationProbeRequest,
+    baseline_sequence: int,
+    strengths: dict[RealizationConcern, ObservationStrength],
+) -> list[Diagnostic]:
+    address = expected.address
+    if len(candidates) != 1 or candidates[0].value != expected.value:
+        return [
+            diagnostic(
+                "conformance.observation-missing",
+                address,
+                "A required addressed realization observation is missing, duplicated, or mismatched.",
             )
-        if item.origin != "observed":
-            diagnostics.append(
-                diagnostic(
-                    "conformance.observation-not-independent",
-                    expected.address,
-                    "Planned or echoed state cannot satisfy an independent realization observation.",
-                )
+        ]
+    item = candidates[0]
+    diagnostics: list[Diagnostic] = []
+    required = strengths.get(expected.concern, ObservationStrength.NONE)
+    if _STRENGTH_RANK[item.source] < _STRENGTH_RANK[required]:
+        diagnostics.append(
+            diagnostic(
+                "conformance.observation-strength-insufficient",
+                address,
+                "The realization observation is weaker than the configuration requires.",
             )
-        if item.sequence is None or item.sequence <= evidence.baseline_sequence:
-            diagnostics.append(
-                diagnostic(
-                    "conformance.observation-stale",
-                    expected.address,
-                    "The realization observation is not fresh for this probe execution.",
-                )
+        )
+    binding = (
+        item.operation_id == address
+        and item.probe_digest == request.probe_digest
+        and item.envelope_digest == request.envelope_digest
+        and item.configuration_digest == request.configuration_digest
+        and item.observer_version == request.observer_version
+        and item.binding_verified
+    )
+    if not binding:
+        diagnostics.append(
+            diagnostic(
+                "conformance.observation-binding-invalid",
+                address,
+                "The realization observation is not bound to this operation, probe, envelope, and observer.",
             )
+        )
+    if item.origin != "observed":
+        diagnostics.append(
+            diagnostic(
+                "conformance.observation-not-independent",
+                address,
+                "Planned or echoed state cannot satisfy an independent realization observation.",
+            )
+        )
+    if item.sequence is None or item.sequence <= baseline_sequence:
+        diagnostics.append(
+            diagnostic(
+                "conformance.observation-stale",
+                address,
+                "The realization observation is not fresh for this probe execution.",
+            )
+        )
     return diagnostics
 
 

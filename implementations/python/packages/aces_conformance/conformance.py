@@ -362,7 +362,10 @@ def _bounded_conformance_claim(
         explicit_non_claims=[
             "Does not establish trace equivalence or bisimulation.",
             "Does not establish strategic, epistemic, probabilistic, timed, or partial-order equivalence.",
-            "Finite generated probes do not establish universal realizability outside the recorded envelope dimensions.",
+            (
+                "Finite generated probes do not establish universal realizability "
+                "outside the recorded envelope dimensions."
+            ),
             "Fixture-only and hermetic-live execution do not establish native-daemon conformance.",
         ],
     )
@@ -1349,19 +1352,20 @@ def _declared_contract_gaps(
     return tuple(sorted(required - manifest.supported_contract_versions))
 
 
-def run_target_conformance(
-    target: RuntimeTarget,
-    *,
-    profile: BackendProfileSelector | None = None,
-    root: Path | None = None,
-    profiles_root: Path | None = None,
-    reference_scenario: ScenarioInput | None = None,
-    realization_harness: RealizationConformanceHarness | None = None,
-    execution_basis: ExecutionBasis = ExecutionBasis.HERMETIC_LIVE,
-    realization_envelope: BackendRealizationEnvelopeModel | None = None,
-    observer_version: str = "aces-realization-observer/v1",
-    native_conformance: bool = False,
-) -> BackendConformanceReport:
+@dataclass(frozen=True)
+class _TargetConformanceOptions:
+    profile: BackendProfileSelector | None = None
+    root: Path | None = None
+    profiles_root: Path | None = None
+    reference_scenario: ScenarioInput | None = None
+    realization_harness: RealizationConformanceHarness | None = None
+    execution_basis: ExecutionBasis = ExecutionBasis.HERMETIC_LIVE
+    realization_envelope: BackendRealizationEnvelopeModel | None = None
+    observer_version: str = "aces-realization-observer/v1"
+    native_conformance: bool = False
+
+
+def run_target_conformance(target: RuntimeTarget, **option_values: Any) -> BackendConformanceReport:
     """Run fixture conformance for a target's declared runtime surface.
 
     ``root`` overrides the fixtures tree and ``profiles_root`` overrides the
@@ -1378,8 +1382,13 @@ def run_target_conformance(
     realizability-envelope design (#667/#668).
     """
 
-    effective_profile = profile or profile_for_manifest(target.manifest)
-    fixture_report = run_fixture_suite(profile=effective_profile, root=root, profiles_root=profiles_root)
+    options = _TargetConformanceOptions(**option_values)
+    effective_profile = options.profile or profile_for_manifest(target.manifest)
+    fixture_report = run_fixture_suite(
+        profile=effective_profile,
+        root=options.root,
+        profiles_root=options.profiles_root,
+    )
     if any(diag.code == "conformance.profile-load-failed" for diag in fixture_report.diagnostics):
         # The published profile is the contract set we are supposed to validate
         # against. With no profile loaded we must NOT mutate the backend via
@@ -1427,7 +1436,11 @@ def run_target_conformance(
             contract_versions=dict(fixture_report.contract_versions),
             diagnostics=diagnostics,
         )
-    contract_gaps = _declared_contract_gaps(effective_profile, target.manifest, profiles_root=profiles_root)
+    contract_gaps = _declared_contract_gaps(
+        effective_profile,
+        target.manifest,
+        profiles_root=options.profiles_root,
+    )
     surface_gaps = _capability_gaps(effective_profile, target)
     participant_claim_gaps = participant_runtime_capability_contract_gaps(target.manifest)
     observation_claim_gaps = observation_capability_contract_gaps(target.manifest)
@@ -1460,20 +1473,24 @@ def run_target_conformance(
                 + "; ".join(claim_gaps),
             )
         )
-    adapter_cases = _target_adapter_cases(target, effective_profile, reference_scenario=reference_scenario)
+    adapter_cases = _target_adapter_cases(
+        target,
+        effective_profile,
+        reference_scenario=options.reference_scenario,
+    )
     if target.manifest.realization_envelope is not None:
         # Envelope-bound targets use the generated honesty probes below. The
         # historic caller-supplied/default reference scenario remains only for
         # targets that do not yet carry the governed envelope contract.
         adapter_cases = adapter_cases[:1]
-    target_cases = tuple(replace(case, execution_basis=execution_basis.value) for case in adapter_cases)
+    target_cases = tuple(replace(case, execution_basis=options.execution_basis.value) for case in adapter_cases)
     realization_run = run_realization_conformance(
         target,
-        harness=realization_harness,
-        execution_basis=execution_basis,
-        envelope=realization_envelope,
-        observer_version=observer_version,
-        native_conformance=native_conformance,
+        harness=options.realization_harness,
+        execution_basis=options.execution_basis,
+        envelope=options.realization_envelope,
+        observer_version=options.observer_version,
+        native_conformance=options.native_conformance,
     )
     realization_cases = tuple(_realization_case_result(case) for case in realization_run.cases)
     cases = (*fixture_report.cases, *target_cases, *realization_cases)

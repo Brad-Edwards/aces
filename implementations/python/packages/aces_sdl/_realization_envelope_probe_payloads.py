@@ -72,18 +72,20 @@ def value_probe_payloads(
 
 def _extra_dimension_values(current: object) -> list[object]:
     if isinstance(current, Enum):
-        return [member.value for member in type(current) if member is not current]
-    if isinstance(current, bool):
-        return [not current]
-    if isinstance(current, (int, float)):
-        return [current + 1]
-    if isinstance(current, str):
-        return ["out-of-envelope" if current != "out-of-envelope" else "out-of-envelope-x"]
-    if isinstance(current, dict):
-        return [{"out-of-envelope": "out-of-envelope"}]
-    if isinstance(current, list):
-        return [["out-of-envelope"]]
-    return []
+        values: list[object] = [member.value for member in type(current) if member is not current]
+    elif isinstance(current, bool):
+        values = [not current]
+    elif isinstance(current, (int, float)):
+        values = [current + 1]
+    elif isinstance(current, str):
+        values = ["out-of-envelope" if current != "out-of-envelope" else "out-of-envelope-x"]
+    elif isinstance(current, dict):
+        values = [{"out-of-envelope": "out-of-envelope"}]
+    elif isinstance(current, list):
+        values = [["out-of-envelope"]]
+    else:
+        values = []
+    return values
 
 
 def _model_extra_dimension_payloads(

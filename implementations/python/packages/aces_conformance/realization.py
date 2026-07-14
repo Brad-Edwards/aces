@@ -4,11 +4,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+from dataclasses import dataclass
 
 from aces_contracts.diagnostics import Diagnostic
-from aces_contracts.realization_envelope import (
-    BackendRealizationEnvelopeModel,
-)
+from aces_contracts.realization_envelope import BackendRealizationEnvelopeModel
 from aces_processor.reference import run_reference_processor
 from aces_runtime.registry import RuntimeTarget
 from aces_sdl.realization_envelope import (
@@ -46,6 +45,19 @@ from ._realization_validation import (
     transformation_diagnostics as _transformation_diagnostics,
 )
 
+_CLEANUP_ADDRESS = "runtime.cleanup"
+
+
+@dataclass(frozen=True)
+class _CaseContext:
+    target: RuntimeTarget
+    envelope: BackendRealizationEnvelopeModel
+    harness: RealizationConformanceHarness | None
+    basis: ExecutionBasis
+    observer_version: str
+    probe_set_digest: str
+    target_binding: str
+
 
 def _payload_digest(payload: dict[str, object]) -> str:
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("utf-8")
@@ -55,6 +67,12 @@ def _payload_digest(payload: dict[str, object]) -> str:
 def _probe_set_digest(positives: tuple[PositiveProbe, ...], negatives: tuple[NegativeProbe, ...]) -> str:
     material = [probe.digest for probe in positives] + [_payload_digest(probe.payload) for probe in negatives]
     return _payload_digest({"probe_digests": material})
+
+
+def _execute(context: _CaseContext, request: RealizationProbeRequest) -> RealizationProbeEvidence:
+    if context.harness is None:
+        raise ValueError("realization conformance harness is required")
+    return context.harness.execute(request)
 
 
 def _target_binding(target: RuntimeTarget, envelope: BackendRealizationEnvelopeModel) -> str:
@@ -68,13 +86,10 @@ def _target_binding(target: RuntimeTarget, envelope: BackendRealizationEnvelopeM
 def _base_case(
     *,
     name: str,
-    basis: ExecutionBasis,
     outcome: ProbeOutcome,
     passed: bool,
     diagnostics: tuple[Diagnostic, ...],
-    envelope: BackendRealizationEnvelopeModel,
-    target_binding: str,
-    probe_set_digest: str | None = None,
+    context: _CaseContext,
 ) -> RealizationProbeCase:
     return RealizationProbeCase(
         name=name,
@@ -82,12 +97,12 @@ def _base_case(
         valid=True,
         passed=passed,
         diagnostics=diagnostics,
-        execution_basis=basis.value,
+        execution_basis=context.basis.value,
         outcome=outcome.value,
-        probe_set_digest=probe_set_digest,
-        envelope_digest=envelope.digest,
-        configuration_digest=envelope.configuration.configuration_digest,
-        target_binding=target_binding,
+        probe_set_digest=context.probe_set_digest,
+        envelope_digest=context.envelope.digest,
+        configuration_digest=context.envelope.configuration.configuration_digest,
+        target_binding=context.target_binding,
     )
 
 
@@ -98,9 +113,17 @@ def _mismatch_run(
     basis: ExecutionBasis,
 ) -> RealizationConformanceRun:
     binding = _target_binding(target, offered)
+    context = _CaseContext(
+        target=target,
+        envelope=selected,
+        harness=None,
+        basis=basis,
+        observer_version="",
+        probe_set_digest="",
+        target_binding=binding,
+    )
     case = _base_case(
         name="realization-envelope-binding",
-        basis=basis,
         outcome=ProbeOutcome.FAILED,
         passed=False,
         diagnostics=(
@@ -110,8 +133,7 @@ def _mismatch_run(
                 "Selected realization envelope does not match the target configuration identity.",
             ),
         ),
-        envelope=selected,
-        target_binding=binding,
+        context=context,
     )
     return RealizationConformanceRun(cases=(case,), target_binding=binding)
 
@@ -123,14 +145,21 @@ def _constructive_failure(
     diagnostics: tuple[Diagnostic, ...],
 ) -> RealizationConformanceRun:
     binding = _target_binding(target, envelope)
+    context = _CaseContext(
+        target=target,
+        envelope=envelope,
+        harness=None,
+        basis=basis,
+        observer_version="",
+        probe_set_digest="",
+        target_binding=binding,
+    )
     case = _base_case(
         name="realization-envelope-constructive",
-        basis=basis,
         outcome=ProbeOutcome.UNSUPPORTED,
         passed=False,
         diagnostics=diagnostics,
-        envelope=envelope,
-        target_binding=binding,
+        context=context,
     )
     return RealizationConformanceRun(cases=(case,), target_binding=binding)
 
@@ -139,22 +168,15 @@ def _positive_case(
     *,
     index: int,
     probe: PositiveProbe,
-    probe_set_digest: str,
-    target: RuntimeTarget,
-    envelope: BackendRealizationEnvelopeModel,
-    harness: RealizationConformanceHarness,
-    basis: ExecutionBasis,
-    observer_version: str,
+    context: _CaseContext,
 ) -> RealizationProbeCase:
-    binding = _target_binding(target, envelope)
     try:
         plan = run_reference_processor(
-            Scenario.model_validate(probe.payload), target.manifest
+            Scenario.model_validate(probe.payload), context.target.manifest
         ).execution_plan.provisioning
     except Exception:
         return _base_case(
             name=f"realization-positive-{index}",
-            basis=basis,
             outcome=ProbeOutcome.FAILED,
             passed=False,
             diagnostics=(
@@ -164,9 +186,7 @@ def _positive_case(
                     "The generated positive probe did not pass the ordinary processor and planning boundary.",
                 ),
             ),
-            envelope=envelope,
-            target_binding=binding,
-            probe_set_digest=probe_set_digest,
+            context=context,
         )
     request = RealizationProbeRequest(
         probe_digest=probe.digest,
@@ -174,12 +194,12 @@ def _positive_case(
         payload=probe.payload,
         negative=False,
         provisioning_plan=plan,
-        envelope_digest=envelope.digest,
-        configuration_digest=envelope.configuration.configuration_digest,
-        observer_version=observer_version,
+        envelope_digest=context.envelope.digest,
+        configuration_digest=context.envelope.configuration.configuration_digest,
+        observer_version=context.observer_version,
     )
-    evidence = harness.execute(request)
-    strengths = _required_strengths(envelope)
+    evidence = _execute(context, request)
+    strengths = _required_strengths(context.envelope)
     diagnostics = list(evidence.diagnostics)
     if not evidence.accepted:
         diagnostics.append(
@@ -204,7 +224,7 @@ def _positive_case(
         diagnostics.append(
             _diagnostic(
                 "conformance.cleanup-unverified",
-                "runtime.cleanup",
+                _CLEANUP_ADDRESS,
                 "Probe cleanup was not independently verified.",
             )
         )
@@ -212,7 +232,7 @@ def _positive_case(
         diagnostics.append(
             _diagnostic(
                 "conformance.residual-state",
-                "runtime.cleanup",
+                _CLEANUP_ADDRESS,
                 "Probe cleanup left residual owned state.",
             )
         )
@@ -223,14 +243,14 @@ def _positive_case(
         valid=True,
         passed=not diagnostics,
         diagnostics=tuple(diagnostics),
-        execution_basis=basis.value,
+        execution_basis=context.basis.value,
         outcome=(ProbeOutcome.PASSED if not diagnostics else ProbeOutcome.FAILED).value,
         probe_kind="positive",
         probe_digest=probe.digest,
-        probe_set_digest=probe_set_digest,
-        envelope_digest=envelope.digest,
-        configuration_digest=envelope.configuration.configuration_digest,
-        target_binding=binding,
+        probe_set_digest=context.probe_set_digest,
+        envelope_digest=context.envelope.digest,
+        configuration_digest=context.envelope.configuration.configuration_digest,
+        target_binding=context.target_binding,
         expected_operations=expected_operations,
         accounted_operations=evidence.accounted_operations,
         expected_observation_strengths=tuple(sorted({strength.value for strength in strengths.values()})),
@@ -247,12 +267,7 @@ def _negative_case(
     *,
     index: int,
     probe: NegativeProbe,
-    probe_set_digest: str,
-    target: RuntimeTarget,
-    envelope: BackendRealizationEnvelopeModel,
-    harness: RealizationConformanceHarness,
-    basis: ExecutionBasis,
-    observer_version: str,
+    context: _CaseContext,
 ) -> RealizationProbeCase:
     digest = _payload_digest(probe.payload)
     request = RealizationProbeRequest(
@@ -261,11 +276,11 @@ def _negative_case(
         payload=probe.payload,
         negative=True,
         provisioning_plan=None,
-        envelope_digest=envelope.digest,
-        configuration_digest=envelope.configuration.configuration_digest,
-        observer_version=observer_version,
+        envelope_digest=context.envelope.digest,
+        configuration_digest=context.envelope.configuration.configuration_digest,
+        observer_version=context.observer_version,
     )
-    evidence = harness.execute(request)
+    evidence = _execute(context, request)
     diagnostics = list(evidence.diagnostics)
     if evidence.accepted:
         diagnostics.append(
@@ -313,7 +328,7 @@ def _negative_case(
         diagnostics.append(
             _diagnostic(
                 "conformance.cleanup-unverified",
-                "runtime.cleanup",
+                _CLEANUP_ADDRESS,
                 "Negative-probe cleanup was not independently verified.",
             )
         )
@@ -321,30 +336,99 @@ def _negative_case(
         diagnostics.append(
             _diagnostic(
                 "conformance.residual-state",
-                "runtime.cleanup",
+                _CLEANUP_ADDRESS,
                 "Negative-probe cleanup left residual owned state.",
             )
         )
-    binding = _target_binding(target, envelope)
     return RealizationProbeCase(
         name=f"realization-negative-{index}",
         contract_name="realization-envelope-v1",
         valid=True,
         passed=not diagnostics,
         diagnostics=tuple(diagnostics),
-        execution_basis=basis.value,
+        execution_basis=context.basis.value,
         outcome=(ProbeOutcome.PASSED if not diagnostics else ProbeOutcome.FAILED).value,
         probe_kind="negative",
         probe_digest=digest,
-        probe_set_digest=probe_set_digest,
-        envelope_digest=envelope.digest,
-        configuration_digest=envelope.configuration.configuration_digest,
-        target_binding=binding,
+        probe_set_digest=context.probe_set_digest,
+        envelope_digest=context.envelope.digest,
+        configuration_digest=context.envelope.configuration.configuration_digest,
+        target_binding=context.target_binding,
         portable_state_unchanged=portable_unchanged,
         native_state_unchanged=native_unchanged,
         cleanup_verified=evidence.cleanup_verified,
         residual_state=evidence.residual_state,
         evidence_refs=evidence.evidence_refs,
+    )
+
+
+def _missing_harness_run(context: _CaseContext) -> RealizationConformanceRun:
+    case = _base_case(
+        name="realization-harness-required",
+        outcome=ProbeOutcome.UNSUPPORTED,
+        passed=False,
+        diagnostics=(
+            _diagnostic(
+                "conformance.realization-harness-missing",
+                "runtime.target.realization-conformance",
+                "Realization certification requires an independent execution and observation harness.",
+            ),
+        ),
+        context=context,
+    )
+    return RealizationConformanceRun(
+        cases=(case,),
+        probe_set_digest=context.probe_set_digest,
+        target_binding=context.target_binding,
+    )
+
+
+def _probe_cases(
+    context: _CaseContext,
+    positive: tuple[PositiveProbe, ...],
+    negative: tuple[NegativeProbe, ...],
+    *,
+    native_conformance: bool,
+) -> list[RealizationProbeCase]:
+    cases = [_positive_case(index=index, probe=probe, context=context) for index, probe in enumerate(positive, start=1)]
+    cases.extend(
+        _negative_case(index=index, probe=probe, context=context) for index, probe in enumerate(negative, start=1)
+    )
+    if native_conformance and context.basis is not ExecutionBasis.NATIVE_LIVE:
+        cases.append(
+            _base_case(
+                name="native-conformance-basis",
+                outcome=ProbeOutcome.FAILED,
+                passed=False,
+                diagnostics=(
+                    _diagnostic(
+                        "conformance.native-basis-required",
+                        "runtime.target.execution-basis",
+                        "Only native-live execution may support a native conformance claim.",
+                    ),
+                ),
+                context=context,
+            )
+        )
+    return cases
+
+
+def _constructive_run(
+    context: _CaseContext,
+    positive: tuple[PositiveProbe, ...],
+    negative: tuple[NegativeProbe, ...],
+    *,
+    native_conformance: bool,
+) -> RealizationConformanceRun:
+    if context.harness is None:
+        return _missing_harness_run(context)
+    cases = _probe_cases(context, positive, negative, native_conformance=native_conformance)
+    passed = all(case.passed for case in cases)
+    return RealizationConformanceRun(
+        cases=tuple(cases),
+        probe_set_digest=context.probe_set_digest,
+        target_binding=context.target_binding,
+        native_conformance=native_conformance and context.basis is ExecutionBasis.NATIVE_LIVE and passed,
     )
 
 
@@ -359,89 +443,35 @@ def run_realization_conformance(
 ) -> RealizationConformanceRun:
     """Return realization-honesty cases for one exact target configuration."""
 
+    result = RealizationConformanceRun()
     offered = target.manifest.realization_envelope
-    if offered is None:
-        return RealizationConformanceRun()
-    selected = envelope or offered
-    if selected.identity != offered.identity:
-        return _mismatch_run(target, offered, selected, execution_basis)
-    positive, positive_diagnostics = generate_positive_probes(selected.expression)
-    negative, negative_diagnostics = generate_negative_probes(selected.expression)
-    if positive_diagnostics or negative_diagnostics or not positive:
-        diagnostics = tuple((*positive_diagnostics, *negative_diagnostics))
-        return _constructive_failure(target, selected, execution_basis, diagnostics)
-    probe_digest = _probe_set_digest(positive, negative)
-    binding = _target_binding(target, selected)
-    if harness is None:
-        case = _base_case(
-            name="realization-harness-required",
-            basis=execution_basis,
-            outcome=ProbeOutcome.UNSUPPORTED,
-            passed=False,
-            diagnostics=(
-                _diagnostic(
-                    "conformance.realization-harness-missing",
-                    "runtime.target.realization-conformance",
-                    "Realization certification requires an independent execution and observation harness.",
-                ),
-            ),
-            envelope=selected,
-            target_binding=binding,
-            probe_set_digest=probe_digest,
-        )
-        return RealizationConformanceRun(cases=(case,), probe_set_digest=probe_digest, target_binding=binding)
-    cases = [
-        _positive_case(
-            index=index,
-            probe=probe,
-            probe_set_digest=probe_digest,
-            target=target,
-            envelope=selected,
-            harness=harness,
-            basis=execution_basis,
-            observer_version=observer_version,
-        )
-        for index, probe in enumerate(positive, start=1)
-    ]
-    cases.extend(
-        _negative_case(
-            index=index,
-            probe=probe,
-            probe_set_digest=probe_digest,
-            target=target,
-            envelope=selected,
-            harness=harness,
-            basis=execution_basis,
-            observer_version=observer_version,
-        )
-        for index, probe in enumerate(negative, start=1)
-    )
-    if native_conformance and execution_basis is not ExecutionBasis.NATIVE_LIVE:
-        cases.append(
-            _base_case(
-                name="native-conformance-basis",
-                basis=execution_basis,
-                outcome=ProbeOutcome.FAILED,
-                passed=False,
-                diagnostics=(
-                    _diagnostic(
-                        "conformance.native-basis-required",
-                        "runtime.target.execution-basis",
-                        "Only native-live execution may support a native conformance claim.",
-                    ),
-                ),
-                envelope=selected,
-                target_binding=binding,
-                probe_set_digest=probe_digest,
-            )
-        )
-    passed = all(case.passed for case in cases)
-    return RealizationConformanceRun(
-        cases=tuple(cases),
-        probe_set_digest=probe_digest,
-        target_binding=binding,
-        native_conformance=native_conformance and execution_basis is ExecutionBasis.NATIVE_LIVE and passed,
-    )
+    if offered is not None:
+        selected = envelope or offered
+        if selected.identity != offered.identity:
+            result = _mismatch_run(target, offered, selected, execution_basis)
+        else:
+            positive, positive_diagnostics = generate_positive_probes(selected.expression)
+            negative, negative_diagnostics = generate_negative_probes(selected.expression)
+            diagnostics = (*positive_diagnostics, *negative_diagnostics)
+            if diagnostics or not positive:
+                result = _constructive_failure(target, selected, execution_basis, diagnostics)
+            else:
+                context = _CaseContext(
+                    target=target,
+                    envelope=selected,
+                    harness=harness,
+                    basis=execution_basis,
+                    observer_version=observer_version,
+                    probe_set_digest=_probe_set_digest(positive, negative),
+                    target_binding=_target_binding(target, selected),
+                )
+                result = _constructive_run(
+                    context,
+                    positive,
+                    negative,
+                    native_conformance=native_conformance,
+                )
+    return result
 
 
 __all__ = [

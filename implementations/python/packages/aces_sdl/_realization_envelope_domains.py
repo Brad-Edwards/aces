@@ -160,19 +160,20 @@ def positive_probe_values(domain: DomainDescriptor) -> list[DomainScalar]:
 
     members = finite_members(domain)
     if members is not None:
-        return sorted(members, key=_enum_sort_key)
-    if not isinstance(domain, NumericIntervalDomain):
-        return []
-    if domain.numeric_type is NumericType.INTEGER:
+        values = sorted(members, key=_enum_sort_key)
+    elif not isinstance(domain, NumericIntervalDomain):
+        values = []
+    elif domain.numeric_type is NumericType.INTEGER:
         lower = int(domain.lower) + (0 if domain.lower_closed else 1)
         upper = int(domain.upper) - (0 if domain.upper_closed else 1)
-        return [lower] if lower == upper else [lower, upper]
-    values: list[DomainScalar] = []
-    if domain.lower_closed:
-        values.append(domain.lower)
-    values.append((domain.lower + domain.upper) / 2)
-    if domain.upper_closed:
-        values.append(domain.upper)
+        values = [lower] if lower == upper else [lower, upper]
+    else:
+        values = []
+        if domain.lower_closed:
+            values.append(domain.lower)
+        values.append((domain.lower + domain.upper) / 2)
+        if domain.upper_closed:
+            values.append(domain.upper)
     return list(dict.fromkeys(values))
 
 

@@ -440,7 +440,10 @@ def test_machine_readable_report_write_is_redaction_gated(tmp_path) -> None:
     index = next(index for index, case in enumerate(cases) if case.probe_kind == "positive")
     cases[index] = replace(cases[index], residual_state=("/home/operator/private",))
     leaking = replace(report, cases=tuple(cases))
+    leaking_payload = backend_conformance_report_payload(leaking)
     with pytest.raises(ValueError, match="redaction"):
         write_backend_conformance_report(
-            backend_conformance_report_payload(leaking), output_dir=tmp_path, run_id="honesty-native-2"
+            leaking_payload,
+            output_dir=tmp_path,
+            run_id="honesty-native-2",
         )
