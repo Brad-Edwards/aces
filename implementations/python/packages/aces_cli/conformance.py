@@ -15,9 +15,9 @@ import typer
 from aces_conformance.conformance import (
     BackendCapabilityProfile,
     BackendConformanceReport,
+    backend_conformance_report_payload,
     run_fixture_suite,
 )
-from aces_contracts.diagnostics import Diagnostic
 
 _DEFAULT_PROFILE_ID = BackendCapabilityProfile.ORCHESTRATION_EVALUATION.value
 _KNOWN_PROFILE_HINT = ", ".join(sorted(profile.value for profile in BackendCapabilityProfile))
@@ -25,41 +25,8 @@ _KNOWN_PROFILE_HINT = ", ".join(sorted(profile.value for profile in BackendCapab
 app = typer.Typer(help="Backend conformance suite and fixture corpus.")
 
 
-def _serialize_diagnostic(diag: Diagnostic) -> dict[str, object]:
-    """Serialize a :class:`Diagnostic` with its stable identifying fields.
-
-    CI gates wired to ``aces conformance backend`` need to distinguish
-    ``conformance.profile-load-failed`` from ``conformance.fixture-missing``
-    from a case-level schema failure; flattening to ``message`` would force
-    brittle string-matching. Preserve the structured envelope.
-    """
-
-    return {
-        "code": diag.code,
-        "domain": diag.domain,
-        "address": diag.address,
-        "severity": diag.severity.value if hasattr(diag.severity, "value") else str(diag.severity),
-        "message": diag.message,
-    }
-
-
 def _report_payload(report: BackendConformanceReport) -> dict[str, object]:
-    return {
-        "profile": report.profile,
-        "passed": report.passed,
-        "claim": report.claim.model_dump(mode="json"),
-        "cases": [
-            {
-                "name": case.name,
-                "contract_name": case.contract_name,
-                "valid": case.valid,
-                "passed": case.passed,
-                "diagnostics": [_serialize_diagnostic(diag) for diag in case.diagnostics],
-            }
-            for case in report.cases
-        ],
-        "diagnostics": [_serialize_diagnostic(diag) for diag in report.diagnostics],
-    }
+    return backend_conformance_report_payload(report)
 
 
 @app.command("backend")

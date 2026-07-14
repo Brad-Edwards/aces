@@ -1,6 +1,6 @@
 {
   "profile": "provisioning-only",
-  "passed": true,
+  "passed": false,
   "cases": [
     {
       "name": "feature-support-bounded",
@@ -241,18 +241,14 @@
       "diagnostic_codes": []
     },
     {
-      "name": "target-provisioning",
-      "contract_name": "operation-status-v1",
+      "name": "realization-envelope-constructive",
+      "contract_name": "realization-envelope-v1",
       "valid": true,
-      "passed": true,
-      "diagnostic_codes": []
-    },
-    {
-      "name": "target-snapshot",
-      "contract_name": "runtime-snapshot-v1",
-      "valid": true,
-      "passed": true,
-      "diagnostic_codes": []
+      "passed": false,
+      "diagnostic_codes": [
+        "realization-envelope.negative-probe.no-witness",
+        "realization-envelope.positive-probe.no-witness"
+      ]
     }
   ],
   "unsupported_contract_gaps": [],

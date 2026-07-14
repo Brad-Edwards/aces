@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import Enum
 from pathlib import Path
 from textwrap import dedent
@@ -92,6 +92,13 @@ from aces_runtime.result_contracts import (
     workflow_result_contract_diagnostics,
 )
 from pydantic import ValidationError
+
+from aces_conformance.realization import (
+    ExecutionBasis,
+    RealizationConformanceHarness,
+    RealizationProbeCase,
+    run_realization_conformance,
+)
 
 _SEMANTIC_INVALID_DIAGNOSTIC_CODE = "conformance.semantic-invalid"
 _OBSERVABILITY_EVIDENCE_INVALID_DIAGNOSTIC_CODE = "conformance.observability-evidence-invalid"
@@ -222,6 +229,29 @@ class ConformanceCaseResult:
     valid: bool
     passed: bool
     diagnostics: tuple[Diagnostic, ...] = ()
+    execution_basis: str = ExecutionBasis.FIXTURE_ONLY.value
+    outcome: str = "passed"
+    probe_kind: str | None = None
+    probe_digest: str | None = None
+    probe_set_digest: str | None = None
+    envelope_digest: str | None = None
+    configuration_digest: str | None = None
+    target_binding: str | None = None
+    expected_operations: tuple[str, ...] = ()
+    accounted_operations: tuple[str, ...] = ()
+    expected_observation_strengths: tuple[str, ...] = ()
+    actual_observation_strengths: tuple[str, ...] = ()
+    portable_state_unchanged: bool | None = None
+    native_state_unchanged: bool | None = None
+    cleanup_verified: bool | None = None
+    residual_state: tuple[str, ...] = ()
+    evidence_refs: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        """Keep the closed outcome vocabulary aligned with the gating boolean."""
+
+        if self.outcome == "passed" and not self.passed:
+            object.__setattr__(self, "outcome", "failed")
 
 
 @dataclass(frozen=True)
@@ -243,6 +273,61 @@ class BackendConformanceReport:
     unsupported_contract_gaps: tuple[str, ...] = ()
     unsupported_capability_gaps: tuple[str, ...] = ()
     diagnostics: tuple[Diagnostic, ...] = ()
+    probe_set_digest: str | None = None
+    native_conformance: bool = False
+
+
+def _diagnostic_payload(diag: Diagnostic) -> dict[str, object]:
+    return {
+        "code": diag.code,
+        "domain": diag.domain,
+        "address": diag.address,
+        "severity": diag.severity.value if hasattr(diag.severity, "value") else str(diag.severity),
+        "message": diag.message,
+    }
+
+
+def backend_conformance_report_payload(report: BackendConformanceReport) -> dict[str, object]:
+    """Render the single machine-readable backend conformance report projection."""
+
+    return {
+        "profile": report.profile,
+        "passed": report.passed,
+        "native_conformance": report.native_conformance,
+        "probe_set_digest": report.probe_set_digest,
+        "claim": report.claim.model_dump(mode="json"),
+        "contract_versions": dict(report.contract_versions),
+        "unsupported_contract_gaps": list(report.unsupported_contract_gaps),
+        "unsupported_capability_gaps": list(report.unsupported_capability_gaps),
+        "cases": [
+            {
+                "name": case.name,
+                "contract_name": case.contract_name,
+                "valid": case.valid,
+                "passed": case.passed,
+                "execution_basis": case.execution_basis,
+                "outcome": case.outcome,
+                "probe_kind": case.probe_kind,
+                "probe_digest": case.probe_digest,
+                "probe_set_digest": case.probe_set_digest,
+                "envelope_digest": case.envelope_digest,
+                "configuration_digest": case.configuration_digest,
+                "target_binding": case.target_binding,
+                "expected_operations": list(case.expected_operations),
+                "accounted_operations": list(case.accounted_operations),
+                "expected_observation_strengths": list(case.expected_observation_strengths),
+                "actual_observation_strengths": list(case.actual_observation_strengths),
+                "portable_state_unchanged": case.portable_state_unchanged,
+                "native_state_unchanged": case.native_state_unchanged,
+                "cleanup_verified": case.cleanup_verified,
+                "residual_state": list(case.residual_state),
+                "evidence_refs": list(case.evidence_refs),
+                "diagnostics": [_diagnostic_payload(diag) for diag in case.diagnostics],
+            }
+            for case in report.cases
+        ],
+        "diagnostics": [_diagnostic_payload(diag) for diag in report.diagnostics],
+    }
 
 
 def _bounded_conformance_claim(
@@ -277,6 +362,8 @@ def _bounded_conformance_claim(
         explicit_non_claims=[
             "Does not establish trace equivalence or bisimulation.",
             "Does not establish strategic, epistemic, probabilistic, timed, or partial-order equivalence.",
+            "Finite generated probes do not establish universal realizability outside the recorded envelope dimensions.",
+            "Fixture-only and hermetic-live execution do not establish native-daemon conformance.",
         ],
     )
     return validate_behavioral_claim_binding(binding)
@@ -1269,14 +1356,19 @@ def run_target_conformance(
     root: Path | None = None,
     profiles_root: Path | None = None,
     reference_scenario: ScenarioInput | None = None,
+    realization_harness: RealizationConformanceHarness | None = None,
+    execution_basis: ExecutionBasis = ExecutionBasis.HERMETIC_LIVE,
+    realization_envelope: BackendRealizationEnvelopeModel | None = None,
+    observer_version: str = "aces-realization-observer/v1",
+    native_conformance: bool = False,
 ) -> BackendConformanceReport:
     """Run fixture conformance for a target's declared runtime surface.
 
     ``root`` overrides the fixtures tree and ``profiles_root`` overrides the
     backend profile tree; both default to the canonical published roots.
 
-    ``reference_scenario`` selects the scenario the live provisioning/snapshot
-    probes drive (issue #663). It defaults to a generic linux-vm scenario
+    ``reference_scenario`` selects the scenario the hermetic target-adapter
+    provisioning/snapshot probes drive (issue #663). It defaults to a generic linux-vm scenario
     (``_DEFAULT_CONFORMANCE_SCENARIO``). A fixed-topology emulation or bounded
     simulation backend that cannot realize the generic default supplies a
     scenario it *can* realize here, instead of being wrongly failed for not
@@ -1368,23 +1460,46 @@ def run_target_conformance(
                 + "; ".join(claim_gaps),
             )
         )
-    target_cases = _target_adapter_cases(target, effective_profile, reference_scenario=reference_scenario)
-    cases = (*fixture_report.cases, *target_cases)
-    passed = passed and all(case.passed for case in target_cases)
+    adapter_cases = _target_adapter_cases(target, effective_profile, reference_scenario=reference_scenario)
+    if target.manifest.realization_envelope is not None:
+        # Envelope-bound targets use the generated honesty probes below. The
+        # historic caller-supplied/default reference scenario remains only for
+        # targets that do not yet carry the governed envelope contract.
+        adapter_cases = adapter_cases[:1]
+    target_cases = tuple(replace(case, execution_basis=execution_basis.value) for case in adapter_cases)
+    realization_run = run_realization_conformance(
+        target,
+        harness=realization_harness,
+        execution_basis=execution_basis,
+        envelope=realization_envelope,
+        observer_version=observer_version,
+        native_conformance=native_conformance,
+    )
+    realization_cases = tuple(_realization_case_result(case) for case in realization_run.cases)
+    cases = (*fixture_report.cases, *target_cases, *realization_cases)
+    passed = passed and all(case.passed for case in (*target_cases, *realization_cases))
     return BackendConformanceReport(
         profile=_to_profile_id(effective_profile),
         passed=passed,
         claim=_bounded_conformance_claim(
             profile=_to_profile_id(effective_profile),
             cases=cases,
-            left_carrier_ref=f"backend-target:{target.name}",
+            left_carrier_ref=realization_run.target_binding or f"backend-target:{target.name}",
         ),
         cases=cases,
         contract_versions=dict(fixture_report.contract_versions),
         unsupported_contract_gaps=contract_gaps,
         unsupported_capability_gaps=capability_gaps,
         diagnostics=tuple(diagnostics),
+        probe_set_digest=realization_run.probe_set_digest,
+        native_conformance=passed and realization_run.native_conformance,
     )
+
+
+def _realization_case_result(case: RealizationProbeCase) -> ConformanceCaseResult:
+    """Project the internal realization case into the one report case family."""
+
+    return ConformanceCaseResult(**case.__dict__)
 
 
 def _drive_participant_episode_probe(
@@ -1518,7 +1633,7 @@ def _provisioning_probe_case(
     control_plane: RuntimeControlPlane,
     provisioning_plan: ProvisioningPlan,
 ) -> ConformanceCaseResult:
-    """Drive live provisioning and prove the operation genuinely realized state.
+    """Drive hermetic target-adapter provisioning and prove portable mutation.
 
     Backend-neutral (issue #606): every known profile requires a provisioner,
     so target conformance always submits the reference scenario's provisioning
@@ -1570,8 +1685,8 @@ def _provisioning_probe_case(
     )
 
 
-def _live_snapshot_payload(control_plane: RuntimeControlPlane) -> dict[str, Any]:
-    """Serialize the live control-plane snapshot to its portable envelope shape."""
+def _hermetic_snapshot_payload(control_plane: RuntimeControlPlane) -> dict[str, Any]:
+    """Serialize the hermetic control-plane snapshot to its portable envelope shape."""
 
     return {
         "schema_version": RuntimeSnapshotEnvelope().schema_version,
@@ -1611,16 +1726,16 @@ def _live_snapshot_payload(control_plane: RuntimeControlPlane) -> dict[str, Any]
     }
 
 
-def _live_snapshot_case(control_plane: RuntimeControlPlane) -> ConformanceCaseResult:
+def _hermetic_snapshot_case(control_plane: RuntimeControlPlane) -> ConformanceCaseResult:
     """Validate the post-provisioning snapshot and prove it was mutated.
 
-    Runs the ``runtime-snapshot-v1`` schema + semantic checks on the live
+    Runs the ``runtime-snapshot-v1`` schema + semantic checks on the hermetic
     snapshot and additionally requires at least one provisioning-domain entry
     (issue #606), so a target cannot pass with a schema-valid but empty
     (unmutated) snapshot.
     """
 
-    snapshot_payload = _live_snapshot_payload(control_plane)
+    snapshot_payload = _hermetic_snapshot_payload(control_plane)
     diagnostics = [
         *_validate_payload("runtime-snapshot-v1", snapshot_payload),
         *_semantic_diagnostics("runtime-snapshot-v1", snapshot_payload),
@@ -1634,7 +1749,7 @@ def _live_snapshot_case(control_plane: RuntimeControlPlane) -> ConformanceCaseRe
                 "conformance.snapshot-not-mutated",
                 "runtime.snapshot.entries",
                 (
-                    "Live snapshot carries no provisioning-domain entry after the provisioning "
+                    "Hermetic snapshot carries no provisioning-domain entry after the provisioning "
                     "probe; the backend validated contracts without realizing runtime state."
                 ),
             )
@@ -1705,5 +1820,5 @@ def _target_adapter_cases(
                     participant_address="participant.conformance",
                 )
             )
-    cases.append(_live_snapshot_case(control_plane))
+    cases.append(_hermetic_snapshot_case(control_plane))
     return tuple(cases)
