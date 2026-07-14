@@ -9,11 +9,18 @@ This document is the issue #71 formal design artifact for:
 - `SEM-212` - Participant Causality And Attribution Semantics
 - `SEM-213` - Temporal Participant Semantics
 - `SEM-215` - Participant Outcome Interpretation Semantics
+- `SEM-219` - Participant Tool And Affordance Semantics
+- `SEM-220` - Participant Decision-Surface Semantics
+- `SEM-226` - Participant Exposure And Visibility-Boundary Semantics
 
 It is a design artifact, not an implementation artifact. It establishes the
 semantic model that later child implementation issues must realize in SDL
 models, semantic helpers, compiler/runtime contracts, evidence/provenance
 contracts, and tests.
+
+Issue #119 and ADR-083 extend the original issue #71 design with the joint
+`SEM-219`, `SEM-220`, and `SEM-226` decision-surface model. Their executable
+implementation remains owned by issues #294, #295, and #296.
 
 ## Current Sufficiency Finding
 
@@ -1264,6 +1271,291 @@ Current implementation artifacts for the `SEM-217` slice:
   implementation-facing guardrails and anti-patterns for external knowledge
   bindings.
 
+## SEM-219 - Participant Tool And Affordance Semantics
+
+`SEM-219` requires explicit semantics for participant tool and affordance
+availability, visibility, invocation, and constraint handling.
+
+The semantic unit is a participant-meaningful **affordance binding**, not a tool
+label. An affordance binding relates:
+
+- a stable tool or artifact identity, when one exists;
+- one or more governed participant action-contract refs;
+- participant or behavior-specification scope;
+- authority and operating-scope bases;
+- observation-boundary and visibility bases;
+- parameter, resource, temporal, interaction, and realization constraints;
+- expected observation and side-effect classes;
+- implementation-support and realized-exposure disclosures; and
+- evidence/provenance refs.
+
+Tool identity, affordance meaning, and apparatus expectation are different
+facts. In particular:
+
+- `participant-tool-affordance-expectations` is an implementation-manifest
+  capability vocabulary. It does not grant an authored participant an action.
+- `ParticipantExposurePolicyModel.tool_affordance_refs` records selected
+  run-level references. It is not proof that an affordance was visible,
+  invocable, or delivered.
+- an action contract defines portable action meaning. A shell, browser, binary,
+  API, prompt, ATT&CK technique, or UI control does not replace that contract.
+
+For affordance `f`, participant `p`, episode `e`, and order point `o`,
+the semantic state is a tuple rather than one availability boolean:
+
+```text
+AffordanceState(p, e, o, f) = (
+  authored,
+  visible,
+  apparatus_supported,
+  eligible,
+  invocable_or_admitted,
+  realized,
+  constraint_state,
+  evidence_and_limitations
+)
+```
+
+Each predicate has its own authority:
+
+- **authored** follows participant/behavior bindings and action-contract refs;
+- **visible** follows `V_p,o`, the observation boundary, audience scope, and
+  exposure policy;
+- **apparatus-supported** follows the selected participant implementation and
+  backend capability disclosures;
+- **eligible** follows SEM-211 authority, capability, target, knowledge,
+  resource, temporal, interaction, and realization preconditions;
+- **invocable/admitted** follows a concrete admission decision for an attempt;
+- **realized** follows runtime behavior history, results, observations, and
+  evidence; and
+- **constraint state** reports satisfied, unsatisfied, unknown, exhausted, or
+  unsupported constraints through the owning typed failure semantics.
+
+No predicate implies another. A visible affordance may be ineligible. An
+eligible affordance may be unsupported by the selected apparatus. A supported
+affordance may be hidden from this participant. An admitted invocation may
+still fail with a declared SEM-211 failure class.
+
+Constraint handling reuses SEM-211. Missing, unresolved, stale, exhausted, or
+unsupported constraints fail closed; they do not fall back to a backend-local
+default. Constraint effects on visibility, telemetry, shared state, or outcome
+interpretation are explicit side-effect/observation obligations under I5 and
+I13.
+
+Issue #294 owns the executable authoring, validation, compilation, runtime, and
+test bindings for this section. It must reuse action contracts, SEM-211
+admission, participant implementation manifests/selections, exposure policies,
+behavior history, and observation/evidence records.
+
+## SEM-220 - Participant Decision-Surface Semantics
+
+`SEM-220` requires explicit semantics for open-ended action generation,
+constrained action forms, candidate-action sets, and their selection meaning.
+
+For participant `p`, episode `e`, and observation/order point `o`, define
+the decision surface as the participant-local projection:
+
+```text
+D(p, e, o) = Project(
+  behavior and action-contract refs,
+  V(p, o) and observation-boundary state,
+  participant context and audience scope,
+  participant-implementation selection and decision-control mode,
+  exposure policy,
+  SEM-211 eligibility state,
+  realized affordance/support disclosures,
+  evidence, provenance, marking, redaction, and limitations
+)
+```
+
+The projection carries stable references and relation state. It does not copy
+world truth, raw policy bodies, hidden prompts, evaluator state, credentials,
+or backend-native objects into a participant-visible payload.
+
+Every surface has:
+
+- participant address, episode id, and observation/order point;
+- surface form and its selection interpretation;
+- behavior, action-contract, observation-boundary, context-view,
+  implementation-selection, and exposure-policy refs;
+- visible context refs and their source/transformation/disclosure bases;
+- action entries with presentation or generation basis, visibility,
+  eligibility, constraint, and support/realization disclosures;
+- affordance refs bound to action contracts and observation effects;
+- evidence/provenance, markings, redaction, limitations, and weakening; and
+- the event/order/evidence anchor from which the surface was derived.
+
+The three surface forms have distinct selection meaning:
+
+- **Open-ended generation:** the participant implementation may propose an
+  action and arguments, but the proposal must resolve to a governed action
+  contract, validate its argument shape, and pass SEM-211 admission before it
+  becomes an attempt. Generation authority is not invocation authority.
+- **Constrained form:** a form, grammar, or parameter editor maps to an action
+  contract. Defaults, normalization, omitted values, validation, and lossy
+  transformations are part of the mapping and must be disclosed.
+- **Candidate-action set:** the surface presents a participant-local set of
+  action-contract entries. Selection identifies a member and its arguments.
+  A non-member is invalid unless an explicit open-extension path binds it to a
+  governed contract and applies the same validation and admission gates.
+
+These are content/selection forms, not new values for
+`participant-decision-surface-modes`. The controlled vocabulary describes how
+an implementation makes or relays decisions. It cannot carry action lists,
+observations, prompts, instructions, or policy bodies.
+
+Candidate membership does not imply eligibility, and surface presentation does
+not imply selection. Selection does not imply admission, execution, success, or
+outcome interpretation. Those transitions remain explicit and evidence-backed.
+
+`ParticipantContextViewModel` is the reuse-first portable envelope because it
+already carries participant/episode scope, observation point, governed source
+layers, transformation, `payload_ref`, visibility projection, markings,
+redaction policy, evidence, provenance, limitations, and comparability. Issue
+#295 may introduce a new closed decision-surface payload contract only when the
+independently portable payload cannot be represented through that envelope
+without weakening SEM-214/216 invariants. Any new payload composes stable refs;
+it does not duplicate action, observation, exposure, or implementation records.
+
+## SEM-226 - Participant Exposure And Visibility-Boundary Semantics
+
+`SEM-226` requires explicit semantics for participant-visible versus hidden
+context across participant decision surfaces.
+
+This requirement refines the existing time-indexed `V_p,t`, view-rule,
+view-transition, observation-boundary, context-view, and audience-view
+semantics. It introduces no parallel visibility taxonomy.
+
+For item `x`, participant `p`, episode `e`, and order point `o`:
+
+```text
+Exposed(x, p, e, o) only if
+  x is admitted by V(p, o)
+  and its source layer and transformation are participant-facing
+  and its audience/role scope includes p
+  and its marking, redaction, withholding, and loss rules are satisfied
+  and the selected exposure policy authorizes the disclosure class
+  and any visibility change has an event/order/evidence anchor at or before o
+```
+
+The conjunction is fail closed. Backend reachability, operating scope,
+participant authority, control-plane authorization, or the presence of an item
+in global/cumulative context cannot substitute for it.
+
+The source classes remain distinct:
+
+- participant-visible observations;
+- authored control-context artifacts;
+- hidden world-truth assets;
+- adjudication and evaluator-only assets;
+- private references, answer material, canaries, and holdout variants;
+- scaffold instructions or guidance;
+- archival evidence and derived analysis; and
+- augmentation supplied by a human, participant implementation, backend, or
+  other governed source.
+
+Augmentation names its source, transformation, audience, visibility basis,
+evidence/provenance, marking/redaction, and limitations. A generic metadata or
+context map is not an exposure authority.
+
+Exposure is participant-local and time-indexed. A visibility transition
+changes surfaces at or after its effective order; future disclosure cannot
+justify an earlier surface. When participants have different boundaries,
+roles, or transition histories, they may receive different surfaces for the
+same world event without semantic inconsistency.
+
+Realized exposure is separately evidenced. A manifest capability, selected
+mode, or exposure-policy ref can explain intent and apparatus support, but
+runtime history/observation evidence records what the participant actually
+received. Issue #296 owns executable enforcement and adversarial leakage
+fixtures for this section.
+
+### Joint lifecycle and authority boundaries
+
+The joint model preserves meaning across stages:
+
+- **authoring** binds participants/behavior specifications to action contracts,
+  observation boundaries, authority/scope, and affordance semantics;
+- **validation** resolves every ref and fails closed on unknown vocabularies,
+  ambiguous selection meaning, incomplete constraints, or conflicting
+  visibility bases;
+- **compilation** emits canonical participant/action/observation addresses and
+  the inputs required to derive `D(p,e,o)`;
+- **planning** validates selected implementation/backend support and records
+  declared weakening before execution;
+- **execution** applies existing SEM-211 admission and records behavior history,
+  results, and visibility transitions;
+- **observation/retrieval** derives participant-local surfaces from the
+  applicable `V_p,o` snapshot rather than global or final state; and
+- **conformance** compares authored, compiled, selected, realized, and evidenced
+  facts and reports disagreement through existing diagnostics.
+
+Live state remains in `RuntimeSnapshot` and `ControlPlaneStore`. Archival
+claims remain in existing evidence/provenance contracts. The joint design adds
+no decision-surface side store, metadata bag, audit channel, exception
+hierarchy, or backend-specific semantic authority.
+
+### Source-to-contract-to-test matrix
+
+The positive and adversarial fixture names below are required implementation
+cases, not new artifacts delivered by issue #119. Each implementation issue
+must preserve or strengthen its rows.
+
+| Source / clause | Typed carrier or canonical helper | Lifecycle enforcement point | Positive case | Adversarial negative case | Existing invariant / implementation owner |
+| --- | --- | --- | --- | --- | --- |
+| SEM-219 A: tool identity is distinct from affordance meaning | governed concept/reference identity plus participant action-contract ref | SDL semantic reference resolution and compiled canonical addresses | one tool identity exposes two separately governed action affordances | tool label or ATT&CK id accepted as the action contract | I14, I16 / #294 |
+| SEM-219 B: authored availability is participant-local | `agents.*`, behavior-specification refs, action contracts, authority/scope refs | `SemanticValidator`, behavior analysis, full post-instantiation validation | affordance bound to one participant and its behavior spec | globally declared tool silently becomes available to every participant | I1, I4 / #294 |
+| SEM-219 C: visibility is independent of availability | `ParticipantViewRule`, `ParticipantViewTransition`, observation boundary, `V_p,o` | compiler timeline plus observation/retrieval validation at the event order | authored affordance becomes visible after its disclosure transition | globally available affordance appears while hidden from this participant | I2, I3 / #294 |
+| SEM-219 D: invocation is independently admitted | action contract plus `ParticipantActionAdmissionRequest` and `participant_action_admission_request_violations()` | runtime `admit_action()` before execution | visible, supported action passes authority and target admission | visible action invokes outside participant authority | I4 / #294 |
+| SEM-219 E: constraints fail closed | SEM-211 typed preconditions and portable failure classes | semantic validation, planner applicability, runtime admission, result validation | satisfied resource/temporal constraint admits the attempt | exhausted constraint is ignored or mapped to an untyped backend error | I4, I7 / #294 |
+| SEM-219 F: support is apparatus metadata | `ParticipantImplementationManifestModel`, selection model, backend feature-support disclosure | apparatus-context validation before execution | selected implementation explicitly supports the bound affordance | backend-supported tool is treated as semantically available without a grant | I11, I12 / #294 |
+| SEM-219 G: side effects and observations are explicit | action-contract effects, behavior history, action result, observation envelope, evidence refs | result/snapshot/conformance validation | invocation records declared visibility and telemetry effects | tool output leaks hidden truth without a view rule or evidence anchor | I5, I13 / #294 |
+| SEM-220 A: surface has participant/episode/order identity | `ParticipantContextViewModel` envelope plus typed `D(p,e,o)` payload/ref | retrieval and context-view validation | surface resolves to one participant, episode, and observation point | cumulative/global context substitutes for participant-local state | I1, I3, I15 / #295 |
+| SEM-220 B: candidate membership is not eligibility | action-entry contract ref plus explicit SEM-211 eligibility state/reason refs | surface derivation followed by independent admission | visible candidate is marked ineligible with a typed reason | every presented candidate is implicitly executable | I4 / #295 |
+| SEM-220 C: open-ended proposals bind before admission | action-contract registry and SEM-211 admission helper | proposal resolution, argument validation, then runtime admission | generated proposal resolves and validates before an attempt | free-form generation bypasses applicability or invents backend-local meaning | I4, I11 / #295 |
+| SEM-220 D: constrained forms preserve mapping meaning | governed parameter schema plus explicit default/normalization/loss disclosure | authoring validation, compiler mapping, conformance comparison | form values map deterministically to validated action arguments | omitted/defaulted field changes meaning without disclosure | I12, I14, I16 / #295 |
+| SEM-220 E: selection is separate from attempt and outcome | decision record, behavior-history attempt, action result, outcome interpretation | execution history and result/outcome validators | chosen candidate links to one admitted attempt and later result | surface appearance is recorded as selection or success | I10 / #295 |
+| SEM-220 F: implementation kind does not change semantics | participant implementation manifest/selection and stable surface refs | apparatus validation and cross-run conformance | human proxy and autonomous implementation realize equivalent refs with disclosed differences | implementation type silently changes action or selection meaning | I1, I11, I12, I15 / #295 |
+| SEM-226 A: exposure is scoped by `V_p,o` | compiled view-relation timeline and observation boundary | observation/retrieval validation at or before the event order | disclosed item appears only from its effective order | stale or future-visible state enters an earlier surface | I2, I3 / #296 |
+| SEM-226 B: source strata remain distinct | `ParticipantContextViewModel.source_layers`, transformation and payload refs | SEM-214 source binding and SEM-216 audience-boundary validator | archival evidence is mediated through a participant-facing transformation | truth/adjudication/evidence payload aliases the visible context payload | I2, I3, I13 / #296 |
+| SEM-226 C: role/audience scope is explicit | context-view audience fields, view rule, participant address, markings | `_validate_sem216_audience_boundary` and retrieval authorization | role-scoped context reaches only the intended participant audience | private or role-specific context appears on another participant's surface | I2, I17 / #296 |
+| SEM-226 D: augmentation is governed exposure | source layer, transformation, visibility basis, evidence/provenance, limitations | context-view validation and conformance | augmentation records source, transformation, disclosure basis, and limits | scaffold guidance or augmentation metadata enters a generic context bag | I3, I13, I17 / #296 |
+| SEM-226 E: exposure changes are anchored | `ParticipantViewTransition`, behavior-history/episode-close anchor, evidence refs | compiler ordering plus runtime/conformance anchor resolution | disclosure transition changes later surfaces with evidence | exposure changes without a history event, order, or evidence anchor | I2, I8, I9 / #296 |
+| SEM-226 F: realized exposure is not inferred from policy | exposure-policy ref plus observation/history/evidence records | apparatus validation followed by runtime and conformance checks | selected policy and realized observation agree, with limitations | policy/manifest claim is treated as proof of delivery | I11, I13, I15 / #296 |
+
+### Adversarial counterexamples
+
+The matrix includes the required negative cases; these examples make the
+cross-requirement failure shapes explicit:
+
+1. A shell is globally installed and supported, but participant `p` has no
+   authored affordance binding. It is not available to `p`.
+2. An affordance is authored and visible, but its target lies outside `p`'s
+   authority. It remains visible and is rejected at admission.
+3. An affordance is authored and eligible, but the selected implementation
+   declares no realization support. Planning fails or records it as unsupported;
+   it does not silently substitute another tool.
+4. Candidate actions are computed from hidden evaluator state. The surface is
+   invalid even when every action contract would otherwise be well formed.
+5. A candidate is derived from a disclosure whose effective order is later than
+   the surface order. Future visibility does not repair the earlier leak.
+6. Open-ended generation emits a backend command without resolving a governed
+   action contract. The proposal is rejected before admission.
+7. A constrained form drops a parameter or supplies a hidden default that
+   changes action meaning. The mapping is invalid without explicit disclosure.
+8. A private answer reference, canary, adjudication record, scaffold hint, or
+   augmentation payload enters the wrong participant's context view. Audience
+   and hidden-truth boundaries reject it.
+9. An exposure policy selects a tool-affordance ref, but runtime history contains
+   no corresponding exposure evidence. Selection is not proof of realization.
+10. A final aggregate surface is used to claim what the participant saw earlier.
+    The claim is invalid without the order-indexed surface/history sequence.
+
+The obligations above refine existing I1-I17 invariants. They add no new
+`### I*` heading and therefore do not expand the abstract invariant oracle in
+this design issue. Issues #294-#296 own concrete typed bindings and negative
+fixtures that specialize the existing oracle.
+
 ## Required Future Verification
 
 The complete participant surface is `FM3`.
@@ -1329,6 +1621,7 @@ Future implementation PRs should still include:
 ## References
 
 - ADR-022: Participant Behavior and Interaction Semantics
+- ADR-083: Participant Tool, Decision-Surface, and Exposure Semantics
 - ADR-007: Lightweight Formal Methods Policy for Semantic Systems
 - ADR-013: Participant Episode Lifecycle Boundaries
 - ADR-016: Semantic Layer Scope and Coverage Model
