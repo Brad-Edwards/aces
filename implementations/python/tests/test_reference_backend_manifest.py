@@ -42,6 +42,13 @@ def test_manifest_does_not_claim_unimplemented_acl_enforcement():
     assert manifest.provisioner.supports_acls is False
 
 
+def test_manifest_does_not_claim_unimplemented_domain_or_spn_realization():
+    manifest = create_reference_backend_manifest()
+
+    assert "spn" not in manifest.provisioner.supported_account_features
+    assert manifest.provisioner.supported_domain_profiles == frozenset()
+
+
 def test_manifest_accepts_and_ignores_extra_config_kwargs():
     # Config kwargs flow to both factories; the manifest factory must accept
     # and ignore extras such as ``driver``.
