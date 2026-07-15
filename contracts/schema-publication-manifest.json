@@ -190,20 +190,20 @@
       "contract_id": "instantiated-scenario-snapshot-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
       "stability": "draft",
-      "content_hash": "10544c816e9407607d4bbc8002eb23645f2fc5bc6c7e86ca7fbd4ae3f0c6d25e",
+      "content_hash": "94ac1f292cce054395771bebd5d9b080cc2411f624618e86434620d252bc565c",
       "last_change": {
-        "summary": "Added authored identity-domain declarations, typed controller and join relationships, and explicit account domain bindings (issue #763).",
-        "content_hash": "10544c816e9407607d4bbc8002eb23645f2fc5bc6c7e86ca7fbd4ae3f0c6d25e"
+        "summary": "Added participant-local authored interactive-access declarations with closed SSH/RDP channels and typed target/account references (issue #805).",
+        "content_hash": "94ac1f292cce054395771bebd5d9b080cc2411f624618e86434620d252bc565c"
       }
     },
     {
       "contract_id": "instantiated-scenario-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
       "stability": "draft",
-      "content_hash": "03aee5d25be44733ef09697b403235189bc91fc65da7bd6ff7ecd8ff6685d72a",
+      "content_hash": "4e9cfb64a2453e277b9badb55a27f0cc2347792e25e506107c13db01e324453f",
       "last_change": {
-        "summary": "Added authored identity-domain declarations, typed controller and join relationships, and explicit account domain bindings (issue #763).",
-        "content_hash": "03aee5d25be44733ef09697b403235189bc91fc65da7bd6ff7ecd8ff6685d72a"
+        "summary": "Added participant-local authored interactive-access declarations with closed SSH/RDP channels and typed target/account references (issue #805).",
+        "content_hash": "4e9cfb64a2453e277b9badb55a27f0cc2347792e25e506107c13db01e324453f"
       }
     },
     {
@@ -456,10 +456,10 @@
       "contract_id": "sdl-authoring-input-v1",
       "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
       "stability": "draft",
-      "content_hash": "27f9ad3203fa48afec0247b7eb8afd376c1acc8dbdac7d88d9e0c96c9b9bf8c3",
+      "content_hash": "eff8a84315035ee9c101068cb0cd3cfe5751bf67f1303468fae2ceb9ff742119",
       "last_change": {
-        "summary": "Added authored identity-domain declarations, typed controller and join relationships, and explicit account domain bindings (issue #763).",
-        "content_hash": "27f9ad3203fa48afec0247b7eb8afd376c1acc8dbdac7d88d9e0c96c9b9bf8c3"
+        "summary": "Added participant-local authored interactive-access declarations with closed SSH/RDP channels and typed target/account references (issue #805).",
+        "content_hash": "eff8a84315035ee9c101068cb0cd3cfe5751bf67f1303468fae2ceb9ff742119"
       }
     },
     {

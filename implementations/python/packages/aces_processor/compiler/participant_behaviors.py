@@ -8,6 +8,7 @@ from ..models import (
     Diagnostic,
     ParticipantBehaviorRuntime,
     ParticipantBehaviorSpecificationRuntime,
+    ParticipantInteractiveAccessRuntime,
 )
 from .addresses import (
     _action_contract_address,
@@ -115,6 +116,32 @@ def _compile_participant_behaviors(
             list(agent.operating_scope),
             addressable_ref_index=addressable_ref_index,
         )
+        interactive_access: list[ParticipantInteractiveAccessRuntime] = []
+        interactive_access_addresses: list[str] = []
+        for access_id, access in sorted(agent.interactive_access.items()):
+            target_addresses = _runtime_addresses_for_refs(
+                [access.target_ref],
+                addressable_ref_index=addressable_ref_index,
+            )
+            account_addresses = _runtime_addresses_for_refs(
+                [access.account_ref] if access.account_ref else [],
+                addressable_ref_index=addressable_ref_index,
+            )
+            target_address = target_addresses[0]
+            account_address = account_addresses[0] if account_addresses else ""
+            channel = str(getattr(access.channel, "value", access.channel))
+            interactive_access.append(
+                ParticipantInteractiveAccessRuntime(
+                    access_id=access_id,
+                    target_ref=access.target_ref,
+                    target_address=target_address,
+                    channel=channel,
+                    account_ref=access.account_ref or "",
+                    account_address=account_address,
+                )
+            )
+            interactive_access_addresses.extend(target_addresses)
+            interactive_access_addresses.extend(account_addresses)
         dependency_addresses = _dedupe(
             [
                 *action_addresses,
@@ -124,6 +151,7 @@ def _compile_participant_behaviors(
                 *starting_assertion_addresses,
                 *authority_anchor_addresses,
                 *operating_scope_addresses,
+                *interactive_access_addresses,
             ]
         )
         participant_behaviors[_participant_behavior_address(name)] = ParticipantBehaviorRuntime(
@@ -142,6 +170,7 @@ def _compile_participant_behaviors(
             operating_scope_addresses=operating_scope_addresses,
             action_contract_addresses=tuple(action_addresses),
             observation_boundary_addresses=tuple(observation_addresses),
+            interactive_access=tuple(interactive_access),
             refresh_dependencies=dependency_addresses,
             spec={"agent": _dump(agent), "interpretation_mode": "role-neutral-projection"},
         )

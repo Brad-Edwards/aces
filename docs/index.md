@@ -152,6 +152,7 @@ research/related-work-comparison/index
 research/dsl-language-evaluation/index
 research/participant-backend-contracts/index
 research/participant-io-control/index
+research/participant-interactive-access/index
 ```
 
 ```{toctree}

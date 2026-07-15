@@ -757,6 +757,14 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   action/observation/reward/episode interfaces, and also expose the
   sim-to-emulation gap that ACES must record through realization disclosure and
   evidence provenance.
+- The participant interactive-access declaration has a narrower,
+  revision-pinned lineage. CyRIS 1.2 explicitly marks an entry guest but infers
+  SSH/RDP realization from OS family; CybORG v3.0 places explicit
+  host/user/session-type bindings under an agent. ACES adapts explicit
+  participant-local binding while rejecting OS inference, established-session
+  state, locators, ports, and raw credentials. Exact source boundaries and
+  divergences are recorded in the lineage ledger and participant
+  interactive-access research note.
 - CALDERA adversary-emulation research informs the action semantics: cyber
   actions can change foothold, knowledge, observations, detection surface, and
   downstream outcomes under uncertainty.

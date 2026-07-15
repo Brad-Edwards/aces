@@ -1347,6 +1347,45 @@ test bindings for this section. It must reuse action contracts, SEM-211
 admission, participant implementation manifests/selections, exposure policies,
 behavior history, and observation/evidence records.
 
+### DSL-117 interactive-access specialization
+
+For participant `p`, let `IA(p)` be a finite map from portable local
+declaration ids to records `(target_ref, channel, account_ref?)`. Let
+`resolve_N` and `resolve_A` be the fail-closed node and account resolvers after
+composition, and let `VM` be the set of declared VM nodes.
+
+The authored interactive-access specialization satisfies:
+
+- **IA1 — participant locality:** `IA(p)` belongs only to `p`; no declaration
+  is global and participant implementation kind does not change its meaning.
+- **IA2 — stable identity:** every map key is a portable local identifier,
+  cannot be a variable, and is preserved through composition and compilation.
+- **IA3 — closed target/channel:** every concrete `target_ref` resolves to one
+  member of `VM`, and every concrete channel is exactly `ssh` or `rdp`.
+- **IA4 — account authority:** when `account_ref` is present, it resolves to an
+  account on `resolve_N(target_ref)` and that account occurs in `p`'s concrete
+  `starting_accounts` set.
+- **IA5 — endpoint uniqueness:** for distinct ids `i,j` in `IA(p)`, the pairs
+  `(resolve_N(target_i), channel_i)` and
+  `(resolve_N(target_j), channel_j)` differ. The same pair may occur for
+  different participants.
+- **IA6 — explicit absence:** `IA(p) = {}` means no authored interactive access.
+  OS, roles, images, services, listeners, ACLs, ports, accounts, credentials,
+  actions, and apparatus capabilities cannot synthesize an entry.
+- **IA7 — phase separation:** an entry is authored access-carrier availability,
+  not operating scope, action/affordance meaning, visibility, apparatus
+  support, invocation admission, runtime session state, or realization
+  evidence. No predicate is inferred from another.
+- **IA8 — no locator or secret carriage:** the closed record admits no host,
+  address, URL, port, username, password, key, token, credential, provider
+  option, or portal session. A backend may add realization data only outside
+  SDL and must not rewrite the authored declaration.
+
+Whole-field variables defer IA3-IA5 only until binding. Instantiation and direct
+artifact admission rerun the same predicates over concrete values; unresolved
+values cannot enter an instantiated scenario. The executable oracle is
+`implementations/python/tests/test_participant_interactive_access.py`.
+
 ## SEM-220 - Participant Decision-Surface Semantics
 
 `SEM-220` requires explicit semantics for open-ended action generation,
