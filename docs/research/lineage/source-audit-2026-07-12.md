@@ -62,6 +62,22 @@ Transactions on Information and Systems (2018),
 unrelated publication. ACES adapts the account/content placement concerns, not
 CyRIS code or deployment syntax.
 
+### CyRIS v1.2 source pin
+
+- Release/revision: 1.2 at
+  `5f0d7843fed3dff782f7f62da9f8bcaa9a2a7481` (2020-12-17).
+- Revision record:
+  <https://github.com/crond-jaist/cyris/commit/5f0d7843fed3dff782f7f62da9f8bcaa9a2a7481>.
+- Reviewed source boundary: `examples/basic.yml` marks a guest with
+  `entry_point: yes`; `main/clone_environment.py` maps that entry point to TCP
+  3389 for `windows.7` and TCP 22 otherwise.
+- License at the reviewed revision: BSD-3-Clause,
+  <https://github.com/crond-jaist/cyris/blob/5f0d7843fed3dff782f7f62da9f8bcaa9a2a7481/LICENSE>.
+- Disposition: semantic analogue only. ACES adapts explicit entry eligibility
+  but rejects CyRIS's OS-to-channel inference, deployment tunnel mechanics,
+  generated accounts/passwords, addresses, and ports. No code or syntax was
+  copied.
+
 ## CybORG
 
 The ledger uses Standen et al., *CybORG: A Gym for the Development of
@@ -69,6 +85,24 @@ Autonomous Cyber Agents*, arXiv:2108.09118 (2021),
 <https://arxiv.org/abs/2108.09118>. It supports the participant/agent concern;
 the ACES agent and participant contracts are ACES-native models rather than a
 copy of the CybORG API or scenario schema.
+
+### CybORG v3.0 source pin
+
+- Release/revision: v3.0 at
+  `a2d03f99e587af153ae0ac50fb94ba6272e4fff2` (2022-10-13).
+- Revision record:
+  <https://github.com/cage-challenge/CybORG/commit/a2d03f99e587af153ae0ac50fb94ba6272e4fff2>.
+- Reviewed source boundary:
+  `CybORG/Simulator/Scenarios/scenario_files/Scenario1.yaml`, where
+  `Agents.Blue.starting_sessions` includes an explicit `username`, `hostname`,
+  `type: SSH`, and session name.
+- License at the reviewed revision: MIT, with the repository's additional
+  public-domain notice,
+  <https://github.com/cage-challenge/CybORG/blob/a2d03f99e587af153ae0ac50fb94ba6272e4fff2/LICENSE>.
+- Disposition: semantic analogue only. ACES adapts participant-local explicit
+  host/channel association but does not adopt established-session state,
+  simulator session types, usernames, or the scenario syntax. No code or
+  syntax was copied.
 
 ## CRACK Publications
 

@@ -1687,7 +1687,7 @@ Bare refs like `webapp` are valid when they are unambiguous. Any top-level secti
 
 ## Agents
 
-Autonomous scenario participants. Adapted from CybORG CAGE Challenge. This
+Role-neutral scenario participants. Adapted from CybORG CAGE Challenge. This
 section is also the SDL-authoring surface for declarative participant framing
 (ACT-601, ADR-020) — it covers all five framing facets the language
 guarantees: identity, role, starting conditions, authority anchors, and
@@ -1712,6 +1712,11 @@ agents:
     operating_scope:                    # broader targetable scope beyond subnets
       - corp-net
       - user-net
+    interactive_access:                 # explicit access-carrier availability
+      primary-shell:                    # stable participant-local declaration id
+        target_ref: user0               # VM ref; bare or nodes.user0
+        channel: ssh                    # closed vocabulary: ssh or rdp
+        account_ref: phished-user       # optional; same VM + starting account
 ```
 
 The CybORG-inherited `agents.reward_calculator` label was removed from the SDL by
@@ -1739,6 +1744,22 @@ targetable named scenario elements (subnets, hosts, services, content) that
 define the boundary of where the participant may act or observe; it
 generalises `allowed_subnets`, which remains restricted to switch-backed
 infrastructure.
+
+`interactive_access` is a keyed registry of authored access-carrier
+availability. Each value is closed: `target_ref` resolves to a VM, `channel` is
+exactly `ssh` or `rdp` (or a whole-field variable before instantiation), and an
+optional `account_ref` resolves to an account on that VM that is already in the
+participant's `starting_accounts`. The same concrete target/channel pair may
+appear only once per participant after bare/qualified reference normalization;
+different participants may declare it independently. Stable registry keys are
+portable local identifiers and mapping order has no priority or fallback
+meaning.
+
+Absence means no authored interactive access. The SDL never infers this field
+from OS, role, image, services, listeners, ACLs, ports, accounts, or
+credentials. A declaration is not a hostname, URL, port, credential, caller
+authentication rule, operating-scope grant, tool/action contract, runtime
+session, or evidence that a backend realized access.
 
 Each of `starting_assertions`, `authority_anchors`, and `operating_scope`
 accepts `${var}` placeholders that resolve through the declared `variables`
