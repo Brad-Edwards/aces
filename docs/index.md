@@ -147,6 +147,7 @@ research/primary/index
 research/lineage/source-audit-2026-07-12
 research/behavioral-relations/conflation-audit-2026-07-13
 research/related-work-comparison/index
+research/dsl-language-evaluation/index
 research/participant-backend-contracts/index
 ```
 
