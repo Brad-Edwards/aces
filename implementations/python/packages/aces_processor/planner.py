@@ -70,6 +70,8 @@ def _collect_resources(model: RuntimeModel) -> dict[str, PlannedResource]:
         (model.feature_bindings, RuntimeDomain.PROVISIONING, "feature-binding"),
         (model.content_placements, RuntimeDomain.PROVISIONING, "content-placement"),
         (model.account_placements, RuntimeDomain.PROVISIONING, "account-placement"),
+        (model.generated_artifacts, RuntimeDomain.PROVISIONING, "generated-artifact"),
+        (model.persistent_volumes, RuntimeDomain.PROVISIONING, "persistent-volume"),
         (model.inject_bindings, RuntimeDomain.ORCHESTRATION, "inject-binding"),
         (model.injects, RuntimeDomain.ORCHESTRATION, "inject"),
         (model.events, RuntimeDomain.ORCHESTRATION, "event"),
@@ -447,6 +449,25 @@ def _validate_manifest(model: RuntimeModel, manifest: BackendManifest) -> list[D
                             message=f"Provisioner does not support account feature '{feature}'.",
                         )
                     )
+
+    if model.generated_artifacts and not provisioner.supports_generated_artifacts:
+        diagnostics.append(
+            Diagnostic(
+                code="provisioner.generated-artifacts-unsupported",
+                domain="provisioning",
+                address="provision.generated-artifacts",
+                message="Provisioner does not support generated artifacts.",
+            )
+        )
+    if model.persistent_volumes and not provisioner.supports_persistent_volumes:
+        diagnostics.append(
+            Diagnostic(
+                code="provisioner.persistent-volumes-unsupported",
+                domain="provisioning",
+                address="provision.persistent-volumes",
+                message="Provisioner does not support persistent volumes.",
+            )
+        )
 
     orchestration_sections = {
         "injects": bool(model.injects or model.inject_bindings),

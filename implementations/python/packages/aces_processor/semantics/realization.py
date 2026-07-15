@@ -75,6 +75,8 @@ CONCERN_PAYLOAD_PATH: dict[str, tuple[str, ...]] = {
     "node-type": ("node_type",),
     "content-type": ("spec", "type"),
     "domain-topology": ("domain_topology",),
+    "generated-artifact": ("spec",),
+    "persistent-volume": ("spec",),
 }
 
 

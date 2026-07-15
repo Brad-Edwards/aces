@@ -51,6 +51,7 @@ from .models import (
     EvaluationResultContract,
     EventRuntime,
     FeatureBinding,
+    GeneratedArtifactRuntime,
     InjectBinding,
     InjectRuntime,
     NetworkRuntime,
@@ -62,6 +63,7 @@ from .models import (
     ParticipantBehaviorSpecificationRuntime,
     ParticipantObservationBoundaryRuntime,
     ParticipantOutcomeInterpretationRuleRuntime,
+    PersistentVolumeRuntime,
     PropositionRuntime,
     RuntimeModel,
     RuntimeTemplate,
@@ -225,6 +227,14 @@ def _feature_binding_address(node_name: str, feature_name: str) -> str:
 
 def _content_address(name: str) -> str:
     return _address("provision", "content", name)
+
+
+def _generated_artifact_address(name: str) -> str:
+    return _address("provision", "generated-artifact", name)
+
+
+def _persistent_volume_address(name: str) -> str:
+    return _address("provision", "persistent-volume", name)
 
 
 def _content_item_address(content_name: str, item_name: str) -> str:
@@ -1289,6 +1299,85 @@ def _compile_content_placements(
             spec=_dump(content),
         )
     return content_placements
+
+
+def _stateful_dependency_address(
+    scenario: InstantiatedScenario,
+    reference: str,
+) -> str:
+    if reference.startswith("generated_artifacts."):
+        name = reference.removeprefix("generated_artifacts.")
+        if name in scenario.generated_artifacts:
+            return _generated_artifact_address(name)
+    if reference.startswith("persistent_volumes."):
+        name = reference.removeprefix("persistent_volumes.")
+        if name in scenario.persistent_volumes:
+            return _persistent_volume_address(name)
+    in_artifacts = reference in scenario.generated_artifacts
+    in_volumes = reference in scenario.persistent_volumes
+    if in_artifacts != in_volumes:
+        return _generated_artifact_address(reference) if in_artifacts else _persistent_volume_address(reference)
+    raise ValueError("validated stateful dependency reference must resolve unambiguously")
+
+
+def _stateful_spec(
+    scenario: InstantiatedScenario,
+    resource: object,
+) -> dict[str, Any]:
+    spec = _dump(resource)
+    consumers: list[dict[str, Any]] = []
+    for raw_consumer in spec.get("consumers", []):
+        consumer = dict(raw_consumer)
+        node_name = _section_ref_name(
+            str(consumer.get("node", "")),
+            "nodes",
+            scenario.nodes,
+        )
+        consumer["node"] = node_name
+        consumer["target_address"] = _node_address(node_name)
+        consumers.append(consumer)
+    spec["consumers"] = consumers
+    return spec
+
+
+def _compile_generated_artifacts(
+    scenario: InstantiatedScenario,
+) -> dict[str, GeneratedArtifactRuntime]:
+    resources: dict[str, GeneratedArtifactRuntime] = {}
+    for name, artifact in scenario.generated_artifacts.items():
+        address = _generated_artifact_address(name)
+        resources[address] = GeneratedArtifactRuntime(
+            address=address,
+            name=name,
+            spec=_stateful_spec(scenario, artifact),
+            ordering_dependencies=tuple(
+                _stateful_dependency_address(scenario, ref) for ref in artifact.ordering_dependencies
+            ),
+            refresh_dependencies=tuple(
+                _stateful_dependency_address(scenario, ref) for ref in artifact.refresh_dependencies
+            ),
+        )
+    return resources
+
+
+def _compile_persistent_volumes(
+    scenario: InstantiatedScenario,
+) -> dict[str, PersistentVolumeRuntime]:
+    resources: dict[str, PersistentVolumeRuntime] = {}
+    for name, volume in scenario.persistent_volumes.items():
+        address = _persistent_volume_address(name)
+        resources[address] = PersistentVolumeRuntime(
+            address=address,
+            name=name,
+            spec=_stateful_spec(scenario, volume),
+            ordering_dependencies=tuple(
+                _stateful_dependency_address(scenario, ref) for ref in volume.ordering_dependencies
+            ),
+            refresh_dependencies=tuple(
+                _stateful_dependency_address(scenario, ref) for ref in volume.refresh_dependencies
+            ),
+        )
+    return resources
 
 
 def _compile_account_placements(
@@ -2571,6 +2660,32 @@ def _compile_realization_requirements(
                 provenance=ExplicitnessProvenance.PROCESSOR_DERIVED,
             )
         )
+    for section_name, resources, address_factory, requirement_kind in (
+        (
+            "generated_artifacts",
+            scenario.generated_artifacts,
+            _generated_artifact_address,
+            "generated-artifact",
+        ),
+        (
+            "persistent_volumes",
+            scenario.persistent_volumes,
+            _persistent_volume_address,
+            "persistent-volume",
+        ),
+    ):
+        for name in resources:
+            requirements.append(
+                CompiledRealizationRequirement(
+                    field_path=f"{section_name}.{name}",
+                    address=address_factory(name),
+                    domain=REALIZATION_DOMAIN,
+                    requirement_kind=requirement_kind,
+                    explicitness=ExplicitnessClass.EXACT,
+                    provenance=ExplicitnessProvenance.AUTHOR_DECLARED,
+                    governing_scope=f"#/{section_name}/{name}",
+                )
+            )
     return tuple(requirements)
 
 
@@ -2630,6 +2745,8 @@ def compile_runtime_model(scenario: Scenario | ExpandedScenario | InstantiatedSc
     inject_bindings = _compile_inject_bindings(scenario, inject_templates, diagnostics)
     content_placements = _compile_content_placements(scenario, diagnostics)
     account_placements = _compile_account_placements(scenario, diagnostics, domain_analysis)
+    generated_artifacts = _compile_generated_artifacts(scenario)
+    persistent_volumes = _compile_persistent_volumes(scenario)
     action_contracts = _compile_action_contracts(scenario)
     observation_boundaries = _compile_observation_boundaries(scenario)
     outcome_interpretation_rules = _compile_outcome_interpretation_rules(scenario)
@@ -2661,6 +2778,8 @@ def compile_runtime_model(scenario: Scenario | ExpandedScenario | InstantiatedSc
         inject_bindings=inject_bindings,
         content_placements=content_placements,
         account_placements=account_placements,
+        generated_artifacts=generated_artifacts,
+        persistent_volumes=persistent_volumes,
         action_contracts=action_contracts,
         observation_boundaries=observation_boundaries,
         outcome_interpretation_rules=outcome_interpretation_rules,

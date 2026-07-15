@@ -42,10 +42,10 @@
       "contract_id": "backend-manifest-v2",
       "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
       "stability": "draft",
-      "content_hash": "014178ea05ae875548c1121e11a59cb66215614a63bde35544dd972f0f53420c",
+      "content_hash": "5a1f88f9f7c090c36530a993a9750389ee34b6fd7860a1e7b33972fb2e82dd16",
       "last_change": {
-        "summary": "Added the governed provisioner domain-profile capability dimension for authored identity-domain realization (issue #763).",
-        "content_hash": "014178ea05ae875548c1121e11a59cb66215614a63bde35544dd972f0f53420c"
+        "summary": "Added explicit provisioner support claims for generated artifacts and persistent volumes (issue #780).",
+        "content_hash": "5a1f88f9f7c090c36530a993a9750389ee34b6fd7860a1e7b33972fb2e82dd16"
       }
     },
     {
@@ -190,20 +190,20 @@
       "contract_id": "instantiated-scenario-snapshot-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
       "stability": "draft",
-      "content_hash": "10544c816e9407607d4bbc8002eb23645f2fc5bc6c7e86ca7fbd4ae3f0c6d25e",
+      "content_hash": "7ff28b8b64791e2c73b6c906714714228827b1a2508e2aa21e296b16dfe9514e",
       "last_change": {
-        "summary": "Added authored identity-domain declarations, typed controller and join relationships, and explicit account domain bindings (issue #763).",
-        "content_hash": "10544c816e9407607d4bbc8002eb23645f2fc5bc6c7e86ca7fbd4ae3f0c6d25e"
+        "summary": "Added typed generated-artifact and persistent-volume desired-state resources for stateful service realization (issue #780).",
+        "content_hash": "7ff28b8b64791e2c73b6c906714714228827b1a2508e2aa21e296b16dfe9514e"
       }
     },
     {
       "contract_id": "instantiated-scenario-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
       "stability": "draft",
-      "content_hash": "03aee5d25be44733ef09697b403235189bc91fc65da7bd6ff7ecd8ff6685d72a",
+      "content_hash": "94f3abe20517e3f987776923102607d5b8b1ecba47e97805a166e8f0832f4a53",
       "last_change": {
-        "summary": "Added authored identity-domain declarations, typed controller and join relationships, and explicit account domain bindings (issue #763).",
-        "content_hash": "03aee5d25be44733ef09697b403235189bc91fc65da7bd6ff7ecd8ff6685d72a"
+        "summary": "Added typed generated-artifact and persistent-volume desired-state resources for stateful service realization (issue #780).",
+        "content_hash": "94f3abe20517e3f987776923102607d5b8b1ecba47e97805a166e8f0832f4a53"
       }
     },
     {
@@ -380,10 +380,10 @@
       "contract_id": "provisioning-plan-v1",
       "schema_path": "contracts/schemas/plans/provisioning-plan-v1.json",
       "stability": "draft",
-      "content_hash": "e3d9a1357af4e49b78d591cca10547a4d0113aee794686e0f8d96e32bb940e49",
+      "content_hash": "c4aef8660b30ee4fbdf29b22180a7da60e1cd42e5a5b087ad3f83c45dc21713c",
       "last_change": {
-        "summary": "Added immutable realization-envelope identity carriage and constrained provisioning operations to canonical provision addresses and resource types.",
-        "content_hash": "e3d9a1357af4e49b78d591cca10547a4d0113aee794686e0f8d96e32bb940e49"
+        "summary": "Added generated-artifact and persistent-volume provisioning resource identities (issue #780).",
+        "content_hash": "c4aef8660b30ee4fbdf29b22180a7da60e1cd42e5a5b087ad3f83c45dc21713c"
       }
     },
     {
@@ -456,10 +456,10 @@
       "contract_id": "sdl-authoring-input-v1",
       "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
       "stability": "draft",
-      "content_hash": "27f9ad3203fa48afec0247b7eb8afd376c1acc8dbdac7d88d9e0c96c9b9bf8c3",
+      "content_hash": "0cf49080adbb23c566bd9585a958ef63e5b5ceba9f4105c65dabcc71c818875a",
       "last_change": {
-        "summary": "Added authored identity-domain declarations, typed controller and join relationships, and explicit account domain bindings (issue #763).",
-        "content_hash": "27f9ad3203fa48afec0247b7eb8afd376c1acc8dbdac7d88d9e0c96c9b9bf8c3"
+        "summary": "Added typed generated-artifact and persistent-volume desired-state resources for stateful service realization (issue #780).",
+        "content_hash": "0cf49080adbb23c566bd9585a958ef63e5b5ceba9f4105c65dabcc71c818875a"
       }
     },
     {

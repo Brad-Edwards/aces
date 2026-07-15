@@ -163,6 +163,8 @@ def create_stub_manifest(
                 max_total_nodes=None,
                 supports_acls=True,
                 supports_accounts=True,
+                supports_generated_artifacts=True,
+                supports_persistent_volumes=True,
             ),
             orchestrator=OrchestratorCapabilities(
                 name="stub-orchestrator",

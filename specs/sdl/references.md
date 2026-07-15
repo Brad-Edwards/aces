@@ -135,6 +135,10 @@ probe implementations; propositions and assertions carry portable truth.
 | `nodes` | feature/condition/inject/vulnerability refs | `features` / `conditions` / `injects` / `vulnerabilities` |
 | `infrastructure` | node / link / dependency | `nodes` / switch-backed `infrastructure` |
 | `content` | target | `nodes` (VM) |
+| `generated_artifacts` | consumers[].node | `nodes` |
+| `generated_artifacts` | ordering/refresh dependencies | `generated_artifacts` / `persistent_volumes` (acyclic ordering) |
+| `persistent_volumes` | consumers[].node | `nodes` |
+| `persistent_volumes` | ordering/refresh dependencies | `generated_artifacts` / `persistent_volumes` (acyclic ordering) |
 | `accounts` | node | `nodes` (VM) |
 | `accounts` | domain | `identity_domains` |
 | `identity_domains` | authority account | `accounts` |
@@ -261,6 +265,12 @@ the source of the row's normative meaning.
 | `scripts.*.events[]` | `events` | semantic validation | fatal dangling or ambiguous | [reference rules](#5-cross-section-reference-edge-catalog) | [section validator](../../implementations/python/packages/aces_sdl/validator/_sections.py) |
 | `stories.*.scripts[]` | `scripts` | semantic validation | fatal dangling or ambiguous | [reference rules](#5-cross-section-reference-edge-catalog) | [section validator](../../implementations/python/packages/aces_sdl/validator/_sections.py) |
 | `content.*.target` | `nodes` | semantic validation | fatal unless target is a vm node | [reference rules](#5-cross-section-reference-edge-catalog) | [content validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py) |
+| `generated_artifacts.*.consumers[].node` | `nodes` | structural model validation | fatal dangling or ambiguous | [stateful resources](stateful-resources.md) | [scenario model](../../implementations/python/packages/aces_sdl/scenario.py) |
+| `generated_artifacts.*.ordering_dependencies[]` | `generated_artifacts,persistent_volumes` | structural model and planner graph validation | fatal dangling, ambiguous, or cyclic | [stateful resources](stateful-resources.md) | [scenario model](../../implementations/python/packages/aces_sdl/scenario.py) |
+| `generated_artifacts.*.refresh_dependencies[]` | `generated_artifacts,persistent_volumes` | structural model validation | fatal dangling or ambiguous | [stateful resources](stateful-resources.md) | [scenario model](../../implementations/python/packages/aces_sdl/scenario.py) |
+| `persistent_volumes.*.consumers[].node` | `nodes` | structural model validation | fatal dangling or ambiguous | [stateful resources](stateful-resources.md) | [scenario model](../../implementations/python/packages/aces_sdl/scenario.py) |
+| `persistent_volumes.*.ordering_dependencies[]` | `generated_artifacts,persistent_volumes` | structural model and planner graph validation | fatal dangling, ambiguous, or cyclic | [stateful resources](stateful-resources.md) | [scenario model](../../implementations/python/packages/aces_sdl/scenario.py) |
+| `persistent_volumes.*.refresh_dependencies[]` | `generated_artifacts,persistent_volumes` | structural model validation | fatal dangling or ambiguous | [stateful resources](stateful-resources.md) | [scenario model](../../implementations/python/packages/aces_sdl/scenario.py) |
 | `accounts.*.domain_ref` | `identity_domains` | semantic validation | fatal dangling, ambiguous, or inconsistent topology | [authored domain topology](authored-domain-topology.md) | [domain topology semantics](../../implementations/python/packages/aces_sdl/semantics/domain_topology.py) |
 | `identity_domains.*.authority_account_ref` | `accounts` | semantic validation | fatal dangling, ambiguous, or authority outside domain controllers | [authored domain topology](authored-domain-topology.md) | [domain topology semantics](../../implementations/python/packages/aces_sdl/semantics/domain_topology.py) |
 | `accounts.*.node` | `nodes` | semantic validation | fatal unless target is a vm node | [reference rules](#5-cross-section-reference-edge-catalog) | [account validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py) |

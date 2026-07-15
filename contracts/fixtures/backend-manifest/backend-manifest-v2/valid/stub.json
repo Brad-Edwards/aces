@@ -165,7 +165,9 @@
         "windows"
       ],
       "supports_accounts": true,
-      "supports_acls": true
+      "supports_acls": true,
+      "supports_generated_artifacts": true,
+      "supports_persistent_volumes": true
     }
   },
   "compatibility": {

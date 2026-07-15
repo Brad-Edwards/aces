@@ -30,11 +30,13 @@ from .resources import (
     ConditionBinding,
     ContentPlacement,
     FeatureBinding,
+    GeneratedArtifactRuntime,
     InjectBinding,
     InjectRuntime,
     NetworkRuntime,
     NodeRuntime,
     ParticipantActionContractRuntime,
+    PersistentVolumeRuntime,
     PropositionRuntime,
     ResolvedResource,
     RuntimeTemplate,
@@ -113,6 +115,8 @@ class RuntimeModel:
     inject_bindings: dict[str, InjectBinding] = field(default_factory=dict)
     content_placements: dict[str, ContentPlacement] = field(default_factory=dict)
     account_placements: dict[str, AccountPlacement] = field(default_factory=dict)
+    generated_artifacts: dict[str, GeneratedArtifactRuntime] = field(default_factory=dict)
+    persistent_volumes: dict[str, PersistentVolumeRuntime] = field(default_factory=dict)
     action_contracts: dict[str, ParticipantActionContractRuntime] = field(default_factory=dict)
     observation_boundaries: dict[str, ParticipantObservationBoundaryRuntime] = field(default_factory=dict)
     outcome_interpretation_rules: dict[str, ParticipantOutcomeInterpretationRuleRuntime] = field(default_factory=dict)
@@ -143,6 +147,8 @@ class RuntimeModel:
             "inject_bindings",
             "content_placements",
             "account_placements",
+            "generated_artifacts",
+            "persistent_volumes",
             "action_contracts",
             "observation_boundaries",
             "outcome_interpretation_rules",

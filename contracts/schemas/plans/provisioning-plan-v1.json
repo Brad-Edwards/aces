@@ -58,8 +58,10 @@
             "account-placement",
             "content-placement",
             "feature-binding",
+            "generated-artifact",
             "network",
-            "node"
+            "node",
+            "persistent-volume"
           ],
           "title": "Resource Type",
           "type": "string"
