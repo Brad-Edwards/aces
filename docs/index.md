@@ -124,6 +124,7 @@ explain/reference/assessment-semantics
 explain/reference/objective-semantics
 explain/reference/explicitness-realization-semantics
 explain/reference/realization-envelopes
+explain/reference/scenario-variation-and-trial-realization
 ```
 
 ```{toctree}
@@ -141,13 +142,16 @@ lessons/README
 migration/README
 research/experiment-core/index
 research/realization-envelope/index
+research/scenario-variation-trial-realization/index
 research/scoring-scope/index
 research/validation-admission-profiles/index
 research/primary/index
 research/lineage/source-audit-2026-07-12
 research/behavioral-relations/conflation-audit-2026-07-13
 research/related-work-comparison/index
+research/dsl-language-evaluation/index
 research/participant-backend-contracts/index
+research/participant-interactive-access/index
 ```
 
 ```{toctree}

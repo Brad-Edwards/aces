@@ -40,6 +40,7 @@ material. It is an index, not a replacement for the linked artifacts.
 | Testing notes | [`docs/explain/sdl/testing.md`](../sdl/testing.md) |
 | Design precedents | [`docs/explain/sdl/precedents.md`](../sdl/precedents.md) |
 | Academic lineage | [`docs/explain/sdl/lineage.md`](../sdl/lineage.md) |
+| Scenario variation and trial realization design | [`scenario-variation-and-trial-realization.md`](scenario-variation-and-trial-realization.md), [ADR-084](../../decisions/adrs/adr-084-scenario-variation-and-deterministic-trial-realization.md) |
 
 ## Contracts And Processing
 
@@ -65,6 +66,7 @@ material. It is an index, not a replacement for the linked artifacts.
 | Assessment semantics | `specs/formal/assessment/`, [`assessment-semantics.md`](assessment-semantics.md) |
 | Participant semantics | `specs/formal/participant-semantics/README.md` |
 | Realization semantics | `specs/formal/realization/`, [`explicitness-realization-semantics.md`](explicitness-realization-semantics.md) |
+| Scenario variation and trial realization invariants | `specs/formal/scenario-variation-trial-realization/` |
 | Planner semantics | `specs/formal/planner/` |
 
 ## Current Materialization Notes

@@ -110,6 +110,10 @@ _PARTICIPANT_VALIDATOR = (
 _PARTICIPANT_SEMANTICS = (
     "[participant semantics](../../implementations/python/packages/aces_sdl/semantics/participant_behavior.py)"
 )
+_PARTICIPANT_INTERACTIVE_ACCESS_SEMANTICS = (
+    "[participant interactive-access semantics]"
+    "(../../implementations/python/packages/aces_sdl/semantics/participant_interactive_access.py)"
+)
 _OUTCOME_SEMANTICS = (
     "[outcome semantics](../../implementations/python/packages/aces_sdl/semantics/participant_outcome.py)"
 )
@@ -422,6 +426,18 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         _SEMANTIC,
         _DANGLING,
         _PARTICIPANT_VALIDATOR,
+    ),
+    "agents.*.interactive_access.*.target_ref": (
+        "nodes",
+        _SEMANTIC,
+        "fatal dangling, ambiguous, or non-vm target",
+        _PARTICIPANT_INTERACTIVE_ACCESS_SEMANTICS,
+    ),
+    "agents.*.interactive_access.*.account_ref": (
+        "accounts",
+        _SEMANTIC,
+        "fatal dangling, same-node mismatch, or outside participant starting accounts",
+        _PARTICIPANT_INTERACTIVE_ACCESS_SEMANTICS,
     ),
     "agents.*.starting_assertions[]": (
         "assertions",

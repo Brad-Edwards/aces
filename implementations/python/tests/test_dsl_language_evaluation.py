@@ -1,0 +1,709 @@
+"""Integrity tests for the preregistered DSL language-evaluation bundle."""
+
+from __future__ import annotations
+
+from copy import deepcopy
+from pathlib import Path
+
+from tools.check_dsl_language_evaluation import (
+    REQUIRED_DIMENSION_IDS,
+    REQUIRED_PERSONA_IDS,
+    evaluate,
+    load_bundle,
+    recompute_dimension_results,
+    recompute_measure_results,
+    validate_bundle,
+)
+from tools.policy.common import load_bounded_json_object
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+
+
+def _rule_ids(failures: list[object]) -> set[str]:
+    return {failure.rule_id for failure in failures}
+
+
+def _bundle() -> tuple[dict, dict, dict, dict]:
+    manifest, protocol, snapshot, analysis = load_bundle(REPO_ROOT)
+    return (
+        deepcopy(manifest),
+        deepcopy(protocol),
+        deepcopy(snapshot),
+        deepcopy(analysis),
+    )
+
+
+def _refresh_analysis(
+    protocol: dict,
+    snapshot: dict,
+    analysis: dict,
+    evidence_status: str,
+) -> None:
+    measure_results = recompute_measure_results(protocol, snapshot)
+    analysis["measure_results"] = [
+        {
+            "measure_id": measure_id,
+            "status": (
+                "not_evaluated"
+                if result["denominator"] == 0
+                else "incomplete"
+                if result["observed_count"] != result["denominator"]
+                else "evaluated"
+            ),
+            **result,
+        }
+        for measure_id, result in measure_results.items()
+    ]
+    analysis["dimension_results"] = [
+        {"dimension_id": dimension_id, **result}
+        for dimension_id, result in recompute_dimension_results(protocol, measure_results).items()
+    ]
+    analysis["execution_status"] = snapshot["execution_status"]
+    analysis["evidence_status"] = evidence_status
+
+
+def _executed_bundle(*, failing: bool = False) -> tuple[dict, dict, dict]:
+    _, protocol, snapshot, analysis = _bundle()
+    snapshot["execution_status"] = "complete"
+    snapshot["ethics_review"] = {
+        "status": "approved",
+        "protocol_identifier": "ethics-approval-one",
+        "approved_population": "qualified ACES author and reviewer personas",
+        "approved_data_boundary": "minimized pseudonymous records",
+    }
+    subjects_by_persona: dict[str, list[dict]] = {}
+    for persona in protocol["personas"]:
+        persona_id = persona["persona_id"]
+        subjects_by_persona[persona_id] = []
+        for index in range(persona["minimum_completed_subjects"]):
+            subject = {
+                "subject_id": f"subject-{persona_id}-{index}",
+                "persona_id": persona_id,
+                "experience_band": "qualified",
+                "consent_status": "consented",
+            }
+            subjects_by_persona[persona_id].append(subject)
+            snapshot["subjects"].append(subject)
+
+    tasks_by_id = {task["task_id"]: task for task in protocol["tasks"]}
+    measures = protocol["measures"]
+
+    def append_attempt(subject: dict, task: dict, condition_id: str, variant_id: str) -> None:
+        attempt_number = len(snapshot["attempts"])
+        attempt_id = f"attempt-{attempt_number}"
+        observation_ids: list[str] = []
+        attempt_outcome = (
+            "failed"
+            if failing
+            and any(
+                measure["measure_id"] == "task-completion" and task["task_id"] in measure["task_ids"]
+                for measure in measures
+            )
+            else "completed"
+        )
+        attempt = {
+            "attempt_id": attempt_id,
+            "study_run_id": "study-run-one",
+            "task_id": task["task_id"],
+            "persona_id": subject["persona_id"],
+            "subject_id": subject["subject_id"],
+            "tooling_condition_id": condition_id,
+            "variant_id": variant_id,
+            "outcome": attempt_outcome,
+            "observation_ids": observation_ids,
+            "started_at": "2026-07-15T09:00:00Z",
+            "ended_at": "2026-07-15T10:00:00Z",
+        }
+        snapshot["attempts"].append(attempt)
+        for measure in measures:
+            if task["task_id"] not in measure["task_ids"]:
+                continue
+            declaration = next(
+                item
+                for item in measure["stage_applicability"]
+                if item["task_id"] == task["task_id"] and variant_id in item["variant_ids"]
+            )
+            for artifact_stage in declaration["artifact_stage_ids"]:
+                observation_id = f"observation-{attempt_number}-{measure['measure_id']}-{artifact_stage}"
+                observation_ids.append(observation_id)
+                value = 1 if measure["direction"] == "higher-is-better" else 0
+                if failing and measure["measure_id"] == "task-completion":
+                    value = 0
+                snapshot["observations"].append(
+                    {
+                        "observation_id": observation_id,
+                        "protocol_revision": protocol["revision"],
+                        "study_run_id": attempt["study_run_id"],
+                        "task_id": task["task_id"],
+                        "persona_id": subject["persona_id"],
+                        "subject_id": subject["subject_id"],
+                        "tooling_condition_id": condition_id,
+                        "attempt_id": attempt_id,
+                        "variant_id": variant_id,
+                        "artifact_stage": artifact_stage,
+                        "dimension_ids": [
+                            dimension_id
+                            for dimension_id in measure["dimension_ids"]
+                            if dimension_id in task["dimension_ids"]
+                        ],
+                        "measure_id": measure["measure_id"],
+                        "value": value,
+                        "outcome": attempt_outcome,
+                        "evidence_refs": [],
+                    }
+                )
+        if "review-judgment" in task["artifact_stage_ids"]:
+            reviewer = next(
+                candidate
+                for persona_id in task["persona_ids"]
+                for candidate in subjects_by_persona[persona_id]
+                if candidate["subject_id"] != subject["subject_id"]
+            )
+            snapshot["reviews"].append(
+                {
+                    "review_id": f"review-{attempt_number}",
+                    "attempt_id": attempt_id,
+                    "reviewer_subject_id": reviewer["subject_id"],
+                    "task_id": task["task_id"],
+                    "variant_id": variant_id,
+                    "judgment": "matches sealed intent",
+                    "confidence": 1.0,
+                    "rationale_code": "matches-intent",
+                    "fixed_at": "2026-07-15T10:30:00Z",
+                }
+            )
+
+    for subject in snapshot["subjects"]:
+        for requirement in protocol["execution_plan"]["subject_task_requirements"]:
+            task = next(
+                task
+                for task in protocol["tasks"]
+                if subject["persona_id"] in task["persona_ids"] and task["kind"] in requirement["task_kinds"]
+            )
+            append_attempt(
+                subject,
+                task,
+                task["tooling_condition_ids"][0],
+                task["variant_ids"][0],
+            )
+    for task in tasks_by_id.values():
+        subject = subjects_by_persona[task["persona_ids"][0]][0]
+        for condition_id in task["tooling_condition_ids"]:
+            for variant_id in task["variant_ids"]:
+                append_attempt(subject, task, condition_id, variant_id)
+
+    _refresh_analysis(protocol, snapshot, analysis, "refuted" if failing else "demonstrated")
+    return protocol, snapshot, analysis
+
+
+def _append_valid_disagreement(protocol: dict, snapshot: dict) -> dict:
+    """Add a second independent review and a valid disagreement record."""
+    first_review = snapshot["reviews"][0]
+    attempt = next(item for item in snapshot["attempts"] if item["attempt_id"] == first_review["attempt_id"])
+    task = next(item for item in protocol["tasks"] if item["task_id"] == attempt["task_id"])
+    second_reviewer = next(
+        subject
+        for subject in snapshot["subjects"]
+        if subject["subject_id"] not in {attempt["subject_id"], first_review["reviewer_subject_id"]}
+        and subject["persona_id"] in task["persona_ids"]
+    )
+    second_review = {
+        **first_review,
+        "review_id": f"{first_review['review_id']}-second",
+        "reviewer_subject_id": second_reviewer["subject_id"],
+        "judgment": "does not match sealed intent",
+        "rationale_code": "semantic-mismatch",
+    }
+    snapshot["reviews"].append(second_review)
+    disagreement = {
+        "disagreement_id": f"disagreement-{attempt['attempt_id']}",
+        "review_ids": [first_review["review_id"], second_review["review_id"]],
+        "status": "resolved",
+        "adjudication": "original fixed judgments retained with the adjudication",
+        "originals_preserved": True,
+    }
+    snapshot["disagreements"].append(disagreement)
+    return disagreement
+
+
+def test_current_bundle_passes_with_required_catalogs_and_an_honest_status() -> None:
+    assert evaluate(REPO_ROOT) == []
+
+    _, protocol, snapshot, analysis = _bundle()
+    assert {item["dimension_id"] for item in protocol["dimensions"]} == REQUIRED_DIMENSION_IDS
+    assert {item["persona_id"] for item in protocol["personas"]} == REQUIRED_PERSONA_IDS
+    assert snapshot["execution_status"] == "not_started"
+    assert snapshot["aces_revision"] == "38ba081714b12a4dcc7a5c527e2f1250d80a4d1b"
+    assert analysis["evidence_status"] == "untested"
+
+
+def test_not_started_bundle_cannot_claim_observations_or_demonstration() -> None:
+    _, protocol, snapshot, analysis = _bundle()
+    snapshot["attempts"].append({"attempt_id": "fabricated"})
+    analysis["evidence_status"] = "demonstrated"
+
+    failures = validate_bundle(REPO_ROOT, protocol, snapshot, analysis)
+
+    assert {
+        "dsl-evaluation-not-started-observations",
+        "dsl-evaluation-evidence-status",
+    }.issubset(_rule_ids(failures))
+
+
+def test_protocol_gate_requires_every_issue_dimension_persona_and_task_kind() -> None:
+    _, protocol, snapshot, analysis = _bundle()
+    protocol["dimensions"] = [item for item in protocol["dimensions"] if item["dimension_id"] != "reviewability"]
+    protocol["thresholds"] = [item for item in protocol["thresholds"] if item["dimension_id"] != "reviewability"]
+    protocol["personas"] = [item for item in protocol["personas"] if item["persona_id"] != "assurance-auditor"]
+    protocol["tasks"] = [item for item in protocol["tasks"] if item["kind"] != "ambiguous"]
+
+    failures = validate_bundle(REPO_ROOT, protocol, snapshot, analysis)
+
+    assert {
+        "dsl-evaluation-dimension-coverage",
+        "dsl-evaluation-persona-coverage",
+        "dsl-evaluation-task-kind-coverage",
+    }.issubset(_rule_ids(failures))
+
+
+def test_protocol_gate_rejects_unknown_fields_and_broken_catalog_joins() -> None:
+    _, protocol, snapshot, analysis = _bundle()
+    protocol["tasks"][0]["backend_hint"] = "private"
+    protocol["tasks"][1]["persona_ids"] = ["missing-persona"]
+
+    failures = validate_bundle(REPO_ROOT, protocol, snapshot, analysis)
+
+    assert {
+        "dsl-evaluation-protocol-shape",
+        "dsl-evaluation-task-join",
+    }.issubset(_rule_ids(failures))
+
+
+def test_gate_rejects_unsafe_public_and_claim_evidence_paths() -> None:
+    _, protocol, snapshot, analysis = _bundle()
+    snapshot["public_surface"][0]["artifact"] = "../outside.md"
+    analysis["claim"]["evidence_artifacts"][0] = "../outside.json"
+
+    failures = validate_bundle(REPO_ROOT, protocol, snapshot, analysis)
+
+    assert {
+        "dsl-evaluation-public-surface-path",
+        "dsl-evaluation-claim-evidence-path",
+    }.issubset(_rule_ids(failures))
+
+
+def test_repository_source_locator_must_match_its_pinned_revision() -> None:
+    _, protocol, snapshot, analysis = _bundle()
+    source = next(item for item in protocol["sources"] if item["kind"] == "repository-internal")
+    source["locator"] = source["locator"].replace(source["revision"], "0" * 40)
+
+    failures = validate_bundle(REPO_ROOT, protocol, snapshot, analysis)
+
+    assert "dsl-evaluation-source-pin" in _rule_ids(failures)
+
+
+def test_demonstrated_status_requires_preregistered_subject_and_task_coverage() -> None:
+    _, protocol, snapshot, analysis = _bundle()
+    snapshot["execution_status"] = "complete"
+    snapshot["ethics_review"]["status"] = "approved"
+    analysis["execution_status"] = "complete"
+    analysis["evidence_status"] = "demonstrated"
+    for result in analysis["dimension_results"]:
+        result.update(
+            {
+                "status": "evaluated",
+                "numerator": 1,
+                "denominator": 1,
+                "value": 1.0,
+                "threshold_result": "pass",
+            }
+        )
+
+    failures = validate_bundle(REPO_ROOT, protocol, snapshot, analysis)
+
+    assert "dsl-evaluation-completion-coverage" in _rule_ids(failures)
+
+
+def test_shape_valid_complete_bundles_support_passing_and_failing_results() -> None:
+    passing_protocol, passing_snapshot, passing_analysis = _executed_bundle()
+    failing_protocol, failing_snapshot, failing_analysis = _executed_bundle(failing=True)
+
+    assert validate_bundle(REPO_ROOT, passing_protocol, passing_snapshot, passing_analysis) == []
+    assert passing_analysis["evidence_status"] == "demonstrated"
+    assert validate_bundle(REPO_ROOT, failing_protocol, failing_snapshot, failing_analysis) == []
+    assert failing_analysis["evidence_status"] == "refuted"
+
+
+def test_opportunity_matrix_rejects_a_self_selected_observation_subset() -> None:
+    protocol, snapshot, analysis = _executed_bundle()
+    omitted = snapshot["observations"].pop()
+    parent = next(item for item in snapshot["attempts"] if item["attempt_id"] == omitted["attempt_id"])
+    parent["observation_ids"].remove(omitted["observation_id"])
+    _refresh_analysis(protocol, snapshot, analysis, "partial")
+
+    failures = validate_bundle(REPO_ROOT, protocol, snapshot, analysis)
+    measure = next(result for result in analysis["measure_results"] if result["measure_id"] == omitted["measure_id"])
+
+    assert "dsl-evaluation-opportunity-coverage" in _rule_ids(failures)
+    assert measure["missing_count"] == 1
+    assert measure["observed_count"] + measure["missing_count"] == measure["denominator"]
+
+
+def test_stage_opportunity_matrix_requires_every_preregistered_artifact_stage() -> None:
+    protocol, snapshot, analysis = _executed_bundle()
+    omitted = next(
+        observation
+        for observation in snapshot["observations"]
+        if observation["measure_id"] == "untraced-critical-changes"
+        and observation["task_id"] == "author-multihost-experiment"
+        and observation["artifact_stage"] == "compiled"
+    )
+    snapshot["observations"].remove(omitted)
+    parent = next(attempt for attempt in snapshot["attempts"] if attempt["attempt_id"] == omitted["attempt_id"])
+    parent["observation_ids"].remove(omitted["observation_id"])
+    _refresh_analysis(protocol, snapshot, analysis, "partial")
+
+    failures = validate_bundle(REPO_ROOT, protocol, snapshot, analysis)
+    measure = next(
+        result for result in analysis["measure_results"] if result["measure_id"] == "untraced-critical-changes"
+    )
+
+    assert "dsl-evaluation-opportunity-coverage" in _rule_ids(failures)
+    assert measure["missing_count"] == 1
+    assert measure["observed_count"] + measure["missing_count"] == measure["denominator"]
+
+
+def test_observation_stage_must_match_measure_stage_applicability() -> None:
+    protocol, snapshot, analysis = _executed_bundle()
+    observation = next(
+        item
+        for item in snapshot["observations"]
+        if item["measure_id"] == "task-completion" and item["task_id"] == "author-multihost-experiment"
+    )
+    observation["artifact_stage"] = "authored"
+
+    failures = validate_bundle(REPO_ROOT, protocol, snapshot, analysis)
+
+    assert {
+        "dsl-evaluation-observation-task-join",
+        "dsl-evaluation-opportunity-coverage",
+    }.issubset(_rule_ids(failures))
+
+
+def test_protocol_requires_closed_task_variant_stage_declarations() -> None:
+    _, protocol, snapshot, analysis = _bundle()
+    protocol["measures"][0]["stage_applicability"].pop()
+
+    failures = validate_bundle(REPO_ROOT, protocol, snapshot, analysis)
+
+    assert "dsl-evaluation-measure-stage-coverage" in _rule_ids(failures)
+
+
+def test_complete_status_requires_each_subjects_preregistered_workload() -> None:
+    protocol, snapshot, analysis = _executed_bundle()
+    subject = next(
+        item
+        for item in snapshot["subjects"]
+        if item["persona_id"] == "benchmark-designer" and item["subject_id"].endswith("-1")
+    )
+    challenge_kinds = set(protocol["execution_plan"]["subject_task_requirements"][1]["task_kinds"])
+    task_kinds = {task["task_id"]: task["kind"] for task in protocol["tasks"]}
+    removed_attempt_ids = {
+        attempt["attempt_id"]
+        for attempt in snapshot["attempts"]
+        if attempt["subject_id"] == subject["subject_id"] and task_kinds[attempt["task_id"]] in challenge_kinds
+    }
+    snapshot["attempts"] = [
+        attempt for attempt in snapshot["attempts"] if attempt["attempt_id"] not in removed_attempt_ids
+    ]
+    snapshot["observations"] = [
+        observation for observation in snapshot["observations"] if observation["attempt_id"] not in removed_attempt_ids
+    ]
+    snapshot["reviews"] = [review for review in snapshot["reviews"] if review["attempt_id"] not in removed_attempt_ids]
+    _refresh_analysis(protocol, snapshot, analysis, "demonstrated")
+
+    failures = validate_bundle(REPO_ROOT, protocol, snapshot, analysis)
+
+    assert "dsl-evaluation-subject-workload" in _rule_ids(failures)
+
+
+def test_protocol_requires_structured_per_subject_task_groups() -> None:
+    _, protocol, snapshot, analysis = _bundle()
+    protocol["execution_plan"]["subject_task_requirements"].pop()
+
+    failures = validate_bundle(REPO_ROOT, protocol, snapshot, analysis)
+
+    assert "dsl-evaluation-subject-workload-plan" in _rule_ids(failures)
+
+
+def test_execution_graph_rejects_disconnected_parent_and_task_fields() -> None:
+    protocol, snapshot, analysis = _executed_bundle()
+    observation = snapshot["observations"][0]
+    observation["persona_id"] = "assurance-auditor"
+    observation["artifact_stage"] = "review-judgment"
+
+    failures = validate_bundle(REPO_ROOT, protocol, snapshot, analysis)
+
+    assert {
+        "dsl-evaluation-observation-parent-join",
+        "dsl-evaluation-observation-task-join",
+    }.issubset(_rule_ids(failures))
+
+
+def test_independent_review_gate_rejects_every_ineligible_reviewer_path() -> None:
+    protocol, snapshot, analysis = _executed_bundle()
+    baseline = (protocol, snapshot, analysis)
+
+    for case in (
+        "self-review",
+        "withdrawn-reviewer",
+        "ineligible-persona",
+        "task-without-review-stage",
+        "wrong-parent-task",
+        "wrong-parent-variant",
+        "unknown-reviewer",
+    ):
+        protocol, snapshot, analysis = deepcopy(baseline)
+        review = snapshot["reviews"][0]
+        attempt = next(item for item in snapshot["attempts"] if item["attempt_id"] == review["attempt_id"])
+        task = next(item for item in protocol["tasks"] if item["task_id"] == attempt["task_id"])
+
+        if case == "self-review":
+            review["reviewer_subject_id"] = attempt["subject_id"]
+        elif case == "withdrawn-reviewer":
+            reviewer = next(
+                item for item in snapshot["subjects"] if item["subject_id"] == review["reviewer_subject_id"]
+            )
+            reviewer["consent_status"] = "withdrawn"
+        elif case == "ineligible-persona":
+            review["reviewer_subject_id"] = next(
+                item["subject_id"]
+                for item in snapshot["subjects"]
+                if item["subject_id"] != attempt["subject_id"] and item["persona_id"] not in task["persona_ids"]
+            )
+        elif case == "task-without-review-stage":
+            task["artifact_stage_ids"].remove("review-judgment")
+        elif case == "wrong-parent-task":
+            review["task_id"] = next(
+                item["task_id"] for item in protocol["tasks"] if item["task_id"] != task["task_id"]
+            )
+        elif case == "wrong-parent-variant":
+            review["variant_id"] = "different-variant"
+        else:
+            review["reviewer_subject_id"] = "unknown-reviewer"
+
+        failures = validate_bundle(REPO_ROOT, protocol, snapshot, analysis)
+
+        assert "dsl-evaluation-review-join" in _rule_ids(failures), case
+
+
+def test_independent_review_gate_rejects_every_malformed_fixed_judgment_path() -> None:
+    baseline = _executed_bundle()
+
+    for field, invalid_value in (
+        ("judgment", ""),
+        ("confidence", True),
+        ("confidence", "high"),
+        ("confidence", -0.1),
+        ("confidence", 1.1),
+        ("rationale_code", "not a valid rationale id"),
+        ("fixed_at", ""),
+    ):
+        protocol, snapshot, analysis = deepcopy(baseline)
+        snapshot["reviews"][0][field] = invalid_value
+
+        failures = validate_bundle(REPO_ROOT, protocol, snapshot, analysis)
+
+        assert "dsl-evaluation-review-shape" in _rule_ids(failures), (field, invalid_value)
+
+
+def test_disagreements_must_join_distinct_reviews_of_one_parent_attempt() -> None:
+    protocol, snapshot, analysis = _executed_bundle()
+    disagreement = _append_valid_disagreement(protocol, snapshot)
+    assert validate_bundle(REPO_ROOT, protocol, snapshot, analysis) == []
+
+    other_parent_review = next(
+        review for review in snapshot["reviews"] if review["attempt_id"] != snapshot["reviews"][0]["attempt_id"]
+    )
+    disagreement["review_ids"][1] = other_parent_review["review_id"]
+
+    failures = validate_bundle(REPO_ROOT, protocol, snapshot, analysis)
+
+    assert "dsl-evaluation-disagreement-join" in _rule_ids(failures)
+
+
+def test_disagreement_adjudication_cannot_discard_original_judgments() -> None:
+    protocol, snapshot, analysis = _executed_bundle()
+    disagreement = _append_valid_disagreement(protocol, snapshot)
+    disagreement["originals_preserved"] = False
+
+    failures = validate_bundle(REPO_ROOT, protocol, snapshot, analysis)
+
+    assert "dsl-evaluation-disagreement-preservation" in _rule_ids(failures)
+
+
+def test_withdrawals_are_excluded_only_through_the_closed_parent_graph() -> None:
+    protocol, snapshot, analysis = _executed_bundle()
+    withdrawn_subject = snapshot["subjects"][0]
+    withdrawn_subject["consent_status"] = "withdrawn"
+    snapshot["withdrawals"] = [
+        {
+            "subject_id": withdrawn_subject["subject_id"],
+            "recorded_at": "2026-07-15T11:00:00Z",
+            "retained_aggregate_only": True,
+        }
+    ]
+    withdrawn_attempt_ids = {
+        attempt["attempt_id"]
+        for attempt in snapshot["attempts"]
+        if attempt["subject_id"] == withdrawn_subject["subject_id"]
+    }
+    for attempt in snapshot["attempts"]:
+        if attempt["attempt_id"] in withdrawn_attempt_ids:
+            attempt["outcome"] = "withdrawn"
+            attempt["observation_ids"] = []
+    snapshot["observations"] = [
+        observation
+        for observation in snapshot["observations"]
+        if observation["attempt_id"] not in withdrawn_attempt_ids
+    ]
+    snapshot["reviews"] = [
+        review
+        for review in snapshot["reviews"]
+        if review["attempt_id"] not in withdrawn_attempt_ids
+        and review["reviewer_subject_id"] != withdrawn_subject["subject_id"]
+    ]
+    snapshot["execution_status"] = "in_progress"
+    _refresh_analysis(protocol, snapshot, analysis, "partial")
+
+    failures = validate_bundle(REPO_ROOT, protocol, snapshot, analysis)
+
+    assert failures == []
+    assert any(result["withdrawn_count"] > 0 for result in analysis["measure_results"])
+
+
+def test_complete_missing_outcomes_remain_explicit_partial_evidence() -> None:
+    protocol, snapshot, analysis = _executed_bundle()
+    attempt = next(item for item in snapshot["attempts"] if item["task_id"] == "author-multihost-experiment")
+    attempt["outcome"] = "missing"
+    for observation in snapshot["observations"]:
+        if observation["attempt_id"] != attempt["attempt_id"]:
+            continue
+        observation["outcome"] = "missing"
+        observation["value"] = 0 if observation["measure_id"] == "task-completion" else None
+    _refresh_analysis(protocol, snapshot, analysis, "partial")
+
+    failures = validate_bundle(REPO_ROOT, protocol, snapshot, analysis)
+
+    assert failures == []
+    assert any(result["missing_count"] > 0 for result in analysis["measure_results"])
+    assert any(result["status"] == "incomplete" for result in analysis["measure_results"])
+
+
+def test_evidence_status_is_derived_from_recomputed_dimension_results() -> None:
+    protocol, snapshot, analysis = _executed_bundle()
+    analysis["evidence_status"] = "refuted"
+    unsupported_refutation = validate_bundle(REPO_ROOT, protocol, snapshot, analysis)
+
+    snapshot["execution_status"] = "in_progress"
+    _refresh_analysis(protocol, snapshot, analysis, "partial")
+    supported_partial = validate_bundle(REPO_ROOT, protocol, snapshot, analysis)
+    analysis["evidence_status"] = "untested"
+    unsupported_untested = validate_bundle(REPO_ROOT, protocol, snapshot, analysis)
+
+    assert "dsl-evaluation-evidence-status" in _rule_ids(unsupported_refutation)
+    assert supported_partial == []
+    assert "dsl-evaluation-evidence-status" in _rule_ids(unsupported_untested)
+
+
+def test_measure_results_are_recomputed_from_frozen_observations() -> None:
+    protocol, snapshot, _ = _executed_bundle()
+    completion_observations = [
+        observation for observation in snapshot["observations"] if observation["measure_id"] == "task-completion"
+    ]
+    for index, observation in enumerate(completion_observations):
+        observation["value"] = index % 2
+
+    results = recompute_measure_results(protocol, snapshot)
+
+    completion = results["task-completion"]
+    assert completion["denominator"] == len(completion_observations)
+    assert completion["observed_count"] == completion["opportunity_count"]
+    assert completion["numerator"] == sum(index % 2 for index in range(len(completion_observations)))
+    assert completion["value"] == completion["numerator"] / completion["denominator"]
+    assert results["semantic-rework-cycles"]["statistic"] == "median"
+    assert results["semantic-rework-cycles"]["value"] == 0.0
+
+
+def test_gate_rejects_stale_measure_results() -> None:
+    _, protocol, snapshot, analysis = _bundle()
+    recomputed = recompute_measure_results(protocol, snapshot)
+    analysis["measure_results"] = [
+        {"measure_id": measure_id, "status": "not_evaluated", **result} for measure_id, result in recomputed.items()
+    ]
+    analysis["measure_results"][0]["value"] = 1.0
+
+    failures = validate_bundle(REPO_ROOT, protocol, snapshot, analysis)
+
+    assert "dsl-evaluation-analysis-measure-drift" in _rule_ids(failures)
+
+
+def test_gate_rejects_secret_bearing_source_locators() -> None:
+    _, protocol, snapshot, analysis = _bundle()
+    protocol["sources"][0]["locator"] = "https://example.test/paper?access_token=secret"
+
+    failures = validate_bundle(REPO_ROOT, protocol, snapshot, analysis)
+
+    assert "dsl-evaluation-source-secret" in _rule_ids(failures)
+
+
+def test_shared_json_loader_rejects_duplicate_keys(tmp_path: Path) -> None:
+    artifact = tmp_path / "duplicate.json"
+    artifact.write_text('{"revision": 1, "revision": 2}\n', encoding="utf-8")
+
+    try:
+        load_bounded_json_object(tmp_path, "duplicate.json", max_bytes=1024)
+    except ValueError as exc:
+        assert "duplicate JSON key 'revision'" in str(exc)
+    else:
+        raise AssertionError("duplicate JSON keys must fail closed")
+
+
+def test_malformed_scalar_fields_fail_closed_without_crashing() -> None:
+    _, protocol, snapshot, analysis = _bundle()
+    protocol["sources"][-1]["locator"] = None
+    protocol["tasks"][0]["variant_ids"] = 1
+    snapshot["public_surface"][0]["artifact"] = {"path": "not-text"}
+
+    failures = validate_bundle(REPO_ROOT, protocol, snapshot, analysis)
+
+    assert {
+        "dsl-evaluation-source-locator",
+        "dsl-evaluation-task-join",
+        "dsl-evaluation-public-surface-path",
+    }.issubset(_rule_ids(failures))
+
+
+def test_dimension_thresholds_are_recomputed_from_measure_results() -> None:
+    _, protocol, _, analysis = _bundle()
+    measure_results = {item["measure_id"]: deepcopy(item) for item in analysis["measure_results"]}
+    for result in measure_results.values():
+        result.update({"status": "evaluated", "denominator": 10, "value": 1.0})
+    measure_results["critical-semantic-errors"]["value"] = 0.0
+    measure_results["semantic-rework-cycles"]["value"] = 1.0
+    for measure_id in (
+        "critical-silent-omissions",
+        "silent-lossy-migrations",
+        "critical-silent-ambiguities",
+        "majority-missed-critical-items",
+        "untraced-critical-changes",
+    ):
+        measure_results[measure_id]["value"] = 0
+
+    passing = recompute_dimension_results(protocol, measure_results)
+    assert all(result["threshold_result"] == "pass" for result in passing.values())
+
+    measure_results["task-completion"]["value"] = 0.5
+    failing = recompute_dimension_results(protocol, measure_results)
+    assert failing["usability-comprehension"]["threshold_result"] == "fail"
+    assert failing["effectiveness-productivity"]["threshold_result"] == "fail"

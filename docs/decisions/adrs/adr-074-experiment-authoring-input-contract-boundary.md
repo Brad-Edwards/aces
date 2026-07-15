@@ -108,6 +108,21 @@ count source, red-variant map-key equality, and blocking factors resolving to
 declared factors — are declared as `x-aces-invariants` and enforced by the ACES
 model validators, consistent with ADR-055's semantic-invariant profile.
 
+### 3a. The authoring input is not an admitted trial plan
+
+ADR-084 makes the downstream boundary explicit. The authoring input declares
+experiment intent. A separate processor-owned operation combines an admitted
+spec with the exact composed scenario family, task, apparatus
+manifests/envelopes, and accepted compiler/identity/random-stream profiles to
+produce an immutable admitted trial plan.
+
+Typed selection/allocation policies may extend the run plan under ADR-061, but
+existing free-text allocation/randomization fields and seeds do not become
+executable by convention. The admitted plan records concrete logical
+coordinates, selections, factor assignments, apparatus bindings, and
+preallocated archival run ids. It is neither this authoring document nor an
+`experiment-run-v1` / `experiment-study-v1` output.
+
 ### 4. Authoring surface parity with SDL
 
 The contract ships an authored-file convention (`examples/experiments/*.exp.yaml`),
@@ -122,8 +137,9 @@ SDL authoring surface and satisfying AUT-801's agent-facing authoring mandate.
 
 Like ADR-055, this decision publishes a contract, a formal spec, tooling, and
 examples. It does not schedule, execute, persist, or evaluate experiments. A
-future orchestration surface consumes an authored spec to produce the archival
-`experiment-run-v1` / `experiment-study-v1` records.
+future orchestration surface consumes an authored spec through ADR-084's
+trial-compilation/admission boundary, then produces the archival
+`experiment-run-v1` / `experiment-study-v1` records from actual executions.
 
 ## Guardrails
 
@@ -137,6 +153,9 @@ future orchestration surface consumes an authored spec to produce the archival
   regenerate.
 - Do not add a parallel experiment-authoring DSL or SDL section; the spec is a
   single nested contract document.
+- Do not treat descriptive stochastic fields or a seed as an executable
+  random-stream contract, and do not let a scheduler/backend create selections
+  that are absent from the admitted plan.
 
 ## Consequences
 
@@ -189,3 +208,9 @@ new root section, and an experiment is not scenario meaning.
 Rejected. The issue asks specifically for an authoring surface analogous to SDL;
 the contract + tooling can and should exist independently of execution, exactly
 as the SDL authoring surface predates full runtime realization.
+
+## Amendments
+
+| Date | Commit/PR | Summary |
+|------|-----------|---------|
+| 2026-07-15 | #652 | Clarified that experiment authoring input is consumed by a separate deterministic trial-compilation/admission boundary and that descriptive stochastic fields are not executable profiles. |

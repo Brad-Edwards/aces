@@ -74,6 +74,18 @@ def _maybe_rename(name: str, name_map: Mapping[str, str]) -> str:
     return name_map.get(name, name)
 
 
+def _rewrite_section_ref(name: str, section: str, name_map: Mapping[str, str]) -> str:
+    """Rewrite a bare or explicitly section-qualified reference."""
+
+    if not name or is_variable_ref(name):
+        return name
+    prefix = f"{section}."
+    if name.startswith(prefix):
+        local_name = name.removeprefix(prefix)
+        return f"{prefix}{name_map.get(local_name, local_name)}"
+    return name_map.get(name, name)
+
+
 def _validate_descriptor_exports(
     scenario: ScenarioContent,
     descriptor: ModuleDescriptor,
@@ -286,6 +298,21 @@ def _namespace_payload(
             agent["starting_accounts"] = [
                 _maybe_rename(name, symbols["accounts"]) for name in agent.get("starting_accounts", [])
             ]
+            for access in agent.get("interactive_access", {}).values():
+                if not isinstance(access, dict):
+                    continue
+                if access.get("target_ref"):
+                    access["target_ref"] = _rewrite_section_ref(
+                        str(access["target_ref"]),
+                        "nodes",
+                        symbols["nodes"],
+                    )
+                if access.get("account_ref"):
+                    access["account_ref"] = _rewrite_section_ref(
+                        str(access["account_ref"]),
+                        "accounts",
+                        symbols["accounts"],
+                    )
             knowledge = agent.get("initial_knowledge")
             if isinstance(knowledge, dict):
                 knowledge["hosts"] = [_maybe_rename(name, symbols["nodes"]) for name in knowledge.get("hosts", [])]

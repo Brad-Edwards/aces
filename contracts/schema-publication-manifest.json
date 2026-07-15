@@ -190,20 +190,20 @@
       "contract_id": "instantiated-scenario-snapshot-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
       "stability": "draft",
-      "content_hash": "7ff28b8b64791e2c73b6c906714714228827b1a2508e2aa21e296b16dfe9514e",
+      "content_hash": "46365e6661556673f124fc7b04383c451cf25396d551c564171bb009fa515dc9",
       "last_change": {
-        "summary": "Added typed generated-artifact and persistent-volume desired-state resources for stateful service realization (issue #780).",
-        "content_hash": "7ff28b8b64791e2c73b6c906714714228827b1a2508e2aa21e296b16dfe9514e"
+        "summary": "Combined typed stateful realization resources (issue #780) with participant interactive-access declarations (issue #805).",
+        "content_hash": "46365e6661556673f124fc7b04383c451cf25396d551c564171bb009fa515dc9"
       }
     },
     {
       "contract_id": "instantiated-scenario-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
       "stability": "draft",
-      "content_hash": "94f3abe20517e3f987776923102607d5b8b1ecba47e97805a166e8f0832f4a53",
+      "content_hash": "96ece657528da43f97750f56d8e72d1c9f2e504f09d8fa673aa9154db83a59be",
       "last_change": {
-        "summary": "Added typed generated-artifact and persistent-volume desired-state resources for stateful service realization (issue #780).",
-        "content_hash": "94f3abe20517e3f987776923102607d5b8b1ecba47e97805a166e8f0832f4a53"
+        "summary": "Combined typed stateful realization resources (issue #780) with participant interactive-access declarations (issue #805).",
+        "content_hash": "96ece657528da43f97750f56d8e72d1c9f2e504f09d8fa673aa9154db83a59be"
       }
     },
     {
@@ -456,10 +456,10 @@
       "contract_id": "sdl-authoring-input-v1",
       "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
       "stability": "draft",
-      "content_hash": "0cf49080adbb23c566bd9585a958ef63e5b5ceba9f4105c65dabcc71c818875a",
+      "content_hash": "b192b76721340ea032d72bba7060c4ddf956e3e88edeca33cf17c74149b77891",
       "last_change": {
-        "summary": "Added typed generated-artifact and persistent-volume desired-state resources for stateful service realization (issue #780).",
-        "content_hash": "0cf49080adbb23c566bd9585a958ef63e5b5ceba9f4105c65dabcc71c818875a"
+        "summary": "Combined typed stateful realization resources (issue #780) with participant interactive-access declarations (issue #805).",
+        "content_hash": "b192b76721340ea032d72bba7060c4ddf956e3e88edeca33cf17c74149b77891"
       }
     },
     {
