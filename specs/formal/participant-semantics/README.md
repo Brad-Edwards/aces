@@ -725,7 +725,7 @@ Current implementation artifacts for the `SEM-208` slice:
 - `implementations/python/packages/aces_sdl/semantics/participant_behavior.py`
   and `implementations/python/packages/aces_sdl/validator/` fail closed on
   unbound action-contract and observation-boundary references;
-- `implementations/python/packages/aces_processor/compiler.py` maps authored
+- `implementations/python/packages/aces_processor/compiler/` maps authored
   participants to compiled participant action, observation, and behavior
   addresses;
 - `implementations/python/packages/aces_processor/models/` defines
@@ -768,7 +768,7 @@ Current implementation artifacts for the `SEM-209` slice:
 - `implementations/python/packages/aces_sdl/semantics/participant_behavior.py`
   and `implementations/python/packages/aces_sdl/validator/` fail closed on
   unbound related actions, interaction targets, and shared-state references;
-- `implementations/python/packages/aces_processor/compiler.py` carries declared
+- `implementations/python/packages/aces_processor/compiler/` carries declared
   interaction classes and shared-state references into compiled participant
   action contracts;
 - `implementations/python/packages/aces_processor/models/` records
@@ -840,7 +840,7 @@ Current implementation artifacts for the `SEM-210` slice:
   and `implementations/python/packages/aces_sdl/validator/` continue to
   fail closed on unbound participant observation-boundary references, view-rule
   references, and view-transition evidence references;
-- `implementations/python/packages/aces_processor/compiler.py` carries hidden,
+- `implementations/python/packages/aces_processor/compiler/` carries hidden,
   observable, discovered, inferred, concealed, disclosed, deceptive,
   evidence-only, and realized-view disclosure metadata into compiled
   participant observation boundaries, including an ordered
@@ -914,7 +914,7 @@ Current implementation artifacts for the `SEM-211` slice:
   plus typed action-contract declarations and backend failure mappings;
 - `implementations/python/packages/aces_sdl/participant_behavior.py` embeds
   those typed declarations in governed participant action contracts;
-- `implementations/python/packages/aces_processor/compiler.py` carries the
+- `implementations/python/packages/aces_processor/compiler/` carries the
   typed precondition classes, effect classes, failure classes, and backend
   failure mappings into compiled participant action contracts;
 - `implementations/python/packages/aces_processor/models/` defines typed
@@ -1011,7 +1011,7 @@ Current implementation artifacts for the first `SEM-213` slice:
   temporal contracts and backend timing disclosures in governed participant
   action contracts, requires temporal preconditions to resolve to typed
   temporal contracts, and fails closed on unknown backend disclosure refs;
-- `implementations/python/packages/aces_processor/compiler.py` carries temporal
+- `implementations/python/packages/aces_processor/compiler/` carries temporal
   contract ids, kinds, time domains, clock authorities, and backend timing
   disclosures into compiled participant action contracts;
 - `implementations/python/packages/aces_processor/models/` defines runtime

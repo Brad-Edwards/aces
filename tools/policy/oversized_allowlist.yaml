@@ -17,7 +17,6 @@ files:
   - implementations/python/packages/aces_mcp/tools/authoring.py
   - implementations/python/packages/aces_mcp/tools/inspection.py
   - implementations/python/packages/aces_operations/_evidence_run_artifact.py
-  - implementations/python/packages/aces_processor/compiler.py
   - implementations/python/packages/aces_processor/planner.py
   - implementations/python/packages/aces_runtime/control_plane_api.py
   - implementations/python/packages/aces_runtime/control_plane.py

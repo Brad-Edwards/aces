@@ -177,7 +177,7 @@ Avoid:
   rendering the issue codes back onto the authoring-error strings)
 - compiled runtime objective resource, canonical addresses, diagnostics, and
   ordering/refresh derivation:
-  - `implementations/python/packages/aces_processor/compiler.py`
+  - `implementations/python/packages/aces_processor/compiler/`
   - `implementations/python/packages/aces_processor/models/` (`ObjectiveRuntime`,
     `Diagnostic`)
 - planner ordering/refresh reconciliation over the compiled edges:
