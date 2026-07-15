@@ -91,29 +91,27 @@ def test_ac1_manifest_default_is_provisioning_only():
 
 
 # ---------------------------------------------------------------------------
-# AC-2: run_target_conformance passes for libvirt target with participant_runtime
+# AC-2: participant runtime remains valid while realization certification fails closed
 # ---------------------------------------------------------------------------
 
 
-def test_ac2_conformance_passes_with_participant_runtime_manifest():
-    # The live provisioning probe (issue #606) now runs for provisioning-only
-    # targets too, so exercise it through a daemon-free recording driver that
-    # confirms realization.
+def test_ac2_conformance_requires_constructive_envelope_with_participant_runtime_manifest():
+    # The participant capability surface remains valid, but the published open
+    # libvirt envelope cannot produce ASR-519 probes and must not fall back to a
+    # caller-selected hermetic target-adapter scenario.
     target = _libvirt_target_with_participant_runtime(driver=RecordingLibvirtDriver())
     report = run_target_conformance(target)
 
-    assert report.passed is True, f"conformance failed: {report.diagnostics}"
+    assert report.passed is False
     assert report.unsupported_contract_gaps == ()
     assert report.unsupported_capability_gaps == ()
 
-    # report.passed is vacuously True on an empty case set, so assert the live
-    # pipeline actually ran end-to-end for the participant-runtime manifest:
-    # the provisioning probe + snapshot-mutation cases must be present and green.
-    case_names = {case.name for case in report.cases}
-    assert {"target-manifest", "target-provisioning", "target-snapshot"} <= case_names
-    for case in report.cases:
-        if case.name in {"target-manifest", "target-provisioning", "target-snapshot"}:
-            assert case.passed, [diag.message for diag in case.diagnostics]
+    cases = {case.name: case for case in report.cases}
+    assert cases["target-manifest"].passed is True
+    assert cases["realization-envelope-constructive"].passed is False
+    assert cases["realization-envelope-constructive"].outcome == "unsupported"
+    assert "target-provisioning" not in cases
+    assert "target-snapshot" not in cases
 
 
 # ---------------------------------------------------------------------------

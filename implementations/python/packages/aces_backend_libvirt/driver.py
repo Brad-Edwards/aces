@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from typing import Protocol
 
 from aces_contracts.diagnostics import Diagnostic
-from aces_contracts.realization_envelope import ObservationStrength, RealizationConcern
+from aces_contracts.realization_observation import RealizationObservation
 
 from .cloudinit import CloudInitSpec
 
@@ -76,17 +76,6 @@ class DomainHandle:
 
     address: str
     realized: bool = True
-
-
-@dataclass(frozen=True)
-class RealizationObservation:
-    """Bounded typed readback for one realized concern field."""
-
-    address: str
-    field_path: str
-    concern: RealizationConcern
-    source: ObservationStrength
-    value: object
 
 
 @dataclass(frozen=True)

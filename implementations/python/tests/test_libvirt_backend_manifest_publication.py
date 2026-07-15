@@ -73,23 +73,25 @@ def test_libvirt_manifest_validates_against_published_schema():
     BackendManifestV2Model.model_validate(payload)
 
 
-def test_libvirt_target_passes_provisioning_only_conformance():
-    """AC1: the target conforms to the published provisioning-only profile, daemon-free.
+def test_libvirt_target_manifest_passes_but_realization_envelope_is_non_constructive():
+    """AC1: manifest validity does not silently certify realization, daemon-free.
 
-    The live provisioning probe (issue #606) is exercised through a daemon-free
-    recording driver that confirms realization, so conformance proves real
-    snapshot mutation without a libvirt/QEMU daemon.
+    The recording driver remains useful hermetic adapter evidence, but ASR-519
+    now fails closed because the published expression cannot generate complete
+    witnesses. Issue #717 owns final native certification.
     """
     report = run_target_conformance(create_libvirt_target(driver=RecordingLibvirtDriver()))
 
     assert report.profile == BackendCapabilityProfile.PROVISIONING_ONLY
-    assert report.passed is True, [diag.message for diag in report.diagnostics]
+    assert report.passed is False
     assert not report.unsupported_contract_gaps
     assert not report.unsupported_capability_gaps
 
     live_manifest = next((case for case in report.cases if case.name == "target-manifest"), None)
     assert live_manifest is not None, "conformance must run the target-manifest validation case"
     assert live_manifest.passed, [diag.message for diag in live_manifest.diagnostics]
+    constructive = next(case for case in report.cases if case.name == "realization-envelope-constructive")
+    assert constructive.outcome == "unsupported"
 
 
 def test_supported_contract_versions_cover_provisioning_only_profile():

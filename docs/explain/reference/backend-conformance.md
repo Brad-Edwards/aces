@@ -206,10 +206,30 @@ facts to daemon- or guest-observed evidence.
 Issue #100 publishes configuration-bound realization envelopes using the shared
 parameterized SDL semantics from #667 and the membership/subsumption relation
 from #668. Manifests, provisioning plans, and snapshots carry one immutable
-envelope/configuration identity. Replacing the temporary
-`reference_scenario` bridge with generated positive and negative probes remains
-tracked by #716; contract, adapter, native-daemon, and guest conformance remain
-distinct reportable dimensions.
+envelope/configuration identity. For an envelope-bound target, target
+conformance now derives deterministic positive witnesses and safe negative
+probes through that shared relation. It does not fall back to
+`_DEFAULT_CONFORMANCE_SCENARIO` when an envelope is non-constructive.
+
+Each realization case records its `fixture-only`, `hermetic-live`, or
+`native-live` execution basis, probe and probe-set digests, exact envelope and
+configuration digests, operation accounting, declared and observed strength,
+state-mutation checks, cleanup status, residual state, evidence references,
+outcome, and diagnostics. Skipped and unsupported cases are gating failures;
+only a passing `native-live` run can set `native_conformance`.
+
+The execution seam is an injected operations-owned harness. It must supply an
+independent expected-observation inventory and fresh addressed observations;
+planned values, unbound or fabricated handles, stale samples, missing operation
+results, silent transformations, and incomplete cleanup all fail closed.
+Machine-readable reports are written only through the redaction-gated atomic
+artifact path. The currently published open libvirt envelopes are deliberately
+reported as non-constructive until the configuration-specific envelopes are
+made executable; a caller-selected happy path cannot substitute for them.
+
+Contract, adapter, native-daemon, and guest conformance remain distinct
+reportable dimensions. The repository-wide guardrails for this work are recorded in the
+[`issue #716 realization-honesty preflight`](../../decisions/issue-716-asr-519-realization-honesty-conformance-preflight.md).
 
 ## Non-Goals
 

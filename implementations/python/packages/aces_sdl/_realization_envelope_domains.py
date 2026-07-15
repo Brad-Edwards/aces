@@ -11,6 +11,7 @@ parser dependency.
 from __future__ import annotations
 
 from collections.abc import Callable
+from enum import Enum
 
 from aces_contracts.realization_envelope import (
     BooleanDomain,
@@ -149,6 +150,33 @@ def default_witness_value(domain: DomainDescriptor) -> WitnessSelection:
     return selector(domain)
 
 
+def positive_probe_values(domain: DomainDescriptor) -> list[DomainScalar]:
+    """Deterministic safe values that cover one bounded scalar domain.
+
+    Finite domains enumerate every member. Numeric intervals contribute their
+    admissible boundaries; for an open real boundary, where no portable epsilon
+    exists, the deterministic witness supplies the safe interior representative.
+    """
+
+    members = finite_members(domain)
+    if members is not None:
+        values = sorted(members, key=_enum_sort_key)
+    elif not isinstance(domain, NumericIntervalDomain):
+        values = []
+    elif domain.numeric_type is NumericType.INTEGER:
+        lower = int(domain.lower) + (0 if domain.lower_closed else 1)
+        upper = int(domain.upper) - (0 if domain.upper_closed else 1)
+        values = [lower] if lower == upper else [lower, upper]
+    else:
+        values = []
+        if domain.lower_closed:
+            values.append(domain.lower)
+        values.append((domain.lower + domain.upper) / 2)
+        if domain.upper_closed:
+            values.append(domain.upper)
+    return list(dict.fromkeys(values))
+
+
 # --------------------------------------------------------------------------- #
 # Out-of-envelope variation (R6)                                             #
 # --------------------------------------------------------------------------- #
@@ -195,3 +223,21 @@ def out_of_domain_value(domain: DomainDescriptor) -> object:
 
     factory = _OUT_OF_DOMAIN.get(type(domain))
     return factory(domain) if factory is not None else _MISSING
+
+
+def out_of_domain_candidates(domain: DomainDescriptor, current: object) -> list[object]:
+    """Candidate scalars outside ``domain``, preferring SDL enum members.
+
+    A domain-blind synthetic string is not a safe negative probe when the SDL
+    field is itself a closed enum.  The instantiated witness exposes that enum
+    type, so enumerate its other legal members before falling back to the
+    domain-kind perturbation used for open scalar fields.
+    """
+
+    candidates: list[object] = []
+    if isinstance(current, Enum):
+        candidates.extend(member.value for member in type(current) if not scalar_in_domain(member.value, domain))
+    fallback = out_of_domain_value(domain)
+    if fallback is not _MISSING:
+        candidates.append(fallback)
+    return list(dict.fromkeys(candidates))

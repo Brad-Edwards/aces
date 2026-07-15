@@ -30,38 +30,41 @@ raw sensitive values (R8 / ADR-070 §7).
 
 from __future__ import annotations
 
+import hashlib
+import json
 from copy import deepcopy
 from dataclasses import dataclass
 
 from aces_contracts.diagnostics import Diagnostic, Severity
-from aces_contracts.realization_envelope import Posture, RealizationEnvelopeModel, WitnessPolicy, scalar_in_domain
+from aces_contracts.realization_envelope import RealizationEnvelopeModel, WitnessPolicy, scalar_in_domain
 from pydantic import ValidationError
 
 from ._errors import SDLInstantiationError, SDLValidationError
-from ._realization_envelope_domains import _MISSING, domain_subset, out_of_domain_value
+from ._realization_envelope_domains import domain_subset, positive_probe_values
 from ._realization_envelope_engine import (
     LeafConstraint,
     assign_path,
     effective_constraints,
-    fresh_extra_key,
     navigate,
     normalize_scalar,
     overridability_violations,
     present_children,
-    remove_path,
     tokenize_path,
     witness_value,
 )
+from ._realization_envelope_probe_payloads import closed_scope_probe_payloads, value_probe_payloads
 from .instantiate import instantiate_scenario
 from .scenario import InstantiatedScenario, Scenario
 from .validator import SemanticValidator
 
 __all__ = [
     "NegativeProbe",
+    "PositiveProbe",
     "RelationKind",
     "RelationResult",
     "WitnessResult",
     "generate_negative_probes",
+    "generate_positive_probes",
     "effective_constraints",
     "member",
     "subsumes",
@@ -104,6 +107,17 @@ class NegativeProbe:
     path: str
     domain_kind: str
     variation: str
+    payload: dict[str, object]
+
+
+@dataclass(frozen=True)
+class PositiveProbe:
+    """A validated in-envelope witness covering one bounded variation."""
+
+    path: str
+    domain_kind: str
+    variation: str
+    digest: str
     payload: dict[str, object]
 
 
@@ -351,34 +365,77 @@ def witness(envelope: RealizationEnvelopeModel, policy: WitnessPolicy | None = N
 
 
 # --------------------------------------------------------------------------- #
-# Negative probes (R6)                                                        #
+# Positive probes (ASR-519)                                                    #
 # --------------------------------------------------------------------------- #
 
 
-def _value_probes_for(base_payload: dict[str, object], path: str, constraint: LeafConstraint) -> list[NegativeProbe]:
-    probes: list[NegativeProbe] = []
-    variation_value = out_of_domain_value(constraint.domain)
-    if variation_value is not _MISSING:
-        payload = deepcopy(base_payload)
-        if assign_path(payload, tokenize_path(path), variation_value) is None:
-            probes.append(NegativeProbe(path, constraint.domain.kind, "value-outside-domain", payload))
-    if constraint.posture is Posture.EXACT:
-        omitted = deepcopy(base_payload)
-        if remove_path(omitted, tokenize_path(path)):
-            probes.append(NegativeProbe(path, constraint.domain.kind, "omitted-required-exact", omitted))
-    return probes
+def _probe_digest(payload: dict[str, object]) -> str:
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("utf-8")
+    return "sha256:" + hashlib.sha256(canonical).hexdigest()
 
 
-def _closed_scope_probes(base_payload: dict[str, object], closed: dict[str, set[str]]) -> list[NegativeProbe]:
-    probes: list[NegativeProbe] = []
-    for scope_path in sorted(closed):
-        extra_key = fresh_extra_key(closed[scope_path])
-        payload = deepcopy(base_payload)
-        tokens = tokenize_path(scope_path) + [extra_key] if scope_path else [extra_key]
-        if assign_path(payload, tokens, "out-of-envelope") is None:
-            address = f"{scope_path}.{extra_key}" if scope_path else extra_key
-            probes.append(NegativeProbe(address, "closed-scope", "extra-dimension", payload))
-    return probes
+def _positive_probe(payload: dict[str, object], *, path: str, domain_kind: str, variation: str) -> PositiveProbe:
+    return PositiveProbe(path, domain_kind, variation, _probe_digest(payload), payload)
+
+
+def generate_positive_probes(
+    envelope: RealizationEnvelopeModel,
+) -> tuple[tuple[PositiveProbe, ...], tuple[Diagnostic, ...]]:
+    """Derive deterministic, structurally valid witnesses for bounded dimensions.
+
+    The base witness is always retained. Each finite member and safe numeric
+    boundary is substituted through the shared path engine, then revalidated by
+    the ordinary SDL and envelope-membership gates. Invalid candidates remain
+    explicit diagnostics rather than silently increasing conformance coverage.
+    """
+
+    base_payload, build_diagnostics = _build_witness_payload(envelope, None)
+    base = _validate_witness_payload(base_payload, envelope) if not build_diagnostics else WitnessResult(None)
+    if base.scenario is None:
+        return (), (
+            _diag(
+                "positive-probe.no-witness",
+                envelope.id,
+                "cannot derive positive probes from a non-constructive envelope",
+            ),
+        )
+    probes: dict[str, PositiveProbe] = {}
+    initial = _positive_probe(base_payload, path=envelope.id, domain_kind="witness", variation="base-witness")
+    probes[initial.digest] = initial
+    diagnostics: list[Diagnostic] = []
+    constraints, _closed = effective_constraints(envelope)
+    for path in sorted(constraints):
+        constraint = constraints[path]
+        for value in positive_probe_values(constraint.domain):
+            payload = deepcopy(base_payload)
+            if assign_path(payload, tokenize_path(path), value) is not None:
+                diagnostics.append(
+                    _diag("positive-probe.invalid-candidate", path, "bounded variation could not be assigned")
+                )
+                continue
+            candidate = _validate_witness_payload(payload, envelope)
+            if candidate.scenario is None or not member(candidate.scenario, envelope).holds:
+                diagnostics.append(
+                    _diag(
+                        "positive-probe.invalid-candidate",
+                        path,
+                        "bounded variation did not pass ordinary SDL and membership validation",
+                    )
+                )
+                continue
+            probe = _positive_probe(
+                payload,
+                path=path,
+                domain_kind=constraint.domain.kind,
+                variation="bounded-member",
+            )
+            probes.setdefault(probe.digest, probe)
+    return tuple(probes.values()), tuple(diagnostics)
+
+
+# --------------------------------------------------------------------------- #
+# Negative probes (R6)                                                        #
+# --------------------------------------------------------------------------- #
 
 
 def generate_negative_probes(
@@ -386,7 +443,8 @@ def generate_negative_probes(
 ) -> tuple[tuple[NegativeProbe, ...], tuple[Diagnostic, ...]]:
     """Derive out-of-envelope probes for the envelope's closed dimensions (R6)."""
 
-    base = witness(envelope)
+    base_payload, build_diagnostics = _build_witness_payload(envelope, None)
+    base = _validate_witness_payload(base_payload, envelope) if not build_diagnostics else WitnessResult(None)
     if base.scenario is None:
         return (), (
             _diag(
@@ -396,12 +454,17 @@ def generate_negative_probes(
             ),
         )
 
-    # ``mode="json"`` yields plain JSON scalars (enums as their string value), so
-    # each probe payload is a portable, re-parseable scenario request.
-    base_payload = base.scenario.model_dump(mode="json", by_alias=True)
     constraints, closed = effective_constraints(envelope)
-    probes: list[NegativeProbe] = []
+    probes = []
     for path in sorted(constraints):
-        probes.extend(_value_probes_for(base_payload, path, constraints[path]))
-    probes.extend(_closed_scope_probes(base_payload, closed))
-    return tuple(probes), ()
+        probes.extend(value_probe_payloads(base_payload, base.scenario, path, constraints[path]))
+    probes.extend(closed_scope_probe_payloads(base_payload, base.scenario, closed))
+    safe: list[NegativeProbe] = []
+    seen: set[tuple[str, str]] = set()
+    for probe in probes:
+        candidate = _validate_witness_payload(probe.payload, envelope)
+        key = (probe.path, _probe_digest(probe.payload))
+        if candidate.scenario is not None and not member(candidate.scenario, envelope).holds and key not in seen:
+            safe.append(NegativeProbe(probe.path, probe.domain_kind, probe.variation, probe.payload))
+            seen.add(key)
+    return tuple(safe), ()
