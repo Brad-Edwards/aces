@@ -1,13 +1,12 @@
 """Per-step workflow compilation machinery and workflow compilation state."""
 
 from dataclasses import dataclass, field
-from typing import Any
 
 from aces_backend_protocols.capabilities import (
     WorkflowFeature,
     WorkflowStatePredicateFeature,
 )
-from aces_sdl.orchestration import WorkflowStepType
+from aces_sdl.orchestration import Workflow, WorkflowPredicate, WorkflowStep, WorkflowStepType
 from aces_sdl.scenario import InstantiatedScenario
 from aces_sdl.semantics.workflow import (
     workflow_step_semantic_contract,
@@ -51,6 +50,16 @@ class _WorkflowCompilationState:
     compensation_targets: dict[str, str] = field(default_factory=dict)
 
 
+@dataclass(frozen=True)
+class _WorkflowStepContext:
+    scenario: InstantiatedScenario
+    workflow: Workflow
+    workflow_address: str
+    state: _WorkflowCompilationState
+    assertions: dict[str, AssertionRuntime]
+    diagnostics: list[Diagnostic]
+
+
 _WORKFLOW_STEP_TYPE_FEATURES = {
     WorkflowStepType.DECISION: WorkflowFeature.DECISION,
     WorkflowStepType.SWITCH: WorkflowFeature.SWITCH,
@@ -61,7 +70,7 @@ _WORKFLOW_STEP_TYPE_FEATURES = {
 
 
 def _compile_workflow_predicate(
-    predicate_source: Any,
+    predicate_source: WorkflowPredicate,
     *,
     scenario: InstantiatedScenario,
     assertions: dict[str, AssertionRuntime],
@@ -120,7 +129,7 @@ def _compile_workflow_predicate(
     )
 
 
-def _workflow_step_edges_and_features(step: Any) -> tuple[tuple[str, ...], tuple[WorkflowFeature, ...]]:
+def _workflow_step_edges_and_features(step: WorkflowStep) -> tuple[tuple[str, ...], tuple[WorkflowFeature, ...]]:
     edge_values = {
         WorkflowStepType.OBJECTIVE: (step.on_success, step.on_failure),
         WorkflowStepType.DECISION: (step.then_step, step.else_step),
@@ -134,7 +143,7 @@ def _workflow_step_edges_and_features(step: Any) -> tuple[tuple[str, ...], tuple
     return _dedupe([edge for edge in edge_values if edge]), (() if feature is None else (feature,))
 
 
-def _workflow_cross_cutting_features(step: Any, workflow: Any) -> tuple[WorkflowFeature, ...]:
+def _workflow_cross_cutting_features(step: WorkflowStep, workflow: Workflow) -> tuple[WorkflowFeature, ...]:
     features: list[WorkflowFeature] = []
     if step.on_failure or step.on_exhausted:
         features.append(WorkflowFeature.FAILURE_TRANSITIONS)
@@ -149,7 +158,7 @@ def _workflow_step_primary_addresses(
     scenario: InstantiatedScenario,
     *,
     workflow_address: str,
-    step: Any,
+    step: WorkflowStep,
     state: _WorkflowCompilationState,
     diagnostics: list[Diagnostic],
 ) -> tuple[str, str]:
@@ -188,7 +197,7 @@ def _workflow_step_compensation_address(
     *,
     workflow_address: str,
     step_name: str,
-    step: Any,
+    step: WorkflowStep,
     state: _WorkflowCompilationState,
     diagnostics: list[Diagnostic],
 ) -> str:
@@ -237,7 +246,7 @@ def _compile_switch_cases(
     *,
     workflow_address: str,
     step_name: str,
-    step: Any,
+    step: WorkflowStep,
     state: _WorkflowCompilationState,
     assertions: dict[str, AssertionRuntime],
     diagnostics: list[Diagnostic],
@@ -272,7 +281,7 @@ def _compile_workflow_step_predicates(
     *,
     workflow_address: str,
     step_name: str,
-    step: Any,
+    step: WorkflowStep,
     state: _WorkflowCompilationState,
     assertions: dict[str, AssertionRuntime],
     diagnostics: list[Diagnostic],
@@ -300,45 +309,36 @@ def _compile_workflow_step_predicates(
     )
 
 
-def _compile_workflow_step(
-    scenario: InstantiatedScenario,
-    *,
-    workflow: Any,
-    workflow_address: str,
-    step_name: str,
-    step: Any,
-    state: _WorkflowCompilationState,
-    assertions: dict[str, AssertionRuntime],
-    diagnostics: list[Diagnostic],
-) -> None:
+def _compile_workflow_step(context: _WorkflowStepContext, *, step_name: str, step: WorkflowStep) -> None:
+    state = context.state
     edges, type_features = _workflow_step_edges_and_features(step)
     state.control_edges[step_name] = edges
     state.required_features.extend(type_features)
     objective_address, called_workflow_address = _workflow_step_primary_addresses(
-        scenario,
-        workflow_address=workflow_address,
+        context.scenario,
+        workflow_address=context.workflow_address,
         step=step,
         state=state,
-        diagnostics=diagnostics,
+        diagnostics=context.diagnostics,
     )
     compensation_workflow_address = _workflow_step_compensation_address(
-        scenario,
-        workflow_address=workflow_address,
+        context.scenario,
+        workflow_address=context.workflow_address,
         step_name=step_name,
         step=step,
         state=state,
-        diagnostics=diagnostics,
+        diagnostics=context.diagnostics,
     )
     predicate, switch_cases = _compile_workflow_step_predicates(
-        scenario,
-        workflow_address=workflow_address,
+        context.scenario,
+        workflow_address=context.workflow_address,
         step_name=step_name,
         step=step,
         state=state,
-        assertions=assertions,
-        diagnostics=diagnostics,
+        assertions=context.assertions,
+        diagnostics=context.diagnostics,
     )
-    state.required_features.extend(_workflow_cross_cutting_features(step, workflow))
+    state.required_features.extend(_workflow_cross_cutting_features(step, context.workflow))
     state.control_steps[step_name] = WorkflowStepRuntime(
         name=step_name,
         step_type=step.type.value,

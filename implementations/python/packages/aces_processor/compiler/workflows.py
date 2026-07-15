@@ -3,7 +3,7 @@
 from typing import Any
 
 from aces_contracts.versions import WORKFLOW_STATE_SCHEMA_VERSION
-from aces_sdl.orchestration import WorkflowStepType
+from aces_sdl.orchestration import Workflow, WorkflowStepType
 from aces_sdl.scenario import InstantiatedScenario
 
 from ..models import (
@@ -16,16 +16,16 @@ from ..models import (
 )
 from .addresses import _workflow_address
 from .support import _dedupe, _dedupe_by_value, _dump
-from .workflow_steps import _compile_workflow_step, _WorkflowCompilationState
+from .workflow_steps import _compile_workflow_step, _WorkflowCompilationState, _WorkflowStepContext
 
 
-def _workflow_timeout_seconds(workflow: Any) -> int | None:
+def _workflow_timeout_seconds(workflow: Workflow) -> int | None:
     if workflow.timeout is None or not isinstance(workflow.timeout.seconds, int):
         return None
     return workflow.timeout.seconds
 
 
-def _workflow_join_owners(workflow: Any) -> dict[str, str]:
+def _workflow_join_owners(workflow: Workflow) -> dict[str, str]:
     return {
         step.join: step_name
         for step_name, step in workflow.steps.items()
@@ -47,26 +47,26 @@ def _workflow_predicate_dependency_addresses(state: _WorkflowCompilationState) -
     return _dedupe([address for addresses in state.step_predicate_addresses.values() for address in addresses])
 
 
-def _workflow_compensation_mode(workflow: Any) -> str:
+def _workflow_compensation_mode(workflow: Workflow) -> str:
     return workflow.compensation.mode.value if workflow.compensation is not None else "disabled"
 
 
-def _workflow_compensation_triggers(workflow: Any) -> tuple[str, ...]:
+def _workflow_compensation_triggers(workflow: Workflow) -> tuple[str, ...]:
     return tuple(trigger.value for trigger in (workflow.compensation.on if workflow.compensation is not None else []))
 
 
-def _workflow_compensation_ordering(workflow: Any) -> str:
+def _workflow_compensation_ordering(workflow: Workflow) -> str:
     return workflow.compensation.order if workflow.compensation is not None else "reverse_completion"
 
 
-def _workflow_compensation_failure_policy(workflow: Any) -> str:
+def _workflow_compensation_failure_policy(workflow: Workflow) -> str:
     if workflow.compensation is None:
         return "fail_workflow"
     return workflow.compensation.failure_policy.value
 
 
 def _workflow_execution_contract(
-    workflow: Any,
+    workflow: Workflow,
     state: _WorkflowCompilationState,
     result_contract_steps: dict[str, Any],
 ) -> WorkflowExecutionContract:
@@ -96,23 +96,22 @@ def _compile_workflow_runtime(
     scenario: InstantiatedScenario,
     *,
     name: str,
-    workflow: Any,
+    workflow: Workflow,
     assertions: dict[str, AssertionRuntime],
     diagnostics: list[Diagnostic],
 ) -> WorkflowRuntime:
     workflow_address = _workflow_address(name)
     state = _WorkflowCompilationState(join_owners=_workflow_join_owners(workflow))
+    context = _WorkflowStepContext(
+        scenario=scenario,
+        workflow=workflow,
+        workflow_address=workflow_address,
+        state=state,
+        assertions=assertions,
+        diagnostics=diagnostics,
+    )
     for step_name, step in workflow.steps.items():
-        _compile_workflow_step(
-            scenario,
-            workflow=workflow,
-            workflow_address=workflow_address,
-            step_name=step_name,
-            step=step,
-            state=state,
-            assertions=assertions,
-            diagnostics=diagnostics,
-        )
+        _compile_workflow_step(context, step_name=step_name, step=step)
     objective_addresses = _dedupe(state.referenced_objectives)
     result_contract_steps = _workflow_result_contract_steps(state.control_steps)
     predicate_dependency_addresses = _workflow_predicate_dependency_addresses(state)

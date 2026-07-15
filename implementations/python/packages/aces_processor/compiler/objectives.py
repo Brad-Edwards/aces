@@ -1,14 +1,14 @@
 """Objective compilation, including objective-window resolution."""
 
 from dataclasses import dataclass
-from typing import Any
 
+from aces_sdl.objectives import Objective
 from aces_sdl.scenario import InstantiatedScenario
 from aces_sdl.semantics.objective_semantics import (
     OBJECTIVE_WINDOW_DEPENDENCY_ROLES,
     partition_objective_dependencies,
 )
-from aces_sdl.semantics.objectives import analyze_objective_window
+from aces_sdl.semantics.objectives import ObjectiveWindowIssue, analyze_objective_window
 
 from ..models import (
     AssertionRuntime,
@@ -80,7 +80,7 @@ _OBJECTIVE_WINDOW_ISSUE_DIAGNOSTICS = {
 
 def _objective_success_addresses(
     assertions: dict[str, AssertionRuntime],
-    objective: Any,
+    objective: Objective,
     objective_address: str,
     diagnostics: list[Diagnostic],
 ) -> list[str]:
@@ -99,7 +99,7 @@ def _objective_success_addresses(
 
 def _objective_dependency_addresses(
     scenario: InstantiatedScenario,
-    objective: Any,
+    objective: Objective,
     objective_address: str,
     diagnostics: list[Diagnostic],
 ) -> tuple[str, ...]:
@@ -116,7 +116,7 @@ def _objective_dependency_addresses(
     return objective_dependencies
 
 
-def _objective_window_issue_diagnostic(issue: Any, objective_address: str) -> Diagnostic | None:
+def _objective_window_issue_diagnostic(issue: ObjectiveWindowIssue, objective_address: str) -> Diagnostic | None:
     spec = _OBJECTIVE_WINDOW_ISSUE_DIAGNOSTICS.get(issue.code)
     if spec is None:
         return None
@@ -131,7 +131,7 @@ def _objective_window_issue_diagnostic(issue: Any, objective_address: str) -> Di
 
 def _compile_objective_window(
     scenario: InstantiatedScenario,
-    objective: Any,
+    objective: Objective,
     objective_address: str,
     diagnostics: list[Diagnostic],
 ) -> _ObjectiveWindowCompilation:

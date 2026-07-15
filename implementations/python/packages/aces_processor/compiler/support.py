@@ -5,7 +5,7 @@ from typing import Any
 from aces_contracts.addressing import render_compiled_address
 
 
-def _dump(model: Any) -> dict[str, Any]:
+def _dump(model: object) -> dict[str, Any]:
     if hasattr(model, "model_dump"):
         return model.model_dump(mode="json", by_alias=True)
     if isinstance(model, dict):

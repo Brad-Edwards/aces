@@ -5,7 +5,8 @@ from typing import Any
 
 from aces_backend_protocols.domain_topology import DomainTopologyBinding
 from aces_sdl.entities import flatten_entities
-from aces_sdl.nodes import NodeType
+from aces_sdl.features import Feature
+from aces_sdl.nodes import Node, NodeType
 from aces_sdl.scenario import InstantiatedScenario
 from aces_sdl.semantics.domain_topology import (
     DomainNodeRole,
@@ -183,8 +184,8 @@ def _record_node_runtime(
 
 
 def _feature_dependency_addresses(
-    node: Any,
-    feature: Any,
+    node: Node,
+    feature: Feature,
     *,
     feature_name: str,
     node_name: str,

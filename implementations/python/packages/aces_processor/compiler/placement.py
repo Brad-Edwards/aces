@@ -1,5 +1,6 @@
 """Content and account placement compilation."""
 
+from aces_sdl.nodes import NodeType
 from aces_sdl.scenario import InstantiatedScenario
 from aces_sdl.semantics.domain_topology import (
     DomainTopologyAnalysis,
@@ -29,7 +30,7 @@ def _compile_content_placements(
             domain="provisioning",
             code_prefix="provisioning.content-target-ref",
             node_label="content target",
-            require_vm=True,
+            required_type=NodeType.VM,
         )
         diagnostics.extend(target_diagnostics)
         if target_address is None:
@@ -62,7 +63,7 @@ def _compile_account_placements(
             domain="provisioning",
             code_prefix="provisioning.account-node-ref",
             node_label="account node",
-            require_vm=True,
+            required_type=NodeType.VM,
         )
         diagnostics.extend(target_diagnostics)
         if target_address is None:

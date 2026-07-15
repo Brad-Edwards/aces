@@ -110,41 +110,19 @@ def _resolve_node_ref(
     domain: str,
     code_prefix: str,
     node_label: str,
-    require_vm: bool = False,
-    require_switch: bool = False,
+    required_type: NodeType | None = None,
 ) -> tuple[str | None, list[Diagnostic]]:
     node = scenario.nodes.get(ref_name)
     if node is None:
-        return None, [
-            Diagnostic(
-                code=f"{code_prefix}-unbound",
-                domain=domain,
-                address=owner_address,
-                message=(f"Reference '{ref_name}' does not resolve to a defined {node_label}."),
-            )
-        ]
-
-    if require_vm and node.type != NodeType.VM:
-        return None, [
-            Diagnostic(
-                code=f"{code_prefix}-invalid-type",
-                domain=domain,
-                address=owner_address,
-                message=(f"Reference '{ref_name}' must resolve to a VM node for {node_label}."),
-            )
-        ]
-
-    if require_switch and node.type != NodeType.SWITCH:
-        return None, [
-            Diagnostic(
-                code=f"{code_prefix}-invalid-type",
-                domain=domain,
-                address=owner_address,
-                message=(f"Reference '{ref_name}' must resolve to a switch/network node for {node_label}."),
-            )
-        ]
-
-    return _resource_address_for_node(scenario, ref_name), []
+        code = f"{code_prefix}-unbound"
+        message = f"Reference '{ref_name}' does not resolve to a defined {node_label}."
+    elif required_type is not None and node.type != required_type:
+        expected = "a VM node" if required_type == NodeType.VM else "a switch/network node"
+        code = f"{code_prefix}-invalid-type"
+        message = f"Reference '{ref_name}' must resolve to {expected} for {node_label}."
+    else:
+        return _resource_address_for_node(scenario, ref_name), []
+    return None, [Diagnostic(code=code, domain=domain, address=owner_address, message=message)]
 
 
 def _node_dependency_addresses(
@@ -166,7 +144,7 @@ def _node_dependency_addresses(
             domain="provisioning",
             code_prefix=code_prefix,
             node_label=node_label,
-            require_switch=require_switch,
+            required_type=NodeType.SWITCH if require_switch else None,
         )
         diagnostics.extend(dep_diagnostics)
         if dep_address is not None:

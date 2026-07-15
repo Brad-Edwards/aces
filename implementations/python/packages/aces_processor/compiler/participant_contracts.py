@@ -1,5 +1,7 @@
 """Participant action contracts, observation boundaries, outcome-interpretation rules."""
 
+from collections.abc import Callable
+
 from aces_sdl.participant_outcome_semantics import (
     OutcomeInterpretationSourceLayer,
     OutcomeInterpretationTargetLayer,
@@ -28,111 +30,73 @@ from .view_relations import (
 )
 
 
+def _dedupe_field(items: list[object], key: str) -> tuple[str, ...]:
+    return _dedupe([str(item.get(key, "")) for item in items if isinstance(item, dict) and item.get(key)])
+
+
+def _shared_state_refs(interactions: list[object]) -> tuple[str, ...]:
+    return _dedupe(
+        [
+            str(ref)
+            for interaction in interactions
+            if isinstance(interaction, dict)
+            for ref in interaction.get("shared_state_refs", [])
+        ]
+    )
+
+
+def _backend_failure_mappings(contract_spec: dict[str, object]) -> tuple[dict[str, str], ...]:
+    return tuple(
+        {
+            "backend_error_code": str(mapping.get("backend_error_code", "")),
+            "failure_class": str(mapping.get("failure_class", "")),
+            "diagnostic": str(mapping.get("diagnostic", "")),
+        }
+        for mapping in contract_spec.get("backend_failure_mappings", [])
+        if isinstance(mapping, dict)
+    )
+
+
+def _backend_timing_disclosures(contract_spec: dict[str, object]) -> tuple[dict[str, object], ...]:
+    return tuple(
+        {
+            "disclosure_id": str(disclosure.get("disclosure_id", "")),
+            "disclosure_kind": str(disclosure.get("disclosure_kind", "")),
+            "support_mode": str(disclosure.get("support_mode", "")),
+            "description": str(disclosure.get("description", "")),
+            "affected_temporal_ids": [str(temporal_id) for temporal_id in disclosure.get("affected_temporal_ids", [])],
+            "limitations": [str(limitation) for limitation in disclosure.get("limitations", [])],
+        }
+        for disclosure in contract_spec.get("backend_timing_disclosures", [])
+        if isinstance(disclosure, dict)
+    )
+
+
 def _compile_action_contracts(scenario: InstantiatedScenario) -> dict[str, ParticipantActionContractRuntime]:
     action_contracts: dict[str, ParticipantActionContractRuntime] = {}
     for name, contract in scenario.action_contracts.items():
         contract_spec = _dump(contract)
         interactions = contract_spec.get("interactions", [])
         temporal_contracts = contract_spec.get("temporal_contracts", [])
-        interaction_classes = _dedupe(
-            [
-                str(interaction.get("interaction_class", ""))
-                for interaction in interactions
-                if isinstance(interaction, dict) and interaction.get("interaction_class")
-            ]
-        )
-        shared_state_refs = _dedupe(
-            [
-                str(ref)
-                for interaction in interactions
-                if isinstance(interaction, dict)
-                for ref in interaction.get("shared_state_refs", [])
-            ]
-        )
-        precondition_classes = _dedupe(
-            [
-                str(precondition.get("precondition_class", ""))
-                for precondition in contract_spec.get("preconditions", [])
-                if isinstance(precondition, dict) and precondition.get("precondition_class")
-            ]
-        )
-        effect_classes = _dedupe(
-            [
-                str(effect.get("effect_class", ""))
-                for effect in contract_spec.get("effects", [])
-                if isinstance(effect, dict) and effect.get("effect_class")
-            ]
-        )
-        failure_classes = _dedupe(str(failure_class) for failure_class in contract_spec.get("failure_classes", []))
-        backend_failure_mappings = tuple(
-            {
-                "backend_error_code": str(mapping.get("backend_error_code", "")),
-                "failure_class": str(mapping.get("failure_class", "")),
-                "diagnostic": str(mapping.get("diagnostic", "")),
-            }
-            for mapping in contract_spec.get("backend_failure_mappings", [])
-            if isinstance(mapping, dict)
-        )
-        temporal_contract_ids = _dedupe(
-            [
-                str(temporal_contract.get("temporal_id", ""))
-                for temporal_contract in temporal_contracts
-                if isinstance(temporal_contract, dict) and temporal_contract.get("temporal_id")
-            ]
-        )
-        temporal_kinds = _dedupe(
-            [
-                str(temporal_contract.get("temporal_kind", ""))
-                for temporal_contract in temporal_contracts
-                if isinstance(temporal_contract, dict) and temporal_contract.get("temporal_kind")
-            ]
-        )
-        time_domains = _dedupe(
-            [
-                str(temporal_contract.get("time_domain", ""))
-                for temporal_contract in temporal_contracts
-                if isinstance(temporal_contract, dict) and temporal_contract.get("time_domain")
-            ]
-        )
-        clock_authorities = _dedupe(
-            [
-                str(temporal_contract.get("clock_authority", ""))
-                for temporal_contract in temporal_contracts
-                if isinstance(temporal_contract, dict) and temporal_contract.get("clock_authority")
-            ]
-        )
-        backend_timing_disclosures = tuple(
-            {
-                "disclosure_id": str(disclosure.get("disclosure_id", "")),
-                "disclosure_kind": str(disclosure.get("disclosure_kind", "")),
-                "support_mode": str(disclosure.get("support_mode", "")),
-                "description": str(disclosure.get("description", "")),
-                "affected_temporal_ids": [
-                    str(temporal_id) for temporal_id in disclosure.get("affected_temporal_ids", [])
-                ],
-                "limitations": [str(limitation) for limitation in disclosure.get("limitations", [])],
-            }
-            for disclosure in contract_spec.get("backend_timing_disclosures", [])
-            if isinstance(disclosure, dict)
-        )
-        action_contracts[_action_contract_address(name)] = ParticipantActionContractRuntime(
-            address=_action_contract_address(name),
+        address = _action_contract_address(name)
+        action_contracts[address] = ParticipantActionContractRuntime(
+            address=address,
             name=name,
             action_name=name,
             semantic_version=str(contract_spec.get("semantic_version", "")),
             lifecycle_state=str(contract_spec.get("lifecycle_state", "")),
             behavioral_granularity=str(contract_spec.get("behavioral_granularity", "")),
-            precondition_classes=precondition_classes,
-            effect_classes=effect_classes,
-            failure_classes=failure_classes,
-            backend_failure_mappings=backend_failure_mappings,
-            interaction_classes=interaction_classes,
-            shared_state_refs=shared_state_refs,
-            temporal_contract_ids=temporal_contract_ids,
-            temporal_kinds=temporal_kinds,
-            time_domains=time_domains,
-            clock_authorities=clock_authorities,
-            backend_timing_disclosures=backend_timing_disclosures,
+            precondition_classes=_dedupe_field(contract_spec.get("preconditions", []), "precondition_class"),
+            effect_classes=_dedupe_field(contract_spec.get("effects", []), "effect_class"),
+            failure_classes=_dedupe(str(failure_class) for failure_class in contract_spec.get("failure_classes", [])),
+            backend_failure_mappings=_backend_failure_mappings(contract_spec),
+            interaction_classes=_dedupe_field(interactions, "interaction_class"),
+            shared_state_refs=_shared_state_refs(interactions),
+            temporal_contract_ids=_dedupe_field(temporal_contracts, "temporal_id"),
+            temporal_kinds=_dedupe_field(temporal_contracts, "temporal_kind"),
+            time_domains=_dedupe_field(temporal_contracts, "time_domain"),
+            clock_authorities=_dedupe_field(temporal_contracts, "clock_authority"),
+            backend_timing_disclosures=_backend_timing_disclosures(contract_spec),
             spec=contract_spec,
         )
     return action_contracts
@@ -178,26 +142,28 @@ def _compile_observation_boundaries(scenario: InstantiatedScenario) -> dict[str,
     return observation_boundaries
 
 
+_OUTCOME_SOURCE_LAYER_ADDRESS: dict[str, Callable[[str], str]] = {
+    OutcomeInterpretationSourceLayer.PARTICIPANT_ACTION_OUTCOME.value: _action_contract_address,
+    OutcomeInterpretationSourceLayer.OBJECTIVE_RESULT.value: _objective_address,
+    OutcomeInterpretationSourceLayer.WORKFLOW_RESULT.value: _workflow_address,
+    OutcomeInterpretationSourceLayer.EVALUATION_RESULT.value: _evaluation_address,
+}
+
+_OUTCOME_TARGET_LAYER_ADDRESS: dict[str, Callable[[str], str]] = {
+    OutcomeInterpretationTargetLayer.OBJECTIVE_RESULT.value: _objective_address,
+    OutcomeInterpretationTargetLayer.WORKFLOW_RESULT.value: _workflow_address,
+    OutcomeInterpretationTargetLayer.EVALUATION_RESULT.value: _evaluation_address,
+}
+
+
 def _outcome_source_ref_address(source_layer: str, ref: str) -> str:
-    if source_layer == OutcomeInterpretationSourceLayer.PARTICIPANT_ACTION_OUTCOME.value:
-        return _action_contract_address(ref)
-    if source_layer == OutcomeInterpretationSourceLayer.OBJECTIVE_RESULT.value:
-        return _objective_address(ref)
-    if source_layer == OutcomeInterpretationSourceLayer.WORKFLOW_RESULT.value:
-        return _workflow_address(ref)
-    if source_layer == OutcomeInterpretationSourceLayer.EVALUATION_RESULT.value:
-        return _evaluation_address(ref)
-    return ref
+    builder = _OUTCOME_SOURCE_LAYER_ADDRESS.get(source_layer)
+    return builder(ref) if builder is not None else ref
 
 
 def _outcome_target_ref_address(target_layer: str, ref: str) -> str:
-    if target_layer == OutcomeInterpretationTargetLayer.OBJECTIVE_RESULT.value:
-        return _objective_address(ref)
-    if target_layer == OutcomeInterpretationTargetLayer.WORKFLOW_RESULT.value:
-        return _workflow_address(ref)
-    if target_layer == OutcomeInterpretationTargetLayer.EVALUATION_RESULT.value:
-        return _evaluation_address(ref)
-    return ref
+    builder = _OUTCOME_TARGET_LAYER_ADDRESS.get(target_layer)
+    return builder(ref) if builder is not None else ref
 
 
 def _compile_outcome_interpretation_rules(
