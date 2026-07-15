@@ -129,6 +129,7 @@ adr-081-behavioral-relation-taxonomy-and-claim-discipline
 adr-082-authored-identity-domain-topology
 adr-083-participant-tool-decision-surface-and-exposure-semantics
 adr-084-scenario-variation-and-deterministic-trial-realization
+adr-085-participant-information-flow-and-control
 ```
 
 | ADR | Title | Status | Date |
@@ -218,3 +219,4 @@ adr-084-scenario-variation-and-deterministic-trial-realization
 | [082](adr-082-authored-identity-domain-topology.md) | Authored Identity-Domain Topology | accepted | 2026-07-13 |
 | [083](adr-083-participant-tool-decision-surface-and-exposure-semantics.md) | Participant Tool, Decision-Surface, and Exposure Semantics | proposed | 2026-07-14 |
 | [084](adr-084-scenario-variation-and-deterministic-trial-realization.md) | Scenario Variation And Deterministic Trial Realization | accepted | 2026-07-15 |
+| [085](adr-085-participant-information-flow-and-control.md) | Participant Information-Flow And Control | proposed | 2026-07-15 |
