@@ -101,6 +101,7 @@ REQUIRED_RELATIONS = {
 }
 
 NEW_REQUIREMENTS = {"SEM-230", "DSL-142", "API-423", "RUN-319", "ASR-535"}
+LINEAGE_ACCEPTANCE = "Update participant lineage documentation and any affected normative lineage records"
 
 
 def _load_program() -> dict[str, object]:
@@ -213,6 +214,7 @@ def test_requirement_dispositions_and_issue_program_are_complete_and_acyclic() -
         assert entry["bounded_outcome"], key
         assert entry["non_goals"], key
         assert entry["acceptance_criteria"], key
+        assert LINEAGE_ACCEPTANCE in entry["acceptance_criteria"], key
         assert entry["assurance_evidence"], key
         assert set(entry["dependencies"]) <= set(issues), key
 

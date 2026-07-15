@@ -157,7 +157,11 @@ Every child issue must:
 - avoid hidden payloads, secrets, policy bodies, backend objects, and unbounded
   diagnostic/error content;
 - use exact relation/projection/quantifier/evidence bindings for every claim;
-  and
+- update the participant section of `docs/explain/sdl/lineage.md` with the
+  issue's adopted intellectual lineage, exact ACES artifact mappings, delivery
+  status, evidence links, and explicit nonclaims. Update
+  `contracts/provenance/sdl-lineage-ledger-v1.json` and its source audit only
+  when normative derivation or compatibility claims change; and
 - remain in milestone `Participant Information-Flow & Behavioral Equivalence`.
 
 No child may report projected-history equality, passing fixtures, bounded
