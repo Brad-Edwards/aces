@@ -116,9 +116,10 @@ def test_interactive_access_channel_is_closed(channel: str) -> None:
         channel: {channel}
         account_ref: operator
     """
+    source = _scenario(access=access)
 
     with pytest.raises(SDLParseError, match="channel must be one of: ssh, rdp"):
-        parse_sdl(_scenario(access=access))
+        parse_sdl(source)
 
 
 @pytest.mark.parametrize("field", ["host", "port", "url", "credential", "password", "secret_ref"])
@@ -131,9 +132,10 @@ def test_interactive_access_rejects_locator_and_secret_fields(field: str) -> Non
         account_ref: operator
         {field}: forbidden
     """
+    source = _scenario(access=access)
 
     with pytest.raises(SDLParseError, match="Extra inputs are not permitted"):
-        parse_sdl(_scenario(access=access))
+        parse_sdl(source)
 
 
 @pytest.mark.parametrize(
@@ -178,8 +180,10 @@ def test_interactive_access_rejects_locator_and_secret_fields(field: str) -> Non
     ],
 )
 def test_interactive_access_reference_and_authority_invariants(access: str, message: str) -> None:
+    source = _scenario(access=access)
+
     with pytest.raises(SDLValidationError, match=message):
-        parse_sdl(_scenario(access=access))
+        parse_sdl(source)
 
 
 def test_duplicate_canonical_target_channel_is_rejected_per_participant() -> None:
@@ -188,9 +192,10 @@ def test_duplicate_canonical_target_channel_is_rejected_per_participant() -> Non
       first: {target_ref: workstation, channel: ssh, account_ref: operator}
       second: {target_ref: nodes.workstation, channel: ssh, account_ref: accounts.operator}
     """
+    source = _scenario(access=access)
 
     with pytest.raises(SDLValidationError, match="duplicates interactive_access target/channel.*workstation.*ssh"):
-        parse_sdl(_scenario(access=access))
+        parse_sdl(source)
 
 
 def test_same_target_channel_is_valid_for_different_participants() -> None:
