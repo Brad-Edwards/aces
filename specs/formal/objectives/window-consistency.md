@@ -71,7 +71,7 @@ shape before compiler/planner semantics run. Each resolved reference carries:
 - shared semantic source of truth: `implementations/python/packages/aces_sdl/semantics/objectives.py`
 - validator checks: `implementations/python/packages/aces_sdl/validator/`
 - compiled runtime references and refresh derivation:
-  - `implementations/python/packages/aces_processor/compiler.py`
+  - `implementations/python/packages/aces_processor/compiler/`
   - `implementations/python/packages/aces_processor/models/`
 - differential and property tests:
   - `implementations/python/tests/test_semantics_objectives.py`
