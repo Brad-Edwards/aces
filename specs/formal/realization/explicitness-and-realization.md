@@ -114,7 +114,7 @@ extend these rather than introduce parallel registries:
   `implementations/python/packages/aces_sdl/instantiate.py`
   (`instantiate_scenario`, `SDLInstantiationError`)
 - runtime compilation and planning:
-  `implementations/python/packages/aces_processor/compiler.py`,
+  `implementations/python/packages/aces_processor/compiler/`,
   `implementations/python/packages/aces_processor/semantics/planner.py`
 - runtime diagnostics, results, and snapshots:
   `implementations/python/packages/aces_processor/models/`
