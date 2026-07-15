@@ -388,6 +388,25 @@
         }
       }
     },
+    "participant-interactive-access-channels": {
+      "title": "Participant Interactive Access Channels",
+      "description": "Closed portable protocol classes for authored participant interactive access.",
+      "kind": "enumeration",
+      "governed_scopes": [
+        "agents.interactive_access.channel"
+      ],
+      "extension_policy": "closed",
+      "terms": {
+        "rdp": {
+          "title": "Remote Desktop Protocol",
+          "description": "Participant access through the Remote Desktop Protocol class without asserting a port or realized listener."
+        },
+        "ssh": {
+          "title": "Secure Shell",
+          "description": "Participant access through the Secure Shell protocol class without asserting a port or realized listener."
+        }
+      }
+    },
     "participant-tool-affordance-expectations": {
       "title": "Participant Tool Affordance Expectations",
       "description": "Governed tool and affordance expectations declared by participant implementations.",

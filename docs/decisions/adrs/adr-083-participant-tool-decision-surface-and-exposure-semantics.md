@@ -135,6 +135,14 @@ list cannot express availability, visibility, invocation authority, support,
 constraints, side effects, or realized exposure and is therefore not a valid
 portable semantic surface.
 
+An authored interactive-access carrier is narrower than a tool affordance.
+`agents.*.interactive_access` may state that one participant can be offered an
+SSH or RDP carrier to a VM, but that declaration does not define a shell or
+desktop action, make the carrier visible at a particular order point, prove
+apparatus support, admit an invocation, or show that access was realized. The
+carrier composes with action, availability, visibility, support, eligibility,
+admission, and evidence predicates; it does not collapse them.
+
 For each affordance, implementations must keep at least these predicates
 separate:
 
