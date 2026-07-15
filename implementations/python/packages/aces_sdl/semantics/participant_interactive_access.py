@@ -16,6 +16,17 @@ class ParticipantInteractiveAccessIssue:
     message: str
 
 
+@dataclass(frozen=True)
+class _ParticipantAccountContext:
+    """Participant-local inputs shared by account-binding checks."""
+
+    nodes: Mapping[str, object]
+    accounts: Mapping[str, object]
+    starting_accounts: frozenset[str]
+    unresolved_starting_ref: bool
+    is_unresolved: Callable[[object], bool]
+
+
 def _concrete_channel(value: object, *, is_unresolved: Callable[[object], bool]) -> str | None:
     if is_unresolved(value):
         return None
@@ -55,21 +66,18 @@ def _analyze_target(
     if is_unresolved(target_ref):
         return None, ()
     target_name = resolve_section_ref(target_ref, "nodes", nodes)
+    issue: ParticipantInteractiveAccessIssue | None = None
     if target_name is None:
-        return None, (
-            ParticipantInteractiveAccessIssue(
-                code="participant.interactive-access-target-unbound",
-                message=f"{label} target_ref '{target_ref}' does not reference a declared VM node",
-            ),
+        issue = ParticipantInteractiveAccessIssue(
+            code="participant.interactive-access-target-unbound",
+            message=f"{label} target_ref '{target_ref}' does not reference a declared VM node",
         )
-    if not is_vm_node(target_name):
-        return target_name, (
-            ParticipantInteractiveAccessIssue(
-                code="participant.interactive-access-target-not-vm",
-                message=f"{label} target_ref '{target_ref}' must reference a VM node",
-            ),
+    elif not is_vm_node(target_name):
+        issue = ParticipantInteractiveAccessIssue(
+            code="participant.interactive-access-target-not-vm",
+            message=f"{label} target_ref '{target_ref}' must reference a VM node",
         )
-    return target_name, ()
+    return target_name, () if issue is None else (issue,)
 
 
 def _resolved_account_node(
@@ -89,28 +97,30 @@ def _analyze_account(
     label: str,
     access: object,
     target_name: str | None,
-    nodes: Mapping[str, object],
-    accounts: Mapping[str, object],
-    starting_accounts: set[str],
-    unresolved_starting_ref: bool,
-    is_unresolved: Callable[[object], bool],
+    context: _ParticipantAccountContext,
 ) -> tuple[ParticipantInteractiveAccessIssue, ...]:
     """Evaluate optional account resolution and participant authority."""
 
+    issues: list[ParticipantInteractiveAccessIssue] = []
     account_ref = getattr(access, "account_ref", None)
-    if account_ref is None or is_unresolved(account_ref):
-        return ()
-    account_name = resolve_section_ref(account_ref, "accounts", accounts)
+    if account_ref is None or context.is_unresolved(account_ref):
+        return tuple(issues)
+
+    account_name = resolve_section_ref(account_ref, "accounts", context.accounts)
     if account_name is None:
-        return (
+        issues.append(
             ParticipantInteractiveAccessIssue(
                 code="participant.interactive-access-account-unbound",
                 message=f"{label} account_ref '{account_ref}' does not reference a declared account",
-            ),
+            )
         )
+        return tuple(issues)
 
-    issues: list[ParticipantInteractiveAccessIssue] = []
-    account_node = _resolved_account_node(accounts[account_name], nodes=nodes, is_unresolved=is_unresolved)
+    account_node = _resolved_account_node(
+        context.accounts[account_name],
+        nodes=context.nodes,
+        is_unresolved=context.is_unresolved,
+    )
     if target_name is not None and account_node is not None and account_node != target_name:
         issues.append(
             ParticipantInteractiveAccessIssue(
@@ -120,7 +130,7 @@ def _analyze_account(
                 ),
             )
         )
-    if account_name not in starting_accounts and not unresolved_starting_ref:
+    if account_name not in context.starting_accounts and not context.unresolved_starting_ref:
         issues.append(
             ParticipantInteractiveAccessIssue(
                 code="participant.interactive-access-account-not-starting",
@@ -175,6 +185,13 @@ def analyze_participant_interactive_access(
             accounts=accounts,
             is_unresolved=is_unresolved,
         )
+        account_context = _ParticipantAccountContext(
+            nodes=nodes,
+            accounts=accounts,
+            starting_accounts=frozenset(starting_accounts),
+            unresolved_starting_ref=unresolved_starting_ref,
+            is_unresolved=is_unresolved,
+        )
         for access_id, access in getattr(agent, "interactive_access", {}).items():
             label = f"Agent '{participant_name}' interactive_access '{access_id}'"
             target_name, target_issues = _analyze_target(
@@ -190,11 +207,7 @@ def analyze_participant_interactive_access(
                     label=label,
                     access=access,
                     target_name=target_name,
-                    nodes=nodes,
-                    accounts=accounts,
-                    starting_accounts=starting_accounts,
-                    unresolved_starting_ref=unresolved_starting_ref,
-                    is_unresolved=is_unresolved,
+                    context=account_context,
                 )
             )
             channel = _concrete_channel(getattr(access, "channel", None), is_unresolved=is_unresolved)
