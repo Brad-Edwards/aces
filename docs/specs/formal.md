@@ -24,6 +24,10 @@ formal artifacts are warranted.
   apparatus-context, study/collection, capture specification, raw evidence,
   derived measure, backend observation capability, and archival provenance
   contracts
+- **Scenario Variation And Trial Realization**
+  (`specs/formal/scenario-variation-trial-realization/`) -- Scenario-family
+  identity, bounded selection, schedule-independent random streams, admitted
+  plans, explicit instantiation, late binding, and archival linkage
 - **Realization** (`specs/formal/realization/`) -- Exact/constrained/open
   realization boundaries, backend realization support, and proposed
   realization-envelope membership, subsumption, witness, and negative

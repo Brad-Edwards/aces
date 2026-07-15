@@ -315,7 +315,11 @@ adrs:
         summary: "Recorded SEM-225 run-level augmentation disclosure implementation coverage."
   - id: ADR-068
     path: docs/decisions/adrs/adr-068-experiment-trials-replication-and-replay-claims.md
-    pin: 2cd46b67fb86a8d5d5c089e2b2f492a94e6141470706f33a2bb14d7268c49d02
+    pin: 12e6d644f7a90d50956964d8f0608737f9b4d8c7627819419a69974184c2781f
+    amendments:
+      - date: 2026-07-15
+        ref: "#652"
+        summary: "Clarified that an admitted plan entry preallocates the existing archival run identity and preserves experiment-owned selection without becoming a second trial/run record."
   - id: ADR-069
     path: docs/decisions/adrs/adr-069-cage-2-replication-architecture.md
     pin: 305334e5558fb88d1f84317209f0e64d182714ba8e99cdeb5f6781bf3ee384f5
@@ -323,6 +327,13 @@ adrs:
       - date: 2026-07-08
         ref: "#675"
         summary: "ADR-074 adds experiment-authoring-input-v1, giving REP-003 a pre-run home for execution-control facts; it complements the SDL scenario authoring path and adds no CAGE-specific schema."
+  - id: ADR-070
+    path: docs/decisions/adrs/adr-070-realization-envelope-semantics.md
+    pin: e7480c4849234177b9e11594e56c3f2d9a82c2536c8c9a1cee7ff84d027f35bb
+    amendments:
+      - date: 2026-07-15
+        ref: "#652"
+        summary: "Accepted after envelope contract, relation, carriage, posture, and honesty conformance landed; clarified that envelopes govern realizability, not SCE-002 experiment selection, and witness seeds are not experiment randomness."
   - id: ADR-071
     path: docs/decisions/adrs/adr-071-reusable-asset-trust-and-integrity-policy.md
     pin: d0f0d15945a91e97870d794986d7c7453cea7fade5c74c673d271ceaf05a6b7e
@@ -338,7 +349,11 @@ adrs:
         summary: "Per ADR-079, corrected executable conditions from observable facts to probe realizations and moved objective truth to typed propositions/assertions."
   - id: ADR-074
     path: docs/decisions/adrs/adr-074-experiment-authoring-input-contract-boundary.md
-    pin: 74dd29e3e5f3a2b7bdf836bd40908c0840c51f46a1a89efbb191e6ce7f620ce5
+    pin: 415566d82cc3d3ac43687016532b06ef62de85eec7ab37a61d7be9f87f9c53ef
+    amendments:
+      - date: 2026-07-15
+        ref: "#652"
+        summary: "Clarified that experiment authoring input is consumed by a separate deterministic trial-compilation/admission boundary and that descriptive stochastic fields are not executable profiles."
   - id: ADR-076
     path: docs/decisions/adrs/adr-076-portable-sdl-identifiers-and-canonical-addresses.md
     pin: cd28329002c1befb1920f0037c07517adbe3811d15e4f559455d05b893c69203
@@ -364,3 +379,6 @@ adrs:
   - id: ADR-082
     path: docs/decisions/adrs/adr-082-authored-identity-domain-topology.md
     pin: 0d5d4997bb2e3abf2ddf2bf9d6d345429a99deef5f343c6ca1aba4b8ebc3a95c
+  - id: ADR-084
+    path: docs/decisions/adrs/adr-084-scenario-variation-and-deterministic-trial-realization.md
+    pin: e4be391affc09e1f0db3c5004fb2dfa0c4138c5c2f98086b3a6b8d341b4fd9d8

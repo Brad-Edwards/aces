@@ -28,6 +28,7 @@ adr_refs:
   - ADR-018
   - ADR-078
   - ADR-081
+  - ADR-084
 
 # Registry of classified formal-spec subsystems. Every immediate subdirectory of
 # specs/formal/ carrying a README.md must appear here (the checker fails on any
@@ -47,6 +48,9 @@ subsystems:
     fm_level: FM2
   - id: experiment-core
     path: specs/formal/experiment-core
+    fm_level: FM2
+  - id: scenario-variation-trial-realization
+    path: specs/formal/scenario-variation-trial-realization
     fm_level: FM2
   - id: runtime-contracts
     path: specs/formal/runtime-contracts
@@ -150,6 +154,50 @@ entries:
           Contract validation in test_runtime_contracts.py is example-based; no
           property-based or differential coverage of the EXP-701-705 contracts
           yet; tracked for delivery.
+
+  - subsystem: scenario-variation-trial-realization
+    # Design coverage only (SCE-002): issue #652 fixes the semantic boundary.
+    # Contract, compiler, runtime, and schedule-permutation evidence belongs to
+    # the native dependency chain rather than this design-only issue.
+    delivered_artifacts:
+      - kind: invariant_list
+        path: specs/formal/scenario-variation-trial-realization/README.md
+    waived_artifacts:
+      - kind: unit_tests
+        date: 2026-07-15
+        tracking:
+          - "#786"
+          - "#787"
+          - "#789"
+          - "#790"
+          - "#791"
+        rationale: >-
+          Issue #652 publishes design coverage only. Family validation,
+          selection, compilation/admission, instantiation/provenance, and fact
+          binding unit tests are owned by the sequenced implementation issues.
+      - kind: typed_ir_or_contract_coverage
+        date: 2026-07-15
+        tracking:
+          - "#274"
+          - "#786"
+          - "#787"
+          - "#788"
+          - "#791"
+        rationale: >-
+          No contract or typed carrier is published by issue #652. Random
+          stream profiles, variation points, selection policies, admitted
+          plans, and fact DTOs are owned by their contract-first follow-ons.
+      - kind: property_based_or_differential_tests
+        date: 2026-07-15
+        tracking:
+          - "#274"
+          - "#789"
+          - "#790"
+          - "#791"
+        rationale: >-
+          Schedule-permutation, stream non-interference, serialized
+          instantiation-equivalence, backend refusal, and fact
+          non-retroactivity properties require the follow-on implementations.
 
   - subsystem: runtime-contracts
     delivered_artifacts:

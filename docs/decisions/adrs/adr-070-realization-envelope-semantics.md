@@ -2,7 +2,7 @@
 
 ## Status
 
-proposed
+accepted
 
 ## Date
 
@@ -19,6 +19,23 @@ membership/subsumption helper, backend-manifest schema evolution, witness-based
 conformance probes, and replacement of the #663 `reference_scenario` bridge are
 downstream implementation work tracked by the blocked subsumption/conformance
 issues, including #668.
+
+## Acceptance Basis And Relationship To Scenario Variation
+
+Issue #652 accepts this decision after the envelope contract and relation
+(#668), configuration-bound carriage (#100), scoped posture semantics (#539),
+and realization-honesty conformance (#777) landed. Acceptance also closes an
+authority ambiguity exposed by the SCE-002 design:
+
+- a realization envelope governs which already-authored or already-selected
+  scenario instances a backend may realize;
+- an SCE-002 scenario-family declaration governs which variations are valid;
+  and
+- an experiment policy governs which valid variations are selected.
+
+These are distinct set and selection planes. Envelope witness generation is a
+conformance mechanism, not experiment allocation or randomization, and its
+`WitnessPolicy.seed` is not an experiment seed or random-stream input.
 
 ## Context
 
@@ -56,8 +73,14 @@ Adopt a **realization envelope** as a versioned SDL semantic expression that
 describes a set of scenario instances. The same expression model is used in both
 directions:
 
-- authored SDL uses it to describe acceptable variation in a scenario family;
+- authored SDL or apparatus intent uses it to describe acceptable realization
+  bounds for already-authored scenario instances; and
 - backend declarations use it to describe realizability.
+
+An envelope does not declare SCE-002 variation points, factors, allocation,
+sampling, or stochastic controls. A trial must first be selected from its
+scenario-family domain; only then may the envelope relation prove whether the
+selected instance or requested realization set fits the backend offer.
 
 The normative formal boundary is
 `specs/formal/realization/envelope-semantics.md`.
@@ -100,6 +123,9 @@ contract:
 
 Witness generation is not evidence of subsumption by itself. It is only the
 concrete instance conformance can execute after the set relation has passed.
+Its seed exists solely to make conformance witness choice repeatable within the
+accepted envelope profile. It never advances, derives, or replaces an
+experiment random stream.
 
 ### 3. The admitted fragment is intentionally small
 
@@ -238,3 +264,9 @@ within the backend's realizable set.
 - If manifest carriage embeds large envelopes directly, manifests could become
   noisy and hard to review. The reference-by-contract-id/digest mode exists to
   keep large envelopes governed as separate published artifacts.
+
+## Amendments
+
+| Date | Commit/PR | Summary |
+|------|-----------|---------|
+| 2026-07-15 | #652 | Accepted after envelope contract, relation, carriage, posture, and honesty conformance landed; clarified that envelopes govern realizability, not SCE-002 experiment selection, and witness seeds are not experiment randomness. |
