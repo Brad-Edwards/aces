@@ -286,7 +286,7 @@ Terminology that must not collapse:
 
 ## Assessment nonclaims
 
-This artifact does not implement the program, accept ADR-084, transition any
+This artifact does not implement the program, accept ADR-085, transition any
 new requirement ACTIVE, prove any behavioral or information-flow relation,
 select a gateway, or certify a backend. It records the evidence and gaps from
 which the adoption decision and implementation program follow.

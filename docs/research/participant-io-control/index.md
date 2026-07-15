@@ -6,7 +6,7 @@ implementation or proof claim.
 
 - [Architecture preflight](../../decisions/issue-794-participant-io-control-preflight.md)
 - [Current-state assessment](current-state-assessment.md)
-- [ADR-084](../../decisions/adrs/adr-084-participant-information-flow-and-control.md)
+- [ADR-085](../../decisions/adrs/adr-085-participant-information-flow-and-control.md)
 - [Detailed adoption design](adoption-design.md)
 - [Requirement disposition](requirement-disposition.md)
 - [Ordered implementation program](adoption-program.md)

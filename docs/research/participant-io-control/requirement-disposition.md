@@ -99,7 +99,7 @@ from being promoted to universal noninterference or bisimulation.
 
 No requirement is replaced or deprecated. The gap came from missing
 composition and bounded sub-authorities, not conflicting ownership. Accepted
-ADRs are not rewritten. ADR-084 composes them and future accepted-content
+ADRs are not rewritten. ADR-085 composes them and future accepted-content
 changes follow ADR-059.
 
 ## Governance nonclaims

@@ -128,7 +128,8 @@ adr-080-revision-pinned-sdl-lineage-and-provenance-ledger
 adr-081-behavioral-relation-taxonomy-and-claim-discipline
 adr-082-authored-identity-domain-topology
 adr-083-participant-tool-decision-surface-and-exposure-semantics
-adr-084-participant-information-flow-and-control
+adr-084-scenario-variation-and-deterministic-trial-realization
+adr-085-participant-information-flow-and-control
 ```
 
 | ADR | Title | Status | Date |
@@ -203,7 +204,7 @@ adr-084-participant-information-flow-and-control
 | [067](adr-067-participant-behavior-model.md) | Participant Behavior Model | proposed | 2026-06-23 |
 | [068](adr-068-experiment-trials-replication-and-replay-claims.md) | Experiment Trials, Replication, and Replay Claims | accepted | 2026-06-25 |
 | [069](adr-069-cage-2-replication-architecture.md) | CAGE-2 Replication Architecture | accepted | 2026-07-01 |
-| [070](adr-070-realization-envelope-semantics.md) | Realization Envelope Semantics | proposed | 2026-07-04 |
+| [070](adr-070-realization-envelope-semantics.md) | Realization Envelope Semantics | accepted | 2026-07-04 |
 | [071](adr-071-reusable-asset-trust-and-integrity-policy.md) | Reusable Asset Trust and Integrity Policy | accepted | 2026-07-05 |
 | [072](adr-072-validation-and-admission-profiles.md) | Validation and Admission Profiles | proposed | 2026-07-05 |
 | [073](adr-073-scoring-reward-language-scope.md) | Scoring and Reward Language Scope in the SDL | accepted | 2026-07-05 |
@@ -217,4 +218,5 @@ adr-084-participant-information-flow-and-control
 | [081](adr-081-behavioral-relation-taxonomy-and-claim-discipline.md) | Behavioral-Relation Taxonomy And Claim Discipline | accepted | 2026-07-13 |
 | [082](adr-082-authored-identity-domain-topology.md) | Authored Identity-Domain Topology | accepted | 2026-07-13 |
 | [083](adr-083-participant-tool-decision-surface-and-exposure-semantics.md) | Participant Tool, Decision-Surface, and Exposure Semantics | proposed | 2026-07-14 |
-| [084](adr-084-participant-information-flow-and-control.md) | Participant Information-Flow And Control | proposed | 2026-07-15 |
+| [084](adr-084-scenario-variation-and-deterministic-trial-realization.md) | Scenario Variation And Deterministic Trial Realization | accepted | 2026-07-15 |
+| [085](adr-085-participant-information-flow-and-control.md) | Participant Information-Flow And Control | proposed | 2026-07-15 |

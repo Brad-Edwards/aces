@@ -5,7 +5,7 @@
   "milestone": "Participant Information-Flow & Behavioral Equivalence",
   "deliverables": [
     "docs/decisions/issue-794-participant-io-control-preflight.md",
-    "docs/decisions/adrs/adr-084-participant-information-flow-and-control.md",
+    "docs/decisions/adrs/adr-085-participant-information-flow-and-control.md",
     "docs/research/participant-io-control/current-state-assessment.md",
     "docs/research/participant-io-control/adoption-design.md",
     "docs/research/participant-io-control/requirement-disposition.md",

@@ -11,7 +11,7 @@ PROGRAM_PATH = REPO_ROOT / "docs/research/participant-io-control/adoption-progra
 MILESTONE = "Participant Information-Flow & Behavioral Equivalence"
 
 REQUIRED_DELIVERABLES = {
-    "docs/decisions/adrs/adr-084-participant-information-flow-and-control.md",
+    "docs/decisions/adrs/adr-085-participant-information-flow-and-control.md",
     "docs/research/participant-io-control/current-state-assessment.md",
     "docs/research/participant-io-control/adoption-design.md",
     "docs/research/participant-io-control/requirement-disposition.md",

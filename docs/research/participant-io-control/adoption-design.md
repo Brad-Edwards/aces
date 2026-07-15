@@ -1,7 +1,7 @@
 # Participant Information-Flow And Control Adoption Design
 
 This is the detailed design behind
-[ADR-084](../../decisions/adrs/adr-084-participant-information-flow-and-control.md).
+[ADR-085](../../decisions/adrs/adr-085-participant-information-flow-and-control.md).
 It is normative only through accepted ADRs, future requirement implementation,
 and published contract/formal authorities. Issue #794 itself adds no runtime,
 schema, backend, conformance, or proof implementation.

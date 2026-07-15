@@ -68,6 +68,20 @@ The existing task/run validator remains the semantic gate for task identity,
 scenario snapshot compatibility, apparatus constraints, declared metrics, and
 evidence requirements.
 
+### 2a. An admitted plan preallocates the archival run identity
+
+ADR-084 introduces an admitted trial plan as immutable pre-execution intent.
+Each plan entry deterministically preallocates the `run_id` that
+`experiment-run-v1` uses if execution starts. The plan entry is not a second
+trial or run record: it has no actual timestamps, observed apparatus, evidence,
+results, deviations, or execution status.
+
+An idempotent transport retry before execution reuses the preallocated id. A
+genuine re-execution uses a new explicit replicate/execution coordinate, is
+admitted again, and receives a distinct run id. Plan ids, scheduler job ids,
+operation ids, runtime snapshot ids, and backend-native ids remain distinct
+from run identity.
+
 ### 3. Replication and controlled variation are study allocation semantics
 
 Replication, cohort, benchmark, comparison, and controlled-variation claims
@@ -88,6 +102,12 @@ apparatus context, selected manifests, capability declarations, measurement
 channels, task or scenario snapshot identity, non-opaque parameters, and
 stochastic controls. It must not depend on free-form tags, opaque `other`
 parameters, runtime metadata, audit blobs, or backend-private logs.
+
+ADR-084 further clarifies the pre-run boundary: typed experiment selection and
+allocation policies choose members of an SDL scenario family and bind them to
+logical trial coordinates. The admitted plan preserves those selections and
+factor assignments. SDL family validity, experiment selection, backend
+realizability, and scheduler placement remain separate authorities.
 
 ### 4. Replay support is claim support, not replay execution
 
@@ -127,6 +147,8 @@ evidence content.
 ## Required Boundaries
 
 - Trial identity is run identity.
+- A plan entry may preallocate that run identity, but is not itself an archival
+  run or a second trial identity.
 - Repetition is a set of distinct run records, not a mutation of one run.
 - Replication and controlled variation are study allocation facts, not tags.
 - Replay support is the preserved claim-support graph, not guaranteed
@@ -148,6 +170,11 @@ Issue #105 is satisfied by this ADR, the experiment-core formal specification,
 the preflight guardrail notes for EXP-706 and EXP-712, and the
 EXP-706/EXP-712 clause matrix in
 `docs/research/experiment-core/traceability-matrix-exp-706-712.md`.
+
+ADR-084 and
+`specs/formal/scenario-variation-trial-realization/README.md` constrain future
+producers that preallocate run ids and preserve selection/plan lineage; they do
+not replace the existing executable run/study validators.
 
 Existing executable gates already enforce the load-bearing clauses:
 
@@ -224,3 +251,9 @@ recalculation require separate producer and control-plane work.
 - Study authors may try to infer replication from repeated operations without
   publishing run records and study allocation. Validators and review guidance
   must continue to reject those shortcuts.
+
+## Amendments
+
+| Date | Commit/PR | Summary |
+|------|-----------|---------|
+| 2026-07-15 | #652 | Clarified that an admitted plan entry preallocates the existing archival run identity and preserves experiment-owned selection without becoming a second trial/run record. |

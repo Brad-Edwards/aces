@@ -1,0 +1,85 @@
+{
+  "snapshot_id": "aces-dsl-language-evaluation-not-started-v1",
+  "protocol_revision": "1.0.0",
+  "captured_at": "2026-07-15",
+  "execution_status": "not_started",
+  "aces_revision": "38ba081714b12a4dcc7a5c527e2f1250d80a4d1b",
+  "public_surface": [
+    {
+      "surface_id": "sdl-source-profile",
+      "kind": "documentation",
+      "artifact": "docs/explain/sdl/parser.md",
+      "version": "ACES revision 38ba081714b12a4dcc7a5c527e2f1250d80a4d1b",
+      "parameters": "sdl-yaml/v1; explicit strict or migration mode per task"
+    },
+    {
+      "surface_id": "sdl-references",
+      "kind": "documentation",
+      "artifact": "specs/sdl/references.md",
+      "version": "ACES revision 38ba081714b12a4dcc7a5c527e2f1250d80a4d1b",
+      "parameters": "fail-closed resolution and ambiguity rules"
+    },
+    {
+      "surface_id": "sdl-diagnostics",
+      "kind": "documentation",
+      "artifact": "specs/sdl/diagnostics.md",
+      "version": "ACES revision 38ba081714b12a4dcc7a5c527e2f1250d80a4d1b",
+      "parameters": "public diagnostic codes, stages, severities, and locations"
+    },
+    {
+      "surface_id": "participant-semantics",
+      "kind": "documentation",
+      "artifact": "specs/formal/participant-semantics/README.md",
+      "version": "ACES revision 38ba081714b12a4dcc7a5c527e2f1250d80a4d1b",
+      "parameters": "participant information-boundary and outcome obligations"
+    },
+    {
+      "surface_id": "parser-validator",
+      "kind": "library",
+      "artifact": "implementations/python/packages/aces_sdl",
+      "version": "ACES revision 38ba081714b12a4dcc7a5c527e2f1250d80a4d1b",
+      "parameters": "production parse_sdl()/parse_sdl_file(), SDLParserLimits, and SemanticValidator; no evaluation-only loader"
+    },
+    {
+      "surface_id": "canonical-authored-sdl",
+      "kind": "library",
+      "artifact": "implementations/python/packages/aces_sdl",
+      "version": "ACES revision 38ba081714b12a4dcc7a5c527e2f1250d80a4d1b",
+      "parameters": "canonical_sdl_bytes()/canonical_sdl_digest() after expansion and validation"
+    },
+    {
+      "surface_id": "instantiation-admission",
+      "kind": "library",
+      "artifact": "implementations/python/packages/aces_sdl",
+      "version": "ACES revision 38ba081714b12a4dcc7a5c527e2f1250d80a4d1b",
+      "parameters": "instantiate_scenario(), admit_instantiated_scenario(), and canonical_instantiated_sdl_digest()"
+    },
+    {
+      "surface_id": "compiler-planner",
+      "kind": "library",
+      "artifact": "implementations/python/packages",
+      "version": "ACES revision 38ba081714b12a4dcc7a5c527e2f1250d80a4d1b",
+      "parameters": "compile_runtime_model(), the reference processor, and plan(); stub mode explicitly labeled"
+    },
+    {
+      "surface_id": "public-authoring-tools",
+      "kind": "tool",
+      "artifact": "implementations/python/packages/aces_cli",
+      "version": "ACES revision 38ba081714b12a4dcc7a5c527e2f1250d80a4d1b",
+      "parameters": "selected CLI or MCP adapter and mode recorded per attempt; adapter input remains bounded"
+    }
+  ],
+  "ethics_review": {
+    "status": "pending",
+    "protocol_identifier": null,
+    "approved_population": null,
+    "approved_data_boundary": null
+  },
+  "subjects": [],
+  "attempts": [],
+  "observations": [],
+  "reviews": [],
+  "deviations": [],
+  "withdrawals": [],
+  "disagreements": []
+}
