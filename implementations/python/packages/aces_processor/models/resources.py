@@ -146,6 +146,16 @@ class AccountPlacement(ResolvedResource):
 
 
 @dataclass(frozen=True)
+class GeneratedArtifactRuntime(ResolvedResource):
+    """Compiled generated-artifact desired state."""
+
+
+@dataclass(frozen=True)
+class PersistentVolumeRuntime(ResolvedResource):
+    """Compiled persistent-volume desired state."""
+
+
+@dataclass(frozen=True)
 class ParticipantActionContractRuntime(ResolvedResource):
     """Compiled participant action contract."""
 

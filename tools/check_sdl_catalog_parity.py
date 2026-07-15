@@ -93,6 +93,7 @@ _CONTENT_VALIDATOR = (
 _ACCOUNT_VALIDATOR = (
     "[account validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py)"
 )
+_STATEFUL_MODEL = "[scenario model](../../implementations/python/packages/aces_sdl/scenario.py)"
 _RELATIONSHIP_VALIDATOR = (
     "[relationship validator](../../implementations/python/packages/aces_sdl/validator/_relationships.py)"
 )
@@ -274,6 +275,42 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         _SEMANTIC,
         "fatal unless target is a vm node",
         _CONTENT_VALIDATOR,
+    ),
+    "generated_artifacts.*.consumers[].node": (
+        "nodes",
+        "structural model validation",
+        _DANGLING,
+        _STATEFUL_MODEL,
+    ),
+    "generated_artifacts.*.ordering_dependencies[]": (
+        "generated_artifacts,persistent_volumes",
+        "structural model and planner graph validation",
+        "fatal dangling, ambiguous, or cyclic",
+        _STATEFUL_MODEL,
+    ),
+    "generated_artifacts.*.refresh_dependencies[]": (
+        "generated_artifacts,persistent_volumes",
+        "structural model validation",
+        _DANGLING,
+        _STATEFUL_MODEL,
+    ),
+    "persistent_volumes.*.consumers[].node": (
+        "nodes",
+        "structural model validation",
+        _DANGLING,
+        _STATEFUL_MODEL,
+    ),
+    "persistent_volumes.*.ordering_dependencies[]": (
+        "generated_artifacts,persistent_volumes",
+        "structural model and planner graph validation",
+        "fatal dangling, ambiguous, or cyclic",
+        _STATEFUL_MODEL,
+    ),
+    "persistent_volumes.*.refresh_dependencies[]": (
+        "generated_artifacts,persistent_volumes",
+        "structural model validation",
+        _DANGLING,
+        _STATEFUL_MODEL,
     ),
     "accounts.*.domain_ref": (
         "identity_domains",
@@ -1533,7 +1570,13 @@ def evaluate_sdl_catalog_parity(repo_root: Path) -> list[PolicyFailure]:
     sections_text = (repo_root / SECTIONS_PATH).read_text(encoding="utf-8")
     top_failures, top_rows = _check_top_level(sections_text, schema)
     failures = list(top_failures)
-    failures.extend(_check_references((repo_root / REFERENCES_PATH).read_text(encoding="utf-8"), top_rows, repo_root))
+    failures.extend(
+        _check_references(
+            (repo_root / REFERENCES_PATH).read_text(encoding="utf-8"),
+            top_rows,
+            repo_root,
+        )
+    )
     failures.extend(_check_runtime((repo_root / RUNTIME_PATH).read_text(encoding="utf-8")))
     failures.extend(_check_phase_members((repo_root / PHASES_PATH).read_text(encoding="utf-8")))
     failures.extend(_check_diagnostic_normative_layer((repo_root / DIAGNOSTICS_PATH).read_text(encoding="utf-8")))

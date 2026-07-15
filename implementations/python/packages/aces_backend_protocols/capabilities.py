@@ -97,6 +97,8 @@ class ProvisionerCapabilities:
     max_total_nodes: int | None = None
     supports_acls: bool = False
     supports_accounts: bool = False
+    supports_generated_artifacts: bool = False
+    supports_persistent_volumes: bool = False
     constraints: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:

@@ -72,6 +72,30 @@ infrastructure:
     links: [security-net]
     dependencies: [aptl-tempo]
 
+generated_artifacts:
+  wazuh-indexer-certs:
+    generator: certificate_bundle
+    lifecycle: reuse_valid
+    provenance: config/certs.yml
+    outputs:
+      - {name: root-ca, path: root-ca.pem, sensitivity: public}
+      - {name: indexer-key, path: wazuh.indexer-key.pem, sensitivity: secret}
+      - {name: indexer-cert, path: wazuh.indexer.pem, sensitivity: public}
+    consumers:
+      - node: wazuh-indexer
+        mount_destination: /usr/share/wazuh-indexer/certs
+        access_mode: read_only
+
+persistent_volumes:
+  wazuh-indexer-data:
+    lifecycle: retain
+    access_mode: read_write_once
+    consumers:
+      - node: wazuh-indexer
+        mount_destination: /var/lib/wazuh-indexer
+        access_mode: read_write
+    ordering_dependencies: [generated_artifacts.wazuh-indexer-certs]
+
 features:
   techvault-defensive-stack:
     type: service

@@ -245,6 +245,20 @@ def _namespace_payload(
     for content in namespaced.get("content", {}).values():
         if isinstance(content, dict) and content.get("target"):
             content["target"] = _maybe_rename(str(content["target"]), symbols["nodes"])
+    for section_name in ("generated_artifacts", "persistent_volumes"):
+        for resource in namespaced.get(section_name, {}).values():
+            if not isinstance(resource, dict):
+                continue
+            for consumer in resource.get("consumers", []):
+                if isinstance(consumer, dict) and consumer.get("node"):
+                    consumer["node"] = _maybe_rename(str(consumer["node"]), symbols["nodes"])
+            for dependency_field in (
+                "ordering_dependencies",
+                "refresh_dependencies",
+            ):
+                resource[dependency_field] = [
+                    _maybe_rename(reference, symbols["named"]) for reference in resource.get(dependency_field, [])
+                ]
     for account in namespaced.get("accounts", {}).values():
         if isinstance(account, dict):
             if account.get("node"):

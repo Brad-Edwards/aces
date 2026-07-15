@@ -8,8 +8,7 @@ relationships, workflows, variables). Per ADR-073 the SDL no
 longer carries the OCR scoring pipeline; graded scoring/reward
 live in the experiment/evaluator plane (ADR-055/064/069).
 
-Delivery-level concerns (Docker, Terraform, cloud APIs) are
-outside the SDL.
+Delivery-level concerns (Docker, Terraform, cloud APIs) are outside the SDL.
 """
 
 from collections.abc import Mapping
@@ -26,6 +25,7 @@ from ._identifiers import (
     require_portable_identifier,
 )
 from ._mapping_scopes import HASHMAP_SECTIONS
+from ._stateful_resource_references import validate_stateful_resource_references
 from .accounts import Account
 from .agents import Agent
 from .conditions import Condition
@@ -55,6 +55,7 @@ from .propositions import Assertion, Proposition
 from .realization_designation import RealizationDesignation
 from .relationships import Relationship
 from .runtime_forwarding_agent import RuntimeForwardingAgent
+from .stateful_resources import GeneratedArtifact, PersistentVolume
 from .variables import Variable
 from .vulnerabilities import Vulnerability
 
@@ -272,6 +273,8 @@ class ScenarioContent(SDLModel):
 
     # --- Extended sections ---
     content: dict[str, Content] = Field(default_factory=dict)
+    generated_artifacts: dict[str, GeneratedArtifact] = Field(default_factory=dict)
+    persistent_volumes: dict[str, PersistentVolume] = Field(default_factory=dict)
     accounts: dict[str, Account] = Field(default_factory=dict)
     identity_domains: dict[str, IdentityDomain] = Field(default_factory=dict)
     relationships: dict[str, Relationship] = Field(default_factory=dict)
@@ -303,6 +306,15 @@ class ScenarioContent(SDLModel):
         )
         _validate_runtime_forwarding_agent_identifiers(value)
         return value
+
+    @model_validator(mode="after")
+    def _validate_stateful_resource_references(self) -> "ScenarioContent":
+        validate_stateful_resource_references(
+            nodes=self.nodes,
+            generated_artifacts=self.generated_artifacts,
+            persistent_volumes=self.persistent_volumes,
+        )
+        return self
 
     @property
     def advisories(self) -> list[str]:

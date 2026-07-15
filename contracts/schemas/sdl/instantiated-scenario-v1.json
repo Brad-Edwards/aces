@@ -795,6 +795,14 @@
       "title": "Condition",
       "type": "object"
     },
+    "ConsumerAccessMode": {
+      "enum": [
+        "read_only",
+        "read_write"
+      ],
+      "title": "ConsumerAccessMode",
+      "type": "string"
+    },
     "ContainerImageBuildProvenance": {
       "additionalProperties": false,
       "description": "Observed build/provenance facts for a custom container image artifact.",
@@ -3469,6 +3477,127 @@
       ],
       "title": "FeatureType",
       "type": "string"
+    },
+    "GeneratedArtifact": {
+      "additionalProperties": false,
+      "description": "Desired generated configuration or certificate/key material.",
+      "properties": {
+        "consumers": {
+          "items": {
+            "$ref": "#/$defs/StatefulResourceConsumer"
+          },
+          "minItems": 1,
+          "title": "Consumers",
+          "type": "array"
+        },
+        "generator": {
+          "$ref": "#/$defs/GeneratedArtifactKind"
+        },
+        "lifecycle": {
+          "$ref": "#/$defs/GeneratedArtifactLifecycle"
+        },
+        "ordering_dependencies": {
+          "items": {
+            "not": {
+              "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
+            },
+            "type": "string"
+          },
+          "title": "Ordering Dependencies",
+          "type": "array"
+        },
+        "outputs": {
+          "items": {
+            "$ref": "#/$defs/GeneratedArtifactOutput"
+          },
+          "minItems": 1,
+          "title": "Outputs",
+          "type": "array"
+        },
+        "provenance": {
+          "minLength": 1,
+          "not": {
+            "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Provenance",
+          "type": "string"
+        },
+        "refresh_dependencies": {
+          "items": {
+            "not": {
+              "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
+            },
+            "type": "string"
+          },
+          "title": "Refresh Dependencies",
+          "type": "array"
+        }
+      },
+      "required": [
+        "generator",
+        "lifecycle",
+        "provenance",
+        "outputs",
+        "consumers"
+      ],
+      "title": "GeneratedArtifact",
+      "type": "object"
+    },
+    "GeneratedArtifactKind": {
+      "enum": [
+        "certificate_bundle",
+        "rendered_config"
+      ],
+      "title": "GeneratedArtifactKind",
+      "type": "string"
+    },
+    "GeneratedArtifactLifecycle": {
+      "enum": [
+        "regenerate_on_change",
+        "reuse_valid"
+      ],
+      "title": "GeneratedArtifactLifecycle",
+      "type": "string"
+    },
+    "GeneratedArtifactOutput": {
+      "additionalProperties": false,
+      "description": "One complete output declared by an artifact generator.",
+      "properties": {
+        "name": {
+          "allOf": [
+            {
+              "not": {
+                "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
+              }
+            }
+          ],
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Name",
+          "type": "string"
+        },
+        "path": {
+          "not": {
+            "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Path",
+          "type": "string"
+        },
+        "sensitivity": {
+          "$ref": "#/$defs/ResourceSensitivity"
+        }
+      },
+      "required": [
+        "name",
+        "path",
+        "sensitivity"
+      ],
+      "title": "GeneratedArtifactOutput",
+      "type": "object"
     },
     "IdentityDomain": {
       "additionalProperties": false,
@@ -6343,6 +6472,53 @@
       "title": "PasswordStrength",
       "type": "string"
     },
+    "PersistentVolume": {
+      "additionalProperties": false,
+      "description": "Portable desired persistent storage and its mount consumers.",
+      "properties": {
+        "access_mode": {
+          "$ref": "#/$defs/VolumeAccessMode"
+        },
+        "consumers": {
+          "items": {
+            "$ref": "#/$defs/StatefulResourceConsumer"
+          },
+          "minItems": 1,
+          "title": "Consumers",
+          "type": "array"
+        },
+        "lifecycle": {
+          "$ref": "#/$defs/VolumeLifecycle"
+        },
+        "ordering_dependencies": {
+          "items": {
+            "not": {
+              "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
+            },
+            "type": "string"
+          },
+          "title": "Ordering Dependencies",
+          "type": "array"
+        },
+        "refresh_dependencies": {
+          "items": {
+            "not": {
+              "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
+            },
+            "type": "string"
+          },
+          "title": "Refresh Dependencies",
+          "type": "array"
+        }
+      },
+      "required": [
+        "lifecycle",
+        "access_mode",
+        "consumers"
+      ],
+      "title": "PersistentVolume",
+      "type": "object"
+    },
     "PresencePredicate": {
       "additionalProperties": false,
       "description": "Test whether a governed property is present on a subject.",
@@ -7252,6 +7428,15 @@
       ],
       "title": "ResolvedImportProvenance",
       "type": "object"
+    },
+    "ResourceSensitivity": {
+      "enum": [
+        "public",
+        "restricted",
+        "secret"
+      ],
+      "title": "ResourceSensitivity",
+      "type": "string"
     },
     "Resources": {
       "additionalProperties": false,
@@ -21966,6 +22151,36 @@
       "title": "SshMatchRule",
       "type": "object"
     },
+    "StatefulResourceConsumer": {
+      "additionalProperties": false,
+      "description": "A node that consumes a generated artifact or persistent volume.",
+      "properties": {
+        "access_mode": {
+          "$ref": "#/$defs/ConsumerAccessMode"
+        },
+        "mount_destination": {
+          "not": {
+            "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Mount Destination",
+          "type": "string"
+        },
+        "node": {
+          "not": {
+            "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Node",
+          "type": "string"
+        }
+      },
+      "required": [
+        "node",
+        "mount_destination",
+        "access_mode"
+      ],
+      "title": "StatefulResourceConsumer",
+      "type": "object"
+    },
     "Story": {
       "additionalProperties": false,
       "description": "Top-level exercise orchestration \u2014 a group of scripts.",
@@ -22107,6 +22322,23 @@
         "at_least"
       ],
       "title": "TruthCompositionMode",
+      "type": "string"
+    },
+    "VolumeAccessMode": {
+      "enum": [
+        "read_write_once",
+        "read_write_many",
+        "read_only_many"
+      ],
+      "title": "VolumeAccessMode",
+      "type": "string"
+    },
+    "VolumeLifecycle": {
+      "enum": [
+        "retain",
+        "ephemeral"
+      ],
+      "title": "VolumeLifecycle",
       "type": "string"
     },
     "Vulnerability": {
@@ -22821,6 +23053,22 @@
       "title": "Forwarding Agents",
       "type": "array"
     },
+    "generated_artifacts": {
+      "additionalProperties": {
+        "$ref": "#/$defs/GeneratedArtifact"
+      },
+      "propertyNames": {
+        "maxLength": 2048,
+        "minLength": 1,
+        "not": {
+          "pattern": "[^a-z0-9_.-]"
+        },
+        "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
+        "type": "string"
+      },
+      "title": "Generated Artifacts",
+      "type": "object"
+    },
     "identity_domains": {
       "additionalProperties": {
         "$ref": "#/$defs/IdentityDomain"
@@ -22952,6 +23200,22 @@
         "type": "string"
       },
       "title": "Outcome Interpretation Rules",
+      "type": "object"
+    },
+    "persistent_volumes": {
+      "additionalProperties": {
+        "$ref": "#/$defs/PersistentVolume"
+      },
+      "propertyNames": {
+        "maxLength": 2048,
+        "minLength": 1,
+        "not": {
+          "pattern": "[^a-z0-9_.-]"
+        },
+        "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
+        "type": "string"
+      },
+      "title": "Persistent Volumes",
       "type": "object"
     },
     "propositions": {

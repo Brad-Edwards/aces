@@ -577,6 +577,37 @@
       ]
     },
     {
+      "subject_id": "sdl-field:generated_artifacts",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/generated_artifacts",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/generated_artifacts"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/stateful-resources.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
       "subject_id": "sdl-field:entities",
       "subject_kind": "top_level_field",
       "disposition": "current",
@@ -1274,6 +1305,37 @@
           "citation_refs": [],
           "internal_authority_refs": [
             "specs/sdl/sections.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "sdl-field:persistent_volumes",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/persistent_volumes",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/persistent_volumes"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/stateful-resources.md"
           ],
           "compatibility_direction": "not_applicable"
         }
