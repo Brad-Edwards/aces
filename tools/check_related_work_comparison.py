@@ -15,7 +15,11 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from tools.policy.common import PolicyFailure, safe_repo_path  # noqa: E402
+from tools.policy.common import (  # noqa: E402
+    PolicyFailure,
+    load_bounded_json_object,
+    safe_repo_path,
+)
 
 PROTOCOL_PATH = "docs/research/related-work-comparison/protocol-v1.json"
 SNAPSHOT_PATH = "docs/research/related-work-comparison/extraction-snapshot-2026-07-13.json"
@@ -226,33 +230,8 @@ _MAX_OBSERVATIONS = 4096
 _MEASURE_BY_SCORE = {0: "absent", 1: "limited", 2: "substantial", 3: "strong"}
 
 
-class _DuplicateKeyError(ValueError):
-    pass
-
-
 def _failure(rule_id: str, message: str, path: str | None = None) -> PolicyFailure:
     return PolicyFailure(rule_id, message, path)
-
-
-def _object_without_duplicates(pairs: list[tuple[str, object]]) -> dict[str, object]:
-    result: dict[str, object] = {}
-    for key, value in pairs:
-        if key in result:
-            raise _DuplicateKeyError(f"duplicate JSON key {key!r}")
-        result[key] = value
-    return result
-
-
-def _load_json(repo_root: Path, rel_path: str) -> dict[str, object]:
-    path = safe_repo_path(repo_root, rel_path)
-    if path is None or not path.is_file():
-        raise ValueError(f"missing or unsafe repository artifact {rel_path!r}")
-    if path.stat().st_size > _MAX_FILE_BYTES:
-        raise ValueError(f"{rel_path!r} exceeds the {_MAX_FILE_BYTES}-byte limit")
-    payload = json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=_object_without_duplicates)
-    if not isinstance(payload, dict):
-        raise ValueError(f"{rel_path!r} must contain a JSON object")
-    return payload
 
 
 def load_bundle(
@@ -261,9 +240,9 @@ def load_bundle(
     """Load the three frozen bundle artifacts with strict duplicate-key handling."""
 
     return (
-        _load_json(repo_root, PROTOCOL_PATH),
-        _load_json(repo_root, SNAPSHOT_PATH),
-        _load_json(repo_root, ANALYSIS_PATH),
+        load_bounded_json_object(repo_root, PROTOCOL_PATH, max_bytes=_MAX_FILE_BYTES),
+        load_bounded_json_object(repo_root, SNAPSHOT_PATH, max_bytes=_MAX_FILE_BYTES),
+        load_bounded_json_object(repo_root, ANALYSIS_PATH, max_bytes=_MAX_FILE_BYTES),
     )
 
 
