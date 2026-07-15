@@ -8,6 +8,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 PRs do **not** edit this file directly. release-please maintains it from the
 Conventional Commit history on `main` (#684).
 
+## [0.22.0](https://github.com/Brad-Edwards/aces/compare/v0.21.0...v0.22.0) (2026-07-15)
+
+
+### Features
+
+* add realization honesty conformance ([#777](https://github.com/Brad-Edwards/aces/issues/777)) ([5f4e3e7](https://github.com/Brad-Edwards/aces/commit/5f4e3e7ca78d21acc12a1ed563aa7f05b64b391a))
+* **sdl:** add authored identity domain topology ([#768](https://github.com/Brad-Edwards/aces/issues/768)) ([78da8fd](https://github.com/Brad-Edwards/aces/commit/78da8fd2c970714232732767398f3b667cd832eb))
+
+
+### Bug Fixes
+
+* stop claiming unrealized domain support ([#778](https://github.com/Brad-Edwards/aces/issues/778)) ([38ba081](https://github.com/Brad-Edwards/aces/commit/38ba081714b12a4dcc7a5c527e2f1250d80a4d1b))
+
+
+### Documentation
+
+* define participant decision-surface semantics ([#774](https://github.com/Brad-Edwards/aces/issues/774)) ([1fd985b](https://github.com/Brad-Edwards/aces/commit/1fd985bb26ecc73b43189fc36584dfa72a80b941))
+* **sdl:** align prose specification with live contracts ([#775](https://github.com/Brad-Edwards/aces/issues/775)) ([4667c90](https://github.com/Brad-Edwards/aces/commit/4667c901c404860e2bda334557bd452ef27cd1c9))
+
 ## [0.21.0](https://github.com/Brad-Edwards/aces/compare/v0.20.0...v0.21.0) (2026-07-14)
 
 
