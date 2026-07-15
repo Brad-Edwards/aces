@@ -124,8 +124,9 @@ def test_stateful_resources_reject_unknown_references(mutation: str, message: st
             "    consumers:",
             "    lifecycle: retain\n    access_mode: read_write_once\n    consumers:",
         )
+    invalid_sdl = textwrap.dedent(f"name: invalid\nnodes:\n  indexer: {{type: vm, os: linux}}\n{mutation}\n")
     with pytest.raises(SDLParseError, match=message):
-        parse_sdl(textwrap.dedent(f"name: invalid\nnodes:\n  indexer: {{type: vm, os: linux}}\n{mutation}\n"))
+        parse_sdl(invalid_sdl)
 
 
 def test_stateful_resource_dependency_cycle_fails_before_backend_dispatch():

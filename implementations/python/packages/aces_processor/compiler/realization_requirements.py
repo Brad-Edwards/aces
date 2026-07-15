@@ -40,6 +40,69 @@ def _realization_requirement_address(
     raise ValueError("realization concern must resolve to one compiled resource address")
 
 
+def _append_domain_topology_requirements(
+    requirements: list[CompiledRealizationRequirement],
+    domain_analysis: DomainTopologyAnalysis,
+) -> None:
+    """Append processor-derived requirements for domain-bound resources."""
+
+    domain_carriers = [
+        *(
+            (_node_address(node_name), binding.domain_name)
+            for node_name, binding in domain_analysis.node_bindings.items()
+        ),
+        *(
+            (_account_address(account_name), binding.domain_name)
+            for account_name, binding in domain_analysis.account_bindings.items()
+        ),
+    ]
+    for address, domain_name in domain_carriers:
+        requirements.append(
+            CompiledRealizationRequirement(
+                field_path=f"identity_domains.{domain_name}.topology",
+                address=address,
+                domain=REALIZATION_DOMAIN,
+                requirement_kind="domain-topology",
+                explicitness=ExplicitnessClass.EXACT,
+                provenance=ExplicitnessProvenance.PROCESSOR_DERIVED,
+            )
+        )
+
+
+def _append_stateful_resource_requirements(
+    requirements: list[CompiledRealizationRequirement],
+    scenario: InstantiatedScenario,
+) -> None:
+    """Append exact requirements for authored stateful resources."""
+
+    for section_name, resources, address_factory, requirement_kind in (
+        (
+            "generated_artifacts",
+            scenario.generated_artifacts,
+            _generated_artifact_address,
+            "generated-artifact",
+        ),
+        (
+            "persistent_volumes",
+            scenario.persistent_volumes,
+            _persistent_volume_address,
+            "persistent-volume",
+        ),
+    ):
+        for name in resources:
+            requirements.append(
+                CompiledRealizationRequirement(
+                    field_path=f"{section_name}.{name}",
+                    address=address_factory(name),
+                    domain=REALIZATION_DOMAIN,
+                    requirement_kind=requirement_kind,
+                    explicitness=ExplicitnessClass.EXACT,
+                    provenance=ExplicitnessProvenance.AUTHOR_DECLARED,
+                    governing_scope=f"#/{section_name}/{name}",
+                )
+            )
+
+
 def _compile_realization_requirements(
     scenario: InstantiatedScenario,
     domain_analysis: DomainTopologyAnalysis,
@@ -103,51 +166,6 @@ def _compile_realization_requirements(
                 delegated=delegated,
             )
         )
-    domain_carriers = [
-        *(
-            (_node_address(node_name), binding.domain_name)
-            for node_name, binding in domain_analysis.node_bindings.items()
-        ),
-        *(
-            (_account_address(account_name), binding.domain_name)
-            for account_name, binding in domain_analysis.account_bindings.items()
-        ),
-    ]
-    for address, domain_name in domain_carriers:
-        requirements.append(
-            CompiledRealizationRequirement(
-                field_path=f"identity_domains.{domain_name}.topology",
-                address=address,
-                domain=REALIZATION_DOMAIN,
-                requirement_kind="domain-topology",
-                explicitness=ExplicitnessClass.EXACT,
-                provenance=ExplicitnessProvenance.PROCESSOR_DERIVED,
-            )
-        )
-    for section_name, resources, address_factory, requirement_kind in (
-        (
-            "generated_artifacts",
-            scenario.generated_artifacts,
-            _generated_artifact_address,
-            "generated-artifact",
-        ),
-        (
-            "persistent_volumes",
-            scenario.persistent_volumes,
-            _persistent_volume_address,
-            "persistent-volume",
-        ),
-    ):
-        for name in resources:
-            requirements.append(
-                CompiledRealizationRequirement(
-                    field_path=f"{section_name}.{name}",
-                    address=address_factory(name),
-                    domain=REALIZATION_DOMAIN,
-                    requirement_kind=requirement_kind,
-                    explicitness=ExplicitnessClass.EXACT,
-                    provenance=ExplicitnessProvenance.AUTHOR_DECLARED,
-                    governing_scope=f"#/{section_name}/{name}",
-                )
-            )
+    _append_domain_topology_requirements(requirements, domain_analysis)
+    _append_stateful_resource_requirements(requirements, scenario)
     return tuple(requirements)

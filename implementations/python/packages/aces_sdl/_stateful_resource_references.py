@@ -6,6 +6,25 @@ from .nodes import Node
 from .stateful_resources import GeneratedArtifact, PersistentVolume
 
 
+def _validate_consumer_references(
+    *, owner: str, resource: GeneratedArtifact | PersistentVolume, node_refs: set[str]
+) -> None:
+    for consumer in resource.consumers:
+        if consumer.node not in node_refs:
+            raise ValueError(f"{owner} consumer node reference {consumer.node!r} is missing")
+
+
+def _validate_dependency_references(
+    *,
+    owner: str,
+    resource: GeneratedArtifact | PersistentVolume,
+    stateful_refs: set[str],
+) -> None:
+    for dependency in (*resource.ordering_dependencies, *resource.refresh_dependencies):
+        if dependency not in stateful_refs:
+            raise ValueError(f"{owner} dependency reference {dependency!r} is missing")
+
+
 def validate_stateful_resource_references(
     *,
     nodes: Mapping[str, Node],
@@ -27,9 +46,5 @@ def validate_stateful_resource_references(
     ):
         for name, resource in resources.items():
             owner = f"{section}.{name}"
-            for consumer in resource.consumers:
-                if consumer.node not in node_refs:
-                    raise ValueError(f"{owner} consumer node reference {consumer.node!r} is missing")
-            for dependency in (*resource.ordering_dependencies, *resource.refresh_dependencies):
-                if dependency not in stateful_refs:
-                    raise ValueError(f"{owner} dependency reference {dependency!r} is missing")
+            _validate_consumer_references(owner=owner, resource=resource, node_refs=node_refs)
+            _validate_dependency_references(owner=owner, resource=resource, stateful_refs=stateful_refs)
