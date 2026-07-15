@@ -361,3 +361,6 @@ adrs:
   - id: ADR-081
     path: docs/decisions/adrs/adr-081-behavioral-relation-taxonomy-and-claim-discipline.md
     pin: c8e096b85edb7ca97217a8bb0ac74b8817f966b9cf42b66f114dc3a45ed83a90
+  - id: ADR-082
+    path: docs/decisions/adrs/adr-082-authored-identity-domain-topology.md
+    pin: 0d5d4997bb2e3abf2ddf2bf9d6d345429a99deef5f343c6ca1aba4b8ebc3a95c

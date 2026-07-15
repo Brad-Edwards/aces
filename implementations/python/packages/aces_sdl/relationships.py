@@ -15,6 +15,7 @@ from enum import Enum
 from pydantic import Field, field_validator
 
 from ._base import SDLModel, normalize_enum_value
+from .identity_domains import RelationshipDomainController, RelationshipDomainJoin
 from .runtime_application import RelationshipProxyUpstream
 from .runtime_database import RelationshipDatabaseAccess
 from .runtime_forwarding_agent import RelationshipForwardingEdge
@@ -32,6 +33,8 @@ class RelationshipType(str, Enum):
     DEPENDS_ON = "depends_on"
     MANAGES = "manages"
     REPLICATES_TO = "replicates_to"
+    DOMAIN_CONTROLLER_FOR = "domain_controller_for"
+    JOINS_DOMAIN = "joins_domain"
 
 
 class Relationship(SDLModel):
@@ -67,6 +70,8 @@ class Relationship(SDLModel):
     forwarding_edge: RelationshipForwardingEdge | None = None
     service_integration: RelationshipServiceIntegration | None = None
     proxy_upstream: RelationshipProxyUpstream | None = None
+    domain_controller: RelationshipDomainController | None = None
+    domain_join: RelationshipDomainJoin | None = None
 
     @field_validator("type", mode="before")
     @classmethod

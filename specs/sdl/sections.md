@@ -25,10 +25,9 @@ referenced by others but does not itself reference another section.
 ## Complete top-level field catalog
 
 This table is the complete, mechanically checked top-level language surface.
-"Lifecycle" names the document forms in which the field is carried. A
-composition field marked `expanded-empty` or `instantiated-empty` remains in the
-model with its empty default after module expansion; its authored composition
-instructions do not survive as executable scenario meaning. "References" is
+"Lifecycle" names the document forms in which the field is carried. A field
+absent from a lifecycle is forbidden by that phase's closed model; authoring
+machinery is not retained as an empty compatibility field. "References" is
 `catalogued` when the field owns at least one row in the exact edge index in
 [`references.md`](references.md).
 
@@ -37,8 +36,8 @@ instructions do not survive as executable scenario meaning. "References" is
 | `name` | metadata | scalar | normalized, expanded, instantiated | required | `scenario_name` | none | [document model](document-model.md) |
 | `version` | metadata | scalar | normalized, expanded, instantiated | optional; default `*` | none | none | [document model](document-model.md) |
 | `description` | metadata | scalar | normalized, expanded, instantiated | optional; default empty string | none | none | [document model](document-model.md) |
-| `module` | composition | mapping | normalized, expanded-empty, instantiated-empty | optional; default null | `module.id` | none | [ADR-053](../../docs/decisions/adrs/adr-053-sdl-module-composition-for-inventory-backed-scenarios.md) |
-| `imports` | composition | list | normalized, expanded-empty, instantiated-empty | optional; default empty list | `namespace` | none | [ADR-053](../../docs/decisions/adrs/adr-053-sdl-module-composition-for-inventory-backed-scenarios.md) |
+| `module` | composition | mapping | normalized | optional; default null | `module.id` | none | [ADR-053](../../docs/decisions/adrs/adr-053-sdl-module-composition-for-inventory-backed-scenarios.md) |
+| `imports` | composition | list | normalized | optional; default empty list | `namespace` | none | [ADR-053](../../docs/decisions/adrs/adr-053-sdl-module-composition-for-inventory-backed-scenarios.md) |
 | `realization` | composition | mapping | normalized | optional; default null | none | none | [explicitness and realization](../formal/realization/explicitness-and-realization.md) |
 | `nodes` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [nodes and runtime inventory](runtime-inventory.md) |
 | `infrastructure` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [document model](document-model.md) |
@@ -54,19 +53,20 @@ instructions do not survive as executable scenario meaning. "References" is
 | `stories` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [reference catalog](references.md) |
 | `content` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [document model](document-model.md) |
 | `accounts` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [document model](document-model.md) |
+| `identity_domains` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [authored domain topology](authored-domain-topology.md) |
 | `relationships` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [ADR-052](../../docs/decisions/adrs/adr-052-typed-runtime-relationship-subtypes.md) |
 | `forwarding_agents` | section | list | normalized, expanded, instantiated | optional; default empty list | `forwarding_agent_id` | none | [ADR-050](../../docs/decisions/adrs/adr-050-forwarding-agent-runtime-inventory.md) |
-| `agents` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [participant model](participant-model.md) |
-| `action_contracts` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [participant model](participant-model.md) |
-| `observation_boundaries` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [participant model](participant-model.md) |
-| `outcome_interpretation_rules` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [participant model](participant-model.md) |
-| `behavior_specifications` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [behavior specifications](behavior-specifications.md) |
+| `agents` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [participant model](../formal/participant-semantics/README.md) |
+| `action_contracts` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [participant model](../formal/participant-semantics/README.md) |
+| `observation_boundaries` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [participant model](../formal/participant-semantics/README.md) |
+| `outcome_interpretation_rules` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [participant model](../formal/participant-semantics/README.md) |
+| `behavior_specifications` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [behavior specifications](../formal/participant-behavior-model/README.md) |
 | `evidence_requirements` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [observability and evidence](observability-and-evidence.md) |
-| `objectives` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [objective semantics](objective-semantics.md) |
-| `workflows` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [workflow semantics](workflow-semantics.md) |
-| `variables` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | none | [variables and instantiation](variables-and-instantiation.md) |
+| `objectives` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [objective semantics](../formal/objectives/declarative-objective-semantics.md) |
+| `workflows` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [workflow semantics](../formal/workflows/state-machine.md) |
+| `variables` | section | map | normalized, expanded | optional; default empty map | `map_key` | none | [variables and instantiation](variables-and-instantiation.md) |
 
-<!-- sdl-catalog-summary top-level=31 metadata-composition=6 sections=25 maps=24 lists=1 -->
+<!-- sdl-catalog-summary top-level=32 metadata-composition=6 sections=26 maps=25 lists=1 -->
 
 The section set therefore has two authoring shapes: maps keyed by stable
 user-defined identifiers and the scenario-level `forwarding_agents` list, whose

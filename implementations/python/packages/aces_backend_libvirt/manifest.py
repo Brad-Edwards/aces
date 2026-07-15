@@ -36,6 +36,7 @@ def _provisioner_capabilities(mode: LibvirtDriverMode) -> ProvisionerCapabilitie
         supported_os_families=frozenset(configuration.supported_os_families),
         supported_content_types=frozenset(configuration.supported_content_types),
         supported_account_features=account_features,
+        supported_domain_profiles=frozenset(configuration.supported_domain_profiles),
         max_total_nodes=None,
         supports_acls=configuration.supports_acls,
         supports_accounts=bool(account_features),
@@ -166,6 +167,7 @@ def create_libvirt_manifest(**config: object) -> BackendManifest:
             ConceptBinding(scope="capabilities.provisioner.supported_os_families", family="assets"),
             ConceptBinding(scope="capabilities.provisioner.supported_content_types", family="tools-and-artifacts"),
             ConceptBinding(scope="capabilities.provisioner.supported_account_features", family="identities"),
+            ConceptBinding(scope="capabilities.provisioner.supported_domain_profiles", family="identities"),
         ),
         realization_support=(
             RealizationSupportDeclaration(

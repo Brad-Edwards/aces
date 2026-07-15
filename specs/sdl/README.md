@@ -71,6 +71,7 @@ tests, rather than a prose rewrite. The catalogs are:
 | [`references.md`](references.md) | **2. Reference-resolution catalog** | Reference forms (bare, qualified, nested runtime-family, workflow-step, module-composed), the resolution algorithm, the fail-closed ambiguity rule, and the cross-section reference-edge catalog. |
 | [`variables-and-instantiation.md`](variables-and-instantiation.md) | **3. Variable / instantiation catalog** | Variable types, defaults, `allowed_values`, `${…}` substitution, the instantiation algorithm, and post-instantiation exclusions. |
 | [`runtime-inventory.md`](runtime-inventory.md) | **4. Runtime-family index** | The node-scoped runtime-inventory index — family key, collection name, primary `<noun>_id`, child-ref collections, owning ADR — and the shared invariants stated once, delegating per-field semantics to the family ADRs. |
+| [`authored-domain-topology.md`](authored-domain-topology.md) | — | Authored identity domains, controller/member topology, account domain bindings, compiled ordering, provisioner capability, admission, and readback invariants. |
 | [`observability-and-evidence.md`](observability-and-evidence.md) | **5. Observability and evidence planes** | Scenario-native observability, authored evidence requirements, processor/backend operational observability, captured evidence, derived analysis, and augmentation classification rules. |
 | [`scientific-scenario-completeness.md`](scientific-scenario-completeness.md) | — | REV1 intended-use profiles, atomic concern dispositions, separately revisioned delivery assessment, computed completeness, and explicit scientific non-claims. |
 | [`diagnostics.md`](diagnostics.md) | — | The parse / semantic-validation / instantiation stages, direct-artifact admission, and the normative error-vs-advisory classification criterion. |
@@ -94,6 +95,8 @@ An implementer can answer each structural question from the named file alone:
   [`variables-and-instantiation.md`](variables-and-instantiation.md).
 - *What is the runtime-inventory surface and which ADR owns each family?* →
   [`runtime-inventory.md`](runtime-inventory.md).
+- *How is domain-backed realization authored without inferring topology from runtime inventory?* →
+  [`authored-domain-topology.md`](authored-domain-topology.md).
 - *How are scenario-native observability systems and authored evidence
   requirements kept distinct?* →
   [`observability-and-evidence.md`](observability-and-evidence.md).
@@ -108,7 +111,7 @@ An implementer can answer each structural question from the named file alone:
 In scope: the SDL authoring model and portable derived phase contracts —
 document structure, references, variables, instantiation/provenance,
 canonical snapshots, the runtime-inventory index, observability/evidence plane
-rules, and the diagnostic boundary.
+rules, authored identity-domain topology, and the diagnostic boundary.
 
 Out of scope: delivery-level concerns (container, infrastructure-as-code, and
 cloud-API mechanics), processor and backend execution contracts, and the

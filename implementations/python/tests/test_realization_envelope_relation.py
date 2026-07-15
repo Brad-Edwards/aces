@@ -38,7 +38,7 @@ from aces_sdl import (
 )
 from aces_sdl._realization_envelope_domains import _MISSING, default_witness_value, out_of_domain_value
 from aces_sdl._realization_envelope_engine import effective_constraints
-from aces_sdl.realization_envelope import generate_negative_probes, member, subsumes, witness
+from aces_sdl.realization_envelope import generate_negative_probes, generate_positive_probes, member, subsumes, witness
 from aces_sdl.scenario import InstantiatedScenario, Scenario
 from hypothesis import given, settings
 from hypothesis import strategies as st
@@ -343,6 +343,62 @@ def test_witness_rejects_list_indexed_path() -> None:
 
 
 # --------------------------------------------------------------------------- #
+# Positive probes (ASR-519)                                                    #
+# --------------------------------------------------------------------------- #
+
+
+def test_positive_probes_cover_every_finite_member_deterministically() -> None:
+    env = _web_envelope(os_values=("windows", "linux"))
+
+    first, diagnostics = generate_positive_probes(env)
+    second, second_diagnostics = generate_positive_probes(env)
+
+    assert diagnostics == second_diagnostics == ()
+    assert [probe.digest for probe in first] == [probe.digest for probe in second]
+    assert {probe.payload["nodes"]["web"]["os"] for probe in first} == {"linux", "windows"}
+    for probe in first:
+        scenario = instantiate_scenario(Scenario.model_validate(probe.payload))
+        assert member(scenario, env).holds
+
+
+def test_positive_probes_cover_safe_integer_interval_boundaries() -> None:
+    env = RealizationEnvelopeModel(
+        id="bounded-cpu",
+        scope=EnvelopeScope.SCENARIO,
+        domains={
+            "name": ExactDomain(value="bounded"),
+            "vm": ExactDomain(value="vm"),
+            "linux": ExactDomain(value="linux"),
+            "ram": ExactDomain(value=1024),
+            "cpu": NumericIntervalDomain(numeric_type=NumericType.INTEGER, lower=1, upper=4),
+        },
+        bindings=[
+            EnvelopeBinding(path="name", scope=EnvelopeScope.SCENARIO, posture=Posture.EXACT, domain="name"),
+            EnvelopeBinding(path="nodes.vm.type", scope=EnvelopeScope.NODE, posture=Posture.EXACT, domain="vm"),
+            EnvelopeBinding(path="nodes.vm.os", scope=EnvelopeScope.FIELD, posture=Posture.EXACT, domain="linux"),
+            EnvelopeBinding(
+                path="nodes.vm.resources.ram", scope=EnvelopeScope.FIELD, posture=Posture.EXACT, domain="ram"
+            ),
+            EnvelopeBinding(
+                path="nodes.vm.resources.cpu", scope=EnvelopeScope.FIELD, posture=Posture.CONSTRAINED, domain="cpu"
+            ),
+        ],
+    )
+
+    probes, diagnostics = generate_positive_probes(env)
+
+    assert not diagnostics
+    assert {probe.payload["nodes"]["vm"]["resources"]["cpu"] for probe in probes} == {1, 4}
+
+
+def test_positive_probes_fail_closed_for_non_constructive_envelope() -> None:
+    probes, diagnostics = generate_positive_probes(RealizationEnvelopeModel(id="open", scope=EnvelopeScope.SCENARIO))
+
+    assert probes == ()
+    assert any(diag.code == "realization-envelope.positive-probe.no-witness" for diag in diagnostics)
+
+
+# --------------------------------------------------------------------------- #
 # Negative probes (R6)                                                        #
 # --------------------------------------------------------------------------- #
 
@@ -364,9 +420,17 @@ def test_negative_probes_are_all_out_of_envelope() -> None:
     variations = {p.variation for p in probes}
     assert "value-outside-domain" in variations
     assert "extra-dimension" in variations
-    assert "omitted-required-exact" in variations
+    assert {"name", "nodes.web.type", "nodes.web.os"} <= {p.path for p in probes}
     for probe in probes:
-        assert _probe_is_out_of_envelope(probe.payload, env), probe.path
+        instance = instantiate_scenario(Scenario.model_validate(probe.payload))
+        assert not member(instance, env).holds, probe.path
+
+
+def test_negative_probes_exclude_malformed_exact_omissions() -> None:
+    probes, diagnostics = generate_negative_probes(_web_envelope())
+
+    assert not diagnostics
+    assert all(probe.variation != "omitted-required-exact" for probe in probes)
 
 
 def test_negative_probes_without_witness_report_diagnostic() -> None:
@@ -437,6 +501,7 @@ def test_property_negative_probes_out_of_envelope(os_values: set[str]) -> None:
     env = _web_envelope(os_values=tuple(sorted(os_values)), closed=True)
     probes, diagnostics = generate_negative_probes(env)
     assert not diagnostics
+    assert any(probe.path == "nodes.web.os" for probe in probes)
     for probe in probes:
         assert _probe_is_out_of_envelope(probe.payload, env), probe.path
 

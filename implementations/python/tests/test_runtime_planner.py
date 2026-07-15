@@ -1033,7 +1033,19 @@ infrastructure:
       - {direction: in, from_net: corp, action: allow}
   dc: {count: 1, links: [corp]}
 accounts:
-  admin: {username: administrator, node: dc, spn: LDAP/dc.example.local}
+  admin: {username: administrator, node: dc, spn: LDAP/dc.example.local, domain_ref: example}
+identity_domains:
+  example:
+    profile: active_directory
+    dns_name: example.local
+    netbios_name: EXAMPLE
+    authority_account_ref: admin
+relationships:
+  dc-role:
+    type: domain_controller_for
+    source: dc
+    target: example
+    domain_controller: {}
 conditions:
   health: {command: /bin/true, interval: 15}
 propositions:

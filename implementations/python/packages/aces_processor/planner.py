@@ -4,6 +4,7 @@ from dataclasses import replace
 
 from aces_backend_protocols.account_features import provisioner_account_features
 from aces_backend_protocols.capabilities import BackendManifest
+from aces_backend_protocols.domain_topology import domain_topology_plan_diagnostics
 from aces_sdl.infrastructure import MINIMUM_NODE_COUNT
 from aces_sdl.nodes import OSFamily
 from aces_sdl.realization_envelope import member
@@ -791,6 +792,13 @@ def plan(
     actions, deleted_entries = _build_operations(resources, snapshot)
 
     provisioning = _build_provisioning_plan(resources, actions, deleted_entries, manifest)
+    topology_diagnostics = domain_topology_plan_diagnostics(
+        provisioning,
+        snapshot=snapshot,
+        supported_domain_profiles=manifest.provisioner.supported_domain_profiles,
+    )
+    diagnostics.extend(topology_diagnostics)
+    provisioning.diagnostics.extend(topology_diagnostics)
     orchestration = _build_orchestration_plan(resources, actions, deleted_entries)
     evaluation = _build_evaluation_plan(resources, actions, deleted_entries)
 

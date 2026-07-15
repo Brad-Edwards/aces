@@ -185,6 +185,38 @@
       ]
     },
     {
+      "subject_id": "sdl-field:identity_domains",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/identity_domains",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/identity_domains"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/authored-domain-topology.md",
+            "docs/decisions/adrs/adr-082-authored-identity-domain-topology.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
       "subject_id": "sdl-field:action_contracts",
       "subject_kind": "top_level_field",
       "disposition": "current",
@@ -2596,6 +2628,36 @@
           ],
           "internal_authority_refs": [],
           "compatibility_direction": "aces_relative_to_source"
+        }
+      ]
+    },
+    {
+      "subject_id": "reference-model:scenario-identity-domain",
+      "subject_kind": "reference_model",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/concept-authority/reference-models-v1.json",
+        "pointer": "#/models/scenario-identity-domain"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/concept-authority/reference-models-v1.json",
+              "symbol_or_pointer": "#/models/scenario-identity-domain"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/authored-domain-topology.md"
+          ],
+          "compatibility_direction": "not_applicable"
         }
       ]
     },

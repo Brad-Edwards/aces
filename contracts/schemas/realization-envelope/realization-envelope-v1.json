@@ -619,6 +619,15 @@
           "type": "array",
           "uniqueItems": true
         },
+        "supported_domain_profiles": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Supported Domain Profiles",
+          "type": "array",
+          "uniqueItems": true
+        },
         "supported_node_types": {
           "items": {
             "minLength": 1,

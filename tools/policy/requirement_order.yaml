@@ -106,11 +106,16 @@ ownership:
     - CHANGELOG.md
   sdl-language:
     - contracts/schemas/sdl
+    - docs/decisions/issue-541-sdl-spec-second-review-preflight.md
     - docs/decisions/adrs
     - docs/explain/sdl
     - docs/index.md
     - implementations/python/packages/aces_sdl
     - implementations/python/tests
+    - specs/formal/sdl-phases
+    - specs/sdl
+    - tools/check_sdl_catalog_parity.py
+    - tools/policy/requirement_order.yaml
     - CHANGELOG.md
   api400-core:
     - contracts/fixtures/backend-manifest

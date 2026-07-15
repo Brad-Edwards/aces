@@ -92,7 +92,7 @@ def test_instantiated_model_rejects_unresolved_variables(payload: dict) -> None:
 
 @pytest.mark.parametrize(
     ("field", "value"),
-    (("variables", {}), ("imports", []), ("module", None)),
+    (("variables", {}), ("imports", []), ("module", None), ("realization", None)),
 )
 def test_instantiated_model_rejects_authoring_fields_even_when_empty(field: str, value: object) -> None:
     with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
@@ -107,8 +107,7 @@ def test_bundle_instantiated_schema_constraints_differ_from_authoring() -> None:
     bundle = schema_bundle()
     authoring = json.dumps(bundle["sdl-authoring-input-v1"])
     instantiated = json.dumps(bundle["instantiated-scenario-v1"])
-    assert _PATTERN_IN_JSON not in authoring
-    assert instantiated.count(_PATTERN_IN_JSON) > 1
+    assert instantiated.count(_PATTERN_IN_JSON) > authoring.count(_PATTERN_IN_JSON)
 
 
 @pytest.mark.parametrize("payload", _VAR_PAYLOADS)
@@ -137,6 +136,7 @@ def test_bundle_instantiated_schema_accepts_concrete_scenario() -> None:
         {**_CONCRETE, "variables": {}},
         {**_CONCRETE, "imports": []},
         {**_CONCRETE, "module": None},
+        {**_CONCRETE, "realization": None},
     ),
 )
 def test_bundle_instantiated_schema_enforces_closed_phase_shape(payload: dict) -> None:
@@ -155,8 +155,7 @@ def test_published_schemas_differ_in_constraints() -> None:
     """Acceptance (a) against the published, shipped schema files."""
     authoring = _load(SDL_SCHEMA_DIR / "sdl-authoring-input-v1.json")
     instantiated = _load(SDL_SCHEMA_DIR / "instantiated-scenario-v1.json")
-    assert _PATTERN_IN_JSON not in json.dumps(authoring)
-    assert json.dumps(instantiated).count(_PATTERN_IN_JSON) > 1
+    assert json.dumps(instantiated).count(_PATTERN_IN_JSON) > json.dumps(authoring).count(_PATTERN_IN_JSON)
 
 
 def test_published_valid_fixture_passes() -> None:

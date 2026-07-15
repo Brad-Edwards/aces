@@ -5,10 +5,12 @@ from __future__ import annotations
 from dataclasses import replace
 from textwrap import dedent
 
+import aces_backend_libvirt.manifest as libvirt_manifest_module
 import pytest
+from aces_backend_libvirt.envelopes import LibvirtDriverMode, load_libvirt_realization_envelope
 from aces_backend_libvirt.manifest import create_libvirt_manifest
 from aces_backend_libvirt.provisioner import LibvirtProvisioner
-from aces_backend_libvirt.target import create_libvirt_components, create_libvirt_target
+from aces_backend_libvirt.target import _validate_manifest_mode, create_libvirt_components, create_libvirt_target
 from aces_backend_libvirt.techvault_native import TechVaultNativeLibvirtDriver
 from aces_backend_protocols.manifest import backend_manifest_payload
 from aces_contracts.realization_envelope import BackendRealizationEnvelopeModel, realization_envelope_digest
@@ -35,6 +37,26 @@ def test_operational_config_does_not_change_generic_material_identity():
 
     assert default is not None and configured is not None
     assert default.identity == configured.identity
+
+
+def test_manifest_projects_domain_profiles_from_selected_envelope(monkeypatch):
+    envelope = load_libvirt_realization_envelope(LibvirtDriverMode.GENERIC)
+    configuration = envelope.configuration.model_copy(
+        update={"supported_domain_profiles": ["active_directory"]},
+    )
+    widened = envelope.model_copy(update={"configuration": configuration})
+    monkeypatch.setattr(libvirt_manifest_module, "load_libvirt_realization_envelope", lambda _mode: widened)
+
+    capabilities = libvirt_manifest_module._provisioner_capabilities(LibvirtDriverMode.GENERIC)
+
+    assert capabilities.supported_domain_profiles == frozenset({"active_directory"})
+
+
+def test_manifest_binds_domain_profile_capability_to_identities():
+    manifest = create_libvirt_manifest()
+
+    bindings = {binding.scope: binding.family for binding in manifest.concept_bindings}
+    assert bindings["capabilities.provisioner.supported_domain_profiles"] == "identities"
 
 
 def test_injected_driver_requires_explicit_mode():
@@ -117,6 +139,21 @@ def test_manifest_broader_than_selected_envelope_fails_before_driver_io():
         )
 
     assert not driver.recorded_ops
+
+
+def test_domain_profile_manifest_drift_fails_before_driver_io():
+    manifest = create_libvirt_manifest(driver_mode="generic")
+    broader_provisioner = replace(
+        manifest.provisioner,
+        supported_domain_profiles=frozenset({"active_directory"}),
+    )
+    broader_manifest = replace(
+        manifest,
+        capabilities=replace(manifest.capabilities, provisioner=broader_provisioner),
+    )
+
+    with pytest.raises(ValueError, match="capabilities do not match realization envelope"):
+        _validate_manifest_mode(broader_manifest, LibvirtDriverMode.GENERIC)
 
 
 def _scenario():

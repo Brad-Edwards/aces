@@ -678,6 +678,22 @@
         }
       }
     },
+    "provisioner-domain-profiles": {
+      "title": "Provisioner Domain Profiles",
+      "description": "Provisioner-supported authored identity-domain realization profiles.",
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "capabilities.provisioner.supported_domain_profiles"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "active_directory": {
+          "title": "Active Directory",
+          "description": "Authored Active Directory controller and domain-join topology realization."
+        }
+      }
+    },
     "orchestrator-supported-sections": {
       "title": "Orchestrator Supported Sections",
       "description": "Orchestrator-supported SDL section vocabulary.",

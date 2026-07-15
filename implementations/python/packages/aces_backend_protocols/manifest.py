@@ -85,6 +85,7 @@ def backend_manifest_v2_model(manifest: BackendManifest) -> BackendManifestV2Mod
                 "supported_os_families": sorted(manifest.provisioner.supported_os_families),
                 "supported_content_types": sorted(manifest.provisioner.supported_content_types),
                 "supported_account_features": sorted(manifest.provisioner.supported_account_features),
+                "supported_domain_profiles": sorted(manifest.provisioner.supported_domain_profiles),
                 "max_total_nodes": manifest.provisioner.max_total_nodes,
                 "supports_acls": manifest.provisioner.supports_acls,
                 "supports_accounts": manifest.provisioner.supports_accounts,

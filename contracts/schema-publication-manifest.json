@@ -42,10 +42,10 @@
       "contract_id": "backend-manifest-v2",
       "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
       "stability": "draft",
-      "content_hash": "e2beb9d9f20f7564c8b485b653c706b8b3d83ebdc535bff62e80fbcd82d8200f",
+      "content_hash": "014178ea05ae875548c1121e11a59cb66215614a63bde35544dd972f0f53420c",
       "last_change": {
-        "summary": "Published evaluator proposition, assertion, evidence, truth-outcome, temporal, and binding-provenance capability declarations and assertion-aware orchestration support.",
-        "content_hash": "e2beb9d9f20f7564c8b485b653c706b8b3d83ebdc535bff62e80fbcd82d8200f"
+        "summary": "Added the governed provisioner domain-profile capability dimension for authored identity-domain realization (issue #763).",
+        "content_hash": "014178ea05ae875548c1121e11a59cb66215614a63bde35544dd972f0f53420c"
       }
     },
     {
@@ -190,20 +190,20 @@
       "contract_id": "instantiated-scenario-snapshot-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
       "stability": "draft",
-      "content_hash": "8e8048de4b5161c1a02d0900811f388b0d57a92b6d8434b0242f0a5254e9b377",
+      "content_hash": "10544c816e9407607d4bbc8002eb23645f2fc5bc6c7e86ca7fbd4ae3f0c6d25e",
       "last_change": {
-        "summary": "Added SEM-218 realization designation provenance and clarified Node.services reachability semantics (issue #748).",
-        "content_hash": "8e8048de4b5161c1a02d0900811f388b0d57a92b6d8434b0242f0a5254e9b377"
+        "summary": "Added authored identity-domain declarations, typed controller and join relationships, and explicit account domain bindings (issue #763).",
+        "content_hash": "10544c816e9407607d4bbc8002eb23645f2fc5bc6c7e86ca7fbd4ae3f0c6d25e"
       }
     },
     {
       "contract_id": "instantiated-scenario-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
       "stability": "draft",
-      "content_hash": "515cacc41d24c643e7655de70a40dc1b6305a14b9d840083d5d9ff694d58df29",
+      "content_hash": "03aee5d25be44733ef09697b403235189bc91fc65da7bd6ff7ecd8ff6685d72a",
       "last_change": {
-        "summary": "Added SEM-218 scoped realization records and clarified Node.services reachability semantics (issue #748).",
-        "content_hash": "515cacc41d24c643e7655de70a40dc1b6305a14b9d840083d5d9ff694d58df29"
+        "summary": "Added authored identity-domain declarations, typed controller and join relationships, and explicit account domain bindings (issue #763).",
+        "content_hash": "03aee5d25be44733ef09697b403235189bc91fc65da7bd6ff7ecd8ff6685d72a"
       }
     },
     {
@@ -390,10 +390,10 @@
       "contract_id": "realization-envelope-v1",
       "schema_path": "contracts/schemas/realization-envelope/realization-envelope-v1.json",
       "stability": "draft",
-      "content_hash": "a5992e81fbc935a7ee6eab3b173a89d6e664274f0f143475e303a54d01a27374",
+      "content_hash": "0eb46ba5c89a8eee9e2ba74fb9079f690bca392eacf774da0900379b4fd79580",
       "last_change": {
-        "summary": "Added explicit service-concern disclosure so backend envelopes cannot hide declared guest services inside another concern.",
-        "content_hash": "a5992e81fbc935a7ee6eab3b173a89d6e664274f0f143475e303a54d01a27374"
+        "summary": "Added domain-profile capability disclosure to material backend realization configurations (issue #763).",
+        "content_hash": "0eb46ba5c89a8eee9e2ba74fb9079f690bca392eacf774da0900379b4fd79580"
       }
     },
     {
@@ -456,10 +456,10 @@
       "contract_id": "sdl-authoring-input-v1",
       "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
       "stability": "draft",
-      "content_hash": "57e984be7783a5eb54ee210da434d2883aa468617b0ee8c2a42de1a769ff30b5",
+      "content_hash": "27f9ad3203fa48afec0247b7eb8afd376c1acc8dbdac7d88d9e0c96c9b9bf8c3",
       "last_change": {
-        "summary": "Published SEM-218 scoped realization defaults and clarified Node.services reachability semantics (issue #748).",
-        "content_hash": "57e984be7783a5eb54ee210da434d2883aa468617b0ee8c2a42de1a769ff30b5"
+        "summary": "Added authored identity-domain declarations, typed controller and join relationships, and explicit account domain bindings (issue #763).",
+        "content_hash": "27f9ad3203fa48afec0247b7eb8afd376c1acc8dbdac7d88d9e0c96c9b9bf8c3"
       }
     },
     {

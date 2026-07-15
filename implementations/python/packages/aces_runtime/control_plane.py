@@ -11,6 +11,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import uuid4
 
+from aces_backend_protocols.domain_topology import domain_topology_plan_diagnostics
 from aces_contracts.diagnostics import Diagnostic
 from aces_contracts.planning import (
     EvaluationPlan,
@@ -71,6 +72,7 @@ def _submitted_plan_diagnostics(
     plan: ProvisioningPlan | OrchestrationPlan | EvaluationPlan,
     domain: RuntimeDomain,
     snapshot: RuntimeSnapshot,
+    supported_domain_profiles: frozenset[str] | None = None,
 ) -> list[Diagnostic]:
     admitted = set(snapshot.entries) | {operation.address for operation in plan.operations}
     diagnostic: Diagnostic | None = None
@@ -78,7 +80,16 @@ def _submitted_plan_diagnostics(
         diagnostic = _submitted_operation_diagnostic(operation, domain, snapshot, admitted)
         if diagnostic is not None:
             break
-    return [diagnostic] if diagnostic is not None else []
+    if diagnostic is not None:
+        return [diagnostic]
+    if domain is RuntimeDomain.PROVISIONING and isinstance(plan, ProvisioningPlan):
+        topology_diagnostics = domain_topology_plan_diagnostics(
+            plan,
+            snapshot=snapshot,
+            supported_domain_profiles=supported_domain_profiles,
+        )
+        return topology_diagnostics[:1]
+    return []
 
 
 def _submitted_operation_diagnostic(
@@ -169,7 +180,12 @@ class RuntimeControlPlane(ParticipantControlMixin, ParticipantRetrievalMixin):
         idempotency_key: str = "",
         request_fingerprint: str = "",
     ) -> OperationReceipt:
-        diagnostics = _submitted_plan_diagnostics(plan, RuntimeDomain.PROVISIONING, self._snapshot)
+        diagnostics = _submitted_plan_diagnostics(
+            plan,
+            RuntimeDomain.PROVISIONING,
+            self._snapshot,
+            self._target.manifest.provisioner.supported_domain_profiles,
+        )
         if diagnostics:
             return self._reject_diagnostics(
                 domain=RuntimeDomain.PROVISIONING,

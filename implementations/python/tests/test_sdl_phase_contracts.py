@@ -65,7 +65,7 @@ def test_phase_models_have_disjoint_authoring_and_instantiated_fields() -> None:
 
 @pytest.mark.parametrize(
     ("field", "value"),
-    (("variables", {}), ("imports", []), ("module", None)),
+    (("variables", {}), ("imports", []), ("module", None), ("realization", None)),
 )
 def test_instantiated_model_forbids_authoring_machinery_even_when_empty(field: str, value: object) -> None:
     with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
@@ -109,7 +109,7 @@ def test_instantiation_serializes_binding_origin_without_live_variables() -> Non
     concrete = instantiate_scenario(scenario)
     payload = concrete.model_dump(mode="json")
 
-    assert {"module", "imports", "variables"}.isdisjoint(payload)
+    assert {"module", "imports", "realization", "variables"}.isdisjoint(payload)
     assert payload["nodes"]["host"]["os"] == "linux"
     assert payload["instantiation_provenance"]["bindings"] == [
         {"parameter": ["image"], "origin": "default", "value": "linux"}
@@ -119,6 +119,24 @@ def test_instantiation_serializes_binding_origin_without_live_variables() -> Non
     assert not hasattr(concrete, "variables")
     assert not hasattr(concrete, "imports")
     assert not hasattr(concrete, "module")
+
+
+def test_instantiation_moves_realization_designations_to_provenance() -> None:
+    scenario = Scenario.model_validate(
+        {
+            "name": "designated",
+            "realization": {"default": "open"},
+        }
+    )
+    scenario._set_semantic_validated(True)
+
+    concrete = instantiate_scenario(scenario)
+    payload = concrete.model_dump(mode="json")
+
+    assert "realization" not in payload
+    assert payload["instantiation_provenance"]["realization_designations"] == [
+        {"namespace": [], "field_pointer": "", "posture": "open"}
+    ]
 
 
 def test_instantiated_artifact_round_trips_without_private_state() -> None:

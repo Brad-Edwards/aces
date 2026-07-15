@@ -152,8 +152,7 @@ together, so the boundary stays single-sourced.
 Exact duplicate keys, conflicting effective keys introduced by `<<`, and
 distinct structural field spellings that normalise to one field use the stable
 diagnostic code `sdl.mapping_key_conflict`. They are fatal at the `parse` stage
-and **MUST** be raised before Pydantic or any other SDL model constructor sees
-the mapping.
+and **MUST** be raised before typed SDL model construction sees the mapping.
 
 An explicitly non-string or complex mapping key uses
 `sdl.mapping_key_type`. A cyclic YAML alias graph uses `sdl.alias_cycle`. These
@@ -174,12 +173,15 @@ Each diagnostic **MUST** carry:
    original key declarations and the canonical path identifies the effective
    target mapping.
 
-The reference implementation continues to use `SDLParseError` for this failure;
-it **MUST NOT** introduce a parallel exception hierarchy. Public structured
-adapters (including language-service and MCP responses) preserve the code,
-stage, canonical path, and both ranges. Plain-text CLI/library rendering may
-format the same fields as prose but must not replace them with raw YAML values or
-silently downgrade the error to a generic model-validation failure.
+Implementations **MUST** expose this failure through the existing parse-error
+channel rather than a parallel diagnostic hierarchy. Public structured adapters
+(including language-service and MCP responses) preserve the code, stage,
+canonical path, and both ranges. Plain-text CLI/library rendering may format the
+same fields as prose but must not replace them with raw YAML values or silently
+downgrade the error to a generic model-validation failure.
+
+> *Implementation evidence (non-normative): the reference implementation's
+> parse-error class for this channel is `SDLParseError`.*
 
 ## 7. Source-profile and migration diagnostics
 
@@ -217,32 +219,39 @@ migration acceptance requires an explicit caller choice.
 An identifier diagnostic points to the exact defining key or scalar-id token
 and carries that token's source range. Its bounded message states the grammar
 without echoing the invalid spelling, adjacent value, document fragment,
-parameter map, or traceback. `SDLMigrationPolicy.ACCEPT` does not demote or
+parameter map, or traceback. The accepting migration profile does not demote or
 rewrite an invalid identity; identifier migration requires an explicit atomic
 rename of the declaration and all resolved references.
 
-A typed-model diagnostic preserves the validator-owned contract statement so
-an author can determine why the field is invalid. The parser excludes
-Pydantic's input rendering and documentation URL, removes framework prefixes,
-escapes control characters, and bounds each message to 512 characters before
-placing it in `sdl.model.invalid`. The JSON Pointer and source range remain the
-authoritative locator; a raw `ValidationError`, input object, traceback, or
-unbounded validator rendering is never exposed.
+A typed-model diagnostic preserves the structural contract statement so an
+author can determine why the field is invalid. Framework input rendering,
+documentation URLs, input objects, tracebacks, and unbounded diagnostic text
+are never exposed. The JSON Pointer and source range remain the authoritative
+locator, and the bounded message **MUST NOT** exceed 512 characters.
+
+> *Implementation evidence (non-normative): the reference parser removes
+> Pydantic input rendering, documentation URLs, and framework prefixes; escapes
+> control characters; and converts raw `ValidationError` instances into
+> `sdl.model.invalid` diagnostics.*
 
 ## 8. Instantiation and artifact-admission disclosure
 
 Instantiation and instantiated-artifact admission diagnostics identify a
 bounded variable/field location and failure class. They **MUST NOT** render a
 supplied parameter value, an `allowed_values` domain, a complete parameter map,
-the concrete artifact, trust-policy contents, credentials, a raw Pydantic input
+the concrete artifact, trust-policy contents, credentials, a raw framework input
 dump, documentation URL, or traceback.
 
 When structural reconstruction fails, the public diagnostic renders an RFC 6901
-location plus a stable validation category. The reference implementation wraps
-this in `SDLInstantiationError`; a raw framework `ValidationError` is not the
-public artifact-admission contract. Semantic errors discovered after successful
-structural admission remain `SDLValidationError` and retain the collect-all
-semantics of the semantic pass.
+location plus a stable validation category through the instantiation-error
+channel; a raw framework exception is not the public artifact-admission
+contract. Semantic errors discovered after successful structural admission
+remain on the semantic-error channel and retain the collect-all semantics of
+the semantic pass.
+
+> *Implementation evidence (non-normative): the reference implementation wraps
+> structural failures in `SDLInstantiationError`; semantic failures remain
+> `SDLValidationError`; and raw `ValidationError` instances are not exposed.*
 
 Resolved values necessarily occur in the concrete fields they populate and in
 the portable replay binding record. Authoring, MCP, compiler, and operation

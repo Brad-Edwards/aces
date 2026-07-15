@@ -6,14 +6,14 @@ Acceptance bar:
    ``unsupported-capability-claim`` / ``unsupported-contract-declaration``
    diagnostics (covered by ``test_backend_conformance_cli.py`` /
    ``run_fixture_suite`` -- asserted green here for the libvirt-relevant profile).
-2. ``run_target_conformance`` against the libvirt target passes a target
-   *provisioning probe* and asserts *snapshot mutation* -- not manifest /
-   contract-surface only. This is adapter evidence, not daemon or guest proof.
+2. ``run_target_conformance`` refuses realization certification while the
+   published libvirt envelope is non-constructive. It never promotes the old
+   daemon-free reference scenario into envelope or native evidence.
 3. A conformance report is captured and committed (drift-guarded here).
 
-The target probe runs daemon-free through an injected ``RecordingLibvirtDriver``
-that confirms realization, so the real ``LibvirtProvisioner`` path is exercised
-without a libvirt/QEMU daemon.
+The direct control-plane tests still exercise the real ``LibvirtProvisioner``
+path through an injected recording driver without a libvirt/QEMU daemon. That
+is hermetic adapter evidence only.
 """
 
 from __future__ import annotations
@@ -105,25 +105,24 @@ def test_provisioning_only_fixture_suite_has_no_unsupported_diagnostics():
 
 
 # ---------------------------------------------------------------------------
-# AC2: target provisioning probe + snapshot mutation
+# AC2: non-constructive envelope refusal + hermetic adapter mutation
 # ---------------------------------------------------------------------------
 
 
-def test_provisioning_only_conformance_runs_live_provisioning_probe():
+def test_provisioning_only_conformance_refuses_non_constructive_envelope():
     report = _libvirt_conformance_report()
 
     assert report.profile == BackendCapabilityProfile.PROVISIONING_ONLY
-    assert report.passed is True, [diag.message for diag in report.diagnostics]
+    assert report.passed is False
     assert not report.unsupported_contract_gaps
     assert not report.unsupported_capability_gaps
 
     case_names = {case.name for case in report.cases}
-    # Not manifest/contract-surface only: the probe must actually provision and
-    # validate a mutated snapshot.
-    assert {"target-manifest", "target-provisioning", "target-snapshot"} <= case_names
-    for case in report.cases:
-        if case.name in {"target-manifest", "target-provisioning", "target-snapshot"}:
-            assert case.passed, [diag.message for diag in case.diagnostics]
+    assert "target-manifest" in case_names
+    assert "target-provisioning" not in case_names
+    constructive = next(case for case in report.cases if case.name == "realization-envelope-constructive")
+    assert constructive.outcome == "unsupported"
+    assert constructive.passed is False
 
 
 def test_libvirt_provisioning_mutates_snapshot():
@@ -149,18 +148,20 @@ def test_libvirt_provisioning_mutates_snapshot():
 
 
 def test_provisioning_only_conformance_requires_confirmed_realization():
-    """A driver that does not confirm realization must fail the target probe.
+    """A driver that does not confirm realization fails the ordinary adapter boundary.
 
-    Guards the backend-neutral anti-pattern: provisioning-only conformance must
-    not pass on ``target-manifest`` alone, and must not accept an empty snapshot.
+    This remains a direct hermetic adapter test; the realization-envelope
+    conformance path deliberately refuses to reuse it as certification evidence.
     """
 
-    report = run_target_conformance(create_libvirt_target(driver=NullLibvirtDriver()))
+    target = create_libvirt_target(driver=NullLibvirtDriver())
+    control_plane = RuntimeControlPlane(target)
+    receipt = control_plane.submit_provisioning(_provisioning_plan(target))
+    status = control_plane.get_operation(receipt.operation_id)
 
-    assert report.passed is False
-    live_provisioning = next((case for case in report.cases if case.name == "target-provisioning"), None)
-    assert live_provisioning is not None, "provisioning-only conformance must run a target-provisioning probe"
-    assert live_provisioning.passed is False
+    assert status is not None and status.state.value == "failed"
+    assert not status.changed_addresses
+    assert not any(entry.domain == RuntimeDomain.PROVISIONING for entry in control_plane.snapshot.entries.values())
 
 
 # ---------------------------------------------------------------------------
@@ -177,4 +178,4 @@ def test_committed_conformance_report_is_current():
         "committed libvirt conformance report is stale; regenerate "
         f"{COMMITTED_REPORT.relative_to(REPO_ROOT)} from run_target_conformance"
     )
-    assert committed["passed"] is True
+    assert committed["passed"] is False
