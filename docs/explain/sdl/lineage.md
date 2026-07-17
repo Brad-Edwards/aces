@@ -743,6 +743,43 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   [Goguen-Meseguer noninterference](https://doi.org/10.1109/SP.1982.10014) and
   [Sabelfeld-Sands declassification](https://doi.org/10.3233/JCS-2009-0352)
   ground the hidden-truth boundary and disclosure-rule semantics.
+- SEM-230 adopts that lineage through ACES-native artifacts rather than source
+  syntax or wire compatibility. The normative participant-policy model is
+  `specs/formal/participant-semantics/information-flow-control.md`; the
+  machine-readable relation is `policy-noninterference` in behavioral taxonomy
+  revision `rev2`; and the claim surface is
+  `participant-information-flow-policy`. Existing `W`, `V`, qualified `H`,
+  `X`, participant action/admission, visibility transition, ordering, marking,
+  controller, authority, evidence, and provenance objects remain the mapped
+  ACES carriers. No generic participant-message or policy payload is derived
+  from either publication.
+- The derivation is deliberately compositional. Fagin, Halpern, Moses, and
+  Vardi supply participant-local information-state/indistinguishability
+  semantics; Goguen and Meseguer supply noninterference and purge; Sabelfeld
+  and Sands supply the declassification dimensions; Milner and van Glabbeek
+  supply labelled-transition, hidden-action, and relation-separation
+  discipline. Lamport happened-before, Winskel event structures, and
+  Mazurkiewicz trace theory enter indirectly through the already governed
+  ADR-054 visible-order model. ACES extends those sources only with the
+  participant/audience, policy-revision/effective-order, controller/authority,
+  marking, and evidence/provenance coordinates needed to bind existing ACES
+  carriers. It does not fork their settled definitions.
+- Delivery status is definition-complete, catalogued, policy-checked, and
+  bounded-tested. Evidence is the SEM-230 formal specification,
+  `contracts/concept-authority/behavioral-relations-v1.json`,
+  `tools/check_behavioral_relation_claims.py`, and
+  `implementations/python/tests/test_sem_230_information_flow_control.py`.
+  Production enforcement, backend realization, and universal proof remain
+  undelivered. In particular, equal projected histories and finite leakage
+  cases do not establish universal noninterference, trace equivalence,
+  simulation, refinement, bisimulation, epistemic indistinguishability, timed
+  security, or probabilistic security.
+- Issues #810 through #813 own the opacity/supervisor-visibility,
+  proof-bearing bisimulation, adversarial threat-model, and
+  simulation/federation extensions. SEM-230 preserves their participant,
+  audience, policy revision, declassification, controller/authority,
+  scheduler/environment, timing/probability, order, and evidence coordinates;
+  that extension seam is not evidence those properties are already delivered.
 - [STRIPS](https://doi.org/10.1016/0004-3702(71)90010-5),
   [PDDL](https://doi.org/10.2200/S00900ED2V01Y201902AIM042),
   [PDDL2.1](https://doi.org/10.1613/jair.1129), and the probabilistic planning

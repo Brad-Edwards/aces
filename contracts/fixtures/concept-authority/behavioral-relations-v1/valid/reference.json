@@ -1,7 +1,7 @@
 {
   "schema_version": "behavioral-relations/v1",
   "taxonomy_id": "aces-behavioral-relations",
-  "taxonomy_revision": "rev1",
+  "taxonomy_revision": "rev2",
   "bibliography": [
     {
       "source_id": "milner-1980",

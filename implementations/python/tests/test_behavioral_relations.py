@@ -42,6 +42,7 @@ REQUIRED_RELATION_IDS = {
     "strong-bisimulation",
     "weak-bisimulation",
     "participant-projected-history-equivalence",
+    "policy-noninterference",
     "epistemic-indistinguishability",
     "alternating-strategic-equivalence",
     "probabilistic-bisimulation",
@@ -54,7 +55,7 @@ REQUIRED_RELATION_IDS = {
 def _bounded_empirical_claim() -> dict[str, object]:
     return {
         "taxonomy_id": "aces-behavioral-relations",
-        "taxonomy_revision": "rev1",
+        "taxonomy_revision": "rev2",
         "relation_id": "empirical-adequacy",
         "subject": "TechVault baseline study",
         "left_carrier_ref": "study-techvault-baseline@1.0.0",
@@ -174,6 +175,8 @@ def test_catalog_bibliography_claim_surfaces_and_relation_references_resolve():
         "fagin-halpern-moses-vardi-1995",
         "alur-henzinger-kupferman-vardi-1998",
         "alur-henzinger-kupferman-2002",
+        "goguen-meseguer-1982",
+        "sabelfeld-sands-2009",
     }
     assert all(source.immutable_locator.kind in {"doi", "isbn"} for source in catalog.bibliography)
     assert all(set(relation.source_refs) <= source_ids for relation in catalog.relations.values())
@@ -182,6 +185,7 @@ def test_catalog_bibliography_claim_surfaces_and_relation_references_resolve():
         "backend-realization",
         "backend-comparison",
         "participant-visible-behavior",
+        "participant-information-flow-policy",
         "multi-agent-interaction",
         "independent-adequacy-study",
     }
@@ -275,7 +279,7 @@ def test_claim_binding_rejects_bounded_evidence_promoted_to_universal_claim():
     with pytest.raises(ValidationError, match="universal quantification requires model-check or proof evidence"):
         BehavioralClaimBindingModel(
             taxonomy_id="aces-behavioral-relations",
-            taxonomy_revision="rev1",
+            taxonomy_revision="rev2",
             relation_id="trace-equivalence",
             subject="two finite backend runs",
             left_carrier_ref="backend-run:left",

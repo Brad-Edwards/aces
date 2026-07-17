@@ -382,3 +382,6 @@ adrs:
   - id: ADR-084
     path: docs/decisions/adrs/adr-084-scenario-variation-and-deterministic-trial-realization.md
     pin: e4be391affc09e1f0db3c5004fb2dfa0c4138c5c2f98086b3a6b8d341b4fd9d8
+  - id: ADR-085
+    path: docs/decisions/adrs/adr-085-participant-information-flow-and-control.md
+    pin: 75143315eba5f4e71d5f8c4bfa3468e46060e4ad95a593c21e8d100387500245

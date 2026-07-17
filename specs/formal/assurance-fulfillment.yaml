@@ -29,6 +29,7 @@ adr_refs:
   - ADR-078
   - ADR-081
   - ADR-084
+  - ADR-085
 
 # Registry of classified formal-spec subsystems. Every immediate subdirectory of
 # specs/formal/ carrying a README.md must appear here (the checker fails on any
@@ -261,37 +262,25 @@ entries:
           model exists; #486 tracks the executable invariant oracle.
 
   - subsystem: participant-semantics
-    # Design coverage only (SEM-208-215): same posture as participant-runtime.
+    # SEM-230 adds an executable bounded policy model while runtime-wide typed
+    # contract coverage remains incomplete for the broader participant surface.
     delivered_artifacts:
       - kind: invariant_list
         path: specs/formal/participant-semantics/README.md
-    waived_artifacts:
       - kind: unit_tests
-        date: 2026-06-13
-        tracking:
-          - "#487"
-        rationale: >-
-          Participant-semantics is at design coverage; no executable semantic
-          tests realize SEM-208-215 yet.
+        path: implementations/python/tests/test_sem_230_information_flow_control.py
+      - kind: property_based_or_differential_tests
+        path: implementations/python/tests/test_sem_230_information_flow_control.py
+      - kind: abstract_state_machine_model
+        path: specs/formal/participant-semantics/information-flow-control.md
+    waived_artifacts:
       - kind: typed_ir_or_contract_coverage
         date: 2026-06-13
         tracking:
           - "#487"
         rationale: >-
-          No typed contract realizes the SEM-208-215 semantic model yet.
-      - kind: property_based_or_differential_tests
-        date: 2026-06-13
-        tracking:
-          - "#487"
-        rationale: >-
-          No property-based or differential coverage of the semantic model yet.
-      - kind: abstract_state_machine_model
-        date: 2026-06-13
-        tracking:
-          - "#487"
-        rationale: >-
-          No executable abstract model exists; #487 tracks the executable
-          invariant oracle (I1-I18) for the abstract model.
+          The SEM-230 relation catalog and test-local model do not deliver the
+          broader participant-semantics SDL/compiler/runtime contract surface.
 
   - subsystem: participant-behavior-model
     # Design coverage for ACT-602/603/606/607/608 plus executable ACT-602

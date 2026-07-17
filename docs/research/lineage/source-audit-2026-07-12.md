@@ -104,6 +104,41 @@ copy of the CybORG API or scenario schema.
   simulator session types, usernames, or the scenario syntax. No code or
   syntax was copied.
 
+## Participant Information-Flow Sources
+
+On 2026-07-17, the two publication identities adopted by SEM-230 were checked
+as bounded DOI records:
+
+- Joseph A. Goguen and José Meseguer, *Security Policies and Security Models*,
+  1982 IEEE Symposium on Security and Privacy,
+  <https://doi.org/10.1109/SP.1982.10014>.
+- Andrei Sabelfeld and David Sands, *Declassification: Dimensions and
+  Principles*, Journal of Computer Security 17(5), 2009,
+  <https://doi.org/10.3233/JCS-2009-0352>.
+
+The SEM-230 derivation also reuses formal identities already adopted by the
+participant and behavioral-relation authorities: Fagin, Halpern, Moses, and
+Vardi's *Reasoning About Knowledge* (ISBN `9780262061629`), Milner's
+*A Calculus of Communicating Systems* (DOI `10.1007/3-540-10235-3`), and van
+Glabbeek's *The Linear Time-Branching Time Spectrum* (DOI
+`10.1007/BFb0039066`). The existing ADR-054 order model supplies the indirect
+Lamport happened-before, Winskel event-structure, and Mazurkiewicz trace-theory
+lineage. SEM-230 references that governed model rather than creating another
+clock, event-structure, or trace definition.
+
+ACES adapts the noninterference policy obligation and explicit
+declassification dimensions, interpreted-system local state, and labelled
+transition/hiding discipline into the ACES-native `policy-noninterference`
+relation. The governed mapping is participant-, audience-, policy-revision-,
+scheduler/environment-, and order-relative and composes existing ACES world,
+view, local-history, archival-evidence, control, authority, marking, and
+provenance objects. The new content is limited to coordinates needed to bind
+those prior definitions to existing ACES carriers. It does not copy publication
+syntax or code and does not claim wire compatibility, universal proof,
+production enforcement, or backend realization. No copied-code notice or
+third-party distribution obligation is introduced by these publication
+citations.
+
 ## CRACK Publications
 
 Two related works by Russo, Costa, and Armando are distinct and must not share

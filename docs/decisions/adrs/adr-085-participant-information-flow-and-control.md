@@ -2,7 +2,7 @@
 
 ## Status
 
-proposed
+accepted
 
 ## Date
 
@@ -183,6 +183,15 @@ and epistemic indistinguishability. Those relations may be proof techniques or
 separate claims only when their own carriers, projections, quantifiers,
 assumptions, and evidence exist. A finite negative-leakage suite, passing
 backend probes, or equal sampled histories remains bounded evidence.
+
+The relation SHALL be published in the existing
+`aces-behavioral-relations` catalog at taxonomy revision `rev2`, with a
+dedicated participant-information-flow claim surface. The closed catalog
+contract remains `behavioral-relations/v1`; adding the relation changes the
+taxonomy contents, not the contract shape. Current in-repository claim
+producers SHALL advance together to `rev2`. Historical serialized `rev1`
+resolution requires the governed migration path owned by issue #802, not a
+consumer-local fallback.
 
 This ADR adopts the claim surface and assurance progression. It makes no
 universal noninterference or bisimulation claim.
