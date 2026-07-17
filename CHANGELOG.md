@@ -8,6 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 PRs do **not** edit this file directly. release-please maintains it from the
 Conventional Commit history on `main` (#684).
 
+## [0.23.0](https://github.com/Brad-Edwards/aces/compare/v0.22.0...v0.23.0) (2026-07-17)
+
+
+### Features
+
+* add DSL evaluation evidence gate ([#795](https://github.com/Brad-Edwards/aces/issues/795)) ([03c3101](https://github.com/Brad-Edwards/aces/commit/03c3101d48c359d96604d8227059af5c12c513e2))
+* add stateful realization resources ([#782](https://github.com/Brad-Edwards/aces/issues/782)) ([5c47235](https://github.com/Brad-Edwards/aces/commit/5c472351c2d5ce15ca07fb03522f4a5846b6a63d))
+* **sdl:** add participant interactive access ([#807](https://github.com/Brad-Edwards/aces/issues/807)) ([7e17b97](https://github.com/Brad-Edwards/aces/commit/7e17b97ce0e47ac11bfee278ccb872f6a57d2bf8))
+
+
+### Documentation
+
+* design deterministic scenario trial realization ([#804](https://github.com/Brad-Edwards/aces/issues/804)) ([60e9ad6](https://github.com/Brad-Edwards/aces/commit/60e9ad6b6d836b88283301f472f7a830e4edc51a))
+* design participant information-flow control adoption ([#806](https://github.com/Brad-Edwards/aces/issues/806)) ([0c87adf](https://github.com/Brad-Edwards/aces/commit/0c87adf02105fe4269d9b77aacce8e86bdf968dc))
+
 ## [0.22.0](https://github.com/Brad-Edwards/aces/compare/v0.21.0...v0.22.0) (2026-07-15)
 
 
