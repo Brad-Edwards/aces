@@ -923,7 +923,7 @@ Current implementation artifacts for the `SEM-211` slice:
   history action-result embedding, compiled-contract validation for declared
   effects and failure classes, and backend diagnostic mapping to portable
   failure classes;
-- `implementations/python/packages/aces_contracts/contracts.py` publishes the
+- `implementations/python/packages/aces_contracts/contracts/` publishes the
   action-result payload shape in the participant behavior-history and runtime
   snapshot schemas;
 - `implementations/python/tests/test_sem_211_participant_action_semantics.py`
@@ -966,7 +966,7 @@ Current implementation artifacts for the first `SEM-212` slice:
   bases, outcome interpretation-rule refs, timestamp-adjacency limits for
   strong causal support, effect grounding in actual observations/action
   results, and participant-boundary authorization for attribution evidence;
-- `implementations/python/packages/aces_contracts/contracts.py` publishes the
+- `implementations/python/packages/aces_contracts/contracts/` publishes the
   attribution-edge payload under participant behavior-history event contracts;
 - `implementations/python/tests/test_sem_212_participant_attribution_semantics.py`
   covers positive attribution, missing bases, timestamp-only strong-causality
@@ -1018,7 +1018,7 @@ Current implementation artifacts for the first `SEM-213` slice:
   temporal context on participant behavior-history events, validates it
   against the compiled action contract, and exposes an abstract state-machine
   checker for cadence, deadline, dwell, timeout, reset, and replay interactions;
-- `implementations/python/packages/aces_contracts/contracts.py` publishes the
+- `implementations/python/packages/aces_contracts/contracts/` publishes the
   runtime temporal-context payload in participant behavior-history and runtime
   snapshot schemas;
 - `implementations/python/tests/test_sem_213_temporal_participant_semantics.py`
@@ -1057,7 +1057,7 @@ Implementation artifacts:
 
 - `participant-context-view-v1` carries the SEM-214 envelope in the existing
   API-408 control-plane carrier;
-- `implementations/python/packages/aces_contracts/contracts.py` defines the
+- `implementations/python/packages/aces_contracts/contracts/` defines the
   closed-world Pydantic model and JSON Schema reference output;
 - `contracts/fixtures/control-plane/participant-context-view-v1/` contains
   positive and negative fixtures for source-layer, temporal, audience-scope,
@@ -1203,7 +1203,7 @@ invariant oracle is unchanged.
 
 Current implementation artifacts for the `SEM-216` slice:
 
-- `implementations/python/packages/aces_contracts/contracts.py` adds
+- `implementations/python/packages/aces_contracts/contracts/` adds
   `ParticipantContextViewModel._validate_sem216_audience_boundary` with its
   published `allOf` (required view rule + redaction policy) and
   `x-aces-invariants` (archival source mediation, `payload_ref` non-aliasing)

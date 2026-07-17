@@ -84,7 +84,7 @@ Implementation exists in:
 - `implementations/python/packages/aces_sdl/semantics/participant_behavior.py`;
 - `implementations/python/packages/aces_processor/compiler/` and
   `aces_processor/models/`;
-- `implementations/python/packages/aces_contracts/contracts.py`; and
+- `implementations/python/packages/aces_contracts/contracts/`; and
 - `implementations/python/packages/aces_conformance/conformance.py`.
 
 Tests include `test_sem_208_participant_behavior.py`,
@@ -191,7 +191,7 @@ is proposed. `ParticipantRuntimeBaseEnvelopeModel`,
 `ParticipantObservationEnvelopeModel`, runtime snapshot/history carriers,
 `ParticipantFeatureSupportModel`, `ParticipantRuntimeCapabilitiesModel`, and
 `BackendManifestV2Model` are published from
-`aces_contracts/contracts.py`. `participant_runtime_capability_contract_gaps()`
+`aces_contracts/contracts/`. `participant_runtime_capability_contract_gaps()`
 and `BackendConformanceReport` provide the canonical capability/conformance
 seams.
 
