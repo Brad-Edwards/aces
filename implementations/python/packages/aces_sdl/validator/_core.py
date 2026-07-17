@@ -222,6 +222,7 @@ class _ValidatorCore:
         self._verify_scripts()
         self._verify_stories()
         self._verify_roles()
+        self._verify_stateful_resources()
 
         # New section passes
         self._verify_content()

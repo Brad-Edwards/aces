@@ -25,7 +25,7 @@ from ._composition_provenance import (
 from ._composition_provenance import (
     resolved_import_record as _resolved_import_record,
 )
-from ._errors import SDLInstantiationError, SDLParseDiagnostic, SDLParseError
+from ._errors import SDLInstantiationError, SDLParseDiagnostic, SDLParseError, SDLValidationError
 from ._identifiers import QualifiedName
 from ._module_symbols import FORWARDING_AGENTS_SECTION
 from ._module_symbols import HASHMAP_SECTIONS as _HASHMAP_SECTIONS
@@ -84,6 +84,35 @@ def _rewrite_section_ref(name: str, section: str, name_map: Mapping[str, str]) -
         local_name = name.removeprefix(prefix)
         return f"{prefix}{name_map.get(local_name, local_name)}"
     return name_map.get(name, name)
+
+
+def _rewrite_stateful_dependency_ref(
+    reference: str,
+    symbols: dict[str, dict[str, str] | set[str]],
+    *,
+    owner: str,
+) -> str:
+    """Rewrite through the resource section that owns the dependency."""
+
+    matching_sections: list[str] = []
+    for section in ("generated_artifacts", "persistent_volumes"):
+        section_map = symbols[section]
+        if not isinstance(section_map, Mapping):
+            continue
+        if reference.startswith(f"{section}."):
+            return _rewrite_section_ref(reference, section, section_map)
+        if reference in section_map:
+            matching_sections.append(section)
+
+    if len(matching_sections) > 1:
+        choices = ", ".join(f"{section}.{reference}" for section in matching_sections)
+        raise SDLValidationError([f"{owner} dependency reference {reference!r} is ambiguous; use one of: {choices}"])
+    if matching_sections:
+        section = matching_sections[0]
+        section_map = symbols[section]
+        assert isinstance(section_map, Mapping)
+        return _rewrite_section_ref(reference, section, section_map)
+    return reference
 
 
 def _validate_descriptor_exports(
@@ -246,7 +275,7 @@ def _namespace_payload(
         if isinstance(content, dict) and content.get("target"):
             content["target"] = _maybe_rename(str(content["target"]), symbols["nodes"])
     for section_name in ("generated_artifacts", "persistent_volumes"):
-        for resource in namespaced.get(section_name, {}).values():
+        for resource_name, resource in namespaced.get(section_name, {}).items():
             if not isinstance(resource, dict):
                 continue
             for consumer in resource.get("consumers", []):
@@ -257,7 +286,12 @@ def _namespace_payload(
                 "refresh_dependencies",
             ):
                 resource[dependency_field] = [
-                    _maybe_rename(reference, symbols["named"]) for reference in resource.get(dependency_field, [])
+                    _rewrite_stateful_dependency_ref(
+                        reference,
+                        symbols,
+                        owner=f"{section_name}.{resource_name}",
+                    )
+                    for reference in resource.get(dependency_field, [])
                 ]
     for account in namespaced.get("accounts", {}).values():
         if isinstance(account, dict):

@@ -3488,7 +3488,8 @@
           },
           "minItems": 1,
           "title": "Consumers",
-          "type": "array"
+          "type": "array",
+          "uniqueItems": true
         },
         "generator": {
           "$ref": "#/$defs/GeneratedArtifactKind"
@@ -3504,7 +3505,8 @@
             "type": "string"
           },
           "title": "Ordering Dependencies",
-          "type": "array"
+          "type": "array",
+          "uniqueItems": true
         },
         "outputs": {
           "items": {
@@ -3512,7 +3514,8 @@
           },
           "minItems": 1,
           "title": "Outputs",
-          "type": "array"
+          "type": "array",
+          "uniqueItems": true
         },
         "provenance": {
           "minLength": 1,
@@ -3530,7 +3533,8 @@
             "type": "string"
           },
           "title": "Refresh Dependencies",
-          "type": "array"
+          "type": "array",
+          "uniqueItems": true
         }
       },
       "required": [
@@ -6485,7 +6489,8 @@
           },
           "minItems": 1,
           "title": "Consumers",
-          "type": "array"
+          "type": "array",
+          "uniqueItems": true
         },
         "lifecycle": {
           "$ref": "#/$defs/VolumeLifecycle"
@@ -6498,7 +6503,8 @@
             "type": "string"
           },
           "title": "Ordering Dependencies",
-          "type": "array"
+          "type": "array",
+          "uniqueItems": true
         },
         "refresh_dependencies": {
           "items": {
@@ -6508,7 +6514,8 @@
             "type": "string"
           },
           "title": "Refresh Dependencies",
-          "type": "array"
+          "type": "array",
+          "uniqueItems": true
         }
       },
       "required": [
@@ -23330,5 +23337,52 @@
   "title": "SDL Instantiated Scenario v1",
   "type": "object",
   "x-aces-authored-identity-profile": "aces-sdl-semantic/v1",
-  "x-aces-document-phase": "instantiated-scenario"
+  "x-aces-document-phase": "instantiated-scenario",
+  "x-aces-invariants": [
+    {
+      "description": "Generated artifact output names and paths, consumers, and dependency entries must be unique, and generated artifact consumers must be read-only.",
+      "id": "stateful-generated-artifact-semantics",
+      "inputs": [
+        {
+          "contract_id": "instantiated-scenario-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_sdl.stateful_resources.GeneratedArtifact._unique_outputs_and_consumers"
+    },
+    {
+      "description": "Persistent volume consumers and dependency entries must be unique and access cardinality must match the declared portable access mode.",
+      "id": "stateful-persistent-volume-semantics",
+      "inputs": [
+        {
+          "contract_id": "instantiated-scenario-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_sdl.stateful_resources.PersistentVolume._unique_consumers"
+    },
+    {
+      "description": "Stateful resource consumers and dependencies must resolve unambiguously, use the POSIX v1 path dialect, and must not collide on a consumer node mount destination.",
+      "id": "stateful-cross-resource-semantics",
+      "inputs": [
+        {
+          "contract_id": "instantiated-scenario-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_sdl._stateful_resource_references.stateful_resource_reference_errors"
+    }
+  ],
+  "x-aces-semantic-profile": {
+    "contract_id": "instantiated-scenario-v1",
+    "entry_schema_contract_id": "aces-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
+    "id": "aces-semantic-invariants-v1",
+    "keyword": "x-aces-invariants",
+    "required": true,
+    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+  }
 }

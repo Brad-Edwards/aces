@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 import textwrap
+from dataclasses import replace
+from typing import Any
 
+import pytest
+from aces_backend_protocols.capabilities import BackendManifest
 from aces_backend_stubs.stubs import create_stub_components, create_stub_manifest
 from aces_contracts.contracts import (
     ParticipantActionResultModel,
@@ -330,6 +334,127 @@ def test_control_plane_rejects_snapshot_resource_identity_disagreement() -> None
 
     assert receipt.accepted is False
     assert [diagnostic.code for diagnostic in receipt.diagnostics] == ["runtime.plan-resource-incoherent"]
+
+
+class _CountingProvisioner:
+    def __init__(self, delegate: Any) -> None:
+        self._delegate = delegate
+        self.validate_calls = 0
+        self.apply_calls = 0
+
+    def validate(self, provisioning_plan: ProvisioningPlan):
+        self.validate_calls += 1
+        return self._delegate.validate(provisioning_plan)
+
+    def apply(self, provisioning_plan: ProvisioningPlan, snapshot: RuntimeSnapshot):
+        self.apply_calls += 1
+        return self._delegate.apply(provisioning_plan, snapshot)
+
+
+def _stateful_plan(resource_type: str = "generated-artifact") -> ProvisioningPlan:
+    return ProvisioningPlan(
+        operations=[
+            ProvisionOp(
+                action=ChangeAction.CREATE,
+                address=f"provision.{resource_type}.config",
+                resource_type=resource_type,
+                payload={"spec": {"provenance": "config.yml"}},
+            )
+        ]
+    )
+
+
+def _target_with_manifest(manifest: BackendManifest) -> tuple[RuntimeTarget, _CountingProvisioner]:
+    base = create_stub_target()
+    provisioner = _CountingProvisioner(base.provisioner)
+    return (
+        RuntimeTarget(
+            name=base.name,
+            manifest=manifest,
+            provisioner=provisioner,
+            orchestrator=base.orchestrator,
+            evaluator=base.evaluator,
+            participant_runtime=base.participant_runtime,
+        ),
+        provisioner,
+    )
+
+
+@pytest.mark.parametrize(
+    ("resource_type", "capability_attribute", "expected_code"),
+    [
+        (
+            "generated-artifact",
+            "supports_generated_artifacts",
+            "provisioner.generated-artifacts-unsupported",
+        ),
+        (
+            "persistent-volume",
+            "supports_persistent_volumes",
+            "provisioner.persistent-volumes-unsupported",
+        ),
+    ],
+)
+def test_control_plane_rejects_stateful_kind_before_backend_calls(
+    resource_type: str,
+    capability_attribute: str,
+    expected_code: str,
+) -> None:
+    manifest = create_stub_manifest()
+    unsupported = replace(
+        manifest,
+        capabilities=replace(
+            manifest.capabilities,
+            provisioner=replace(manifest.provisioner, **{capability_attribute: False}),
+        ),
+    )
+    target, provisioner = _target_with_manifest(unsupported)
+
+    receipt = RuntimeControlPlane(target).submit_provisioning(_stateful_plan(resource_type))
+
+    assert receipt.accepted is False
+    assert [diagnostic.code for diagnostic in receipt.diagnostics] == [expected_code]
+    assert provisioner.validate_calls == 0
+    assert provisioner.apply_calls == 0
+
+
+def test_control_plane_rejects_stateful_plan_without_exact_realization_support() -> None:
+    manifest = create_stub_manifest()
+    support = replace(
+        manifest.realization_support[0],
+        supported_exact_requirement_kinds=frozenset(),
+    )
+    target, provisioner = _target_with_manifest(replace(manifest, realization_support=(support,)))
+
+    receipt = RuntimeControlPlane(target).submit_provisioning(_stateful_plan())
+
+    assert receipt.accepted is False
+    assert [diagnostic.code for diagnostic in receipt.diagnostics] == ["realization.unsupported-exact-requirement"]
+    assert provisioner.validate_calls == 0
+    assert provisioner.apply_calls == 0
+
+
+def test_control_plane_rejects_exact_support_from_another_domain() -> None:
+    manifest = create_stub_manifest()
+    support = replace(manifest.realization_support[0], domain="orchestration")
+    target, provisioner = _target_with_manifest(replace(manifest, realization_support=(support,)))
+
+    receipt = RuntimeControlPlane(target).submit_provisioning(_stateful_plan())
+
+    assert receipt.accepted is False
+    assert [diagnostic.code for diagnostic in receipt.diagnostics] == ["realization.unsupported-exact-requirement"]
+    assert provisioner.validate_calls == 0
+    assert provisioner.apply_calls == 0
+
+
+def test_control_plane_dispatches_stateful_plan_after_both_admission_gates() -> None:
+    target, provisioner = _target_with_manifest(create_stub_manifest())
+
+    receipt = RuntimeControlPlane(target).submit_provisioning(_stateful_plan())
+
+    assert receipt.accepted is True
+    assert provisioner.validate_calls == 1
+    assert provisioner.apply_calls == 1
 
 
 def test_control_plane_submits_orchestration_with_portable_workflow_state():

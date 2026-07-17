@@ -11,6 +11,10 @@ from dataclasses import dataclass, replace
 
 from aces_backend_protocols.capabilities import BackendManifest
 from aces_contracts.addressing import require_compiled_address
+from aces_contracts.apparatus import (
+    DECLARED_CAPABILITY_MATCH_REQUIREMENT_KIND,
+    RUNTIME_REALIZATION_DOMAIN,
+)
 from aces_contracts.diagnostics import Diagnostic, Severity
 from aces_contracts.planning import ChangeAction, ProvisioningPlan, ProvisionOp
 from aces_contracts.realization_envelope import (
@@ -45,12 +49,12 @@ _MISSING_CONCERN_VALUE = object()
 # The single coarse realization domain string already published by backend
 # manifests (see ``aces_backend_stubs.stubs``). Kept opaque per the SEM-218
 # extensibility seam.
-REALIZATION_DOMAIN = "runtime-realization"
+REALIZATION_DOMAIN = RUNTIME_REALIZATION_DOMAIN
 
 # The exact-requirement kind every concrete (exact) author declaration maps to.
 # A backend that honors exact declarations lists this in
 # ``supported_exact_requirement_kinds``; one that cannot must reject (I2).
-EXACT_REQUIREMENT_KIND = "declared-capability-match"
+EXACT_REQUIREMENT_KIND = DECLARED_CAPABILITY_MATCH_REQUIREMENT_KIND
 
 # Authored realization concerns mapped onto the published constraint-kind
 # vocabulary, keyed by (head section, leaf field) of the classifier path. The
