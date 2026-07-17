@@ -74,6 +74,18 @@ def _maybe_rename(name: str, name_map: Mapping[str, str]) -> str:
     return name_map.get(name, name)
 
 
+def _rewrite_section_ref(name: str, section: str, name_map: Mapping[str, str]) -> str:
+    """Rewrite a bare or explicitly section-qualified reference."""
+
+    if not name or is_variable_ref(name):
+        return name
+    prefix = f"{section}."
+    if name.startswith(prefix):
+        local_name = name.removeprefix(prefix)
+        return f"{prefix}{name_map.get(local_name, local_name)}"
+    return name_map.get(name, name)
+
+
 def _validate_descriptor_exports(
     scenario: ScenarioContent,
     descriptor: ModuleDescriptor,
@@ -233,6 +245,20 @@ def _namespace_payload(
     for content in namespaced.get("content", {}).values():
         if isinstance(content, dict) and content.get("target"):
             content["target"] = _maybe_rename(str(content["target"]), symbols["nodes"])
+    for section_name in ("generated_artifacts", "persistent_volumes"):
+        for resource in namespaced.get(section_name, {}).values():
+            if not isinstance(resource, dict):
+                continue
+            for consumer in resource.get("consumers", []):
+                if isinstance(consumer, dict) and consumer.get("node"):
+                    consumer["node"] = _maybe_rename(str(consumer["node"]), symbols["nodes"])
+            for dependency_field in (
+                "ordering_dependencies",
+                "refresh_dependencies",
+            ):
+                resource[dependency_field] = [
+                    _maybe_rename(reference, symbols["named"]) for reference in resource.get(dependency_field, [])
+                ]
     for account in namespaced.get("accounts", {}).values():
         if isinstance(account, dict):
             if account.get("node"):
@@ -272,6 +298,21 @@ def _namespace_payload(
             agent["starting_accounts"] = [
                 _maybe_rename(name, symbols["accounts"]) for name in agent.get("starting_accounts", [])
             ]
+            for access in agent.get("interactive_access", {}).values():
+                if not isinstance(access, dict):
+                    continue
+                if access.get("target_ref"):
+                    access["target_ref"] = _rewrite_section_ref(
+                        str(access["target_ref"]),
+                        "nodes",
+                        symbols["nodes"],
+                    )
+                if access.get("account_ref"):
+                    access["account_ref"] = _rewrite_section_ref(
+                        str(access["account_ref"]),
+                        "accounts",
+                        symbols["accounts"],
+                    )
             knowledge = agent.get("initial_knowledge")
             if isinstance(knowledge, dict):
                 knowledge["hosts"] = [_maybe_rename(name, symbols["nodes"]) for name in knowledge.get("hosts", [])]

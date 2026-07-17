@@ -52,6 +52,37 @@ def safe_repo_path(repo_root: Path, rel_path: str) -> Path | None:
     return resolved
 
 
+def load_bounded_json_object(
+    repo_root: Path,
+    rel_path: str,
+    *,
+    max_bytes: int,
+) -> dict[str, object]:
+    """Load one repository JSON object with containment, size, and duplicate-key checks."""
+
+    path = safe_repo_path(repo_root, rel_path)
+    if path is None or not path.is_file():
+        raise ValueError(f"missing or unsafe repository artifact {rel_path!r}")
+    if path.stat().st_size > max_bytes:
+        raise ValueError(f"{rel_path!r} exceeds the {max_bytes}-byte limit")
+
+    def object_without_duplicates(pairs: list[tuple[str, object]]) -> dict[str, object]:
+        result: dict[str, object] = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError(f"duplicate JSON key {key!r}")
+            result[key] = value
+        return result
+
+    payload = json.loads(
+        path.read_text(encoding="utf-8"),
+        object_pairs_hook=object_without_duplicates,
+    )
+    if not isinstance(payload, dict):
+        raise ValueError(f"{rel_path!r} must contain a JSON object")
+    return payload
+
+
 def run_git(args: list[str], repo_root: Path = REPO_ROOT) -> str:
     proc = subprocess.run(
         ["git", *args],
@@ -72,7 +103,10 @@ def changed_paths(
     if staged:
         output = run_git(["diff", "--name-only", "--diff-filter=d", "--cached"], repo_root=repo_root)
     elif base_rev:
-        output = run_git(["diff", "--name-only", "--diff-filter=d", base_rev, "HEAD"], repo_root=repo_root)
+        output = run_git(
+            ["diff", "--name-only", "--diff-filter=d", base_rev, "HEAD"],
+            repo_root=repo_root,
+        )
     else:
         output = run_git(["diff", "--name-only", "--diff-filter=d", "HEAD"], repo_root=repo_root)
     return [line.strip() for line in output.splitlines() if line.strip()]
@@ -123,7 +157,10 @@ def apply_exceptions(
                 continue
             if entry.get("rule_id") != failure.rule_id:
                 continue
-            if requirement_uid and entry.get("requirement_uid") not in {None, requirement_uid}:
+            if requirement_uid and entry.get("requirement_uid") not in {
+                None,
+                requirement_uid,
+            }:
                 continue
             match_paths = entry.get("paths") or []
             if failure.path and match_paths and not path_matches_any(failure.path, match_paths):
@@ -137,7 +174,14 @@ def apply_exceptions(
 
 def failures_to_json(failures: list[PolicyFailure]) -> str:
     return json.dumps(
-        [{"rule_id": failure.rule_id, "message": failure.message, "path": failure.path} for failure in failures],
+        [
+            {
+                "rule_id": failure.rule_id,
+                "message": failure.message,
+                "path": failure.path,
+            }
+            for failure in failures
+        ],
         indent=2,
         sort_keys=True,
     )

@@ -27,6 +27,8 @@ HASHMAP_SECTIONS = frozenset(
         "scripts",
         "stories",
         "content",
+        "generated_artifacts",
+        "persistent_volumes",
         "accounts",
         "identity_domains",
         "relationships",
@@ -57,6 +59,7 @@ NESTED_HASHMAP_FIELDS = frozenset(
         "events",
         "steps",
         "extensions",
+        "interactive_access",
     }
 )
 

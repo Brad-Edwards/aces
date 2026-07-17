@@ -105,13 +105,28 @@ ownership:
     - implementations/python/tests
     - CHANGELOG.md
   sdl-language:
+    - contracts/concept-authority
+    - contracts/fixtures/backend-manifest
+    - contracts/fixtures/concept-authority
+    - contracts/provenance
+    - contracts/schema-publication-manifest.json
+    - contracts/schemas/backend-manifest
+    - contracts/schemas/plans
     - contracts/schemas/sdl
     - docs/decisions/issue-541-sdl-spec-second-review-preflight.md
+    - docs/decisions/issue-805-participant-interactive-access-preflight.md
     - docs/decisions/adrs
     - docs/explain/sdl
     - docs/index.md
+    - docs/research/lineage/source-audit-2026-07-12.md
+    - docs/research/participant-interactive-access
+    - implementations/python/packages/aces_backend_protocols
+    - implementations/python/packages/aces_backend_stubs
+    - implementations/python/packages/aces_contracts
+    - implementations/python/packages/aces_processor
     - implementations/python/packages/aces_sdl
     - implementations/python/tests
+    - specs/formal/participant-semantics
     - specs/formal/sdl-phases
     - specs/sdl
     - tools/check_sdl_catalog_parity.py

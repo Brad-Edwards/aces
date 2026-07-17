@@ -38,6 +38,7 @@ from .provisioning import (
     _metadata_specs,
 )
 from .realization_requirements import _compile_realization_requirements
+from .stateful_resources import _compile_generated_artifacts, _compile_persistent_volumes
 from .workflows import _compile_workflows
 
 
@@ -97,6 +98,8 @@ def compile_runtime_model(scenario: Scenario | ExpandedScenario | InstantiatedSc
     inject_bindings = _compile_inject_bindings(scenario, inject_templates, diagnostics)
     content_placements = _compile_content_placements(scenario, diagnostics)
     account_placements = _compile_account_placements(scenario, diagnostics, domain_analysis)
+    generated_artifacts = _compile_generated_artifacts(scenario)
+    persistent_volumes = _compile_persistent_volumes(scenario)
     action_contracts = _compile_action_contracts(scenario)
     observation_boundaries = _compile_observation_boundaries(scenario)
     outcome_interpretation_rules = _compile_outcome_interpretation_rules(scenario)
@@ -128,6 +131,8 @@ def compile_runtime_model(scenario: Scenario | ExpandedScenario | InstantiatedSc
         inject_bindings=inject_bindings,
         content_placements=content_placements,
         account_placements=account_placements,
+        generated_artifacts=generated_artifacts,
+        persistent_volumes=persistent_volumes,
         action_contracts=action_contracts,
         observation_boundaries=observation_boundaries,
         outcome_interpretation_rules=outcome_interpretation_rules,

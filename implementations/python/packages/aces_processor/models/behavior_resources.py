@@ -51,6 +51,18 @@ class ParticipantOutcomeInterpretationRuleRuntime(ResolvedResource):
 
 
 @dataclass(frozen=True)
+class ParticipantInteractiveAccessRuntime:
+    """Resolved authored interactive access carried with one participant."""
+
+    access_id: str
+    target_ref: str
+    target_address: str
+    channel: str
+    account_ref: str = ""
+    account_address: str = ""
+
+
+@dataclass(frozen=True)
 class ParticipantBehaviorRuntime(ResolvedResource):
     """Compiled role-neutral participant behavior binding."""
 
@@ -67,6 +79,7 @@ class ParticipantBehaviorRuntime(ResolvedResource):
     operating_scope_addresses: tuple[str, ...] = ()
     action_contract_addresses: tuple[str, ...] = ()
     observation_boundary_addresses: tuple[str, ...] = ()
+    interactive_access: tuple[ParticipantInteractiveAccessRuntime, ...] = ()
     interpretation_mode: str = "role-neutral-projection"
 
 

@@ -709,6 +709,16 @@
           "default": false,
           "title": "Supports Acls",
           "type": "boolean"
+        },
+        "supports_generated_artifacts": {
+          "default": false,
+          "title": "Supports Generated Artifacts",
+          "type": "boolean"
+        },
+        "supports_persistent_volumes": {
+          "default": false,
+          "title": "Supports Persistent Volumes",
+          "type": "boolean"
         }
       },
       "required": [

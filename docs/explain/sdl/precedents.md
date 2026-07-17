@@ -74,6 +74,7 @@ Cyber Range.
 | `AssetValue` | `ConfidentialityValue`, `AvailabilityValue` | Semantics | Extended to CIA triad |
 | `ACLRule` | `Subnets.NACLs` | Both | Simplified from nested dict to flat rule list |
 | `Objective.agent/actions` | Agent identity + action space | Semantics | Objective actor binding and optional action subset validation |
+| `Agent.interactive_access` | `Agents.*.starting_sessions[]` in CybORG v3.0 | Semantics | Adapted participant-local explicit host/channel association; ACES uses stable authored ids and references, not established simulator sessions, usernames, or copied syntax |
 
 
 ### From Newer Participant And Benchmark Ecosystems
@@ -127,6 +128,7 @@ shared-state references without making framework/tool APIs the SDL authority.
 | ----------- | ----------------------------------------- | --- | ------------------------------------------------- |
 | `Content` | `copy_content`, `emulate_traffic_capture` | Semantics | Generalized to file/dataset/directory types |
 | `Account` | `add_account`, `modify_account` | Semantics | Preserved host account-placement lineage; ACES-specific account metadata such as groups, password strength, SPN, and auth method are extensions, not CyRIS-derived directory semantics |
+| `Agent.interactive_access` | `guest_settings[].entry_point` and tunnel selection in CyRIS 1.2 | Semantics | Adapted explicit entry-host eligibility but rejected OS-to-channel inference, tunnel/port mechanics, and generated credentials |
 
 
 ### From Identity, Directory, And Access-Control Sources

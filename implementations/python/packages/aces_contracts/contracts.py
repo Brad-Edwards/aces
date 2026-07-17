@@ -254,6 +254,7 @@ _CONTROLLED_VOCABULARY_GOVERNED_SCOPES = frozenset(
         "behavior_specifications.behavior_mode",
         "behavior_specifications.ai_offensive_behavior_refs",
         "behavior_specifications.offensive_behavior_refs",
+        "agents.interactive_access.channel",
         "capabilities.supported_features",
         "implementation_kind",
         "capabilities.supported_participant_contracts",
@@ -2645,6 +2646,8 @@ class ProvisionerCapabilitiesModel(ContractModel):
     max_total_nodes: int | None = Field(default=None, gt=0)
     supports_acls: bool = False
     supports_accounts: bool = False
+    supports_generated_artifacts: bool = False
+    supports_persistent_volumes: bool = False
     constraints: dict[str, str] = Field(default_factory=dict)
 
     @model_validator(mode="after")

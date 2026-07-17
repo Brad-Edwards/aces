@@ -8,8 +8,7 @@ relationships, workflows, variables). Per ADR-073 the SDL no
 longer carries the OCR scoring pipeline; graded scoring/reward
 live in the experiment/evaluator plane (ADR-055/064/069).
 
-Delivery-level concerns (Docker, Terraform, cloud APIs) are
-outside the SDL.
+Delivery-level concerns (Docker, Terraform, cloud APIs) are outside the SDL.
 """
 
 from collections.abc import Mapping
@@ -17,7 +16,7 @@ from typing import ClassVar
 
 from pydantic import ConfigDict, Field, PrivateAttr, model_validator
 
-from ._base import VARIABLE_TOKEN_RE, SDLModel
+from ._base import SDLModel
 from ._errors import SDLParseDiagnostic
 from ._identifiers import (
     PortableIdentifier,
@@ -26,6 +25,8 @@ from ._identifiers import (
     require_portable_identifier,
 )
 from ._mapping_scopes import HASHMAP_SECTIONS
+from ._scenario_instantiation import collect_variable_tokens, resolve_json_pointer
+from ._stateful_resource_references import validate_stateful_resource_references
 from .accounts import Account
 from .agents import Agent
 from .conditions import Condition
@@ -55,6 +56,7 @@ from .propositions import Assertion, Proposition
 from .realization_designation import RealizationDesignation
 from .relationships import Relationship
 from .runtime_forwarding_agent import RuntimeForwardingAgent
+from .stateful_resources import GeneratedArtifact, PersistentVolume
 from .variables import Variable
 from .vulnerabilities import Vulnerability
 
@@ -97,25 +99,6 @@ def _constraint_node_refs(
             constraint.parameter
         )
     return refs
-
-
-def _collect_variable_tokens(value: object) -> list[str]:
-    """Return the names of every ``${name}`` token found in string *values*.
-
-    Mirrors ``instantiate._substitute_value``: every string is a substitution
-    site and mapping keys are not. An :class:`InstantiatedScenario` is fully
-    concrete, so no token may survive in any string value.
-    """
-    found: list[str] = []
-    if isinstance(value, Mapping):
-        for nested in value.values():
-            found.extend(_collect_variable_tokens(nested))
-    elif isinstance(value, (list, tuple)):
-        for item in value:
-            found.extend(_collect_variable_tokens(item))
-    elif isinstance(value, str):
-        found.extend(VARIABLE_TOKEN_RE.findall(value))
-    return found
 
 
 def _validate_declaration_identifier(
@@ -272,6 +255,8 @@ class ScenarioContent(SDLModel):
 
     # --- Extended sections ---
     content: dict[str, Content] = Field(default_factory=dict)
+    generated_artifacts: dict[str, GeneratedArtifact] = Field(default_factory=dict)
+    persistent_volumes: dict[str, PersistentVolume] = Field(default_factory=dict)
     accounts: dict[str, Account] = Field(default_factory=dict)
     identity_domains: dict[str, IdentityDomain] = Field(default_factory=dict)
     relationships: dict[str, Relationship] = Field(default_factory=dict)
@@ -303,6 +288,15 @@ class ScenarioContent(SDLModel):
         )
         _validate_runtime_forwarding_agent_identifiers(value)
         return value
+
+    @model_validator(mode="after")
+    def _validate_stateful_resource_references(self) -> "ScenarioContent":
+        validate_stateful_resource_references(
+            nodes=self.nodes,
+            generated_artifacts=self.generated_artifacts,
+            persistent_volumes=self.persistent_volumes,
+        )
+        return self
 
     @property
     def advisories(self) -> list[str]:
@@ -453,7 +447,7 @@ class InstantiatedScenario(ScenarioContent):
     @model_validator(mode="after")
     def _reject_unresolved_variable_references(self) -> "InstantiatedScenario":
         payload = self.model_dump(mode="json", by_alias=True)
-        tokens = sorted(set(_collect_variable_tokens(payload)))
+        tokens = sorted(set(collect_variable_tokens(payload)))
         if tokens:
             joined = ", ".join(tokens)
             raise ValueError(f"InstantiatedScenario must not contain unresolved variable references: {joined}")
@@ -463,7 +457,7 @@ class InstantiatedScenario(ScenarioContent):
                 binding_values[(*imported.namespace, *binding.parameter)] = binding.value
         for constraint in self.instantiation_provenance.capability_constraints:
             try:
-                concrete_value = _resolve_json_pointer(payload, constraint.field_pointer)
+                concrete_value = resolve_json_pointer(payload, constraint.field_pointer)
             except (KeyError, IndexError, TypeError, ValueError) as exc:
                 raise ValueError(
                     f"Capability constraint field_pointer does not resolve: {constraint.field_pointer}"
@@ -473,16 +467,3 @@ class InstantiatedScenario(ScenarioContent):
             if not _json_value_equal(concrete_value, binding_values[constraint.parameter]):
                 raise ValueError("Capability constraint binding does not match the concrete field value")
         return self
-
-
-def _resolve_json_pointer(payload: object, pointer: str) -> object:
-    current = payload
-    for raw_segment in pointer.split("/")[1:]:
-        segment = raw_segment.replace("~1", "/").replace("~0", "~")
-        if isinstance(current, Mapping):
-            current = current[segment]
-        elif isinstance(current, (list, tuple)):
-            current = current[int(segment)]
-        else:
-            raise TypeError("JSON Pointer traverses a scalar value")
-    return current

@@ -1,4 +1,4 @@
-"""Agent models — autonomous participants in the scenario.
+"""Agent models — role-neutral participants in the scenario.
 
 Adapted from CybORG's Agents section. An agent has a role (from
 entities), available actions, initial authenticated access (via
@@ -17,9 +17,40 @@ authority anchors point at declared SDL elements, and operating scope
 combines ``allowed_subnets`` with the broader ``operating_scope`` list.
 """
 
-from pydantic import Field, model_validator
+from enum import Enum
 
-from ._base import SDLModel
+from pydantic import Field, field_validator, model_validator
+
+from ._base import SDLModel, WholeFieldVariableReference, parse_enum_or_var
+from ._identifiers import PortableIdentifier
+
+
+class ParticipantInteractiveAccessChannel(str, Enum):
+    """Portable classes of authored participant interactive access."""
+
+    SSH = "ssh"
+    RDP = "rdp"
+
+
+class ParticipantInteractiveAccess(SDLModel):
+    """One authored participant-to-VM interactive-access binding.
+
+    This record carries portable intent only. It is not a host locator, port,
+    credential, portal session, listener observation, or realization claim.
+    """
+
+    target_ref: str = Field(min_length=1)
+    channel: ParticipantInteractiveAccessChannel | WholeFieldVariableReference
+    account_ref: str | None = Field(default=None, min_length=1)
+
+    @field_validator("channel", mode="before")
+    @classmethod
+    def parse_channel(cls, value: object) -> ParticipantInteractiveAccessChannel | str:
+        return parse_enum_or_var(
+            value,
+            ParticipantInteractiveAccessChannel,
+            field_name="channel",
+        )
 
 
 class InitialKnowledge(SDLModel):
@@ -37,7 +68,7 @@ class InitialKnowledge(SDLModel):
 
 
 class Agent(SDLModel):
-    """An autonomous participant in the scenario.
+    """A role-neutral participant in the scenario.
 
     Agents reference existing scenario elements:
 
@@ -58,6 +89,9 @@ class Agent(SDLModel):
     - ``observation_boundaries`` links to declared participant observation
       boundaries that define participant-specific projections of world and
       evidence state (SEM-208)
+    - ``interactive_access`` declares the VM/channel pairs that may be offered
+      to this participant, without inferring a listener, locator, credential,
+      operating scope, action authority, or successful realization (DSL-117)
 
     Per ADR-073 the CybORG-inherited ``reward_calculator`` label was removed;
     it was an unbound, unvalidated string and graded reward lives in the
@@ -74,6 +108,10 @@ class Agent(SDLModel):
     authority_anchors: list[str] = Field(default_factory=list)
     operating_scope: list[str] = Field(default_factory=list)
     observation_boundaries: list[str] = Field(default_factory=list)
+    interactive_access: dict[PortableIdentifier, ParticipantInteractiveAccess] = Field(
+        default_factory=dict,
+        json_schema_extra={"additionalProperties": False},
+    )
 
     @model_validator(mode="before")
     @classmethod

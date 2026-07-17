@@ -32,6 +32,14 @@ def _content_address(name: str) -> str:
     return _address("provision", "content", name)
 
 
+def _generated_artifact_address(name: str) -> str:
+    return _address("provision", "generated-artifact", name)
+
+
+def _persistent_volume_address(name: str) -> str:
+    return _address("provision", "persistent-volume", name)
+
+
 def _content_item_address(content_name: str, item_name: str) -> str:
     return _address("provision", "content", content_name, "items", item_name)
 

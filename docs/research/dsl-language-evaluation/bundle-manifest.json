@@ -1,0 +1,7 @@
+{
+  "bundle_id": "aces-dsl-language-evaluation",
+  "revision": "1.0.0",
+  "protocol_path": "docs/research/dsl-language-evaluation/protocol-v1.json",
+  "snapshot_path": "docs/research/dsl-language-evaluation/execution-snapshot-v1.json",
+  "analysis_path": "docs/research/dsl-language-evaluation/analysis-v1.json"
+}

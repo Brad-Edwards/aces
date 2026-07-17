@@ -29,7 +29,15 @@ PLAN_ADDRESS_ROOT_BY_DOMAIN = {
 }
 PLAN_RESOURCE_TYPES_BY_DOMAIN = {
     RuntimeDomain.PROVISIONING: frozenset(
-        {"network", "node", "feature-binding", "content-placement", "account-placement"}
+        {
+            "network",
+            "node",
+            "feature-binding",
+            "content-placement",
+            "account-placement",
+            "generated-artifact",
+            "persistent-volume",
+        }
     ),
     RuntimeDomain.ORCHESTRATION: frozenset({"inject-binding", "inject", "event", "script", "story", "workflow"}),
     RuntimeDomain.EVALUATION: frozenset({"condition-binding", "proposition", "assertion", "objective"}),

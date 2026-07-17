@@ -1,6 +1,6 @@
 {
   "schema_version": "sdl-lineage-ledger/v1",
-  "reviewed_on": "2026-07-13",
+  "reviewed_on": "2026-07-15",
   "citations": [
     {
       "citation_id": "ocr-sdl-v0.21.2",
@@ -109,6 +109,32 @@
       "license_expression": "MIT",
       "license_url": "https://github.com/Open-Cyber-Range/SDL-parser/blob/fe83e8281fc4b954967fbaa5a0d099007ddcb06c/LICENSE",
       "license_evidence_ref": "docs/research/lineage/source-audit-2026-07-12.md#open-cyber-range-sdl"
+    },
+    {
+      "source_id": "cyris-v1.2",
+      "kind": "git",
+      "title": "CyRIS",
+      "version_or_edition": "1.2",
+      "canonical_url": "https://github.com/crond-jaist/cyris/tree/5f0d7843fed3dff782f7f62da9f8bcaa9a2a7481",
+      "repository_url": "https://github.com/crond-jaist/cyris",
+      "commit": "5f0d7843fed3dff782f7f62da9f8bcaa9a2a7481",
+      "citation_ref": "cyris-2018",
+      "license_expression": "BSD-3-Clause",
+      "license_url": "https://github.com/crond-jaist/cyris/blob/5f0d7843fed3dff782f7f62da9f8bcaa9a2a7481/LICENSE",
+      "license_evidence_ref": "docs/research/lineage/source-audit-2026-07-12.md#cyris-v12-source-pin"
+    },
+    {
+      "source_id": "cyborg-v3.0",
+      "kind": "git",
+      "title": "CybORG",
+      "version_or_edition": "v3.0",
+      "canonical_url": "https://github.com/cage-challenge/CybORG/tree/a2d03f99e587af153ae0ac50fb94ba6272e4fff2",
+      "repository_url": "https://github.com/cage-challenge/CybORG",
+      "commit": "a2d03f99e587af153ae0ac50fb94ba6272e4fff2",
+      "citation_ref": "cyborg-2021",
+      "license_expression": "MIT",
+      "license_url": "https://github.com/cage-challenge/CybORG/blob/a2d03f99e587af153ae0ac50fb94ba6272e4fff2/LICENSE",
+      "license_evidence_ref": "docs/research/lineage/source-audit-2026-07-12.md#cyborg-v30-source-pin"
     },
     {
       "source_id": "cacao-v2.0",
@@ -281,6 +307,43 @@
             "cyborg-2021"
           ],
           "internal_authority_refs": [],
+          "compatibility_direction": "aces_relative_to_source"
+        },
+        {
+          "plane": "semantics",
+          "classification": "adapted",
+          "source_refs": [
+            "cyris-v1.2",
+            "cyborg-v3.0"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/$defs/Agent/properties/interactive_access"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "CyRIS examples/basic.yml and main/clone_environment.py",
+              "symbol_or_pointer": "guest_settings[].entry_point and VMClone tunnel selection"
+            },
+            {
+              "artifact": "CybORG/Simulator/Scenarios/scenario_files/Scenario1.yaml",
+              "symbol_or_pointer": "Agents.*.starting_sessions[]"
+            }
+          ],
+          "divergence": "ACES adapts explicit participant-local access binding into stable keyed declarations with explicit VM and account references plus a closed SSH/RDP channel. It does not copy either syntax, infer a channel from OS family, represent an established simulator session, expose ports or locators, carry raw credentials, or claim that authored availability was realized.",
+          "compatibility": "none",
+          "citation_refs": [
+            "cyris-2018",
+            "cyborg-2021"
+          ],
+          "internal_authority_refs": [
+            "docs/decisions/adrs/adr-020-declarative-participant-framing-boundaries.md",
+            "docs/decisions/adrs/adr-022-participant-behavior-and-interaction-semantics.md",
+            "docs/decisions/adrs/adr-083-participant-tool-decision-surface-and-exposure-semantics.md",
+            "specs/formal/participant-semantics/README.md"
+          ],
           "compatibility_direction": "aces_relative_to_source"
         }
       ]
@@ -510,6 +573,37 @@
           ],
           "internal_authority_refs": [],
           "compatibility_direction": "aces_relative_to_source"
+        }
+      ]
+    },
+    {
+      "subject_id": "sdl-field:generated_artifacts",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/generated_artifacts",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/generated_artifacts"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/stateful-resources.md"
+          ],
+          "compatibility_direction": "not_applicable"
         }
       ]
     },
@@ -1211,6 +1305,37 @@
           "citation_refs": [],
           "internal_authority_refs": [
             "specs/sdl/sections.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "sdl-field:persistent_volumes",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/persistent_volumes",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/persistent_volumes"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/stateful-resources.md"
           ],
           "compatibility_direction": "not_applicable"
         }

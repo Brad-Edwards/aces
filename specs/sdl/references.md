@@ -135,6 +135,10 @@ probe implementations; propositions and assertions carry portable truth.
 | `nodes` | feature/condition/inject/vulnerability refs | `features` / `conditions` / `injects` / `vulnerabilities` |
 | `infrastructure` | node / link / dependency | `nodes` / switch-backed `infrastructure` |
 | `content` | target | `nodes` (VM) |
+| `generated_artifacts` | consumers[].node | `nodes` |
+| `generated_artifacts` | ordering/refresh dependencies | `generated_artifacts` / `persistent_volumes` (acyclic ordering) |
+| `persistent_volumes` | consumers[].node | `nodes` |
+| `persistent_volumes` | ordering/refresh dependencies | `generated_artifacts` / `persistent_volumes` (acyclic ordering) |
 | `accounts` | node | `nodes` (VM) |
 | `accounts` | domain | `identity_domains` |
 | `identity_domains` | authority account | `accounts` |
@@ -145,6 +149,7 @@ probe implementations; propositions and assertions carry portable truth.
 |--------|-------|--------|
 | `agents` | entity | `entities` |
 | `agents` | starting accounts | `accounts` |
+| `agents` | interactive-access target / account | `nodes` (VM) / `accounts` |
 | `agents` | subnets / initial-knowledge subnets | switch-backed `infrastructure` |
 | `agents` | initial-knowledge hosts | `nodes` (VM) |
 | `agents` | initial-knowledge services | declared services on nodes |
@@ -261,6 +266,12 @@ the source of the row's normative meaning.
 | `scripts.*.events[]` | `events` | semantic validation | fatal dangling or ambiguous | [reference rules](#5-cross-section-reference-edge-catalog) | [section validator](../../implementations/python/packages/aces_sdl/validator/_sections.py) |
 | `stories.*.scripts[]` | `scripts` | semantic validation | fatal dangling or ambiguous | [reference rules](#5-cross-section-reference-edge-catalog) | [section validator](../../implementations/python/packages/aces_sdl/validator/_sections.py) |
 | `content.*.target` | `nodes` | semantic validation | fatal unless target is a vm node | [reference rules](#5-cross-section-reference-edge-catalog) | [content validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py) |
+| `generated_artifacts.*.consumers[].node` | `nodes` | structural model validation | fatal dangling or ambiguous | [stateful resources](stateful-resources.md) | [scenario model](../../implementations/python/packages/aces_sdl/scenario.py) |
+| `generated_artifacts.*.ordering_dependencies[]` | `generated_artifacts,persistent_volumes` | structural model and planner graph validation | fatal dangling, ambiguous, or cyclic | [stateful resources](stateful-resources.md) | [scenario model](../../implementations/python/packages/aces_sdl/scenario.py) |
+| `generated_artifacts.*.refresh_dependencies[]` | `generated_artifacts,persistent_volumes` | structural model validation | fatal dangling or ambiguous | [stateful resources](stateful-resources.md) | [scenario model](../../implementations/python/packages/aces_sdl/scenario.py) |
+| `persistent_volumes.*.consumers[].node` | `nodes` | structural model validation | fatal dangling or ambiguous | [stateful resources](stateful-resources.md) | [scenario model](../../implementations/python/packages/aces_sdl/scenario.py) |
+| `persistent_volumes.*.ordering_dependencies[]` | `generated_artifacts,persistent_volumes` | structural model and planner graph validation | fatal dangling, ambiguous, or cyclic | [stateful resources](stateful-resources.md) | [scenario model](../../implementations/python/packages/aces_sdl/scenario.py) |
+| `persistent_volumes.*.refresh_dependencies[]` | `generated_artifacts,persistent_volumes` | structural model validation | fatal dangling or ambiguous | [stateful resources](stateful-resources.md) | [scenario model](../../implementations/python/packages/aces_sdl/scenario.py) |
 | `accounts.*.domain_ref` | `identity_domains` | semantic validation | fatal dangling, ambiguous, or inconsistent topology | [authored domain topology](authored-domain-topology.md) | [domain topology semantics](../../implementations/python/packages/aces_sdl/semantics/domain_topology.py) |
 | `identity_domains.*.authority_account_ref` | `accounts` | semantic validation | fatal dangling, ambiguous, or authority outside domain controllers | [authored domain topology](authored-domain-topology.md) | [domain topology semantics](../../implementations/python/packages/aces_sdl/semantics/domain_topology.py) |
 | `accounts.*.node` | `nodes` | semantic validation | fatal unless target is a vm node | [reference rules](#5-cross-section-reference-edge-catalog) | [account validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py) |
@@ -281,6 +292,8 @@ the source of the row's normative meaning.
 | `agents.*.entity` | `entities` | semantic validation | fatal dangling or ambiguous | [participant semantics](../formal/participant-semantics/README.md) | [participant validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py) |
 | `agents.*.actions[]` | `action_contracts` | semantic validation | fatal dangling or ambiguous | [participant semantics](../formal/participant-semantics/README.md) | [participant semantics](../../implementations/python/packages/aces_sdl/semantics/participant_behavior.py) |
 | `agents.*.starting_accounts[]` | `accounts` | semantic validation | fatal dangling or ambiguous | [participant semantics](../formal/participant-semantics/README.md) | [participant validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py) |
+| `agents.*.interactive_access.*.target_ref` | `nodes` | semantic validation | fatal dangling, ambiguous, or non-VM target | [participant semantics](../formal/participant-semantics/README.md) | [participant interactive-access semantics](../../implementations/python/packages/aces_sdl/semantics/participant_interactive_access.py) |
+| `agents.*.interactive_access.*.account_ref` | `accounts` | semantic validation | fatal dangling, same-node mismatch, or outside participant starting accounts | [participant semantics](../formal/participant-semantics/README.md) | [participant interactive-access semantics](../../implementations/python/packages/aces_sdl/semantics/participant_interactive_access.py) |
 | `agents.*.starting_assertions[]` | `assertions` | semantic validation | fatal dangling, ambiguous, or non-precondition role | [participant semantics](../formal/participant-semantics/README.md) | [proposition validator](../../implementations/python/packages/aces_sdl/validator/_propositions.py) |
 | `agents.*.initial_knowledge.hosts[]` | `nodes` | semantic validation | fatal unless the target is a vm node | [participant semantics](../formal/participant-semantics/README.md) | [participant validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py) |
 | `agents.*.initial_knowledge.subnets[]` | `infrastructure` | semantic validation | fatal unless the target is switch-backed | [participant semantics](../formal/participant-semantics/README.md) | [participant validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py) |

@@ -52,6 +52,8 @@ machinery is not retained as an empty compatibility field. "References" is
 | `scripts` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [reference catalog](references.md) |
 | `stories` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [reference catalog](references.md) |
 | `content` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [document model](document-model.md) |
+| `generated_artifacts` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [stateful resources](stateful-resources.md) |
+| `persistent_volumes` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [stateful resources](stateful-resources.md) |
 | `accounts` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [document model](document-model.md) |
 | `identity_domains` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [authored domain topology](authored-domain-topology.md) |
 | `relationships` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [ADR-052](../../docs/decisions/adrs/adr-052-typed-runtime-relationship-subtypes.md) |
@@ -66,7 +68,7 @@ machinery is not retained as an empty compatibility field. "References" is
 | `workflows` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [workflow semantics](../formal/workflows/state-machine.md) |
 | `variables` | section | map | normalized, expanded | optional; default empty map | `map_key` | none | [variables and instantiation](variables-and-instantiation.md) |
 
-<!-- sdl-catalog-summary top-level=32 metadata-composition=6 sections=26 maps=25 lists=1 -->
+<!-- sdl-catalog-summary top-level=34 metadata-composition=6 sections=28 maps=27 lists=1 -->
 
 The section set therefore has two authoring shapes: maps keyed by stable
 user-defined identifiers and the scenario-level `forwarding_agents` list, whose

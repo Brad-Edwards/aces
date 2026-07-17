@@ -16,6 +16,7 @@ from ..semantics.participant_behavior import (
     ParticipantBehaviorIssue,
     analyze_participant_behavior,
 )
+from ..semantics.participant_interactive_access import analyze_participant_interactive_access
 from ..semantics.participant_outcome import (
     ParticipantOutcomeIssue,
     analyze_participant_outcome_interpretations,
@@ -242,6 +243,14 @@ class _ContentObjectivesMixin:
         service_names = {service.name for node in self._s.nodes.values() for service in node.services if service.name}
         for name, agent in self._s.agents.items():
             self._verify_agent(name, agent, flat_entity_names, service_names)
+        for issue in analyze_participant_interactive_access(
+            agents_by_name=self._s.agents,
+            nodes=self._s.nodes,
+            accounts=self._s.accounts,
+            is_vm_node=self._is_vm_node,
+            is_unresolved=self._is_unresolved_var,
+        ):
+            self._err(issue.message)
 
     def _verify_agent(self, name: str, agent: object, flat_entity_names: set[str], service_names: set[str]) -> None:
         label = f"Agent '{name}'"

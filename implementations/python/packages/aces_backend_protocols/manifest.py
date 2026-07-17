@@ -89,6 +89,8 @@ def backend_manifest_v2_model(manifest: BackendManifest) -> BackendManifestV2Mod
                 "max_total_nodes": manifest.provisioner.max_total_nodes,
                 "supports_acls": manifest.provisioner.supports_acls,
                 "supports_accounts": manifest.provisioner.supports_accounts,
+                "supports_generated_artifacts": manifest.provisioner.supports_generated_artifacts,
+                "supports_persistent_volumes": manifest.provisioner.supports_persistent_volumes,
                 "constraints": dict(manifest.provisioner.constraints),
             },
             "orchestrator": (
