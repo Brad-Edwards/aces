@@ -42,11 +42,11 @@ def _add_aces_plane(json_schema: JsonSchemaValue, contract_id: str) -> None:
     json_schema["x-aces-plane"] = classify_contract_plane(contract_id).value
 
 
-def _schema_contains_aces_invariants(schema_node: Any) -> bool:
+def _schema_contains_aces_invariants(schema_node: object) -> bool:
     if isinstance(schema_node, dict):
-        if "x-aces-invariants" in schema_node:
-            return True
-        return any(_schema_contains_aces_invariants(value) for value in schema_node.values())
+        return "x-aces-invariants" in schema_node or any(
+            _schema_contains_aces_invariants(value) for value in schema_node.values()
+        )
     if isinstance(schema_node, list):
         return any(_schema_contains_aces_invariants(value) for value in schema_node)
     return False

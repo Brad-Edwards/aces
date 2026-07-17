@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Literal
 
 from pydantic import Field, GetJsonSchemaHandler, model_validator
 from pydantic.json_schema import JsonSchemaValue
@@ -337,7 +337,7 @@ def _joint_action_member_ref_set(member_event_refs: list[str]) -> set[str]:
     return member_ref_set
 
 
-def _validate_joint_action_members(record: Any, member_ref_set: set[str]) -> None:
+def _validate_joint_action_members(record: ParticipantJointActionRecordModel, member_ref_set: set[str]) -> None:
     access_event_refs = [access.member_event_ref for access in record.access_sets]
     if not _exact_string_permutation(access_event_refs, member_ref_set):
         raise ValueError("joint action access_sets must cover member_event_refs exactly once")
@@ -345,14 +345,14 @@ def _validate_joint_action_members(record: Any, member_ref_set: set[str]) -> Non
         raise ValueError("joint action realized_order must be an exact permutation of member_event_refs")
 
 
-def _validate_joint_action_disclosure(record: Any) -> None:
+def _validate_joint_action_disclosure(record: ParticipantJointActionRecordModel) -> None:
     if record.unsupported_disclosure and record.exact_concurrency_claim:
         raise ValueError("unsupported concurrency disclosure cannot carry an exact concurrency claim")
     if record.exact_concurrency_claim and record.time_management_context_ref is None:
         raise ValueError("exact concurrency claims require time_management_context_ref")
 
 
-def _joint_action_unsupported_policy_applies(record: Any) -> bool:
+def _joint_action_unsupported_policy_applies(record: ParticipantJointActionRecordModel) -> bool:
     if record.conflict_policy != "unsupported":
         return False
     if not record.unsupported_disclosure or record.exact_concurrency_claim:
@@ -360,7 +360,7 @@ def _joint_action_unsupported_policy_applies(record: Any) -> bool:
     return True
 
 
-def _validate_joint_action_conflict(record: Any, actual_conflict: str) -> None:
+def _validate_joint_action_conflict(record: ParticipantJointActionRecordModel, actual_conflict: str) -> None:
     if not record.unsupported_disclosure and record.conflict_class != actual_conflict:
         raise ValueError("joint action conflict_class must match declared access-set conflicts")
     if record.conflict_class == "none" and actual_conflict != "none":
@@ -369,7 +369,7 @@ def _validate_joint_action_conflict(record: Any, actual_conflict: str) -> None:
     _validate_joint_action_atomicity(record, actual_conflict)
 
 
-def _validate_joint_action_conflict_policy(record: Any, actual_conflict: str) -> None:
+def _validate_joint_action_conflict_policy(record: ParticipantJointActionRecordModel, actual_conflict: str) -> None:
     if record.isolation_guarantee == "serializable" and not record.realized_order:
         raise ValueError("serializable joint action isolation requires realized_order")
     if record.conflict_policy == "serialize" and not record.realized_order:
@@ -380,7 +380,7 @@ def _validate_joint_action_conflict_policy(record: Any, actual_conflict: str) ->
         raise ValueError("none conflict_policy is only valid when access sets do not conflict")
 
 
-def _validate_joint_action_atomicity(record: Any, actual_conflict: str) -> None:
+def _validate_joint_action_atomicity(record: ParticipantJointActionRecordModel, actual_conflict: str) -> None:
     has_recovery_evidence = bool(record.realized_order or record.rollback_event_refs)
     if record.atomicity_scope == "multi_object" and actual_conflict != "none" and not has_recovery_evidence:
         raise ValueError("multi_object conflicting joint actions require realized_order or rollback_event_refs")
@@ -420,7 +420,7 @@ class ParticipantJointActionRecordModel(ParticipantRuntimeBaseEnvelopeModel):
         return self
 
 
-def _validate_time_management_claim(context: Any) -> None:
+def _validate_time_management_claim(context: ParticipantTimeManagementContextModel) -> None:
     if context.unsupported_disclosure and context.claim_strength == "exact":
         raise ValueError("unsupported time-management disclosure cannot carry an exact claim")
     if context.basis == "wall_clock_only" and context.claim_strength != "display":
@@ -429,22 +429,28 @@ def _validate_time_management_claim(context: Any) -> None:
         raise ValueError("bounded or exact time-management claims require clock_ref")
 
 
-def _validate_time_management_mode(context: Any) -> None:
+def _validate_time_management_mode(context: ParticipantTimeManagementContextModel) -> None:
     if context.mode == "backend_serialized":
         _validate_backend_serialized_time_management(context)
+    elif context.mode in {"devs", "fmi"}:
+        if context.clock_ref is None or context.basis == "wall_clock_only":
+            raise ValueError("devs and fmi modes require a non-wall-clock basis and clock_ref")
+    else:
+        _validate_simple_time_management_mode(context)
+
+
+def _validate_simple_time_management_mode(context: ParticipantTimeManagementContextModel) -> None:
     if context.mode == "lookahead" and context.lookahead is None:
         raise ValueError("lookahead mode requires lookahead")
     if context.mode == "pacing" and context.advance_by is None:
         raise ValueError("pacing mode requires advance_by")
     if context.mode == "rollback" and not context.rollback_event_refs:
         raise ValueError("rollback mode requires rollback_event_refs")
-    if context.mode in {"devs", "fmi"} and (context.clock_ref is None or context.basis == "wall_clock_only"):
-        raise ValueError("devs and fmi modes require a non-wall-clock basis and clock_ref")
     if context.mode == "unsupported" and not context.unsupported_disclosure:
         raise ValueError("unsupported time-management mode requires unsupported_disclosure")
 
 
-def _validate_backend_serialized_time_management(context: Any) -> None:
+def _validate_backend_serialized_time_management(context: ParticipantTimeManagementContextModel) -> None:
     if not context.backend_serialized or context.basis != "serialized_backend_order" or context.clock_ref is None:
         raise ValueError("backend_serialized mode requires serialized_backend_order basis and clock_ref")
 

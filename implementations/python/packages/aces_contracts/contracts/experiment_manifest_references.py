@@ -12,6 +12,8 @@ from ..versions import BACKEND_MANIFEST_V2_SCHEMA_VERSION, PROCESSOR_MANIFEST_V2
 from .experiment_references import ExperimentReferenceModel
 from .schema_invariants import _add_aces_invariant
 
+_MANIFEST_REFERENCE_DEFS_POINTER = "#/$defs/ExperimentManifestReferenceModel"
+
 
 class ExperimentManifestReferenceModel(ExperimentReferenceModel):
     """Reference constrained to an apparatus or capability manifest."""
@@ -21,31 +23,49 @@ class ExperimentManifestReferenceModel(ExperimentReferenceModel):
 
     @model_validator(mode="after")
     def _validate_manifest_reference_scope(self) -> ExperimentManifestReferenceModel:
+        self._reject_manifest_ref_path()
+        self._reject_manifest_subject_ref_qualifiers()
+        self._validate_digest_bound_manifest_reference()
+        self._validate_manifest_subject_ref_id_match()
+        return self
+
+    def _reject_manifest_ref_path(self) -> None:
         if self.ref_path is not None:
             raise ValueError("manifest references must not carry ref_path")
+
+    def _reject_manifest_subject_ref_qualifiers(self) -> None:
         if self.subject_ref is not None and (
             self.subject_ref.ref_digest is not None or self.subject_ref.ref_path is not None
         ):
             raise ValueError("manifest subject_ref must not carry ref_digest or ref_path")
-        if self.ref_digest is not None:
-            if self.subject_ref is None or self.subject_ref.ref_kind not in {"processor", "backend"}:
-                raise ValueError(
-                    "digest-bound manifest references must use processor/backend subject_ref values "
-                    "validated against concrete manifest payloads"
-                )
-            expected_manifest_version = (
-                PROCESSOR_MANIFEST_V2_SCHEMA_VERSION
-                if self.subject_ref.ref_kind == "processor"
-                else BACKEND_MANIFEST_V2_SCHEMA_VERSION
+
+    def _validate_digest_bound_manifest_reference(self) -> None:
+        if self.ref_digest is None:
+            return
+        self._require_processor_or_backend_subject_ref()
+        expected_manifest_version = self._expected_manifest_version()
+        if self.ref_version != expected_manifest_version:
+            raise ValueError(
+                "digest-bound processor/backend manifest references must use the supported manifest schema version"
             )
-            if self.ref_version != expected_manifest_version:
-                raise ValueError(
-                    "digest-bound processor/backend manifest references must use the supported manifest schema version"
-                )
-        if self.subject_ref is not None and self.subject_ref.ref_kind in {"processor", "backend"}:
-            if self.ref_id != self.subject_ref.ref_id:
-                raise ValueError("processor/backend manifest references ref_id must match subject_ref.ref_id")
-        return self
+
+    def _require_processor_or_backend_subject_ref(self) -> None:
+        if self.subject_ref is None or self.subject_ref.ref_kind not in {"processor", "backend"}:
+            raise ValueError(
+                "digest-bound manifest references must use processor/backend subject_ref values "
+                "validated against concrete manifest payloads"
+            )
+
+    def _expected_manifest_version(self) -> str:
+        if self.subject_ref.ref_kind == "processor":
+            return PROCESSOR_MANIFEST_V2_SCHEMA_VERSION
+        return BACKEND_MANIFEST_V2_SCHEMA_VERSION
+
+    def _validate_manifest_subject_ref_id_match(self) -> None:
+        if self.subject_ref is None or self.subject_ref.ref_kind not in {"processor", "backend"}:
+            return
+        if self.ref_id != self.subject_ref.ref_id:
+            raise ValueError("processor/backend manifest references ref_id must match subject_ref.ref_id")
 
     @classmethod
     def __get_pydantic_json_schema__(
@@ -121,12 +141,12 @@ class ExperimentManifestReferenceModel(ExperimentReferenceModel):
             "against concrete manifest payload digests; manifest path qualifiers are not accepted in v1.",
             validator="aces_contracts.contracts.ExperimentManifestReferenceModel._validate_manifest_reference_scope",
             inputs=[
-                {"contract_id": "experiment-task-v1", "instance_path": "#/$defs/ExperimentManifestReferenceModel"},
+                {"contract_id": "experiment-task-v1", "instance_path": _MANIFEST_REFERENCE_DEFS_POINTER},
                 {
                     "contract_id": "experiment-apparatus-context-v1",
-                    "instance_path": "#/$defs/ExperimentManifestReferenceModel",
+                    "instance_path": _MANIFEST_REFERENCE_DEFS_POINTER,
                 },
-                {"contract_id": "experiment-run-v1", "instance_path": "#/$defs/ExperimentManifestReferenceModel"},
+                {"contract_id": "experiment-run-v1", "instance_path": _MANIFEST_REFERENCE_DEFS_POINTER},
             ],
         )
         return json_schema

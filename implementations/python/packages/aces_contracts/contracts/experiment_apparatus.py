@@ -48,6 +48,18 @@ from .manifests import ProcessorManifestV2Model
 from .participant_manifests import BackendManifestV2Model
 from .schema_invariants import _add_aces_invariant
 
+_ManifestReferenceKey = tuple[
+    str,
+    str | None,
+    str | None,
+    str | None,
+    str | None,
+    str | None,
+    str | None,
+    str | None,
+    str | None,
+]
+
 
 class ExperimentTaskModel(ContractModel):
     """Experiment task contract that separates scenario material from protocol intent."""
@@ -128,122 +140,14 @@ class ExperimentApparatusContextModel(ContractModel):
     @model_validator(mode="after")
     def _validate_instrument_context(self) -> ExperimentApparatusContextModel:
         _parse_rfc3339_datetime("declared_at", self.declared_at)
-        processor = self.components.get("processor")
-        backend = self.components.get("backend")
-        if processor is None or processor.component_kind != "processor":
-            raise ValueError(
-                "apparatus components must include a 'processor' component with component_kind='processor'"
-            )
-        if backend is None or backend.component_kind != "backend":
-            raise ValueError("apparatus components must include a 'backend' component with component_kind='backend'")
-        selected_manifest_subject_keys: dict[tuple[str, str, str | None, str | None], str] = {}
-        for selected_manifest in self.selected_manifests:
-            selected_subject_ref = selected_manifest.subject_ref
-            if selected_subject_ref is None:
-                continue
-            selected_subject_key = (
-                selected_subject_ref.ref_kind,
-                selected_subject_ref.ref_id,
-                selected_subject_ref.ref_version,
-                selected_manifest.ref_version,
-            )
-            prior_manifest_id = selected_manifest_subject_keys.get(selected_subject_key)
-            if prior_manifest_id is not None:
-                raise ValueError(
-                    "selected_manifests must not contain multiple manifest refs for the same subject identity "
-                    f"and manifest schema version: {selected_subject_ref.ref_kind}:{selected_subject_ref.ref_id}"
-                )
-            selected_manifest_subject_keys[selected_subject_key] = selected_manifest.ref_id
-        selected_manifest_keys = {_manifest_reference_key(ref) for ref in self.selected_manifests}
-        canonical_component_manifest_keys: set[
-            tuple[
-                str,
-                str | None,
-                str | None,
-                str | None,
-                str | None,
-                str | None,
-                str | None,
-                str | None,
-                str | None,
-            ]
-        ] = set()
-        for key, component in (("processor", processor), ("backend", backend)):
-            if component.manifest_ref is None:
-                raise ValueError(f"apparatus component '{key}' must include manifest_ref")
-            subject_ref = component.manifest_ref.subject_ref
-            if subject_ref is None:
-                raise ValueError(f"apparatus component '{key}' manifest_ref must include subject_ref")
-            if subject_ref.ref_kind != key:
-                raise ValueError(f"apparatus component '{key}' manifest_ref subject_ref must use ref_kind='{key}'")
-            if component.manifest_ref.ref_id != component.identity.name:
-                raise ValueError(f"apparatus component '{key}' manifest_ref ref_id must match component identity")
-            if subject_ref.ref_id != component.identity.name or subject_ref.ref_version != component.identity.version:
-                raise ValueError(f"apparatus component '{key}' manifest_ref subject_ref must match component identity")
-            if subject_ref.ref_digest is not None or subject_ref.ref_path is not None:
-                raise ValueError(
-                    f"apparatus component '{key}' manifest_ref subject_ref must not carry ref_digest or ref_path"
-                )
-            expected_manifest_version = (
-                PROCESSOR_MANIFEST_V2_SCHEMA_VERSION if key == "processor" else BACKEND_MANIFEST_V2_SCHEMA_VERSION
-            )
-            if component.manifest_ref.ref_version != expected_manifest_version:
-                raise ValueError(
-                    f"apparatus component '{key}' manifest_ref must use ref_version='{expected_manifest_version}'"
-                )
-            component_manifest_key = _manifest_reference_key(component.manifest_ref)
-            canonical_component_manifest_keys.add(component_manifest_key)
-            if component_manifest_key not in selected_manifest_keys:
-                raise ValueError(f"apparatus component '{key}' manifest_ref must be present in selected_manifests")
-        participant_components = {
-            key: component
-            for key, component in self.components.items()
-            if component.component_kind == "participant-implementation"
-        }
-        for key, component in participant_components.items():
-            if component.manifest_ref is None:
-                raise ValueError(f"participant implementation component '{key}' must include manifest_ref")
-            subject_ref = component.manifest_ref.subject_ref
-            if subject_ref is None:
-                raise ValueError(f"participant implementation component '{key}' manifest_ref must include subject_ref")
-            if subject_ref.ref_kind != "participant-implementation":
-                raise ValueError(
-                    f"participant implementation component '{key}' manifest_ref subject_ref must use "
-                    "ref_kind='participant-implementation'"
-                )
-            if component.manifest_ref.ref_id != component.identity.name:
-                raise ValueError(
-                    f"participant implementation component '{key}' manifest_ref ref_id must match component identity"
-                )
-            if subject_ref.ref_id != component.identity.name or subject_ref.ref_version != component.identity.version:
-                raise ValueError(
-                    f"participant implementation component '{key}' manifest_ref subject_ref must match "
-                    "component identity"
-                )
-            if subject_ref.ref_digest is not None or subject_ref.ref_path is not None:
-                raise ValueError(
-                    f"participant implementation component '{key}' manifest_ref subject_ref must not carry "
-                    "ref_digest or ref_path"
-                )
-            if component.manifest_ref.ref_version != PARTICIPANT_IMPLEMENTATION_MANIFEST_V1_SCHEMA_VERSION:
-                raise ValueError(
-                    f"participant implementation component '{key}' manifest_ref must use "
-                    f"ref_version='{PARTICIPANT_IMPLEMENTATION_MANIFEST_V1_SCHEMA_VERSION}'"
-                )
-            if _manifest_reference_key(component.manifest_ref) not in selected_manifest_keys:
-                raise ValueError(
-                    f"participant implementation component '{key}' manifest_ref must be present in selected_manifests"
-                )
-        for selected_manifest in self.selected_manifests:
-            if (
-                selected_manifest.ref_digest is not None
-                and _manifest_reference_key(selected_manifest) not in canonical_component_manifest_keys
-            ):
-                raise ValueError(
-                    "digest-qualified selected_manifests must be canonical processor/backend component manifest refs"
-                )
-        if not any(artifact.role == "apparatus-evidence" for artifact in self.observed_setup_evidence):
-            raise ValueError("observed_setup_evidence must include at least one apparatus-evidence artifact")
+        processor, backend = _require_processor_and_backend_components(self.components)
+        selected_manifest_keys = _validate_selected_manifest_subject_uniqueness(self.selected_manifests)
+        canonical_component_manifest_keys = _validate_core_component_manifest_refs(
+            processor, backend, selected_manifest_keys
+        )
+        _validate_participant_component_manifest_refs(self.components, selected_manifest_keys)
+        _validate_digest_qualified_manifests_are_canonical(self.selected_manifests, canonical_component_manifest_keys)
+        _validate_observed_setup_evidence_present(self.observed_setup_evidence)
         return self
 
     @classmethod
@@ -304,6 +208,133 @@ class ExperimentApparatusContextModel(ContractModel):
             ],
         )
         return json_schema
+
+
+def _require_processor_and_backend_components(
+    components: dict[str, ExperimentApparatusComponentModel],
+) -> tuple[ExperimentApparatusComponentModel, ExperimentApparatusComponentModel]:
+    processor = components.get("processor")
+    backend = components.get("backend")
+    if processor is None or processor.component_kind != "processor":
+        raise ValueError("apparatus components must include a 'processor' component with component_kind='processor'")
+    if backend is None or backend.component_kind != "backend":
+        raise ValueError("apparatus components must include a 'backend' component with component_kind='backend'")
+    return processor, backend
+
+
+def _validate_selected_manifest_subject_uniqueness(
+    selected_manifests: list[ExperimentManifestReferenceModel],
+) -> set[_ManifestReferenceKey]:
+    selected_manifest_subject_keys: dict[tuple[str, str, str | None, str | None], str] = {}
+    for selected_manifest in selected_manifests:
+        selected_subject_ref = selected_manifest.subject_ref
+        if selected_subject_ref is None:
+            continue
+        selected_subject_key = (
+            selected_subject_ref.ref_kind,
+            selected_subject_ref.ref_id,
+            selected_subject_ref.ref_version,
+            selected_manifest.ref_version,
+        )
+        prior_manifest_id = selected_manifest_subject_keys.get(selected_subject_key)
+        if prior_manifest_id is not None:
+            raise ValueError(
+                "selected_manifests must not contain multiple manifest refs for the same subject identity "
+                f"and manifest schema version: {selected_subject_ref.ref_kind}:{selected_subject_ref.ref_id}"
+            )
+        selected_manifest_subject_keys[selected_subject_key] = selected_manifest.ref_id
+    return {_manifest_reference_key(ref) for ref in selected_manifests}
+
+
+def _validate_component_manifest_ref_identity(
+    *, key: str, component: ExperimentApparatusComponentModel, label: str, expected_ref_kind: str
+) -> ExperimentManifestReferenceModel:
+    if component.manifest_ref is None:
+        raise ValueError(f"{label} component '{key}' must include manifest_ref")
+    subject_ref = component.manifest_ref.subject_ref
+    if subject_ref is None:
+        raise ValueError(f"{label} component '{key}' manifest_ref must include subject_ref")
+    if subject_ref.ref_kind != expected_ref_kind:
+        raise ValueError(f"{label} component '{key}' manifest_ref subject_ref must use ref_kind='{expected_ref_kind}'")
+    if component.manifest_ref.ref_id != component.identity.name:
+        raise ValueError(f"{label} component '{key}' manifest_ref ref_id must match component identity")
+    if subject_ref.ref_id != component.identity.name or subject_ref.ref_version != component.identity.version:
+        raise ValueError(f"{label} component '{key}' manifest_ref subject_ref must match component identity")
+    if subject_ref.ref_digest is not None or subject_ref.ref_path is not None:
+        raise ValueError(f"{label} component '{key}' manifest_ref subject_ref must not carry ref_digest or ref_path")
+    return component.manifest_ref
+
+
+def _validate_core_component_manifest_refs(
+    processor: ExperimentApparatusComponentModel,
+    backend: ExperimentApparatusComponentModel,
+    selected_manifest_keys: set[_ManifestReferenceKey],
+) -> set[_ManifestReferenceKey]:
+    canonical_component_manifest_keys: set[_ManifestReferenceKey] = set()
+    for key, component in (("processor", processor), ("backend", backend)):
+        manifest_ref = _validate_component_manifest_ref_identity(
+            key=key, component=component, label="apparatus", expected_ref_kind=key
+        )
+        expected_manifest_version = (
+            PROCESSOR_MANIFEST_V2_SCHEMA_VERSION if key == "processor" else BACKEND_MANIFEST_V2_SCHEMA_VERSION
+        )
+        if manifest_ref.ref_version != expected_manifest_version:
+            raise ValueError(
+                f"apparatus component '{key}' manifest_ref must use ref_version='{expected_manifest_version}'"
+            )
+        component_manifest_key = _manifest_reference_key(manifest_ref)
+        canonical_component_manifest_keys.add(component_manifest_key)
+        if component_manifest_key not in selected_manifest_keys:
+            raise ValueError(f"apparatus component '{key}' manifest_ref must be present in selected_manifests")
+    return canonical_component_manifest_keys
+
+
+def _validate_participant_component_manifest_refs(
+    components: dict[str, ExperimentApparatusComponentModel],
+    selected_manifest_keys: set[_ManifestReferenceKey],
+) -> None:
+    participant_components = {
+        key: component
+        for key, component in components.items()
+        if component.component_kind == "participant-implementation"
+    }
+    for key, component in participant_components.items():
+        manifest_ref = _validate_component_manifest_ref_identity(
+            key=key,
+            component=component,
+            label="participant implementation",
+            expected_ref_kind="participant-implementation",
+        )
+        if manifest_ref.ref_version != PARTICIPANT_IMPLEMENTATION_MANIFEST_V1_SCHEMA_VERSION:
+            raise ValueError(
+                f"participant implementation component '{key}' manifest_ref must use "
+                f"ref_version='{PARTICIPANT_IMPLEMENTATION_MANIFEST_V1_SCHEMA_VERSION}'"
+            )
+        if _manifest_reference_key(manifest_ref) not in selected_manifest_keys:
+            raise ValueError(
+                f"participant implementation component '{key}' manifest_ref must be present in selected_manifests"
+            )
+
+
+def _validate_digest_qualified_manifests_are_canonical(
+    selected_manifests: list[ExperimentManifestReferenceModel],
+    canonical_component_manifest_keys: set[_ManifestReferenceKey],
+) -> None:
+    for selected_manifest in selected_manifests:
+        if (
+            selected_manifest.ref_digest is not None
+            and _manifest_reference_key(selected_manifest) not in canonical_component_manifest_keys
+        ):
+            raise ValueError(
+                "digest-qualified selected_manifests must be canonical processor/backend component manifest refs"
+            )
+
+
+def _validate_observed_setup_evidence_present(
+    observed_setup_evidence: list[ExperimentArtifactRefModel],
+) -> None:
+    if not any(artifact.role == "apparatus-evidence" for artifact in observed_setup_evidence):
+        raise ValueError("observed_setup_evidence must include at least one apparatus-evidence artifact")
 
 
 def _component_identity_satisfies_allowed_refs(
@@ -393,15 +424,29 @@ def _validate_component_manifest_payload(
         raise ValueError(f"apparatus component '{component_key}' manifest_ref must include subject_ref")
     if not _identity_matches_reference(manifest.identity, subject_ref):
         raise ValueError(f"apparatus component '{component_key}' manifest_ref subject_ref must match manifest identity")
-    if component.manifest_ref.ref_digest is not None:
-        if supplied_digest is None:
-            raise ValueError(
-                f"apparatus component '{component_key}' manifest_ref digest requires a supplied manifest payload digest"
-            )
-        if _canonical_digest(component.manifest_ref.ref_digest) != _canonical_digest(supplied_digest):
-            raise ValueError(
-                f"apparatus component '{component_key}' manifest_ref digest must match manifest payload digest"
-            )
+    _validate_component_manifest_digest_match(
+        component_key=component_key,
+        manifest_ref=component.manifest_ref,
+        supplied_digest=supplied_digest,
+    )
+
+
+def _validate_component_manifest_digest_match(
+    *,
+    component_key: Literal["processor", "backend"],
+    manifest_ref: ExperimentManifestReferenceModel,
+    supplied_digest: str | None,
+) -> None:
+    if manifest_ref.ref_digest is None:
+        return
+    if supplied_digest is None:
+        raise ValueError(
+            f"apparatus component '{component_key}' manifest_ref digest requires a supplied manifest payload digest"
+        )
+    if _canonical_digest(manifest_ref.ref_digest) != _canonical_digest(supplied_digest):
+        raise ValueError(
+            f"apparatus component '{component_key}' manifest_ref digest must match manifest payload digest"
+        )
 
 
 def validate_experiment_apparatus_context_against_manifests(

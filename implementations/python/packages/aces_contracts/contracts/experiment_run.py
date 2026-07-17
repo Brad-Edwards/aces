@@ -17,6 +17,7 @@ from .base import (
     _parse_rfc3339_datetime,
 )
 from .experiment_apparatus import (
+    ExperimentApparatusComponentModel,
     ExperimentApparatusContextModel,
     ExperimentClockContextModel,
     ExperimentStochasticControlModel,
@@ -52,6 +53,8 @@ from .schema_invariants import (
     _validate_reported_value_status,
 )
 from .validators import _validate_unique_string_values
+
+_ARCHIVAL_RUN_VALIDATOR = "aces_contracts.contracts.ExperimentRunModel._validate_archival_run"
 
 
 class ExperimentResultSummaryModel(ContractModel):
@@ -129,85 +132,14 @@ class ExperimentRunModel(ContractModel):
 
     @model_validator(mode="after")
     def _validate_archival_run(self) -> ExperimentRunModel:
-        started_at = _parse_rfc3339_datetime("started_at", self.started_at)
-        ended_at = _parse_rfc3339_datetime("ended_at", self.ended_at)
-        if ended_at < started_at:
-            raise ValueError("ended_at must be greater than or equal to started_at")
-        if self.run_status == "invalidated" and self.invalidation is None:
-            raise ValueError("invalidated experiment runs must include invalidation details")
-        if self.outcome_status == "succeeded" and not any(
-            result.value_status == "reported" for result in self.result_summaries.values()
-        ):
-            raise ValueError("succeeded experiment runs must include at least one reported result summary")
-        participant_components = [
-            component
-            for component in self.apparatus_context.components.values()
-            if component.component_kind == "participant-implementation"
-        ]
-        if participant_components and self.participant_implementation_provenance is None:
-            raise ValueError(
-                "experiment runs with participant implementation apparatus components must include "
-                "participant_implementation_provenance"
-            )
-        if self.participant_implementation_provenance is not None:
-            if self.participant_implementation_provenance.run_id != self.run_id:
-                raise ValueError("participant_implementation_provenance run_id must match experiment run_id")
-            selected_identities = {
-                (selection.implementation_identity.name, selection.implementation_identity.version)
-                for selection in self.participant_implementation_provenance.participant_implementations
-            }
-            missing_component_identities = sorted(
-                f"{component.identity.name}:{component.identity.version}"
-                for component in participant_components
-                if (component.identity.name, component.identity.version) not in selected_identities
-            )
-            if missing_component_identities:
-                joined = ", ".join(missing_component_identities)
-                raise ValueError(
-                    "participant implementation apparatus components must resolve to "
-                    f"participant_implementation_provenance selections: {joined}"
-                )
-        evidence_artifact_ids = {artifact.artifact_id for artifact in self.evidence_artifacts}
-        missing_evidence_refs = sorted(
-            {
-                evidence_ref.ref_id
-                for result in self.result_summaries.values()
-                for evidence_ref in result.evidence_refs
-                if evidence_ref.ref_id not in evidence_artifact_ids
-            }
-        )
-        if missing_evidence_refs:
-            joined = ", ".join(missing_evidence_refs)
-            raise ValueError(f"result_summaries evidence_refs must resolve to evidence_artifacts: {joined}")
-        traced_evidence_record_refs = {
-            _experiment_reference_key(evidence_ref) for evidence_ref in self.traceability.evidence_record_refs
-        }
-        missing_disclosure_evidence_refs = sorted(
-            _format_reference(evidence_ref)
-            for disclosure in self.realized_form_disclosures
-            for evidence_ref in disclosure.evidence_refs
-            if _experiment_reference_key(evidence_ref) not in traced_evidence_record_refs
-        )
-        if missing_disclosure_evidence_refs:
-            joined = ", ".join(missing_disclosure_evidence_refs)
-            raise ValueError(
-                f"realized_form_disclosures evidence_refs must be listed in traceability evidence_record_refs: {joined}"
-            )
-        _validate_unique_string_values(
-            "augmentation_disclosures augmentation_id",
-            [disclosure.augmentation_id for disclosure in self.augmentation_disclosures],
-        )
-        missing_augmentation_evidence_refs = sorted(
-            _format_reference(evidence_ref)
-            for disclosure in self.augmentation_disclosures
-            for evidence_ref in disclosure.evidence_refs
-            if _experiment_reference_key(evidence_ref) not in traced_evidence_record_refs
-        )
-        if missing_augmentation_evidence_refs:
-            joined = ", ".join(missing_augmentation_evidence_refs)
-            raise ValueError(
-                f"augmentation_disclosures evidence_refs must be listed in traceability evidence_record_refs: {joined}"
-            )
+        _validate_run_timing(self)
+        _validate_run_invalidation_status(self)
+        _validate_run_outcome_evidence(self)
+        _validate_run_participant_provenance_required(self)
+        _validate_run_participant_implementation_selections(self)
+        _validate_run_evidence_artifact_refs(self)
+        _validate_run_realized_form_disclosures(self)
+        _validate_run_augmentation_disclosures(self)
         return self
 
     @classmethod
@@ -234,28 +166,28 @@ class ExperimentRunModel(ContractModel):
             json_schema,
             "ended-at-not-before-started-at",
             "ended_at must be greater than or equal to started_at.",
-            validator="aces_contracts.contracts.ExperimentRunModel._validate_archival_run",
+            validator=_ARCHIVAL_RUN_VALIDATOR,
             inputs=[{"contract_id": "experiment-run-v1", "instance_path": "#"}],
         )
         _add_aces_invariant(
             json_schema,
             "result-evidence-ref-resolves",
             "Every result_summaries evidence_refs ref_id must match an evidence_artifacts artifact_id.",
-            validator="aces_contracts.contracts.ExperimentRunModel._validate_archival_run",
+            validator=_ARCHIVAL_RUN_VALIDATOR,
             inputs=[{"contract_id": "experiment-run-v1", "instance_path": "#"}],
         )
         _add_aces_invariant(
             json_schema,
             "participant-implementation-provenance-resolves",
             "Participant implementation apparatus components must resolve to run-level participant provenance.",
-            validator="aces_contracts.contracts.ExperimentRunModel._validate_archival_run",
+            validator=_ARCHIVAL_RUN_VALIDATOR,
             inputs=[{"contract_id": "experiment-run-v1", "instance_path": "#"}],
         )
         _add_aces_invariant(
             json_schema,
             "realized-form-evidence-refs-traced",
             "Every realized-form disclosure evidence ref must also appear in the run traceability evidence refs.",
-            validator="aces_contracts.contracts.ExperimentRunModel._validate_archival_run",
+            validator=_ARCHIVAL_RUN_VALIDATOR,
             inputs=[{"contract_id": "experiment-run-v1", "instance_path": "#"}],
         )
         _add_aces_invariant(
@@ -263,13 +195,14 @@ class ExperimentRunModel(ContractModel):
             "augmentation-disclosure-evidence-refs-traced",
             "Every augmentation disclosure evidence ref must also appear in the run traceability evidence refs, "
             "and augmentation_id values must be unique within the run.",
-            validator="aces_contracts.contracts.ExperimentRunModel._validate_archival_run",
+            validator=_ARCHIVAL_RUN_VALIDATOR,
             inputs=[{"contract_id": "experiment-run-v1", "instance_path": "#"}],
         )
         _add_aces_invariant(
             json_schema,
             "task-run-protocol-binding-valid",
-            "Run apparatus, result metric ids, and concrete evidence artifacts must satisfy the referenced task protocol.",
+            "Run apparatus, result metric ids, and concrete evidence artifacts must satisfy the "
+            "referenced task protocol.",
             validator="aces_contracts.contracts.validate_experiment_run_against_task",
             inputs=[
                 {"contract_id": "experiment-task-v1", "instance_path": "#"},
@@ -277,6 +210,119 @@ class ExperimentRunModel(ContractModel):
             ],
         )
         return json_schema
+
+
+def _validate_run_timing(run: ExperimentRunModel) -> None:
+    started_at = _parse_rfc3339_datetime("started_at", run.started_at)
+    ended_at = _parse_rfc3339_datetime("ended_at", run.ended_at)
+    if ended_at < started_at:
+        raise ValueError("ended_at must be greater than or equal to started_at")
+
+
+def _validate_run_invalidation_status(run: ExperimentRunModel) -> None:
+    if run.run_status == "invalidated" and run.invalidation is None:
+        raise ValueError("invalidated experiment runs must include invalidation details")
+
+
+def _validate_run_outcome_evidence(run: ExperimentRunModel) -> None:
+    if run.outcome_status == "succeeded" and not any(
+        result.value_status == "reported" for result in run.result_summaries.values()
+    ):
+        raise ValueError("succeeded experiment runs must include at least one reported result summary")
+
+
+def _participant_implementation_components(
+    run: ExperimentRunModel,
+) -> list[ExperimentApparatusComponentModel]:
+    return [
+        component
+        for component in run.apparatus_context.components.values()
+        if component.component_kind == "participant-implementation"
+    ]
+
+
+def _validate_run_participant_provenance_required(run: ExperimentRunModel) -> None:
+    participant_components = _participant_implementation_components(run)
+    if participant_components and run.participant_implementation_provenance is None:
+        raise ValueError(
+            "experiment runs with participant implementation apparatus components must include "
+            "participant_implementation_provenance"
+        )
+
+
+def _validate_run_participant_implementation_selections(run: ExperimentRunModel) -> None:
+    if run.participant_implementation_provenance is None:
+        return
+    if run.participant_implementation_provenance.run_id != run.run_id:
+        raise ValueError("participant_implementation_provenance run_id must match experiment run_id")
+    selected_identities = {
+        (selection.implementation_identity.name, selection.implementation_identity.version)
+        for selection in run.participant_implementation_provenance.participant_implementations
+    }
+    missing_component_identities = sorted(
+        f"{component.identity.name}:{component.identity.version}"
+        for component in _participant_implementation_components(run)
+        if (component.identity.name, component.identity.version) not in selected_identities
+    )
+    if missing_component_identities:
+        joined = ", ".join(missing_component_identities)
+        raise ValueError(
+            "participant implementation apparatus components must resolve to "
+            f"participant_implementation_provenance selections: {joined}"
+        )
+
+
+def _validate_run_evidence_artifact_refs(run: ExperimentRunModel) -> None:
+    evidence_artifact_ids = {artifact.artifact_id for artifact in run.evidence_artifacts}
+    missing_evidence_refs = sorted(
+        {
+            evidence_ref.ref_id
+            for result in run.result_summaries.values()
+            for evidence_ref in result.evidence_refs
+            if evidence_ref.ref_id not in evidence_artifact_ids
+        }
+    )
+    if missing_evidence_refs:
+        joined = ", ".join(missing_evidence_refs)
+        raise ValueError(f"result_summaries evidence_refs must resolve to evidence_artifacts: {joined}")
+
+
+def _traced_evidence_record_refs(run: ExperimentRunModel) -> set[str]:
+    return {_experiment_reference_key(evidence_ref) for evidence_ref in run.traceability.evidence_record_refs}
+
+
+def _validate_run_realized_form_disclosures(run: ExperimentRunModel) -> None:
+    traced_evidence_record_refs = _traced_evidence_record_refs(run)
+    missing_disclosure_evidence_refs = sorted(
+        _format_reference(evidence_ref)
+        for disclosure in run.realized_form_disclosures
+        for evidence_ref in disclosure.evidence_refs
+        if _experiment_reference_key(evidence_ref) not in traced_evidence_record_refs
+    )
+    if missing_disclosure_evidence_refs:
+        joined = ", ".join(missing_disclosure_evidence_refs)
+        raise ValueError(
+            f"realized_form_disclosures evidence_refs must be listed in traceability evidence_record_refs: {joined}"
+        )
+
+
+def _validate_run_augmentation_disclosures(run: ExperimentRunModel) -> None:
+    _validate_unique_string_values(
+        "augmentation_disclosures augmentation_id",
+        [disclosure.augmentation_id for disclosure in run.augmentation_disclosures],
+    )
+    traced_evidence_record_refs = _traced_evidence_record_refs(run)
+    missing_augmentation_evidence_refs = sorted(
+        _format_reference(evidence_ref)
+        for disclosure in run.augmentation_disclosures
+        for evidence_ref in disclosure.evidence_refs
+        if _experiment_reference_key(evidence_ref) not in traced_evidence_record_refs
+    )
+    if missing_augmentation_evidence_refs:
+        joined = ", ".join(missing_augmentation_evidence_refs)
+        raise ValueError(
+            f"augmentation_disclosures evidence_refs must be listed in traceability evidence_record_refs: {joined}"
+        )
 
 
 def _artifact_satisfies_evidence_reference(
@@ -297,21 +343,25 @@ def _artifact_satisfies_evidence_reference(
     return evidence_reference.ref_path is None or artifact.uri == evidence_reference.ref_path
 
 
-def validate_experiment_run_against_task(task: ExperimentTaskModel, run: ExperimentRunModel) -> None:
-    """Validate cross-artifact task/run semantic invariants."""
-
+def _validate_run_task_ref(task: ExperimentTaskModel, run: ExperimentRunModel) -> None:
     if run.task_ref.ref_id != task.task_id or run.task_ref.ref_version != task.task_version:
         raise ValueError("run task_ref must match task task_id and task_version")
 
+
+def _validate_run_scenario_ref(task: ExperimentTaskModel, run: ExperimentRunModel) -> None:
     if task.scenario_ref.ref_kind == "scenario-snapshot":
         if not _reference_satisfies_requirement(run.scenario_snapshot_ref, task.scenario_ref):
             raise ValueError("run scenario_snapshot_ref must satisfy task scenario_ref")
     elif run.scenario_snapshot_ref.ref_id != task.scenario_ref.ref_id:
         raise ValueError("run scenario_snapshot_ref ref_id must match task scenario_ref ref_id")
 
+
+def _validate_run_apparatus_constraints(task: ExperimentTaskModel, run: ExperimentRunModel) -> None:
     if task.apparatus_constraints is not None:
         _validate_apparatus_context_satisfies_constraints(task.apparatus_constraints, run.apparatus_context)
 
+
+def _validate_run_metric_ids_declared(task: ExperimentTaskModel, run: ExperimentRunModel) -> None:
     metric_definitions = task.evaluation_protocol.metric_definitions
     missing_metric_ids = sorted(
         {result.metric_id for result in run.result_summaries.values() if result.metric_id not in metric_definitions}
@@ -320,7 +370,8 @@ def validate_experiment_run_against_task(task: ExperimentTaskModel, run: Experim
         joined = ", ".join(missing_metric_ids)
         raise ValueError(f"run result metric_id values must be declared by the task evaluation protocol: {joined}")
 
-    evidence_artifacts_by_id = {artifact.artifact_id: artifact for artifact in run.evidence_artifacts}
+
+def _validate_run_observation_requirements(task: ExperimentTaskModel, run: ExperimentRunModel) -> None:
     missing_observation_requirements = sorted(
         requirement.ref_id
         for requirement in task.evaluation_protocol.observation_requirements
@@ -330,16 +381,49 @@ def validate_experiment_run_against_task(task: ExperimentTaskModel, run: Experim
         joined = ", ".join(missing_observation_requirements)
         raise ValueError(f"run evidence_artifacts must satisfy task observation requirements: {joined}")
 
+
+def _result_missing_metric_evidence(
+    task: ExperimentTaskModel,
+    result_id: str,
+    result: ExperimentResultSummaryModel,
+    evidence_artifacts_by_id: dict[str, ExperimentArtifactRefModel],
+) -> list[str]:
+    result_artifacts = [
+        evidence_artifacts_by_id[evidence_ref.ref_id]
+        for evidence_ref in result.evidence_refs
+        if evidence_ref.ref_id in evidence_artifacts_by_id
+    ]
+    metric_definition = task.evaluation_protocol.metric_definitions[result.metric_id]
+    return [
+        f"{result_id}:{requirement.ref_id}"
+        for requirement in metric_definition.evidence_requirements
+        if not any(_artifact_satisfies_evidence_reference(artifact, requirement) for artifact in result_artifacts)
+    ]
+
+
+def _collect_missing_metric_evidence(task: ExperimentTaskModel, run: ExperimentRunModel) -> list[str]:
+    evidence_artifacts_by_id = {artifact.artifact_id: artifact for artifact in run.evidence_artifacts}
     missing_metric_evidence: list[str] = []
     for result_id, result in run.result_summaries.items():
-        result_artifacts = [
-            evidence_artifacts_by_id[evidence_ref.ref_id]
-            for evidence_ref in result.evidence_refs
-            if evidence_ref.ref_id in evidence_artifacts_by_id
-        ]
-        for requirement in metric_definitions[result.metric_id].evidence_requirements:
-            if not any(_artifact_satisfies_evidence_reference(artifact, requirement) for artifact in result_artifacts):
-                missing_metric_evidence.append(f"{result_id}:{requirement.ref_id}")
+        missing_metric_evidence.extend(
+            _result_missing_metric_evidence(task, result_id, result, evidence_artifacts_by_id)
+        )
+    return missing_metric_evidence
+
+
+def _validate_run_metric_evidence(task: ExperimentTaskModel, run: ExperimentRunModel) -> None:
+    missing_metric_evidence = _collect_missing_metric_evidence(task, run)
     if missing_metric_evidence:
         joined = ", ".join(sorted(missing_metric_evidence))
         raise ValueError(f"run result evidence_refs must satisfy task metric evidence requirements: {joined}")
+
+
+def validate_experiment_run_against_task(task: ExperimentTaskModel, run: ExperimentRunModel) -> None:
+    """Validate cross-artifact task/run semantic invariants."""
+
+    _validate_run_task_ref(task, run)
+    _validate_run_scenario_ref(task, run)
+    _validate_run_apparatus_constraints(task, run)
+    _validate_run_metric_ids_declared(task, run)
+    _validate_run_observation_requirements(task, run)
+    _validate_run_metric_evidence(task, run)

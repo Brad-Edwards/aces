@@ -62,7 +62,7 @@ def _resolve_schema_pointer(schema_root: dict[str, Any], pointer: str) -> dict[s
     if not pointer.startswith("#/"):
         raise KeyError(pointer)
 
-    current: Any = schema_root
+    current: object = schema_root
     for raw_segment in pointer[2:].split("/"):
         segment = _decode_json_pointer_segment(raw_segment)
         if not isinstance(current, dict) or segment not in current:
@@ -178,11 +178,9 @@ def _validate_reference_model_schema_binding(
 
 
 def _scope_is_present(model: ContractModel, scope: str) -> bool:
-    current: Any = model
+    current: object = model
     for segment in scope.split("."):
-        if not isinstance(current, BaseModel):
-            return False
-        if segment not in type(current).model_fields:
+        if not isinstance(current, BaseModel) or segment not in type(current).model_fields:
             return False
         current = getattr(current, segment)
         if current is None:

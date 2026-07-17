@@ -311,6 +311,94 @@ class ExperimentSplitAndLeakageControlsModel(ContractModel):
         return json_schema
 
 
+def _expected_manifest_schema_version_for_ref_kind(ref_kind: str) -> str:
+    return PROCESSOR_MANIFEST_V2_SCHEMA_VERSION if ref_kind == "processor" else BACKEND_MANIFEST_V2_SCHEMA_VERSION
+
+
+def _validate_required_manifest_subject_ref(manifest: ExperimentManifestReferenceModel) -> None:
+    subject_ref = manifest.subject_ref
+    if subject_ref is None or subject_ref.ref_kind not in {"processor", "backend"}:
+        return
+    expected_manifest_version = _expected_manifest_schema_version_for_ref_kind(subject_ref.ref_kind)
+    if manifest.ref_version != expected_manifest_version:
+        return
+    if manifest.ref_id != subject_ref.ref_id:
+        raise ValueError("processor/backend required_manifest_refs ref_id must match subject_ref.ref_id")
+    if subject_ref.ref_digest is not None or subject_ref.ref_path is not None:
+        raise ValueError("processor/backend required_manifest_refs subject_ref must not carry ref_digest or ref_path")
+
+
+def _validate_required_manifest_subject_refs(
+    required_manifest_refs: list[ExperimentManifestReferenceModel],
+) -> None:
+    for manifest in required_manifest_refs:
+        _validate_required_manifest_subject_ref(manifest)
+
+
+def _build_required_manifest_keys(
+    required_manifest_refs: list[ExperimentManifestReferenceModel],
+) -> set[tuple[str, str, str, str]]:
+    return {
+        (
+            manifest.subject_ref.ref_kind,
+            manifest.subject_ref.ref_id,
+            manifest.subject_ref.ref_version,
+            manifest.ref_version,
+        )
+        for manifest in required_manifest_refs
+        if manifest.subject_ref is not None
+    }
+
+
+def _validate_apparatus_constraint_disclosure_surface(model: ExperimentApparatusConstraintModel) -> None:
+    if not any(
+        (
+            model.allowed_processor_refs,
+            model.allowed_backend_refs,
+            model.required_manifest_refs,
+            model.required_capabilities,
+            model.notes,
+        )
+    ):
+        raise ValueError("apparatus_constraints must declare at least one apparatus constraint or disclosure note")
+
+
+def _validate_allowed_processor_refs_resolve(
+    allowed_processor_refs: list[ExperimentProcessorReferenceModel],
+    required_manifest_keys: set[tuple[str, str, str, str]],
+) -> None:
+    for ref in allowed_processor_refs:
+        if (
+            "processor",
+            ref.ref_id,
+            ref.ref_version,
+            PROCESSOR_MANIFEST_V2_SCHEMA_VERSION,
+        ) not in required_manifest_keys:
+            raise ValueError(
+                "allowed_processor_refs entries must have a matching required_manifest_refs "
+                f"entry with processor subject_ref='{ref.ref_id}' and "
+                f"manifest ref_version='{PROCESSOR_MANIFEST_V2_SCHEMA_VERSION}'"
+            )
+
+
+def _validate_allowed_backend_refs_resolve(
+    allowed_backend_refs: list[ExperimentBackendReferenceModel],
+    required_manifest_keys: set[tuple[str, str, str, str]],
+) -> None:
+    for ref in allowed_backend_refs:
+        if (
+            "backend",
+            ref.ref_id,
+            ref.ref_version,
+            BACKEND_MANIFEST_V2_SCHEMA_VERSION,
+        ) not in required_manifest_keys:
+            raise ValueError(
+                "allowed_backend_refs entries must have a matching required_manifest_refs "
+                f"entry with backend subject_ref='{ref.ref_id}' and "
+                f"manifest ref_version='{BACKEND_MANIFEST_V2_SCHEMA_VERSION}'"
+            )
+
+
 class ExperimentApparatusConstraintModel(ContractModel):
     """Apparatus compatibility and capability constraints for a task."""
 
@@ -322,66 +410,11 @@ class ExperimentApparatusConstraintModel(ContractModel):
 
     @model_validator(mode="after")
     def _validate_allowed_identity_manifest_refs(self) -> ExperimentApparatusConstraintModel:
-        if not any(
-            (
-                self.allowed_processor_refs,
-                self.allowed_backend_refs,
-                self.required_manifest_refs,
-                self.required_capabilities,
-                self.notes,
-            )
-        ):
-            raise ValueError("apparatus_constraints must declare at least one apparatus constraint or disclosure note")
-        for manifest in self.required_manifest_refs:
-            subject_ref = manifest.subject_ref
-            if subject_ref is None or subject_ref.ref_kind not in {"processor", "backend"}:
-                continue
-            expected_manifest_version = (
-                PROCESSOR_MANIFEST_V2_SCHEMA_VERSION
-                if subject_ref.ref_kind == "processor"
-                else BACKEND_MANIFEST_V2_SCHEMA_VERSION
-            )
-            if manifest.ref_version == expected_manifest_version:
-                if manifest.ref_id != subject_ref.ref_id:
-                    raise ValueError("processor/backend required_manifest_refs ref_id must match subject_ref.ref_id")
-                if subject_ref.ref_digest is not None or subject_ref.ref_path is not None:
-                    raise ValueError(
-                        "processor/backend required_manifest_refs subject_ref must not carry ref_digest or ref_path"
-                    )
-        required_manifest_keys = {
-            (
-                manifest.subject_ref.ref_kind,
-                manifest.subject_ref.ref_id,
-                manifest.subject_ref.ref_version,
-                manifest.ref_version,
-            )
-            for manifest in self.required_manifest_refs
-            if manifest.subject_ref is not None
-        }
-        for ref in self.allowed_processor_refs:
-            if (
-                "processor",
-                ref.ref_id,
-                ref.ref_version,
-                PROCESSOR_MANIFEST_V2_SCHEMA_VERSION,
-            ) not in required_manifest_keys:
-                raise ValueError(
-                    "allowed_processor_refs entries must have a matching required_manifest_refs "
-                    f"entry with processor subject_ref='{ref.ref_id}' and "
-                    f"manifest ref_version='{PROCESSOR_MANIFEST_V2_SCHEMA_VERSION}'"
-                )
-        for ref in self.allowed_backend_refs:
-            if (
-                "backend",
-                ref.ref_id,
-                ref.ref_version,
-                BACKEND_MANIFEST_V2_SCHEMA_VERSION,
-            ) not in required_manifest_keys:
-                raise ValueError(
-                    "allowed_backend_refs entries must have a matching required_manifest_refs "
-                    f"entry with backend subject_ref='{ref.ref_id}' and "
-                    f"manifest ref_version='{BACKEND_MANIFEST_V2_SCHEMA_VERSION}'"
-                )
+        _validate_apparatus_constraint_disclosure_surface(self)
+        _validate_required_manifest_subject_refs(self.required_manifest_refs)
+        required_manifest_keys = _build_required_manifest_keys(self.required_manifest_refs)
+        _validate_allowed_processor_refs_resolve(self.allowed_processor_refs, required_manifest_keys)
+        _validate_allowed_backend_refs_resolve(self.allowed_backend_refs, required_manifest_keys)
         return self
 
     @classmethod
@@ -406,7 +439,9 @@ class ExperimentApparatusConstraintModel(ContractModel):
             "apparatus-constraint-identity-manifest-resolves",
             "Every allowed processor/backend identity reference must have a matching required manifest ref_id "
             "with matching manifest id, subject identity, and manifest schema version.",
-            validator="aces_contracts.contracts.ExperimentApparatusConstraintModel._validate_allowed_identity_manifest_refs",
+            validator=(
+                "aces_contracts.contracts.ExperimentApparatusConstraintModel._validate_allowed_identity_manifest_refs"
+            ),
             inputs=[{"contract_id": "experiment-task-v1", "instance_path": "#/apparatus_constraints"}],
         )
         return json_schema

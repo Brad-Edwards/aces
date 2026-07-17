@@ -28,6 +28,8 @@ from .experiment_study import (
 )
 from .schema_invariants import _add_aces_invariant
 
+_STUDY_AGAINST_TASKS_AND_RUNS_VALIDATOR = "aces_contracts.contracts.validate_experiment_study_against_tasks_and_runs"
+
 
 class ExperimentStudyModel(ContractModel):
     """Study or collection contract for grouping experiment artifacts."""
@@ -62,56 +64,63 @@ class ExperimentStudyModel(ContractModel):
         for claim in self.behavioral_claims:
             validate_behavioral_claim_binding(claim, catalog)
         if self.run_allocation is not None:
-            undeclared_blocking_factors = sorted(
-                factor_id for factor_id in self.run_allocation.blocking_factors if factor_id not in self.factors
-            )
-            if undeclared_blocking_factors:
-                joined = ", ".join(undeclared_blocking_factors)
-                raise ValueError(f"run_allocation blocking_factors must reference declared factors: {joined}")
-            blocking_factors_without_levels = sorted(
-                factor_id for factor_id in self.run_allocation.blocking_factors if not self.factors[factor_id].levels
-            )
-            if blocking_factors_without_levels:
-                joined = ", ".join(blocking_factors_without_levels)
-                raise ValueError(
-                    f"run_allocation blocking_factors must reference factors with declared levels: {joined}"
-                )
-            invalid_blocking_factor_kinds = sorted(
-                f"{factor_id}:{self.factors[factor_id].factor_kind}"
-                for factor_id in self.run_allocation.blocking_factors
-                if self.factors[factor_id].factor_kind not in {"blocking", "stratification", "apparatus", "control"}
-            )
-            if invalid_blocking_factor_kinds:
-                joined = ", ".join(invalid_blocking_factor_kinds)
-                raise ValueError(
-                    "run_allocation blocking_factors must reference blocking, stratification, apparatus, "
-                    f"or control factors: {joined}"
-                )
-            for assignment_key, assignment in self.run_allocation.condition_assignments.items():
-                for factor_id, level in assignment.factor_levels.items():
-                    factor = self.factors.get(factor_id)
-                    if factor is None:
-                        raise ValueError(
-                            "run_allocation condition_assignments factor_levels must reference declared factors: "
-                            f"{assignment_key}:{factor_id}"
-                        )
-                    if level not in factor.levels:
-                        raise ValueError(
-                            "run_allocation condition_assignments factor_levels must reference declared factor levels: "
-                            f"{assignment_key}:{factor_id}:{level}"
-                        )
+            self._validate_run_allocation_blocking_factors(self.run_allocation)
+            self._validate_run_allocation_condition_assignments(self.run_allocation)
         if self.study_kind in {"study", "benchmark"}:
-            if not self.research_questions:
-                raise ValueError("study and benchmark records must include at least one research question")
-            if not self.behavioral_claims:
-                raise ValueError("study and benchmark records must include at least one behavioral claim binding")
-            if self.run_allocation is None:
-                raise ValueError("study and benchmark records must include run_allocation")
-            if self.analysis_plan is None:
-                raise ValueError("study and benchmark records must include analysis_plan")
-            if not self.validity_notes:
-                raise ValueError("study and benchmark records must include validity_notes")
+            self._validate_claim_bearing_study_requirements()
         return self
+
+    def _validate_run_allocation_blocking_factors(self, run_allocation: ExperimentRunAllocationPlanModel) -> None:
+        undeclared_blocking_factors = sorted(
+            factor_id for factor_id in run_allocation.blocking_factors if factor_id not in self.factors
+        )
+        if undeclared_blocking_factors:
+            joined = ", ".join(undeclared_blocking_factors)
+            raise ValueError(f"run_allocation blocking_factors must reference declared factors: {joined}")
+        blocking_factors_without_levels = sorted(
+            factor_id for factor_id in run_allocation.blocking_factors if not self.factors[factor_id].levels
+        )
+        if blocking_factors_without_levels:
+            joined = ", ".join(blocking_factors_without_levels)
+            raise ValueError(f"run_allocation blocking_factors must reference factors with declared levels: {joined}")
+        invalid_blocking_factor_kinds = sorted(
+            f"{factor_id}:{self.factors[factor_id].factor_kind}"
+            for factor_id in run_allocation.blocking_factors
+            if self.factors[factor_id].factor_kind not in {"blocking", "stratification", "apparatus", "control"}
+        )
+        if invalid_blocking_factor_kinds:
+            joined = ", ".join(invalid_blocking_factor_kinds)
+            raise ValueError(
+                "run_allocation blocking_factors must reference blocking, stratification, apparatus, "
+                f"or control factors: {joined}"
+            )
+
+    def _validate_run_allocation_condition_assignments(self, run_allocation: ExperimentRunAllocationPlanModel) -> None:
+        for assignment_key, assignment in run_allocation.condition_assignments.items():
+            for factor_id, level in assignment.factor_levels.items():
+                factor = self.factors.get(factor_id)
+                if factor is None:
+                    raise ValueError(
+                        "run_allocation condition_assignments factor_levels must reference declared factors: "
+                        f"{assignment_key}:{factor_id}"
+                    )
+                if level not in factor.levels:
+                    raise ValueError(
+                        "run_allocation condition_assignments factor_levels must reference declared factor levels: "
+                        f"{assignment_key}:{factor_id}:{level}"
+                    )
+
+    def _validate_claim_bearing_study_requirements(self) -> None:
+        if not self.research_questions:
+            raise ValueError("study and benchmark records must include at least one research question")
+        if not self.behavioral_claims:
+            raise ValueError("study and benchmark records must include at least one behavioral claim binding")
+        if self.run_allocation is None:
+            raise ValueError("study and benchmark records must include run_allocation")
+        if self.analysis_plan is None:
+            raise ValueError("study and benchmark records must include analysis_plan")
+        if not self.validity_notes:
+            raise ValueError("study and benchmark records must include validity_notes")
 
     @classmethod
     def __get_pydantic_json_schema__(
@@ -157,7 +166,7 @@ class ExperimentStudyModel(ContractModel):
             json_schema,
             "study-analysis-metrics-grounded-in-task-protocols",
             "Study analysis_plan metrics must be declared by included experiment task protocols.",
-            validator="aces_contracts.contracts.validate_experiment_study_against_tasks_and_runs",
+            validator=_STUDY_AGAINST_TASKS_AND_RUNS_VALIDATOR,
             inputs=[
                 {"contract_id": "experiment-study-v1", "instance_path": "#"},
                 {"contract_id": "experiment-task-v1", "instance_path": "#"},
@@ -169,7 +178,7 @@ class ExperimentStudyModel(ContractModel):
             "study-analysis-metrics-covered-by-evaluation-run-results",
             "Study analysis_plan metrics must have result_summaries, including explicit missing/withheld "
             "statuses, in included evaluation runs.",
-            validator="aces_contracts.contracts.validate_experiment_study_against_tasks_and_runs",
+            validator=_STUDY_AGAINST_TASKS_AND_RUNS_VALIDATOR,
             inputs=[
                 {"contract_id": "experiment-study-v1", "instance_path": "#"},
                 {"contract_id": "experiment-task-v1", "instance_path": "#"},
@@ -181,7 +190,7 @@ class ExperimentStudyModel(ContractModel):
             "study-analysis-runs-eligible",
             "Study analysis_plan evaluation-run members must resolve unambiguously and exclude invalidated, "
             "superseded, and not-evaluated runs.",
-            validator="aces_contracts.contracts.validate_experiment_study_against_tasks_and_runs",
+            validator=_STUDY_AGAINST_TASKS_AND_RUNS_VALIDATOR,
             inputs=[
                 {"contract_id": "experiment-study-v1", "instance_path": "#"},
                 {"contract_id": "experiment-run-v1", "instance_path": "#"},
@@ -193,7 +202,7 @@ class ExperimentStudyModel(ContractModel):
             "Study run_allocation compared_conditions must be represented by eligible included evaluation-run "
             "membership groupings that meet target_runs_per_condition, use operational blocking factors, and satisfy "
             "exactly one distinct factor-level combination and auditable condition assignment.",
-            validator="aces_contracts.contracts.validate_experiment_study_against_tasks_and_runs",
+            validator=_STUDY_AGAINST_TASKS_AND_RUNS_VALIDATOR,
             inputs=[
                 {"contract_id": "experiment-study-v1", "instance_path": "#"},
                 {"contract_id": "experiment-task-v1", "instance_path": "#"},

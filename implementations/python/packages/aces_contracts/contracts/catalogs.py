@@ -33,15 +33,18 @@ class ConceptFamilyDefinitionModel(ContractModel):
     relation_rules: list[NonEmptyString] = Field(default_factory=list, min_length=1)
     non_ambiguity_constraints: list[NonEmptyString] = Field(default_factory=list, min_length=1)
 
-    @model_validator(mode="after")
-    def _validate_provenance_rules(self) -> ConceptFamilyDefinitionModel:
+    def _validate_borrowed_provenance_requires_authority(self) -> None:
         if self.provenance in {ConceptProvenanceCategory.ADOPTED, ConceptProvenanceCategory.ADAPTED}:
             if self.authority is None or self.authority_reference is None:
                 raise ValueError("adopted and adapted concept families require both authority and authority_reference")
+
+    def _validate_native_forbids_authority_metadata(self) -> None:
         if self.provenance == ConceptProvenanceCategory.NATIVE and (
             self.authority is not None or self.authority_reference is not None
         ):
             raise ValueError("native concept families must not declare authority metadata")
+
+    def _validate_native_requires_extension_metadata(self) -> None:
         if self.provenance == ConceptProvenanceCategory.NATIVE:
             if self.extension_scope is None:
                 raise ValueError("native concept families require extension_scope")
@@ -49,6 +52,12 @@ class ConceptFamilyDefinitionModel(ContractModel):
                 raise ValueError("native concept families require relation_rules")
             if not self.non_ambiguity_constraints:
                 raise ValueError("native concept families require non_ambiguity_constraints")
+
+    @model_validator(mode="after")
+    def _validate_provenance_rules(self) -> ConceptFamilyDefinitionModel:
+        self._validate_borrowed_provenance_requires_authority()
+        self._validate_native_forbids_authority_metadata()
+        self._validate_native_requires_extension_metadata()
         return self
 
     @classmethod

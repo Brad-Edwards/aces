@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping
 from datetime import UTC, datetime, timedelta
-from typing import Annotated, Any, Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -279,19 +279,19 @@ def _parse_rfc3339_datetime(field_name: str, value: str) -> datetime:
     return parsed
 
 
-def _payload_get(payload: Any, field_name: str) -> Any:
+def _payload_get(payload: object, field_name: str) -> object:
     if isinstance(payload, Mapping):
         return payload.get(field_name)
     return getattr(payload, field_name, None)
 
 
-def _validate_rfc3339_payload_field(payload: Any, field_name: str) -> None:
+def _validate_rfc3339_payload_field(payload: object, field_name: str) -> None:
     value = _payload_get(payload, field_name)
     if value is not None:
         _parse_rfc3339_datetime(field_name, value)
 
 
-def _validate_artifact_collection_created_at(field_name: str, artifacts: Any) -> None:
+def _validate_artifact_collection_created_at(field_name: str, artifacts: object) -> None:
     for index, artifact in enumerate(artifacts or []):
         created_at = _payload_get(artifact, "created_at")
         if created_at is not None:

@@ -376,7 +376,7 @@ def _aces_semantic_invariant_profile_schema_for_bundle() -> dict[str, Any]:
     return json_schema
 
 
-def _iter_aces_semantic_invariant_entries(schema_node: Any) -> list[dict[str, Any]]:
+def _iter_aces_semantic_invariant_entries(schema_node: object) -> list[dict[str, Any]]:
     entries: list[dict[str, Any]] = []
     if isinstance(schema_node, dict):
         invariants = schema_node.get("x-aces-invariants")
@@ -392,7 +392,7 @@ def _iter_aces_semantic_invariant_entries(schema_node: Any) -> list[dict[str, An
     return entries
 
 
-def _resolve_semantic_validator(validator: str) -> Any:
+def _resolve_semantic_validator(validator: str) -> object:
     parts = validator.split(".")
     for index in range(len(parts), 0, -1):
         module_name = ".".join(parts[:index])
@@ -402,7 +402,7 @@ def _resolve_semantic_validator(validator: str) -> Any:
             continue
         if module_spec is None:
             continue
-        target: Any = importlib.import_module(module_name)
+        target: object = importlib.import_module(module_name)
         try:
             for attr in parts[index:]:
                 target = getattr(target, attr)

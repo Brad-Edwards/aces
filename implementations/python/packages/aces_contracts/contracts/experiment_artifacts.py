@@ -176,20 +176,21 @@ def _manifest_reference_key(
     )
 
 
-def _reference_satisfies_requirement(
+def _reference_scalar_fields_mismatch(
     candidate: ExperimentReferenceModel, requirement: ExperimentReferenceModel
 ) -> bool:
-    if candidate.ref_kind != requirement.ref_kind or candidate.ref_id != requirement.ref_id:
-        return False
-    if requirement.ref_version is not None and candidate.ref_version != requirement.ref_version:
-        return False
-    if requirement.ref_digest is not None and _canonical_digest(candidate.ref_digest) != _canonical_digest(
-        requirement.ref_digest
-    ):
-        return False
-    if requirement.ref_path is not None and candidate.ref_path != requirement.ref_path:
-        return False
+    kind_or_id_mismatch = candidate.ref_kind != requirement.ref_kind or candidate.ref_id != requirement.ref_id
+    version_mismatch = requirement.ref_version is not None and candidate.ref_version != requirement.ref_version
+    digest_mismatch = requirement.ref_digest is not None and _canonical_digest(
+        candidate.ref_digest
+    ) != _canonical_digest(requirement.ref_digest)
+    path_mismatch = requirement.ref_path is not None and candidate.ref_path != requirement.ref_path
+    return kind_or_id_mismatch or version_mismatch or digest_mismatch or path_mismatch
 
+
+def _reference_subject_satisfies_requirement(
+    candidate: ExperimentReferenceModel, requirement: ExperimentReferenceModel
+) -> bool:
     requirement_subject = getattr(requirement, "subject_ref", None)
     if requirement_subject is None:
         return True
@@ -199,14 +200,25 @@ def _reference_satisfies_requirement(
     return _reference_satisfies_requirement(candidate_subject, requirement_subject)
 
 
-def _reference_identity_satisfies_requirement(
+def _reference_satisfies_requirement(
     candidate: ExperimentReferenceModel, requirement: ExperimentReferenceModel
 ) -> bool:
-    if candidate.ref_kind != requirement.ref_kind or candidate.ref_id != requirement.ref_id:
+    if _reference_scalar_fields_mismatch(candidate, requirement):
         return False
-    if requirement.ref_version is not None and candidate.ref_version != requirement.ref_version:
-        return False
+    return _reference_subject_satisfies_requirement(candidate, requirement)
 
+
+def _reference_identity_scalar_fields_mismatch(
+    candidate: ExperimentReferenceModel, requirement: ExperimentReferenceModel
+) -> bool:
+    kind_or_id_mismatch = candidate.ref_kind != requirement.ref_kind or candidate.ref_id != requirement.ref_id
+    version_mismatch = requirement.ref_version is not None and candidate.ref_version != requirement.ref_version
+    return kind_or_id_mismatch or version_mismatch
+
+
+def _reference_identity_subject_satisfies_requirement(
+    candidate: ExperimentReferenceModel, requirement: ExperimentReferenceModel
+) -> bool:
     requirement_subject = getattr(requirement, "subject_ref", None)
     if requirement_subject is None:
         return True
@@ -214,6 +226,14 @@ def _reference_identity_satisfies_requirement(
     if candidate_subject is None:
         return False
     return _reference_identity_satisfies_requirement(candidate_subject, requirement_subject)
+
+
+def _reference_identity_satisfies_requirement(
+    candidate: ExperimentReferenceModel, requirement: ExperimentReferenceModel
+) -> bool:
+    if _reference_identity_scalar_fields_mismatch(candidate, requirement):
+        return False
+    return _reference_identity_subject_satisfies_requirement(candidate, requirement)
 
 
 def _experiment_reference_key(

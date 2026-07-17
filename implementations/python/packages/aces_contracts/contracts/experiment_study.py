@@ -163,8 +163,6 @@ class ExperimentRunAllocationPlanModel(ContractModel):
 
     @model_validator(mode="after")
     def _validate_condition_assignments(self) -> ExperimentRunAllocationPlanModel:
-        from .experiment_analysis import _condition_assignment_run_criteria_signature
-
         condition_ids = set(self.compared_conditions)
         if len(condition_ids) != len(self.compared_conditions):
             raise ValueError("run_allocation compared_conditions must be unique")
@@ -182,42 +180,47 @@ class ExperimentRunAllocationPlanModel(ContractModel):
         if len(set(self.blocking_factors)) != len(self.blocking_factors):
             raise ValueError("run_allocation blocking_factors must be unique")
         if len(condition_ids) > 1:
-            factor_levels_by_signature: dict[tuple[tuple[str, str], ...], list[str]] = {}
-            criteria_by_signature: dict[
-                tuple[
-                    tuple[tuple[str, str, str | None, str | None, str | None], ...],
-                    tuple[tuple[str, str, str, str], ...],
-                ],
-                list[str],
-            ] = {}
-            for condition_id, assignment in self.condition_assignments.items():
-                factor_levels_signature = tuple(sorted(assignment.factor_levels.items()))
-                factor_levels_by_signature.setdefault(factor_levels_signature, []).append(condition_id)
-                signature = _condition_assignment_run_criteria_signature(assignment)
-                criteria_by_signature.setdefault(signature, []).append(condition_id)
-            duplicate_factor_level_conditions = sorted(
-                ",".join(sorted(condition_ids))
-                for condition_ids in factor_levels_by_signature.values()
-                if len(condition_ids) > 1
-            )
-            if duplicate_factor_level_conditions:
-                joined = "; ".join(duplicate_factor_level_conditions)
-                raise ValueError(
-                    "run_allocation condition_assignments must use distinct factor-level combinations across "
-                    f"compared_conditions: {joined}"
-                )
-            duplicate_criteria_conditions = sorted(
-                ",".join(sorted(condition_ids))
-                for condition_ids in criteria_by_signature.values()
-                if len(condition_ids) > 1
-            )
-            if duplicate_criteria_conditions:
-                joined = "; ".join(duplicate_criteria_conditions)
-                raise ValueError(
-                    "run_allocation condition_assignments must use distinct run-level criteria across "
-                    f"compared_conditions: {joined}"
-                )
+            self._validate_distinct_condition_criteria()
         return self
+
+    def _validate_distinct_condition_criteria(self) -> None:
+        from .experiment_conditions import _condition_assignment_run_criteria_signature
+
+        factor_levels_by_signature: dict[tuple[tuple[str, str], ...], list[str]] = {}
+        criteria_by_signature: dict[
+            tuple[
+                tuple[tuple[str, str, str | None, str | None, str | None], ...],
+                tuple[tuple[str, str, str, str], ...],
+            ],
+            list[str],
+        ] = {}
+        for condition_id, assignment in self.condition_assignments.items():
+            factor_levels_signature = tuple(sorted(assignment.factor_levels.items()))
+            factor_levels_by_signature.setdefault(factor_levels_signature, []).append(condition_id)
+            signature = _condition_assignment_run_criteria_signature(assignment)
+            criteria_by_signature.setdefault(signature, []).append(condition_id)
+        duplicate_factor_level_conditions = sorted(
+            ",".join(sorted(condition_ids))
+            for condition_ids in factor_levels_by_signature.values()
+            if len(condition_ids) > 1
+        )
+        if duplicate_factor_level_conditions:
+            joined = "; ".join(duplicate_factor_level_conditions)
+            raise ValueError(
+                "run_allocation condition_assignments must use distinct factor-level combinations across "
+                f"compared_conditions: {joined}"
+            )
+        duplicate_criteria_conditions = sorted(
+            ",".join(sorted(condition_ids))
+            for condition_ids in criteria_by_signature.values()
+            if len(condition_ids) > 1
+        )
+        if duplicate_criteria_conditions:
+            joined = "; ".join(duplicate_criteria_conditions)
+            raise ValueError(
+                "run_allocation condition_assignments must use distinct run-level criteria across "
+                f"compared_conditions: {joined}"
+            )
 
     @classmethod
     def __get_pydantic_json_schema__(
