@@ -168,6 +168,16 @@ def _classify_evaluation_run_allocation_candidate(
     if not _run_is_eligible_for_study_analysis(run):
         state.ineligible_run_refs.append(f"{run.run_id}:{run.run_status}:{run.outcome_status}")
         return
+    _classify_eligible_run_allocation_candidate(run, run_key, grouping, allocation, state)
+
+
+def _classify_eligible_run_allocation_candidate(
+    run: ExperimentRunModel,
+    run_key: tuple[str, str | None],
+    grouping: str,
+    allocation: ExperimentRunAllocationPlanModel,
+    state: _RunAllocationCoverageState,
+) -> None:
     assignment = allocation.condition_assignments[grouping]
     missing_condition_inputs = _run_satisfies_condition_assignment(run, assignment)
     if missing_condition_inputs:
