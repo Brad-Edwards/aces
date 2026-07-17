@@ -1,7 +1,84 @@
 {
   "bundle_id": "aces-dsl-language-evaluation",
-  "revision": "1.0.0",
+  "revision": "2.0.0",
   "protocol_path": "docs/research/dsl-language-evaluation/protocol-v1.json",
   "snapshot_path": "docs/research/dsl-language-evaluation/execution-snapshot-v1.json",
-  "analysis_path": "docs/research/dsl-language-evaluation/analysis-v1.json"
+  "analysis_path": "docs/research/dsl-language-evaluation/analysis-v1.json",
+  "claim_binding": {
+    "claim_id": "aces-dsl-language-adequacy",
+    "scope": {
+      "persona_ids": ["benchmark-designer", "scenario-author", "participant-model-author", "backend-implementer", "evaluator-reviewer", "assurance-auditor"],
+      "task_ids": ["author-multihost-experiment", "author-information-boundary", "reject-dangling-reference", "classify-underspecified-realization", "reject-normalized-key-ambiguity", "round-trip-format-equivalence", "distinguish-hidden-asset-mutation", "maintain-versioned-import", "independent-review-change"],
+      "tooling_condition_ids": ["public-docs-only", "public-tools"],
+      "variant_ids": ["multihost-reference", "visibility-boundary-change", "dangling-reference-single-defect", "profile-dependent-realization", "normalized-key-collision", "format-only-equivalent", "field-order-equivalent", "hidden-asset-non-equivalent", "compatible-import-update", "lossy-import-update", "review-hidden-assumption-change"],
+      "artifact_stage_ids": ["authored", "validated", "canonical-authored", "instantiated", "compiled", "planned", "review-judgment"],
+      "dimension_ids": ["expressiveness", "usability-comprehension", "effectiveness-productivity", "maintainability-evolution", "ambiguity", "diagnostic-quality", "reviewability", "semantic-traceability"],
+      "measure_ids": ["semantic-elements-correct", "task-completion", "critical-semantic-errors", "semantic-rework-cycles", "relation-classification-accuracy", "diagnostic-localization", "diagnostic-repair", "critical-review-items", "critical-silent-omissions", "silent-lossy-migrations", "critical-silent-ambiguities", "majority-missed-critical-items", "untraced-critical-changes"]
+    },
+    "strata": [
+      {
+        "group_id": "language-adequacy-population",
+        "role": "gating",
+        "partition_by": [],
+        "persona_ids": ["benchmark-designer", "scenario-author", "participant-model-author", "backend-implementer", "evaluator-reviewer", "assurance-auditor"],
+        "experience_band_ids": ["qualified-novice-to-aces", "prior-aces-user"],
+        "tooling_condition_ids": ["public-docs-only", "public-tools"]
+      }
+    ]
+  },
+  "supplemental_bundles": [
+    {
+      "bundle_id": "aces-researcher-accessibility-evaluation",
+      "revision": "1.0.0",
+      "protocol_path": "docs/research/dsl-language-evaluation/protocol-v2.json",
+      "snapshot_path": "docs/research/dsl-language-evaluation/execution-snapshot-accessibility-v1.json",
+      "analysis_path": "docs/research/dsl-language-evaluation/analysis-accessibility-v1.json",
+      "claim_binding": {
+        "claim_id": "aces-researcher-accessibility",
+        "scope": {
+          "persona_ids": ["security-researcher", "benchmark-designer", "backend-implementer", "evaluator-reviewer"],
+          "task_ids": ["accessibility-author-benchmark-scenario", "accessibility-repair-invalid-scenario", "accessibility-classify-unsupported-request", "accessibility-review-nontrivial-scenario"],
+          "tooling_condition_ids": ["public-docs-only", "mcp-tools", "cli-tools", "direct-library"],
+          "variant_ids": ["accessibility-nontrivial-benchmark", "accessibility-single-dangling-reference", "accessibility-unsupported-live-realization", "accessibility-hidden-boundary-error"],
+          "artifact_stage_ids": ["authored", "validated", "instantiated", "compiled", "planned", "review-judgment"],
+          "dimension_ids": ["expressiveness", "usability-comprehension", "effectiveness-productivity", "diagnostic-quality", "reviewability", "semantic-traceability"],
+          "measure_ids": ["semantic-elements-correct", "task-completion", "critical-semantic-errors", "semantic-rework-cycles", "relation-classification-accuracy", "diagnostic-localization", "diagnostic-repair", "critical-review-items", "critical-silent-omissions", "majority-missed-critical-items", "untraced-critical-changes", "prohibited-infrastructure-assistance", "nontrivial-example-support"]
+        },
+        "strata": [
+          {
+            "group_id": "target-infrastructure-novice",
+            "role": "gating",
+            "partition_by": ["persona_id", "tooling_condition_id"],
+            "persona_ids": ["security-researcher", "benchmark-designer", "evaluator-reviewer"],
+            "experience_band_ids": ["research-qualified-infrastructure-novice"],
+            "tooling_condition_ids": ["public-docs-only", "mcp-tools", "cli-tools", "direct-library"]
+          },
+          {
+            "group_id": "target-infrastructure-familiar",
+            "role": "comparison",
+            "partition_by": ["persona_id", "tooling_condition_id"],
+            "persona_ids": ["security-researcher", "benchmark-designer", "evaluator-reviewer"],
+            "experience_band_ids": ["research-qualified-infrastructure-familiar"],
+            "tooling_condition_ids": ["public-docs-only", "mcp-tools", "cli-tools", "direct-library"]
+          },
+          {
+            "group_id": "target-prior-aces-user",
+            "role": "comparison",
+            "partition_by": ["persona_id", "tooling_condition_id"],
+            "persona_ids": ["security-researcher", "benchmark-designer", "evaluator-reviewer"],
+            "experience_band_ids": ["prior-aces-user"],
+            "tooling_condition_ids": ["public-docs-only", "mcp-tools", "cli-tools", "direct-library"]
+          },
+          {
+            "group_id": "backend-implementer-comparison",
+            "role": "comparison",
+            "partition_by": ["experience_band", "tooling_condition_id"],
+            "persona_ids": ["backend-implementer"],
+            "experience_band_ids": ["research-qualified-infrastructure-novice", "research-qualified-infrastructure-familiar", "prior-aces-user"],
+            "tooling_condition_ids": ["public-docs-only", "mcp-tools", "cli-tools", "direct-library"]
+          }
+        ]
+      }
+    }
+  ]
 }
