@@ -29,6 +29,7 @@
     {"dimension_id": "reviewability", "status": "not_evaluated", "threshold_result": "not_evaluated", "condition_results": [], "supporting_observation_ids": []},
     {"dimension_id": "semantic-traceability", "status": "not_evaluated", "threshold_result": "not_evaluated", "condition_results": [], "supporting_observation_ids": []}
   ],
+  "stratum_results": [],
   "evidence_status": "untested",
   "claim": {
     "claim_id": "aces-dsl-language-adequacy",
@@ -43,6 +44,15 @@
     "objective_fail_criteria": "Any dimension meets its preregistered failure threshold, a critical semantic ambiguity or silent loss is observed, or reviewers/tools cannot recover meaning without backend-private interpretation.",
     "allowed_evidence": ["sanitized attempt observations", "production tool outputs", "blinded reviewer judgments", "pinned public documentation", "recomputed aggregate measures"],
     "disallowed_evidence": ["schema or parser success alone", "formal prose alone", "maintainer confidence", "backend-private interpretation", "private prompts", "post-hoc thresholds or exclusions", "fabricated or simulated human evidence"],
+    "scope": {
+      "persona_ids": ["benchmark-designer", "scenario-author", "participant-model-author", "backend-implementer", "evaluator-reviewer", "assurance-auditor"],
+      "task_ids": ["author-multihost-experiment", "author-information-boundary", "reject-dangling-reference", "classify-underspecified-realization", "reject-normalized-key-ambiguity", "round-trip-format-equivalence", "distinguish-hidden-asset-mutation", "maintain-versioned-import", "independent-review-change"],
+      "tooling_condition_ids": ["public-docs-only", "public-tools"],
+      "variant_ids": ["multihost-reference", "visibility-boundary-change", "dangling-reference-single-defect", "profile-dependent-realization", "normalized-key-collision", "format-only-equivalent", "field-order-equivalent", "hidden-asset-non-equivalent", "compatible-import-update", "lossy-import-update", "review-hidden-assumption-change"],
+      "artifact_stage_ids": ["authored", "validated", "canonical-authored", "instantiated", "compiled", "planned", "review-judgment"],
+      "dimension_ids": ["expressiveness", "usability-comprehension", "effectiveness-productivity", "maintainability-evolution", "ambiguity", "diagnostic-quality", "reviewability", "semantic-traceability"],
+      "measure_ids": ["semantic-elements-correct", "task-completion", "critical-semantic-errors", "semantic-rework-cycles", "relation-classification-accuracy", "diagnostic-localization", "diagnostic-repair", "critical-review-items", "critical-silent-omissions", "silent-lossy-migrations", "critical-silent-ambiguities", "majority-missed-critical-items", "untraced-critical-changes"]
+    },
     "evidence_artifacts": [
       "docs/research/dsl-language-evaluation/protocol-v1.json",
       "docs/research/dsl-language-evaluation/execution-snapshot-v1.json",

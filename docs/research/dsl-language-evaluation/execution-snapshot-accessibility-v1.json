@@ -1,0 +1,127 @@
+{
+  "snapshot_id": "aces-researcher-accessibility-not-started-v1",
+  "protocol_revision": "2.0.0",
+  "captured_at": "2026-07-17",
+  "execution_status": "not_started",
+  "aces_revision": "c3ce41a5dbfd519582de7c7f6b77764525f31932",
+  "public_surface": [
+    {
+      "surface_id": "getting-started",
+      "kind": "documentation",
+      "artifact": "docs/explain/getting-started.md",
+      "version": "ACES revision c3ce41a5dbfd519582de7c7f6b77764525f31932",
+      "parameters": "public onboarding path; no implementation source"
+    },
+    {
+      "surface_id": "sdl-explanation",
+      "kind": "documentation",
+      "artifact": "docs/explain/sdl",
+      "version": "ACES revision c3ce41a5dbfd519582de7c7f6b77764525f31932",
+      "parameters": "public SDL authoring, parser, diagnostics, limitation, and language-service explanations"
+    },
+    {
+      "surface_id": "public-glossary",
+      "kind": "documentation",
+      "artifact": "docs/explain/reference/glossary.md",
+      "version": "ACES revision c3ce41a5dbfd519582de7c7f6b77764525f31932",
+      "parameters": "public domain terminology"
+    },
+    {
+      "surface_id": "agent-guidance-aut-811",
+      "kind": "guidance",
+      "artifact": "specs/agent-guidance/agent-guidance.yaml",
+      "version": "ACES revision c3ce41a5dbfd519582de7c7f6b77764525f31932",
+      "parameters": "materialized canonical guidance profile AUT-811; no issue-local duplicate"
+    },
+    {
+      "surface_id": "intended-use-profiles",
+      "kind": "tool",
+      "artifact": "implementations/python/packages/aces_mcp/tools/completeness.py",
+      "version": "ACES revision c3ce41a5dbfd519582de7c7f6b77764525f31932",
+      "parameters": "aces_intended_use_profiles with a task-declared profile only"
+    },
+    {
+      "surface_id": "example-scenarios",
+      "kind": "examples",
+      "artifact": "examples/scenarios",
+      "version": "ACES revision c3ce41a5dbfd519582de7c7f6b77764525f31932",
+      "parameters": "positive parser-validated scenario corpus"
+    },
+    {
+      "surface_id": "example-library",
+      "kind": "examples",
+      "artifact": "examples/library",
+      "version": "ACES revision c3ce41a5dbfd519582de7c7f6b77764525f31932",
+      "parameters": "cataloged templates and patterns; invalid stimuli remain outside this library"
+    },
+    {
+      "surface_id": "sdl-source-profile",
+      "kind": "documentation",
+      "artifact": "docs/explain/sdl/parser.md",
+      "version": "ACES revision c3ce41a5dbfd519582de7c7f6b77764525f31932",
+      "parameters": "sdl-yaml/v1; explicit strict or migration mode per task"
+    },
+    {
+      "surface_id": "sdl-references",
+      "kind": "documentation",
+      "artifact": "specs/sdl/references.md",
+      "version": "ACES revision c3ce41a5dbfd519582de7c7f6b77764525f31932",
+      "parameters": "fail-closed resolution and ambiguity rules"
+    },
+    {
+      "surface_id": "sdl-diagnostics",
+      "kind": "documentation",
+      "artifact": "specs/sdl/diagnostics.md",
+      "version": "ACES revision c3ce41a5dbfd519582de7c7f6b77764525f31932",
+      "parameters": "public diagnostic codes, stages, severities, and locations"
+    },
+    {
+      "surface_id": "participant-semantics",
+      "kind": "documentation",
+      "artifact": "specs/formal/participant-semantics/README.md",
+      "version": "ACES revision c3ce41a5dbfd519582de7c7f6b77764525f31932",
+      "parameters": "participant information-boundary and outcome obligations"
+    },
+    {
+      "surface_id": "mcp-authoring-tools",
+      "kind": "tool",
+      "artifact": "implementations/python/packages/aces_mcp/tools",
+      "version": "ACES revision c3ce41a5dbfd519582de7c7f6b77764525f31932",
+      "parameters": "named local-stdio reference, authoring, language-service, inspection, or operation tool; exact mode and profile recorded per attempt; 64 KiB adapter bound"
+    },
+    {
+      "surface_id": "human-cli",
+      "kind": "tool",
+      "artifact": "implementations/python/packages/aces_cli",
+      "version": "ACES revision c3ce41a5dbfd519582de7c7f6b77764525f31932",
+      "parameters": "named command, source profile, migration policy, semantic-validation mode, and arguments recorded per attempt"
+    },
+    {
+      "surface_id": "documented-library",
+      "kind": "library",
+      "artifact": "implementations/python/packages/aces_sdl",
+      "version": "ACES revision c3ce41a5dbfd519582de7c7f6b77764525f31932",
+      "parameters": "documented content-based parse, semantic validation, canonicalization, instantiation, compiler, reference-processor, and stub-planner entrypoints only"
+    },
+    {
+      "surface_id": "language-service",
+      "kind": "library",
+      "artifact": "implementations/python/packages/aces_sdl/language_service.py",
+      "version": "ACES revision c3ce41a5dbfd519582de7c7f6b77764525f31932",
+      "parameters": "structured public diagnostics kept distinct from CLI prose and MCP operation envelopes"
+    }
+  ],
+  "ethics_review": {
+    "status": "pending",
+    "protocol_identifier": null,
+    "approved_population": null,
+    "approved_data_boundary": null
+  },
+  "subjects": [],
+  "attempts": [],
+  "observations": [],
+  "reviews": [],
+  "deviations": [],
+  "withdrawals": [],
+  "disagreements": []
+}

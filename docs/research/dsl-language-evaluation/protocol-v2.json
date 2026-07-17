@@ -1,0 +1,2304 @@
+{
+  "protocol_id": "aces-researcher-accessibility-evaluation",
+  "revision": "2.0.0",
+  "registered_at": "2026-07-17",
+  "title": "ACES SDL researcher-accessibility evaluation protocol",
+  "claim": "Target security researchers, benchmark designers, backend implementers, and evaluator-reviewers can author, validate, and review representative ACES scenarios through pinned public surfaces without infrastructure expertise or backend-private interpretation.",
+  "research_question": "Can each issue-178 persona complete benchmark-relevant positive and negative authoring or review tasks through the declared public ACES condition with useful diagnostics and without cloud, Terraform, OpenStack, Docker, or implementation-source inspection?",
+  "evidence_status_values": [
+    "untested",
+    "partial",
+    "demonstrated",
+    "refuted"
+  ],
+  "dimensions": [
+    {
+      "dimension_id": "expressiveness",
+      "label": "Expressiveness",
+      "construct": "Whether every experimental concern in a task brief has a native representation or an explicit unsupported, underspecified, or profile-dependent disposition.",
+      "pass_rule": "At least 90 percent of required semantic elements are represented or explicitly dispositioned, with no silent loss of a critical element.",
+      "fail_rule": "A critical element is silently omitted or represented only by backend-private convention, or aggregate coverage is below 90 percent."
+    },
+    {
+      "dimension_id": "usability-comprehension",
+      "label": "Usability and comprehension",
+      "construct": "Whether qualified subjects complete assigned authoring or review tasks using only the declared public surface and assistance condition.",
+      "pass_rule": "At least 80 percent of scored attempts complete without prohibited assistance and the critical semantic-error rate is at most 10 percent.",
+      "fail_rule": "Completion is below 80 percent, critical semantic errors exceed 10 percent, or success depends on backend/source inspection."
+    },
+    {
+      "dimension_id": "effectiveness-productivity",
+      "label": "Effectiveness and productivity",
+      "construct": "Task correctness, bounded effort, diagnostic repair, and rework under a fixed task and assistance condition rather than elapsed time or self-report alone.",
+      "pass_rule": "At least 80 percent of attempts meet the task outcome and median rework is no more than two semantic repair cycles; timing is reported descriptively by persona and task.",
+      "fail_rule": "Outcome success is below 80 percent or median semantic rework exceeds two cycles; no universal speed claim is permitted."
+    },
+    {
+      "dimension_id": "maintainability-evolution",
+      "label": "Maintainability and evolution",
+      "construct": "Whether controlled edits and migrations preserve, change, invalidate, or replace declared meaning with visible status.",
+      "pass_rule": "At least 90 percent of maintenance attempts produce the preregistered semantic relation and every lossy or invalid migration is surfaced.",
+      "fail_rule": "A meaning-changing edit is reported as preserving meaning, a lossy migration is silent, or relation accuracy is below 90 percent."
+    },
+    {
+      "dimension_id": "ambiguity",
+      "label": "Ambiguity",
+      "construct": "Whether one artifact admits multiple materially defensible meanings or intended-equivalent authorings diverge without an explicit disposition.",
+      "pass_rule": "No critical ambiguity is accepted silently and at least 90 percent of preregistered ambiguous or relation-bearing variants receive the expected disposition.",
+      "fail_rule": "Any critical ambiguity is silently accepted or expected relation classification falls below 90 percent."
+    },
+    {
+      "dimension_id": "diagnostic-quality",
+      "label": "Diagnostic quality",
+      "construct": "Whether the selected public entrypoint reports a bounded code, stage, severity, location, explanation, and repair direction sufficient for a valid correction.",
+      "pass_rule": "At least 80 percent of negative attempts locate the injected defect and at least 75 percent are repaired without prohibited assistance.",
+      "fail_rule": "Defect localization is below 80 percent, repair success is below 75 percent, or resolution requires implementation-source inspection."
+    },
+    {
+      "dimension_id": "reviewability",
+      "label": "Reviewability",
+      "construct": "Whether an independent reviewer identifies intended meaning, material changes, hidden assumptions, and information boundaries before intent is revealed.",
+      "pass_rule": "At least 80 percent of critical rubric items are identified and no critical hidden-assumption or information-boundary change is missed by a majority of reviewers.",
+      "fail_rule": "Critical-item recall is below 80 percent or a majority miss a critical assumption or boundary change."
+    },
+    {
+      "dimension_id": "semantic-traceability",
+      "label": "Semantic traceability",
+      "construct": "Whether intent can be followed across authored, expanded, instantiated, compiled, and planned artifacts through canonical public identities.",
+      "pass_rule": "At least 90 percent of required intent-to-artifact links resolve at the owning stage and no critical change disappears from all machine artifacts.",
+      "fail_rule": "A critical intent element cannot be traced, a meaning change collapses at every observed stage, or link coverage is below 90 percent."
+    }
+  ],
+  "personas": [
+    {
+      "persona_id": "benchmark-designer",
+      "label": "Benchmark designer",
+      "qualification": "Has designed or evaluated at least one cyber, agent, or security benchmark and can state tasks, measures, and validity limits.",
+      "minimum_completed_subjects": 5
+    },
+    {
+      "persona_id": "scenario-author",
+      "label": "Scenario author",
+      "qualification": "Has authored cyber-range, infrastructure, exercise, or security-scenario material but need not know ACES internals.",
+      "minimum_completed_subjects": 0
+    },
+    {
+      "persona_id": "participant-model-author",
+      "label": "Participant-model author",
+      "qualification": "Has modeled agent or human actions, observations, information boundaries, episodes, or outcomes.",
+      "minimum_completed_subjects": 0
+    },
+    {
+      "persona_id": "backend-implementer",
+      "label": "Backend implementer",
+      "qualification": "Has implemented or integrated a cyber range, simulator, orchestration backend, or execution adapter.",
+      "minimum_completed_subjects": 5
+    },
+    {
+      "persona_id": "evaluator-reviewer",
+      "label": "Evaluator or reviewer",
+      "qualification": "Has independently reviewed experimental protocols, scenario specifications, or agent-evaluation artifacts.",
+      "minimum_completed_subjects": 5
+    },
+    {
+      "persona_id": "assurance-auditor",
+      "label": "Assurance auditor",
+      "qualification": "Has assessed traceability, evidence, security controls, reproducibility, or compliance claims.",
+      "minimum_completed_subjects": 0
+    },
+    {
+      "persona_id": "security-researcher",
+      "label": "Security researcher",
+      "qualification": "Has designed, run, or evaluated security experiments or cyber-agent studies, but is not required to know cloud, container, infrastructure-as-code, cyber-range backend, or ACES implementation internals.",
+      "minimum_completed_subjects": 5
+    }
+  ],
+  "tooling_conditions": [
+    {
+      "condition_id": "public-docs-only",
+      "label": "Public documentation only",
+      "allowed_surface": "Pinned public documentation and task materials; no source, backend internals, or private prompts.",
+      "assistance": "Search within the pinned documentation is allowed; maintainers and generative assistants are not."
+    },
+    {
+      "condition_id": "public-tools",
+      "label": "Public documentation and production tools",
+      "allowed_surface": "Pinned public documentation plus the selected production parser, validator, canonicalizer, compiler, planner, CLI, or MCP adapter named by the task.",
+      "assistance": "Tool diagnostics may be used; implementation-source inspection, backend-private interpretation, and manual artifact repair after scoring are prohibited."
+    },
+    {
+      "condition_id": "mcp-tools",
+      "label": "Public documentation and MCP authoring tools",
+      "allowed_surface": "Pinned public documentation plus the named local-stdio MCP tool, mode, intended-use profile, and parameters; no other adapter or implementation source.",
+      "assistance": "Exact MCP diagnostics may be used; maintainers, generative assistants, backend internals, and source-derived enrichment are prohibited."
+    },
+    {
+      "condition_id": "cli-tools",
+      "label": "Public documentation and CLI",
+      "allowed_surface": "Pinned public documentation plus the named human CLI command, source profile, migration policy, semantic-validation mode, and parameters; no other adapter or implementation source.",
+      "assistance": "Exact CLI output may be used; maintainers, generative assistants, backend internals, and source-derived enrichment are prohibited."
+    },
+    {
+      "condition_id": "direct-library",
+      "label": "Public documentation and documented Python library",
+      "allowed_surface": "Pinned public documentation plus the named documented content-based Python entrypoints and explicit validation mode; no private helper or backend source.",
+      "assistance": "Public exceptions and diagnostics may be used; undocumented imports, maintainers, generative assistants, and backend-private interpretation are prohibited."
+    }
+  ],
+  "artifact_stages": [
+    {
+      "stage_id": "authored",
+      "label": "Authored SDL",
+      "canonical_entrypoint": "parse_sdl() or parse_sdl_file() using sdl-yaml/v1 and the task's explicit source/migration profile"
+    },
+    {
+      "stage_id": "validated",
+      "label": "Semantically validated SDL",
+      "canonical_entrypoint": "SemanticValidator in collect-all fail-closed mode"
+    },
+    {
+      "stage_id": "canonical-authored",
+      "label": "Canonical authored SDL",
+      "canonical_entrypoint": "canonical_sdl_bytes() and canonical_sdl_digest() after expansion and semantic validation"
+    },
+    {
+      "stage_id": "instantiated",
+      "label": "Admitted instantiated SDL",
+      "canonical_entrypoint": "instantiate_scenario(), admit_instantiated_scenario(), and canonical_instantiated_sdl_digest()"
+    },
+    {
+      "stage_id": "compiled",
+      "label": "Compiled runtime model",
+      "canonical_entrypoint": "compile_runtime_model() with canonical SDL addresses"
+    },
+    {
+      "stage_id": "planned",
+      "label": "Processor plan",
+      "canonical_entrypoint": "the reference processor and plan(); stub planning must be labeled as such"
+    },
+    {
+      "stage_id": "review-judgment",
+      "label": "Independent review judgment",
+      "canonical_entrypoint": "a blinded rubric response fixed before intended semantics are revealed"
+    }
+  ],
+  "sources": [
+    {
+      "source_id": "gabriel-language-evaluation",
+      "kind": "publication",
+      "title": "Do Software Languages Engineers Evaluate their Languages?",
+      "authors": "Pedro Gabriel; Miguel Goulao; Vasco Amaral",
+      "year": 2011,
+      "locator": "https://arxiv.org/abs/1109.6794v1",
+      "version": "arXiv:1109.6794v1",
+      "revision": null,
+      "artifact_path": null,
+      "primary": true
+    },
+    {
+      "source_id": "mernik-dsl-method",
+      "kind": "publication",
+      "title": "When and How to Develop Domain-Specific Languages",
+      "authors": "Marjan Mernik; Jan Heering; Anthony M. Sloane",
+      "year": 2005,
+      "locator": "https://doi.org/10.1145/1118890.1118892",
+      "version": "ACM Computing Surveys 37(4)",
+      "revision": null,
+      "artifact_path": null,
+      "primary": true
+    },
+    {
+      "source_id": "kosar-dsl-mapping",
+      "kind": "publication",
+      "title": "Domain-Specific Languages: A Systematic Mapping Study",
+      "authors": "Tomaž Kosar; Sudev Bohra; Marjan Mernik",
+      "year": 2016,
+      "locator": "https://doi.org/10.1016/j.infsof.2015.11.001",
+      "version": "Information and Software Technology 71",
+      "revision": null,
+      "artifact_path": null,
+      "primary": true
+    },
+    {
+      "source_id": "vsdl",
+      "kind": "publication",
+      "title": "Automating the Generation of Cyber Range Virtual Scenarios with VSDL",
+      "authors": "Gabriele Costa; Enrico Russo; Alessandro Armando",
+      "year": 2023,
+      "locator": "https://arxiv.org/abs/2001.06681v2",
+      "version": "arXiv:2001.06681v2",
+      "revision": null,
+      "artifact_path": null,
+      "primary": true
+    },
+    {
+      "source_id": "aces-participant-semantics",
+      "kind": "repository-internal",
+      "title": "ACES participant behavior and interaction semantics",
+      "authors": "ACES project",
+      "year": 2026,
+      "locator": "https://github.com/Brad-Edwards/aces/blob/38ba081714b12a4dcc7a5c527e2f1250d80a4d1b/specs/formal/participant-semantics/README.md",
+      "version": "ACES revision 38ba081714b12a4dcc7a5c527e2f1250d80a4d1b",
+      "revision": "38ba081714b12a4dcc7a5c527e2f1250d80a4d1b",
+      "artifact_path": "specs/formal/participant-semantics/README.md",
+      "primary": true
+    },
+    {
+      "source_id": "aces-related-work-protocol",
+      "kind": "repository-internal",
+      "title": "ACES reproducible related-work comparison protocol",
+      "authors": "ACES project",
+      "year": 2026,
+      "locator": "https://github.com/Brad-Edwards/aces/blob/38ba081714b12a4dcc7a5c527e2f1250d80a4d1b/docs/research/related-work-comparison/protocol-v1.json",
+      "version": "protocol 1.0.0 at ACES revision 38ba081714b12a4dcc7a5c527e2f1250d80a4d1b",
+      "revision": "38ba081714b12a4dcc7a5c527e2f1250d80a4d1b",
+      "artifact_path": "docs/research/related-work-comparison/protocol-v1.json",
+      "primary": true
+    },
+    {
+      "source_id": "aces-public-authoring-guidance",
+      "kind": "repository-internal",
+      "title": "ACES public getting-started, SDL, glossary, and intended-use guidance",
+      "authors": "ACES project",
+      "year": 2026,
+      "locator": "https://github.com/Brad-Edwards/aces/blob/c3ce41a5dbfd519582de7c7f6b77764525f31932/docs/explain/getting-started.md",
+      "version": "ACES revision c3ce41a5dbfd519582de7c7f6b77764525f31932",
+      "revision": "c3ce41a5dbfd519582de7c7f6b77764525f31932",
+      "artifact_path": "docs/explain/getting-started.md",
+      "primary": true
+    },
+    {
+      "source_id": "aces-example-library",
+      "kind": "repository-internal",
+      "title": "ACES scenario example, template, and pattern catalog",
+      "authors": "ACES project",
+      "year": 2026,
+      "locator": "https://github.com/Brad-Edwards/aces/blob/c3ce41a5dbfd519582de7c7f6b77764525f31932/examples/library/catalog.yaml",
+      "version": "ACES revision c3ce41a5dbfd519582de7c7f6b77764525f31932",
+      "revision": "c3ce41a5dbfd519582de7c7f6b77764525f31932",
+      "artifact_path": "examples/library/catalog.yaml",
+      "primary": true
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "author-multihost-experiment",
+      "title": "Author a multi-host participant experiment",
+      "kind": "positive",
+      "persona_ids": [
+        "benchmark-designer",
+        "scenario-author",
+        "participant-model-author"
+      ],
+      "dimension_ids": [
+        "expressiveness",
+        "usability-comprehension",
+        "effectiveness-productivity",
+        "semantic-traceability"
+      ],
+      "source_refs": [
+        "aces-related-work-protocol",
+        "aces-participant-semantics",
+        "vsdl"
+      ],
+      "intended_semantics_ref": "sealed-intent/author-multihost-experiment-v1",
+      "artifact_stage_ids": [
+        "authored",
+        "validated",
+        "instantiated",
+        "compiled",
+        "planned"
+      ],
+      "tooling_condition_ids": [
+        "public-docs-only",
+        "public-tools"
+      ],
+      "variant_ids": [
+        "multihost-reference"
+      ],
+      "success_rule": "The artifact expresses topology, participant views/actions, an objective, evidence, and declared external obligations without implementation-specific credentials or private conventions.",
+      "failure_rule": "A critical concern is omitted, silently externalized, or only recoverable from backend or implementation source."
+    },
+    {
+      "task_id": "author-information-boundary",
+      "title": "Author participant visibility and outcome boundaries",
+      "kind": "positive",
+      "persona_ids": [
+        "participant-model-author",
+        "assurance-auditor"
+      ],
+      "dimension_ids": [
+        "expressiveness",
+        "reviewability",
+        "semantic-traceability"
+      ],
+      "source_refs": [
+        "aces-participant-semantics"
+      ],
+      "intended_semantics_ref": "sealed-intent/author-information-boundary-v1",
+      "artifact_stage_ids": [
+        "authored",
+        "validated",
+        "compiled",
+        "review-judgment"
+      ],
+      "tooling_condition_ids": [
+        "public-docs-only",
+        "public-tools"
+      ],
+      "variant_ids": [
+        "visibility-boundary-change"
+      ],
+      "success_rule": "World truth, participant-visible projection, action applicability, observation, and outcome meaning remain distinguishable to tools and reviewers.",
+      "failure_rule": "A reviewer cannot determine what the participant can observe or a machine artifact collapses hidden truth into the visible projection."
+    },
+    {
+      "task_id": "reject-dangling-reference",
+      "title": "Reject one dangling authored reference",
+      "kind": "negative",
+      "persona_ids": [
+        "scenario-author",
+        "backend-implementer"
+      ],
+      "dimension_ids": [
+        "diagnostic-quality",
+        "usability-comprehension",
+        "effectiveness-productivity"
+      ],
+      "source_refs": [
+        "aces-related-work-protocol"
+      ],
+      "intended_semantics_ref": "sealed-intent/reject-dangling-reference-v1",
+      "artifact_stage_ids": [
+        "authored",
+        "validated"
+      ],
+      "tooling_condition_ids": [
+        "public-tools"
+      ],
+      "variant_ids": [
+        "dangling-reference-single-defect"
+      ],
+      "success_rule": "The production semantic boundary rejects the single defect with a bounded, located diagnostic and the subject repairs it without source inspection.",
+      "failure_rule": "The defect is accepted, mislocated, only reported by a private path, or cannot be repaired from the declared public output."
+    },
+    {
+      "task_id": "classify-underspecified-realization",
+      "title": "Classify underspecified or profile-dependent realization",
+      "kind": "underspecified",
+      "persona_ids": [
+        "scenario-author",
+        "backend-implementer",
+        "evaluator-reviewer"
+      ],
+      "dimension_ids": [
+        "expressiveness",
+        "ambiguity",
+        "reviewability"
+      ],
+      "source_refs": [
+        "aces-participant-semantics",
+        "vsdl"
+      ],
+      "intended_semantics_ref": "sealed-intent/classify-underspecified-realization-v1",
+      "artifact_stage_ids": [
+        "validated",
+        "compiled",
+        "planned",
+        "review-judgment"
+      ],
+      "tooling_condition_ids": [
+        "public-docs-only",
+        "public-tools"
+      ],
+      "variant_ids": [
+        "profile-dependent-realization"
+      ],
+      "success_rule": "The artifact and reviewer classify the concern as underspecified or profile-dependent at the owning stage rather than inventing backend meaning.",
+      "failure_rule": "The concern is reported as fully specified, silently defaulted, or resolved only through private backend assumptions."
+    },
+    {
+      "task_id": "reject-normalized-key-ambiguity",
+      "title": "Reject a deliberately ambiguous mapping key",
+      "kind": "ambiguous",
+      "persona_ids": [
+        "scenario-author",
+        "backend-implementer"
+      ],
+      "dimension_ids": [
+        "ambiguity",
+        "diagnostic-quality",
+        "effectiveness-productivity"
+      ],
+      "source_refs": [
+        "gabriel-language-evaluation",
+        "aces-related-work-protocol"
+      ],
+      "intended_semantics_ref": "sealed-intent/reject-normalized-key-ambiguity-v1",
+      "artifact_stage_ids": [
+        "authored"
+      ],
+      "tooling_condition_ids": [
+        "public-tools"
+      ],
+      "variant_ids": [
+        "normalized-key-collision"
+      ],
+      "success_rule": "The production parser fails closed before construction, identifies the collision, and supports a valid repair.",
+      "failure_rule": "One key silently wins, the ambiguity reaches later stages, or the diagnostic cannot support repair."
+    },
+    {
+      "task_id": "round-trip-format-equivalence",
+      "title": "Preserve meaning across source-format variation",
+      "kind": "round-trip",
+      "persona_ids": [
+        "scenario-author",
+        "evaluator-reviewer"
+      ],
+      "dimension_ids": [
+        "ambiguity",
+        "maintainability-evolution",
+        "semantic-traceability"
+      ],
+      "source_refs": [
+        "mernik-dsl-method",
+        "kosar-dsl-mapping"
+      ],
+      "intended_semantics_ref": "sealed-intent/round-trip-format-equivalence-v1",
+      "artifact_stage_ids": [
+        "authored",
+        "canonical-authored",
+        "review-judgment"
+      ],
+      "tooling_condition_ids": [
+        "public-tools"
+      ],
+      "variant_ids": [
+        "format-only-equivalent",
+        "field-order-equivalent"
+      ],
+      "success_rule": "Strict reparse and canonical authored identity converge for both variants while reviewers classify the change as non-material.",
+      "failure_rule": "Equivalent source variants diverge semantically, a tool reports false material change, or a reviewer must rely on hidden conventions."
+    },
+    {
+      "task_id": "distinguish-hidden-asset-mutation",
+      "title": "Distinguish a non-equivalent hidden-asset mutation",
+      "kind": "mutation",
+      "persona_ids": [
+        "participant-model-author",
+        "evaluator-reviewer",
+        "assurance-auditor"
+      ],
+      "dimension_ids": [
+        "ambiguity",
+        "reviewability",
+        "semantic-traceability"
+      ],
+      "source_refs": [
+        "aces-participant-semantics"
+      ],
+      "intended_semantics_ref": "sealed-intent/distinguish-hidden-asset-mutation-v1",
+      "artifact_stage_ids": [
+        "authored",
+        "instantiated",
+        "compiled",
+        "planned",
+        "review-judgment"
+      ],
+      "tooling_condition_ids": [
+        "public-tools"
+      ],
+      "variant_ids": [
+        "hidden-asset-non-equivalent"
+      ],
+      "success_rule": "At least one owning machine artifact and the independent review distinguish the declared information-boundary change.",
+      "failure_rule": "All observed machine stages collapse the change or reviewers classify it as equivalent because the boundary is not public."
+    },
+    {
+      "task_id": "maintain-versioned-import",
+      "title": "Maintain a versioned imported scenario",
+      "kind": "maintenance",
+      "persona_ids": [
+        "scenario-author",
+        "backend-implementer",
+        "assurance-auditor"
+      ],
+      "dimension_ids": [
+        "maintainability-evolution",
+        "diagnostic-quality",
+        "semantic-traceability"
+      ],
+      "source_refs": [
+        "mernik-dsl-method",
+        "aces-related-work-protocol"
+      ],
+      "intended_semantics_ref": "sealed-intent/maintain-versioned-import-v1",
+      "artifact_stage_ids": [
+        "authored",
+        "validated",
+        "canonical-authored",
+        "instantiated"
+      ],
+      "tooling_condition_ids": [
+        "public-tools"
+      ],
+      "variant_ids": [
+        "compatible-import-update",
+        "lossy-import-update"
+      ],
+      "success_rule": "The compatible update preserves the declared relation and the lossy update reports invalidation, migration, or replacement status.",
+      "failure_rule": "A lossy update is accepted as meaning-preserving, identity silently drifts, or repair requires private registry/source knowledge."
+    },
+    {
+      "task_id": "independent-review-change",
+      "title": "Review a blinded semantic change",
+      "kind": "independent-review",
+      "persona_ids": [
+        "benchmark-designer",
+        "evaluator-reviewer",
+        "assurance-auditor"
+      ],
+      "dimension_ids": [
+        "reviewability",
+        "ambiguity",
+        "semantic-traceability"
+      ],
+      "source_refs": [
+        "gabriel-language-evaluation",
+        "kosar-dsl-mapping"
+      ],
+      "intended_semantics_ref": "sealed-intent/independent-review-change-v1",
+      "artifact_stage_ids": [
+        "authored",
+        "compiled",
+        "planned",
+        "review-judgment"
+      ],
+      "tooling_condition_ids": [
+        "public-docs-only",
+        "public-tools"
+      ],
+      "variant_ids": [
+        "review-hidden-assumption-change"
+      ],
+      "success_rule": "The blinded reviewer identifies the material change, hidden assumption, affected artifact stage, and information boundary before intent is revealed.",
+      "failure_rule": "The critical change or assumption is missed by a majority or can be explained only after backend-private intent is disclosed."
+    },
+    {
+      "task_id": "accessibility-author-benchmark-scenario",
+      "title": "Author and validate a non-trivial benchmark scenario",
+      "kind": "positive",
+      "persona_ids": [
+        "security-researcher",
+        "benchmark-designer"
+      ],
+      "dimension_ids": [
+        "expressiveness",
+        "usability-comprehension",
+        "effectiveness-productivity",
+        "semantic-traceability"
+      ],
+      "source_refs": [
+        "aces-public-authoring-guidance",
+        "aces-example-library",
+        "aces-participant-semantics"
+      ],
+      "intended_semantics_ref": "sealed-intent/accessibility-author-benchmark-scenario-v1",
+      "artifact_stage_ids": [
+        "authored",
+        "validated",
+        "instantiated",
+        "compiled",
+        "planned"
+      ],
+      "tooling_condition_ids": [
+        "public-docs-only",
+        "mcp-tools",
+        "cli-tools",
+        "direct-library"
+      ],
+      "variant_ids": [
+        "accessibility-nontrivial-benchmark"
+      ],
+      "success_rule": "The subject expresses and validates the sealed topology, participant information boundary, actions, objective, evidence, and declared external obligations without infrastructure setup, backend source, or undocumented convention.",
+      "failure_rule": "A critical benchmark element is missing or wrong, only a trivial toy scenario is produced, validation is mistaken for semantic correctness, or completion requires infrastructure/backend expertise."
+    },
+    {
+      "task_id": "accessibility-repair-invalid-scenario",
+      "title": "Repair one invalid benchmark scenario from public diagnostics",
+      "kind": "negative",
+      "persona_ids": [
+        "security-researcher",
+        "benchmark-designer",
+        "backend-implementer"
+      ],
+      "dimension_ids": [
+        "usability-comprehension",
+        "effectiveness-productivity",
+        "diagnostic-quality"
+      ],
+      "source_refs": [
+        "aces-public-authoring-guidance",
+        "aces-example-library"
+      ],
+      "intended_semantics_ref": "sealed-intent/accessibility-repair-invalid-scenario-v1",
+      "artifact_stage_ids": [
+        "authored",
+        "validated"
+      ],
+      "tooling_condition_ids": [
+        "mcp-tools",
+        "cli-tools",
+        "direct-library"
+      ],
+      "variant_ids": [
+        "accessibility-single-dangling-reference"
+      ],
+      "success_rule": "The assigned production entrypoint rejects the single dangling reference, localizes and explains it, and the subject produces a semantically valid repair within the preregistered cycle limit without source inspection.",
+      "failure_rule": "The defect is accepted, mislocated, explained only by source/private output, or cannot be repaired from the exact public diagnostic."
+    },
+    {
+      "task_id": "accessibility-classify-unsupported-request",
+      "title": "Classify an unsupported or profile-dependent request",
+      "kind": "underspecified",
+      "persona_ids": [
+        "security-researcher",
+        "benchmark-designer",
+        "backend-implementer",
+        "evaluator-reviewer"
+      ],
+      "dimension_ids": [
+        "expressiveness",
+        "usability-comprehension",
+        "effectiveness-productivity",
+        "diagnostic-quality",
+        "reviewability"
+      ],
+      "source_refs": [
+        "aces-public-authoring-guidance",
+        "aces-participant-semantics"
+      ],
+      "intended_semantics_ref": "sealed-intent/accessibility-classify-unsupported-request-v1",
+      "artifact_stage_ids": [
+        "validated",
+        "planned",
+        "review-judgment"
+      ],
+      "tooling_condition_ids": [
+        "public-docs-only",
+        "mcp-tools",
+        "cli-tools",
+        "direct-library"
+      ],
+      "variant_ids": [
+        "accessibility-unsupported-live-realization"
+      ],
+      "success_rule": "The subject identifies the sealed request as unsupported or profile-dependent at the owning stage, explains the public boundary, and does not invent deployment semantics.",
+      "failure_rule": "The request is mislabeled as invalid or fully supported, silently defaulted, or resolved through cloud, container, backend, or implementation-source assumptions."
+    },
+    {
+      "task_id": "accessibility-review-nontrivial-scenario",
+      "title": "Independently review a non-trivial scenario and public-tool result",
+      "kind": "independent-review",
+      "persona_ids": [
+        "benchmark-designer",
+        "evaluator-reviewer"
+      ],
+      "dimension_ids": [
+        "usability-comprehension",
+        "reviewability",
+        "semantic-traceability"
+      ],
+      "source_refs": [
+        "aces-public-authoring-guidance",
+        "aces-example-library",
+        "aces-participant-semantics"
+      ],
+      "intended_semantics_ref": "sealed-intent/accessibility-review-nontrivial-scenario-v1",
+      "artifact_stage_ids": [
+        "authored",
+        "validated",
+        "compiled",
+        "planned",
+        "review-judgment"
+      ],
+      "tooling_condition_ids": [
+        "public-docs-only",
+        "mcp-tools",
+        "cli-tools",
+        "direct-library"
+      ],
+      "variant_ids": [
+        "accessibility-hidden-boundary-error"
+      ],
+      "success_rule": "Before intent reveal, the reviewer identifies the critical information-boundary error, the affected artifact stages, the public diagnostic or guidance gap, and whether the scenario is benchmark-relevant.",
+      "failure_rule": "A majority miss the critical error, accept a toy scenario as representative, or need backend-private meaning to explain the result."
+    }
+  ],
+  "variants": [
+    {
+      "variant_id": "multihost-reference",
+      "task_id": "author-multihost-experiment",
+      "kind": "reference",
+      "expected_relation": "reference",
+      "description": "The sealed reference meaning for the positive task."
+    },
+    {
+      "variant_id": "visibility-boundary-change",
+      "task_id": "author-information-boundary",
+      "kind": "non-equivalent",
+      "expected_relation": "non-equivalent",
+      "description": "Changes one participant-visible fact while retaining topology."
+    },
+    {
+      "variant_id": "dangling-reference-single-defect",
+      "task_id": "reject-dangling-reference",
+      "kind": "invalid",
+      "expected_relation": "invalid",
+      "description": "Introduces exactly one undeclared reference."
+    },
+    {
+      "variant_id": "profile-dependent-realization",
+      "task_id": "classify-underspecified-realization",
+      "kind": "profile-dependent",
+      "expected_relation": "profile-dependent",
+      "description": "Leaves one realization choice outside portable SDL meaning."
+    },
+    {
+      "variant_id": "normalized-key-collision",
+      "task_id": "reject-normalized-key-ambiguity",
+      "kind": "ambiguous",
+      "expected_relation": "invalid",
+      "description": "Introduces two mapping keys that collide under the source profile."
+    },
+    {
+      "variant_id": "format-only-equivalent",
+      "task_id": "round-trip-format-equivalence",
+      "kind": "equivalent",
+      "expected_relation": "equivalent",
+      "description": "Changes comments and formatting only."
+    },
+    {
+      "variant_id": "field-order-equivalent",
+      "task_id": "round-trip-format-equivalence",
+      "kind": "equivalent",
+      "expected_relation": "equivalent",
+      "description": "Reorders mapping fields without changing values."
+    },
+    {
+      "variant_id": "hidden-asset-non-equivalent",
+      "task_id": "distinguish-hidden-asset-mutation",
+      "kind": "non-equivalent",
+      "expected_relation": "non-equivalent",
+      "description": "Changes whether one asset is visible to one participant."
+    },
+    {
+      "variant_id": "compatible-import-update",
+      "task_id": "maintain-versioned-import",
+      "kind": "equivalent",
+      "expected_relation": "equivalent",
+      "description": "Updates a versioned imported unit without changing declared semantics."
+    },
+    {
+      "variant_id": "lossy-import-update",
+      "task_id": "maintain-versioned-import",
+      "kind": "migration",
+      "expected_relation": "lossy",
+      "description": "Removes a referenced semantic element and requires explicit invalidation or migration status."
+    },
+    {
+      "variant_id": "review-hidden-assumption-change",
+      "task_id": "independent-review-change",
+      "kind": "non-equivalent",
+      "expected_relation": "non-equivalent",
+      "description": "Changes one hidden assumption without changing the high-level topology summary."
+    },
+    {
+      "variant_id": "accessibility-nontrivial-benchmark",
+      "task_id": "accessibility-author-benchmark-scenario",
+      "kind": "reference",
+      "expected_relation": "reference",
+      "description": "A sealed representative multi-host benchmark task with participant information boundaries, actions, objective, evidence, and external obligations."
+    },
+    {
+      "variant_id": "accessibility-single-dangling-reference",
+      "task_id": "accessibility-repair-invalid-scenario",
+      "kind": "invalid",
+      "expected_relation": "invalid",
+      "description": "Introduces exactly one dangling authored reference into a representative scenario."
+    },
+    {
+      "variant_id": "accessibility-unsupported-live-realization",
+      "task_id": "accessibility-classify-unsupported-request",
+      "kind": "profile-dependent",
+      "expected_relation": "profile-dependent",
+      "description": "Requests a live realization detail outside portable SDL and the declared stub-planning condition."
+    },
+    {
+      "variant_id": "accessibility-hidden-boundary-error",
+      "task_id": "accessibility-review-nontrivial-scenario",
+      "kind": "non-equivalent",
+      "expected_relation": "non-equivalent",
+      "description": "Introduces one critical participant information-boundary error into a non-trivial benchmark scenario."
+    }
+  ],
+  "measures": [
+    {
+      "measure_id": "semantic-elements-correct",
+      "task_ids": [
+        "author-multihost-experiment",
+        "author-information-boundary",
+        "classify-underspecified-realization",
+        "round-trip-format-equivalence",
+        "distinguish-hidden-asset-mutation",
+        "maintain-versioned-import",
+        "independent-review-change",
+        "accessibility-author-benchmark-scenario",
+        "accessibility-classify-unsupported-request",
+        "accessibility-review-nontrivial-scenario"
+      ],
+      "dimension_ids": [
+        "expressiveness",
+        "semantic-traceability"
+      ],
+      "stage_applicability": [
+        {
+          "task_id": "author-multihost-experiment",
+          "variant_ids": [
+            "multihost-reference"
+          ],
+          "artifact_stage_ids": [
+            "authored",
+            "validated",
+            "instantiated",
+            "compiled",
+            "planned"
+          ]
+        },
+        {
+          "task_id": "author-information-boundary",
+          "variant_ids": [
+            "visibility-boundary-change"
+          ],
+          "artifact_stage_ids": [
+            "authored",
+            "validated",
+            "compiled",
+            "review-judgment"
+          ]
+        },
+        {
+          "task_id": "classify-underspecified-realization",
+          "variant_ids": [
+            "profile-dependent-realization"
+          ],
+          "artifact_stage_ids": [
+            "validated",
+            "compiled",
+            "planned",
+            "review-judgment"
+          ]
+        },
+        {
+          "task_id": "round-trip-format-equivalence",
+          "variant_ids": [
+            "format-only-equivalent",
+            "field-order-equivalent"
+          ],
+          "artifact_stage_ids": [
+            "authored",
+            "canonical-authored",
+            "review-judgment"
+          ]
+        },
+        {
+          "task_id": "distinguish-hidden-asset-mutation",
+          "variant_ids": [
+            "hidden-asset-non-equivalent"
+          ],
+          "artifact_stage_ids": [
+            "authored",
+            "instantiated",
+            "compiled",
+            "planned",
+            "review-judgment"
+          ]
+        },
+        {
+          "task_id": "maintain-versioned-import",
+          "variant_ids": [
+            "compatible-import-update",
+            "lossy-import-update"
+          ],
+          "artifact_stage_ids": [
+            "authored",
+            "validated",
+            "canonical-authored",
+            "instantiated"
+          ]
+        },
+        {
+          "task_id": "independent-review-change",
+          "variant_ids": [
+            "review-hidden-assumption-change"
+          ],
+          "artifact_stage_ids": [
+            "authored",
+            "compiled",
+            "planned",
+            "review-judgment"
+          ]
+        },
+        {
+          "task_id": "accessibility-author-benchmark-scenario",
+          "variant_ids": [
+            "accessibility-nontrivial-benchmark"
+          ],
+          "artifact_stage_ids": [
+            "authored",
+            "validated",
+            "instantiated",
+            "compiled",
+            "planned"
+          ]
+        },
+        {
+          "task_id": "accessibility-classify-unsupported-request",
+          "variant_ids": [
+            "accessibility-unsupported-live-realization"
+          ],
+          "artifact_stage_ids": [
+            "validated",
+            "planned",
+            "review-judgment"
+          ]
+        },
+        {
+          "task_id": "accessibility-review-nontrivial-scenario",
+          "variant_ids": [
+            "accessibility-hidden-boundary-error"
+          ],
+          "artifact_stage_ids": [
+            "authored",
+            "validated",
+            "compiled",
+            "planned",
+            "review-judgment"
+          ]
+        }
+      ],
+      "unit": "proportion",
+      "aggregation": "proportion",
+      "direction": "higher-is-better",
+      "capture_rule": "Score every declared task-variant-stage opportunity against the sealed intent after the attempt is fixed; a missing stage score leaves the aggregate incomplete."
+    },
+    {
+      "measure_id": "task-completion",
+      "task_ids": [
+        "author-multihost-experiment",
+        "reject-dangling-reference",
+        "reject-normalized-key-ambiguity",
+        "accessibility-author-benchmark-scenario",
+        "accessibility-repair-invalid-scenario",
+        "accessibility-classify-unsupported-request",
+        "accessibility-review-nontrivial-scenario"
+      ],
+      "dimension_ids": [
+        "usability-comprehension",
+        "effectiveness-productivity"
+      ],
+      "stage_applicability": [
+        {
+          "task_id": "author-multihost-experiment",
+          "variant_ids": [
+            "multihost-reference"
+          ],
+          "artifact_stage_ids": [
+            "planned"
+          ]
+        },
+        {
+          "task_id": "reject-dangling-reference",
+          "variant_ids": [
+            "dangling-reference-single-defect"
+          ],
+          "artifact_stage_ids": [
+            "validated"
+          ]
+        },
+        {
+          "task_id": "reject-normalized-key-ambiguity",
+          "variant_ids": [
+            "normalized-key-collision"
+          ],
+          "artifact_stage_ids": [
+            "authored"
+          ]
+        },
+        {
+          "task_id": "accessibility-author-benchmark-scenario",
+          "variant_ids": [
+            "accessibility-nontrivial-benchmark"
+          ],
+          "artifact_stage_ids": [
+            "planned"
+          ]
+        },
+        {
+          "task_id": "accessibility-repair-invalid-scenario",
+          "variant_ids": [
+            "accessibility-single-dangling-reference"
+          ],
+          "artifact_stage_ids": [
+            "validated"
+          ]
+        },
+        {
+          "task_id": "accessibility-classify-unsupported-request",
+          "variant_ids": [
+            "accessibility-unsupported-live-realization"
+          ],
+          "artifact_stage_ids": [
+            "review-judgment"
+          ]
+        },
+        {
+          "task_id": "accessibility-review-nontrivial-scenario",
+          "variant_ids": [
+            "accessibility-hidden-boundary-error"
+          ],
+          "artifact_stage_ids": [
+            "review-judgment"
+          ]
+        }
+      ],
+      "unit": "proportion",
+      "aggregation": "proportion",
+      "direction": "higher-is-better",
+      "capture_rule": "Count every assigned non-withdrawn attempt at its declared terminal decision stage; tool failures, missing records, and abandoned attempts are explicit zeroes unless the preregistered withdrawal rule applies."
+    },
+    {
+      "measure_id": "critical-semantic-errors",
+      "task_ids": [
+        "author-multihost-experiment",
+        "reject-dangling-reference",
+        "classify-underspecified-realization",
+        "reject-normalized-key-ambiguity",
+        "round-trip-format-equivalence",
+        "distinguish-hidden-asset-mutation",
+        "independent-review-change",
+        "accessibility-author-benchmark-scenario",
+        "accessibility-repair-invalid-scenario",
+        "accessibility-classify-unsupported-request",
+        "accessibility-review-nontrivial-scenario"
+      ],
+      "dimension_ids": [
+        "usability-comprehension",
+        "ambiguity"
+      ],
+      "stage_applicability": [
+        {
+          "task_id": "author-multihost-experiment",
+          "variant_ids": [
+            "multihost-reference"
+          ],
+          "artifact_stage_ids": [
+            "planned"
+          ]
+        },
+        {
+          "task_id": "reject-dangling-reference",
+          "variant_ids": [
+            "dangling-reference-single-defect"
+          ],
+          "artifact_stage_ids": [
+            "validated"
+          ]
+        },
+        {
+          "task_id": "classify-underspecified-realization",
+          "variant_ids": [
+            "profile-dependent-realization"
+          ],
+          "artifact_stage_ids": [
+            "review-judgment"
+          ]
+        },
+        {
+          "task_id": "reject-normalized-key-ambiguity",
+          "variant_ids": [
+            "normalized-key-collision"
+          ],
+          "artifact_stage_ids": [
+            "authored"
+          ]
+        },
+        {
+          "task_id": "round-trip-format-equivalence",
+          "variant_ids": [
+            "format-only-equivalent",
+            "field-order-equivalent"
+          ],
+          "artifact_stage_ids": [
+            "review-judgment"
+          ]
+        },
+        {
+          "task_id": "distinguish-hidden-asset-mutation",
+          "variant_ids": [
+            "hidden-asset-non-equivalent"
+          ],
+          "artifact_stage_ids": [
+            "review-judgment"
+          ]
+        },
+        {
+          "task_id": "independent-review-change",
+          "variant_ids": [
+            "review-hidden-assumption-change"
+          ],
+          "artifact_stage_ids": [
+            "review-judgment"
+          ]
+        },
+        {
+          "task_id": "accessibility-author-benchmark-scenario",
+          "variant_ids": [
+            "accessibility-nontrivial-benchmark"
+          ],
+          "artifact_stage_ids": [
+            "planned"
+          ]
+        },
+        {
+          "task_id": "accessibility-repair-invalid-scenario",
+          "variant_ids": [
+            "accessibility-single-dangling-reference"
+          ],
+          "artifact_stage_ids": [
+            "validated"
+          ]
+        },
+        {
+          "task_id": "accessibility-classify-unsupported-request",
+          "variant_ids": [
+            "accessibility-unsupported-live-realization"
+          ],
+          "artifact_stage_ids": [
+            "review-judgment"
+          ]
+        },
+        {
+          "task_id": "accessibility-review-nontrivial-scenario",
+          "variant_ids": [
+            "accessibility-hidden-boundary-error"
+          ],
+          "artifact_stage_ids": [
+            "review-judgment"
+          ]
+        }
+      ],
+      "unit": "proportion",
+      "aggregation": "proportion",
+      "direction": "lower-is-better",
+      "capture_rule": "Count attempts containing at least one preregistered critical meaning error at the declared decision stage; missing scores leave the aggregate incomplete."
+    },
+    {
+      "measure_id": "semantic-rework-cycles",
+      "task_ids": [
+        "author-multihost-experiment",
+        "reject-dangling-reference",
+        "reject-normalized-key-ambiguity",
+        "round-trip-format-equivalence",
+        "maintain-versioned-import",
+        "accessibility-author-benchmark-scenario",
+        "accessibility-repair-invalid-scenario"
+      ],
+      "dimension_ids": [
+        "effectiveness-productivity",
+        "maintainability-evolution"
+      ],
+      "stage_applicability": [
+        {
+          "task_id": "author-multihost-experiment",
+          "variant_ids": [
+            "multihost-reference"
+          ],
+          "artifact_stage_ids": [
+            "authored"
+          ]
+        },
+        {
+          "task_id": "reject-dangling-reference",
+          "variant_ids": [
+            "dangling-reference-single-defect"
+          ],
+          "artifact_stage_ids": [
+            "authored"
+          ]
+        },
+        {
+          "task_id": "reject-normalized-key-ambiguity",
+          "variant_ids": [
+            "normalized-key-collision"
+          ],
+          "artifact_stage_ids": [
+            "authored"
+          ]
+        },
+        {
+          "task_id": "round-trip-format-equivalence",
+          "variant_ids": [
+            "format-only-equivalent",
+            "field-order-equivalent"
+          ],
+          "artifact_stage_ids": [
+            "authored"
+          ]
+        },
+        {
+          "task_id": "maintain-versioned-import",
+          "variant_ids": [
+            "compatible-import-update",
+            "lossy-import-update"
+          ],
+          "artifact_stage_ids": [
+            "authored"
+          ]
+        },
+        {
+          "task_id": "accessibility-author-benchmark-scenario",
+          "variant_ids": [
+            "accessibility-nontrivial-benchmark"
+          ],
+          "artifact_stage_ids": [
+            "authored"
+          ]
+        },
+        {
+          "task_id": "accessibility-repair-invalid-scenario",
+          "variant_ids": [
+            "accessibility-single-dangling-reference"
+          ],
+          "artifact_stage_ids": [
+            "authored"
+          ]
+        }
+      ],
+      "unit": "count",
+      "aggregation": "median",
+      "direction": "lower-is-better",
+      "capture_rule": "Count submitted semantic repair cycles at each task's declared authored-stage opportunity; formatting-only edits do not count and missing scores leave the aggregate incomplete."
+    },
+    {
+      "measure_id": "relation-classification-accuracy",
+      "task_ids": [
+        "classify-underspecified-realization",
+        "reject-normalized-key-ambiguity",
+        "round-trip-format-equivalence",
+        "distinguish-hidden-asset-mutation",
+        "maintain-versioned-import",
+        "independent-review-change",
+        "accessibility-classify-unsupported-request",
+        "accessibility-review-nontrivial-scenario"
+      ],
+      "dimension_ids": [
+        "ambiguity",
+        "maintainability-evolution",
+        "diagnostic-quality",
+        "reviewability"
+      ],
+      "stage_applicability": [
+        {
+          "task_id": "classify-underspecified-realization",
+          "variant_ids": [
+            "profile-dependent-realization"
+          ],
+          "artifact_stage_ids": [
+            "review-judgment"
+          ]
+        },
+        {
+          "task_id": "reject-normalized-key-ambiguity",
+          "variant_ids": [
+            "normalized-key-collision"
+          ],
+          "artifact_stage_ids": [
+            "authored"
+          ]
+        },
+        {
+          "task_id": "round-trip-format-equivalence",
+          "variant_ids": [
+            "format-only-equivalent",
+            "field-order-equivalent"
+          ],
+          "artifact_stage_ids": [
+            "review-judgment"
+          ]
+        },
+        {
+          "task_id": "distinguish-hidden-asset-mutation",
+          "variant_ids": [
+            "hidden-asset-non-equivalent"
+          ],
+          "artifact_stage_ids": [
+            "review-judgment"
+          ]
+        },
+        {
+          "task_id": "maintain-versioned-import",
+          "variant_ids": [
+            "compatible-import-update",
+            "lossy-import-update"
+          ],
+          "artifact_stage_ids": [
+            "canonical-authored",
+            "instantiated"
+          ]
+        },
+        {
+          "task_id": "independent-review-change",
+          "variant_ids": [
+            "review-hidden-assumption-change"
+          ],
+          "artifact_stage_ids": [
+            "review-judgment"
+          ]
+        },
+        {
+          "task_id": "accessibility-classify-unsupported-request",
+          "variant_ids": [
+            "accessibility-unsupported-live-realization"
+          ],
+          "artifact_stage_ids": [
+            "review-judgment"
+          ]
+        },
+        {
+          "task_id": "accessibility-review-nontrivial-scenario",
+          "variant_ids": [
+            "accessibility-hidden-boundary-error"
+          ],
+          "artifact_stage_ids": [
+            "review-judgment"
+          ]
+        }
+      ],
+      "unit": "proportion",
+      "aggregation": "proportion",
+      "direction": "higher-is-better",
+      "capture_rule": "Compare each declared stage's fixed machine or reviewer relation judgment with the variant's preregistered expected relation; missing judgments leave the aggregate incomplete."
+    },
+    {
+      "measure_id": "diagnostic-localization",
+      "task_ids": [
+        "reject-dangling-reference",
+        "reject-normalized-key-ambiguity",
+        "maintain-versioned-import",
+        "accessibility-repair-invalid-scenario",
+        "accessibility-classify-unsupported-request"
+      ],
+      "dimension_ids": [
+        "diagnostic-quality"
+      ],
+      "stage_applicability": [
+        {
+          "task_id": "reject-dangling-reference",
+          "variant_ids": [
+            "dangling-reference-single-defect"
+          ],
+          "artifact_stage_ids": [
+            "validated"
+          ]
+        },
+        {
+          "task_id": "reject-normalized-key-ambiguity",
+          "variant_ids": [
+            "normalized-key-collision"
+          ],
+          "artifact_stage_ids": [
+            "authored"
+          ]
+        },
+        {
+          "task_id": "maintain-versioned-import",
+          "variant_ids": [
+            "compatible-import-update",
+            "lossy-import-update"
+          ],
+          "artifact_stage_ids": [
+            "validated"
+          ]
+        },
+        {
+          "task_id": "accessibility-repair-invalid-scenario",
+          "variant_ids": [
+            "accessibility-single-dangling-reference"
+          ],
+          "artifact_stage_ids": [
+            "validated"
+          ]
+        },
+        {
+          "task_id": "accessibility-classify-unsupported-request",
+          "variant_ids": [
+            "accessibility-unsupported-live-realization"
+          ],
+          "artifact_stage_ids": [
+            "planned"
+          ]
+        }
+      ],
+      "unit": "proportion",
+      "aggregation": "proportion",
+      "direction": "higher-is-better",
+      "capture_rule": "Count every declared diagnostic stage opportunity where the public diagnostic identifies the defect's owning stage and location; missing output leaves the aggregate incomplete."
+    },
+    {
+      "measure_id": "diagnostic-repair",
+      "task_ids": [
+        "reject-dangling-reference",
+        "reject-normalized-key-ambiguity",
+        "maintain-versioned-import",
+        "accessibility-repair-invalid-scenario",
+        "accessibility-classify-unsupported-request"
+      ],
+      "dimension_ids": [
+        "diagnostic-quality",
+        "effectiveness-productivity"
+      ],
+      "stage_applicability": [
+        {
+          "task_id": "reject-dangling-reference",
+          "variant_ids": [
+            "dangling-reference-single-defect"
+          ],
+          "artifact_stage_ids": [
+            "validated"
+          ]
+        },
+        {
+          "task_id": "reject-normalized-key-ambiguity",
+          "variant_ids": [
+            "normalized-key-collision"
+          ],
+          "artifact_stage_ids": [
+            "authored"
+          ]
+        },
+        {
+          "task_id": "maintain-versioned-import",
+          "variant_ids": [
+            "compatible-import-update",
+            "lossy-import-update"
+          ],
+          "artifact_stage_ids": [
+            "validated"
+          ]
+        },
+        {
+          "task_id": "accessibility-repair-invalid-scenario",
+          "variant_ids": [
+            "accessibility-single-dangling-reference"
+          ],
+          "artifact_stage_ids": [
+            "validated"
+          ]
+        },
+        {
+          "task_id": "accessibility-classify-unsupported-request",
+          "variant_ids": [
+            "accessibility-unsupported-live-realization"
+          ],
+          "artifact_stage_ids": [
+            "planned"
+          ]
+        }
+      ],
+      "unit": "proportion",
+      "aggregation": "proportion",
+      "direction": "higher-is-better",
+      "capture_rule": "Count every declared repair stage opportunity achieved using only the assigned public surface before the stopping limit; missing output leaves the aggregate incomplete."
+    },
+    {
+      "measure_id": "critical-review-items",
+      "task_ids": [
+        "author-information-boundary",
+        "classify-underspecified-realization",
+        "distinguish-hidden-asset-mutation",
+        "independent-review-change",
+        "accessibility-classify-unsupported-request",
+        "accessibility-review-nontrivial-scenario"
+      ],
+      "dimension_ids": [
+        "reviewability"
+      ],
+      "stage_applicability": [
+        {
+          "task_id": "author-information-boundary",
+          "variant_ids": [
+            "visibility-boundary-change"
+          ],
+          "artifact_stage_ids": [
+            "review-judgment"
+          ]
+        },
+        {
+          "task_id": "classify-underspecified-realization",
+          "variant_ids": [
+            "profile-dependent-realization"
+          ],
+          "artifact_stage_ids": [
+            "review-judgment"
+          ]
+        },
+        {
+          "task_id": "distinguish-hidden-asset-mutation",
+          "variant_ids": [
+            "hidden-asset-non-equivalent"
+          ],
+          "artifact_stage_ids": [
+            "review-judgment"
+          ]
+        },
+        {
+          "task_id": "independent-review-change",
+          "variant_ids": [
+            "review-hidden-assumption-change"
+          ],
+          "artifact_stage_ids": [
+            "review-judgment"
+          ]
+        },
+        {
+          "task_id": "accessibility-classify-unsupported-request",
+          "variant_ids": [
+            "accessibility-unsupported-live-realization"
+          ],
+          "artifact_stage_ids": [
+            "review-judgment"
+          ]
+        },
+        {
+          "task_id": "accessibility-review-nontrivial-scenario",
+          "variant_ids": [
+            "accessibility-hidden-boundary-error"
+          ],
+          "artifact_stage_ids": [
+            "review-judgment"
+          ]
+        }
+      ],
+      "unit": "proportion",
+      "aggregation": "proportion",
+      "direction": "higher-is-better",
+      "capture_rule": "Score every blinded fixed review-judgment-stage rubric before intent reveal; missing judgments leave the aggregate incomplete and adjudication never overwrites the original judgment."
+    },
+    {
+      "measure_id": "critical-silent-omissions",
+      "task_ids": [
+        "author-multihost-experiment",
+        "author-information-boundary",
+        "classify-underspecified-realization",
+        "accessibility-author-benchmark-scenario",
+        "accessibility-classify-unsupported-request"
+      ],
+      "dimension_ids": [
+        "expressiveness"
+      ],
+      "stage_applicability": [
+        {
+          "task_id": "author-multihost-experiment",
+          "variant_ids": [
+            "multihost-reference"
+          ],
+          "artifact_stage_ids": [
+            "authored",
+            "validated",
+            "instantiated",
+            "compiled",
+            "planned"
+          ]
+        },
+        {
+          "task_id": "author-information-boundary",
+          "variant_ids": [
+            "visibility-boundary-change"
+          ],
+          "artifact_stage_ids": [
+            "authored",
+            "validated",
+            "compiled"
+          ]
+        },
+        {
+          "task_id": "classify-underspecified-realization",
+          "variant_ids": [
+            "profile-dependent-realization"
+          ],
+          "artifact_stage_ids": [
+            "validated",
+            "compiled",
+            "planned"
+          ]
+        },
+        {
+          "task_id": "accessibility-author-benchmark-scenario",
+          "variant_ids": [
+            "accessibility-nontrivial-benchmark"
+          ],
+          "artifact_stage_ids": [
+            "authored",
+            "validated",
+            "instantiated",
+            "compiled",
+            "planned"
+          ]
+        },
+        {
+          "task_id": "accessibility-classify-unsupported-request",
+          "variant_ids": [
+            "accessibility-unsupported-live-realization"
+          ],
+          "artifact_stage_ids": [
+            "validated",
+            "planned"
+          ]
+        }
+      ],
+      "unit": "count",
+      "aggregation": "count",
+      "direction": "lower-is-better",
+      "capture_rule": "Count critical intended semantic elements silently omitted or recoverable only through backend-private convention at each declared machine stage."
+    },
+    {
+      "measure_id": "silent-lossy-migrations",
+      "task_ids": [
+        "round-trip-format-equivalence",
+        "maintain-versioned-import"
+      ],
+      "dimension_ids": [
+        "maintainability-evolution"
+      ],
+      "stage_applicability": [
+        {
+          "task_id": "round-trip-format-equivalence",
+          "variant_ids": [
+            "format-only-equivalent",
+            "field-order-equivalent"
+          ],
+          "artifact_stage_ids": [
+            "canonical-authored"
+          ]
+        },
+        {
+          "task_id": "maintain-versioned-import",
+          "variant_ids": [
+            "compatible-import-update",
+            "lossy-import-update"
+          ],
+          "artifact_stage_ids": [
+            "canonical-authored",
+            "instantiated"
+          ]
+        }
+      ],
+      "unit": "count",
+      "aggregation": "count",
+      "direction": "lower-is-better",
+      "capture_rule": "Count lossy or invalid migrations accepted without visible invalidation, migration, or replacement status at each declared canonical or instantiated stage."
+    },
+    {
+      "measure_id": "critical-silent-ambiguities",
+      "task_ids": [
+        "classify-underspecified-realization",
+        "reject-normalized-key-ambiguity",
+        "round-trip-format-equivalence",
+        "distinguish-hidden-asset-mutation",
+        "independent-review-change"
+      ],
+      "dimension_ids": [
+        "ambiguity"
+      ],
+      "stage_applicability": [
+        {
+          "task_id": "classify-underspecified-realization",
+          "variant_ids": [
+            "profile-dependent-realization"
+          ],
+          "artifact_stage_ids": [
+            "validated",
+            "compiled",
+            "planned",
+            "review-judgment"
+          ]
+        },
+        {
+          "task_id": "reject-normalized-key-ambiguity",
+          "variant_ids": [
+            "normalized-key-collision"
+          ],
+          "artifact_stage_ids": [
+            "authored"
+          ]
+        },
+        {
+          "task_id": "round-trip-format-equivalence",
+          "variant_ids": [
+            "format-only-equivalent",
+            "field-order-equivalent"
+          ],
+          "artifact_stage_ids": [
+            "authored",
+            "canonical-authored",
+            "review-judgment"
+          ]
+        },
+        {
+          "task_id": "distinguish-hidden-asset-mutation",
+          "variant_ids": [
+            "hidden-asset-non-equivalent"
+          ],
+          "artifact_stage_ids": [
+            "authored",
+            "instantiated",
+            "compiled",
+            "planned",
+            "review-judgment"
+          ]
+        },
+        {
+          "task_id": "independent-review-change",
+          "variant_ids": [
+            "review-hidden-assumption-change"
+          ],
+          "artifact_stage_ids": [
+            "authored",
+            "compiled",
+            "planned",
+            "review-judgment"
+          ]
+        }
+      ],
+      "unit": "count",
+      "aggregation": "count",
+      "direction": "lower-is-better",
+      "capture_rule": "Count critical ambiguities accepted without rejection or explicit underspecified/profile-dependent disposition at each declared stage."
+    },
+    {
+      "measure_id": "majority-missed-critical-items",
+      "task_ids": [
+        "author-information-boundary",
+        "classify-underspecified-realization",
+        "distinguish-hidden-asset-mutation",
+        "independent-review-change",
+        "accessibility-classify-unsupported-request",
+        "accessibility-review-nontrivial-scenario"
+      ],
+      "dimension_ids": [
+        "reviewability"
+      ],
+      "stage_applicability": [
+        {
+          "task_id": "author-information-boundary",
+          "variant_ids": [
+            "visibility-boundary-change"
+          ],
+          "artifact_stage_ids": [
+            "review-judgment"
+          ]
+        },
+        {
+          "task_id": "classify-underspecified-realization",
+          "variant_ids": [
+            "profile-dependent-realization"
+          ],
+          "artifact_stage_ids": [
+            "review-judgment"
+          ]
+        },
+        {
+          "task_id": "distinguish-hidden-asset-mutation",
+          "variant_ids": [
+            "hidden-asset-non-equivalent"
+          ],
+          "artifact_stage_ids": [
+            "review-judgment"
+          ]
+        },
+        {
+          "task_id": "independent-review-change",
+          "variant_ids": [
+            "review-hidden-assumption-change"
+          ],
+          "artifact_stage_ids": [
+            "review-judgment"
+          ]
+        },
+        {
+          "task_id": "accessibility-classify-unsupported-request",
+          "variant_ids": [
+            "accessibility-unsupported-live-realization"
+          ],
+          "artifact_stage_ids": [
+            "review-judgment"
+          ]
+        },
+        {
+          "task_id": "accessibility-review-nontrivial-scenario",
+          "variant_ids": [
+            "accessibility-hidden-boundary-error"
+          ],
+          "artifact_stage_ids": [
+            "review-judgment"
+          ]
+        }
+      ],
+      "unit": "count",
+      "aggregation": "count",
+      "direction": "lower-is-better",
+      "capture_rule": "Count critical hidden assumptions or information-boundary changes missed by a majority of assigned reviewers at each declared review-judgment stage."
+    },
+    {
+      "measure_id": "untraced-critical-changes",
+      "task_ids": [
+        "author-multihost-experiment",
+        "author-information-boundary",
+        "round-trip-format-equivalence",
+        "distinguish-hidden-asset-mutation",
+        "maintain-versioned-import",
+        "independent-review-change",
+        "accessibility-author-benchmark-scenario",
+        "accessibility-review-nontrivial-scenario"
+      ],
+      "dimension_ids": [
+        "semantic-traceability"
+      ],
+      "stage_applicability": [
+        {
+          "task_id": "author-multihost-experiment",
+          "variant_ids": [
+            "multihost-reference"
+          ],
+          "artifact_stage_ids": [
+            "authored",
+            "validated",
+            "instantiated",
+            "compiled",
+            "planned"
+          ]
+        },
+        {
+          "task_id": "author-information-boundary",
+          "variant_ids": [
+            "visibility-boundary-change"
+          ],
+          "artifact_stage_ids": [
+            "authored",
+            "validated",
+            "compiled"
+          ]
+        },
+        {
+          "task_id": "round-trip-format-equivalence",
+          "variant_ids": [
+            "format-only-equivalent",
+            "field-order-equivalent"
+          ],
+          "artifact_stage_ids": [
+            "authored",
+            "canonical-authored"
+          ]
+        },
+        {
+          "task_id": "distinguish-hidden-asset-mutation",
+          "variant_ids": [
+            "hidden-asset-non-equivalent"
+          ],
+          "artifact_stage_ids": [
+            "authored",
+            "instantiated",
+            "compiled",
+            "planned"
+          ]
+        },
+        {
+          "task_id": "maintain-versioned-import",
+          "variant_ids": [
+            "compatible-import-update",
+            "lossy-import-update"
+          ],
+          "artifact_stage_ids": [
+            "authored",
+            "validated",
+            "canonical-authored",
+            "instantiated"
+          ]
+        },
+        {
+          "task_id": "independent-review-change",
+          "variant_ids": [
+            "review-hidden-assumption-change"
+          ],
+          "artifact_stage_ids": [
+            "authored",
+            "compiled",
+            "planned"
+          ]
+        },
+        {
+          "task_id": "accessibility-author-benchmark-scenario",
+          "variant_ids": [
+            "accessibility-nontrivial-benchmark"
+          ],
+          "artifact_stage_ids": [
+            "authored",
+            "validated",
+            "instantiated",
+            "compiled",
+            "planned"
+          ]
+        },
+        {
+          "task_id": "accessibility-review-nontrivial-scenario",
+          "variant_ids": [
+            "accessibility-hidden-boundary-error"
+          ],
+          "artifact_stage_ids": [
+            "authored",
+            "validated",
+            "compiled",
+            "planned"
+          ]
+        }
+      ],
+      "unit": "count",
+      "aggregation": "count",
+      "direction": "lower-is-better",
+      "capture_rule": "Count critical intended changes absent from each required owning machine artifact stage; every declared task-variant-stage opportunity is preserved before aggregation."
+    },
+    {
+      "measure_id": "prohibited-infrastructure-assistance",
+      "task_ids": [
+        "accessibility-author-benchmark-scenario",
+        "accessibility-repair-invalid-scenario",
+        "accessibility-classify-unsupported-request",
+        "accessibility-review-nontrivial-scenario"
+      ],
+      "dimension_ids": [
+        "usability-comprehension",
+        "effectiveness-productivity"
+      ],
+      "stage_applicability": [
+        {
+          "task_id": "accessibility-author-benchmark-scenario",
+          "variant_ids": [
+            "accessibility-nontrivial-benchmark"
+          ],
+          "artifact_stage_ids": [
+            "planned"
+          ]
+        },
+        {
+          "task_id": "accessibility-repair-invalid-scenario",
+          "variant_ids": [
+            "accessibility-single-dangling-reference"
+          ],
+          "artifact_stage_ids": [
+            "validated"
+          ]
+        },
+        {
+          "task_id": "accessibility-classify-unsupported-request",
+          "variant_ids": [
+            "accessibility-unsupported-live-realization"
+          ],
+          "artifact_stage_ids": [
+            "review-judgment"
+          ]
+        },
+        {
+          "task_id": "accessibility-review-nontrivial-scenario",
+          "variant_ids": [
+            "accessibility-hidden-boundary-error"
+          ],
+          "artifact_stage_ids": [
+            "review-judgment"
+          ]
+        }
+      ],
+      "unit": "count",
+      "aggregation": "count",
+      "direction": "lower-is-better",
+      "capture_rule": "Count attempts that request or use cloud, Terraform, OpenStack, Docker, backend implementation source, undocumented conventions, maintainer interpretation, or another prohibited assistance channel."
+    },
+    {
+      "measure_id": "nontrivial-example-support",
+      "task_ids": [
+        "accessibility-author-benchmark-scenario",
+        "accessibility-review-nontrivial-scenario"
+      ],
+      "dimension_ids": [
+        "expressiveness",
+        "reviewability"
+      ],
+      "stage_applicability": [
+        {
+          "task_id": "accessibility-author-benchmark-scenario",
+          "variant_ids": [
+            "accessibility-nontrivial-benchmark"
+          ],
+          "artifact_stage_ids": [
+            "authored"
+          ]
+        },
+        {
+          "task_id": "accessibility-review-nontrivial-scenario",
+          "variant_ids": [
+            "accessibility-hidden-boundary-error"
+          ],
+          "artifact_stage_ids": [
+            "review-judgment"
+          ]
+        }
+      ],
+      "unit": "proportion",
+      "aggregation": "proportion",
+      "direction": "higher-is-better",
+      "capture_rule": "Score whether the pinned public example, template, and pattern catalog supports the sealed non-trivial benchmark meaning without a toy-only substitution or backend-private convention."
+    }
+  ],
+  "sampling_plan": {
+    "target_total": 20,
+    "minimum_per_persona": 5,
+    "experience_bands": [
+      "research-qualified-infrastructure-novice",
+      "research-qualified-infrastructure-familiar",
+      "prior-aces-user"
+    ],
+    "inclusion_rule": "Each subject satisfies one issue-178 persona qualification, records bounded SDL, benchmark, cloud/container, and programming experience bands, completes consent where applicable, and has not seen sealed intent or adjudication material.",
+    "exclusion_rule": "Exclude only preregistered ineligibility, consent withdrawal, corrupted capture before task exposure, duplicate enrollment, or prior access to sealed intent; preserve all other failures, setup friction, missing records, and prohibited-assistance requests in the declared denominator."
+  },
+  "execution_plan": {
+    "unit_of_analysis": "One subject-task-tooling-condition-attempt and its variant-stage observations.",
+    "attempts_per_subject": "Each subject completes at least one positive or underspecified accessibility task and at least one negative or independent-review accessibility task appropriate to the assigned persona.",
+    "subject_task_requirements": [
+      {
+        "requirement_id": "accessibility-constructive-or-boundary",
+        "minimum_assigned_attempts": 1,
+        "task_kinds": [
+          "positive",
+          "underspecified"
+        ]
+      },
+      {
+        "requirement_id": "accessibility-challenge-or-review",
+        "minimum_assigned_attempts": 1,
+        "task_kinds": [
+          "negative",
+          "ambiguous",
+          "round-trip",
+          "mutation",
+          "maintenance",
+          "independent-review"
+        ]
+      }
+    ],
+    "task_order": "Use a preregistered balanced order within persona, infrastructure-experience band, and public-surface condition; record installation/setup friction and learning exposure separately from task correctness.",
+    "blinding": "Seal intended semantics and expected relations from independent reviewers until their judgments are fixed.",
+    "stopping_rule": "Stop at 20 completed subjects with at least five per issue-178 persona, or at the approved recruitment deadline; do not extend or stop based on observed outcomes.",
+    "missing_data_rule": "Report denominator, missing, abandoned, tool-failed, and withdrawn counts separately for every measure; do not impute success.",
+    "withdrawal_rule": "Honor consent withdrawal and retain only the minimum aggregate count permitted by the approved protocol; never relabel withdrawal as task failure."
+  },
+  "thresholds": [
+    {
+      "dimension_id": "expressiveness",
+      "logic": "all",
+      "conditions": [
+        {
+          "measure_id": "semantic-elements-correct",
+          "operator": ">=",
+          "target": 0.9
+        },
+        {
+          "measure_id": "critical-silent-omissions",
+          "operator": "==",
+          "target": 0
+        },
+        {
+          "measure_id": "nontrivial-example-support",
+          "operator": ">=",
+          "target": 0.8
+        }
+      ]
+    },
+    {
+      "dimension_id": "usability-comprehension",
+      "logic": "all",
+      "conditions": [
+        {
+          "measure_id": "task-completion",
+          "operator": ">=",
+          "target": 0.8
+        },
+        {
+          "measure_id": "critical-semantic-errors",
+          "operator": "<=",
+          "target": 0.1
+        },
+        {
+          "measure_id": "prohibited-infrastructure-assistance",
+          "operator": "==",
+          "target": 0
+        }
+      ]
+    },
+    {
+      "dimension_id": "effectiveness-productivity",
+      "logic": "all",
+      "conditions": [
+        {
+          "measure_id": "task-completion",
+          "operator": ">=",
+          "target": 0.8
+        },
+        {
+          "measure_id": "semantic-rework-cycles",
+          "operator": "<=",
+          "target": 2
+        },
+        {
+          "measure_id": "prohibited-infrastructure-assistance",
+          "operator": "==",
+          "target": 0
+        }
+      ]
+    },
+    {
+      "dimension_id": "maintainability-evolution",
+      "logic": "all",
+      "conditions": [
+        {
+          "measure_id": "relation-classification-accuracy",
+          "operator": ">=",
+          "target": 0.9
+        },
+        {
+          "measure_id": "silent-lossy-migrations",
+          "operator": "==",
+          "target": 0
+        }
+      ]
+    },
+    {
+      "dimension_id": "ambiguity",
+      "logic": "all",
+      "conditions": [
+        {
+          "measure_id": "relation-classification-accuracy",
+          "operator": ">=",
+          "target": 0.9
+        },
+        {
+          "measure_id": "critical-silent-ambiguities",
+          "operator": "==",
+          "target": 0
+        }
+      ]
+    },
+    {
+      "dimension_id": "diagnostic-quality",
+      "logic": "all",
+      "conditions": [
+        {
+          "measure_id": "diagnostic-localization",
+          "operator": ">=",
+          "target": 0.8
+        },
+        {
+          "measure_id": "diagnostic-repair",
+          "operator": ">=",
+          "target": 0.75
+        },
+        {
+          "measure_id": "relation-classification-accuracy",
+          "operator": ">=",
+          "target": 0.9
+        }
+      ]
+    },
+    {
+      "dimension_id": "reviewability",
+      "logic": "all",
+      "conditions": [
+        {
+          "measure_id": "critical-review-items",
+          "operator": ">=",
+          "target": 0.8
+        },
+        {
+          "measure_id": "majority-missed-critical-items",
+          "operator": "==",
+          "target": 0
+        },
+        {
+          "measure_id": "nontrivial-example-support",
+          "operator": ">=",
+          "target": 0.8
+        }
+      ]
+    },
+    {
+      "dimension_id": "semantic-traceability",
+      "logic": "all",
+      "conditions": [
+        {
+          "measure_id": "semantic-elements-correct",
+          "operator": ">=",
+          "target": 0.9
+        },
+        {
+          "measure_id": "untraced-critical-changes",
+          "operator": "==",
+          "target": 0
+        }
+      ]
+    }
+  ],
+  "ethics_and_privacy": {
+    "review_status_required": "Obtain applicable institutional ethics, privacy, and data-protection review before recruiting or collecting from human subjects.",
+    "consent_required": true,
+    "committed_data_rule": "Commit only consented, minimized, pseudonymous observations or aggregates; keep the pseudonym linkage key outside the repository in an approved controlled store.",
+    "prohibited_data": [
+      "names",
+      "email addresses",
+      "recordings",
+      "raw chats or prompts",
+      "keystroke streams",
+      "free-form biographies",
+      "pseudonym linkage keys",
+      "credentials",
+      "private backend output"
+    ]
+  },
+  "disagreement_policy": "Preserve every original reviewer judgment, confidence, rationale code, and disagreement. Adjudication adds a separate record after intent reveal and never replaces or edits the independent result.",
+  "validity_threats": [
+    "Construct validity: task completion, diagnostics, and infrastructure independence are distinct constructs and do not prove universal usability or language adequacy.",
+    "Population validity: five subjects per issue-178 persona is exploratory and supports only the recruited qualification and infrastructure-experience bands.",
+    "Task validity: the selected representative and negative tasks cannot cover every cyber-agent benchmark scenario.",
+    "Condition validity: docs-only, MCP, CLI, and direct-library results apply only to the pinned adapter, mode, parameters, and assistance policy and are never pooled as equivalent surfaces.",
+    "Learning and order effects: repeated ACES exposure may improve later attempts despite balanced ordering.",
+    "Reviewer reliability: agreement measures scoring consistency, not semantic correctness.",
+    "Implementation-version validity: later ACES changes require a new immutable snapshot and cannot rewrite a failed observation.",
+    "External validity: simulated personas, maintainers, or agents are exploratory only and cannot demonstrate generalized researcher accessibility."
+  ],
+  "analysis_plan": "Compute only the measures and dimensions in the stable claim id's exact versioned manifest binding from frozen attempt and review records; reject an analysis that narrows its own scope; persist independently recomputed numerators, denominators, and dimension results for the preregistered persona, infrastructure-experience, and tooling-condition strata; keep backend implementers, infrastructure-familiar researchers, and prior ACES users as comparison strata that cannot promote or refute the claim; apply thresholds without post-hoc exclusions; and set the issue-178 ADR-021 status to demonstrated only when every dimension in every target infrastructure-novice gating stratum passes with complete coverage, no prohibited infrastructure/source assistance, no unresolved critical disagreement, and no invalidating deviation. Any gating-stratum objective failure sets refuted; incomplete qualifying evidence remains untested or partial.",
+  "amendment_log": [
+    {
+      "revision": "2.0.0",
+      "date": "2026-07-17",
+      "summary": "Added issue-178 personas, adapter-specific conditions, benchmark-relevant positive and negative tasks, accessibility measures and thresholds, and claim-scoped analysis support without altering the frozen revision-1 protocol."
+    }
+  ]
+}
