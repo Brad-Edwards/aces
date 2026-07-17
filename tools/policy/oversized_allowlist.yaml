@@ -10,7 +10,6 @@ files:
   - implementations/python/packages/aces_backend_libvirt/drivers/libvirt.py
   - implementations/python/packages/aces_backend_libvirt/realization.py
   - implementations/python/packages/aces_backend_libvirt/techvault_native.py
-  - implementations/python/packages/aces_backend_stubs/stubs.py
   - implementations/python/packages/aces_conformance/conformance.py
   - implementations/python/packages/aces_contracts/contracts.py
   - implementations/python/packages/aces_contracts/workflow.py
