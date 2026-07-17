@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any
 
 
 class Severity(str, Enum):
@@ -27,4 +28,16 @@ class Diagnostic:
         return self.severity == Severity.ERROR
 
 
-__all__ = ("Diagnostic", "Severity")
+def diagnostic_payload(diagnostic: Diagnostic) -> dict[str, Any]:
+    """Render a diagnostic as a JSON-ready mapping (severity as its string value)."""
+
+    return {
+        "code": diagnostic.code,
+        "domain": diagnostic.domain,
+        "address": diagnostic.address,
+        "message": diagnostic.message,
+        "severity": diagnostic.severity.value,
+    }
+
+
+__all__ = ("Diagnostic", "Severity", "diagnostic_payload")

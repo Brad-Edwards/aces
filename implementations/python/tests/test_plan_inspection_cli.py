@@ -1,0 +1,181 @@
+"""Tests for the ``aces processor plan`` plan-inspection CLI (issue #609)."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+from aces_backend_protocols.manifest import backend_manifest_payload
+from aces_backend_stubs.manifest import create_stub_manifest
+from aces_cli.main import app
+from aces_cli.processor import _sdl_error_summary
+from aces_contracts.contracts import (
+    EvaluationPlanModel,
+    OrchestrationPlanModel,
+    ProvisioningPlanModel,
+)
+from aces_sdl._errors import (
+    SDLInstantiationError,
+    SDLParseDiagnostic,
+    SDLParseError,
+    SDLSourcePosition,
+    SDLSourceRange,
+    SDLValidationError,
+)
+from paths import EXAMPLES_DIR
+from typer.testing import CliRunner
+
+_SCENARIO = EXAMPLES_DIR / "techvault-defensive-min.sdl.yaml"
+_ENVELOPE_IDENTITY = {
+    "contract_id": "realization-envelope-v1",
+    "envelope_id": "example-envelope",
+    "schema_version": "realization-envelope/v1",
+    "digest": "sha256:" + "0" * 64,
+    "configuration_digest": "sha256:" + "1" * 64,
+}
+
+
+def _invoke(*args: str):
+    return CliRunner().invoke(app, ["processor", "plan", *args])
+
+
+def test_plan_default_manifest_emits_contract_json() -> None:
+    result = _invoke(str(_SCENARIO), "--format", "json")
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.stdout)
+    assert set(payload) == {"scenario_name", "provisioning", "orchestration", "evaluation", "diagnostics"}
+    assert payload["scenario_name"] == "techvault-defensive-min"
+
+    # Each domain member independently validates against its published plan contract
+    # -- the same models that admit contracts/fixtures/plans/*.
+    ProvisioningPlanModel.model_validate(payload["provisioning"])
+    OrchestrationPlanModel.model_validate(payload["orchestration"])
+    EvaluationPlanModel.model_validate(payload["evaluation"])
+    provisioning_ops = payload["provisioning"]["operations"]
+    assert provisioning_ops, "expected provisioning operations for defensive-min"
+    # Operation payload content -- the field real backends consume -- survives
+    # end-to-end through the CLI, not just the operations list being non-empty.
+    assert any(op["payload"] for op in provisioning_ops)
+
+
+def test_plan_output_is_deterministic() -> None:
+    first = _invoke(str(_SCENARIO), "--format", "json")
+    second = _invoke(str(_SCENARIO), "--format", "json")
+
+    assert first.exit_code == 0
+    assert first.stdout == second.stdout
+
+
+def test_plan_accepts_supplied_backend_manifest(tmp_path: Path) -> None:
+    manifest_file = tmp_path / "stub-manifest.json"
+    manifest_file.write_text(json.dumps(backend_manifest_payload(create_stub_manifest())), encoding="utf-8")
+
+    result = _invoke(str(_SCENARIO), "--manifest", str(manifest_file), "--format", "json")
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.stdout)
+    ProvisioningPlanModel.model_validate(payload["provisioning"])
+
+
+def test_plan_emits_full_json_and_nonzero_exit_on_error_diagnostics(tmp_path: Path) -> None:
+    payload = backend_manifest_payload(create_stub_manifest())
+    # A manifest that cannot provision VMs turns the scenario's VM nodes into a
+    # capability gap: the planner reports error diagnostics rather than raising.
+    payload["capabilities"]["provisioner"]["supported_node_types"] = ["switch"]
+    manifest_file = tmp_path / "no-vm-manifest.json"
+    manifest_file.write_text(json.dumps(payload), encoding="utf-8")
+
+    result = _invoke(str(_SCENARIO), "--manifest", str(manifest_file), "--format", "json")
+
+    assert result.exit_code == 1
+    emitted = json.loads(result.stdout)  # the full plan is still emitted
+    error_codes = {diagnostic["code"] for diagnostic in emitted["diagnostics"] if diagnostic["severity"] == "error"}
+    assert "provisioner.unsupported-node-type" in error_codes
+
+
+def test_plan_invalid_sdl_fails_without_partial_json(tmp_path: Path) -> None:
+    bad = tmp_path / "broken.sdl.yaml"
+    bad.write_text("name: [unclosed\n", encoding="utf-8")
+
+    result = _invoke(str(bad), "--format", "json")
+
+    assert result.exit_code == 1
+    assert result.stdout.strip() == ""
+    assert "could not compile" in result.stderr
+    # Sanitized single-line summary, not a raw multi-line exception dump.
+    assert result.stderr.count("\n") <= 1
+    assert "Traceback" not in result.stderr
+
+
+def test_sdl_error_summary_redacts_message_and_source() -> None:
+    source = Path("scenario.sdl.yaml")
+    parse_error = SDLParseError(
+        "boom SECRETMARKER",
+        diagnostics=[
+            SDLParseDiagnostic(
+                code="sdl.duplicate-key",
+                message="rejected value SECRETMARKER",
+                pointer="/nodes",
+                primary_range=SDLSourceRange(SDLSourcePosition(3, 5), SDLSourcePosition(3, 9)),
+            )
+        ],
+    )
+    parse_summary = _sdl_error_summary(source, parse_error)
+    assert "SECRETMARKER" not in parse_summary
+    assert "sdl.duplicate-key@3:5" in parse_summary
+
+    validation_summary = _sdl_error_summary(
+        source, SDLValidationError(errors=["undefined node SECRETMARKER", "bad ref SECRETMARKER"])
+    )
+    assert "SECRETMARKER" not in validation_summary
+    assert "2 SDL validation errors" in validation_summary
+
+    instantiation_summary = _sdl_error_summary(source, SDLInstantiationError(errors=["unbound parameter SECRETMARKER"]))
+    assert "SECRETMARKER" not in instantiation_summary
+    assert "1 SDL instantiation error" in instantiation_summary
+
+
+def test_plan_invalid_manifest_does_not_leak_rejected_value(tmp_path: Path) -> None:
+    payload = backend_manifest_payload(create_stub_manifest())
+    # A rejected controlled-vocabulary value must not escape into stderr/logs.
+    payload["capabilities"]["provisioner"]["supported_node_types"] = ["ZZLEAKMARKER99"]
+    manifest_file = tmp_path / "leaky-manifest.json"
+    manifest_file.write_text(json.dumps(payload), encoding="utf-8")
+
+    result = _invoke(str(_SCENARIO), "--manifest", str(manifest_file), "--format", "json")
+
+    assert result.exit_code != 0
+    assert result.stdout.strip() == ""
+    assert "ZZLEAKMARKER99" not in result.stderr
+    assert "backend-manifest-v2" in result.stderr
+
+
+def test_plan_manifest_with_realization_envelope_fails_closed(tmp_path: Path) -> None:
+    payload = backend_manifest_payload(create_stub_manifest())
+    payload["supported_contract_versions"].append("realization-envelope-v1")
+    payload["realization_envelope"] = dict(_ENVELOPE_IDENTITY)
+    manifest_file = tmp_path / "envelope-manifest.json"
+    manifest_file.write_text(json.dumps(payload), encoding="utf-8")
+
+    result = _invoke(str(_SCENARIO), "--manifest", str(manifest_file), "--format", "json")
+
+    assert result.exit_code != 0
+    assert result.stdout.strip() == ""
+    assert "realization envelope" in result.stderr
+
+
+def test_plan_rejects_non_json_manifest(tmp_path: Path) -> None:
+    manifest_file = tmp_path / "not-json.json"
+    manifest_file.write_text("this is not json", encoding="utf-8")
+
+    result = _invoke(str(_SCENARIO), "--manifest", str(manifest_file), "--format", "json")
+
+    assert result.exit_code != 0
+    assert result.stdout.strip() == ""
+
+
+def test_plan_requires_explicit_format() -> None:
+    result = _invoke(str(_SCENARIO))
+
+    assert result.exit_code != 0

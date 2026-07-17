@@ -4,18 +4,45 @@ from __future__ import annotations
 
 from typing import Any
 
+from aces_contracts.apparatus import ApparatusIdentity, ConceptBinding, RealizationSupportDeclaration
 from aces_contracts.contracts import (
     ApparatusIdentityModel,
+    BackendCapabilitiesV2Model,
     BackendCompatibilityModel,
     BackendManifestV2Model,
     ConceptBindingEntryModel,
+    EvaluatorCapabilitiesModel,
     ObservationCapabilitiesModel,
+    OrchestratorCapabilitiesModel,
     ParticipantFeatureSupportModel,
+    ParticipantRuntimeCapabilitiesModel,
+    ProvisionerCapabilitiesModel,
     RealizationSupportDeclarationModel,
 )
 from aces_contracts.manifest_authority import BACKEND_SUPPORTED_CONTRACT_IDS
 
-from .capabilities import BackendManifest
+from .capabilities import (
+    BackendCapabilitySet,
+    BackendCompatibility,
+    BackendManifest,
+    EvaluatorCapabilities,
+    ObservationCapabilities,
+    OrchestratorCapabilities,
+    ParticipantFeatureSupport,
+    ParticipantRuntimeCapabilities,
+    ProvisionerCapabilities,
+)
+
+
+class BackendManifestEnvelopeUnsupportedError(ValueError):
+    """A backend-manifest-v2 payload declares a realization envelope that cannot be resolved.
+
+    A ``backend-manifest-v2`` payload carries only the realization-envelope
+    *identity*, not the full digest-checked declaration the planner needs for
+    envelope-membership checks. :func:`backend_manifest_from_v2_model` raises this
+    (a ``ValueError`` subclass, so existing ``except ValueError`` handlers still
+    catch it) so callers can render a stable, input-free message for this case.
+    """
 
 
 def _evaluator_capability_payload(manifest: BackendManifest) -> dict[str, Any] | None:
@@ -161,3 +188,153 @@ def backend_manifest_payload(manifest: BackendManifest) -> dict[str, Any]:
     if payload.get("realization_envelope") is None:
         payload.pop("realization_envelope", None)
     return payload
+
+
+def _realization_support_from_model(model: RealizationSupportDeclarationModel) -> RealizationSupportDeclaration:
+    return RealizationSupportDeclaration(
+        domain=model.domain,
+        support_mode=model.support_mode,
+        supported_constraint_kinds=frozenset(model.supported_constraint_kinds),
+        supported_exact_requirement_kinds=frozenset(model.supported_exact_requirement_kinds),
+        disclosure_kinds=frozenset(model.disclosure_kinds),
+        constraints=dict(model.constraints),
+    )
+
+
+def _provisioner_from_model(model: ProvisionerCapabilitiesModel) -> ProvisionerCapabilities:
+    return ProvisionerCapabilities(
+        name=model.name,
+        supported_node_types=frozenset(model.supported_node_types),
+        supported_os_families=frozenset(model.supported_os_families),
+        supported_content_types=frozenset(model.supported_content_types),
+        supported_account_features=frozenset(model.supported_account_features),
+        supported_domain_profiles=frozenset(model.supported_domain_profiles),
+        max_total_nodes=model.max_total_nodes,
+        supports_acls=model.supports_acls,
+        supports_accounts=model.supports_accounts,
+        supports_generated_artifacts=model.supports_generated_artifacts,
+        supports_persistent_volumes=model.supports_persistent_volumes,
+        constraints=dict(model.constraints),
+    )
+
+
+def _orchestrator_from_model(model: OrchestratorCapabilitiesModel | None) -> OrchestratorCapabilities | None:
+    if model is None:
+        return None
+    return OrchestratorCapabilities(
+        name=model.name,
+        supported_sections=frozenset(model.supported_sections),
+        supports_workflows=model.supports_workflows,
+        supports_assertion_refs=model.supports_assertion_refs,
+        supports_inject_bindings=model.supports_inject_bindings,
+        supported_workflow_features=frozenset(model.supported_workflow_features),
+        supported_workflow_state_predicates=frozenset(model.supported_workflow_state_predicates),
+        constraints=dict(model.constraints),
+    )
+
+
+def _evaluator_from_model(model: EvaluatorCapabilitiesModel | None) -> EvaluatorCapabilities | None:
+    if model is None:
+        return None
+    return EvaluatorCapabilities(
+        name=model.name,
+        supported_sections=frozenset(model.supported_sections),
+        supports_scoring=model.supports_scoring,
+        supports_objectives=model.supports_objectives,
+        supported_predicate_families=frozenset(model.supported_predicate_families),
+        supported_quantifiers=frozenset(model.supported_quantifiers),
+        supported_truth_outcomes=frozenset(model.supported_truth_outcomes),
+        supported_evidence_channels=frozenset(model.supported_evidence_channels),
+        supported_time_domains=frozenset(model.supported_time_domains),
+        preserves_binding_provenance=model.preserves_binding_provenance,
+        constraints=dict(model.constraints),
+    )
+
+
+def _participant_feature_support_from_model(model: ParticipantFeatureSupportModel) -> ParticipantFeatureSupport:
+    return ParticipantFeatureSupport(
+        feature=model.feature,
+        support_level=model.support_level,
+        constraint_refs=tuple(model.constraint_refs),
+        disclosure_refs=tuple(model.disclosure_refs),
+    )
+
+
+def _participant_runtime_from_model(
+    model: ParticipantRuntimeCapabilitiesModel | None,
+) -> ParticipantRuntimeCapabilities | None:
+    if model is None:
+        return None
+    return ParticipantRuntimeCapabilities(
+        name=model.name,
+        supported_participant_roles=frozenset(model.supported_participant_roles),
+        supported_behavior_features=frozenset(model.supported_behavior_features),
+        supported_interaction_features=frozenset(model.supported_interaction_features),
+        feature_support=tuple(_participant_feature_support_from_model(entry) for entry in model.feature_support),
+        constraints=dict(model.constraints),
+    )
+
+
+def _observation_from_model(model: ObservationCapabilitiesModel | None) -> ObservationCapabilities | None:
+    if model is None:
+        return None
+    return ObservationCapabilities(
+        name=model.name,
+        supported_capture_kinds=frozenset(model.supported_capture_kinds),
+        supported_channel_kinds=frozenset(model.supported_channel_kinds),
+        supported_evidence_contracts=frozenset(model.supported_evidence_contracts),
+        supported_media_types=frozenset(model.supported_media_types),
+        supported_sealing_modes=frozenset(model.supported_sealing_modes),
+        supports_redaction=model.supports_redaction,
+        supports_loss_disclosure=model.supports_loss_disclosure,
+        supports_chain_of_custody=model.supports_chain_of_custody,
+        constraints=dict(model.constraints),
+    )
+
+
+def _capability_set_from_model(model: BackendCapabilitiesV2Model) -> BackendCapabilitySet:
+    return BackendCapabilitySet(
+        provisioner=_provisioner_from_model(model.provisioner),
+        orchestrator=_orchestrator_from_model(model.orchestrator),
+        evaluator=_evaluator_from_model(model.evaluator),
+        participant_runtime=_participant_runtime_from_model(model.participant_runtime),
+        observation=_observation_from_model(model.observation),
+    )
+
+
+def backend_manifest_from_v2_model(model: BackendManifestV2Model) -> BackendManifest:
+    """Reconstruct the internal typed ``BackendManifest`` from its v2 contract model.
+
+    Inverse of :func:`backend_manifest_v2_model`. Constructing ``BackendManifest``
+    re-runs the internal capability, controlled-vocabulary, compatibility, and
+    contract-authority validators, so a payload that merely passed
+    ``BackendManifestV2Model`` schema validation still cannot smuggle in an
+    inconsistent internal manifest.
+
+    Fails closed on realization-envelope-bearing manifests: a
+    ``backend-manifest-v2`` payload carries only the realization-envelope
+    *identity*, not the full digest-checked declaration the planner needs for
+    envelope-membership checks. Such a manifest is insufficient for planning, so
+    the caller must supply an envelope-free manifest (or use the default).
+    """
+
+    if model.realization_envelope is not None or "realization-envelope-v1" in model.supported_contract_versions:
+        raise BackendManifestEnvelopeUnsupportedError(
+            "backend manifest declares a realization envelope, but a backend-manifest-v2 payload "
+            "carries only the envelope identity, not the full digest-checked declaration the planner "
+            "requires. Supply an envelope-free manifest or omit it to use the default reference "
+            "dry-run manifest."
+        )
+    return BackendManifest(
+        identity=ApparatusIdentity(name=model.identity.name, version=model.identity.version),
+        supported_contract_versions=frozenset(model.supported_contract_versions),
+        compatibility=BackendCompatibility(processors=frozenset(model.compatibility.processors)),
+        realization_support=tuple(
+            _realization_support_from_model(declaration) for declaration in model.realization_support
+        ),
+        concept_bindings=tuple(
+            ConceptBinding(scope=binding.scope, family=binding.family) for binding in model.concept_bindings
+        ),
+        constraints=dict(model.constraints),
+        capabilities=_capability_set_from_model(model.capabilities),
+    )
