@@ -6,6 +6,9 @@ from dataclasses import dataclass, field
 
 from .vocabulary import RealizationSupportMode
 
+DECLARED_CAPABILITY_MATCH_REQUIREMENT_KIND = "declared-capability-match"
+RUNTIME_REALIZATION_DOMAIN = "runtime-realization"
+
 
 def _require_non_empty_strings(values: frozenset[str], *, field_name: str) -> None:
     if any(not value.strip() for value in values):

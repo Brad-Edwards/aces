@@ -190,20 +190,20 @@
       "contract_id": "instantiated-scenario-snapshot-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
       "stability": "draft",
-      "content_hash": "46365e6661556673f124fc7b04383c451cf25396d551c564171bb009fa515dc9",
+      "content_hash": "93b4355e8633fb76ed35851a6cd2573ff09f041b2ae089fe69f55611a6589886",
       "last_change": {
-        "summary": "Combined typed stateful realization resources (issue #780) with participant interactive-access declarations (issue #805).",
-        "content_hash": "46365e6661556673f124fc7b04383c451cf25396d551c564171bb009fa515dc9"
+        "summary": "Published unique-item constraints for stateful resource outputs, consumers, and dependency lists (issue #780).",
+        "content_hash": "93b4355e8633fb76ed35851a6cd2573ff09f041b2ae089fe69f55611a6589886"
       }
     },
     {
       "contract_id": "instantiated-scenario-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
       "stability": "draft",
-      "content_hash": "96ece657528da43f97750f56d8e72d1c9f2e504f09d8fa673aa9154db83a59be",
+      "content_hash": "bfb1b79c11861a57accc2614eba9760cbcc19a9b6ce34dabf64404048eee0e8b",
       "last_change": {
-        "summary": "Combined typed stateful realization resources (issue #780) with participant interactive-access declarations (issue #805).",
-        "content_hash": "96ece657528da43f97750f56d8e72d1c9f2e504f09d8fa673aa9154db83a59be"
+        "summary": "Published unique-item constraints for stateful resource outputs, consumers, and dependency lists (issue #780).",
+        "content_hash": "bfb1b79c11861a57accc2614eba9760cbcc19a9b6ce34dabf64404048eee0e8b"
       }
     },
     {
@@ -456,10 +456,10 @@
       "contract_id": "sdl-authoring-input-v1",
       "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
       "stability": "draft",
-      "content_hash": "b192b76721340ea032d72bba7060c4ddf956e3e88edeca33cf17c74149b77891",
+      "content_hash": "4869ea7e7e26e63172b5799f0f6ee46c79cf802e426f66846a7f0471cac145a7",
       "last_change": {
-        "summary": "Combined typed stateful realization resources (issue #780) with participant interactive-access declarations (issue #805).",
-        "content_hash": "b192b76721340ea032d72bba7060c4ddf956e3e88edeca33cf17c74149b77891"
+        "summary": "Published unique-item constraints for stateful resource outputs, consumers, and dependency lists (issue #780).",
+        "content_hash": "4869ea7e7e26e63172b5799f0f6ee46c79cf802e426f66846a7f0471cac145a7"
       }
     },
     {

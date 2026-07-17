@@ -11,7 +11,12 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import uuid4
 
+from aces_backend_protocols.backend_manifest import BackendManifest
 from aces_backend_protocols.domain_topology import domain_topology_plan_diagnostics
+from aces_contracts.apparatus import (
+    DECLARED_CAPABILITY_MATCH_REQUIREMENT_KIND,
+    RUNTIME_REALIZATION_DOMAIN,
+)
 from aces_contracts.diagnostics import Diagnostic
 from aces_contracts.planning import (
     EvaluationPlan,
@@ -62,6 +67,18 @@ _TERMINAL_WORKFLOW_STATUSES = {
     WorkflowStatus.CANCELLED,
     WorkflowStatus.TIMED_OUT,
 }
+_STATEFUL_ADMISSION_BY_RESOURCE_TYPE = {
+    "generated-artifact": (
+        "supports_generated_artifacts",
+        "provisioner.generated-artifacts-unsupported",
+        "generated artifacts",
+    ),
+    "persistent-volume": (
+        "supports_persistent_volumes",
+        "provisioner.persistent-volumes-unsupported",
+        "persistent volumes",
+    ),
+}
 
 
 def _utc_now() -> str:
@@ -72,24 +89,64 @@ def _submitted_plan_diagnostics(
     plan: ProvisioningPlan | OrchestrationPlan | EvaluationPlan,
     domain: RuntimeDomain,
     snapshot: RuntimeSnapshot,
-    supported_domain_profiles: frozenset[str] | None = None,
+    manifest: BackendManifest | None = None,
 ) -> list[Diagnostic]:
     admitted = set(snapshot.entries) | {operation.address for operation in plan.operations}
-    diagnostic: Diagnostic | None = None
+    diagnostics: list[Diagnostic] = []
     for operation in plan.operations:
         diagnostic = _submitted_operation_diagnostic(operation, domain, snapshot, admitted)
         if diagnostic is not None:
+            diagnostics.append(diagnostic)
             break
-    if diagnostic is not None:
-        return [diagnostic]
-    if domain is RuntimeDomain.PROVISIONING and isinstance(plan, ProvisioningPlan):
-        topology_diagnostics = domain_topology_plan_diagnostics(
-            plan,
-            snapshot=snapshot,
-            supported_domain_profiles=supported_domain_profiles,
+    if not diagnostics and domain is RuntimeDomain.PROVISIONING and isinstance(plan, ProvisioningPlan):
+        if manifest is None:
+            raise ValueError("provisioning submission admission requires a backend manifest")
+        stateful_diagnostic = _stateful_submission_diagnostic(plan, manifest)
+        if stateful_diagnostic is not None:
+            diagnostics.append(stateful_diagnostic)
+        else:
+            diagnostics.extend(
+                domain_topology_plan_diagnostics(
+                    plan,
+                    snapshot=snapshot,
+                    supported_domain_profiles=manifest.provisioner.supported_domain_profiles,
+                )[:1]
+            )
+    return diagnostics
+
+
+def _stateful_submission_diagnostic(
+    plan: ProvisioningPlan,
+    manifest: BackendManifest,
+) -> Diagnostic | None:
+    for operation in plan.operations:
+        admission = _STATEFUL_ADMISSION_BY_RESOURCE_TYPE.get(operation.resource_type)
+        if admission is None:
+            continue
+        capability_attribute, unsupported_code, resource_label = admission
+        if not getattr(manifest.provisioner, capability_attribute):
+            return Diagnostic(
+                code=unsupported_code,
+                domain="provisioning",
+                address=operation.address,
+                message=f"Provisioner does not support {resource_label}.",
+            )
+        exact_supported = any(
+            declaration.domain == RUNTIME_REALIZATION_DOMAIN
+            and DECLARED_CAPABILITY_MATCH_REQUIREMENT_KIND in declaration.supported_exact_requirement_kinds
+            for declaration in manifest.realization_support
         )
-        return topology_diagnostics[:1]
-    return []
+        if not exact_supported:
+            return Diagnostic(
+                code="realization.unsupported-exact-requirement",
+                domain="runtime-realization",
+                address=operation.address,
+                message=(
+                    "Backend declares no exact realization support for the submitted "
+                    f"{operation.resource_type} resource."
+                ),
+            )
+    return None
 
 
 def _submitted_operation_diagnostic(
@@ -184,7 +241,7 @@ class RuntimeControlPlane(ParticipantControlMixin, ParticipantRetrievalMixin):
             plan,
             RuntimeDomain.PROVISIONING,
             self._snapshot,
-            self._target.manifest.provisioner.supported_domain_profiles,
+            self._target.manifest,
         )
         if diagnostics:
             return self._reject_diagnostics(

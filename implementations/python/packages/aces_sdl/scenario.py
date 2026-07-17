@@ -26,7 +26,6 @@ from ._identifiers import (
 )
 from ._mapping_scopes import HASHMAP_SECTIONS
 from ._scenario_instantiation import collect_variable_tokens, resolve_json_pointer
-from ._stateful_resource_references import validate_stateful_resource_references
 from .accounts import Account
 from .agents import Agent
 from .conditions import Condition
@@ -288,15 +287,6 @@ class ScenarioContent(SDLModel):
         )
         _validate_runtime_forwarding_agent_identifiers(value)
         return value
-
-    @model_validator(mode="after")
-    def _validate_stateful_resource_references(self) -> "ScenarioContent":
-        validate_stateful_resource_references(
-            nodes=self.nodes,
-            generated_artifacts=self.generated_artifacts,
-            persistent_volumes=self.persistent_volumes,
-        )
-        return self
 
     @property
     def advisories(self) -> list[str]:
