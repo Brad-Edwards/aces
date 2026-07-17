@@ -1,0 +1,458 @@
+{
+  "protocol_id": "aces-standardized-specification-coverage",
+  "revision": "1.0.0",
+  "registered_at": "2026-07-17",
+  "title": "ACES standardized configurable cyber-range specification coverage protocol",
+  "claim": "ACES provides a portable, typed scenario, experiment, and apparatus specification surface for the preregistered representative cyber-agent evaluation requirements without requiring backend deployment vocabulary in core SDL.",
+  "research_question": "Can the preregistered atomic concepts be expressed, validated, instantiated, and compiled at their owning ACES stages without silent semantic loss or backend lock-in?",
+  "evidence_status_values": [
+    "untested",
+    "partial",
+    "demonstrated",
+    "refuted"
+  ],
+  "classification_rules": {
+    "directly-expressible": "A named typed ACES SDL or portable experiment field owns the meaning and every applicable production stage preserves it at an exact pointer.",
+    "profile-or-manifest-constraint": "A named versioned profile, manifest, apparatus constraint, or realization envelope owns the constraint and validates independently from core SDL.",
+    "deliberately-backend-specific": "The concept is a realization mechanism rather than portable scenario meaning and remains in a backend-facing disclosure or apparatus record.",
+    "missing": "No existing typed owning surface preserves the requested meaning; prose, arbitrary metadata, and approximations do not count."
+  },
+  "coverage_strata": [
+    {
+      "stratum_id": "cyber-range-survey",
+      "label": "Cyber-range survey requirements",
+      "minimum_sources": 1
+    },
+    {
+      "stratum_id": "agent-benchmark",
+      "label": "Autonomous cyber-agent benchmark requirements",
+      "minimum_sources": 1
+    },
+    {
+      "stratum_id": "scenario-dsl",
+      "label": "Cyber-range DSL requirements",
+      "minimum_sources": 1
+    },
+    {
+      "stratum_id": "simulation-emulation-platform",
+      "label": "Simulation and emulation platform requirements",
+      "minimum_sources": 1
+    }
+  ],
+  "artifact_stages": [
+    {
+      "stage_id": "authored",
+      "canonical_entrypoint": "aces_sdl.parse_sdl_file() with semantic validation enabled"
+    },
+    {
+      "stage_id": "semantic",
+      "canonical_entrypoint": "aces_sdl.validator.SemanticValidator through parse_sdl_file()"
+    },
+    {
+      "stage_id": "instantiated",
+      "canonical_entrypoint": "aces_sdl.instantiate_scenario() followed by admit_instantiated_scenario()"
+    },
+    {
+      "stage_id": "compiled",
+      "canonical_entrypoint": "aces_processor.compiler.compile_runtime_model()"
+    },
+    {
+      "stage_id": "contract",
+      "canonical_entrypoint": "the named closed aces_contracts ContractModel"
+    },
+    {
+      "stage_id": "profile-manifest",
+      "canonical_entrypoint": "aces_contracts.backend_profiles.BackendProfileModel"
+    },
+    {
+      "stage_id": "realization-disclosure",
+      "canonical_entrypoint": "backend-facing realization or apparatus disclosure; not core SDL"
+    }
+  ],
+  "sources": [
+    {
+      "source_id": "garg-cyber-range-survey",
+      "stratum_id": "cyber-range-survey",
+      "kind": "publication",
+      "title": "A Survey of Cyber Range Training Exercise Scenario Description, Generation, and Execution",
+      "locator": "https://doi.org/10.36227/techrxiv.175942879.94813577/v1",
+      "version": "TechRxiv preprint v1",
+      "revision": "doi:10.36227/techrxiv.175942879.94813577/v1",
+      "artifact_path": "docs/research/primary/literature/cyber-range-scenario-survey.md",
+      "content_sha256": "a00392d29fd7bad14d77109a0cb26adcc8c371eb839a65715e3922cbdd426e6d"
+    },
+    {
+      "source_id": "cyborg-paper",
+      "stratum_id": "agent-benchmark",
+      "kind": "publication",
+      "title": "CybORG: A Gym for the Development of Autonomous Cyber Agents",
+      "locator": "https://arxiv.org/pdf/2108.09118v1",
+      "version": "arXiv version 1",
+      "revision": "arXiv:2108.09118v1",
+      "artifact_path": null,
+      "content_sha256": "69fc40a8ca959adb3333a2716fa4bc6f52bf1e3bebf76129fcf42fe9891ed783"
+    },
+    {
+      "source_id": "vsdl-paper",
+      "stratum_id": "scenario-dsl",
+      "kind": "publication",
+      "title": "Automating the Generation of Cyber Range Virtual Scenarios with VSDL",
+      "locator": "https://arxiv.org/pdf/2001.06681v1",
+      "version": "arXiv version 1",
+      "revision": "arXiv:2001.06681v1",
+      "artifact_path": null,
+      "content_sha256": "d8b505602afee6962c39f02d6691fc5ab7aba77acb3ea35760bb8211e85381b4"
+    },
+    {
+      "source_id": "cyber-dem-standard",
+      "stratum_id": "simulation-emulation-platform",
+      "kind": "standard",
+      "title": "SISO Cyber Data Exchange Model",
+      "locator": "https://cdn.ymaws.com/www.sisostandards.org/resource/resmgr/standards_products/siso-std-025-2023_cyberdem.pdf",
+      "version": "SISO-STD-025-2023",
+      "revision": "SISO-STD-025-2023",
+      "artifact_path": null,
+      "content_sha256": "e351e2c73ede003cea62c1ec0c22acb4430220b4d033c4de625645c6a8560e72"
+    }
+  ],
+  "requests": [
+    {
+      "request_id": "survey-representative-range",
+      "stratum_id": "cyber-range-survey",
+      "source_refs": ["garg-cyber-range-survey"],
+      "title": "Describe and validate a representative multi-host evaluation range",
+      "paraphrase": "Author topology, participant roles, objectives, workflows, evidence expectations, and apparatus requirements as distinct typed concerns.",
+      "concept_ids": [
+        "range-topology",
+        "exercise-roles",
+        "evaluation-objectives",
+        "control-workflows",
+        "authored-evidence-expectations",
+        "apparatus-selection-constraints"
+      ]
+    },
+    {
+      "request_id": "cyborg-participant-evaluation",
+      "stratum_id": "agent-benchmark",
+      "source_refs": ["cyborg-paper"],
+      "title": "Describe an autonomous cyber-agent evaluation environment",
+      "paraphrase": "Declare participant identity, actions, observations, outcome measures, and the tools or affordances available to the participant.",
+      "concept_ids": [
+        "participant-agent",
+        "participant-action-contract",
+        "participant-observation-boundary",
+        "evaluation-measure",
+        "participant-tool-affordance"
+      ]
+    },
+    {
+      "request_id": "vsdl-configurable-infrastructure",
+      "stratum_id": "scenario-dsl",
+      "source_refs": ["vsdl-paper"],
+      "title": "Specify constrained configurable virtual infrastructure",
+      "paraphrase": "Declare resource-constrained topology, test constraint satisfiability, and keep provider-specific image and deployment mechanics out of portable scenario meaning.",
+      "concept_ids": [
+        "resource-constrained-topology",
+        "formal-constraint-satisfiability",
+        "provider-specific-provisioning"
+      ]
+    },
+    {
+      "request_id": "cyber-dem-federation",
+      "stratum_id": "simulation-emulation-platform",
+      "source_refs": ["cyber-dem-standard"],
+      "title": "Bind simulation apparatus and exchange cyber events",
+      "paraphrase": "Declare the execution clock/apparatus context separately from a typed federated cyber object and event exchange surface.",
+      "concept_ids": [
+        "apparatus-clock-context",
+        "federated-object-event-exchange"
+      ]
+    }
+  ],
+  "carriers": [
+    {
+      "carrier_id": "enterprise-participant-sdl",
+      "kind": "sdl",
+      "artifact_id": "enterprise-participant-sdl",
+      "portable": true,
+      "description": "Authored participant, evidence, objective, and workflow scenario meaning."
+    },
+    {
+      "carrier_id": "port-range-sdl",
+      "kind": "sdl",
+      "artifact_id": "port-range-sdl",
+      "portable": true,
+      "description": "Authored multi-host topology, constraints, objectives, and workflow meaning."
+    },
+    {
+      "carrier_id": "experiment-task-contract",
+      "kind": "contract",
+      "artifact_id": "experiment-task-contract",
+      "portable": true,
+      "description": "Published experiment task and apparatus constraint contract."
+    },
+    {
+      "carrier_id": "apparatus-context-contract",
+      "kind": "contract",
+      "artifact_id": "apparatus-context-contract",
+      "portable": true,
+      "description": "Published apparatus identity, clock, and measurement context contract."
+    },
+    {
+      "carrier_id": "backend-realization-disclosure",
+      "kind": "profile",
+      "artifact_id": "backend-profile",
+      "portable": false,
+      "description": "Backend-facing profile and realization disclosure outside core SDL."
+    },
+    {
+      "carrier_id": "participant-tool-contract",
+      "kind": "missing",
+      "artifact_id": null,
+      "portable": true,
+      "description": "No current typed participant tool or affordance carrier."
+    },
+    {
+      "carrier_id": "formal-constraint-contract",
+      "kind": "missing",
+      "artifact_id": null,
+      "portable": true,
+      "description": "No current solver-backed constraint carrier."
+    },
+    {
+      "carrier_id": "federation-exchange-contract",
+      "kind": "missing",
+      "artifact_id": null,
+      "portable": true,
+      "description": "No current typed federation object and event exchange carrier."
+    }
+  ],
+  "concepts": [
+    {
+      "concept_id": "range-topology",
+      "request_id": "survey-representative-range",
+      "title": "Multi-host network topology",
+      "meaning": "Named hosts, networks, links, and dependencies form the evaluation environment.",
+      "atomic": true,
+      "load_bearing": true,
+      "expected_classification": "directly-expressible",
+      "expected_carrier_id": "port-range-sdl",
+      "artifact_stage_ids": ["authored", "semantic", "instantiated", "compiled"],
+      "success_rule": "Every topology element is typed and survives at an exact compiled address.",
+      "fail_rule": "Topology requires provider vocabulary or disappears before compilation."
+    },
+    {
+      "concept_id": "exercise-roles",
+      "request_id": "survey-representative-range",
+      "title": "Exercise participant roles",
+      "meaning": "Red, blue, and evaluator responsibilities remain scenario roles rather than control-plane identities.",
+      "atomic": true,
+      "load_bearing": true,
+      "expected_classification": "directly-expressible",
+      "expected_carrier_id": "enterprise-participant-sdl",
+      "artifact_stage_ids": ["authored", "semantic", "instantiated", "compiled"],
+      "success_rule": "A typed entity role survives compilation without becoming an authentication identity.",
+      "fail_rule": "The role is prose-only or conflated with backend authorization."
+    },
+    {
+      "concept_id": "evaluation-objectives",
+      "request_id": "survey-representative-range",
+      "title": "Evaluation objectives",
+      "meaning": "Actors, targets, windows, and success conditions are declared independently from scored measures.",
+      "atomic": true,
+      "load_bearing": true,
+      "expected_classification": "directly-expressible",
+      "expected_carrier_id": "enterprise-participant-sdl",
+      "artifact_stage_ids": ["authored", "semantic", "instantiated", "compiled"],
+      "success_rule": "The objective and its success bindings survive at exact authored and compiled pointers.",
+      "fail_rule": "Success meaning is free-form or dropped by the compiler."
+    },
+    {
+      "concept_id": "control-workflows",
+      "request_id": "survey-representative-range",
+      "title": "Portable control workflow",
+      "meaning": "Objective ordering, branching, retry, and terminal control remain backend-neutral.",
+      "atomic": true,
+      "load_bearing": true,
+      "expected_classification": "directly-expressible",
+      "expected_carrier_id": "port-range-sdl",
+      "artifact_stage_ids": ["authored", "semantic", "instantiated", "compiled"],
+      "success_rule": "The workflow validates and compiles to a typed control graph.",
+      "fail_rule": "The workflow depends on backend commands or loses control edges."
+    },
+    {
+      "concept_id": "authored-evidence-expectations",
+      "request_id": "survey-representative-range",
+      "title": "Authored evidence expectations",
+      "meaning": "Portable capture obligations remain distinct from captured evidence and derived measures.",
+      "atomic": true,
+      "load_bearing": true,
+      "expected_classification": "directly-expressible",
+      "expected_carrier_id": "enterprise-participant-sdl",
+      "artifact_stage_ids": ["authored", "semantic", "instantiated"],
+      "success_rule": "A typed evidence requirement survives admission at an exact pointer.",
+      "fail_rule": "Evidence intent exists only as notes or is mistaken for proof of capture."
+    },
+    {
+      "concept_id": "apparatus-selection-constraints",
+      "request_id": "survey-representative-range",
+      "title": "Processor and backend selection constraints",
+      "meaning": "Experiment apparatus choices are typed and version-bound outside core SDL.",
+      "atomic": true,
+      "load_bearing": true,
+      "expected_classification": "profile-or-manifest-constraint",
+      "expected_carrier_id": "experiment-task-contract",
+      "artifact_stage_ids": ["contract"],
+      "success_rule": "The published experiment task contract validates named processor/backend constraints.",
+      "fail_rule": "Apparatus choice leaks into SDL or remains an unvalidated note."
+    },
+    {
+      "concept_id": "participant-agent",
+      "request_id": "cyborg-participant-evaluation",
+      "title": "Autonomous participant identity and scope",
+      "meaning": "A participant has typed identity, initial knowledge, actions, observation boundary, and operating scope.",
+      "atomic": true,
+      "load_bearing": true,
+      "expected_classification": "directly-expressible",
+      "expected_carrier_id": "enterprise-participant-sdl",
+      "artifact_stage_ids": ["authored", "semantic", "instantiated", "compiled"],
+      "success_rule": "Participant meaning validates and survives at an exact compiled agent address.",
+      "fail_rule": "The participant is only a backend process or loses its information boundary."
+    },
+    {
+      "concept_id": "participant-action-contract",
+      "request_id": "cyborg-participant-evaluation",
+      "title": "Participant action contract",
+      "meaning": "Action preconditions, effects, evidence expectations, and failure classes are declared independently from backend commands.",
+      "atomic": true,
+      "load_bearing": true,
+      "expected_classification": "directly-expressible",
+      "expected_carrier_id": "enterprise-participant-sdl",
+      "artifact_stage_ids": ["authored", "semantic", "instantiated", "compiled"],
+      "success_rule": "The action contract survives compilation at an exact canonical address.",
+      "fail_rule": "Action meaning requires a backend command or is silently weakened."
+    },
+    {
+      "concept_id": "participant-observation-boundary",
+      "request_id": "cyborg-participant-evaluation",
+      "title": "Participant observation boundary",
+      "meaning": "Participant-visible, hidden, and evidence-only information are declared separately from world truth.",
+      "atomic": true,
+      "load_bearing": true,
+      "expected_classification": "directly-expressible",
+      "expected_carrier_id": "enterprise-participant-sdl",
+      "artifact_stage_ids": ["authored", "semantic", "instantiated", "compiled"],
+      "success_rule": "The observation boundary survives compilation at an exact canonical address.",
+      "fail_rule": "World truth and participant-visible state collapse or require backend interpretation."
+    },
+    {
+      "concept_id": "evaluation-measure",
+      "request_id": "cyborg-participant-evaluation",
+      "title": "Outcome measure",
+      "meaning": "A benchmark metric names its construct, unit, direction, and evidence requirements outside SDL objectives.",
+      "atomic": true,
+      "load_bearing": false,
+      "expected_classification": "directly-expressible",
+      "expected_carrier_id": "experiment-task-contract",
+      "artifact_stage_ids": ["contract"],
+      "success_rule": "The published experiment task validates a typed metric definition.",
+      "fail_rule": "A reward label or objective prose is treated as a measure."
+    },
+    {
+      "concept_id": "participant-tool-affordance",
+      "request_id": "cyborg-participant-evaluation",
+      "title": "Participant tool and affordance declaration",
+      "meaning": "The authored task declares which bounded tools and decision affordances are available to the participant.",
+      "atomic": true,
+      "load_bearing": false,
+      "expected_classification": "missing",
+      "expected_carrier_id": "participant-tool-contract",
+      "artifact_stage_ids": ["authored"],
+      "success_rule": "A typed portable carrier owns tool and affordance availability.",
+      "fail_rule": "Availability is only backend policy, prose, or arbitrary metadata."
+    },
+    {
+      "concept_id": "resource-constrained-topology",
+      "request_id": "vsdl-configurable-infrastructure",
+      "title": "Resource-constrained virtual topology",
+      "meaning": "Virtual nodes carry typed CPU, memory, network, and dependency constraints without provider resource names.",
+      "atomic": true,
+      "load_bearing": true,
+      "expected_classification": "directly-expressible",
+      "expected_carrier_id": "port-range-sdl",
+      "artifact_stage_ids": ["authored", "semantic", "instantiated", "compiled"],
+      "success_rule": "Typed portable resource constraints survive compilation.",
+      "fail_rule": "Constraints require OpenStack, Docker, or cloud-provider fields."
+    },
+    {
+      "concept_id": "formal-constraint-satisfiability",
+      "request_id": "vsdl-configurable-infrastructure",
+      "title": "Solver-backed constraint satisfiability",
+      "meaning": "The authored infrastructure constraints can be checked for global satisfiability before realization.",
+      "atomic": true,
+      "load_bearing": false,
+      "expected_classification": "missing",
+      "expected_carrier_id": "formal-constraint-contract",
+      "artifact_stage_ids": ["semantic"],
+      "success_rule": "A typed formal constraint surface and solver result own the claim.",
+      "fail_rule": "Local validation is presented as global satisfiability."
+    },
+    {
+      "concept_id": "provider-specific-provisioning",
+      "request_id": "vsdl-configurable-infrastructure",
+      "title": "Provider-specific image and provisioning mechanics",
+      "meaning": "Provider image, Terraform, and Packer choices are realization mechanics rather than portable SDL meaning.",
+      "atomic": true,
+      "load_bearing": false,
+      "expected_classification": "deliberately-backend-specific",
+      "expected_carrier_id": "backend-realization-disclosure",
+      "artifact_stage_ids": ["realization-disclosure"],
+      "success_rule": "Provider mechanics remain in a backend-facing disclosure outside core SDL.",
+      "fail_rule": "Provider vocabulary becomes a required SDL structural field."
+    },
+    {
+      "concept_id": "apparatus-clock-context",
+      "request_id": "cyber-dem-federation",
+      "title": "Execution clock context",
+      "meaning": "Clock authority, time domain, and synchronization are recorded as apparatus context.",
+      "atomic": true,
+      "load_bearing": false,
+      "expected_classification": "profile-or-manifest-constraint",
+      "expected_carrier_id": "apparatus-context-contract",
+      "artifact_stage_ids": ["contract"],
+      "success_rule": "The published apparatus context validates a typed clock record.",
+      "fail_rule": "Clock context is inferred from mutable runtime state."
+    },
+    {
+      "concept_id": "federated-object-event-exchange",
+      "request_id": "cyber-dem-federation",
+      "title": "Federated cyber object and event exchange",
+      "meaning": "A portable typed contract exchanges cyber objects and events across independently implemented simulation federates.",
+      "atomic": true,
+      "load_bearing": false,
+      "expected_classification": "missing",
+      "expected_carrier_id": "federation-exchange-contract",
+      "artifact_stage_ids": ["contract"],
+      "success_rule": "A published portable exchange contract preserves object/event identity and provenance.",
+      "fail_rule": "Exchange depends on backend-private payloads or has no typed carrier."
+    }
+  ],
+  "execution_rules": {
+    "stage_outcomes": ["passed", "failed", "unsupported", "not_applicable", "not_run", "tool_failed"],
+    "validation_strength_values": ["structural", "semantic", "phase-admitted", "compiled", "contract", "profile", "not-applicable"],
+    "missing_concepts_force_partial": true,
+    "load_bearing_failure_forces_refuted": true,
+    "unallowed_backend_leakage_forces_refuted": true,
+    "normal_execution_network_access": false
+  },
+  "objective_pass_criteria": "Every load-bearing concept is directly expressible or profile/manifest constrained, every declared stage passes at an exact pointer, backend-specific mechanics remain outside core SDL, and no requested meaning is silently lost.",
+  "objective_fail_criteria": "Any load-bearing concept is missing, invalid, silently weakened, or requires backend vocabulary in core SDL; or an applicable production stage fails while the analysis claims success.",
+  "validity_threats": [
+    "The four sources and sixteen atomic concepts are representative but do not exhaust cyber-range or cyber-agent evaluation requirements.",
+    "Repository-owned examples test the pinned reference implementation and do not prove independent backend conformance.",
+    "Source requests are bounded paraphrases of cited records; no paper or standard bytes are copied into the bundle.",
+    "Results apply only to the pinned ACES revision and named production entrypoints.",
+    "A missing supplemental concept keeps the broad claim partial even when every issue-defined load-bearing concept passes."
+  ],
+  "amendment_log": []
+}
