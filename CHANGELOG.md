@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 PRs do **not** edit this file directly. release-please maintains it from the
 Conventional Commit history on `main` (#684).
 
+## [0.23.1](https://github.com/Brad-Edwards/aces/compare/v0.23.0...v0.23.1) (2026-07-17)
+
+
+### Bug Fixes
+
+* enforce stateful resource admission ([#816](https://github.com/Brad-Edwards/aces/issues/816)) ([8bf12ee](https://github.com/Brad-Edwards/aces/commit/8bf12eeb0d43e6e23a86abb012d7b31b076bd69a))
+
 ## [0.23.0](https://github.com/Brad-Edwards/aces/compare/v0.22.0...v0.23.0) (2026-07-17)
 
 
