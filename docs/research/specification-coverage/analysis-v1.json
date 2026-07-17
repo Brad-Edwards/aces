@@ -1,0 +1,88 @@
+{
+  "analysis_id": "aces-standardized-specification-coverage-analysis-v1",
+  "protocol_revision": "1.0.0",
+  "snapshot_id": "aces-standardized-specification-coverage-8bf12ee-v1",
+  "snapshot_sha256": "f8ff56958cb47ca927f8acbf8a23fc3e6eddd1ba78e66a42870602e885b2766e",
+  "generated_at": "2026-07-17",
+  "execution_status": "complete",
+  "classification_counts": {
+    "directly-expressible": 10,
+    "profile-or-manifest-constraint": 2,
+    "deliberately-backend-specific": 1,
+    "missing": 3
+  },
+  "load_bearing_results": {
+    "total": 10,
+    "passed": 10,
+    "failed": 0,
+    "missing": 0
+  },
+  "request_results": [
+    {
+      "request_id": "survey-representative-range",
+      "status": "demonstrated",
+      "concept_count": 6,
+      "missing_count": 0,
+      "failed_stage_count": 0
+    },
+    {
+      "request_id": "cyborg-participant-evaluation",
+      "status": "partial",
+      "concept_count": 5,
+      "missing_count": 1,
+      "failed_stage_count": 0
+    },
+    {
+      "request_id": "vsdl-configurable-infrastructure",
+      "status": "partial",
+      "concept_count": 3,
+      "missing_count": 1,
+      "failed_stage_count": 0
+    },
+    {
+      "request_id": "cyber-dem-federation",
+      "status": "partial",
+      "concept_count": 2,
+      "missing_count": 1,
+      "failed_stage_count": 0
+    }
+  ],
+  "backend_leakage": [],
+  "evidence_status": "partial",
+  "claim": {
+    "claim_id": "aces-standardized-configurable-specification-coverage",
+    "statement": "ACES provides a standardized configurable portable specification surface for the preregistered representative cyber-agent evaluation environment requirements without backend vocabulary in core SDL.",
+    "threats_to_validity": [
+      "The representative corpus contains four source strata and sixteen atomic concepts rather than every cyber-range requirement.",
+      "The reference processor and repository fixtures are not independent backend implementations.",
+      "No live range, simulator federation, or participant execution was part of this offline specification-coverage test."
+    ],
+    "falsification_protocol": "docs/research/specification-coverage/protocol-v1.json",
+    "objective_pass_criteria": "Every load-bearing concept passes at every owning stage, backend-specific mechanics stay outside core SDL, and no requested concept is silently lost.",
+    "objective_fail_criteria": "A load-bearing concept is missing or lossy, an applicable stage fails, or backend vocabulary is required in core SDL while the result claims success.",
+    "allowed_evidence": [
+      "pinned source metadata and bounded paraphrases",
+      "production parser, semantic, instantiation, admission, compiler, contract, and profile results",
+      "exact artifact digests and typed pointers",
+      "documented missing-concept and backend-specific dispositions"
+    ],
+    "disallowed_evidence": [
+      "field-count or schema breadth alone",
+      "the existing scenario stress corpus as the representative request corpus",
+      "free-form metadata as typed coverage",
+      "backend-private interpretation",
+      "post-hoc removal or repair of falsifying concepts"
+    ],
+    "evidence_artifacts": [
+      "docs/research/specification-coverage/protocol-v1.json",
+      "docs/research/specification-coverage/execution-snapshot-v1.json",
+      "docs/research/specification-coverage/analysis-v1.json"
+    ]
+  },
+  "plain_language_outcome": "ACES preserved every issue-defined load-bearing concept through its owning typed stages without requiring backend fields in core SDL. The broader standardized-platform claim remains partial because participant tool affordances, solver-backed constraint satisfiability, and federated cyber object/event exchange have no current typed carrier.",
+  "limitations": [
+    "This result demonstrates bounded specification coverage, not universal cyber-range coverage, usability, adoption, backend substitution, or behavioral equivalence.",
+    "The three missing concepts are evidence, not implementation tasks within this snapshot.",
+    "A later product change requires a new immutable execution snapshot and recomputed analysis rather than editing this result."
+  ]
+}
