@@ -32,6 +32,56 @@ def _dependency_candidates(
     return candidates
 
 
+def _consumer_reference_errors(
+    *,
+    owner: str,
+    resource: GeneratedArtifact | PersistentVolume,
+    nodes: Mapping[str, Node],
+    occupied_destinations: dict[tuple[str, str], str],
+) -> list[str]:
+    errors: list[str] = []
+    for consumer in resource.consumers:
+        node_name = _node_name(consumer.node, nodes)
+        if node_name is None:
+            errors.append(f"{owner} consumer node reference {consumer.node!r} is missing")
+            continue
+        node = nodes[node_name]
+        if node.os is OSFamily.WINDOWS or node.os == OSFamily.WINDOWS.value:
+            errors.append(f"{owner} uses a POSIX mount_destination for Windows consumer node {node_name!r}")
+        destination = (node_name, consumer.mount_destination)
+        previous = occupied_destinations.get(destination)
+        if previous is None:
+            occupied_destinations[destination] = owner
+        else:
+            errors.append(
+                f"{owner} mount_destination {consumer.mount_destination!r} on node {node_name!r} "
+                f"is already consumed by {previous}"
+            )
+    return errors
+
+
+def _dependency_reference_errors(
+    *,
+    owner: str,
+    resource: GeneratedArtifact | PersistentVolume,
+    generated_artifacts: Mapping[str, GeneratedArtifact],
+    persistent_volumes: Mapping[str, PersistentVolume],
+) -> list[str]:
+    errors: list[str] = []
+    for dependency in (*resource.ordering_dependencies, *resource.refresh_dependencies):
+        candidates = _dependency_candidates(
+            dependency,
+            generated_artifacts=generated_artifacts,
+            persistent_volumes=persistent_volumes,
+        )
+        if not candidates:
+            errors.append(f"{owner} dependency reference {dependency!r} is missing")
+        elif len(candidates) > 1:
+            choices = ", ".join(candidates)
+            errors.append(f"{owner} dependency reference {dependency!r} is ambiguous; use one of: {choices}")
+    return errors
+
+
 def stateful_resource_reference_errors(
     *,
     nodes: Mapping[str, Node],
@@ -48,35 +98,22 @@ def stateful_resource_reference_errors(
     ):
         for name, resource in resources.items():
             owner = f"{section}.{name}"
-            for consumer in resource.consumers:
-                node_name = _node_name(consumer.node, nodes)
-                if node_name is None:
-                    errors.append(f"{owner} consumer node reference {consumer.node!r} is missing")
-                    continue
-                node = nodes[node_name]
-                if node.os is OSFamily.WINDOWS or node.os == OSFamily.WINDOWS.value:
-                    errors.append(f"{owner} uses a POSIX mount_destination for Windows consumer node {node_name!r}")
-                destination = (node_name, consumer.mount_destination)
-                previous = occupied_destinations.get(destination)
-                if previous is not None:
-                    errors.append(
-                        f"{owner} mount_destination {consumer.mount_destination!r} on node {node_name!r} "
-                        f"is already consumed by {previous}"
-                    )
-                else:
-                    occupied_destinations[destination] = owner
-
-            for dependency in (*resource.ordering_dependencies, *resource.refresh_dependencies):
-                candidates = _dependency_candidates(
-                    dependency,
+            errors.extend(
+                _consumer_reference_errors(
+                    owner=owner,
+                    resource=resource,
+                    nodes=nodes,
+                    occupied_destinations=occupied_destinations,
+                )
+            )
+            errors.extend(
+                _dependency_reference_errors(
+                    owner=owner,
+                    resource=resource,
                     generated_artifacts=generated_artifacts,
                     persistent_volumes=persistent_volumes,
                 )
-                if not candidates:
-                    errors.append(f"{owner} dependency reference {dependency!r} is missing")
-                elif len(candidates) > 1:
-                    choices = ", ".join(candidates)
-                    errors.append(f"{owner} dependency reference {dependency!r} is ambiguous; use one of: {choices}")
+            )
     return errors
 
 

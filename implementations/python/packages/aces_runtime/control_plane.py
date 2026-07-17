@@ -92,26 +92,27 @@ def _submitted_plan_diagnostics(
     manifest: BackendManifest | None = None,
 ) -> list[Diagnostic]:
     admitted = set(snapshot.entries) | {operation.address for operation in plan.operations}
-    diagnostic: Diagnostic | None = None
+    diagnostics: list[Diagnostic] = []
     for operation in plan.operations:
         diagnostic = _submitted_operation_diagnostic(operation, domain, snapshot, admitted)
         if diagnostic is not None:
+            diagnostics.append(diagnostic)
             break
-    if diagnostic is not None:
-        return [diagnostic]
-    if domain is RuntimeDomain.PROVISIONING and isinstance(plan, ProvisioningPlan):
+    if not diagnostics and domain is RuntimeDomain.PROVISIONING and isinstance(plan, ProvisioningPlan):
         if manifest is None:
             raise ValueError("provisioning submission admission requires a backend manifest")
         stateful_diagnostic = _stateful_submission_diagnostic(plan, manifest)
         if stateful_diagnostic is not None:
-            return [stateful_diagnostic]
-        topology_diagnostics = domain_topology_plan_diagnostics(
-            plan,
-            snapshot=snapshot,
-            supported_domain_profiles=manifest.provisioner.supported_domain_profiles,
-        )
-        return topology_diagnostics[:1]
-    return []
+            diagnostics.append(stateful_diagnostic)
+        else:
+            diagnostics.extend(
+                domain_topology_plan_diagnostics(
+                    plan,
+                    snapshot=snapshot,
+                    supported_domain_profiles=manifest.provisioner.supported_domain_profiles,
+                )[:1]
+            )
+    return diagnostics
 
 
 def _stateful_submission_diagnostic(
