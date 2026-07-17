@@ -1,0 +1,2 @@
+name: schema-invalid-unknown-field
+unknown_top_level_field: true
