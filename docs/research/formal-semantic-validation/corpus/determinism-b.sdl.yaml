@@ -1,0 +1,8 @@
+name: determinism-b
+nodes:
+  beta:
+    type: vm
+    os: linux
+    resources: {ram: 2 gib, cpu: 2}
+infrastructure:
+  beta: 1
