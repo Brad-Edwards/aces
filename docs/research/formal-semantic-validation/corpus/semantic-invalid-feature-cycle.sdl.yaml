@@ -1,0 +1,8 @@
+name: semantic-feature-cycle
+features:
+  a:
+    type: service
+    dependencies: [b]
+  b:
+    type: service
+    dependencies: [a]

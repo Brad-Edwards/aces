@@ -1,0 +1,15 @@
+name: semantic-ambiguous-reference
+nodes:
+  web:
+    type: vm
+    os: linux
+    resources: {ram: 1 gib, cpu: 1}
+features:
+  web:
+    type: service
+    source: {name: nginx}
+relationships:
+  ambiguous:
+    type: connects_to
+    source: web
+    target: web
