@@ -385,3 +385,5 @@ adrs:
   - id: ADR-085
     path: docs/decisions/adrs/adr-085-participant-information-flow-and-control.md
     pin: 75143315eba5f4e71d5f8c4bfa3468e46060e4ad95a593c21e8d100387500245
+    amendments:
+      - ref: "#831"

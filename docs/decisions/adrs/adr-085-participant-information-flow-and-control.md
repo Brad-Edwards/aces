@@ -296,3 +296,9 @@ risks and are published with issue #794.
 - [ADR-060](adr-060-participant-backend-facing-contract-surface.md)
 - [ADR-081](adr-081-behavioral-relation-taxonomy-and-claim-discipline.md)
 - [ADR-083](adr-083-participant-tool-decision-surface-and-exposure-semantics.md)
+
+## Amendments
+
+| Date | Commit/PR | Summary |
+|------|-----------|---------|
+| 2026-07-17 | #831 | Recorded ADR-085 acceptance with the SEM-230 formal authority, behavioral taxonomy revision, bounded evidence, and explicit literature-derived lineage and nonclaims. |
