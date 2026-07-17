@@ -47,15 +47,32 @@ class VolumeAccessMode(str, Enum):
 
 def _validate_relative_path(value: str) -> str:
     path = PurePosixPath(value)
-    if not value or path.is_absolute() or ".." in path.parts or value.endswith("/"):
-        raise ValueError("generated output path must be a contained relative file path")
+    if (
+        not value
+        or not path.parts
+        or path.is_absolute()
+        or ".." in path.parts
+        or str(path) != value
+        or "\\" in value
+        or any(ord(character) < 32 or ord(character) == 127 for character in value)
+    ):
+        raise ValueError("generated output path must be a canonical contained POSIX relative file path")
     return value
 
 
 def _validate_mount_destination(value: str) -> str:
     path = PurePosixPath(value)
-    if not value or not path.is_absolute() or ".." in path.parts or str(path) == "/":
-        raise ValueError("mount_destination must be a contained absolute path below root")
+    if (
+        not value
+        or not path.is_absolute()
+        or value.startswith("//")
+        or ".." in path.parts
+        or str(path) == "/"
+        or str(path) != value
+        or "\\" in value
+        or any(ord(character) < 32 or ord(character) == 127 for character in value)
+    ):
+        raise ValueError("mount_destination must be a canonical contained POSIX absolute path below root")
     return value
 
 
@@ -85,10 +102,10 @@ class GeneratedArtifact(SDLModel):
     generator: GeneratedArtifactKind
     lifecycle: GeneratedArtifactLifecycle
     provenance: str = Field(min_length=1)
-    outputs: list[GeneratedArtifactOutput] = Field(min_length=1)
-    consumers: list[StatefulResourceConsumer] = Field(min_length=1)
-    ordering_dependencies: list[str] = Field(default_factory=list)
-    refresh_dependencies: list[str] = Field(default_factory=list)
+    outputs: list[GeneratedArtifactOutput] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
+    consumers: list[StatefulResourceConsumer] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
+    ordering_dependencies: list[str] = Field(default_factory=list, json_schema_extra={"uniqueItems": True})
+    refresh_dependencies: list[str] = Field(default_factory=list, json_schema_extra={"uniqueItems": True})
 
     @model_validator(mode="after")
     def _unique_outputs_and_consumers(self) -> GeneratedArtifact:
@@ -101,6 +118,12 @@ class GeneratedArtifact(SDLModel):
             raise ValueError("generated artifact output paths must be unique")
         if len(consumers) != len(set(consumers)):
             raise ValueError("generated artifact consumers must be unique")
+        if any(consumer.access_mode is ConsumerAccessMode.READ_WRITE for consumer in self.consumers):
+            raise ValueError("generated artifact consumers must be read_only")
+        if len(self.ordering_dependencies) != len(set(self.ordering_dependencies)):
+            raise ValueError("generated artifact ordering_dependencies must be unique")
+        if len(self.refresh_dependencies) != len(set(self.refresh_dependencies)):
+            raise ValueError("generated artifact refresh_dependencies must be unique")
         return self
 
 
@@ -109,9 +132,9 @@ class PersistentVolume(SDLModel):
 
     lifecycle: VolumeLifecycle
     access_mode: VolumeAccessMode
-    consumers: list[StatefulResourceConsumer] = Field(min_length=1)
-    ordering_dependencies: list[str] = Field(default_factory=list)
-    refresh_dependencies: list[str] = Field(default_factory=list)
+    consumers: list[StatefulResourceConsumer] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
+    ordering_dependencies: list[str] = Field(default_factory=list, json_schema_extra={"uniqueItems": True})
+    refresh_dependencies: list[str] = Field(default_factory=list, json_schema_extra={"uniqueItems": True})
 
     @model_validator(mode="after")
     def _unique_consumers(self) -> PersistentVolume:
@@ -122,6 +145,15 @@ class PersistentVolume(SDLModel):
             consumer.access_mode is ConsumerAccessMode.READ_WRITE for consumer in self.consumers
         ):
             raise ValueError("read_only_many volume consumers must be read_only")
+        writer_nodes = {
+            consumer.node for consumer in self.consumers if consumer.access_mode is ConsumerAccessMode.READ_WRITE
+        }
+        if self.access_mode is VolumeAccessMode.READ_WRITE_ONCE and len(writer_nodes) > 1:
+            raise ValueError("read_write_once volumes admit at most one writer node")
+        if len(self.ordering_dependencies) != len(set(self.ordering_dependencies)):
+            raise ValueError("persistent volume ordering_dependencies must be unique")
+        if len(self.refresh_dependencies) != len(set(self.refresh_dependencies)):
+            raise ValueError("persistent volume refresh_dependencies must be unique")
         return self
 
 

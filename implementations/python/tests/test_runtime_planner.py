@@ -1019,12 +1019,28 @@ accounts:
 name: limited
 nodes:
   corp: {type: switch}
+  stateful: {type: vm, os: linux}
   dc:
     type: vm
     os: windows
     resources: {ram: 1 gib, cpu: 1}
     conditions: {health: ops}
     roles: {ops: operator}
+generated_artifacts:
+  dc-config:
+    generator: rendered_config
+    lifecycle: regenerate_on_change
+    provenance: config/dc.yml
+    outputs:
+      - {name: dc-config, path: dc.yml, sensitivity: restricted}
+    consumers:
+      - {node: stateful, mount_destination: /etc/aces/dc.yml, access_mode: read_only}
+persistent_volumes:
+  dc-data:
+    lifecycle: retain
+    access_mode: read_write_once
+    consumers:
+      - {node: stateful, mount_destination: /var/lib/aces, access_mode: read_write}
 infrastructure:
   corp:
     count: 1
@@ -1084,6 +1100,8 @@ workflows:
         assert "provisioner.max-total-nodes-exceeded" in codes
         assert "provisioner.acls-unsupported" in codes
         assert "provisioner.unsupported-account-feature" in codes
+        assert "provisioner.generated-artifacts-unsupported" in codes
+        assert "provisioner.persistent-volumes-unsupported" in codes
         assert "orchestrator.unsupported-section" in codes
         assert "orchestrator.workflows-unsupported" in codes
         assert "evaluator.unsupported-section" in codes

@@ -6,6 +6,7 @@ Part of the SemanticValidator mixin composition; see __init__.py.
 from pydantic import BaseModel
 
 from .._base import VARIABLE_TOKEN_RE
+from .._stateful_resource_references import stateful_resource_reference_errors
 from ..entities import flatten_entities
 from ..explicitness import classify_scenario_explicitness
 from ..realization_designation import designation_records, resolve_json_pointer_surface
@@ -14,6 +15,15 @@ from ._support import _topological_sort
 
 
 class _SectionsMixin:
+    def _verify_stateful_resources(self) -> None:
+        self._errors.extend(
+            stateful_resource_reference_errors(
+                nodes=self._s.nodes,
+                generated_artifacts=self._s.generated_artifacts,
+                persistent_volumes=self._s.persistent_volumes,
+            )
+        )
+
     def _verify_variables(self) -> None:
         defined = set(getattr(self._s, "variables", {}))
         self._check_variable_refs(self._s, "", defined)

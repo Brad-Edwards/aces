@@ -20,14 +20,18 @@ generator, its regeneration lifecycle, non-secret provenance, the complete
 output set, and every consumer. Each output carries a contained relative path
 and a sensitivity class (`public`, `restricted`, or `secret`). The contract
 contains desired metadata only; secret values and rendered bytes never enter
-SDL, plans, diagnostics, or provenance.
+SDL, plans, diagnostics, or provenance. Output paths use one canonical POSIX
+relative-path spelling. Generated artifacts are immutable inputs to consumers;
+every consumer therefore declares `read_only` access.
 
 ## Persistent volumes
 
 A persistent volume declares `retain` or `ephemeral` lifecycle, portable
 single/multi-writer access semantics, and every consumer. Consumers name a
-declared node, an absolute mount destination below `/`, and read-only or
-read-write access.
+declared non-Windows node, a canonical POSIX absolute mount destination below
+`/`, and read-only or read-write access. `read_write_once` admits at most one
+writer node. A node and mount-destination pair may be owned by only one
+generated artifact or persistent volume.
 
 ## Graph and realization rules
 
@@ -41,3 +45,8 @@ requirement and emits its typed payload into the provisioning plan. Backends
 must either honor the complete declared resource or reject the plan; silently
 substituting an observed mount, generic content placement, or provider-private
 configuration is not conformant.
+
+Published JSON Schemas reject exact duplicate collection members. Relational
+uniqueness, cross-resource reference resolution, mount ownership, and access
+cardinality are published as `x-aces-invariants` and enforced by semantic SDL
+admission; JSON Schema success alone is not semantic admission.

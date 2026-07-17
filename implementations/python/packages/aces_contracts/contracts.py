@@ -471,6 +471,40 @@ def _attach_experiment_datetime_invariants(contract_id: str, json_schema: dict[s
     )
 
 
+def _attach_stateful_resource_invariants(contract_id: str, json_schema: dict[str, Any]) -> None:
+    if contract_id not in {
+        "sdl-authoring-input-v1",
+        "instantiated-scenario-v1",
+        "instantiated-scenario-snapshot-v1",
+    }:
+        return
+    input_contract = [{"contract_id": contract_id, "instance_path": "#"}]
+    _add_aces_invariant(
+        json_schema,
+        "stateful-generated-artifact-semantics",
+        "Generated artifact output names and paths, consumers, and dependency entries must be unique, and "
+        "generated artifact consumers must be read-only.",
+        validator="aces_sdl.stateful_resources.GeneratedArtifact._unique_outputs_and_consumers",
+        inputs=input_contract,
+    )
+    _add_aces_invariant(
+        json_schema,
+        "stateful-persistent-volume-semantics",
+        "Persistent volume consumers and dependency entries must be unique and access cardinality must match "
+        "the declared portable access mode.",
+        validator="aces_sdl.stateful_resources.PersistentVolume._unique_consumers",
+        inputs=input_contract,
+    )
+    _add_aces_invariant(
+        json_schema,
+        "stateful-cross-resource-semantics",
+        "Stateful resource consumers and dependencies must resolve unambiguously, use the POSIX v1 path dialect, "
+        "and must not collide on a consumer node mount destination.",
+        validator="aces_sdl._stateful_resource_references.stateful_resource_reference_errors",
+        inputs=input_contract,
+    )
+
+
 def _validate_reported_value_status(
     value_status: str,
     value: object | None,
@@ -8158,6 +8192,7 @@ def schema_bundle() -> dict[str, dict[str, Any]]:
         _attach_sdl_identifier_constraints(contract_id, json_schema)
         _attach_instantiation_invariants(contract_id, json_schema)
         _attach_experiment_datetime_invariants(contract_id, json_schema)
+        _attach_stateful_resource_invariants(contract_id, json_schema)
         _attach_json_schema_metadata(contract_id, json_schema)
         _attach_compiled_address_map_constraints(contract_id, json_schema)
         _attach_plan_identity_constraints(contract_id, json_schema)
