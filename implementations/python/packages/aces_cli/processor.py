@@ -63,20 +63,21 @@ def _sdl_error_summary(source: Path, exc: SDLError) -> str:
     values, which can carry untrusted SDL content or terminal control sequences.
     """
 
-    prefix = f"error: could not compile {source}:"
     if isinstance(exc, SDLParseError) and exc.diagnostics:
         markers = ", ".join(
             f"{diagnostic.code}@{diagnostic.primary_range.start.line}:{diagnostic.primary_range.start.column}"
             for diagnostic in exc.diagnostics[:10]
         )
-        return f"{prefix} SDL parse failed [{markers}]"
-    if isinstance(exc, SDLValidationError):
+        detail = f"SDL parse failed [{markers}]"
+    elif isinstance(exc, SDLValidationError):
         count = len(exc.errors)
-        return f"{prefix} {count} SDL validation error{'s' if count != 1 else ''}"
-    if isinstance(exc, SDLInstantiationError):
+        detail = f"{count} SDL validation error{'s' if count != 1 else ''}"
+    elif isinstance(exc, SDLInstantiationError):
         count = len(exc.errors)
-        return f"{prefix} {count} SDL instantiation error{'s' if count != 1 else ''}"
-    return f"{prefix} SDL compilation failed ({type(exc).__name__})"
+        detail = f"{count} SDL instantiation error{'s' if count != 1 else ''}"
+    else:
+        detail = f"SDL compilation failed ({type(exc).__name__})"
+    return f"error: could not compile {source}: {detail}"
 
 
 def _load_backend_manifest(manifest_path: Path | None) -> BackendManifest:
@@ -158,7 +159,8 @@ def plan(
     read-only dry run: it does not apply, provision, or start anything.
     """
 
-    del output_format  # only JSON is supported today; the enum reserves the seam.
+    # Only JSON is supported today; the enum reserves the seam for future formats.
+    del output_format
     backend_manifest = _load_backend_manifest(manifest_path)
     try:
         result = run_reference_processor(sdl, backend_manifest)

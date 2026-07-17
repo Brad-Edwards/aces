@@ -47,12 +47,195 @@ REFERENCE_PARTICIPANT_INTERACTION_FEATURES = frozenset(
     PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE]
 )
 
+_PARTICIPANT_CONTRACT_VERSIONS = frozenset(
+    {
+        "participant-episode-state-envelope-v1",
+        "participant-episode-history-event-stream-v1",
+        "participant-behavior-history-event-stream-v1",
+        "participant-lifecycle-event-v1",
+        "participant-observation-envelope-v1",
+        "participant-shared-state-record-v1",
+        "participant-joint-action-record-v1",
+        "participant-time-management-context-v1",
+        "participant-outcome-report-v1",
+    }
+)
+_OBSERVATION_CONTRACT_VERSIONS = frozenset(
+    {
+        "experiment-capture-spec-v1",
+        "experiment-evidence-record-v1",
+        "experiment-derived-measure-v1",
+        "experiment-run-v1",
+    }
+)
+
 
 def _current_backend_version() -> str:
     try:
         return distribution_version("aces-sdl")
     except PackageNotFoundError:
         return "0.0.0+unknown"
+
+
+def _stub_supported_contract_versions(*, with_participant_runtime: bool, with_observation: bool) -> frozenset[str]:
+    versions = set(REFERENCE_BACKEND_SUPPORTED_CONTRACT_VERSIONS)
+    if not with_participant_runtime:
+        versions -= _PARTICIPANT_CONTRACT_VERSIONS
+    if not with_observation:
+        versions -= _OBSERVATION_CONTRACT_VERSIONS
+    return frozenset(versions)
+
+
+def _stub_concept_bindings(*, with_participant_runtime: bool, with_observation: bool) -> tuple[ConceptBinding, ...]:
+    bindings = (
+        ConceptBinding(scope="capabilities.provisioner.supported_node_types", family="assets"),
+        ConceptBinding(scope="capabilities.provisioner.supported_os_families", family="assets"),
+        ConceptBinding(scope="capabilities.provisioner.supported_content_types", family="tools-and-artifacts"),
+        ConceptBinding(scope="capabilities.provisioner.supported_account_features", family="identities"),
+        ConceptBinding(scope="capabilities.provisioner.supported_domain_profiles", family="identities"),
+        ConceptBinding(scope="capabilities.orchestrator.supported_sections", family="actions-and-events"),
+        ConceptBinding(scope="capabilities.evaluator.supported_sections", family="observables"),
+    )
+    if with_participant_runtime:
+        bindings += (
+            ConceptBinding(scope="capabilities.participant_runtime.supported_participant_roles", family="identities"),
+            ConceptBinding(
+                scope="capabilities.participant_runtime.supported_behavior_features", family="actions-and-events"
+            ),
+            ConceptBinding(
+                scope="capabilities.participant_runtime.supported_interaction_features", family="relationships"
+            ),
+        )
+    if with_observation:
+        bindings += (
+            ConceptBinding(scope="capabilities.observation.supported_capture_kinds", family="provenance-and-evidence"),
+            ConceptBinding(scope="capabilities.observation.supported_channel_kinds", family="apparatus-declarations"),
+            ConceptBinding(scope="capabilities.observation.supported_sealing_modes", family="provenance-and-evidence"),
+        )
+    return bindings
+
+
+def _stub_realization_support() -> tuple[RealizationSupportDeclaration, ...]:
+    return (
+        RealizationSupportDeclaration(
+            domain="runtime-realization",
+            support_mode=RealizationSupportMode.CONSTRAINED,
+            supported_constraint_kinds=frozenset(
+                {
+                    "node-type",
+                    "os-family",
+                    "content-type",
+                    "account-feature",
+                    "workflow-feature",
+                    "workflow-state-predicate",
+                }
+            ),
+            supported_exact_requirement_kinds=frozenset({"declared-capability-match"}),
+            disclosure_kinds=frozenset({"backend-manifest-v2", "runtime-snapshot-v1", "operation-status-v1"}),
+        ),
+    )
+
+
+def _stub_provisioner() -> ProvisionerCapabilities:
+    return ProvisionerCapabilities(
+        name="stub-provisioner",
+        supported_node_types=frozenset({"vm", "switch"}),
+        supported_os_families=frozenset({"linux", "windows", "macos", "freebsd", "other"}),
+        supported_content_types=frozenset({"file", "dataset", "directory"}),
+        supported_account_features=frozenset({"groups", "mail", "spn", "shell", "home", "disabled", "auth_method"}),
+        supported_domain_profiles=frozenset({"active_directory"}),
+        max_total_nodes=None,
+        supports_acls=True,
+        supports_accounts=True,
+        supports_generated_artifacts=True,
+        supports_persistent_volumes=True,
+    )
+
+
+def _stub_orchestrator() -> OrchestratorCapabilities:
+    return OrchestratorCapabilities(
+        name="stub-orchestrator",
+        supported_sections=frozenset({"injects", "events", "scripts", "stories", "workflows"}),
+        supports_workflows=True,
+        supports_assertion_refs=True,
+        supports_inject_bindings=True,
+        supported_workflow_features=frozenset(
+            {
+                WorkflowFeature.DECISION,
+                WorkflowFeature.SWITCH,
+                WorkflowFeature.CALL,
+                WorkflowFeature.PARALLEL_BARRIER,
+                WorkflowFeature.RETRY,
+                WorkflowFeature.FAILURE_TRANSITIONS,
+                WorkflowFeature.CANCELLATION,
+                WorkflowFeature.TIMEOUTS,
+                WorkflowFeature.COMPENSATION,
+            }
+        ),
+        supported_workflow_state_predicates=frozenset(
+            {
+                WorkflowStatePredicateFeature.OUTCOME_MATCHING,
+                WorkflowStatePredicateFeature.ATTEMPT_COUNTS,
+            }
+        ),
+    )
+
+
+def _stub_evaluator() -> EvaluatorCapabilities:
+    return EvaluatorCapabilities(
+        name="stub-evaluator",
+        supported_sections=frozenset({"conditions", "propositions", "assertions", "objectives"}),
+        supports_scoring=True,
+        supports_objectives=True,
+        supported_predicate_families=frozenset({"presence", "boolean", "string", "number"}),
+        supported_quantifiers=frozenset({"all", "any", "at_least"}),
+        supported_truth_outcomes=frozenset({"true", "false", "unknown", "unsupported"}),
+        supported_evidence_channels=frozenset({"log", "api_response", "file_artifact"}),
+        supported_time_domains=frozenset({"scenario_time"}),
+        preserves_binding_provenance=True,
+    )
+
+
+def _stub_participant_runtime() -> ParticipantRuntimeCapabilities:
+    return ParticipantRuntimeCapabilities(
+        name="stub-participant-runtime",
+        supported_participant_roles=REFERENCE_PARTICIPANT_ROLES,
+        supported_behavior_features=REFERENCE_PARTICIPANT_BEHAVIOR_FEATURES,
+        supported_interaction_features=REFERENCE_PARTICIPANT_INTERACTION_FEATURES,
+    )
+
+
+def _stub_observation() -> ObservationCapabilities:
+    return ObservationCapabilities(
+        name="stub-observation",
+        supported_capture_kinds=frozenset({"artifact", "log", "observation", "telemetry", "trace"}),
+        supported_channel_kinds=frozenset(
+            {
+                "backend-log",
+                "evaluation-history",
+                "file-artifact",
+                "participant-observation",
+                "runtime-snapshot",
+                "workflow-history",
+            }
+        ),
+        supported_evidence_contracts=frozenset(_OBSERVATION_CONTRACT_VERSIONS),
+        supported_media_types=frozenset({"application/json", "text/plain"}),
+        supported_sealing_modes=frozenset({"digest", "immutable-store"}),
+        supports_redaction=True,
+        supports_loss_disclosure=True,
+        supports_chain_of_custody=False,
+    )
+
+
+def _stub_capabilities(*, with_participant_runtime: bool, with_observation: bool) -> BackendCapabilitySet:
+    return BackendCapabilitySet(
+        provisioner=_stub_provisioner(),
+        orchestrator=_stub_orchestrator(),
+        evaluator=_stub_evaluator(),
+        participant_runtime=_stub_participant_runtime() if with_participant_runtime else None,
+        observation=_stub_observation() if with_observation else None,
+    )
 
 
 def create_stub_manifest(
@@ -71,185 +254,21 @@ def create_stub_manifest(
     """
 
     del config
-    supported_contract_versions = set(REFERENCE_BACKEND_SUPPORTED_CONTRACT_VERSIONS)
-    if not with_participant_runtime:
-        supported_contract_versions.discard("participant-episode-state-envelope-v1")
-        supported_contract_versions.discard("participant-episode-history-event-stream-v1")
-        supported_contract_versions.discard("participant-behavior-history-event-stream-v1")
-        supported_contract_versions.discard("participant-lifecycle-event-v1")
-        supported_contract_versions.discard("participant-observation-envelope-v1")
-        supported_contract_versions.discard("participant-shared-state-record-v1")
-        supported_contract_versions.discard("participant-joint-action-record-v1")
-        supported_contract_versions.discard("participant-time-management-context-v1")
-        supported_contract_versions.discard("participant-outcome-report-v1")
-    if not with_observation:
-        supported_contract_versions.discard("experiment-capture-spec-v1")
-        supported_contract_versions.discard("experiment-evidence-record-v1")
-        supported_contract_versions.discard("experiment-derived-measure-v1")
-        supported_contract_versions.discard("experiment-run-v1")
-    concept_bindings = (
-        ConceptBinding(scope="capabilities.provisioner.supported_node_types", family="assets"),
-        ConceptBinding(scope="capabilities.provisioner.supported_os_families", family="assets"),
-        ConceptBinding(scope="capabilities.provisioner.supported_content_types", family="tools-and-artifacts"),
-        ConceptBinding(scope="capabilities.provisioner.supported_account_features", family="identities"),
-        ConceptBinding(scope="capabilities.provisioner.supported_domain_profiles", family="identities"),
-        ConceptBinding(scope="capabilities.orchestrator.supported_sections", family="actions-and-events"),
-        ConceptBinding(scope="capabilities.evaluator.supported_sections", family="observables"),
-    )
-    if with_participant_runtime:
-        concept_bindings += (
-            ConceptBinding(
-                scope="capabilities.participant_runtime.supported_participant_roles",
-                family="identities",
-            ),
-            ConceptBinding(
-                scope="capabilities.participant_runtime.supported_behavior_features",
-                family="actions-and-events",
-            ),
-            ConceptBinding(
-                scope="capabilities.participant_runtime.supported_interaction_features",
-                family="relationships",
-            ),
-        )
-    if with_observation:
-        concept_bindings += (
-            ConceptBinding(
-                scope="capabilities.observation.supported_capture_kinds",
-                family="provenance-and-evidence",
-            ),
-            ConceptBinding(
-                scope="capabilities.observation.supported_channel_kinds",
-                family="apparatus-declarations",
-            ),
-            ConceptBinding(
-                scope="capabilities.observation.supported_sealing_modes",
-                family="provenance-and-evidence",
-            ),
-        )
     return BackendManifest(
         name="stub",
         version=_current_backend_version(),
-        supported_contract_versions=frozenset(supported_contract_versions),
-        compatible_processors=frozenset({"aces-reference-processor"}),
-        concept_bindings=concept_bindings,
-        realization_support=(
-            RealizationSupportDeclaration(
-                domain="runtime-realization",
-                support_mode=RealizationSupportMode.CONSTRAINED,
-                supported_constraint_kinds=frozenset(
-                    {
-                        "node-type",
-                        "os-family",
-                        "content-type",
-                        "account-feature",
-                        "workflow-feature",
-                        "workflow-state-predicate",
-                    }
-                ),
-                supported_exact_requirement_kinds=frozenset({"declared-capability-match"}),
-                disclosure_kinds=frozenset(
-                    {
-                        "backend-manifest-v2",
-                        "runtime-snapshot-v1",
-                        "operation-status-v1",
-                    }
-                ),
-            ),
+        supported_contract_versions=_stub_supported_contract_versions(
+            with_participant_runtime=with_participant_runtime,
+            with_observation=with_observation,
         ),
-        capabilities=BackendCapabilitySet(
-            provisioner=ProvisionerCapabilities(
-                name="stub-provisioner",
-                supported_node_types=frozenset({"vm", "switch"}),
-                supported_os_families=frozenset({"linux", "windows", "macos", "freebsd", "other"}),
-                supported_content_types=frozenset({"file", "dataset", "directory"}),
-                supported_account_features=frozenset(
-                    {"groups", "mail", "spn", "shell", "home", "disabled", "auth_method"}
-                ),
-                supported_domain_profiles=frozenset({"active_directory"}),
-                max_total_nodes=None,
-                supports_acls=True,
-                supports_accounts=True,
-                supports_generated_artifacts=True,
-                supports_persistent_volumes=True,
-            ),
-            orchestrator=OrchestratorCapabilities(
-                name="stub-orchestrator",
-                supported_sections=frozenset({"injects", "events", "scripts", "stories", "workflows"}),
-                supports_workflows=True,
-                supports_assertion_refs=True,
-                supports_inject_bindings=True,
-                supported_workflow_features=frozenset(
-                    {
-                        WorkflowFeature.DECISION,
-                        WorkflowFeature.SWITCH,
-                        WorkflowFeature.CALL,
-                        WorkflowFeature.PARALLEL_BARRIER,
-                        WorkflowFeature.RETRY,
-                        WorkflowFeature.FAILURE_TRANSITIONS,
-                        WorkflowFeature.CANCELLATION,
-                        WorkflowFeature.TIMEOUTS,
-                        WorkflowFeature.COMPENSATION,
-                    }
-                ),
-                supported_workflow_state_predicates=frozenset(
-                    {
-                        WorkflowStatePredicateFeature.OUTCOME_MATCHING,
-                        WorkflowStatePredicateFeature.ATTEMPT_COUNTS,
-                    }
-                ),
-            ),
-            evaluator=EvaluatorCapabilities(
-                name="stub-evaluator",
-                supported_sections=frozenset({"conditions", "propositions", "assertions", "objectives"}),
-                supports_scoring=True,
-                supports_objectives=True,
-                supported_predicate_families=frozenset({"presence", "boolean", "string", "number"}),
-                supported_quantifiers=frozenset({"all", "any", "at_least"}),
-                supported_truth_outcomes=frozenset({"true", "false", "unknown", "unsupported"}),
-                supported_evidence_channels=frozenset({"log", "api_response", "file_artifact"}),
-                supported_time_domains=frozenset({"scenario_time"}),
-                preserves_binding_provenance=True,
-            ),
-            participant_runtime=(
-                ParticipantRuntimeCapabilities(
-                    name="stub-participant-runtime",
-                    supported_participant_roles=REFERENCE_PARTICIPANT_ROLES,
-                    supported_behavior_features=REFERENCE_PARTICIPANT_BEHAVIOR_FEATURES,
-                    supported_interaction_features=REFERENCE_PARTICIPANT_INTERACTION_FEATURES,
-                )
-                if with_participant_runtime
-                else None
-            ),
-            observation=(
-                ObservationCapabilities(
-                    name="stub-observation",
-                    supported_capture_kinds=frozenset({"artifact", "log", "observation", "telemetry", "trace"}),
-                    supported_channel_kinds=frozenset(
-                        {
-                            "backend-log",
-                            "evaluation-history",
-                            "file-artifact",
-                            "participant-observation",
-                            "runtime-snapshot",
-                            "workflow-history",
-                        }
-                    ),
-                    supported_evidence_contracts=frozenset(
-                        {
-                            "experiment-capture-spec-v1",
-                            "experiment-evidence-record-v1",
-                            "experiment-derived-measure-v1",
-                            "experiment-run-v1",
-                        }
-                    ),
-                    supported_media_types=frozenset({"application/json", "text/plain"}),
-                    supported_sealing_modes=frozenset({"digest", "immutable-store"}),
-                    supports_redaction=True,
-                    supports_loss_disclosure=True,
-                    supports_chain_of_custody=False,
-                )
-                if with_observation
-                else None
-            ),
+        compatible_processors=frozenset({"aces-reference-processor"}),
+        concept_bindings=_stub_concept_bindings(
+            with_participant_runtime=with_participant_runtime,
+            with_observation=with_observation,
+        ),
+        realization_support=_stub_realization_support(),
+        capabilities=_stub_capabilities(
+            with_participant_runtime=with_participant_runtime,
+            with_observation=with_observation,
         ),
     )
