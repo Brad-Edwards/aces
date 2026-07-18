@@ -56,7 +56,7 @@ Rationale:
   and
   `docs/decisions/adrs/adr-074-experiment-authoring-input-contract-boundary.md`.
 - Machine-readable schemas: `contracts/schemas/experiment-core/`.
-- Contract source: `implementations/python/packages/aces_contracts/contracts.py`.
+- Contract source: `implementations/python/packages/aces_contracts/contracts/`.
 - Schema generation: `tools/generate_contract_schemas.py`.
 - Fixture corpus: `contracts/fixtures/experiment-core/`.
 

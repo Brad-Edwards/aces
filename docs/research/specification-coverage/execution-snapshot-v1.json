@@ -9,7 +9,7 @@
     {
       "surface_id": "contract-models",
       "path": "implementations/python/packages/aces_contracts",
-      "content_sha256": "00d0e745c69f6a1add1867750d851a4445705eeea995d2e0cd9b748163a2ab9e"
+      "content_sha256": "87f35f1e6a4b291a5ba0640ecedb34686e9f50ba6dea842d35f87510888d0f30"
     },
     {
       "surface_id": "processor-pipeline",

@@ -94,7 +94,7 @@ The participant behavior evidence set is
 - manager contract validation: `implementations/python/packages/aces_processor/manager.py`
 - backend example: `implementations/python/packages/aces_backend_stubs/stubs.py`
 - participant capability contract model:
-  `implementations/python/packages/aces_contracts/contracts.py`
+  `implementations/python/packages/aces_contracts/contracts/`
 - participant capability runtime declaration:
   `implementations/python/packages/aces_backend_protocols/capabilities.py`
 - backend manifest renderer:
