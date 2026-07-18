@@ -129,7 +129,15 @@ jobs:
   sonar:
     runs-on: ubuntu-latest
     needs: [verify]
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    # SonarCloud needs SONAR_TOKEN, which GitHub withholds from both forked-PR
+    # runs and Dependabot-triggered runs (Actions secrets are unavailable in
+    # those contexts). Skip cleanly there so the required check reports
+    # "skipped" (treated as passing by branch protection) instead of a spurious
+    # "Not authorized" auth failure.
+    if: >-
+      (github.event_name != 'pull_request'
+      || github.event.pull_request.head.repo.full_name == github.repository)
+      && github.actor != 'dependabot[bot]'
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
         with:
@@ -139,6 +147,6 @@ jobs:
           name: coverage-report
           path: implementations/python/
       - name: SonarCloud Scan
-        uses: SonarSource/sonarqube-scan-action@713881670b6b3676cda39549040e2d88c70d582e # v8
+        uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f # v8
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
