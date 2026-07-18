@@ -1,9 +1,11 @@
 """Resource collection from a compiled runtime model."""
 
-from ..models import PlannedResource, RuntimeDomain, RuntimeModel, resource_payload
+from ..models import PlannedResource, ResolvedResource, RuntimeDomain, RuntimeModel, resource_payload
 
 
-def _planned_resource(address: str, domain: RuntimeDomain, resource_type: str, resource) -> PlannedResource:
+def _planned_resource(
+    address: str, domain: RuntimeDomain, resource_type: str, resource: ResolvedResource
+) -> PlannedResource:
     return PlannedResource(
         address=address,
         domain=domain,

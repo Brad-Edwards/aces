@@ -5,7 +5,7 @@ from aces_sdl.infrastructure import MINIMUM_NODE_COUNT
 from aces_sdl.nodes import OSFamily
 from aces_sdl.value_parsing import extract_variable_name, parse_enum_or_var, parse_int_or_var
 
-from ..models import CompiledCapabilityConstraint, Diagnostic, RuntimeModel
+from ..models import CompiledCapabilityConstraint, Diagnostic, NodeRuntime, ResolvedResource, RuntimeModel
 
 _COUNT_DOMAIN_INVALID = "provisioner.count-variable-domain-invalid"
 _OS_FAMILY_DOMAIN_INVALID = "provisioner.os-family-variable-domain-invalid"
@@ -36,6 +36,28 @@ def _error_diagnostic(code: str, address: str, message: str) -> Diagnostic:
     )
 
 
+def _os_allowed_value(
+    raw_value: str | int | float | bool,
+    variable_name: str,
+    address: str,
+) -> tuple[str | None, Diagnostic | None]:
+    try:
+        parsed = parse_enum_or_var(raw_value, OSFamily, field_name="os")
+    except ValueError as exc:
+        message = f"Variable '{variable_name}' allowed_values contain value {raw_value!r} invalid for nodes.os: {exc}."
+    else:
+        if extract_variable_name(parsed) is not None:
+            message = f"Variable '{variable_name}' has a non-concrete nodes.os domain."
+        elif isinstance(parsed, OSFamily):
+            return parsed.value, None
+        else:
+            message = (
+                f"Variable '{variable_name}' allowed_values contain value {raw_value!r} "
+                "that could not be validated for nodes.os."
+            )
+    return None, _error_diagnostic(_OS_FAMILY_DOMAIN_INVALID, address, message)
+
+
 def _validate_os_allowed_values(
     variable_name: str,
     allowed_values: tuple[str | int | float | bool, ...],
@@ -44,68 +66,47 @@ def _validate_os_allowed_values(
 ) -> tuple[tuple[str, ...] | None, Diagnostic | None]:
     validated_values: list[str] = []
     for raw_value in allowed_values:
-        try:
-            parsed = parse_enum_or_var(raw_value, OSFamily, field_name="os")
-        except ValueError as exc:
-            return None, _error_diagnostic(
-                _OS_FAMILY_DOMAIN_INVALID,
-                address,
-                (f"Variable '{variable_name}' allowed_values contain value {raw_value!r} invalid for nodes.os: {exc}."),
-            )
-        if extract_variable_name(parsed) is not None:
-            return None, _error_diagnostic(
-                _OS_FAMILY_DOMAIN_INVALID,
-                address,
-                f"Variable '{variable_name}' has a non-concrete nodes.os domain.",
-            )
-        if isinstance(parsed, OSFamily):
-            validated_values.append(parsed.value)
-            continue
-        return None, _error_diagnostic(
-            _OS_FAMILY_DOMAIN_INVALID,
-            address,
-            (
-                "Variable "
-                f"'{variable_name}' allowed_values contain value {raw_value!r} "
-                "that could not be validated for nodes.os."
-            ),
-        )
+        value, error = _os_allowed_value(raw_value, variable_name, address)
+        if error is not None:
+            return None, error
+        validated_values.append(value)  # value is a concrete str when error is None
 
     return tuple(validated_values), None
 
 
-def _validate_node_os_family(
-    model: RuntimeModel,
-    node,
+def _node_os_without_constraint(
+    node: NodeRuntime,
     supported_os_families: frozenset[str],
 ) -> list[Diagnostic]:
-    if not node.os_family:
-        return []
-
-    constraint = _capability_constraint(model, address=node.address, concern="nodes.os")
-    if constraint is None:
-        unresolved = extract_variable_name(node.os_family)
-        if unresolved is not None:
-            return [
-                _error_diagnostic(
-                    "provisioner.os-family-variable-ref-unbound",
-                    node.address,
-                    (
-                        "Provisioner capability validation cannot resolve undeclared "
-                        f"variable '{unresolved}' referenced by nodes.os."
-                    ),
-                )
-            ]
-        if node.os_family in supported_os_families:
-            return []
+    unresolved = extract_variable_name(node.os_family)
+    if unresolved is not None:
         return [
-            Diagnostic(
-                code="provisioner.unsupported-os-family",
-                domain="provisioning",
-                address=node.address,
-                message=f"Provisioner does not support OS family '{node.os_family}'.",
+            _error_diagnostic(
+                "provisioner.os-family-variable-ref-unbound",
+                node.address,
+                (
+                    "Provisioner capability validation cannot resolve undeclared "
+                    f"variable '{unresolved}' referenced by nodes.os."
+                ),
             )
         ]
+    if node.os_family in supported_os_families:
+        return []
+    return [
+        Diagnostic(
+            code="provisioner.unsupported-os-family",
+            domain="provisioning",
+            address=node.address,
+            message=f"Provisioner does not support OS family '{node.os_family}'.",
+        )
+    ]
+
+
+def _node_os_with_constraint(
+    constraint: CompiledCapabilityConstraint,
+    node: NodeRuntime,
+    supported_os_families: frozenset[str],
+) -> list[Diagnostic]:
     variable_name = ".".join(constraint.parameter)
     finite_domain, domain_error = _validate_os_allowed_values(
         variable_name,
@@ -114,11 +115,13 @@ def _validate_node_os_family(
     )
     if domain_error is not None:
         return [domain_error]
+
+    diagnostics: list[Diagnostic] = []
     if finite_domain is not None:
         unsupported_values = sorted({value for value in finite_domain if value not in supported_os_families})
         if unsupported_values:
             rendered = ", ".join(repr(value) for value in unsupported_values)
-            return [
+            diagnostics.append(
                 Diagnostic(
                     code="provisioner.unsupported-os-family",
                     domain="provisioning",
@@ -128,10 +131,51 @@ def _validate_node_os_family(
                         f"variable '{variable_name}': {rendered}."
                     ),
                 )
-            ]
+            )
+    return diagnostics
+
+
+def _validate_node_os_family(
+    model: RuntimeModel,
+    node: NodeRuntime,
+    supported_os_families: frozenset[str],
+) -> list[Diagnostic]:
+    if not node.os_family:
         return []
 
-    return []
+    constraint = _capability_constraint(model, address=node.address, concern="nodes.os")
+    if constraint is None:
+        return _node_os_without_constraint(node, supported_os_families)
+    return _node_os_with_constraint(constraint, node, supported_os_families)
+
+
+def _count_allowed_value(
+    raw_value: str | int | float | bool,
+    variable_name: str,
+    address: str,
+) -> tuple[int | None, Diagnostic | None]:
+    try:
+        parsed = parse_int_or_var(
+            raw_value,
+            minimum=MINIMUM_NODE_COUNT,
+            field_name="count",
+        )
+    except ValueError as exc:
+        message = (
+            f"Variable '{variable_name}' allowed_values contain value {raw_value!r} "
+            f"invalid for infrastructure.count: {exc}."
+        )
+    else:
+        if extract_variable_name(parsed) is not None:
+            message = f"Variable '{variable_name}' has a non-concrete infrastructure.count domain."
+        elif isinstance(parsed, int):
+            return parsed, None
+        else:
+            message = (
+                f"Variable '{variable_name}' allowed_values contain value {raw_value!r} "
+                "that could not be validated for infrastructure.count."
+            )
+    return None, _error_diagnostic(_COUNT_DOMAIN_INVALID, address, message)
 
 
 def _validate_count_allowed_values(
@@ -142,47 +186,51 @@ def _validate_count_allowed_values(
 ) -> tuple[int | None, Diagnostic | None]:
     validated_values: list[int] = []
     for raw_value in allowed_values:
-        try:
-            parsed = parse_int_or_var(
-                raw_value,
-                minimum=MINIMUM_NODE_COUNT,
-                field_name="count",
-            )
-        except ValueError as exc:
-            return None, _error_diagnostic(
-                _COUNT_DOMAIN_INVALID,
-                address,
-                (
-                    "Variable "
-                    f"'{variable_name}' allowed_values contain value {raw_value!r} "
-                    f"invalid for infrastructure.count: {exc}."
-                ),
-            )
-        if extract_variable_name(parsed) is not None:
-            return None, _error_diagnostic(
-                _COUNT_DOMAIN_INVALID,
-                address,
-                f"Variable '{variable_name}' has a non-concrete infrastructure.count domain.",
-            )
-        if isinstance(parsed, int):
-            validated_values.append(parsed)
-            continue
-        return None, _error_diagnostic(
-            _COUNT_DOMAIN_INVALID,
-            address,
-            (
-                "Variable "
-                f"'{variable_name}' allowed_values contain value {raw_value!r} "
-                "that could not be validated for infrastructure.count."
-            ),
-        )
+        value, error = _count_allowed_value(raw_value, variable_name, address)
+        if error is not None:
+            return None, error
+        validated_values.append(value)  # value is a concrete int when error is None
 
     return max(validated_values), None
 
 
+def _count_without_constraint(
+    count: object,
+    resource: ResolvedResource,
+) -> tuple[int | None, Diagnostic | None]:
+    if isinstance(count, int):
+        return count, None
+    unresolved = extract_variable_name(count) if isinstance(count, str) else None
+    if unresolved is None:
+        return None, None
+    return None, _error_diagnostic(
+        "provisioner.count-variable-ref-unbound",
+        resource.address,
+        (
+            "Provisioner capability validation cannot resolve undeclared "
+            f"variable '{unresolved}' referenced by infrastructure.count."
+        ),
+    )
+
+
+def _count_with_constraint(
+    constraint: CompiledCapabilityConstraint,
+    resource: ResolvedResource,
+) -> tuple[int | None, Diagnostic | None]:
+    variable_name = ".".join(constraint.parameter)
+    finite_upper_bound, domain_error = _validate_count_allowed_values(
+        variable_name,
+        constraint.allowed_values,
+        address=resource.address,
+    )
+    if domain_error is not None:
+        return None, domain_error
+    return finite_upper_bound, None
+
+
 def _resource_count_upper_bound(
     model: RuntimeModel,
-    resource,
+    resource: ResolvedResource,
 ) -> tuple[int | None, Diagnostic | None]:
     count = resource.spec.get("infrastructure", {}).get("count", 1)
 
@@ -192,32 +240,8 @@ def _resource_count_upper_bound(
         concern="infrastructure.count",
     )
     if constraint is None:
-        if isinstance(count, int):
-            return count, None
-        unresolved = extract_variable_name(count) if isinstance(count, str) else None
-        if unresolved is None:
-            return None, None
-        return None, _error_diagnostic(
-            "provisioner.count-variable-ref-unbound",
-            resource.address,
-            (
-                "Provisioner capability validation cannot resolve undeclared "
-                f"variable '{unresolved}' referenced by infrastructure.count."
-            ),
-        )
-
-    variable_name = ".".join(constraint.parameter)
-    finite_upper_bound, domain_error = _validate_count_allowed_values(
-        variable_name,
-        constraint.allowed_values,
-        address=resource.address,
-    )
-    if domain_error is not None:
-        return None, domain_error
-    if finite_upper_bound is not None:
-        return finite_upper_bound, None
-
-    return None, None
+        return _count_without_constraint(count, resource)
+    return _count_with_constraint(constraint, resource)
 
 
 def _account_features(account_spec: dict[str, object]) -> set[str]:

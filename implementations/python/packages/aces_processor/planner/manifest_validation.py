@@ -1,15 +1,15 @@
 """Backend-manifest capability validation for compiled runtime models."""
 
-from aces_backend_protocols.capabilities import BackendManifest
+from aces_backend_protocols.capabilities import BackendManifest, OrchestratorCapabilities, ProvisionerCapabilities
 
 from ..models import Diagnostic, RuntimeModel
 from .capability_domains import _account_features, _resource_count_upper_bound, _validate_node_os_family
 
+_ORCHESTRATION_WORKFLOWS_ADDRESS = "orchestration.workflows"
 
-def _validate_manifest(model: RuntimeModel, manifest: BackendManifest) -> list[Diagnostic]:
+
+def _validate_acls(model: RuntimeModel, provisioner: ProvisionerCapabilities) -> list[Diagnostic]:
     diagnostics: list[Diagnostic] = []
-    provisioner = manifest.provisioner
-
     for resource in [*model.networks.values(), *model.node_deployments.values()]:
         if resource.spec.get("infrastructure", {}).get("acls") and not provisioner.supports_acls:
             diagnostics.append(
@@ -20,7 +20,11 @@ def _validate_manifest(model: RuntimeModel, manifest: BackendManifest) -> list[D
                     message="Provisioner does not support ACL declarations.",
                 )
             )
+    return diagnostics
 
+
+def _validate_switch_support(model: RuntimeModel, provisioner: ProvisionerCapabilities) -> list[Diagnostic]:
+    diagnostics: list[Diagnostic] = []
     for network in model.networks.values():
         if "switch" not in provisioner.supported_node_types:
             diagnostics.append(
@@ -31,6 +35,11 @@ def _validate_manifest(model: RuntimeModel, manifest: BackendManifest) -> list[D
                     message="Provisioner does not support switch/network nodes.",
                 )
             )
+    return diagnostics
+
+
+def _validate_node_type_support(model: RuntimeModel, provisioner: ProvisionerCapabilities) -> list[Diagnostic]:
+    diagnostics: list[Diagnostic] = []
     for node in model.node_deployments.values():
         if node.node_type and node.node_type not in provisioner.supported_node_types:
             diagnostics.append(
@@ -48,17 +57,23 @@ def _validate_manifest(model: RuntimeModel, manifest: BackendManifest) -> list[D
                 provisioner.supported_os_families,
             )
         )
+    return diagnostics
 
+
+def _validate_total_node_count(model: RuntimeModel, provisioner: ProvisionerCapabilities) -> list[Diagnostic]:
+    if provisioner.max_total_nodes is None:
+        return []
+
+    diagnostics: list[Diagnostic] = []
     total_nodes = 0
-    if provisioner.max_total_nodes is not None:
-        for resource in [*model.networks.values(), *model.node_deployments.values()]:
-            count_upper_bound, warning = _resource_count_upper_bound(model, resource)
-            if warning is not None:
-                diagnostics.append(warning)
-            if count_upper_bound is not None:
-                total_nodes += count_upper_bound
+    for resource in [*model.networks.values(), *model.node_deployments.values()]:
+        count_upper_bound, warning = _resource_count_upper_bound(model, resource)
+        if warning is not None:
+            diagnostics.append(warning)
+        if count_upper_bound is not None:
+            total_nodes += count_upper_bound
 
-    if provisioner.max_total_nodes is not None and total_nodes > provisioner.max_total_nodes:
+    if total_nodes > provisioner.max_total_nodes:
         diagnostics.append(
             Diagnostic(
                 code="provisioner.max-total-nodes-exceeded",
@@ -70,7 +85,11 @@ def _validate_manifest(model: RuntimeModel, manifest: BackendManifest) -> list[D
                 ),
             )
         )
+    return diagnostics
 
+
+def _validate_content_type_support(model: RuntimeModel, provisioner: ProvisionerCapabilities) -> list[Diagnostic]:
+    diagnostics: list[Diagnostic] = []
     for content in model.content_placements.values():
         content_type = str(content.spec.get("type", ""))
         if content_type and content_type not in provisioner.supported_content_types:
@@ -82,17 +101,22 @@ def _validate_manifest(model: RuntimeModel, manifest: BackendManifest) -> list[D
                     message=f"Provisioner does not support content type '{content_type}'.",
                 )
             )
+    return diagnostics
 
+
+def _validate_account_support(model: RuntimeModel, provisioner: ProvisionerCapabilities) -> list[Diagnostic]:
     if model.account_placements and not provisioner.supports_accounts:
-        diagnostics.append(
+        return [
             Diagnostic(
                 code="provisioner.accounts-unsupported",
                 domain="provisioning",
                 address="provision.accounts",
                 message="Provisioner does not support accounts.",
             )
-        )
-    elif provisioner.supports_accounts:
+        ]
+
+    diagnostics: list[Diagnostic] = []
+    if provisioner.supports_accounts:
         for account in model.account_placements.values():
             for feature in sorted(_account_features(account.spec)):
                 if feature not in provisioner.supported_account_features:
@@ -104,7 +128,13 @@ def _validate_manifest(model: RuntimeModel, manifest: BackendManifest) -> list[D
                             message=f"Provisioner does not support account feature '{feature}'.",
                         )
                     )
+    return diagnostics
 
+
+def _validate_artifact_and_volume_support(
+    model: RuntimeModel, provisioner: ProvisionerCapabilities
+) -> list[Diagnostic]:
+    diagnostics: list[Diagnostic] = []
     if model.generated_artifacts and not provisioner.supports_generated_artifacts:
         diagnostics.append(
             Diagnostic(
@@ -123,7 +153,111 @@ def _validate_manifest(model: RuntimeModel, manifest: BackendManifest) -> list[D
                 message="Provisioner does not support persistent volumes.",
             )
         )
+    return diagnostics
 
+
+def _orchestrator_section_support(
+    orchestration_sections: dict[str, bool], orchestrator: OrchestratorCapabilities
+) -> list[Diagnostic]:
+    diagnostics: list[Diagnostic] = []
+    for section, used in orchestration_sections.items():
+        if used and section not in orchestrator.supported_sections:
+            diagnostics.append(
+                Diagnostic(
+                    code="orchestrator.unsupported-section",
+                    domain="orchestration",
+                    address=f"orchestration.{section}",
+                    message=f"Orchestrator does not support '{section}'.",
+                )
+            )
+    return diagnostics
+
+
+def _orchestrator_workflow_support(model: RuntimeModel, orchestrator: OrchestratorCapabilities) -> list[Diagnostic]:
+    diagnostics: list[Diagnostic] = []
+    if model.workflows and not orchestrator.supports_workflows:
+        diagnostics.append(
+            Diagnostic(
+                code="orchestrator.workflows-unsupported",
+                domain="orchestration",
+                address=_ORCHESTRATION_WORKFLOWS_ADDRESS,
+                message="Orchestrator does not support workflows.",
+            )
+        )
+    workflow_features = sorted(
+        {feature for workflow in model.workflows.values() for feature in workflow.required_features},
+        key=lambda feature: feature.value,
+    )
+    for feature in workflow_features:
+        if feature in orchestrator.supported_workflow_features:
+            continue
+        diagnostics.append(
+            Diagnostic(
+                code="orchestrator.workflow-feature-unsupported",
+                domain="orchestration",
+                address=_ORCHESTRATION_WORKFLOWS_ADDRESS,
+                message=(f"Orchestrator does not support workflow feature '{feature.value}'."),
+            )
+        )
+    return diagnostics
+
+
+def _orchestrator_assertion_ref_support(
+    model: RuntimeModel, orchestrator: OrchestratorCapabilities
+) -> list[Diagnostic]:
+    orchestration_uses_assertion_refs = any(event.assertion_addresses for event in model.events.values()) or any(
+        addresses for workflow in model.workflows.values() for addresses in workflow.step_assertion_addresses.values()
+    )
+    if orchestration_uses_assertion_refs and not orchestrator.supports_assertion_refs:
+        return [
+            Diagnostic(
+                code="orchestrator.assertion-refs-unsupported",
+                domain="orchestration",
+                address="orchestration.assertion-refs",
+                message=("Orchestrator does not support assertion-gated events or workflow predicates."),
+            )
+        ]
+    return []
+
+
+def _orchestrator_state_predicate_support(
+    model: RuntimeModel, orchestrator: OrchestratorCapabilities
+) -> list[Diagnostic]:
+    required_state_predicate_features = sorted(
+        {feature for workflow in model.workflows.values() for feature in workflow.required_state_predicate_features},
+        key=lambda feature: feature.value,
+    )
+    diagnostics: list[Diagnostic] = []
+    for feature in required_state_predicate_features:
+        if feature in orchestrator.supported_workflow_state_predicates:
+            continue
+        diagnostics.append(
+            Diagnostic(
+                code="orchestrator.step-state-predicate-feature-unsupported",
+                domain="orchestration",
+                address=_ORCHESTRATION_WORKFLOWS_ADDRESS,
+                message=(f"Orchestrator does not support workflow state predicate feature '{feature.value}'."),
+            )
+        )
+    return diagnostics
+
+
+def _orchestrator_inject_binding_support(
+    model: RuntimeModel, orchestrator: OrchestratorCapabilities
+) -> list[Diagnostic]:
+    if model.inject_bindings and not orchestrator.supports_inject_bindings:
+        return [
+            Diagnostic(
+                code="orchestrator.inject-bindings-unsupported",
+                domain="orchestration",
+                address="orchestration.injects",
+                message="Orchestrator does not support node-bound injects.",
+            )
+        ]
+    return []
+
+
+def _validate_orchestration_support(model: RuntimeModel, manifest: BackendManifest) -> list[Diagnostic]:
     orchestration_sections = {
         "injects": bool(model.injects or model.inject_bindings),
         "events": bool(model.events),
@@ -131,132 +265,83 @@ def _validate_manifest(model: RuntimeModel, manifest: BackendManifest) -> list[D
         "stories": bool(model.stories),
         "workflows": bool(model.workflows),
     }
-    if any(orchestration_sections.values()):
-        if manifest.orchestrator is None:
-            diagnostics.append(
-                Diagnostic(
-                    code="orchestrator.missing",
-                    domain="orchestration",
-                    address="orchestration",
-                    message="Scenario requires orchestration support, but no orchestrator is configured.",
-                )
-            )
-        else:
-            for section, used in orchestration_sections.items():
-                if used and section not in manifest.orchestrator.supported_sections:
-                    diagnostics.append(
-                        Diagnostic(
-                            code="orchestrator.unsupported-section",
-                            domain="orchestration",
-                            address=f"orchestration.{section}",
-                            message=f"Orchestrator does not support '{section}'.",
-                        )
-                    )
-            if model.workflows and not manifest.orchestrator.supports_workflows:
-                diagnostics.append(
-                    Diagnostic(
-                        code="orchestrator.workflows-unsupported",
-                        domain="orchestration",
-                        address="orchestration.workflows",
-                        message="Orchestrator does not support workflows.",
-                    )
-                )
-            workflow_features = sorted(
-                {feature for workflow in model.workflows.values() for feature in workflow.required_features},
-                key=lambda feature: feature.value,
-            )
-            for feature in workflow_features:
-                if feature in manifest.orchestrator.supported_workflow_features:
-                    continue
-                diagnostics.append(
-                    Diagnostic(
-                        code="orchestrator.workflow-feature-unsupported",
-                        domain="orchestration",
-                        address="orchestration.workflows",
-                        message=(f"Orchestrator does not support workflow feature '{feature.value}'."),
-                    )
-                )
-            orchestration_uses_assertion_refs = any(
-                event.assertion_addresses for event in model.events.values()
-            ) or any(
-                addresses
-                for workflow in model.workflows.values()
-                for addresses in workflow.step_assertion_addresses.values()
-            )
-            if orchestration_uses_assertion_refs and not manifest.orchestrator.supports_assertion_refs:
-                diagnostics.append(
-                    Diagnostic(
-                        code="orchestrator.assertion-refs-unsupported",
-                        domain="orchestration",
-                        address="orchestration.assertion-refs",
-                        message=("Orchestrator does not support assertion-gated events or workflow predicates."),
-                    )
-                )
-            required_state_predicate_features = sorted(
-                {
-                    feature
-                    for workflow in model.workflows.values()
-                    for feature in workflow.required_state_predicate_features
-                },
-                key=lambda feature: feature.value,
-            )
-            for feature in required_state_predicate_features:
-                if feature in manifest.orchestrator.supported_workflow_state_predicates:
-                    continue
-                diagnostics.append(
-                    Diagnostic(
-                        code="orchestrator.step-state-predicate-feature-unsupported",
-                        domain="orchestration",
-                        address="orchestration.workflows",
-                        message=(f"Orchestrator does not support workflow state predicate feature '{feature.value}'."),
-                    )
-                )
-            if model.inject_bindings and not manifest.orchestrator.supports_inject_bindings:
-                diagnostics.append(
-                    Diagnostic(
-                        code="orchestrator.inject-bindings-unsupported",
-                        domain="orchestration",
-                        address="orchestration.injects",
-                        message="Orchestrator does not support node-bound injects.",
-                    )
-                )
+    if not any(orchestration_sections.values()):
+        return []
 
+    orchestrator = manifest.orchestrator
+    if orchestrator is None:
+        return [
+            Diagnostic(
+                code="orchestrator.missing",
+                domain="orchestration",
+                address="orchestration",
+                message="Scenario requires orchestration support, but no orchestrator is configured.",
+            )
+        ]
+
+    diagnostics: list[Diagnostic] = []
+    diagnostics.extend(_orchestrator_section_support(orchestration_sections, orchestrator))
+    diagnostics.extend(_orchestrator_workflow_support(model, orchestrator))
+    diagnostics.extend(_orchestrator_assertion_ref_support(model, orchestrator))
+    diagnostics.extend(_orchestrator_state_predicate_support(model, orchestrator))
+    diagnostics.extend(_orchestrator_inject_binding_support(model, orchestrator))
+    return diagnostics
+
+
+def _validate_evaluation_support(model: RuntimeModel, manifest: BackendManifest) -> list[Diagnostic]:
     evaluation_sections = {
         "conditions": bool(model.condition_bindings),
         "propositions": bool(model.propositions),
         "assertions": bool(model.assertions),
         "objectives": bool(model.objectives),
     }
-    if any(evaluation_sections.values()):
-        if not manifest.has_evaluator:
+    if not any(evaluation_sections.values()):
+        return []
+
+    if not manifest.has_evaluator:
+        return [
+            Diagnostic(
+                code="evaluator.missing",
+                domain="evaluation",
+                address="evaluation",
+                message="Scenario requires evaluation support, but no evaluator is configured.",
+            )
+        ]
+
+    diagnostics: list[Diagnostic] = []
+    supported_sections = manifest.evaluator_supported_sections
+    for section, used in evaluation_sections.items():
+        if used and section not in supported_sections:
             diagnostics.append(
                 Diagnostic(
-                    code="evaluator.missing",
+                    code="evaluator.unsupported-section",
                     domain="evaluation",
-                    address="evaluation",
-                    message="Scenario requires evaluation support, but no evaluator is configured.",
+                    address=f"evaluation.{section}",
+                    message=f"Evaluator does not support '{section}'.",
                 )
             )
-        else:
-            supported_sections = manifest.evaluator_supported_sections
-            for section, used in evaluation_sections.items():
-                if used and section not in supported_sections:
-                    diagnostics.append(
-                        Diagnostic(
-                            code="evaluator.unsupported-section",
-                            domain="evaluation",
-                            address=f"evaluation.{section}",
-                            message=f"Evaluator does not support '{section}'.",
-                        )
-                    )
-            if model.objectives and not manifest.supports_objectives:
-                diagnostics.append(
-                    Diagnostic(
-                        code="evaluator.objectives-unsupported",
-                        domain="evaluation",
-                        address="evaluation.objectives",
-                        message="Evaluator does not support objectives.",
-                    )
-                )
+    if model.objectives and not manifest.supports_objectives:
+        diagnostics.append(
+            Diagnostic(
+                code="evaluator.objectives-unsupported",
+                domain="evaluation",
+                address="evaluation.objectives",
+                message="Evaluator does not support objectives.",
+            )
+        )
+    return diagnostics
 
+
+def _validate_manifest(model: RuntimeModel, manifest: BackendManifest) -> list[Diagnostic]:
+    provisioner = manifest.provisioner
+    diagnostics: list[Diagnostic] = []
+    diagnostics.extend(_validate_acls(model, provisioner))
+    diagnostics.extend(_validate_switch_support(model, provisioner))
+    diagnostics.extend(_validate_node_type_support(model, provisioner))
+    diagnostics.extend(_validate_total_node_count(model, provisioner))
+    diagnostics.extend(_validate_content_type_support(model, provisioner))
+    diagnostics.extend(_validate_account_support(model, provisioner))
+    diagnostics.extend(_validate_artifact_and_volume_support(model, provisioner))
+    diagnostics.extend(_validate_orchestration_support(model, manifest))
+    diagnostics.extend(_validate_evaluation_support(model, manifest))
     return diagnostics
