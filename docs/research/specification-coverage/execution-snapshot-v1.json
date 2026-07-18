@@ -14,7 +14,7 @@
     {
       "surface_id": "processor-pipeline",
       "path": "implementations/python/packages/aces_processor",
-      "content_sha256": "c586f0288b7fcd40eca3a19f677bf54eac22baaf1208a47a76e6a2dba609f481"
+      "content_sha256": "c5c54c3732d5f6cb99260cb5e9be1e19250f135f1abb611e707939edc70feeb0"
     },
     {
       "surface_id": "sdl-pipeline",

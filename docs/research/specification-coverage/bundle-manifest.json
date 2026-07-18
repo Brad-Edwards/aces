@@ -4,7 +4,7 @@
   "protocol_path": "docs/research/specification-coverage/protocol-v1.json",
   "protocol_sha256": "e97a19e643e94c9e589dca823a63c6ce49d3329fe2a3cb888ab630838ed93125",
   "snapshot_path": "docs/research/specification-coverage/execution-snapshot-v1.json",
-  "snapshot_sha256": "954b26fa8d8db9ea9f0672486f013ac8acfdd533fe1c56a6dc5fd041dcb35b01",
+  "snapshot_sha256": "dafd207e6f2e30cd76b3ac796608d75e5be26d6e53a6b2870e696be67545b8bc",
   "analysis_path": "docs/research/specification-coverage/analysis-v1.json",
-  "analysis_sha256": "0e2eb3de4bf655ae9808bdd36e6af26ceb0f4d040b7e071e43329f6ba2197dc5"
+  "analysis_sha256": "9adc73f622a0820e6804a54b80a5cd5d31abd1f7f1cae3614b479c0c9072ddd0"
 }

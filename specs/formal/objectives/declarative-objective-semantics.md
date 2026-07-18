@@ -181,7 +181,7 @@ Avoid:
   - `implementations/python/packages/aces_processor/models/` (`ObjectiveRuntime`,
     `Diagnostic`)
 - planner ordering/refresh reconciliation over the compiled edges:
-  - `implementations/python/packages/aces_processor/planner.py`
+  - `implementations/python/packages/aces_processor/planner/`
   - `implementations/python/packages/aces_processor/semantics/planner.py`
 - implementation-facing reference note:
   `docs/explain/reference/objective-semantics.md` (governed by ADR-016)
