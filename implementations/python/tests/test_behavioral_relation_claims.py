@@ -14,7 +14,7 @@ from tools.check_behavioral_relation_claims import (
 def _valid_binding() -> dict[str, object]:
     return {
         "taxonomy_id": "aces-behavioral-relations",
-        "taxonomy_revision": "rev1",
+        "taxonomy_revision": "rev2",
         "relation_id": "bounded-probe-success",
         "subject": "Named backend fixture cases",
         "left_carrier_ref": "backend-target:stub",

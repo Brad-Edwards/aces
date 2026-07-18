@@ -1,6 +1,6 @@
 {
   "schema_version": "sdl-lineage-ledger/v1",
-  "reviewed_on": "2026-07-15",
+  "reviewed_on": "2026-07-17",
   "citations": [
     {
       "citation_id": "ocr-sdl-v0.21.2",
@@ -64,6 +64,75 @@
       "canonical_url": "https://arxiv.org/abs/2108.09118",
       "verified_on": "2026-07-12",
       "verification_evidence": "docs/research/lineage/source-audit-2026-07-12.md#cyborg"
+    },
+    {
+      "citation_id": "fagin-halpern-moses-vardi-1995",
+      "title": "Reasoning About Knowledge",
+      "authors_or_maintainer": [
+        "Ronald Fagin",
+        "Joseph Y. Halpern",
+        "Yoram Moses",
+        "Moshe Y. Vardi"
+      ],
+      "year": 1995,
+      "container_title": "MIT Press",
+      "canonical_url": "https://mitpress.mit.edu/9780262061629/reasoning-about-knowledge/",
+      "verified_on": "2026-07-17",
+      "verification_evidence": "docs/research/lineage/source-audit-2026-07-12.md#participant-information-flow-sources"
+    },
+    {
+      "citation_id": "goguen-meseguer-1982",
+      "title": "Security Policies and Security Models",
+      "authors_or_maintainer": [
+        "Joseph A. Goguen",
+        "José Meseguer"
+      ],
+      "year": 1982,
+      "container_title": "1982 IEEE Symposium on Security and Privacy",
+      "doi": "10.1109/SP.1982.10014",
+      "canonical_url": "https://doi.org/10.1109/SP.1982.10014",
+      "verified_on": "2026-07-17",
+      "verification_evidence": "docs/research/lineage/source-audit-2026-07-12.md#participant-information-flow-sources"
+    },
+    {
+      "citation_id": "sabelfeld-sands-2009",
+      "title": "Declassification: Dimensions and Principles",
+      "authors_or_maintainer": [
+        "Andrei Sabelfeld",
+        "David Sands"
+      ],
+      "year": 2009,
+      "container_title": "Journal of Computer Security 17(5)",
+      "doi": "10.3233/JCS-2009-0352",
+      "canonical_url": "https://doi.org/10.3233/JCS-2009-0352",
+      "verified_on": "2026-07-17",
+      "verification_evidence": "docs/research/lineage/source-audit-2026-07-12.md#participant-information-flow-sources"
+    },
+    {
+      "citation_id": "milner-1980",
+      "title": "A Calculus of Communicating Systems",
+      "authors_or_maintainer": [
+        "Robin Milner"
+      ],
+      "year": 1980,
+      "container_title": "Lecture Notes in Computer Science 92",
+      "doi": "10.1007/3-540-10235-3",
+      "canonical_url": "https://doi.org/10.1007/3-540-10235-3",
+      "verified_on": "2026-07-17",
+      "verification_evidence": "docs/research/lineage/source-audit-2026-07-12.md#participant-information-flow-sources"
+    },
+    {
+      "citation_id": "van-glabbeek-1990",
+      "title": "The Linear Time-Branching Time Spectrum",
+      "authors_or_maintainer": [
+        "Rob J. van Glabbeek"
+      ],
+      "year": 1990,
+      "container_title": "CONCUR 1990, LNCS 458",
+      "doi": "10.1007/BFb0039066",
+      "canonical_url": "https://doi.org/10.1007/BFb0039066",
+      "verified_on": "2026-07-17",
+      "verification_evidence": "docs/research/lineage/source-audit-2026-07-12.md#participant-information-flow-sources"
     },
     {
       "citation_id": "crack-nca-2018",
@@ -169,6 +238,46 @@
       "version_or_edition": "arXiv:2108.09118v1",
       "canonical_url": "https://arxiv.org/abs/2108.09118",
       "citation_ref": "cyborg-2021"
+    },
+    {
+      "source_id": "fagin-halpern-moses-vardi-1995",
+      "kind": "publication",
+      "title": "Reasoning About Knowledge",
+      "version_or_edition": "hardcover first edition",
+      "canonical_url": "https://mitpress.mit.edu/9780262061629/reasoning-about-knowledge/",
+      "citation_ref": "fagin-halpern-moses-vardi-1995"
+    },
+    {
+      "source_id": "goguen-meseguer-1982",
+      "kind": "publication",
+      "title": "Security Policies and Security Models",
+      "version_or_edition": "version of record",
+      "canonical_url": "https://doi.org/10.1109/SP.1982.10014",
+      "citation_ref": "goguen-meseguer-1982"
+    },
+    {
+      "source_id": "sabelfeld-sands-2009",
+      "kind": "publication",
+      "title": "Declassification: Dimensions and Principles",
+      "version_or_edition": "version of record",
+      "canonical_url": "https://doi.org/10.3233/JCS-2009-0352",
+      "citation_ref": "sabelfeld-sands-2009"
+    },
+    {
+      "source_id": "milner-1980",
+      "kind": "publication",
+      "title": "A Calculus of Communicating Systems",
+      "version_or_edition": "first edition",
+      "canonical_url": "https://doi.org/10.1007/3-540-10235-3",
+      "citation_ref": "milner-1980"
+    },
+    {
+      "source_id": "van-glabbeek-1990",
+      "kind": "publication",
+      "title": "The Linear Time-Branching Time Spectrum",
+      "version_or_edition": "published conference chapter",
+      "canonical_url": "https://doi.org/10.1007/BFb0039066",
+      "citation_ref": "van-glabbeek-1990"
     }
   ],
   "subjects": [
@@ -2386,6 +2495,66 @@
             "specs/formal/behavioral-relations/README.md"
           ],
           "compatibility_direction": "not_applicable"
+        },
+        {
+          "plane": "semantics",
+          "classification": "adapted",
+          "source_refs": [
+            "fagin-halpern-moses-vardi-1995",
+            "goguen-meseguer-1982",
+            "sabelfeld-sands-2009",
+            "milner-1980",
+            "van-glabbeek-1990"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/concept-authority/behavioral-relations-v1.json",
+              "symbol_or_pointer": "#/relations/policy-noninterference"
+            },
+            {
+              "artifact": "specs/formal/participant-semantics/information-flow-control.md",
+              "symbol_or_pointer": "Baseline Policy-Noninterference Obligation"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "Reasoning About Knowledge",
+              "symbol_or_pointer": "interpreted systems and local-state indistinguishability"
+            },
+            {
+              "artifact": "Security Policies and Security Models",
+              "symbol_or_pointer": "noninterference security-policy model"
+            },
+            {
+              "artifact": "Declassification: Dimensions and Principles",
+              "symbol_or_pointer": "declassification dimensions and principles"
+            },
+            {
+              "artifact": "A Calculus of Communicating Systems",
+              "symbol_or_pointer": "labelled transitions and hidden tau actions"
+            },
+            {
+              "artifact": "The Linear Time-Branching Time Spectrum",
+              "symbol_or_pointer": "separation of trace and branching-time relations"
+            }
+          ],
+          "divergence": "ACES composes interpreted-system local-state indistinguishability, policy noninterference and purge, explicit declassification dimensions, and labelled-transition hidden-action discipline into a participant-, audience-, policy-revision-, scheduler/environment-, and order-relative support-set relation over ACES-native carriers. Its ordering construction remains indirectly derived through ADR-054 from Lamport happened-before, Winskel event structures, and Mazurkiewicz trace theory rather than being redefined here. ACES adds only carrier, policy-revision, marking, controller/authority, ordering, evidence, and assurance coordinates needed by the governed participant model. It does not copy source syntax, define source-compatible wire contracts, claim universal proof, or claim runtime/backend realization.",
+          "compatibility": "none",
+          "citation_refs": [
+            "fagin-halpern-moses-vardi-1995",
+            "goguen-meseguer-1982",
+            "sabelfeld-sands-2009",
+            "milner-1980",
+            "van-glabbeek-1990"
+          ],
+          "internal_authority_refs": [
+            "docs/decisions/adrs/adr-085-participant-information-flow-and-control.md",
+            "docs/decisions/adrs/adr-054-participant-runtime-observable-lifecycle.md",
+            "specs/formal/participant-semantics/information-flow-control.md",
+            "specs/formal/participant-runtime/README.md",
+            "specs/formal/behavioral-relations/README.md"
+          ],
+          "compatibility_direction": "aces_relative_to_source"
         }
       ]
     },

@@ -19,7 +19,7 @@
       "behavioral_claims": [
         {
           "taxonomy_id": "aces-behavioral-relations",
-          "taxonomy_revision": "rev1",
+          "taxonomy_revision": "rev2",
           "relation_id": "semantic-validity",
           "subject": "One SDL source",
           "left_carrier_ref": "fixture:source",

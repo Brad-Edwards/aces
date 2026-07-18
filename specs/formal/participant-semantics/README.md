@@ -12,6 +12,7 @@ This document is the issue #71 formal design artifact for:
 - `SEM-219` - Participant Tool And Affordance Semantics
 - `SEM-220` - Participant Decision-Surface Semantics
 - `SEM-226` - Participant Exposure And Visibility-Boundary Semantics
+- `SEM-230` - Participant Information-Flow And Control Semantics
 
 It is a design artifact, not an implementation artifact. It establishes the
 semantic model that later child implementation issues must realize in SDL
@@ -21,6 +22,12 @@ contracts, and tests.
 Issue #119 and ADR-083 extend the original issue #71 design with the joint
 `SEM-219`, `SEM-220`, and `SEM-226` decision-surface model. Their executable
 implementation remains owned by issues #294, #295, and #296.
+
+Issue #796 and ADR-085 add the revisioned SEM-230 composition boundary. Its
+normative model is the focused sibling specification
+[`information-flow-control.md`](information-flow-control.md); this README's
+world, view, history, action, visibility, and ordering objects remain the
+incumbent carriers that model composes.
 
 ## Current Sufficiency Finding
 
@@ -1595,6 +1602,20 @@ The obligations above refine existing I1-I17 invariants. They add no new
 this design issue. Issues #294-#296 own concrete typed bindings and negative
 fixtures that specialize the existing oracle.
 
+## SEM-230 - Participant Information-Flow And Control Semantics
+
+SEM-230 is defined in
+[`information-flow-control.md`](information-flow-control.md). The focused
+authority defines the revisioned crossing relation, participant/audience/policy
+and order-relative label projection, independent control and information-flow
+operations, dynamic purge and declassification semantics, and the exact
+baseline `policy-noninterference` obligation.
+
+The relation is bound through taxonomy revision `rev2` rather than a local
+registry. Its current assurance is definition-complete and bounded-tested but
+deliberately unproved. The test-local model can falsify finite cases; it is not
+runtime mediation, backend realization, or a universal information-flow proof.
+
 ## Required Future Verification
 
 The complete participant surface is `FM3`.
@@ -1661,6 +1682,7 @@ Future implementation PRs should still include:
 
 - ADR-022: Participant Behavior and Interaction Semantics
 - ADR-083: Participant Tool, Decision-Surface, and Exposure Semantics
+- ADR-085: Participant Information-Flow And Control
 - ADR-007: Lightweight Formal Methods Policy for Semantic Systems
 - ADR-013: Participant Episode Lifecycle Boundaries
 - ADR-016: Semantic Layer Scope and Coverage Model
@@ -1673,6 +1695,8 @@ Future implementation PRs should still include:
 - [Bernstein, Givan, Immerman, Zilberstein — The Complexity of Decentralized Control of Markov Decision Processes (Mathematics of Operations Research 27(4), 2002)](https://doi.org/10.1287/moor.27.4.819.297)
 - [Oliehoek and Amato — A Concise Introduction to Decentralized POMDPs (Springer, 2016)](https://doi.org/10.1007/978-3-319-28929-8)
 - [Kuhn — Extensive Games and the Problem of Information (Contributions to the Theory of Games II, 1953)](https://doi.org/10.1515/9781400881970-012)
+- [Goguen and Meseguer — Security Policies and Security Models (1982)](https://doi.org/10.1109/SP.1982.10014)
+- [Sabelfeld and Sands — Declassification: Dimensions and Principles (2009)](https://doi.org/10.3233/JCS-2009-0352)
 - [Fagin, Halpern, Moses, Vardi — Reasoning About Knowledge (MIT Press, 1995)](https://mitpress.mit.edu/9780262562003/reasoning-about-knowledge/)
 - [van Ditmarsch, van der Hoek, Kooi — Dynamic Epistemic Logic (Springer, 2007)](https://doi.org/10.1007/978-1-4020-5839-4)
 - [Goguen and Meseguer — Security Policies and Security Models (IEEE S&P, 1982)](https://doi.org/10.1109/SP.1982.10014)

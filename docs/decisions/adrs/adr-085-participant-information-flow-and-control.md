@@ -2,7 +2,7 @@
 
 ## Status
 
-proposed
+accepted
 
 ## Date
 
@@ -184,6 +184,15 @@ separate claims only when their own carriers, projections, quantifiers,
 assumptions, and evidence exist. A finite negative-leakage suite, passing
 backend probes, or equal sampled histories remains bounded evidence.
 
+The relation SHALL be published in the existing
+`aces-behavioral-relations` catalog at taxonomy revision `rev2`, with a
+dedicated participant-information-flow claim surface. The closed catalog
+contract remains `behavioral-relations/v1`; adding the relation changes the
+taxonomy contents, not the contract shape. Current in-repository claim
+producers SHALL advance together to `rev2`. Historical serialized `rev1`
+resolution requires the governed migration path owned by issue #802, not a
+consumer-local fallback.
+
 This ADR adopts the claim surface and assurance progression. It makes no
 universal noninterference or bisimulation claim.
 
@@ -287,3 +296,9 @@ risks and are published with issue #794.
 - [ADR-060](adr-060-participant-backend-facing-contract-surface.md)
 - [ADR-081](adr-081-behavioral-relation-taxonomy-and-claim-discipline.md)
 - [ADR-083](adr-083-participant-tool-decision-surface-and-exposure-semantics.md)
+
+## Amendments
+
+| Date | Commit/PR | Summary |
+|------|-----------|---------|
+| 2026-07-17 | #831 | Recorded ADR-085 acceptance with the SEM-230 formal authority, behavioral taxonomy revision, bounded evidence, and explicit literature-derived lineage and nonclaims. |
