@@ -97,6 +97,19 @@ uv run aces sdl resolve ../../examples/scenarios/hospital-ransomware-surgery-day
 uv run aces sdl verify-imports ../../examples/scenarios/hospital-ransomware-surgery-day.sdl.yaml
 ```
 
+Inspect a compiled execution plan as JSON:
+
+```shell
+cd implementations/python
+uv run aces processor plan ../../examples/scenarios/techvault-defensive-min.sdl.yaml --format json
+```
+
+This is a read-only dry run: it parses, compiles, and plans the scenario against
+the reference backend manifest and prints the resulting provisioning,
+orchestration, and evaluation plans as published-contract JSON. It does not
+apply or start anything. Pass `--manifest <backend-manifest-v2.json>` to plan
+against an explicitly supplied backend manifest.
+
 Expose the agent-facing MCP tools:
 
 ```shell
