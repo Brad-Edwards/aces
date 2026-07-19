@@ -486,7 +486,6 @@ def _tool_affordance_boundary_issues(
     *,
     spec_name: str,
     affordance_id: str,
-    binding_ref: str,
     boundary_ref: str,
     parent_boundaries: set[str],
     participants: set[str],
@@ -521,6 +520,7 @@ def _tool_affordance_boundary_issues(
     boundary = observation_boundaries.get(boundary_ref)
     if boundary is None:
         return issues
+    binding_ref = tool_affordance_reference(spec_name, affordance_id)
     declared_refs = _observation_boundary_declared_refs(boundary)
     view_rule_refs = {str(getattr(rule, "information_ref", "")) for rule in getattr(boundary, "view_rules", []) or []}
     if binding_ref not in declared_refs or binding_ref not in view_rule_refs:
@@ -534,6 +534,18 @@ def _tool_affordance_boundary_issues(
                 boundary_name=boundary_ref,
             )
         )
+    return issues
+
+
+def _resolved_reference_issues(
+    refs: list[str],
+    is_unresolved: Callable[[object], bool],
+    build_issues: Callable[[str], list[ParticipantBehaviorIssue]],
+) -> list[ParticipantBehaviorIssue]:
+    issues: list[ParticipantBehaviorIssue] = []
+    for ref in refs:
+        if not is_unresolved(ref):
+            issues.extend(build_issues(ref))
     return issues
 
 
@@ -553,7 +565,6 @@ def _tool_affordance_reference_issues(
     seen_relations: dict[tuple[str, tuple[str, ...], tuple[str, ...]], str] = {}
     for affordance_id, binding in getattr(behavior_spec, "tool_affordances", {}).items():
         affordance_id = str(affordance_id)
-        binding_ref = tool_affordance_reference(spec_name, affordance_id)
         action_refs = [str(ref) for ref in getattr(binding, "action_contract_refs", []) or []]
         boundary_refs = [str(ref) for ref in getattr(binding, "observation_boundary_refs", []) or []]
         duplicate_issue = _tool_affordance_duplicate_issue(
@@ -567,35 +578,35 @@ def _tool_affordance_reference_issues(
         if duplicate_issue is not None:
             issues.append(duplicate_issue)
 
-        for action_ref in action_refs:
-            if is_unresolved(action_ref):
-                continue
-            issues.extend(
-                _tool_affordance_action_issues(
+        issues.extend(
+            _resolved_reference_issues(
+                action_refs,
+                is_unresolved,
+                lambda action_ref, affordance_id=affordance_id: _tool_affordance_action_issues(
                     spec_name=spec_name,
                     affordance_id=affordance_id,
                     action_ref=action_ref,
                     parent_actions=parent_actions,
                     participants=participants,
                     agents_by_name=agents_by_name,
-                )
+                ),
             )
-
-        for boundary_ref in boundary_refs:
-            if is_unresolved(boundary_ref):
-                continue
-            issues.extend(
-                _tool_affordance_boundary_issues(
+        )
+        issues.extend(
+            _resolved_reference_issues(
+                boundary_refs,
+                is_unresolved,
+                lambda boundary_ref, affordance_id=affordance_id: _tool_affordance_boundary_issues(
                     spec_name=spec_name,
                     affordance_id=affordance_id,
-                    binding_ref=binding_ref,
                     boundary_ref=boundary_ref,
                     parent_boundaries=parent_boundaries,
                     participants=participants,
                     agents_by_name=agents_by_name,
                     observation_boundaries=observation_boundaries,
-                )
+                ),
             )
+        )
     return issues
 
 
