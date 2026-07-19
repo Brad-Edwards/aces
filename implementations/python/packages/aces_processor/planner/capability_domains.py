@@ -69,7 +69,7 @@ def _validate_os_allowed_values(
         value, error = _os_allowed_value(raw_value, variable_name, address)
         if error is not None:
             return None, error
-        validated_values.append(value)  # value is a concrete str when error is None
+        validated_values.append(value)
 
     return tuple(validated_values), None
 
@@ -189,7 +189,7 @@ def _validate_count_allowed_values(
         value, error = _count_allowed_value(raw_value, variable_name, address)
         if error is not None:
             return None, error
-        validated_values.append(value)  # value is a concrete int when error is None
+        validated_values.append(value)
 
     return max(validated_values), None
 
