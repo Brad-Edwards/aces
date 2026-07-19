@@ -157,13 +157,15 @@ def test_mixed_control_mapping_keys_accept_portable_hyphenated_identifiers() -> 
 
 
 def test_mixed_control_mode_requires_explicit_declaration() -> None:
+    scenario = _scenario_yaml(include_declaration=False)
     with pytest.raises(SDLValidationError, match="mixed-control mode requires mixed_control"):
-        parse_sdl(_scenario_yaml(include_declaration=False))
+        parse_sdl(scenario)
 
 
 def test_mixed_control_declaration_requires_matching_mode() -> None:
+    scenario = _scenario_yaml(mode="autonomous")
     with pytest.raises(SDLValidationError, match="mixed_control requires behavior_mode mixed-control"):
-        parse_sdl(_scenario_yaml(mode="autonomous"))
+        parse_sdl(scenario)
 
 
 def test_mixed_control_is_not_hidden_in_raw_compiler_metadata() -> None:
@@ -207,8 +209,9 @@ def test_mixed_control_is_not_hidden_in_raw_compiler_metadata() -> None:
     ],
 )
 def test_mixed_control_controller_authority_and_scope_fail_closed(old: str, new: str, message: str) -> None:
+    scenario = _scenario_yaml().replace(old, new, 1)
     with pytest.raises(SDLValidationError, match=message):
-        parse_sdl(_scenario_yaml().replace(old, new, 1))
+        parse_sdl(scenario)
 
 
 def test_mixed_control_rejects_transitions_from_revoked_authority() -> None:
@@ -234,8 +237,9 @@ def test_mixed_control_rejects_transitions_from_revoked_authority() -> None:
     ],
 )
 def test_mixed_control_stale_and_ambiguous_decisions_fail_closed(old: str, new: str, message: str) -> None:
+    scenario = _scenario_yaml().replace(old, new, 1)
     with pytest.raises(SDLParseError, match=message):
-        parse_sdl(_scenario_yaml().replace(old, new, 1))
+        parse_sdl(scenario)
 
 
 def test_mixed_control_handoff_requires_controller_change_and_completion_evidence() -> None:

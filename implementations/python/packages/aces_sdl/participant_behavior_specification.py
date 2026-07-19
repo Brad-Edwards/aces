@@ -196,6 +196,12 @@ class MixedControlTransition(SDLModel):
 
     @model_validator(mode="after")
     def _validate_transition_shape(self) -> MixedControlTransition:
+        self._validate_transition_ordering()
+        self._validate_proposal_targeting()
+        self._validate_transition_kind_requirements()
+        return self
+
+    def _validate_transition_ordering(self) -> None:
         if not self.evidence_refs:
             raise ValueError("mixed-control transitions require evidence_refs")
         if self.valid_until_order < self.valid_from_order:
@@ -204,6 +210,8 @@ class MixedControlTransition(SDLModel):
             raise ValueError("mixed-control transition effective_order must fall within its validity interval")
         if self.resulting_state_revision != self.expected_state_revision + 1:
             raise ValueError("mixed-control transitions must advance state revision by exactly one")
+
+    def _validate_proposal_targeting(self) -> None:
         has_proposal = self.proposal_ref is not None or self.proposal_revision is not None
         if (self.proposal_ref is None) != (self.proposal_revision is None):
             raise ValueError("mixed-control proposal_ref and proposal_revision must be provided together")
@@ -211,9 +219,10 @@ class MixedControlTransition(SDLModel):
             raise ValueError(f"{self.transition_kind.value} transitions require a proposal_ref and revision")
         if self.transition_kind == MixedControlTransitionKind.PROPOSAL and has_proposal:
             raise ValueError("proposal transitions cannot target another proposal")
+
+    def _validate_transition_kind_requirements(self) -> None:
         if self.transition_kind == MixedControlTransitionKind.HANDOFF and not self.completion_evidence_refs:
             raise ValueError("handoff transitions require completion_evidence_refs")
-        return self
 
 
 class MixedControlParticipantOperation(SDLModel):
@@ -236,35 +245,47 @@ class MixedControlParticipantOperation(SDLModel):
 
     @model_validator(mode="after")
     def _validate_policy_graph(self) -> MixedControlParticipantOperation:
+        self._validate_graph_roots()
+        self._validate_controller_state_revisions()
+        ordered_transitions = self._validated_ordered_transitions()
+        self._validate_revision_continuity(ordered_transitions)
+        self._validate_proposal_links(ordered_transitions)
+        return self
+
+    def _validate_graph_roots(self) -> None:
         if not self.controller_states:
             raise ValueError("mixed_control requires controller_states")
         if not self.transitions:
             raise ValueError("mixed_control requires transitions")
         if self.initial_state_ref not in self.controller_states:
             raise ValueError("mixed_control initial_state_ref must resolve to controller_states")
-        effective_orders: set[int] = set()
-        ordered_transitions: list[tuple[PortableIdentifier, MixedControlTransition]] = []
+
+    def _validate_controller_state_revisions(self) -> None:
         for state_id, state in self.controller_states.items():
             if state.policy_revision != self.policy_revision:
                 raise ValueError(f"mixed-control controller state '{state_id}' has a stale policy revision")
+
+    def _validated_ordered_transitions(self) -> list[tuple[PortableIdentifier, MixedControlTransition]]:
+        effective_orders: set[int] = set()
+        ordered_transitions: list[tuple[PortableIdentifier, MixedControlTransition]] = []
         for transition_id, transition in self.transitions.items():
             if transition.policy_revision != self.policy_revision:
                 raise ValueError(f"mixed-control transition '{transition_id}' has a stale policy revision")
-            if (
-                transition.from_state_ref not in self.controller_states
-                or transition.to_state_ref not in self.controller_states
-            ):
+            state_refs = (transition.from_state_ref, transition.to_state_ref)
+            if any(ref not in self.controller_states for ref in state_refs):
                 raise ValueError(f"mixed-control transition '{transition_id}' has an unknown controller-state ref")
             if transition.effective_order in effective_orders:
                 raise ValueError("mixed-control transitions require unique effective_order values")
             effective_orders.add(transition.effective_order)
             ordered_transitions.append((transition_id, transition))
+        return sorted(ordered_transitions, key=lambda item: item[1].effective_order)
 
+    def _validate_revision_continuity(
+        self,
+        ordered_transitions: list[tuple[PortableIdentifier, MixedControlTransition]],
+    ) -> None:
         established_state_revisions = {(self.initial_state_ref, 0)}
-        for transition_id, transition in sorted(
-            ordered_transitions,
-            key=lambda item: item[1].effective_order,
-        ):
+        for transition_id, transition in ordered_transitions:
             expected_state = (transition.from_state_ref, transition.expected_state_revision)
             if expected_state not in established_state_revisions:
                 raise ValueError(
@@ -274,16 +295,20 @@ class MixedControlParticipantOperation(SDLModel):
                 )
             established_state_revisions.add((transition.to_state_ref, transition.resulting_state_revision))
 
+    def _validate_proposal_links(
+        self,
+        ordered_transitions: list[tuple[PortableIdentifier, MixedControlTransition]],
+    ) -> None:
         for transition_id, transition in ordered_transitions:
-            if transition.proposal_ref is not None:
-                proposal = self.transitions.get(transition.proposal_ref)
-                if proposal is None or proposal.transition_kind != MixedControlTransitionKind.PROPOSAL:
-                    raise ValueError(f"mixed-control transition '{transition_id}' proposal_ref must target a proposal")
-                if transition.proposal_revision != proposal.resulting_state_revision:
-                    raise ValueError(f"mixed-control transition '{transition_id}' has a stale proposal revision")
-                if transition.effective_order <= proposal.effective_order:
-                    raise ValueError(f"mixed-control transition '{transition_id}' must follow its proposal")
-        return self
+            if transition.proposal_ref is None:
+                continue
+            proposal = self.transitions.get(transition.proposal_ref)
+            if proposal is None or proposal.transition_kind != MixedControlTransitionKind.PROPOSAL:
+                raise ValueError(f"mixed-control transition '{transition_id}' proposal_ref must target a proposal")
+            if transition.proposal_revision != proposal.resulting_state_revision:
+                raise ValueError(f"mixed-control transition '{transition_id}' has a stale proposal revision")
+            if transition.effective_order <= proposal.effective_order:
+                raise ValueError(f"mixed-control transition '{transition_id}' must follow its proposal")
 
 
 class ParticipantBehaviorSpecification(SDLModel):

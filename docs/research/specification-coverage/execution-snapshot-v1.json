@@ -14,12 +14,12 @@
     {
       "surface_id": "processor-pipeline",
       "path": "implementations/python/packages/aces_processor",
-      "content_sha256": "ee35918ae4a39f4dd9d313d8531c9e57e3fad13f6e8cc13e04c933d10646f2f5"
+      "content_sha256": "58d351ff2d5b229a99a45c93979d5e009b4e3eaad90e5ef4cee3232107215d03"
     },
     {
       "surface_id": "sdl-pipeline",
       "path": "implementations/python/packages/aces_sdl",
-      "content_sha256": "9330b5ddfb77529b29ea8832e90a00cd32f38504af78d2e57f7597a7937979e8"
+      "content_sha256": "06d4162896300b516392fec832165ad08d0f69801590931b4b4f44439a01a310"
     }
   ],
   "execution_status": "complete",

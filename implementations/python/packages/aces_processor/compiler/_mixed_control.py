@@ -1,6 +1,6 @@
 """Mixed-control participant behavior compilation helpers."""
 
-from aces_sdl.scenario import InstantiatedScenario
+from typing import Any
 
 from ..models import (
     MixedControlControllerStateRuntime,
@@ -16,32 +16,16 @@ from .alias_index import _runtime_addresses_for_refs
 from .support import _dedupe, _dump
 
 
-def _compile_mixed_control(
-    scenario: InstantiatedScenario,
+def _compile_controller_states(
+    declaration: Any,
     *,
     spec_name: str,
-    behavior_spec: object,
+    participant_address: str,
     addressable_ref_index: dict[str, set[str]],
-) -> tuple[
-    str,
-    str,
-    str,
-    str,
-    MixedControlDispositionRulesRuntime | None,
-    tuple[MixedControlControllerStateRuntime, ...],
-    tuple[MixedControlTransitionRuntime, ...],
-    tuple[str, ...],
-]:
-    """Compile one behavior specification's mixed-control declaration."""
-    declaration = getattr(behavior_spec, "mixed_control", None)
-    if declaration is None:
-        return "", "", "", "", None, (), (), ()
-
-    participant_address = _participant_behavior_address(declaration.participant_ref)
+) -> tuple[tuple[MixedControlControllerStateRuntime, ...], tuple[str, ...]]:
     states: list[MixedControlControllerStateRuntime] = []
-    dependencies: list[str] = [participant_address]
+    dependencies: list[str] = []
     for state_id, state in sorted(declaration.controller_states.items()):
-        state_address = _mixed_control_state_address(spec_name, state_id)
         controller_address = (
             participant_address
             if state.controller_ref == "self"
@@ -63,7 +47,7 @@ def _compile_mixed_control(
         dependencies.extend(state_dependencies)
         states.append(
             MixedControlControllerStateRuntime(
-                address=state_address,
+                address=_mixed_control_state_address(spec_name, state_id),
                 name=state_id,
                 spec=_dump(state),
                 state_id=state_id,
@@ -82,12 +66,19 @@ def _compile_mixed_control(
                 refresh_dependencies=state_dependencies,
             )
         )
+    return tuple(states), _dedupe(dependencies)
 
+
+def _compile_control_transitions(
+    declaration: Any,
+    *,
+    spec_name: str,
+    addressable_ref_index: dict[str, set[str]],
+) -> tuple[tuple[MixedControlTransitionRuntime, ...], tuple[str, ...]]:
     transitions: list[MixedControlTransitionRuntime] = []
-    for transition_id, transition in sorted(
-        declaration.transitions.items(), key=lambda item: (item[1].effective_order, item[0])
-    ):
-        transition_address = _mixed_control_transition_address(spec_name, transition_id)
+    dependencies: list[str] = []
+    ordered = sorted(declaration.transitions.items(), key=lambda item: (item[1].effective_order, item[0]))
+    for transition_id, transition in ordered:
         from_state_address = _mixed_control_state_address(spec_name, transition.from_state_ref)
         to_state_address = _mixed_control_state_address(spec_name, transition.to_state_ref)
         proposal_address = (
@@ -115,7 +106,7 @@ def _compile_mixed_control(
         dependencies.extend(transition_dependencies)
         transitions.append(
             MixedControlTransitionRuntime(
-                address=transition_address,
+                address=_mixed_control_transition_address(spec_name, transition_id),
                 name=transition_id,
                 spec=_dump(transition),
                 transition_id=transition_id,
@@ -137,9 +128,11 @@ def _compile_mixed_control(
                 refresh_dependencies=transition_dependencies,
             )
         )
+    return tuple(transitions), _dedupe(dependencies)
 
-    dispositions = declaration.dispositions
-    compiled_dispositions = MixedControlDispositionRulesRuntime(
+
+def _compile_dispositions(dispositions: Any) -> MixedControlDispositionRulesRuntime:
+    return MixedControlDispositionRulesRuntime(
         duplicate=str(getattr(dispositions.duplicate, "value", dispositions.duplicate)),
         stale=str(getattr(dispositions.stale, "value", dispositions.stale)),
         revoked=str(getattr(dispositions.revoked, "value", dispositions.revoked)),
@@ -147,13 +140,47 @@ def _compile_mixed_control(
         concurrent=str(getattr(dispositions.concurrent, "value", dispositions.concurrent)),
         conflict=str(getattr(dispositions.conflict, "value", dispositions.conflict)),
     )
+
+
+def _compile_mixed_control(
+    *,
+    spec_name: str,
+    behavior_spec: object,
+    addressable_ref_index: dict[str, set[str]],
+) -> tuple[
+    str,
+    str,
+    str,
+    str,
+    MixedControlDispositionRulesRuntime | None,
+    tuple[MixedControlControllerStateRuntime, ...],
+    tuple[MixedControlTransitionRuntime, ...],
+    tuple[str, ...],
+]:
+    """Compile one behavior specification's mixed-control declaration."""
+    declaration = getattr(behavior_spec, "mixed_control", None)
+    if declaration is None:
+        return "", "", "", "", None, (), (), ()
+
+    participant_address = _participant_behavior_address(declaration.participant_ref)
+    states, state_dependencies = _compile_controller_states(
+        declaration,
+        spec_name=spec_name,
+        participant_address=participant_address,
+        addressable_ref_index=addressable_ref_index,
+    )
+    transitions, transition_dependencies = _compile_control_transitions(
+        declaration,
+        spec_name=spec_name,
+        addressable_ref_index=addressable_ref_index,
+    )
     return (
         participant_address,
         declaration.policy_revision,
         str(getattr(declaration.order_strategy, "value", declaration.order_strategy)),
         _mixed_control_state_address(spec_name, declaration.initial_state_ref),
-        compiled_dispositions,
-        tuple(states),
-        tuple(transitions),
-        _dedupe(dependencies),
+        _compile_dispositions(declaration.dispositions),
+        states,
+        transitions,
+        _dedupe([participant_address, *state_dependencies, *transition_dependencies]),
     )

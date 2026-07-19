@@ -268,7 +268,6 @@ def _compile_behavior_specifications(
             control_transitions,
             mixed_control_dependencies,
         ) = _compile_mixed_control(
-            scenario,
             spec_name=name,
             behavior_spec=behavior_spec,
             addressable_ref_index=addressable_ref_index,
