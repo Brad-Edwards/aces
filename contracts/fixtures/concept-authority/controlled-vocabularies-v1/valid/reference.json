@@ -144,6 +144,82 @@
         }
       }
     },
+    "participant-defensive-behavior-activities": {
+      "title": "Participant Defensive Behavior Activities",
+      "description": "ACES adaptations of NIST CSF 2.0 Detect, Respond, and Recover categories as governed defensive behavior classifications for behavior specifications.",
+      "source": {
+        "provenance": "adapted",
+        "authority": "NIST Cybersecurity Framework",
+        "authority_version": "2.0",
+        "source_artifact_ref": "contracts/concept-authority/nist-csf-defensive-categories-source-v1.json",
+        "source_url": "https://csrc.nist.gov/extensions/nudp/services/json/csf/download?",
+        "source_digest": "sha256:014492980e87f8ce2c98d80ea040540392de96a08980c2f9901114ad4108b2c3",
+        "citation_urls": [
+          "https://csrc.nist.gov/extensions/nudp/services/json/csf/download?",
+          "https://www.nist.gov/publications/nist-cybersecurity-framework-csf-20",
+          "https://doi.org/10.6028/NIST.CSWP.29",
+          "https://www.nist.gov/copyrights-disclaimers"
+        ],
+        "license_url": "https://www.nist.gov/copyrights-disclaimers",
+        "license_notice": "Adapted from NIST CSF 2.0. Except for material marked as copyrighted, NIST site information is public information that may be distributed or copied; appropriate source credit is requested."
+      },
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "behavior_specifications.defensive_behavior_refs"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "continuous-monitoring": {
+          "title": "Continuous Monitoring",
+          "description": "Classifies participant behavior that monitors assets for anomalies, indicators of compromise, and other potentially adverse events.",
+          "source_id": "DE.CM",
+          "source_url": "https://doi.org/10.6028/NIST.CSWP.29"
+        },
+        "adverse-event-analysis": {
+          "title": "Adverse Event Analysis",
+          "description": "Classifies participant behavior that analyzes anomalies, indicators of compromise, and other potentially adverse events to characterize events and detect cybersecurity incidents.",
+          "source_id": "DE.AE",
+          "source_url": "https://doi.org/10.6028/NIST.CSWP.29"
+        },
+        "incident-management": {
+          "title": "Incident Management",
+          "description": "Classifies participant behavior that manages responses to detected cybersecurity incidents.",
+          "source_id": "RS.MA",
+          "source_url": "https://doi.org/10.6028/NIST.CSWP.29"
+        },
+        "incident-analysis": {
+          "title": "Incident Analysis",
+          "description": "Classifies participant behavior that investigates incidents to support effective response, forensics, and recovery activities.",
+          "source_id": "RS.AN",
+          "source_url": "https://doi.org/10.6028/NIST.CSWP.29"
+        },
+        "incident-response-reporting-and-communication": {
+          "title": "Incident Response Reporting and Communication",
+          "description": "Classifies participant behavior that coordinates response activities with internal and external stakeholders.",
+          "source_id": "RS.CO",
+          "source_url": "https://doi.org/10.6028/NIST.CSWP.29"
+        },
+        "incident-mitigation": {
+          "title": "Incident Mitigation",
+          "description": "Classifies participant behavior that prevents expansion of an event and mitigates its effects.",
+          "source_id": "RS.MI",
+          "source_url": "https://doi.org/10.6028/NIST.CSWP.29"
+        },
+        "incident-recovery-plan-execution": {
+          "title": "Incident Recovery Plan Execution",
+          "description": "Classifies participant behavior that performs restoration activities for systems and services affected by cybersecurity incidents.",
+          "source_id": "RC.RP",
+          "source_url": "https://doi.org/10.6028/NIST.CSWP.29"
+        },
+        "incident-recovery-communication": {
+          "title": "Incident Recovery Communication",
+          "description": "Classifies participant behavior that coordinates restoration activities with internal and external parties.",
+          "source_id": "RC.CO",
+          "source_url": "https://doi.org/10.6028/NIST.CSWP.29"
+        }
+      }
+    },
     "participant-offensive-behavior-activities": {
       "title": "Participant Offensive Behavior Activities",
       "description": "Direct adoption of MITRE ATT&CK Enterprise tactics v19.1 as governed offensive behavior classifications for behavior specifications.",

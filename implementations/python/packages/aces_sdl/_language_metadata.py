@@ -104,6 +104,7 @@ SECTION_FIELD_COMPLETIONS = {
         "authority_scope_refs",
         "behavior_mode",
         "ai_offensive_behavior_refs",
+        "defensive_behavior_refs",
         "offensive_behavior_refs",
         "realization_profile_ref",
         "backend_feature_support_refs",

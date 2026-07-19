@@ -84,6 +84,7 @@ from .vocabulary_sources import (
     AtlasTacticsSourceModel,
     AttackEnterpriseTacticsSourceModel,
     ControlledVocabularyCatalogModel,
+    NistCsfDefensiveCategorySourceModel,
 )
 
 
@@ -115,6 +116,7 @@ def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
         "controlled-vocabularies-v1": ControlledVocabularyCatalogModel.model_json_schema(),
         "attack-enterprise-tactics-source-v1": AttackEnterpriseTacticsSourceModel.model_json_schema(),
         "atlas-tactics-source-v1": AtlasTacticsSourceModel.model_json_schema(),
+        "nist-csf-defensive-categories-source-v1": NistCsfDefensiveCategorySourceModel.model_json_schema(),
         "semantic-profile-v1": SemanticProfileModel.model_json_schema(),
         "backend-profile-v1": _backend_profile_schema_for_bundle(),
         "experiment-apparatus-context-v1": ExperimentApparatusContextModel.model_json_schema(),

@@ -18,6 +18,7 @@ from ..versions import (
     EXPERIMENT_RUN_SCHEMA_VERSION,
     EXPERIMENT_STUDY_SCHEMA_VERSION,
     EXPERIMENT_TASK_SCHEMA_VERSION,
+    NIST_CSF_DEFENSIVE_CATEGORIES_SOURCE_SCHEMA_VERSION,
     OPERATION_SCHEMA_VERSION,
     PARTICIPANT_EPISODE_STATE_SCHEMA_VERSION,
     PARTICIPANT_IMPLEMENTATION_MANIFEST_V1_SCHEMA_VERSION,
@@ -280,6 +281,8 @@ from .vocabulary_sources import (
     ControlledVocabularyDefinitionModel,
     ControlledVocabularySourceModel,
     ControlledVocabularyTermModel,
+    NistCsfDefensiveCategorySourceModel,
+    NistCsfDefensiveCategorySourceTermModel,
 )
 
 # fmt: off
@@ -297,6 +300,8 @@ __all__ = [
     "CONTROLLED_VOCABULARIES_SCHEMA_VERSION", "ControlledVocabularyCatalogModel",
     "ControlledVocabularyDefinitionModel", "ControlledVocabularySourceModel", "ControlledVocabularyTermId",
     "ControlledVocabularyTermModel", "ContractModel", "ExperimentAnalysisPlanModel",
+    "NIST_CSF_DEFENSIVE_CATEGORIES_SOURCE_SCHEMA_VERSION", "NistCsfDefensiveCategorySourceModel",
+    "NistCsfDefensiveCategorySourceTermModel",
     "ExperimentApparatusCompatibilityReferenceModel", "ExperimentApparatusComponentModel",
     "ExperimentApparatusConstraintModel", "ExperimentApparatusContextModel", "ExperimentArtifactRefModel",
     "ExperimentAugmentationDisclosureModel", "ExperimentBackendReferenceModel",
