@@ -213,7 +213,7 @@
         {"kind": "normative-spec", "path": "specs/formal/behavioral-relations/README.md", "claim": "Normative relation definitions, dimensions, claim surfaces, assurance states, and counterexamples."},
         {"kind": "published-schema", "path": "contracts/schemas/concept-authority/behavioral-relations-v1.json", "contract_id": "behavioral-relations-v1", "claim": "Published closed contract for the revisioned taxonomy."},
         {"kind": "implementation", "path": "tools/check_behavioral_relation_claims.py", "claim": "Semantic claim-binding and overclaim gate."},
-        {"kind": "conformance", "path": "implementations/python/packages/aces_conformance/conformance.py", "claim": "Backend conformance reports disclose bounded-probe relation, projection, case boundary, and nonclaims."},
+        {"kind": "conformance", "path": "implementations/python/packages/aces_conformance/conformance/__init__.py", "claim": "Backend conformance reports disclose bounded-probe relation, projection, case boundary, and nonclaims."},
         {"kind": "test", "path": "implementations/python/tests/test_behavioral_relations.py", "claim": "Catalog, binding, counterexample, and property-based relation tests."},
         {"kind": "documentation", "path": "docs/research/behavioral-relations/conflation-audit-2026-07-13.md", "claim": "Claim-surface conflation audit and remediation record."}
       ]
