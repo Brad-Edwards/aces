@@ -83,6 +83,59 @@ _DEFAULT_CONFORMANCE_SCENARIO = dedent(
 )
 
 
+def _participant_snapshot_consistency_case(
+    control_plane: RuntimeControlPlane,
+    participant_address: str,
+    contract_name: str,
+) -> ConformanceCaseResult:
+    """Validate the post-lifecycle snapshot exposes live participant-episode state.
+
+    A target that registers a participant runtime but never populates the
+    snapshot fields fails the snapshot-state-not-empty check, so the live
+    conformance probe cannot certify a backend whose runtime accepts every
+    action but produces no observable state.
+    """
+
+    snapshot = control_plane.snapshot
+    final_diagnostics: list[Diagnostic] = []
+    if not snapshot.participant_episode_results:
+        final_diagnostics.append(
+            _diagnostic(
+                "conformance.participant-runtime-empty",
+                f"runtime.snapshot.participant-episode-results.{participant_address}",
+                (
+                    "Participant runtime accepted every control action but the snapshot "
+                    "exposes no participant_episode_results. RUN-311 backends must publish "
+                    "live episode state through the snapshot."
+                ),
+            )
+        )
+    if not snapshot.participant_episode_history:
+        final_diagnostics.append(
+            _diagnostic(
+                "conformance.participant-runtime-empty",
+                f"runtime.snapshot.participant-episode-history.{participant_address}",
+                (
+                    "Participant runtime accepted every control action but the snapshot "
+                    "exposes no participant_episode_history. RUN-311 backends must publish "
+                    "live episode history events through the snapshot."
+                ),
+            )
+        )
+    for address, message in iter_participant_episode_snapshot_violations(
+        snapshot.participant_episode_results,
+        snapshot.participant_episode_history,
+    ):
+        final_diagnostics.append(_diagnostic(_SEMANTIC_INVALID_DIAGNOSTIC_CODE, address, message))
+    return ConformanceCaseResult(
+        name="participant-snapshot-consistent",
+        contract_name=contract_name,
+        valid=True,
+        passed=not final_diagnostics,
+        diagnostics=tuple(final_diagnostics),
+    )
+
+
 def _drive_participant_episode_probe(
     control_plane: RuntimeControlPlane,
     *,
@@ -119,7 +172,8 @@ def _drive_participant_episode_probe(
     for case_name, invoke in actions:
         try:
             receipt = invoke()
-        except Exception as exc:  # pragma: no cover - defensive only
+        except Exception as exc:
+            # Defensive: a well-behaved backend does not raise here; surface it as a diagnostic.
             cases.append(
                 ConformanceCaseResult(
                     name=case_name,
@@ -167,46 +221,7 @@ def _drive_participant_episode_probe(
             )
         )
 
-    snapshot = control_plane.snapshot
-    final_diagnostics: list[Diagnostic] = []
-    if not snapshot.participant_episode_results:
-        final_diagnostics.append(
-            _diagnostic(
-                "conformance.participant-runtime-empty",
-                f"runtime.snapshot.participant-episode-results.{participant_address}",
-                (
-                    "Participant runtime accepted every control action but the snapshot "
-                    "exposes no participant_episode_results. RUN-311 backends must publish "
-                    "live episode state through the snapshot."
-                ),
-            )
-        )
-    if not snapshot.participant_episode_history:
-        final_diagnostics.append(
-            _diagnostic(
-                "conformance.participant-runtime-empty",
-                f"runtime.snapshot.participant-episode-history.{participant_address}",
-                (
-                    "Participant runtime accepted every control action but the snapshot "
-                    "exposes no participant_episode_history. RUN-311 backends must publish "
-                    "live episode history events through the snapshot."
-                ),
-            )
-        )
-    for address, message in iter_participant_episode_snapshot_violations(
-        snapshot.participant_episode_results,
-        snapshot.participant_episode_history,
-    ):
-        final_diagnostics.append(_diagnostic(_SEMANTIC_INVALID_DIAGNOSTIC_CODE, address, message))
-    cases.append(
-        ConformanceCaseResult(
-            name="participant-snapshot-consistent",
-            contract_name=contract_name,
-            valid=True,
-            passed=not final_diagnostics,
-            diagnostics=tuple(final_diagnostics),
-        )
-    )
+    cases.append(_participant_snapshot_consistency_case(control_plane, participant_address, contract_name))
     return cases
 
 

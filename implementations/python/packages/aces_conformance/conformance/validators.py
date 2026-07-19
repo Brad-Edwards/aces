@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from aces_contracts.behavioral_relations import BehavioralRelationCatalogModel
 from aces_contracts.contracts import (
     AssociatedArtifactManifestModel,
@@ -42,6 +40,8 @@ from aces_contracts.scientific_completeness import (
 )
 
 from aces_conformance.conformance.diagnostics import _diagnostic
+
+_SCHEMA_INVALID_DIAGNOSTIC_CODE = "conformance.schema-invalid"
 
 _MODEL_VALIDATORS = {
     "backend-manifest-v2": BackendManifestV2Model.model_validate,
@@ -98,7 +98,7 @@ _EVENT_STREAM_VALIDATORS: dict[str, tuple[type, str]] = {
 def _validate_event_stream(
     *,
     contract_name: str,
-    payload: Any,
+    payload: object,
     model_cls: type,
     event_label: str,
 ) -> list[Diagnostic]:
@@ -112,7 +112,7 @@ def _validate_event_stream(
     if not isinstance(payload, list):
         return [
             _diagnostic(
-                "conformance.schema-invalid",
+                _SCHEMA_INVALID_DIAGNOSTIC_CODE,
                 contract_name,
                 f"{event_label} history payload must be a list",
             )
@@ -124,7 +124,7 @@ def _validate_event_stream(
         except Exception as exc:
             diagnostics.append(
                 _diagnostic(
-                    "conformance.schema-invalid",
+                    _SCHEMA_INVALID_DIAGNOSTIC_CODE,
                     f"{contract_name}[{index}]",
                     f"{event_label} history event is invalid: {exc}",
                 )
@@ -132,7 +132,7 @@ def _validate_event_stream(
     return diagnostics
 
 
-def _validate_payload(contract_name: str, payload: Any) -> list[Diagnostic]:
+def _validate_payload(contract_name: str, payload: object) -> list[Diagnostic]:
     diagnostics: list[Diagnostic] = []
     validator = _MODEL_VALIDATORS.get(contract_name) or _STRUCTURAL_ONLY_VALIDATORS.get(contract_name)
     if validator is not None:
@@ -141,7 +141,7 @@ def _validate_payload(contract_name: str, payload: Any) -> list[Diagnostic]:
         except Exception as exc:
             diagnostics.append(
                 _diagnostic(
-                    "conformance.schema-invalid",
+                    _SCHEMA_INVALID_DIAGNOSTIC_CODE,
                     contract_name,
                     f"{contract_name} failed contract validation: {exc}",
                 )

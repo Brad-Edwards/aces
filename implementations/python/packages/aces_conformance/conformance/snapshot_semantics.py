@@ -195,7 +195,7 @@ def _participant_behavior_snapshot_references(
     )
 
 
-def _participant_history_observation_boundary_addresses(history: Any) -> set[str]:
+def _participant_history_observation_boundary_addresses(history: object) -> set[str]:
     if not isinstance(history, list):
         return set()
     addresses: set[str] = set()
@@ -210,16 +210,20 @@ def _participant_history_observation_boundary_addresses(history: Any) -> set[str
 
 def _participant_behavior_history_diagnostics(
     root_address: str,
-    payload: Any,
+    payload: object,
     *,
-    action_contract_addresses: set[str] | None = None,
+    address_scope: ParticipantHistoryAddressScope | None = None,
     action_contracts: dict[str, ParticipantActionContractRuntime] | None = None,
-    observation_boundary_addresses: set[str] | None = None,
     observation_boundaries: dict[str, ParticipantObservationBoundaryRuntime] | None = None,
-    participant_episode_history: Any = None,
+    participant_episode_history: object | None = None,
     expected_participant_address: str | None = None,
 ) -> list[Diagnostic]:
     history_key = "runtime.snapshot.participant-behavior-history"
+    if address_scope is None:
+        address_scope = ParticipantHistoryAddressScope(
+            action_contract_addresses=None,
+            observation_boundary_addresses=None,
+        )
     diagnostics: list[Diagnostic] = []
     for address, message in iter_participant_behavior_history_violations(
         payload,
@@ -227,10 +231,7 @@ def _participant_behavior_history_diagnostics(
         observation_boundaries=observation_boundaries,
         participant_episode_history=participant_episode_history,
         expected_participant_address=expected_participant_address,
-        address_scope=ParticipantHistoryAddressScope(
-            action_contract_addresses=action_contract_addresses,
-            observation_boundary_addresses=observation_boundary_addresses,
-        ),
+        address_scope=address_scope,
     ):
         if address.startswith(history_key):
             diagnostic_address = root_address + address.removeprefix(history_key)
@@ -301,13 +302,15 @@ def _participant_behavior_snapshot_diagnostics(
             _participant_behavior_history_diagnostics(
                 f"runtime.snapshot.participant-behavior-history.{participant_address}",
                 history,
-                action_contract_addresses=(
-                    participant_action_addresses[participant_address]
-                    if has_participant_action_binding
-                    else action_contract_addresses
+                address_scope=ParticipantHistoryAddressScope(
+                    action_contract_addresses=(
+                        participant_action_addresses[participant_address]
+                        if has_participant_action_binding
+                        else action_contract_addresses
+                    ),
+                    observation_boundary_addresses=participant_known_boundary_addresses,
                 ),
                 action_contracts=action_contracts,
-                observation_boundary_addresses=participant_known_boundary_addresses,
                 observation_boundaries=participant_boundaries,
                 participant_episode_history=snapshot.participant_episode_history.get(participant_address),
                 expected_participant_address=participant_address,
@@ -349,7 +352,7 @@ def _participant_concurrency_snapshot_diagnostics(snapshot: RuntimeSnapshot) -> 
     ]
 
 
-def _runtime_snapshot_semantic_diagnostics(payload: Any) -> list[Diagnostic]:
+def _runtime_snapshot_semantic_diagnostics(payload: object) -> list[Diagnostic]:
     snapshot = _snapshot_from_envelope(payload)
     return [
         *workflow_result_contract_diagnostics(snapshot),

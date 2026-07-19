@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from collections.abc import Callable
 
 from aces_contracts.diagnostics import Diagnostic, Severity
 from aces_contracts.evaluation import EvaluationExecutionState
@@ -24,8 +24,8 @@ from aces_conformance.conformance.validators import _SEMANTIC_CONTEXT_REQUIRED_C
 
 def _state_semantic_diagnostics(
     contract_name: str,
-    payload: Any,
-    state_model: Any,
+    payload: object,
+    state_model: type,
     invalid_message: str,
 ) -> list[Diagnostic]:
     try:
@@ -43,8 +43,8 @@ def _state_semantic_diagnostics(
 
 def _event_stream_semantic_diagnostics(
     contract_name: str,
-    payload: Any,
-    event_model: Any,
+    payload: object,
+    event_model: type,
     payload_type_message: str,
     invalid_message: str,
 ) -> list[Diagnostic]:
@@ -72,7 +72,7 @@ def _event_stream_semantic_diagnostics(
     return diagnostics
 
 
-def _participant_behavior_stream_diagnostics(contract_name: str, payload: Any) -> list[Diagnostic]:
+def _participant_behavior_stream_diagnostics(contract_name: str, payload: object) -> list[Diagnostic]:
     diagnostics: list[Diagnostic] = []
     if isinstance(payload, list):
         for index, event in enumerate(payload):
@@ -90,43 +90,34 @@ def _participant_behavior_stream_diagnostics(contract_name: str, payload: Any) -
     return diagnostics
 
 
-def _semantic_diagnostics(contract_name: str, payload: Any) -> list[Diagnostic]:
-    if contract_name == "workflow-result-envelope-v1":
-        return _state_semantic_diagnostics(
-            contract_name,
-            payload,
-            WorkflowExecutionState,
-            "workflow result semantics are invalid",
-        )
-    if contract_name == "evaluation-result-envelope-v1":
-        return _state_semantic_diagnostics(
-            contract_name,
-            payload,
-            EvaluationExecutionState,
-            "evaluation result semantics are invalid",
-        )
-    if contract_name == "participant-episode-state-envelope-v1":
-        return _state_semantic_diagnostics(
-            contract_name,
-            payload,
-            ParticipantEpisodeExecutionState,
-            "participant episode state semantics are invalid",
-        )
-    if contract_name == "participant-episode-history-event-stream-v1":
-        return _event_stream_semantic_diagnostics(
-            contract_name,
-            payload,
-            ParticipantEpisodeHistoryEvent,
-            "participant episode history payload must be a list",
-            "participant episode history event semantics are invalid",
-        )
-    if contract_name == "participant-behavior-history-event-stream-v1":
-        return _participant_behavior_stream_diagnostics(contract_name, payload)
-    if contract_name == "experiment-run-v1":
-        return list(observability_evidence_conformance_diagnostics(payload))
-    if contract_name != "runtime-snapshot-v1":
+_SEMANTIC_DISPATCH: dict[str, Callable[[str, object], list[Diagnostic]]] = {
+    "workflow-result-envelope-v1": lambda name, payload: _state_semantic_diagnostics(
+        name, payload, WorkflowExecutionState, "workflow result semantics are invalid"
+    ),
+    "evaluation-result-envelope-v1": lambda name, payload: _state_semantic_diagnostics(
+        name, payload, EvaluationExecutionState, "evaluation result semantics are invalid"
+    ),
+    "participant-episode-state-envelope-v1": lambda name, payload: _state_semantic_diagnostics(
+        name, payload, ParticipantEpisodeExecutionState, "participant episode state semantics are invalid"
+    ),
+    "participant-episode-history-event-stream-v1": lambda name, payload: _event_stream_semantic_diagnostics(
+        name,
+        payload,
+        ParticipantEpisodeHistoryEvent,
+        "participant episode history payload must be a list",
+        "participant episode history event semantics are invalid",
+    ),
+    "participant-behavior-history-event-stream-v1": _participant_behavior_stream_diagnostics,
+    "experiment-run-v1": lambda name, payload: list(observability_evidence_conformance_diagnostics(payload)),
+    "runtime-snapshot-v1": lambda name, payload: _runtime_snapshot_semantic_diagnostics(payload),
+}
+
+
+def _semantic_diagnostics(contract_name: str, payload: object) -> list[Diagnostic]:
+    handler = _SEMANTIC_DISPATCH.get(contract_name)
+    if handler is None:
         return []
-    return _runtime_snapshot_semantic_diagnostics(payload)
+    return handler(contract_name, payload)
 
 
 def _fixture_case_diagnostics(contract_name: str, payload: object) -> list[Diagnostic]:

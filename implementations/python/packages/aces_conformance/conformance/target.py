@@ -53,12 +53,14 @@ def profile_for_manifest(manifest: BackendManifest) -> BackendCapabilityProfile:
     """
 
     if manifest.has_orchestrator and manifest.has_evaluator and manifest.has_participant_runtime:
-        return BackendCapabilityProfile.FULL_REMOTE_CONTROL_PLANE
-    if manifest.has_orchestrator and manifest.has_evaluator:
-        return BackendCapabilityProfile.ORCHESTRATION_EVALUATION
-    if manifest.has_orchestrator:
-        return BackendCapabilityProfile.ORCHESTRATION_CAPABLE
-    return BackendCapabilityProfile.PROVISIONING_ONLY
+        profile = BackendCapabilityProfile.FULL_REMOTE_CONTROL_PLANE
+    elif manifest.has_orchestrator and manifest.has_evaluator:
+        profile = BackendCapabilityProfile.ORCHESTRATION_EVALUATION
+    elif manifest.has_orchestrator:
+        profile = BackendCapabilityProfile.ORCHESTRATION_CAPABLE
+    else:
+        profile = BackendCapabilityProfile.PROVISIONING_ONLY
+    return profile
 
 
 def _capability_gaps(

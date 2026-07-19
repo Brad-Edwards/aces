@@ -162,7 +162,7 @@ def _resolve_required_contracts(
     profile_id = _to_profile_id(profile)
     try:
         return required_contracts(profile, profiles_root=profiles_root), ()
-    except (FileNotFoundError, json.JSONDecodeError, ValidationError, ValueError) as exc:
+    except (FileNotFoundError, ValueError) as exc:
         return frozenset(), (
             _diagnostic(
                 "conformance.profile-load-failed",
@@ -185,9 +185,11 @@ def _sanitize_load_error(exc: Exception) -> str:
     """
 
     if isinstance(exc, FileNotFoundError):
-        return "profile artifact not found"
-    if isinstance(exc, json.JSONDecodeError):
-        return "profile artifact is not valid JSON"
-    if isinstance(exc, ValidationError):
-        return f"profile artifact failed closed-world validation ({exc.error_count()} error(s))"
-    return f"{type(exc).__name__}: {exc}"
+        message = "profile artifact not found"
+    elif isinstance(exc, json.JSONDecodeError):
+        message = "profile artifact is not valid JSON"
+    elif isinstance(exc, ValidationError):
+        message = f"profile artifact failed closed-world validation ({exc.error_count()} error(s))"
+    else:
+        message = f"{type(exc).__name__}: {exc}"
+    return message
