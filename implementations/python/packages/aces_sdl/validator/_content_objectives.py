@@ -333,6 +333,7 @@ class _ContentObjectivesMixin:
             self._err(self._format_participant_behavior_issue(issue))
         self._verify_participant_interaction_refs()
         self._verify_behavior_specification_authority_refs()
+        self._verify_mixed_control_semantics()
 
     def _participant_role_refs(self) -> set[str]:
         entities = flatten_entities(self._s.entities)

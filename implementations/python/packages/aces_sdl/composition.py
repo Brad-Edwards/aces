@@ -392,6 +392,37 @@ def _namespace_payload(
             behavior_spec["authority_scope_refs"] = [
                 _maybe_rename(name, symbols["named"]) for name in behavior_spec.get("authority_scope_refs", [])
             ]
+            mixed_control = behavior_spec.get("mixed_control")
+            if isinstance(mixed_control, dict):
+                if mixed_control.get("participant_ref"):
+                    mixed_control["participant_ref"] = _maybe_rename(
+                        str(mixed_control["participant_ref"]),
+                        symbols["agents"],
+                    )
+                for state in mixed_control.get("controller_states", {}).values():
+                    if not isinstance(state, dict):
+                        continue
+                    controller_ref = state.get("controller_ref")
+                    if controller_ref and controller_ref != "self":
+                        state["controller_ref"] = _maybe_rename(str(controller_ref), symbols["agents"])
+                    state["authority_basis_refs"] = [
+                        _maybe_rename(name, symbols["named"]) for name in state.get("authority_basis_refs", [])
+                    ]
+                    state["scope_refs"] = [
+                        _maybe_rename(name, symbols["named"]) for name in state.get("scope_refs", [])
+                    ]
+                    state["evidence_refs"] = [
+                        _maybe_rename(name, symbols["named"]) for name in state.get("evidence_refs", [])
+                    ]
+                for transition in mixed_control.get("transitions", {}).values():
+                    if not isinstance(transition, dict):
+                        continue
+                    transition["evidence_refs"] = [
+                        _maybe_rename(name, symbols["named"]) for name in transition.get("evidence_refs", [])
+                    ]
+                    transition["completion_evidence_refs"] = [
+                        _maybe_rename(name, symbols["named"]) for name in transition.get("completion_evidence_refs", [])
+                    ]
     for requirement in namespaced.get("evidence_requirements", {}).values():
         if isinstance(requirement, dict):
             _rewrite_evidence_requirement(requirement, symbols)

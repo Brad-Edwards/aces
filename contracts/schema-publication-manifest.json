@@ -190,20 +190,20 @@
       "contract_id": "instantiated-scenario-snapshot-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
       "stability": "draft",
-      "content_hash": "93b4355e8633fb76ed35851a6cd2573ff09f041b2ae089fe69f55611a6589886",
+      "content_hash": "3a534d506a30f083cdd700b21f9f4c88c4fff6e632238931705b3a0a7add7e87",
       "last_change": {
-        "summary": "Published unique-item constraints for stateful resource outputs, consumers, and dependency lists (issue #780).",
-        "content_hash": "93b4355e8633fb76ed35851a6cd2573ff09f041b2ae089fe69f55611a6589886"
+        "summary": "Published typed mixed-control participant controller states, ordered transitions, and fail-closed disposition rules for ACT-617 (issue #251).",
+        "content_hash": "3a534d506a30f083cdd700b21f9f4c88c4fff6e632238931705b3a0a7add7e87"
       }
     },
     {
       "contract_id": "instantiated-scenario-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
       "stability": "draft",
-      "content_hash": "bfb1b79c11861a57accc2614eba9760cbcc19a9b6ce34dabf64404048eee0e8b",
+      "content_hash": "2fe11d4c12d92a10de41a9f308d83efb9946c672dee1ec2af0fa21bd9d535224",
       "last_change": {
-        "summary": "Published unique-item constraints for stateful resource outputs, consumers, and dependency lists (issue #780).",
-        "content_hash": "bfb1b79c11861a57accc2614eba9760cbcc19a9b6ce34dabf64404048eee0e8b"
+        "summary": "Published typed mixed-control participant controller states, ordered transitions, and fail-closed disposition rules for ACT-617 (issue #251).",
+        "content_hash": "2fe11d4c12d92a10de41a9f308d83efb9946c672dee1ec2af0fa21bd9d535224"
       }
     },
     {
@@ -456,10 +456,10 @@
       "contract_id": "sdl-authoring-input-v1",
       "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
       "stability": "draft",
-      "content_hash": "4869ea7e7e26e63172b5799f0f6ee46c79cf802e426f66846a7f0471cac145a7",
+      "content_hash": "10ca2b5ab8f85cef0cbc99a26652e63edf5374b8217bae558fbf2b0df35eee34",
       "last_change": {
-        "summary": "Published unique-item constraints for stateful resource outputs, consumers, and dependency lists (issue #780).",
-        "content_hash": "4869ea7e7e26e63172b5799f0f6ee46c79cf802e426f66846a7f0471cac145a7"
+        "summary": "Published typed mixed-control participant controller states, ordered transitions, and fail-closed disposition rules for ACT-617 (issue #251).",
+        "content_hash": "10ca2b5ab8f85cef0cbc99a26652e63edf5374b8217bae558fbf2b0df35eee34"
       }
     },
     {

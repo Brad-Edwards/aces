@@ -6,6 +6,7 @@ from ._content_objectives import _ContentObjectivesMixin
 from ._core import _ValidatorCore
 from ._domain_topology import _DomainTopologyMixin
 from ._evidence_requirements import _EvidenceRequirementsMixin
+from ._mixed_control import _MixedControlMixin
 from ._nodes_infra_network import _NodesInfraNetworkMixin
 from ._propositions import _PropositionsMixin
 from ._relationships import _RelationshipsMixin
@@ -32,6 +33,7 @@ class SemanticValidator(
     _DomainTopologyMixin,
     _RelationshipsMixin,
     _RelationshipsProxyMixin,
+    _MixedControlMixin,
     _ContentObjectivesMixin,
     _PropositionsMixin,
     _EvidenceRequirementsMixin,

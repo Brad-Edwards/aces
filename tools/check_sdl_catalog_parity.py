@@ -123,7 +123,13 @@ _BEHAVIOR_SEMANTICS = (
 _BEHAVIOR_VALIDATOR = (
     "[behavior validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py)"
 )
+_MIXED_CONTROL_VALIDATOR = (
+    "[behavior validator](../../implementations/python/packages/aces_sdl/validator/_mixed_control.py)"
+)
 _BEHAVIOR_MODEL = "[behavior model](../../implementations/python/packages/aces_sdl/participant_behavior.py)"
+_MIXED_CONTROL_MODEL = (
+    "[behavior model](../../implementations/python/packages/aces_sdl/participant_behavior_specification.py)"
+)
 _EVIDENCE_VALIDATOR = (
     "[evidence validator](../../implementations/python/packages/aces_sdl/validator/_evidence_requirements.py)"
 )
@@ -600,6 +606,66 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         _STRUCTURAL,
         "fatal invalid vocabulary value",
         _BEHAVIOR_MODEL,
+    ),
+    "behavior_specifications.*.mixed_control.participant_ref": (
+        "agents",
+        _SEMANTIC,
+        "fatal unless owned by the enclosing behavior specification",
+        _MIXED_CONTROL_VALIDATOR,
+    ),
+    "behavior_specifications.*.mixed_control.controller_states.*.controller_ref": (
+        "agents-or-self",
+        _SEMANTIC,
+        "fatal operator/role/identity impersonation or dangling agent",
+        _MIXED_CONTROL_VALIDATOR,
+    ),
+    "behavior_specifications.*.mixed_control.controller_states.*.authority_basis_refs[]": (
+        "derived:controller_authority_anchors",
+        _SEMANTIC,
+        "fatal dangling, ambiguous, or authority widening",
+        _MIXED_CONTROL_VALIDATOR,
+    ),
+    "behavior_specifications.*.mixed_control.controller_states.*.scope_refs[]": (
+        "derived:behavior-and-controller-scope",
+        _SEMANTIC,
+        "fatal dangling, ambiguous, or scope widening",
+        _MIXED_CONTROL_VALIDATOR,
+    ),
+    "behavior_specifications.*.mixed_control.controller_states.*.evidence_refs[]": (
+        "declared",
+        _SEMANTIC,
+        _DANGLING,
+        _MIXED_CONTROL_VALIDATOR,
+    ),
+    "behavior_specifications.*.mixed_control.transitions.*.from_state_ref": (
+        "derived:mixed_control_local_ids",
+        "structural and semantic validation",
+        "fatal dangling, stale, reversed, or ambiguously ordered local ref",
+        _MIXED_CONTROL_MODEL,
+    ),
+    "behavior_specifications.*.mixed_control.transitions.*.to_state_ref": (
+        "derived:mixed_control_local_ids",
+        "structural and semantic validation",
+        "fatal dangling, stale, reversed, or ambiguously ordered local ref",
+        _MIXED_CONTROL_MODEL,
+    ),
+    "behavior_specifications.*.mixed_control.transitions.*.proposal_ref": (
+        "derived:mixed_control_local_ids",
+        "structural and semantic validation",
+        "fatal dangling, stale, reversed, or ambiguously ordered local ref",
+        _MIXED_CONTROL_MODEL,
+    ),
+    "behavior_specifications.*.mixed_control.transitions.*.evidence_refs[]": (
+        "declared",
+        _SEMANTIC,
+        "fatal dangling, ambiguous, or silent handoff",
+        _MIXED_CONTROL_VALIDATOR,
+    ),
+    "behavior_specifications.*.mixed_control.transitions.*.completion_evidence_refs[]": (
+        "declared",
+        _SEMANTIC,
+        "fatal dangling, ambiguous, or silent handoff",
+        _MIXED_CONTROL_VALIDATOR,
     ),
     "behavior_specifications.*.ai_offensive_behavior_refs[]": (
         "vocabulary:ai_offensive_behavior",

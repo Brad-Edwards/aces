@@ -3392,6 +3392,346 @@
       "title": "Inject",
       "type": "object"
     },
+    "MixedControlAuthorityStatus": {
+      "description": "Authored authority state for one controller binding.",
+      "enum": [
+        "active",
+        "revoked"
+      ],
+      "title": "MixedControlAuthorityStatus",
+      "type": "string"
+    },
+    "MixedControlConcurrentDisposition": {
+      "description": "Disposition for decisions that share a control-state revision.",
+      "enum": [
+        "order-then-revalidate"
+      ],
+      "title": "MixedControlConcurrentDisposition",
+      "type": "string"
+    },
+    "MixedControlControllerState": {
+      "additionalProperties": false,
+      "description": "One authored controller, authority, scope, and validity binding.",
+      "properties": {
+        "authority_basis_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Authority Basis Refs",
+          "type": "array"
+        },
+        "authority_status": {
+          "$ref": "#/$defs/MixedControlAuthorityStatus"
+        },
+        "controller_ref": {
+          "title": "Controller Ref",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "policy_revision": {
+          "title": "Policy Revision",
+          "type": "string"
+        },
+        "scope_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Scope Refs",
+          "type": "array"
+        },
+        "valid_from_order": {
+          "minimum": 0,
+          "title": "Valid From Order",
+          "type": "integer"
+        },
+        "valid_until_order": {
+          "minimum": 0,
+          "title": "Valid Until Order",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "controller_ref",
+        "authority_basis_refs",
+        "scope_refs",
+        "policy_revision",
+        "valid_from_order",
+        "valid_until_order",
+        "authority_status",
+        "evidence_refs"
+      ],
+      "title": "MixedControlControllerState",
+      "type": "object"
+    },
+    "MixedControlDispositionRules": {
+      "additionalProperties": false,
+      "description": "Explicit deterministic rules for invalid or competing decisions.",
+      "properties": {
+        "concurrent": {
+          "$ref": "#/$defs/MixedControlConcurrentDisposition"
+        },
+        "conflict": {
+          "$ref": "#/$defs/MixedControlRejectDisposition"
+        },
+        "duplicate": {
+          "$ref": "#/$defs/MixedControlDuplicateDisposition"
+        },
+        "late": {
+          "$ref": "#/$defs/MixedControlRejectDisposition"
+        },
+        "revoked": {
+          "$ref": "#/$defs/MixedControlRejectDisposition"
+        },
+        "stale": {
+          "$ref": "#/$defs/MixedControlRejectDisposition"
+        }
+      },
+      "required": [
+        "duplicate",
+        "stale",
+        "revoked",
+        "late",
+        "concurrent",
+        "conflict"
+      ],
+      "title": "MixedControlDispositionRules",
+      "type": "object"
+    },
+    "MixedControlDuplicateDisposition": {
+      "description": "Disposition for a repeated decision identity.",
+      "enum": [
+        "idempotent-if-equivalent"
+      ],
+      "title": "MixedControlDuplicateDisposition",
+      "type": "string"
+    },
+    "MixedControlOrderStrategy": {
+      "description": "Portable ordering strategies for authored control decisions.",
+      "enum": [
+        "total-effective-order"
+      ],
+      "title": "MixedControlOrderStrategy",
+      "type": "string"
+    },
+    "MixedControlParticipantOperation": {
+      "additionalProperties": false,
+      "description": "Closed authored mixed-control policy for exactly one participant.",
+      "properties": {
+        "controller_states": {
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/MixedControlControllerState"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Controller States",
+          "type": "object"
+        },
+        "dispositions": {
+          "$ref": "#/$defs/MixedControlDispositionRules"
+        },
+        "initial_state_ref": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Initial State Ref",
+          "type": "string"
+        },
+        "order_strategy": {
+          "$ref": "#/$defs/MixedControlOrderStrategy"
+        },
+        "participant_ref": {
+          "title": "Participant Ref",
+          "type": "string"
+        },
+        "policy_revision": {
+          "title": "Policy Revision",
+          "type": "string"
+        },
+        "transitions": {
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/MixedControlTransition"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Transitions",
+          "type": "object"
+        }
+      },
+      "required": [
+        "participant_ref",
+        "policy_revision",
+        "order_strategy",
+        "initial_state_ref",
+        "dispositions",
+        "controller_states",
+        "transitions"
+      ],
+      "title": "MixedControlParticipantOperation",
+      "type": "object"
+    },
+    "MixedControlRejectDisposition": {
+      "description": "Fail-closed disposition that preserves the current state.",
+      "enum": [
+        "reject-no-state-change"
+      ],
+      "title": "MixedControlRejectDisposition",
+      "type": "string"
+    },
+    "MixedControlTransition": {
+      "additionalProperties": false,
+      "description": "One authored, revision-checked mixed-control transition declaration.",
+      "properties": {
+        "completion_evidence_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Completion Evidence Refs",
+          "type": "array"
+        },
+        "effective_order": {
+          "minimum": 0,
+          "title": "Effective Order",
+          "type": "integer"
+        },
+        "evidence_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "expected_state_revision": {
+          "minimum": 0,
+          "title": "Expected State Revision",
+          "type": "integer"
+        },
+        "from_state_ref": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "From State Ref",
+          "type": "string"
+        },
+        "policy_revision": {
+          "title": "Policy Revision",
+          "type": "string"
+        },
+        "proposal_ref": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "minLength": 1,
+              "not": {
+                "pattern": "[^a-z0-9_-]"
+              },
+              "pattern": "^[a-z0-9]",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Proposal Ref"
+        },
+        "proposal_revision": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Proposal Revision"
+        },
+        "resulting_state_revision": {
+          "minimum": 1,
+          "title": "Resulting State Revision",
+          "type": "integer"
+        },
+        "to_state_ref": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "To State Ref",
+          "type": "string"
+        },
+        "transition_kind": {
+          "$ref": "#/$defs/MixedControlTransitionKind"
+        },
+        "valid_from_order": {
+          "minimum": 0,
+          "title": "Valid From Order",
+          "type": "integer"
+        },
+        "valid_until_order": {
+          "minimum": 0,
+          "title": "Valid Until Order",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "transition_kind",
+        "from_state_ref",
+        "to_state_ref",
+        "policy_revision",
+        "expected_state_revision",
+        "resulting_state_revision",
+        "effective_order",
+        "valid_from_order",
+        "valid_until_order",
+        "evidence_refs"
+      ],
+      "title": "MixedControlTransition",
+      "type": "object"
+    },
+    "MixedControlTransitionKind": {
+      "description": "Control-owned facts kept distinct from admission and execution.",
+      "enum": [
+        "proposal",
+        "approval",
+        "denial",
+        "external-direction",
+        "intervention",
+        "handoff",
+        "override",
+        "cancellation"
+      ],
+      "title": "MixedControlTransitionKind",
+      "type": "string"
+    },
     "ModuleDescriptor": {
       "additionalProperties": false,
       "description": "Published module metadata for SDL composition.",
@@ -4402,6 +4742,17 @@
         "lifecycle_state": {
           "$ref": "#/$defs/ParticipantBehaviorSpecificationLifecycle",
           "default": "active"
+        },
+        "mixed_control": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MixedControlParticipantOperation"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "observation_boundary_refs": {
           "items": {

@@ -1,0 +1,89 @@
+name: act-617-invalid-controller
+nodes:
+  web:
+    type: VM
+    resources: {ram: 1 GiB, cpu: 1}
+entities:
+  red-team: {role: red}
+  blue-team: {role: blue}
+agents:
+  red-agent:
+    entity: red-team
+    authority_anchors: [entities.red-team]
+    operating_scope: [nodes.web]
+  supervisor-agent:
+    entity: blue-team
+    authority_anchors: [entities.blue-team]
+    operating_scope: [nodes.web]
+behavior_specifications:
+  controlled-red:
+    semantic_version: 1.0.0
+    participant_refs: [red-agent]
+    authority_scope_refs: [nodes.web]
+    behavior_mode: mixed-control
+    mixed_control:
+      participant_ref: red-agent
+      policy_revision: 1.0.0
+      order_strategy: total-effective-order
+      initial_state_ref: autonomous
+      dispositions:
+        duplicate: idempotent-if-equivalent
+        stale: reject-no-state-change
+        revoked: reject-no-state-change
+        late: reject-no-state-change
+        concurrent: order-then-revalidate
+        conflict: reject-no-state-change
+      controller_states:
+        autonomous:
+          controller_ref: self
+          authority_basis_refs: [entities.red-team]
+          scope_refs: [nodes.web]
+          policy_revision: 1.0.0
+          valid_from_order: 0
+          valid_until_order: 10
+          authority_status: active
+          evidence_refs: [entities.red-team]
+        pending:
+          controller_ref: self
+          authority_basis_refs: [entities.red-team]
+          scope_refs: [nodes.web]
+          policy_revision: 1.0.0
+          valid_from_order: 10
+          valid_until_order: 11
+          authority_status: active
+          evidence_refs: [entities.red-team]
+        supervised:
+          controller_ref: blue
+          authority_basis_refs: [entities.blue-team]
+          scope_refs: [nodes.web]
+          policy_revision: 1.0.0
+          valid_from_order: 11
+          valid_until_order: 99
+          authority_status: active
+          evidence_refs: [entities.blue-team]
+      transitions:
+        propose_supervision:
+          transition_kind: proposal
+          from_state_ref: autonomous
+          to_state_ref: pending
+          policy_revision: 1.0.0
+          expected_state_revision: 0
+          resulting_state_revision: 1
+          effective_order: 10
+          valid_from_order: 0
+          valid_until_order: 10
+          evidence_refs: [entities.red-team]
+        approve_supervision:
+          transition_kind: approval
+          from_state_ref: pending
+          to_state_ref: supervised
+          policy_revision: 1.0.0
+          expected_state_revision: 1
+          resulting_state_revision: 2
+          effective_order: 11
+          valid_from_order: 0
+          valid_until_order: 11
+          proposal_ref: propose_supervision
+          proposal_revision: 1
+          evidence_refs: [entities.blue-team]
+    extension_policy: closed
