@@ -190,20 +190,20 @@
       "contract_id": "instantiated-scenario-snapshot-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
       "stability": "draft",
-      "content_hash": "93b4355e8633fb76ed35851a6cd2573ff09f041b2ae089fe69f55611a6589886",
+      "content_hash": "60d12662e802ec83bc82580cf6136f9ad46fb19c0ff7b2bec9ded91967d147cf",
       "last_change": {
-        "summary": "Published unique-item constraints for stateful resource outputs, consumers, and dependency lists (issue #780).",
-        "content_hash": "93b4355e8633fb76ed35851a6cd2573ff09f041b2ae089fe69f55611a6589886"
+        "summary": "Added closed participant-local tool-affordance bindings with governed action and observation references (SEM-219, issue #294).",
+        "content_hash": "60d12662e802ec83bc82580cf6136f9ad46fb19c0ff7b2bec9ded91967d147cf"
       }
     },
     {
       "contract_id": "instantiated-scenario-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
       "stability": "draft",
-      "content_hash": "bfb1b79c11861a57accc2614eba9760cbcc19a9b6ce34dabf64404048eee0e8b",
+      "content_hash": "f1d1267388b49b713a646a9ef494b7e1484389f27540d8e2b515527b0efa43d0",
       "last_change": {
-        "summary": "Published unique-item constraints for stateful resource outputs, consumers, and dependency lists (issue #780).",
-        "content_hash": "bfb1b79c11861a57accc2614eba9760cbcc19a9b6ce34dabf64404048eee0e8b"
+        "summary": "Added closed participant-local tool-affordance bindings with governed action and observation references (SEM-219, issue #294).",
+        "content_hash": "f1d1267388b49b713a646a9ef494b7e1484389f27540d8e2b515527b0efa43d0"
       }
     },
     {
@@ -456,10 +456,10 @@
       "contract_id": "sdl-authoring-input-v1",
       "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
       "stability": "draft",
-      "content_hash": "4869ea7e7e26e63172b5799f0f6ee46c79cf802e426f66846a7f0471cac145a7",
+      "content_hash": "cea5017a5952391b2c1c423225b74f15c3f60dc551dfa25067156b15e82a3e27",
       "last_change": {
-        "summary": "Published unique-item constraints for stateful resource outputs, consumers, and dependency lists (issue #780).",
-        "content_hash": "4869ea7e7e26e63172b5799f0f6ee46c79cf802e426f66846a7f0471cac145a7"
+        "summary": "Added closed participant-local tool-affordance bindings with governed action and observation references (SEM-219, issue #294).",
+        "content_hash": "cea5017a5952391b2c1c423225b74f15c3f60dc551dfa25067156b15e82a3e27"
       }
     },
     {

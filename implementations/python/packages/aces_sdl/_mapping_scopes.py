@@ -60,6 +60,7 @@ NESTED_HASHMAP_FIELDS = frozenset(
         "steps",
         "extensions",
         "interactive_access",
+        "tool_affordances",
     }
 )
 

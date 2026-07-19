@@ -103,8 +103,23 @@ class ParticipantBehaviorSpecificationRuntime(ResolvedResource):
     realization_profile_ref: str = ""
     backend_feature_support_refs: tuple[str, ...] = ()
     evidence_contract_refs: tuple[str, ...] = ()
+    tool_affordance_addresses: tuple[str, ...] = ()
     extension_policy: str = ""
     extension_keys: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class ParticipantToolAffordanceRuntime(ResolvedResource):
+    """Compiled semantic IR for one authored participant tool-affordance binding."""
+
+    affordance_id: str = ""
+    behavior_specification_address: str = ""
+    tool_ref: str = ""
+    tool_address: str = ""
+    action_contract_refs: tuple[str, ...] = ()
+    action_contract_addresses: tuple[str, ...] = ()
+    observation_boundary_refs: tuple[str, ...] = ()
+    observation_boundary_addresses: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
