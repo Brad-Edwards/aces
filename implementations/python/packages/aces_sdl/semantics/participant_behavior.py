@@ -424,6 +424,119 @@ def _tool_affordance_participants(
     return participants
 
 
+def _tool_affordance_duplicate_issue(
+    *,
+    spec_name: str,
+    affordance_id: str,
+    tool_ref: object,
+    action_refs: list[str],
+    boundary_refs: list[str],
+    seen_relations: dict[tuple[str, tuple[str, ...], tuple[str, ...]], str],
+) -> ParticipantBehaviorIssue | None:
+    signature = (str(tool_ref or ""), tuple(sorted(action_refs)), tuple(sorted(boundary_refs)))
+    duplicate_of = seen_relations.get(signature)
+    if duplicate_of is None:
+        seen_relations[signature] = affordance_id
+        return None
+    return ParticipantBehaviorIssue(
+        code="participant.tool-affordance-duplicate-relation",
+        participant_name="",
+        spec_name=spec_name,
+        ref=affordance_id,
+        message=duplicate_of,
+    )
+
+
+def _tool_affordance_action_issues(
+    *,
+    spec_name: str,
+    affordance_id: str,
+    action_ref: str,
+    parent_actions: set[str],
+    participants: set[str],
+    agents_by_name: Mapping[str, object],
+) -> list[ParticipantBehaviorIssue]:
+    issues: list[ParticipantBehaviorIssue] = []
+    if action_ref not in parent_actions:
+        issues.append(
+            ParticipantBehaviorIssue(
+                code="participant.tool-affordance-action-widens-parent",
+                participant_name="",
+                spec_name=spec_name,
+                ref=action_ref,
+                action_name=affordance_id,
+            )
+        )
+    for participant_name in sorted(participants):
+        agent_actions = {str(ref) for ref in getattr(agents_by_name[participant_name], "actions", []) or []}
+        if action_ref not in agent_actions:
+            issues.append(
+                ParticipantBehaviorIssue(
+                    code="participant.tool-affordance-action-outside-participant",
+                    participant_name=participant_name,
+                    spec_name=spec_name,
+                    ref=action_ref,
+                    action_name=affordance_id,
+                )
+            )
+    return issues
+
+
+def _tool_affordance_boundary_issues(
+    *,
+    spec_name: str,
+    affordance_id: str,
+    binding_ref: str,
+    boundary_ref: str,
+    parent_boundaries: set[str],
+    participants: set[str],
+    agents_by_name: Mapping[str, object],
+    observation_boundaries: Mapping[str, object],
+) -> list[ParticipantBehaviorIssue]:
+    issues: list[ParticipantBehaviorIssue] = []
+    if boundary_ref not in parent_boundaries:
+        issues.append(
+            ParticipantBehaviorIssue(
+                code="participant.tool-affordance-boundary-widens-parent",
+                participant_name="",
+                spec_name=spec_name,
+                ref=boundary_ref,
+                action_name=affordance_id,
+            )
+        )
+    for participant_name in sorted(participants):
+        agent_boundaries = {
+            str(ref) for ref in getattr(agents_by_name[participant_name], "observation_boundaries", []) or []
+        }
+        if boundary_ref not in agent_boundaries:
+            issues.append(
+                ParticipantBehaviorIssue(
+                    code="participant.tool-affordance-boundary-outside-participant",
+                    participant_name=participant_name,
+                    spec_name=spec_name,
+                    ref=boundary_ref,
+                    action_name=affordance_id,
+                )
+            )
+    boundary = observation_boundaries.get(boundary_ref)
+    if boundary is None:
+        return issues
+    declared_refs = _observation_boundary_declared_refs(boundary)
+    view_rule_refs = {str(getattr(rule, "information_ref", "")) for rule in getattr(boundary, "view_rules", []) or []}
+    if binding_ref not in declared_refs or binding_ref not in view_rule_refs:
+        issues.append(
+            ParticipantBehaviorIssue(
+                code="participant.tool-affordance-view-unclassified",
+                participant_name="",
+                spec_name=spec_name,
+                ref=binding_ref,
+                action_name=affordance_id,
+                boundary_name=boundary_ref,
+            )
+        )
+    return issues
+
+
 def _tool_affordance_reference_issues(
     *,
     spec_name: str,
@@ -439,99 +552,50 @@ def _tool_affordance_reference_issues(
     participants = _tool_affordance_participants(behavior_spec, reference_context)
     seen_relations: dict[tuple[str, tuple[str, ...], tuple[str, ...]], str] = {}
     for affordance_id, binding in getattr(behavior_spec, "tool_affordances", {}).items():
-        binding_ref = tool_affordance_reference(spec_name, str(affordance_id))
+        affordance_id = str(affordance_id)
+        binding_ref = tool_affordance_reference(spec_name, affordance_id)
         action_refs = [str(ref) for ref in getattr(binding, "action_contract_refs", []) or []]
         boundary_refs = [str(ref) for ref in getattr(binding, "observation_boundary_refs", []) or []]
-        signature = (
-            str(getattr(binding, "tool_ref", None) or ""),
-            tuple(sorted(action_refs)),
-            tuple(sorted(boundary_refs)),
+        duplicate_issue = _tool_affordance_duplicate_issue(
+            spec_name=spec_name,
+            affordance_id=affordance_id,
+            tool_ref=getattr(binding, "tool_ref", None),
+            action_refs=action_refs,
+            boundary_refs=boundary_refs,
+            seen_relations=seen_relations,
         )
-        duplicate_of = seen_relations.get(signature)
-        if duplicate_of is not None:
-            issues.append(
-                ParticipantBehaviorIssue(
-                    code="participant.tool-affordance-duplicate-relation",
-                    participant_name="",
-                    spec_name=spec_name,
-                    ref=str(affordance_id),
-                    message=duplicate_of,
-                )
-            )
-        else:
-            seen_relations[signature] = str(affordance_id)
+        if duplicate_issue is not None:
+            issues.append(duplicate_issue)
 
         for action_ref in action_refs:
             if is_unresolved(action_ref):
                 continue
-            if action_ref not in parent_actions:
-                issues.append(
-                    ParticipantBehaviorIssue(
-                        code="participant.tool-affordance-action-widens-parent",
-                        participant_name="",
-                        spec_name=spec_name,
-                        ref=action_ref,
-                        action_name=str(affordance_id),
-                    )
+            issues.extend(
+                _tool_affordance_action_issues(
+                    spec_name=spec_name,
+                    affordance_id=affordance_id,
+                    action_ref=action_ref,
+                    parent_actions=parent_actions,
+                    participants=participants,
+                    agents_by_name=agents_by_name,
                 )
-            for participant_name in sorted(participants):
-                agent_actions = {str(ref) for ref in getattr(agents_by_name[participant_name], "actions", []) or []}
-                if action_ref not in agent_actions:
-                    issues.append(
-                        ParticipantBehaviorIssue(
-                            code="participant.tool-affordance-action-outside-participant",
-                            participant_name=participant_name,
-                            spec_name=spec_name,
-                            ref=action_ref,
-                            action_name=str(affordance_id),
-                        )
-                    )
+            )
 
         for boundary_ref in boundary_refs:
             if is_unresolved(boundary_ref):
                 continue
-            if boundary_ref not in parent_boundaries:
-                issues.append(
-                    ParticipantBehaviorIssue(
-                        code="participant.tool-affordance-boundary-widens-parent",
-                        participant_name="",
-                        spec_name=spec_name,
-                        ref=boundary_ref,
-                        action_name=str(affordance_id),
-                    )
+            issues.extend(
+                _tool_affordance_boundary_issues(
+                    spec_name=spec_name,
+                    affordance_id=affordance_id,
+                    binding_ref=binding_ref,
+                    boundary_ref=boundary_ref,
+                    parent_boundaries=parent_boundaries,
+                    participants=participants,
+                    agents_by_name=agents_by_name,
+                    observation_boundaries=observation_boundaries,
                 )
-            for participant_name in sorted(participants):
-                agent_boundaries = {
-                    str(ref) for ref in getattr(agents_by_name[participant_name], "observation_boundaries", []) or []
-                }
-                if boundary_ref not in agent_boundaries:
-                    issues.append(
-                        ParticipantBehaviorIssue(
-                            code="participant.tool-affordance-boundary-outside-participant",
-                            participant_name=participant_name,
-                            spec_name=spec_name,
-                            ref=boundary_ref,
-                            action_name=str(affordance_id),
-                        )
-                    )
-            boundary = observation_boundaries.get(boundary_ref)
-            if boundary is None:
-                continue
-            declared_refs = _observation_boundary_declared_refs(boundary)
-            view_rule_refs = {
-                str(getattr(rule, "information_ref", "")) for rule in getattr(boundary, "view_rules", []) or []
-            }
-            if binding_ref not in declared_refs or binding_ref not in view_rule_refs:
-                issues.append(
-                    ParticipantBehaviorIssue(
-                        code="participant.tool-affordance-view-unclassified",
-                        participant_name="",
-                        spec_name=spec_name,
-                        ref=binding_ref,
-                        action_name=str(affordance_id),
-                        boundary_name=boundary_ref,
-                    )
-                )
+            )
     return issues
 
 
