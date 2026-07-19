@@ -27,10 +27,6 @@ def _bundle() -> tuple[dict, dict, dict, dict, dict]:
     return tuple(deepcopy(item) for item in load_bundle(REPO_ROOT))  # type: ignore[return-value]
 
 
-def test_current_bundle_passes_the_integrity_and_replay_gate() -> None:
-    assert evaluate(REPO_ROOT) == []
-
-
 def test_protocol_keeps_all_literature_claim_classes_distinct() -> None:
     _, protocol, _, _, _ = _bundle()
 

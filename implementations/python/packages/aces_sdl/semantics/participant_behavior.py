@@ -5,6 +5,8 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 
+from ..participant_behavior_specification import tool_affordance_reference
+
 
 @dataclass(frozen=True)
 class ParticipantBehaviorReference:
@@ -45,10 +47,14 @@ class ParticipantBehaviorAnalysis:
 @dataclass(frozen=True)
 class _BehaviorSpecificationReferenceContext:
     participant_names: set[str]
-    participant_roles: set[str]
+    participant_roles_by_agent: Mapping[str, str]
     action_names: set[str]
     observation_boundary_names: set[str]
     outcome_rule_names: set[str]
+
+    @property
+    def participant_roles(self) -> set[str]:
+        return set(self.participant_roles_by_agent.values())
 
 
 def _action_references_for_agent(
@@ -400,6 +406,210 @@ def _behavior_specification_reference_issues(
     return issues
 
 
+def _tool_affordance_participants(
+    behavior_spec: object,
+    reference_context: _BehaviorSpecificationReferenceContext,
+) -> set[str]:
+    participants = {
+        str(ref)
+        for ref in getattr(behavior_spec, "participant_refs", []) or []
+        if str(ref) in reference_context.participant_names
+    }
+    role_refs = {str(ref) for ref in getattr(behavior_spec, "participant_role_refs", []) or []}
+    participants.update(
+        participant_name
+        for participant_name, role in reference_context.participant_roles_by_agent.items()
+        if role in role_refs
+    )
+    return participants
+
+
+def _tool_affordance_duplicate_issue(
+    *,
+    spec_name: str,
+    affordance_id: str,
+    tool_ref: object,
+    action_refs: list[str],
+    boundary_refs: list[str],
+    seen_relations: dict[tuple[str, tuple[str, ...], tuple[str, ...]], str],
+) -> ParticipantBehaviorIssue | None:
+    signature = (str(tool_ref or ""), tuple(sorted(action_refs)), tuple(sorted(boundary_refs)))
+    duplicate_of = seen_relations.get(signature)
+    if duplicate_of is None:
+        seen_relations[signature] = affordance_id
+        return None
+    return ParticipantBehaviorIssue(
+        code="participant.tool-affordance-duplicate-relation",
+        participant_name="",
+        spec_name=spec_name,
+        ref=affordance_id,
+        message=duplicate_of,
+    )
+
+
+def _tool_affordance_action_issues(
+    *,
+    spec_name: str,
+    affordance_id: str,
+    action_ref: str,
+    parent_actions: set[str],
+    participants: set[str],
+    agents_by_name: Mapping[str, object],
+) -> list[ParticipantBehaviorIssue]:
+    issues: list[ParticipantBehaviorIssue] = []
+    if action_ref not in parent_actions:
+        issues.append(
+            ParticipantBehaviorIssue(
+                code="participant.tool-affordance-action-widens-parent",
+                participant_name="",
+                spec_name=spec_name,
+                ref=action_ref,
+                action_name=affordance_id,
+            )
+        )
+    for participant_name in sorted(participants):
+        agent_actions = {str(ref) for ref in getattr(agents_by_name[participant_name], "actions", []) or []}
+        if action_ref not in agent_actions:
+            issues.append(
+                ParticipantBehaviorIssue(
+                    code="participant.tool-affordance-action-outside-participant",
+                    participant_name=participant_name,
+                    spec_name=spec_name,
+                    ref=action_ref,
+                    action_name=affordance_id,
+                )
+            )
+    return issues
+
+
+def _tool_affordance_boundary_issues(
+    *,
+    spec_name: str,
+    affordance_id: str,
+    boundary_ref: str,
+    parent_boundaries: set[str],
+    participants: set[str],
+    agents_by_name: Mapping[str, object],
+    observation_boundaries: Mapping[str, object],
+) -> list[ParticipantBehaviorIssue]:
+    issues: list[ParticipantBehaviorIssue] = []
+    if boundary_ref not in parent_boundaries:
+        issues.append(
+            ParticipantBehaviorIssue(
+                code="participant.tool-affordance-boundary-widens-parent",
+                participant_name="",
+                spec_name=spec_name,
+                ref=boundary_ref,
+                action_name=affordance_id,
+            )
+        )
+    for participant_name in sorted(participants):
+        agent_boundaries = {
+            str(ref) for ref in getattr(agents_by_name[participant_name], "observation_boundaries", []) or []
+        }
+        if boundary_ref not in agent_boundaries:
+            issues.append(
+                ParticipantBehaviorIssue(
+                    code="participant.tool-affordance-boundary-outside-participant",
+                    participant_name=participant_name,
+                    spec_name=spec_name,
+                    ref=boundary_ref,
+                    action_name=affordance_id,
+                )
+            )
+    boundary = observation_boundaries.get(boundary_ref)
+    if boundary is None:
+        return issues
+    binding_ref = tool_affordance_reference(spec_name, affordance_id)
+    declared_refs = _observation_boundary_declared_refs(boundary)
+    view_rule_refs = {str(getattr(rule, "information_ref", "")) for rule in getattr(boundary, "view_rules", []) or []}
+    if binding_ref not in declared_refs or binding_ref not in view_rule_refs:
+        issues.append(
+            ParticipantBehaviorIssue(
+                code="participant.tool-affordance-view-unclassified",
+                participant_name="",
+                spec_name=spec_name,
+                ref=binding_ref,
+                action_name=affordance_id,
+                boundary_name=boundary_ref,
+            )
+        )
+    return issues
+
+
+def _resolved_reference_issues(
+    refs: list[str],
+    is_unresolved: Callable[[object], bool],
+    build_issues: Callable[[str], list[ParticipantBehaviorIssue]],
+) -> list[ParticipantBehaviorIssue]:
+    issues: list[ParticipantBehaviorIssue] = []
+    for ref in refs:
+        if not is_unresolved(ref):
+            issues.extend(build_issues(ref))
+    return issues
+
+
+def _tool_affordance_reference_issues(
+    *,
+    spec_name: str,
+    behavior_spec: object,
+    agents_by_name: Mapping[str, object],
+    observation_boundaries: Mapping[str, object],
+    reference_context: _BehaviorSpecificationReferenceContext,
+    is_unresolved: Callable[[object], bool],
+) -> list[ParticipantBehaviorIssue]:
+    issues: list[ParticipantBehaviorIssue] = []
+    parent_actions = {str(ref) for ref in getattr(behavior_spec, "action_contract_refs", []) or []}
+    parent_boundaries = {str(ref) for ref in getattr(behavior_spec, "observation_boundary_refs", []) or []}
+    participants = _tool_affordance_participants(behavior_spec, reference_context)
+    seen_relations: dict[tuple[str, tuple[str, ...], tuple[str, ...]], str] = {}
+    for affordance_id, binding in getattr(behavior_spec, "tool_affordances", {}).items():
+        affordance_id = str(affordance_id)
+        action_refs = [str(ref) for ref in getattr(binding, "action_contract_refs", []) or []]
+        boundary_refs = [str(ref) for ref in getattr(binding, "observation_boundary_refs", []) or []]
+        duplicate_issue = _tool_affordance_duplicate_issue(
+            spec_name=spec_name,
+            affordance_id=affordance_id,
+            tool_ref=getattr(binding, "tool_ref", None),
+            action_refs=action_refs,
+            boundary_refs=boundary_refs,
+            seen_relations=seen_relations,
+        )
+        if duplicate_issue is not None:
+            issues.append(duplicate_issue)
+
+        issues.extend(
+            _resolved_reference_issues(
+                action_refs,
+                is_unresolved,
+                lambda action_ref, affordance_id=affordance_id: _tool_affordance_action_issues(
+                    spec_name=spec_name,
+                    affordance_id=affordance_id,
+                    action_ref=action_ref,
+                    parent_actions=parent_actions,
+                    participants=participants,
+                    agents_by_name=agents_by_name,
+                ),
+            )
+        )
+        issues.extend(
+            _resolved_reference_issues(
+                boundary_refs,
+                is_unresolved,
+                lambda boundary_ref, affordance_id=affordance_id: _tool_affordance_boundary_issues(
+                    spec_name=spec_name,
+                    affordance_id=affordance_id,
+                    boundary_ref=boundary_ref,
+                    parent_boundaries=parent_boundaries,
+                    participants=participants,
+                    agents_by_name=agents_by_name,
+                    observation_boundaries=observation_boundaries,
+                ),
+            )
+        )
+    return issues
+
+
 def _behavior_specification_feature_issues(
     *,
     spec_name: str,
@@ -498,7 +708,7 @@ def _behavior_specification_issues(
     *,
     behavior_specifications: Mapping[str, object],
     agents_by_name: Mapping[str, object],
-    participant_roles: set[str],
+    participant_roles_by_agent: Mapping[str, str],
     action_contracts: Mapping[str, object],
     observation_boundaries: Mapping[str, object],
     outcome_interpretation_rules: Mapping[str, object],
@@ -507,7 +717,7 @@ def _behavior_specification_issues(
     issues: list[ParticipantBehaviorIssue] = []
     reference_context = _BehaviorSpecificationReferenceContext(
         participant_names={str(name) for name in agents_by_name},
-        participant_roles=participant_roles,
+        participant_roles_by_agent=participant_roles_by_agent,
         action_names={str(name) for name in action_contracts},
         observation_boundary_names={str(name) for name in observation_boundaries},
         outcome_rule_names={str(name) for name in outcome_interpretation_rules},
@@ -529,6 +739,16 @@ def _behavior_specification_issues(
                 is_unresolved=is_unresolved,
             )
         )
+        issues.extend(
+            _tool_affordance_reference_issues(
+                spec_name=normalized_spec_name,
+                behavior_spec=behavior_spec,
+                agents_by_name=agents_by_name,
+                observation_boundaries=observation_boundaries,
+                reference_context=reference_context,
+                is_unresolved=is_unresolved,
+            )
+        )
     return issues
 
 
@@ -539,7 +759,7 @@ def analyze_participant_behavior(
     observation_boundaries: Mapping[str, object],
     outcome_interpretation_rules: Mapping[str, object],
     behavior_specifications: Mapping[str, object],
-    participant_roles: set[str],
+    participant_roles_by_agent: Mapping[str, str],
     is_unresolved: Callable[[object], bool],
 ) -> ParticipantBehaviorAnalysis:
     """Validate and normalize participant action/observation references.
@@ -588,7 +808,7 @@ def analyze_participant_behavior(
         _behavior_specification_issues(
             behavior_specifications=behavior_specifications,
             agents_by_name=agents_by_name,
-            participant_roles=participant_roles,
+            participant_roles_by_agent=participant_roles_by_agent,
             action_contracts=action_contracts,
             observation_boundaries=observation_boundaries,
             outcome_interpretation_rules=outcome_interpretation_rules,

@@ -9,14 +9,18 @@ from ..models import (
     ParticipantBehaviorRuntime,
     ParticipantBehaviorSpecificationRuntime,
     ParticipantInteractiveAccessRuntime,
+    ParticipantToolAffordanceRuntime,
 )
 from .addresses import (
     _action_contract_address,
     _assertion_address,
     _behavior_specification_address,
+    _content_address,
     _observation_boundary_address,
     _outcome_interpretation_rule_address,
     _participant_behavior_address,
+    _section_ref_name,
+    _tool_affordance_address,
 )
 from .alias_index import (
     _account_addresses_for_refs,
@@ -262,6 +266,9 @@ def _compile_behavior_specifications(
                 *authority_scope_addresses,
             ]
         )
+        tool_affordance_addresses = tuple(
+            _tool_affordance_address(name, affordance_id) for affordance_id in sorted(behavior_spec.tool_affordances)
+        )
         behavior_specifications[address] = ParticipantBehaviorSpecificationRuntime(
             address=address,
             name=name,
@@ -281,9 +288,66 @@ def _compile_behavior_specifications(
             realization_profile_ref=str(behavior_spec.realization_profile_ref or ""),
             backend_feature_support_refs=tuple(behavior_spec.backend_feature_support_refs),
             evidence_contract_refs=tuple(behavior_spec.evidence_contract_refs),
+            tool_affordance_addresses=tool_affordance_addresses,
             extension_policy=str(behavior_spec.extension_policy),
             extension_keys=tuple(sorted(behavior_spec.extensions)),
             refresh_dependencies=dependencies,
             spec=spec,
         )
     return behavior_specifications
+
+
+def _compile_tool_affordances(
+    scenario: InstantiatedScenario,
+    diagnostics: list[Diagnostic],
+) -> dict[str, ParticipantToolAffordanceRuntime]:
+    tool_affordances: dict[str, ParticipantToolAffordanceRuntime] = {}
+    for spec_name, behavior_spec in scenario.behavior_specifications.items():
+        owner_address = _behavior_specification_address(spec_name)
+        for affordance_id, binding in sorted(behavior_spec.tool_affordances.items()):
+            address = _tool_affordance_address(spec_name, affordance_id)
+            action_addresses = _resolve_behavior_spec_refs(
+                refs=list(binding.action_contract_refs),
+                declared=scenario.action_contracts,
+                address_for_ref=_action_contract_address,
+                owner_address=address,
+                diagnostic_code="participant.tool-affordance-action-contract-ref-unbound",
+                diagnostic_label="participant action contract",
+                diagnostics=diagnostics,
+            )
+            observation_addresses = _resolve_behavior_spec_refs(
+                refs=list(binding.observation_boundary_refs),
+                declared=scenario.observation_boundaries,
+                address_for_ref=_observation_boundary_address,
+                owner_address=address,
+                diagnostic_code="participant.tool-affordance-observation-boundary-ref-unbound",
+                diagnostic_label="participant observation boundary",
+                diagnostics=diagnostics,
+            )
+            tool_address = ""
+            if binding.tool_ref:
+                tool_name = _section_ref_name(binding.tool_ref, "content", scenario.content)
+                tool_address = _content_address(tool_name)
+            dependencies = _dedupe(
+                [
+                    owner_address,
+                    *([tool_address] if tool_address else []),
+                    *action_addresses,
+                    *observation_addresses,
+                ]
+            )
+            tool_affordances[address] = ParticipantToolAffordanceRuntime(
+                address=address,
+                name=affordance_id,
+                affordance_id=affordance_id,
+                behavior_specification_address=owner_address,
+                tool_ref=str(binding.tool_ref or ""),
+                tool_address=tool_address,
+                action_contract_refs=tuple(binding.action_contract_refs),
+                action_contract_addresses=action_addresses,
+                observation_boundary_refs=tuple(binding.observation_boundary_refs),
+                observation_boundary_addresses=observation_addresses,
+                refresh_dependencies=dependencies,
+                spec=_dump(binding),
+            )
+    return tool_affordances

@@ -307,6 +307,24 @@ def _add_section_declarations(index: DeclarationIndex, scenario: ScenarioContent
             )
 
 
+def _add_tool_affordance_declarations(index: DeclarationIndex, scenario: ScenarioContent) -> None:
+    for spec_name, behavior_spec in scenario.behavior_specifications.items():
+        spec_parts = _qualified_parts(spec_name)
+        for affordance_id in behavior_spec.tool_affordances:
+            _add(
+                index,
+                kind="tool-affordance",
+                address_parts=(
+                    "behavior_specifications",
+                    *spec_parts,
+                    "tool_affordances",
+                    affordance_id,
+                ),
+                model_path=(f"behavior_specifications.{spec_name}.tool_affordances.{affordance_id}"),
+                referenceable=True,
+            )
+
+
 def _add_variable_declarations(index: DeclarationIndex, scenario: ScenarioContent) -> None:
     for name in getattr(scenario, "variables", {}):
         _add(
@@ -413,6 +431,7 @@ def build_declaration_index(
     )
 
     _add_section_declarations(index, scenario)
+    _add_tool_affordance_declarations(index, scenario)
     _add_variable_declarations(index, scenario)
     _add_node_declarations(index, scenario)
     _add_infrastructure_declarations(index, scenario)

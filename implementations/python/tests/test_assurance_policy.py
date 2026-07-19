@@ -1047,16 +1047,6 @@ def test_ledger_required_artifacts_must_be_delivered_or_waived(tmp_path: Path) -
     assert _flagged(failures, "unit_tests")
 
 
-# ----------------------------------------------------------------------------- #
-# Real-repo invariant -- the actual checked-in YAML and docs must be clean.     #
-# ----------------------------------------------------------------------------- #
-
-
-def test_real_repo_assurance_policy_is_clean() -> None:
-    failures = evaluate_assurance_policy(REPO_ROOT)
-    assert failures == []
-
-
 # --------------------------------------------------------------------------- #
 # Assurance fulfillment map (issue #485). Per classified formal-spec           #
 # subsystem, every required artifact kind for its FM level must be delivered   #

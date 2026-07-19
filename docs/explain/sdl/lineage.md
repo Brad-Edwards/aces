@@ -802,6 +802,23 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   state, locators, ports, and raw credentials. Exact source boundaries and
   divergences are recorded in the lineage ledger and participant
   interactive-access research note.
+- SEM-219's executable tool-affordance binding adopts no new external syntax.
+  It maps the existing ACES `scenario-content` reference model
+  (`tools-and-artifacts`) to optional tool identity, existing participant
+  action contracts to affordance meaning and complete SEM-211 constraints,
+  `agents.*` plus behavior-specification refs to participant-local authored
+  availability, and observation-boundary/view-rule refs to explicit visibility
+  classification. Delivery is implemented for authoring, module composition,
+  fail-closed semantic validation, post-instantiation revalidation, canonical
+  compiler IR, and the three published SDL schemas. Evidence is
+  `ParticipantToolAffordance`, `ParticipantToolAffordanceRuntime`, the SDL
+  reference catalog, and the SEM-219 cases in
+  `implementations/python/tests/test_sem_208_participant_behavior.py`.
+  This mapping does not claim apparatus support, current eligibility,
+  invocation admission, realized exposure, runtime execution, persistence,
+  or evidence merely from authored presence. The lineage ledger and source
+  audit remain unchanged because this implementation adds no normative
+  external derivation or compatibility claim.
 - CALDERA adversary-emulation research informs the action semantics: cyber
   actions can change foothold, knowledge, observations, detection surface, and
   downstream outcomes under uncertainty.

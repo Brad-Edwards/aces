@@ -123,6 +123,10 @@ _BEHAVIOR_SEMANTICS = (
 _BEHAVIOR_VALIDATOR = (
     "[behavior validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py)"
 )
+_TOOL_AFFORDANCE_VALIDATOR = (
+    "[tool-affordance validator]"
+    "(../../implementations/python/packages/aces_sdl/validator/_participant_tool_affordances.py)"
+)
 _BEHAVIOR_MODEL = "[behavior model](../../implementations/python/packages/aces_sdl/participant_behavior.py)"
 _EVIDENCE_VALIDATOR = (
     "[evidence validator](../../implementations/python/packages/aces_sdl/validator/_evidence_requirements.py)"
@@ -594,6 +598,24 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         _SEMANTIC,
         _DANGLING,
         _BEHAVIOR_VALIDATOR,
+    ),
+    "behavior_specifications.*.tool_affordances.*.tool_ref": (
+        "content",
+        _SEMANTIC,
+        "fatal dangling, ambiguous, or outside the `scenario-content` tools-and-artifacts reference model",
+        _TOOL_AFFORDANCE_VALIDATOR,
+    ),
+    "behavior_specifications.*.tool_affordances.*.action_contract_refs[]": (
+        "action_contracts",
+        _SEMANTIC,
+        "fatal dangling, outside the owning behavior specification, or outside a resolved participant",
+        _BEHAVIOR_SEMANTICS,
+    ),
+    "behavior_specifications.*.tool_affordances.*.observation_boundary_refs[]": (
+        "observation_boundaries",
+        _SEMANTIC,
+        "fatal dangling, outside the owner/participant, or without explicit view classification",
+        _BEHAVIOR_SEMANTICS,
     ),
     "behavior_specifications.*.behavior_mode": (
         "vocabulary:behavior_mode",

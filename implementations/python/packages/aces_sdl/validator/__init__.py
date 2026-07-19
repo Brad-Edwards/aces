@@ -7,6 +7,7 @@ from ._core import _ValidatorCore
 from ._domain_topology import _DomainTopologyMixin
 from ._evidence_requirements import _EvidenceRequirementsMixin
 from ._nodes_infra_network import _NodesInfraNetworkMixin
+from ._participant_tool_affordances import _ParticipantToolAffordancesMixin
 from ._propositions import _PropositionsMixin
 from ._relationships import _RelationshipsMixin
 from ._relationships_proxy import _RelationshipsProxyMixin
@@ -32,6 +33,7 @@ class SemanticValidator(
     _DomainTopologyMixin,
     _RelationshipsMixin,
     _RelationshipsProxyMixin,
+    _ParticipantToolAffordancesMixin,
     _ContentObjectivesMixin,
     _PropositionsMixin,
     _EvidenceRequirementsMixin,

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
+from functools import cache
 from typing import Any
 
 from aces_sdl.canonical import InstantiatedScenarioSnapshot
@@ -171,8 +173,9 @@ def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
     }
 
 
-def schema_bundle() -> dict[str, dict[str, Any]]:
-    """Return the repo-published JSON Schemas for external contracts."""
+@cache
+def _schema_bundle_template() -> dict[str, dict[str, Any]]:
+    """Build the immutable-in-practice template used by :func:`schema_bundle`."""
 
     bundle = _raw_schema_bundle()
     _add_aces_invariant(
@@ -250,3 +253,15 @@ def schema_bundle() -> dict[str, dict[str, Any]]:
             known_contract_ids=known_contract_ids,
         )
     return bundle
+
+
+def schema_bundle() -> dict[str, dict[str, Any]]:
+    """Return an isolated copy of the repo-published external contract schemas.
+
+    Generating the complete bundle is expensive because it traverses every
+    Pydantic contract model and attaches the governed ACES annotations.  The
+    generated template is process-stable, so build it once while preserving the
+    public function's historical fresh-dictionary semantics for callers.
+    """
+
+    return deepcopy(_schema_bundle_template())

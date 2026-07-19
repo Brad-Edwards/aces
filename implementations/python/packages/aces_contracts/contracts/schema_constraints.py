@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib
 from copy import deepcopy
+from functools import cache
 from typing import Any, Literal
 
 from aces_sdl import VARIABLE_TOKEN_PATTERN
@@ -447,13 +448,18 @@ def _validate_aces_semantic_invariant_annotations(
                 )
 
 
+@cache
+def _published_contract_ids() -> frozenset[str]:
+    from .bundle import _schema_bundle_template
+
+    return frozenset(_schema_bundle_template())
+
+
 def validate_aces_semantic_invariant_annotations(contract_id: str, json_schema: dict[str, Any]) -> None:
     """Validate ACES semantic-invariant metadata on a published JSON Schema."""
-    from .bundle import schema_bundle
 
-    known_contract_ids = frozenset(schema_bundle())
     _validate_aces_semantic_invariant_annotations(
         contract_id=contract_id,
         json_schema=json_schema,
-        known_contract_ids=known_contract_ids,
+        known_contract_ids=_published_contract_ids(),
     )

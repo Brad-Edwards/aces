@@ -135,10 +135,13 @@ def _validate_reference_model_schema_binding(
     binding_label: str,
     binding: ReferenceModelSchemaBindingModel,
     key_fields: list[str],
+    schemas: dict[str, dict[str, Any]] | None = None,
 ) -> None:
-    from .bundle import schema_bundle
+    if schemas is None:
+        from .bundle import schema_bundle
 
-    schema_root = schema_bundle()[binding.contract_id]
+        schemas = schema_bundle()
+    schema_root = schemas[binding.contract_id]
     try:
         pointer_schema = _resolve_ref_schema(schema_root, _resolve_schema_pointer(schema_root, binding.schema_pointer))
     except KeyError as exc:

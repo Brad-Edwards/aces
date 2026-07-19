@@ -119,6 +119,16 @@ def _behavior_specification_address(name: str) -> str:
     return _address("participant", "behavior-specification", name)
 
 
+def _tool_affordance_address(spec_name: str, affordance_id: str) -> str:
+    return _address(
+        "participant",
+        "behavior-specification",
+        spec_name,
+        "tool-affordance",
+        affordance_id,
+    )
+
+
 def _condition_binding_address(node_name: str, condition_name: str) -> str:
     return _address("evaluation", "condition", node_name, condition_name)
 

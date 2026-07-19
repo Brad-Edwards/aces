@@ -1871,6 +1871,11 @@ behavior_specifications:
     realization_profile_ref: participant-implementation-manifest:red-agent
     backend_feature_support_refs: [behavior_history]
     evidence_contract_refs: [participant-behavior-history-event-stream-v1]
+    tool_affordances:
+      scanner:
+        tool_ref: scanner-package
+        action_contract_refs: [scan]
+        observation_boundary_refs: [red-view]
     extension_policy: governed-extension
     extensions:
       x-acme:review-note:
@@ -1899,10 +1904,22 @@ action contracts, experiment tasks, workflow steps, or runtime
 history. Extensions are only allowed when `extension_policy` permits them, and
 extension keys must use `x-<owner>:<term>`.
 
+`tool_affordances` is a closed, participant-local mapping. Its keys identify
+authored affordance bindings; each value may name one governed scenario
+`content` identity and must name non-empty action-contract and observation-
+boundary sets. The binding reference
+`behavior_specifications.<spec>.tool_affordances.<id>` must be explicitly
+classified by each referenced observation boundary. Presence means authored
+availability only: visibility, apparatus support, eligibility, admission,
+realization, effects, constraints, and evidence remain on their existing
+contracts and do not follow from the binding.
+
 Compiled behavior specifications use stable
 `participant.behavior-specification.<name>` addresses and preserve dependency
 links to the participant behavior, action contract, observation boundary, and
-outcome-rule runtime addresses.
+outcome-rule runtime addresses. Each nested affordance compiles independently
+at `participant.behavior-specification.<name>.tool-affordance.<id>` with raw
+refs and resolved content/action/observation addresses.
 
 ---
 
