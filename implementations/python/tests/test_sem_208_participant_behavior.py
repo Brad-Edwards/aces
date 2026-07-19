@@ -15,9 +15,12 @@ from aces_processor.models import (
     ParticipantObservationStatus,
     iter_participant_behavior_history_violations,
 )
-from aces_sdl._errors import SDLParseError, SDLValidationError
+from aces_sdl._declarations import build_declaration_index
+from aces_sdl._errors import SDLInstantiationError, SDLParseError, SDLValidationError
+from aces_sdl.instantiate import instantiate_scenario
 from aces_sdl.parser import parse_sdl, parse_sdl_file
 from aces_sdl.participant_behavior import ParticipantInteractionClass
+from jsonschema import Draft202012Validator
 
 T0 = "2026-05-18T18:30:00Z"
 T1 = "2026-05-18T18:30:05Z"
@@ -26,6 +29,7 @@ T3 = "2026-05-18T18:30:15Z"
 PARTICIPANT_ADDRESS = "participant.behavior.red-agent"
 ACTION_ADDRESS = "participant.action-contract.scan"
 OBSERVATION_ADDRESS = "participant.observation-boundary.red-view"
+AFFORDANCE_ADDRESS = "participant.behavior-specification.red-scan-behavior.tool-affordance.network-scanner"
 ACTION_INSTANCE = "scan-0001"
 POST_STATE_DIGEST = "sha256:fb2f5a36c0d7d2a0"
 
@@ -226,6 +230,58 @@ def _scenario_yaml(*, actions: str = "[scan]", boundaries: str = "[red-view]") -
             entity: red-team
             actions: {actions}
             observation_boundaries: {boundaries}
+        """
+    )
+
+
+def _sem219_scenario_yaml(*, actions: str = "[scan]", boundaries: str = "[red-view]") -> str:
+    affordance_ref = "behavior_specifications.red-scan-behavior.tool_affordances.network-scanner"
+    scenario = _scenario_yaml(actions=actions, boundaries=boundaries).replace(
+        "action_contracts:\n",
+        textwrap.dedent(
+            """
+        content:
+          scanner-package:
+            type: file
+            target: web
+            path: /opt/aces/tools/scanner
+        action_contracts:
+        """
+        ),
+        1,
+    )
+    scenario = scenario.replace(
+        "    observable_refs: []\n",
+        f"    observable_refs: [{affordance_ref}]\n",
+        1,
+    )
+    scenario = scenario.replace(
+        "    view_rules:\n",
+        (
+            "    view_rules:\n"
+            f"      - information_ref: {affordance_ref}\n"
+            "        boundary_class: observable_resource\n"
+            "        disposition: observable\n"
+            "        visibility_basis: authored participant-local affordance\n"
+        ),
+        1,
+    )
+    return scenario + textwrap.dedent(
+        """
+        behavior_specifications:
+          red-scan-behavior:
+            semantic_version: 1.0.0
+            lifecycle_state: active
+            participant_refs: [red-agent]
+            action_contract_refs: [scan]
+            observation_boundary_refs: [red-view]
+            authority_scope_refs: [nodes.web.services.http]
+            tool_affordances:
+              network-scanner:
+                tool_ref: scanner-package
+                action_contract_refs: [scan]
+                observation_boundary_refs: [red-view]
+            extension_policy: governed-extension
         """
     )
 
@@ -462,6 +518,461 @@ def test_behavior_specifications_parse_validate_and_compile():
     assert compiled.spec["participant_refs"] == ["red-agent"]
 
 
+def test_sem219_tool_affordance_parses_validates_and_compiles_typed_ir():
+    scenario = parse_sdl(_sem219_scenario_yaml())
+
+    binding = scenario.behavior_specifications["red-scan-behavior"].tool_affordances["network-scanner"]
+    assert binding.tool_ref == "scanner-package"
+    assert binding.action_contract_refs == ["scan"]
+    assert binding.observation_boundary_refs == ["red-view"]
+
+    model = compile_runtime_model(scenario)
+    compiled = model.tool_affordances[AFFORDANCE_ADDRESS]
+    assert compiled.behavior_specification_address == ("participant.behavior-specification.red-scan-behavior")
+    assert compiled.tool_ref == "scanner-package"
+    assert compiled.tool_address == "provision.content.scanner-package"
+    assert compiled.action_contract_refs == ("scan",)
+    assert compiled.action_contract_addresses == (ACTION_ADDRESS,)
+    assert compiled.observation_boundary_refs == ("red-view",)
+    assert compiled.observation_boundary_addresses == (OBSERVATION_ADDRESS,)
+    assert compiled.refresh_dependencies == (
+        "participant.behavior-specification.red-scan-behavior",
+        "provision.content.scanner-package",
+        ACTION_ADDRESS,
+        OBSERVATION_ADDRESS,
+    )
+    assert model.behavior_specifications[
+        "participant.behavior-specification.red-scan-behavior"
+    ].tool_affordance_addresses == (AFFORDANCE_ADDRESS,)
+
+
+def test_sem219_one_tool_identity_can_bind_multiple_distinct_affordances():
+    scan_ref = "behavior_specifications.red-scan-behavior.tool_affordances.network-scanner"
+    inspect_ref = "behavior_specifications.red-scan-behavior.tool_affordances.package-inspection"
+    source = _sem219_scenario_yaml().replace(
+        "action_contracts:\n  scan:\n",
+        textwrap.dedent(
+            """
+            action_contracts:
+              inspect:
+                semantic_version: 1.0.0
+                lifecycle_state: active
+                behavioral_granularity: atomic
+                procedure_basis: inspect a governed package
+                realization_profile: backend-declared
+                fidelity_claim: records participant package-inspection intent
+                preconditions:
+                  - precondition_id: authority-in-scope
+                    precondition_class: authority
+                    description: participant is authorized to inspect the package
+                effects:
+                  - effect_id: inspect-package
+                    effect_class: observation_effect
+                    description: inspect the governed package
+                    evidence_refs: [evidence.scan-output]
+                failure_classes: [precondition_unsatisfied, unknown]
+              scan:
+            """
+        ).lstrip(),
+        1,
+    )
+    source = source.replace("actions: [scan]", "actions: [scan, inspect]", 1)
+    source = source.replace(
+        "    action_contract_refs: [scan]\n    observation_boundary_refs: [red-view]\n    authority_scope_refs:",
+        "    action_contract_refs: [scan, inspect]\n    observation_boundary_refs: [red-view]\n    authority_scope_refs:",
+        1,
+    )
+    source = source.replace(
+        "      network-scanner:\n",
+        (
+            "      package-inspection:\n"
+            "        tool_ref: scanner-package\n"
+            "        action_contract_refs: [inspect]\n"
+            "        observation_boundary_refs: [red-view]\n"
+            "      network-scanner:\n"
+        ),
+        1,
+    )
+    source = source.replace(
+        f"    observable_refs: [{scan_ref}]",
+        f"    observable_refs: [{scan_ref}, {inspect_ref}]",
+        1,
+    )
+    source = source.replace(
+        "    view_rules:\n",
+        (
+            "    view_rules:\n"
+            f"      - information_ref: {inspect_ref}\n"
+            "        boundary_class: observable_resource\n"
+            "        disposition: observable\n"
+            "        visibility_basis: authored participant-local affordance\n"
+        ),
+        1,
+    )
+
+    model = compile_runtime_model(parse_sdl(source))
+    scan = model.tool_affordances[AFFORDANCE_ADDRESS]
+    inspect = model.tool_affordances[
+        "participant.behavior-specification.red-scan-behavior.tool-affordance.package-inspection"
+    ]
+
+    assert scan.tool_address == inspect.tool_address == "provision.content.scanner-package"
+    assert scan.action_contract_addresses == (ACTION_ADDRESS,)
+    assert inspect.action_contract_addresses == ("participant.action-contract.inspect",)
+
+
+def test_sem219_tool_identity_is_revalidated_after_instantiation():
+    source = (
+        _sem219_scenario_yaml()
+        .replace(
+            "name: sem-208\n",
+            textwrap.dedent(
+                """
+            name: sem-208
+            variables:
+              tool_identity:
+                type: string
+                default: scanner-package
+                allowed_values: [scanner-package, missing-package]
+            """
+            ).lstrip(),
+            1,
+        )
+        .replace("tool_ref: scanner-package", "tool_ref: ${tool_identity}", 1)
+    )
+    authored = parse_sdl(source)
+
+    instantiated = instantiate_scenario(authored, parameters={"tool_identity": "scanner-package"})
+    assert compile_runtime_model(instantiated).tool_affordances[AFFORDANCE_ADDRESS].tool_address == (
+        "provision.content.scanner-package"
+    )
+
+    with pytest.raises(SDLInstantiationError, match="missing-package"):
+        instantiate_scenario(authored, parameters={"tool_identity": "missing-package"})
+
+
+def test_sem219_tool_affordance_is_closed_and_requires_non_empty_relations():
+    invalid = _sem219_scenario_yaml().replace(
+        "        tool_ref: scanner-package\n        action_contract_refs: [scan]\n        observation_boundary_refs: [red-view]",
+        "        tool_ref: scanner-package\n        action_contract_refs: [scan]\n        observation_boundary_refs: []\n        visible: true",
+        1,
+    )
+
+    with pytest.raises(SDLParseError) as excinfo:
+        parse_sdl(invalid)
+
+    rendered = str(excinfo.value)
+    assert "observation_boundary_refs" in rendered
+    assert "Extra inputs are not permitted" in rendered
+
+
+def test_sem219_schemas_publish_closed_tool_affordance_shape():
+    for contract_id in (
+        "sdl-authoring-input-v1",
+        "instantiated-scenario-v1",
+        "instantiated-scenario-snapshot-v1",
+    ):
+        schema = schema_bundle()[contract_id]
+        affordance = schema["$defs"]["ParticipantToolAffordance"]
+        assert affordance["additionalProperties"] is False
+        assert affordance["required"] == ["action_contract_refs", "observation_boundary_refs"]
+        assert set(affordance["properties"]) == {
+            "tool_ref",
+            "action_contract_refs",
+            "observation_boundary_refs",
+        }
+
+
+@pytest.mark.parametrize("relation_field", ("action_contract_refs", "observation_boundary_refs"))
+@pytest.mark.parametrize("invalid_refs", (("",), ("scan", "scan")))
+def test_sem219_schemas_reject_blank_and_duplicate_tool_affordance_relations(
+    relation_field: str,
+    invalid_refs: tuple[str, ...],
+):
+    payload = {
+        "tool_ref": "scanner-package",
+        "action_contract_refs": ["scan"],
+        "observation_boundary_refs": ["red-view"],
+    }
+    payload[relation_field] = list(invalid_refs)
+
+    for contract_id in (
+        "sdl-authoring-input-v1",
+        "instantiated-scenario-v1",
+        "instantiated-scenario-snapshot-v1",
+    ):
+        affordance_schema = schema_bundle()[contract_id]["$defs"]["ParticipantToolAffordance"]
+        assert list(Draft202012Validator(affordance_schema).iter_errors(payload)), contract_id
+
+
+def test_sem219_tool_affordance_has_a_typed_authored_declaration():
+    scenario = parse_sdl(_sem219_scenario_yaml())
+    index = build_declaration_index(scenario)
+    authored_ref = "behavior_specifications.red-scan-behavior.tool_affordances.network-scanner"
+
+    declaration = index.declaration_for(authored_ref)
+    assert declaration is not None
+    assert declaration.kind == "tool-affordance"
+    assert declaration.referenceable is True
+    assert declaration.targetable is False
+    assert index.resolve(authored_ref) == {authored_ref}
+
+
+@pytest.mark.parametrize(
+    ("scenario", "expected"),
+    (
+        (
+            _sem219_scenario_yaml().replace("tool_ref: scanner-package", "tool_ref: shell", 1),
+            "tool_ref 'shell' does not reference a declared scenario content identity",
+        ),
+        (
+            _sem219_scenario_yaml().replace("tool_ref: scanner-package", "tool_ref: web", 1),
+            "tool_ref 'web' must resolve through the scenario-content tools-and-artifacts reference model",
+        ),
+        (
+            _sem219_scenario_yaml().replace(
+                "    action_contract_refs: [scan]\n    observation_boundary_refs: [red-view]",
+                "    action_contract_refs: []\n    observation_boundary_refs: [red-view]",
+                1,
+            ),
+            "action_contract_ref 'scan' widens its owning behavior specification",
+        ),
+        (
+            _sem219_scenario_yaml().replace(
+                "    action_contract_refs: [scan]\n    observation_boundary_refs: [red-view]",
+                "    action_contract_refs: [scan]\n    observation_boundary_refs: []",
+                1,
+            ),
+            "observation_boundary_ref 'red-view' widens its owning behavior specification",
+        ),
+        (
+            _sem219_scenario_yaml(actions="[]"),
+            "action_contract_ref 'scan' is outside participant 'red-agent' actions",
+        ),
+        (
+            _sem219_scenario_yaml(boundaries="[]"),
+            "observation_boundary_ref 'red-view' is outside participant 'red-agent' observation boundaries",
+        ),
+    ),
+)
+def test_sem219_tool_affordance_references_fail_closed(scenario: str, expected: str):
+    with pytest.raises(SDLValidationError) as excinfo:
+        parse_sdl(scenario)
+
+    assert expected in str(excinfo.value)
+
+
+def test_sem219_tool_affordance_rejects_cross_family_ambiguous_tool_identity():
+    ambiguous = _sem219_scenario_yaml().replace(
+        "entities:\n  red-team:\n",
+        "entities:\n  scanner-package:\n    role: red\n  red-team:\n",
+        1,
+    )
+
+    with pytest.raises(SDLValidationError) as excinfo:
+        parse_sdl(ambiguous)
+
+    rendered = str(excinfo.value)
+    assert "tool_ref 'scanner-package' is ambiguous" in rendered
+    assert "content.scanner-package" in rendered
+    assert "entities.scanner-package" in rendered
+
+
+def test_sem219_tool_affordance_requires_explicit_view_classification():
+    affordance_ref = "behavior_specifications.red-scan-behavior.tool_affordances.network-scanner"
+    invalid = _sem219_scenario_yaml().replace(
+        f"    observable_refs: [{affordance_ref}]",
+        "    observable_refs: []",
+        1,
+    )
+    invalid = invalid.replace(
+        (
+            f"      - information_ref: {affordance_ref}\n"
+            "        boundary_class: observable_resource\n"
+            "        disposition: observable\n"
+            "        visibility_basis: authored participant-local affordance\n"
+        ),
+        "",
+        1,
+    )
+
+    with pytest.raises(SDLValidationError) as excinfo:
+        parse_sdl(invalid)
+
+    assert "must be explicitly classified by observation boundary 'red-view'" in str(excinfo.value)
+
+
+def test_sem219_tool_affordance_rejects_duplicate_relations():
+    duplicate = _sem219_scenario_yaml().replace(
+        "      network-scanner:\n",
+        (
+            "      alternate-scanner:\n"
+            "        tool_ref: scanner-package\n"
+            "        action_contract_refs: [scan]\n"
+            "        observation_boundary_refs: [red-view]\n"
+            "      network-scanner:\n"
+        ),
+        1,
+    )
+
+    with pytest.raises(SDLValidationError) as excinfo:
+        parse_sdl(duplicate)
+
+    assert "duplicate tool affordance relation" in str(excinfo.value)
+
+
+def test_sem219_role_scoped_affordance_resolves_each_matching_participant():
+    role_scoped = _sem219_scenario_yaml().replace(
+        "    participant_refs: [red-agent]\n",
+        "    participant_refs: []\n    participant_role_refs: [red]\n",
+        1,
+    )
+
+    scenario = parse_sdl(role_scoped)
+
+    assert scenario.behavior_specifications["red-scan-behavior"].participant_role_refs == ["red"]
+    assert AFFORDANCE_ADDRESS in compile_runtime_model(scenario).tool_affordances
+
+
+@pytest.mark.parametrize(
+    ("actions", "boundaries", "expected"),
+    (
+        ("[]", "[red-view]", "action_contract_ref 'scan' is outside participant 'red-observer' actions"),
+        (
+            "[scan]",
+            "[]",
+            "observation_boundary_ref 'red-view' is outside participant 'red-observer' observation boundaries",
+        ),
+    ),
+)
+def test_sem219_role_scoped_affordance_enforces_each_matching_participant(
+    actions: str,
+    boundaries: str,
+    expected: str,
+):
+    role_scoped = _sem219_scenario_yaml().replace(
+        "    participant_refs: [red-agent]\n",
+        "    participant_refs: []\n    participant_role_refs: [red]\n",
+        1,
+    )
+    role_scoped = role_scoped.replace(
+        "    observation_boundaries: [red-view]\n\nbehavior_specifications:\n",
+        (
+            "    observation_boundaries: [red-view]\n"
+            "  red-observer:\n"
+            "    entity: red-team\n"
+            f"    actions: {actions}\n"
+            f"    observation_boundaries: {boundaries}\n\n"
+            "behavior_specifications:\n"
+        ),
+        1,
+    )
+
+    with pytest.raises(SDLValidationError) as excinfo:
+        parse_sdl(role_scoped)
+
+    assert expected in str(excinfo.value)
+
+
+def test_sem219_hidden_affordance_remains_authored_without_becoming_visible():
+    affordance_ref = "behavior_specifications.red-scan-behavior.tool_affordances.network-scanner"
+    hidden = (
+        _sem219_scenario_yaml()
+        .replace(
+            f"    observable_refs: [{affordance_ref}]",
+            f"    observable_refs: []\n    hidden_refs: [{affordance_ref}, nodes.web, content.private-answer-key]",
+            1,
+        )
+        .replace(
+            "    hidden_refs: [nodes.web, content.private-answer-key]\n",
+            "",
+            1,
+        )
+        .replace(
+            "        disposition: observable\n",
+            "        disposition: hidden\n",
+            1,
+        )
+    )
+
+    model = compile_runtime_model(parse_sdl(hidden))
+
+    assert AFFORDANCE_ADDRESS in model.tool_affordances
+    assert affordance_ref in model.observation_boundaries[OBSERVATION_ADDRESS].hidden_refs
+    assert affordance_ref not in model.observation_boundaries[OBSERVATION_ADDRESS].observable_refs
+
+
+def test_sem219_optional_tool_identity_does_not_weaken_affordance_meaning():
+    identity_free = _sem219_scenario_yaml().replace(
+        "        tool_ref: scanner-package\n",
+        "",
+        1,
+    )
+
+    compiled = compile_runtime_model(parse_sdl(identity_free)).tool_affordances[AFFORDANCE_ADDRESS]
+
+    assert compiled.tool_ref == ""
+    assert compiled.tool_address == ""
+    assert compiled.action_contract_addresses == (ACTION_ADDRESS,)
+    assert compiled.observation_boundary_addresses == (OBSERVATION_ADDRESS,)
+
+
+def test_sem219_global_tool_identity_does_not_synthesize_participant_availability():
+    globally_present = _scenario_yaml().replace(
+        "action_contracts:\n",
+        textwrap.dedent(
+            """
+            content:
+              scanner-package:
+                type: file
+                target: web
+                path: /opt/aces/tools/scanner
+            action_contracts:
+            """
+        ),
+        1,
+    )
+
+    model = compile_runtime_model(parse_sdl(globally_present))
+
+    assert "provision.content.scanner-package" in model.content_placements
+    assert model.tool_affordances == {}
+
+
+def test_sem219_backend_support_does_not_synthesize_participant_authority():
+    source = _scenario_yaml() + textwrap.dedent(
+        """
+        behavior_specifications:
+          red-scan-behavior:
+            semantic_version: 1.0.0
+            lifecycle_state: active
+            participant_refs: [red-agent]
+            action_contract_refs: [scan]
+            backend_feature_support_refs: [action_contracts]
+            extension_policy: governed-extension
+        """
+    )
+
+    model = compile_runtime_model(parse_sdl(source))
+    behavior_spec = model.behavior_specifications["participant.behavior-specification.red-scan-behavior"]
+
+    assert behavior_spec.backend_feature_support_refs == ("action_contracts",)
+    assert behavior_spec.tool_affordance_addresses == ()
+    assert model.tool_affordances == {}
+
+
+def test_sem219_constraints_and_failure_classes_remain_on_action_contract():
+    model = compile_runtime_model(parse_sdl(_sem219_scenario_yaml()))
+    affordance = model.tool_affordances[AFFORDANCE_ADDRESS]
+    action_contract = model.action_contracts[ACTION_ADDRESS]
+
+    assert affordance.action_contract_addresses == (ACTION_ADDRESS,)
+    assert action_contract.precondition_classes == ("authority", "target", "realization")
+    assert "precondition_unsatisfied" in action_contract.failure_classes
+    assert "preconditions" not in affordance.spec
+    assert "failure_classes" not in affordance.spec
+
+
 def test_participant_behavior_runtime_carries_act607_authority_scope_metadata():
     model = compile_runtime_model(parse_sdl(_act607_authority_scope_scenario_yaml()))
 
@@ -584,6 +1095,7 @@ def test_behavior_specification_refs_are_namespaced_during_module_composition(tm
               version: 1.0.0
               exports:
                 entities: [red-team]
+                content: [scanner-package]
                 agents: [red-agent]
                 action_contracts: [scan]
                 observation_boundaries: [red-view]
@@ -594,6 +1106,17 @@ def test_behavior_specification_refs_are_namespaced_during_module_composition(tm
             agents:
               red-agent:
                 entity: red-team
+                actions: [scan]
+                observation_boundaries: [red-view]
+            content:
+              scanner-package:
+                type: file
+                target: web
+                path: /opt/aces/tools/scanner
+            nodes:
+              web:
+                type: VM
+                resources: {ram: 1 GiB, cpu: 1}
             action_contracts:
               scan:
                 semantic_version: 1.0.0
@@ -614,9 +1137,16 @@ def test_behavior_specification_refs_are_namespaced_during_module_composition(tm
             observation_boundaries:
               red-view:
                 projection_basis: participant view
+                observable_refs:
+                  - behavior_specifications.red-scan-behavior.tool_affordances.network-scanner
                 evidence_refs: [evidence.scan-output]
                 redaction_policy: no hidden refs are disclosed
                 latency_profile: immediate
+                view_rules:
+                  - information_ref: behavior_specifications.red-scan-behavior.tool_affordances.network-scanner
+                    boundary_class: observable_resource
+                    disposition: observable
+                    visibility_basis: authored participant-local affordance
             behavior_specifications:
               red-scan-behavior:
                 semantic_version: 1.0.0
@@ -624,6 +1154,11 @@ def test_behavior_specification_refs_are_namespaced_during_module_composition(tm
                 participant_refs: [red-agent]
                 action_contract_refs: [scan]
                 observation_boundary_refs: [red-view]
+                tool_affordances:
+                  network-scanner:
+                    tool_ref: scanner-package
+                    action_contract_refs: [scan]
+                    observation_boundary_refs: [red-view]
                 extension_policy: governed-extension
             """
         ).lstrip(),
@@ -647,6 +1182,14 @@ def test_behavior_specification_refs_are_namespaced_during_module_composition(tm
     assert spec.participant_refs == ["shared.red-agent"]
     assert spec.action_contract_refs == ["shared.scan"]
     assert spec.observation_boundary_refs == ["shared.red-view"]
+    binding = spec.tool_affordances["network-scanner"]
+    assert binding.tool_ref == "shared.scanner-package"
+    assert binding.action_contract_refs == ["shared.scan"]
+    assert binding.observation_boundary_refs == ["shared.red-view"]
+    affordance_ref = "behavior_specifications.shared.red-scan-behavior.tool_affordances.network-scanner"
+    boundary = scenario.observation_boundaries["shared.red-view"]
+    assert affordance_ref in boundary.observable_refs
+    assert boundary.view_rules[0].information_ref == affordance_ref
 
     compiled = compile_runtime_model(scenario).behavior_specifications[
         "participant.behavior-specification.shared.red-scan-behavior"
@@ -654,6 +1197,11 @@ def test_behavior_specification_refs_are_namespaced_during_module_composition(tm
     assert compiled.participant_addresses == ("participant.behavior.shared.red-agent",)
     assert compiled.action_contract_addresses == ("participant.action-contract.shared.scan",)
     assert compiled.observation_boundary_addresses == ("participant.observation-boundary.shared.red-view",)
+    affordance = compile_runtime_model(scenario).tool_affordances[
+        "participant.behavior-specification.shared.red-scan-behavior.tool-affordance.network-scanner"
+    ]
+    assert affordance.tool_address == "provision.content.shared.scanner-package"
+    assert affordance.action_contract_addresses == ("participant.action-contract.shared.scan",)
 
 
 def test_behavior_specification_optional_fields_compile_empty_when_omitted():

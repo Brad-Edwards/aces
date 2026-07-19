@@ -62,6 +62,7 @@ NESTED_HASHMAP_FIELDS = frozenset(
         "interactive_access",
         "controller_states",
         "transitions",
+        "tool_affordances",
     }
 )
 

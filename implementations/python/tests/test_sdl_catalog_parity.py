@@ -184,6 +184,9 @@ def test_reference_catalog_uses_live_nested_model_paths() -> None:
         "action_contracts.*.temporal_contracts.*.backend_disclosure_refs[]",
         "action_contracts.*.backend_timing_disclosures.*.affected_temporal_ids[]",
         "action_contracts.*.interactions.*.related_actions[]",
+        "behavior_specifications.*.tool_affordances.*.tool_ref",
+        "behavior_specifications.*.tool_affordances.*.action_contract_refs[]",
+        "behavior_specifications.*.tool_affordances.*.observation_boundary_refs[]",
         "outcome_interpretation_rules.*.source_bindings.*.ref",
         "outcome_interpretation_rules.*.target_bindings.*.ref",
     } <= paths

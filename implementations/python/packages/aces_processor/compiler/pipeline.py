@@ -23,7 +23,11 @@ from .orchestration import (
     _compile_scripts,
     _compile_stories,
 )
-from .participant_behaviors import _compile_behavior_specifications, _compile_participant_behaviors
+from .participant_behaviors import (
+    _compile_behavior_specifications,
+    _compile_participant_behaviors,
+    _compile_tool_affordances,
+)
 from .participant_contracts import (
     _compile_action_contracts,
     _compile_observation_boundaries,
@@ -105,6 +109,7 @@ def compile_runtime_model(scenario: Scenario | ExpandedScenario | InstantiatedSc
     outcome_interpretation_rules = _compile_outcome_interpretation_rules(scenario)
     participant_behaviors = _compile_participant_behaviors(scenario, diagnostics)
     behavior_specifications = _compile_behavior_specifications(scenario, diagnostics)
+    tool_affordances = _compile_tool_affordances(scenario, diagnostics)
     events = _compile_events(scenario, assertions, injects, inject_bindings, diagnostics)
     scripts = _compile_scripts(scenario, diagnostics)
     stories = _compile_stories(scenario, diagnostics)
@@ -138,6 +143,7 @@ def compile_runtime_model(scenario: Scenario | ExpandedScenario | InstantiatedSc
         outcome_interpretation_rules=outcome_interpretation_rules,
         participant_behaviors=participant_behaviors,
         behavior_specifications=behavior_specifications,
+        tool_affordances=tool_affordances,
         events=events,
         scripts=scripts,
         stories=stories,

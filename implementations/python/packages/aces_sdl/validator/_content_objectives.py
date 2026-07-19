@@ -185,6 +185,42 @@ _PARTICIPANT_BEHAVIOR_ISSUE_RENDERERS = {
             f"does not reference a published contract: {i.message}"
         )
     ),
+    "participant.tool-affordance-duplicate-relation": (
+        lambda i: (
+            f"Behavior specification '{i.spec_name}' has duplicate tool affordance relation '{i.ref}' "
+            f"matching '{i.message}'; mapping order has no priority or fallback meaning"
+        )
+    ),
+    "participant.tool-affordance-action-widens-parent": (
+        lambda i: (
+            f"Behavior specification '{i.spec_name}' tool affordance '{i.action_name}' action_contract_ref "
+            f"'{i.ref}' widens its owning behavior specification"
+        )
+    ),
+    "participant.tool-affordance-boundary-widens-parent": (
+        lambda i: (
+            f"Behavior specification '{i.spec_name}' tool affordance '{i.action_name}' observation_boundary_ref "
+            f"'{i.ref}' widens its owning behavior specification"
+        )
+    ),
+    "participant.tool-affordance-action-outside-participant": (
+        lambda i: (
+            f"Behavior specification '{i.spec_name}' tool affordance '{i.action_name}' action_contract_ref "
+            f"'{i.ref}' is outside participant '{i.participant_name}' actions"
+        )
+    ),
+    "participant.tool-affordance-boundary-outside-participant": (
+        lambda i: (
+            f"Behavior specification '{i.spec_name}' tool affordance '{i.action_name}' observation_boundary_ref "
+            f"'{i.ref}' is outside participant '{i.participant_name}' observation boundaries"
+        )
+    ),
+    "participant.tool-affordance-view-unclassified": (
+        lambda i: (
+            f"Behavior specification '{i.spec_name}' tool affordance '{i.action_name}' reference '{i.ref}' "
+            f"must be explicitly classified by observation boundary '{i.boundary_name}'"
+        )
+    ),
 }
 
 _PARTICIPANT_OUTCOME_ISSUE_RENDERERS = {
@@ -326,26 +362,27 @@ class _ContentObjectivesMixin:
             observation_boundaries=self._s.observation_boundaries,
             outcome_interpretation_rules=self._s.outcome_interpretation_rules,
             behavior_specifications=self._s.behavior_specifications,
-            participant_roles=self._participant_role_refs(),
+            participant_roles_by_agent=self._participant_roles_by_agent(),
             is_unresolved=self._is_unresolved_var,
         )
         for issue in analysis.issues:
             self._err(self._format_participant_behavior_issue(issue))
+        self._verify_tool_affordance_tool_refs()
         self._verify_participant_interaction_refs()
         self._verify_behavior_specification_authority_refs()
         self._verify_mixed_control_semantics()
 
-    def _participant_role_refs(self) -> set[str]:
+    def _participant_roles_by_agent(self) -> dict[str, str]:
         entities = flatten_entities(self._s.entities)
-        roles: set[str] = set()
-        for agent in self._s.agents.values():
+        roles: dict[str, str] = {}
+        for agent_name, agent in self._s.agents.items():
             if self._is_unresolved_var(agent.entity):
                 continue
             entity = entities.get(agent.entity)
             role = getattr(entity, "role", None)
             if role is None or self._is_unresolved_var(role):
                 continue
-            roles.add(str(getattr(role, "value", role)))
+            roles[agent_name] = str(getattr(role, "value", role))
         return roles
 
     def _verify_behavior_specification_authority_refs(self) -> None:

@@ -20,6 +20,7 @@ from .behavior_resources import (
     ParticipantBehaviorSpecificationRuntime,
     ParticipantObservationBoundaryRuntime,
     ParticipantOutcomeInterpretationRuleRuntime,
+    ParticipantToolAffordanceRuntime,
     ScriptRuntime,
     StoryRuntime,
     WorkflowRuntime,
@@ -122,6 +123,7 @@ class RuntimeModel:
     outcome_interpretation_rules: dict[str, ParticipantOutcomeInterpretationRuleRuntime] = field(default_factory=dict)
     participant_behaviors: dict[str, ParticipantBehaviorRuntime] = field(default_factory=dict)
     behavior_specifications: dict[str, ParticipantBehaviorSpecificationRuntime] = field(default_factory=dict)
+    tool_affordances: dict[str, ParticipantToolAffordanceRuntime] = field(default_factory=dict)
     events: dict[str, EventRuntime] = field(default_factory=dict)
     scripts: dict[str, ScriptRuntime] = field(default_factory=dict)
     stories: dict[str, StoryRuntime] = field(default_factory=dict)
@@ -154,6 +156,7 @@ class RuntimeModel:
             "outcome_interpretation_rules",
             "participant_behaviors",
             "behavior_specifications",
+            "tool_affordances",
             "events",
             "scripts",
             "stories",

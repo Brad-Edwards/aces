@@ -6,22 +6,22 @@ from aces_sdl.scenario import InstantiatedScenario
 
 from ..models import (
     Diagnostic,
-    MixedControlControllerStateRuntime,
-    MixedControlDispositionRulesRuntime,
-    MixedControlTransitionRuntime,
     ParticipantBehaviorRuntime,
     ParticipantBehaviorSpecificationRuntime,
     ParticipantInteractiveAccessRuntime,
+    ParticipantToolAffordanceRuntime,
 )
+from ._mixed_control import _compile_mixed_control
 from .addresses import (
     _action_contract_address,
     _assertion_address,
     _behavior_specification_address,
-    _mixed_control_state_address,
-    _mixed_control_transition_address,
+    _content_address,
     _observation_boundary_address,
     _outcome_interpretation_rule_address,
     _participant_behavior_address,
+    _section_ref_name,
+    _tool_affordance_address,
 )
 from .alias_index import (
     _account_addresses_for_refs,
@@ -209,148 +209,6 @@ def _resolve_behavior_spec_refs(
     return tuple(addresses)
 
 
-def _compile_mixed_control(
-    scenario: InstantiatedScenario,
-    *,
-    spec_name: str,
-    behavior_spec: object,
-    addressable_ref_index: dict[str, set[str]],
-) -> tuple[
-    str,
-    str,
-    str,
-    str,
-    MixedControlDispositionRulesRuntime | None,
-    tuple[MixedControlControllerStateRuntime, ...],
-    tuple[MixedControlTransitionRuntime, ...],
-    tuple[str, ...],
-]:
-    declaration = getattr(behavior_spec, "mixed_control", None)
-    if declaration is None:
-        return "", "", "", "", None, (), (), ()
-
-    participant_address = _participant_behavior_address(declaration.participant_ref)
-    states: list[MixedControlControllerStateRuntime] = []
-    dependencies: list[str] = [participant_address]
-    for state_id, state in sorted(declaration.controller_states.items()):
-        state_address = _mixed_control_state_address(spec_name, state_id)
-        controller_address = (
-            participant_address
-            if state.controller_ref == "self"
-            else _participant_behavior_address(state.controller_ref)
-        )
-        authority_addresses = _runtime_addresses_for_refs(
-            list(state.authority_basis_refs),
-            addressable_ref_index=addressable_ref_index,
-        )
-        scope_addresses = _runtime_addresses_for_refs(
-            list(state.scope_refs),
-            addressable_ref_index=addressable_ref_index,
-        )
-        evidence_addresses = _runtime_addresses_for_refs(
-            list(state.evidence_refs),
-            addressable_ref_index=addressable_ref_index,
-        )
-        state_dependencies = _dedupe([controller_address, *authority_addresses, *scope_addresses, *evidence_addresses])
-        dependencies.extend(state_dependencies)
-        states.append(
-            MixedControlControllerStateRuntime(
-                address=state_address,
-                name=state_id,
-                spec=_dump(state),
-                state_id=state_id,
-                controller_ref=state.controller_ref,
-                controller_address=controller_address,
-                authority_basis_refs=tuple(state.authority_basis_refs),
-                authority_basis_addresses=authority_addresses,
-                scope_refs=tuple(state.scope_refs),
-                scope_addresses=scope_addresses,
-                policy_revision=state.policy_revision,
-                valid_from_order=state.valid_from_order,
-                valid_until_order=state.valid_until_order,
-                authority_status=str(getattr(state.authority_status, "value", state.authority_status)),
-                evidence_refs=tuple(state.evidence_refs),
-                evidence_addresses=evidence_addresses,
-                refresh_dependencies=state_dependencies,
-            )
-        )
-
-    transitions: list[MixedControlTransitionRuntime] = []
-    for transition_id, transition in sorted(
-        declaration.transitions.items(), key=lambda item: (item[1].effective_order, item[0])
-    ):
-        transition_address = _mixed_control_transition_address(spec_name, transition_id)
-        from_state_address = _mixed_control_state_address(spec_name, transition.from_state_ref)
-        to_state_address = _mixed_control_state_address(spec_name, transition.to_state_ref)
-        proposal_address = (
-            _mixed_control_transition_address(spec_name, transition.proposal_ref)
-            if transition.proposal_ref is not None
-            else ""
-        )
-        evidence_addresses = _runtime_addresses_for_refs(
-            list(transition.evidence_refs),
-            addressable_ref_index=addressable_ref_index,
-        )
-        completion_addresses = _runtime_addresses_for_refs(
-            list(transition.completion_evidence_refs),
-            addressable_ref_index=addressable_ref_index,
-        )
-        transition_dependencies = _dedupe(
-            [
-                from_state_address,
-                to_state_address,
-                *([proposal_address] if proposal_address else []),
-                *evidence_addresses,
-                *completion_addresses,
-            ]
-        )
-        dependencies.extend(transition_dependencies)
-        transitions.append(
-            MixedControlTransitionRuntime(
-                address=transition_address,
-                name=transition_id,
-                spec=_dump(transition),
-                transition_id=transition_id,
-                transition_kind=str(getattr(transition.transition_kind, "value", transition.transition_kind)),
-                from_state_address=from_state_address,
-                to_state_address=to_state_address,
-                policy_revision=transition.policy_revision,
-                expected_state_revision=transition.expected_state_revision,
-                resulting_state_revision=transition.resulting_state_revision,
-                effective_order=transition.effective_order,
-                valid_from_order=transition.valid_from_order,
-                valid_until_order=transition.valid_until_order,
-                proposal_address=proposal_address,
-                proposal_revision=transition.proposal_revision,
-                evidence_refs=tuple(transition.evidence_refs),
-                evidence_addresses=evidence_addresses,
-                completion_evidence_refs=tuple(transition.completion_evidence_refs),
-                completion_evidence_addresses=completion_addresses,
-                refresh_dependencies=transition_dependencies,
-            )
-        )
-
-    dispositions = declaration.dispositions
-    compiled_dispositions = MixedControlDispositionRulesRuntime(
-        duplicate=str(getattr(dispositions.duplicate, "value", dispositions.duplicate)),
-        stale=str(getattr(dispositions.stale, "value", dispositions.stale)),
-        revoked=str(getattr(dispositions.revoked, "value", dispositions.revoked)),
-        late=str(getattr(dispositions.late, "value", dispositions.late)),
-        concurrent=str(getattr(dispositions.concurrent, "value", dispositions.concurrent)),
-        conflict=str(getattr(dispositions.conflict, "value", dispositions.conflict)),
-    )
-    return (
-        participant_address,
-        declaration.policy_revision,
-        str(getattr(declaration.order_strategy, "value", declaration.order_strategy)),
-        _mixed_control_state_address(spec_name, declaration.initial_state_ref),
-        compiled_dispositions,
-        tuple(states),
-        tuple(transitions),
-        _dedupe(dependencies),
-    )
-
-
 def _compile_behavior_specifications(
     scenario: InstantiatedScenario,
     diagnostics: list[Diagnostic],
@@ -425,6 +283,9 @@ def _compile_behavior_specifications(
                 *mixed_control_dependencies,
             ]
         )
+        tool_affordance_addresses = tuple(
+            _tool_affordance_address(name, affordance_id) for affordance_id in sorted(behavior_spec.tool_affordances)
+        )
         behavior_specifications[address] = ParticipantBehaviorSpecificationRuntime(
             address=address,
             name=name,
@@ -451,9 +312,66 @@ def _compile_behavior_specifications(
             realization_profile_ref=str(behavior_spec.realization_profile_ref or ""),
             backend_feature_support_refs=tuple(behavior_spec.backend_feature_support_refs),
             evidence_contract_refs=tuple(behavior_spec.evidence_contract_refs),
+            tool_affordance_addresses=tool_affordance_addresses,
             extension_policy=str(behavior_spec.extension_policy),
             extension_keys=tuple(sorted(behavior_spec.extensions)),
             refresh_dependencies=dependencies,
             spec=spec,
         )
     return behavior_specifications
+
+
+def _compile_tool_affordances(
+    scenario: InstantiatedScenario,
+    diagnostics: list[Diagnostic],
+) -> dict[str, ParticipantToolAffordanceRuntime]:
+    tool_affordances: dict[str, ParticipantToolAffordanceRuntime] = {}
+    for spec_name, behavior_spec in scenario.behavior_specifications.items():
+        owner_address = _behavior_specification_address(spec_name)
+        for affordance_id, binding in sorted(behavior_spec.tool_affordances.items()):
+            address = _tool_affordance_address(spec_name, affordance_id)
+            action_addresses = _resolve_behavior_spec_refs(
+                refs=list(binding.action_contract_refs),
+                declared=scenario.action_contracts,
+                address_for_ref=_action_contract_address,
+                owner_address=address,
+                diagnostic_code="participant.tool-affordance-action-contract-ref-unbound",
+                diagnostic_label="participant action contract",
+                diagnostics=diagnostics,
+            )
+            observation_addresses = _resolve_behavior_spec_refs(
+                refs=list(binding.observation_boundary_refs),
+                declared=scenario.observation_boundaries,
+                address_for_ref=_observation_boundary_address,
+                owner_address=address,
+                diagnostic_code="participant.tool-affordance-observation-boundary-ref-unbound",
+                diagnostic_label="participant observation boundary",
+                diagnostics=diagnostics,
+            )
+            tool_address = ""
+            if binding.tool_ref:
+                tool_name = _section_ref_name(binding.tool_ref, "content", scenario.content)
+                tool_address = _content_address(tool_name)
+            dependencies = _dedupe(
+                [
+                    owner_address,
+                    *([tool_address] if tool_address else []),
+                    *action_addresses,
+                    *observation_addresses,
+                ]
+            )
+            tool_affordances[address] = ParticipantToolAffordanceRuntime(
+                address=address,
+                name=affordance_id,
+                affordance_id=affordance_id,
+                behavior_specification_address=owner_address,
+                tool_ref=str(binding.tool_ref or ""),
+                tool_address=tool_address,
+                action_contract_refs=tuple(binding.action_contract_refs),
+                action_contract_addresses=action_addresses,
+                observation_boundary_refs=tuple(binding.observation_boundary_refs),
+                observation_boundary_addresses=observation_addresses,
+                refresh_dependencies=dependencies,
+                spec=_dump(binding),
+            )
+    return tool_affordances
