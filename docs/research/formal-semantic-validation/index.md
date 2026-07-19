@@ -25,11 +25,11 @@ protocol for those claims.
 - [`corpus/manifest-v1.json`](corpus/manifest-v1.json) carries positive and
   single-defect negative cases for every claim class. Unsupported classes have
   explicit cases with no invented research-only model or fixture semantics.
-- [`execution-snapshot-v1.json`](execution-snapshot-v1.json) pins ACES commit
-  `c3ce41a5dbfd519582de7c7f6b77764525f31932`, fixed-argv commands, replay
+- [`execution-snapshot-v1.1.json`](execution-snapshot-v1.1.json) pins ACES commit
+  `9347f64b26e3bb71d5459759c3d4bd473c76b446`, fixed-argv commands, replay
   digests, structured diagnostic kinds, participant fixture outcomes, and
   limitations.
-- [`analysis-v1.json`](analysis-v1.json) derives ADR-021 evidence status from
+- [`analysis-v1.1.json`](analysis-v1.1.json) derives ADR-021 evidence status from
   the frozen observations and states the bounded result in plain language.
 
 The participant matrix includes positive and negative fixtures for hidden

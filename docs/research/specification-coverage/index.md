@@ -21,11 +21,11 @@ this run does not repair them.
   representative requests, sixteen atomic concepts, expected carriers and
   classifications, stage obligations, load-bearing status, classification
   rules, and objective pass/fail criteria.
-- [`execution-snapshot-v1.json`](execution-snapshot-v1.json) pins ACES commit
-  `8bf12eeb0d43e6e23a86abb012d7b31b076bd69a`, deterministic digests of the SDL,
+- [`execution-snapshot-v1.1.json`](execution-snapshot-v1.1.json) pins ACES commit
+  `9347f64b26e3bb71d5459759c3d4bd473c76b446`, deterministic digests of the SDL,
   processor, and contract implementation surfaces, exact repository artifacts,
   production entrypoints, typed pointers, diagnostics, and observed outcomes.
-- [`analysis-v1.json`](analysis-v1.json) is recomputed from the protocol and
+- [`analysis-v1.1.json`](analysis-v1.1.json) is recomputed from the protocol and
   bound to the complete snapshot digest, and records the ADR-021 evidence
   status.
 

@@ -12,7 +12,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, ClassVar
 
-from pydantic import ConfigDict, ValidationError
+from pydantic import ConfigDict, Field, ValidationError
 
 from ._base import VARIABLE_TOKEN_RE, extract_variable_name
 from ._errors import SDLInstantiationError, SDLValidationError
@@ -32,6 +32,7 @@ from .realization_designation import RealizationDesignationRecord, designation_r
 from .scenario import ExpandedScenario, InstantiatedScenario, Scenario, ScenarioContent
 from .validator import SemanticValidator
 from .variables import Variable, VariableType
+from .variation import ParameterVariationPoint, VariationPoint
 
 JSONScalar = str | int | float | bool | None
 JSONLike = JSONScalar | list["JSONLike"] | dict[str, "JSONLike"]
@@ -42,6 +43,8 @@ class _BoundScenarioContent(ScenarioContent):
 
     _allows_qualified_declaration_keys: ClassVar[bool] = True
     model_config = ConfigDict(title="SDL Private Bound Content", extra="forbid")
+    variables: dict[str, Variable] = Field(default_factory=dict)
+    variation_points: dict[str, VariationPoint] = Field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -68,12 +71,21 @@ def _matches_value_type(value: object, variable: Variable) -> bool:
 def _resolve_variable_values(
     scenario: Scenario | ExpandedScenario,
     parameters: Mapping[str, JSONLike],
+    *,
+    preserved: set[str] | None = None,
 ) -> tuple[dict[str, JSONLike], dict[str, BindingOrigin], list[str]]:
     resolved: dict[str, JSONLike] = {}
     origins: dict[str, BindingOrigin] = {}
     errors: list[str] = []
 
+    preserved = preserved or set()
     for name, variable in scenario.variables.items():
+        if name in preserved:
+            if name in parameters:
+                errors.append(
+                    f"Variable '{name}' is owned by a variation point and cannot be bound during composition."
+                )
+            continue
         if name in parameters:
             value = parameters[name]
             origin = BindingOrigin.PROVIDED
@@ -107,13 +119,16 @@ def _substitute_value(
     *,
     variable_values: Mapping[str, JSONLike],
     unresolved_refs: set[str],
+    preserved: set[str] | None = None,
 ) -> Any:
+    preserved = preserved or set()
     if isinstance(value, dict):
         return {
             str(key): _substitute_value(
                 nested_value,
                 variable_values=variable_values,
                 unresolved_refs=unresolved_refs,
+                preserved=preserved,
             )
             for key, nested_value in value.items()
         }
@@ -123,6 +138,7 @@ def _substitute_value(
                 nested_value,
                 variable_values=variable_values,
                 unresolved_refs=unresolved_refs,
+                preserved=preserved,
             )
             for nested_value in value
         ]
@@ -131,6 +147,8 @@ def _substitute_value(
 
     full_variable_name = extract_variable_name(value)
     if full_variable_name is not None:
+        if full_variable_name in preserved:
+            return value
         if full_variable_name not in variable_values:
             unresolved_refs.add(full_variable_name)
             return value
@@ -138,6 +156,8 @@ def _substitute_value(
 
     def replace_token(match: re.Match[str]) -> str:
         variable_name = match.group(1)
+        if variable_name in preserved:
+            return match.group(0)
         if variable_name not in variable_values:
             unresolved_refs.add(variable_name)
             return match.group(0)
@@ -255,20 +275,40 @@ def _merge_expanded_provenance(
 def _bind_scenario_content(
     raw_scenario: Scenario | ExpandedScenario,
     parameters: Mapping[str, JSONLike] | None = None,
+    *,
+    preserve_variation_variables: bool = False,
 ) -> _BoundScenarioResult:
     """Bind one already-expanded object without minting a public phase artifact."""
 
-    variable_values, binding_origins, errors = _resolve_variable_values(raw_scenario, dict(parameters or {}))
+    preserved = (
+        {
+            point.target.variable
+            for point in raw_scenario.variation_points.values()
+            if isinstance(point, ParameterVariationPoint)
+        }
+        if preserve_variation_variables
+        else set()
+    )
+    variable_values, binding_origins, errors = _resolve_variable_values(
+        raw_scenario,
+        dict(parameters or {}),
+        preserved=preserved,
+    )
     if errors:
         raise SDLInstantiationError(errors)
 
-    local_constraints = _capture_capability_constraints(raw_scenario)
+    local_constraints = tuple(
+        constraint
+        for constraint in _capture_capability_constraints(raw_scenario)
+        if not constraint.parameter or constraint.parameter[0] not in preserved
+    )
     raw_payload = raw_scenario.model_dump(mode="python", by_alias=True)
     unresolved_refs: set[str] = set()
     substituted_payload = _substitute_value(
         raw_payload,
         variable_values=variable_values,
         unresolved_refs=unresolved_refs,
+        preserved=preserved,
     )
     if unresolved_refs:
         unresolved_list = ", ".join(sorted(unresolved_refs))
@@ -276,7 +316,11 @@ def _bind_scenario_content(
             [f"Scenario contains unresolved variable references after instantiation: {unresolved_list}."]
         )
 
-    for authoring_field in ("variables", "imports", "module", "realization", "expansion_provenance"):
+    variable_definitions = substituted_payload.get("variables", {})
+    substituted_payload["variables"] = {
+        name: definition for name, definition in variable_definitions.items() if name in preserved
+    }
+    for authoring_field in ("imports", "module", "realization", "expansion_provenance"):
         substituted_payload.pop(authoring_field, None)
     try:
         content = _BoundScenarioContent.model_validate(substituted_payload)
@@ -286,7 +330,11 @@ def _bind_scenario_content(
     derived = derive_instantiated_explicitness(raw_scenario, content)
     if derived.errors:
         raise SDLInstantiationError(list(derived.errors))
-    explicitness_by_path = {record.path: _portable_explicitness_record(record) for record in derived.records.values()}
+    explicitness_by_path = {
+        record.path: _portable_explicitness_record(record)
+        for record in derived.records.values()
+        if not any(name in preserved for name in record.variables)
+    }
     constraints: tuple[CapabilityConstraint, ...] = local_constraints
     realization_designations = (
         designation_records(raw_scenario.realization)
@@ -360,6 +408,12 @@ def instantiate_scenario(
     """
 
     _validate_authoring_scenario(raw_scenario)
+    if raw_scenario.variation_points:
+        raise SDLInstantiationError(
+            [
+                "Scenario has unresolved variation points; recorded selection integration is required before instantiation."
+            ]
+        )
     authored_digest = canonical_sdl_digest(raw_scenario)
     bound = _bind_scenario_content(raw_scenario, parameters)
     expansion = raw_scenario.expansion_provenance if isinstance(raw_scenario, ExpandedScenario) else None
@@ -373,6 +427,8 @@ def instantiate_scenario(
         realization_designations=bound.realization_designations,
     )
     payload = bound.content.model_dump(mode="python", by_alias=True)
+    payload.pop("variables", None)
+    payload.pop("variation_points", None)
     payload["instantiation_provenance"] = provenance.model_dump(mode="python")
 
     try:

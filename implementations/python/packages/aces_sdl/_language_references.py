@@ -60,6 +60,8 @@ def _reference_result(
         if declaration_index is not None
         else frozenset({symbol, _bare_symbol(symbol)})
     )
+    if declaration_index is not None and _is_variation_member_symbol(symbol):
+        spellings = frozenset({*spellings, _bare_symbol(symbol)})
     _collect_occurrences(
         root,
         spellings,
@@ -127,6 +129,17 @@ def _collect_section_definitions(
                     definitions,
                     prefix=f"{prefix}{name}.",
                 )
+        if section == "variation_points" and isinstance(value_node, MappingNode):
+            for container in ("alternatives", "members"):
+                nested = _mapping_child(value_node, container)
+                if isinstance(nested, MappingNode):
+                    _collect_section_definitions(
+                        section,
+                        nested,
+                        [*definition_path, container],
+                        definitions,
+                        prefix=f"{prefix}{name}.{container}.",
+                    )
 
 
 def _collect_occurrences(
@@ -309,6 +322,14 @@ def _qualified_symbol_section(symbol: str) -> str | None:
     return parts[0] if len(parts) > 1 else None
 
 
+def _is_variation_member_symbol(symbol: str) -> bool:
+    try:
+        parts = QualifiedName.parse(symbol).parts
+    except (TypeError, ValueError):
+        return False
+    return len(parts) >= 4 and parts[0] == "variation_points" and parts[-2] in {"alternatives", "members"}
+
+
 def _include_occurrence(
     path: list[str],
     *,
@@ -330,6 +351,8 @@ def _reference_target_for_path(path: list[str], *, mapping_key: bool) -> str | N
     target = REFERENCE_COMPLETION_TARGETS.get((path[0], field))
     if target is not None:
         return target
+    if path[0] == "variation_points" and field == "members":
+        return "variation_points"
     if len(path) >= 4 and path[-2] == "success":
         return field if field in _SUCCESS_REFERENCE_TARGETS else None
     return None

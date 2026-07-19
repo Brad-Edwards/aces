@@ -190,20 +190,20 @@
       "contract_id": "instantiated-scenario-snapshot-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
       "stability": "draft",
-      "content_hash": "93b4355e8633fb76ed35851a6cd2573ff09f041b2ae089fe69f55611a6589886",
+      "content_hash": "d41f7142864f43c1a905a46bc54262ec30371086fba6217f80134066305d7302",
       "last_change": {
-        "summary": "Published unique-item constraints for stateful resource outputs, consumers, and dependency lists (issue #780).",
-        "content_hash": "93b4355e8633fb76ed35851a6cd2573ff09f041b2ae089fe69f55611a6589886"
+        "summary": "Rejected unresolved qualified module-variable tokens from concrete SDL snapshots (issue #786).",
+        "content_hash": "d41f7142864f43c1a905a46bc54262ec30371086fba6217f80134066305d7302"
       }
     },
     {
       "contract_id": "instantiated-scenario-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
       "stability": "draft",
-      "content_hash": "bfb1b79c11861a57accc2614eba9760cbcc19a9b6ce34dabf64404048eee0e8b",
+      "content_hash": "5c5bf693941d6e922bd72eafb976845a56f99119b5545ce8459e0c76967f7fa6",
       "last_change": {
-        "summary": "Published unique-item constraints for stateful resource outputs, consumers, and dependency lists (issue #780).",
-        "content_hash": "bfb1b79c11861a57accc2614eba9760cbcc19a9b6ce34dabf64404048eee0e8b"
+        "summary": "Rejected unresolved qualified module-variable tokens from concrete SDL artifacts (issue #786).",
+        "content_hash": "5c5bf693941d6e922bd72eafb976845a56f99119b5545ce8459e0c76967f7fa6"
       }
     },
     {
@@ -456,10 +456,10 @@
       "contract_id": "sdl-authoring-input-v1",
       "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
       "stability": "draft",
-      "content_hash": "4869ea7e7e26e63172b5799f0f6ee46c79cf802e426f66846a7f0471cac145a7",
+      "content_hash": "36fc49609f735cf3e3728001be7f1c03396a4d957dc78ad31a8ac0af3b932dd1",
       "last_change": {
-        "summary": "Published unique-item constraints for stateful resource outputs, consumers, and dependency lists (issue #780).",
-        "content_hash": "4869ea7e7e26e63172b5799f0f6ee46c79cf802e426f66846a7f0471cac145a7"
+        "summary": "Published closed bounded scenario-family variation points and typed targets (issue #786).",
+        "content_hash": "36fc49609f735cf3e3728001be7f1c03396a4d957dc78ad31a8ac0af3b932dd1"
       }
     },
     {

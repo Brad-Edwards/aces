@@ -67,8 +67,9 @@ machinery is not retained as an empty compatibility field. "References" is
 | `objectives` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [objective semantics](../formal/objectives/declarative-objective-semantics.md) |
 | `workflows` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [workflow semantics](../formal/workflows/state-machine.md) |
 | `variables` | section | map | normalized, expanded | optional; default empty map | `map_key` | none | [variables and instantiation](variables-and-instantiation.md) |
+| `variation_points` | section | map | normalized, expanded | optional; default empty map | `map_key` | catalogued | [scenario-family variation points](variation-points.md) |
 
-<!-- sdl-catalog-summary top-level=34 metadata-composition=6 sections=28 maps=27 lists=1 -->
+<!-- sdl-catalog-summary top-level=35 metadata-composition=6 sections=29 maps=28 lists=1 -->
 
 The section set therefore has two authoring shapes: maps keyed by stable
 user-defined identifiers and the scenario-level `forwarding_agents` list, whose

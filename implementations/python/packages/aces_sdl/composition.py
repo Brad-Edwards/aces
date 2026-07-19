@@ -8,7 +8,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from ._base import is_variable_ref
+from ._base import VARIABLE_TOKEN_RE, is_variable_ref
 from ._composition_budget import CompositionBudget, CompositionTraversal
 from ._composition_provenance import (
     prefixed_constraint as _prefixed_constraint,
@@ -58,6 +58,11 @@ from .phase_contracts import (
 )
 from .realization_designation import RealizationDesignation, RealizationDesignationRecord, designation_records
 from .scenario import ExpandedScenario, ImportDecl, ModuleDescriptor, ScenarioContent
+from .variation import COLLECTION_TARGET_SPECS, REFERENCE_TARGET_SPECS, TIMING_TARGET_SPECS
+
+_REFERENCE_TARGET_SPECS_BY_VALUE = {slot.value: spec for slot, spec in REFERENCE_TARGET_SPECS.items()}
+_COLLECTION_TARGET_SPECS_BY_VALUE = {slot.value: spec for slot, spec in COLLECTION_TARGET_SPECS.items()}
+_TIMING_TARGET_SPECS_BY_VALUE = {slot.value: spec for slot, spec in TIMING_TARGET_SPECS.items()}
 
 
 def _prefix(namespace: str, name: str) -> str:
@@ -210,6 +215,88 @@ def _rewrite_evidence_requirement(
     for field_name in ("trigger_ref", "boundary_ref"):
         if payload.get(field_name):
             payload[field_name] = _maybe_rename(str(payload[field_name]), symbols["named"])
+
+
+def _rewrite_variation_reference(
+    reference: str,
+    section: str,
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> str:
+    return _maybe_rename(reference, symbols["named"] if section == "targetable" else symbols[section])
+
+
+def _rewrite_variation_point(
+    payload: dict[str, Any],
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
+    kind = payload.get("kind")
+    target = payload.get("target")
+    if kind == "parameter" and isinstance(target, dict) and isinstance(target.get("variable"), str):
+        target["variable"] = _maybe_rename(str(target["variable"]), symbols["variables"])
+    if isinstance(target, dict) and isinstance(target.get("owner"), str):
+        raw_slot = target.get("slot", "")
+        slot = str(getattr(raw_slot, "value", raw_slot))
+        spec = (
+            _REFERENCE_TARGET_SPECS_BY_VALUE.get(slot)
+            or _COLLECTION_TARGET_SPECS_BY_VALUE.get(slot)
+            or _TIMING_TARGET_SPECS_BY_VALUE.get(slot)
+        )
+        if spec is not None:
+            target["owner"] = _rewrite_variation_reference(str(target["owner"]), spec[0], symbols)
+
+    target_section: str | None = None
+    if isinstance(target, dict):
+        raw_slot = target.get("slot", "")
+        slot = str(getattr(raw_slot, "value", raw_slot))
+        if kind in {"governed-reference", "alternative"}:
+            spec = _REFERENCE_TARGET_SPECS_BY_VALUE.get(slot)
+            target_section = spec[1] if spec is not None else None
+        elif kind in {"subset", "order"}:
+            spec = _COLLECTION_TARGET_SPECS_BY_VALUE.get(slot)
+            target_section = spec[1] if spec is not None else None
+
+    if kind == "governed-reference" and target_section is not None:
+        domain = payload.get("domain")
+        if isinstance(domain, dict):
+            domain["allowed_refs"] = [
+                _rewrite_variation_reference(reference, target_section, symbols)
+                for reference in domain.get("allowed_refs", [])
+            ]
+
+    member_field = "alternatives" if kind == "alternative" else "members"
+    members = payload.get(member_field)
+    if not isinstance(members, dict):
+        return
+    for member in members.values():
+        if not isinstance(member, dict):
+            continue
+        if target_section is not None and isinstance(member.get("reference"), str):
+            member["reference"] = _rewrite_variation_reference(
+                str(member["reference"]),
+                target_section,
+                symbols,
+            )
+        for relation_field in ("requires", "excludes"):
+            for relation in member.get(relation_field, []):
+                if isinstance(relation, dict) and isinstance(relation.get("point"), str):
+                    relation["point"] = _maybe_rename(str(relation["point"]), symbols["variation_points"])
+
+
+def _rewrite_variable_tokens(value: Any, variables: Mapping[str, str]) -> Any:
+    """Namespace preserved authoring-variable tokens in imported content."""
+
+    if isinstance(value, str):
+        return VARIABLE_TOKEN_RE.sub(
+            lambda match: "${" + variables.get(match.group(1), match.group(1)) + "}",
+            value,
+        )
+    if isinstance(value, dict):
+        return {key: _rewrite_variable_tokens(item, variables) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_rewrite_variable_tokens(item, variables) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_rewrite_variable_tokens(item, variables) for item in value)
+    return value
 
 
 def _namespace_payload(
@@ -426,6 +513,11 @@ def _namespace_payload(
     for workflow in namespaced.get("workflows", {}).values():
         if isinstance(workflow, dict):
             _rewrite_workflow(workflow, symbols)
+    for variation_point in namespaced.get("variation_points", {}).values():
+        if isinstance(variation_point, dict):
+            _rewrite_variation_point(variation_point, symbols)
+
+    namespaced = _rewrite_variable_tokens(namespaced, symbols["variables"])
 
     for section_name in _HASHMAP_SECTIONS:
         section_payload = namespaced.get(section_name)
@@ -445,7 +537,6 @@ def _namespace_payload(
                     identifier,
                     _private_prefix(namespace, identifier),
                 )
-    namespaced.pop("variables", None)
     namespaced.pop("module", None)
     namespaced.pop("imports", None)
     namespaced.pop("expansion_provenance", None)
@@ -567,7 +658,11 @@ def expand_sdl_modules(
         )
         try:
             imported_scenario = ExpandedScenario.model_validate(imported_expanded)
-            bound = _bind_scenario_content(imported_scenario, import_decl.parameters)
+            bound = _bind_scenario_content(
+                imported_scenario,
+                import_decl.parameters,
+                preserve_variation_variables=True,
+            )
         except ValidationError as exc:
             raise SDLParseError("Imported SDL unit is structurally invalid", path=import_path) from exc
         except SDLInstantiationError as exc:

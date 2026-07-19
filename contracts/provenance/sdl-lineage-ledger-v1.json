@@ -1,6 +1,6 @@
 {
   "schema_version": "sdl-lineage-ledger/v1",
-  "reviewed_on": "2026-07-17",
+  "reviewed_on": "2026-07-19",
   "citations": [
     {
       "citation_id": "ocr-sdl-v0.21.2",
@@ -1682,6 +1682,37 @@
           ],
           "internal_authority_refs": [],
           "compatibility_direction": "aces_relative_to_source"
+        }
+      ]
+    },
+    {
+      "subject_id": "sdl-field:variation_points",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/variation_points",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/variation_points"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/variation-points.md"
+          ],
+          "compatibility_direction": "not_applicable"
         }
       ]
     },

@@ -57,6 +57,7 @@ from .relationships import Relationship
 from .runtime_forwarding_agent import RuntimeForwardingAgent
 from .stateful_resources import GeneratedArtifact, PersistentVolume
 from .variables import Variable
+from .variation import VariationPoint
 from .vulnerabilities import Vulnerability
 
 VariableName = PortableIdentifier
@@ -349,6 +350,7 @@ class Scenario(ScenarioContent):
         default_factory=dict,
         json_schema_extra={"additionalProperties": False},
     )
+    variation_points: dict[str, VariationPoint] = Field(default_factory=dict)
 
     @property
     def module_variable_specs(self) -> dict[str, dict[str, object]]:
@@ -369,10 +371,11 @@ class ExpandedScenario(ScenarioContent):
         json_schema_extra={"x-aces-document-phase": "expanded-authoring-object"},
     )
 
-    variables: VariableDefinitions = Field(
+    variables: dict[str, Variable] = Field(
         default_factory=dict,
         json_schema_extra={"additionalProperties": False},
     )
+    variation_points: dict[str, VariationPoint] = Field(default_factory=dict)
     expansion_provenance: ExpansionProvenance = Field(default_factory=ExpansionProvenance)
 
     @property

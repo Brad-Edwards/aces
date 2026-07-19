@@ -58,6 +58,7 @@ plane (ADR-055/064/069). Declarative `conditions` remain.
 | `objectives` | `dict[str, Objective]` | Scenario-local objectives binding actors, targets, windows, and success (against observable `conditions`); not EXP task records | CACAO action/target/agent |
 | `workflows` | `dict[str, Workflow]` | Branching and parallel control graphs over declared objectives | CACAO workflow graph patterns; semantics tightened using Step Functions / Argo / SCXML style control-flow rules |
 | `variables` | `dict[str, Variable]` | Parameterization (types, defaults, substitution) | CACAO playbook_variables |
+| `variation_points` | `dict[str, VariationPoint]` | Named bounded scenario-family domains and typed targets | ACES ADR-084 |
 
 ---
 
