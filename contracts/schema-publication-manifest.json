@@ -190,20 +190,20 @@
       "contract_id": "instantiated-scenario-snapshot-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
       "stability": "draft",
-      "content_hash": "d41f7142864f43c1a905a46bc54262ec30371086fba6217f80134066305d7302",
+      "content_hash": "133204ceeb5548d788673db1d40bd0429dffa11757d20761531715e5ad4bd204",
       "last_change": {
-        "summary": "Rejected unresolved qualified module-variable tokens from concrete SDL snapshots (issue #786).",
-        "content_hash": "d41f7142864f43c1a905a46bc54262ec30371086fba6217f80134066305d7302"
+        "summary": "Published bounded scenario-family variation points and participant-local tool-affordance bindings (issues #786 and #294).",
+        "content_hash": "133204ceeb5548d788673db1d40bd0429dffa11757d20761531715e5ad4bd204"
       }
     },
     {
       "contract_id": "instantiated-scenario-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
       "stability": "draft",
-      "content_hash": "5c5bf693941d6e922bd72eafb976845a56f99119b5545ce8459e0c76967f7fa6",
+      "content_hash": "ee2a6d662c2e6430a8c7e17105c3fcc796c5fd681d0597537dc1dcda94c85042",
       "last_change": {
-        "summary": "Rejected unresolved qualified module-variable tokens from concrete SDL artifacts (issue #786).",
-        "content_hash": "5c5bf693941d6e922bd72eafb976845a56f99119b5545ce8459e0c76967f7fa6"
+        "summary": "Published bounded scenario-family variation points and participant-local tool-affordance bindings (issues #786 and #294).",
+        "content_hash": "ee2a6d662c2e6430a8c7e17105c3fcc796c5fd681d0597537dc1dcda94c85042"
       }
     },
     {
@@ -456,10 +456,10 @@
       "contract_id": "sdl-authoring-input-v1",
       "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
       "stability": "draft",
-      "content_hash": "36fc49609f735cf3e3728001be7f1c03396a4d957dc78ad31a8ac0af3b932dd1",
+      "content_hash": "2b1573e91a964f6781d0c0f78790605bb89adc379b281c7eeac66cf50f5839e8",
       "last_change": {
-        "summary": "Published closed bounded scenario-family variation points and typed targets (issue #786).",
-        "content_hash": "36fc49609f735cf3e3728001be7f1c03396a4d957dc78ad31a8ac0af3b932dd1"
+        "summary": "Published bounded scenario-family variation points and participant-local tool-affordance bindings (issues #786 and #294).",
+        "content_hash": "2b1573e91a964f6781d0c0f78790605bb89adc379b281c7eeac66cf50f5839e8"
       }
     },
     {

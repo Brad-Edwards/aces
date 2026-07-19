@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import re
 from enum import Enum
+from typing import Annotated
 
 from pydantic import Field, field_validator, model_validator
 from typing_extensions import TypeAliasType
 
 from ._base import SDLModel
+from ._identifiers import PortableIdentifier
 
 
 class ParticipantBehaviorSpecificationLifecycle(str, Enum):
@@ -28,6 +30,36 @@ BehaviorSpecificationExtensionValue = TypeAliasType(
     | list["BehaviorSpecificationExtensionValue"]
     | dict[str, "BehaviorSpecificationExtensionValue"],
 )
+ToolAffordanceReference = Annotated[str, Field(min_length=1, pattern=r"\S")]
+
+
+class ParticipantToolAffordance(SDLModel):
+    """Authored participant-local binding from tool identity to governed behavior."""
+
+    tool_ref: str | None = Field(default=None, min_length=1)
+    action_contract_refs: list[ToolAffordanceReference] = Field(
+        min_length=1,
+        json_schema_extra={"uniqueItems": True},
+    )
+    observation_boundary_refs: list[ToolAffordanceReference] = Field(
+        min_length=1,
+        json_schema_extra={"uniqueItems": True},
+    )
+
+    @field_validator("action_contract_refs", "observation_boundary_refs")
+    @classmethod
+    def _require_unique_non_empty_refs(cls, values: list[str]) -> list[str]:
+        if any(not value.strip() for value in values):
+            raise ValueError("tool affordance refs must be non-empty")
+        if len(set(values)) != len(values):
+            raise ValueError("tool affordance refs must be unique within each field")
+        return values
+
+
+def tool_affordance_reference(spec_name: str, affordance_id: str) -> str:
+    """Return the stable authored reference for one nested affordance binding."""
+
+    return f"behavior_specifications.{spec_name}.tool_affordances.{affordance_id}"
 
 
 class ParticipantBehaviorSpecification(SDLModel):
@@ -47,6 +79,10 @@ class ParticipantBehaviorSpecification(SDLModel):
     realization_profile_ref: str | None = None
     backend_feature_support_refs: list[str] = Field(default_factory=list)
     evidence_contract_refs: list[str] = Field(default_factory=list)
+    tool_affordances: dict[PortableIdentifier, ParticipantToolAffordance] = Field(
+        default_factory=dict,
+        json_schema_extra={"additionalProperties": False},
+    )
     extension_policy: str = "governed-extension"
     extensions: dict[str, BehaviorSpecificationExtensionValue] = Field(default_factory=dict)
 
@@ -119,6 +155,7 @@ class ParticipantBehaviorSpecification(SDLModel):
                 self.realization_profile_ref,
                 self.backend_feature_support_refs,
                 self.evidence_contract_refs,
+                self.tool_affordances,
             )
         ):
             raise ValueError("behavior specifications must aggregate at least one behavior surface reference")

@@ -50,6 +50,7 @@ from .module_registry import (
     resolve_import,
 )
 from .parser import _load_normalized_data
+from .participant_behavior_specification import tool_affordance_reference
 from .phase_contracts import (
     CapabilityConstraint,
     ExpansionProvenance,
@@ -313,6 +314,18 @@ def _namespace_payload(
         descriptor=descriptor,
         restrict_to_descriptor=True,
     )
+    tool_affordance_ref_map: dict[str, str] = {}
+    for spec_name, behavior_spec in namespaced.get("behavior_specifications", {}).items():
+        if not isinstance(behavior_spec, dict):
+            continue
+        namespaced_spec_name = symbols["behavior_specifications"].get(
+            spec_name,
+            _prefix(namespace, spec_name),
+        )
+        for affordance_id in behavior_spec.get("tool_affordances", {}):
+            tool_affordance_ref_map[tool_affordance_reference(spec_name, affordance_id)] = tool_affordance_reference(
+                namespaced_spec_name, affordance_id
+            )
 
     for node in namespaced.get("nodes", {}).values():
         if isinstance(node, dict):
@@ -358,6 +371,21 @@ def _namespace_payload(
     for story in namespaced.get("stories", {}).values():
         if isinstance(story, dict):
             story["scripts"] = [_maybe_rename(name, symbols["scripts"]) for name in story.get("scripts", [])]
+    for boundary in namespaced.get("observation_boundaries", {}).values():
+        if not isinstance(boundary, dict):
+            continue
+        for field_name in ("observable_refs", "hidden_refs", "evidence_refs"):
+            boundary[field_name] = [tool_affordance_ref_map.get(ref, ref) for ref in boundary.get(field_name, [])]
+        for field_name in ("view_rules", "view_transitions"):
+            for item in boundary.get(field_name, []):
+                if not isinstance(item, dict):
+                    continue
+                information_ref = item.get("information_ref")
+                if isinstance(information_ref, str):
+                    item["information_ref"] = tool_affordance_ref_map.get(
+                        information_ref,
+                        information_ref,
+                    )
     for content in namespaced.get("content", {}).values():
         if isinstance(content, dict) and content.get("target"):
             content["target"] = _maybe_rename(str(content["target"]), symbols["nodes"])
@@ -419,6 +447,11 @@ def _namespace_payload(
             agent["starting_accounts"] = [
                 _maybe_rename(name, symbols["accounts"]) for name in agent.get("starting_accounts", [])
             ]
+            agent["actions"] = [_maybe_rename(name, symbols["action_contracts"]) for name in agent.get("actions", [])]
+            agent["observation_boundaries"] = [
+                _maybe_rename(name, symbols["observation_boundaries"])
+                for name in agent.get("observation_boundaries", [])
+            ]
             for access in agent.get("interactive_access", {}).values():
                 if not isinstance(access, dict):
                     continue
@@ -479,6 +512,21 @@ def _namespace_payload(
             behavior_spec["authority_scope_refs"] = [
                 _maybe_rename(name, symbols["named"]) for name in behavior_spec.get("authority_scope_refs", [])
             ]
+            for binding in behavior_spec.get("tool_affordances", {}).values():
+                if not isinstance(binding, dict):
+                    continue
+                if binding.get("tool_ref"):
+                    binding["tool_ref"] = _maybe_rename(
+                        str(binding["tool_ref"]),
+                        symbols["content"],
+                    )
+                binding["action_contract_refs"] = [
+                    _maybe_rename(name, symbols["action_contracts"]) for name in binding.get("action_contract_refs", [])
+                ]
+                binding["observation_boundary_refs"] = [
+                    _maybe_rename(name, symbols["observation_boundaries"])
+                    for name in binding.get("observation_boundary_refs", [])
+                ]
     for requirement in namespaced.get("evidence_requirements", {}).values():
         if isinstance(requirement, dict):
             _rewrite_evidence_requirement(requirement, symbols)

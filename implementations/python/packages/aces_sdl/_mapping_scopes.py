@@ -64,6 +64,7 @@ NESTED_HASHMAP_FIELDS = frozenset(
         "alternatives",
         "members",
         "fixed_positions",
+        "tool_affordances",
     }
 )
 
