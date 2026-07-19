@@ -4453,6 +4453,23 @@
         "semantic_version": {
           "title": "Semantic Version",
           "type": "string"
+        },
+        "tool_affordances": {
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/ParticipantToolAffordance"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Tool Affordances",
+          "type": "object"
         }
       },
       "required": [
@@ -4892,6 +4909,53 @@
       ],
       "title": "ParticipantTimeDomain",
       "type": "string"
+    },
+    "ParticipantToolAffordance": {
+      "additionalProperties": false,
+      "description": "Authored participant-local binding from tool identity to governed behavior.",
+      "properties": {
+        "action_contract_refs": {
+          "items": {
+            "minLength": 1,
+            "pattern": "\\S",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Action Contract Refs",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "observation_boundary_refs": {
+          "items": {
+            "minLength": 1,
+            "pattern": "\\S",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Observation Boundary Refs",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "tool_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tool Ref"
+        }
+      },
+      "required": [
+        "action_contract_refs",
+        "observation_boundary_refs"
+      ],
+      "title": "ParticipantToolAffordance",
+      "type": "object"
     },
     "ParticipantViewDisposition": {
       "description": "SEM-210 visibility disposition for one information object.",
