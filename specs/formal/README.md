@@ -15,6 +15,7 @@ Examples:
 - `specs/formal/participant-runtime/`
 - `specs/formal/experiment-core/`
 - `specs/formal/scenario-variation-trial-realization/`
+- `specs/formal/scenario-satisfiability/`
 - `specs/formal/validation-admission-profiles/`
 - `specs/formal/sdl-phases/`
 

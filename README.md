@@ -178,6 +178,20 @@ uvx nox -l
 The full `verify` session runs the project checks expected for pull requests,
 including repository policy, generated artifact checks, tests, and docs.
 
+Whole-scenario finite-domain satisfiability can be inspected without applying
+or provisioning a scenario:
+
+```shell
+uv run --project implementations/python aces processor satisfiability \
+  path/to/scenario.sdl.yaml \
+  --profile aces-finite-domain-satisfiability-v1
+```
+
+The command emits the published replayable evidence envelope. Exit `0` is a
+completed satisfiable or unsatisfiable analysis, `2` is an explicit unsupported
+fragment result, and `1` is an input or operational failure. See ADR-086 for the
+bounded target coverage and nonclaims.
+
 ## Contributing
 
 Contributions are welcome where they improve the language, reference

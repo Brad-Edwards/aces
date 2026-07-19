@@ -24,6 +24,11 @@ from aces_contracts.plan_projection import (
 from aces_processor.manifest import reference_processor_manifest_payload
 from aces_processor.models import ExecutionPlan
 from aces_processor.reference import run_reference_processor
+from aces_processor.satisfiability import (
+    ANALYSIS_PROFILE,
+    SatisfiabilityOperationalError,
+    analyze_scenario_file,
+)
 from aces_sdl import SDLError, SDLInstantiationError, SDLParseError, SDLValidationError
 from pydantic import ValidationError
 
@@ -172,3 +177,38 @@ def plan(
     typer.echo(json.dumps(payload, indent=2, sort_keys=True))
     if not result.execution_plan.is_valid:
         raise typer.Exit(code=1)
+
+
+@app.command("satisfiability")
+def satisfiability(
+    sdl: Path = typer.Argument(..., exists=True, readable=True, help="SDL scenario file to analyze."),
+    profile: str = typer.Option(
+        ANALYSIS_PROFILE,
+        "--profile",
+        help="Closed governed satisfiability-analysis profile.",
+    ),
+) -> None:
+    """Emit replayable whole-scenario satisfiability evidence as JSON.
+
+    Exit status 0 means satisfiable or unsatisfiable, 2 means the authored
+    scenario uses a construct outside the selected theory, and 1 means the
+    input or operational boundary failed. Unsupported is a typed, fail-closed
+    analysis result rather than a satisfiability conclusion.
+    """
+
+    try:
+        evidence = analyze_scenario_file(sdl, profile=profile)
+    except SDLError as exc:
+        typer.echo(
+            f"error: satisfiability input was rejected ({type(exc).__name__})",
+            err=True,
+        )
+        raise typer.Exit(code=1) from exc
+    except SatisfiabilityOperationalError as exc:
+        # The service deliberately exposes value-free operational messages.
+        typer.echo(f"error: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+
+    typer.echo(json.dumps(evidence.model_dump(mode="json"), indent=2, sort_keys=True))
+    if evidence.outcome.value == "unsupported":
+        raise typer.Exit(code=2)

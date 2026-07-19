@@ -433,6 +433,16 @@
       }
     },
     {
+      "contract_id": "scenario-satisfiability-evidence-v1",
+      "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
+      "stability": "draft",
+      "content_hash": "79ff1f748c65c006c5a1366d87c063b49b4d41da9476626011dfbf87cd858061",
+      "last_change": {
+        "summary": "Initial publication of deterministic whole-scenario finite-domain satisfiability, unsupported, witness, core, solver-configuration, and replay evidence (ADR-086, issue #826).",
+        "content_hash": "79ff1f748c65c006c5a1366d87c063b49b4d41da9476626011dfbf87cd858061"
+      }
+    },
+    {
       "contract_id": "scientific-completeness-assessment-v1",
       "schema_path": "contracts/schemas/profiles/scientific-completeness-assessment-v1.json",
       "stability": "draft",

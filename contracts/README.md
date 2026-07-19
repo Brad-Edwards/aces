@@ -75,6 +75,13 @@ their conclusions to `aces-behavioral-relations@rev1`, including population or
 case scope, measurement projection, evidence boundary, limitations, and
 explicit nonclaims.
 
+The published `scenario-satisfiability-evidence-v1` contract binds exact SDL
+source bytes, canonical authored semantics, a solver-neutral normalized model,
+the pinned solver configuration, and exactly one satisfiable witness,
+unsatisfiable core, or unsupported disclosure. Its claim is limited to the
+ADR-086 finite-domain profile; it is not backend-realization or runtime-success
+evidence.
+
 `experiment-run-v1` is the canonical run provenance record. It carries the
 task/run/apparatus context, result and evidence pointers, traceability links to
 capture specs, evidence records, derived measures, and claims, plus
