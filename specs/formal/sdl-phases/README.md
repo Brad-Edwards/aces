@@ -185,7 +185,7 @@ equivalence or bisimilarity.
   `implementations/python/packages/aces_sdl/instantiate.py`
 - typed processor lowering:
   `implementations/python/packages/aces_processor/models/` and
-  `implementations/python/packages/aces_processor/planner.py`
+  `implementations/python/packages/aces_processor/planner/`
 - canonical snapshot:
   `implementations/python/packages/aces_sdl/canonical.py`
 - external contracts:
