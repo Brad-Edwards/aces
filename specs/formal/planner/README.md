@@ -18,7 +18,7 @@ reconciliation semantics.
 
 - shared graph helpers: `implementations/python/packages/aces_processor/semantics/planner.py`
 - planner use sites:
-  - `implementations/python/packages/aces_processor/planner.py`
+  - `implementations/python/packages/aces_processor/planner/`
   - `implementations/python/packages/aces_processor/manager.py`
 
 ## Tests

@@ -49,7 +49,7 @@ target-resolution, success-interpretation, and dependency-ordering semantics
   - `implementations/python/packages/aces_processor/compiler/`
   - `implementations/python/packages/aces_processor/models/`
 - planner ordering/refresh reconciliation:
-  - `implementations/python/packages/aces_processor/planner.py`
+  - `implementations/python/packages/aces_processor/planner/`
   - `implementations/python/packages/aces_processor/semantics/planner.py`
 
 ## Tests
