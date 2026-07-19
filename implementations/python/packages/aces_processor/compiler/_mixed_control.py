@@ -1,6 +1,10 @@
 """Mixed-control participant behavior compilation helpers."""
 
-from typing import Any
+from aces_sdl.participant_behavior_specification import (
+    MixedControlDispositionRules,
+    MixedControlParticipantOperation,
+    ParticipantBehaviorSpecification,
+)
 
 from ..models import (
     MixedControlControllerStateRuntime,
@@ -17,7 +21,7 @@ from .support import _dedupe, _dump
 
 
 def _compile_controller_states(
-    declaration: Any,
+    declaration: MixedControlParticipantOperation,
     *,
     spec_name: str,
     participant_address: str,
@@ -70,7 +74,7 @@ def _compile_controller_states(
 
 
 def _compile_control_transitions(
-    declaration: Any,
+    declaration: MixedControlParticipantOperation,
     *,
     spec_name: str,
     addressable_ref_index: dict[str, set[str]],
@@ -131,7 +135,7 @@ def _compile_control_transitions(
     return tuple(transitions), _dedupe(dependencies)
 
 
-def _compile_dispositions(dispositions: Any) -> MixedControlDispositionRulesRuntime:
+def _compile_dispositions(dispositions: MixedControlDispositionRules) -> MixedControlDispositionRulesRuntime:
     return MixedControlDispositionRulesRuntime(
         duplicate=str(getattr(dispositions.duplicate, "value", dispositions.duplicate)),
         stale=str(getattr(dispositions.stale, "value", dispositions.stale)),
@@ -145,7 +149,7 @@ def _compile_dispositions(dispositions: Any) -> MixedControlDispositionRulesRunt
 def _compile_mixed_control(
     *,
     spec_name: str,
-    behavior_spec: object,
+    behavior_spec: ParticipantBehaviorSpecification,
     addressable_ref_index: dict[str, set[str]],
 ) -> tuple[
     str,

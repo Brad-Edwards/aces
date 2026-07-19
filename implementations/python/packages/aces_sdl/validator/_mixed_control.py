@@ -1,6 +1,13 @@
 """Semantic validation for ACT-617 mixed-control participant operation."""
 
-from typing import Any
+from ..participant_behavior_specification import (
+    MixedControlAuthorityStatus,
+    MixedControlControllerState,
+    MixedControlParticipantOperation,
+    MixedControlTransition,
+    MixedControlTransitionKind,
+    ParticipantBehaviorSpecification,
+)
 
 
 class _MixedControlMixin:
@@ -23,8 +30,8 @@ class _MixedControlMixin:
         self,
         *,
         spec_name: str,
-        behavior_mode: str,
-        declaration: Any,
+        behavior_mode: str | None,
+        declaration: MixedControlParticipantOperation | None,
     ) -> None:
         if behavior_mode == "mixed-control" and declaration is None:
             self._err(f"Behavior specification '{spec_name}' mixed-control mode requires mixed_control")
@@ -35,8 +42,8 @@ class _MixedControlMixin:
         self,
         *,
         spec_name: str,
-        behavior_spec: Any,
-        declaration: Any,
+        behavior_spec: ParticipantBehaviorSpecification,
+        declaration: MixedControlParticipantOperation,
     ) -> None:
         label = f"Behavior specification '{spec_name}' mixed_control"
         if declaration.participant_ref not in behavior_spec.participant_refs:
@@ -76,8 +83,8 @@ class _MixedControlMixin:
         self,
         *,
         state_id: str,
-        state: Any,
-        declaration: Any,
+        state: MixedControlControllerState,
+        declaration: MixedControlParticipantOperation,
         label: str,
         named_index: dict[str, set[str]],
         targetable_index: dict[str, set[str]],
@@ -153,8 +160,8 @@ class _MixedControlMixin:
         self,
         *,
         transition_id: str,
-        transition: Any,
-        declaration: Any,
+        transition: MixedControlTransition,
+        declaration: MixedControlParticipantOperation,
         label: str,
     ) -> None:
         from_state = declaration.controller_states[transition.from_state_ref]
@@ -185,9 +192,9 @@ class _MixedControlMixin:
     def _verify_transition_validity(
         self,
         *,
-        transition: Any,
-        from_state: Any,
-        to_state: Any,
+        transition: MixedControlTransition,
+        from_state: MixedControlControllerState,
+        to_state: MixedControlControllerState,
         owner_label: str,
     ) -> None:
         if self._enum_value(from_state.authority_status) == "revoked":
@@ -200,8 +207,8 @@ class _MixedControlMixin:
     def _verify_proposal_transition(
         self,
         *,
-        transition: Any,
-        declaration: Any,
+        transition: MixedControlTransition,
+        declaration: MixedControlParticipantOperation,
         owner_label: str,
     ) -> None:
         if transition.proposal_ref is None:
@@ -215,9 +222,9 @@ class _MixedControlMixin:
     def _verify_handoff_transition(
         self,
         *,
-        transition: Any,
-        from_state: Any,
-        to_state: Any,
+        transition: MixedControlTransition,
+        from_state: MixedControlControllerState,
+        to_state: MixedControlControllerState,
         owner_label: str,
     ) -> None:
         if self._enum_value(transition.transition_kind) != "handoff":
@@ -232,7 +239,7 @@ class _MixedControlMixin:
             self._validate_named_ref(ref, owner_label=owner_label, ref_label="evidence_ref")
 
     @staticmethod
-    def _enum_value(value: Any) -> str:
+    def _enum_value(value: MixedControlAuthorityStatus | MixedControlTransitionKind) -> str:
         return str(getattr(value, "value", value))
 
     @staticmethod
