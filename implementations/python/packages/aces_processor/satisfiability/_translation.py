@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import Any
+from typing import cast
 
 import rfc8785
 from aces_contracts.diagnostics import DiagnosticModel
@@ -29,6 +30,7 @@ _MAX_DIAGNOSTICS = 64
 _DOMAIN_CODE = "scenario-satisfiability.unsupported-domain"
 _TARGET_CODE = "scenario-satisfiability.unsupported-target"
 _RESOURCE_CODE = "scenario-satisfiability.resource-limit"
+VariableOccurrence = tuple[str, str, bool]
 
 
 @dataclass(frozen=True)
@@ -83,71 +85,9 @@ def translate_scenario(
         exclude={"variables", "imports", "module", "expansion_provenance"},
     )
     occurrences = tuple(_variable_occurrences(payload))
-    referenced = {name for _, name, _ in occurrences}
-    selected = {
-        name: variable for name, variable in scenario.variables.items() if name in referenced or variable.required
-    }
     diagnostics = _DiagnosticAccumulator()
-    symbols: dict[str, ConstraintSymbolModel] = {}
-
-    selected_items = sorted(selected.items())
-    if len(selected_items) > _MAX_SYMBOLS:
-        diagnostics.add(_diagnostic(_RESOURCE_CODE, "/variables", "The analysis exceeds the symbol limit."))
-        selected_items = selected_items[:_MAX_SYMBOLS]
-    for name, variable in selected_items:
-        symbol = _symbol(name, variable, diagnostics)
-        if symbol is not None:
-            symbols[name] = symbol
-
-    clauses: list[ConstraintClauseModel] = []
-
-    def append_clause(clause: ConstraintClauseModel) -> None:
-        if len(clauses) < _MAX_CLAUSES:
-            clauses.append(clause)
-        else:
-            diagnostics.add(_diagnostic(_RESOURCE_CODE, "", "The analysis exceeds the clause limit."))
-
-    for name, symbol in symbols.items():
-        append_clause(
-            ConstraintClauseModel(
-                clause_id=_stable_id("domain", name),
-                kind=ConstraintClauseKind.DECLARED_DOMAIN,
-                symbol_id=symbol.symbol_id,
-                source_address=f"/variables/{_pointer(name)}",
-                allowed_values=symbol.domain,
-            )
-        )
-
-    for address, name, embedded in occurrences:
-        symbol = symbols.get(name)
-        if embedded or symbol is None:
-            diagnostics.add(
-                _diagnostic(
-                    _TARGET_CODE,
-                    address,
-                    "The variable occurrence is outside the selected translation profile.",
-                )
-            )
-            continue
-        allowed = _target_domain(address, symbol)
-        if allowed is None:
-            diagnostics.add(
-                _diagnostic(
-                    _TARGET_CODE,
-                    address,
-                    "The variable occurrence is outside the selected translation profile.",
-                )
-            )
-            continue
-        append_clause(
-            ConstraintClauseModel(
-                clause_id="target:" + hashlib.sha256(address.encode("utf-8")).hexdigest(),
-                kind=ConstraintClauseKind.TARGET_DOMAIN,
-                symbol_id=symbol.symbol_id,
-                source_address=address,
-                allowed_values=allowed,
-            )
-        )
+    symbols = _select_symbols(scenario, occurrences, diagnostics)
+    clauses = _translate_clauses(symbols, occurrences, diagnostics)
 
     model = NormalizedConstraintModel(
         profile="aces-finite-domain-constraints/v1",
@@ -164,30 +104,104 @@ def translate_scenario(
     )
 
 
+def _select_symbols(
+    scenario: Scenario | ExpandedScenario,
+    occurrences: tuple[VariableOccurrence, ...],
+    diagnostics: _DiagnosticAccumulator,
+) -> dict[str, ConstraintSymbolModel]:
+    referenced = {name for _, name, _ in occurrences}
+    selected = {
+        name: variable for name, variable in scenario.variables.items() if name in referenced or variable.required
+    }
+    selected_items = sorted(selected.items())
+    if len(selected_items) > _MAX_SYMBOLS:
+        diagnostics.add(_diagnostic(_RESOURCE_CODE, "/variables", "The analysis exceeds the symbol limit."))
+        selected_items = selected_items[:_MAX_SYMBOLS]
+
+    symbols: dict[str, ConstraintSymbolModel] = {}
+    for name, variable in selected_items:
+        symbol = _symbol(name, variable, diagnostics)
+        if symbol is not None:
+            symbols[name] = symbol
+    return symbols
+
+
+def _translate_clauses(
+    symbols: dict[str, ConstraintSymbolModel],
+    occurrences: tuple[VariableOccurrence, ...],
+    diagnostics: _DiagnosticAccumulator,
+) -> list[ConstraintClauseModel]:
+    clauses: list[ConstraintClauseModel] = []
+    for name, symbol in symbols.items():
+        _append_clause(
+            clauses,
+            ConstraintClauseModel(
+                clause_id=_stable_id("domain", name),
+                kind=ConstraintClauseKind.DECLARED_DOMAIN,
+                symbol_id=symbol.symbol_id,
+                source_address=f"/variables/{_pointer(name)}",
+                allowed_values=symbol.domain,
+            ),
+            diagnostics,
+        )
+    for occurrence in occurrences:
+        clause = _target_clause(occurrence, symbols, diagnostics)
+        if clause is not None:
+            _append_clause(clauses, clause, diagnostics)
+    return clauses
+
+
+def _append_clause(
+    clauses: list[ConstraintClauseModel],
+    clause: ConstraintClauseModel,
+    diagnostics: _DiagnosticAccumulator,
+) -> None:
+    if len(clauses) < _MAX_CLAUSES:
+        clauses.append(clause)
+    else:
+        diagnostics.add(_diagnostic(_RESOURCE_CODE, "", "The analysis exceeds the clause limit."))
+
+
+def _target_clause(
+    occurrence: VariableOccurrence,
+    symbols: dict[str, ConstraintSymbolModel],
+    diagnostics: _DiagnosticAccumulator,
+) -> ConstraintClauseModel | None:
+    address, name, embedded = occurrence
+    symbol = symbols.get(name)
+    allowed = None if embedded or symbol is None else _target_domain(address, symbol)
+    if symbol is None or allowed is None:
+        diagnostics.add(
+            _diagnostic(
+                _TARGET_CODE,
+                address,
+                "The variable occurrence is outside the selected translation profile.",
+            )
+        )
+        return None
+    return ConstraintClauseModel(
+        clause_id="target:" + hashlib.sha256(address.encode("utf-8")).hexdigest(),
+        kind=ConstraintClauseKind.TARGET_DOMAIN,
+        symbol_id=symbol.symbol_id,
+        source_address=address,
+        allowed_values=allowed,
+    )
+
+
 def _symbol(
     name: str,
     variable: Variable,
     diagnostics: _DiagnosticAccumulator,
 ) -> ConstraintSymbolModel | None:
     address = f"/variables/{_pointer(name)}"
-    if variable.type is VariableType.NUMBER:
-        diagnostics.add(_diagnostic(_DOMAIN_CODE, address, "The variable sort is not supported by this profile."))
+    values = _finite_domain_values(variable, address, diagnostics)
+    if values is None:
         return None
     sort = {
         VariableType.STRING: ConstraintSort.STRING,
         VariableType.INTEGER: ConstraintSort.INTEGER,
         VariableType.BOOLEAN: ConstraintSort.BOOLEAN,
     }[variable.type]
-    values: tuple[str | int | bool, ...]
-    if variable.allowed_values:
-        values = tuple(variable.allowed_values)  # type: ignore[assignment]
-    elif variable.type is VariableType.BOOLEAN:
-        values = (False, True)
-    else:
-        diagnostics.add(
-            _diagnostic(_DOMAIN_CODE, address, "The variable requires an explicit finite allowed-values domain.")
-        )
-        return None
     canonical = tuple(sorted(values, key=rfc8785.dumps))
     if len(canonical) > _MAX_DOMAIN_MEMBERS or len({rfc8785.dumps(item) for item in canonical}) != len(canonical):
         diagnostics.add(_diagnostic(_DOMAIN_CODE, address, "The variable domain is invalid or exceeds its limit."))
@@ -200,23 +214,57 @@ def _symbol(
     )
 
 
-def _variable_occurrences(value: Any, address: str = ""):
+def _finite_domain_values(
+    variable: Variable,
+    address: str,
+    diagnostics: _DiagnosticAccumulator,
+) -> tuple[str | int | bool, ...] | None:
+    values: tuple[str | int | bool, ...] | None = None
+    if variable.type is VariableType.NUMBER:
+        diagnostics.add(_diagnostic(_DOMAIN_CODE, address, "The variable sort is not supported by this profile."))
+    elif variable.allowed_values:
+        values = cast(tuple[str | int | bool, ...], tuple(variable.allowed_values))
+    elif variable.type is VariableType.BOOLEAN:
+        values = (False, True)
+    else:
+        diagnostics.add(
+            _diagnostic(_DOMAIN_CODE, address, "The variable requires an explicit finite allowed-values domain.")
+        )
+    return values
+
+
+def _variable_occurrences(value: object, address: str = "") -> Iterator[VariableOccurrence]:
     if isinstance(value, dict):
-        for key in sorted(value, key=str):
-            yield from _variable_occurrences(value[key], f"{address}/{_pointer(str(key))}")
-        return
-    if isinstance(value, list):
-        for index, item in enumerate(value):
-            yield from _variable_occurrences(item, f"{address}/{index}")
-        return
-    if not isinstance(value, str):
-        return
+        yield from _mapping_variable_occurrences(cast(dict[object, object], value), address)
+    elif isinstance(value, list):
+        yield from _sequence_variable_occurrences(cast(list[object], value), address)
+    elif isinstance(value, str):
+        yield from _string_variable_occurrences(value, address)
+
+
+def _mapping_variable_occurrences(
+    value: dict[object, object],
+    address: str,
+) -> Iterator[VariableOccurrence]:
+    for key in sorted(value, key=str):
+        yield from _variable_occurrences(value[key], f"{address}/{_pointer(str(key))}")
+
+
+def _sequence_variable_occurrences(
+    value: list[object],
+    address: str,
+) -> Iterator[VariableOccurrence]:
+    for index, item in enumerate(value):
+        yield from _variable_occurrences(item, f"{address}/{index}")
+
+
+def _string_variable_occurrences(value: str, address: str) -> Iterator[VariableOccurrence]:
     whole = extract_variable_name(value)
     if whole is not None:
         yield address, whole, False
-        return
-    for name in variable_names_in_value(value):
-        yield address, name, True
+    else:
+        for name in variable_names_in_value(value):
+            yield address, name, True
 
 
 def _target_domain(
@@ -224,34 +272,26 @@ def _target_domain(
     symbol: ConstraintSymbolModel,
 ) -> tuple[str | int | bool, ...] | None:
     parts = address.split("/")[1:]
-    if len(parts) == 3 and parts[0] == "nodes" and parts[2] == "os" and symbol.sort is ConstraintSort.STRING:
-        vocabulary = {item.value for item in OSFamily}
-        return tuple(value for value in symbol.domain if normalize_enum_value(value) in vocabulary)  # type: ignore[arg-type]
-    if (
-        len(parts) == 5
-        and parts[0] == "infrastructure"
-        and parts[2] == "acls"
-        and parts[4] == "action"
-        and symbol.sort is ConstraintSort.STRING
-    ):
-        vocabulary = {item.value for item in ACLAction}
-        return tuple(value for value in symbol.domain if normalize_enum_value(value) in vocabulary)  # type: ignore[arg-type]
-    if (
-        len(parts) == 3
-        and parts[0] == "infrastructure"
-        and parts[2] == "count"
-        and symbol.sort is ConstraintSort.INTEGER
-    ):
-        return tuple(value for value in symbol.domain if isinstance(value, int) and value >= 1)  # type: ignore[return-value]
-    if (
-        len(parts) == 4
-        and parts[0] == "infrastructure"
-        and parts[2] == "properties"
-        and parts[3] == "internal"
-        and symbol.sort is ConstraintSort.BOOLEAN
-    ):
-        return symbol.domain
-    return None
+    result: tuple[str | int | bool, ...] | None = None
+    match parts:
+        case ["nodes", _, "os"] if symbol.sort is ConstraintSort.STRING:
+            result = _string_vocabulary_domain(symbol, {item.value for item in OSFamily})
+        case ["infrastructure", _, "acls", _, "action"] if symbol.sort is ConstraintSort.STRING:
+            result = _string_vocabulary_domain(symbol, {item.value for item in ACLAction})
+        case ["infrastructure", _, "count"] if symbol.sort is ConstraintSort.INTEGER:
+            integer_domain = cast(tuple[int, ...], symbol.domain)
+            result = tuple(value for value in integer_domain if value >= 1)
+        case ["infrastructure", _, "properties", "internal"] if symbol.sort is ConstraintSort.BOOLEAN:
+            result = symbol.domain
+    return result
+
+
+def _string_vocabulary_domain(
+    symbol: ConstraintSymbolModel,
+    vocabulary: set[str],
+) -> tuple[str, ...]:
+    string_domain = cast(tuple[str, ...], symbol.domain)
+    return tuple(value for value in string_domain if normalize_enum_value(value) in vocabulary)
 
 
 def _diagnostic(code: str, address: str, message: str) -> DiagnosticModel:

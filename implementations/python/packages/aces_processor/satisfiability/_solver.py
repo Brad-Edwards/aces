@@ -25,29 +25,47 @@ def solve_model(model: NormalizedConstraintModel) -> SolverResult:
     all_clause_ids = tuple(clause.clause_id for clause in model.clauses)
     status = _check(model, all_clause_ids, {})
     if status == z3.sat:
-        fixed: dict[str, int] = {}
-        assignment: dict[str, str | int | bool] = {}
-        for symbol in model.symbols:
-            for index, value in enumerate(symbol.domain):
-                candidate = {**fixed, symbol.symbol_id: index}
-                if _check(model, all_clause_ids, candidate) == z3.sat:
-                    fixed[symbol.symbol_id] = index
-                    assignment[symbol.variable] = value
-                    break
-            else:  # pragma: no cover - guarded by the initial satisfiable result
-                raise SolverOperationalError("deterministic witness selection failed")
-        return SolverResult(outcome=SatisfiabilityOutcome.SATISFIABLE, assignment=assignment)
+        return SolverResult(
+            outcome=SatisfiabilityOutcome.SATISFIABLE,
+            assignment=_select_witness(model, all_clause_ids),
+        )
     if status == z3.unsat:
-        core = list(all_clause_ids)
-        for clause_id in all_clause_ids:
-            candidate = tuple(item for item in core if item != clause_id)
-            if _check(model, candidate, {}) == z3.unsat:
-                core = list(candidate)
         return SolverResult(
             outcome=SatisfiabilityOutcome.UNSATISFIABLE,
-            core=tuple(sorted(core)),
+            core=_reduce_unsat_core(model, all_clause_ids),
         )
     raise SolverOperationalError("solver returned an incomplete result")
+
+
+def _select_witness(
+    model: NormalizedConstraintModel,
+    all_clause_ids: tuple[str, ...],
+) -> dict[str, str | int | bool]:
+    fixed: dict[str, int] = {}
+    assignment: dict[str, str | int | bool] = {}
+    for symbol in model.symbols:
+        for index, value in enumerate(symbol.domain):
+            candidate = {**fixed, symbol.symbol_id: index}
+            if _check(model, all_clause_ids, candidate) == z3.sat:
+                fixed[symbol.symbol_id] = index
+                assignment[symbol.variable] = value
+                break
+        else:
+            # This is guarded by the initial satisfiable result.
+            raise SolverOperationalError("deterministic witness selection failed")
+    return assignment
+
+
+def _reduce_unsat_core(
+    model: NormalizedConstraintModel,
+    all_clause_ids: tuple[str, ...],
+) -> tuple[str, ...]:
+    core = list(all_clause_ids)
+    for clause_id in all_clause_ids:
+        candidate = tuple(item for item in core if item != clause_id)
+        if _check(model, candidate, {}) == z3.unsat:
+            core = list(candidate)
+    return tuple(sorted(core))
 
 
 def _check(

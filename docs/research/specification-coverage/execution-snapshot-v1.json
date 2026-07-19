@@ -9,12 +9,12 @@
     {
       "surface_id": "contract-models",
       "path": "implementations/python/packages/aces_contracts",
-      "content_sha256": "d4439f2f441a3af2183efaa0da2534784f051ab1aed479d1f18304cc65e51b74"
+      "content_sha256": "b09ba77fef389928f8226bca082f55de8a6a686d5982b70a6bffc3ebdf699b1c"
     },
     {
       "surface_id": "processor-pipeline",
       "path": "implementations/python/packages/aces_processor",
-      "content_sha256": "548401baff44845cd240354b2c514f62c3887e9ac34a77561db3a711ceda81dd"
+      "content_sha256": "d6662710f32aee966b4659ffc89a3b8fa3c01f885bf9f6220017dffc14fc54b2"
     },
     {
       "surface_id": "sdl-pipeline",

@@ -308,5 +308,6 @@ def test_published_valid_and_invalid_fixtures_enforce_outcome_joins() -> None:
     invalid = fixtures / "scenario-satisfiability-evidence-v1" / "invalid" / "cross-outcome-payload.json"
 
     ScenarioSatisfiabilityEvidenceModel.model_validate_json(valid.read_text(encoding="utf-8"))
+    invalid_payload = invalid.read_text(encoding="utf-8")
     with pytest.raises(ValidationError):
-        ScenarioSatisfiabilityEvidenceModel.model_validate_json(invalid.read_text(encoding="utf-8"))
+        ScenarioSatisfiabilityEvidenceModel.model_validate_json(invalid_payload)

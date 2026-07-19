@@ -140,7 +140,7 @@ class SolverConfigurationModel(ContractModel):
     profile: Literal["aces-z3-finite-domain/v1"]
     engine: Literal["z3"]
     package: Literal["z3-solver"]
-    package_version: Literal["4.16.0.0"]
+    package_version: Literal["4.16.0.0"]  # NOSONAR -- pinned package version, not an IP address
     engine_version: Literal["4.16.0"]
     logic: Literal["QF_LIA"]
     random_seed: Literal[0]
@@ -217,29 +217,50 @@ class ScenarioSatisfiabilityEvidenceModel(ContractModel):
 
     @model_validator(mode="after")
     def _validate_evidence_joins(self) -> ScenarioSatisfiabilityEvidenceModel:
-        if self.source.byte_digest != self.normalized_model.source_digest:
-            raise ValueError("normalized model source digest must match the root source")
-        if self.authored_digest != self.normalized_model.authored_digest:
-            raise ValueError("normalized model authored digest must match the evidence")
-        if self.normalized_model_digest != canonical_contract_digest(self.normalized_model):
-            raise ValueError("normalized_model_digest must bind the normalized model")
-        if self.solver_configuration_digest != canonical_contract_digest(self.solver_configuration):
-            raise ValueError("solver_configuration_digest must bind the solver configuration")
-        payloads = {
-            SatisfiabilityOutcome.SATISFIABLE: self.witness,
-            SatisfiabilityOutcome.UNSATISFIABLE: self.unsat_core,
-            SatisfiabilityOutcome.UNSUPPORTED: self.unsupported,
-        }
-        if payloads[self.outcome] is None or sum(item is not None for item in payloads.values()) != 1:
-            raise ValueError("outcome must select exactly one matching payload")
-        clause_ids = {item.clause_id for item in self.normalized_model.clauses}
-        if self.unsat_core is not None and any(item not in clause_ids for item in self.unsat_core.clause_ids):
-            raise ValueError("unsatisfiable core must reference normalized model clauses")
-        if self.unsupported is not None:
-            diagnostic_codes = tuple(sorted({item.code for item in self.diagnostics}))
-            if self.unsupported.reason_codes != diagnostic_codes:
-                raise ValueError("unsupported reason codes must match diagnostic codes")
+        _validate_evidence_digests(self)
+        _validate_outcome_payload(self)
+        _validate_unsatisfiable_core(self)
+        _validate_unsupported_reasons(self)
         return self
+
+
+def _validate_evidence_digests(evidence: ScenarioSatisfiabilityEvidenceModel) -> None:
+    """Validate the source, authored, normalized-model, and solver joins."""
+
+    if evidence.source.byte_digest != evidence.normalized_model.source_digest:
+        raise ValueError("normalized model source digest must match the root source")
+    if evidence.authored_digest != evidence.normalized_model.authored_digest:
+        raise ValueError("normalized model authored digest must match the evidence")
+    if evidence.normalized_model_digest != canonical_contract_digest(evidence.normalized_model):
+        raise ValueError("normalized_model_digest must bind the normalized model")
+    if evidence.solver_configuration_digest != canonical_contract_digest(evidence.solver_configuration):
+        raise ValueError("solver_configuration_digest must bind the solver configuration")
+
+
+def _validate_outcome_payload(evidence: ScenarioSatisfiabilityEvidenceModel) -> None:
+    payloads = {
+        SatisfiabilityOutcome.SATISFIABLE: evidence.witness,
+        SatisfiabilityOutcome.UNSATISFIABLE: evidence.unsat_core,
+        SatisfiabilityOutcome.UNSUPPORTED: evidence.unsupported,
+    }
+    if payloads[evidence.outcome] is None or sum(item is not None for item in payloads.values()) != 1:
+        raise ValueError("outcome must select exactly one matching payload")
+
+
+def _validate_unsatisfiable_core(evidence: ScenarioSatisfiabilityEvidenceModel) -> None:
+    if evidence.unsat_core is None:
+        return
+    clause_ids = {item.clause_id for item in evidence.normalized_model.clauses}
+    if any(item not in clause_ids for item in evidence.unsat_core.clause_ids):
+        raise ValueError("unsatisfiable core must reference normalized model clauses")
+
+
+def _validate_unsupported_reasons(evidence: ScenarioSatisfiabilityEvidenceModel) -> None:
+    if evidence.unsupported is None:
+        return
+    diagnostic_codes = tuple(sorted({item.code for item in evidence.diagnostics}))
+    if evidence.unsupported.reason_codes != diagnostic_codes:
+        raise ValueError("unsupported reason codes must match diagnostic codes")
 
 
 def canonical_contract_digest(model: ContractModel) -> str:
