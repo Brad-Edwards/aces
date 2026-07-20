@@ -1,0 +1,6 @@
+{
+  "contract_id": "random-stream-profile-v1",
+  "schema_path": "contracts/schemas/profiles/random-stream-profile-v1.json",
+  "stability": "draft",
+  "content_hash": "86f94c7a6b8de22181e31861f00fa360897e62620594e69120ca8fb481f06ad4"
+}

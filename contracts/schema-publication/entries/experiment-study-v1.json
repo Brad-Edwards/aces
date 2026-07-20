@@ -2,9 +2,9 @@
   "contract_id": "experiment-study-v1",
   "schema_path": "contracts/schemas/experiment-core/experiment-study-v1.json",
   "stability": "draft",
-  "content_hash": "48f758096bf386e097ffa1f9e7e4e9a32781925428be47b42e2f430ba7e681e3",
+  "content_hash": "e58418ef49b514e49744d4908e4a8b3b128e918037b0464375dbb9d5eee625c5",
   "last_change": {
-    "summary": "Required revisioned, evidence-bounded behavioral or empirical claim bindings for claim-bearing studies and benchmarks (ADR-081, issue #747).",
-    "content_hash": "48f758096bf386e097ffa1f9e7e4e9a32781925428be47b42e2f430ba7e681e3"
+    "summary": "Documented the EXP-718 study run_allocation stochastic-control consistency invariant (common-random-number/controlled-variation comparability across compared evaluation runs, issue #274). The invariant now also rejects a shared control_id that carries an executable_binding on only some of the compared runs (asymmetric claim), not just a mismatched profile_ref/namespace.",
+    "content_hash": "e58418ef49b514e49744d4908e4a8b3b128e918037b0464375dbb9d5eee625c5"
   }
 }

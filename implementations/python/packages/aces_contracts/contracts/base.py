@@ -188,6 +188,7 @@ _CONTROLLED_VOCABULARY_GOVERNED_SCOPES = frozenset(
         "capabilities.exposure_policy_kinds",
         "capabilities.orchestrator.supported_workflow_features",
         "capabilities.orchestrator.supported_workflow_state_predicates",
+        "random_streams.draw_purpose",
         *_BACKEND_CONCEPT_BINDING_SCOPES,
         *_PARTICIPANT_IMPLEMENTATION_CONCEPT_BINDING_SCOPES,
     }

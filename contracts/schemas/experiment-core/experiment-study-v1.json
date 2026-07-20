@@ -1670,6 +1670,22 @@
       "validator": "aces_contracts.contracts.validate_experiment_study_against_tasks_and_runs"
     },
     {
+      "description": "When run_allocation compares evaluation runs, every shared stochastic_controls control_id across those runs must use a consistent executable_binding profile_ref and namespace, and either all or none of the runs that share the control_id may carry an executable_binding (EXP-718 common random numbers / controlled-variation comparability).",
+      "id": "study-run-allocation-stochastic-control-consistency",
+      "inputs": [
+        {
+          "contract_id": "experiment-study-v1",
+          "instance_path": "#/run_allocation"
+        },
+        {
+          "contract_id": "experiment-run-v1",
+          "instance_path": "#/stochastic_controls"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_contracts.contracts.validate_experiment_study_against_tasks_and_runs"
+    },
+    {
       "description": "Every study behavioral claim must resolve against the canonical taxonomy revision, include a required observation projection, and keep bounded evidence out of universal quantifiers.",
       "id": "study-behavioral-claim-catalog-resolution",
       "inputs": [

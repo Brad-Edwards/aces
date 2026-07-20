@@ -1,0 +1,240 @@
+{
+  "$defs": {
+    "RandomStreamAddressEncodingSpecModel": {
+      "additionalProperties": false,
+      "description": "Canonical semantic-address byte encoding fixed by an accepted profile.",
+      "properties": {
+        "canonicalization": {
+          "minLength": 1,
+          "title": "Canonicalization",
+          "type": "string"
+        }
+      },
+      "required": [
+        "canonicalization"
+      ],
+      "title": "RandomStreamAddressEncodingSpecModel",
+      "type": "object"
+    },
+    "RandomStreamBlockEncodingSpecModel": {
+      "additionalProperties": false,
+      "description": "Raw-block byte length and byte order fixed by an accepted profile.",
+      "properties": {
+        "block_bytes": {
+          "minimum": 1,
+          "title": "Block Bytes",
+          "type": "integer"
+        },
+        "byte_order": {
+          "enum": [
+            "big-endian",
+            "little-endian"
+          ],
+          "title": "Byte Order",
+          "type": "string"
+        }
+      },
+      "required": [
+        "block_bytes",
+        "byte_order"
+      ],
+      "title": "RandomStreamBlockEncodingSpecModel",
+      "type": "object"
+    },
+    "RandomStreamDerivationSpecModel": {
+      "additionalProperties": false,
+      "description": "Key/child-stream derivation function and domain-separation context fixed by an accepted profile.",
+      "properties": {
+        "context_template": {
+          "minLength": 1,
+          "title": "Context Template",
+          "type": "string"
+        },
+        "key_derivation_function": {
+          "minLength": 1,
+          "title": "Key Derivation Function",
+          "type": "string"
+        }
+      },
+      "required": [
+        "key_derivation_function",
+        "context_template"
+      ],
+      "title": "RandomStreamDerivationSpecModel",
+      "type": "object"
+    },
+    "RandomStreamGeneratorModel": {
+      "additionalProperties": false,
+      "description": "Generator family, exact version, and mode fixed by an accepted profile.",
+      "properties": {
+        "family": {
+          "minLength": 1,
+          "title": "Family",
+          "type": "string"
+        },
+        "mode": {
+          "minLength": 1,
+          "title": "Mode",
+          "type": "string"
+        },
+        "version": {
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "family",
+        "version",
+        "mode"
+      ],
+      "title": "RandomStreamGeneratorModel",
+      "type": "object"
+    },
+    "RandomStreamRootEntropySpecModel": {
+      "additionalProperties": false,
+      "description": "Root-entropy type, length, and canonical byte encoding fixed by an accepted profile.",
+      "properties": {
+        "byte_length": {
+          "minimum": 1,
+          "title": "Byte Length",
+          "type": "integer"
+        },
+        "encoding": {
+          "minLength": 1,
+          "title": "Encoding",
+          "type": "string"
+        }
+      },
+      "required": [
+        "encoding",
+        "byte_length"
+      ],
+      "title": "RandomStreamRootEntropySpecModel",
+      "type": "object"
+    },
+    "RandomStreamTransformSpecModel": {
+      "additionalProperties": false,
+      "description": "One admitted bounded transform, its version, and its rejection/exhaustion budget.",
+      "properties": {
+        "kind": {
+          "minLength": 1,
+          "title": "Kind",
+          "type": "string"
+        },
+        "max_rejection_attempts": {
+          "minimum": 1,
+          "title": "Max Rejection Attempts",
+          "type": "integer"
+        },
+        "transform_id": {
+          "minLength": 1,
+          "title": "Transform Id",
+          "type": "string"
+        },
+        "version": {
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "transform_id",
+        "version",
+        "kind",
+        "max_rejection_attempts"
+      ],
+      "title": "RandomStreamTransformSpecModel",
+      "type": "object"
+    }
+  },
+  "$id": "https://aces.dev/schemas/random-stream-profile-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Published random-stream profile: one closed, immutable compatibility unit.\n\nChanging any field mints a new ``profile_id`` (the EXP-718 preflight's \"One\nProfile And One Stateless API\" section). This model's JSON Schema is\ngenerated via ``schema_bundle()``, never hand-authored.",
+  "properties": {
+    "address_encoding": {
+      "$ref": "#/$defs/RandomStreamAddressEncodingSpecModel"
+    },
+    "block_encoding": {
+      "$ref": "#/$defs/RandomStreamBlockEncodingSpecModel"
+    },
+    "derivation": {
+      "$ref": "#/$defs/RandomStreamDerivationSpecModel"
+    },
+    "description": {
+      "minLength": 1,
+      "title": "Description",
+      "type": "string"
+    },
+    "generator": {
+      "$ref": "#/$defs/RandomStreamGeneratorModel"
+    },
+    "profile_id": {
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*-v[0-9]+$",
+      "title": "Profile Id",
+      "type": "string"
+    },
+    "root_entropy": {
+      "$ref": "#/$defs/RandomStreamRootEntropySpecModel"
+    },
+    "schema_version": {
+      "const": "random-stream-profile/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "title": {
+      "minLength": 1,
+      "title": "Title",
+      "type": "string"
+    },
+    "transforms": {
+      "additionalProperties": {
+        "$ref": "#/$defs/RandomStreamTransformSpecModel"
+      },
+      "minProperties": 1,
+      "propertyNames": {
+        "minLength": 1
+      },
+      "title": "Transforms",
+      "type": "object"
+    }
+  },
+  "required": [
+    "schema_version",
+    "profile_id",
+    "title",
+    "description",
+    "generator",
+    "root_entropy",
+    "address_encoding",
+    "derivation",
+    "block_encoding",
+    "transforms"
+  ],
+  "title": "RandomStreamProfileModel",
+  "type": "object",
+  "x-aces-invariants": [
+    {
+      "description": "transforms dict keys must match each entry's embedded transform_id.",
+      "id": "random-stream-profile-transform-keys-match",
+      "inputs": [
+        {
+          "contract_id": "random-stream-profile-v1",
+          "instance_path": "#/transforms"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_contracts.contracts.random_stream.RandomStreamProfileModel._validate_transform_keys"
+    }
+  ],
+  "x-aces-semantic-profile": {
+    "contract_id": "random-stream-profile-v1",
+    "entry_schema_contract_id": "aces-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
+    "id": "aces-semantic-invariants-v1",
+    "keyword": "x-aces-invariants",
+    "required": true,
+    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+  }
+}

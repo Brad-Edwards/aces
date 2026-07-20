@@ -404,6 +404,8 @@ def _run_gitleaks_dir_scan(session: nox.Session, paths: list[str]) -> None:
         _run_external_subprocess(
             str(binary),
             "dir",
+            "--config",
+            str(REPO_ROOT / ".gitleaks.toml"),
             "--follow-symlinks",
             "--no-banner",
             "--redact",

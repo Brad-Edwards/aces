@@ -54,6 +54,10 @@ def _schema_output_path(schemas_dir: Path, name: str) -> Path:
         return schemas_dir / "profiles" / f"{name}.json"
     if name.startswith("backend-profile-v"):
         return schemas_dir / "profiles" / f"{name}.json"
+    if name.startswith("random-stream-profile-v"):
+        return schemas_dir / "profiles" / f"{name}.json"
+    if name.startswith("random-stream-vector-v"):
+        return schemas_dir / "profiles" / f"{name}.json"
     if name.startswith("scientific-completeness-"):
         return schemas_dir / "profiles" / f"{name}.json"
     if name in {
