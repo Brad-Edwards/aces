@@ -190,20 +190,30 @@
       "contract_id": "instantiated-scenario-snapshot-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
       "stability": "draft",
-      "content_hash": "60d12662e802ec83bc82580cf6136f9ad46fb19c0ff7b2bec9ded91967d147cf",
+      "content_hash": "e86672c77bc0c5cfc322f34161bf7ad78d81c295a35faa17a1c83b69bd5b5143",
       "last_change": {
-        "summary": "Added closed participant-local tool-affordance bindings with governed action and observation references (SEM-219, issue #294).",
-        "content_hash": "60d12662e802ec83bc82580cf6136f9ad46fb19c0ff7b2bec9ded91967d147cf"
+        "summary": "Added governed defensive behavior references adapted from NIST CSF 2.0 categories (ACT-610, issue #210).",
+        "content_hash": "e86672c77bc0c5cfc322f34161bf7ad78d81c295a35faa17a1c83b69bd5b5143"
       }
     },
     {
       "contract_id": "instantiated-scenario-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
       "stability": "draft",
-      "content_hash": "f1d1267388b49b713a646a9ef494b7e1484389f27540d8e2b515527b0efa43d0",
+      "content_hash": "be96027b9f7287dc663898f3ea1828320f538f0801c9e21c72f0fd889b31f013",
       "last_change": {
-        "summary": "Added closed participant-local tool-affordance bindings with governed action and observation references (SEM-219, issue #294).",
-        "content_hash": "f1d1267388b49b713a646a9ef494b7e1484389f27540d8e2b515527b0efa43d0"
+        "summary": "Added governed defensive behavior references adapted from NIST CSF 2.0 categories (ACT-610, issue #210).",
+        "content_hash": "be96027b9f7287dc663898f3ea1828320f538f0801c9e21c72f0fd889b31f013"
+      }
+    },
+    {
+      "contract_id": "nist-csf-defensive-categories-source-v1",
+      "schema_path": "contracts/schemas/concept-authority/nist-csf-defensive-categories-source-v1.json",
+      "stability": "draft",
+      "content_hash": "60d34916929a8607dda79fb2578e162e04d1f91d1554b6991058ff79968bc82a",
+      "last_change": {
+        "summary": "Initial publication of the pinned NIST CSF 2.0 defensive-category source schema for the ACT-610 adapted defensive behavior vocabulary.",
+        "content_hash": "60d34916929a8607dda79fb2578e162e04d1f91d1554b6991058ff79968bc82a"
       }
     },
     {
@@ -456,10 +466,10 @@
       "contract_id": "sdl-authoring-input-v1",
       "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
       "stability": "draft",
-      "content_hash": "cea5017a5952391b2c1c423225b74f15c3f60dc551dfa25067156b15e82a3e27",
+      "content_hash": "8627d42efc46b227c9381773a3efa638fffb466dc4aa9b65b34a49fc8ba6e1bf",
       "last_change": {
-        "summary": "Added closed participant-local tool-affordance bindings with governed action and observation references (SEM-219, issue #294).",
-        "content_hash": "cea5017a5952391b2c1c423225b74f15c3f60dc551dfa25067156b15e82a3e27"
+        "summary": "Added governed defensive behavior references adapted from NIST CSF 2.0 categories (ACT-610, issue #210).",
+        "content_hash": "8627d42efc46b227c9381773a3efa638fffb466dc4aa9b65b34a49fc8ba6e1bf"
       }
     },
     {

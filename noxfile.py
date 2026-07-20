@@ -16,7 +16,11 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from tools.gitleaks_tool import ensure_gitleaks
-from tools.osv_scanner_tool import OSV_ADVISORY_EXIT_CODES, ensure_osv_scanner, run_osv_scanner
+from tools.osv_scanner_tool import (
+    OSV_ADVISORY_EXIT_CODES,
+    ensure_osv_scanner,
+    run_osv_scanner,
+)
 from tools.tool_versions import PRE_COMMIT_HOOKS_TOOL_SPEC, RUFF_TOOL_SPEC
 
 PROJECT_ROOT = REPO_ROOT / "implementations" / "python"
@@ -658,6 +662,10 @@ def _run_contracts(session: nox.Session, reporter: SessionReporter, *args: str) 
     reporter.run(
         "contracts / ATLAS tactic vocabulary conformance",
         lambda: _run_project_python(session, "tools/check_atlas_tactic_vocabulary.py"),
+    )
+    reporter.run(
+        "contracts / NIST CSF defensive vocabulary conformance",
+        lambda: _run_project_python(session, "tools/check_nist_csf_defensive_vocabulary.py"),
     )
 
 

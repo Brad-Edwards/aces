@@ -629,6 +629,12 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         "fatal unknown vocabulary identifier",
         _BEHAVIOR_MODEL,
     ),
+    "behavior_specifications.*.defensive_behavior_refs[]": (
+        "vocabulary:defensive_behavior",
+        _SEMANTIC,
+        "fatal unknown vocabulary identifier",
+        _BEHAVIOR_MODEL,
+    ),
     "behavior_specifications.*.offensive_behavior_refs[]": (
         "vocabulary:offensive_behavior",
         _SEMANTIC,
