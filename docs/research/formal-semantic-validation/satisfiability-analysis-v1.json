@@ -1,0 +1,43 @@
+{
+  "profile": "aces-formal-satisfiability-analysis/v1",
+  "revision": "1.0.0",
+  "execution_id": "issue-826-satisfiability-2026-07-19",
+  "snapshot_revision": "1.0.0",
+  "issue_number": 826,
+  "requirement_uid": "ASR-530",
+  "analysis_profile": "aces-finite-domain-satisfiability-v1",
+  "claim_class_id": "constraint-satisfiability",
+  "evidence_status": "demonstrated",
+  "scope": "The pinned production analyzer decides and replays the named finite-domain translation fragment for the three fixed controls.",
+  "cases": [
+    {
+      "case_id": "finite-domain-satisfiable",
+      "control": "positive",
+      "fixture_path": "docs/research/formal-semantic-validation/corpus/satisfiable-control.sdl.yaml",
+      "expected_outcome": "satisfiable",
+      "expected_normalized_model_digest": "sha256:32ac029d9279e6c7ea4cd9082435eb6fa455122bba57498923b8371818ef708c",
+      "limitation": "One finite OS-family membership model is not evidence for unsupported SDL targets or backend realizability."
+    },
+    {
+      "case_id": "finite-domain-unsatisfiable",
+      "control": "negative",
+      "fixture_path": "docs/research/formal-semantic-validation/corpus/unsatisfiable-control.sdl.yaml",
+      "expected_outcome": "unsatisfiable",
+      "expected_normalized_model_digest": "sha256:3a061baa67090e312abc4bca7a3ed24cc9458487b67f2fc37b3b7abcac2ecf1b",
+      "limitation": "The subset-minimal core is evidence for the pinned translation and solver profile, not an independently checked proof certificate."
+    },
+    {
+      "case_id": "finite-domain-unsupported",
+      "control": "unsupported",
+      "fixture_path": "docs/research/formal-semantic-validation/corpus/unsupported-control.sdl.yaml",
+      "expected_outcome": "unsupported",
+      "expected_normalized_model_digest": "sha256:2f0f762771dc329419ab739766f684c18261aba28c2fbc50a26ee8ad80224ba5",
+      "limitation": "The CPU-resource target remains outside the translation profile and cannot support either satisfiable or unsatisfiable promotion."
+    }
+  ],
+  "limitations": [
+    "The demonstrated status is bounded to aces-finite-domain-satisfiability-v1 and the pinned Z3 package and engine versions.",
+    "No backend realization, runtime execution, exploit-path, temporal, optimality, uniqueness, or universal solver-correctness claim is made.",
+    "The historical issue-168 v1 analysis remains immutable; this revisioned supplement changes only the constraint-satisfiability evidence surface."
+  ]
+}

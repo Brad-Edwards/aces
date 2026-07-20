@@ -18,7 +18,7 @@ verification evidence that the old surface stays supported (plus a reviewed
 security exception if the ordinary window is shortened). Removal
 (``status: removed``) is allowed only with a removal record, and for a
 published JSON Schema surface the removal must reference an existing
-``removed_schemas`` tombstone in the schema publication manifest (ADR-061),
+schema-publication tombstone record (ADR-061),
 not a duplicate mechanism.
 
 This is a CI-time governance gate over static data, not a runtime lifecycle
@@ -32,7 +32,6 @@ matching the other policy gates (``check_authority_boundary.py``,
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from collections.abc import Iterable
 from pathlib import Path
@@ -43,6 +42,7 @@ if str(REPO_ROOT) not in sys.path:
 
 import yaml
 
+from tools.check_schema_publication import load_schema_publication_catalog
 from tools.policy.common import (
     PolicyFailure,
     apply_exceptions,
@@ -275,14 +275,10 @@ def _check_spec_present(repo_root: Path, raw: dict, source_path: str) -> list[Po
 
 
 def _load_removed_schema_paths(repo_root: Path) -> set[str]:
-    """Return the set of ``schema_path`` values recorded as removed_schemas
-    tombstones in the schema publication manifest (empty if absent)."""
-    manifest_path = repo_root / SCHEMA_PUBLICATION_MANIFEST
-    if not manifest_path.is_file():
-        return set()
+    """Return the schema paths in normalized publication tombstone records."""
     try:
-        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+        manifest = load_schema_publication_catalog(repo_root)
+    except (OSError, ValueError):
         return set()
     removed = manifest.get("removed_schemas")
     if not isinstance(removed, list):

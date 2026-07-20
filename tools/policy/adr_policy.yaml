@@ -17,6 +17,7 @@ generated_contracts:
   generated_roots:
     - contracts/schemas
   manifest_path: contracts/schema-publication-manifest.json
+  manifest_records_root: contracts/schema-publication
 
 compatibility_layer:
   root: implementations/python/src/aces
@@ -33,6 +34,7 @@ concept_authority:
     - contracts/concept-authority
     - contracts/schemas/concept-authority
     - contracts/fixtures/concept-authority
+    - contracts/schema-publication
     - docs/explain/reference/shared-concept-model.md
     - docs/decisions/adrs/adr-012-shared-concept-authority-and-aces-extension-discipline.md
     - docs/decisions/adrs/adr-062-concept-authority-catalog-governance-gate.md
@@ -225,6 +227,7 @@ module_boundaries:
           - aces_processor.manifest
           - aces_processor.models
           - aces_processor.reference
+          - aces_processor.satisfiability
     - id: aces_mcp
       root: implementations/python/packages/aces_mcp
       allowed_top_level_imports:

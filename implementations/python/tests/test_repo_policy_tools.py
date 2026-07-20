@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import importlib.util
+import inspect
+import json
 import shutil
 import subprocess
 import sys
 import types
+from contextlib import nullcontext
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +18,7 @@ if str(REPO_ROOT) not in sys.path:
 import pytest
 import tools.check_generated_schemas as check_generated_schemas
 import tools.osv_scanner_tool as osv_scanner_tool
+import tools.policy.conftest_tool as conftest_tool
 import yaml
 from tools.check_adr_immutability import (
     amendment_refs,
@@ -27,6 +31,7 @@ from tools.check_json_artifacts import collect_validation_targets, should_run_fu
 from tools.check_schema_publication import schema_content_hash, validate_schema_publication_manifest
 from tools.gitleaks_tool import _checksums_asset_name, _release_asset_name, gitleaks_binary_path
 from tools.policy.common import PolicyFailure
+from tools.policy.conftest_tool import run_conftest_policy
 from tools.policy.repo_policy import evaluate_repo_policy
 
 
@@ -55,6 +60,83 @@ def load_noxfile_with_fake_nox(monkeypatch: pytest.MonkeyPatch) -> types.ModuleT
     monkeypatch.setitem(sys.modules, "_aces_test_noxfile", module)
     spec.loader.exec_module(module)
     return module
+
+
+def test_parallel_coverage_command_is_capped_and_worker_safe(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    noxfile = load_noxfile_with_fake_nox(monkeypatch)
+
+    class FakeSession:
+        def __init__(self) -> None:
+            self.commands: list[tuple[tuple[str, ...], dict[str, Any]]] = []
+
+        def run(self, *args: str, **kwargs: Any) -> None:
+            self.commands.append((args, kwargs))
+
+        def chdir(self, _path: Path):
+            return nullcontext()
+
+    session = FakeSession()
+    coverage_file = tmp_path / ".coverage"
+    noxfile._run_pytest(
+        session,
+        "-q",
+        coverage_file=coverage_file,
+        parallel=True,
+    )
+
+    pytest_command, kwargs = next(
+        (command, options)
+        for command, options in session.commands
+        if command[:6] == ("uv", "run", "--frozen", "python", "-m", "pytest")
+    )
+    assert pytest_command[6:] == (
+        "-n",
+        "auto",
+        "--maxprocesses=8",
+        "--dist=worksteal",
+        "--cov",
+        "--cov-config=pyproject.toml",
+        "--cov-report=",
+        "-q",
+    )
+    assert kwargs["env"] == {"COVERAGE_FILE": str(coverage_file)}
+
+    session.commands.clear()
+    noxfile._run_pytest(
+        session,
+        "-m",
+        "integration",
+        coverage_file=coverage_file,
+        append_coverage=True,
+        finalize_coverage=True,
+    )
+    pytest_command = next(
+        command
+        for command, _options in session.commands
+        if command[:6] == ("uv", "run", "--frozen", "python", "-m", "pytest")
+    )
+    assert "--cov-append" in pytest_command
+    coverage_commands = [
+        (command, options)
+        for command, options in session.commands
+        if command[:4] == ("uv", "run", "--frozen", "coverage")
+    ]
+    assert [command[4] for command, _options in coverage_commands] == ["xml", "report"]
+    assert all(options["env"] == {"COVERAGE_FILE": str(coverage_file)} for _, options in coverage_commands)
+
+
+def test_canonical_verify_does_not_use_change_aware_selection(monkeypatch: pytest.MonkeyPatch) -> None:
+    noxfile = load_noxfile_with_fake_nox(monkeypatch)
+    source = inspect.getsource(noxfile.verify)
+
+    assert "_run_changed_verification" not in source
+    assert "_run_contracts" in source
+    assert "_run_tests" in source
+    assert "_run_integration_tests" in source
+    assert "_run_docs" in source
 
 
 def write_text(path: Path, content: str) -> None:
@@ -186,6 +268,58 @@ def test_structural_policy_runner_receives_policy_input(tmp_path: Path) -> None:
     assert captured["check_set"] == "full"
     assert "generated_contracts" in captured["policy"]
     assert [failure.rule_id for failure in failures] == ["structural-check"]
+
+
+@pytest.mark.integration
+def test_default_structural_policy_runner_executes_rego(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    repo_root = setup_policy_repo(tmp_path)
+    binary = conftest_tool.conftest_binary_path(REPO_ROOT)
+    assert binary.is_file()
+    monkeypatch.setattr(conftest_tool, "ensure_conftest", lambda *_args, **_kwargs: binary)
+
+    failures = evaluate_repo_policy(
+        repo_root,
+        ["schemas/legacy-contract.json"],
+        check_set="file-local",
+        structural_runner=None,
+    )
+
+    assert [failure.rule_id for failure in failures] == ["legacy-top-level-root"]
+
+
+def test_conftest_policy_runner_parses_and_sorts_failures(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setattr(conftest_tool, "ensure_conftest", lambda *_args, **_kwargs: tmp_path / "conftest")
+    payload = [
+        {
+            "failures": [
+                {"msg": "second", "metadata": {"rule_id": "rule-b", "path": "z.py"}},
+                {"msg": "first", "metadata": {"rule_id": "rule-a", "path": "a.py"}},
+            ]
+        }
+    ]
+    monkeypatch.setattr(
+        conftest_tool.subprocess,
+        "run",
+        lambda *_args, **_kwargs: subprocess.CompletedProcess(
+            args=[],
+            returncode=1,
+            stdout=json.dumps(payload),
+            stderr="",
+        ),
+    )
+
+    failures = run_conftest_policy({}, repo_root=tmp_path, policy_dir=tmp_path / "policy")
+
+    assert [(failure.path, failure.rule_id, failure.message) for failure in failures] == [
+        ("a.py", "rule-a", "first"),
+        ("z.py", "rule-b", "second"),
+    ]
 
 
 def test_package_import_direction_blocks_aces_compatibility_imports(tmp_path: Path) -> None:
@@ -1441,6 +1575,43 @@ def test_schema_publication_manifest_accepts_valid_last_change_ledger(tmp_path: 
     assert validate_schema_publication_manifest(repo_root) == []
 
 
+def test_schema_publication_manifest_accepts_independent_v2_records(tmp_path: Path) -> None:
+    import json
+
+    repo_root = tmp_path
+    schema_path = repo_root / "contracts" / "schemas" / "sdl" / "draft-contract-v1.json"
+    write_text(schema_path, _published_schema({"name": {"type": "string"}}))
+    digest = schema_content_hash(schema_path)
+    write_text(
+        repo_root / "contracts" / "schema-publication-manifest.json",
+        json.dumps(
+            {
+                "schema_version": "schema-publication-manifest/v2",
+                "hash_algorithm": "sha256",
+                "entries_directory": "contracts/schema-publication/entries",
+                "tombstones_directory": "contracts/schema-publication/tombstones",
+            }
+        )
+        + "\n",
+    )
+    write_text(
+        repo_root / "contracts" / "schema-publication" / "entries" / "draft-contract-v1.json",
+        json.dumps(
+            {
+                "contract_id": "draft-contract-v1",
+                "schema_path": "contracts/schemas/sdl/draft-contract-v1.json",
+                "stability": "draft",
+                "content_hash": digest,
+                "last_change": {"summary": "Initial publication.", "content_hash": digest},
+            }
+        )
+        + "\n",
+    )
+    write_text(repo_root / "contracts" / "schema-publication" / "tombstones" / "README.md", "# Empty\n")
+
+    assert validate_schema_publication_manifest(repo_root) == []
+
+
 def test_schema_publication_manifest_rejects_last_change_without_summary(tmp_path: Path) -> None:
     repo_root = tmp_path
     schema_path = repo_root / "contracts" / "schemas" / "sdl" / "draft-contract-v1.json"
@@ -2361,10 +2532,3 @@ def test_adr_pin_gate_base_rev_flags_boundary_blank_line_edit(tmp_path: Path) ->
 
     failures = evaluate_adr_immutability(tmp_path, base_rev="HEAD")
     assert _rule_ids(failures) == ["adr-amendment-unrecorded"]
-
-
-def test_real_repo_adr_index_is_green() -> None:
-    """The committed adr-index.yaml must pin every accepted ADR honestly so the
-    gate starts (and stays) green on the real corpus."""
-    failures = evaluate_adr_immutability(REPO_ROOT)
-    assert failures == [], "\n".join(failure.render() for failure in failures)

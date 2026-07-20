@@ -1,0 +1,6 @@
+{
+  "contract_id": "participant-episode-state-envelope-v1",
+  "schema_path": "contracts/schemas/control-plane/participant-episode-state-envelope-v1.json",
+  "stability": "draft",
+  "content_hash": "e442e8c17d47fa275855664db993b53c501f0fb04e82b661f5bbe9fcb68ae39c"
+}

@@ -185,6 +185,8 @@ class ReferenceModelCatalogModel(ContractModel):
 
     @model_validator(mode="after")
     def _validate_reference_models(self) -> ReferenceModelCatalogModel:
+        from .bundle import schema_bundle
+
         known_families = _authoritative_concept_family_ids()
         unknown_families = {
             model.concept_family for model in self.models.values() if model.concept_family not in known_families
@@ -204,12 +206,14 @@ class ReferenceModelCatalogModel(ContractModel):
             unknown = ", ".join(sorted(unknown_contracts))
             raise ValueError(f"reference models include unknown contract ids: {unknown}")
 
+        schemas = schema_bundle()
         for model_id, model in self.models.items():
             _validate_reference_model_schema_binding(
                 model_id=model_id,
                 binding_label="authoritative_schema",
                 binding=model.authoritative_schema,
                 key_fields=model.key_fields,
+                schemas=schemas,
             )
             for index, binding in enumerate(model.reused_schemas):
                 _validate_reference_model_schema_binding(
@@ -217,6 +221,7 @@ class ReferenceModelCatalogModel(ContractModel):
                     binding_label=f"reused_schemas[{index}]",
                     binding=binding,
                     key_fields=model.key_fields,
+                    schemas=schemas,
                 )
         return self
 

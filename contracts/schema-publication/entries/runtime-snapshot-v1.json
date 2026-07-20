@@ -1,0 +1,10 @@
+{
+  "contract_id": "runtime-snapshot-v1",
+  "schema_path": "contracts/schemas/snapshots/runtime-snapshot-v1.json",
+  "stability": "draft",
+  "content_hash": "b1453a4764c14bf9ec1497030563ac0c774b17b1883d15fcbb2027d66f5dcbf9",
+  "last_change": {
+    "summary": "Added redacted governing-scope references to SEM-218 runtime realization provenance.",
+    "content_hash": "b1453a4764c14bf9ec1497030563ac0c774b17b1883d15fcbb2027d66f5dcbf9"
+  }
+}

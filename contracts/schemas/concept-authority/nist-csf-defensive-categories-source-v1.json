@@ -1,0 +1,124 @@
+{
+  "$defs": {
+    "NistCsfDefensiveCategorySourceTermModel": {
+      "additionalProperties": false,
+      "properties": {
+        "category_id": {
+          "pattern": "^(?:DE|RS|RC)\\.[A-Z]{2}$",
+          "title": "Category Id",
+          "type": "string"
+        },
+        "description": {
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "function": {
+          "enum": [
+            "Detect",
+            "Respond",
+            "Recover"
+          ],
+          "title": "Function",
+          "type": "string"
+        },
+        "term_id": {
+          "pattern": "^[a-z0-9]+(?:[-_][a-z0-9]+)*$",
+          "title": "Term Id",
+          "type": "string"
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "category_id",
+        "term_id",
+        "title",
+        "description",
+        "function"
+      ],
+      "title": "NistCsfDefensiveCategorySourceTermModel",
+      "type": "object"
+    }
+  },
+  "$id": "https://aces.dev/schemas/nist-csf-defensive-categories-source-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "categories": {
+      "items": {
+        "$ref": "#/$defs/NistCsfDefensiveCategorySourceTermModel"
+      },
+      "minItems": 1,
+      "title": "Categories",
+      "type": "array"
+    },
+    "citation_urls": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Citation Urls",
+      "type": "array"
+    },
+    "license_notice": {
+      "minLength": 1,
+      "title": "License Notice",
+      "type": "string"
+    },
+    "license_url": {
+      "minLength": 1,
+      "title": "License Url",
+      "type": "string"
+    },
+    "retrieved_at": {
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "title": "Retrieved At",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "nist-csf-defensive-categories-source/v1",
+      "default": "nist-csf-defensive-categories-source/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source_authority": {
+      "const": "NIST Cybersecurity Framework",
+      "title": "Source Authority",
+      "type": "string"
+    },
+    "source_digest": {
+      "minLength": 1,
+      "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+      "title": "Source Digest",
+      "type": "string"
+    },
+    "source_url": {
+      "minLength": 1,
+      "title": "Source Url",
+      "type": "string"
+    },
+    "source_version": {
+      "const": "2.0",
+      "title": "Source Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "source_authority",
+    "source_version",
+    "source_url",
+    "source_digest",
+    "citation_urls",
+    "retrieved_at",
+    "license_url",
+    "license_notice",
+    "categories"
+  ],
+  "title": "NistCsfDefensiveCategorySourceModel",
+  "type": "object"
+}

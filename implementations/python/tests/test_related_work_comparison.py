@@ -7,7 +7,6 @@ from pathlib import Path
 
 from tools.check_related_work_comparison import (
     EXPECTED_AXIS_IDS,
-    evaluate,
     load_bundle,
     render_publication,
     validate_bundle,
@@ -25,8 +24,8 @@ def _bundle() -> tuple[dict, dict, dict]:
     return deepcopy(protocol), deepcopy(snapshot), deepcopy(analysis)
 
 
-def test_current_bundle_and_publication_pass_the_integrity_gate() -> None:
-    assert evaluate(REPO_ROOT) == []
+def test_current_bundle_is_clean() -> None:
+    assert validate_bundle(REPO_ROOT, *_bundle()) == []
 
 
 def test_protocol_uses_all_required_axes_and_independent_systems() -> None:

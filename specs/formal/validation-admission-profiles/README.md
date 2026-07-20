@@ -224,3 +224,17 @@ issues:
 
 - #258: ASR-511 profile taxonomy implementation.
 - #259: ASR-515 validation-basis disclosure implementation.
+
+### Governed scenario satisfiability
+
+ADR-086 adds `aces-finite-domain-satisfiability-v1` as a concrete
+falsification-backed analysis boundary for its explicitly bounded SDL fragment.
+Its `scenario-satisfiability-evidence/v1` envelope records the exact source,
+normalized constraint model, pinned solver configuration, completed outcome,
+and witness/core/unsupported payload. The profile's detailed theory,
+translation coverage, replay rules, and nonclaims are normative in
+[`specs/formal/scenario-satisfiability/`](../scenario-satisfiability/README.md).
+
+This profile does not upgrade the general validation strength of every
+scenario. Unsupported occurrences remain an explicit unsupported gate, and
+backend realization and runtime behavior remain separate gates.

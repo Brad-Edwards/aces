@@ -1,0 +1,10 @@
+{
+  "contract_id": "instantiated-scenario-v1",
+  "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
+  "stability": "draft",
+  "content_hash": "9ab535c2784f19efdce8395c76b6399e320b2fefc8ec2d95f1946391f2c5ac00",
+  "last_change": {
+    "summary": "Published bounded scenario-family variation points, participant-local tool-affordance bindings, and governed defensive behavior references (issues #786, #294, and #210).",
+    "content_hash": "9ab535c2784f19efdce8395c76b6399e320b2fefc8ec2d95f1946391f2c5ac00"
+  }
+}

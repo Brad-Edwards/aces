@@ -1,0 +1,6 @@
+{
+  "contract_id": "workflow-history-event-stream-v1",
+  "schema_path": "contracts/schemas/control-plane/workflow-history-event-stream-v1.json",
+  "stability": "draft",
+  "content_hash": "6fa5f0a9b87da0cc1582204dc1324c5d7ffa30c2171aba74aedbbda7e109c243"
+}

@@ -1,0 +1,10 @@
+{
+  "contract_id": "participant-behavior-history-event-stream-v1",
+  "schema_path": "contracts/schemas/control-plane/participant-behavior-history-event-stream-v1.json",
+  "stability": "draft",
+  "content_hash": "4aeeaba0d4834a38bed72aca834733806fe8625d763b15e7d2dba764637f4234",
+  "last_change": {
+    "summary": "Revised the participant behavior-history event-stream contract as part of the backend-facing contract family publication (ADR-060, issue #76).",
+    "content_hash": "4aeeaba0d4834a38bed72aca834733806fe8625d763b15e7d2dba764637f4234"
+  }
+}

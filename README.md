@@ -171,12 +171,33 @@ The documentation source is under [`docs/`](https://github.com/Brad-Edwards/aces
 
 ```shell
 uvx nox -s verify
+uvx nox -s verify-changed
 uvx nox -s tests
 uvx nox -l
 ```
 
-The full `verify` session runs the project checks expected for pull requests,
-including repository policy, generated artifact checks, tests, and docs.
+The full `verify` session is unconditional and runs the project checks expected
+for pull requests, including repository policy, governed evidence and generated
+artifacts, parallel worker-safe test coverage, serial integration tests, and
+docs. Use `verify-changed` while iterating: it compares the branch and working
+tree with the upstream ref, skips evidence and regression stages only for
+allowlisted prose or research-only changes, and fails closed to the full local
+gate for unknown, deleted, renamed, executable, contract, or configuration
+changes. The pre-push hook uses the same change-aware plan.
+
+Whole-scenario finite-domain satisfiability can be inspected without applying
+or provisioning a scenario:
+
+```shell
+uv run --project implementations/python aces processor satisfiability \
+  path/to/scenario.sdl.yaml \
+  --profile aces-finite-domain-satisfiability-v1
+```
+
+The command emits the published replayable evidence envelope. Exit `0` is a
+completed satisfiable or unsatisfiable analysis, `2` is an explicit unsupported
+fragment result, and `1` is an input or operational failure. See ADR-086 for the
+bounded target coverage and nonclaims.
 
 ## Contributing
 
@@ -199,8 +220,9 @@ from the Conventional Commit history on `main`, which also generates
 
 Published JSON Schemas use versioned contract identifiers such as
 `sdl-authoring-input-v1`, but the suffix is not the same as a stability promise.
-The authoritative schema publication manifest records each schema's `draft` or
-`stable` stability class and canonical content hash. Current checked-in schemas
+The authoritative schema publication index assembles independent per-contract
+records, each carrying its schema's `draft` or `stable` stability class and
+canonical content hash. Current checked-in schemas
 are draft until a maintainer explicitly promotes them; stable breaking changes
 must mint a new schema version as described in
 [ADR-061](https://github.com/Brad-Edwards/aces/blob/main/docs/decisions/adrs/adr-061-published-schema-evolution-policy.md).

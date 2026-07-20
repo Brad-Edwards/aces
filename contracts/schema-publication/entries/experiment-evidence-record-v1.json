@@ -1,0 +1,10 @@
+{
+  "contract_id": "experiment-evidence-record-v1",
+  "schema_path": "contracts/schemas/experiment-core/experiment-evidence-record-v1.json",
+  "stability": "draft",
+  "content_hash": "b6b14039002d04329d760a30b26cb191d795de3b49e377edd084be4d10f9c32b",
+  "last_change": {
+    "summary": "Extended shared experiment artifact roles and typed references for associated-artifact parents (ADR-077, issue #738).",
+    "content_hash": "b6b14039002d04329d760a30b26cb191d795de3b49e377edd084be4d10f9c32b"
+  }
+}

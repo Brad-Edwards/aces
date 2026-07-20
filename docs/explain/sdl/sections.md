@@ -1868,6 +1868,7 @@ behavior_specifications:
       - nodes.web-server.services.https
     behavior_mode: policy-directed
     ai_offensive_behavior_refs: [ai-model-access, defense-evasion]
+    defensive_behavior_refs: [continuous-monitoring, incident-analysis]
     offensive_behavior_refs: [reconnaissance, exfiltration]
     realization_profile_ref: participant-implementation-manifest:red-agent
     backend_feature_support_refs: [behavior_history]
@@ -1902,7 +1903,14 @@ direct adoption of MITRE ATLAS tactics release v2026.06, pinned by
 `tools/check_atlas_tactic_vocabulary.py`. These refs classify authored
 attack-oriented participant tasks, goals, or activities without replacing
 action contracts, experiment tasks, workflow steps, or runtime
-history. Extensions are only allowed when `extension_policy` permits them, and
+history. `defensive_behavior_refs` is validated against the independent
+`participant-defensive-behavior-activities` vocabulary. Its base values adapt
+the active NIST CSF 2.0 Detect, Respond, and Recover categories pinned by
+`contracts/concept-authority/nist-csf-defensive-categories-source-v1.json` and
+checked by `tools/check_nist_csf_defensive_vocabulary.py`. A defensive ref
+classifies authored intent or outcome domain; it does not prove an incident,
+detection quality, response effectiveness, recovery completion, or NIST CSF
+conformance. Extensions are only allowed when `extension_policy` permits them, and
 extension keys must use `x-<owner>:<term>`.
 
 `tool_affordances` is a closed, participant-local mapping. Its keys identify

@@ -1,8 +1,4 @@
 {
-  "bundle_id": "aces-formal-semantic-validation",
-  "revision": "1.1.0",
-  "protocol_path": "docs/research/formal-semantic-validation/protocol-v1.json",
-  "corpus_path": "docs/research/formal-semantic-validation/corpus/manifest-v1.json",
-  "snapshot_path": "docs/research/formal-semantic-validation/execution-snapshot-v1.1.json",
-  "analysis_path": "docs/research/formal-semantic-validation/analysis-v1.1.json"
+  "schema_version": "formal-semantic-validation-bundle-index/v1",
+  "parts_directory": "docs/research/formal-semantic-validation/bundles"
 }

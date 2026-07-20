@@ -177,6 +177,7 @@ _CONTROLLED_VOCABULARY_GOVERNED_SCOPES = frozenset(
     {
         "behavior_specifications.behavior_mode",
         "behavior_specifications.ai_offensive_behavior_refs",
+        "behavior_specifications.defensive_behavior_refs",
         "behavior_specifications.offensive_behavior_refs",
         "agents.interactive_access.channel",
         "capabilities.supported_features",

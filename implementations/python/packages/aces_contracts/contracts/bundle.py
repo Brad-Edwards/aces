@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
+from functools import cache
 from typing import Any
 
 from aces_sdl.canonical import InstantiatedScenarioSnapshot
@@ -84,6 +86,7 @@ from .vocabulary_sources import (
     AtlasTacticsSourceModel,
     AttackEnterpriseTacticsSourceModel,
     ControlledVocabularyCatalogModel,
+    NistCsfDefensiveCategorySourceModel,
 )
 
 
@@ -92,6 +95,7 @@ def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
 
     from ..behavioral_relations import BehavioralRelationCatalogModel
     from ..provenance import SDLLineageLedgerModel
+    from ..satisfiability import ScenarioSatisfiabilityEvidenceModel
     from ..scientific_completeness import (
         ScientificCompletenessAssessmentModel,
         ScientificCompletenessTaxonomyModel,
@@ -103,6 +107,7 @@ def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
         "instantiated-scenario-v1": InstantiatedScenario.model_json_schema(),
         "instantiated-scenario-snapshot-v1": InstantiatedScenarioSnapshot.model_json_schema(),
         "scenario-instantiation-request-v1": InstantiationRequestModel.model_json_schema(),
+        "scenario-satisfiability-evidence-v1": ScenarioSatisfiabilityEvidenceModel.model_json_schema(),
         "backend-manifest-v2": BackendManifestV2Model.model_json_schema(),
         "realization-envelope-v1": BackendRealizationEnvelopeModel.model_json_schema(),
         "processor-manifest-v2": ProcessorManifestV2Model.model_json_schema(),
@@ -115,6 +120,7 @@ def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
         "controlled-vocabularies-v1": ControlledVocabularyCatalogModel.model_json_schema(),
         "attack-enterprise-tactics-source-v1": AttackEnterpriseTacticsSourceModel.model_json_schema(),
         "atlas-tactics-source-v1": AtlasTacticsSourceModel.model_json_schema(),
+        "nist-csf-defensive-categories-source-v1": NistCsfDefensiveCategorySourceModel.model_json_schema(),
         "semantic-profile-v1": SemanticProfileModel.model_json_schema(),
         "backend-profile-v1": _backend_profile_schema_for_bundle(),
         "experiment-apparatus-context-v1": ExperimentApparatusContextModel.model_json_schema(),
@@ -169,8 +175,9 @@ def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
     }
 
 
-def schema_bundle() -> dict[str, dict[str, Any]]:
-    """Return the repo-published JSON Schemas for external contracts."""
+@cache
+def _schema_bundle_template() -> dict[str, dict[str, Any]]:
+    """Build the immutable-in-practice template used by :func:`schema_bundle`."""
 
     bundle = _raw_schema_bundle()
     _add_aces_invariant(
@@ -248,3 +255,15 @@ def schema_bundle() -> dict[str, dict[str, Any]]:
             known_contract_ids=known_contract_ids,
         )
     return bundle
+
+
+def schema_bundle() -> dict[str, dict[str, Any]]:
+    """Return an isolated copy of the repo-published external contract schemas.
+
+    Generating the complete bundle is expensive because it traverses every
+    Pydantic contract model and attaches the governed ACES annotations.  The
+    generated template is process-stable, so build it once while preserving the
+    public function's historical fresh-dictionary semantics for callers.
+    """
+
+    return deepcopy(_schema_bundle_template())

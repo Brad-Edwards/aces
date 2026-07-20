@@ -1,0 +1,10 @@
+{
+  "contract_id": "experiment-capture-spec-v1",
+  "schema_path": "contracts/schemas/experiment-core/experiment-capture-spec-v1.json",
+  "stability": "draft",
+  "content_hash": "b262408eda4309d265a292ffd2fbcb1e34ba58c28205e4d99996f1b854a70876",
+  "last_change": {
+    "summary": "Extended shared experiment artifact roles and typed references for associated-artifact parents (ADR-077, issue #738).",
+    "content_hash": "b262408eda4309d265a292ffd2fbcb1e34ba58c28205e4d99996f1b854a70876"
+  }
+}

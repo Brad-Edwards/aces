@@ -130,6 +130,7 @@ adr-082-authored-identity-domain-topology
 adr-083-participant-tool-decision-surface-and-exposure-semantics
 adr-084-scenario-variation-and-deterministic-trial-realization
 adr-085-participant-information-flow-and-control
+adr-086-governed-whole-scenario-satisfiability
 ```
 
 | ADR | Title | Status | Date |
@@ -220,3 +221,4 @@ adr-085-participant-information-flow-and-control
 | [083](adr-083-participant-tool-decision-surface-and-exposure-semantics.md) | Participant Tool, Decision-Surface, and Exposure Semantics | proposed | 2026-07-14 |
 | [084](adr-084-scenario-variation-and-deterministic-trial-realization.md) | Scenario Variation And Deterministic Trial Realization | accepted | 2026-07-15 |
 | [085](adr-085-participant-information-flow-and-control.md) | Participant Information-Flow And Control | accepted | 2026-07-15 |
+| [086](adr-086-governed-whole-scenario-satisfiability.md) | Governed Whole-Scenario Satisfiability | accepted | 2026-07-19 |

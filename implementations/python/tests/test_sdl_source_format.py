@@ -195,6 +195,15 @@ def test_parser_limits_fail_with_one_stable_operational_diagnostic(
     assert _diagnostic_codes(exc_info.value) == {"sdl.source_limit"}
 
 
+def test_parse_sdl_file_bounds_raw_bytes_before_decoding(tmp_path: Path) -> None:
+    path = tmp_path / "oversized.sdl.yaml"
+    path.write_bytes(b"name: oversized\n" + b"x" * 64)
+    limits = SDLParserLimits(max_input_bytes=16)
+
+    with pytest.raises(SDLParseError, match="byte limit"):
+        parse_sdl_file(path, limits=limits)
+
+
 def test_alias_reuse_is_checked_at_its_effective_expanded_depth() -> None:
     content = """\
 base: &base

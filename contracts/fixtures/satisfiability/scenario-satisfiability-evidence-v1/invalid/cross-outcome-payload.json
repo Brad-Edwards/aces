@@ -1,0 +1,50 @@
+{
+  "analysis_profile": "aces-finite-domain-satisfiability-v1",
+  "authored_digest": {
+    "algorithm": "sha256",
+    "profile": "aces-sdl-semantic/v1",
+    "value": "sha256:f87bd4b2d9bdf62293871d0f047912a3fa3abfefeaf162c66878938870268726"
+  },
+  "diagnostics": [],
+  "imports": [],
+  "normalized_model": {
+    "authored_digest": {
+      "algorithm": "sha256",
+      "profile": "aces-sdl-semantic/v1",
+      "value": "sha256:f87bd4b2d9bdf62293871d0f047912a3fa3abfefeaf162c66878938870268726"
+    },
+    "clauses": [],
+    "profile": "aces-finite-domain-constraints/v1",
+    "source_digest": "sha256:a5902bcb0e43a9aa8d88ffaa2fa7c608781adb3052ca96dd54573ea3c9be14d7",
+    "symbols": [],
+    "theory_profile": "aces-finite-domain-theory/v1",
+    "translation_profile": "aces-sdl-authoring-translation/v1"
+  },
+  "normalized_model_digest": "sha256:5f72c3a95df8e76b1ae6fb6a17c2c1b2dda9771e84445e8fe8b6ea14971a7bc4",
+  "outcome": "satisfiable",
+  "profile": "scenario-satisfiability-evidence/v1",
+  "solver_configuration": {
+    "auto_config": false,
+    "core_reduction": "sorted-deletion-subset-minimal/v1",
+    "engine": "z3",
+    "engine_version": "4.16.0",
+    "logic": "QF_LIA",
+    "model": true,
+    "package": "z3-solver",
+    "package_version": "4.16.0.0",
+    "profile": "aces-z3-finite-domain/v1",
+    "random_seed": 0,
+    "threads": 1,
+    "timeout_ms": 5000,
+    "unsat_core": true,
+    "witness_selection": "canonical-lexicographic/v1"
+  },
+  "solver_configuration_digest": "sha256:63e58f4637dbd8328d84a286e1e5af1f3a69557e5209f683909ce22f39838e7d",
+  "source": {
+    "byte_digest": "sha256:a5902bcb0e43a9aa8d88ffaa2fa7c608781adb3052ca96dd54573ea3c9be14d7",
+    "source_id": "unsupported-control.sdl.yaml"
+  },
+  "unsat_core": null,
+  "unsupported": null,
+  "witness": null
+}

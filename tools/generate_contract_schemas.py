@@ -18,6 +18,8 @@ def _schema_output_path(schemas_dir: Path, name: str) -> Path:
         "scenario-instantiation-request-v1",
     }:
         return schemas_dir / "sdl" / f"{name}.json"
+    if name.startswith("scenario-satisfiability-evidence-v"):
+        return schemas_dir / "satisfiability" / f"{name}.json"
     if name.startswith("backend-manifest-v"):
         return schemas_dir / "backend-manifest" / f"{name}.json"
     if name.startswith("realization-envelope-v"):
@@ -36,7 +38,11 @@ def _schema_output_path(schemas_dir: Path, name: str) -> Path:
         return schemas_dir / "concept-authority" / f"{name}.json"
     if name == "controlled-vocabularies-v1":
         return schemas_dir / "concept-authority" / f"{name}.json"
-    if name in {"attack-enterprise-tactics-source-v1", "atlas-tactics-source-v1"}:
+    if name in {
+        "attack-enterprise-tactics-source-v1",
+        "atlas-tactics-source-v1",
+        "nist-csf-defensive-categories-source-v1",
+    }:
         return schemas_dir / "concept-authority" / f"{name}.json"
     if name == "reusable-asset-trust-policy-v1":
         return schemas_dir / "asset-trust" / f"{name}.json"

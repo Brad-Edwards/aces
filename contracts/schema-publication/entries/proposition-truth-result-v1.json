@@ -1,0 +1,10 @@
+{
+  "contract_id": "proposition-truth-result-v1",
+  "schema_path": "contracts/schemas/control-plane/proposition-truth-result-v1.json",
+  "stability": "draft",
+  "content_hash": "4a37fa964b8a7e3e641f381a27ea6960e9bc1efb8edfe426b9c19e173f7a045f",
+  "last_change": {
+    "summary": "Initial publication of portable four-valued proposition truth results with typed evidence, provenance, temporal context, loss disclosure, and capability-bounded unsupported outcomes.",
+    "content_hash": "4a37fa964b8a7e3e641f381a27ea6960e9bc1efb8edfe426b9c19e173f7a045f"
+  }
+}

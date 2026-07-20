@@ -1,0 +1,76 @@
+{
+  "profile": "aces-formal-satisfiability-execution/v1",
+  "revision": "1.0.0",
+  "execution_id": "issue-826-satisfiability-2026-07-19",
+  "captured_at": "2026-07-19T00:00:00Z",
+  "analysis_profile": "aces-finite-domain-satisfiability-v1",
+  "solver_configuration_digest": "sha256:63e58f4637dbd8328d84a286e1e5af1f3a69557e5209f683909ce22f39838e7d",
+  "commands": [
+    {
+      "command_id": "finite-domain-satisfiable",
+      "argv": [
+        "implementations/python/.venv/bin/aces",
+        "processor",
+        "satisfiability",
+        "docs/research/formal-semantic-validation/corpus/satisfiable-control.sdl.yaml",
+        "--profile",
+        "aces-finite-domain-satisfiability-v1"
+      ],
+      "network": "disabled"
+    },
+    {
+      "command_id": "finite-domain-unsatisfiable",
+      "argv": [
+        "implementations/python/.venv/bin/aces",
+        "processor",
+        "satisfiability",
+        "docs/research/formal-semantic-validation/corpus/unsatisfiable-control.sdl.yaml",
+        "--profile",
+        "aces-finite-domain-satisfiability-v1"
+      ],
+      "network": "disabled"
+    },
+    {
+      "command_id": "finite-domain-unsupported",
+      "argv": [
+        "implementations/python/.venv/bin/aces",
+        "processor",
+        "satisfiability",
+        "docs/research/formal-semantic-validation/corpus/unsupported-control.sdl.yaml",
+        "--profile",
+        "aces-finite-domain-satisfiability-v1"
+      ],
+      "network": "disabled"
+    }
+  ],
+  "observations": [
+    {
+      "case_id": "finite-domain-satisfiable",
+      "actual_outcome": "satisfiable",
+      "source_byte_digest": "sha256:0ca9eaba9dc47171f7a042dc6753faa6c820c65ee966538f9d65fac5342202e8",
+      "normalized_model_digest": "sha256:32ac029d9279e6c7ea4cd9082435eb6fa455122bba57498923b8371818ef708c",
+      "evidence_profile": "scenario-satisfiability-evidence/v1",
+      "replayable": true,
+      "limitation": "The witness covers the named finite-domain profile and this source only."
+    },
+    {
+      "case_id": "finite-domain-unsatisfiable",
+      "actual_outcome": "unsatisfiable",
+      "source_byte_digest": "sha256:cfef56a1f56d5f0db9da195377fd75694bdd0f0b92932fdb8fafcbd3f7baf6c5",
+      "normalized_model_digest": "sha256:3a061baa67090e312abc4bca7a3ed24cc9458487b67f2fc37b3b7abcac2ecf1b",
+      "evidence_profile": "scenario-satisfiability-evidence/v1",
+      "replayable": true,
+      "limitation": "The subset-minimal core is not an independently checked proof certificate."
+    },
+    {
+      "case_id": "finite-domain-unsupported",
+      "actual_outcome": "unsupported",
+      "source_byte_digest": "sha256:a5902bcb0e43a9aa8d88ffaa2fa7c608781adb3052ca96dd54573ea3c9be14d7",
+      "normalized_model_digest": "sha256:2f0f762771dc329419ab739766f684c18261aba28c2fbc50a26ee8ad80224ba5",
+      "evidence_profile": "scenario-satisfiability-evidence/v1",
+      "replayable": true,
+      "limitation": "Unsupported is a coverage disclosure and not a satisfiability decision."
+    }
+  ],
+  "deviations": []
+}

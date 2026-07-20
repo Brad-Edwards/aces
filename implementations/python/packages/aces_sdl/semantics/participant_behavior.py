@@ -667,6 +667,11 @@ def _behavior_specification_vocabulary_issues(
             "participant.behavior-spec-ai-offensive-behavior-ungoverned",
         ),
         (
+            "defensive_behavior_refs",
+            "behavior_specifications.defensive_behavior_refs",
+            "participant.behavior-spec-defensive-behavior-ungoverned",
+        ),
+        (
             "offensive_behavior_refs",
             "behavior_specifications.offensive_behavior_refs",
             "participant.behavior-spec-offensive-behavior-ungoverned",

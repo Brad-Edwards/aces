@@ -13,21 +13,29 @@ affordance declarations, solver-backed constraint satisfiability, and
 federated cyber object/event exchange. Those gaps are preserved as evidence;
 this run does not repair them.
 
-## Frozen bundle
+## Immutable bundles
 
-- [`bundle-manifest.json`](bundle-manifest.json) pins the active protocol,
-  snapshot, analysis, and their SHA-256 digests.
+- [`bundle-manifest.json`](bundle-manifest.json) is a stable index over
+  immutable capture manifests in `bundles/`. The checker validates every
+  capture and selects the highest revision deterministically; publishing a new
+  capture never rewrites another branch's manifest.
 - [`protocol-v1.json`](protocol-v1.json) preregisters four source strata, four
   representative requests, sixteen atomic concepts, expected carriers and
   classifications, stage obligations, load-bearing status, classification
   rules, and objective pass/fail criteria.
 - [`execution-snapshot-v1.1.json`](execution-snapshot-v1.1.json) pins ACES commit
-  `9347f64b26e3bb71d5459759c3d4bd473c76b446`, deterministic digests of the SDL,
+  `9347f64b26e3bb71d5459759c3d4bd473c76b446`, historical digests of the SDL,
   processor, and contract implementation surfaces, exact repository artifacts,
   production entrypoints, typed pointers, diagnostics, and observed outcomes.
 - [`analysis-v1.1.json`](analysis-v1.1.json) is recomputed from the protocol and
   bound to the complete snapshot digest, and records the ADR-021 evidence
   status.
+
+Implementation-surface hashes identify the pinned capture; they are not
+compared with the live checkout. Live artifact execution and the capture's
+internal digest joins remain enforced. This keeps historical evidence
+immutable and avoids forcing every unrelated implementation change to rewrite
+the current evidence record.
 
 The source strata are a cyber-range survey, the CybORG autonomous-agent
 benchmark, the VSDL cyber-range DSL, and the SISO Cyber Data Exchange Model.

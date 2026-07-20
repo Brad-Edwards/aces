@@ -1,0 +1,10 @@
+{
+  "contract_id": "sdl-authoring-input-v1",
+  "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+  "stability": "draft",
+  "content_hash": "cae685a10d7c241bed3e90e780e151275c722248af4e67da3092b85895e49bd1",
+  "last_change": {
+    "summary": "Published bounded scenario-family variation points, participant-local tool-affordance bindings, and governed defensive behavior references (issues #786, #294, and #210).",
+    "content_hash": "cae685a10d7c241bed3e90e780e151275c722248af4e67da3092b85895e49bd1"
+  }
+}

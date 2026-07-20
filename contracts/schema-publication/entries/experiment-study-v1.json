@@ -1,0 +1,10 @@
+{
+  "contract_id": "experiment-study-v1",
+  "schema_path": "contracts/schemas/experiment-core/experiment-study-v1.json",
+  "stability": "draft",
+  "content_hash": "48f758096bf386e097ffa1f9e7e4e9a32781925428be47b42e2f430ba7e681e3",
+  "last_change": {
+    "summary": "Required revisioned, evidence-bounded behavioral or empirical claim bindings for claim-bearing studies and benchmarks (ADR-081, issue #747).",
+    "content_hash": "48f758096bf386e097ffa1f9e7e4e9a32781925428be47b42e2f430ba7e681e3"
+  }
+}

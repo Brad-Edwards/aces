@@ -387,3 +387,6 @@ adrs:
     pin: 75143315eba5f4e71d5f8c4bfa3468e46060e4ad95a593c21e8d100387500245
     amendments:
       - ref: "#831"
+  - id: ADR-086
+    path: docs/decisions/adrs/adr-086-governed-whole-scenario-satisfiability.md
+    pin: c34101fb3b5ddeba1e11f02666fb7747a38f52784087514ec76867df152aefa0

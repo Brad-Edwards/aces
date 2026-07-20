@@ -1,0 +1,10 @@
+{
+  "contract_id": "participant-time-management-context-v1",
+  "schema_path": "contracts/schemas/participant-runtime/participant-time-management-context-v1.json",
+  "stability": "draft",
+  "content_hash": "e4711ff9a4674697fb8aed40af863ea0327ad31824ef0a8f07d182ccfa9f28a1",
+  "last_change": {
+    "summary": "Initial publication of the RUN-308 participant time-management context contract: clock, ordering, lookahead, pacing, rollback, and backend-serialization basis.",
+    "content_hash": "e4711ff9a4674697fb8aed40af863ea0327ad31824ef0a8f07d182ccfa9f28a1"
+  }
+}

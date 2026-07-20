@@ -1,0 +1,10 @@
+{
+  "contract_id": "provisioning-plan-v1",
+  "schema_path": "contracts/schemas/plans/provisioning-plan-v1.json",
+  "stability": "draft",
+  "content_hash": "c4aef8660b30ee4fbdf29b22180a7da60e1cd42e5a5b087ad3f83c45dc21713c",
+  "last_change": {
+    "summary": "Added generated-artifact and persistent-volume provisioning resource identities (issue #780).",
+    "content_hash": "c4aef8660b30ee4fbdf29b22180a7da60e1cd42e5a5b087ad3f83c45dc21713c"
+  }
+}

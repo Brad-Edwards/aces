@@ -10,6 +10,8 @@ from aces_contracts.contracts import (
     AtlasTacticsSourceModel,
     AttackEnterpriseTacticsSourceModel,
     ControlledVocabularyCatalogModel,
+    NistCsfDefensiveCategorySourceModel,
+    schema_bundle,
 )
 from aces_contracts.controlled_vocabularies import (
     controlled_vocabulary_catalog_path,
@@ -31,6 +33,9 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 CATALOG_PATH = REPO_ROOT / "contracts" / "concept-authority" / "controlled-vocabularies-v1.json"
 ATTACK_TACTICS_SOURCE_PATH = REPO_ROOT / "contracts" / "concept-authority" / "attack-enterprise-tactics-source-v1.json"
 ATLAS_TACTICS_SOURCE_PATH = REPO_ROOT / "contracts" / "concept-authority" / "atlas-tactics-source-v1.json"
+NIST_CSF_DEFENSIVE_SOURCE_PATH = (
+    REPO_ROOT / "contracts" / "concept-authority" / "nist-csf-defensive-categories-source-v1.json"
+)
 FIXTURES_ROOT = REPO_ROOT / "contracts" / "fixtures" / "concept-authority" / "controlled-vocabularies-v1"
 VALID_DIR = FIXTURES_ROOT / "valid"
 INVALID_DIR = FIXTURES_ROOT / "invalid"
@@ -69,6 +74,21 @@ ATLAS_TACTIC_TERMS_2026_06 = [
     ("exfiltration", "AML.TA0010", "Exfiltration"),
     ("impact", "AML.TA0011", "Impact"),
 ]
+NIST_CSF_DEFENSIVE_CATEGORY_TERMS_2_0 = [
+    ("continuous-monitoring", "DE.CM", "Continuous Monitoring", "Detect"),
+    ("adverse-event-analysis", "DE.AE", "Adverse Event Analysis", "Detect"),
+    ("incident-management", "RS.MA", "Incident Management", "Respond"),
+    ("incident-analysis", "RS.AN", "Incident Analysis", "Respond"),
+    (
+        "incident-response-reporting-and-communication",
+        "RS.CO",
+        "Incident Response Reporting and Communication",
+        "Respond",
+    ),
+    ("incident-mitigation", "RS.MI", "Incident Mitigation", "Respond"),
+    ("incident-recovery-plan-execution", "RC.RP", "Incident Recovery Plan Execution", "Recover"),
+    ("incident-recovery-communication", "RC.CO", "Incident Recovery Communication", "Recover"),
+]
 
 
 def test_load_controlled_vocabulary_catalog():
@@ -79,6 +99,7 @@ def test_load_controlled_vocabulary_catalog():
         "processor-features",
         "participant-implementation-kinds",
         "participant-decision-surface-modes",
+        "participant-defensive-behavior-activities",
         "participant-offensive-behavior-activities",
         "participant-ai-offensive-behavior-activities",
         "participant-tool-affordance-expectations",
@@ -122,6 +143,39 @@ def test_attack_enterprise_tactics_source_pins_mitre_v19_1():
     assert [(term.shortname, term.tactic_id, term.name) for term in source.tactics] == (
         ATTACK_ENTERPRISE_TACTIC_TERMS_V19_1
     )
+
+
+def test_nist_csf_defensive_category_source_pins_csf_2_0():
+    payload = json.loads(NIST_CSF_DEFENSIVE_SOURCE_PATH.read_text(encoding="utf-8"))
+    source = NistCsfDefensiveCategorySourceModel.model_validate(payload)
+
+    assert source.source_authority == "NIST Cybersecurity Framework"
+    assert source.source_version == "2.0"
+    assert source.source_digest == "sha256:014492980e87f8ce2c98d80ea040540392de96a08980c2f9901114ad4108b2c3"
+    assert source.retrieved_at == "2026-07-19"
+    assert source.license_url == "https://www.nist.gov/copyrights-disclaimers"
+    assert source.license_notice.startswith("Adapted from NIST CSF 2.0")
+    assert [
+        (term.term_id, term.category_id, term.title, term.function) for term in source.categories
+    ] == NIST_CSF_DEFENSIVE_CATEGORY_TERMS_2_0
+
+
+def test_nist_csf_defensive_category_source_rejects_duplicate_ids_and_term_ids():
+    payload = json.loads(NIST_CSF_DEFENSIVE_SOURCE_PATH.read_text(encoding="utf-8"))
+    payload["categories"][1]["category_id"] = payload["categories"][0]["category_id"]
+    with pytest.raises(ValidationError, match="duplicate category_id"):
+        NistCsfDefensiveCategorySourceModel.model_validate(payload)
+
+    payload = json.loads(NIST_CSF_DEFENSIVE_SOURCE_PATH.read_text(encoding="utf-8"))
+    payload["categories"][1]["term_id"] = payload["categories"][0]["term_id"]
+    with pytest.raises(ValidationError, match="duplicate term_id"):
+        NistCsfDefensiveCategorySourceModel.model_validate(payload)
+
+
+def test_nist_csf_defensive_category_source_schema_is_published():
+    schema = schema_bundle()["nist-csf-defensive-categories-source-v1"]
+
+    assert schema["properties"]["schema_version"]["const"] == "nist-csf-defensive-categories-source/v1"
 
 
 def test_attack_enterprise_tactics_source_rejects_duplicate_ids_and_shortnames():
@@ -229,6 +283,31 @@ def test_behavior_specification_ai_offensive_behavior_scope_uses_atlas_vocabular
     )
 
 
+def test_behavior_specification_defensive_behavior_scope_uses_nist_csf_vocabulary():
+    validate_controlled_vocabulary_scope_values(
+        "behavior_specifications.defensive_behavior_refs",
+        ["continuous-monitoring", "incident-analysis", "incident-mitigation", "x-acme:threat-hunting"],
+    )
+
+
+def test_defensive_behavior_vocabulary_adapts_pinned_nist_csf_categories():
+    catalog = load_controlled_vocabulary_catalog()
+    vocabulary = catalog.vocabularies["participant-defensive-behavior-activities"]
+
+    assert vocabulary.source is not None
+    assert vocabulary.source.provenance == "adapted"
+    assert vocabulary.source.authority == "NIST Cybersecurity Framework"
+    assert vocabulary.source.authority_version == "2.0"
+    assert (
+        vocabulary.source.source_artifact_ref
+        == "contracts/concept-authority/nist-csf-defensive-categories-source-v1.json"
+    )
+    assert vocabulary.source.source_digest == "sha256:014492980e87f8ce2c98d80ea040540392de96a08980c2f9901114ad4108b2c3"
+    assert [(term_id, term.source_id, term.title) for term_id, term in vocabulary.terms.items()] == [
+        (term_id, source_id, title) for term_id, source_id, title, _function in NIST_CSF_DEFENSIVE_CATEGORY_TERMS_2_0
+    ]
+
+
 def test_offensive_behavior_vocabulary_directly_adopts_pinned_attack_tactics():
     catalog = load_controlled_vocabulary_catalog()
     vocabulary = catalog.vocabularies["participant-offensive-behavior-activities"]
@@ -282,6 +361,25 @@ def test_attack_and_atlas_scopes_do_not_bleed_into_each_other():
             "behavior_specifications.ai_offensive_behavior_refs",
             ["defense-impairment"],
         )
+
+
+def test_offensive_and_defensive_scopes_do_not_bleed_into_each_other():
+    for offensive_scope in (
+        "behavior_specifications.offensive_behavior_refs",
+        "behavior_specifications.ai_offensive_behavior_refs",
+    ):
+        with pytest.raises(ValueError, match="not a permitted term"):
+            validate_controlled_vocabulary_scope_values(
+                offensive_scope,
+                ["continuous-monitoring"],
+            )
+
+    for offensive_term in ("reconnaissance", "ai-model-access"):
+        with pytest.raises(ValueError, match="not a permitted term"):
+            validate_controlled_vocabulary_scope_values(
+                "behavior_specifications.defensive_behavior_refs",
+                [offensive_term],
+            )
 
 
 def test_unguarded_extension_values_are_rejected():
