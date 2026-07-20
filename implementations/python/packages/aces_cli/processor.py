@@ -21,6 +21,13 @@ from aces_contracts.plan_projection import (
     orchestration_plan_model,
     provisioning_plan_model,
 )
+from aces_processor.exploit_path import (
+    ANALYSIS_PROFILE as EXPLOIT_PATH_ANALYSIS_PROFILE,
+)
+from aces_processor.exploit_path import (
+    ExploitPathOperationalError,
+    analyze_exploit_path_file,
+)
 from aces_processor.manifest import reference_processor_manifest_payload
 from aces_processor.models import ExecutionPlan
 from aces_processor.reference import run_reference_processor
@@ -207,6 +214,33 @@ def satisfiability(
     except SatisfiabilityOperationalError as exc:
         # The service deliberately exposes value-free operational messages.
         typer.echo(f"error: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+
+    typer.echo(json.dumps(evidence.model_dump(mode="json"), indent=2, sort_keys=True))
+    if evidence.outcome.value == "unsupported":
+        raise typer.Exit(code=2)
+
+
+@app.command("exploit-path")
+def exploit_path(
+    input_json: Path = typer.Argument(..., exists=True, readable=True, help="Exploit-path analysis input JSON."),
+    profile: str = typer.Option(
+        EXPLOIT_PATH_ANALYSIS_PROFILE,
+        "--profile",
+        help="Closed governed exploit-path analysis profile.",
+    ),
+) -> None:
+    """Emit replayable typed exploit-path analysis evidence as JSON.
+
+    Exit status 0 means the supported query completed with a valid or invalid
+    path result, 2 means typed unsupported input, and 1 means malformed input
+    or operational failure.
+    """
+
+    try:
+        evidence = analyze_exploit_path_file(input_json, profile=profile)
+    except ExploitPathOperationalError as exc:
+        typer.echo(f"error: exploit-path input was rejected ({exc})", err=True)
         raise typer.Exit(code=1) from exc
 
     typer.echo(json.dumps(evidence.model_dump(mode="json"), indent=2, sort_keys=True))

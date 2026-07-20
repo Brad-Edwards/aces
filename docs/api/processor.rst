@@ -76,3 +76,9 @@ Capabilities
 
 .. automodule:: aces_processor.capabilities
    :members:
+
+Exploit-Path Analysis
+---------------------
+
+.. automodule:: aces_processor.exploit_path
+   :members:

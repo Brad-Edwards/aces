@@ -57,6 +57,9 @@ subsystems:
   - id: scenario-satisfiability
     path: specs/formal/scenario-satisfiability
     fm_level: FM2
+  - id: exploit-path-analysis
+    path: specs/formal/exploit-path-analysis
+    fm_level: FM2
   - id: runtime-contracts
     path: specs/formal/runtime-contracts
     fm_level: FM2
@@ -216,6 +219,18 @@ entries:
         path: contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json
       - kind: property_based_or_differential_tests
         path: implementations/python/tests/test_scenario_satisfiability.py
+    waived_artifacts: []
+
+  - subsystem: exploit-path-analysis
+    delivered_artifacts:
+      - kind: invariant_list
+        path: specs/formal/exploit-path-analysis/README.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_exploit_path_analysis.py
+      - kind: typed_ir_or_contract_coverage
+        path: contracts/schemas/exploit-path-analysis/exploit-path-analysis-evidence-v1.json
+      - kind: property_based_or_differential_tests
+        path: implementations/python/tests/test_exploit_path_analysis.py
     waived_artifacts: []
 
   - subsystem: runtime-contracts

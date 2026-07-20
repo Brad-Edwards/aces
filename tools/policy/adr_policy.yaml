@@ -224,6 +224,7 @@ module_boundaries:
           - aces_operations.cross_backend_corpus
           - aces_operations.techvault_live
         aces_processor:
+          - aces_processor.exploit_path
           - aces_processor.manifest
           - aces_processor.models
           - aces_processor.reference

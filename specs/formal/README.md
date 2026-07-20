@@ -16,6 +16,7 @@ Examples:
 - `specs/formal/experiment-core/`
 - `specs/formal/scenario-variation-trial-realization/`
 - `specs/formal/scenario-satisfiability/`
+- `specs/formal/exploit-path-analysis/`
 - `specs/formal/validation-admission-profiles/`
 - `specs/formal/sdl-phases/`
 
