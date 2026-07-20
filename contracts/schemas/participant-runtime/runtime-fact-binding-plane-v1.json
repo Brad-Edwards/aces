@@ -1,0 +1,759 @@
+{
+  "$defs": {
+    "RuntimeFactAbsenceDisposition": {
+      "enum": [
+        "block",
+        "fail",
+        "inapplicable"
+      ],
+      "title": "RuntimeFactAbsenceDisposition",
+      "type": "string"
+    },
+    "RuntimeFactAudience": {
+      "enum": [
+        "participant",
+        "workflow",
+        "protected_sink"
+      ],
+      "title": "RuntimeFactAudience",
+      "type": "string"
+    },
+    "RuntimeFactBindingDisposition": {
+      "enum": [
+        "bound",
+        "absent",
+        "stale",
+        "ambiguous",
+        "unauthorized",
+        "unsupported",
+        "wrong_type",
+        "wrong_scope",
+        "secret_unavailable",
+        "dispatch_failed"
+      ],
+      "title": "RuntimeFactBindingDisposition",
+      "type": "string"
+    },
+    "RuntimeFactBindingEventModel": {
+      "additionalProperties": false,
+      "properties": {
+        "action_contract_address": {
+          "minLength": 1,
+          "title": "Action Contract Address",
+          "type": "string"
+        },
+        "action_instance_id": {
+          "minLength": 1,
+          "title": "Action Instance Id",
+          "type": "string"
+        },
+        "authorization_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Authorization Refs",
+          "type": "array"
+        },
+        "disposition": {
+          "$ref": "#/$defs/RuntimeFactBindingDisposition"
+        },
+        "episode_id": {
+          "minLength": 1,
+          "title": "Episode Id",
+          "type": "string"
+        },
+        "event_id": {
+          "minLength": 1,
+          "title": "Event Id",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "fact_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fact Id"
+        },
+        "fact_version_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fact Version Id"
+        },
+        "participant_address": {
+          "minLength": 1,
+          "title": "Participant Address",
+          "type": "string"
+        },
+        "provenance_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Provenance Refs",
+          "type": "array"
+        },
+        "reason_code": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason Code"
+        },
+        "redacted": {
+          "default": false,
+          "title": "Redacted",
+          "type": "boolean"
+        },
+        "run_id": {
+          "minLength": 1,
+          "title": "Run Id",
+          "type": "string"
+        },
+        "sensitivity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeFactSensitivity"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "sink_id": {
+          "minLength": 1,
+          "title": "Sink Id",
+          "type": "string"
+        },
+        "target_field": {
+          "minLength": 1,
+          "title": "Target Field",
+          "type": "string"
+        },
+        "workflow_address": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Workflow Address"
+        }
+      },
+      "required": [
+        "event_id",
+        "run_id",
+        "participant_address",
+        "episode_id",
+        "action_instance_id",
+        "action_contract_address",
+        "sink_id",
+        "target_field",
+        "disposition"
+      ],
+      "title": "RuntimeFactBindingEventModel",
+      "type": "object"
+    },
+    "RuntimeFactDeclarationModel": {
+      "additionalProperties": false,
+      "properties": {
+        "authority_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Authority Refs",
+          "type": "array"
+        },
+        "fact_id": {
+          "minLength": 1,
+          "title": "Fact Id",
+          "type": "string"
+        },
+        "sensitivity": {
+          "$ref": "#/$defs/RuntimeFactSensitivity"
+        },
+        "source_kind": {
+          "$ref": "#/$defs/RuntimeFactSourceKind"
+        },
+        "value_type": {
+          "$ref": "#/$defs/RuntimeFactValueType"
+        },
+        "visibility": {
+          "$ref": "#/$defs/RuntimeFactVisibilityModel"
+        }
+      },
+      "required": [
+        "fact_id",
+        "value_type",
+        "source_kind",
+        "sensitivity",
+        "visibility",
+        "authority_refs"
+      ],
+      "title": "RuntimeFactDeclarationModel",
+      "type": "object"
+    },
+    "RuntimeFactProjectionModel": {
+      "additionalProperties": false,
+      "properties": {
+        "confidence": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confidence"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "fact_id": {
+          "minLength": 1,
+          "title": "Fact Id",
+          "type": "string"
+        },
+        "fact_version_id": {
+          "minLength": 1,
+          "title": "Fact Version Id",
+          "type": "string"
+        },
+        "observed_at": {
+          "format": "date-time",
+          "minLength": 1,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+          "title": "Observed At",
+          "type": "string"
+        },
+        "provenance_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Provenance Refs",
+          "type": "array"
+        },
+        "redacted": {
+          "default": false,
+          "title": "Redacted",
+          "type": "boolean"
+        },
+        "scope": {
+          "$ref": "#/$defs/RuntimeFactScopeModel"
+        },
+        "secret_reference_present": {
+          "default": false,
+          "title": "Secret Reference Present",
+          "type": "boolean"
+        },
+        "sensitivity": {
+          "$ref": "#/$defs/RuntimeFactSensitivity"
+        },
+        "source_kind": {
+          "$ref": "#/$defs/RuntimeFactSourceKind"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        },
+        "value_type": {
+          "$ref": "#/$defs/RuntimeFactValueType"
+        }
+      },
+      "required": [
+        "fact_id",
+        "fact_version_id",
+        "value_type",
+        "source_kind",
+        "sensitivity",
+        "scope",
+        "observed_at"
+      ],
+      "title": "RuntimeFactProjectionModel",
+      "type": "object"
+    },
+    "RuntimeFactScopeKind": {
+      "enum": [
+        "run",
+        "participant",
+        "episode",
+        "workflow"
+      ],
+      "title": "RuntimeFactScopeKind",
+      "type": "string"
+    },
+    "RuntimeFactScopeModel": {
+      "additionalProperties": false,
+      "properties": {
+        "episode_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Episode Id"
+        },
+        "kind": {
+          "$ref": "#/$defs/RuntimeFactScopeKind"
+        },
+        "participant_address": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Participant Address"
+        },
+        "run_id": {
+          "minLength": 1,
+          "title": "Run Id",
+          "type": "string"
+        },
+        "workflow_address": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Workflow Address"
+        }
+      },
+      "required": [
+        "kind",
+        "run_id"
+      ],
+      "title": "RuntimeFactScopeModel",
+      "type": "object"
+    },
+    "RuntimeFactSensitivity": {
+      "enum": [
+        "public",
+        "internal",
+        "restricted",
+        "secret"
+      ],
+      "title": "RuntimeFactSensitivity",
+      "type": "string"
+    },
+    "RuntimeFactSinkModel": {
+      "additionalProperties": false,
+      "properties": {
+        "absence_disposition": {
+          "$ref": "#/$defs/RuntimeFactAbsenceDisposition"
+        },
+        "action_contract_address": {
+          "minLength": 1,
+          "title": "Action Contract Address",
+          "type": "string"
+        },
+        "allowed_scope_kinds": {
+          "items": {
+            "$ref": "#/$defs/RuntimeFactScopeKind"
+          },
+          "minItems": 1,
+          "title": "Allowed Scope Kinds",
+          "type": "array"
+        },
+        "allowed_sensitivities": {
+          "items": {
+            "$ref": "#/$defs/RuntimeFactSensitivity"
+          },
+          "minItems": 1,
+          "title": "Allowed Sensitivities",
+          "type": "array"
+        },
+        "allowed_source_kinds": {
+          "items": {
+            "$ref": "#/$defs/RuntimeFactSourceKind"
+          },
+          "minItems": 1,
+          "title": "Allowed Source Kinds",
+          "type": "array"
+        },
+        "audience": {
+          "$ref": "#/$defs/RuntimeFactAudience"
+        },
+        "authority_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Authority Refs",
+          "type": "array"
+        },
+        "max_age_seconds": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Age Seconds"
+        },
+        "sink_id": {
+          "minLength": 1,
+          "title": "Sink Id",
+          "type": "string"
+        },
+        "target_field": {
+          "minLength": 1,
+          "title": "Target Field",
+          "type": "string"
+        },
+        "value_type": {
+          "$ref": "#/$defs/RuntimeFactValueType"
+        }
+      },
+      "required": [
+        "sink_id",
+        "action_contract_address",
+        "target_field",
+        "value_type",
+        "allowed_source_kinds",
+        "allowed_scope_kinds",
+        "allowed_sensitivities",
+        "authority_refs",
+        "audience",
+        "absence_disposition"
+      ],
+      "title": "RuntimeFactSinkModel",
+      "type": "object"
+    },
+    "RuntimeFactSourceKind": {
+      "enum": [
+        "observation",
+        "derived",
+        "tool_result",
+        "secret_reference"
+      ],
+      "title": "RuntimeFactSourceKind",
+      "type": "string"
+    },
+    "RuntimeFactValueType": {
+      "enum": [
+        "string",
+        "integer",
+        "number",
+        "boolean",
+        "reference"
+      ],
+      "title": "RuntimeFactValueType",
+      "type": "string"
+    },
+    "RuntimeFactVersionModel": {
+      "additionalProperties": false,
+      "properties": {
+        "confidence": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confidence"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "expires_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "minLength": 1,
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expires At"
+        },
+        "fact_id": {
+          "minLength": 1,
+          "title": "Fact Id",
+          "type": "string"
+        },
+        "observed_at": {
+          "format": "date-time",
+          "minLength": 1,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+          "title": "Observed At",
+          "type": "string"
+        },
+        "provenance_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Provenance Refs",
+          "type": "array"
+        },
+        "scope": {
+          "$ref": "#/$defs/RuntimeFactScopeModel"
+        },
+        "secret_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Secret Ref"
+        },
+        "sensitivity": {
+          "$ref": "#/$defs/RuntimeFactSensitivity"
+        },
+        "sequence": {
+          "minimum": 1,
+          "title": "Sequence",
+          "type": "integer"
+        },
+        "source_kind": {
+          "$ref": "#/$defs/RuntimeFactSourceKind"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        },
+        "value_type": {
+          "$ref": "#/$defs/RuntimeFactValueType"
+        },
+        "version_id": {
+          "minLength": 1,
+          "title": "Version Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "fact_id",
+        "version_id",
+        "sequence",
+        "value_type",
+        "source_kind",
+        "sensitivity",
+        "scope",
+        "observed_at",
+        "evidence_refs",
+        "provenance_refs"
+      ],
+      "title": "RuntimeFactVersionModel",
+      "type": "object"
+    },
+    "RuntimeFactVisibilityModel": {
+      "additionalProperties": false,
+      "properties": {
+        "operator_visible": {
+          "default": true,
+          "title": "Operator Visible",
+          "type": "boolean"
+        },
+        "participant_addresses": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Participant Addresses",
+          "type": "array"
+        },
+        "workflow_addresses": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Workflow Addresses",
+          "type": "array"
+        }
+      },
+      "title": "RuntimeFactVisibilityModel",
+      "type": "object"
+    }
+  },
+  "$id": "https://aces.dev/schemas/runtime-fact-binding-plane-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "declarations": {
+      "items": {
+        "$ref": "#/$defs/RuntimeFactDeclarationModel"
+      },
+      "title": "Declarations",
+      "type": "array"
+    },
+    "events": {
+      "items": {
+        "$ref": "#/$defs/RuntimeFactBindingEventModel"
+      },
+      "title": "Events",
+      "type": "array"
+    },
+    "projections": {
+      "items": {
+        "$ref": "#/$defs/RuntimeFactProjectionModel"
+      },
+      "title": "Projections",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "runtime-fact-binding-plane/v1",
+      "default": "runtime-fact-binding-plane/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "sinks": {
+      "items": {
+        "$ref": "#/$defs/RuntimeFactSinkModel"
+      },
+      "title": "Sinks",
+      "type": "array"
+    },
+    "versions": {
+      "items": {
+        "$ref": "#/$defs/RuntimeFactVersionModel"
+      },
+      "title": "Versions",
+      "type": "array"
+    }
+  },
+  "title": "RuntimeFactBindingPlaneModel",
+  "type": "object",
+  "x-aces-invariants": [
+    {
+      "description": "Every fact version resolves to a declaration, every binding event resolves to its compiled sink and optional immutable fact version with matching scope, sensitivity, provenance, redaction, and sink policy, and every projection exactly matches the immutable version it discloses.",
+      "id": "runtime-fact-binding-references-resolve",
+      "inputs": [
+        {
+          "contract_id": "runtime-fact-binding-plane-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_contracts.contracts.runtime_facts.RuntimeFactBindingPlaneModel._validate_references"
+    }
+  ],
+  "x-aces-semantic-profile": {
+    "contract_id": "runtime-fact-binding-plane-v1",
+    "entry_schema_contract_id": "aces-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
+    "id": "aces-semantic-invariants-v1",
+    "keyword": "x-aces-invariants",
+    "required": true,
+    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+  }
+}

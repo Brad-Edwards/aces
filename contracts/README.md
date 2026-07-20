@@ -67,6 +67,16 @@ participant-local scope, audience scope, observation point, governed source
 layers, transformation rule, evidence/provenance basis, semantic limitations,
 and explicit comparability disclosure.
 
+The participant-runtime `runtime-fact-binding-plane-v1` contract defines typed
+run-local fact declarations, immutable versions, compiled late-bound action
+sinks, value-free binding provenance, and redacted participant/workflow
+projections. It permits facts to fill only declared action `input.*` fields;
+it does not permit runtime values to rewrite SDL variables, topology, workflow
+structure, experiment factors, identities, or random streams.
+The reference runtime obtains sinks, candidates, time, and authority from a
+trusted per-action admission and delivers values through a one-shot dispatcher;
+caller requests cannot inject policy or receive protected values.
+
 The published experiment-core contract family includes task, run,
 apparatus-context, study/collection, capture specification, raw evidence record,
 and derived measure schemas under `contracts/schemas/experiment-core/`. These
