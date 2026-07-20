@@ -3,13 +3,9 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable
-from dataclasses import dataclass
-from datetime import datetime
-from enum import Enum
+from dataclasses import dataclass, field
 
 from aces_contracts.contracts.runtime_facts import (
-    RuntimeFactAbsenceDisposition,
-    RuntimeFactAudience,
     RuntimeFactBindingDisposition,
     RuntimeFactBindingEventModel,
     RuntimeFactBindingRequestModel,
@@ -22,21 +18,21 @@ from aces_contracts.contracts.runtime_facts import (
 )
 from aces_contracts.diagnostics import Diagnostic
 
+from .runtime_fact_binding_policy import (
+    RuntimeFactActionDisposition,
+    absence_action_disposition,
+    aggregate_action_disposition,
+    candidate_visible,
+    parse_datetime,
+    projection_visible,
+    validate_binding,
+)
 from .runtime_fact_dispatch import (
     RuntimeFactBindingAdmission,
     RuntimeFactDispatchCommand,
     _RuntimeFactDispatchBinding,
     _RuntimeFactDispatchFailure,
 )
-
-
-class RuntimeFactActionDisposition(str, Enum):
-    """Aggregate action-dispatch outcome across all compiled sinks."""
-
-    BOUND = "bound"
-    BLOCKED = "blocked"
-    FAILED = "failed"
-    INAPPLICABLE = "inapplicable"
 
 
 @dataclass(frozen=True)
@@ -47,6 +43,15 @@ class RuntimeFactBindingResult:
     action_disposition: RuntimeFactActionDisposition
     events: tuple[RuntimeFactBindingEventModel, ...]
     diagnostics: tuple[Diagnostic, ...]
+
+
+@dataclass
+class _RuntimeFactBindingCollection:
+    events: list[RuntimeFactBindingEventModel] = field(default_factory=list)
+    diagnostics: list[Diagnostic] = field(default_factory=list)
+    action_failures: list[RuntimeFactActionDisposition] = field(default_factory=list)
+    dispatch_bindings: list[_RuntimeFactDispatchBinding] = field(default_factory=list)
+    bound_selections: list[tuple[int, RuntimeFactSinkModel, RuntimeFactVersionModel]] = field(default_factory=list)
 
 
 class RuntimeFactBindingPlane:
@@ -111,18 +116,23 @@ class RuntimeFactBindingPlane:
             )
         admission = self._admissions.get(action_key)
         if admission is None:
-            return RuntimeFactBindingResult(
+            result = RuntimeFactBindingResult(
                 accepted=False,
                 action_disposition=RuntimeFactActionDisposition.FAILED,
                 events=(),
                 diagnostics=(self._diagnostic(request.action_contract_address, "unauthorized"),),
             )
+        else:
+            collection = self._collect_bindings(request, admission)
+            result = self._finish_binding(action_key, request, admission, collection)
+        return result
 
-        events: list[RuntimeFactBindingEventModel] = []
-        diagnostics: list[Diagnostic] = []
-        action_failures: list[RuntimeFactActionDisposition] = []
-        dispatch_bindings: list[_RuntimeFactDispatchBinding] = []
-        bound_selections: list[tuple[int, RuntimeFactSinkModel, RuntimeFactVersionModel]] = []
+    def _collect_bindings(
+        self,
+        request: RuntimeFactBindingRequestModel,
+        admission: RuntimeFactBindingAdmission,
+    ) -> _RuntimeFactBindingCollection:
+        collection = _RuntimeFactBindingCollection()
         for index, selection in enumerate(admission.selections, start=1):
             sink = selection.sink
             candidates = self._visible_candidates(
@@ -135,17 +145,17 @@ class RuntimeFactBindingPlane:
                 disposition = (
                     RuntimeFactBindingDisposition.ABSENT if not candidates else RuntimeFactBindingDisposition.AMBIGUOUS
                 )
-                events.append(self._event(request, admission, sink, index, disposition=disposition))
-                diagnostics.append(self._diagnostic(sink.sink_id, disposition.value))
-                action_failures.append(
-                    _absence_action_disposition(sink.absence_disposition)
+                collection.events.append(self._event(request, admission, sink, index, disposition=disposition))
+                collection.diagnostics.append(self._diagnostic(sink.sink_id, disposition.value))
+                collection.action_failures.append(
+                    absence_action_disposition(sink.absence_disposition)
                     if disposition is RuntimeFactBindingDisposition.ABSENT
                     else RuntimeFactActionDisposition.FAILED
                 )
                 continue
             version = candidates[0]
             declaration = self._declarations[version.fact_id]
-            disposition = self._validate_binding(admission, sink, declaration, version)
+            disposition = validate_binding(admission, sink, declaration, version, self._supported_source_kinds)
             if disposition is not RuntimeFactBindingDisposition.BOUND:
                 safe_version = (
                     None
@@ -156,7 +166,7 @@ class RuntimeFactBindingPlane:
                     }
                     else version
                 )
-                events.append(
+                collection.events.append(
                     self._event(
                         request,
                         admission,
@@ -166,64 +176,76 @@ class RuntimeFactBindingPlane:
                         version=safe_version,
                     )
                 )
-                diagnostics.append(self._diagnostic(sink.sink_id, disposition.value))
-                action_failures.append(RuntimeFactActionDisposition.FAILED)
+                collection.diagnostics.append(self._diagnostic(sink.sink_id, disposition.value))
+                collection.action_failures.append(RuntimeFactActionDisposition.FAILED)
                 continue
-            dispatch_bindings.append(
+            collection.dispatch_bindings.append(
                 _RuntimeFactDispatchBinding(
                     sink=sink,
                     value=version.value,
                     secret_ref=version.secret_ref,
                 )
             )
-            bound_selections.append((index, sink, version))
+            collection.bound_selections.append((index, sink, version))
+        return collection
 
-        if diagnostics:
-            return self._record_result(action_key, events, diagnostics, action_failures)
+    def _finish_binding(
+        self,
+        action_key: tuple[str, str, str, str | None, str, str],
+        request: RuntimeFactBindingRequestModel,
+        admission: RuntimeFactBindingAdmission,
+        collection: _RuntimeFactBindingCollection,
+    ) -> RuntimeFactBindingResult:
+        if not collection.diagnostics:
+            dispatch_disposition = self._dispatch(tuple(collection.dispatch_bindings))
+            self._append_dispatch_events(request, admission, collection, dispatch_disposition)
+            if dispatch_disposition is not RuntimeFactBindingDisposition.BOUND:
+                collection.action_failures.append(RuntimeFactActionDisposition.FAILED)
+        return self._record_result(
+            action_key,
+            collection.events,
+            collection.diagnostics,
+            collection.action_failures,
+        )
 
-        dispatch_disposition = self._dispatch(tuple(dispatch_bindings))
-        if dispatch_disposition is not RuntimeFactBindingDisposition.BOUND:
-            for index, sink, version in bound_selections:
-                events.append(
-                    self._event(
-                        request,
-                        admission,
-                        sink,
-                        index,
-                        disposition=dispatch_disposition,
-                        version=version,
-                    )
-                )
-                diagnostics.append(self._diagnostic(sink.sink_id, dispatch_disposition.value))
-            action_failures.append(RuntimeFactActionDisposition.FAILED)
-            return self._record_result(action_key, events, diagnostics, action_failures)
-
-        for index, sink, version in bound_selections:
-            events.append(
+    def _append_dispatch_events(
+        self,
+        request: RuntimeFactBindingRequestModel,
+        admission: RuntimeFactBindingAdmission,
+        collection: _RuntimeFactBindingCollection,
+        disposition: RuntimeFactBindingDisposition,
+    ) -> None:
+        for index, sink, version in collection.bound_selections:
+            collection.events.append(
                 self._event(
                     request,
                     admission,
                     sink,
                     index,
-                    disposition=RuntimeFactBindingDisposition.BOUND,
+                    disposition=disposition,
                     version=version,
                 )
             )
-        return self._record_result(action_key, events, diagnostics, action_failures)
+            if disposition is not RuntimeFactBindingDisposition.BOUND:
+                collection.diagnostics.append(self._diagnostic(sink.sink_id, disposition.value))
 
     def _dispatch(self, bindings: tuple[_RuntimeFactDispatchBinding, ...]) -> RuntimeFactBindingDisposition:
         if self._action_dispatcher is None:
-            return RuntimeFactBindingDisposition.DISPATCH_FAILED
-        command = RuntimeFactDispatchCommand(bindings)
-        try:
-            self._action_dispatcher(command)
-        except _RuntimeFactDispatchFailure as exc:
-            return exc.disposition
-        except Exception:
-            return RuntimeFactBindingDisposition.DISPATCH_FAILED
-        if not command.completed:
-            return RuntimeFactBindingDisposition.DISPATCH_FAILED
-        return RuntimeFactBindingDisposition.BOUND
+            disposition = RuntimeFactBindingDisposition.DISPATCH_FAILED
+        else:
+            command = RuntimeFactDispatchCommand(bindings)
+            try:
+                self._action_dispatcher(command)
+                disposition = (
+                    RuntimeFactBindingDisposition.BOUND
+                    if command.completed
+                    else RuntimeFactBindingDisposition.DISPATCH_FAILED
+                )
+            except _RuntimeFactDispatchFailure as exc:
+                disposition = exc.disposition
+            except Exception:
+                disposition = RuntimeFactBindingDisposition.DISPATCH_FAILED
+        return disposition
 
     def _record_result(
         self,
@@ -236,7 +258,7 @@ class RuntimeFactBindingPlane:
         self._bound_action_instances.add(action_key)
         return RuntimeFactBindingResult(
             accepted=not diagnostics,
-            action_disposition=_aggregate_action_disposition(action_failures),
+            action_disposition=aggregate_action_disposition(action_failures),
             events=tuple(events),
             diagnostics=tuple(diagnostics),
         )
@@ -249,44 +271,23 @@ class RuntimeFactBindingPlane:
         candidate_fact_ids: list[str],
     ) -> list[RuntimeFactVersionModel]:
         visible: list[RuntimeFactVersionModel] = []
-        requested_at = _parse_datetime(admission.requested_at)
+        requested_at = parse_datetime(admission.requested_at)
         for fact_id in candidate_fact_ids:
             history = self._versions.get(fact_id)
             if not history:
                 continue
-            eligible = [version for version in history if _parse_datetime(version.observed_at) <= requested_at]
+            eligible = [version for version in history if parse_datetime(version.observed_at) <= requested_at]
             if not eligible:
                 continue
             version = max(
                 eligible,
-                key=lambda item: (_parse_datetime(item.observed_at), item.sequence),
+                key=lambda item: (parse_datetime(item.observed_at), item.sequence),
             )
             declaration = self._declarations[fact_id]
-            if not self._candidate_visible(request, sink, declaration, version):
+            if not candidate_visible(request, sink, declaration, version):
                 continue
             visible.append(version)
         return visible
-
-    @staticmethod
-    def _candidate_visible(
-        request: RuntimeFactBindingRequestModel,
-        sink: RuntimeFactSinkModel,
-        declaration: RuntimeFactDeclarationModel,
-        version: RuntimeFactVersionModel,
-    ) -> bool:
-        if version.scope.run_id != request.run_id:
-            return False
-        if version.scope.participant_address not in {None, request.participant_address}:
-            return False
-        if version.scope.episode_id not in {None, request.episode_id}:
-            return False
-        if version.scope.workflow_address not in {None, request.workflow_address}:
-            return False
-        if sink.audience is RuntimeFactAudience.WORKFLOW:
-            return bool(
-                request.workflow_address and request.workflow_address in declaration.visibility.workflow_addresses
-            )
-        return request.participant_address in declaration.visibility.participant_addresses
 
     def binding_history(self) -> tuple[RuntimeFactBindingEventModel, ...]:
         return tuple(self._binding_events)
@@ -327,21 +328,15 @@ class RuntimeFactBindingPlane:
                 continue
             version = history[-1]
             declaration = self._declarations[fact_id]
-            if version.scope.run_id != run_id:
-                continue
-            if participant_address is not None:
-                if participant_address not in declaration.visibility.participant_addresses:
-                    continue
-                if version.scope.participant_address not in {None, participant_address}:
-                    continue
-                if version.scope.episode_id not in {None, episode_id}:
-                    continue
-            elif workflow_address is not None:
-                if workflow_address not in declaration.visibility.workflow_addresses:
-                    continue
-                if version.scope.workflow_address not in {None, workflow_address}:
-                    continue
-            projections.append(self._projection(version))
+            if projection_visible(
+                run_id=run_id,
+                participant_address=participant_address,
+                episode_id=episode_id,
+                workflow_address=workflow_address,
+                declaration=declaration,
+                version=version,
+            ):
+                projections.append(self._projection(version))
         return tuple(projections)
 
     @staticmethod
@@ -362,43 +357,6 @@ class RuntimeFactBindingPlane:
             evidence_refs=list(version.evidence_refs),
             provenance_refs=list(version.provenance_refs),
         )
-
-    def _validate_binding(
-        self,
-        admission: RuntimeFactBindingAdmission,
-        sink: RuntimeFactSinkModel,
-        declaration: RuntimeFactDeclarationModel,
-        version: RuntimeFactVersionModel,
-    ) -> RuntimeFactBindingDisposition:
-        if version.source_kind not in self._supported_source_kinds:
-            return RuntimeFactBindingDisposition.UNSUPPORTED
-        if version.value_type != sink.value_type:
-            return RuntimeFactBindingDisposition.WRONG_TYPE
-        if version.source_kind not in sink.allowed_source_kinds:
-            return RuntimeFactBindingDisposition.UNSUPPORTED
-        if version.scope.kind not in sink.allowed_scope_kinds:
-            return RuntimeFactBindingDisposition.WRONG_SCOPE
-        if version.sensitivity not in sink.allowed_sensitivities:
-            return RuntimeFactBindingDisposition.UNAUTHORIZED
-        if sink.audience is not RuntimeFactAudience.PROTECTED_SINK and (
-            version.sensitivity is RuntimeFactSensitivity.SECRET
-        ):
-            return RuntimeFactBindingDisposition.UNAUTHORIZED
-        required_authority = set(declaration.authority_refs) | set(sink.authority_refs)
-        if not required_authority.issubset(admission.authority_refs):
-            return RuntimeFactBindingDisposition.UNAUTHORIZED
-        if sink.max_age_seconds is not None:
-            requested_at = _parse_datetime(admission.requested_at)
-            observed_at = _parse_datetime(version.observed_at)
-            if observed_at > requested_at:
-                return RuntimeFactBindingDisposition.STALE
-            if (requested_at - observed_at).total_seconds() > sink.max_age_seconds:
-                return RuntimeFactBindingDisposition.STALE
-        if version.expires_at is not None and _parse_datetime(admission.requested_at) > _parse_datetime(
-            version.expires_at
-        ):
-            return RuntimeFactBindingDisposition.STALE
-        return RuntimeFactBindingDisposition.BOUND
 
     @staticmethod
     def _event(
@@ -454,32 +412,6 @@ def _action_key(
         request.action_instance_id,
         request.action_contract_address,
     )
-
-
-def _parse_datetime(value: str) -> datetime:
-    return datetime.fromisoformat(value.replace("Z", "+00:00").replace("z", "+00:00"))
-
-
-def _absence_action_disposition(
-    disposition: RuntimeFactAbsenceDisposition,
-) -> RuntimeFactActionDisposition:
-    return {
-        RuntimeFactAbsenceDisposition.BLOCK: RuntimeFactActionDisposition.BLOCKED,
-        RuntimeFactAbsenceDisposition.FAIL: RuntimeFactActionDisposition.FAILED,
-        RuntimeFactAbsenceDisposition.INAPPLICABLE: RuntimeFactActionDisposition.INAPPLICABLE,
-    }[disposition]
-
-
-def _aggregate_action_disposition(
-    failures: list[RuntimeFactActionDisposition],
-) -> RuntimeFactActionDisposition:
-    if not failures:
-        return RuntimeFactActionDisposition.BOUND
-    if RuntimeFactActionDisposition.FAILED in failures:
-        return RuntimeFactActionDisposition.FAILED
-    if RuntimeFactActionDisposition.BLOCKED in failures:
-        return RuntimeFactActionDisposition.BLOCKED
-    return RuntimeFactActionDisposition.INAPPLICABLE
 
 
 __all__ = (

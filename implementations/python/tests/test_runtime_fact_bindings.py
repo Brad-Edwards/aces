@@ -172,8 +172,9 @@ def test_fact_history_is_append_only_and_monotonic() -> None:
 
     with pytest.raises(ValueError, match="version_id"):
         plane.append(first)
+    invalid_sequence = _host_version(version_id="fact-version.host.3", sequence=3)
     with pytest.raises(ValueError, match="sequence"):
-        plane.append(_host_version(version_id="fact-version.host.3", sequence=3))
+        plane.append(invalid_sequence)
 
     second = _host_version(version_id="fact-version.host.2", sequence=2)
     plane.append(second)
@@ -528,21 +529,15 @@ def test_binding_history_is_append_only_and_action_instance_cannot_be_rebound() 
 
 
 def test_fact_contracts_reject_identity_rewrites_and_inconsistent_secret_posture() -> None:
+    invalid_sink = _host_sink().model_dump(mode="json")
+    invalid_sink["target_field"] = "scenario.identity"
     with pytest.raises(ValidationError, match="run-local action input"):
-        _host_sink().model_copy(update={"target_field": "scenario.identity"}, deep=True).__class__.model_validate(
-            {
-                **_host_sink().model_dump(mode="json"),
-                "target_field": "scenario.identity",
-            }
-        )
+        RuntimeFactSinkModel.model_validate(invalid_sink)
 
+    invalid_declaration = _secret_declaration().model_dump(mode="json")
+    invalid_declaration["source_kind"] = "observation"
     with pytest.raises(ValidationError, match="secret_reference"):
-        RuntimeFactDeclarationModel.model_validate(
-            {
-                **_secret_declaration().model_dump(mode="json"),
-                "source_kind": "observation",
-            }
-        )
+        RuntimeFactDeclarationModel.model_validate(invalid_declaration)
 
 
 def test_runtime_fact_contract_schema_and_fixtures_are_closed_and_conformant() -> None:
@@ -675,24 +670,23 @@ def test_runtime_fact_contract_is_registered_with_the_conformance_boundary() -> 
 
 
 def test_binding_request_cannot_supply_sinks_candidates_or_authority() -> None:
-    with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
-        RuntimeFactBindingRequestModel.model_validate(
+    invalid_request = {
+        "run_id": "run-791",
+        "participant_address": "participant.behavior.red-agent",
+        "episode_id": "episode-1",
+        "workflow_address": "workflow.main",
+        "action_instance_id": "scan-0001",
+        "action_contract_address": "participant.action-contract.scan",
+        "authority_refs": ["policy.runtime-secrets"],
+        "selections": [
             {
-                "run_id": "run-791",
-                "participant_address": "participant.behavior.red-agent",
-                "episode_id": "episode-1",
-                "workflow_address": "workflow.main",
-                "action_instance_id": "scan-0001",
-                "action_contract_address": "participant.action-contract.scan",
-                "authority_refs": ["policy.runtime-secrets"],
-                "selections": [
-                    {
-                        "sink": _secret_sink().model_dump(mode="json"),
-                        "candidate_fact_ids": ["fact.credential-handle"],
-                    }
-                ],
+                "sink": _secret_sink().model_dump(mode="json"),
+                "candidate_fact_ids": ["fact.credential-handle"],
             }
-        )
+        ],
+    }
+    with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
+        RuntimeFactBindingRequestModel.model_validate(invalid_request)
 
 
 def test_secret_resolution_stays_inside_trusted_dispatch_and_result_is_value_free() -> None:

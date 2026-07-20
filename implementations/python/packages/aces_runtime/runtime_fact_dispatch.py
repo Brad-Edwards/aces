@@ -98,19 +98,7 @@ class RuntimeFactDispatchCommand:
         inputs: dict[str, object] = {}
         try:
             for binding in self._bindings:
-                value = binding.value
-                if binding.secret_ref is not None:
-                    if secret_resolver is None:
-                        raise _RuntimeFactDispatchFailure(RuntimeFactBindingDisposition.SECRET_UNAVAILABLE)
-                    try:
-                        value = secret_resolver(binding.secret_ref)
-                    except Exception as exc:
-                        raise _RuntimeFactDispatchFailure(RuntimeFactBindingDisposition.SECRET_UNAVAILABLE) from exc
-                if value is None:
-                    raise _RuntimeFactDispatchFailure(RuntimeFactBindingDisposition.SECRET_UNAVAILABLE)
-                if not _value_matches_type(value, binding.sink.value_type.value):
-                    raise _RuntimeFactDispatchFailure(RuntimeFactBindingDisposition.WRONG_TYPE)
-                inputs[binding.sink.target_field] = value
+                inputs[binding.sink.target_field] = _materialize_binding(binding, secret_resolver)
             send(MappingProxyType(inputs))
             self._completed = True
         except _RuntimeFactDispatchFailure:
@@ -130,14 +118,35 @@ def _parse_datetime(value: str) -> datetime:
 
 def _value_matches_type(value: object, value_type: str) -> bool:
     if value_type in {"string", "reference"}:
-        return isinstance(value, str)
-    if value_type == "boolean":
-        return isinstance(value, bool)
-    if value_type == "integer":
-        return isinstance(value, int) and not isinstance(value, bool)
-    if value_type == "number":
-        return isinstance(value, (int, float)) and not isinstance(value, bool)
-    return False
+        matches = isinstance(value, str)
+    elif value_type == "boolean":
+        matches = isinstance(value, bool)
+    elif value_type == "integer":
+        matches = isinstance(value, int) and not isinstance(value, bool)
+    elif value_type == "number":
+        matches = isinstance(value, (int, float)) and not isinstance(value, bool)
+    else:
+        matches = False
+    return matches
+
+
+def _materialize_binding(
+    binding: _RuntimeFactDispatchBinding,
+    secret_resolver: Callable[[str], object] | None,
+) -> object:
+    value = binding.value
+    if binding.secret_ref is not None:
+        if secret_resolver is None:
+            raise _RuntimeFactDispatchFailure(RuntimeFactBindingDisposition.SECRET_UNAVAILABLE)
+        try:
+            value = secret_resolver(binding.secret_ref)
+        except Exception as exc:
+            raise _RuntimeFactDispatchFailure(RuntimeFactBindingDisposition.SECRET_UNAVAILABLE) from exc
+    if value is None:
+        raise _RuntimeFactDispatchFailure(RuntimeFactBindingDisposition.SECRET_UNAVAILABLE)
+    if not _value_matches_type(value, binding.sink.value_type.value):
+        raise _RuntimeFactDispatchFailure(RuntimeFactBindingDisposition.WRONG_TYPE)
+    return value
 
 
 __all__ = ("RuntimeFactBindingAdmission", "RuntimeFactDispatchCommand")
