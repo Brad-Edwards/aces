@@ -171,7 +171,7 @@ def _participant_behavior_episode_closed_ids(
     return closed_episode_ids
 
 
-def _participant_behavior_observation_effective_relation(
+def participant_observation_effective_relation(
     *,
     observation_index: int,
     boundary_address: str,
@@ -238,7 +238,7 @@ def _participant_behavior_observation_visibility_violations(
             continue
         if not any(detail_refs.values()):
             continue
-        relation, effective_order = _participant_behavior_observation_effective_relation(
+        relation, effective_order = participant_observation_effective_relation(
             observation_index=index,
             boundary_address=boundary_address,
             boundary=boundary,
@@ -271,7 +271,7 @@ def _participant_behavior_action_result_ref_authorization_violations_for_events(
         if boundary is None:
             continue
         locator = f"{_PARTICIPANT_BEHAVIOR_HISTORY_KEY}[{index}]"
-        relation, effective_order = _participant_behavior_observation_effective_relation(
+        relation, effective_order = participant_observation_effective_relation(
             observation_index=index,
             boundary_address=boundary_address,
             boundary=boundary,

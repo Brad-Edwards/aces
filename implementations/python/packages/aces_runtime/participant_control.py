@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
+from aces_contracts.contracts import ParticipantDecisionSurfaceModel, ParticipantDecisionSurfaceSelectionModel
 from aces_contracts.diagnostics import Diagnostic
-from aces_contracts.participant_binding import ParticipantActionAdmissionRequest
+from aces_contracts.participant_binding import (
+    ParticipantActionAdmissionRequest,
+    ParticipantDecisionSurfaceBindingResolvers,
+    bind_participant_decision_surface_selection,
+)
 from aces_contracts.participant_episode import (
     ParticipantEpisodeInitializeRequest,
     ParticipantEpisodeResetRequest,
@@ -352,6 +357,50 @@ class ParticipantControlMixin:
             method=self._target.participant_runtime.admit_action,
             request=request,
             address=f"runtime.control-plane.participant.{request.participant_address}.admit-action",
+            idempotency_key=idempotency_key,
+            request_fingerprint=request_fingerprint,
+        )
+
+    def admit_participant_decision_surface_selection(
+        self,
+        participant_behavior: ParticipantBehaviorRuntime,
+        *,
+        surface: ParticipantDecisionSurfaceModel,
+        selection: ParticipantDecisionSurfaceSelectionModel,
+        admission_request: ParticipantActionAdmissionRequest,
+        resolvers: ParticipantDecisionSurfaceBindingResolvers,
+        idempotency_key: str = "",
+        request_fingerprint: str = "",
+    ) -> OperationReceipt:
+        """Validate a SEM-220 selection before reusing normal action admission."""
+
+        if self._target.participant_runtime is None:
+            return self._reject_submission(
+                domain=RuntimeDomain.PARTICIPANT,
+                message=_NO_PARTICIPANT_RUNTIME_MESSAGE,
+                idempotency_key=idempotency_key,
+                request_fingerprint=request_fingerprint,
+            )
+        try:
+            request = bind_participant_decision_surface_selection(
+                surface=surface,
+                selection=selection,
+                admission_request=admission_request,
+                argument_shape_resolver=resolvers.argument_shape,
+                apparatus_resolver=resolvers.apparatus,
+            )
+        except (TypeError, ValueError) as exc:
+            return self._reject_diagnostics(
+                domain=RuntimeDomain.PARTICIPANT,
+                diagnostics=[
+                    _participant_binding_diagnostic(_participant_binding_address(participant_behavior), str(exc))
+                ],
+                idempotency_key=idempotency_key,
+                request_fingerprint=request_fingerprint,
+            )
+        return self.admit_participant_action(
+            participant_behavior,
+            request,
             idempotency_key=idempotency_key,
             request_fingerprint=request_fingerprint,
         )
