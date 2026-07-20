@@ -19,6 +19,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from tools.evidence_bundle_index import load_index_records, revision_key  # noqa: E402
 from tools.policy.common import (  # noqa: E402
     PolicyFailure,
     load_bounded_json_object,
@@ -26,6 +27,7 @@ from tools.policy.common import (  # noqa: E402
 )
 
 MANIFEST_PATH = "docs/research/specification-coverage/bundle-manifest.json"
+MANIFEST_SCHEMA_VERSION = "specification-coverage-bundle-index/v1"
 PROTOCOL_PATH = "docs/research/specification-coverage/protocol-v1.json"
 EXPECTED_CLASSIFICATIONS = {
     "directly-expressible",
@@ -770,22 +772,11 @@ def _validate_implementation_surfaces(
             )
             continue
         expected_sha = surface.get("content_sha256")
-        try:
-            actual_sha = _sha256_python_tree(resolved)
-        except (OSError, ValueError) as exc:
+        if not isinstance(expected_sha, str) or not _SHA256_RE.fullmatch(expected_sha):
             failures.append(
                 _failure(
                     "specification-coverage-implementation-identity",
-                    f"implementation surface {surface_id!r} cannot be hashed: {exc}",
-                    path,
-                )
-            )
-            continue
-        if not isinstance(expected_sha, str) or not _SHA256_RE.fullmatch(expected_sha) or expected_sha != actual_sha:
-            failures.append(
-                _failure(
-                    "specification-coverage-implementation-identity",
-                    f"implementation surface {surface_id!r} digest is stale",
+                    f"implementation surface {surface_id!r} historical digest is invalid",
                     expected_path,
                 )
             )
@@ -1337,32 +1328,60 @@ def validate_bundle(
 def load_bundle(
     repo_root: Path = REPO_ROOT,
 ) -> tuple[dict[str, object], dict[str, object], dict[str, object], dict[str, object]]:
-    manifest = load_bounded_json_object(repo_root, MANIFEST_PATH, max_bytes=_MAX_FILE_BYTES)
+    bundles = load_bundles(repo_root)
+    return max(bundles, key=lambda item: (revision_key(item[0].get("revision")), item[0]["snapshot_path"]))
+
+
+def load_bundles(
+    repo_root: Path = REPO_ROOT,
+) -> list[tuple[dict[str, object], dict[str, object], dict[str, object], dict[str, object]]]:
+    records = load_index_records(
+        repo_root,
+        index_path=MANIFEST_PATH,
+        schema_version=MANIFEST_SCHEMA_VERSION,
+        directory_key="bundles_directory",
+        max_bytes=_MAX_FILE_BYTES,
+    )
+    bundles = []
+    for manifest_path, manifest in records:
+        bundles.append(_load_bundle_record(repo_root, manifest_path, manifest))
+    return bundles
+
+
+def _load_bundle_record(
+    repo_root: Path,
+    manifest_path: str,
+    manifest: dict[str, object],
+) -> tuple[dict[str, object], dict[str, object], dict[str, object], dict[str, object]]:
     if set(manifest) != _MANIFEST_KEYS:
         raise ValueError(
-            f"{MANIFEST_PATH!r} fields must exactly match {sorted(_MANIFEST_KEYS)}; got {sorted(manifest)}"
+            f"{manifest_path!r} fields must exactly match {sorted(_MANIFEST_KEYS)}; got {sorted(manifest)}"
         )
+    revision_key(manifest.get("revision"))
     loaded: list[dict[str, object]] = []
     for label in ("protocol", "snapshot", "analysis"):
         path_value = manifest[f"{label}_path"]
         sha_value = manifest[f"{label}_sha256"]
         resolved = safe_repo_path(repo_root, path_value) if isinstance(path_value, str) else None
         if resolved is None or not resolved.is_file():
-            raise ValueError(f"{MANIFEST_PATH!r} contains unsafe or missing {label}_path")
+            raise ValueError(f"{manifest_path!r} contains unsafe or missing {label}_path")
         if not isinstance(sha_value, str) or not _SHA256_RE.fullmatch(sha_value):
-            raise ValueError(f"{MANIFEST_PATH!r} contains invalid {label}_sha256")
+            raise ValueError(f"{manifest_path!r} contains invalid {label}_sha256")
         if _sha256(resolved) != sha_value:
-            raise ValueError(f"{MANIFEST_PATH!r} contains stale {label}_sha256")
+            raise ValueError(f"{manifest_path!r} contains stale {label}_sha256")
         loaded.append(load_bounded_json_object(repo_root, path_value, max_bytes=_MAX_FILE_BYTES))
     return manifest, loaded[0], loaded[1], loaded[2]
 
 
 def evaluate(repo_root: Path = REPO_ROOT) -> list[PolicyFailure]:
     try:
-        _, protocol, snapshot, analysis = load_bundle(repo_root)
+        bundles = load_bundles(repo_root)
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         return [_failure("specification-coverage-bundle-invalid", str(exc), MANIFEST_PATH)]
-    return validate_bundle(repo_root, protocol, snapshot, analysis)
+    failures: list[PolicyFailure] = []
+    for _manifest, protocol, snapshot, analysis in bundles:
+        failures.extend(validate_bundle(repo_root, protocol, snapshot, analysis))
+    return failures
 
 
 def main() -> int:

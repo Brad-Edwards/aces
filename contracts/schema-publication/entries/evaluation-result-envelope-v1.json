@@ -1,0 +1,6 @@
+{
+  "contract_id": "evaluation-result-envelope-v1",
+  "schema_path": "contracts/schemas/control-plane/evaluation-result-envelope-v1.json",
+  "stability": "draft",
+  "content_hash": "a3a99913c8e2092fb39483e278d52be2f2a41c553a500b776d08a2500638c95d"
+}

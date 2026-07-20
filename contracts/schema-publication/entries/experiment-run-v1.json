@@ -1,0 +1,10 @@
+{
+  "contract_id": "experiment-run-v1",
+  "schema_path": "contracts/schemas/experiment-core/experiment-run-v1.json",
+  "stability": "draft",
+  "content_hash": "1503644443be7e61d5710a6aed9437a66c53a7871eb0ff1541fb2449b684742b",
+  "last_change": {
+    "summary": "Extended shared experiment artifact roles and typed references for associated-artifact parents (ADR-077, issue #738).",
+    "content_hash": "1503644443be7e61d5710a6aed9437a66c53a7871eb0ff1541fb2449b684742b"
+  }
+}

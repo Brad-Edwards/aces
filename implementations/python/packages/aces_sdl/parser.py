@@ -6,6 +6,7 @@ Provides ``parse_sdl()`` as the primary entry point. Handles:
 - Shorthand expansion (``source: "pkg"`` → ``{name: "pkg", version: "*"}``)
 """
 
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
@@ -37,6 +38,7 @@ from ._source_profile import (
     SDLParserLimits,
     SDLSourceParseOptions,
 )
+from ._source_validation import _raise_source_limit
 from ._yaml_loader import load_sdl_yaml
 from .scenario import ExpandedScenario, Scenario
 from .validator import SemanticValidator
@@ -48,6 +50,45 @@ _HASHMAP_SECTIONS = HASHMAP_SECTIONS
 
 # Fields within struct models that are also HashMaps of user-defined keys.
 _NESTED_HASHMAP_FIELDS = NESTED_HASHMAP_FIELDS
+
+
+@dataclass(frozen=True)
+class SDLSourceDocument:
+    """Exact bounded bytes and decoded text for one SDL source document."""
+
+    raw_bytes: bytes
+    text: str
+
+
+def read_sdl_source(
+    path: Path,
+    *,
+    limits: SDLParserLimits = DEFAULT_PARSER_LIMITS,
+) -> SDLSourceDocument:
+    """Read one SDL source with the byte limit enforced before decoding."""
+
+    if not path.exists():
+        raise FileNotFoundError(f"SDL file not found: {path}")
+    with path.open("rb") as source:
+        raw_bytes = source.read(limits.max_input_bytes + 1)
+    if len(raw_bytes) > limits.max_input_bytes:
+        _raise_source_limit(
+            f"SDL source exceeds the byte limit of {limits.max_input_bytes} bytes.",
+            path=path,
+        )
+    try:
+        text = raw_bytes.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        position = SDLSourcePosition(1, 1)
+        diagnostic = SDLParseDiagnostic(
+            code="sdl.utf8",
+            message="SDL source must be valid UTF-8.",
+            pointer="",
+            primary_range=SDLSourceRange(start=position, end=position),
+            source=str(path),
+        )
+        raise SDLParseError(diagnostic.message, path=path, diagnostics=(diagnostic,)) from exc
+    return SDLSourceDocument(raw_bytes=raw_bytes, text=text)
 
 
 def _child_is_hashmap_field(key: str, value: Any) -> bool:
@@ -363,22 +404,9 @@ def parse_sdl_file(path: Path, **kwargs: Any) -> Scenario:
 
     Convenience wrapper around ``parse_sdl()`` that reads from a file.
     """
-    if not path.exists():
-        raise FileNotFoundError(f"SDL file not found: {path}")
-
-    try:
-        content = path.read_text(encoding="utf-8")
-    except UnicodeDecodeError as exc:
-        position = SDLSourcePosition(1, 1)
-        diagnostic = SDLParseDiagnostic(
-            code="sdl.utf8",
-            message="SDL source must be valid UTF-8.",
-            pointer="",
-            primary_range=SDLSourceRange(start=position, end=position),
-            source=str(path),
-        )
-        raise SDLParseError(diagnostic.message, path=path, diagnostics=(diagnostic,)) from exc
-    return parse_sdl(content, path=path, **kwargs)
+    limits = kwargs.get("limits", DEFAULT_PARSER_LIMITS)
+    document = read_sdl_source(path, limits=limits)
+    return parse_sdl(document.text, path=path, **kwargs)
 
 
 def _load_normalized_data(

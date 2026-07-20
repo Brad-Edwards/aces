@@ -1,0 +1,10 @@
+{
+  "contract_id": "realization-envelope-v1",
+  "schema_path": "contracts/schemas/realization-envelope/realization-envelope-v1.json",
+  "stability": "draft",
+  "content_hash": "0eb46ba5c89a8eee9e2ba74fb9079f690bca392eacf774da0900379b4fd79580",
+  "last_change": {
+    "summary": "Added domain-profile capability disclosure to material backend realization configurations (issue #763).",
+    "content_hash": "0eb46ba5c89a8eee9e2ba74fb9079f690bca392eacf774da0900379b4fd79580"
+  }
+}

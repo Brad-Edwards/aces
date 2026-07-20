@@ -1,0 +1,5 @@
+name: composed-family
+imports:
+  - path: module.yaml
+    namespace: shared
+    version: 1.0.0

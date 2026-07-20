@@ -1,0 +1,10 @@
+{
+  "contract_id": "backend-manifest-v2",
+  "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
+  "stability": "draft",
+  "content_hash": "5a1f88f9f7c090c36530a993a9750389ee34b6fd7860a1e7b33972fb2e82dd16",
+  "last_change": {
+    "summary": "Added explicit provisioner support claims for generated artifacts and persistent volumes (issue #780).",
+    "content_hash": "5a1f88f9f7c090c36530a993a9750389ee34b6fd7860a1e7b33972fb2e82dd16"
+  }
+}

@@ -1,0 +1,11 @@
+name: invalid-family
+nodes:
+  primary: {type: vm, resources: {ram: 1 GiB, cpu: 1}}
+content:
+  payload: {type: file, target: primary, path: /opt/payload}
+variation_points:
+  payload-host:
+    kind: alternative
+    target: {kind: reference, owner: payload, slot: content.target}
+    alternatives:
+      missing-host: {reference: undeclared-host}

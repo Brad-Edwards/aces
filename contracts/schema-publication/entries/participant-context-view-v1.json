@@ -1,0 +1,10 @@
+{
+  "contract_id": "participant-context-view-v1",
+  "schema_path": "contracts/schemas/control-plane/participant-context-view-v1.json",
+  "stability": "draft",
+  "content_hash": "2946f3d2cb6e74a5848f57b3729545b4939cacd84aecdc2a5b86add7e431c0de",
+  "last_change": {
+    "summary": "Added the SEM-216 audience-boundary rules to participant-visible context views: archival evidence_record/derived_measure source layers require a derivation_basis_ref view rule and redaction_policy_ref (published allOf), must be mediated by the transformation, and payload_ref must not alias a raw archival ref (both published as x-aces-invariants).",
+    "content_hash": "2946f3d2cb6e74a5848f57b3729545b4939cacd84aecdc2a5b86add7e431c0de"
+  }
+}

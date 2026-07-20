@@ -1,0 +1,10 @@
+{
+  "bundle_id": "aces-standardized-specification-coverage",
+  "revision": "1.1.0",
+  "protocol_path": "docs/research/specification-coverage/protocol-v1.json",
+  "protocol_sha256": "e97a19e643e94c9e589dca823a63c6ce49d3329fe2a3cb888ab630838ed93125",
+  "snapshot_path": "docs/research/specification-coverage/execution-snapshot-v1.1.json",
+  "snapshot_sha256": "7053646bc8eabe558ecf984e76740e2869eb18ce22c46066d50614fe3b27d137",
+  "analysis_path": "docs/research/specification-coverage/analysis-v1.1.json",
+  "analysis_sha256": "299ff4cd378e9f01cb22c94fd8ac92d41a006025b79cff676cc564e2fb51e5d6"
+}

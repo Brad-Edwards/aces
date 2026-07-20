@@ -8,7 +8,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from ._base import is_variable_ref
+from ._base import VARIABLE_TOKEN_RE, is_variable_ref
 from ._composition_budget import CompositionBudget, CompositionTraversal
 from ._composition_provenance import (
     prefixed_constraint as _prefixed_constraint,
@@ -59,6 +59,11 @@ from .phase_contracts import (
 )
 from .realization_designation import RealizationDesignation, RealizationDesignationRecord, designation_records
 from .scenario import ExpandedScenario, ImportDecl, ModuleDescriptor, ScenarioContent
+from .variation import COLLECTION_TARGET_SPECS, REFERENCE_TARGET_SPECS, TIMING_TARGET_SPECS
+
+_REFERENCE_TARGET_SPECS_BY_VALUE = {slot.value: spec for slot, spec in REFERENCE_TARGET_SPECS.items()}
+_COLLECTION_TARGET_SPECS_BY_VALUE = {slot.value: spec for slot, spec in COLLECTION_TARGET_SPECS.items()}
+_TIMING_TARGET_SPECS_BY_VALUE = {slot.value: spec for slot, spec in TIMING_TARGET_SPECS.items()}
 
 
 def _prefix(namespace: str, name: str) -> str:
@@ -263,6 +268,123 @@ def _rewrite_tool_affordance(
     binding["observation_boundary_refs"] = [
         _maybe_rename(name, symbols["observation_boundaries"]) for name in binding.get("observation_boundary_refs", [])
     ]
+
+
+def _rewrite_variation_reference(
+    reference: str,
+    section: str,
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> str:
+    return _maybe_rename(reference, symbols["named"] if section == "targetable" else symbols[section])
+
+
+def _variation_slot(target: dict[str, Any]) -> str:
+    raw_slot = target.get("slot", "")
+    return str(getattr(raw_slot, "value", raw_slot))
+
+
+def _rewrite_variation_target(
+    kind: object,
+    target: object,
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> str | None:
+    target_section: str | None = None
+    if isinstance(target, dict):
+        if kind == "parameter" and isinstance(target.get("variable"), str):
+            target["variable"] = _maybe_rename(str(target["variable"]), symbols["variables"])
+        slot = _variation_slot(target)
+        owner_spec = (
+            _REFERENCE_TARGET_SPECS_BY_VALUE.get(slot)
+            or _COLLECTION_TARGET_SPECS_BY_VALUE.get(slot)
+            or _TIMING_TARGET_SPECS_BY_VALUE.get(slot)
+        )
+        if owner_spec is not None and isinstance(target.get("owner"), str):
+            target["owner"] = _rewrite_variation_reference(str(target["owner"]), owner_spec[0], symbols)
+        target_section = _variation_target_section(kind, slot)
+    return target_section
+
+
+def _variation_target_section(kind: object, slot: str) -> str | None:
+    spec: tuple[str, str] | None = None
+    if kind in {"governed-reference", "alternative"}:
+        spec = _REFERENCE_TARGET_SPECS_BY_VALUE.get(slot)
+    elif kind in {"subset", "order"}:
+        spec = _COLLECTION_TARGET_SPECS_BY_VALUE.get(slot)
+    return spec[1] if spec is not None else None
+
+
+def _rewrite_variation_domain(
+    payload: dict[str, Any],
+    target_section: str | None,
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
+    domain = payload.get("domain")
+    if payload.get("kind") == "governed-reference" and target_section is not None and isinstance(domain, dict):
+        domain["allowed_refs"] = [
+            _rewrite_variation_reference(reference, target_section, symbols)
+            for reference in domain.get("allowed_refs", [])
+        ]
+
+
+def _rewrite_member_relations(
+    member: dict[str, Any],
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
+    for relation_field in ("requires", "excludes"):
+        for relation in member.get(relation_field, []):
+            if isinstance(relation, dict) and isinstance(relation.get("point"), str):
+                relation["point"] = _maybe_rename(str(relation["point"]), symbols["variation_points"])
+
+
+def _rewrite_variation_members(
+    payload: dict[str, Any],
+    target_section: str | None,
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
+    member_field = "alternatives" if payload.get("kind") == "alternative" else "members"
+    members = payload.get(member_field)
+    if isinstance(members, dict):
+        for member in members.values():
+            if not isinstance(member, dict):
+                continue
+            if target_section is not None and isinstance(member.get("reference"), str):
+                member["reference"] = _rewrite_variation_reference(
+                    str(member["reference"]),
+                    target_section,
+                    symbols,
+                )
+            _rewrite_member_relations(member, symbols)
+
+
+def _rewrite_variation_point(
+    payload: dict[str, Any],
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
+    kind = payload.get("kind")
+    target = payload.get("target")
+    target_section = _rewrite_variation_target(kind, target, symbols)
+    _rewrite_variation_domain(payload, target_section, symbols)
+    _rewrite_variation_members(payload, target_section, symbols)
+
+
+def _rewrite_variable_tokens(value: object, variables: Mapping[str, str]) -> object:
+    """Namespace preserved authoring-variable tokens in imported content."""
+
+    rewritten: object
+    if isinstance(value, str):
+        rewritten = VARIABLE_TOKEN_RE.sub(
+            lambda match: "${" + variables.get(match.group(1), match.group(1)) + "}",
+            value,
+        )
+    elif isinstance(value, dict):
+        rewritten = {key: _rewrite_variable_tokens(item, variables) for key, item in value.items()}
+    elif isinstance(value, list):
+        rewritten = [_rewrite_variable_tokens(item, variables) for item in value]
+    elif isinstance(value, tuple):
+        rewritten = tuple(_rewrite_variable_tokens(item, variables) for item in value)
+    else:
+        rewritten = value
+    return rewritten
 
 
 def _namespace_payload(
@@ -515,6 +637,11 @@ def _namespace_payload(
     for workflow in namespaced.get("workflows", {}).values():
         if isinstance(workflow, dict):
             _rewrite_workflow(workflow, symbols)
+    for variation_point in namespaced.get("variation_points", {}).values():
+        if isinstance(variation_point, dict):
+            _rewrite_variation_point(variation_point, symbols)
+
+    namespaced = _rewrite_variable_tokens(namespaced, symbols["variables"])
 
     for section_name in _HASHMAP_SECTIONS:
         section_payload = namespaced.get(section_name)
@@ -534,7 +661,6 @@ def _namespace_payload(
                     identifier,
                     _private_prefix(namespace, identifier),
                 )
-    namespaced.pop("variables", None)
     namespaced.pop("module", None)
     namespaced.pop("imports", None)
     namespaced.pop("expansion_provenance", None)
@@ -638,7 +764,7 @@ def expand_sdl_modules(
         )
         import_path = resolved_import.root_file
         imported_raw = _load_normalized_data(
-            import_path.read_text(encoding="utf-8"),
+            resolved_import.source_document.text,
             path=import_path,
             source_format=source_format,
             migration_policy=migration_policy,
@@ -656,7 +782,11 @@ def expand_sdl_modules(
         )
         try:
             imported_scenario = ExpandedScenario.model_validate(imported_expanded)
-            bound = _bind_scenario_content(imported_scenario, import_decl.parameters)
+            bound = _bind_scenario_content(
+                imported_scenario,
+                import_decl.parameters,
+                preserve_variation_variables=True,
+            )
         except ValidationError as exc:
             raise SDLParseError("Imported SDL unit is structurally invalid", path=import_path) from exc
         except SDLInstantiationError as exc:

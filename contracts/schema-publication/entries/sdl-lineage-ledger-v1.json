@@ -1,0 +1,10 @@
+{
+  "contract_id": "sdl-lineage-ledger-v1",
+  "schema_path": "contracts/schemas/provenance/sdl-lineage-ledger-v1.json",
+  "stability": "draft",
+  "content_hash": "ac8a7737debd83fe70cfe791a85f72455d6e474c806e3faf9692cdce38123e6d",
+  "last_change": {
+    "summary": "Initial publication of the revision-pinned SDL lineage, derivation, citation identity, compatibility, and third-party notice-disposition contract for issue #726.",
+    "content_hash": "ac8a7737debd83fe70cfe791a85f72455d6e474c806e3faf9692cdce38123e6d"
+  }
+}

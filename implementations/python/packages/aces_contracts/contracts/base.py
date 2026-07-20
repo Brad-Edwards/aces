@@ -7,17 +7,9 @@ from collections.abc import Mapping
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import Field, model_validator
 
-
-class ContractModel(BaseModel):
-    """Base model for closed-world external contracts."""
-
-    model_config = ConfigDict(extra="forbid")
-
-
-NonEmptyString = Annotated[str, Field(min_length=1)]
-
+from aces_contracts._base import ContractModel, NonEmptyString
 
 BehavioralRelationId = Annotated[str, Field(pattern=r"^[a-z][a-z0-9-]*$")]
 
@@ -185,6 +177,7 @@ _CONTROLLED_VOCABULARY_GOVERNED_SCOPES = frozenset(
     {
         "behavior_specifications.behavior_mode",
         "behavior_specifications.ai_offensive_behavior_refs",
+        "behavior_specifications.defensive_behavior_refs",
         "behavior_specifications.offensive_behavior_refs",
         "agents.interactive_access.channel",
         "capabilities.supported_features",

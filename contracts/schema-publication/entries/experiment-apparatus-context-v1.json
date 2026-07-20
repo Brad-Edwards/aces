@@ -1,0 +1,10 @@
+{
+  "contract_id": "experiment-apparatus-context-v1",
+  "schema_path": "contracts/schemas/experiment-core/experiment-apparatus-context-v1.json",
+  "stability": "draft",
+  "content_hash": "a2c8fcfc2fec00a20ee9e46af3160c88b9e7aeb8b2315afbaa3781b3e25c0f93",
+  "last_change": {
+    "summary": "Extended shared experiment artifact roles and typed references for associated-artifact parents (ADR-077, issue #738).",
+    "content_hash": "a2c8fcfc2fec00a20ee9e46af3160c88b9e7aeb8b2315afbaa3781b3e25c0f93"
+  }
+}

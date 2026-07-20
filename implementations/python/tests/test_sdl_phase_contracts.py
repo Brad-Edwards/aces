@@ -57,15 +57,31 @@ def _provenance(
 def test_phase_models_have_disjoint_authoring_and_instantiated_fields() -> None:
     shared = set(ScenarioContent.model_fields)
     assert not issubclass(InstantiatedScenario, Scenario)
-    assert set(Scenario.model_fields) == shared | {"module", "imports", "realization", "variables"}
-    assert set(ExpandedScenario.model_fields) == shared | {"variables", "expansion_provenance"}
+    assert set(Scenario.model_fields) == shared | {
+        "module",
+        "imports",
+        "realization",
+        "variables",
+        "variation_points",
+    }
+    assert set(ExpandedScenario.model_fields) == shared | {
+        "variables",
+        "variation_points",
+        "expansion_provenance",
+    }
     assert set(InstantiatedScenario.model_fields) == shared | {"instantiation_provenance"}
     assert "ExpandedScenario" not in aces_sdl.__all__
 
 
 @pytest.mark.parametrize(
     ("field", "value"),
-    (("variables", {}), ("imports", []), ("module", None), ("realization", None)),
+    (
+        ("variables", {}),
+        ("variation_points", {}),
+        ("imports", []),
+        ("module", None),
+        ("realization", None),
+    ),
 )
 def test_instantiated_model_forbids_authoring_machinery_even_when_empty(field: str, value: object) -> None:
     with pytest.raises(ValidationError, match="Extra inputs are not permitted"):

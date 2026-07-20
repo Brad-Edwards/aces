@@ -70,6 +70,7 @@ tests, rather than a prose rewrite. The catalogs are:
 | [`sections.md`](sections.md) | **1. Section catalog** | Every top-level field: kind, value shape (map-keyed vs. list-valued vs. scalar), requiredness, key shape, and the sections it references. |
 | [`references.md`](references.md) | **2. Reference-resolution catalog** | Reference forms (bare, qualified, nested runtime-family, workflow-step, module-composed), the resolution algorithm, the fail-closed ambiguity rule, and the cross-section reference-edge catalog. |
 | [`variables-and-instantiation.md`](variables-and-instantiation.md) | **3. Variable / instantiation catalog** | Variable types, defaults, `allowed_values`, `${…}` substitution, the instantiation algorithm, and post-instantiation exclusions. |
+| [`variation-points.md`](variation-points.md) | — | Closed scenario-family variation kinds, bounded domains, typed target slots, structural constraints, composition, and phase behavior. |
 | [`runtime-inventory.md`](runtime-inventory.md) | **4. Runtime-family index** | The node-scoped runtime-inventory index — family key, collection name, primary `<noun>_id`, child-ref collections, owning ADR — and the shared invariants stated once, delegating per-field semantics to the family ADRs. |
 | [`authored-domain-topology.md`](authored-domain-topology.md) | — | Authored identity domains, controller/member topology, account domain bindings, compiled ordering, provisioner capability, admission, and readback invariants. |
 | [`observability-and-evidence.md`](observability-and-evidence.md) | **5. Observability and evidence planes** | Scenario-native observability, authored evidence requirements, processor/backend operational observability, captured evidence, derived analysis, and augmentation classification rules. |
@@ -93,6 +94,8 @@ An implementer can answer each structural question from the named file alone:
   editor-visible edge index and distinct candidate-domain classifications.
 - *What is legal to instantiate, and what does instantiation reject?* →
   [`variables-and-instantiation.md`](variables-and-instantiation.md).
+- *How is a bounded scenario family authored without embedding selection
+  policy?* → [`variation-points.md`](variation-points.md).
 - *What is the runtime-inventory surface and which ADR owns each family?* →
   [`runtime-inventory.md`](runtime-inventory.md).
 - *How is domain-backed realization authored without inferring topology from runtime inventory?* →
@@ -110,7 +113,7 @@ An implementer can answer each structural question from the named file alone:
 
 In scope: the SDL authoring model and portable derived phase contracts —
 document structure, references, variables, instantiation/provenance,
-canonical snapshots, the runtime-inventory index, observability/evidence plane
+scenario-family variation declarations, canonical snapshots, the runtime-inventory index, observability/evidence plane
 rules, authored identity-domain topology, and the diagnostic boundary.
 
 Out of scope: delivery-level concerns (container, infrastructure-as-code, and

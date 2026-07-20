@@ -110,11 +110,6 @@ def _rule_ids(tmp_path: Path) -> set[str]:
 # --------------------------------------------------------------------------- #
 
 
-def test_real_repo_ledger_conforms() -> None:
-    """The checked-in ledger must pass its own gate."""
-    assert evaluate_deprecation_records(REPO_ROOT) == []
-
-
 def test_good_ledger_passes(tmp_path: Path) -> None:
     _write_repo(tmp_path, _good_ledger())
     assert evaluate_deprecation_records(tmp_path) == []

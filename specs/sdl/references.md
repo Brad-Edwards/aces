@@ -219,6 +219,22 @@ any role-bearing refs
 |--------|-------|--------|
 | any field | `${name}` placeholder | a declared `variables` entry (name only, at authoring time) |
 
+### Scenario-family variation points
+
+Variation targets and candidates are resolved after composition. The closed
+target slot narrows the owner and candidate kinds described below; `targetable`
+does not permit a point to widen its slot. Relation member ids are local to the
+relation's resolved point.
+
+| Source | Field | Target |
+|--------|-------|--------|
+| `variation_points` | parameter target variable | `variables` |
+| `variation_points` | reference/collection/timing target owner | slot-declared owner section |
+| `variation_points` | governed allowed refs and alternative/subset/order member refs | slot-declared candidate section |
+| `variation_points` | requires/excludes point | `variation_points` |
+| `variation_points` | requires/excludes members | members of the resolved point |
+| `variation_points` | precedence/fixed-position members | members of the owning order point |
+
 ## 6. Machine-checkable reference-edge index
 
 This index gives every cross-section or cross-declaration authoring reference a
@@ -337,6 +353,7 @@ the source of the row's normative meaning.
 | `behavior_specifications.*.mixed_control.transitions.*.evidence_refs[]` | `declared` | semantic validation | fatal dangling, ambiguous, or silent handoff | [behavior model](../formal/participant-behavior-model/README.md) | [behavior validator](../../implementations/python/packages/aces_sdl/validator/_mixed_control.py) |
 | `behavior_specifications.*.mixed_control.transitions.*.completion_evidence_refs[]` | `declared` | semantic validation | fatal dangling, ambiguous, or silent handoff | [behavior model](../formal/participant-behavior-model/README.md) | [behavior validator](../../implementations/python/packages/aces_sdl/validator/_mixed_control.py) |
 | `behavior_specifications.*.ai_offensive_behavior_refs[]` | `vocabulary:ai_offensive_behavior` | semantic validation | fatal unknown vocabulary identifier | [behavior model](../formal/participant-behavior-model/README.md) | [behavior model](../../implementations/python/packages/aces_sdl/participant_behavior.py) |
+| `behavior_specifications.*.defensive_behavior_refs[]` | `vocabulary:defensive_behavior` | semantic validation | fatal unknown vocabulary identifier | [behavior model](../formal/participant-behavior-model/README.md) | [behavior model](../../implementations/python/packages/aces_sdl/participant_behavior.py) |
 | `behavior_specifications.*.offensive_behavior_refs[]` | `vocabulary:offensive_behavior` | semantic validation | fatal unknown vocabulary identifier | [behavior model](../formal/participant-behavior-model/README.md) | [behavior model](../../implementations/python/packages/aces_sdl/participant_behavior.py) |
 | `behavior_specifications.*.realization_profile_ref` | `opaque:realization_profile` | structural validation | fatal invalid reference shape; resolution belongs to realization | [behavior model](../formal/participant-behavior-model/README.md) | [behavior model](../../implementations/python/packages/aces_sdl/participant_behavior.py) |
 | `behavior_specifications.*.backend_feature_support_refs[]` | `registry:behavior_features` | semantic validation | fatal unsupported feature identifier | [behavior model](../formal/participant-behavior-model/README.md) | [behavior semantics](../../implementations/python/packages/aces_sdl/semantics/participant_behavior.py) |
@@ -346,6 +363,22 @@ the source of the row's normative meaning.
 | `evidence_requirements.*.channel_refs[]` | `targetable` | semantic validation | fatal dangling or ambiguous | [evidence authoring](observability-and-evidence.md) | [evidence validator](../../implementations/python/packages/aces_sdl/validator/_evidence_requirements.py) |
 | `evidence_requirements.*.trigger_ref` | `targetable` | semantic validation | fatal dangling or ambiguous | [evidence authoring](observability-and-evidence.md) | [evidence validator](../../implementations/python/packages/aces_sdl/validator/_evidence_requirements.py) |
 | `evidence_requirements.*.boundary_ref` | `targetable` | semantic validation | fatal dangling or ambiguous | [evidence authoring](observability-and-evidence.md) | [evidence validator](../../implementations/python/packages/aces_sdl/validator/_evidence_requirements.py) |
+| `variation_points.*.target.variable` | `variables` | semantic validation | fatal dangling or wrong variable type | [variation points](variation-points.md) | [variation validator](../../implementations/python/packages/aces_sdl/validator/_variation.py) |
+| `variation_points.*.target.owner` | `targetable` | semantic validation | fatal dangling or wrong slot owner type | [variation points](variation-points.md) | [variation validator](../../implementations/python/packages/aces_sdl/validator/_variation.py) |
+| `variation_points.*.domain.allowed_refs[]` | `targetable` | semantic validation | fatal dangling or wrong slot candidate type | [variation points](variation-points.md) | [variation validator](../../implementations/python/packages/aces_sdl/validator/_variation.py) |
+| `variation_points.*.alternatives.*.reference` | `targetable` | semantic validation | fatal dangling or wrong slot candidate type | [variation points](variation-points.md) | [variation validator](../../implementations/python/packages/aces_sdl/validator/_variation.py) |
+| `variation_points.*.members.*.reference` | `targetable` | semantic validation | fatal dangling or wrong slot candidate type | [variation points](variation-points.md) | [variation validator](../../implementations/python/packages/aces_sdl/validator/_variation.py) |
+| `variation_points.*.alternatives.*.requires[].point` | `variation_points` | semantic validation | fatal dangling or ambiguous | [variation points](variation-points.md) | [variation validator](../../implementations/python/packages/aces_sdl/validator/_variation.py) |
+| `variation_points.*.alternatives.*.requires[].members[]` | `derived:variation_members` | semantic validation | fatal outside the resolved variation point | [variation points](variation-points.md) | [variation validator](../../implementations/python/packages/aces_sdl/validator/_variation.py) |
+| `variation_points.*.alternatives.*.excludes[].point` | `variation_points` | semantic validation | fatal dangling or ambiguous | [variation points](variation-points.md) | [variation validator](../../implementations/python/packages/aces_sdl/validator/_variation.py) |
+| `variation_points.*.alternatives.*.excludes[].members[]` | `derived:variation_members` | semantic validation | fatal outside the resolved variation point | [variation points](variation-points.md) | [variation validator](../../implementations/python/packages/aces_sdl/validator/_variation.py) |
+| `variation_points.*.members.*.requires[].point` | `variation_points` | semantic validation | fatal dangling or ambiguous | [variation points](variation-points.md) | [variation validator](../../implementations/python/packages/aces_sdl/validator/_variation.py) |
+| `variation_points.*.members.*.requires[].members[]` | `derived:variation_members` | semantic validation | fatal outside the resolved variation point | [variation points](variation-points.md) | [variation validator](../../implementations/python/packages/aces_sdl/validator/_variation.py) |
+| `variation_points.*.members.*.excludes[].point` | `variation_points` | semantic validation | fatal dangling or ambiguous | [variation points](variation-points.md) | [variation validator](../../implementations/python/packages/aces_sdl/validator/_variation.py) |
+| `variation_points.*.members.*.excludes[].members[]` | `derived:variation_members` | semantic validation | fatal outside the resolved variation point | [variation points](variation-points.md) | [variation validator](../../implementations/python/packages/aces_sdl/validator/_variation.py) |
+| `variation_points.*.precedence[].before` | `derived:variation_members` | structural validation | fatal outside the owning order point | [variation points](variation-points.md) | [variation validator](../../implementations/python/packages/aces_sdl/validator/_variation.py) |
+| `variation_points.*.precedence[].after` | `derived:variation_members` | structural validation | fatal outside the owning order point | [variation points](variation-points.md) | [variation validator](../../implementations/python/packages/aces_sdl/validator/_variation.py) |
+| `variation_points.*.fixed_positions.*.$key` | `derived:variation_members` | structural validation | fatal outside the owning order point | [variation points](variation-points.md) | [variation validator](../../implementations/python/packages/aces_sdl/validator/_variation.py) |
 | `objectives.*.agent` | `agents` | semantic validation | fatal dangling or ambiguous | [objective semantics](../formal/objectives/declarative-objective-semantics.md) | [objective semantics](../../implementations/python/packages/aces_sdl/semantics/objective_semantics.py) |
 | `objectives.*.entity` | `entities` | semantic validation | fatal dangling or ambiguous | [objective semantics](../formal/objectives/declarative-objective-semantics.md) | [objective semantics](../../implementations/python/packages/aces_sdl/semantics/objective_semantics.py) |
 | `objectives.*.actions[]` | `derived:agent_actions` | semantic validation | fatal outside the bound agent action contracts | [objective semantics](../formal/objectives/declarative-objective-semantics.md) | [objective semantics](../../implementations/python/packages/aces_sdl/semantics/objective_semantics.py) |

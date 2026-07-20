@@ -325,6 +325,7 @@ class ParticipantBehaviorSpecification(SDLModel):
     behavior_mode: str | None = None
     mixed_control: MixedControlParticipantOperation | None = None
     ai_offensive_behavior_refs: list[str] = Field(default_factory=list)
+    defensive_behavior_refs: list[str] = Field(default_factory=list)
     offensive_behavior_refs: list[str] = Field(default_factory=list)
     realization_profile_ref: str | None = None
     backend_feature_support_refs: list[str] = Field(default_factory=list)
@@ -358,6 +359,7 @@ class ParticipantBehaviorSpecification(SDLModel):
         "outcome_interpretation_rule_refs",
         "authority_scope_refs",
         "ai_offensive_behavior_refs",
+        "defensive_behavior_refs",
         "offensive_behavior_refs",
         "backend_feature_support_refs",
         "evidence_contract_refs",
@@ -402,6 +404,7 @@ class ParticipantBehaviorSpecification(SDLModel):
                 self.behavior_mode,
                 self.mixed_control,
                 self.ai_offensive_behavior_refs,
+                self.defensive_behavior_refs,
                 self.offensive_behavior_refs,
                 self.realization_profile_ref,
                 self.backend_feature_support_refs,

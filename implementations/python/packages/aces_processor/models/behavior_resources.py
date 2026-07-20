@@ -159,6 +159,7 @@ class ParticipantBehaviorSpecificationRuntime(ResolvedResource):
     controller_states: tuple[MixedControlControllerStateRuntime, ...] = ()
     control_transitions: tuple[MixedControlTransitionRuntime, ...] = ()
     ai_offensive_behavior_refs: tuple[str, ...] = ()
+    defensive_behavior_refs: tuple[str, ...] = ()
     offensive_behavior_refs: tuple[str, ...] = ()
     realization_profile_ref: str = ""
     backend_feature_support_refs: tuple[str, ...] = ()

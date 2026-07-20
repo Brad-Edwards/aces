@@ -179,6 +179,12 @@ _PARTICIPANT_BEHAVIOR_ISSUE_RENDERERS = {
             f"participant-ai-offensive-behavior-activities: {i.message}"
         )
     ),
+    "participant.behavior-spec-defensive-behavior-ungoverned": (
+        lambda i: (
+            f"Behavior specification '{i.spec_name}' defensive_behavior_ref '{i.ref}' is not in "
+            f"participant-defensive-behavior-activities: {i.message}"
+        )
+    ),
     "participant.behavior-spec-evidence-contract-unbound": (
         lambda i: (
             f"Behavior specification '{i.spec_name}' evidence_contract_ref '{i.ref}' "

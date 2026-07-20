@@ -307,6 +307,7 @@ def _compile_behavior_specifications(
             controller_states=controller_states,
             control_transitions=control_transitions,
             ai_offensive_behavior_refs=tuple(behavior_spec.ai_offensive_behavior_refs),
+            defensive_behavior_refs=tuple(behavior_spec.defensive_behavior_refs),
             offensive_behavior_refs=tuple(behavior_spec.offensive_behavior_refs),
             realization_profile_ref=str(behavior_spec.realization_profile_ref or ""),
             backend_feature_support_refs=tuple(behavior_spec.backend_feature_support_refs),

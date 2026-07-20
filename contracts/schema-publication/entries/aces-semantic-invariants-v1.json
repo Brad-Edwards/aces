@@ -1,0 +1,6 @@
+{
+  "contract_id": "aces-semantic-invariants-v1",
+  "schema_path": "contracts/schemas/profiles/aces-semantic-invariants-v1.json",
+  "stability": "draft",
+  "content_hash": "e7b858c93b7ec763c361439b1d9c7cc3979a1d150ca64a7f41ebc12c050f5cff"
+}

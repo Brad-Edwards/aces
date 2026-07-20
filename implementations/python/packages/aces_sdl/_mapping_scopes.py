@@ -41,6 +41,7 @@ HASHMAP_SECTIONS = frozenset(
         "objectives",
         "workflows",
         "variables",
+        "variation_points",
     }
 )
 
@@ -62,6 +63,9 @@ NESTED_HASHMAP_FIELDS = frozenset(
         "interactive_access",
         "controller_states",
         "transitions",
+        "alternatives",
+        "members",
+        "fixed_positions",
         "tool_affordances",
     }
 )

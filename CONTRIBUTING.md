@@ -55,6 +55,17 @@ The full repository gate is:
 uvx nox -s verify
 ```
 
+Run the change-aware local gate while iterating:
+
+```shell
+uvx nox -s verify-changed
+```
+
+It selects from status-aware changes against the branch's upstream ref and
+fails closed to the full local gate when classification is uncertain. The
+pre-push hook uses this lane. It does not weaken `verify`, which remains the
+unconditional pull-request gate.
+
 Useful narrower sessions:
 
 ```shell

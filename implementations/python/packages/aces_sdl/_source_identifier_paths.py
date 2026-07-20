@@ -12,7 +12,12 @@ def _is_flat_declaration_scope(tokens: list[str]) -> bool:
     if len(tokens) == 1:
         return tokens[0] in HASHMAP_SECTIONS
     if len(tokens) == 3:
-        return (tokens[0], tokens[2]) in {("nodes", "roles"), ("workflows", "steps")}
+        return (tokens[0], tokens[2]) in {
+            ("nodes", "roles"),
+            ("workflows", "steps"),
+            ("variation_points", "alternatives"),
+            ("variation_points", "members"),
+        }
     return False
 
 

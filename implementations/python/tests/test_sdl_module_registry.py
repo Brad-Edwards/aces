@@ -14,6 +14,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import aces_sdl.module_registry as module_registry
+import aces_sdl.parser as sdl_parser
 import pytest
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -201,6 +202,32 @@ def test_local_import_digest_mismatch_fails_closed(tmp_path: Path):
 
     with pytest.raises(SDLParseError, match="Digest mismatch"):
         parse_sdl_file(root)
+
+
+def test_local_import_composes_the_exact_document_verified_by_resolution(tmp_path: Path, monkeypatch) -> None:
+    module_path = _local_module(tmp_path / "shared.yaml")
+    root = _root_import(
+        tmp_path / "root.yaml",
+        "source: local:shared.yaml\n            namespace: shared",
+    )
+    original_read = sdl_parser.read_sdl_source
+    module_reads = 0
+
+    def swap_after_verified_read(path: Path, **kwargs):
+        nonlocal module_reads
+        document = original_read(path, **kwargs)
+        if path.resolve() == module_path.resolve():
+            module_reads += 1
+            if module_reads == 1:
+                module_path.write_bytes(document.raw_bytes.replace(b"os: linux", b"os: windows"))
+        return document
+
+    monkeypatch.setattr(sdl_parser, "read_sdl_source", swap_after_verified_read)
+
+    scenario = parse_sdl_file(root)
+
+    assert module_reads == 1
+    assert scenario.nodes["shared.vm"].os.value == "linux"
 
 
 def test_module_exports_are_enforced_for_importers(tmp_path: Path):

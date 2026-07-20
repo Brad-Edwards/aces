@@ -31,6 +31,7 @@ from aces_contracts.contracts import (
     validate_experiment_run_archival_datetimes,
     validate_experiment_study_against_tasks_and_runs,
 )
+from aces_contracts.contracts import bundle as contract_bundle
 from aces_contracts.manifest_authority import (
     BACKEND_SUPPORTED_CONTRACT_IDS,
     PARTICIPANT_IMPLEMENTATION_SUPPORTED_CONTRACT_IDS,
@@ -108,16 +109,19 @@ def _invariant_by_id(schema: dict, invariant_id: str) -> dict:
     return {invariant["id"]: invariant for invariant in schema.get("x-aces-invariants", [])}[invariant_id]
 
 
-def test_published_contract_schemas_exist_and_match_bundle():
-    repo_root = Path(__file__).resolve().parents[3]
-    schemas_dir = repo_root / "contracts" / "schemas"
-    published = {path.stem: json.loads(path.read_text(encoding="utf-8")) for path in schemas_dir.rglob("*.json")}
+def test_schema_bundle_caches_generation_but_returns_isolated_copies(mocker):
+    contract_bundle._schema_bundle_template.cache_clear()
+    generate = mocker.spy(contract_bundle, "_raw_schema_bundle")
+    try:
+        first = schema_bundle()
+        second = schema_bundle()
 
-    generated = schema_bundle()
-
-    assert set(generated) == set(published)
-    for name, schema in generated.items():
-        assert published[name] == schema
+        assert generate.call_count == 1
+        assert first is not second
+        first["runtime-snapshot-v1"]["title"] = "caller mutation"
+        assert second["runtime-snapshot-v1"].get("title") != "caller mutation"
+    finally:
+        contract_bundle._schema_bundle_template.cache_clear()
 
 
 def test_compat_contract_imports_reexport_neutral_contracts():

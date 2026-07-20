@@ -18,6 +18,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from tools.evidence_bundle_index import load_index_records, revision_key  # noqa: E402
 from tools.policy.common import (  # noqa: E402
     PolicyFailure,
     load_bounded_json_object,
@@ -25,6 +26,7 @@ from tools.policy.common import (  # noqa: E402
 )
 
 MANIFEST_PATH = "docs/research/formal-semantic-validation/bundle-manifest.json"
+MANIFEST_SCHEMA_VERSION = "formal-semantic-validation-bundle-index/v1"
 _MAX_FILE_BYTES = 512 * 1024
 _MAX_CASES = 128
 _COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
@@ -65,6 +67,8 @@ _MANIFEST_KEYS = {
     "corpus_path",
     "snapshot_path",
     "analysis_path",
+    "satisfiability_snapshot_path",
+    "satisfiability_analysis_path",
 }
 _PROTOCOL_KEYS = {
     "protocol_id",
@@ -185,6 +189,53 @@ _CLAIM_KEYS = {
     "allowed_evidence",
     "disallowed_evidence",
     "evidence_artifacts",
+}
+_SATISFIABILITY_ANALYSIS_KEYS = {
+    "profile",
+    "revision",
+    "execution_id",
+    "snapshot_revision",
+    "issue_number",
+    "requirement_uid",
+    "analysis_profile",
+    "claim_class_id",
+    "evidence_status",
+    "scope",
+    "cases",
+    "limitations",
+}
+_SATISFIABILITY_SNAPSHOT_KEYS = {
+    "profile",
+    "revision",
+    "execution_id",
+    "captured_at",
+    "analysis_profile",
+    "solver_configuration_digest",
+    "commands",
+    "observations",
+    "deviations",
+}
+_SATISFIABILITY_OBSERVATION_KEYS = {
+    "case_id",
+    "actual_outcome",
+    "source_byte_digest",
+    "normalized_model_digest",
+    "evidence_profile",
+    "replayable",
+    "limitation",
+}
+_SATISFIABILITY_CASE_KEYS = {
+    "case_id",
+    "control",
+    "fixture_path",
+    "expected_outcome",
+    "expected_normalized_model_digest",
+    "limitation",
+}
+_SATISFIABILITY_CONTROL_OUTCOMES = {
+    "positive": "satisfiable",
+    "negative": "unsatisfiable",
+    "unsupported": "unsupported",
 }
 
 
@@ -1004,7 +1055,7 @@ def _validate_analysis(
 
 
 def load_bundle(repo_root: Path = REPO_ROOT) -> tuple[dict, dict, dict, dict, dict]:
-    manifest = load_bounded_json_object(repo_root, MANIFEST_PATH, max_bytes=_MAX_FILE_BYTES)
+    manifest = _assembled_manifest(repo_root)
     paths: list[str] = []
     for key in ("protocol_path", "corpus_path", "snapshot_path", "analysis_path"):
         value = manifest.get(key)
@@ -1015,6 +1066,370 @@ def load_bundle(repo_root: Path = REPO_ROOT) -> tuple[dict, dict, dict, dict, di
         load_bounded_json_object(repo_root, path, max_bytes=_MAX_FILE_BYTES) for path in paths
     )
     return manifest, protocol, corpus, snapshot, analysis
+
+
+def load_satisfiability_analysis(repo_root: Path = REPO_ROOT) -> tuple[dict, dict, dict]:
+    """Load the revisioned issue-826 supplement selected by the bundle."""
+
+    manifest = _assembled_manifest(repo_root)
+    values = [
+        manifest.get("satisfiability_snapshot_path"),
+        manifest.get("satisfiability_analysis_path"),
+    ]
+    for key, value in zip(
+        ("satisfiability_snapshot_path", "satisfiability_analysis_path"),
+        values,
+        strict=True,
+    ):
+        path = safe_repo_path(repo_root, str(value)) if _nonempty_string(value) else None
+        if path is None:
+            raise ValueError(f"manifest {key} must be a safe repository path")
+    snapshot, analysis = (
+        load_bounded_json_object(repo_root, str(value), max_bytes=_MAX_FILE_BYTES) for value in values
+    )
+    return manifest, snapshot, analysis
+
+
+def _assembled_manifest(repo_root: Path) -> dict[str, object]:
+    records = load_index_records(
+        repo_root,
+        index_path=MANIFEST_PATH,
+        schema_version=MANIFEST_SCHEMA_VERSION,
+        directory_key="parts_directory",
+        max_bytes=_MAX_FILE_BYTES,
+    )
+    base_parts: list[tuple[str, dict[str, object]]] = []
+    supplement_parts: list[tuple[str, dict[str, object]]] = []
+    for path, record in records:
+        kind = record.get("part_kind")
+        revision_key(record.get("revision"))
+        if kind == "base":
+            expected = {
+                "part_kind",
+                "revision",
+                "protocol_path",
+                "corpus_path",
+                "snapshot_path",
+                "analysis_path",
+            }
+            base_parts.append((path, record))
+        elif kind == "satisfiability":
+            expected = {
+                "part_kind",
+                "revision",
+                "satisfiability_snapshot_path",
+                "satisfiability_analysis_path",
+            }
+            supplement_parts.append((path, record))
+        else:
+            raise ValueError(f"{path!r} has unknown formal evidence part_kind {kind!r}")
+        if set(record) != expected:
+            raise ValueError(f"{path!r} fields must exactly match {sorted(expected)}")
+        for key, value in record.items():
+            if not key.endswith("_path"):
+                continue
+            resolved = safe_repo_path(repo_root, value) if isinstance(value, str) else None
+            if resolved is None or not resolved.is_file():
+                raise ValueError(f"{path!r} contains unsafe or missing {key}")
+    if not base_parts or not supplement_parts:
+        raise ValueError(f"{MANIFEST_PATH!r} must select base and satisfiability evidence parts")
+    _base_path, base = max(base_parts, key=lambda item: (revision_key(item[1]["revision"]), item[0]))
+    _supplement_path, supplement = max(
+        supplement_parts,
+        key=lambda item: (revision_key(item[1]["revision"]), item[0]),
+    )
+    return {
+        "bundle_id": "aces-formal-semantic-validation",
+        "revision": supplement["revision"],
+        "protocol_path": base["protocol_path"],
+        "corpus_path": base["corpus_path"],
+        "snapshot_path": base["snapshot_path"],
+        "analysis_path": base["analysis_path"],
+        "satisfiability_snapshot_path": supplement["satisfiability_snapshot_path"],
+        "satisfiability_analysis_path": supplement["satisfiability_analysis_path"],
+    }
+
+
+def validate_satisfiability_analysis(
+    repo_root: Path,
+    manifest: dict,
+    snapshot: dict,
+    analysis: dict,
+) -> list[PolicyFailure]:
+    """Recompute the finite-profile control matrix and replay every envelope."""
+
+    failures: list[PolicyFailure] = []
+    path = str(manifest.get("satisfiability_analysis_path"))
+    snapshot_path = str(manifest.get("satisfiability_snapshot_path"))
+    if manifest.get("revision") != "2.0.0":
+        failures.append(
+            _failure(
+                "formal-satisfiability-manifest-revision",
+                "the satisfiability supplement requires bundle revision 2.0.0",
+                MANIFEST_PATH,
+            )
+        )
+    if not _closed_object(
+        analysis,
+        _SATISFIABILITY_ANALYSIS_KEYS,
+        rule_id="formal-satisfiability-analysis-shape",
+        label="satisfiability analysis",
+        failures=failures,
+        path=path,
+    ):
+        return failures
+    snapshot_shape_valid = _closed_object(
+        snapshot,
+        _SATISFIABILITY_SNAPSHOT_KEYS,
+        rule_id="formal-satisfiability-snapshot-shape",
+        label="satisfiability execution snapshot",
+        failures=failures,
+        path=snapshot_path,
+    )
+    if (
+        analysis.get("profile") != "aces-formal-satisfiability-analysis/v1"
+        or analysis.get("revision") != "1.0.0"
+        or analysis.get("issue_number") != 826
+        or analysis.get("requirement_uid") != "ASR-530"
+        or analysis.get("analysis_profile") != "aces-finite-domain-satisfiability-v1"
+        or analysis.get("claim_class_id") != "constraint-satisfiability"
+    ):
+        failures.append(
+            _failure(
+                "formal-satisfiability-scope",
+                "the supplement must remain bound to issue 826, ASR-530, and the v1 finite-domain profile",
+                path,
+            )
+        )
+    if not snapshot_shape_valid:
+        return failures
+    if (
+        snapshot.get("profile") != "aces-formal-satisfiability-execution/v1"
+        or snapshot.get("revision") != "1.0.0"
+        or snapshot.get("execution_id") != analysis.get("execution_id")
+        or snapshot.get("revision") != analysis.get("snapshot_revision")
+        or snapshot.get("analysis_profile") != analysis.get("analysis_profile")
+        or not _nonempty_string(snapshot.get("captured_at"))
+        or not _nonempty_string(snapshot.get("solver_configuration_digest"))
+        or snapshot.get("deviations") != []
+    ):
+        failures.append(
+            _failure(
+                "formal-satisfiability-snapshot-join",
+                "the execution snapshot must bind the analysis, profile, configuration, and no-deviation run",
+                snapshot_path,
+            )
+        )
+    if (
+        analysis.get("evidence_status") != "demonstrated"
+        or not _nonempty_string(analysis.get("scope"))
+        or not _string_list(analysis.get("limitations"))
+    ):
+        failures.append(
+            _failure(
+                "formal-satisfiability-disclosure",
+                "the bounded demonstrated result requires a scope and non-empty limitations",
+                path,
+            )
+        )
+
+    cases = analysis.get("cases")
+    if not _is_sequence(cases) or len(cases) != len(_SATISFIABILITY_CONTROL_OUTCOMES):
+        failures.append(
+            _failure(
+                "formal-satisfiability-control-coverage",
+                "the supplement requires exactly one positive, negative, and unsupported control",
+                path,
+            )
+        )
+        return failures
+    controls = [item.get("control") for item in cases if isinstance(item, Mapping)]
+    case_ids, unique_case_ids = _stable_ids(cases, "case_id")
+    if (
+        set(controls) != set(_SATISFIABILITY_CONTROL_OUTCOMES)
+        or len(controls) != len(set(controls))
+        or len(case_ids) != len(cases)
+        or not unique_case_ids
+    ):
+        failures.append(
+            _failure(
+                "formal-satisfiability-control-coverage",
+                "controls and case ids must be complete, unique, and stable",
+                path,
+            )
+        )
+
+    cases_by_id = {
+        item.get("case_id"): item
+        for item in cases
+        if isinstance(item, Mapping) and _nonempty_string(item.get("case_id"))
+    }
+    commands = snapshot.get("commands")
+    command_ids, unique_command_ids = _stable_ids(commands, "command_id")
+    if not _is_sequence(commands) or command_ids != set(cases_by_id) or not unique_command_ids:
+        failures.append(
+            _failure(
+                "formal-satisfiability-snapshot-commands",
+                "the snapshot requires one fixed-argv command per satisfiability case",
+                snapshot_path,
+            )
+        )
+        commands = []
+    for command in commands:
+        if not _closed_object(
+            command,
+            _COMMAND_KEYS,
+            rule_id="formal-satisfiability-command-shape",
+            label="satisfiability command",
+            failures=failures,
+            path=snapshot_path,
+        ):
+            continue
+        case = cases_by_id.get(command.get("command_id"))
+        expected_argv = [
+            "implementations/python/.venv/bin/aces",
+            "processor",
+            "satisfiability",
+            case.get("fixture_path") if isinstance(case, Mapping) else None,
+            "--profile",
+            analysis.get("analysis_profile"),
+        ]
+        if command.get("argv") != expected_argv or command.get("network") != "disabled":
+            failures.append(
+                _failure(
+                    "formal-satisfiability-snapshot-commands",
+                    f"command {command.get('command_id')!r} drifted from its fixed offline invocation",
+                    snapshot_path,
+                )
+            )
+
+    observations = snapshot.get("observations")
+    observation_ids, unique_observation_ids = _stable_ids(observations, "case_id")
+    if not _is_sequence(observations) or observation_ids != set(cases_by_id) or not unique_observation_ids:
+        failures.append(
+            _failure(
+                "formal-satisfiability-snapshot-coverage",
+                "the snapshot requires one observation per satisfiability case",
+                snapshot_path,
+            )
+        )
+        observations = []
+    observations_by_case: dict[object, Mapping[str, object]] = {}
+    for observation in observations:
+        if not _closed_object(
+            observation,
+            _SATISFIABILITY_OBSERVATION_KEYS,
+            rule_id="formal-satisfiability-observation-shape",
+            label="satisfiability observation",
+            failures=failures,
+            path=snapshot_path,
+        ):
+            continue
+        observations_by_case[observation.get("case_id")] = observation
+        if (
+            observation.get("evidence_profile") != "scenario-satisfiability-evidence/v1"
+            or observation.get("replayable") is not True
+            or not _nonempty_string(observation.get("limitation"))
+        ):
+            failures.append(
+                _failure(
+                    "formal-satisfiability-snapshot-disclosure",
+                    f"observation {observation.get('case_id')!r} lacks replay or limitation disclosure",
+                    snapshot_path,
+                )
+            )
+
+    from aces_processor.satisfiability import analyze_scenario_file, replay_satisfiability_evidence
+
+    for item in cases:
+        if not _closed_object(
+            item,
+            _SATISFIABILITY_CASE_KEYS,
+            rule_id="formal-satisfiability-case-shape",
+            label="satisfiability case",
+            failures=failures,
+            path=path,
+        ):
+            continue
+        case_id = item.get("case_id")
+        control = item.get("control")
+        expected_for_control = _SATISFIABILITY_CONTROL_OUTCOMES.get(str(control))
+        if expected_for_control is None or item.get("expected_outcome") != expected_for_control:
+            failures.append(
+                _failure(
+                    "formal-satisfiability-replay-drift",
+                    f"case {case_id!r} does not preserve its control outcome",
+                    path,
+                )
+            )
+        fixture_value = item.get("fixture_path")
+        fixture = safe_repo_path(repo_root, str(fixture_value)) if _nonempty_string(fixture_value) else None
+        if fixture is None or not fixture.is_file():
+            failures.append(
+                _failure(
+                    "formal-satisfiability-case-path",
+                    f"case {case_id!r} has a missing or unsafe fixture",
+                    path,
+                )
+            )
+            continue
+        if not _nonempty_string(item.get("limitation")):
+            failures.append(
+                _failure(
+                    "formal-satisfiability-case-limit",
+                    f"case {case_id!r} must record a limitation",
+                    path,
+                )
+            )
+        try:
+            evidence = analyze_scenario_file(fixture, profile=str(analysis.get("analysis_profile")))
+            replay_satisfiability_evidence(fixture, evidence)
+        except (OSError, ValueError, RuntimeError) as exc:
+            failures.append(
+                _failure(
+                    "formal-satisfiability-replay-error",
+                    f"case {case_id!r} could not complete production replay ({type(exc).__name__})",
+                    path,
+                )
+            )
+            continue
+        if evidence.outcome.value != item.get("expected_outcome") or evidence.normalized_model_digest != item.get(
+            "expected_normalized_model_digest"
+        ):
+            failures.append(
+                _failure(
+                    "formal-satisfiability-replay-drift",
+                    f"case {case_id!r} drifted from its frozen outcome or normalized model",
+                    path,
+                )
+            )
+        observation = observations_by_case.get(case_id)
+        if observation is None or (
+            observation.get("actual_outcome") != evidence.outcome.value
+            or observation.get("source_byte_digest") != evidence.source.byte_digest
+            or observation.get("normalized_model_digest") != evidence.normalized_model_digest
+            or snapshot.get("solver_configuration_digest") != evidence.solver_configuration_digest
+        ):
+            failures.append(
+                _failure(
+                    "formal-satisfiability-snapshot-drift",
+                    f"case {case_id!r} drifted from its execution snapshot",
+                    snapshot_path,
+                )
+            )
+        if control == "positive" and evidence.witness is None:
+            failures.append(_failure("formal-satisfiability-evidence-shape", "positive control lacks a witness", path))
+        elif control == "negative" and evidence.unsat_core is None:
+            failures.append(_failure("formal-satisfiability-evidence-shape", "negative control lacks a core", path))
+        elif control == "unsupported" and (evidence.unsupported is None or not evidence.diagnostics):
+            failures.append(
+                _failure(
+                    "formal-satisfiability-evidence-shape",
+                    "unsupported control lacks its fail-closed disclosure",
+                    path,
+                )
+            )
+    return failures
 
 
 def validate_bundle(
@@ -1056,6 +1471,13 @@ def evaluate(
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         return [_failure("formal-validation-bundle-load", str(exc), MANIFEST_PATH)]
     failures = validate_bundle(repo_root, *bundle)
+    if failures:
+        return failures
+    try:
+        satisfiability_bundle = load_satisfiability_analysis(repo_root)
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        return [_failure("formal-satisfiability-bundle-load", str(exc), MANIFEST_PATH)]
+    failures = validate_satisfiability_analysis(repo_root, *satisfiability_bundle)
     if failures:
         return failures
     protocol = bundle[1]

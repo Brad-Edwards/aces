@@ -22,11 +22,11 @@ from aces_contracts.contracts import (
 )
 from aces_contracts.versions import REUSABLE_ASSET_TRUST_POLICY_SCHEMA_VERSION
 from pydantic import ValidationError
+from tools.check_schema_publication import load_schema_publication_catalog
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 CONTRACT_ID = "reusable-asset-trust-policy-v1"
 SCHEMA_PATH = REPO_ROOT / "contracts" / "schemas" / "asset-trust" / f"{CONTRACT_ID}.json"
-MANIFEST_PATH = REPO_ROOT / "contracts" / "schema-publication-manifest.json"
 FIXTURES_ROOT = REPO_ROOT / "contracts" / "fixtures" / "asset-trust" / CONTRACT_ID
 VALID_DIR = FIXTURES_ROOT / "valid"
 INVALID_DIR = FIXTURES_ROOT / "invalid"
@@ -96,7 +96,7 @@ def test_manifest_entry_registered_with_consistent_ledger():
     """Exact canonical-hash parity is enforced by tools/check_schema_publication.py;
     here we assert the entry exists, points at the published schema, and its
     last_change ledger hash is self-consistent with the entry content_hash."""
-    manifest = _load(MANIFEST_PATH)
+    manifest = load_schema_publication_catalog(REPO_ROOT)
     entry = next(item for item in manifest["schemas"] if item["contract_id"] == CONTRACT_ID)
     assert entry["schema_path"] == "contracts/schemas/asset-trust/reusable-asset-trust-policy-v1.json"
     assert len(entry["content_hash"]) == 64

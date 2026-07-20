@@ -1,0 +1,6 @@
+{
+  "contract_id": "workflow-cancellation-request-v1",
+  "schema_path": "contracts/schemas/control-plane/workflow-cancellation-request-v1.json",
+  "stability": "draft",
+  "content_hash": "89ab39ece6fb1473a0f967a50186b29e0c6581257db3ad113324b31d05401435"
+}

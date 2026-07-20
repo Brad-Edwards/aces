@@ -1,0 +1,10 @@
+{
+  "contract_id": "experiment-derived-measure-v1",
+  "schema_path": "contracts/schemas/experiment-core/experiment-derived-measure-v1.json",
+  "stability": "draft",
+  "content_hash": "3619f07b4e075a47a99e026aed5395a6a9c06b663a81e62f67bba7fd196ccf34",
+  "last_change": {
+    "summary": "Extended shared experiment artifact roles and typed references for associated-artifact parents (ADR-077, issue #738).",
+    "content_hash": "3619f07b4e075a47a99e026aed5395a6a9c06b663a81e62f67bba7fd196ccf34"
+  }
+}

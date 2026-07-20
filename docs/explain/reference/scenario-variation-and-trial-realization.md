@@ -215,6 +215,28 @@ primitives introduced with ADR-070. They do not reuse
 or witness generation as experiment selection. ADR-070 is accepted and owns
 only the realizability relation; its witness seed is not experiment randomness.
 
+The reusable domain algebra belongs in a dependency-neutral `aces_contracts`
+leaf that does not import SDL models or schema-bundle machinery. Realization
+envelopes and scenario-family declarations consume (and may re-export) those
+same closed domain types and membership helpers. They must not copy the
+discriminated union, fork its validation, or make an SDL variation model depend
+on `RealizationEnvelopeModel`; those choices would create competing schemas and
+an SDL/contracts import cycle.
+
+Variation declarations use the existing SDL phase and admission spine. They are
+authoring/expanded declarations, participate in the existing parser mapping
+scopes, declaration index, composition symbol table, namespace rewriting,
+canonical family digest, language tooling, and published authoring schema, and
+are absent from `InstantiatedScenario`. Selection evidence extends the existing
+`InstantiationProvenance`; it does not create a parallel provenance record,
+resolver, binder, semantic validator, or SDL exception hierarchy. Credential
+selection is authorized by an explicit governed-reference or late-bound target
+kind. The runtime secret-name classifier remains advisory under ADR-057 and is
+not a substitute for that typed boundary. Until the recorded-selection
+integration lands, the public instantiation path must fail closed on a
+non-empty variation registry rather than silently discard it; absent or empty
+registries retain the existing singleton-family behavior.
+
 ### Structural validity and combination constraints
 
 Authoring validation checks every alternative/member in its typed local

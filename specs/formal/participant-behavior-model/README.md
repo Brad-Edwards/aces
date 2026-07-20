@@ -243,6 +243,8 @@ BehaviorSpecification =
   outcome_interpretation_rule_ref*
   authority_scope_ref*
   behavior_mode?
+  ai_offensive_behavior_ref*
+  defensive_behavior_ref*
   offensive_behavior_ref*
   realization_profile_ref?
   backend_feature_support_ref*
@@ -260,6 +262,9 @@ Rules:
 - `behavior_mode` binds to the controlled vocabulary described in ACT-608.
 - `offensive_behavior_ref` values bind to the ACT-609 offensive behavior
   vocabulary for attack-oriented participant tasks, goals, or activities.
+- `defensive_behavior_ref` values bind to the ACT-610 defensive behavior
+  vocabulary for detection, investigation, response, mitigation, and recovery
+  classifications.
 - `realization_profile_ref` records how the behavior can be realized without
   exposing private implementation configuration.
 - `evidence_contract_ref` names the contracts needed to prove the behavior
@@ -505,6 +510,44 @@ Pinned ATLAS v2026.06 tactics:
 Implementation issue #209 owns executable declaration, validation, generated
 schema coverage, and compiler carry-through for offensive behavior refs.
 
+## ACT-610 - Defensive Behavior Vocabularies
+
+`defensive_behavior_refs` declare defensive participant intent or outcome
+domains on the existing behavior-specification aggregate. Values resolve
+through `participant-defensive-behavior-activities`, independently from the
+ATT&CK and ATLAS offensive scopes.
+
+The eight base terms are ACES adaptations of the active NIST CSF 2.0 Detect,
+Respond, and Recover categories. The pinned source artifact is
+`contracts/concept-authority/nist-csf-defensive-categories-source-v1.json`.
+It preserves the official category identifiers, titles, function membership,
+and category descriptions extracted from the NIST CSF 2.0 Core export. Its
+digest covers the canonical category snapshot rather than generated XLSX bytes,
+whose ZIP metadata changes between downloads.
+
+| NIST CSF ID | ACES term | Function |
+| --- | --- | --- |
+| DE.CM | `continuous-monitoring` | Detect |
+| DE.AE | `adverse-event-analysis` | Detect |
+| RS.MA | `incident-management` | Respond |
+| RS.AN | `incident-analysis` | Respond |
+| RS.CO | `incident-response-reporting-and-communication` | Respond |
+| RS.MI | `incident-mitigation` | Respond |
+| RC.RP | `incident-recovery-plan-execution` | Recover |
+| RC.CO | `incident-recovery-communication` | Recover |
+
+These terms classify authored behavior; they do not prove that an incident
+exists, a detection or investigation is correct, mitigation contains an event,
+recovery completed, or an organization conforms to NIST CSF. Those claims use
+the existing action, observation, outcome, evidence, runtime, and conformance
+surfaces. D3FEND tactics and techniques remain distinct external mappings and
+are not aliases for these categories. Governed local extensions use the shared
+`x-<owner>:<term>` syntax.
+
+Implementation issue #210 owns the executable SDL field, governed validation,
+source-integrity checker, generated schemas, documentation, and compiler
+carry-through for defensive behavior refs.
+
 ## ACT-617 - Mixed-Control Participant Operation
 
 A behavior specification in `mixed-control` mode carries one explicit
@@ -577,7 +620,8 @@ portable occurrence contracts and runtime mediation/persistence respectively.
 | PBM-07 | Hidden prompts, credentials, answer keys, raw command output, backend-private objects, and adjudication assets stay out of portable behavior artifacts. | ACT-606, ACT-607 |
 | PBM-08 | Unknown, opaque, unsupported, not applicable, bounded, lossy, and exact are distinct claims. | ACT-602, ACT-603, ACT-608 |
 | PBM-09 | Offensive behavior refs are governed vocabulary classifications, not raw action names, roles, goals, tasks, commands, or external technique labels. | ACT-609 |
-| PBM-10 | Mixed-control authority and ordered control facts are explicit, fail closed, and remain distinct from admission, execution, and observation. | ACT-617 |
+| PBM-10 | Defensive behavior refs classify intent or outcome domains and do not prove incident existence, effectiveness, recovery, or CSF conformance. | ACT-610 |
+| PBM-11 | Mixed-control authority and ordered control facts are explicit, fail closed, and remain distinct from admission, execution, and observation. | ACT-617 |
 
 ## Child-Issue Mapping
 
@@ -589,6 +633,7 @@ portable occurrence contracts and runtime mediation/persistence respectively.
 | #207 | ACT-607 | Authority/scope boundary authoring, validation, evidence, and failure mapping. |
 | #208 | ACT-608 | Behavior-mode declaration, selection, controlled-vocabulary validation, and conformance. |
 | #209 | ACT-609 | Offensive behavior vocabulary declaration, validation, and compiler carry-through. |
+| #210 | ACT-610 | Defensive behavior vocabulary declaration, validation, source integrity, and compiler carry-through. |
 | #251 | ACT-617 | Authored controller/authority state, ordered fail-closed control transitions, composition, and typed compiler projection. |
 
 ## Verification Expectations

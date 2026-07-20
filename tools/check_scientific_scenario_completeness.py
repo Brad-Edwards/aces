@@ -22,6 +22,7 @@ from aces_contracts.scientific_completeness import (  # noqa: E402
     load_scientific_completeness_taxonomy,
 )
 
+from tools.check_schema_publication import load_schema_publication_catalog  # noqa: E402
 from tools.policy.common import PolicyFailure, safe_repo_path  # noqa: E402
 
 _EXPECTED_PROFILE_IDS = {
@@ -124,8 +125,7 @@ def _validate_evidence_paths(
 
 
 def _published_schema_paths(repo_root: Path) -> dict[str, str]:
-    manifest_path = repo_root / "contracts/schema-publication-manifest.json"
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest = load_schema_publication_catalog(repo_root)
     return {
         entry["contract_id"]: entry["schema_path"]
         for entry in manifest.get("schemas", [])

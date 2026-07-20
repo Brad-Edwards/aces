@@ -51,6 +51,11 @@ published in the pinned source artifact. ACES may bind those terms to its own
 fields and may permit governed extensions, but it must not rewrite the adopted
 base-term meanings.
 
+When `source.provenance` is `adapted`, the pinned source artifact must preserve
+the external identifiers and source text while each catalog description clearly
+states the narrower ACES binding. Adaptation must not claim endorsement or
+conformance by the external authority.
+
 ### Enumeration Rules
 
 Closed enumerations are for stable portable values where cross-artifact
@@ -113,6 +118,14 @@ It defines:
   `sha256:b771de8b1489564b2838a709c7429849a9575dbd94073928817fe1a21661e70a`.
   MITRE ATLAS release, data-format, project, and license citations are recorded
   in the source artifact's `citation_urls`.
+- an independent governed-extension vocabulary for
+  `participant-defensive-behavior-activities`, whose base terms adapt the eight
+  active NIST CSF 2.0 Detect, Respond, and Recover categories. The pinned source
+  artifact is
+  `contracts/concept-authority/nist-csf-defensive-categories-source-v1.json`;
+  it records the official Core export URL, CSWP 29 citations, retrieval date,
+  NIST use notice, and the canonical category-snapshot digest
+  `sha256:014492980e87f8ce2c98d80ea040540392de96a08980c2f9901114ad4108b2c3`.
 
 The MITRE notice for the adopted ATT&CK terms is recorded in the source
 artifact and catalog metadata:
@@ -154,11 +167,12 @@ release, a change must update all of the following together:
   the new pinned release
 - affected authoring and behavior-model documentation
 
-ATT&CK and ATLAS terms must remain in distinct governed scopes:
+ATT&CK, ATLAS, and NIST CSF terms must remain in distinct governed scopes:
 `behavior_specifications.offensive_behavior_refs` for ATT&CK and
-`behavior_specifications.ai_offensive_behavior_refs` for ATLAS. A catalog entry
-must not merge ATLAS terms into the ATT&CK vocabulary or reuse one vocabulary to
-govern both scopes.
+`behavior_specifications.ai_offensive_behavior_refs` for ATLAS, and
+`behavior_specifications.defensive_behavior_refs` for NIST CSF. A catalog entry
+must not merge these authorities or reuse one vocabulary to govern multiple
+scopes.
 
 `tools/check_attack_tactic_vocabulary.py` is part of the contract verification
 stage. Its default offline mode compares the catalog to the pinned source
@@ -172,11 +186,27 @@ ATLAS source artifact. Its `--verify-remote` mode fetches the pinned upstream
 YAML release asset, verifies the recorded SHA-256 digest, extracts ATLAS tactics
 in matrix order, and compares them to the checked-in source artifact.
 
+### NIST CSF Adaptation Guardrail
+
+The ACT-610 base terms are adapted classifications, not claims that a NIST CSF
+outcome was achieved. A source update must change the pinned category snapshot,
+catalog, valid fixture, generated schemas and publication ledger when needed,
+documentation, and `tools/check_nist_csf_defensive_vocabulary.py` together.
+The checker's normal mode is offline. Its explicit `--verify-remote` mode
+downloads the official NIST Core export, extracts the eight active categories,
+and compares their canonical semantic digest and content with the checked-in
+snapshot.
+
 ## Machine-Readable Artifacts
 
 The JSON Schema for the catalog format is published at:
 
 `contracts/schemas/concept-authority/controlled-vocabularies-v1.json`
+
+The source-snapshot schema for the NIST CSF defensive adaptation is published
+at:
+
+`contracts/schemas/concept-authority/nist-csf-defensive-categories-source-v1.json`
 
 The valid and invalid fixture corpus for controlled vocabularies is published
 under:

@@ -244,6 +244,7 @@ class _ValidatorCore:
         self._verify_participant_outcomes()
         self._verify_evidence_requirements()
         self._verify_variables()
+        self._verify_variation_points()
         self._verify_realization_designations()
         self._verify_explicitness()
         self._collect_advisories()

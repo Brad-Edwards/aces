@@ -1,0 +1,10 @@
+{
+  "contract_id": "experiment-authoring-input-v1",
+  "schema_path": "contracts/schemas/experiment-core/experiment-authoring-input-v1.json",
+  "stability": "draft",
+  "content_hash": "2f399830a126d155bbb3940ad1f0bbb2c41fe540ea261d12e37d74400393d976",
+  "last_change": {
+    "summary": "Extended shared experiment artifact roles and typed references for associated-artifact parents (ADR-077, issue #738).",
+    "content_hash": "2f399830a126d155bbb3940ad1f0bbb2c41fe540ea261d12e37d74400393d976"
+  }
+}

@@ -67,6 +67,7 @@ material. It is an index, not a replacement for the linked artifacts.
 | Participant semantics | `specs/formal/participant-semantics/README.md` |
 | Realization semantics | `specs/formal/realization/`, [`explicitness-realization-semantics.md`](explicitness-realization-semantics.md) |
 | Scenario variation and trial realization invariants | `specs/formal/scenario-variation-trial-realization/` |
+| Whole-scenario finite-domain satisfiability | `specs/formal/scenario-satisfiability/`, ADR-086 |
 | Planner semantics | `specs/formal/planner/` |
 
 ## Current Materialization Notes

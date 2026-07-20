@@ -1,0 +1,6 @@
+{
+  "part_kind": "satisfiability",
+  "revision": "2.0.0",
+  "satisfiability_snapshot_path": "docs/research/formal-semantic-validation/satisfiability-execution-snapshot-v1.json",
+  "satisfiability_analysis_path": "docs/research/formal-semantic-validation/satisfiability-analysis-v1.json"
+}
