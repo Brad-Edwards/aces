@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
 
 from aces_contracts.bounded_domains import (
     BooleanDomain,
@@ -21,7 +20,6 @@ from ..variation import (
     COLLECTION_TARGET_SPECS,
     REFERENCE_TARGET_SPECS,
     TIMING_TARGET_SPECS,
-    VARIATION_SATISFIABILITY_STATE_LIMIT,
     AlternativeVariationPoint,
     GovernedReferenceVariationPoint,
     LogicalTimingVariationPoint,
@@ -32,136 +30,37 @@ from ..variation import (
     VariationPoint,
     structural_members,
 )
-
-_SelectionVariable = tuple[str, str]
-_SelectionLiteral = tuple[_SelectionVariable, bool]
-
-
-@dataclass(frozen=True)
-class _SelectionGroup:
-    members: tuple[_SelectionVariable, ...]
-    minimum: int
-    maximum: int
-
-
-class _SelectionBudgetExceeded(RuntimeError):
-    pass
-
-
-class _SelectionSatisfiability:
-    def __init__(
-        self,
-        groups: list[_SelectionGroup],
-        clauses: list[tuple[_SelectionLiteral, _SelectionLiteral]],
-    ) -> None:
-        self._groups = groups
-        self._clauses = clauses
-        self._variables = tuple(sorted(variable for group in groups for variable in group.members))
-        self._remaining_states = VARIATION_SATISFIABILITY_STATE_LIMIT
-        occurrence_count = {variable: 0 for variable in self._variables}
-        for clause in clauses:
-            for variable, _value in clause:
-                occurrence_count[variable] += 1
-        self._branch_order = tuple(sorted(self._variables, key=lambda item: (-occurrence_count[item], item)))
-
-    def has_witness(self, required: dict[_SelectionVariable, bool] | None = None) -> bool:
-        assignments = dict(required or {})
-        return self._search(assignments, seen=set())
-
-    def _search(
-        self,
-        assignments: dict[_SelectionVariable, bool],
-        *,
-        seen: set[frozenset[tuple[_SelectionVariable, bool]]],
-    ) -> bool:
-        self._remaining_states -= 1
-        if self._remaining_states < 0:
-            raise _SelectionBudgetExceeded
-        if not self._propagate(assignments):
-            return False
-        state = frozenset(assignments.items())
-        if state in seen:
-            return False
-        seen.add(state)
-        variable = next((item for item in self._branch_order if item not in assignments), None)
-        if variable is None:
-            return True
-        for value in (True, False):
-            branch = dict(assignments)
-            branch[variable] = value
-            if self._search(branch, seen=seen):
-                return True
-        return False
-
-    def _propagate(self, assignments: dict[_SelectionVariable, bool]) -> bool:
-        changed = True
-        while changed:
-            changed = False
-            for clause in self._clauses:
-                unassigned: list[_SelectionLiteral] = []
-                satisfied = False
-                for variable, value in clause:
-                    if variable not in assignments:
-                        unassigned.append((variable, value))
-                    elif assignments[variable] is value:
-                        satisfied = True
-                        break
-                if satisfied:
-                    continue
-                if not unassigned:
-                    return False
-                if len(unassigned) == 1:
-                    variable, value = unassigned[0]
-                    if not self._assign(assignments, variable, value):
-                        return False
-                    changed = True
-            for group in self._groups:
-                selected = sum(assignments.get(member) is True for member in group.members)
-                unknown = [member for member in group.members if member not in assignments]
-                if selected > group.maximum or selected + len(unknown) < group.minimum:
-                    return False
-                forced_value: bool | None = None
-                if selected == group.maximum:
-                    forced_value = False
-                elif selected + len(unknown) == group.minimum:
-                    forced_value = True
-                if forced_value is not None:
-                    for member in unknown:
-                        if not self._assign(assignments, member, forced_value):
-                            return False
-                        changed = True
-        return True
-
-    @staticmethod
-    def _assign(
-        assignments: dict[_SelectionVariable, bool],
-        variable: _SelectionVariable,
-        value: bool,
-    ) -> bool:
-        if variable in assignments:
-            return assignments[variable] is value
-        assignments[variable] = value
-        return True
+from ._variation_satisfiability import (
+    _SelectionBudgetExceeded,
+    _SelectionGroup,
+    _SelectionLiteral,
+    _SelectionSatisfiability,
+    _SelectionVariable,
+)
 
 
 def _value_matches_variable(value: object, variable: Variable) -> bool:
+    matches: bool
     if variable.type is VariableType.STRING:
-        return isinstance(value, str)
-    if variable.type is VariableType.INTEGER:
-        return isinstance(value, int) and not isinstance(value, bool)
-    if variable.type is VariableType.BOOLEAN:
-        return isinstance(value, bool)
-    return isinstance(value, (int, float)) and not isinstance(value, bool)
+        matches = isinstance(value, str)
+    elif variable.type is VariableType.INTEGER:
+        matches = isinstance(value, int) and not isinstance(value, bool)
+    elif variable.type is VariableType.BOOLEAN:
+        matches = isinstance(value, bool)
+    else:
+        matches = isinstance(value, (int, float)) and not isinstance(value, bool)
+    return matches
 
 
 def _finite_values(domain: object) -> list[object] | None:
+    values: list[object] | None = None
     if isinstance(domain, ExactDomain):
-        return [domain.value]
-    if isinstance(domain, EnumDomain):
-        return list(domain.values)
-    if isinstance(domain, BooleanDomain):
-        return [domain.value] if domain.value is not None else [False, True]
-    return None
+        values = [domain.value]
+    elif isinstance(domain, EnumDomain):
+        values = list(domain.values)
+    elif isinstance(domain, BooleanDomain):
+        values = [domain.value] if domain.value is not None else [False, True]
+    return values
 
 
 def _typed_contains(values: list[object], candidate: object) -> bool:
@@ -184,18 +83,20 @@ def _integer_interval_members(domain: NumericIntervalDomain, limit: int) -> list
 def _domain_has_member(domain: object) -> bool:
     finite = _finite_values(domain)
     if finite is not None:
-        return bool(finite)
-    if not isinstance(domain, NumericIntervalDomain):
-        return False
-    if domain.numeric_type is NumericType.NUMBER:
-        return True
-    lower = math.ceil(domain.lower)
-    upper = math.floor(domain.upper)
-    if not domain.lower_closed and lower == domain.lower:
-        lower += 1
-    if not domain.upper_closed and upper == domain.upper:
-        upper -= 1
-    return lower <= upper
+        has_member = bool(finite)
+    elif not isinstance(domain, NumericIntervalDomain):
+        has_member = False
+    elif domain.numeric_type is NumericType.NUMBER:
+        has_member = True
+    else:
+        lower = math.ceil(domain.lower)
+        upper = math.floor(domain.upper)
+        if not domain.lower_closed and lower == domain.lower:
+            lower += 1
+        if not domain.upper_closed and upper == domain.upper:
+            upper -= 1
+        has_member = lower <= upper
+    return has_member
 
 
 class _VariationMixin:
@@ -311,7 +212,12 @@ class _VariationMixin:
         if not _domain_has_member(point.domain):
             self._err(f"Variation point '{name}' domain is empty")
             return
-        finite = _finite_values(point.domain)
+        if not self._timing_domain_matches(point.domain, value_type):
+            self._err(f"Variation point '{name}' domain does not match timing target type")
+
+    @staticmethod
+    def _timing_domain_matches(domain: object, value_type: str) -> bool:
+        finite = _finite_values(domain)
         if finite is not None:
             matches = all(
                 isinstance(value, int) and not isinstance(value, bool)
@@ -320,11 +226,10 @@ class _VariationMixin:
                 for value in finite
             )
         else:
-            matches = isinstance(point.domain, NumericIntervalDomain) and (
-                value_type == "number" or point.domain.numeric_type is NumericType.INTEGER
+            matches = isinstance(domain, NumericIntervalDomain) and (
+                value_type == "number" or domain.numeric_type is NumericType.INTEGER
             )
-        if not matches:
-            self._err(f"Variation point '{name}' domain does not match timing target type")
+        return matches
 
     def _verify_member_relations(self, name: str, point: VariationPoint) -> None:
         for member_name, member in structural_members(point).items():
@@ -364,34 +269,52 @@ class _VariationMixin:
                 matches.append(name)
         return matches
 
-    def _verify_family_satisfiability(self) -> None:
+    def _selection_constraints(
+        self,
+    ) -> tuple[list[_SelectionGroup], list[tuple[_SelectionLiteral, _SelectionLiteral]]]:
         groups: list[_SelectionGroup] = []
         clauses: list[tuple[_SelectionLiteral, _SelectionLiteral]] = []
         for point_name, point in getattr(self._s, "variation_points", {}).items():
             members = structural_members(point)
             if not members:
                 continue
-            variables = tuple((point_name, member_name) for member_name in sorted(members))
-            if isinstance(point, AlternativeVariationPoint):
-                minimum = maximum = 1
-            elif isinstance(point, SubsetVariationPoint):
-                minimum = point.minimum
-                maximum = len(members) if point.maximum is None else point.maximum
-            else:
-                minimum = maximum = len(members)
-            groups.append(_SelectionGroup(variables, minimum, maximum))
+            groups.append(self._selection_group(point_name, point, sorted(members)))
             for member_name, member in members.items():
                 source = (point_name, member_name)
                 clauses.extend(self._selection_relation_clauses(source, member.requires, required=True))
                 clauses.extend(self._selection_relation_clauses(source, member.excludes, required=False))
+        return groups, clauses
 
+    @staticmethod
+    def _selection_group(point_name: str, point: VariationPoint, member_names: list[str]) -> _SelectionGroup:
+        variables = tuple((point_name, member_name) for member_name in member_names)
+        if isinstance(point, AlternativeVariationPoint):
+            minimum = maximum = 1
+        elif isinstance(point, SubsetVariationPoint):
+            minimum = point.minimum
+            maximum = len(member_names) if point.maximum is None else point.maximum
+        else:
+            minimum = maximum = len(member_names)
+        return _SelectionGroup(variables, minimum, maximum)
+
+    def _verify_family_satisfiability(self) -> None:
+        groups, clauses = self._selection_constraints()
         if not groups:
             return
         solver = _SelectionSatisfiability(groups, clauses)
         try:
-            if not solver.has_witness():
-                self._err("Variation point constraints have no satisfying selection")
-                return
+            self._verify_selection_witnesses(solver, groups)
+        except _SelectionBudgetExceeded:
+            self._err("Variation point constraints exceed the deterministic satisfiability budget")
+
+    def _verify_selection_witnesses(
+        self,
+        solver: _SelectionSatisfiability,
+        groups: list[_SelectionGroup],
+    ) -> None:
+        if not solver.has_witness():
+            self._err("Variation point constraints have no satisfying selection")
+        else:
             for group in groups:
                 for point_name, member_name in group.members:
                     if not solver.has_witness({(point_name, member_name): True}):
@@ -399,8 +322,6 @@ class _VariationMixin:
                             f"Variation point '{point_name}' member '{member_name}' cannot participate "
                             "in any satisfying selection"
                         )
-        except _SelectionBudgetExceeded:
-            self._err("Variation point constraints exceed the deterministic satisfiability budget")
 
     def _selection_relation_clauses(
         self,
@@ -428,29 +349,53 @@ class _VariationMixin:
         candidate: str,
         collection: bool,
     ) -> bool:
+        payload = self._candidate_payload(
+            owner_section=owner_section,
+            owner_reference=owner_reference,
+            slot=slot,
+            candidate=candidate,
+            collection=collection,
+        )
+        valid = False
+        if payload is not None:
+            try:
+                candidate_scenario = type(self._s).model_validate(payload)
+                type(self)(candidate_scenario).validate()
+            except (ValidationError, SDLValidationError):
+                pass
+            else:
+                valid = True
+        return valid
+
+    def _candidate_payload(
+        self,
+        *,
+        owner_section: str,
+        owner_reference: str,
+        slot: str,
+        candidate: str,
+        collection: bool,
+    ) -> dict[str, object] | None:
         owner_addresses = self._resolved_addresses(owner_reference, owner_section)
+        payload: dict[str, object] | None = None
         if len(owner_addresses) != 1:
-            return False
+            return payload
+        candidate_payload = self._s.model_dump(mode="python", by_alias=True)
         owner_name = owner_addresses[0].removeprefix(f"{owner_section}.")
-        field_name = slot.split(".", 1)[1]
-        payload = self._s.model_dump(mode="python", by_alias=True)
-        owner_payload = payload.get(owner_section, {}).get(owner_name)
-        if not isinstance(owner_payload, dict):
-            return False
-        if collection:
-            current = owner_payload.get(field_name)
-            owner_payload[field_name] = (
-                {candidate: current.get(candidate, "")} if isinstance(current, dict) else [candidate]
-            )
-        else:
-            owner_payload[field_name] = candidate
-        payload["variation_points"] = {}
-        try:
-            candidate_scenario = type(self._s).model_validate(payload)
-            type(self)(candidate_scenario).validate()
-        except (ValidationError, SDLValidationError):
-            return False
-        return True
+        section_payload = candidate_payload.get(owner_section)
+        owner_payload = section_payload.get(owner_name) if isinstance(section_payload, dict) else None
+        if isinstance(owner_payload, dict):
+            field_name = slot.split(".", 1)[1]
+            if collection:
+                current = owner_payload.get(field_name)
+                owner_payload[field_name] = (
+                    {candidate: current.get(candidate, "")} if isinstance(current, dict) else [candidate]
+                )
+            else:
+                owner_payload[field_name] = candidate
+            candidate_payload["variation_points"] = {}
+            payload = candidate_payload
+        return payload
 
     def _resolved_addresses(self, reference: str, section: str) -> list[str]:
         if self._declaration_index is None:

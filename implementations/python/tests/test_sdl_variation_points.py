@@ -266,9 +266,10 @@ def test_semantic_validation_rejects_invalid_domains_targets_relations_and_timin
     payload = deepcopy(_family_payload())
     mutate(payload)
     scenario = Scenario.model_validate(payload)
+    validator = SemanticValidator(scenario)
 
     with pytest.raises(SDLValidationError, match=message):
-        SemanticValidator(scenario).validate()
+        validator.validate()
 
 
 def test_each_declared_candidate_must_pass_the_owning_slot_semantics() -> None:
@@ -276,9 +277,10 @@ def test_each_declared_candidate_must_pass_the_owning_slot_semantics() -> None:
     payload["nodes"]["network"] = {"type": "switch"}
     payload["variation_points"]["host-choice"]["alternatives"]["network"] = {"reference": "network"}
     scenario = Scenario.model_validate(payload)
+    validator = SemanticValidator(scenario)
 
     with pytest.raises(SDLValidationError, match="candidate is invalid for target slot"):
-        SemanticValidator(scenario).validate()
+        validator.validate()
 
 
 def test_each_collection_member_must_pass_the_owning_slot_semantics() -> None:
@@ -314,9 +316,10 @@ def test_each_collection_member_must_pass_the_owning_slot_semantics() -> None:
         "members": {"self": {"reference": "self-dependent"}},
     }
     scenario = Scenario.model_validate(payload)
+    validator = SemanticValidator(scenario)
 
     with pytest.raises(SDLValidationError, match="candidate is invalid for target slot"):
-        SemanticValidator(scenario).validate()
+        validator.validate()
 
 
 def test_domain_constraint_failure_does_not_echo_candidate_values() -> None:
@@ -327,9 +330,10 @@ def test_domain_constraint_failure_does_not_echo_candidate_values() -> None:
         "values": [marker],
     }
     scenario = Scenario.model_validate(payload)
+    validator = SemanticValidator(scenario)
 
     with pytest.raises(SDLValidationError) as caught:
-        SemanticValidator(scenario).validate()
+        validator.validate()
     assert marker not in str(caught.value)
 
 
@@ -365,8 +369,9 @@ def test_integer_interval_must_contain_an_integer_member() -> None:
     }
 
     scenario = Scenario.model_validate(payload)
+    validator = SemanticValidator(scenario)
     with pytest.raises(SDLValidationError, match="domain is empty"):
-        SemanticValidator(scenario).validate()
+        validator.validate()
 
 
 def test_cross_point_constraints_must_have_a_satisfying_selection() -> None:
@@ -389,8 +394,9 @@ def test_cross_point_constraints_must_have_a_satisfying_selection() -> None:
     payload["variation_points"]["host-choice"]["alternatives"]["secondary-host"]["excludes"] = exclusion
 
     scenario = Scenario.model_validate(payload)
+    validator = SemanticValidator(scenario)
     with pytest.raises(SDLValidationError, match="no satisfying selection"):
-        SemanticValidator(scenario).validate()
+        validator.validate()
 
 
 def test_every_structural_member_must_participate_in_a_satisfying_selection() -> None:
@@ -413,8 +419,9 @@ def test_every_structural_member_must_participate_in_a_satisfying_selection() ->
     ]
 
     scenario = Scenario.model_validate(payload)
+    validator = SemanticValidator(scenario)
     with pytest.raises(SDLValidationError, match="member 'primary-host' cannot participate"):
-        SemanticValidator(scenario).validate()
+        validator.validate()
 
 
 @pytest.mark.parametrize(
@@ -437,8 +444,9 @@ def test_subset_cardinality_and_order_members_participate_in_family_satisfiabili
     point["members"][second_member]["excludes"] = [{"point": "host-choice", "members": ["primary-host"]}]
 
     scenario = Scenario.model_validate(payload)
+    validator = SemanticValidator(scenario)
     with pytest.raises(SDLValidationError, match="no satisfying selection"):
-        SemanticValidator(scenario).validate()
+        validator.validate()
 
 
 def test_module_composition_namespaces_exported_and_private_points_and_nested_references(tmp_path) -> None:

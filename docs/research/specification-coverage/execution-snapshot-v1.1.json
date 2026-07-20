@@ -19,7 +19,7 @@
     {
       "surface_id": "sdl-pipeline",
       "path": "implementations/python/packages/aces_sdl",
-      "content_sha256": "071a504e552fd49af897523585dc8b7f1753da41cbe725873a27839786f3c16f"
+      "content_sha256": "dd6f595b8baed2c05f27f7c346cf55cf21ae093a6108c767fb72fbd9072ac823"
     }
   ],
   "execution_status": "complete",

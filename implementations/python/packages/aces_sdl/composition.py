@@ -226,78 +226,113 @@ def _rewrite_variation_reference(
     return _maybe_rename(reference, symbols["named"] if section == "targetable" else symbols[section])
 
 
+def _variation_slot(target: dict[str, Any]) -> str:
+    raw_slot = target.get("slot", "")
+    return str(getattr(raw_slot, "value", raw_slot))
+
+
+def _rewrite_variation_target(
+    kind: object,
+    target: object,
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> str | None:
+    target_section: str | None = None
+    if isinstance(target, dict):
+        if kind == "parameter" and isinstance(target.get("variable"), str):
+            target["variable"] = _maybe_rename(str(target["variable"]), symbols["variables"])
+        slot = _variation_slot(target)
+        owner_spec = (
+            _REFERENCE_TARGET_SPECS_BY_VALUE.get(slot)
+            or _COLLECTION_TARGET_SPECS_BY_VALUE.get(slot)
+            or _TIMING_TARGET_SPECS_BY_VALUE.get(slot)
+        )
+        if owner_spec is not None and isinstance(target.get("owner"), str):
+            target["owner"] = _rewrite_variation_reference(str(target["owner"]), owner_spec[0], symbols)
+        target_section = _variation_target_section(kind, slot)
+    return target_section
+
+
+def _variation_target_section(kind: object, slot: str) -> str | None:
+    spec: tuple[str, str] | None = None
+    if kind in {"governed-reference", "alternative"}:
+        spec = _REFERENCE_TARGET_SPECS_BY_VALUE.get(slot)
+    elif kind in {"subset", "order"}:
+        spec = _COLLECTION_TARGET_SPECS_BY_VALUE.get(slot)
+    return spec[1] if spec is not None else None
+
+
+def _rewrite_variation_domain(
+    payload: dict[str, Any],
+    target_section: str | None,
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
+    domain = payload.get("domain")
+    if payload.get("kind") == "governed-reference" and target_section is not None and isinstance(domain, dict):
+        domain["allowed_refs"] = [
+            _rewrite_variation_reference(reference, target_section, symbols)
+            for reference in domain.get("allowed_refs", [])
+        ]
+
+
+def _rewrite_member_relations(
+    member: dict[str, Any],
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
+    for relation_field in ("requires", "excludes"):
+        for relation in member.get(relation_field, []):
+            if isinstance(relation, dict) and isinstance(relation.get("point"), str):
+                relation["point"] = _maybe_rename(str(relation["point"]), symbols["variation_points"])
+
+
+def _rewrite_variation_members(
+    payload: dict[str, Any],
+    target_section: str | None,
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
+    member_field = "alternatives" if payload.get("kind") == "alternative" else "members"
+    members = payload.get(member_field)
+    if isinstance(members, dict):
+        for member in members.values():
+            if not isinstance(member, dict):
+                continue
+            if target_section is not None and isinstance(member.get("reference"), str):
+                member["reference"] = _rewrite_variation_reference(
+                    str(member["reference"]),
+                    target_section,
+                    symbols,
+                )
+            _rewrite_member_relations(member, symbols)
+
+
 def _rewrite_variation_point(
     payload: dict[str, Any],
     symbols: dict[str, dict[str, str] | set[str]],
 ) -> None:
     kind = payload.get("kind")
     target = payload.get("target")
-    if kind == "parameter" and isinstance(target, dict) and isinstance(target.get("variable"), str):
-        target["variable"] = _maybe_rename(str(target["variable"]), symbols["variables"])
-    if isinstance(target, dict) and isinstance(target.get("owner"), str):
-        raw_slot = target.get("slot", "")
-        slot = str(getattr(raw_slot, "value", raw_slot))
-        spec = (
-            _REFERENCE_TARGET_SPECS_BY_VALUE.get(slot)
-            or _COLLECTION_TARGET_SPECS_BY_VALUE.get(slot)
-            or _TIMING_TARGET_SPECS_BY_VALUE.get(slot)
-        )
-        if spec is not None:
-            target["owner"] = _rewrite_variation_reference(str(target["owner"]), spec[0], symbols)
-
-    target_section: str | None = None
-    if isinstance(target, dict):
-        raw_slot = target.get("slot", "")
-        slot = str(getattr(raw_slot, "value", raw_slot))
-        if kind in {"governed-reference", "alternative"}:
-            spec = _REFERENCE_TARGET_SPECS_BY_VALUE.get(slot)
-            target_section = spec[1] if spec is not None else None
-        elif kind in {"subset", "order"}:
-            spec = _COLLECTION_TARGET_SPECS_BY_VALUE.get(slot)
-            target_section = spec[1] if spec is not None else None
-
-    if kind == "governed-reference" and target_section is not None:
-        domain = payload.get("domain")
-        if isinstance(domain, dict):
-            domain["allowed_refs"] = [
-                _rewrite_variation_reference(reference, target_section, symbols)
-                for reference in domain.get("allowed_refs", [])
-            ]
-
-    member_field = "alternatives" if kind == "alternative" else "members"
-    members = payload.get(member_field)
-    if not isinstance(members, dict):
-        return
-    for member in members.values():
-        if not isinstance(member, dict):
-            continue
-        if target_section is not None and isinstance(member.get("reference"), str):
-            member["reference"] = _rewrite_variation_reference(
-                str(member["reference"]),
-                target_section,
-                symbols,
-            )
-        for relation_field in ("requires", "excludes"):
-            for relation in member.get(relation_field, []):
-                if isinstance(relation, dict) and isinstance(relation.get("point"), str):
-                    relation["point"] = _maybe_rename(str(relation["point"]), symbols["variation_points"])
+    target_section = _rewrite_variation_target(kind, target, symbols)
+    _rewrite_variation_domain(payload, target_section, symbols)
+    _rewrite_variation_members(payload, target_section, symbols)
 
 
-def _rewrite_variable_tokens(value: Any, variables: Mapping[str, str]) -> Any:
+def _rewrite_variable_tokens(value: object, variables: Mapping[str, str]) -> object:
     """Namespace preserved authoring-variable tokens in imported content."""
 
+    rewritten: object
     if isinstance(value, str):
-        return VARIABLE_TOKEN_RE.sub(
+        rewritten = VARIABLE_TOKEN_RE.sub(
             lambda match: "${" + variables.get(match.group(1), match.group(1)) + "}",
             value,
         )
-    if isinstance(value, dict):
-        return {key: _rewrite_variable_tokens(item, variables) for key, item in value.items()}
-    if isinstance(value, list):
-        return [_rewrite_variable_tokens(item, variables) for item in value]
-    if isinstance(value, tuple):
-        return tuple(_rewrite_variable_tokens(item, variables) for item in value)
-    return value
+    elif isinstance(value, dict):
+        rewritten = {key: _rewrite_variable_tokens(item, variables) for key, item in value.items()}
+    elif isinstance(value, list):
+        rewritten = [_rewrite_variable_tokens(item, variables) for item in value]
+    elif isinstance(value, tuple):
+        rewritten = tuple(_rewrite_variable_tokens(item, variables) for item in value)
+    else:
+        rewritten = value
+    return rewritten
 
 
 def _namespace_payload(

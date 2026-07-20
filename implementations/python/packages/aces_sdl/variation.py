@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from enum import Enum
-from functools import cache
 from typing import Annotated, Literal
 
 from aces_contracts.bounded_domains import (
@@ -170,44 +169,107 @@ class OrderPrecedence(SDLModel):
         return self
 
 
+class _OrderConstraintWitness:
+    def __init__(
+        self,
+        names: set[str],
+        edges: set[tuple[str, str]],
+        fixed_positions: dict[str, int],
+    ) -> None:
+        self._ordered_names = tuple(sorted(names))
+        self._fixed_positions = fixed_positions
+        self._fixed_by_position = {position: name for name, position in fixed_positions.items()}
+        self._predecessors = {
+            name: frozenset(before for before, after in edges if after == name) for name in self._ordered_names
+        }
+        self._memo: dict[frozenset[str], bool] = {}
+        self._explored = 0
+
+    def has_witness(self) -> bool:
+        return self._visit(frozenset())
+
+    def _visit(self, placed: frozenset[str]) -> bool:
+        cached = self._memo.get(placed)
+        if cached is not None:
+            return cached
+        self._explored += 1
+        if self._explored > VARIATION_SATISFIABILITY_STATE_LIMIT:
+            raise ValueError("order constraints exceed the deterministic satisfiability budget")
+        position = len(placed)
+        if position == len(self._ordered_names):
+            result = True
+        elif self._has_overdue_fixed_member(placed, position):
+            result = False
+        else:
+            result = any(self._candidate_has_witness(name, placed, position) for name in self._candidates(position))
+        self._memo[placed] = result
+        return result
+
+    def _has_overdue_fixed_member(self, placed: frozenset[str], position: int) -> bool:
+        return any(
+            fixed_position < position and name not in placed for name, fixed_position in self._fixed_positions.items()
+        )
+
+    def _candidates(self, position: int) -> tuple[str, ...]:
+        fixed_name = self._fixed_by_position.get(position)
+        return (fixed_name,) if fixed_name is not None else self._ordered_names
+
+    def _candidate_has_witness(self, name: str, placed: frozenset[str], position: int) -> bool:
+        pinned_position = self._fixed_positions.get(name)
+        eligible = (
+            name not in placed
+            and (pinned_position is None or pinned_position == position)
+            and self._predecessors[name].issubset(placed)
+        )
+        return eligible and self._visit(placed | {name})
+
+
 def _order_constraints_have_witness(
     names: set[str],
     edges: set[tuple[str, str]],
     fixed_positions: dict[str, int],
 ) -> bool:
-    ordered_names = tuple(sorted(names))
-    fixed_by_position = {position: name for name, position in fixed_positions.items()}
-    predecessors: dict[str, frozenset[str]] = {
-        name: frozenset(before for before, after in edges if after == name) for name in ordered_names
-    }
-    explored = 0
+    return _OrderConstraintWitness(names, edges, fixed_positions).has_witness()
 
-    @cache
-    def visit(placed: frozenset[str]) -> bool:
-        nonlocal explored
-        explored += 1
-        if explored > VARIATION_SATISFIABILITY_STATE_LIMIT:
-            raise ValueError("order constraints exceed the deterministic satisfiability budget")
-        position = len(placed)
-        if position == len(ordered_names):
-            return True
-        if any(fixed_position < position and name not in placed for name, fixed_position in fixed_positions.items()):
-            return False
-        fixed_name = fixed_by_position.get(position)
-        candidates = (fixed_name,) if fixed_name is not None else ordered_names
-        for name in candidates:
-            if name is None or name in placed:
-                continue
-            pinned_position = fixed_positions.get(name)
-            if pinned_position is not None and pinned_position != position:
-                continue
-            if not predecessors[name].issubset(placed):
-                continue
-            if visit(placed | {name}):
-                return True
-        return False
 
-    return visit(frozenset())
+def _validated_order_edges(
+    names: set[str],
+    precedence: list[OrderPrecedence],
+) -> set[tuple[str, str]]:
+    edges = {(edge.before, edge.after) for edge in precedence}
+    if len(edges) != len(precedence):
+        raise ValueError("order precedence edges must be unique")
+    if any(before not in names or after not in names for before, after in edges):
+        raise ValueError("order precedence references an undefined member")
+    return edges
+
+
+def _validate_fixed_positions(names: set[str], fixed_positions: dict[str, int]) -> None:
+    if any(name not in names for name in fixed_positions):
+        raise ValueError("order fixed_positions references an undefined member")
+    positions = list(fixed_positions.values())
+    if any(position < 0 or position >= len(names) for position in positions):
+        raise ValueError("order fixed position must be within the member range")
+    if len(positions) != len(set(positions)):
+        raise ValueError("order fixed positions must be unique")
+
+
+def _order_graph_is_acyclic(names: set[str], edges: set[tuple[str, str]]) -> bool:
+    pending = dict.fromkeys(names, 0)
+    outgoing: dict[str, list[str]] = {name: [] for name in names}
+    for before, after in edges:
+        outgoing[before].append(after)
+        pending[after] += 1
+    ready = [name for name, count in pending.items() if count == 0]
+    visited = 0
+    while ready:
+        current = ready.pop()
+        visited += 1
+        for successor in outgoing[current]:
+            pending[successor] -= 1
+            if pending[successor] == 0:
+                ready.append(successor)
+    return visited == len(names)
 
 
 class ParameterVariationPoint(SDLModel):
@@ -273,33 +335,9 @@ class OrderVariationPoint(SDLModel):
         references = [member.reference for member in self.members.values()]
         if len(references) != len(set(references)):
             raise ValueError("order member references must be unique")
-        edges = {(edge.before, edge.after) for edge in self.precedence}
-        if len(edges) != len(self.precedence):
-            raise ValueError("order precedence edges must be unique")
-        if any(before not in names or after not in names for before, after in edges):
-            raise ValueError("order precedence references an undefined member")
-        if any(name not in names for name in self.fixed_positions):
-            raise ValueError("order fixed_positions references an undefined member")
-        positions = list(self.fixed_positions.values())
-        if any(position < 0 or position >= len(names) for position in positions):
-            raise ValueError("order fixed position must be within the member range")
-        if len(positions) != len(set(positions)):
-            raise ValueError("order fixed positions must be unique")
-        pending = {name: 0 for name in names}
-        outgoing: dict[str, list[str]] = {name: [] for name in names}
-        for before, after in edges:
-            outgoing[before].append(after)
-            pending[after] += 1
-        ready = [name for name, count in pending.items() if count == 0]
-        visited = 0
-        while ready:
-            current = ready.pop()
-            visited += 1
-            for successor in outgoing[current]:
-                pending[successor] -= 1
-                if pending[successor] == 0:
-                    ready.append(successor)
-        if visited != len(names):
+        edges = _validated_order_edges(names, self.precedence)
+        _validate_fixed_positions(names, self.fixed_positions)
+        if not _order_graph_is_acyclic(names, edges):
             raise ValueError("order precedence graph must be acyclic")
         if self.fixed_positions and not _order_constraints_have_witness(names, edges, self.fixed_positions):
             raise ValueError("order constraints must admit at least one ordering")

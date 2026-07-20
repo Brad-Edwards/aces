@@ -68,6 +68,38 @@ def _matches_value_type(value: object, variable: Variable) -> bool:
     return False
 
 
+def _variable_candidate(
+    name: str,
+    variable: Variable,
+    parameters: Mapping[str, JSONLike],
+    preserved: set[str],
+) -> tuple[JSONLike | None, BindingOrigin | None, str | None]:
+    value: JSONLike | None = None
+    origin: BindingOrigin | None = None
+    error: str | None = None
+    if name in preserved:
+        if name in parameters:
+            error = f"Variable '{name}' is owned by a variation point and cannot be bound during composition."
+    elif name in parameters:
+        value = parameters[name]
+        origin = BindingOrigin.PROVIDED
+    elif variable.default is not None:
+        value = variable.default
+        origin = BindingOrigin.DEFAULT
+    elif variable.required:
+        error = f"Variable '{name}' is required and has no provided value or default."
+    return value, origin, error
+
+
+def _variable_constraint_error(name: str, value: JSONLike, variable: Variable) -> str | None:
+    error: str | None = None
+    if not _matches_value_type(value, variable):
+        error = f"Variable '{name}' expects type '{variable.type.value}', got {type(value).__name__}."
+    elif variable.allowed_values and value not in variable.allowed_values:
+        error = f"Variable '{name}' does not satisfy its allowed_values constraint."
+    return error
+
+
 def _resolve_variable_values(
     scenario: Scenario | ExpandedScenario,
     parameters: Mapping[str, JSONLike],
@@ -80,29 +112,15 @@ def _resolve_variable_values(
 
     preserved = preserved or set()
     for name, variable in scenario.variables.items():
-        if name in preserved:
-            if name in parameters:
-                errors.append(
-                    f"Variable '{name}' is owned by a variation point and cannot be bound during composition."
-                )
+        value, origin, error = _variable_candidate(name, variable, parameters, preserved)
+        if error is not None:
+            errors.append(error)
             continue
-        if name in parameters:
-            value = parameters[name]
-            origin = BindingOrigin.PROVIDED
-        elif variable.default is not None:
-            value = variable.default
-            origin = BindingOrigin.DEFAULT
-        elif variable.required:
-            errors.append(f"Variable '{name}' is required and has no provided value or default.")
+        if origin is None:
             continue
-        else:
-            continue
-
-        if not _matches_value_type(value, variable):
-            errors.append(f"Variable '{name}' expects type '{variable.type.value}', got {type(value).__name__}.")
-            continue
-        if variable.allowed_values and value not in variable.allowed_values:
-            errors.append(f"Variable '{name}' does not satisfy its allowed_values constraint.")
+        constraint_error = _variable_constraint_error(name, value, variable)
+        if constraint_error is not None:
+            errors.append(constraint_error)
             continue
         resolved[name] = value
         origins[name] = origin
@@ -411,7 +429,8 @@ def instantiate_scenario(
     if raw_scenario.variation_points:
         raise SDLInstantiationError(
             [
-                "Scenario has unresolved variation points; recorded selection integration is required before instantiation."
+                "Scenario has unresolved variation points; recorded selection integration is required "
+                "before instantiation."
             ]
         )
     authored_digest = canonical_sdl_digest(raw_scenario)
