@@ -2,5 +2,9 @@
   "contract_id": "random-stream-vector-v1",
   "schema_path": "contracts/schemas/profiles/random-stream-vector-v1.json",
   "stability": "draft",
-  "content_hash": "93560c646f76237e2494d8a34ea46ad362b2d63606096588152a0a0e317c34fa"
+  "content_hash": "93560c646f76237e2494d8a34ea46ad362b2d63606096588152a0a0e317c34fa",
+  "last_change": {
+    "summary": "Initial publication of the EXP-718 canonical cross-language random-stream conformance vector shape, computed independently of the reference engine for cross-language test-vector conformance.",
+    "content_hash": "93560c646f76237e2494d8a34ea46ad362b2d63606096588152a0a0e317c34fa"
+  }
 }
