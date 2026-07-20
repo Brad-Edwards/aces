@@ -32,6 +32,10 @@ formal artifacts are warranted.
   realization boundaries, backend realization support, and proposed
   realization-envelope membership, subsumption, witness, and negative
   conformance semantics
+- **Exploit-Path Analysis** (`specs/formal/exploit-path-analysis/`) -- Typed
+  attack-state graph, transition, query, witness, and failure-evidence
+  semantics with explicit nonclaims for weaker reachability and vulnerability
+  evidence
 - **Behavioral Relations** (`specs/formal/behavioral-relations/`) -- Revisioned
   validity, conformance, trace, simulation, refinement, bisimulation,
   participant-projection, strategic, probabilistic, statistical, and empirical

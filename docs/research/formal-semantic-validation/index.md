@@ -15,9 +15,12 @@ The immutable issue-168 v1 record keeps whole-scenario satisfiability,
 exploit-path validity, and counterfactual necessity `untested` at its pinned
 revision. ADR-086 and issue #826 add a revisioned satisfiability supplement:
 the exact finite-domain profile is now `demonstrated` by production
-satisfiable, unsatisfiable, and fail-closed unsupported controls. Exploit-path
-validity and counterfactual necessity remain `untested`, and the supplement
-does not generalize beyond its named profile.
+satisfiable, unsatisfiable, and fail-closed unsupported controls. Issue #827
+adds a bounded typed exploit-path analyzer and published evidence contract for
+`aces-exploit-path-analysis-v1`; that result is valid only for its admitted
+snapshot, normalized attack graph, query, and search profile. It does not
+demonstrate arbitrary-SDL or real-world exploit validity, and counterfactual
+necessity remains `untested`.
 
 ## Bundle
 

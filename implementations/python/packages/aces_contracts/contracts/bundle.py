@@ -94,6 +94,7 @@ def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
     from aces_contracts.realization_envelope import BackendRealizationEnvelopeModel
 
     from ..behavioral_relations import BehavioralRelationCatalogModel
+    from ..exploit_path import ExploitPathAnalysisEvidenceModel
     from ..provenance import SDLLineageLedgerModel
     from ..satisfiability import ScenarioSatisfiabilityEvidenceModel
     from ..scientific_completeness import (
@@ -107,6 +108,7 @@ def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
         "instantiated-scenario-v1": InstantiatedScenario.model_json_schema(),
         "instantiated-scenario-snapshot-v1": InstantiatedScenarioSnapshot.model_json_schema(),
         "scenario-instantiation-request-v1": InstantiationRequestModel.model_json_schema(),
+        "exploit-path-analysis-evidence-v1": ExploitPathAnalysisEvidenceModel.model_json_schema(),
         "scenario-satisfiability-evidence-v1": ScenarioSatisfiabilityEvidenceModel.model_json_schema(),
         "backend-manifest-v2": BackendManifestV2Model.model_json_schema(),
         "realization-envelope-v1": BackendRealizationEnvelopeModel.model_json_schema(),
