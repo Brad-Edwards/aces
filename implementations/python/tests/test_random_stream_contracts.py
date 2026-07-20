@@ -107,22 +107,22 @@ class TestRandomStreamControlBindingModel:
         assert binding.root_entropy.kind == "governed-reference"
 
     def test_root_entropy_union_is_closed_to_declared_kinds(self) -> None:
+        payload = {
+            "profile_ref": _profile_ref().model_dump(mode="json"),
+            "namespace": "study-namespace",
+            "root_entropy": {"kind": "raw-value", "value": "danger"},
+        }
         with pytest.raises(ValidationError):
-            RandomStreamControlBindingModel.model_validate(
-                {
-                    "profile_ref": _profile_ref().model_dump(mode="json"),
-                    "namespace": "study-namespace",
-                    "root_entropy": {"kind": "raw-value", "value": "danger"},
-                }
-            )
+            RandomStreamControlBindingModel.model_validate(payload)
 
     def test_requires_profile_kind_reference(self) -> None:
         bad_ref = ExperimentReferenceModel(ref_kind="task", ref_id="blake3-xof-v1")
+        root_entropy = PublicSeedModel(kind="public-seed", encoding="hex-fixed-width", value=VALID_HEX_SEED)
         with pytest.raises(ValidationError):
             RandomStreamControlBindingModel(
                 profile_ref=bad_ref,
                 namespace="study-namespace",
-                root_entropy=PublicSeedModel(kind="public-seed", encoding="hex-fixed-width", value=VALID_HEX_SEED),
+                root_entropy=root_entropy,
             )
 
     def test_seed_without_profile_ref_is_rejected(self) -> None:
@@ -208,14 +208,16 @@ class TestRandomStreamDrawRecordModel:
         assert "value" not in dumped["outcome"]
 
     def test_local_coordinate_must_match_address(self) -> None:
+        address = _address(local_coordinate=3)
+        outcome = PublicRandomOutcomeModel(kind="public-value", value="7")
         with pytest.raises(ValidationError, match="local_coordinate"):
             RandomStreamDrawRecordModel(
                 control_id="control-1",
-                address=_address(local_coordinate=3),
+                address=address,
                 transform_id="bounded-integer",
                 transform_version="1",
                 local_coordinate=4,
-                outcome=PublicRandomOutcomeModel(kind="public-value", value="7"),
+                outcome=outcome,
             )
 
     def test_exhausted_outcome_defaults_are_rejection_facts(self) -> None:
@@ -248,23 +250,26 @@ class TestRandomStreamDrawRecordModel:
         assert record.rejection_exhausted is True
 
     def test_rejection_exhausted_record_with_outcome_is_rejected(self) -> None:
+        address = _address(local_coordinate=3)
+        outcome = PublicRandomOutcomeModel(kind="public-value", value="7")
         with pytest.raises(ValidationError, match="rejection_exhausted"):
             RandomStreamDrawRecordModel(
                 control_id="control-1",
-                address=_address(local_coordinate=3),
+                address=address,
                 transform_id="bounded-integer",
                 transform_version="1",
                 local_coordinate=3,
-                outcome=PublicRandomOutcomeModel(kind="public-value", value="7"),
+                outcome=outcome,
                 rejection_attempts=32,
                 rejection_exhausted=True,
             )
 
     def test_non_exhausted_record_without_outcome_is_rejected(self) -> None:
+        address = _address(local_coordinate=3)
         with pytest.raises(ValidationError, match="rejection_exhausted"):
             RandomStreamDrawRecordModel(
                 control_id="control-1",
-                address=_address(local_coordinate=3),
+                address=address,
                 transform_id="bounded-integer",
                 transform_version="1",
                 local_coordinate=3,

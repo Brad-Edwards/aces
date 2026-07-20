@@ -122,8 +122,9 @@ def test_rejection_then_accept_vector_present() -> None:
 
 class TestUnsupportedAndMalformedInputsFailClosed:
     def test_derive_stream_key_rejects_unsupported_profile(self) -> None:
+        root_entropy = bytes(32)
         with pytest.raises(ValueError, match="unsupported"):
-            derive_stream_key(profile_id="not-a-real-profile-v1", root_entropy=bytes(32))
+            derive_stream_key(profile_id="not-a-real-profile-v1", root_entropy=root_entropy)
 
     def test_derive_stream_key_rejects_wrong_length_entropy(self) -> None:
         with pytest.raises(ValueError, match="32 bytes"):
@@ -140,8 +141,9 @@ class TestUnsupportedAndMalformedInputsFailClosed:
                 "local_coordinate": 0,
             }
         )
+        stream_key = bytes(32)
         with pytest.raises(ValueError, match="unsupported"):
-            raw_block(profile_id="not-a-real-profile-v1", stream_key=bytes(32), address=address)
+            raw_block(profile_id="not-a-real-profile-v1", stream_key=stream_key, address=address)
 
     def test_draw_bounded_integer_rejects_maximum_below_minimum(self) -> None:
         address = StreamAddressModel.model_validate(
@@ -154,10 +156,11 @@ class TestUnsupportedAndMalformedInputsFailClosed:
                 "local_coordinate": 0,
             }
         )
+        stream_key = bytes(32)
         with pytest.raises(ValueError, match="maximum"):
             draw_bounded_integer(
                 profile_id="blake3-xof-v1",
-                stream_key=bytes(32),
+                stream_key=stream_key,
                 address=address,
                 minimum=10,
                 maximum=1,

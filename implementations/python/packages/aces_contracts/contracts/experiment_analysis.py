@@ -293,6 +293,43 @@ def _executable_binding_identity(control: ExperimentStochasticControlModel) -> t
     return (_experiment_reference_key(binding.profile_ref), binding.namespace)
 
 
+@dataclass
+class _StochasticControlIdentityState:
+    """Mutable accumulator for `_collect_evaluation_run_stochastic_control_identities` classification."""
+
+    identity_by_control_id: dict[str, tuple[Any, ...]] = field(default_factory=dict)
+    unbound_control_ids: set[str] = field(default_factory=set)
+    conflicting_control_ids: set[str] = field(default_factory=set)
+
+
+def _record_stochastic_control_identity(
+    control: ExperimentStochasticControlModel,
+    state: _StochasticControlIdentityState,
+) -> None:
+    identity = _executable_binding_identity(control)
+    if identity is None:
+        state.unbound_control_ids.add(control.control_id)
+        return
+    prior_identity = state.identity_by_control_id.get(control.control_id)
+    if prior_identity is not None and prior_identity != identity:
+        state.conflicting_control_ids.add(control.control_id)
+    state.identity_by_control_id[control.control_id] = identity
+
+
+def _collect_evaluation_run_stochastic_control_identities(
+    runs: list[ExperimentRunModel],
+    evaluation_run_members: list[ExperimentStudyMembershipModel],
+) -> _StochasticControlIdentityState:
+    state = _StochasticControlIdentityState()
+    for member in evaluation_run_members:
+        for run in runs:
+            if not _run_ref_matches_run(member.target_ref, run):
+                continue
+            for control in run.stochastic_controls:
+                _record_stochastic_control_identity(control, state)
+    return state
+
+
 def _validate_study_run_allocation_stochastic_control_consistency(
     study: ExperimentStudyModel,
     runs: list[ExperimentRunModel],
@@ -316,23 +353,10 @@ def _validate_study_run_allocation_stochastic_control_consistency(
 
     if study.run_allocation is None:
         return
-    identity_by_control_id: dict[str, tuple[Any, ...]] = {}
-    unbound_control_ids: set[str] = set()
-    conflicting_control_ids: set[str] = set()
-    for member in evaluation_run_members:
-        for run in runs:
-            if not _run_ref_matches_run(member.target_ref, run):
-                continue
-            for control in run.stochastic_controls:
-                identity = _executable_binding_identity(control)
-                if identity is None:
-                    unbound_control_ids.add(control.control_id)
-                    continue
-                prior_identity = identity_by_control_id.get(control.control_id)
-                if prior_identity is not None and prior_identity != identity:
-                    conflicting_control_ids.add(control.control_id)
-                identity_by_control_id[control.control_id] = identity
-    asymmetric_control_ids = conflicting_control_ids | (unbound_control_ids & identity_by_control_id.keys())
+    state = _collect_evaluation_run_stochastic_control_identities(runs, evaluation_run_members)
+    asymmetric_control_ids = state.conflicting_control_ids | (
+        state.unbound_control_ids & state.identity_by_control_id.keys()
+    )
     if asymmetric_control_ids:
         joined = ", ".join(sorted(asymmetric_control_ids))
         raise ValueError(
