@@ -31,6 +31,7 @@ from .experiment_run import ExperimentRunModel
 from .experiment_spec import ExperimentSpecModel, ExperimentStudyModel
 from .manifests import ProcessorManifestV2Model
 from .participant_context import ParticipantContextViewModel
+from .participant_decision_surface import ParticipantDecisionSurfaceModel
 from .participant_envelopes import (
     ParticipantJointActionRecordModel,
     ParticipantLifecycleEventModel,
@@ -171,6 +172,7 @@ def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
         "participant-status-view-v1": ParticipantStatusViewModel.model_json_schema(),
         "participant-history-view-v1": ParticipantHistoryViewModel.model_json_schema(),
         "participant-context-view-v1": ParticipantContextViewModel.model_json_schema(),
+        "participant-decision-surface-v1": ParticipantDecisionSurfaceModel.model_json_schema(),
         "operation-receipt-v1": OperationReceiptModel.model_json_schema(),
         "operation-status-v1": OperationStatusModel.model_json_schema(),
         "associated-artifact-manifest-v1": AssociatedArtifactManifestModel.model_json_schema(),
