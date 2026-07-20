@@ -209,6 +209,19 @@ class ExperimentStudyModel(ContractModel):
                 {"contract_id": "experiment-run-v1", "instance_path": "#"},
             ],
         )
+        _add_aces_invariant(
+            json_schema,
+            "study-run-allocation-stochastic-control-consistency",
+            "When run_allocation compares evaluation runs, every shared stochastic_controls control_id across "
+            "those runs must use a consistent executable_binding profile_ref and namespace, and either all or "
+            "none of the runs that share the control_id may carry an executable_binding (EXP-718 common "
+            "random numbers / controlled-variation comparability).",
+            validator=_STUDY_AGAINST_TASKS_AND_RUNS_VALIDATOR,
+            inputs=[
+                {"contract_id": "experiment-study-v1", "instance_path": "#/run_allocation"},
+                {"contract_id": "experiment-run-v1", "instance_path": "#/stochastic_controls"},
+            ],
+        )
         return json_schema
 
 

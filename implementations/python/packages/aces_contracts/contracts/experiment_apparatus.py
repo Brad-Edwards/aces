@@ -46,6 +46,7 @@ from .experiment_references import (
 )
 from .manifests import ProcessorManifestV2Model
 from .participant_manifests import BackendManifestV2Model
+from .random_stream import RandomStreamControlBindingModel
 from .schema_invariants import _add_aces_invariant
 
 _ManifestReferenceKey = tuple[
@@ -87,6 +88,7 @@ class ExperimentStochasticControlModel(ContractModel):
     role: Literal["seed", "randomization", "sampling", "scheduler", "agent-policy", "other"]
     value: str | int | None = None
     description: NonEmptyString | None = None
+    executable_binding: RandomStreamControlBindingModel | None = None
 
 
 class ExperimentClockContextModel(ContractModel):

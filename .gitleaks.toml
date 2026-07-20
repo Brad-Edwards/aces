@@ -1,0 +1,52 @@
+title = "aces gitleaks config"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = """
+EXP-718 canonical random-stream conformance vectors (contracts/fixtures/random-stream-vectors/):
+`stream_key_hex` is a BLAKE3 `derive_key`-derived value computed from a public, non-secret root
+seed already inline in the same fixture file (`root_entropy`). It is published test-vector data
+for cross-language conformance, not a live credential, and matches the `generic-api-key` rule only
+because of its hex shape and the substring `key` in its field name.
+
+Scoped three ways so an unrelated real secret is still caught everywhere else, including inside this
+same directory:
+1. `targetRules` binds this exception to the `generic-api-key` rule only -- every other rule
+   (private keys, cloud provider tokens, etc.) still scans this directory normally.
+2. `condition = "AND"` combined with `regexTarget = "match"` requires the exact `stream_key_hex`
+   field context (not a bare hex pattern) to match -- a differently named secret field in the same
+   file (e.g. a real credential mistakenly added alongside a vector) is still flagged by
+   `generic-api-key`.
+3. `paths` restricts the exemption to the canonical vector directory -- the same field name/value
+   shape placed anywhere else in the repository is still flagged.
+
+`targetRules` is required for the AND semantics to hold: gitleaks' directory walker prunes a whole
+file/directory from scanning based on `paths` alone for any *global* (non-rule-targeted) allowlist,
+before the `regexes` condition is ever evaluated (gitleaks source: `sources/common.go`
+`shouldSkipPath`, consulted by `sources/files.go`, iterates `cfg.Allowlists` and checks only
+`PathAllowed`, independent of `MatchCondition`). Declaring this allowlist via `[[allowlists]]` with
+`targetRules` keeps it out of that global list (`config.go`'s `extend`/parse step only adds
+non-target-ruled allowlists to `c.Allowlists`) so it is evaluated solely at the rule/finding level
+(`detect.go` `checkFindingAllowed`), where `condition = "AND"` genuinely combines `paths` and
+`regexes` per match rather than pruning the whole file.
+
+The `paths` pattern is deliberately not anchored to the string start (`^`): the repo's own
+`noxfile.py` `hygiene` session scans through `--follow-symlinks`, which makes gitleaks match `paths`
+against each file's *resolved absolute* filesystem path, not its repository-relative path. Anchoring
+on `^contracts/...` would never match `/home/.../aces2/contracts/...` and silently stop exempting the
+legitimate vectors under a symlink-following scan. Matching on a `/`-or-start-bounded segment instead
+works for both a plain repository-relative scan and the real resolved-symlink scan, while still
+requiring a full path-segment boundary (rejecting an unrelated path that merely contains this text as
+a substring, e.g. `not-contracts/fixtures/random-stream-vectors/`).
+"""
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "match"
+regexes = [
+  '''stream_key_hex":\s*"[0-9a-f]{64}"''',
+]
+paths = [
+  '''(^|/)contracts/fixtures/random-stream-vectors/.*''',
+]

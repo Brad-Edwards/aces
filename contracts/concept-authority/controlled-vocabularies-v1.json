@@ -1080,6 +1080,41 @@
           "description": "Backend declares no portable guarantee for the feature."
         }
       }
+    },
+    "random-stream-draw-purposes": {
+      "title": "Random Stream Draw Purposes",
+      "description": "Closed EXP-718 governed concern identifiers for a random-stream draw address.",
+      "kind": "enumeration",
+      "governed_scopes": [
+        "random_streams.draw_purpose"
+      ],
+      "extension_policy": "closed",
+      "terms": {
+        "condition-assignment": {
+          "title": "Condition Assignment",
+          "description": "Draw selects or assigns an experiment condition."
+        },
+        "sampling-selection": {
+          "title": "Sampling Selection",
+          "description": "Draw selects a member from a bounded scenario-family sampling domain."
+        },
+        "scheduler-tiebreak": {
+          "title": "Scheduler Tiebreak",
+          "description": "Draw resolves a tie among otherwise-equal scheduling candidates without owning placement."
+        },
+        "agent-policy": {
+          "title": "Agent Policy",
+          "description": "Draw feeds a declared stochastic participant/agent policy decision."
+        },
+        "observation-noise": {
+          "title": "Observation Noise",
+          "description": "Draw introduces declared observation or measurement noise."
+        },
+        "other": {
+          "title": "Other",
+          "description": "Draw purpose outside the enumerated governed concerns."
+        }
+      }
     }
   }
 }

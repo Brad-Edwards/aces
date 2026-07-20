@@ -39,7 +39,11 @@ class ValidationTarget:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Validate published JSON Schemas and schema-governed JSON artifacts.")
-    parser.add_argument("--staged", action="store_true", help="Check staged changes instead of working tree changes.")
+    parser.add_argument(
+        "--staged",
+        action="store_true",
+        help="Check staged changes instead of working tree changes.",
+    )
     parser.add_argument("--base-rev", help="Compare against a specific git revision.")
     parser.add_argument("paths", nargs="*", help="Explicit repo-relative paths to check.")
     return parser.parse_args()
@@ -64,6 +68,18 @@ def _semantic_profile_schema(repo_root: Path, path: Path) -> Path:
 
 
 def _backend_profile_schema(repo_root: Path, path: Path) -> Path:
+    payload = _load_json(path)
+    schema_version = payload["schema_version"]
+    return repo_root / "contracts" / "schemas" / "profiles" / _schema_filename(schema_version)
+
+
+def _random_stream_profile_schema(repo_root: Path, path: Path) -> Path:
+    payload = _load_json(path)
+    schema_version = payload["schema_version"]
+    return repo_root / "contracts" / "schemas" / "profiles" / _schema_filename(schema_version)
+
+
+def _random_stream_vector_schema(repo_root: Path, path: Path) -> Path:
     payload = _load_json(path)
     schema_version = payload["schema_version"]
     return repo_root / "contracts" / "schemas" / "profiles" / _schema_filename(schema_version)
@@ -95,25 +111,57 @@ def collect_validation_targets(
             targets.append(ValidationTarget(raw_path, None, "metaschema"))
             continue
         if raw_path.startswith("contracts/concept-authority/") and raw_path.endswith(".json"):
-            targets.append(ValidationTarget(raw_path, f"contracts/schemas/concept-authority/{path.name}", "schema"))
+            targets.append(
+                ValidationTarget(
+                    raw_path,
+                    f"contracts/schemas/concept-authority/{path.name}",
+                    "schema",
+                )
+            )
             continue
         if raw_path.startswith("contracts/profiles/semantic/") and raw_path.endswith(".json"):
             targets.append(
                 ValidationTarget(
-                    raw_path, _repo_rel_from(repo_root, _semantic_profile_schema(repo_root, path)), "schema"
+                    raw_path,
+                    _repo_rel_from(repo_root, _semantic_profile_schema(repo_root, path)),
+                    "schema",
                 )
             )
             continue
         if raw_path.startswith("contracts/profiles/backend/") and raw_path.endswith(".json"):
             targets.append(
                 ValidationTarget(
-                    raw_path, _repo_rel_from(repo_root, _backend_profile_schema(repo_root, path)), "schema"
+                    raw_path,
+                    _repo_rel_from(repo_root, _backend_profile_schema(repo_root, path)),
+                    "schema",
+                )
+            )
+            continue
+        if raw_path.startswith("contracts/profiles/random-stream/") and raw_path.endswith(".json"):
+            targets.append(
+                ValidationTarget(
+                    raw_path,
+                    _repo_rel_from(repo_root, _random_stream_profile_schema(repo_root, path)),
+                    "schema",
+                )
+            )
+            continue
+        if raw_path.startswith("contracts/fixtures/random-stream-vectors/") and raw_path.endswith(".json"):
+            targets.append(
+                ValidationTarget(
+                    raw_path,
+                    _repo_rel_from(repo_root, _random_stream_vector_schema(repo_root, path)),
+                    "schema",
                 )
             )
             continue
         if "/valid/" in raw_path and raw_path.startswith("contracts/fixtures/") and raw_path.endswith(".json"):
             targets.append(
-                ValidationTarget(raw_path, _repo_rel_from(repo_root, _fixture_schema(repo_root, path)), "schema")
+                ValidationTarget(
+                    raw_path,
+                    _repo_rel_from(repo_root, _fixture_schema(repo_root, path)),
+                    "schema",
+                )
             )
     return _dedupe_targets(targets)
 
@@ -147,6 +195,22 @@ def _collect_full_targets(repo_root: Path) -> list[ValidationTarget]:
             ValidationTarget(
                 _repo_rel_from(repo_root, profile),
                 _repo_rel_from(repo_root, _backend_profile_schema(repo_root, profile)),
+                "schema",
+            )
+        )
+    for profile in sorted((repo_root / "contracts" / "profiles" / "random-stream").glob("*.json")):
+        targets.append(
+            ValidationTarget(
+                _repo_rel_from(repo_root, profile),
+                _repo_rel_from(repo_root, _random_stream_profile_schema(repo_root, profile)),
+                "schema",
+            )
+        )
+    for vector in sorted((repo_root / "contracts" / "fixtures" / "random-stream-vectors").rglob("*.json")):
+        targets.append(
+            ValidationTarget(
+                _repo_rel_from(repo_root, vector),
+                _repo_rel_from(repo_root, _random_stream_vector_schema(repo_root, vector)),
                 "schema",
             )
         )

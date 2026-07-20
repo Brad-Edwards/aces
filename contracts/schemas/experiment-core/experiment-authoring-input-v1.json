@@ -1590,6 +1590,17 @@
           "default": null,
           "title": "Description"
         },
+        "executable_binding": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RandomStreamControlBindingModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "role": {
           "enum": [
             "seed",
@@ -1740,6 +1751,169 @@
         "note"
       ],
       "title": "ExperimentValidityNoteModel",
+      "type": "object"
+    },
+    "GovernedEntropyRefModel": {
+      "additionalProperties": false,
+      "description": "Governed reference to sensitive root entropy; never carries raw bytes.\n\nRaw entropy is resolved only at an authorized in-process boundary (out of\nscope here) and is never serialized back into this model, a diagnostic, a\nfixture, argv, or telemetry (SVR-028).",
+      "properties": {
+        "kind": {
+          "const": "governed-reference",
+          "title": "Kind",
+          "type": "string"
+        },
+        "reference_id": {
+          "minLength": 1,
+          "title": "Reference Id",
+          "type": "string"
+        },
+        "reference_version": {
+          "minLength": 1,
+          "title": "Reference Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "reference_id",
+        "reference_version"
+      ],
+      "title": "GovernedEntropyRefModel",
+      "type": "object"
+    },
+    "PublicSeedModel": {
+      "additionalProperties": false,
+      "description": "Inline public root-entropy seed: fixed-width canonical hex bytes.\n\nFixed-width lowercase hex removes leading-zero, integer-width, sign, and\nUnicode ambiguity from the executable entropy encoding (per the EXP-718\npreflight's \"Canonical Inputs\" section).",
+      "properties": {
+        "encoding": {
+          "const": "hex-fixed-width",
+          "title": "Encoding",
+          "type": "string"
+        },
+        "kind": {
+          "const": "public-seed",
+          "title": "Kind",
+          "type": "string"
+        },
+        "value": {
+          "minLength": 1,
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "encoding",
+        "value"
+      ],
+      "title": "PublicSeedModel",
+      "type": "object"
+    },
+    "RandomStreamControlBindingModel": {
+      "additionalProperties": false,
+      "description": "Executable binding: profile identity, namespace, and root entropy.\n\nA seed alone, without generator/derivation/transform identity, is not a\nreproducibility claim (SVR-012). ``profile_ref`` is required and\nstructurally constrained to ``ref_kind=\"profile\"``.",
+      "properties": {
+        "namespace": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Namespace",
+          "type": "string"
+        },
+        "profile_ref": {
+          "$ref": "#/$defs/RandomStreamProfileReferenceModel"
+        },
+        "root_entropy": {
+          "discriminator": {
+            "mapping": {
+              "governed-reference": "#/$defs/GovernedEntropyRefModel",
+              "public-seed": "#/$defs/PublicSeedModel"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/PublicSeedModel"
+            },
+            {
+              "$ref": "#/$defs/GovernedEntropyRefModel"
+            }
+          ],
+          "title": "Root Entropy"
+        }
+      },
+      "required": [
+        "profile_ref",
+        "namespace",
+        "root_entropy"
+      ],
+      "title": "RandomStreamControlBindingModel",
+      "type": "object"
+    },
+    "RandomStreamProfileReferenceModel": {
+      "additionalProperties": false,
+      "description": "Reference constrained to an accepted random-stream profile.",
+      "properties": {
+        "ref_digest": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Digest"
+        },
+        "ref_id": {
+          "minLength": 1,
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "ref_kind": {
+          "const": "profile",
+          "title": "Ref Kind",
+          "type": "string"
+        },
+        "ref_path": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Path"
+        },
+        "ref_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Version"
+        }
+      },
+      "required": [
+        "ref_kind",
+        "ref_id"
+      ],
+      "title": "RandomStreamProfileReferenceModel",
       "type": "object"
     }
   },

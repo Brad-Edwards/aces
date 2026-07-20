@@ -46,7 +46,9 @@ from .experiment_references import (
     ExperimentScenarioSnapshotReferenceModel,
     ExperimentTaskReferenceModel,
 )
+from .experiment_run_stochastic import _validate_run_stochastic_draw_control_refs
 from .participant_manifests import ParticipantImplementationProvenanceModel
+from .random_stream import RandomStreamDrawRecordModel
 from .schema_invariants import (
     _add_aces_invariant,
     _extend_reported_value_status_schema,
@@ -114,6 +116,7 @@ class ExperimentRunModel(ContractModel):
     participant_implementation_provenance: ParticipantImplementationProvenanceModel | None = None
     parameter_set: list[ExperimentParameterModel] = Field(min_length=1)
     stochastic_controls: list[ExperimentStochasticControlModel] = Field(min_length=1)
+    stochastic_draws: list[RandomStreamDrawRecordModel] = Field(default_factory=list)
     started_at: Rfc3339DateTimeString
     ended_at: Rfc3339DateTimeString
     clock_context: ExperimentClockContextModel
@@ -197,6 +200,15 @@ class ExperimentRunModel(ContractModel):
             "and augmentation_id values must be unique within the run.",
             validator=_ARCHIVAL_RUN_VALIDATOR,
             inputs=[{"contract_id": "experiment-run-v1", "instance_path": "#"}],
+        )
+        _add_aces_invariant(
+            json_schema,
+            "stochastic-draws-control-ref-resolves",
+            "Every stochastic_draws control_id must resolve to a stochastic_controls control_id with an "
+            "executable_binding on the same run, and each draw's address.namespace and transform_id/"
+            "transform_version must match that binding's namespace and admitted profile transforms.",
+            validator="aces_contracts.contracts.validate_experiment_run_against_task",
+            inputs=[{"contract_id": "experiment-run-v1", "instance_path": "#/stochastic_draws"}],
         )
         _add_aces_invariant(
             json_schema,
@@ -427,3 +439,4 @@ def validate_experiment_run_against_task(task: ExperimentTaskModel, run: Experim
     _validate_run_metric_ids_declared(task, run)
     _validate_run_observation_requirements(task, run)
     _validate_run_metric_evidence(task, run)
+    _validate_run_stochastic_draw_control_refs(run)

@@ -1994,6 +1994,17 @@
           "default": null,
           "title": "Description"
         },
+        "executable_binding": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RandomStreamControlBindingModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "role": {
           "enum": [
             "seed",
@@ -2107,6 +2118,62 @@
         "note"
       ],
       "title": "ExperimentValidityNoteModel",
+      "type": "object"
+    },
+    "GovernedEntropyRefModel": {
+      "additionalProperties": false,
+      "description": "Governed reference to sensitive root entropy; never carries raw bytes.\n\nRaw entropy is resolved only at an authorized in-process boundary (out of\nscope here) and is never serialized back into this model, a diagnostic, a\nfixture, argv, or telemetry (SVR-028).",
+      "properties": {
+        "kind": {
+          "const": "governed-reference",
+          "title": "Kind",
+          "type": "string"
+        },
+        "reference_id": {
+          "minLength": 1,
+          "title": "Reference Id",
+          "type": "string"
+        },
+        "reference_version": {
+          "minLength": 1,
+          "title": "Reference Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "reference_id",
+        "reference_version"
+      ],
+      "title": "GovernedEntropyRefModel",
+      "type": "object"
+    },
+    "GovernedRandomOutcomeRefModel": {
+      "additionalProperties": false,
+      "description": "Governed reference to a sensitive drawn outcome; never carries the raw value.",
+      "properties": {
+        "kind": {
+          "const": "governed-reference",
+          "title": "Kind",
+          "type": "string"
+        },
+        "reference_id": {
+          "minLength": 1,
+          "title": "Reference Id",
+          "type": "string"
+        },
+        "reference_version": {
+          "minLength": 1,
+          "title": "Reference Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "reference_id",
+        "reference_version"
+      ],
+      "title": "GovernedRandomOutcomeRefModel",
       "type": "object"
     },
     "ParticipantExposurePolicyModel": {
@@ -2338,6 +2405,404 @@
       ],
       "title": "ParticipantImplementationSelectionModel",
       "type": "object"
+    },
+    "PublicRandomOutcomeModel": {
+      "additionalProperties": false,
+      "description": "Public drawn value, recorded as canonical text.",
+      "properties": {
+        "kind": {
+          "const": "public-value",
+          "title": "Kind",
+          "type": "string"
+        },
+        "value": {
+          "minLength": 1,
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "value"
+      ],
+      "title": "PublicRandomOutcomeModel",
+      "type": "object"
+    },
+    "PublicSeedModel": {
+      "additionalProperties": false,
+      "description": "Inline public root-entropy seed: fixed-width canonical hex bytes.\n\nFixed-width lowercase hex removes leading-zero, integer-width, sign, and\nUnicode ambiguity from the executable entropy encoding (per the EXP-718\npreflight's \"Canonical Inputs\" section).",
+      "properties": {
+        "encoding": {
+          "const": "hex-fixed-width",
+          "title": "Encoding",
+          "type": "string"
+        },
+        "kind": {
+          "const": "public-seed",
+          "title": "Kind",
+          "type": "string"
+        },
+        "value": {
+          "minLength": 1,
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "encoding",
+        "value"
+      ],
+      "title": "PublicSeedModel",
+      "type": "object"
+    },
+    "RandomStreamControlBindingModel": {
+      "additionalProperties": false,
+      "description": "Executable binding: profile identity, namespace, and root entropy.\n\nA seed alone, without generator/derivation/transform identity, is not a\nreproducibility claim (SVR-012). ``profile_ref`` is required and\nstructurally constrained to ``ref_kind=\"profile\"``.",
+      "properties": {
+        "namespace": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Namespace",
+          "type": "string"
+        },
+        "profile_ref": {
+          "$ref": "#/$defs/RandomStreamProfileReferenceModel"
+        },
+        "root_entropy": {
+          "discriminator": {
+            "mapping": {
+              "governed-reference": "#/$defs/GovernedEntropyRefModel",
+              "public-seed": "#/$defs/PublicSeedModel"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/PublicSeedModel"
+            },
+            {
+              "$ref": "#/$defs/GovernedEntropyRefModel"
+            }
+          ],
+          "title": "Root Entropy"
+        }
+      },
+      "required": [
+        "profile_ref",
+        "namespace",
+        "root_entropy"
+      ],
+      "title": "RandomStreamControlBindingModel",
+      "type": "object"
+    },
+    "RandomStreamDrawRecordModel": {
+      "additionalProperties": false,
+      "description": "Archival draw provenance: address, transform identity, outcome, and rejection facts.\n\nReferences its control rather than duplicating the root seed for every\ndraw, and never exposes raw generator blocks outside the conformance\nvector corpus.",
+      "properties": {
+        "address": {
+          "$ref": "#/$defs/StreamAddressModel"
+        },
+        "control_id": {
+          "minLength": 1,
+          "title": "Control Id",
+          "type": "string"
+        },
+        "local_coordinate": {
+          "minimum": 0,
+          "title": "Local Coordinate",
+          "type": "integer"
+        },
+        "outcome": {
+          "anyOf": [
+            {
+              "discriminator": {
+                "mapping": {
+                  "governed-reference": "#/$defs/GovernedRandomOutcomeRefModel",
+                  "public-value": "#/$defs/PublicRandomOutcomeModel"
+                },
+                "propertyName": "kind"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/PublicRandomOutcomeModel"
+                },
+                {
+                  "$ref": "#/$defs/GovernedRandomOutcomeRefModel"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Outcome"
+        },
+        "rejection_attempts": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Rejection Attempts",
+          "type": "integer"
+        },
+        "rejection_exhausted": {
+          "default": false,
+          "title": "Rejection Exhausted",
+          "type": "boolean"
+        },
+        "transform_id": {
+          "minLength": 1,
+          "title": "Transform Id",
+          "type": "string"
+        },
+        "transform_version": {
+          "minLength": 1,
+          "title": "Transform Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "control_id",
+        "address",
+        "transform_id",
+        "transform_version",
+        "local_coordinate"
+      ],
+      "title": "RandomStreamDrawRecordModel",
+      "type": "object",
+      "x-aces-invariants": [
+        {
+          "description": "local_coordinate must match address.local_coordinate.",
+          "id": "random-stream-draw-record-local-coordinate-matches-address",
+          "inputs": [
+            {
+              "contract_id": "experiment-run-v1",
+              "instance_path": "#/stochastic_draws"
+            }
+          ],
+          "level": "error",
+          "validator": "aces_contracts.contracts.random_stream.RandomStreamDrawRecordModel._validate_local_coordinate_matches_address"
+        },
+        {
+          "description": "outcome must be present exactly when rejection_exhausted is false, and absent when true.",
+          "id": "random-stream-draw-record-outcome-matches-exhaustion",
+          "inputs": [
+            {
+              "contract_id": "experiment-run-v1",
+              "instance_path": "#/stochastic_draws"
+            }
+          ],
+          "level": "error",
+          "validator": "aces_contracts.contracts.random_stream.RandomStreamDrawRecordModel._validate_outcome_matches_exhaustion"
+        }
+      ]
+    },
+    "RandomStreamProfileReferenceModel": {
+      "additionalProperties": false,
+      "description": "Reference constrained to an accepted random-stream profile.",
+      "properties": {
+        "ref_digest": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Digest"
+        },
+        "ref_id": {
+          "minLength": 1,
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "ref_kind": {
+          "const": "profile",
+          "title": "Ref Kind",
+          "type": "string"
+        },
+        "ref_path": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Path"
+        },
+        "ref_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Version"
+        }
+      },
+      "required": [
+        "ref_kind",
+        "ref_id"
+      ],
+      "title": "RandomStreamProfileReferenceModel",
+      "type": "object"
+    },
+    "StreamAddressModel": {
+      "additionalProperties": false,
+      "description": "Closed semantic random-draw address (SVR-013).\n\nA pure canonical function of the randomness namespace, logical trial\ncoordinate, selection-policy id, variation-point id, draw purpose, and a\nstable local draw coordinate. It is not a concatenated string, arbitrary\nmapping, JSON Pointer, or scheduler/compiled-runtime address, and it\nadmits no worker/process/thread/host, wall-time, retry, or aggregate\nexperiment-digest field (``extra=\"forbid\"`` closes the shape).",
+      "properties": {
+        "draw_purpose": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Draw Purpose",
+          "type": "string"
+        },
+        "local_coordinate": {
+          "minimum": 0,
+          "title": "Local Coordinate",
+          "type": "integer"
+        },
+        "namespace": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Namespace",
+          "type": "string"
+        },
+        "selection_policy_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Selection Policy Id",
+          "type": "string"
+        },
+        "trial_coordinate": {
+          "$ref": "#/$defs/TrialCoordinateModel"
+        },
+        "variation_point_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Variation Point Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "namespace",
+        "trial_coordinate",
+        "selection_policy_id",
+        "variation_point_id",
+        "draw_purpose",
+        "local_coordinate"
+      ],
+      "title": "StreamAddressModel",
+      "type": "object",
+      "x-aces-invariants": [
+        {
+          "description": "draw_purpose must be a term from the random_streams.draw_purpose controlled vocabulary.",
+          "id": "random-stream-address-draw-purpose-governed",
+          "inputs": [
+            {
+              "contract_id": "controlled-vocabularies-v1",
+              "instance_path": "#"
+            }
+          ],
+          "level": "error",
+          "validator": "aces_contracts.contracts.random_stream.StreamAddressModel._validate_draw_purpose"
+        }
+      ]
+    },
+    "TrialCoordinateModel": {
+      "additionalProperties": false,
+      "description": "Logical trial coordinate dimensions usable in a random-stream address.\n\nEvery field is an optional portable identifier: an experiment declares\nonly the dimensions it actually varies (SVR-013's \"logical trial\ncoordinate\").",
+      "properties": {
+        "block_id": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "minLength": 1,
+              "not": {
+                "pattern": "[^a-z0-9_-]"
+              },
+              "pattern": "^[a-z0-9]",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Block Id"
+        },
+        "condition_id": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "minLength": 1,
+              "not": {
+                "pattern": "[^a-z0-9_-]"
+              },
+              "pattern": "^[a-z0-9]",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Condition Id"
+        },
+        "replicate_id": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "minLength": 1,
+              "not": {
+                "pattern": "[^a-z0-9_-]"
+              },
+              "pattern": "^[a-z0-9]",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Replicate Id"
+        }
+      },
+      "title": "TrialCoordinateModel",
+      "type": "object"
     }
   },
   "$id": "https://aces.dev/schemas/experiment-run-v1.json",
@@ -2523,6 +2988,13 @@
       "title": "Stochastic Controls",
       "type": "array"
     },
+    "stochastic_draws": {
+      "items": {
+        "$ref": "#/$defs/RandomStreamDrawRecordModel"
+      },
+      "title": "Stochastic Draws",
+      "type": "array"
+    },
     "task_ref": {
       "$ref": "#/$defs/ExperimentTaskReferenceModel"
     },
@@ -2617,6 +3089,18 @@
       ],
       "level": "error",
       "validator": "aces_contracts.contracts.ExperimentRunModel._validate_archival_run"
+    },
+    {
+      "description": "Every stochastic_draws control_id must resolve to a stochastic_controls control_id with an executable_binding on the same run, and each draw's address.namespace and transform_id/transform_version must match that binding's namespace and admitted profile transforms.",
+      "id": "stochastic-draws-control-ref-resolves",
+      "inputs": [
+        {
+          "contract_id": "experiment-run-v1",
+          "instance_path": "#/stochastic_draws"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_contracts.contracts.validate_experiment_run_against_task"
     },
     {
       "description": "Run apparatus, result metric ids, and concrete evidence artifacts must satisfy the referenced task protocol.",

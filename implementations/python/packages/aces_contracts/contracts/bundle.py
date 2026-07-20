@@ -54,6 +54,7 @@ from .participant_views import (
     ParticipantOutcomeReportModel,
     ParticipantStatusViewModel,
 )
+from .random_stream import RandomStreamProfileModel, RandomStreamVectorModel
 from .realization_plans import (
     EvaluationPlanModel,
     OperationReceiptModel,
@@ -125,6 +126,8 @@ def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
         "nist-csf-defensive-categories-source-v1": NistCsfDefensiveCategorySourceModel.model_json_schema(),
         "semantic-profile-v1": SemanticProfileModel.model_json_schema(),
         "backend-profile-v1": _backend_profile_schema_for_bundle(),
+        "random-stream-profile-v1": RandomStreamProfileModel.model_json_schema(),
+        "random-stream-vector-v1": RandomStreamVectorModel.model_json_schema(),
         "experiment-apparatus-context-v1": ExperimentApparatusContextModel.model_json_schema(),
         "experiment-authoring-input-v1": ExperimentSpecModel.model_json_schema(),
         "experiment-capture-spec-v1": ExperimentCaptureSpecModel.model_json_schema(),

@@ -13,9 +13,11 @@ from .base import (
 )
 from .experiment_apparatus import (
     ExperimentApparatusContextModel,
+    ExperimentStochasticControlModel,
     ExperimentTaskModel,
 )
 from .experiment_artifacts import (
+    _experiment_reference_key,
     _format_reference,
 )
 from .experiment_conditions import _run_satisfies_condition_assignment
@@ -284,6 +286,86 @@ def _validate_study_run_allocation_coverage(
     _raise_for_run_allocation_coverage_violations(state, allocation)
 
 
+def _executable_binding_identity(control: ExperimentStochasticControlModel) -> tuple[Any, ...] | None:
+    binding = control.executable_binding
+    if binding is None:
+        return None
+    return (_experiment_reference_key(binding.profile_ref), binding.namespace)
+
+
+@dataclass
+class _StochasticControlIdentityState:
+    """Mutable accumulator for `_collect_evaluation_run_stochastic_control_identities` classification."""
+
+    identity_by_control_id: dict[str, tuple[Any, ...]] = field(default_factory=dict)
+    unbound_control_ids: set[str] = field(default_factory=set)
+    conflicting_control_ids: set[str] = field(default_factory=set)
+
+
+def _record_stochastic_control_identity(
+    control: ExperimentStochasticControlModel,
+    state: _StochasticControlIdentityState,
+) -> None:
+    identity = _executable_binding_identity(control)
+    if identity is None:
+        state.unbound_control_ids.add(control.control_id)
+        return
+    prior_identity = state.identity_by_control_id.get(control.control_id)
+    if prior_identity is not None and prior_identity != identity:
+        state.conflicting_control_ids.add(control.control_id)
+    state.identity_by_control_id[control.control_id] = identity
+
+
+def _collect_evaluation_run_stochastic_control_identities(
+    runs: list[ExperimentRunModel],
+    evaluation_run_members: list[ExperimentStudyMembershipModel],
+) -> _StochasticControlIdentityState:
+    state = _StochasticControlIdentityState()
+    for member in evaluation_run_members:
+        for run in runs:
+            if not _run_ref_matches_run(member.target_ref, run):
+                continue
+            for control in run.stochastic_controls:
+                _record_stochastic_control_identity(control, state)
+    return state
+
+
+def _validate_study_run_allocation_stochastic_control_consistency(
+    study: ExperimentStudyModel,
+    runs: list[ExperimentRunModel],
+    evaluation_run_members: list[ExperimentStudyMembershipModel],
+) -> None:
+    """EXP-718: runs an allocation asserts comparable must share consistent executable stream identity.
+
+    When ``run_allocation`` compares evaluation runs across conditions, a
+    stochastic control declared on more than one of those runs (matched by
+    ``control_id``) is a common-random-number/controlled-variation claim: its
+    executable ``profile_ref`` and ``namespace`` must agree across every run
+    that declares it. A control that is descriptive-only (no
+    ``executable_binding``) on *every* run that declares it makes no such
+    claim and is not checked. A control that carries an ``executable_binding``
+    on some but not all of the runs that declare it is an asymmetric claim --
+    one run asserts a reproducible executable stream identity for it and
+    another makes no claim at all -- and is rejected on the same footing as a
+    mismatched ``profile_ref``/``namespace``, since it is exactly as
+    unreproducible as a genuine mismatch would be.
+    """
+
+    if study.run_allocation is None:
+        return
+    state = _collect_evaluation_run_stochastic_control_identities(runs, evaluation_run_members)
+    asymmetric_control_ids = state.conflicting_control_ids | (
+        state.unbound_control_ids & state.identity_by_control_id.keys()
+    )
+    if asymmetric_control_ids:
+        joined = ", ".join(sorted(asymmetric_control_ids))
+        raise ValueError(
+            "study run_allocation compared evaluation runs must use a consistent executable stochastic "
+            "profile_ref and namespace for shared stochastic_controls control_id values, and either all "
+            f"or none of the runs that share a control_id may carry an executable_binding: {joined}"
+        )
+
+
 def _resolve_and_validate_study_tasks(
     study: ExperimentStudyModel,
     tasks: list[ExperimentTaskModel],
@@ -386,5 +468,6 @@ def validate_experiment_study_against_tasks_and_runs(
 
     _validate_study_analysis_run_eligibility(study, runs, evaluation_run_members)
     _validate_study_run_allocation_coverage(study, runs, evaluation_run_members)
+    _validate_study_run_allocation_stochastic_control_consistency(study, runs, evaluation_run_members)
     _validate_study_run_task_membership(matched_tasks, matched_runs)
     _validate_study_analysis_plan_metrics(study, matched_tasks, matched_evaluation_runs)

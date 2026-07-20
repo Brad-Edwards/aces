@@ -2,9 +2,9 @@
   "contract_id": "experiment-run-v1",
   "schema_path": "contracts/schemas/experiment-core/experiment-run-v1.json",
   "stability": "draft",
-  "content_hash": "1503644443be7e61d5710a6aed9437a66c53a7871eb0ff1541fb2449b684742b",
+  "content_hash": "051a6593a285940ebf0a6b09a4ea66c8abfefaf688e76bb935735cf7bd302a95",
   "last_change": {
-    "summary": "Extended shared experiment artifact roles and typed references for associated-artifact parents (ADR-077, issue #738).",
-    "content_hash": "1503644443be7e61d5710a6aed9437a66c53a7871eb0ff1541fb2449b684742b"
+    "summary": "Added an optional executable_binding field to ExperimentStochasticControlModel and a stochastic_draws archival draw-provenance list for EXP-718 (issue #274). The stochastic_draws control_id invariant now also requires the resolved control to carry an executable_binding and the draw's address.namespace/transform_id/transform_version to match that binding's namespace and admitted profile transforms. RandomStreamDrawRecordModel's outcome is now optional, with an invariant requiring it exactly when rejection_exhausted is false.",
+    "content_hash": "051a6593a285940ebf0a6b09a4ea66c8abfefaf688e76bb935735cf7bd302a95"
   }
 }
