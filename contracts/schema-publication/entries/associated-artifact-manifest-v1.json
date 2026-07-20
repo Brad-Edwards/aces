@@ -1,0 +1,10 @@
+{
+  "contract_id": "associated-artifact-manifest-v1",
+  "schema_path": "contracts/schemas/associated-artifacts/associated-artifact-manifest-v1.json",
+  "stability": "draft",
+  "content_hash": "50cb495731d7274371dd01116acfe67dda3dd3261a1a911136cae02dab7f7927",
+  "last_change": {
+    "summary": "Initial publication of the ADR-077 scenario- and experiment-associated artifact manifest, canonical set identity, and required semantic byte-binding invariant.",
+    "content_hash": "50cb495731d7274371dd01116acfe67dda3dd3261a1a911136cae02dab7f7927"
+  }
+}

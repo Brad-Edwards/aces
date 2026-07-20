@@ -220,8 +220,9 @@ from the Conventional Commit history on `main`, which also generates
 
 Published JSON Schemas use versioned contract identifiers such as
 `sdl-authoring-input-v1`, but the suffix is not the same as a stability promise.
-The authoritative schema publication manifest records each schema's `draft` or
-`stable` stability class and canonical content hash. Current checked-in schemas
+The authoritative schema publication index assembles independent per-contract
+records, each carrying its schema's `draft` or `stable` stability class and
+canonical content hash. Current checked-in schemas
 are draft until a maintainer explicitly promotes them; stable breaking changes
 must mint a new schema version as described in
 [ADR-061](https://github.com/Brad-Edwards/aces/blob/main/docs/decisions/adrs/adr-061-published-schema-evolution-policy.md).

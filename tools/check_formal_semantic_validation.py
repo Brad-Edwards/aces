@@ -18,6 +18,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from tools.evidence_bundle_index import load_index_records, revision_key  # noqa: E402
 from tools.policy.common import (  # noqa: E402
     PolicyFailure,
     load_bounded_json_object,
@@ -25,6 +26,7 @@ from tools.policy.common import (  # noqa: E402
 )
 
 MANIFEST_PATH = "docs/research/formal-semantic-validation/bundle-manifest.json"
+MANIFEST_SCHEMA_VERSION = "formal-semantic-validation-bundle-index/v1"
 _MAX_FILE_BYTES = 512 * 1024
 _MAX_CASES = 128
 _COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
@@ -1053,7 +1055,7 @@ def _validate_analysis(
 
 
 def load_bundle(repo_root: Path = REPO_ROOT) -> tuple[dict, dict, dict, dict, dict]:
-    manifest = load_bounded_json_object(repo_root, MANIFEST_PATH, max_bytes=_MAX_FILE_BYTES)
+    manifest = _assembled_manifest(repo_root)
     paths: list[str] = []
     for key in ("protocol_path", "corpus_path", "snapshot_path", "analysis_path"):
         value = manifest.get(key)
@@ -1069,7 +1071,7 @@ def load_bundle(repo_root: Path = REPO_ROOT) -> tuple[dict, dict, dict, dict, di
 def load_satisfiability_analysis(repo_root: Path = REPO_ROOT) -> tuple[dict, dict, dict]:
     """Load the revisioned issue-826 supplement selected by the bundle."""
 
-    manifest = load_bounded_json_object(repo_root, MANIFEST_PATH, max_bytes=_MAX_FILE_BYTES)
+    manifest = _assembled_manifest(repo_root)
     values = [
         manifest.get("satisfiability_snapshot_path"),
         manifest.get("satisfiability_analysis_path"),
@@ -1086,6 +1088,66 @@ def load_satisfiability_analysis(repo_root: Path = REPO_ROOT) -> tuple[dict, dic
         load_bounded_json_object(repo_root, str(value), max_bytes=_MAX_FILE_BYTES) for value in values
     )
     return manifest, snapshot, analysis
+
+
+def _assembled_manifest(repo_root: Path) -> dict[str, object]:
+    records = load_index_records(
+        repo_root,
+        index_path=MANIFEST_PATH,
+        schema_version=MANIFEST_SCHEMA_VERSION,
+        directory_key="parts_directory",
+        max_bytes=_MAX_FILE_BYTES,
+    )
+    base_parts: list[tuple[str, dict[str, object]]] = []
+    supplement_parts: list[tuple[str, dict[str, object]]] = []
+    for path, record in records:
+        kind = record.get("part_kind")
+        revision_key(record.get("revision"))
+        if kind == "base":
+            expected = {
+                "part_kind",
+                "revision",
+                "protocol_path",
+                "corpus_path",
+                "snapshot_path",
+                "analysis_path",
+            }
+            base_parts.append((path, record))
+        elif kind == "satisfiability":
+            expected = {
+                "part_kind",
+                "revision",
+                "satisfiability_snapshot_path",
+                "satisfiability_analysis_path",
+            }
+            supplement_parts.append((path, record))
+        else:
+            raise ValueError(f"{path!r} has unknown formal evidence part_kind {kind!r}")
+        if set(record) != expected:
+            raise ValueError(f"{path!r} fields must exactly match {sorted(expected)}")
+        for key, value in record.items():
+            if not key.endswith("_path"):
+                continue
+            resolved = safe_repo_path(repo_root, value) if isinstance(value, str) else None
+            if resolved is None or not resolved.is_file():
+                raise ValueError(f"{path!r} contains unsafe or missing {key}")
+    if not base_parts or not supplement_parts:
+        raise ValueError(f"{MANIFEST_PATH!r} must select base and satisfiability evidence parts")
+    _base_path, base = max(base_parts, key=lambda item: (revision_key(item[1]["revision"]), item[0]))
+    _supplement_path, supplement = max(
+        supplement_parts,
+        key=lambda item: (revision_key(item[1]["revision"]), item[0]),
+    )
+    return {
+        "bundle_id": "aces-formal-semantic-validation",
+        "revision": supplement["revision"],
+        "protocol_path": base["protocol_path"],
+        "corpus_path": base["corpus_path"],
+        "snapshot_path": base["snapshot_path"],
+        "analysis_path": base["analysis_path"],
+        "satisfiability_snapshot_path": supplement["satisfiability_snapshot_path"],
+        "satisfiability_analysis_path": supplement["satisfiability_analysis_path"],
+    }
 
 
 def validate_satisfiability_analysis(

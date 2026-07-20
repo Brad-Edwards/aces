@@ -309,5 +309,7 @@ def test_published_valid_and_invalid_fixtures_enforce_outcome_joins() -> None:
 
     ScenarioSatisfiabilityEvidenceModel.model_validate_json(valid.read_text(encoding="utf-8"))
     invalid_payload = invalid.read_text(encoding="utf-8")
-    with pytest.raises(ValidationError):
+    with pytest.raises(ValidationError) as exc_info:
         ScenarioSatisfiabilityEvidenceModel.model_validate_json(invalid_payload)
+
+    assert "outcome must select exactly one matching payload" in str(exc_info.value)

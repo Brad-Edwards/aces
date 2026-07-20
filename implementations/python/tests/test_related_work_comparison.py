@@ -24,6 +24,10 @@ def _bundle() -> tuple[dict, dict, dict]:
     return deepcopy(protocol), deepcopy(snapshot), deepcopy(analysis)
 
 
+def test_current_bundle_is_clean() -> None:
+    assert validate_bundle(REPO_ROOT, *_bundle()) == []
+
+
 def test_protocol_uses_all_required_axes_and_independent_systems() -> None:
     protocol, _, _ = _bundle()
 

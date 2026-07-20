@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import subprocess
 from copy import deepcopy
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from tools.check_formal_semantic_validation import (
     REQUIRED_CLAIM_CLASS_IDS,
     REQUIRED_PARTICIPANT_OBLIGATION_IDS,
+    _replay_participant_tests,
     evaluate,
     load_bundle,
     load_satisfiability_analysis,
@@ -27,10 +30,21 @@ def _bundle() -> tuple[dict, dict, dict, dict, dict]:
     return tuple(deepcopy(item) for item in load_bundle(REPO_ROOT))  # type: ignore[return-value]
 
 
+def test_current_bundle_is_clean() -> None:
+    assert validate_bundle(REPO_ROOT, *_bundle()) == []
+
+
 def test_protocol_keeps_all_literature_claim_classes_distinct() -> None:
     _, protocol, _, _, _ = _bundle()
 
     assert {item["claim_class_id"] for item in protocol["claim_classes"]} == REQUIRED_CLAIM_CLASS_IDS
+
+
+def test_sharded_manifest_composes_latest_base_with_independent_supplement() -> None:
+    manifest, _protocol, _corpus, _snapshot, _analysis = _bundle()
+    assert manifest["revision"] == "2.0.0"
+    assert manifest["snapshot_path"].endswith("execution-snapshot-v1.1.json")
+    assert manifest["satisfiability_snapshot_path"].endswith("satisfiability-execution-snapshot-v1.json")
 
 
 def test_gate_requires_positive_and_negative_cases_for_every_claim_class() -> None:
@@ -124,6 +138,35 @@ def test_gate_replays_participant_tests_instead_of_trusting_pass_labels() -> Non
     failures = evaluate(REPO_ROOT, participant_test_runner=failed_replay)
 
     assert "formal-validation-participant-replay" in _rule_ids(failures)
+
+
+@pytest.mark.parametrize(
+    ("returncode", "expected"),
+    [(0, (True, "")), (3, (False, "participant fixture replay exited with status 3"))],
+)
+def test_participant_test_replay_maps_pytest_status(
+    monkeypatch: pytest.MonkeyPatch,
+    returncode: int,
+    expected: tuple[bool, str],
+) -> None:
+    monkeypatch.setattr(
+        "tools.check_formal_semantic_validation.subprocess.run",
+        lambda *_args, **_kwargs: SimpleNamespace(returncode=returncode),
+    )
+
+    assert _replay_participant_tests(REPO_ROOT, ["tests/test_example.py::test_case"]) == expected
+
+
+def test_participant_test_replay_fails_closed_on_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    def timed_out(*_args: object, **_kwargs: object) -> None:
+        raise subprocess.TimeoutExpired(cmd="pytest", timeout=600)
+
+    monkeypatch.setattr("tools.check_formal_semantic_validation.subprocess.run", timed_out)
+
+    ok, message = _replay_participant_tests(REPO_ROOT, ["tests/test_example.py::test_case"])
+
+    assert not ok
+    assert message.startswith("participant fixture replay could not complete:")
 
 
 def test_gate_recomputes_claim_statuses_from_frozen_observations() -> None:

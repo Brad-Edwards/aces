@@ -19,6 +19,9 @@ class SDLModel(BaseModel):
 
 
 _VARIABLE_NAME_PATTERN = PORTABLE_IDENTIFIER_PATTERN
+_VARIABLE_TOKEN_NAME_PATTERN = (
+    r"(?:(?:" + PORTABLE_IDENTIFIER_PATTERN + r"|__private)\.)*" + PORTABLE_IDENTIFIER_PATTERN
+)
 VARIABLE_NAME_PATTERN = _VARIABLE_NAME_PATTERN
 VARIABLE_NAME_RE = re.compile(r"^" + VARIABLE_NAME_PATTERN + r"$")
 # Single source of truth for the ``${name}`` substitution token, shared by the
@@ -28,7 +31,7 @@ VARIABLE_NAME_RE = re.compile(r"^" + VARIABLE_NAME_PATTERN + r"$")
 # ``.findall`` / ``match.group(1)`` consumers. ``VARIABLE_TOKEN_RE`` matches a
 # token embedded anywhere in a string; ``_VARIABLE_REF_RE`` matches a
 # whole-string placeholder.
-VARIABLE_TOKEN_PATTERN = r"\$\{(" + _VARIABLE_NAME_PATTERN + r")\}"
+VARIABLE_TOKEN_PATTERN = r"\$\{(" + _VARIABLE_TOKEN_NAME_PATTERN + r")\}"
 VARIABLE_TOKEN_RE = re.compile(VARIABLE_TOKEN_PATTERN)
 _VARIABLE_REF_RE = re.compile(r"^" + VARIABLE_TOKEN_PATTERN + r"$")
 VARIABLE_REFERENCE_SCHEMA_MARKER = "x-aces-variable-reference"

@@ -1,0 +1,10 @@
+{
+  "contract_id": "attack-enterprise-tactics-source-v1",
+  "schema_path": "contracts/schemas/concept-authority/attack-enterprise-tactics-source-v1.json",
+  "stability": "draft",
+  "content_hash": "32dc4af64f786b3c7a520181f9266cbc3fcfd54d69683faa861c38a495783c7f",
+  "last_change": {
+    "summary": "Initial publication of the pinned MITRE ATT&CK Enterprise tactics v19.1 source schema for the ACT-609 adopted offensive behavior vocabulary.",
+    "content_hash": "32dc4af64f786b3c7a520181f9266cbc3fcfd54d69683faa861c38a495783c7f"
+  }
+}

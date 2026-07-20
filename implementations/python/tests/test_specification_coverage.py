@@ -9,6 +9,7 @@ from tools.check_specification_coverage import (
     EXPECTED_CLASSIFICATIONS,
     EXPECTED_STRATA,
     load_bundle,
+    load_bundles,
     recompute_analysis,
     validate_bundle,
 )
@@ -30,6 +31,11 @@ def _bundle() -> tuple[dict, dict, dict, dict]:
     )
 
 
+def test_current_bundle_is_clean() -> None:
+    _manifest, protocol, snapshot, analysis = _bundle()
+    assert validate_bundle(REPO_ROOT, protocol, snapshot, analysis) == []
+
+
 def test_current_bundle_records_reproducible_and_honest_results() -> None:
     _, protocol, snapshot, analysis = _bundle()
     assert {item["stratum_id"] for item in protocol["coverage_strata"]} == EXPECTED_STRATA
@@ -37,6 +43,13 @@ def test_current_bundle_records_reproducible_and_honest_results() -> None:
     assert snapshot["execution_status"] == "complete"
     assert analysis == recompute_analysis(protocol, snapshot, analysis)
     assert analysis["evidence_status"] in {"partial", "demonstrated", "refuted"}
+
+
+def test_immutable_bundle_index_preserves_concurrent_captures() -> None:
+    bundles = load_bundles(REPO_ROOT)
+    assert {manifest["revision"] for manifest, *_rest in bundles} >= {"1.0.0", "1.1.0"}
+    manifest, *_rest = load_bundle(REPO_ROOT)
+    assert manifest["revision"] == "1.1.0"
 
 
 def test_gate_rejects_missing_strata_and_composite_concepts() -> None:
@@ -153,11 +166,11 @@ def test_gate_rejects_post_execution_reclassification_of_load_bearing_concept() 
     }.issubset(_rule_ids(failures))
 
 
-def test_gate_rejects_stale_implementation_identity_and_analysis_join() -> None:
+def test_gate_rejects_invalid_implementation_identity_and_analysis_join() -> None:
     _, protocol, snapshot, analysis = _bundle()
     surfaces = snapshot.get("implementation_surfaces")
     assert isinstance(surfaces, list) and surfaces
-    surfaces[0]["content_sha256"] = "0" * 64
+    surfaces[0]["content_sha256"] = "not-a-digest"
 
     failures = validate_bundle(REPO_ROOT, protocol, snapshot, analysis)
 
@@ -165,3 +178,14 @@ def test_gate_rejects_stale_implementation_identity_and_analysis_join() -> None:
         "specification-coverage-implementation-identity",
         "specification-coverage-analysis-stale",
     }.issubset(_rule_ids(failures))
+
+
+def test_historical_implementation_digest_does_not_bind_the_live_checkout() -> None:
+    _, protocol, snapshot, analysis = _bundle()
+    surfaces = snapshot.get("implementation_surfaces")
+    assert isinstance(surfaces, list) and surfaces
+    surfaces[0]["content_sha256"] = "f" * 64
+
+    failures = validate_bundle(REPO_ROOT, protocol, snapshot, analysis)
+
+    assert "specification-coverage-implementation-identity" not in _rule_ids(failures)

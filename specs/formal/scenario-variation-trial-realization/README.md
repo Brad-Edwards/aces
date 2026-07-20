@@ -17,9 +17,10 @@ experiment provenance. It fixes identity, phase ordering, selection,
 random-stream, secrecy, admission, backend, scheduling, and late-binding
 properties for follow-on implementations.
 
-It is not an executable model and defines no published schema. The executable
-contracts, compiler, properties, and differential witnesses are tracked by
-#274 and #786 through #791.
+It is not an executable model. The SCE-002 family declarations are published in
+the SDL authoring schema; the remaining executable contracts, compiler,
+properties, and differential witnesses are tracked by #274 and #787 through
+#791.
 
 ## Model
 
@@ -419,12 +420,14 @@ backend state, cryptographic unpredictability, or exact replay from a seed.
 
 ## Assurance Fulfillment
 
-The invariant list is delivered by this file. Because issue #652 is design-only:
+The invariant list is delivered by this file. Issue #786 now supplies the
+bounded family declaration contract and tests; remaining evidence is allocated
+as follows:
 
-- unit-test evidence is waived to #786, #787, #789, #790, and #791;
-- typed IR/contract evidence is waived to #274, #786, #787, #788, and #791; and
+- unit-test evidence is waived to #787, #789, #790, and #791;
+- typed IR/contract evidence is waived to #274, #787, #788, and #791; and
 - property/differential evidence is waived to #274, #789, #790, and #791.
 
 The dated waivers and paths are registered in
-`specs/formal/assurance-fulfillment.yaml`. No SCE-002 implementation claim is
-made until those follow-on artifacts land.
+`specs/formal/assurance-fulfillment.yaml`. SCE-002 remains DRAFT until those
+follow-on artifacts land.

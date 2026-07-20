@@ -1,0 +1,29 @@
+name: fixture-module
+version: 1.0.0
+module:
+  id: aces/fixture-family
+  version: 1.0.0
+  exports:
+    nodes: [primary, secondary]
+    content: [payload]
+    variation_points: [payload-host]
+nodes:
+  primary: {type: vm, resources: {ram: 1 GiB, cpu: 1}}
+  secondary: {type: vm, resources: {ram: 1 GiB, cpu: 1}}
+content:
+  payload: {type: file, target: primary, path: /opt/payload}
+variation_points:
+  private-host:
+    kind: alternative
+    target: {kind: reference, owner: payload, slot: content.target}
+    alternatives:
+      primary-host: {reference: primary}
+      secondary-host: {reference: secondary}
+  payload-host:
+    kind: alternative
+    target: {kind: reference, owner: payload, slot: content.target}
+    alternatives:
+      primary-host:
+        reference: primary
+        requires: [{point: private-host, members: [primary-host]}]
+      secondary-host: {reference: secondary}

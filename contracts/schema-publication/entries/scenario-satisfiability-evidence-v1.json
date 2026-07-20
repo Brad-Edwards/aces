@@ -1,0 +1,10 @@
+{
+  "contract_id": "scenario-satisfiability-evidence-v1",
+  "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
+  "stability": "draft",
+  "content_hash": "7045dfa84adc36552dcfd2cb9815348709bef5c9afbd3fdfd1b8c503f5d9e1f3",
+  "last_change": {
+    "summary": "Carry defensive behavior references through the embedded scenario witness after merging the current SDL contract authority.",
+    "content_hash": "7045dfa84adc36552dcfd2cb9815348709bef5c9afbd3fdfd1b8c503f5d9e1f3"
+  }
+}

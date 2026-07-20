@@ -13,11 +13,13 @@ The goal of this bucket is organizational clarity:
 - `realization-envelopes/` contains configuration-bound backend realization
   declarations whose identity is carried through manifests, plans, and snapshots
 
-`schema-publication-manifest.json` is the authoritative publication inventory
-for the current machine-readable schema set. The contracts verification gate
-checks that every entry points at `contracts/schemas/`, that every listed schema
-exists, that every JSON Schema file under `contracts/schemas/` is listed, and
-that every entry records its stability class and canonical content hash.
+`schema-publication-manifest.json` is the stable index for the authoritative
+publication inventory. Each contract has an independent record under
+`schema-publication/entries/`, so concurrent changes to unrelated contracts do
+not rewrite one shared array. The contracts verification gate assembles those
+records deterministically and checks that every entry points at
+`contracts/schemas/`, every listed schema exists, every JSON Schema file is
+listed, and every entry records its stability class and canonical content hash.
 
 ## Schema authority direction (ADR-009 §7)
 
@@ -28,10 +30,10 @@ regenerating from a reference implementation. The Python `schema_bundle()` and
 `tools/generate_contract_schemas.py` are the reference implementation's output;
 `tools/check_generated_schemas.py` runs that generation into a throwaway
 directory and **proves the reference implementation still matches the published
-normative schemas** (it never overwrites them). A schema change must record a
-contract-facing change-ledger entry (`last_change`: summary + content hash) in
-`schema-publication-manifest.json`; a schema **removal** must record a
-`removed_schemas` tombstone (schema path + summary) in the same manifest.
+normative schemas** (it never overwrites them). A schema change must update its
+contract record with a contract-facing `last_change` ledger (summary + content
+hash); a schema **removal** must add an independent tombstone record (schema path
++ summary) under `schema-publication/tombstones/`.
 `tools/check_schema_publication.py --base-rev` and the
 `schema-change-missing-manifest` policy rule reject a `contracts/schemas/`
 change — including a removal — that lands without one, so a schema cannot

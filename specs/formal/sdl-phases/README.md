@@ -22,8 +22,8 @@ Let:
 The phase shapes are:
 
 ```text
-fields(A) subset-of C union {module, imports, realization, variables}
-fields(E) subset-of C union {variables, expansion_provenance}
+fields(A) subset-of C union {module, imports, realization, variables, variation_points}
+fields(E) subset-of C union {variables, variation_points, expansion_provenance}
 fields(I) subset-of C union {instantiation_provenance}
 fields(S) = {profile, scenario}
 ```
@@ -47,6 +47,7 @@ value.
 | `imports` | optional | forbidden | forbidden | Consumed by expansion; resolved imports move to `expansion_provenance.imports` and later `instantiation_provenance.imports`. |
 | `realization` | optional | forbidden | forbidden | Normalized designation records move to `expansion_provenance.realization_designations` and later `instantiation_provenance.realization_designations`. |
 | `variables` | optional | optional | forbidden | Selected values move to provenance bindings; variable definitions do not survive instantiation. |
+| `variation_points` | optional | optional | forbidden | Composition preserves and namespaces family declarations. Recorded-selection integration consumes them before instantiation; unresolved non-empty families fail closed. |
 | `expansion_provenance` | forbidden | optional | forbidden | Its portable import, constraint, explicitness, and realization records feed instantiation provenance. |
 | `instantiation_provenance` | forbidden | forbidden | required | Required portable derivation context for an instantiated artifact. |
 
@@ -71,8 +72,8 @@ transition from `I` back to `A` or `E`, and no parser treats `S` as source.
 
 ```text
 {module, imports, realization} intersect fields(E) = empty
-{module, imports, realization, variables} intersect fields(I) = empty
-{module, imports, realization, variables} intersect fields(S) = empty
+{module, imports, realization, variables, variation_points} intersect fields(I) = empty
+{module, imports, realization, variables, variation_points} intersect fields(S) = empty
 ```
 
 The last line applies to snapshot-envelope members; the nested `scenario` must

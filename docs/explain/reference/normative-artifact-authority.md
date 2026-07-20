@@ -25,8 +25,9 @@ contributor-facing reading material.
 - `implementations/` contains reference code only. Python models, CLI output,
   generated bindings, and conformance runners consume published authority; they
   do not define ecosystem meaning.
-- `contracts/schema-publication-manifest.json` is the publication inventory for
-  schemas. It must stay aligned with `schema_bundle()` and
+- `contracts/schema-publication-manifest.json` is the stable index for the
+  sharded schema publication inventory under `contracts/schema-publication/`.
+  The assembled catalog must stay aligned with `schema_bundle()` and
   `contracts/schemas/`.
 - Code generation is support machinery. If a generated schema is published,
   the implementation must still describe it as a checked-in contract artifact,
@@ -69,14 +70,14 @@ but it still passes through these gates:
   catalogs, and profiles must validate through `check-jsonschema` via
   `tools/check_json_artifacts.py` and the closed-world `ContractModel`
   descendants where Python validation exists.
-- Publication validation: every published schema must be listed once in
-  `contracts/schema-publication-manifest.json`, and every manifest entry must
+- Publication validation: every published schema must have one independent
+  record under `contracts/schema-publication/entries/`, and every record must
   point under `contracts/schemas/`.
 - Schema authority direction (ADR-009 §7): the published schemas under
   `contracts/schemas/` are the hand-governed normative authority. A contract
   change is an edit to the published schema plus a contract-facing change-ledger
-  entry in `contracts/schema-publication-manifest.json` (`last_change` for an
-  added or modified schema; a `removed_schemas` tombstone for a deletion);
+  record under `contracts/schema-publication/` (`last_change` for an added or
+  modified schema; an independent tombstone record for a deletion);
   `tools/check_generated_schemas.py` proves the reference implementation
   (`schema_bundle()`) still generates an identical bundle (into a throwaway
   directory — it never overwrites the published authority).
@@ -118,9 +119,9 @@ Avoid:
   profiles, and semantic profiles into one generic "profile" or "runtime"
   bucket
 - changing or removing a published schema under `contracts/schemas/` without
-  recording a contract-facing change-ledger entry (`last_change`, or a
-  `removed_schemas` tombstone for a deletion) in
-  `contracts/schema-publication-manifest.json`, or treating a generator/Python
+  updating its contract-facing publication record (`last_change`, or an
+  independent tombstone record for a deletion) under
+  `contracts/schema-publication/`, or treating a generator/Python
   edit as authorization for a schema change (the published schema is the
   authority; the generator only proves compatibility)
 - adding new authority-bearing artifacts anywhere other than `specs/` (for

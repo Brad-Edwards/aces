@@ -43,6 +43,8 @@ HASHMAP_SECTIONS = (
     "evidence_requirements",
     "objectives",
     "workflows",
+    "variables",
+    "variation_points",
 )
 _HASHMAP_SECTIONS = HASHMAP_SECTIONS
 FORWARDING_AGENTS_SECTION = "forwarding_agents"
@@ -221,6 +223,8 @@ def symbol_index(
         "evidence_requirements": section_maps.get("evidence_requirements", {}),
         "objectives": section_maps.get("objectives", {}),
         "workflows": section_maps.get("workflows", {}),
+        "variables": section_maps.get("variables", {}),
+        "variation_points": section_maps.get("variation_points", {}),
         FORWARDING_AGENTS_SECTION: forwarding_agent_map,
         "named": named,
     }

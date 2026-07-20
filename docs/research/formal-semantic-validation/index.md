@@ -21,19 +21,21 @@ does not generalize beyond its named profile.
 
 ## Bundle
 
-- [`bundle-manifest.json`](bundle-manifest.json) selects the exact active
-  protocol, corpus, execution snapshot, and analysis.
+- [`bundle-manifest.json`](bundle-manifest.json) is a stable index over
+  immutable records in `bundles/`. Base evidence and supplements advance in
+  separate files, then the checker composes their highest revisions
+  deterministically. Adding a supplement no longer rewrites the base bundle.
 - [`protocol-v1.json`](protocol-v1.json) freezes the claim boundaries,
   entrypoints, allowed evidence, objective pass/fail rules, and participant
   obligations before interpretation.
 - [`corpus/manifest-v1.json`](corpus/manifest-v1.json) carries positive and
   single-defect negative cases for every claim class. Unsupported classes have
   explicit cases with no invented research-only model or fixture semantics.
-- [`execution-snapshot-v1.json`](execution-snapshot-v1.json) pins ACES commit
-  `c3ce41a5dbfd519582de7c7f6b77764525f31932`, fixed-argv commands, replay
+- [`execution-snapshot-v1.1.json`](execution-snapshot-v1.1.json) pins ACES commit
+  `9347f64b26e3bb71d5459759c3d4bd473c76b446`, fixed-argv commands, replay
   digests, structured diagnostic kinds, participant fixture outcomes, and
   limitations.
-- [`analysis-v1.json`](analysis-v1.json) derives ADR-021 evidence status from
+- [`analysis-v1.1.json`](analysis-v1.1.json) derives ADR-021 evidence status from
   the frozen observations and states the bounded result in plain language.
 - [`satisfiability-analysis-v1.json`](satisfiability-analysis-v1.json) is the
   issue-826 supplement. It binds positive, negative, and unsupported source

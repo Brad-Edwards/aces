@@ -50,6 +50,11 @@ REFERENCE_COMPLETION_TARGETS = {
     ("injects", "to_entities"): "entities",
     ("workflows", "start"): "workflow_steps",
     ("workflows", "assertions"): "assertions",
+    ("variation_points", "owner"): "targetable",
+    ("variation_points", "reference"): "targetable",
+    ("variation_points", "allowed_refs"): "targetable",
+    ("variation_points", "point"): "variation_points",
+    ("variation_points", "variable"): "variables",
 }
 
 SECTION_FIELD_COMPLETIONS = {
@@ -135,4 +140,17 @@ SECTION_FIELD_COMPLETIONS = {
     "objectives": ("agent", "entity", "actions", "targets", "success", "window", "depends_on"),
     "workflows": ("start", "steps"),
     "variables": ("type", "default", "required", "allowed_values", "description"),
+    "variation_points": (
+        "kind",
+        "target",
+        "domain",
+        "alternatives",
+        "members",
+        "minimum",
+        "maximum",
+        "precedence",
+        "fixed_positions",
+        "unit",
+        "description",
+    ),
 }

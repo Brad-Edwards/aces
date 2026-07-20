@@ -52,7 +52,7 @@ Each surface class owns its version meaning and compatibility rule.
 | Surface class | Authority | Identifier syntax | Compatibility relation | Lifecycle record | Migration evidence |
 |---|---|---|---|---|---|
 | Python distribution | `implementations/python/pyproject.toml`, release-please config, Git tag, PyPI artifact | SemVer package version and matching `vX.Y.Z` tag | Consumer code imports installed package APIs for the documented release | Release PR, GitHub Release, generated `CHANGELOG.md` | Release notes and package/API docs |
-| Published JSON Schema | ADR-061 and `contracts/schema-publication-manifest.json` | Contract id such as `backend-manifest-v2`; wire discriminator such as `backend-manifest/v2` | Schema lineage and stability-specific structural compatibility | Manifest `stability`, `last_change`, and `removed_schemas` tombstones | Schema diff, fixtures, checker output, and contract docs |
+| Published JSON Schema | ADR-061, `contracts/schema-publication-manifest.json`, and `contracts/schema-publication/` | Contract id such as `backend-manifest-v2`; wire discriminator such as `backend-manifest/v2` | Schema lineage and stability-specific structural compatibility | Per-contract `stability` and `last_change` records; independent removal tombstones | Schema diff, fixtures, checker output, and contract docs |
 | Closed contract DTO and wire envelope | `aces_contracts.versions`, contract models, manifest authority | Exact discriminator such as `workflow-step-state/v1` | Exact payload-shape selection by owning reader | Contract ADR/spec and release notes | Reader validation tests and conformance fixtures |
 | Processor/backend support declaration | Manifest models and manifest authority allowlists | Exact governed contract ids, not version ranges | Declared support for named counterpart contract ids | Manifest contract lineage and conformance result | Manifest update, fixture, and conformance report |
 | Apparatus or implementation identity | Processor, backend, and participant manifests | Product/component identity version string | Operational interoperability declared by manifest capability blocks | Manifest release and conformance profile | Backend/processor/participant conformance evidence |
@@ -127,7 +127,7 @@ notices — a CI-time governance record, not a runtime lifecycle registry,
 migration service, or endpoint — and each record cites its owning surface's
 existing authority rather than replacing it. A record whose `status` is
 `removed` on a published JSON Schema surface references the ADR-061
-`removed_schemas` tombstone rather than duplicating it.
+schema-publication tombstone record rather than duplicating it.
 
 ## Removal
 

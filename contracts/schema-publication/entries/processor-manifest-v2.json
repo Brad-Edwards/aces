@@ -1,0 +1,10 @@
+{
+  "contract_id": "processor-manifest-v2",
+  "schema_path": "contracts/schemas/processor-manifest/processor-manifest-v2.json",
+  "stability": "draft",
+  "content_hash": "882ea02e0294d3ed7fb62b6bafec699236a5e3d42f4e22de27107ef3f2c25510",
+  "last_change": {
+    "summary": "Added proposition-truth-result-v1 to the processor contract surface.",
+    "content_hash": "882ea02e0294d3ed7fb62b6bafec699236a5e3d42f4e22de27107ef3f2c25510"
+  }
+}

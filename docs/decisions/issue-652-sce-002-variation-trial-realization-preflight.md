@@ -38,9 +38,9 @@ fact behavior, persistence, or scenario content.
 - ADR-070 and `aces_contracts.realization_envelope` supply reusable bounded
   domain descriptors and backend membership/subsumption semantics. A scenario
   validity domain, an experiment selection policy, and a backend realizability
-  envelope are nevertheless three different authorities. ADR-070 remains
-  `proposed`; #652 must not silently treat its status as accepted or broaden its
-  expression fragment without an explicit decision.
+  envelope are nevertheless three different authorities. ADR-070 and ADR-084
+  are now accepted; their shared-domain decision does not broaden the envelope
+  expression fragment or transfer backend authority into SDL variation.
 - The existing experiment fields are not yet an executable randomization
   contract. `allocation_method`, `randomization_unit`, `replication_policy`,
   and stopping rules are descriptive strings;
@@ -49,10 +49,10 @@ fact behavior, persistence, or scenario content.
   basis but introduces no randomness. None of these may be treated as a
   schedule-independent trial compiler by convention.
 
-A focused #652 architecture decision must make the choices below normative
-before follow-on contract or implementation work. It should amend ADR-068 and
-ADR-074 where planned run identity and admitted-plan input semantics are
-clarified, and reconcile ADR-070's status rather than duplicate it.
+ADR-084 makes the choices below normative for follow-on contract and
+implementation work. ADR-068 and ADR-074 continue to own planned run identity
+and admitted-plan input semantics, and ADR-070 remains the bounded-domain and
+backend-realizability authority rather than being duplicated.
 
 ## One Pipeline And One Authority Per Boundary
 

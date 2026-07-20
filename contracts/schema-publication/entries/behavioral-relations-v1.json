@@ -1,0 +1,10 @@
+{
+  "contract_id": "behavioral-relations-v1",
+  "schema_path": "contracts/schemas/concept-authority/behavioral-relations-v1.json",
+  "stability": "draft",
+  "content_hash": "6527fb300e23678a778fd44282f6fa12c8c86119b707ab0874bd4cf19ddb5e29",
+  "last_change": {
+    "summary": "Initial publication of the ADR-081 revisioned behavioral-relation taxonomy, formal dimensions, claim surfaces, assurance states, source identities, and counterexamples (issue #747).",
+    "content_hash": "6527fb300e23678a778fd44282f6fa12c8c86119b707ab0874bd4cf19ddb5e29"
+  }
+}

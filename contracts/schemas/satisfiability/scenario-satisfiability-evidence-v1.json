@@ -3111,7 +3111,7 @@
               "not": {
                 "pattern": "[\\r\\n]"
               },
-              "pattern": "^\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}$",
+              "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
               "x-aces-variable-reference": true
             }
@@ -5236,7 +5236,7 @@
               "not": {
                 "pattern": "[\\r\\n]"
               },
-              "pattern": "^\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}$",
+              "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
               "x-aces-variable-reference": true
             }

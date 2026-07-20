@@ -96,6 +96,7 @@ def _git(repo: Path, *args: str) -> None:
     subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True)
 
 
+@pytest.mark.integration
 def test_git_collection_preserves_deletions_renames_and_untracked_paths(tmp_path: Path) -> None:
     _git(tmp_path, "init", "-q")
     _git(tmp_path, "config", "user.email", "tests@example.invalid")
@@ -117,6 +118,7 @@ def test_git_collection_preserves_deletions_renames_and_untracked_paths(tmp_path
     assert ChangeRecord(status="A", path="docs/untracked.md") in changes
 
 
+@pytest.mark.integration
 def test_git_collection_fails_closed_when_base_revision_is_invalid(tmp_path: Path) -> None:
     _git(tmp_path, "init", "-q")
 

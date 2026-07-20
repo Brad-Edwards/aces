@@ -72,6 +72,7 @@ explain/releasing
 explain/sdl/index
 explain/sdl/sections
 explain/sdl/parser
+explain/sdl/variation-points
 explain/sdl/language-service
 explain/sdl/agent-guidance
 explain/sdl/validation

@@ -1,0 +1,10 @@
+{
+  "contract_id": "scientific-completeness-taxonomy-v1",
+  "schema_path": "contracts/schemas/profiles/scientific-completeness-taxonomy-v1.json",
+  "stability": "draft",
+  "content_hash": "d1c83d89fc161199208d2eb82f7f5ddebd61ffc9af6d67c9ddac4d84e0a03328",
+  "last_change": {
+    "summary": "Bound every REV1 intended-use claim and nonclaim to the ADR-081 behavioral-relation taxonomy (issue #747).",
+    "content_hash": "d1c83d89fc161199208d2eb82f7f5ddebd61ffc9af6d67c9ddac4d84e0a03328"
+  }
+}

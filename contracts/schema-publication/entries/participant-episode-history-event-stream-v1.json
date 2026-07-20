@@ -1,0 +1,6 @@
+{
+  "contract_id": "participant-episode-history-event-stream-v1",
+  "schema_path": "contracts/schemas/control-plane/participant-episode-history-event-stream-v1.json",
+  "stability": "draft",
+  "content_hash": "9fb1a9b0edaf79987e66dd61a34d9c3d4f95f020424783778a2ba4f64eaa2272"
+}

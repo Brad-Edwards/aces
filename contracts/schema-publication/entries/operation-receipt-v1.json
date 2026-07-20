@@ -1,0 +1,6 @@
+{
+  "contract_id": "operation-receipt-v1",
+  "schema_path": "contracts/schemas/control-plane/operation-receipt-v1.json",
+  "stability": "draft",
+  "content_hash": "07bdbdaf5def120d43500da30a7ea38b736fdce8125e2cdb62b5b6851bf90504"
+}

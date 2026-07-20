@@ -20,7 +20,7 @@
     "theory_profile": "aces-finite-domain-theory/v1",
     "translation_profile": "aces-sdl-authoring-translation/v1"
   },
-  "normalized_model_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "normalized_model_digest": "sha256:5f72c3a95df8e76b1ae6fb6a17c2c1b2dda9771e84445e8fe8b6ea14971a7bc4",
   "outcome": "satisfiable",
   "profile": "scenario-satisfiability-evidence/v1",
   "solver_configuration": {

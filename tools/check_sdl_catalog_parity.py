@@ -18,7 +18,7 @@ import types
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Union, get_args, get_origin
+from typing import Annotated, Any, Union, get_args, get_origin
 
 from pydantic import BaseModel
 
@@ -140,6 +140,7 @@ _WORKFLOW_SEMANTICS = (
 _PROPOSITION_VALIDATOR = (
     "[proposition validator](../../implementations/python/packages/aces_sdl/validator/_propositions.py)"
 )
+_VARIATION_VALIDATOR = "[variation validator](../../implementations/python/packages/aces_sdl/validator/_variation.py)"
 _PARTICIPANT_TEMPORAL_MODEL = (
     "[temporal model](../../implementations/python/packages/aces_sdl/participant_temporal_semantics.py)"
 )
@@ -688,6 +689,102 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         _SEMANTIC,
         _DANGLING,
         _EVIDENCE_VALIDATOR,
+    ),
+    "variation_points.*.target.variable": (
+        "variables",
+        _SEMANTIC,
+        "fatal dangling or wrong variable type",
+        _VARIATION_VALIDATOR,
+    ),
+    "variation_points.*.target.owner": (
+        "targetable",
+        _SEMANTIC,
+        "fatal dangling or wrong slot owner type",
+        _VARIATION_VALIDATOR,
+    ),
+    "variation_points.*.domain.allowed_refs[]": (
+        "targetable",
+        _SEMANTIC,
+        "fatal dangling or wrong slot candidate type",
+        _VARIATION_VALIDATOR,
+    ),
+    "variation_points.*.alternatives.*.reference": (
+        "targetable",
+        _SEMANTIC,
+        "fatal dangling or wrong slot candidate type",
+        _VARIATION_VALIDATOR,
+    ),
+    "variation_points.*.members.*.reference": (
+        "targetable",
+        _SEMANTIC,
+        "fatal dangling or wrong slot candidate type",
+        _VARIATION_VALIDATOR,
+    ),
+    "variation_points.*.alternatives.*.requires[].point": (
+        "variation_points",
+        _SEMANTIC,
+        _DANGLING,
+        _VARIATION_VALIDATOR,
+    ),
+    "variation_points.*.alternatives.*.requires[].members[]": (
+        "derived:variation_members",
+        _SEMANTIC,
+        "fatal outside the resolved variation point",
+        _VARIATION_VALIDATOR,
+    ),
+    "variation_points.*.alternatives.*.excludes[].point": (
+        "variation_points",
+        _SEMANTIC,
+        _DANGLING,
+        _VARIATION_VALIDATOR,
+    ),
+    "variation_points.*.alternatives.*.excludes[].members[]": (
+        "derived:variation_members",
+        _SEMANTIC,
+        "fatal outside the resolved variation point",
+        _VARIATION_VALIDATOR,
+    ),
+    "variation_points.*.members.*.requires[].point": (
+        "variation_points",
+        _SEMANTIC,
+        _DANGLING,
+        _VARIATION_VALIDATOR,
+    ),
+    "variation_points.*.members.*.requires[].members[]": (
+        "derived:variation_members",
+        _SEMANTIC,
+        "fatal outside the resolved variation point",
+        _VARIATION_VALIDATOR,
+    ),
+    "variation_points.*.members.*.excludes[].point": (
+        "variation_points",
+        _SEMANTIC,
+        _DANGLING,
+        _VARIATION_VALIDATOR,
+    ),
+    "variation_points.*.members.*.excludes[].members[]": (
+        "derived:variation_members",
+        _SEMANTIC,
+        "fatal outside the resolved variation point",
+        _VARIATION_VALIDATOR,
+    ),
+    "variation_points.*.precedence[].before": (
+        "derived:variation_members",
+        _STRUCTURAL,
+        "fatal outside the owning order point",
+        _VARIATION_VALIDATOR,
+    ),
+    "variation_points.*.precedence[].after": (
+        "derived:variation_members",
+        _STRUCTURAL,
+        "fatal outside the owning order point",
+        _VARIATION_VALIDATOR,
+    ),
+    "variation_points.*.fixed_positions.*.$key": (
+        "derived:variation_members",
+        _STRUCTURAL,
+        "fatal outside the owning order point",
+        _VARIATION_VALIDATOR,
     ),
     "objectives.*.agent": ("agents", _SEMANTIC, _DANGLING, _OBJECTIVE_SEMANTICS),
     "objectives.*.entity": ("entities", _SEMANTIC, _DANGLING, _OBJECTIVE_SEMANTICS),
@@ -1334,6 +1431,8 @@ def _check_references(text: str, top_rows: list[TopLevelRow], repo_root: Path) -
 
 
 def _annotation_members(annotation: Any) -> tuple[Any, ...]:
+    if get_origin(annotation) is Annotated:
+        return _annotation_members(get_args(annotation)[0])
     if get_origin(annotation) in (Union, types.UnionType):
         return tuple(member for option in get_args(annotation) for member in _annotation_members(option))
     return (annotation,)

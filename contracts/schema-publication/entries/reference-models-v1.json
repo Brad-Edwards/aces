@@ -1,0 +1,6 @@
+{
+  "contract_id": "reference-models-v1",
+  "schema_path": "contracts/schemas/concept-authority/reference-models-v1.json",
+  "stability": "draft",
+  "content_hash": "28ae8b46e4bcb4436a01adf3a70472b2f8ffc1fc8c13ff7ea8766492652f8267"
+}

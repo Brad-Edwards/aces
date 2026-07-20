@@ -267,6 +267,48 @@
       "title": "Agent",
       "type": "object"
     },
+    "AlternativeVariationPoint": {
+      "additionalProperties": false,
+      "properties": {
+        "alternatives": {
+          "minProperties": 1,
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/VariationMember"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Alternatives",
+          "type": "object"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "kind": {
+          "const": "alternative",
+          "default": "alternative",
+          "title": "Kind",
+          "type": "string"
+        },
+        "target": {
+          "$ref": "#/$defs/ReferenceTarget"
+        }
+      },
+      "required": [
+        "target",
+        "alternatives"
+      ],
+      "title": "AlternativeVariationPoint",
+      "type": "object"
+    },
     "Assertion": {
       "additionalProperties": false,
       "description": "A typed use of one proposition at a governed semantic boundary.",
@@ -411,6 +453,32 @@
         }
       ]
     },
+    "BooleanDomain": {
+      "additionalProperties": false,
+      "description": "Booleans: both ``true``/``false``, or an exact boolean when ``value`` set.",
+      "properties": {
+        "kind": {
+          "const": "boolean",
+          "default": "boolean",
+          "title": "Kind",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        }
+      },
+      "title": "BooleanDomain",
+      "type": "object"
+    },
     "BooleanPredicate": {
       "additionalProperties": false,
       "description": "Compare a governed Boolean property with an expected Boolean.",
@@ -456,6 +524,50 @@
       ],
       "title": "BooleanPredicate",
       "type": "object"
+    },
+    "CollectionTarget": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "collection",
+          "default": "collection",
+          "title": "Kind",
+          "type": "string"
+        },
+        "owner": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Owner",
+          "type": "string"
+        },
+        "slot": {
+          "$ref": "#/$defs/CollectionTargetSlot"
+        }
+      },
+      "required": [
+        "owner",
+        "slot"
+      ],
+      "title": "CollectionTarget",
+      "type": "object"
+    },
+    "CollectionTargetSlot": {
+      "description": "Closed finite collection slots whose owning model permits selection.",
+      "enum": [
+        "nodes.features",
+        "nodes.conditions",
+        "nodes.injects",
+        "nodes.vulnerabilities",
+        "events.assertions",
+        "events.injects",
+        "stories.scripts",
+        "agents.starting_accounts",
+        "agents.starting_assertions",
+        "objectives.targets",
+        "objectives.depends_on"
+      ],
+      "title": "CollectionTargetSlot",
+      "type": "string"
     },
     "Condition": {
       "additionalProperties": false,
@@ -2274,6 +2386,44 @@
       "title": "Entity",
       "type": "object"
     },
+    "EnumDomain": {
+      "additionalProperties": false,
+      "description": "A finite value set: values equal to one listed member.",
+      "properties": {
+        "kind": {
+          "const": "enum",
+          "default": "enum",
+          "title": "Kind",
+          "type": "string"
+        },
+        "values": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "minItems": 1,
+          "title": "Values",
+          "type": "array"
+        }
+      },
+      "required": [
+        "values"
+      ],
+      "title": "EnumDomain",
+      "type": "object"
+    },
     "Event": {
       "additionalProperties": false,
       "description": "A triggered action combining assertion preconditions and injects.",
@@ -2579,6 +2729,40 @@
       "title": "EvidenceRetentionExpectation",
       "type": "string"
     },
+    "ExactDomain": {
+      "additionalProperties": false,
+      "description": "A singleton value set: values equal to ``value``.",
+      "properties": {
+        "kind": {
+          "const": "exact",
+          "default": "exact",
+          "title": "Kind",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "value"
+      ],
+      "title": "ExactDomain",
+      "type": "object"
+    },
     "ExerciseRole": {
       "description": "Role in the exercise.",
       "enum": [
@@ -2797,6 +2981,66 @@
       "title": "GeneratedArtifactOutput",
       "type": "object"
     },
+    "GovernedReferenceDomain": {
+      "additionalProperties": false,
+      "description": "References in a finite governed set under a named authority.",
+      "properties": {
+        "allowed_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Allowed Refs",
+          "type": "array"
+        },
+        "authority": {
+          "minLength": 1,
+          "title": "Authority",
+          "type": "string"
+        },
+        "kind": {
+          "const": "governed-reference",
+          "default": "governed-reference",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "authority",
+        "allowed_refs"
+      ],
+      "title": "GovernedReferenceDomain",
+      "type": "object"
+    },
+    "GovernedReferenceVariationPoint": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "domain": {
+          "$ref": "#/$defs/GovernedReferenceDomain"
+        },
+        "kind": {
+          "const": "governed-reference",
+          "default": "governed-reference",
+          "title": "Kind",
+          "type": "string"
+        },
+        "target": {
+          "$ref": "#/$defs/ReferenceTarget"
+        }
+      },
+      "required": [
+        "target",
+        "domain"
+      ],
+      "title": "GovernedReferenceVariationPoint",
+      "type": "object"
+    },
     "IdentityDomain": {
       "additionalProperties": false,
       "description": "Scenario-scoped authored identity domain.",
@@ -2825,7 +3069,7 @@
               "not": {
                 "pattern": "[\\r\\n]"
               },
-              "pattern": "^\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}$",
+              "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
               "x-aces-variable-reference": true
             }
@@ -3392,6 +3636,96 @@
       "title": "Inject",
       "type": "object"
     },
+    "LogicalTimingTarget": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "logical-timing",
+          "default": "logical-timing",
+          "title": "Kind",
+          "type": "string"
+        },
+        "owner": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Owner",
+          "type": "string"
+        },
+        "slot": {
+          "$ref": "#/$defs/TimingTargetSlot"
+        }
+      },
+      "required": [
+        "owner",
+        "slot"
+      ],
+      "title": "LogicalTimingTarget",
+      "type": "object"
+    },
+    "LogicalTimingUnit": {
+      "enum": [
+        "seconds",
+        "logical-ticks",
+        "multiplier"
+      ],
+      "title": "LogicalTimingUnit",
+      "type": "string"
+    },
+    "LogicalTimingVariationPoint": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "domain": {
+          "discriminator": {
+            "mapping": {
+              "boolean": "#/$defs/BooleanDomain",
+              "enum": "#/$defs/EnumDomain",
+              "exact": "#/$defs/ExactDomain",
+              "numeric-interval": "#/$defs/NumericIntervalDomain"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ExactDomain"
+            },
+            {
+              "$ref": "#/$defs/EnumDomain"
+            },
+            {
+              "$ref": "#/$defs/BooleanDomain"
+            },
+            {
+              "$ref": "#/$defs/NumericIntervalDomain"
+            }
+          ],
+          "title": "Domain"
+        },
+        "kind": {
+          "const": "logical-timing",
+          "default": "logical-timing",
+          "title": "Kind",
+          "type": "string"
+        },
+        "target": {
+          "$ref": "#/$defs/LogicalTimingTarget"
+        },
+        "unit": {
+          "$ref": "#/$defs/LogicalTimingUnit"
+        }
+      },
+      "required": [
+        "target",
+        "domain",
+        "unit"
+      ],
+      "title": "LogicalTimingVariationPoint",
+      "type": "object"
+    },
     "ModuleDescriptor": {
       "additionalProperties": false,
       "description": "Published module metadata for SDL composition.",
@@ -3583,6 +3917,46 @@
       "title": "NodeType",
       "type": "string"
     },
+    "NumericIntervalDomain": {
+      "additionalProperties": false,
+      "description": "Numbers of ``numeric_type`` inside a bounded interval.\n\nBoth endpoints are required (the fragment admits only *bounded* intervals,\n``envelope-semantics.md`` R3). An integer interval requires integral\nendpoints. Empty intervals are rejected at construction.",
+      "properties": {
+        "kind": {
+          "const": "numeric-interval",
+          "default": "numeric-interval",
+          "title": "Kind",
+          "type": "string"
+        },
+        "lower": {
+          "title": "Lower",
+          "type": "number"
+        },
+        "lower_closed": {
+          "default": true,
+          "title": "Lower Closed",
+          "type": "boolean"
+        },
+        "numeric_type": {
+          "$ref": "#/$defs/NumericType"
+        },
+        "upper": {
+          "title": "Upper",
+          "type": "number"
+        },
+        "upper_closed": {
+          "default": true,
+          "title": "Upper Closed",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "numeric_type",
+        "lower",
+        "upper"
+      ],
+      "title": "NumericIntervalDomain",
+      "type": "object"
+    },
     "NumericPredicate": {
       "additionalProperties": false,
       "description": "Compare a governed numeric property using an explicit unit.",
@@ -3655,6 +4029,15 @@
       ],
       "title": "NumericPredicate",
       "type": "object"
+    },
+    "NumericType": {
+      "description": "Declared numeric type for a numeric-interval domain.",
+      "enum": [
+        "integer",
+        "number"
+      ],
+      "title": "NumericType",
+      "type": "string"
     },
     "OSFamily": {
       "description": "Operating system family. Vocabulary from OCSF Device.os.",
@@ -3815,6 +4198,102 @@
         }
       },
       "title": "ObjectiveWindow",
+      "type": "object"
+    },
+    "OrderPrecedence": {
+      "additionalProperties": false,
+      "properties": {
+        "after": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "After",
+          "type": "string"
+        },
+        "before": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Before",
+          "type": "string"
+        }
+      },
+      "required": [
+        "before",
+        "after"
+      ],
+      "title": "OrderPrecedence",
+      "type": "object"
+    },
+    "OrderVariationPoint": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "fixed_positions": {
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "type": "integer"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Fixed Positions",
+          "type": "object"
+        },
+        "kind": {
+          "const": "order",
+          "default": "order",
+          "title": "Kind",
+          "type": "string"
+        },
+        "members": {
+          "minProperties": 1,
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/VariationMember"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Members",
+          "type": "object"
+        },
+        "precedence": {
+          "items": {
+            "$ref": "#/$defs/OrderPrecedence"
+          },
+          "title": "Precedence",
+          "type": "array"
+        },
+        "target": {
+          "$ref": "#/$defs/CollectionTarget"
+        }
+      },
+      "required": [
+        "target",
+        "members"
+      ],
+      "title": "OrderVariationPoint",
       "type": "object"
     },
     "OutcomeInterpretationParticipantScope": {
@@ -4044,6 +4523,57 @@
       ],
       "title": "OutcomeInterpretationTargetLayer",
       "type": "string"
+    },
+    "ParameterVariationPoint": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "domain": {
+          "discriminator": {
+            "mapping": {
+              "boolean": "#/$defs/BooleanDomain",
+              "enum": "#/$defs/EnumDomain",
+              "exact": "#/$defs/ExactDomain",
+              "numeric-interval": "#/$defs/NumericIntervalDomain"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ExactDomain"
+            },
+            {
+              "$ref": "#/$defs/EnumDomain"
+            },
+            {
+              "$ref": "#/$defs/BooleanDomain"
+            },
+            {
+              "$ref": "#/$defs/NumericIntervalDomain"
+            }
+          ],
+          "title": "Domain"
+        },
+        "kind": {
+          "const": "parameter",
+          "default": "parameter",
+          "title": "Kind",
+          "type": "string"
+        },
+        "target": {
+          "$ref": "#/$defs/VariableTarget"
+        }
+      },
+      "required": [
+        "target",
+        "domain"
+      ],
+      "title": "ParameterVariationPoint",
+      "type": "object"
     },
     "ParticipantActionContract": {
       "additionalProperties": false,
@@ -4625,7 +5155,7 @@
               "not": {
                 "pattern": "[\\r\\n]"
               },
-              "pattern": "^\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}$",
+              "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
               "x-aces-variable-reference": true
             }
@@ -5440,6 +5970,46 @@
       ],
       "title": "RealizationScopeDesignation",
       "type": "object"
+    },
+    "ReferenceTarget": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "reference",
+          "default": "reference",
+          "title": "Kind",
+          "type": "string"
+        },
+        "owner": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Owner",
+          "type": "string"
+        },
+        "slot": {
+          "$ref": "#/$defs/ReferenceTargetSlot"
+        }
+      },
+      "required": [
+        "owner",
+        "slot"
+      ],
+      "title": "ReferenceTarget",
+      "type": "object"
+    },
+    "ReferenceTargetSlot": {
+      "description": "Closed scalar-reference slots whose owners authorize replacement.",
+      "enum": [
+        "conditions.proposition",
+        "content.target",
+        "accounts.node",
+        "accounts.domain_ref",
+        "identity_domains.authority_account_ref",
+        "objectives.agent",
+        "objectives.entity"
+      ],
+      "title": "ReferenceTargetSlot",
+      "type": "string"
     },
     "Relationship": {
       "additionalProperties": false,
@@ -16932,6 +17502,38 @@
       "title": "Script",
       "type": "object"
     },
+    "SelectionRelation": {
+      "additionalProperties": false,
+      "description": "A finite cross-point member requirement or exclusion.",
+      "properties": {
+        "members": {
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            },
+            "pattern": "^[a-z0-9]",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Members",
+          "type": "array"
+        },
+        "point": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Point",
+          "type": "string"
+        }
+      },
+      "required": [
+        "point",
+        "members"
+      ],
+      "title": "SelectionRelation",
+      "type": "object"
+    },
     "ServiceManagerKind": {
       "description": "Kind of service manager whose unit inventory is being recorded.\n\nInitially scoped to ``systemd``; ``other`` is the escape hatch for managers\nthat have not yet been promoted to their own typed enum value (per\nADR-035 \u00a7 5).",
       "enum": [
@@ -17719,6 +18321,79 @@
       "title": "SubjectQuantifier",
       "type": "string"
     },
+    "SubsetVariationPoint": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "kind": {
+          "const": "subset",
+          "default": "subset",
+          "title": "Kind",
+          "type": "string"
+        },
+        "maximum": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Maximum"
+        },
+        "members": {
+          "minProperties": 1,
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/VariationMember"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Members",
+          "type": "object"
+        },
+        "minimum": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Minimum",
+          "type": "integer"
+        },
+        "target": {
+          "$ref": "#/$defs/CollectionTarget"
+        }
+      },
+      "required": [
+        "target",
+        "members"
+      ],
+      "title": "SubsetVariationPoint",
+      "type": "object"
+    },
+    "TimingTargetSlot": {
+      "description": "Closed logical-time fields; none denotes host or scheduler time.",
+      "enum": [
+        "conditions.interval",
+        "scripts.start_time",
+        "scripts.end_time",
+        "scripts.speed",
+        "stories.speed"
+      ],
+      "title": "TimingTargetSlot",
+      "type": "string"
+    },
     "TruthCompositionMode": {
       "description": "Portable composition over assertion outcomes.",
       "enum": [
@@ -17794,6 +18469,28 @@
       "title": "Variable",
       "type": "object"
     },
+    "VariableTarget": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "variable",
+          "default": "variable",
+          "title": "Kind",
+          "type": "string"
+        },
+        "variable": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Variable",
+          "type": "string"
+        }
+      },
+      "required": [
+        "variable"
+      ],
+      "title": "VariableTarget",
+      "type": "object"
+    },
     "VariableType": {
       "description": "Data type of a variable.",
       "enum": [
@@ -17804,6 +18501,42 @@
       ],
       "title": "VariableType",
       "type": "string"
+    },
+    "VariationMember": {
+      "additionalProperties": false,
+      "description": "One named semantic object referenced by a structural point.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "excludes": {
+          "items": {
+            "$ref": "#/$defs/SelectionRelation"
+          },
+          "title": "Excludes",
+          "type": "array"
+        },
+        "reference": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Reference",
+          "type": "string"
+        },
+        "requires": {
+          "items": {
+            "$ref": "#/$defs/SelectionRelation"
+          },
+          "title": "Requires",
+          "type": "array"
+        }
+      },
+      "required": [
+        "reference"
+      ],
+      "title": "VariationMember",
+      "type": "object"
     },
     "VolumeAccessMode": {
       "enum": [
@@ -18705,6 +19438,52 @@
         "type": "string"
       },
       "title": "Variables",
+      "type": "object"
+    },
+    "variation_points": {
+      "additionalProperties": {
+        "discriminator": {
+          "mapping": {
+            "alternative": "#/$defs/AlternativeVariationPoint",
+            "governed-reference": "#/$defs/GovernedReferenceVariationPoint",
+            "logical-timing": "#/$defs/LogicalTimingVariationPoint",
+            "order": "#/$defs/OrderVariationPoint",
+            "parameter": "#/$defs/ParameterVariationPoint",
+            "subset": "#/$defs/SubsetVariationPoint"
+          },
+          "propertyName": "kind"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/$defs/ParameterVariationPoint"
+          },
+          {
+            "$ref": "#/$defs/GovernedReferenceVariationPoint"
+          },
+          {
+            "$ref": "#/$defs/AlternativeVariationPoint"
+          },
+          {
+            "$ref": "#/$defs/SubsetVariationPoint"
+          },
+          {
+            "$ref": "#/$defs/OrderVariationPoint"
+          },
+          {
+            "$ref": "#/$defs/LogicalTimingVariationPoint"
+          }
+        ]
+      },
+      "propertyNames": {
+        "maxLength": 64,
+        "minLength": 1,
+        "not": {
+          "pattern": "[^a-z0-9_-]"
+        },
+        "pattern": "^[a-z0-9]",
+        "type": "string"
+      },
+      "title": "Variation Points",
       "type": "object"
     },
     "version": {

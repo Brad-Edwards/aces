@@ -998,6 +998,80 @@ def test_adr_template_missing_classification_field_is_flagged(tmp_path: Path) ->
     assert _flagged(failures, "adr-template-classification")
 
 
+def test_ledger_missing_file_is_flagged(tmp_path: Path) -> None:
+    repo = _seed_repo(tmp_path, ledger_body=None)
+
+    assert _flagged(evaluate_assurance_policy(repo), "fm-classification-ledger-missing")
+
+
+@pytest.mark.parametrize(
+    ("ledger_body", "expected_rule"),
+    [
+        ("ledger: [unclosed\n", "fm-classification-ledger-parse"),
+        ("- first\n- second\n", "fm-classification-ledger-shape"),
+        (
+            f"ledger: wrong\npolicy_ref: {ASSURANCE_POLICY_RELATIVE_PATH}\nentries: []\n",
+            "fm-classification-ledger-field",
+        ),
+        (
+            "ledger: per-change-fm-classification\npolicy_ref: wrong.yaml\nentries: []\n",
+            "fm-classification-ledger-policy-ref",
+        ),
+        (
+            f"ledger: per-change-fm-classification\npolicy_ref: {ASSURANCE_POLICY_RELATIVE_PATH}\nentries: {{}}\n",
+            "fm-classification-ledger-field",
+        ),
+        (
+            f"ledger: per-change-fm-classification\npolicy_ref: {ASSURANCE_POLICY_RELATIVE_PATH}\nentries:\n  - malformed\n",
+            "fm-classification-ledger-entry",
+        ),
+        (
+            f"ledger: per-change-fm-classification\npolicy_ref: {ASSURANCE_POLICY_RELATIVE_PATH}\n"
+            "entries:\n  - adr: not-an-adr\n    surface: ''\n    fm_level: FM0\n"
+            "    delivered_artifacts: []\n    waived_artifacts: []\n",
+            "fm-classification-ledger-entry",
+        ),
+    ],
+)
+def test_ledger_rejects_malformed_structures(
+    tmp_path: Path,
+    ledger_body: str,
+    expected_rule: str,
+) -> None:
+    repo = _seed_repo(tmp_path, ledger_body=ledger_body)
+
+    failures = evaluate_assurance_policy(repo)
+
+    assert _flagged(failures, expected_rule)
+
+
+def test_ledger_rejects_empty_surface(tmp_path: Path) -> None:
+    body = (
+        f"ledger: per-change-fm-classification\npolicy_ref: {ASSURANCE_POLICY_RELATIVE_PATH}\n"
+        "entries:\n  - adr: ADR-023\n    surface: ''\n    fm_level: FM0\n"
+        "    delivered_artifacts:\n      - kind: unit_tests\n"
+        "        path: implementations/python/tests/test_assurance_policy_surface.py\n"
+        "    waived_artifacts: []\n"
+    )
+    repo = _seed_repo(tmp_path, ledger_body=body)
+    _seed_runtime_surface(repo)
+
+    assert _flagged(evaluate_assurance_policy(repo), "fm-classification-ledger-entry")
+
+
+def test_ledger_rejects_duplicate_adr_entries(tmp_path: Path) -> None:
+    repo = _seed_repo(
+        tmp_path,
+        ledger_body=(
+            f"ledger: per-change-fm-classification\npolicy_ref: {ASSURANCE_POLICY_RELATIVE_PATH}\nentries:\n"
+            f"{_ledger_entry('ADR-023')}{_ledger_entry('ADR-023')}"
+        ),
+    )
+    _seed_runtime_surface(repo)
+
+    assert _flagged(evaluate_assurance_policy(repo), "fm-classification-ledger-duplicate")
+
+
 def test_ledger_missing_existing_runtime_surface_entry_is_flagged(tmp_path: Path) -> None:
     repo = _seed_repo(
         tmp_path,

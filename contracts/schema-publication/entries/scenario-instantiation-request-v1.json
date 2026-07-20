@@ -1,0 +1,10 @@
+{
+  "contract_id": "scenario-instantiation-request-v1",
+  "schema_path": "contracts/schemas/sdl/scenario-instantiation-request-v1.json",
+  "stability": "draft",
+  "content_hash": "130a103664dd69819c1dbe13437e94436dfb2b5db871f135e9f1750c741b412f",
+  "last_change": {
+    "summary": "Constrained instantiation parameter names to portable local identifiers while leaving parameter values outside declaration identity for DSL-101.",
+    "content_hash": "130a103664dd69819c1dbe13437e94436dfb2b5db871f135e9f1750c741b412f"
+  }
+}
