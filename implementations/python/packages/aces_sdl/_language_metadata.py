@@ -108,6 +108,7 @@ SECTION_FIELD_COMPLETIONS = {
         "outcome_interpretation_rule_refs",
         "authority_scope_refs",
         "behavior_mode",
+        "mixed_control",
         "ai_offensive_behavior_refs",
         "defensive_behavior_refs",
         "offensive_behavior_refs",

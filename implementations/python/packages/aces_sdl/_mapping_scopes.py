@@ -61,6 +61,8 @@ NESTED_HASHMAP_FIELDS = frozenset(
         "steps",
         "extensions",
         "interactive_access",
+        "controller_states",
+        "transitions",
         "alternatives",
         "members",
         "fixed_positions",

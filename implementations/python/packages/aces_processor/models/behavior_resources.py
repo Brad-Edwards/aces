@@ -84,6 +84,59 @@ class ParticipantBehaviorRuntime(ResolvedResource):
 
 
 @dataclass(frozen=True)
+class MixedControlDispositionRulesRuntime:
+    """Compiled fail-closed decision disposition rules."""
+
+    duplicate: str
+    stale: str
+    revoked: str
+    late: str
+    concurrent: str
+    conflict: str
+
+
+@dataclass(frozen=True)
+class MixedControlControllerStateRuntime(ResolvedResource):
+    """Compiled controller binding nested under one behavior specification."""
+
+    state_id: str = ""
+    controller_ref: str = ""
+    controller_address: str = ""
+    authority_basis_refs: tuple[str, ...] = ()
+    authority_basis_addresses: tuple[str, ...] = ()
+    scope_refs: tuple[str, ...] = ()
+    scope_addresses: tuple[str, ...] = ()
+    policy_revision: str = ""
+    valid_from_order: int = 0
+    valid_until_order: int = 0
+    authority_status: str = ""
+    evidence_refs: tuple[str, ...] = ()
+    evidence_addresses: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class MixedControlTransitionRuntime(ResolvedResource):
+    """Compiled ordered control transition nested under one behavior specification."""
+
+    transition_id: str = ""
+    transition_kind: str = ""
+    from_state_address: str = ""
+    to_state_address: str = ""
+    policy_revision: str = ""
+    expected_state_revision: int = 0
+    resulting_state_revision: int = 0
+    effective_order: int = 0
+    valid_from_order: int = 0
+    valid_until_order: int = 0
+    proposal_address: str = ""
+    proposal_revision: int | None = None
+    evidence_refs: tuple[str, ...] = ()
+    evidence_addresses: tuple[str, ...] = ()
+    completion_evidence_refs: tuple[str, ...] = ()
+    completion_evidence_addresses: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class ParticipantBehaviorSpecificationRuntime(ResolvedResource):
     """Compiled first-class participant behavior specification aggregate."""
 
@@ -98,6 +151,13 @@ class ParticipantBehaviorSpecificationRuntime(ResolvedResource):
     authority_scope_refs: tuple[str, ...] = ()
     authority_scope_addresses: tuple[str, ...] = ()
     behavior_mode: str = ""
+    mixed_control_participant_address: str = ""
+    mixed_control_policy_revision: str = ""
+    mixed_control_order_strategy: str = ""
+    mixed_control_initial_state_address: str = ""
+    mixed_control_dispositions: MixedControlDispositionRulesRuntime | None = None
+    controller_states: tuple[MixedControlControllerStateRuntime, ...] = ()
+    control_transitions: tuple[MixedControlTransitionRuntime, ...] = ()
     ai_offensive_behavior_refs: tuple[str, ...] = ()
     defensive_behavior_refs: tuple[str, ...] = ()
     offensive_behavior_refs: tuple[str, ...] = ()

@@ -548,6 +548,65 @@ Implementation issue #210 owns the executable SDL field, governed validation,
 source-integrity checker, generated schemas, documentation, and compiler
 carry-through for defensive behavior refs.
 
+## ACT-617 - Mixed-Control Participant Operation
+
+A behavior specification in `mixed-control` mode carries one explicit
+`mixed_control` policy for one of its `participant_refs`. The policy is a
+closed authored state graph, not a runtime decision history:
+
+```text
+MixedControl =
+  participant_ref
+  policy_revision
+  order_strategy
+  initial_state_ref
+  disposition_rules
+  controller_state+
+  control_transition+
+```
+
+Each controller state binds a controller agent (or `self`), that controller's
+declared authority bases, a non-widening subset of the behavior
+specification's authority scope, the policy revision, an order-bounded
+validity interval, active/revoked authority state, and evidence refs. Each
+transition has a portable local identity and preserves a distinct `proposal`,
+`approval`, `denial`, `external-direction`, `intervention`, `handoff`,
+`override`, or `cancellation` fact with from/to controller states, expected
+and resulting state revisions, effective order and validity, evidence, and
+proposal identity/revision where required.
+
+Rules:
+
+- `behavior_mode: mixed-control` and `mixed_control` require each other; a
+  mode label never implies controller or authority state.
+- A controller is `self` or a declared agent. Roles, credentials,
+  control-plane identities, implementation identities, and backend processes
+  cannot impersonate it.
+- Authority bases must be declared by the controller. State scopes must be
+  within both the behavior specification's `authority_scope_refs` and the
+  controller's `operating_scope`.
+- Policy, proposal, and state revisions fail closed. Transition order is an
+  explicit unique total effective order; timestamps, mapping order, backend
+  scheduling, and last-writer-wins are not semantic order.
+- Duplicate identities are idempotent only when semantically equivalent.
+  Stale, revoked, late, conflicting, or ambiguously concurrent decisions use
+  explicit no-state-change dispositions; ordered concurrent decisions are
+  revalidated against the resulting revision.
+- Handoff requires a controller change and completion evidence. It never
+  changes participant identity or rewrites prior provenance.
+- Approval and direction target a proposal identity/revision. They are not
+  action admission, execution, delivery, observation, or proof of success.
+- Compilation emits typed child controller-state and control-transition
+  records beneath `participant.behavior-specification.<name>`, with stable
+  addresses, resolved dependencies, deterministic order, and authored
+  provenance. It does not create top-level resources or live controller
+  history.
+
+Issue #251 provides the authored model, semantic validation, composition,
+governed SDL schema publication, valid/invalid fixtures, typed compiler
+projection, and negative/state-transition evidence. Issues #252 and #255 own
+portable occurrence contracts and runtime mediation/persistence respectively.
+
 ## Cross-Clause Invariants
 
 | ID | Invariant | Primary clauses |
@@ -562,6 +621,7 @@ carry-through for defensive behavior refs.
 | PBM-08 | Unknown, opaque, unsupported, not applicable, bounded, lossy, and exact are distinct claims. | ACT-602, ACT-603, ACT-608 |
 | PBM-09 | Offensive behavior refs are governed vocabulary classifications, not raw action names, roles, goals, tasks, commands, or external technique labels. | ACT-609 |
 | PBM-10 | Defensive behavior refs classify intent or outcome domains and do not prove incident existence, effectiveness, recovery, or CSF conformance. | ACT-610 |
+| PBM-11 | Mixed-control authority and ordered control facts are explicit, fail closed, and remain distinct from admission, execution, and observation. | ACT-617 |
 
 ## Child-Issue Mapping
 
@@ -574,6 +634,7 @@ carry-through for defensive behavior refs.
 | #208 | ACT-608 | Behavior-mode declaration, selection, controlled-vocabulary validation, and conformance. |
 | #209 | ACT-609 | Offensive behavior vocabulary declaration, validation, and compiler carry-through. |
 | #210 | ACT-610 | Defensive behavior vocabulary declaration, validation, source integrity, and compiler carry-through. |
+| #251 | ACT-617 | Authored controller/authority state, ordered fail-closed control transitions, composition, and typed compiler projection. |
 
 ## Verification Expectations
 

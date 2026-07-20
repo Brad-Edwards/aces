@@ -376,6 +376,7 @@ class _ContentObjectivesMixin:
         self._verify_tool_affordance_tool_refs()
         self._verify_participant_interaction_refs()
         self._verify_behavior_specification_authority_refs()
+        self._verify_mixed_control_semantics()
 
     def _participant_roles_by_agent(self) -> dict[str, str]:
         entities = flatten_entities(self._s.entities)

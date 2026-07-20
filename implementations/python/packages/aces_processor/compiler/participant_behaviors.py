@@ -11,6 +11,7 @@ from ..models import (
     ParticipantInteractiveAccessRuntime,
     ParticipantToolAffordanceRuntime,
 )
+from ._mixed_control import _compile_mixed_control
 from .addresses import (
     _action_contract_address,
     _assertion_address,
@@ -257,6 +258,20 @@ def _compile_behavior_specifications(
             list(behavior_spec.authority_scope_refs),
             addressable_ref_index=addressable_ref_index,
         )
+        (
+            mixed_control_participant_address,
+            mixed_control_policy_revision,
+            mixed_control_order_strategy,
+            mixed_control_initial_state_address,
+            mixed_control_dispositions,
+            controller_states,
+            control_transitions,
+            mixed_control_dependencies,
+        ) = _compile_mixed_control(
+            spec_name=name,
+            behavior_spec=behavior_spec,
+            addressable_ref_index=addressable_ref_index,
+        )
         dependencies = _dedupe(
             [
                 *participant_addresses,
@@ -264,6 +279,7 @@ def _compile_behavior_specifications(
                 *observation_addresses,
                 *outcome_rule_addresses,
                 *authority_scope_addresses,
+                *mixed_control_dependencies,
             ]
         )
         tool_affordance_addresses = tuple(
@@ -283,6 +299,13 @@ def _compile_behavior_specifications(
             authority_scope_refs=tuple(behavior_spec.authority_scope_refs),
             authority_scope_addresses=authority_scope_addresses,
             behavior_mode=str(behavior_spec.behavior_mode or ""),
+            mixed_control_participant_address=mixed_control_participant_address,
+            mixed_control_policy_revision=mixed_control_policy_revision,
+            mixed_control_order_strategy=mixed_control_order_strategy,
+            mixed_control_initial_state_address=mixed_control_initial_state_address,
+            mixed_control_dispositions=mixed_control_dispositions,
+            controller_states=controller_states,
+            control_transitions=control_transitions,
             ai_offensive_behavior_refs=tuple(behavior_spec.ai_offensive_behavior_refs),
             defensive_behavior_refs=tuple(behavior_spec.defensive_behavior_refs),
             offensive_behavior_refs=tuple(behavior_spec.offensive_behavior_refs),

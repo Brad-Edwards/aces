@@ -218,6 +218,58 @@ def _rewrite_evidence_requirement(
             payload[field_name] = _maybe_rename(str(payload[field_name]), symbols["named"])
 
 
+def _rewrite_mixed_control_state(
+    state: dict[str, Any],
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
+    controller_ref = state.get("controller_ref")
+    if controller_ref and controller_ref != "self":
+        state["controller_ref"] = _maybe_rename(str(controller_ref), symbols["agents"])
+    for field_name in ("authority_basis_refs", "scope_refs", "evidence_refs"):
+        state[field_name] = [_maybe_rename(name, symbols["named"]) for name in state.get(field_name, [])]
+
+
+def _rewrite_mixed_control_transition(
+    transition: dict[str, Any],
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
+    for field_name in ("evidence_refs", "completion_evidence_refs"):
+        transition[field_name] = [_maybe_rename(name, symbols["named"]) for name in transition.get(field_name, [])]
+
+
+def _rewrite_mixed_control(
+    mixed_control: object,
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
+    if not isinstance(mixed_control, dict):
+        return
+    if mixed_control.get("participant_ref"):
+        mixed_control["participant_ref"] = _maybe_rename(
+            str(mixed_control["participant_ref"]),
+            symbols["agents"],
+        )
+    for state in mixed_control.get("controller_states", {}).values():
+        if isinstance(state, dict):
+            _rewrite_mixed_control_state(state, symbols)
+    for transition in mixed_control.get("transitions", {}).values():
+        if isinstance(transition, dict):
+            _rewrite_mixed_control_transition(transition, symbols)
+
+
+def _rewrite_tool_affordance(
+    binding: dict[str, Any],
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
+    if binding.get("tool_ref"):
+        binding["tool_ref"] = _maybe_rename(str(binding["tool_ref"]), symbols["content"])
+    binding["action_contract_refs"] = [
+        _maybe_rename(name, symbols["action_contracts"]) for name in binding.get("action_contract_refs", [])
+    ]
+    binding["observation_boundary_refs"] = [
+        _maybe_rename(name, symbols["observation_boundaries"]) for name in binding.get("observation_boundary_refs", [])
+    ]
+
+
 def _rewrite_variation_reference(
     reference: str,
     section: str,
@@ -547,21 +599,10 @@ def _namespace_payload(
             behavior_spec["authority_scope_refs"] = [
                 _maybe_rename(name, symbols["named"]) for name in behavior_spec.get("authority_scope_refs", [])
             ]
+            _rewrite_mixed_control(behavior_spec.get("mixed_control"), symbols)
             for binding in behavior_spec.get("tool_affordances", {}).values():
-                if not isinstance(binding, dict):
-                    continue
-                if binding.get("tool_ref"):
-                    binding["tool_ref"] = _maybe_rename(
-                        str(binding["tool_ref"]),
-                        symbols["content"],
-                    )
-                binding["action_contract_refs"] = [
-                    _maybe_rename(name, symbols["action_contracts"]) for name in binding.get("action_contract_refs", [])
-                ]
-                binding["observation_boundary_refs"] = [
-                    _maybe_rename(name, symbols["observation_boundaries"])
-                    for name in binding.get("observation_boundary_refs", [])
-                ]
+                if isinstance(binding, dict):
+                    _rewrite_tool_affordance(binding, symbols)
     for requirement in namespaced.get("evidence_requirements", {}).values():
         if isinstance(requirement, dict):
             _rewrite_evidence_requirement(requirement, symbols)

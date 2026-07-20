@@ -1238,7 +1238,6 @@ def test_behavior_specification_optional_fields_compile_empty_when_omitted():
         "policy-directed",
         "replayed",
         "human-supervised",
-        "mixed-control",
     ],
 )
 def test_act_608_behavior_modes_parse_validate_and_compile(behavior_mode: str):

@@ -1930,6 +1930,67 @@ outcome-rule runtime addresses. Each nested affordance compiles independently
 at `participant.behavior-specification.<name>.tool-affordance.<id>` with raw
 refs and resolved content/action/observation addresses.
 
+For `behavior_mode: mixed-control`, authors must also provide a closed
+`mixed_control` declaration. It binds one controlled participant, explicit
+controller states, fail-closed disposition rules, and ordered control facts.
+Controller-state and transition mapping keys are portable local identifiers;
+external participant, authority, scope, and evidence refs are rewritten by
+module composition while local state/transition refs remain local.
+
+```yaml
+mixed_control:
+  participant_ref: red-agent
+  policy_revision: 1.0.0
+  order_strategy: total-effective-order
+  initial_state_ref: autonomous
+  dispositions:
+    duplicate: idempotent-if-equivalent
+    stale: reject-no-state-change
+    revoked: reject-no-state-change
+    late: reject-no-state-change
+    concurrent: order-then-revalidate
+    conflict: reject-no-state-change
+  controller_states:
+    autonomous:
+      controller_ref: self
+      authority_basis_refs: [entities.red-team]
+      scope_refs: [nodes.web]
+      policy_revision: 1.0.0
+      valid_from_order: 0
+      valid_until_order: 10
+      authority_status: active
+      evidence_refs: [entities.red-team]
+    pending:
+      controller_ref: self
+      authority_basis_refs: [entities.red-team]
+      scope_refs: [nodes.web]
+      policy_revision: 1.0.0
+      valid_from_order: 10
+      valid_until_order: 10
+      authority_status: active
+      evidence_refs: [entities.red-team]
+  transitions:
+    propose_supervision:
+      transition_kind: proposal
+      from_state_ref: autonomous
+      to_state_ref: pending
+      policy_revision: 1.0.0
+      expected_state_revision: 0
+      resulting_state_revision: 1
+      effective_order: 10
+      valid_from_order: 0
+      valid_until_order: 10
+      evidence_refs: [entities.red-team]
+```
+
+The full fixture at
+`contracts/fixtures/sdl/mixed-control-v1/valid/mixed-control-participant.yaml`
+shows proposal/approval flow across autonomous, pending, and supervised
+states. Proposal, approval/denial, direction, intervention, handoff, override,
+and cancellation remain distinct control facts. Admission, execution,
+observation, wire contracts, and live histories belong to downstream runtime
+surfaces.
+
 ---
 
 ## Evidence Requirements

@@ -774,6 +774,30 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   cases do not establish universal noninterference, trace equivalence,
   simulation, refinement, bisimulation, epistemic indistinguishability, timed
   security, or probabilistic security.
+- ACT-617 applies the already adopted SEM-230/ADR-085 control and ordering
+  lineage to authored mixed-control behavior without introducing another
+  external derivation. The exact ACES mapping is
+  `ParticipantBehaviorSpecification.mixed_control` for the revisioned policy,
+  keyed typed controller states for participant/controller, authority, scope,
+  validity, revocation, and evidence coordinates, keyed typed control
+  transitions for proposal, approval/denial, direction, intervention,
+  handoff, override, and cancellation, and nested
+  `ParticipantBehaviorSpecificationRuntime.controller_states` /
+  `control_transitions` for deterministic compiled addresses and
+  dependencies. `SemanticValidator` owns fail-closed identity, authority,
+  scope, revision, validity, order, proposal, revocation, and handoff checks;
+  module composition rewrites external refs while preserving local state and
+  transition identities.
+- ACT-617 delivery evidence is the governed SDL schemas and publication
+  manifest, the valid/invalid mixed-control fixtures, and
+  `implementations/python/tests/test_act_617_mixed_control.py`. This delivers
+  authored and compiled policy semantics only. It does not claim portable
+  occurrence/wire contracts, action admission, execution, observation,
+  runtime mediation or persistence, backend enforcement, distributed/partial
+  ordering, policy noninterference, or universal correctness. Because the
+  implementation reuses the revision-pinned SEM-230 lineage without changing
+  its normative derivation or compatibility claims, the SDL lineage ledger
+  and source audit remain unchanged.
 - Issues #810 through #813 own the opacity/supervisor-visibility,
   proof-bearing bisimulation, adversarial threat-model, and
   simulation/federation extensions. SEM-230 preserves their participant,
