@@ -843,6 +843,34 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   or evidence merely from authored presence. The lineage ledger and source
   audit remain unchanged because this implementation adds no normative
   external derivation or compatibility claim.
+- SEM-220's executable participant decision surface adopts the existing
+  action/observation-interface lineage above without importing a UI, prompt,
+  command, or backend-native parameter language. ACES maps one participant,
+  episode, and behavior-history order point to
+  `ParticipantDecisionSurfaceModel`; maps the three portable selection forms
+  to its discriminated open-ended, constrained-form, and candidate-set
+  payloads; maps governed action meaning to compiled
+  `ParticipantActionContractRuntime` addresses; maps participant-local
+  presentation to the shared observation-boundary effective-view selector;
+  maps candidate applicability to explicit SEM-211 eligibility state and
+  reason refs; maps apparatus variation to implementation-selection, support,
+  and realization refs; and maps a chosen proposal through governed
+  argument-shape resolution before the existing
+  `ParticipantActionAdmissionRequest` path. Delivery is implemented for the
+  published closed contract and fixtures, compiled-runtime projection,
+  context-envelope agreement, proposal binding, runtime admission routing,
+  schema publication, and adversarial ordering/bypass checks. Evidence is
+  `participant-decision-surface-v1`, `project_participant_decision_surface()`,
+  `bind_participant_decision_surface_selection()`, and
+  `implementations/python/tests/test_sem_220_participant_decision_surface.py`.
+  Human proxy, script, LLM-agent, and RL-agent fixtures retain identical stable
+  action and selection-meaning refs while disclosing apparatus differences.
+  This mapping does not claim that presentation proves eligibility, selection,
+  admission, execution, result, outcome, historical exposure from a final
+  snapshot, backend support, UI behavior, prompt semantics, or complete
+  SEM-211 precondition evaluation. The lineage ledger and source audit remain
+  unchanged because the implementation adds no normative external derivation
+  or compatibility claim.
 - CALDERA adversary-emulation research informs the action semantics: cyber
   actions can change foothold, knowledge, observations, detection surface, and
   downstream outcomes under uncertainty.

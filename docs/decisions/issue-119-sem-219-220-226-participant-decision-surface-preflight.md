@@ -139,19 +139,65 @@ Do not rename or overload `behavior_mode`,
 action lists, tool instances, prompts, instructions, observations, or policy
 bodies.
 
-### Reuse a view carrier before publishing another DTO
+### Issue #295 reuse verdict: keep the envelope, not the generic producer
 
-If later implementation needs a portable retrieval/exchange carrier, first test
-whether `ParticipantContextViewModel` can express it through participant and
-episode scope, observation point, governed source layers, transformation,
-`payload_ref`, visibility projection, markings, redaction policy, evidence,
-provenance, limitations, and comparability. Stable action-contract and
-affordance refs may remain referenced content rather than duplicated payloads.
+The current `ParticipantContextViewModel` passes the ADR-083 reuse-first test as
+the outer portable envelope. It already owns participant/episode scope,
+observation point, governed source layers, transformation, `payload_ref`,
+visibility projection, markings, redaction policy, evidence, provenance,
+limitations, and comparability. Issue #295 must reuse those fields rather than
+publish a second context/audience envelope.
 
-A new published decision-surface contract is justified only if an independently
-portable payload cannot be represented without weakening those context-view
-invariants. It must not duplicate action-contract, observation-boundary,
-exposure-policy, status/history-view, or participant implementation fields.
+The existing `ParticipantRetrievalMixin.get_participant_context_view()` producer
+does **not** pass the semantic-projection test for `D(p,e,o)`. It accepts
+caller-supplied `view_ref`, `derivation_basis_ref`, and `payload_ref`; permits
+an absent episode; substitutes an episode id or `runtime.snapshot.current` for an
+observation point; and projects the current snapshot without proving the
+effective view relation at an order/event anchor. It remains a valid generic
+API-408 reference-view producer, but issue #295 must not reuse it as proof of a
+time-indexed decision surface or allow query parameters to manufacture semantic
+refs.
+
+A single new closed decision-surface payload contract is therefore justified.
+`ParticipantContextViewModel.payload_ref` references that typed payload; it does
+not embed a free-form map. The payload must be independently portable and carry
+the required `D(p,e,o)` identity and surface facts, while a relational validator
+or projection boundary verifies that its participant, episode, observation/order
+point, derivation basis, visibility projection, evidence, and provenance agree
+with the enclosing context view. Cross-contract obligations that JSON Schema
+cannot express must use the existing `x-aces-invariants` convention. The payload
+composes stable action-contract, affordance, observation-boundary,
+implementation-selection, exposure-policy, evidence, and provenance refs; it
+must not duplicate the referenced contracts.
+
+The payload must use one discriminated surface-form union so open-ended,
+constrained-form, and candidate-set selection meaning cannot be combined into an
+ambiguous bag. Common surface and action-entry facts remain common; form-specific
+defaults, normalization, omission, loss, membership, and open-extension meaning
+live only on the applicable variant. These form values are not additions to
+`participant-decision-surface-modes`.
+
+Two current capability limits must remain explicit:
+
+- `participant_action_admission_request_violations()` validates
+  implementation selection, exposure-policy consistency, and result identity;
+  it does not evaluate every SEM-211 precondition and does not validate action
+  arguments. `ParticipantActionResult` and
+  `validate_participant_action_result_contract()` enforce reported SEM-211
+  precondition/effect/result consistency after an attempt. A surface must not
+  rename either fact as pre-selection eligibility. It needs an order-scoped,
+  fail-closed eligibility state with reason refs to the existing SEM-211
+  precondition classes, and every selection still enters the existing admission
+  path.
+- No governed participant-action argument/parameter schema exists in the current
+  action contract. Issue #295 must not claim argument-shape validation by using
+  arbitrary dictionaries, SDL variables, experiment parameters, backend
+  command shapes, or `ParticipantExposurePolicyModel.constraints`. The minimum
+  missing seam is a governed selection/argument-shape reference plus a resolver
+  that validates proposals before admission; unresolved shape, default,
+  normalization, omission, or loss meaning fails closed or is explicitly
+  `unsupported`/`unknown`. This seam maps selection to an existing action
+  contract and does not redefine that contract's action meaning.
 
 ## Required Incumbents
 
@@ -167,13 +213,18 @@ exposure-policy, status/history-view, or participant implementation fields.
 - Compiled semantic addresses: `ParticipantBehaviorRuntime`,
   `ParticipantBehaviorSpecificationRuntime`,
   `ParticipantActionContractRuntime`,
-  `ParticipantObservationBoundaryRuntime`, and the existing
-  `participant.*` address families produced by `aces_processor.compiler`.
+  `ParticipantObservationBoundaryRuntime`, `ParticipantToolAffordanceRuntime`,
+  and the existing `participant.*` address families produced by
+  `aces_processor.compiler`.
 - Visibility and audience projections: `ParticipantViewRule`,
   `ParticipantViewTransition`, `view_relation_timeline`,
+  `_compile_view_relation_timeline()`,
+  `_participant_behavior_observation_effective_relation()`,
   `ParticipantObservationEnvelopeModel`, `ParticipantContextViewModel`,
   `ParticipantStatusViewModel`, `ParticipantHistoryViewModel`, and the SEM-216
-  audience-boundary validators.
+  audience-boundary validators. The existing effective-relation logic is the
+  incumbent to expose/factor for reuse; a decision-surface projector must not
+  copy its transition ordering and anchor-resolution algorithm.
 - Apparatus and selection: `ParticipantImplementationManifestModel`,
   `ParticipantImplementationCapabilitiesModel`,
   `ParticipantImplementationSelectionModel`, `ParticipantExposurePolicyModel`,
@@ -181,13 +232,16 @@ exposure-policy, status/history-view, or participant implementation fields.
   `validate_experiment_apparatus_context_against_manifests()`, and
   `participant_action_admission_request_violations()`.
 - Runtime admission and evidence: `ParticipantActionAdmissionRequest`,
-  `RuntimeControlPlane`, `ParticipantRuntime.admit_action()`,
+  `participant_action_admission_request_violations()`, `RuntimeControlPlane`,
+  `ParticipantRuntime.admit_action()`, `ParticipantActionPreconditionResult`,
+  `ParticipantActionResult`, `validate_participant_action_result_contract()`,
   `ParticipantBehaviorHistoryEventModel`, `ParticipantActionResultModel`,
   `RuntimeSnapshot`, participant episode/behavior/history validators,
   shared-state and concurrency validators, and runtime conformance diagnostics.
 - Contract and concept authority: `ContractModel`, `schema_bundle()`,
   `contracts/schemas/`, `contracts/fixtures/`,
   `contracts/schema-publication-manifest.json`,
+  `contracts/schema-publication/entries/`,
   `controlled-vocabularies-v1`, concept bindings,
   `validate_controlled_vocabulary_scope_values()`, and governed
   `x-<owner>:<term>` extensions.
@@ -200,14 +254,21 @@ exposure-policy, status/history-view, or participant implementation fields.
 - Verification patterns: the existing participant semantic invariant oracle,
   SEM-208/210 and SEM-216 negative leakage tests, participant-manifest fixtures,
   participant-backend contract fixtures, control-plane authorization tests,
-  runtime snapshot/conformance tests, and controlled-vocabulary tests.
+  runtime snapshot/conformance tests, RUN-306 lifecycle separation tests, and
+  controlled-vocabulary tests. Human, script, LLM, and RL fixtures reuse stable
+  semantic refs: LLM/RL are realization variants of the governed `agent`
+  implementation kind, not new action or surface semantics.
 - Repository policy: `.ground-control.yaml`, `.gc/plan-rules.md`,
   `noxfile.py`, `tools/check_repo_policy.py`,
   `tools/check_requirement_governance.py`,
   `tools/check_concept_authority_governance.py`,
   `tools/check_generated_schemas.py`, `tools/check_schema_publication.py`,
   `tools/check_json_artifacts.py`, `tools/check_semantic_coverage.py`, and
-  `tools/verify_all.py`.
+  `tools/verify_all.py`. The participant section of `docs/explain/sdl/lineage.md`
+  records SEM-220's exact ACES mappings, delivery status, evidence, and
+  nonclaims. `contracts/provenance/sdl-lineage-ledger-v1.json` and
+  `docs/research/lineage/source-audit-2026-07-12.md` change only if implementation
+  changes a normative external derivation or compatibility claim.
 
 ## Cross-Cutting Layers
 
@@ -224,18 +285,26 @@ exposure-policy, status/history-view, or participant implementation fields.
 - **Contract/schema shape:** portable payloads must be closed `ContractModel`
   descendants and pass model plus JSON Schema validation. Published schema
   changes require normative schema review, reference `schema_bundle()` parity,
-  valid/invalid fixtures, a publication-manifest change-ledger entry, and
-  compatibility classification under ADR-061.
+  valid/invalid fixtures, a v2 record under
+  `contracts/schema-publication/entries/` with a current `last_change` hash, and
+  compatibility classification under ADR-061. Adding a contract to a backend,
+  processor, or participant-implementation support allowlist is a separate
+  capability claim and occurs only when that component really consumes or
+  produces the contract.
 - **Participant visibility:** every participant-visible item must resolve at the
   relevant observation/order point through the compiled observation boundary,
   `V_p,t` timeline, exposure policy, source-layer transformation, audience
   scope, marking, redaction policy, evidence/provenance basis, and any disclosed
-  weakening. Future visibility cannot justify earlier exposure.
+  weakening. Factor/reuse the effective-relation selector already embodied by
+  `_participant_behavior_observation_effective_relation()`; do not implement a
+  second timeline walk. Future visibility cannot justify earlier exposure.
 - **Action admission:** a visible action or affordance is not necessarily
   eligible. Any admission path must reuse compiled action-contract addresses and
   SEM-211 authority, capability, target, knowledge, resource, temporal,
   interaction, and realization checks, then emit existing behavior-history and
-  action-result records.
+  action-result records. `ParticipantAdmissionDisposition` describes an
+  admission decision, not candidate eligibility, and the current admission
+  request helper is not an argument or full-precondition validator.
 - **Apparatus and provenance:** manifest support, selected mode, configuration
   ref/digest, and exposure policy must validate through the existing participant
   implementation and experiment apparatus/run models. Capability claims do not
@@ -246,7 +315,10 @@ exposure-policy, status/history-view, or participant implementation fields.
   bearer/proxy identity validation, read-versus-mutating role dependencies,
   target binding, request-size limits, idempotency/request fingerprints for
   mutations, and audit recording. Participant authority, surface visibility,
-  and control-plane caller authorization remain three different checks.
+  and control-plane caller authorization remain three different checks. Issue
+  #295 requires no new HTTP endpoint; if the existing context route later
+  returns a decision-surface ref, authenticated caller-supplied query values
+  must never become the surface's semantic or derivation authority.
 - **Secret handling and error envelopes:** credentials, bearer tokens, private
   keys, hidden prompts, answer keys, canaries, raw policy/configuration bodies,
   raw evidence payloads, environment dumps, backend-native object reprs, and
@@ -268,8 +340,12 @@ exposure-policy, status/history-view, or participant implementation fields.
   archival claims remain in participant implementation and experiment-run
   provenance contracts. Reuse behavior history, observation envelopes,
   diagnostics, audit events, and evidence records for observability. Do not add
-  a decision-surface store, cache, audit channel, log schema, or metadata/details
-  side channel, and do not treat raw logs as participant-visible evidence.
+  a decision-surface store, authoritative current-surface cache, audit channel,
+  log schema, or metadata/details side channel, and do not treat raw logs as
+  participant-visible evidence. Historical claims must remain derivable from or
+  referenced by the existing time-indexed behavior/visibility history and
+  evidence; a final `RuntimeSnapshot` projection alone cannot prove an earlier
+  surface after exposure changed.
 - **Package and policy boundary:** authored semantics stay in `aces_sdl`,
   compiled projections in `aces_processor`, neutral DTOs in `aces_contracts`,
   live control/persistence/security in `aces_runtime`, protocols in
@@ -283,7 +359,9 @@ backend-specific runner or UI model. Its semantic inputs are:
 
 - participant address and episode id;
 - observation/order point and time/clock basis where relevant;
+- surface form, projection-policy ref/revision, and selection-meaning ref;
 - behavior-specification and action-contract refs;
+- governed selection/argument-shape and constraint refs;
 - observation-boundary/view-relation ref;
 - participant implementation selection and decision-control mode;
 - exposure-policy ref/version/digest and realized affordance refs;
@@ -293,7 +371,10 @@ The next reasonable variants should fit by changing those parameters: another
 participant implementation, a per-phase surface, a new governed affordance
 category, a weaker backend realization, or another audience projection. A
 per-phase or per-action surface should add an explicit selection-context
-parameter, not overload the mode vocabulary or fork the visibility model.
+parameter, not overload the mode vocabulary or fork the visibility model. The
+order-relative view selector must remain one shared incumbent used by behavior
+history validation and surface projection, so a new clock/order basis extends
+one selector rather than creating divergent visibility algorithms.
 
 ## Gotchas And Anti-Patterns
 
@@ -307,6 +388,13 @@ Avoid:
   interaction topology, authority, or control-plane permission;
 - treating a visible action as currently applicable, authorized, supported, or
   successfully admitted;
+- treating `ParticipantAdmissionDisposition` or a successful historical
+  `ParticipantActionResult` as the candidate's pre-selection eligibility state;
+- treating `participant_action_admission_request_violations()` as argument-shape
+  validation or as the complete SEM-211 applicability evaluator;
+- treating caller-supplied `view_ref`, `payload_ref`, an episode id, or
+  `runtime.snapshot.current` from the generic context-view producer as a proved
+  decision-surface order/derivation anchor;
 - treating network reachability, `operating_scope`, backend sandboxing, control
   plane authorization, and information visibility as equivalent boundaries;
 - collapsing `hidden`, `withheld`, `evidence_only`, `concealed`, `unsupported`,
@@ -318,6 +406,12 @@ Avoid:
   participant decision surface;
 - turning `ParticipantExposurePolicyModel.constraints`, snapshot `metadata`,
   history `details`, audit details, or logs into an untyped policy/surface bag;
+- placing raw proposal arguments, JSON Schema bodies, form defaults,
+  normalization rules, or lossy mappings in those bags instead of resolving a
+  governed selection-shape reference;
+- adding `llm`, `rl`, or UI-specific participant semantics when the existing
+  `agent`, `human-control-proxy`, `script`, decision-control mode, configuration,
+  provenance, and realization disclosures already express the variation;
 - duplicating action, affordance, visibility, exposure, mode, failure, or
   support vocabularies in Python, schemas, docs, CLI, API, or backend code;
 - adding a second DTO layer, schema registry, validator stack, exception
@@ -334,6 +428,10 @@ Avoid:
   fixtures, APIs, adapters, storage, conformance, or tests in this preflight.
 - Designing a participant UI, agent framework, shell/RPC protocol, generic tool
   runner, prompt format, policy engine, credential broker, or OS sandbox.
+- Designing a general action-parameter language or changing governed action
+  meaning. SEM-220 owns the minimum selection/argument-shape binding needed to
+  map a surface choice to an existing action contract; it does not turn UI,
+  prompt, command, or backend-native schemas into action authority.
 - Replacing participant action contracts, SEM-210 visibility, SEM-211
   applicability/failure, SEM-214 context views, SEM-216 audience boundaries,
   participant implementation provenance, or backend feature support.

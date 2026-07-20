@@ -1,0 +1,569 @@
+{
+  "$defs": {
+    "ParticipantDecisionSurfaceActionEntryModel": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "eligibility": {
+                "enum": [
+                  "ineligible",
+                  "unknown",
+                  "unsupported"
+                ]
+              }
+            },
+            "required": [
+              "eligibility"
+            ]
+          },
+          "then": {
+            "properties": {
+              "eligibility_reason_refs": {
+                "minItems": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "support": {
+                "const": "supported"
+              }
+            },
+            "required": [
+              "support"
+            ]
+          },
+          "then": {
+            "properties": {
+              "support_refs": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ],
+      "description": "One presented or generable action without lifecycle implications.",
+      "properties": {
+        "action_contract_address": {
+          "minLength": 1,
+          "title": "Action Contract Address",
+          "type": "string"
+        },
+        "affordance_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Affordance Refs",
+          "type": "array"
+        },
+        "constraint_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Constraint Refs",
+          "type": "array"
+        },
+        "eligibility": {
+          "enum": [
+            "eligible",
+            "ineligible",
+            "unknown",
+            "unsupported"
+          ],
+          "title": "Eligibility",
+          "type": "string"
+        },
+        "eligibility_reason_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Eligibility Reason Refs",
+          "type": "array"
+        },
+        "entry_id": {
+          "minLength": 1,
+          "title": "Entry Id",
+          "type": "string"
+        },
+        "presentation_basis_ref": {
+          "minLength": 1,
+          "title": "Presentation Basis Ref",
+          "type": "string"
+        },
+        "realization_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Realization Refs",
+          "type": "array"
+        },
+        "selection_shape_ref": {
+          "minLength": 1,
+          "title": "Selection Shape Ref",
+          "type": "string"
+        },
+        "support": {
+          "enum": [
+            "supported",
+            "unsupported",
+            "unknown"
+          ],
+          "title": "Support",
+          "type": "string"
+        },
+        "support_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Support Refs",
+          "type": "array"
+        },
+        "visibility": {
+          "enum": [
+            "observable",
+            "discovered",
+            "inferred",
+            "disclosed",
+            "deceptive"
+          ],
+          "title": "Visibility",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entry_id",
+        "action_contract_address",
+        "presentation_basis_ref",
+        "visibility",
+        "eligibility",
+        "constraint_refs",
+        "selection_shape_ref",
+        "support"
+      ],
+      "title": "ParticipantDecisionSurfaceActionEntryModel",
+      "type": "object"
+    },
+    "ParticipantDecisionSurfaceCandidateSetFormModel": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_entry_ids": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Candidate Entry Ids",
+          "type": "array"
+        },
+        "open_extension_binding_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Open Extension Binding Ref"
+        },
+        "selection_meaning_ref": {
+          "minLength": 1,
+          "title": "Selection Meaning Ref",
+          "type": "string"
+        },
+        "surface_form": {
+          "const": "candidate_action_set",
+          "title": "Surface Form",
+          "type": "string"
+        }
+      },
+      "required": [
+        "surface_form",
+        "selection_meaning_ref",
+        "candidate_entry_ids"
+      ],
+      "title": "ParticipantDecisionSurfaceCandidateSetFormModel",
+      "type": "object"
+    },
+    "ParticipantDecisionSurfaceConstrainedFormModel": {
+      "additionalProperties": false,
+      "properties": {
+        "action_entry_id": {
+          "minLength": 1,
+          "title": "Action Entry Id",
+          "type": "string"
+        },
+        "argument_shape_ref": {
+          "minLength": 1,
+          "title": "Argument Shape Ref",
+          "type": "string"
+        },
+        "constraint_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Constraint Refs",
+          "type": "array"
+        },
+        "default_disclosure_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Default Disclosure Refs",
+          "type": "array"
+        },
+        "loss_disclosure_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Loss Disclosure Refs",
+          "type": "array"
+        },
+        "normalization_disclosure_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Normalization Disclosure Refs",
+          "type": "array"
+        },
+        "omission_disclosure_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Omission Disclosure Refs",
+          "type": "array"
+        },
+        "selection_meaning_ref": {
+          "minLength": 1,
+          "title": "Selection Meaning Ref",
+          "type": "string"
+        },
+        "surface_form": {
+          "const": "constrained_form",
+          "title": "Surface Form",
+          "type": "string"
+        },
+        "validation_policy_ref": {
+          "minLength": 1,
+          "title": "Validation Policy Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "surface_form",
+        "selection_meaning_ref",
+        "action_entry_id",
+        "argument_shape_ref",
+        "validation_policy_ref",
+        "constraint_refs",
+        "default_disclosure_refs",
+        "normalization_disclosure_refs",
+        "omission_disclosure_refs",
+        "loss_disclosure_refs"
+      ],
+      "title": "ParticipantDecisionSurfaceConstrainedFormModel",
+      "type": "object"
+    },
+    "ParticipantDecisionSurfaceOpenEndedFormModel": {
+      "additionalProperties": false,
+      "properties": {
+        "allowed_action_contract_addresses": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Allowed Action Contract Addresses",
+          "type": "array"
+        },
+        "argument_shape_ref": {
+          "minLength": 1,
+          "title": "Argument Shape Ref",
+          "type": "string"
+        },
+        "proposal_binding_ref": {
+          "minLength": 1,
+          "title": "Proposal Binding Ref",
+          "type": "string"
+        },
+        "selection_meaning_ref": {
+          "minLength": 1,
+          "title": "Selection Meaning Ref",
+          "type": "string"
+        },
+        "surface_form": {
+          "const": "open_ended_generation",
+          "title": "Surface Form",
+          "type": "string"
+        },
+        "validation_policy_ref": {
+          "minLength": 1,
+          "title": "Validation Policy Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "surface_form",
+        "selection_meaning_ref",
+        "proposal_binding_ref",
+        "argument_shape_ref",
+        "validation_policy_ref",
+        "allowed_action_contract_addresses"
+      ],
+      "title": "ParticipantDecisionSurfaceOpenEndedFormModel",
+      "type": "object"
+    }
+  },
+  "$id": "https://aces.dev/schemas/participant-decision-surface-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "One participant-local decision projection at one episode order point.",
+  "properties": {
+    "action_entries": {
+      "items": {
+        "$ref": "#/$defs/ParticipantDecisionSurfaceActionEntryModel"
+      },
+      "minItems": 1,
+      "title": "Action Entries",
+      "type": "array"
+    },
+    "affordance_refs": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Affordance Refs",
+      "type": "array"
+    },
+    "behavior_specification_address": {
+      "minLength": 1,
+      "title": "Behavior Specification Address",
+      "type": "string"
+    },
+    "context_view_ref": {
+      "minLength": 1,
+      "title": "Context View Ref",
+      "type": "string"
+    },
+    "decision_control_mode": {
+      "minLength": 1,
+      "title": "Decision Control Mode",
+      "type": "string"
+    },
+    "episode_id": {
+      "minLength": 1,
+      "title": "Episode Id",
+      "type": "string"
+    },
+    "evidence_refs": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Evidence Refs",
+      "type": "array"
+    },
+    "exposure_policy_ref": {
+      "minLength": 1,
+      "title": "Exposure Policy Ref",
+      "type": "string"
+    },
+    "form": {
+      "discriminator": {
+        "mapping": {
+          "candidate_action_set": "#/$defs/ParticipantDecisionSurfaceCandidateSetFormModel",
+          "constrained_form": "#/$defs/ParticipantDecisionSurfaceConstrainedFormModel",
+          "open_ended_generation": "#/$defs/ParticipantDecisionSurfaceOpenEndedFormModel"
+        },
+        "propertyName": "surface_form"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/ParticipantDecisionSurfaceOpenEndedFormModel"
+        },
+        {
+          "$ref": "#/$defs/ParticipantDecisionSurfaceConstrainedFormModel"
+        },
+        {
+          "$ref": "#/$defs/ParticipantDecisionSurfaceCandidateSetFormModel"
+        }
+      ],
+      "title": "Form"
+    },
+    "implementation_selection_ref": {
+      "minLength": 1,
+      "title": "Implementation Selection Ref",
+      "type": "string"
+    },
+    "marking_definition_refs": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Marking Definition Refs",
+      "type": "array"
+    },
+    "observation_boundary_address": {
+      "minLength": 1,
+      "title": "Observation Boundary Address",
+      "type": "string"
+    },
+    "observation_order": {
+      "minimum": 0,
+      "title": "Observation Order",
+      "type": "integer"
+    },
+    "observation_point": {
+      "minLength": 1,
+      "title": "Observation Point",
+      "type": "string"
+    },
+    "participant_address": {
+      "minLength": 1,
+      "title": "Participant Address",
+      "type": "string"
+    },
+    "projection_policy_ref": {
+      "minLength": 1,
+      "title": "Projection Policy Ref",
+      "type": "string"
+    },
+    "projection_policy_revision": {
+      "minLength": 1,
+      "title": "Projection Policy Revision",
+      "type": "string"
+    },
+    "provenance_refs": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Provenance Refs",
+      "type": "array"
+    },
+    "redaction_policy_ref": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Redaction Policy Ref"
+    },
+    "semantic_limitations": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Semantic Limitations",
+      "type": "array"
+    },
+    "surface_id": {
+      "minLength": 1,
+      "title": "Surface Id",
+      "type": "string"
+    },
+    "visibility_projection_ref": {
+      "minLength": 1,
+      "title": "Visibility Projection Ref",
+      "type": "string"
+    },
+    "visible_context_refs": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Visible Context Refs",
+      "type": "array"
+    }
+  },
+  "required": [
+    "surface_id",
+    "participant_address",
+    "episode_id",
+    "observation_point",
+    "observation_order",
+    "behavior_specification_address",
+    "observation_boundary_address",
+    "context_view_ref",
+    "implementation_selection_ref",
+    "decision_control_mode",
+    "projection_policy_ref",
+    "projection_policy_revision",
+    "exposure_policy_ref",
+    "visibility_projection_ref",
+    "visible_context_refs",
+    "action_entries",
+    "form",
+    "evidence_refs",
+    "provenance_refs",
+    "semantic_limitations"
+  ],
+  "title": "ParticipantDecisionSurfaceModel",
+  "type": "object",
+  "x-aces-invariants": [
+    {
+      "description": "Candidate, constrained-form, and open-ended action references must resolve to action entries and their governed selection shapes.",
+      "id": "decision-surface-entry-reference-agreement",
+      "inputs": [
+        {
+          "contract_id": "participant-decision-surface-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_contracts.contracts.ParticipantDecisionSurfaceModel._validate_surface_relations"
+    },
+    {
+      "description": "Surface membership or presentation carries no selection, admission, execution, result, or outcome fact; those facts remain in their existing lifecycle contracts.",
+      "id": "decision-surface-presentation-not-lifecycle-evidence",
+      "inputs": [
+        {
+          "contract_id": "participant-decision-surface-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_contracts.contracts.ParticipantDecisionSurfaceModel"
+    }
+  ],
+  "x-aces-semantic-profile": {
+    "contract_id": "participant-decision-surface-v1",
+    "entry_schema_contract_id": "aces-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
+    "id": "aces-semantic-invariants-v1",
+    "keyword": "x-aces-invariants",
+    "required": true,
+    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+  }
+}
