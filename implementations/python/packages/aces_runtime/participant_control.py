@@ -6,8 +6,7 @@ from aces_contracts.contracts import ParticipantDecisionSurfaceModel, Participan
 from aces_contracts.diagnostics import Diagnostic
 from aces_contracts.participant_binding import (
     ParticipantActionAdmissionRequest,
-    ParticipantDecisionSurfaceApparatusResolver,
-    ParticipantDecisionSurfaceArgumentShapeResolver,
+    ParticipantDecisionSurfaceBindingResolvers,
     bind_participant_decision_surface_selection,
 )
 from aces_contracts.participant_episode import (
@@ -369,8 +368,7 @@ class ParticipantControlMixin:
         surface: ParticipantDecisionSurfaceModel,
         selection: ParticipantDecisionSurfaceSelectionModel,
         admission_request: ParticipantActionAdmissionRequest,
-        argument_shape_resolver: ParticipantDecisionSurfaceArgumentShapeResolver,
-        apparatus_resolver: ParticipantDecisionSurfaceApparatusResolver,
+        resolvers: ParticipantDecisionSurfaceBindingResolvers,
         idempotency_key: str = "",
         request_fingerprint: str = "",
     ) -> OperationReceipt:
@@ -388,8 +386,8 @@ class ParticipantControlMixin:
                 surface=surface,
                 selection=selection,
                 admission_request=admission_request,
-                argument_shape_resolver=argument_shape_resolver,
-                apparatus_resolver=apparatus_resolver,
+                argument_shape_resolver=resolvers.argument_shape,
+                apparatus_resolver=resolvers.apparatus,
             )
         except (TypeError, ValueError) as exc:
             return self._reject_diagnostics(

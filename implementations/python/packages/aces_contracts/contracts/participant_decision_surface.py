@@ -150,6 +150,83 @@ ParticipantDecisionSurfaceFormModel = Annotated[
 ]
 
 
+def _surface_entry_indexes(
+    entries: list[ParticipantDecisionSurfaceActionEntryModel],
+) -> tuple[
+    dict[str, ParticipantDecisionSurfaceActionEntryModel],
+    dict[str, ParticipantDecisionSurfaceActionEntryModel],
+]:
+    entries_by_id = {entry.entry_id: entry for entry in entries}
+    entries_by_address = {entry.action_contract_address: entry for entry in entries}
+    _require_unique([entry.entry_id for entry in entries], "action_entries.entry_id")
+    _require_unique(
+        [entry.action_contract_address for entry in entries],
+        "action_entries.action_contract_address",
+    )
+    return entries_by_id, entries_by_address
+
+
+def _validate_candidate_form_relations(
+    form: ParticipantDecisionSurfaceCandidateSetFormModel,
+    entries_by_id: dict[str, ParticipantDecisionSurfaceActionEntryModel],
+) -> None:
+    unknown = sorted(set(form.candidate_entry_ids) - entries_by_id.keys())
+    if unknown:
+        raise ValueError("candidate_entry_ids must reference action_entries: " + ", ".join(unknown))
+
+
+def _validate_constrained_form_relations(
+    form: ParticipantDecisionSurfaceConstrainedFormModel,
+    entries_by_id: dict[str, ParticipantDecisionSurfaceActionEntryModel],
+) -> None:
+    entry = entries_by_id.get(form.action_entry_id)
+    if entry is None:
+        raise ValueError("constrained form action_entry_id must reference action_entries")
+    if entry.selection_shape_ref != form.argument_shape_ref:
+        raise ValueError("constrained form argument_shape_ref must match the selected action entry")
+
+
+def _validate_open_ended_form_relations(
+    form: ParticipantDecisionSurfaceOpenEndedFormModel,
+    entries_by_address: dict[str, ParticipantDecisionSurfaceActionEntryModel],
+) -> None:
+    unknown = sorted(set(form.allowed_action_contract_addresses) - entries_by_address.keys())
+    if unknown:
+        raise ValueError(
+            "open-ended allowed_action_contract_addresses must reference action_entries: " + ", ".join(unknown)
+        )
+    mismatched = sorted(
+        address
+        for address in form.allowed_action_contract_addresses
+        if entries_by_address[address].selection_shape_ref != form.argument_shape_ref
+    )
+    if mismatched:
+        raise ValueError("open-ended argument_shape_ref must match allowed action entries: " + ", ".join(mismatched))
+
+
+def _validate_surface_form_relations(
+    form: ParticipantDecisionSurfaceFormModel,
+    entries_by_id: dict[str, ParticipantDecisionSurfaceActionEntryModel],
+    entries_by_address: dict[str, ParticipantDecisionSurfaceActionEntryModel],
+) -> None:
+    if isinstance(form, ParticipantDecisionSurfaceCandidateSetFormModel):
+        _validate_candidate_form_relations(form, entries_by_id)
+    elif isinstance(form, ParticipantDecisionSurfaceConstrainedFormModel):
+        _validate_constrained_form_relations(form, entries_by_id)
+    else:
+        _validate_open_ended_form_relations(form, entries_by_address)
+
+
+def _validate_surface_affordances(
+    affordance_refs: list[str],
+    entries: list[ParticipantDecisionSurfaceActionEntryModel],
+) -> None:
+    entry_affordances = {ref for entry in entries for ref in entry.affordance_refs}
+    unknown = sorted(set(affordance_refs) - entry_affordances)
+    if unknown:
+        raise ValueError("affordance_refs must be carried by action_entries: " + ", ".join(unknown))
+
+
 class ParticipantDecisionSurfaceModel(ContractModel):
     """One participant-local decision projection at one episode order point."""
 
@@ -188,42 +265,9 @@ class ParticipantDecisionSurfaceModel(ContractModel):
             "semantic_limitations",
         ):
             _require_unique(getattr(self, field_name), field_name)
-        entry_ids = [entry.entry_id for entry in self.action_entries]
-        _require_unique(entry_ids, "action_entries.entry_id")
-        action_addresses = [entry.action_contract_address for entry in self.action_entries]
-        _require_unique(action_addresses, "action_entries.action_contract_address")
-        entry_id_set = set(entry_ids)
-        action_address_set = set(action_addresses)
-        if isinstance(self.form, ParticipantDecisionSurfaceCandidateSetFormModel):
-            unknown = sorted(set(self.form.candidate_entry_ids) - entry_id_set)
-            if unknown:
-                raise ValueError("candidate_entry_ids must reference action_entries: " + ", ".join(unknown))
-        elif isinstance(self.form, ParticipantDecisionSurfaceConstrainedFormModel):
-            if self.form.action_entry_id not in entry_id_set:
-                raise ValueError("constrained form action_entry_id must reference action_entries")
-            entry = next(item for item in self.action_entries if item.entry_id == self.form.action_entry_id)
-            if entry.selection_shape_ref != self.form.argument_shape_ref:
-                raise ValueError("constrained form argument_shape_ref must match the selected action entry")
-        else:
-            unknown = sorted(set(self.form.allowed_action_contract_addresses) - action_address_set)
-            if unknown:
-                raise ValueError(
-                    "open-ended allowed_action_contract_addresses must reference action_entries: " + ", ".join(unknown)
-                )
-            mismatched = sorted(
-                entry.action_contract_address
-                for entry in self.action_entries
-                if entry.action_contract_address in self.form.allowed_action_contract_addresses
-                and entry.selection_shape_ref != self.form.argument_shape_ref
-            )
-            if mismatched:
-                raise ValueError(
-                    "open-ended argument_shape_ref must match allowed action entries: " + ", ".join(mismatched)
-                )
-        entry_affordances = {ref for entry in self.action_entries for ref in entry.affordance_refs}
-        unknown_affordances = sorted(set(self.affordance_refs) - entry_affordances)
-        if unknown_affordances:
-            raise ValueError("affordance_refs must be carried by action_entries: " + ", ".join(unknown_affordances))
+        entries_by_id, entries_by_address = _surface_entry_indexes(self.action_entries)
+        _validate_surface_form_relations(self.form, entries_by_id, entries_by_address)
+        _validate_surface_affordances(self.affordance_refs, self.action_entries)
         return self
 
     @classmethod

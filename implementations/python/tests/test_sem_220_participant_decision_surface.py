@@ -18,6 +18,7 @@ from aces_contracts.contracts import (
 )
 from aces_contracts.participant_binding import (
     ParticipantActionAdmissionRequest,
+    ParticipantDecisionSurfaceBindingResolvers,
     bind_participant_decision_surface_selection,
 )
 from aces_processor.models import (
@@ -435,9 +436,10 @@ def test_candidate_membership_does_not_bypass_entry_admissibility(
     payload = _surface_payload()
     payload["action_entries"][0].update(entry_updates)  # type: ignore[index,union-attr]
     surface = ParticipantDecisionSurfaceModel.model_validate(payload)
+    selection = _surface_selection(surface)
 
     with pytest.raises(ValueError, match=message):
-        _bind_selection(surface, _surface_selection(surface))
+        _bind_selection(surface, selection)
 
 
 def test_selection_must_be_a_candidate_member() -> None:
@@ -456,9 +458,10 @@ def test_selection_must_be_a_candidate_member() -> None:
     payload["action_entries"].append(exfiltrate_entry)  # type: ignore[union-attr]
     payload["form"]["candidate_entry_ids"] = [EXFILTRATE]  # type: ignore[index]
     surface = ParticipantDecisionSurfaceModel.model_validate(payload)
+    selection = _surface_selection(surface)
 
     with pytest.raises(ValueError, match="not a member"):
-        _bind_selection(surface, _surface_selection(surface))
+        _bind_selection(surface, selection)
 
 
 def test_constrained_form_selection_must_match_its_action_entry() -> None:
@@ -504,12 +507,13 @@ def test_constrained_form_requires_mapping_disclosures() -> None:
 def test_projection_uses_time_indexed_visibility_and_rejects_future_state() -> None:
     runtime_model = _runtime_model()
     history = _history()
+    hidden_projection = _projection_input(observation_order=0, action_address=EXFILTRATE)
 
     with pytest.raises(ValueError, match="not participant-visible at observation_order 0"):
         project_participant_decision_surface(
             runtime_model,
             history_events=history,
-            projection=_projection_input(observation_order=0, action_address=EXFILTRATE),
+            projection=hidden_projection,
         )
 
     surface = project_participant_decision_surface(
@@ -523,11 +527,15 @@ def test_projection_uses_time_indexed_visibility_and_rejects_future_state() -> N
 
 @pytest.mark.parametrize("omitted_ref", (SCAN, SCAN_AFFORDANCE))
 def test_projection_requires_visibility_proof_for_every_emitted_ref(omitted_ref: str) -> None:
+    runtime_model = _runtime_model(omitted_visibility_ref=omitted_ref)
+    history = _history()
+    projection = _projection_input(observation_order=0)
+
     with pytest.raises(ValueError, match="lack an effective view disposition"):
         project_participant_decision_surface(
-            _runtime_model(omitted_visibility_ref=omitted_ref),
-            history_events=_history(),
-            projection=_projection_input(observation_order=0),
+            runtime_model,
+            history_events=history,
+            projection=projection,
         )
 
 
@@ -542,17 +550,19 @@ def test_projection_rejects_global_history_and_final_snapshot_substitution() -> 
         action_contract_address=SCAN,
         actor_provenance="participant:blue-agent",
     )
+    global_history = (*_history(), foreign)
+    projection = _projection_input(observation_order=0)
     with pytest.raises(ValueError, match="one participant and episode"):
         project_participant_decision_surface(
             runtime_model,
-            history_events=(*_history(), foreign),
-            projection=_projection_input(observation_order=0),
+            history_events=global_history,
+            projection=projection,
         )
     with pytest.raises(ValueError, match="time-indexed history"):
         project_participant_decision_surface(
             runtime_model,
             history_events=(),
-            projection=_projection_input(observation_order=0),
+            projection=projection,
         )
 
 
@@ -697,8 +707,10 @@ def test_open_ended_proposal_validates_before_existing_admission_path() -> None:
         surface=surface,
         selection=selection,
         admission_request=request,
-        argument_shape_resolver=reject_shape,
-        apparatus_resolver=resolve_apparatus,
+        resolvers=ParticipantDecisionSurfaceBindingResolvers(
+            argument_shape=reject_shape,
+            apparatus=resolve_apparatus,
+        ),
     )
     assert rejected == "rejected"
     assert resolver_calls == ["proposals.scan.1"]
@@ -710,8 +722,10 @@ def test_open_ended_proposal_validates_before_existing_admission_path() -> None:
         surface=surface,
         selection=selection,
         admission_request=request,
-        argument_shape_resolver=lambda **_: True,
-        apparatus_resolver=resolve_apparatus,
+        resolvers=ParticipantDecisionSurfaceBindingResolvers(
+            argument_shape=lambda **_: True,
+            apparatus=resolve_apparatus,
+        ),
     )
     assert admitted == "admitted"
     assert control.admitted is request
@@ -741,8 +755,10 @@ def test_surface_apparatus_must_resolve_to_the_admission_selection() -> None:
         surface=surface,
         selection=selection,
         admission_request=request,
-        apparatus_resolver=lambda **_: mismatched_selection,
-        argument_shape_resolver=lambda **kwargs: shape_calls.append(kwargs["proposal_ref"]) or True,
+        resolvers=ParticipantDecisionSurfaceBindingResolvers(
+            argument_shape=lambda **kwargs: shape_calls.append(kwargs["proposal_ref"]) or True,
+            apparatus=lambda **_: mismatched_selection,
+        ),
     )
 
     assert rejected == "rejected"
@@ -755,8 +771,10 @@ def test_surface_apparatus_must_resolve_to_the_admission_selection() -> None:
         surface=mismatched_mode_surface,
         selection=selection,
         admission_request=request,
-        apparatus_resolver=lambda **_: request.implementation_selection,
-        argument_shape_resolver=lambda **kwargs: shape_calls.append(kwargs["proposal_ref"]) or True,
+        resolvers=ParticipantDecisionSurfaceBindingResolvers(
+            argument_shape=lambda **kwargs: shape_calls.append(kwargs["proposal_ref"]) or True,
+            apparatus=lambda **_: request.implementation_selection,
+        ),
     )
 
     assert rejected == "rejected"

@@ -9,7 +9,11 @@ from aces_contracts.contracts import ParticipantDecisionSurfaceModel
 
 from .behavior_anchor_checks import participant_observation_effective_relation
 from .behavior_anchor_index import _participant_behavior_history_anchor_indexes
-from .behavior_resources import _PARTICIPANT_VISIBLE_VIEW_DISPOSITIONS
+from .behavior_resources import (
+    _PARTICIPANT_VISIBLE_VIEW_DISPOSITIONS,
+    ParticipantBehaviorSpecificationRuntime,
+    ParticipantObservationBoundaryRuntime,
+)
 from .history_event import ParticipantBehaviorHistoryEvent
 from .runtime_model import RuntimeModel
 
@@ -130,14 +134,10 @@ def _validate_context_visibility(
         )
 
 
-def project_participant_decision_surface(
-    runtime_model: RuntimeModel,
-    *,
+def _validate_projection_history(
     history_events: Sequence[ParticipantBehaviorHistoryEvent],
     projection: ParticipantDecisionSurfaceProjectionInput,
-) -> ParticipantDecisionSurfaceModel:
-    """Derive one surface from compiled meaning and one scoped history prefix."""
-
+) -> None:
     if not history_events:
         raise ValueError("participant decision surfaces require time-indexed history; a final snapshot is insufficient")
     if projection.observation_order < 0 or projection.observation_order >= len(history_events):
@@ -148,6 +148,11 @@ def project_participant_decision_surface(
     ):
         raise ValueError("participant decision surface history must contain one participant and episode")
 
+
+def _resolve_projection_scope(
+    runtime_model: RuntimeModel,
+    projection: ParticipantDecisionSurfaceProjectionInput,
+) -> tuple[ParticipantBehaviorSpecificationRuntime, ParticipantObservationBoundaryRuntime]:
     behavior = runtime_model.behavior_specifications.get(projection.behavior_specification_address)
     if behavior is None:
         raise ValueError("behavior_specification_address does not resolve in the compiled runtime model")
@@ -158,7 +163,14 @@ def project_participant_decision_surface(
     boundary = runtime_model.observation_boundaries.get(projection.observation_boundary_address)
     if boundary is None:
         raise ValueError("observation_boundary_address does not resolve in the compiled runtime model")
+    return behavior, boundary
 
+
+def _projection_visibility_relation(
+    history_events: Sequence[ParticipantBehaviorHistoryEvent],
+    projection: ParticipantDecisionSurfaceProjectionInput,
+    boundary: ParticipantObservationBoundaryRuntime,
+) -> Mapping[str, str]:
     action_attempts, state_transitions, observations = _participant_behavior_history_anchor_indexes(history_events)
     relation, _ = participant_observation_effective_relation(
         observation_index=projection.observation_order,
@@ -168,75 +180,121 @@ def project_participant_decision_surface(
         state_transitions=state_transitions,
         observations=observations,
     )
+    return relation
+
+
+def _project_surface_action(
+    runtime_model: RuntimeModel,
+    behavior: ParticipantBehaviorSpecificationRuntime,
+    relation: Mapping[str, str],
+    projection: ParticipantDecisionSurfaceProjectionInput,
+    action_address: str,
+) -> tuple[dict[str, object], tuple[str, ...]]:
+    if action_address not in behavior.action_contract_addresses:
+        raise ValueError(f"action {action_address!r} is outside the compiled behavior specification")
+    if action_address not in runtime_model.action_contracts:
+        raise ValueError(f"action {action_address!r} does not resolve in the compiled runtime model")
+    assessment = projection.action_assessments.get(action_address)
+    if assessment is None or assessment.action_contract_address != action_address:
+        raise ValueError(f"action {action_address!r} lacks a matching order-scoped assessment")
+    affordance_addresses = _action_affordance_addresses(
+        runtime_model,
+        behavior_affordance_addresses=behavior.tool_affordance_addresses,
+        action_address=action_address,
+    )
+    visibility = _participant_visible_disposition(
+        relation,
+        action_address=action_address,
+        affordance_addresses=affordance_addresses,
+        observation_order=projection.observation_order,
+    )
+    return (
+        {
+            "entry_id": action_address,
+            "action_contract_address": action_address,
+            "presentation_basis_ref": assessment.presentation_basis_ref,
+            "visibility": visibility,
+            "eligibility": assessment.eligibility,
+            "eligibility_reason_refs": list(assessment.eligibility_reason_refs),
+            "constraint_refs": list(assessment.constraint_refs),
+            "selection_shape_ref": assessment.selection_shape_ref,
+            "support": assessment.support,
+            "support_refs": list(assessment.support_refs),
+            "affordance_refs": list(affordance_addresses),
+            "realization_refs": list(assessment.realization_refs),
+        },
+        affordance_addresses,
+    )
+
+
+def _project_surface_actions(
+    runtime_model: RuntimeModel,
+    behavior: ParticipantBehaviorSpecificationRuntime,
+    relation: Mapping[str, str],
+    projection: ParticipantDecisionSurfaceProjectionInput,
+) -> tuple[list[dict[str, object]], list[str]]:
+    entries: list[dict[str, object]] = []
+    surface_affordances: list[str] = []
+    for action_address in _surface_action_addresses(projection.form):
+        entry, affordance_addresses = _project_surface_action(
+            runtime_model,
+            behavior,
+            relation,
+            projection,
+            action_address,
+        )
+        entries.append(entry)
+        surface_affordances.extend(affordance_addresses)
+    return entries, surface_affordances
+
+
+def _surface_payload(
+    projection: ParticipantDecisionSurfaceProjectionInput,
+    entries: list[dict[str, object]],
+    surface_affordances: list[str],
+) -> dict[str, object]:
+    return {
+        "surface_id": projection.surface_id,
+        "participant_address": projection.participant_address,
+        "episode_id": projection.episode_id,
+        "observation_point": projection.observation_point,
+        "observation_order": projection.observation_order,
+        "behavior_specification_address": projection.behavior_specification_address,
+        "observation_boundary_address": projection.observation_boundary_address,
+        "context_view_ref": projection.context_view_ref,
+        "implementation_selection_ref": projection.implementation_selection_ref,
+        "decision_control_mode": projection.decision_control_mode,
+        "projection_policy_ref": projection.projection_policy_ref,
+        "projection_policy_revision": projection.projection_policy_revision,
+        "exposure_policy_ref": projection.exposure_policy_ref,
+        "visibility_projection_ref": projection.visibility_projection_ref,
+        "visible_context_refs": list(projection.visible_context_refs),
+        "action_entries": entries,
+        "affordance_refs": list(dict.fromkeys(surface_affordances)),
+        "form": dict(projection.form),
+        "evidence_refs": list(projection.evidence_refs),
+        "provenance_refs": list(projection.provenance_refs),
+        "marking_definition_refs": list(projection.marking_definition_refs),
+        "redaction_policy_ref": projection.redaction_policy_ref,
+        "semantic_limitations": list(projection.semantic_limitations),
+    }
+
+
+def project_participant_decision_surface(
+    runtime_model: RuntimeModel,
+    *,
+    history_events: Sequence[ParticipantBehaviorHistoryEvent],
+    projection: ParticipantDecisionSurfaceProjectionInput,
+) -> ParticipantDecisionSurfaceModel:
+    """Derive one surface from compiled meaning and one scoped history prefix."""
+
+    _validate_projection_history(history_events, projection)
+    behavior, boundary = _resolve_projection_scope(runtime_model, projection)
+    relation = _projection_visibility_relation(history_events, projection, boundary)
     _validate_context_visibility(
         relation,
         refs=projection.visible_context_refs,
         observation_order=projection.observation_order,
     )
-
-    entries: list[dict[str, object]] = []
-    surface_affordances: list[str] = []
-    for action_address in _surface_action_addresses(projection.form):
-        if action_address not in behavior.action_contract_addresses:
-            raise ValueError(f"action {action_address!r} is outside the compiled behavior specification")
-        if action_address not in runtime_model.action_contracts:
-            raise ValueError(f"action {action_address!r} does not resolve in the compiled runtime model")
-        assessment = projection.action_assessments.get(action_address)
-        if assessment is None or assessment.action_contract_address != action_address:
-            raise ValueError(f"action {action_address!r} lacks a matching order-scoped assessment")
-        affordance_addresses = _action_affordance_addresses(
-            runtime_model,
-            behavior_affordance_addresses=behavior.tool_affordance_addresses,
-            action_address=action_address,
-        )
-        visibility = _participant_visible_disposition(
-            relation,
-            action_address=action_address,
-            affordance_addresses=affordance_addresses,
-            observation_order=projection.observation_order,
-        )
-        surface_affordances.extend(affordance_addresses)
-        entries.append(
-            {
-                "entry_id": action_address,
-                "action_contract_address": action_address,
-                "presentation_basis_ref": assessment.presentation_basis_ref,
-                "visibility": visibility,
-                "eligibility": assessment.eligibility,
-                "eligibility_reason_refs": list(assessment.eligibility_reason_refs),
-                "constraint_refs": list(assessment.constraint_refs),
-                "selection_shape_ref": assessment.selection_shape_ref,
-                "support": assessment.support,
-                "support_refs": list(assessment.support_refs),
-                "affordance_refs": list(affordance_addresses),
-                "realization_refs": list(assessment.realization_refs),
-            }
-        )
-
-    return ParticipantDecisionSurfaceModel.model_validate(
-        {
-            "surface_id": projection.surface_id,
-            "participant_address": projection.participant_address,
-            "episode_id": projection.episode_id,
-            "observation_point": projection.observation_point,
-            "observation_order": projection.observation_order,
-            "behavior_specification_address": projection.behavior_specification_address,
-            "observation_boundary_address": projection.observation_boundary_address,
-            "context_view_ref": projection.context_view_ref,
-            "implementation_selection_ref": projection.implementation_selection_ref,
-            "decision_control_mode": projection.decision_control_mode,
-            "projection_policy_ref": projection.projection_policy_ref,
-            "projection_policy_revision": projection.projection_policy_revision,
-            "exposure_policy_ref": projection.exposure_policy_ref,
-            "visibility_projection_ref": projection.visibility_projection_ref,
-            "visible_context_refs": list(projection.visible_context_refs),
-            "action_entries": entries,
-            "affordance_refs": list(dict.fromkeys(surface_affordances)),
-            "form": dict(projection.form),
-            "evidence_refs": list(projection.evidence_refs),
-            "provenance_refs": list(projection.provenance_refs),
-            "marking_definition_refs": list(projection.marking_definition_refs),
-            "redaction_policy_ref": projection.redaction_policy_ref,
-            "semantic_limitations": list(projection.semantic_limitations),
-        }
-    )
+    entries, surface_affordances = _project_surface_actions(runtime_model, behavior, relation, projection)
+    return ParticipantDecisionSurfaceModel.model_validate(_surface_payload(projection, entries, surface_affordances))
