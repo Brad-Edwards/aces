@@ -225,6 +225,7 @@ module_boundaries:
           - aces_processor.manifest
           - aces_processor.models
           - aces_processor.reference
+          - aces_processor.satisfiability
     - id: aces_mcp
       root: implementations/python/packages/aces_mcp
       allowed_top_level_imports:

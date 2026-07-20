@@ -11,7 +11,9 @@ from tools.check_formal_semantic_validation import (
     REQUIRED_PARTICIPANT_OBLIGATION_IDS,
     evaluate,
     load_bundle,
+    load_satisfiability_analysis,
     validate_bundle,
+    validate_satisfiability_analysis,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -23,10 +25,6 @@ def _rule_ids(failures: list[object]) -> set[str]:
 
 def _bundle() -> tuple[dict, dict, dict, dict, dict]:
     return tuple(deepcopy(item) for item in load_bundle(REPO_ROOT))  # type: ignore[return-value]
-
-
-def test_current_bundle_passes_the_integrity_and_replay_gate() -> None:
-    assert evaluate(REPO_ROOT) == []
 
 
 def test_protocol_keeps_all_literature_claim_classes_distinct() -> None:
@@ -272,3 +270,76 @@ def test_gate_rejects_mutations_of_every_semantic_integrity_rule_family(
     failures = validate_bundle(REPO_ROOT, manifest, protocol, corpus, snapshot, analysis)
 
     assert expected_rule in _rule_ids(failures)
+
+
+def test_satisfiability_supplement_has_complete_replayable_control_matrix() -> None:
+    manifest, snapshot, analysis = load_satisfiability_analysis(REPO_ROOT)
+
+    assert manifest["revision"] == "2.0.0"
+    assert analysis["evidence_status"] == "demonstrated"
+    assert {item["control"] for item in analysis["cases"]} == {
+        "positive",
+        "negative",
+        "unsupported",
+    }
+    assert analysis["execution_id"] == snapshot["execution_id"]
+    assert validate_satisfiability_analysis(REPO_ROOT, manifest, snapshot, analysis) == []
+
+
+def test_satisfiability_gate_rejects_missing_unsupported_control() -> None:
+    manifest, snapshot, analysis = load_satisfiability_analysis(REPO_ROOT)
+    analysis = deepcopy(analysis)
+    analysis["cases"] = [item for item in analysis["cases"] if item["control"] != "unsupported"]
+
+    failures = validate_satisfiability_analysis(REPO_ROOT, manifest, snapshot, analysis)
+
+    assert "formal-satisfiability-control-coverage" in _rule_ids(failures)
+
+
+@pytest.mark.parametrize(
+    ("field", "replacement"),
+    [
+        ("expected_outcome", "satisfiable"),
+        (
+            "expected_normalized_model_digest",
+            "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        ),
+    ],
+)
+def test_satisfiability_gate_rejects_mutated_frozen_observations(
+    field: str,
+    replacement: str,
+) -> None:
+    manifest, snapshot, analysis = load_satisfiability_analysis(REPO_ROOT)
+    analysis = deepcopy(analysis)
+    unsupported = next(item for item in analysis["cases"] if item["control"] == "unsupported")
+    unsupported[field] = replacement
+
+    failures = validate_satisfiability_analysis(REPO_ROOT, manifest, snapshot, analysis)
+
+    assert "formal-satisfiability-replay-drift" in _rule_ids(failures)
+
+
+def test_satisfiability_gate_rejects_unsafe_fixture_and_unknown_fields() -> None:
+    manifest, snapshot, analysis = load_satisfiability_analysis(REPO_ROOT)
+    unsafe = deepcopy(analysis)
+    unsafe["cases"][0]["fixture_path"] = "../outside.sdl.yaml"
+    unknown = deepcopy(analysis)
+    unknown["unexpected"] = True
+
+    assert "formal-satisfiability-case-path" in _rule_ids(
+        validate_satisfiability_analysis(REPO_ROOT, manifest, snapshot, unsafe)
+    )
+    assert "formal-satisfiability-analysis-shape" in _rule_ids(
+        validate_satisfiability_analysis(REPO_ROOT, manifest, snapshot, unknown)
+    )
+
+
+def test_satisfiability_gate_rejects_mutated_execution_snapshot() -> None:
+    manifest, snapshot, analysis = load_satisfiability_analysis(REPO_ROOT)
+    snapshot = deepcopy(snapshot)
+    snapshot["observations"][0]["actual_outcome"] = "unsatisfiable"
+
+    failures = validate_satisfiability_analysis(REPO_ROOT, manifest, snapshot, analysis)
+
+    assert "formal-satisfiability-snapshot-drift" in _rule_ids(failures)

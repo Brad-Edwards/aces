@@ -597,7 +597,7 @@ def expand_sdl_modules(
         )
         import_path = resolved_import.root_file
         imported_raw = _load_normalized_data(
-            import_path.read_text(encoding="utf-8"),
+            resolved_import.source_document.text,
             path=import_path,
             source_format=source_format,
             migration_policy=migration_policy,

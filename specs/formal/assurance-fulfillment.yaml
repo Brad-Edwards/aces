@@ -30,6 +30,7 @@ adr_refs:
   - ADR-081
   - ADR-084
   - ADR-085
+  - ADR-086
 
 # Registry of classified formal-spec subsystems. Every immediate subdirectory of
 # specs/formal/ carrying a README.md must appear here (the checker fails on any
@@ -52,6 +53,9 @@ subsystems:
     fm_level: FM2
   - id: scenario-variation-trial-realization
     path: specs/formal/scenario-variation-trial-realization
+    fm_level: FM2
+  - id: scenario-satisfiability
+    path: specs/formal/scenario-satisfiability
     fm_level: FM2
   - id: runtime-contracts
     path: specs/formal/runtime-contracts
@@ -176,6 +180,7 @@ entries:
           Issue #652 publishes design coverage only. Family validation,
           selection, compilation/admission, instantiation/provenance, and fact
           binding unit tests are owned by the sequenced implementation issues.
+
       - kind: typed_ir_or_contract_coverage
         date: 2026-07-15
         tracking:
@@ -199,6 +204,18 @@ entries:
           Schedule-permutation, stream non-interference, serialized
           instantiation-equivalence, backend refusal, and fact
           non-retroactivity properties require the follow-on implementations.
+
+  - subsystem: scenario-satisfiability
+    delivered_artifacts:
+      - kind: invariant_list
+        path: specs/formal/scenario-satisfiability/README.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_scenario_satisfiability.py
+      - kind: typed_ir_or_contract_coverage
+        path: contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json
+      - kind: property_based_or_differential_tests
+        path: implementations/python/tests/test_scenario_satisfiability.py
+    waived_artifacts: []
 
   - subsystem: runtime-contracts
     delivered_artifacts:

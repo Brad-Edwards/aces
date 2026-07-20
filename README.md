@@ -171,12 +171,33 @@ The documentation source is under [`docs/`](https://github.com/Brad-Edwards/aces
 
 ```shell
 uvx nox -s verify
+uvx nox -s verify-changed
 uvx nox -s tests
 uvx nox -l
 ```
 
-The full `verify` session runs the project checks expected for pull requests,
-including repository policy, generated artifact checks, tests, and docs.
+The full `verify` session is unconditional and runs the project checks expected
+for pull requests, including repository policy, governed evidence and generated
+artifacts, parallel worker-safe test coverage, serial integration tests, and
+docs. Use `verify-changed` while iterating: it compares the branch and working
+tree with the upstream ref, skips evidence and regression stages only for
+allowlisted prose or research-only changes, and fails closed to the full local
+gate for unknown, deleted, renamed, executable, contract, or configuration
+changes. The pre-push hook uses the same change-aware plan.
+
+Whole-scenario finite-domain satisfiability can be inspected without applying
+or provisioning a scenario:
+
+```shell
+uv run --project implementations/python aces processor satisfiability \
+  path/to/scenario.sdl.yaml \
+  --profile aces-finite-domain-satisfiability-v1
+```
+
+The command emits the published replayable evidence envelope. Exit `0` is a
+completed satisfiable or unsatisfiable analysis, `2` is an explicit unsupported
+fragment result, and `1` is an input or operational failure. See ADR-086 for the
+bounded target coverage and nonclaims.
 
 ## Contributing
 

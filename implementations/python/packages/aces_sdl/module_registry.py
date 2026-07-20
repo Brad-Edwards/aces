@@ -10,7 +10,7 @@ import os
 import tarfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
@@ -30,6 +30,9 @@ from ._base import SDLModel
 from ._errors import SDLParseDiagnostic, SDLParseError
 from ._source_profile import DEFAULT_SOURCE_PARSE_OPTIONS, SDLSourceParseOptions
 from .scenario import ImportDecl, ModuleDescriptor, Scenario
+
+if TYPE_CHECKING:
+    from .parser import SDLSourceDocument
 
 LOCKFILE_NAME = "aces.lock.json"
 TRUST_POLICY_NAME = "aces-trust.yaml"
@@ -104,6 +107,7 @@ class ResolvedModule:
     import_decl: ImportDecl
     module_descriptor: ModuleDescriptor
     root_file: Path
+    source_document: SDLSourceDocument
     resolved_source: str
     manifest_digest: str = ""
     content_digest: str = ""
@@ -565,10 +569,11 @@ def resolve_import(
             raise SDLParseError(f"Local import path escapes base directory: {relative!r}")
         if not import_path.exists():
             raise SDLParseError(f"Imported SDL file not found: {relative}")
-        from .parser import _load_normalized_data
+        from .parser import _load_normalized_data, read_sdl_source
 
+        imported_source = read_sdl_source(import_path, limits=source_options.limits)
         imported_raw = _load_normalized_data(
-            import_path.read_text(encoding="utf-8"),
+            imported_source.text,
             path=import_path,
             source_format=source_options.source_format,
             migration_policy=source_options.migration_policy,
@@ -580,7 +585,7 @@ def resolve_import(
             imported_scenario,
             source_id=relative.replace("\\", "/"),
         )
-        content_digest = f"sha256:{_sha256_digest(import_path.read_bytes())}"
+        content_digest = f"sha256:{_sha256_digest(imported_source.raw_bytes)}"
         if not _satisfies_version(descriptor.version, import_decl.version):
             raise SDLParseError(
                 f"Import '{relative}' requested version {import_decl.version!r} "
@@ -599,6 +604,7 @@ def resolve_import(
             import_decl=import_decl,
             module_descriptor=descriptor,
             root_file=import_path,
+            source_document=imported_source,
             resolved_source=_local_resolved_source(import_path, base_dir),
             content_digest=content_digest,
             export_hash=_descriptor_digest(descriptor.exports),
@@ -696,6 +702,9 @@ def resolve_import(
         root_file=root_file,
         base_dir=base_dir,
     )
+    from .parser import read_sdl_source
+
+    resolved_source_document = read_sdl_source(resolved_root, limits=source_options.limits)
     _verify_allowed_parameters(import_decl, descriptor)
     export_hash = _descriptor_digest(descriptor.exports)
     if locked is not None and locked.export_hash != export_hash:
@@ -704,6 +713,7 @@ def resolve_import(
         import_decl=import_decl,
         module_descriptor=descriptor,
         root_file=resolved_root,
+        source_document=resolved_source_document,
         resolved_source=f"{registry}/{repository}@{manifest_digest}",
         manifest_digest=manifest_digest,
         content_digest=content_digest,
@@ -717,10 +727,10 @@ def resolve_lock_records(
     *,
     trust_policy: TrustPolicy | None = None,
 ) -> Lockfile:
-    from .parser import _load_normalized_data
+    from .parser import _load_normalized_data, read_sdl_source
 
     trust_policy = trust_policy or load_trust_policy(root_path.parent)
-    root_data = _load_normalized_data(root_path.read_text(encoding="utf-8"), path=root_path)
+    root_data = _load_normalized_data(read_sdl_source(root_path).text, path=root_path)
     imports = [ImportDecl.model_validate(item) for item in root_data.get("imports", [])]
     records: list[LockRecord] = []
     for import_decl in imports:
@@ -751,15 +761,16 @@ def _collect_local_bundle_files(
     *,
     seen: set[Path] | None = None,
 ) -> dict[Path, bytes]:
-    from .parser import _load_normalized_data
+    from .parser import _load_normalized_data, read_sdl_source
 
     seen = set() if seen is None else set(seen)
     resolved = root_path.resolve()
     if resolved in seen:
         raise SDLParseError(f"Import cycle detected at {resolved}")
     seen.add(resolved)
-    payload = _load_normalized_data(root_path.read_text(encoding="utf-8"), path=root_path)
-    files = {resolved: root_path.read_bytes()}
+    root_source = read_sdl_source(root_path)
+    payload = _load_normalized_data(root_source.text, path=root_path)
+    files = {resolved: root_source.raw_bytes}
     for raw_import in payload.get("imports", []):
         import_decl = ImportDecl.model_validate(raw_import)
         source = import_decl.normalized_source

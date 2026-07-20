@@ -443,6 +443,16 @@
       }
     },
     {
+      "contract_id": "scenario-satisfiability-evidence-v1",
+      "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
+      "stability": "draft",
+      "content_hash": "ee0060a90c686053eedf0328a349fe726783529518bbf2e17d81d76992bbdd36",
+      "last_change": {
+        "summary": "Carry defensive behavior references through the embedded scenario witness after merging the current SDL contract authority.",
+        "content_hash": "ee0060a90c686053eedf0328a349fe726783529518bbf2e17d81d76992bbdd36"
+      }
+    },
+    {
       "contract_id": "scientific-completeness-assessment-v1",
       "schema_path": "contracts/schemas/profiles/scientific-completeness-assessment-v1.json",
       "stability": "draft",

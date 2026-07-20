@@ -18,6 +18,8 @@ def _schema_output_path(schemas_dir: Path, name: str) -> Path:
         "scenario-instantiation-request-v1",
     }:
         return schemas_dir / "sdl" / f"{name}.json"
+    if name.startswith("scenario-satisfiability-evidence-v"):
+        return schemas_dir / "satisfiability" / f"{name}.json"
     if name.startswith("backend-manifest-v"):
         return schemas_dir / "backend-manifest" / f"{name}.json"
     if name.startswith("realization-envelope-v"):
