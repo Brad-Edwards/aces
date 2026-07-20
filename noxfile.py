@@ -678,6 +678,10 @@ def _run_contracts(session: nox.Session, reporter: SessionReporter, *args: str) 
         "contracts / ATLAS tactic vocabulary conformance",
         lambda: _run_project_python(session, "tools/check_atlas_tactic_vocabulary.py"),
     )
+    reporter.run(
+        "contracts / NIST CSF defensive vocabulary conformance",
+        lambda: _run_project_python(session, "tools/check_nist_csf_defensive_vocabulary.py"),
+    )
 
 
 def _run_lint(session: nox.Session, reporter: SessionReporter) -> None:

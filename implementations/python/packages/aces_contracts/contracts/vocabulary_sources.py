@@ -13,6 +13,7 @@ from ..versions import (
     ATLAS_TACTICS_SOURCE_SCHEMA_VERSION,
     ATTACK_ENTERPRISE_TACTICS_SOURCE_SCHEMA_VERSION,
     CONTROLLED_VOCABULARIES_SCHEMA_VERSION,
+    NIST_CSF_DEFENSIVE_CATEGORIES_SOURCE_SCHEMA_VERSION,
 )
 from .base import (
     _CONTROLLED_VOCABULARY_GOVERNED_SCOPES,
@@ -193,4 +194,38 @@ class AtlasTacticsSourceModel(ContractModel):
             raise ValueError("ATLAS tactic source must not contain duplicate position values")
         if positions != sorted(positions):
             raise ValueError("ATLAS tactic source tactics must be ordered by matrix position")
+        return self
+
+
+class NistCsfDefensiveCategorySourceTermModel(ContractModel):
+    category_id: Annotated[str, Field(pattern=r"^(?:DE|RS|RC)\.[A-Z]{2}$")]
+    term_id: ControlledVocabularyTermId
+    title: NonEmptyString
+    description: NonEmptyString
+    function: Literal["Detect", "Respond", "Recover"]
+
+
+class NistCsfDefensiveCategorySourceModel(ContractModel):
+    schema_version: Literal[NIST_CSF_DEFENSIVE_CATEGORIES_SOURCE_SCHEMA_VERSION] = (
+        NIST_CSF_DEFENSIVE_CATEGORIES_SOURCE_SCHEMA_VERSION
+    )
+    source_authority: Literal["NIST Cybersecurity Framework"]
+    source_version: Literal["2.0"]
+    source_url: NonEmptyString
+    source_digest: PrefixedDigestString
+    citation_urls: list[NonEmptyString] = Field(min_length=1)
+    retrieved_at: CalendarDateString
+    license_url: NonEmptyString
+    license_notice: NonEmptyString
+    categories: list[NistCsfDefensiveCategorySourceTermModel] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _validate_defensive_categories_source(self) -> NistCsfDefensiveCategorySourceModel:
+        category_ids = [category.category_id for category in self.categories]
+        if len(category_ids) != len(set(category_ids)):
+            raise ValueError("NIST CSF defensive category source must not contain duplicate category_id values")
+
+        term_ids = [category.term_id for category in self.categories]
+        if len(term_ids) != len(set(term_ids)):
+            raise ValueError("NIST CSF defensive category source must not contain duplicate term_id values")
         return self

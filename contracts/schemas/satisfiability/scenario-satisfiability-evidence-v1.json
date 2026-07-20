@@ -4991,6 +4991,13 @@
           "default": null,
           "title": "Behavior Mode"
         },
+        "defensive_behavior_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Defensive Behavior Refs",
+          "type": "array"
+        },
         "evidence_contract_refs": {
           "items": {
             "type": "string"

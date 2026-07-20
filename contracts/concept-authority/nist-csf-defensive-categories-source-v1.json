@@ -1,0 +1,74 @@
+{
+  "schema_version": "nist-csf-defensive-categories-source/v1",
+  "source_authority": "NIST Cybersecurity Framework",
+  "source_version": "2.0",
+  "source_url": "https://csrc.nist.gov/extensions/nudp/services/json/csf/download?",
+  "source_digest": "sha256:014492980e87f8ce2c98d80ea040540392de96a08980c2f9901114ad4108b2c3",
+  "citation_urls": [
+    "https://csrc.nist.gov/extensions/nudp/services/json/csf/download?",
+    "https://www.nist.gov/publications/nist-cybersecurity-framework-csf-20",
+    "https://doi.org/10.6028/NIST.CSWP.29",
+    "https://www.nist.gov/copyrights-disclaimers"
+  ],
+  "retrieved_at": "2026-07-19",
+  "license_url": "https://www.nist.gov/copyrights-disclaimers",
+  "license_notice": "Adapted from NIST CSF 2.0. Except for material marked as copyrighted, NIST site information is public information that may be distributed or copied; appropriate source credit is requested.",
+  "categories": [
+    {
+      "category_id": "DE.CM",
+      "term_id": "continuous-monitoring",
+      "title": "Continuous Monitoring",
+      "description": "Assets are monitored to find anomalies, indicators of compromise, and other potentially adverse events",
+      "function": "Detect"
+    },
+    {
+      "category_id": "DE.AE",
+      "term_id": "adverse-event-analysis",
+      "title": "Adverse Event Analysis",
+      "description": "Anomalies, indicators of compromise, and other potentially adverse events are analyzed to characterize the events and detect cybersecurity incidents",
+      "function": "Detect"
+    },
+    {
+      "category_id": "RS.MA",
+      "term_id": "incident-management",
+      "title": "Incident Management",
+      "description": "Responses to detected cybersecurity incidents are managed",
+      "function": "Respond"
+    },
+    {
+      "category_id": "RS.AN",
+      "term_id": "incident-analysis",
+      "title": "Incident Analysis",
+      "description": "Investigations are conducted to ensure effective response and support forensics and recovery activities",
+      "function": "Respond"
+    },
+    {
+      "category_id": "RS.CO",
+      "term_id": "incident-response-reporting-and-communication",
+      "title": "Incident Response Reporting and Communication",
+      "description": "Response activities are coordinated with internal and external stakeholders as required by laws, regulations, or policies",
+      "function": "Respond"
+    },
+    {
+      "category_id": "RS.MI",
+      "term_id": "incident-mitigation",
+      "title": "Incident Mitigation",
+      "description": "Activities are performed to prevent expansion of an event and mitigate its effects",
+      "function": "Respond"
+    },
+    {
+      "category_id": "RC.RP",
+      "term_id": "incident-recovery-plan-execution",
+      "title": "Incident Recovery Plan Execution",
+      "description": "Restoration activities are performed to ensure operational availability of systems and services affected by cybersecurity incidents",
+      "function": "Recover"
+    },
+    {
+      "category_id": "RC.CO",
+      "term_id": "incident-recovery-communication",
+      "title": "Incident Recovery Communication",
+      "description": "Restoration activities are coordinated with internal and external parties",
+      "function": "Recover"
+    }
+  ]
+}
