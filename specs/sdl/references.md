@@ -192,6 +192,9 @@ element is the source or channel.
 | `workflows` | compensation | other `workflows` |
 | `workflows` | predicate assertion refs | `assertions` (preconditions) |
 | `workflows` | predicate step refs | own steps (executable) |
+| `workflows` | scripted-step procedure refs | `action_contracts` with `procedure` granularity |
+| `workflows` | scaffold refs | `observation_boundaries` with scaffold-compatible view rules |
+| `workflows` | allowed action families | `action_contracts` with `aggregate` granularity |
 
 Parallel/join control flow MUST be closed: every branch reaches its join and no
 join is unreferenced.
@@ -398,6 +401,9 @@ the source of the row's normative meaning.
 | `workflows.*.steps.*.cases.*.when.objectives[]` | `objectives` | semantic validation | fatal dangling or ambiguous | [workflow semantics](../formal/workflows/state-machine.md) | [workflow validator](../../implementations/python/packages/aces_sdl/validator/_workflows_verify.py) |
 | `workflows.*.steps.*.cases.*.when.steps.*.step` | `workflow_steps` | semantic validation | fatal dangling, self-referential, non-executable, or unavailable before evaluation | [workflow semantics](../formal/workflows/state-machine.md) | [workflow validator](../../implementations/python/packages/aces_sdl/validator/_workflows_verify.py) |
 | `workflows.*.steps.*.objective` | `objectives` | semantic validation | fatal dangling or ambiguous | [workflow semantics](../formal/workflows/state-machine.md) | [workflow validator](../../implementations/python/packages/aces_sdl/validator/_workflows_verify.py) |
+| `workflows.*.steps.*.procedure_ref` | `action_contracts` | semantic validation | fatal dangling or non-procedure granularity | [goal-oriented step semantics](../formal/workflows/goal-oriented-steps.md) | [workflow validator](../../implementations/python/packages/aces_sdl/validator/_workflows_verify.py) |
+| `workflows.*.steps.*.scaffold_refs[]` | `observation_boundaries` | semantic validation | fatal dangling or scaffold-incompatible boundary | [goal-oriented step semantics](../formal/workflows/goal-oriented-steps.md) | [workflow validator](../../implementations/python/packages/aces_sdl/validator/_workflows_verify.py) |
+| `workflows.*.steps.*.allowed_action_families[]` | `action_contracts` | semantic validation | fatal dangling or non-aggregate granularity | [goal-oriented step semantics](../formal/workflows/goal-oriented-steps.md) | [workflow validator](../../implementations/python/packages/aces_sdl/validator/_workflows_verify.py) |
 | `workflows.*.steps.*.next` | `workflow_steps` | semantic validation | fatal dangling, cyclic, or unreachable | [workflow semantics](../formal/workflows/state-machine.md) | [workflow validator](../../implementations/python/packages/aces_sdl/validator/_workflows_verify.py) |
 | `workflows.*.steps.*.on_success` | `workflow_steps` | semantic validation | fatal dangling, cyclic, or unreachable | [workflow semantics](../formal/workflows/state-machine.md) | [workflow validator](../../implementations/python/packages/aces_sdl/validator/_workflows_verify.py) |
 | `workflows.*.steps.*.on_failure` | `workflow_steps` | semantic validation | fatal dangling, cyclic, or unreachable | [workflow semantics](../formal/workflows/state-machine.md) | [workflow validator](../../implementations/python/packages/aces_sdl/validator/_workflows_verify.py) |

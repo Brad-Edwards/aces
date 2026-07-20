@@ -32,6 +32,31 @@ class WorkflowStepStateModel(ContractModel):
     lifecycle: str
     outcome: str | None = None
     attempts: int
+    attempt_provenance: list[WorkflowStepAttemptProvenanceModel] = Field(default_factory=list)
+
+
+class WorkflowStepAttemptProvenanceModel(ContractModel):
+    step_name: NonEmptyString
+    execution_mode: Literal["scripted", "objective", "scaffolded"]
+    attempt_id: NonEmptyString
+    objective_address: str = ""
+    procedure_ref: str = ""
+    exposed_scaffold_refs: list[NonEmptyString] = Field(default_factory=list)
+    allowed_action_families: list[NonEmptyString] = Field(default_factory=list)
+    selected_action_family: str = ""
+    selected_tool_ref: str = ""
+    selected_affordance_ref: str = ""
+    fact_versions: list[NonEmptyString] = Field(default_factory=list)
+    outcome: Literal["", "succeeded", "failed", "exhausted"] = ""
+    evidence_refs: list[NonEmptyString] = Field(default_factory=list)
+    assertion_truth_refs: list[NonEmptyString] = Field(default_factory=list)
+    participant_report: str = ""
+
+    @model_validator(mode="after")
+    def _validate_success_evidence(self) -> WorkflowStepAttemptProvenanceModel:
+        if self.outcome == "succeeded" and not (self.evidence_refs and self.assertion_truth_refs):
+            raise ValueError("successful workflow step provenance requires evidence-bearing assertion truth")
+        return self
 
 
 class WorkflowExecutionStateModel(ContractModel):

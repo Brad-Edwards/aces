@@ -10,6 +10,7 @@ This directory holds the repo-native formal artifacts for SDL workflow control s
 - step-state visibility before predicate evaluation
 - portable workflow result envelopes
 - explicit compensation / rollback registration and observation semantics
+- scripted, objective, and scaffolded realization semantics
 
 ## Invariants
 
@@ -22,6 +23,8 @@ This directory holds the repo-native formal artifacts for SDL workflow control s
 - compensation executes only for successfully completed compensable steps
 - compensation order is reverse completion order
 - compensation workflows remain acyclic relative to normal `call` edges
+- goal-oriented success requires evidence-bearing assertion truth and cannot be
+  established by participant self-report
 
 ## Implementation Mapping
 
@@ -36,6 +39,10 @@ This directory holds the repo-native formal artifacts for SDL workflow control s
   - `implementations/python/tests/test_runtime_models.py`
   - `implementations/python/tests/test_runtime_manager.py`
   - `implementations/python/tests/test_runtime_control_plane_api.py`
+  - `implementations/python/tests/test_sce_004_goal_oriented_steps.py`
+
+See also [goal-oriented-steps.md](goal-oriented-steps.md) for SCE-004 mode,
+admission, provenance, and success invariants.
 
 ## Notes
 

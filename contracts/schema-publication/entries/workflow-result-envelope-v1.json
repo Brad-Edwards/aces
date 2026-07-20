@@ -2,5 +2,9 @@
   "contract_id": "workflow-result-envelope-v1",
   "schema_path": "contracts/schemas/control-plane/workflow-result-envelope-v1.json",
   "stability": "draft",
-  "content_hash": "7050c30c073fa690f17b17f43a1310e9200892ec8a6f5c0fa1efd790a2bfc442"
+  "content_hash": "587d87619359a921ff369662e2af090cf49c764694cb855f02188358f298c66c",
+  "last_change": {
+    "summary": "Published SCE-004 action-attempt, tool-selection, fact-version, outcome, evidence, and assertion-truth provenance.",
+    "content_hash": "587d87619359a921ff369662e2af090cf49c764694cb855f02188358f298c66c"
+  }
 }

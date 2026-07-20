@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "1b524612c3067d2cbb4c76bdda23d573bc989d0db7f952c75607dee6cfd35e49",
+  "content_hash": "77f436950d2db5a922d57fc4d170400cec17725fc10a608159ddf01a2bee8cca",
   "last_change": {
-    "summary": "Carry defensive behavior references and typed mixed-control participant operations through the embedded scenario witness after merging the current SDL contract authority.",
-    "content_hash": "1b524612c3067d2cbb4c76bdda23d573bc989d0db7f952c75607dee6cfd35e49"
+    "summary": "Carried SCE-004 goal-oriented workflow-step semantics through satisfiability evidence.",
+    "content_hash": "77f436950d2db5a922d57fc4d170400cec17725fc10a608159ddf01a2bee8cca"
   }
 }

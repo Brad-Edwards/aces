@@ -2,9 +2,9 @@
   "contract_id": "sdl-authoring-input-v1",
   "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
   "stability": "draft",
-  "content_hash": "023f548592e4b23e1e5973335f20f1a6bea2b8ac61182b048884d35085e32ff2",
+  "content_hash": "8287ba46df00ccb8969873741a387c59ec409fcea82a26dd614e8cdb1a59489c",
   "last_change": {
-    "summary": "Published bounded scenario-family variation points, participant-local tool-affordance bindings, governed defensive behavior references, and typed mixed-control participant operations (issues #786, #294, #210, and #251).",
-    "content_hash": "023f548592e4b23e1e5973335f20f1a6bea2b8ac61182b048884d35085e32ff2"
+    "summary": "Published explicit scripted, objective, and scaffolded workflow-step semantics for SCE-004.",
+    "content_hash": "8287ba46df00ccb8969873741a387c59ec409fcea82a26dd614e8cdb1a59489c"
   }
 }

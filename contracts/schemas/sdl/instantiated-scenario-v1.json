@@ -23053,6 +23053,16 @@
       "additionalProperties": false,
       "description": "A named workflow step with explicit portable control semantics.",
       "properties": {
+        "allowed_action_families": {
+          "items": {
+            "not": {
+              "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+            },
+            "type": "string"
+          },
+          "title": "Allowed Action Families",
+          "type": "array"
+        },
         "branches": {
           "items": {
             "not": {
@@ -23061,6 +23071,16 @@
             "type": "string"
           },
           "title": "Branches",
+          "type": "array"
+        },
+        "capability_refs": {
+          "items": {
+            "not": {
+              "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+            },
+            "type": "string"
+          },
+          "title": "Capability Refs",
           "type": "array"
         },
         "cases": {
@@ -23101,6 +23121,20 @@
           },
           "title": "Else",
           "type": "string"
+        },
+        "execution_mode": {
+          "$ref": "#/$defs/WorkflowStepExecutionMode",
+          "default": "scripted"
+        },
+        "fact_binding_refs": {
+          "items": {
+            "not": {
+              "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+            },
+            "type": "string"
+          },
+          "title": "Fact Binding Refs",
+          "type": "array"
         },
         "join": {
           "default": "",
@@ -23168,6 +23202,24 @@
           "title": "On Success",
           "type": "string"
         },
+        "procedure_ref": {
+          "default": "",
+          "not": {
+            "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Procedure Ref",
+          "type": "string"
+        },
+        "scaffold_refs": {
+          "items": {
+            "not": {
+              "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+            },
+            "type": "string"
+          },
+          "title": "Scaffold Refs",
+          "type": "array"
+        },
         "then": {
           "default": "",
           "not": {
@@ -23175,6 +23227,16 @@
           },
           "title": "Then",
           "type": "string"
+        },
+        "tool_affordance_refs": {
+          "items": {
+            "not": {
+              "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+            },
+            "type": "string"
+          },
+          "title": "Tool Affordance Refs",
+          "type": "array"
         },
         "type": {
           "$ref": "#/$defs/WorkflowStepType"
@@ -23204,6 +23266,16 @@
       ],
       "title": "WorkflowStep",
       "type": "object"
+    },
+    "WorkflowStepExecutionMode": {
+      "description": "Authored realization boundary for an executable workflow step.",
+      "enum": [
+        "scripted",
+        "objective",
+        "scaffolded"
+      ],
+      "title": "WorkflowStepExecutionMode",
+      "type": "string"
     },
     "WorkflowStepOutcome": {
       "description": "Portable workflow-visible outcomes emitted by executable steps.",

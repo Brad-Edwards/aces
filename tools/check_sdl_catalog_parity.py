@@ -956,6 +956,24 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         _DANGLING,
         _WORKFLOW_SEMANTICS,
     ),
+    "workflows.*.steps.*.procedure_ref": (
+        "action_contracts",
+        _SEMANTIC,
+        "fatal dangling or non-procedure granularity",
+        _WORKFLOW_SEMANTICS,
+    ),
+    "workflows.*.steps.*.scaffold_refs[]": (
+        "observation_boundaries",
+        _SEMANTIC,
+        "fatal dangling or scaffold-incompatible boundary",
+        _WORKFLOW_SEMANTICS,
+    ),
+    "workflows.*.steps.*.allowed_action_families[]": (
+        "action_contracts",
+        _SEMANTIC,
+        "fatal dangling or non-aggregate granularity",
+        _WORKFLOW_SEMANTICS,
+    ),
     "workflows.*.steps.*.next": (
         "workflow_steps",
         _SEMANTIC,

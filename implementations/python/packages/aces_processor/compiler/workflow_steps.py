@@ -6,7 +6,13 @@ from aces_backend_protocols.capabilities import (
     WorkflowFeature,
     WorkflowStatePredicateFeature,
 )
-from aces_sdl.orchestration import Workflow, WorkflowPredicate, WorkflowStep, WorkflowStepType
+from aces_sdl.orchestration import (
+    Workflow,
+    WorkflowPredicate,
+    WorkflowStep,
+    WorkflowStepExecutionMode,
+    WorkflowStepType,
+)
 from aces_sdl.scenario import InstantiatedScenario
 from aces_sdl.semantics.workflow import (
     workflow_step_semantic_contract,
@@ -66,6 +72,11 @@ _WORKFLOW_STEP_TYPE_FEATURES = {
     WorkflowStepType.PARALLEL: WorkflowFeature.PARALLEL_BARRIER,
     WorkflowStepType.RETRY: WorkflowFeature.RETRY,
     WorkflowStepType.CALL: WorkflowFeature.CALL,
+}
+
+_WORKFLOW_STEP_MODE_FEATURES = {
+    WorkflowStepExecutionMode.OBJECTIVE: WorkflowFeature.OBJECTIVE_STEPS,
+    WorkflowStepExecutionMode.SCAFFOLDED: WorkflowFeature.SCAFFOLDED_STEPS,
 }
 
 
@@ -314,6 +325,9 @@ def _compile_workflow_step(context: _WorkflowStepContext, *, step_name: str, ste
     edges, type_features = _workflow_step_edges_and_features(step)
     state.control_edges[step_name] = edges
     state.required_features.extend(type_features)
+    mode_feature = _WORKFLOW_STEP_MODE_FEATURES.get(step.execution_mode)
+    if mode_feature is not None:
+        state.required_features.append(mode_feature)
     objective_address, called_workflow_address = _workflow_step_primary_addresses(
         context.scenario,
         workflow_address=context.workflow_address,
@@ -342,7 +356,14 @@ def _compile_workflow_step(context: _WorkflowStepContext, *, step_name: str, ste
     state.control_steps[step_name] = WorkflowStepRuntime(
         name=step_name,
         step_type=step.type.value,
+        execution_mode=step.execution_mode.value,
         objective_address=objective_address,
+        procedure_ref=step.procedure_ref,
+        scaffold_refs=tuple(step.scaffold_refs),
+        allowed_action_families=tuple(step.allowed_action_families),
+        tool_affordance_refs=tuple(step.tool_affordance_refs),
+        capability_refs=tuple(step.capability_refs),
+        fact_binding_refs=tuple(step.fact_binding_refs),
         predicate=predicate,
         next_step=step.next,
         on_success=step.on_success,

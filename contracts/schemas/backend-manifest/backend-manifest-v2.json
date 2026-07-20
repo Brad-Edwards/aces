@@ -893,7 +893,9 @@
         "failure-transitions",
         "cancellation",
         "timeouts",
-        "compensation"
+        "compensation",
+        "objective-steps",
+        "scaffolded-steps"
       ],
       "title": "WorkflowFeature",
       "type": "string"

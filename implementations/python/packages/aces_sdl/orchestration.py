@@ -233,6 +233,14 @@ class WorkflowStepType(str, Enum):
     END = "end"
 
 
+class WorkflowStepExecutionMode(str, Enum):
+    """Authored realization boundary for an executable workflow step."""
+
+    SCRIPTED = "scripted"
+    OBJECTIVE = "objective"
+    SCAFFOLDED = "scaffolded"
+
+
 class WorkflowStepOutcome(str, Enum):
     """Portable workflow-visible outcomes emitted by executable steps."""
 
@@ -367,7 +375,14 @@ class WorkflowStep(SDLModel):
     """A named workflow step with explicit portable control semantics."""
 
     type: WorkflowStepType = Field(alias="type")
+    execution_mode: WorkflowStepExecutionMode = WorkflowStepExecutionMode.SCRIPTED
     objective: str = ""
+    procedure_ref: str = ""
+    scaffold_refs: list[str] = Field(default_factory=list)
+    allowed_action_families: list[str] = Field(default_factory=list)
+    tool_affordance_refs: list[str] = Field(default_factory=list)
+    capability_refs: list[str] = Field(default_factory=list)
+    fact_binding_refs: list[str] = Field(default_factory=list)
     next: str = ""
     on_success: str = ""
     on_failure: str = ""
@@ -402,6 +417,45 @@ class WorkflowStep(SDLModel):
         if v is None:
             return None
         return parse_int_or_var(v, minimum=1, field_name="max_attempts")
+
+    @field_validator(
+        "scaffold_refs",
+        "allowed_action_families",
+        "tool_affordance_refs",
+        "capability_refs",
+        "fact_binding_refs",
+    )
+    @classmethod
+    def validate_goal_refs(cls, values: list[str]) -> list[str]:
+        if any(not value.strip() for value in values):
+            raise ValueError("workflow step governed references must be non-empty")
+        if len(values) != len(set(values)):
+            raise ValueError("workflow step governed references must be unique within each field")
+        return values
+
+    @model_validator(mode="after")
+    def validate_execution_mode(self) -> "WorkflowStep":
+        goal_modes = {WorkflowStepExecutionMode.OBJECTIVE, WorkflowStepExecutionMode.SCAFFOLDED}
+        if self.execution_mode in goal_modes and self.type not in {
+            WorkflowStepType.OBJECTIVE,
+            WorkflowStepType.RETRY,
+        }:
+            raise ValueError("objective and scaffolded execution modes are only valid for objective or retry steps")
+        if self.execution_mode in goal_modes and self.procedure_ref:
+            raise ValueError("objective and scaffolded execution mode does not admit prescribed procedure")
+        if self.execution_mode != WorkflowStepExecutionMode.SCAFFOLDED and self.scaffold_refs:
+            raise ValueError("scaffold_refs are only valid for scaffolded execution mode")
+        if self.execution_mode != WorkflowStepExecutionMode.SCAFFOLDED and self.allowed_action_families:
+            raise ValueError("allowed_action_families are only valid for scaffolded execution mode")
+        if self.execution_mode == WorkflowStepExecutionMode.SCAFFOLDED and not any(
+            (self.scaffold_refs, self.tool_affordance_refs, self.allowed_action_families)
+        ):
+            raise ValueError(
+                "scaffolded execution mode requires governed scaffold, tool-affordance, or action-family references"
+            )
+        if self.execution_mode != WorkflowStepExecutionMode.SCRIPTED and self.procedure_ref:
+            raise ValueError("procedure_ref is only valid for scripted execution mode")
+        return self
 
     @model_validator(mode="after")
     def validate_type_specific_fields(self) -> "WorkflowStep":
