@@ -25,8 +25,11 @@ The design covers:
 - linkage to the existing experiment run, study, apparatus, evidence, and
   lineage records.
 
-It does not implement a generator, sampler, compiler, scheduler, runtime fact
-service, schema, persistence service, API, scenario pack, or adaptive policy.
+The reference does not add a generator, sampler, trial compiler, scheduler,
+persistence service, API, scenario pack, or adaptive policy. Follow-on issue
+#791 implements the typed run-local fact contract and in-process binding plane
+described below; the remaining conceptual sketches retain their issue-owned
+implementation boundaries.
 It does not guarantee identical backend behavior, artifact availability,
 reconstruction of hidden state, or exact replay from a seed alone.
 
@@ -538,6 +541,49 @@ The portable plan and binding evidence record slot/source identities and
 redaction/loss disclosures, not secret material. Missing, stale, wrong-scope,
 wrong-type, or unauthorized facts produce an explicit runtime disposition; no
 fallback value or scenario resampling is permitted.
+
+### Executable fact-binding surface
+
+The reference implementation exposes this boundary through the closed
+`runtime-fact-binding-plane-v1` contract and
+`aces_runtime.runtime_fact_bindings.RuntimeFactBindingPlane`.
+
+- `RuntimeFactDeclarationModel` fixes portable type, source, sensitivity,
+  visibility, and authority semantics before values arrive.
+- `RuntimeFactVersionModel` is append-only and run-scoped. Version ids cannot be
+  replaced and per-fact sequence numbers are contiguous.
+- `RuntimeFactSinkModel` targets only an `input.*` field on a compiled
+  `participant.action-contract.*` address. It records allowed sources, scopes,
+  sensitivities, freshness, authority, audience, and absence behavior.
+- `RuntimeFactBindingAdmission` supplies the compiled sinks, candidate facts,
+  authority references, and request time from trusted control-plane state for
+  one exact action instance. The caller-facing request cannot supply or replace
+  those decisions.
+- `bind_action_inputs()` resolves one visible current candidate per admitted
+  sink as of the trusted admission time; later observations cannot flow
+  backward into an earlier action. It records a value-free binding event tied
+  to the action instance, fact version, evidence, and provenance. Its result
+  never returns action values.
+- Participant and workflow projections are explicit visibility-filtered views.
+  Secret-backed projections contain neither the secret reference nor its value;
+  protected secret resolution and sink-type validation occur synchronously
+  inside the injected trusted dispatcher, which sends values directly to the
+  action adapter without returning an unwrap-capable carrier.
+
+Binding is deny-first. Unadmitted requests return no fact metadata, and
+out-of-scope candidates are filtered before absence or ambiguity is reported.
+Missing, stale, ambiguous, unauthorized, unsupported, wrong-type, wrong-scope,
+unavailable-secret, and dispatch-failed outcomes are distinct. A
+missing fact additionally honors the compiled sink's `block`, `fail`, or
+`inapplicable` action disposition. Once an action instance has binding history,
+it cannot be rebound under the same run, participant, and episode identity.
+
+The published conformance corpus under
+`contracts/fixtures/participant-runtime/runtime-fact-binding-plane-v1/`
+covers positive, failure, secret, cross-participant, and cross-backend portable
+cases. Aggregate validation also requires events and projections to reproduce
+the referenced immutable version's sensitivity, scope where applicable,
+evidence, provenance, value/redaction posture, and compiled sink policy.
 
 ## Backend Realization And Scheduling
 

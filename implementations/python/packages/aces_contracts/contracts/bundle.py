@@ -67,6 +67,7 @@ from .reusable_assets import (
     _backend_profile_schema_for_bundle,
     _event_stream_schema,
 )
+from .runtime_facts import RuntimeFactBindingPlaneModel
 from .schema_constraints import (
     _aces_semantic_invariant_profile_schema_for_bundle,
     _attach_compiled_address_map_constraints,
@@ -169,6 +170,7 @@ def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
         "participant-status-view-v1": ParticipantStatusViewModel.model_json_schema(),
         "participant-history-view-v1": ParticipantHistoryViewModel.model_json_schema(),
         "participant-context-view-v1": ParticipantContextViewModel.model_json_schema(),
+        "runtime-fact-binding-plane-v1": RuntimeFactBindingPlaneModel.model_json_schema(),
         "participant-decision-surface-v1": ParticipantDecisionSurfaceModel.model_json_schema(),
         "operation-receipt-v1": OperationReceiptModel.model_json_schema(),
         "operation-status-v1": OperationStatusModel.model_json_schema(),
@@ -228,6 +230,15 @@ def _schema_bundle_template() -> dict[str, dict[str, Any]]:
         "exclusion rationale.",
         validator="aces_contracts.scientific_completeness.ScientificCompletenessAssessmentModel",
         inputs=[{"contract_id": "scientific-completeness-assessment-v1", "instance_path": "#"}],
+    )
+    _add_aces_invariant(
+        bundle["runtime-fact-binding-plane-v1"],
+        "runtime-fact-binding-references-resolve",
+        "Every fact version resolves to a declaration, every binding event resolves to its compiled sink and "
+        "optional immutable fact version with matching scope, sensitivity, provenance, redaction, and sink policy, "
+        "and every projection exactly matches the immutable version it discloses.",
+        validator="aces_contracts.contracts.runtime_facts.RuntimeFactBindingPlaneModel._validate_references",
+        inputs=[{"contract_id": "runtime-fact-binding-plane-v1", "instance_path": "#"}],
     )
     _add_aces_invariant(
         bundle["scientific-completeness-assessment-v1"],
