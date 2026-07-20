@@ -182,6 +182,15 @@ from .manifests import (
     ProcessorManifestV2Model,
 )
 from .participant_context import ParticipantContextViewModel
+from .participant_decision_surface import (
+    ParticipantDecisionSurfaceActionEntryModel,
+    ParticipantDecisionSurfaceCandidateSetFormModel,
+    ParticipantDecisionSurfaceConstrainedFormModel,
+    ParticipantDecisionSurfaceModel,
+    ParticipantDecisionSurfaceOpenEndedFormModel,
+    ParticipantDecisionSurfaceSelectionModel,
+    validate_participant_decision_surface_context,
+)
 from .participant_envelopes import (
     EventClassificationModel,
     ParticipantJointActionAccessSetModel,
@@ -338,7 +347,11 @@ __all__ = [
     "ParticipantActionPreconditionResultModel", "ParticipantActionResultModel",
     "ParticipantAttributionCandidateModel", "ParticipantAttributionEdgeModel",
     "ParticipantAttributionEvidenceBasisModel", "ParticipantAttributionOrderingBasisModel",
-    "ParticipantBehaviorHistoryEventModel", "ParticipantContextViewModel", "ParticipantEpisodeHistoryEventModel",
+    "ParticipantBehaviorHistoryEventModel", "ParticipantContextViewModel",
+    "ParticipantDecisionSurfaceActionEntryModel", "ParticipantDecisionSurfaceCandidateSetFormModel",
+    "ParticipantDecisionSurfaceConstrainedFormModel", "ParticipantDecisionSurfaceModel",
+    "ParticipantDecisionSurfaceOpenEndedFormModel", "ParticipantDecisionSurfaceSelectionModel",
+    "validate_participant_decision_surface_context", "ParticipantEpisodeHistoryEventModel",
     "ParticipantEpisodeStateModel", "ParticipantExposurePolicyModel", "ParticipantFeatureSupportLevel",
     "ParticipantFeatureSupportModel", "ParticipantHistoryViewBehaviorEventModel",
     "ParticipantHistoryViewEpisodeEventModel", "ParticipantHistoryViewModel",

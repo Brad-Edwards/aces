@@ -1,0 +1,10 @@
+{
+  "contract_id": "participant-decision-surface-v1",
+  "schema_path": "contracts/schemas/control-plane/participant-decision-surface-v1.json",
+  "stability": "draft",
+  "content_hash": "5cd19386eec34eb5cfaa70f65c441ecfc743f1637a874dcecb62e02f7f59eee0",
+  "last_change": {
+    "summary": "Initial publication of the SEM-220 participant-local decision-surface payload with discriminated open-ended, constrained-form, and candidate-set selection meaning; explicit visibility, eligibility, constraint, support, evidence, provenance, and lifecycle-separation invariants.",
+    "content_hash": "5cd19386eec34eb5cfaa70f65c441ecfc743f1637a874dcecb62e02f7f59eee0"
+  }
+}

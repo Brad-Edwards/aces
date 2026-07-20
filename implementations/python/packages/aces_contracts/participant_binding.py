@@ -4,10 +4,15 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import dataclass
+from typing import Protocol
 
 from .contracts import (
     ParticipantActionResultModel,
     ParticipantBehaviorHistoryEventModel,
+    ParticipantDecisionSurfaceCandidateSetFormModel,
+    ParticipantDecisionSurfaceConstrainedFormModel,
+    ParticipantDecisionSurfaceModel,
+    ParticipantDecisionSurfaceSelectionModel,
     ParticipantImplementationManifestModel,
     ParticipantImplementationSelectionModel,
     ParticipantObservationDetailsModel,
@@ -22,6 +27,29 @@ from .participant_behavior import (
 
 _ACTION_CONTRACT_PREFIX = "participant.action-contract."
 _OBSERVATION_BOUNDARY_PREFIX = "participant.observation-boundary."
+
+
+class ParticipantDecisionSurfaceArgumentShapeResolver(Protocol):
+    """Resolve a governed argument shape and validate one referenced proposal."""
+
+    def __call__(
+        self,
+        *,
+        action_contract_address: str,
+        argument_shape_ref: str,
+        proposal_ref: str,
+    ) -> bool: ...
+
+
+class ParticipantDecisionSurfaceApparatusResolver(Protocol):
+    """Resolve the run selection and exposure policy referenced by one surface."""
+
+    def __call__(
+        self,
+        *,
+        implementation_selection_ref: str,
+        exposure_policy_ref: str,
+    ) -> ParticipantImplementationSelectionModel | None: ...
 
 
 @dataclass(frozen=True)
@@ -94,6 +122,81 @@ def participant_action_admission_request_violations(
         *_exposure_policy_violations(request),
         *_action_result_violations(request),
     )
+
+
+def bind_participant_decision_surface_selection(
+    *,
+    surface: ParticipantDecisionSurfaceModel,
+    selection: ParticipantDecisionSurfaceSelectionModel,
+    admission_request: ParticipantActionAdmissionRequest,
+    argument_shape_resolver: ParticipantDecisionSurfaceArgumentShapeResolver,
+    apparatus_resolver: ParticipantDecisionSurfaceApparatusResolver,
+) -> ParticipantActionAdmissionRequest:
+    """Validate SEM-220 selection meaning before the existing admission path."""
+
+    if selection.surface_id != surface.surface_id:
+        raise ValueError("selection surface_id must match the participant decision surface")
+    if selection.observation_order != surface.observation_order:
+        raise ValueError("selection observation_order must match the participant decision surface")
+    entries = {entry.action_contract_address: entry for entry in surface.action_entries}
+    entry = entries.get(selection.action_contract_address)
+    if entry is None:
+        raise ValueError("selection action_contract_address is not carried by the participant decision surface")
+    if entry.eligibility != "eligible":
+        raise ValueError("participant decision surface selection is not eligible")
+    if entry.support != "supported":
+        raise ValueError("participant decision surface selection is not supported")
+    if entry.selection_shape_ref != selection.argument_shape_ref:
+        raise ValueError("selection argument_shape_ref must match the participant decision surface action entry")
+
+    form = surface.form
+    if isinstance(form, ParticipantDecisionSurfaceCandidateSetFormModel):
+        if entry.entry_id not in form.candidate_entry_ids:
+            raise ValueError("selection action is not a member of the participant candidate-action set")
+    elif isinstance(form, ParticipantDecisionSurfaceConstrainedFormModel):
+        if entry.entry_id != form.action_entry_id or selection.argument_shape_ref != form.argument_shape_ref:
+            raise ValueError("selection does not match the constrained-form action and argument shape")
+    else:
+        if selection.action_contract_address not in form.allowed_action_contract_addresses:
+            raise ValueError("open-ended proposal does not bind to an allowed governed action contract")
+        if selection.argument_shape_ref != form.argument_shape_ref:
+            raise ValueError("open-ended proposal does not bind to the governed argument shape")
+
+    if admission_request.participant_address != surface.participant_address:
+        raise ValueError("admission request participant_address must match the participant decision surface")
+    if admission_request.action_contract_address != selection.action_contract_address:
+        raise ValueError("admission request action_contract_address must match the validated selection")
+    if admission_request.observation_boundary_address != surface.observation_boundary_address:
+        raise ValueError("admission request observation_boundary_address must match the participant decision surface")
+    if admission_request.implementation_selection.selected_decision_surface_mode != surface.decision_control_mode:
+        raise ValueError("admission request decision-control mode must match the participant decision surface")
+    try:
+        surface_implementation_selection = apparatus_resolver(
+            implementation_selection_ref=surface.implementation_selection_ref,
+            exposure_policy_ref=surface.exposure_policy_ref,
+        )
+    except Exception as exc:
+        raise ValueError("participant decision surface apparatus resolution failed") from exc
+    if surface_implementation_selection is None:
+        raise ValueError("participant decision surface apparatus refs did not resolve")
+    if surface_implementation_selection.model_dump(
+        mode="json"
+    ) != admission_request.implementation_selection.model_dump(mode="json"):
+        raise ValueError("admission request implementation selection and exposure policy must match the surface refs")
+    try:
+        valid_arguments = argument_shape_resolver(
+            action_contract_address=selection.action_contract_address,
+            argument_shape_ref=selection.argument_shape_ref,
+            proposal_ref=selection.proposal_ref,
+        )
+    except Exception as exc:
+        raise ValueError("participant decision surface argument-shape resolution failed") from exc
+    if valid_arguments is not True:
+        raise ValueError("participant decision surface proposal failed governed argument-shape validation")
+    violations = participant_action_admission_request_violations(admission_request)
+    if violations:
+        raise ValueError(violations[0])
+    return admission_request
 
 
 def _implementation_selection_violations(request: ParticipantActionAdmissionRequest) -> tuple[str, ...]:
@@ -271,6 +374,8 @@ def _string_tuple(value: Iterable[str], field_name: str) -> tuple[str, ...]:
 
 __all__ = (
     "ParticipantActionAdmissionRequest",
+    "ParticipantDecisionSurfaceArgumentShapeResolver",
+    "bind_participant_decision_surface_selection",
     "participant_action_admission_request_violations",
     "participant_action_binding_events",
     "participant_behavior_event_payload",

@@ -125,6 +125,11 @@ from .behavior_resources import (
     WorkflowStepStatePredicateRuntime,
     WorkflowSwitchCaseRuntime,
 )
+from .decision_surface import (
+    ParticipantDecisionSurfaceActionAssessment,
+    ParticipantDecisionSurfaceProjectionInput,
+    project_participant_decision_surface,
+)
 from .history_event import (
     ParticipantBehaviorHistoryEvent,
 )
@@ -219,6 +224,8 @@ __all__ = [
     "ParticipantAttributionOrderingBasis",
     "ParticipantBehaviorHistoryEvent",
     "ParticipantBehaviorHistoryEventType",
+    "ParticipantDecisionSurfaceActionAssessment",
+    "ParticipantDecisionSurfaceProjectionInput",
     "ParticipantBehaviorRuntime",
     "ParticipantBehaviorSpecificationRuntime",
     "ParticipantInteractiveAccessRuntime",
@@ -243,6 +250,7 @@ __all__ = [
     "ParticipantOutcomeTargetRecord",
     "ParticipantPhaseRealization",
     "ParticipantRuntimeLifecyclePhase",
+    "project_participant_decision_surface",
     "ParticipantTemporalRuntimeContext",
     "ParticipantTemporalState",
     "ParticipantTemporalStateTransition",
