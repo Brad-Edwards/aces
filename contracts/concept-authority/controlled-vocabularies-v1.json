@@ -551,6 +551,22 @@
         }
       }
     },
+    "workflow-step-fact-binding-references": {
+      "title": "Workflow Step Runtime-Fact Binding References",
+      "description": "Governed authority-qualified runtime-fact binding identifiers admitted by goal-oriented workflow steps.",
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "workflows.steps.fact_binding_refs"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "runtime-fact-binding-plane": {
+          "title": "Runtime Fact Binding Plane",
+          "description": "Requires an authorized binding supplied through the canonical runtime-fact binding plane."
+        }
+      }
+    },
     "workflow-features": {
       "title": "Workflow Features",
       "description": "Closed portable workflow control feature identifiers.",
@@ -587,6 +603,14 @@
         "cancellation": {
           "title": "Cancellation",
           "description": "Workflow engine supports cancellation semantics."
+        },
+        "objective-steps": {
+          "title": "Objective Steps",
+          "description": "Workflow engine supports goal-oriented steps resolved by objective."
+        },
+        "scaffolded-steps": {
+          "title": "Scaffolded Steps",
+          "description": "Workflow engine supports scaffolded steps with constrained execution guidance."
         },
         "timeouts": {
           "title": "Timeouts",

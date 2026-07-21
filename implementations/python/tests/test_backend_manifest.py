@@ -54,6 +54,8 @@ def test_backend_workflow_vocab_enum_values():
         "cancellation",
         "timeouts",
         "compensation",
+        "objective-steps",
+        "scaffolded-steps",
     }
     assert {feature.value for feature in WorkflowStatePredicateFeature} == {
         "outcome-matching",

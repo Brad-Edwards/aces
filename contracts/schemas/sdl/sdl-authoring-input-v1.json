@@ -19092,11 +19092,25 @@
       "additionalProperties": false,
       "description": "A named workflow step with explicit portable control semantics.",
       "properties": {
+        "allowed_action_families": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Allowed Action Families",
+          "type": "array"
+        },
         "branches": {
           "items": {
             "type": "string"
           },
           "title": "Branches",
+          "type": "array"
+        },
+        "capability_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Capability Refs",
           "type": "array"
         },
         "cases": {
@@ -19125,6 +19139,17 @@
           "default": "",
           "title": "Else",
           "type": "string"
+        },
+        "execution_mode": {
+          "$ref": "#/$defs/WorkflowStepExecutionMode",
+          "default": "scripted"
+        },
+        "fact_binding_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Fact Binding Refs",
+          "type": "array"
         },
         "join": {
           "default": "",
@@ -19171,10 +19196,29 @@
           "title": "On Success",
           "type": "string"
         },
+        "procedure_ref": {
+          "default": "",
+          "title": "Procedure Ref",
+          "type": "string"
+        },
+        "scaffold_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Scaffold Refs",
+          "type": "array"
+        },
         "then": {
           "default": "",
           "title": "Then",
           "type": "string"
+        },
+        "tool_affordance_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Tool Affordance Refs",
+          "type": "array"
         },
         "type": {
           "$ref": "#/$defs/WorkflowStepType"
@@ -19201,6 +19245,16 @@
       ],
       "title": "WorkflowStep",
       "type": "object"
+    },
+    "WorkflowStepExecutionMode": {
+      "description": "Authored realization boundary for an executable workflow step.",
+      "enum": [
+        "scripted",
+        "objective",
+        "scaffolded"
+      ],
+      "title": "WorkflowStepExecutionMode",
+      "type": "string"
     },
     "WorkflowStepOutcome": {
       "description": "Portable workflow-visible outcomes emitted by executable steps.",

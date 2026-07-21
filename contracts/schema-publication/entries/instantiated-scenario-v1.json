@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
   "stability": "draft",
-  "content_hash": "e7d904ab93a2ee6f4a9e137653703907b5d6b94945dfafce947b2494260bc93d",
+  "content_hash": "bed7ebe95f4a323d00e45be196ab218870e2ef76b0b6e726fba15bd9ca5d8fab",
   "last_change": {
-    "summary": "Published bounded scenario-family variation points, participant-local tool-affordance bindings, governed defensive behavior references, and typed mixed-control participant operations (issues #786, #294, #210, and #251).",
-    "content_hash": "e7d904ab93a2ee6f4a9e137653703907b5d6b94945dfafce947b2494260bc93d"
+    "summary": "Published SCE-004 goal-oriented workflow-step semantics for instantiated scenarios.",
+    "content_hash": "bed7ebe95f4a323d00e45be196ab218870e2ef76b0b6e726fba15bd9ca5d8fab"
   }
 }

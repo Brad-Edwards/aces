@@ -43,7 +43,7 @@ def test_protocol_keeps_all_literature_claim_classes_distinct() -> None:
 def test_sharded_manifest_composes_latest_base_with_independent_supplement() -> None:
     manifest, _protocol, _corpus, _snapshot, _analysis = _bundle()
     assert manifest["revision"] == "2.0.0"
-    assert manifest["snapshot_path"].endswith("execution-snapshot-v1.1.json")
+    assert manifest["snapshot_path"].endswith("execution-snapshot-v1.2.json")
     assert manifest["satisfiability_snapshot_path"].endswith("satisfiability-execution-snapshot-v1.json")
 
 

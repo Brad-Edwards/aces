@@ -267,7 +267,14 @@ class WorkflowStepRuntime:
 
     name: str
     step_type: str
+    execution_mode: str = "scripted"
     objective_address: str = ""
+    procedure_ref: str = ""
+    scaffold_refs: tuple[str, ...] = ()
+    allowed_action_families: tuple[str, ...] = ()
+    tool_affordance_refs: tuple[str, ...] = ()
+    capability_refs: tuple[str, ...] = ()
+    fact_binding_refs: tuple[str, ...] = ()
     predicate: WorkflowPredicateRuntime | None = None
     next_step: str = ""
     on_success: str = ""

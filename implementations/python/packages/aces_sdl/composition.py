@@ -191,12 +191,27 @@ def _rewrite_entity(payload: dict[str, Any], symbols: dict[str, dict[str, str] |
             _rewrite_entity(child, symbols)
 
 
-def _rewrite_workflow(payload: dict[str, Any], symbols: dict[str, dict[str, str] | set[str]]) -> None:
+def _rewrite_workflow(
+    payload: dict[str, Any],
+    symbols: dict[str, dict[str, str] | set[str]],
+    tool_affordance_ref_map: dict[str, str],
+) -> None:
     for step in payload.get("steps", {}).values():
         if not isinstance(step, dict):
             continue
         if step.get("objective"):
             step["objective"] = _maybe_rename(str(step["objective"]), symbols["objectives"])
+        if step.get("procedure_ref"):
+            step["procedure_ref"] = _maybe_rename(str(step["procedure_ref"]), symbols["action_contracts"])
+        step["scaffold_refs"] = [
+            _maybe_rename(name, symbols["observation_boundaries"]) for name in step.get("scaffold_refs", [])
+        ]
+        step["allowed_action_families"] = [
+            _maybe_rename(name, symbols["action_contracts"]) for name in step.get("allowed_action_families", [])
+        ]
+        step["tool_affordance_refs"] = [
+            tool_affordance_ref_map.get(name, name) for name in step.get("tool_affordance_refs", [])
+        ]
         if step.get("workflow"):
             step["workflow"] = _maybe_rename(str(step["workflow"]), symbols["workflows"])
         if step.get("compensate_with"):
@@ -636,7 +651,7 @@ def _namespace_payload(
             ]
     for workflow in namespaced.get("workflows", {}).values():
         if isinstance(workflow, dict):
-            _rewrite_workflow(workflow, symbols)
+            _rewrite_workflow(workflow, symbols, tool_affordance_ref_map)
     for variation_point in namespaced.get("variation_points", {}).values():
         if isinstance(variation_point, dict):
             _rewrite_variation_point(variation_point, symbols)

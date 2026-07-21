@@ -3,7 +3,14 @@
 Part of the SemanticValidator mixin composition; see __init__.py.
 """
 
+from aces_contracts.controlled_vocabularies import (
+    validate_controlled_vocabulary_scope_values,
+    validate_controlled_vocabulary_value,
+)
+
 from ..orchestration import WorkflowStepType
+from ..participant_behavior import ParticipantActionGranularity, ParticipantInformationBoundaryClass
+from ..participant_behavior_specification import tool_affordance_reference
 from ..semantics.workflow import branch_closure
 from ._support import _AvailableStateContext, _CompensationState, _topological_sort, _WorkflowBuildState
 
@@ -95,6 +102,7 @@ class _WorkflowVerifyMixin:
             self._err(
                 f"Workflow '{workflow_name}' step '{step_name}' references undefined objective '{step.objective}'"
             )
+        self._verify_workflow_step_realization_refs(workflow_name, step_name, step)
         self._verify_step_terminator_and_compensation(
             workflow_name=workflow_name, step_name=step_name, step=step, workflow=workflow, build=build, comp=comp
         )
@@ -166,10 +174,135 @@ class _WorkflowVerifyMixin:
             self._err(
                 f"Workflow '{workflow_name}' step '{step_name}' references undefined objective '{step.objective}'"
             )
+        self._verify_workflow_step_realization_refs(workflow_name, step_name, step)
         for field_name, target in (("on-success", step.on_success), ("on-exhausted", step.on_exhausted)):
             resolved = self._validate_workflow_target_ref(workflow_name, step_name, field_name, target, workflow.steps)
             if resolved is not None:
                 build.graph[step_name].append(resolved)
+
+    def _verify_workflow_step_realization_refs(
+        self,
+        workflow_name: str,
+        step_name: str,
+        step: object,
+    ) -> None:
+        self._verify_workflow_step_action_contract_ref(
+            workflow_name,
+            step_name,
+            "procedure_ref",
+            step.procedure_ref,
+            ParticipantActionGranularity.PROCEDURE,
+        )
+        self._verify_workflow_step_action_families(workflow_name, step_name, step)
+        self._verify_workflow_step_scaffold_refs(workflow_name, step_name, step)
+        self._verify_workflow_step_tool_affordance_refs(workflow_name, step_name, step)
+        self._verify_workflow_step_capability_refs(workflow_name, step_name, step)
+        self._verify_workflow_step_fact_binding_refs(workflow_name, step_name, step)
+
+    def _verify_workflow_step_action_families(self, workflow_name: str, step_name: str, step: object) -> None:
+        for ref in step.allowed_action_families:
+            self._verify_workflow_step_action_contract_ref(
+                workflow_name,
+                step_name,
+                "allowed_action_families",
+                ref,
+                ParticipantActionGranularity.AGGREGATE,
+            )
+
+    def _verify_workflow_step_scaffold_refs(self, workflow_name: str, step_name: str, step: object) -> None:
+        scaffold_boundary_classes = {
+            ParticipantInformationBoundaryClass.INSTRUCTION,
+            ParticipantInformationBoundaryClass.STARTER_FILE,
+            ParticipantInformationBoundaryClass.SCAFFOLD_INSTRUCTION,
+            ParticipantInformationBoundaryClass.SUBTASK_GUIDANCE,
+        }
+        for ref in step.scaffold_refs:
+            if self._is_unresolved_var(ref):
+                continue
+            boundary = self._s.observation_boundaries.get(ref)
+            if boundary is None:
+                self._err(
+                    f"Workflow '{workflow_name}' step '{step_name}' references undefined scaffold "
+                    f"observation boundary '{ref}'"
+                )
+                continue
+            if not any(rule.boundary_class in scaffold_boundary_classes for rule in boundary.view_rules):
+                self._err(
+                    f"Workflow '{workflow_name}' step '{step_name}' scaffold observation boundary '{ref}' "
+                    "does not declare an instruction, starter-file, scaffold-instruction, or subtask-guidance view rule"
+                )
+
+    def _verify_workflow_step_tool_affordance_refs(self, workflow_name: str, step_name: str, step: object) -> None:
+        available_refs = {
+            tool_affordance_reference(spec_name, affordance_id)
+            for spec_name, behavior_spec in self._s.behavior_specifications.items()
+            for affordance_id in behavior_spec.tool_affordances
+        }
+        for ref in step.tool_affordance_refs:
+            if self._is_unresolved_var(ref):
+                continue
+            if ref not in available_refs:
+                self._err(f"Workflow '{workflow_name}' step '{step_name}' references undefined tool affordance '{ref}'")
+
+    def _verify_workflow_step_capability_refs(self, workflow_name: str, step_name: str, step: object) -> None:
+        for ref in step.capability_refs:
+            if self._is_unresolved_var(ref):
+                continue
+            governed, errors = self._governed_capability_ref(ref)
+            if not governed:
+                self._err(
+                    f"Workflow '{workflow_name}' step '{step_name}' references ungoverned participant "
+                    f"capability '{ref}': {'; '.join(errors)}"
+                )
+
+    @staticmethod
+    def _governed_capability_ref(ref: str) -> tuple[bool, list[str]]:
+        errors: list[str] = []
+        for vocabulary_id in (
+            "participant-runtime-behavior-features",
+            "participant-runtime-interaction-features",
+        ):
+            try:
+                validate_controlled_vocabulary_value(vocabulary_id, ref)
+                return True, errors
+            except ValueError as exc:
+                errors.append(str(exc))
+        return False, errors
+
+    def _verify_workflow_step_fact_binding_refs(self, workflow_name: str, step_name: str, step: object) -> None:
+        for ref in step.fact_binding_refs:
+            if self._is_unresolved_var(ref):
+                continue
+            try:
+                validate_controlled_vocabulary_scope_values("workflows.steps.fact_binding_refs", [ref])
+            except ValueError as exc:
+                self._err(
+                    f"Workflow '{workflow_name}' step '{step_name}' references ungoverned runtime-fact "
+                    f"binding '{ref}': {exc}"
+                )
+
+    def _verify_workflow_step_action_contract_ref(
+        self,
+        workflow_name: str,
+        step_name: str,
+        field_name: str,
+        ref: str,
+        expected_granularity: ParticipantActionGranularity,
+    ) -> None:
+        if not ref or self._is_unresolved_var(ref):
+            return
+        action_contract = self._s.action_contracts.get(ref)
+        if action_contract is None:
+            self._err(
+                f"Workflow '{workflow_name}' step '{step_name}' {field_name} references undefined "
+                f"action contract '{ref}'"
+            )
+            return
+        if action_contract.behavioral_granularity != expected_granularity:
+            self._err(
+                f"Workflow '{workflow_name}' step '{step_name}' {field_name} action contract '{ref}' "
+                f"must have {expected_granularity.value} behavioral granularity"
+            )
 
     def _collect_call_step(
         self,
