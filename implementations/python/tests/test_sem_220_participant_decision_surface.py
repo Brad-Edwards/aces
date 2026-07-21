@@ -697,13 +697,14 @@ def test_projection_uses_time_indexed_visibility_and_rejects_future_state() -> N
     runtime_model = _runtime_model()
     history = _history()
     hidden_projection = _projection_input(observation_order=0, action_address=EXFILTRATE)
+    hidden_resolvers = _projection_exposure_resolvers(hidden_projection)
 
     with pytest.raises(ValueError, match="not participant-visible at observation_order 0"):
         project_participant_decision_surface(
             runtime_model,
             history_events=history,
             projection=hidden_projection,
-            exposure_resolvers=_projection_exposure_resolvers(hidden_projection),
+            exposure_resolvers=hidden_resolvers,
         )
 
     visible_projection = _projection_input(observation_order=1, action_address=EXFILTRATE)
@@ -722,13 +723,14 @@ def test_projection_requires_visibility_proof_for_every_emitted_ref(omitted_ref:
     runtime_model = _runtime_model(omitted_visibility_ref=omitted_ref)
     history = _history()
     projection = _projection_input(observation_order=0)
+    resolvers = _projection_exposure_resolvers(projection)
 
     with pytest.raises(ValueError, match="lack an effective view disposition"):
         project_participant_decision_surface(
             runtime_model,
             history_events=history,
             projection=projection,
-            exposure_resolvers=_projection_exposure_resolvers(projection),
+            exposure_resolvers=resolvers,
         )
 
 
@@ -745,19 +747,20 @@ def test_projection_rejects_global_history_and_final_snapshot_substitution() -> 
     )
     global_history = (*_history(), foreign)
     projection = _projection_input(observation_order=0)
+    resolvers = _projection_exposure_resolvers(projection)
     with pytest.raises(ValueError, match="one participant and episode"):
         project_participant_decision_surface(
             runtime_model,
             history_events=global_history,
             projection=projection,
-            exposure_resolvers=_projection_exposure_resolvers(projection),
+            exposure_resolvers=resolvers,
         )
     with pytest.raises(ValueError, match="time-indexed history"):
         project_participant_decision_surface(
             runtime_model,
             history_events=(),
             projection=projection,
-            exposure_resolvers=_projection_exposure_resolvers(projection),
+            exposure_resolvers=resolvers,
         )
 
 

@@ -81,40 +81,55 @@ class ParticipantDecisionSurfaceExposureBindingModel(ContractModel):
 
     @model_validator(mode="after")
     def _validate_exposure_basis(self) -> ParticipantDecisionSurfaceExposureBindingModel:
-        for field_name in (
-            "source_marking_definition_refs",
-            "result_marking_definition_refs",
-            "source_provenance_refs",
-            "result_provenance_refs",
-            "evidence_refs",
-            "provenance_refs",
-            "loss_and_limitations",
-        ):
-            _require_unique(getattr(self, field_name), field_name)
-        if self.source_ref != self.item_ref and self.transformation_rule_ref is None:
-            raise ValueError("derived exposure items require transformation_rule_ref")
-        if self.operation in {"masking", "redaction", "transformation"} and self.transformation_rule_ref is None:
-            raise ValueError(f"{self.operation} exposure operations require transformation_rule_ref")
-        if self.operation == "redaction" and self.redaction_policy_ref is None:
-            raise ValueError("redaction exposure operations require redaction_policy_ref")
-        if self.operation == "declassification" and self.declassification_basis_ref is None:
-            raise ValueError("declassification exposure operations require declassification_basis_ref")
-        if self.declassification_basis_ref is None and not set(self.source_marking_definition_refs).issubset(
-            self.result_marking_definition_refs
-        ):
-            raise ValueError(
-                "derived exposure results must inherit source markings unless declassification is explicit"
-            )
-        if self.declassification_basis_ref is None and not set(self.source_provenance_refs).issubset(
-            self.result_provenance_refs
-        ):
-            raise ValueError(
-                "derived exposure results must inherit source provenance unless declassification is explicit"
-            )
-        if not {*self.source_provenance_refs, *self.result_provenance_refs}.issubset(self.provenance_refs):
-            raise ValueError("source and result provenance refs must be carried by provenance_refs")
-        if self.realization is not None and self.realization.delivery_order > self.observation_order:
-            raise ValueError("realized exposure delivery_order cannot be later than the surface observation_order")
-        if self.realization is not None and self.realization.item_ref != self.item_ref:
-            raise ValueError("realized exposure item_ref must match the exposure binding")
+        _validate_binding_ref_lists(self)
+        _validate_binding_operation(self)
+        _validate_binding_inheritance(self)
+        _validate_binding_realization(self)
         return self
+
+
+def _validate_binding_ref_lists(binding: ParticipantDecisionSurfaceExposureBindingModel) -> None:
+    for field_name in (
+        "source_marking_definition_refs",
+        "result_marking_definition_refs",
+        "source_provenance_refs",
+        "result_provenance_refs",
+        "evidence_refs",
+        "provenance_refs",
+        "loss_and_limitations",
+    ):
+        _require_unique(getattr(binding, field_name), field_name)
+
+
+def _validate_binding_operation(binding: ParticipantDecisionSurfaceExposureBindingModel) -> None:
+    if binding.source_ref != binding.item_ref and binding.transformation_rule_ref is None:
+        raise ValueError("derived exposure items require transformation_rule_ref")
+    transformed_operations = {"masking", "redaction", "transformation"}
+    if binding.operation in transformed_operations and binding.transformation_rule_ref is None:
+        raise ValueError(f"{binding.operation} exposure operations require transformation_rule_ref")
+    if binding.operation == "redaction" and binding.redaction_policy_ref is None:
+        raise ValueError("redaction exposure operations require redaction_policy_ref")
+    if binding.operation == "declassification" and binding.declassification_basis_ref is None:
+        raise ValueError("declassification exposure operations require declassification_basis_ref")
+
+
+def _validate_binding_inheritance(binding: ParticipantDecisionSurfaceExposureBindingModel) -> None:
+    if binding.declassification_basis_ref is None and not set(binding.source_marking_definition_refs).issubset(
+        binding.result_marking_definition_refs
+    ):
+        raise ValueError("derived exposure results must inherit source markings unless declassification is explicit")
+    if binding.declassification_basis_ref is None and not set(binding.source_provenance_refs).issubset(
+        binding.result_provenance_refs
+    ):
+        raise ValueError("derived exposure results must inherit source provenance unless declassification is explicit")
+    if not {*binding.source_provenance_refs, *binding.result_provenance_refs}.issubset(binding.provenance_refs):
+        raise ValueError("source and result provenance refs must be carried by provenance_refs")
+
+
+def _validate_binding_realization(binding: ParticipantDecisionSurfaceExposureBindingModel) -> None:
+    if binding.realization is None:
+        return
+    if binding.realization.delivery_order > binding.observation_order:
+        raise ValueError("realized exposure delivery_order cannot be later than the surface observation_order")
+    if binding.realization.item_ref != binding.item_ref:
+        raise ValueError("realized exposure item_ref must match the exposure binding")

@@ -189,12 +189,14 @@ from .participant_decision_surface import (
     ParticipantDecisionSurfaceActionEntryModel,
     ParticipantDecisionSurfaceCandidateSetFormModel,
     ParticipantDecisionSurfaceConstrainedFormModel,
-    ParticipantDecisionSurfaceExposureBindingModel,
-    ParticipantDecisionSurfaceExposureRealizationModel,
     ParticipantDecisionSurfaceModel,
     ParticipantDecisionSurfaceOpenEndedFormModel,
     ParticipantDecisionSurfaceSelectionModel,
     validate_participant_decision_surface_context,
+)
+from .participant_decision_surface_exposure import (
+    ParticipantDecisionSurfaceExposureBindingModel,
+    ParticipantDecisionSurfaceExposureRealizationModel,
 )
 from .participant_envelopes import (
     EventClassificationModel,

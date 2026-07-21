@@ -329,10 +329,12 @@ def test_projection_request_carries_no_self_attested_authorization_booleans() ->
 
 def test_apparatus_and_authorization_refs_must_resolve() -> None:
     projection, resolvers = _projection()
+    missing_apparatus = replace(resolvers, apparatus=lambda **_: None)
     with pytest.raises(ValueError, match="apparatus refs did not resolve"):
-        _project(projection, replace(resolvers, apparatus=lambda **_: None))
+        _project(projection, missing_apparatus)
+    missing_authorization = replace(resolvers, authorization=lambda **_: None)
     with pytest.raises(ValueError, match="no authoritative authorization"):
-        _project(projection, replace(resolvers, authorization=lambda **_: None))
+        _project(projection, missing_authorization)
 
 
 def test_synthetic_cross_participant_selection_is_rejected() -> None:
@@ -602,8 +604,9 @@ def test_realized_occurrence_requires_authorization_effective_at_delivery_order(
     authorizations = _authorizations()
     authorizations["context.public"] = replace(authorizations["context.public"], effective_from_order=2)
     projection, resolvers = _projection(observation_order=2, authorizations=authorizations)
+    history = _history_through_order_2()
     with pytest.raises(ValueError, match="not effective at observation_order"):
-        _project(projection, resolvers, history=_history_through_order_2())
+        _project(projection, resolvers, history=history)
 
 
 def test_realized_occurrence_uses_exposure_policy_effective_at_delivery_order() -> None:
@@ -621,8 +624,10 @@ def test_realized_occurrence_uses_exposure_policy_effective_at_delivery_order() 
             return None
         return delivery_selection if observation_order == 1 else current_selection
 
+    delivery_resolvers = replace(resolvers, apparatus=apparatus)
+    history = _history_through_order_2()
     with pytest.raises(ValueError, match="delivery exposure policy does not permit"):
-        _project(projection, replace(resolvers, apparatus=apparatus), history=_history_through_order_2())
+        _project(projection, delivery_resolvers, history=history)
 
 
 def test_realized_occurrence_uses_projection_policy_effective_at_delivery_order() -> None:
@@ -639,8 +644,9 @@ def test_realized_occurrence_uses_projection_policy_effective_at_delivery_order(
         policy_revisions=revisions,
         authorizations=authorizations,
     )
+    history = _history_through_order_2()
     with pytest.raises(ValueError, match="revision effective at observation_order"):
-        _project(projection, resolvers, history=_history_through_order_2())
+        _project(projection, resolvers, history=history)
 
 
 def test_realized_occurrence_may_resolve_distinct_delivery_time_authorization() -> None:

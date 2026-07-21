@@ -10,83 +10,23 @@ from aces_contracts.participant_behavior import ParticipantBehaviorHistoryEventT
 from .behavior_resources import _PARTICIPANT_VISIBLE_VIEW_DISPOSITIONS
 from .history_event import ParticipantBehaviorHistoryEvent
 from .participant_exposure_authority import (
-    ParticipantExposureApparatusResolver,
     ParticipantExposureAssessment,
     ParticipantExposureAuthorizationRecord,
-    ParticipantExposureAuthorizationResolver,
     ParticipantExposureOccurrenceRecord,
     ParticipantExposurePolicyRevision,
     ParticipantExposureProjection,
-    ParticipantExposureProjectionPolicyResolver,
     ParticipantExposureResolvers,
 )
-
-
-def _resolved_projection_policy_revisions(
-    projection: ParticipantExposureProjection,
-    resolver: ParticipantExposureProjectionPolicyResolver,
-) -> tuple[ParticipantExposurePolicyRevision, ...]:
-    try:
-        revisions = tuple(
-            resolver(
-                projection_policy_ref=projection.projection_policy_ref,
-                participant_address=projection.participant_address,
-                audience_scope_ref=projection.audience_scope_ref,
-            )
-        )
-    except Exception as exc:
-        raise ValueError("participant exposure projection-policy resolution failed") from exc
-    if not revisions:
-        raise ValueError("participant exposure requires an authoritative projection policy sequence")
-    if any(revision.policy_ref != projection.projection_policy_ref for revision in revisions):
-        raise ValueError("projection policy resolver returned a revision for a different policy")
-    orders = [revision.effective_order for revision in revisions]
-    if len(orders) != len(set(orders)):
-        raise ValueError("projection policy revisions must have unique effective_order values")
-    return revisions
-
-
-def _effective_projection_policy(
-    revisions: Sequence[ParticipantExposurePolicyRevision],
-    *,
-    observation_order: int,
-    expected_revision: str,
-) -> ParticipantExposurePolicyRevision:
-    eligible = [revision for revision in revisions if revision.effective_order <= observation_order]
-    if not eligible:
-        raise ValueError("no projection policy revision is effective at observation_order")
-    effective = max(eligible, key=lambda revision: revision.effective_order)
-    if effective.revision != expected_revision:
-        raise ValueError("surface projection policy must match the revision effective at observation_order")
-    return effective
-
-
-def _selected_exposure_policy(
-    projection: ParticipantExposureProjection,
-    resolver: ParticipantExposureApparatusResolver,
-    *,
-    observation_order: int,
-) -> ParticipantExposurePolicyModel:
-    try:
-        selection = resolver(
-            implementation_selection_ref=projection.implementation_selection_ref,
-            exposure_policy_ref=projection.exposure_policy_ref,
-            observation_order=observation_order,
-        )
-    except Exception as exc:
-        raise ValueError("participant exposure apparatus resolution failed") from exc
-    if selection is None:
-        raise ValueError("participant exposure apparatus refs did not resolve")
-    if selection.participant_address != projection.participant_address:
-        raise ValueError("implementation selection participant_address must match the exposure projection")
-    if selection.selected_decision_surface_mode != projection.decision_control_mode:
-        raise ValueError("implementation selection decision-surface mode must match the exposure projection")
-    policy = selection.exposure_policy
-    if policy.policy_id != projection.exposure_policy_ref:
-        raise ValueError("selected exposure policy identity must match exposure_policy_ref")
-    if policy.policy_version is None or policy.policy_digest is None:
-        raise ValueError("selected exposure policy requires an explicit version and digest")
-    return policy
+from .participant_exposure_policy import (
+    _effective_projection_policy,
+    _policy_permits_item,
+    _resolve_authorization,
+    _resolved_projection_policy_revisions,
+    _selected_exposure_policy,
+    _validate_authorization_scope,
+    _validate_authorization_shape,
+    _validate_exposure_operation,
+)
 
 
 def _serialized_surface_refs(
@@ -99,127 +39,6 @@ def _serialized_surface_refs(
         *(str(entry["action_contract_address"]) for entry in entries),
         *surface_affordances,
     }
-
-
-def _resolve_authorization(
-    *,
-    authorization_record_ref: str,
-    item_ref: str,
-    resolver: ParticipantExposureAuthorizationResolver,
-) -> ParticipantExposureAuthorizationRecord:
-    if not item_ref or not authorization_record_ref:
-        raise ValueError("participant exposure assessment requires item and authorization record refs")
-    try:
-        authorization = resolver(
-            authorization_record_ref=authorization_record_ref,
-            item_ref=item_ref,
-        )
-    except Exception as exc:
-        raise ValueError("participant exposure authorization resolution failed") from exc
-    if authorization is None:
-        raise ValueError(f"exposure item {item_ref!r} has no authoritative authorization")
-    if authorization.authorization_record_ref != authorization_record_ref:
-        raise ValueError("exposure authorization resolver returned a different record")
-    if authorization.item_ref != item_ref:
-        raise ValueError("exposure authorization record item_ref does not match the requested item")
-    return authorization
-
-
-def _validate_authorization_scope(
-    authorization: ParticipantExposureAuthorizationRecord,
-    projection: ParticipantExposureProjection,
-    policy: ParticipantExposurePolicyModel,
-    *,
-    observation_order: int,
-    projection_policy_revision: str,
-) -> None:
-    exact_coordinates = {
-        "participant_address": projection.participant_address,
-        "episode_id": projection.episode_id,
-        "audience_scope_ref": projection.audience_scope_ref,
-        "implementation_selection_ref": projection.implementation_selection_ref,
-        "projection_policy_ref": projection.projection_policy_ref,
-        "projection_policy_revision": projection_policy_revision,
-        "exposure_policy_ref": projection.exposure_policy_ref,
-        "exposure_policy_version": policy.policy_version,
-        "exposure_policy_digest": policy.policy_digest,
-    }
-    mismatches = sorted(
-        field_name
-        for field_name, expected in exact_coordinates.items()
-        if getattr(authorization, field_name) != expected
-    )
-    if mismatches:
-        raise ValueError(
-            f"exposure authorization {authorization.item_ref!r} has mismatched coordinates: " + ", ".join(mismatches)
-        )
-    if authorization.effective_from_order > observation_order or (
-        authorization.effective_through_order is not None and observation_order > authorization.effective_through_order
-    ):
-        raise ValueError(f"exposure authorization {authorization.item_ref!r} is not effective at observation_order")
-
-
-def _validate_authorization_shape(authorization: ParticipantExposureAuthorizationRecord) -> None:
-    required_strings = {
-        "authorization_record_ref": authorization.authorization_record_ref,
-        "item_ref": authorization.item_ref,
-        "source_ref": authorization.source_ref,
-        "source_layer_ref": authorization.source_layer_ref,
-        "visibility_basis_ref": authorization.visibility_basis_ref,
-        "operation_basis_ref": authorization.operation_basis_ref,
-        "actor_ref": authorization.actor_ref,
-        "controller_ref": authorization.controller_ref,
-        "authority_basis_ref": authorization.authority_basis_ref,
-        "backend_support_ref": authorization.backend_support_ref,
-        "exposure_policy_version": authorization.exposure_policy_version,
-        "exposure_policy_digest": authorization.exposure_policy_digest,
-    }
-    missing = sorted(name for name, value in required_strings.items() if not isinstance(value, str) or not value)
-    if missing:
-        raise ValueError("participant exposure authorization requires non-empty refs: " + ", ".join(missing))
-    for field_name in (
-        "source_marking_definition_refs",
-        "result_marking_definition_refs",
-        "source_provenance_refs",
-        "result_provenance_refs",
-        "evidence_refs",
-        "provenance_refs",
-        "loss_and_limitations",
-    ):
-        values = getattr(authorization, field_name)
-        if field_name in {"evidence_refs", "provenance_refs", "loss_and_limitations"} and not values:
-            raise ValueError(f"exposure authorization {authorization.item_ref!r} requires {field_name}")
-        if len(values) != len(set(values)) or any(not isinstance(value, str) or not value for value in values):
-            raise ValueError(f"exposure authorization {authorization.item_ref!r} has invalid {field_name}")
-
-
-def _validate_exposure_operation(authorization: ParticipantExposureAuthorizationRecord) -> None:
-    emitted_operations = {"projection", "masking", "redaction", "declassification", "disclosure", "transformation"}
-    if authorization.operation not in emitted_operations:
-        raise ValueError(f"exposure authorization {authorization.item_ref!r} operation cannot emit a surface item")
-    if authorization.source_ref != authorization.item_ref and authorization.transformation_rule_ref is None:
-        raise ValueError(f"derived exposure item {authorization.item_ref!r} requires a transformation rule")
-    if (
-        authorization.operation in {"masking", "redaction", "transformation"}
-        and authorization.transformation_rule_ref is None
-    ):
-        raise ValueError(f"{authorization.operation} exposure operation requires a transformation rule")
-    if authorization.operation == "redaction" and authorization.redaction_policy_ref is None:
-        raise ValueError("redaction exposure operation requires a redaction policy")
-    if authorization.operation == "declassification" and authorization.declassification_basis_ref is None:
-        raise ValueError("declassification exposure operation requires a declassification basis")
-    if authorization.declassification_basis_ref is None and not set(
-        authorization.source_marking_definition_refs
-    ).issubset(authorization.result_marking_definition_refs):
-        raise ValueError("derived exposure results must inherit source markings unless declassification is explicit")
-    if authorization.declassification_basis_ref is None and not set(authorization.source_provenance_refs).issubset(
-        authorization.result_provenance_refs
-    ):
-        raise ValueError("derived exposure results must inherit source provenance unless declassification is explicit")
-    if not {*authorization.source_provenance_refs, *authorization.result_provenance_refs}.issubset(
-        authorization.provenance_refs
-    ):
-        raise ValueError("source and result exposure provenance must be carried by provenance_refs")
 
 
 def _event_evidence_refs(event: ParticipantBehaviorHistoryEvent) -> tuple[str, ...]:
@@ -246,16 +65,9 @@ def _occurrence_ref(event: ParticipantBehaviorHistoryEvent, delivery_order: int)
     return f"{_observation_ref(event)}:order-{delivery_order}"
 
 
-def _policy_permits_item(policy: ParticipantExposurePolicyModel, item_ref: str) -> bool:
-    allowed_refs = {*policy.disclosed_refs, *policy.tool_affordance_refs, *policy.visibility_scope_refs}
-    return item_ref not in policy.withheld_refs and item_ref in allowed_refs
-
-
-def _validate_realized_exposure(
+def _resolve_occurrence(
     assessment: ParticipantExposureAssessment,
     projection: ParticipantExposureProjection,
-    history_events: Sequence[ParticipantBehaviorHistoryEvent],
-    policy_revisions: Sequence[ParticipantExposurePolicyRevision],
     resolvers: ParticipantExposureResolvers,
 ) -> ParticipantExposureOccurrenceRecord | None:
     realization = assessment.realization
@@ -273,6 +85,13 @@ def _validate_realized_exposure(
         raise ValueError("realized exposure occurrence item_ref must match the exposed item")
     if occurrence.delivery_order < 0 or occurrence.delivery_order > projection.observation_order:
         raise ValueError("realized exposure delivery_order must identify an occurrence at or before the surface")
+    return occurrence
+
+
+def _matching_observation_event(
+    occurrence: ParticipantExposureOccurrenceRecord,
+    history_events: Sequence[ParticipantBehaviorHistoryEvent],
+) -> ParticipantBehaviorHistoryEvent:
     matching_events = tuple(
         event
         for event in history_events
@@ -284,7 +103,15 @@ def _validate_realized_exposure(
     )
     if len(matching_events) != 1:
         raise ValueError("realized exposure must resolve to an observation history occurrence")
-    event = matching_events[0]
+    return matching_events[0]
+
+
+def _validate_delivery_authorization(
+    occurrence: ParticipantExposureOccurrenceRecord,
+    projection: ParticipantExposureProjection,
+    policy_revisions: Sequence[ParticipantExposurePolicyRevision],
+    resolvers: ParticipantExposureResolvers,
+) -> None:
     delivery_authorization = _resolve_authorization(
         authorization_record_ref=occurrence.authorization_record_ref,
         item_ref=occurrence.item_ref,
@@ -311,6 +138,13 @@ def _validate_realized_exposure(
     _validate_exposure_operation(delivery_authorization)
     if not _policy_permits_item(delivery_policy, occurrence.item_ref):
         raise ValueError(f"delivery exposure policy does not permit item {occurrence.item_ref!r}")
+
+
+def _validate_occurrence_coordinates(
+    occurrence: ParticipantExposureOccurrenceRecord,
+    event: ParticipantBehaviorHistoryEvent,
+    projection: ParticipantExposureProjection,
+) -> None:
     expected = {
         "participant_address": event.participant_address,
         "episode_id": event.episode_id,
@@ -327,12 +161,21 @@ def _validate_realized_exposure(
         or occurrence.episode_id != projection.episode_id
     ):
         raise ValueError("realized exposure occurrence is outside the surface participant and episode")
+
+
+def _validate_occurrence_evidence(
+    occurrence: ParticipantExposureOccurrenceRecord,
+    event: ParticipantBehaviorHistoryEvent,
+) -> None:
     event_evidence = _event_evidence_refs(event)
     event_provenance = (event.actor_provenance,) if event.actor_provenance is not None else ()
     if set(occurrence.evidence_refs) != set(event_evidence):
         raise ValueError("realized exposure evidence_refs must agree with the observation history occurrence")
     if set(occurrence.provenance_refs) != set(event_provenance):
         raise ValueError("realized exposure provenance_refs must agree with the observation history occurrence")
+
+
+def _validate_occurrence_required_refs(occurrence: ParticipantExposureOccurrenceRecord) -> None:
     required = (
         occurrence.delivery_basis_ref,
         occurrence.item_ref,
@@ -343,8 +186,26 @@ def _validate_realized_exposure(
     )
     if any(not isinstance(value, str) or not value for value in required):
         raise ValueError("realized exposure requires delivery, evidence, provenance, and limitation refs")
-    if not occurrence.evidence_refs or not occurrence.provenance_refs or not occurrence.limitations:
+    required_collections = (occurrence.evidence_refs, occurrence.provenance_refs, occurrence.limitations)
+    if any(not values for values in required_collections):
         raise ValueError("realized exposure requires evidence, provenance, and limitations")
+
+
+def _validate_realized_exposure(
+    assessment: ParticipantExposureAssessment,
+    projection: ParticipantExposureProjection,
+    history_events: Sequence[ParticipantBehaviorHistoryEvent],
+    policy_revisions: Sequence[ParticipantExposurePolicyRevision],
+    resolvers: ParticipantExposureResolvers,
+) -> ParticipantExposureOccurrenceRecord | None:
+    occurrence = _resolve_occurrence(assessment, projection, resolvers)
+    if occurrence is None:
+        return None
+    event = _matching_observation_event(occurrence, history_events)
+    _validate_delivery_authorization(occurrence, projection, policy_revisions, resolvers)
+    _validate_occurrence_coordinates(occurrence, event, projection)
+    _validate_occurrence_evidence(occurrence, event)
+    _validate_occurrence_required_refs(occurrence)
     return occurrence
 
 
@@ -405,6 +266,75 @@ def _exposure_binding_payload(
     }
 
 
+def _validate_binding_admission(
+    item_ref: str,
+    authorization: ParticipantExposureAuthorizationRecord,
+    relation: Mapping[str, str],
+    projection: ParticipantExposureProjection,
+    policy: ParticipantExposurePolicyModel,
+) -> None:
+    if relation.get(item_ref) not in _PARTICIPANT_VISIBLE_VIEW_DISPOSITIONS:
+        raise ValueError(f"exposure item {item_ref!r} is not participant-visible at observation_order")
+    if not _policy_permits_item(policy, item_ref):
+        raise ValueError(f"selected exposure policy does not permit item {item_ref!r}")
+    carried_refs = (
+        ("evidence_refs", authorization.evidence_refs, projection.evidence_refs),
+        ("provenance_refs", authorization.provenance_refs, projection.provenance_refs),
+        ("result markings", authorization.result_marking_definition_refs, projection.marking_definition_refs),
+    )
+    for label, authorization_refs, projection_refs in carried_refs:
+        if not set(authorization_refs).issubset(projection_refs):
+            raise ValueError(f"exposure authorization {item_ref!r} {label} must be carried by the surface")
+    if (
+        authorization.redaction_policy_ref is not None
+        and authorization.redaction_policy_ref != projection.redaction_policy_ref
+    ):
+        raise ValueError(f"exposure authorization {item_ref!r} redaction policy must match the surface")
+
+
+def _project_exposure_binding(
+    item_ref: str,
+    relation: Mapping[str, str],
+    projection: ParticipantExposureProjection,
+    history_events: Sequence[ParticipantBehaviorHistoryEvent],
+    policy_revisions: Sequence[ParticipantExposurePolicyRevision],
+    policy: ParticipantExposurePolicyModel,
+    resolvers: ParticipantExposureResolvers,
+) -> dict[str, object]:
+    assessment = projection.exposure_assessments[item_ref]
+    if assessment.item_ref != item_ref:
+        raise ValueError(f"exposure assessment key {item_ref!r} must match its item_ref")
+    authorization = _resolve_authorization(
+        authorization_record_ref=assessment.authorization_record_ref,
+        item_ref=assessment.item_ref,
+        resolver=resolvers.authorization,
+    )
+    _validate_authorization_scope(
+        authorization,
+        projection,
+        policy,
+        observation_order=projection.observation_order,
+        projection_policy_revision=projection.projection_policy_revision,
+    )
+    _validate_authorization_shape(authorization)
+    _validate_exposure_operation(authorization)
+    occurrence = _validate_realized_exposure(
+        assessment,
+        projection,
+        history_events,
+        policy_revisions,
+        resolvers,
+    )
+    _validate_binding_admission(item_ref, authorization, relation, projection, policy)
+    return _exposure_binding_payload(
+        authorization,
+        occurrence,
+        projection,
+        policy_version=policy.policy_version,
+        policy_digest=policy.policy_digest,
+    )
+
+
 def project_participant_exposure_bindings(
     relation: Mapping[str, str],
     projection: ParticipantExposureProjection,
@@ -429,54 +359,15 @@ def project_participant_exposure_bindings(
     expected = _serialized_surface_refs(projection, entries, surface_affordances)
     if set(projection.exposure_assessments) != expected:
         raise ValueError("exposure_assessments must exactly cover every serialized surface ref")
-    bindings = []
-    for item_ref in sorted(expected):
-        assessment = projection.exposure_assessments[item_ref]
-        if assessment.item_ref != item_ref:
-            raise ValueError(f"exposure assessment key {item_ref!r} must match its item_ref")
-        authorization = _resolve_authorization(
-            authorization_record_ref=assessment.authorization_record_ref,
-            item_ref=assessment.item_ref,
-            resolver=resolvers.authorization,
-        )
-        _validate_authorization_scope(
-            authorization,
-            projection,
-            policy,
-            observation_order=projection.observation_order,
-            projection_policy_revision=projection.projection_policy_revision,
-        )
-        _validate_authorization_shape(authorization)
-        _validate_exposure_operation(authorization)
-        occurrence = _validate_realized_exposure(
-            assessment,
+    return [
+        _project_exposure_binding(
+            item_ref,
+            relation,
             projection,
             history_events,
             policy_revisions,
+            policy,
             resolvers,
         )
-        if relation.get(item_ref) not in _PARTICIPANT_VISIBLE_VIEW_DISPOSITIONS:
-            raise ValueError(f"exposure item {item_ref!r} is not participant-visible at observation_order")
-        if not _policy_permits_item(policy, item_ref):
-            raise ValueError(f"selected exposure policy does not permit item {item_ref!r}")
-        if not set(authorization.evidence_refs).issubset(projection.evidence_refs):
-            raise ValueError(f"exposure authorization {item_ref!r} evidence_refs must be carried by the surface")
-        if not set(authorization.provenance_refs).issubset(projection.provenance_refs):
-            raise ValueError(f"exposure authorization {item_ref!r} provenance_refs must be carried by the surface")
-        if not set(authorization.result_marking_definition_refs).issubset(projection.marking_definition_refs):
-            raise ValueError(f"exposure authorization {item_ref!r} result markings must be carried by the surface")
-        if (
-            authorization.redaction_policy_ref is not None
-            and authorization.redaction_policy_ref != projection.redaction_policy_ref
-        ):
-            raise ValueError(f"exposure authorization {item_ref!r} redaction policy must match the surface")
-        bindings.append(
-            _exposure_binding_payload(
-                authorization,
-                occurrence,
-                projection,
-                policy_version=policy.policy_version,
-                policy_digest=policy.policy_digest,
-            )
-        )
-    return bindings
+        for item_ref in sorted(expected)
+    ]

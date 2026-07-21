@@ -13,9 +13,6 @@ from .participant_context import ParticipantContextViewModel
 from .participant_decision_surface_exposure import (
     ParticipantDecisionSurfaceExposureBindingModel,
 )
-from .participant_decision_surface_exposure import (
-    ParticipantDecisionSurfaceExposureRealizationModel as ParticipantDecisionSurfaceExposureRealizationModel,
-)
 from .schema_invariants import _add_aces_invariant
 
 ParticipantDecisionSurfaceVisibility = Literal[
@@ -241,7 +238,9 @@ def _surface_exposed_refs(surface: ParticipantDecisionSurfaceModel) -> set[str]:
     }
 
 
-def _validate_surface_exposure_bindings(surface: ParticipantDecisionSurfaceModel) -> None:
+def _surface_exposure_binding_index(
+    surface: ParticipantDecisionSurfaceModel,
+) -> dict[str, ParticipantDecisionSurfaceExposureBindingModel]:
     bindings = {binding.item_ref: binding for binding in surface.exposure_bindings}
     _require_unique([binding.item_ref for binding in surface.exposure_bindings], "exposure_bindings.item_ref")
     expected = _surface_exposed_refs(surface)
@@ -254,37 +253,67 @@ def _validate_surface_exposure_bindings(surface: ParticipantDecisionSurfaceModel
         if extra:
             details.append("unexpected " + ", ".join(extra))
         raise ValueError("exposure_bindings must exactly cover serialized surface refs: " + "; ".join(details))
-    for binding in surface.exposure_bindings:
-        comparisons = (
-            ("participant_address", binding.participant_address, surface.participant_address),
-            ("episode_id", binding.episode_id, surface.episode_id),
-            ("audience_scope_ref", binding.audience_scope_ref, surface.audience_scope_ref),
-            ("observation_point", binding.observation_point, surface.observation_point),
-            ("observation_order", binding.observation_order, surface.observation_order),
-            ("projection_policy_ref", binding.projection_policy_ref, surface.projection_policy_ref),
-            ("projection_policy_revision", binding.projection_policy_revision, surface.projection_policy_revision),
-            ("exposure_policy_ref", binding.exposure_policy_ref, surface.exposure_policy_ref),
+    return bindings
+
+
+def _validate_binding_surface_coordinates(
+    binding: ParticipantDecisionSurfaceExposureBindingModel,
+    surface: ParticipantDecisionSurfaceModel,
+) -> None:
+    comparisons = (
+        ("participant_address", binding.participant_address, surface.participant_address),
+        ("episode_id", binding.episode_id, surface.episode_id),
+        ("audience_scope_ref", binding.audience_scope_ref, surface.audience_scope_ref),
+        ("observation_point", binding.observation_point, surface.observation_point),
+        ("observation_order", binding.observation_order, surface.observation_order),
+        ("projection_policy_ref", binding.projection_policy_ref, surface.projection_policy_ref),
+        ("projection_policy_revision", binding.projection_policy_revision, surface.projection_policy_revision),
+        ("exposure_policy_ref", binding.exposure_policy_ref, surface.exposure_policy_ref),
+    )
+    mismatched = [name for name, binding_value, surface_value in comparisons if binding_value != surface_value]
+    if mismatched:
+        raise ValueError(
+            f"exposure binding {binding.item_ref!r} disagrees with the surface on: " + ", ".join(mismatched)
         )
-        mismatched = [name for name, binding_value, surface_value in comparisons if binding_value != surface_value]
-        if mismatched:
+
+
+def _validate_binding_surface_evidence(
+    binding: ParticipantDecisionSurfaceExposureBindingModel,
+    surface: ParticipantDecisionSurfaceModel,
+) -> None:
+    carried_refs = (
+        ("evidence_refs", binding.evidence_refs, surface.evidence_refs),
+        ("provenance_refs", binding.provenance_refs, surface.provenance_refs),
+        ("result markings", binding.result_marking_definition_refs, surface.marking_definition_refs),
+    )
+    for label, binding_refs, surface_refs in carried_refs:
+        if not set(binding_refs).issubset(surface_refs):
+            raise ValueError(f"exposure binding {binding.item_ref!r} {label} must be carried by the surface")
+
+
+def _validate_binding_realization_evidence(
+    binding: ParticipantDecisionSurfaceExposureBindingModel,
+    surface: ParticipantDecisionSurfaceModel,
+) -> None:
+    if binding.realization is None:
+        return
+    carried_refs = (
+        ("evidence", binding.realization.evidence_refs, surface.evidence_refs),
+        ("provenance", binding.realization.provenance_refs, surface.provenance_refs),
+    )
+    for label, realization_refs, surface_refs in carried_refs:
+        if not set(realization_refs).issubset(surface_refs):
             raise ValueError(
-                f"exposure binding {binding.item_ref!r} disagrees with the surface on: " + ", ".join(mismatched)
+                f"exposure binding {binding.item_ref!r} realization {label} must be carried by the surface"
             )
-        if not set(binding.evidence_refs).issubset(surface.evidence_refs):
-            raise ValueError(f"exposure binding {binding.item_ref!r} evidence_refs must be carried by the surface")
-        if not set(binding.provenance_refs).issubset(surface.provenance_refs):
-            raise ValueError(f"exposure binding {binding.item_ref!r} provenance_refs must be carried by the surface")
-        if not set(binding.result_marking_definition_refs).issubset(surface.marking_definition_refs):
-            raise ValueError(f"exposure binding {binding.item_ref!r} result markings must be carried by the surface")
-        if binding.realization is not None:
-            if not set(binding.realization.evidence_refs).issubset(surface.evidence_refs):
-                raise ValueError(
-                    f"exposure binding {binding.item_ref!r} realization evidence must be carried by the surface"
-                )
-            if not set(binding.realization.provenance_refs).issubset(surface.provenance_refs):
-                raise ValueError(
-                    f"exposure binding {binding.item_ref!r} realization provenance must be carried by the surface"
-                )
+
+
+def _validate_surface_exposure_bindings(surface: ParticipantDecisionSurfaceModel) -> None:
+    _surface_exposure_binding_index(surface)
+    for binding in surface.exposure_bindings:
+        _validate_binding_surface_coordinates(binding, surface)
+        _validate_binding_surface_evidence(binding, surface)
+        _validate_binding_realization_evidence(binding, surface)
 
 
 class ParticipantDecisionSurfaceModel(ContractModel):
