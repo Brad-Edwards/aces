@@ -113,39 +113,38 @@ def test_goal_mode_requires_an_objective_control_step() -> None:
 
 
 def test_tool_affordance_constraint_must_resolve() -> None:
+    source = textwrap.dedent(
+        """
+        name: dangling-affordance
+        entities:
+          operator: {role: blue}
+        propositions:
+          restored:
+            description: The service is restored.
+            subjects: [entities.operator]
+            basis: declared_state
+            predicate: {kind: presence, property: service, semantic_ref: urn:aces:declared-property:service, operator: exists}
+        assertions:
+          restored: {proposition: restored, role: postcondition, polarity: positive}
+        objectives:
+          restore-service:
+            entity: operator
+            success: {assertions: [restored]}
+        workflows:
+          response:
+            start: restore
+            steps:
+              restore:
+                type: objective
+                execution_mode: objective
+                objective: restore-service
+                on_success: done
+                tool_affordance_refs: [behavior_specifications.missing.tool_affordances.shell]
+              done: {type: end}
+        """
+    )
     with pytest.raises(SDLValidationError, match="undefined tool affordance"):
-        parse_sdl(
-            textwrap.dedent(
-                """
-                name: dangling-affordance
-                entities:
-                  operator: {role: blue}
-                propositions:
-                  restored:
-                    description: The service is restored.
-                    subjects: [entities.operator]
-                    basis: declared_state
-                    predicate: {kind: presence, property: service, semantic_ref: urn:aces:declared-property:service, operator: exists}
-                assertions:
-                  restored: {proposition: restored, role: postcondition, polarity: positive}
-                objectives:
-                  restore-service:
-                    entity: operator
-                    success: {assertions: [restored]}
-                workflows:
-                  response:
-                    start: restore
-                    steps:
-                      restore:
-                        type: objective
-                        execution_mode: objective
-                        objective: restore-service
-                        on_success: done
-                        tool_affordance_refs: [behavior_specifications.missing.tool_affordances.shell]
-                      done: {type: end}
-                """
-            )
-        )
+        parse_sdl(source)
 
 
 def _governed_goal_scenario() -> str:
@@ -255,8 +254,9 @@ def test_compiler_preserves_goal_realization_contract() -> None:
     ],
 )
 def test_goal_realization_reference_families_fail_closed(authored: str, dangling: str, message: str) -> None:
+    source = _governed_goal_scenario().replace(authored, dangling)
     with pytest.raises(SDLValidationError, match=message):
-        parse_sdl(_governed_goal_scenario().replace(authored, dangling))
+        parse_sdl(source)
 
 
 def test_scripted_procedure_must_resolve_to_a_procedure_action_contract() -> None:
@@ -277,8 +277,9 @@ def test_scripted_procedure_must_resolve_to_a_procedure_action_contract() -> Non
     with pytest.raises(SDLValidationError, match="must have procedure behavioral granularity"):
         parse_sdl(source)
 
+    missing_procedure_source = source.replace("procedure_ref: service-recovery", "procedure_ref: missing-procedure")
     with pytest.raises(SDLValidationError, match="references undefined action contract"):
-        parse_sdl(source.replace("procedure_ref: service-recovery", "procedure_ref: missing-procedure"))
+        parse_sdl(missing_procedure_source)
 
 
 def test_success_provenance_requires_assertion_truth_and_evidence() -> None:

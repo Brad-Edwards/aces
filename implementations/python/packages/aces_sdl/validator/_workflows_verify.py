@@ -3,6 +3,11 @@
 Part of the SemanticValidator mixin composition; see __init__.py.
 """
 
+from aces_contracts.controlled_vocabularies import (
+    validate_controlled_vocabulary_scope_values,
+    validate_controlled_vocabulary_value,
+)
+
 from ..orchestration import WorkflowStepType
 from ..participant_behavior import ParticipantActionGranularity, ParticipantInformationBoundaryClass
 from ..participant_behavior_specification import tool_affordance_reference
@@ -188,6 +193,13 @@ class _WorkflowVerifyMixin:
             step.procedure_ref,
             ParticipantActionGranularity.PROCEDURE,
         )
+        self._verify_workflow_step_action_families(workflow_name, step_name, step)
+        self._verify_workflow_step_scaffold_refs(workflow_name, step_name, step)
+        self._verify_workflow_step_tool_affordance_refs(workflow_name, step_name, step)
+        self._verify_workflow_step_capability_refs(workflow_name, step_name, step)
+        self._verify_workflow_step_fact_binding_refs(workflow_name, step_name, step)
+
+    def _verify_workflow_step_action_families(self, workflow_name: str, step_name: str, step: object) -> None:
         for ref in step.allowed_action_families:
             self._verify_workflow_step_action_contract_ref(
                 workflow_name,
@@ -197,6 +209,7 @@ class _WorkflowVerifyMixin:
                 ParticipantActionGranularity.AGGREGATE,
             )
 
+    def _verify_workflow_step_scaffold_refs(self, workflow_name: str, step_name: str, step: object) -> None:
         scaffold_boundary_classes = {
             ParticipantInformationBoundaryClass.INSTRUCTION,
             ParticipantInformationBoundaryClass.STARTER_FILE,
@@ -219,6 +232,7 @@ class _WorkflowVerifyMixin:
                     "does not declare an instruction, starter-file, scaffold-instruction, or subtask-guidance view rule"
                 )
 
+    def _verify_workflow_step_tool_affordance_refs(self, workflow_name: str, step_name: str, step: object) -> None:
         available_refs = {
             tool_affordance_reference(spec_name, affordance_id)
             for spec_name, behavior_spec in self._s.behavior_specifications.items()
@@ -230,30 +244,32 @@ class _WorkflowVerifyMixin:
             if ref not in available_refs:
                 self._err(f"Workflow '{workflow_name}' step '{step_name}' references undefined tool affordance '{ref}'")
 
-        from aces_contracts.controlled_vocabularies import (
-            validate_controlled_vocabulary_scope_values,
-            validate_controlled_vocabulary_value,
-        )
-
+    def _verify_workflow_step_capability_refs(self, workflow_name: str, step_name: str, step: object) -> None:
         for ref in step.capability_refs:
             if self._is_unresolved_var(ref):
                 continue
-            errors: list[str] = []
-            for vocabulary_id in (
-                "participant-runtime-behavior-features",
-                "participant-runtime-interaction-features",
-            ):
-                try:
-                    validate_controlled_vocabulary_value(vocabulary_id, ref)
-                    break
-                except ValueError as exc:
-                    errors.append(str(exc))
-            else:
+            governed, errors = self._governed_capability_ref(ref)
+            if not governed:
                 self._err(
                     f"Workflow '{workflow_name}' step '{step_name}' references ungoverned participant "
                     f"capability '{ref}': {'; '.join(errors)}"
                 )
 
+    @staticmethod
+    def _governed_capability_ref(ref: str) -> tuple[bool, list[str]]:
+        errors: list[str] = []
+        for vocabulary_id in (
+            "participant-runtime-behavior-features",
+            "participant-runtime-interaction-features",
+        ):
+            try:
+                validate_controlled_vocabulary_value(vocabulary_id, ref)
+                return True, errors
+            except ValueError as exc:
+                errors.append(str(exc))
+        return False, errors
+
+    def _verify_workflow_step_fact_binding_refs(self, workflow_name: str, step_name: str, step: object) -> None:
         for ref in step.fact_binding_refs:
             if self._is_unresolved_var(ref):
                 continue

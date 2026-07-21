@@ -435,6 +435,11 @@ class WorkflowStep(SDLModel):
 
     @model_validator(mode="after")
     def validate_execution_mode(self) -> "WorkflowStep":
+        self._validate_goal_mode_compatibility()
+        self._validate_scaffolded_mode()
+        return self
+
+    def _validate_goal_mode_compatibility(self) -> None:
         goal_modes = {WorkflowStepExecutionMode.OBJECTIVE, WorkflowStepExecutionMode.SCAFFOLDED}
         if self.execution_mode in goal_modes and self.type not in {
             WorkflowStepType.OBJECTIVE,
@@ -443,6 +448,10 @@ class WorkflowStep(SDLModel):
             raise ValueError("objective and scaffolded execution modes are only valid for objective or retry steps")
         if self.execution_mode in goal_modes and self.procedure_ref:
             raise ValueError("objective and scaffolded execution mode does not admit prescribed procedure")
+        if self.execution_mode != WorkflowStepExecutionMode.SCRIPTED and self.procedure_ref:
+            raise ValueError("procedure_ref is only valid for scripted execution mode")
+
+    def _validate_scaffolded_mode(self) -> None:
         if self.execution_mode != WorkflowStepExecutionMode.SCAFFOLDED and self.scaffold_refs:
             raise ValueError("scaffold_refs are only valid for scaffolded execution mode")
         if self.execution_mode != WorkflowStepExecutionMode.SCAFFOLDED and self.allowed_action_families:
@@ -453,9 +462,6 @@ class WorkflowStep(SDLModel):
             raise ValueError(
                 "scaffolded execution mode requires governed scaffold, tool-affordance, or action-family references"
             )
-        if self.execution_mode != WorkflowStepExecutionMode.SCRIPTED and self.procedure_ref:
-            raise ValueError("procedure_ref is only valid for scripted execution mode")
-        return self
 
     @model_validator(mode="after")
     def validate_type_specific_fields(self) -> "WorkflowStep":

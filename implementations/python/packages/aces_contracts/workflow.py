@@ -39,6 +39,13 @@ class WorkflowStepOutcome(str, Enum):
     EXHAUSTED = "exhausted"
 
 
+def _validate_provenance_string_tuple(field_name: str, values: object) -> None:
+    if not isinstance(values, tuple) or any(not isinstance(item, str) or not item for item in values):
+        raise TypeError(f"{field_name} must be a tuple of non-empty strings")
+    if len(values) != len(set(values)):
+        raise ValueError(f"{field_name} entries must be unique")
+
+
 @dataclass(frozen=True)
 class WorkflowStepAttemptProvenance:
     """Portable provenance for one governed workflow-step realization attempt."""
@@ -76,10 +83,7 @@ class WorkflowStepAttemptProvenance:
             "assertion_truth_refs",
         ):
             values = getattr(self, field_name)
-            if not isinstance(values, tuple) or any(not isinstance(item, str) or not item for item in values):
-                raise TypeError(f"{field_name} must be a tuple of non-empty strings")
-            if len(values) != len(set(values)):
-                raise ValueError(f"{field_name} entries must be unique")
+            _validate_provenance_string_tuple(field_name, values)
         if self.outcome == "succeeded" and not (self.evidence_refs and self.assertion_truth_refs):
             raise ValueError("successful workflow step provenance requires evidence-bearing assertion truth")
 
