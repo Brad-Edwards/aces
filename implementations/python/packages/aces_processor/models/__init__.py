@@ -139,6 +139,14 @@ from .outcome import (
     ParticipantOutcomeTargetRecord,
 )
 from .outcome_interpretation_validation import validate_participant_outcome_interpretation_record
+from .participant_exposure_authority import (
+    ParticipantExposureAssessment,
+    ParticipantExposureAuthorizationRecord,
+    ParticipantExposureOccurrenceRecord,
+    ParticipantExposurePolicyRevision,
+    ParticipantExposureRealizationAssessment,
+    ParticipantExposureResolvers,
+)
 from .resources import (
     AccountPlacement,
     AssertionRuntime,
@@ -226,6 +234,12 @@ __all__ = [
     "ParticipantBehaviorHistoryEventType",
     "ParticipantDecisionSurfaceActionAssessment",
     "ParticipantDecisionSurfaceProjectionInput",
+    "ParticipantExposureAssessment",
+    "ParticipantExposureAuthorizationRecord",
+    "ParticipantExposureOccurrenceRecord",
+    "ParticipantExposurePolicyRevision",
+    "ParticipantExposureRealizationAssessment",
+    "ParticipantExposureResolvers",
     "ParticipantBehaviorRuntime",
     "ParticipantBehaviorSpecificationRuntime",
     "ParticipantInteractiveAccessRuntime",

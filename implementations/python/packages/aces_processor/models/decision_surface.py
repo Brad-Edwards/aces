@@ -15,6 +15,11 @@ from .behavior_resources import (
     ParticipantObservationBoundaryRuntime,
 )
 from .history_event import ParticipantBehaviorHistoryEvent
+from .participant_exposure import project_participant_exposure_bindings
+from .participant_exposure_authority import (
+    ParticipantExposureAssessment,
+    ParticipantExposureResolvers,
+)
 from .runtime_model import RuntimeModel
 
 
@@ -47,12 +52,14 @@ class ParticipantDecisionSurfaceProjectionInput:
     context_view_ref: str
     implementation_selection_ref: str
     decision_control_mode: str
+    audience_scope_ref: str
     projection_policy_ref: str
     projection_policy_revision: str
     exposure_policy_ref: str
     visibility_projection_ref: str
     visible_context_refs: tuple[str, ...]
     action_assessments: Mapping[str, ParticipantDecisionSurfaceActionAssessment]
+    exposure_assessments: Mapping[str, ParticipantExposureAssessment]
     form: Mapping[str, object]
     evidence_refs: tuple[str, ...]
     provenance_refs: tuple[str, ...]
@@ -252,7 +259,20 @@ def _surface_payload(
     projection: ParticipantDecisionSurfaceProjectionInput,
     entries: list[dict[str, object]],
     surface_affordances: list[str],
+    exposure_bindings: list[dict[str, object]],
 ) -> dict[str, object]:
+    realization_evidence_refs = [
+        ref
+        for binding in exposure_bindings
+        if isinstance(binding.get("realization"), dict)
+        for ref in binding["realization"]["evidence_refs"]
+    ]
+    realization_provenance_refs = [
+        ref
+        for binding in exposure_bindings
+        if isinstance(binding.get("realization"), dict)
+        for ref in binding["realization"]["provenance_refs"]
+    ]
     return {
         "surface_id": projection.surface_id,
         "participant_address": projection.participant_address,
@@ -264,6 +284,7 @@ def _surface_payload(
         "context_view_ref": projection.context_view_ref,
         "implementation_selection_ref": projection.implementation_selection_ref,
         "decision_control_mode": projection.decision_control_mode,
+        "audience_scope_ref": projection.audience_scope_ref,
         "projection_policy_ref": projection.projection_policy_ref,
         "projection_policy_revision": projection.projection_policy_revision,
         "exposure_policy_ref": projection.exposure_policy_ref,
@@ -271,9 +292,10 @@ def _surface_payload(
         "visible_context_refs": list(projection.visible_context_refs),
         "action_entries": entries,
         "affordance_refs": list(dict.fromkeys(surface_affordances)),
+        "exposure_bindings": exposure_bindings,
         "form": dict(projection.form),
-        "evidence_refs": list(projection.evidence_refs),
-        "provenance_refs": list(projection.provenance_refs),
+        "evidence_refs": list(dict.fromkeys((*projection.evidence_refs, *realization_evidence_refs))),
+        "provenance_refs": list(dict.fromkeys((*projection.provenance_refs, *realization_provenance_refs))),
         "marking_definition_refs": list(projection.marking_definition_refs),
         "redaction_policy_ref": projection.redaction_policy_ref,
         "semantic_limitations": list(projection.semantic_limitations),
@@ -285,6 +307,7 @@ def project_participant_decision_surface(
     *,
     history_events: Sequence[ParticipantBehaviorHistoryEvent],
     projection: ParticipantDecisionSurfaceProjectionInput,
+    exposure_resolvers: ParticipantExposureResolvers,
 ) -> ParticipantDecisionSurfaceModel:
     """Derive one surface from compiled meaning and one scoped history prefix."""
 
@@ -297,4 +320,14 @@ def project_participant_decision_surface(
         observation_order=projection.observation_order,
     )
     entries, surface_affordances = _project_surface_actions(runtime_model, behavior, relation, projection)
-    return ParticipantDecisionSurfaceModel.model_validate(_surface_payload(projection, entries, surface_affordances))
+    exposure_bindings = project_participant_exposure_bindings(
+        relation,
+        projection,
+        entries,
+        surface_affordances,
+        history_events,
+        exposure_resolvers,
+    )
+    return ParticipantDecisionSurfaceModel.model_validate(
+        _surface_payload(projection, entries, surface_affordances, exposure_bindings)
+    )

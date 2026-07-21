@@ -871,6 +871,43 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   SEM-211 precondition evaluation. The lineage ledger and source audit remain
   unchanged because the implementation adds no normative external derivation
   or compatibility claim.
+- SEM-226 specializes that delivered decision-surface projection without
+  adopting another visibility taxonomy, policy language, or participant I/O
+  envelope. ACES maps the participant/episode/audience/order coordinates to
+  `ParticipantDecisionSurfaceExposureBindingModel`; maps `V_p,o` to the
+  existing `participant_observation_effective_relation()` selector; maps the
+  revisioned SEM-230 `Effective(rho,o)` coordinate to an authoritative
+  `ParticipantExposurePolicyRevision` resolver; maps selected apparatus intent
+  to a separately resolved `ParticipantExposurePolicyModel` identity, version,
+  digest, disclosed and withheld refs; maps item authorization to stable
+  `ParticipantExposureAuthorizationRecord` refs, immutable exposure-policy
+  version/digest, and effective intervals instead of projection-owned gate
+  booleans; and maps source/result identity,
+  markings, transformation, redaction, declassification, evidence,
+  provenance, and limitations to one closed binding per serialized context,
+  action, and affordance ref. Realized delivery remains an optional
+  `ParticipantDecisionSurfaceExposureRealizationModel` occurrence binding
+  whose stable ref resolves independently and binds the exact delivered item
+  and delivery-time authorization record. That record and the occurrence must
+  agree with the policy effective at delivery order and with the participant,
+  episode, action instance, observation boundary, history order, observation
+  identity, evidence, and provenance. Observation lookup uses that semantic
+  identity rather than treating delivery order as a sequence index. It carries
+  its own delivery basis and limitations. Delivery is
+  implemented in `project_participant_decision_surface()` with deny-first
+  item selection, effective-order policy checks, exact item coverage,
+  participant/audience isolation, marking and provenance inheritance, and
+  non-retroactive concealment/revocation behavior. Evidence is the strengthened
+  `participant-decision-surface-v1` schema and fixtures,
+  `implementations/python/tests/test_sem_226_participant_exposure.py`, and
+  the retained SEM-220 projection tests. This mapping does not claim that a
+  selected policy, manifest capability, surface entry, disclosure decision,
+  HTTP response, log, or audit record proves delivery; does not make API-408
+  retrieval participant-safe; and does not claim erasure, a general crossing
+  API, runtime persistence, backend enforcement, or universal
+  noninterference/bisimulation. The lineage ledger and source audit remain
+  unchanged because the implementation changes no normative external
+  derivation or compatibility claim.
 - CALDERA adversary-emulation research informs the action semantics: cyber
   actions can change foothold, knowledge, observations, detection surface, and
   downstream outcomes under uncertainty.

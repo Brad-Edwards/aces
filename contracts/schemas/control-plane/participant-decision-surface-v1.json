@@ -286,6 +286,335 @@
       "title": "ParticipantDecisionSurfaceConstrainedFormModel",
       "type": "object"
     },
+    "ParticipantDecisionSurfaceExposureBindingModel": {
+      "additionalProperties": false,
+      "description": "Resolved SEM-226 basis for one item admitted to a surface.",
+      "properties": {
+        "actor_ref": {
+          "minLength": 1,
+          "title": "Actor Ref",
+          "type": "string"
+        },
+        "audience_scope_ref": {
+          "minLength": 1,
+          "title": "Audience Scope Ref",
+          "type": "string"
+        },
+        "authority_basis_ref": {
+          "minLength": 1,
+          "title": "Authority Basis Ref",
+          "type": "string"
+        },
+        "authorization_record_ref": {
+          "minLength": 1,
+          "title": "Authorization Record Ref",
+          "type": "string"
+        },
+        "controller_ref": {
+          "minLength": 1,
+          "title": "Controller Ref",
+          "type": "string"
+        },
+        "declassification_basis_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Declassification Basis Ref"
+        },
+        "episode_id": {
+          "minLength": 1,
+          "title": "Episode Id",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "exposure_policy_digest": {
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "title": "Exposure Policy Digest",
+          "type": "string"
+        },
+        "exposure_policy_ref": {
+          "minLength": 1,
+          "title": "Exposure Policy Ref",
+          "type": "string"
+        },
+        "exposure_policy_version": {
+          "minLength": 1,
+          "title": "Exposure Policy Version",
+          "type": "string"
+        },
+        "item_ref": {
+          "minLength": 1,
+          "title": "Item Ref",
+          "type": "string"
+        },
+        "loss_and_limitations": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Loss And Limitations",
+          "type": "array"
+        },
+        "observation_order": {
+          "minimum": 0,
+          "title": "Observation Order",
+          "type": "integer"
+        },
+        "observation_point": {
+          "minLength": 1,
+          "title": "Observation Point",
+          "type": "string"
+        },
+        "operation": {
+          "enum": [
+            "projection",
+            "masking",
+            "redaction",
+            "declassification",
+            "disclosure",
+            "transformation"
+          ],
+          "title": "Operation",
+          "type": "string"
+        },
+        "operation_basis_ref": {
+          "minLength": 1,
+          "title": "Operation Basis Ref",
+          "type": "string"
+        },
+        "participant_address": {
+          "minLength": 1,
+          "title": "Participant Address",
+          "type": "string"
+        },
+        "projection_policy_ref": {
+          "minLength": 1,
+          "title": "Projection Policy Ref",
+          "type": "string"
+        },
+        "projection_policy_revision": {
+          "minLength": 1,
+          "title": "Projection Policy Revision",
+          "type": "string"
+        },
+        "provenance_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Provenance Refs",
+          "type": "array"
+        },
+        "realization": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ParticipantDecisionSurfaceExposureRealizationModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "redaction_policy_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Redaction Policy Ref"
+        },
+        "result_marking_definition_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Result Marking Definition Refs",
+          "type": "array"
+        },
+        "result_provenance_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Result Provenance Refs",
+          "type": "array"
+        },
+        "source_layer_ref": {
+          "minLength": 1,
+          "title": "Source Layer Ref",
+          "type": "string"
+        },
+        "source_marking_definition_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Source Marking Definition Refs",
+          "type": "array"
+        },
+        "source_provenance_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Source Provenance Refs",
+          "type": "array"
+        },
+        "source_ref": {
+          "minLength": 1,
+          "title": "Source Ref",
+          "type": "string"
+        },
+        "transformation_rule_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Transformation Rule Ref"
+        },
+        "visibility_basis_ref": {
+          "minLength": 1,
+          "title": "Visibility Basis Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "item_ref",
+        "authorization_record_ref",
+        "source_ref",
+        "source_layer_ref",
+        "participant_address",
+        "episode_id",
+        "audience_scope_ref",
+        "observation_point",
+        "observation_order",
+        "visibility_basis_ref",
+        "projection_policy_ref",
+        "projection_policy_revision",
+        "exposure_policy_ref",
+        "exposure_policy_version",
+        "exposure_policy_digest",
+        "operation",
+        "operation_basis_ref",
+        "actor_ref",
+        "controller_ref",
+        "authority_basis_ref",
+        "source_provenance_refs",
+        "result_provenance_refs",
+        "evidence_refs",
+        "provenance_refs",
+        "loss_and_limitations"
+      ],
+      "title": "ParticipantDecisionSurfaceExposureBindingModel",
+      "type": "object"
+    },
+    "ParticipantDecisionSurfaceExposureRealizationModel": {
+      "additionalProperties": false,
+      "description": "Independent evidence that one authorized exposure was delivered.",
+      "properties": {
+        "authorization_record_ref": {
+          "minLength": 1,
+          "title": "Authorization Record Ref",
+          "type": "string"
+        },
+        "delivery_basis_ref": {
+          "minLength": 1,
+          "title": "Delivery Basis Ref",
+          "type": "string"
+        },
+        "delivery_order": {
+          "minimum": 0,
+          "title": "Delivery Order",
+          "type": "integer"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "item_ref": {
+          "minLength": 1,
+          "title": "Item Ref",
+          "type": "string"
+        },
+        "limitations": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Limitations",
+          "type": "array"
+        },
+        "observation_ref": {
+          "minLength": 1,
+          "title": "Observation Ref",
+          "type": "string"
+        },
+        "occurrence_ref": {
+          "minLength": 1,
+          "title": "Occurrence Ref",
+          "type": "string"
+        },
+        "provenance_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Provenance Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "occurrence_ref",
+        "item_ref",
+        "authorization_record_ref",
+        "delivery_basis_ref",
+        "delivery_order",
+        "observation_ref",
+        "evidence_refs",
+        "provenance_refs",
+        "limitations"
+      ],
+      "title": "ParticipantDecisionSurfaceExposureRealizationModel",
+      "type": "object"
+    },
     "ParticipantDecisionSurfaceOpenEndedFormModel": {
       "additionalProperties": false,
       "properties": {
@@ -357,6 +686,11 @@
       "title": "Affordance Refs",
       "type": "array"
     },
+    "audience_scope_ref": {
+      "minLength": 1,
+      "title": "Audience Scope Ref",
+      "type": "string"
+    },
     "behavior_specification_address": {
       "minLength": 1,
       "title": "Behavior Specification Address",
@@ -384,6 +718,14 @@
       },
       "minItems": 1,
       "title": "Evidence Refs",
+      "type": "array"
+    },
+    "exposure_bindings": {
+      "items": {
+        "$ref": "#/$defs/ParticipantDecisionSurfaceExposureBindingModel"
+      },
+      "minItems": 1,
+      "title": "Exposure Bindings",
       "type": "array"
     },
     "exposure_policy_ref": {
@@ -518,12 +860,14 @@
     "context_view_ref",
     "implementation_selection_ref",
     "decision_control_mode",
+    "audience_scope_ref",
     "projection_policy_ref",
     "projection_policy_revision",
     "exposure_policy_ref",
     "visibility_projection_ref",
     "visible_context_refs",
     "action_entries",
+    "exposure_bindings",
     "form",
     "evidence_refs",
     "provenance_refs",
@@ -555,6 +899,18 @@
       ],
       "level": "error",
       "validator": "aces_contracts.contracts.ParticipantDecisionSurfaceModel"
+    },
+    {
+      "description": "Every serialized context, action, and affordance reference must have one participant-, audience-, order-, immutable-policy-, authorization-, marking-, evidence-, and provenance-bound exposure decision; realized delivery is an optional item- and delivery-authorization-bound occurrence.",
+      "id": "decision-surface-sem226-item-exposure-agreement",
+      "inputs": [
+        {
+          "contract_id": "participant-decision-surface-v1",
+          "instance_path": "#/exposure_bindings"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_contracts.contracts.ParticipantDecisionSurfaceModel._validate_surface_relations"
     }
   ],
   "x-aces-semantic-profile": {
