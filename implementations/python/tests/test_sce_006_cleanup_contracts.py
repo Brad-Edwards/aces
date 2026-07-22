@@ -152,16 +152,15 @@ def test_required_cleanup_cannot_be_silently_skipped() -> None:
 
 
 def test_failed_cleanup_cannot_claim_clean_state() -> None:
+    failed_result = _result(
+        status="failed",
+        evidence_refs=["evidence:failure-a"],
+        residual_state_refs=["residual:vm-a"],
+    )
     with pytest.raises(ValidationError, match="clean_state_claim requires succeeded cleanup"):
         _receipt(
             cleanup_status="failed",
-            obligation_results={
-                "destroy-range": _result(
-                    status="failed",
-                    evidence_refs=["evidence:failure-a"],
-                    residual_state_refs=["residual:vm-a"],
-                )
-            },
+            obligation_results={"destroy-range": failed_result},
         )
 
 
@@ -199,11 +198,13 @@ def test_reusable_state_requires_bounded_evidence() -> None:
 
 
 def test_resource_and_dependency_references_must_resolve() -> None:
+    missing_boundary = _obligation(boundary_refs=["missing-range"])
     with pytest.raises(ValidationError, match="unknown resource boundaries"):
-        _plan(cleanup_obligations={"destroy-range": _obligation(boundary_refs=["missing-range"])})
+        _plan(cleanup_obligations={"destroy-range": missing_boundary})
 
+    missing_dependency = _obligation(depends_on=["missing-obligation"])
     with pytest.raises(ValidationError, match="unknown cleanup dependencies"):
-        _plan(cleanup_obligations={"destroy-range": _obligation(depends_on=["missing-obligation"])})
+        _plan(cleanup_obligations={"destroy-range": missing_dependency})
 
 
 def test_cleanup_dependency_graph_must_be_acyclic() -> None:
@@ -216,11 +217,12 @@ def test_cleanup_dependency_graph_must_be_acyclic() -> None:
 
 def test_non_idempotent_retry_requires_explicit_reset_or_compensation() -> None:
     unsafe = _obligation(idempotency="not-repeatable")
+    retry_policy = ExecutionRetryPolicyModel(max_attempts=2, after_effect_policy="idempotent")
 
     with pytest.raises(ValidationError, match="non-idempotent effects require explicit reset or compensation"):
         _plan(
             cleanup_obligations={"destroy-range": unsafe},
-            retry_policy=ExecutionRetryPolicyModel(max_attempts=2, after_effect_policy="idempotent"),
+            retry_policy=retry_policy,
         )
 
 
@@ -271,21 +273,23 @@ def test_reset_retry_policy_rejects_non_retry_capable_reset_obligations(
             resource_refs=["node.vm-b"],
         )
 
+    obligations = {
+        "effect-range": _obligation(
+            obligation_id="effect-range",
+            idempotency="not-repeatable",
+        ),
+        "reset-range": _obligation(**reset_fields),
+    }
+    retry_policy = ExecutionRetryPolicyModel(
+        max_attempts=2,
+        after_effect_policy="reset",
+        reset_obligation_refs=["reset-range"],
+    )
     with pytest.raises(ValidationError, match=message):
         _plan(
             resource_boundaries=resource_boundaries,
-            cleanup_obligations={
-                "effect-range": _obligation(
-                    obligation_id="effect-range",
-                    idempotency="not-repeatable",
-                ),
-                "reset-range": _obligation(**reset_fields),
-            },
-            retry_policy=ExecutionRetryPolicyModel(
-                max_attempts=2,
-                after_effect_policy="reset",
-                reset_obligation_refs=["reset-range"],
-            ),
+            cleanup_obligations=obligations,
+            retry_policy=retry_policy,
         )
 
 
@@ -309,13 +313,14 @@ def test_scheduler_isolation_defaults_to_serial_without_parallel_proof() -> None
 
 
 def test_parallel_scheduler_requires_every_isolation_dimension() -> None:
+    dimensions = [_dimension("range-instance")]
     with pytest.raises(ValidationError, match="parallel isolation proof requires dimensions"):
         SchedulerIsolationProofModel(
             schema_version="scheduler-isolation-proof/v1",
             proof_id="proof-parallel",
             plan_entry_ids=["trial-entry-a", "trial-entry-b"],
             requested_parallelism=2,
-            dimensions=[_dimension("range-instance")],
+            dimensions=dimensions,
         )
 
 
@@ -371,12 +376,15 @@ def test_cleanup_capability_requires_both_plan_and_receipt_contracts() -> None:
             supports_residual_state_disclosure=True,
         )
 
+    supported_contract_versions = frozenset({"trial-cleanup-plan-v1"})
+    supported_action_kinds = frozenset({"destroy"})
+    supported_verification_methods = frozenset({"probe"})
     with pytest.raises(ValueError, match="CleanupCapabilities.supported_contract_versions"):
         CleanupCapabilities(
             name="cleanup",
-            supported_contract_versions=frozenset({"trial-cleanup-plan-v1"}),
-            supported_action_kinds=frozenset({"destroy"}),
-            supported_verification_methods=frozenset({"probe"}),
+            supported_contract_versions=supported_contract_versions,
+            supported_action_kinds=supported_action_kinds,
+            supported_verification_methods=supported_verification_methods,
             supports_reusable_state=True,
             supports_residual_state_disclosure=True,
         )
@@ -418,20 +426,25 @@ def _manifest_with_cleanup(cleanup: CleanupCapabilities | None) -> BackendManife
 
 
 def test_cleanup_plan_admission_requires_declared_backend_capability() -> None:
+    manifest = _manifest_with_cleanup(None)
+    plan = _plan()
     with pytest.raises(ValueError, match="backend does not declare cleanup capabilities"):
-        require_cleanup_plan_capability(_manifest_with_cleanup(None), _plan())
+        require_cleanup_plan_capability(manifest, plan)
 
 
 def test_cleanup_plan_admission_rejects_unsupported_action_and_probe_method() -> None:
     base = create_stub_manifest().cleanup
     assert base is not None
+    plan = _plan()
     unsupported_action = replace(base, supported_action_kinds=frozenset({"reset"}))
+    action_manifest = _manifest_with_cleanup(unsupported_action)
     with pytest.raises(ValueError, match="unsupported cleanup action kinds: destroy"):
-        require_cleanup_plan_capability(_manifest_with_cleanup(unsupported_action), _plan())
+        require_cleanup_plan_capability(action_manifest, plan)
 
     unsupported_probe = replace(base, supported_verification_methods=frozenset({"receipt"}))
+    probe_manifest = _manifest_with_cleanup(unsupported_probe)
     with pytest.raises(ValueError, match="unsupported cleanup verification methods: probe"):
-        require_cleanup_plan_capability(_manifest_with_cleanup(unsupported_probe), _plan())
+        require_cleanup_plan_capability(probe_manifest, plan)
 
 
 def test_cleanup_plan_admission_accepts_supported_required_cleanup() -> None:

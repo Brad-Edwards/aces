@@ -51,6 +51,40 @@ def _require_unique(field_name: str, values: Iterable[str]) -> None:
         raise ValueError(f"{field_name} must not contain duplicates")
 
 
+def _validate_cleanup_plan_map_keys(plan: TrialCleanupPlanModel) -> None:
+    for key, boundary in plan.resource_boundaries.items():
+        if key != boundary.boundary_id:
+            raise ValueError("resource boundary map keys must equal embedded boundary_id")
+    for key, obligation in plan.cleanup_obligations.items():
+        if key != obligation.obligation_id:
+            raise ValueError("cleanup obligation map keys must equal embedded obligation_id")
+
+
+def _validate_cleanup_plan_references(plan: TrialCleanupPlanModel) -> None:
+    referenced_boundaries = set(plan.clean_state.boundary_refs)
+    for obligation in plan.cleanup_obligations.values():
+        referenced_boundaries.update(obligation.boundary_refs)
+    unknown_boundaries = sorted(referenced_boundaries - set(plan.resource_boundaries))
+    if unknown_boundaries:
+        raise ValueError(f"cleanup plan references unknown resource boundaries: {', '.join(unknown_boundaries)}")
+
+    unknown_dependencies = sorted(
+        {ref for obligation in plan.cleanup_obligations.values() for ref in obligation.depends_on}
+        - set(plan.cleanup_obligations)
+    )
+    if unknown_dependencies:
+        raise ValueError(f"cleanup plan references unknown cleanup dependencies: {', '.join(unknown_dependencies)}")
+
+
+def _validate_cleanup_retry_safety(plan: TrialCleanupPlanModel) -> None:
+    if plan.retry_policy.max_attempts <= 1:
+        return
+    non_idempotent = any(obligation.idempotency != "idempotent" for obligation in plan.cleanup_obligations.values())
+    safe_policy = plan.retry_policy.after_effect_policy in {"reset", "compensate"}
+    if non_idempotent and not safe_policy:
+        raise ValueError("non-idempotent effects require explicit reset or compensation before retry")
+
+
 class CleanupResourceBoundaryModel(ContractModel):
     """Owned resource scope to which cleanup and restoration claims are bounded."""
 
@@ -163,34 +197,11 @@ class TrialCleanupPlanModel(ContractModel):
 
     @model_validator(mode="after")
     def _validate_plan(self) -> TrialCleanupPlanModel:
-        for key, boundary in self.resource_boundaries.items():
-            if key != boundary.boundary_id:
-                raise ValueError("resource boundary map keys must equal embedded boundary_id")
-        for key, obligation in self.cleanup_obligations.items():
-            if key != obligation.obligation_id:
-                raise ValueError("cleanup obligation map keys must equal embedded obligation_id")
-        boundary_ids = set(self.resource_boundaries)
-        referenced_boundaries = set(self.clean_state.boundary_refs)
-        for obligation in self.cleanup_obligations.values():
-            referenced_boundaries.update(obligation.boundary_refs)
-        unknown_boundaries = sorted(referenced_boundaries - boundary_ids)
-        if unknown_boundaries:
-            raise ValueError(f"cleanup plan references unknown resource boundaries: {', '.join(unknown_boundaries)}")
-        obligation_ids = set(self.cleanup_obligations)
-        unknown_dependencies = sorted(
-            {ref for obligation in self.cleanup_obligations.values() for ref in obligation.depends_on} - obligation_ids
-        )
-        if unknown_dependencies:
-            raise ValueError(f"cleanup plan references unknown cleanup dependencies: {', '.join(unknown_dependencies)}")
+        _validate_cleanup_plan_map_keys(self)
+        _validate_cleanup_plan_references(self)
         self._validate_acyclic_dependencies()
         validate_reset_retry_obligations(self.cleanup_obligations, self.retry_policy)
-        if self.retry_policy.max_attempts > 1:
-            non_idempotent = any(
-                obligation.idempotency != "idempotent" for obligation in self.cleanup_obligations.values()
-            )
-            safe_policy = self.retry_policy.after_effect_policy in {"reset", "compensate"}
-            if non_idempotent and not safe_policy:
-                raise ValueError("non-idempotent effects require explicit reset or compensation before retry")
+        _validate_cleanup_retry_safety(self)
         return self
 
     def _validate_acyclic_dependencies(self) -> None:
@@ -337,6 +348,11 @@ def validate_trial_cleanup_receipt(plan: TrialCleanupPlanModel, receipt: TrialCl
     unknown_results = sorted(set(receipt.obligation_results) - set(plan.cleanup_obligations))
     if unknown_results:
         raise ValueError(f"cleanup receipt references unknown obligations: {', '.join(unknown_results)}")
+    _validate_triggered_cleanup_results(plan, receipt)
+    _validate_clean_state_claim_boundaries(plan, receipt)
+
+
+def _validate_triggered_cleanup_results(plan: TrialCleanupPlanModel, receipt: TrialCleanupReceiptModel) -> None:
     trigger = _OUTCOME_TRIGGER[receipt.trial_outcome]
     triggered_required = {
         obligation_id
@@ -347,6 +363,9 @@ def validate_trial_cleanup_receipt(plan: TrialCleanupPlanModel, receipt: TrialCl
         result = receipt.obligation_results.get(obligation_id)
         if result is None or result.status != "succeeded":
             raise ValueError(f"required cleanup obligation '{obligation_id}' must succeed for trigger '{trigger}'")
+
+
+def _validate_clean_state_claim_boundaries(plan: TrialCleanupPlanModel, receipt: TrialCleanupReceiptModel) -> None:
     if receipt.clean_state_claim is not None:
         unknown_boundaries = sorted(set(receipt.clean_state_claim.boundary_refs) - set(plan.resource_boundaries))
         if unknown_boundaries:

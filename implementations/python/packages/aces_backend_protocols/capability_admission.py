@@ -52,9 +52,35 @@ def observation_capability_contract_gaps(manifest: BackendManifest) -> tuple[str
 
     required_contracts = set(observation.supported_evidence_contracts) | set(OBSERVATION_CAPABILITY_REQUIRED_CONTRACTS)
     missing = sorted(required_contracts - manifest.supported_contract_versions)
+    gaps: list[str] = []
     if missing:
-        return (f"capabilities.observation missing required contracts: {', '.join(missing)}",)
-    return ()
+        gaps.append(f"capabilities.observation missing required contracts: {', '.join(missing)}")
+    return tuple(gaps)
+
+
+def _required_cleanup_actions(plan: TrialCleanupPlanModel) -> set[str]:
+    return {
+        obligation.action_kind
+        for obligation in plan.cleanup_obligations.values()
+        if obligation.requirement == "required"
+    }
+
+
+def _required_cleanup_probe_methods(plan: TrialCleanupPlanModel) -> set[str]:
+    probe_refs = set(plan.clean_state.verification_probe_refs)
+    probe_refs.update(
+        probe_ref
+        for obligation in plan.cleanup_obligations.values()
+        if obligation.requirement == "required"
+        for probe_ref in obligation.verification_probe_refs
+    )
+    return {probe_ref.partition(":")[0] for probe_ref in probe_refs}
+
+
+def _require_supported_cleanup_values(label: str, required: set[str], supported: frozenset[str]) -> None:
+    unsupported = sorted(required - supported)
+    if unsupported:
+        raise ValueError(f"unsupported cleanup {label}: {', '.join(unsupported)}")
 
 
 def require_cleanup_plan_capability(manifest: BackendManifest, plan: TrialCleanupPlanModel) -> None:
@@ -64,23 +90,10 @@ def require_cleanup_plan_capability(manifest: BackendManifest, plan: TrialCleanu
     if cleanup is None:
         raise ValueError("backend does not declare cleanup capabilities")
 
-    required_actions = {
-        obligation.action_kind
-        for obligation in plan.cleanup_obligations.values()
-        if obligation.requirement == "required"
-    }
-    unsupported_actions = sorted(required_actions - cleanup.supported_action_kinds)
-    if unsupported_actions:
-        raise ValueError(f"unsupported cleanup action kinds: {', '.join(unsupported_actions)}")
-
-    probe_refs = set(plan.clean_state.verification_probe_refs)
-    for obligation in plan.cleanup_obligations.values():
-        if obligation.requirement == "required":
-            probe_refs.update(obligation.verification_probe_refs)
-    probe_methods = {probe_ref.partition(":")[0] for probe_ref in probe_refs}
-    unsupported_methods = sorted(probe_methods - cleanup.supported_verification_methods)
-    if unsupported_methods:
-        raise ValueError(f"unsupported cleanup verification methods: {', '.join(unsupported_methods)}")
+    _require_supported_cleanup_values("action kinds", _required_cleanup_actions(plan), cleanup.supported_action_kinds)
+    _require_supported_cleanup_values(
+        "verification methods", _required_cleanup_probe_methods(plan), cleanup.supported_verification_methods
+    )
 
     if plan.clean_state.mode == "declared-reusable" and not cleanup.supports_reusable_state:
         raise ValueError("backend does not support declared reusable state")
