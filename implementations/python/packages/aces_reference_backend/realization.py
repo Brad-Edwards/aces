@@ -90,7 +90,7 @@ def interpret_provisioning_plan(plan: ProvisioningPlan) -> Realization:
 
     return Realization(
         networks=tuple(sorted(networks, key=lambda spec: spec.address)),
-        containers=tuple(sorted(containers, key=lambda spec: spec.address)),
+        containers=_order_containers(containers),
         placements=tuple(sorted(placements, key=lambda item: item.address)),
         diagnostics=tuple(diagnostics),
     )
@@ -158,9 +158,41 @@ def _container_spec(
             image_ref=image_ref,
             networks=network_addresses,
             services=services,
+            network_namespace_target=_network_namespace_target(payload),
         ),
         diagnostics,
     )
+
+
+def _network_namespace_target(payload: Mapping[str, object]) -> str:
+    target = payload.get("network_namespace_target")
+    return target if isinstance(target, str) else ""
+
+
+def _order_containers(containers: list[ContainerSpec]) -> tuple[ContainerSpec, ...]:
+    """Place namespace owners before sharers while retaining deterministic order."""
+
+    by_address = {spec.address: spec for spec in containers}
+    ordered: list[ContainerSpec] = []
+    visiting: set[str] = set()
+    visited: set[str] = set()
+
+    def visit(address: str) -> None:
+        if address in visited:
+            return
+        if address in visiting:
+            return
+        visiting.add(address)
+        spec = by_address[address]
+        if spec.network_namespace_target in by_address:
+            visit(spec.network_namespace_target)
+        visiting.remove(address)
+        visited.add(address)
+        ordered.append(spec)
+
+    for address in sorted(by_address):
+        visit(address)
+    return tuple(ordered)
 
 
 def _service_specs(

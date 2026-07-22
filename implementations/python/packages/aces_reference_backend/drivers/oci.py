@@ -45,6 +45,12 @@ _CODE_TIMEOUT = "reference-backend.driver.timeout"
 _CODE_RUNTIME_UNAVAILABLE = "reference-backend.driver.runtime-unavailable"
 _CODE_COMMAND_FAILED = "reference-backend.driver.command-failed"
 _CODE_IMAGE_NOT_ALLOWED = "reference-backend.driver.image-not-allowed"
+_CODE_NETWORK_NAMESPACE_TARGET_UNAVAILABLE = "reference-backend.driver.network-namespace-target-unavailable"
+_CODE_NETWORK_NAMESPACE_CONFLICT = "reference-backend.driver.network-namespace-conflict"
+
+_OWNERSHIP_INSPECT_FORMAT = (
+    '{{.Id}}\n{{index .Config.Labels "aces.workspace"}}\n{{index .Config.Labels "aces.address"}}\n{{.Name}}'
+)
 
 _KIND_TO_CODE = {
     "timeout": _CODE_TIMEOUT,
@@ -124,16 +130,22 @@ class OciDeploymentDriver:
         # removes exactly what was created even when a payload pinned an
         # explicit name that differs from the address's last segment.
         self._names: dict[str, str] = {}
+        # Native identifiers never cross the portable driver boundary. They are
+        # retained only so namespace joins can prove that the current runtime
+        # object is the exact container this driver created in this realize()
+        # transaction, rather than trusting a stale ACES address/name mapping.
+        self._native_ids: dict[str, str] = {}
 
-    def _label_args(self) -> list[str]:
-        return ["--label", f"aces.workspace={self._workspace}"]
+    def _label_args(self, address: str) -> list[str]:
+        return [
+            "--label",
+            f"aces.workspace={self._workspace}",
+            "--label",
+            f"aces.address={address}",
+        ]
 
-    def _run(self, argv: list[str]) -> tuple[bool, str | None]:
-        """Run a fixed argv; return (success, failure_kind).
-
-        Native stdout/stderr is consumed but never returned to the caller --
-        only a coarse, fixed failure-kind string used to pick a diagnostic.
-        """
+    def _invoke(self, argv: list[str]) -> tuple[bool, str | None, str]:
+        """Run fixed argv and privately return native stdout for verification."""
 
         try:
             completed = self._runner(
@@ -144,11 +156,22 @@ class OciDeploymentDriver:
                 check=False,
             )
         except subprocess.TimeoutExpired:
-            return False, "timeout"
+            return False, "timeout", ""
         except FileNotFoundError:
-            return False, "runtime-missing"
+            return False, "runtime-missing", ""
         kind = None if completed.returncode == 0 else "command-failed"
-        return kind is None, kind
+        stdout = completed.stdout if isinstance(completed.stdout, str) else ""
+        return kind is None, kind, stdout
+
+    def _run(self, argv: list[str]) -> tuple[bool, str | None]:
+        """Run a fixed argv; return (success, failure_kind).
+
+        Native stdout/stderr is consumed but never returned to the caller --
+        only a coarse, fixed failure-kind string used to pick a diagnostic.
+        """
+
+        ok, kind, _stdout = self._invoke(argv)
+        return ok, kind
 
     def realize(
         self,
@@ -157,10 +180,13 @@ class OciDeploymentDriver:
         containers: tuple[ContainerSpec, ...],
     ) -> DriverResult:
         diagnostics: list[Diagnostic] = []
+        diagnostics.extend(self._network_namespace_diagnostics(containers))
+        if diagnostics:
+            return DriverResult(diagnostics=tuple(diagnostics))
         network_handles: list[NetworkHandle] = []
         for spec in networks:
             runtime_name = provider_resource_name(spec.address, prefix="aces")
-            argv = [self._runtime, "network", "create", *self._label_args(), runtime_name]
+            argv = [self._runtime, "network", "create", *self._label_args(spec.address), runtime_name]
             ok, kind = self._run(argv)
             if ok:
                 self._realized.add(spec.address)
@@ -169,7 +195,16 @@ class OciDeploymentDriver:
             else:
                 diagnostics.append(self._failure(spec.address, kind))
         container_handles: list[ContainerHandle] = []
-        for spec in containers:
+        for spec in self._ordered_containers(containers):
+            if spec.network_namespace_target and not self._is_current_owned_container(spec.network_namespace_target):
+                diagnostics.append(
+                    self._network_namespace_diagnostic(
+                        spec.address,
+                        code=_CODE_NETWORK_NAMESPACE_TARGET_UNAVAILABLE,
+                        message="The network namespace target is not a current run-owned container.",
+                    )
+                )
+                continue
             runtime_name = provider_resource_name(spec.address, prefix="aces")
             image = self._image_policy.image_for(spec.image_ref)
             if not self._image_policy.permits(image):
@@ -180,7 +215,7 @@ class OciDeploymentDriver:
                 "run",
                 "--detach",
                 "--rm",
-                *self._label_args(),
+                *self._label_args(spec.address),
                 "--name",
                 runtime_name,
                 # Attach the container to every requested network (created above
@@ -188,16 +223,19 @@ class OciDeploymentDriver:
                 # not silently left on the runtime default network. spec.networks
                 # carries network resource addresses; resolve each to the runtime
                 # name this driver actually created.
-                *self._network_args(spec.networks),
+                *self._network_args(spec),
                 image,
                 # Fixed keep-alive so generic images do not exit immediately.
                 # Pure argv tokens -- never a shell string.
                 *self._keep_alive,
             ]
-            ok, kind = self._run(argv)
+            ok, kind, native_stdout = self._invoke(argv)
             if ok:
                 self._realized.add(spec.address)
                 self._names[spec.address] = runtime_name
+                native_id = native_stdout.strip().splitlines()[0] if native_stdout.strip() else ""
+                if native_id:
+                    self._native_ids[spec.address] = native_id
                 container_handles.append(ContainerHandle(address=spec.address, realized=True))
             else:
                 diagnostics.append(self._failure(spec.address, kind))
@@ -214,11 +252,100 @@ class OciDeploymentDriver:
             return DriverResult(diagnostics=result.diagnostics)
         return result
 
-    def _network_args(self, network_addresses: tuple[str, ...]) -> list[str]:
+    def _network_args(self, spec: ContainerSpec) -> list[str]:
+        if spec.network_namespace_target:
+            return ["--network", f"container:{self._name_for(spec.network_namespace_target)}"]
         args: list[str] = []
-        for address in network_addresses:
+        for address in spec.networks:
             args.extend(("--network", self._name_for(address)))
         return args
+
+    def _network_namespace_diagnostics(self, containers: tuple[ContainerSpec, ...]) -> list[Diagnostic]:
+        # Namespace sharing is a transaction-local relation. A prior realized
+        # address may now name a replaced runtime object and is never sufficient
+        # proof of ownership for a new join.
+        available = {spec.address for spec in containers}
+        diagnostics: list[Diagnostic] = []
+        for spec in containers:
+            target = spec.network_namespace_target
+            if not target:
+                continue
+            if spec.networks:
+                diagnostics.append(
+                    self._network_namespace_diagnostic(
+                        spec.address,
+                        code=_CODE_NETWORK_NAMESPACE_CONFLICT,
+                        message="A shared network namespace cannot be combined with independent networks.",
+                    )
+                )
+            elif target == spec.address or target not in available:
+                diagnostics.append(
+                    self._network_namespace_diagnostic(
+                        spec.address,
+                        code=_CODE_NETWORK_NAMESPACE_TARGET_UNAVAILABLE,
+                        message="The network namespace target is not a run-owned container.",
+                    )
+                )
+        return diagnostics
+
+    def _is_current_owned_container(self, address: str) -> bool:
+        expected_native_id = self._native_ids.get(address)
+        expected_name = self._names.get(address)
+        if not expected_native_id or not expected_name:
+            return False
+        ok, _kind, stdout = self._invoke(
+            [
+                self._runtime,
+                "inspect",
+                "--format",
+                _OWNERSHIP_INSPECT_FORMAT,
+                expected_name,
+            ]
+        )
+        if not ok:
+            return False
+        fields = stdout.rstrip("\n").split("\n")
+        if len(fields) != 4:
+            return False
+        native_id, workspace, owned_address, native_name = fields
+        return (
+            native_id == expected_native_id
+            and workspace == self._workspace
+            and owned_address == address
+            and native_name.removeprefix("/") == expected_name
+        )
+
+    @staticmethod
+    def _ordered_containers(containers: tuple[ContainerSpec, ...]) -> tuple[ContainerSpec, ...]:
+        by_address = {spec.address: spec for spec in containers}
+        ordered: list[ContainerSpec] = []
+        visiting: set[str] = set()
+        visited: set[str] = set()
+
+        def visit(address: str) -> None:
+            if address in visited or address in visiting:
+                return
+            visiting.add(address)
+            spec = by_address[address]
+            if spec.network_namespace_target in by_address:
+                visit(spec.network_namespace_target)
+            visiting.remove(address)
+            visited.add(address)
+            ordered.append(spec)
+
+        for address in sorted(by_address):
+            visit(address)
+        return tuple(ordered)
+
+    @staticmethod
+    def _network_namespace_diagnostic(address: str, *, code: str, message: str) -> Diagnostic:
+        return Diagnostic(
+            code=code,
+            domain=_DOMAIN,
+            address=address,
+            message=f"Container runtime rejected network namespace sharing for '{address}': {message}",
+            severity=Severity.ERROR,
+        )
 
     def _rollback(
         self,
@@ -249,6 +376,7 @@ class OciDeploymentDriver:
                 # teardown stays tracked so a retry can reconcile it.
                 self._realized.discard(address)
                 self._names.pop(address, None)
+                self._native_ids.pop(address, None)
             else:
                 diagnostics.append(self._failure(address, kind))
             container_handles.append(ContainerHandle(address=address, realized=not ok))

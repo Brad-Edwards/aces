@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
   "stability": "draft",
-  "content_hash": "bed7ebe95f4a323d00e45be196ab218870e2ef76b0b6e726fba15bd9ca5d8fab",
+  "content_hash": "0f29ce7ba6ecefdaff0df3212aa676196e88ec7b91f416f7ad08dfbe2f439e8c",
   "last_change": {
-    "summary": "Published SCE-004 goal-oriented workflow-step semantics for instantiated scenarios.",
-    "content_hash": "bed7ebe95f4a323d00e45be196ab218870e2ef76b0b6e726fba15bd9ca5d8fab"
+    "summary": "Carried typed node-to-node network namespace sharing into instantiated scenarios.",
+    "content_hash": "0f29ce7ba6ecefdaff0df3212aa676196e88ec7b91f416f7ad08dfbe2f439e8c"
   }
 }

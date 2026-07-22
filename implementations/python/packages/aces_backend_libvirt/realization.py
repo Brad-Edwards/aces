@@ -45,6 +45,7 @@ from .driver import DomainSpec, NetworkAcl, NetworkSpec, ServiceSpec
 from .manifest import LIBVIRT_PROVISIONER_CAPABILITIES
 
 _DOMAIN = "runtime"
+_NETWORK_NAMESPACE_UNSUPPORTED = "libvirt-backend.network-namespace-unsupported"
 
 
 @dataclass(frozen=True)
@@ -114,6 +115,8 @@ def interpret_provisioning_plan(
             network_resources.append((resource, payload))
         elif resource.resource_type == NODE_RESOURCE_TYPE:
             node_resources.append((resource, payload))
+            if payload.get("network_namespace_target"):
+                diagnostics.append(_network_namespace_unsupported(resource.address))
         else:
             placement_resources.append((resource, payload))
 
@@ -507,6 +510,16 @@ def _unsupported_resource(resource: PlannedResource) -> Diagnostic:
             "Libvirt backend does not realize provisioning resource type "
             f"'{resource.resource_type}' for '{resource.address}'."
         ),
+        severity=Severity.ERROR,
+    )
+
+
+def _network_namespace_unsupported(address: str) -> Diagnostic:
+    return Diagnostic(
+        code=_NETWORK_NAMESPACE_UNSUPPORTED,
+        domain=_DOMAIN,
+        address=address,
+        message=(f"Libvirt backend cannot realize exact container network namespace sharing for '{address}'."),
         severity=Severity.ERROR,
     )
 

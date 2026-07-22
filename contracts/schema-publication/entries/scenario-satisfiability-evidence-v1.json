@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "77f436950d2db5a922d57fc4d170400cec17725fc10a608159ddf01a2bee8cca",
+  "content_hash": "2eb7df8241ae9450a7577f1daf6b90d13121ee4d060217038d7d27d1c6473fe8",
   "last_change": {
-    "summary": "Carried SCE-004 goal-oriented workflow-step semantics through satisfiability evidence.",
-    "content_hash": "77f436950d2db5a922d57fc4d170400cec17725fc10a608159ddf01a2bee8cca"
+    "summary": "Carried typed node-to-node network namespace sharing through satisfiability evidence.",
+    "content_hash": "2eb7df8241ae9450a7577f1daf6b90d13121ee4d060217038d7d27d1c6473fe8"
   }
 }

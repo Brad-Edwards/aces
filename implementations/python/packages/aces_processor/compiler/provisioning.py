@@ -136,12 +136,16 @@ def _compile_node_runtimes(
         )
         if domain_binding is not None and domain_binding.role is DomainNodeRole.MEMBER:
             dependency_addresses.extend(_node_address(name) for name in domain_binding.controller_names)
+        network_namespace_target = _network_namespace_target(node)
+        if network_namespace_target:
+            dependency_addresses.append(_node_address(network_namespace_target))
         _record_node_runtime(
             node_name=node_name,
             node_type=node.type,
             node_spec=node_spec,
             infra_spec=infra_spec,
             dependency_addresses=dependency_addresses,
+            network_namespace_target=(_node_address(network_namespace_target) if network_namespace_target else ""),
             domain_topology=compiled_domain_binding,
             targets=targets,
         )
@@ -155,6 +159,7 @@ def _record_node_runtime(
     node_spec: dict[str, Any],
     infra_spec: dict[str, Any],
     dependency_addresses: list[str],
+    network_namespace_target: str,
     domain_topology: DomainTopologyBinding | None,
     targets: _NodeRuntimeTargets,
 ) -> None:
@@ -176,11 +181,22 @@ def _record_node_runtime(
         node_type=node_spec.get("type", ""),
         os_family=node_spec.get("os", "") or "",
         count=infra_spec.get("count"),
+        network_namespace_target=network_namespace_target,
         domain_topology=domain_topology,
         spec=spec,
         ordering_dependencies=_dedupe(dependency_addresses),
         refresh_dependencies=_dedupe(dependency_addresses),
     )
+
+
+def _network_namespace_target(node: Node) -> str:
+    runtime = node.runtime
+    container = runtime.container if runtime is not None else None
+    namespaces = container.namespaces if container is not None else None
+    network = namespaces.network if namespaces is not None else None
+    if network is None:
+        return ""
+    return network.target_node_ref.removeprefix("nodes.")
 
 
 def _feature_dependency_addresses(

@@ -41,6 +41,7 @@ from .runtime_container import (
     RuntimeExtraHost,
     RuntimeInitProcess,
     RuntimeNamespaceConfiguration,
+    RuntimeNetworkNamespace,
 )
 from .runtime_filesystem import (
     RuntimeFilesystemEntry,
@@ -122,6 +123,7 @@ __all__ = [
     "RuntimeMountPropagation",
     "RuntimeMountSourceKind",
     "RuntimeNamespaceConfiguration",
+    "RuntimeNetworkNamespace",
     "RuntimeNetworkBackendDetail",
     "RuntimeNetworkDriver",
     "RuntimeNetworkEndpoint",

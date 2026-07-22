@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-snapshot-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "3160e7e75273205becd93392976cb9e166b06cbd1dfde768c79c018c932603ed",
+  "content_hash": "d52faa1cc68c95c0897db38e21765951a2d458a91610b350b44120f7505c723e",
   "last_change": {
-    "summary": "Published SCE-004 goal-oriented workflow-step semantics in instantiated snapshots.",
-    "content_hash": "3160e7e75273205becd93392976cb9e166b06cbd1dfde768c79c018c932603ed"
+    "summary": "Carried typed node-to-node network namespace sharing into instantiated snapshots.",
+    "content_hash": "d52faa1cc68c95c0897db38e21765951a2d458a91610b350b44120f7505c723e"
   }
 }

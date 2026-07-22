@@ -21,6 +21,7 @@ def _node_resource(
     os_family: str = "linux",
     *,
     services: list[dict[str, object]] | None = None,
+    network_namespace_target: str = "",
 ) -> PlannedResource:
     return PlannedResource(
         address=address,
@@ -31,6 +32,7 @@ def _node_resource(
             "node_name": name,
             "node_type": "vm",
             "os_family": os_family,
+            "network_namespace_target": network_namespace_target,
             "spec": {
                 "node": {"services": services or []},
                 "infrastructure": {"networks": ["lan"]},
@@ -135,6 +137,25 @@ def test_interpret_resolves_container_network_references_to_addresses():
     realization = interpret_provisioning_plan(plan)
 
     assert realization.containers[0].networks == ("provision.network.lan",)
+
+
+def test_interpret_carries_canonical_network_namespace_target_and_orders_owner_first():
+    plan = _plan(
+        _node_resource(
+            "provision.node.aaa-capture",
+            "aaa-capture",
+            network_namespace_target="provision.node.zzz-owner",
+        ),
+        _node_resource("provision.node.zzz-owner", "zzz-owner"),
+    )
+
+    realization = interpret_provisioning_plan(plan)
+
+    assert [spec.address for spec in realization.containers] == [
+        "provision.node.zzz-owner",
+        "provision.node.aaa-capture",
+    ]
+    assert realization.containers[1].network_namespace_target == "provision.node.zzz-owner"
 
 
 def test_interpret_passes_through_unresolved_network_reference():
