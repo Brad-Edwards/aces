@@ -623,7 +623,7 @@ APTL and any other scheduler use this same handoff.
 The portable handoff for clean-state requirements, cleanup obligations,
 execution-attempt receipts, backend capability, and serial-by-default isolation
 proof is specified in
-[`cleanup-contracts.md`](../../../specs/formal/scenario-variation-trial-realization/cleanup-contracts.md).
+{download}`cleanup-contracts.md <../../../specs/formal/scenario-variation-trial-realization/cleanup-contracts.md>`.
 Those contracts describe admitted intent and evidence; they do not introduce a
 scheduler queue or a second scenario lifecycle.
 
