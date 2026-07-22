@@ -2,9 +2,9 @@
   "contract_id": "participant-decision-surface-v1",
   "schema_path": "contracts/schemas/control-plane/participant-decision-surface-v1.json",
   "stability": "draft",
-  "content_hash": "5cd19386eec34eb5cfaa70f65c441ecfc743f1637a874dcecb62e02f7f59eee0",
+  "content_hash": "ccaa6a83ff8380d328339c51a8e6c7cca7fdb4aefb10d25b4f0c356840c9e1a6",
   "last_change": {
-    "summary": "Initial publication of the SEM-220 participant-local decision-surface payload with discriminated open-ended, constrained-form, and candidate-set selection meaning; explicit visibility, eligibility, constraint, support, evidence, provenance, and lifecycle-separation invariants.",
-    "content_hash": "5cd19386eec34eb5cfaa70f65c441ecfc743f1637a874dcecb62e02f7f59eee0"
+    "summary": "Require SEM-226 item-level exposure bindings for every serialized context, action, and affordance reference, including authorization-record identity, participant/audience/order scope, immutable effective and selected policy coordinates, markings, transformation and declassification bases, evidence, provenance, limitations, and item-bound delivery-time-authorized realized occurrences.",
+    "content_hash": "ccaa6a83ff8380d328339c51a8e6c7cca7fdb4aefb10d25b4f0c356840c9e1a6"
   }
 }

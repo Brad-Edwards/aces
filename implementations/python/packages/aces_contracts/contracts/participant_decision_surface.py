@@ -10,6 +10,9 @@ from pydantic_core import CoreSchema
 
 from .base import ContractModel, NonEmptyString
 from .participant_context import ParticipantContextViewModel
+from .participant_decision_surface_exposure import (
+    ParticipantDecisionSurfaceExposureBindingModel,
+)
 from .schema_invariants import _add_aces_invariant
 
 ParticipantDecisionSurfaceVisibility = Literal[
@@ -227,6 +230,92 @@ def _validate_surface_affordances(
         raise ValueError("affordance_refs must be carried by action_entries: " + ", ".join(unknown))
 
 
+def _surface_exposed_refs(surface: ParticipantDecisionSurfaceModel) -> set[str]:
+    return {
+        *surface.visible_context_refs,
+        *(entry.action_contract_address for entry in surface.action_entries),
+        *surface.affordance_refs,
+    }
+
+
+def _surface_exposure_binding_index(
+    surface: ParticipantDecisionSurfaceModel,
+) -> dict[str, ParticipantDecisionSurfaceExposureBindingModel]:
+    bindings = {binding.item_ref: binding for binding in surface.exposure_bindings}
+    _require_unique([binding.item_ref for binding in surface.exposure_bindings], "exposure_bindings.item_ref")
+    expected = _surface_exposed_refs(surface)
+    if bindings.keys() != expected:
+        missing = sorted(expected - bindings.keys())
+        extra = sorted(bindings.keys() - expected)
+        details = []
+        if missing:
+            details.append("missing " + ", ".join(missing))
+        if extra:
+            details.append("unexpected " + ", ".join(extra))
+        raise ValueError("exposure_bindings must exactly cover serialized surface refs: " + "; ".join(details))
+    return bindings
+
+
+def _validate_binding_surface_coordinates(
+    binding: ParticipantDecisionSurfaceExposureBindingModel,
+    surface: ParticipantDecisionSurfaceModel,
+) -> None:
+    comparisons = (
+        ("participant_address", binding.participant_address, surface.participant_address),
+        ("episode_id", binding.episode_id, surface.episode_id),
+        ("audience_scope_ref", binding.audience_scope_ref, surface.audience_scope_ref),
+        ("observation_point", binding.observation_point, surface.observation_point),
+        ("observation_order", binding.observation_order, surface.observation_order),
+        ("projection_policy_ref", binding.projection_policy_ref, surface.projection_policy_ref),
+        ("projection_policy_revision", binding.projection_policy_revision, surface.projection_policy_revision),
+        ("exposure_policy_ref", binding.exposure_policy_ref, surface.exposure_policy_ref),
+    )
+    mismatched = [name for name, binding_value, surface_value in comparisons if binding_value != surface_value]
+    if mismatched:
+        raise ValueError(
+            f"exposure binding {binding.item_ref!r} disagrees with the surface on: " + ", ".join(mismatched)
+        )
+
+
+def _validate_binding_surface_evidence(
+    binding: ParticipantDecisionSurfaceExposureBindingModel,
+    surface: ParticipantDecisionSurfaceModel,
+) -> None:
+    carried_refs = (
+        ("evidence_refs", binding.evidence_refs, surface.evidence_refs),
+        ("provenance_refs", binding.provenance_refs, surface.provenance_refs),
+        ("result markings", binding.result_marking_definition_refs, surface.marking_definition_refs),
+    )
+    for label, binding_refs, surface_refs in carried_refs:
+        if not set(binding_refs).issubset(surface_refs):
+            raise ValueError(f"exposure binding {binding.item_ref!r} {label} must be carried by the surface")
+
+
+def _validate_binding_realization_evidence(
+    binding: ParticipantDecisionSurfaceExposureBindingModel,
+    surface: ParticipantDecisionSurfaceModel,
+) -> None:
+    if binding.realization is None:
+        return
+    carried_refs = (
+        ("evidence", binding.realization.evidence_refs, surface.evidence_refs),
+        ("provenance", binding.realization.provenance_refs, surface.provenance_refs),
+    )
+    for label, realization_refs, surface_refs in carried_refs:
+        if not set(realization_refs).issubset(surface_refs):
+            raise ValueError(
+                f"exposure binding {binding.item_ref!r} realization {label} must be carried by the surface"
+            )
+
+
+def _validate_surface_exposure_bindings(surface: ParticipantDecisionSurfaceModel) -> None:
+    _surface_exposure_binding_index(surface)
+    for binding in surface.exposure_bindings:
+        _validate_binding_surface_coordinates(binding, surface)
+        _validate_binding_surface_evidence(binding, surface)
+        _validate_binding_realization_evidence(binding, surface)
+
+
 class ParticipantDecisionSurfaceModel(ContractModel):
     """One participant-local decision projection at one episode order point."""
 
@@ -240,6 +329,7 @@ class ParticipantDecisionSurfaceModel(ContractModel):
     context_view_ref: NonEmptyString
     implementation_selection_ref: NonEmptyString
     decision_control_mode: NonEmptyString
+    audience_scope_ref: NonEmptyString
     projection_policy_ref: NonEmptyString
     projection_policy_revision: NonEmptyString
     exposure_policy_ref: NonEmptyString
@@ -247,6 +337,7 @@ class ParticipantDecisionSurfaceModel(ContractModel):
     visible_context_refs: list[NonEmptyString] = Field(min_length=1)
     action_entries: list[ParticipantDecisionSurfaceActionEntryModel] = Field(min_length=1)
     affordance_refs: list[NonEmptyString] = Field(default_factory=list)
+    exposure_bindings: list[ParticipantDecisionSurfaceExposureBindingModel] = Field(min_length=1)
     form: ParticipantDecisionSurfaceFormModel
     evidence_refs: list[NonEmptyString] = Field(min_length=1)
     provenance_refs: list[NonEmptyString] = Field(min_length=1)
@@ -268,6 +359,7 @@ class ParticipantDecisionSurfaceModel(ContractModel):
         entries_by_id, entries_by_address = _surface_entry_indexes(self.action_entries)
         _validate_surface_form_relations(self.form, entries_by_id, entries_by_address)
         _validate_surface_affordances(self.affordance_refs, self.action_entries)
+        _validate_surface_exposure_bindings(self)
         return self
 
     @classmethod
@@ -293,6 +385,15 @@ class ParticipantDecisionSurfaceModel(ContractModel):
             "those facts remain in their existing lifecycle contracts.",
             validator="aces_contracts.contracts.ParticipantDecisionSurfaceModel",
             inputs=[{"contract_id": "participant-decision-surface-v1", "instance_path": "#"}],
+        )
+        _add_aces_invariant(
+            json_schema,
+            "decision-surface-sem226-item-exposure-agreement",
+            "Every serialized context, action, and affordance reference must have one participant-, audience-, "
+            "order-, immutable-policy-, authorization-, marking-, evidence-, and provenance-bound exposure decision; "
+            "realized delivery is an optional item- and delivery-authorization-bound occurrence.",
+            validator="aces_contracts.contracts.ParticipantDecisionSurfaceModel._validate_surface_relations",
+            inputs=[{"contract_id": "participant-decision-surface-v1", "instance_path": "#/exposure_bindings"}],
         )
         return json_schema
 

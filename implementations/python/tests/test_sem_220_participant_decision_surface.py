@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -28,6 +29,10 @@ from aces_processor.models import (
     ParticipantBehaviorSpecificationRuntime,
     ParticipantDecisionSurfaceActionAssessment,
     ParticipantDecisionSurfaceProjectionInput,
+    ParticipantExposureAssessment,
+    ParticipantExposureAuthorizationRecord,
+    ParticipantExposurePolicyRevision,
+    ParticipantExposureResolvers,
     ParticipantObservationBoundaryRuntime,
     ParticipantObservationStatus,
     ParticipantToolAffordanceRuntime,
@@ -94,6 +99,41 @@ def _surface_payload(*, surface_form: str = "candidate_action_set") -> dict[str,
             "loss_disclosure_refs": ["forms.scan.loss.none.v1"],
         },
     }
+    evidence_ref = "evidence.surface.red.order-0"
+    provenance_ref = "provenance.surface.red.order-0"
+
+    def exposure_binding(item_ref: str) -> dict[str, object]:
+        return {
+            "item_ref": item_ref,
+            "authorization_record_ref": f"exposure-authorizations.{item_ref}.v1",
+            "source_ref": item_ref,
+            "source_layer_ref": f"source-layers.{item_ref}",
+            "participant_address": PARTICIPANT,
+            "episode_id": EPISODE,
+            "audience_scope_ref": "audience.participant.red-agent",
+            "observation_point": "behavior-history:0",
+            "observation_order": 0,
+            "visibility_basis_ref": f"visibility-bases.{item_ref}",
+            "projection_policy_ref": "projection-policy.red.v1",
+            "projection_policy_revision": "1",
+            "exposure_policy_ref": "exposure-policy.red.v1",
+            "exposure_policy_version": "1",
+            "exposure_policy_digest": "sha256:" + "3" * 64,
+            "operation": "disclosure",
+            "operation_basis_ref": f"disclosures.{item_ref}.v1",
+            "actor_ref": "actors.runtime-projector",
+            "controller_ref": "controllers.red-agent",
+            "authority_basis_ref": "authorities.red-agent.v1",
+            "source_marking_definition_refs": ["markings.participant-visible.v1"],
+            "result_marking_definition_refs": ["markings.participant-visible.v1"],
+            "source_provenance_refs": [provenance_ref],
+            "result_provenance_refs": [provenance_ref],
+            "evidence_refs": [evidence_ref],
+            "provenance_refs": [provenance_ref],
+            "loss_and_limitations": ["No known projection loss"],
+            "realization": None,
+        }
+
     return {
         "surface_id": "decision-surfaces.red.episode-1.order-0",
         "participant_address": PARTICIPANT,
@@ -105,6 +145,7 @@ def _surface_payload(*, surface_form: str = "candidate_action_set") -> dict[str,
         "context_view_ref": "context-views.red.episode-1.order-0",
         "implementation_selection_ref": "participant-selections.red.reference.v1",
         "decision_control_mode": "autonomous",
+        "audience_scope_ref": "audience.participant.red-agent",
         "projection_policy_ref": "projection-policy.red.v1",
         "projection_policy_revision": "1",
         "exposure_policy_ref": "exposure-policy.red.v1",
@@ -112,9 +153,14 @@ def _surface_payload(*, surface_form: str = "candidate_action_set") -> dict[str,
         "visible_context_refs": ["context.public"],
         "action_entries": [entry],
         "affordance_refs": [SCAN_AFFORDANCE],
+        "exposure_bindings": [
+            exposure_binding("context.public"),
+            exposure_binding(SCAN),
+            exposure_binding(SCAN_AFFORDANCE),
+        ],
         "form": forms[surface_form],
-        "evidence_refs": ["evidence.surface.red.order-0"],
-        "provenance_refs": ["provenance.surface.red.order-0"],
+        "evidence_refs": [evidence_ref],
+        "provenance_refs": [provenance_ref],
         "marking_definition_refs": ["markings.participant-visible.v1"],
         "redaction_policy_ref": "redaction.red.v1",
         "semantic_limitations": ["Presentation does not imply selection, admission, execution, result, or outcome"],
@@ -244,7 +290,9 @@ def _history() -> tuple[ParticipantBehaviorHistoryEvent, ...]:
             action_contract_address=SCAN,
             observation_boundary_address=BOUNDARY,
             observation_status=ParticipantObservationStatus.TERMINAL,
+            actor_provenance="participant:red-agent",
             post_state_digest="sha256:known-after-reveal",
+            details={"evidence_refs": ["evidence.observation.reveal-1"]},
         ),
     )
 
@@ -263,6 +311,81 @@ def _assessment(action_address: str, *, eligibility: str = "eligible") -> Partic
     )
 
 
+def _projection_exposure_authorization(
+    item_ref: str,
+    *,
+    observation_order: int,
+) -> ParticipantExposureAuthorizationRecord:
+    evidence_ref = f"evidence.surface.red.order-{observation_order}"
+    provenance_ref = f"provenance.surface.red.order-{observation_order}"
+    return ParticipantExposureAuthorizationRecord(
+        authorization_record_ref=f"exposure-authorizations.{item_ref}.order-{observation_order}",
+        item_ref=item_ref,
+        source_ref=item_ref,
+        source_layer_ref=f"source-layers.{item_ref}",
+        participant_address=PARTICIPANT,
+        episode_id=EPISODE,
+        audience_scope_ref="audience.participant.red-agent",
+        effective_from_order=0,
+        effective_through_order=None,
+        implementation_selection_ref="participant-selections.red.agent.v1",
+        projection_policy_ref="projection-policy.red.v1",
+        projection_policy_revision="1",
+        exposure_policy_ref="exposure-policy.red.v1",
+        exposure_policy_version="1",
+        exposure_policy_digest="sha256:" + "3" * 64,
+        visibility_basis_ref=f"visibility-bases.{item_ref}",
+        operation="disclosure",
+        operation_basis_ref=f"disclosures.{item_ref}.v1",
+        actor_ref="actors.runtime-projector",
+        controller_ref="controllers.red-agent",
+        authority_basis_ref="authorities.red-agent.v1",
+        backend_support_ref="backend-support.reference.v1",
+        source_marking_definition_refs=("markings.participant-visible.v1",),
+        result_marking_definition_refs=("markings.participant-visible.v1",),
+        source_provenance_refs=(provenance_ref,),
+        result_provenance_refs=(provenance_ref,),
+        evidence_refs=(evidence_ref,),
+        provenance_refs=(provenance_ref,),
+        loss_and_limitations=("No known projection loss",),
+    )
+
+
+def _projection_exposure_assessment(item_ref: str, *, observation_order: int) -> ParticipantExposureAssessment:
+    return ParticipantExposureAssessment(
+        item_ref=item_ref,
+        authorization_record_ref=f"exposure-authorizations.{item_ref}.order-{observation_order}",
+    )
+
+
+def _projection_implementation_selection(
+    *,
+    decision_control_mode: str,
+    permitted_refs: tuple[str, ...],
+) -> ParticipantImplementationSelectionModel:
+    return ParticipantImplementationSelectionModel.model_validate(
+        {
+            "participant_address": PARTICIPANT,
+            "implementation_identity": {"name": "reference-red-agent", "version": "1.0.0"},
+            "manifest_ref": "participant-implementation-manifests.reference.v1",
+            "manifest_digest": "sha256:" + "1" * 64,
+            "selected_decision_surface_mode": decision_control_mode,
+            "participant_contract_versions": ["participant-behavior-history-event-stream-v1"],
+            "exposure_policy": {
+                "policy_id": "exposure-policy.red.v1",
+                "policy_version": "1",
+                "policy_digest": "sha256:" + "3" * 64,
+                "exposure_policy_kinds": ["task-statement"],
+                "disclosed_refs": list(permitted_refs),
+                "withheld_refs": [],
+                "tool_affordance_refs": [],
+                "visibility_scope_refs": [],
+                "constraints": {},
+            },
+        }
+    )
+
+
 def _projection_input(
     *,
     observation_order: int,
@@ -271,6 +394,8 @@ def _projection_input(
     implementation_selection_ref: str = "participant-selections.red.agent.v1",
     decision_control_mode: str = "autonomous",
 ) -> ParticipantDecisionSurfaceProjectionInput:
+    affordance_address = SCAN_AFFORDANCE if action_address == SCAN else EXFILTRATE_AFFORDANCE
+    emitted_refs = ("context.public", action_address, affordance_address)
     return ParticipantDecisionSurfaceProjectionInput(
         surface_id=f"decision-surfaces.red.episode-1.order-{observation_order}",
         participant_address=PARTICIPANT,
@@ -282,12 +407,17 @@ def _projection_input(
         context_view_ref=f"context-views.red.episode-1.order-{observation_order}",
         implementation_selection_ref=implementation_selection_ref,
         decision_control_mode=decision_control_mode,
+        audience_scope_ref="audience.participant.red-agent",
         projection_policy_ref="projection-policy.red.v1",
         projection_policy_revision="1",
         exposure_policy_ref="exposure-policy.red.v1",
         visibility_projection_ref=f"visibility-projection.red.order-{observation_order}",
         visible_context_refs=("context.public",),
         action_assessments={action_address: _assessment(action_address, eligibility=eligibility)},
+        exposure_assessments={
+            item_ref: _projection_exposure_assessment(item_ref, observation_order=observation_order)
+            for item_ref in emitted_refs
+        },
         form={
             "surface_form": "candidate_action_set",
             "selection_meaning_ref": "selection-meaning.candidate.v1",
@@ -299,6 +429,42 @@ def _projection_input(
         marking_definition_refs=("markings.participant-visible.v1",),
         redaction_policy_ref="redaction.red.v1",
         semantic_limitations=("Presentation does not imply selection, admission, execution, result, or outcome",),
+    )
+
+
+def _projection_exposure_resolvers(
+    projection: ParticipantDecisionSurfaceProjectionInput,
+) -> ParticipantExposureResolvers:
+    emitted_refs = tuple(projection.exposure_assessments)
+    selection = _projection_implementation_selection(
+        decision_control_mode=projection.decision_control_mode,
+        permitted_refs=emitted_refs,
+    )
+    authorizations = {
+        item_ref: _projection_exposure_authorization(
+            item_ref,
+            observation_order=projection.observation_order,
+        )
+        for item_ref in emitted_refs
+    }
+    if projection.implementation_selection_ref != "participant-selections.red.agent.v1":
+        authorizations = {
+            item_ref: replace(
+                authorization,
+                implementation_selection_ref=projection.implementation_selection_ref,
+            )
+            for item_ref, authorization in authorizations.items()
+        }
+    return ParticipantExposureResolvers(
+        apparatus=lambda **_: selection,
+        projection_policy=lambda **_: (ParticipantExposurePolicyRevision(projection.projection_policy_ref, "1", 0),),
+        authorization=lambda *, authorization_record_ref, item_ref: (
+            authorizations.get(item_ref)
+            if authorizations.get(item_ref) is not None
+            and authorizations[item_ref].authorization_record_ref == authorization_record_ref
+            else None
+        ),
+        occurrence=lambda **_: None,
     )
 
 
@@ -394,6 +560,7 @@ def test_decision_surface_schema_is_closed_discriminated_and_published() -> None
     assert {entry["id"] for entry in schema["x-aces-invariants"]} >= {
         "decision-surface-entry-reference-agreement",
         "decision-surface-presentation-not-lifecycle-evidence",
+        "decision-surface-sem226-item-exposure-agreement",
     }
 
 
@@ -456,6 +623,17 @@ def test_selection_must_be_a_candidate_member() -> None:
         }
     )
     payload["action_entries"].append(exfiltrate_entry)  # type: ignore[union-attr]
+    exfiltrate_binding = dict(payload["exposure_bindings"][1])  # type: ignore[index]
+    exfiltrate_binding.update(
+        {
+            "item_ref": EXFILTRATE,
+            "source_ref": EXFILTRATE,
+            "source_layer_ref": f"source-layers.{EXFILTRATE}",
+            "visibility_basis_ref": f"visibility-bases.{EXFILTRATE}",
+            "operation_basis_ref": f"disclosures.{EXFILTRATE}.v1",
+        }
+    )
+    payload["exposure_bindings"].append(exfiltrate_binding)  # type: ignore[union-attr]
     payload["form"]["candidate_entry_ids"] = [EXFILTRATE]  # type: ignore[index]
     surface = ParticipantDecisionSurfaceModel.model_validate(payload)
     selection = _surface_selection(surface)
@@ -478,6 +656,17 @@ def test_constrained_form_selection_must_match_its_action_entry() -> None:
         }
     )
     payload["action_entries"].append(exfiltrate_entry)  # type: ignore[union-attr]
+    exfiltrate_binding = dict(payload["exposure_bindings"][1])  # type: ignore[index]
+    exfiltrate_binding.update(
+        {
+            "item_ref": EXFILTRATE,
+            "source_ref": EXFILTRATE,
+            "source_layer_ref": f"source-layers.{EXFILTRATE}",
+            "visibility_basis_ref": f"visibility-bases.{EXFILTRATE}",
+            "operation_basis_ref": f"disclosures.{EXFILTRATE}.v1",
+        }
+    )
+    payload["exposure_bindings"].append(exfiltrate_binding)  # type: ignore[union-attr]
     surface = ParticipantDecisionSurfaceModel.model_validate(payload)
 
     selection = _surface_selection(
@@ -508,18 +697,22 @@ def test_projection_uses_time_indexed_visibility_and_rejects_future_state() -> N
     runtime_model = _runtime_model()
     history = _history()
     hidden_projection = _projection_input(observation_order=0, action_address=EXFILTRATE)
+    hidden_resolvers = _projection_exposure_resolvers(hidden_projection)
 
     with pytest.raises(ValueError, match="not participant-visible at observation_order 0"):
         project_participant_decision_surface(
             runtime_model,
             history_events=history,
             projection=hidden_projection,
+            exposure_resolvers=hidden_resolvers,
         )
 
+    visible_projection = _projection_input(observation_order=1, action_address=EXFILTRATE)
     surface = project_participant_decision_surface(
         runtime_model,
         history_events=history,
-        projection=_projection_input(observation_order=1, action_address=EXFILTRATE),
+        projection=visible_projection,
+        exposure_resolvers=_projection_exposure_resolvers(visible_projection),
     )
     assert surface.observation_order == 1
     assert surface.action_entries[0].visibility == "disclosed"
@@ -530,12 +723,14 @@ def test_projection_requires_visibility_proof_for_every_emitted_ref(omitted_ref:
     runtime_model = _runtime_model(omitted_visibility_ref=omitted_ref)
     history = _history()
     projection = _projection_input(observation_order=0)
+    resolvers = _projection_exposure_resolvers(projection)
 
     with pytest.raises(ValueError, match="lack an effective view disposition"):
         project_participant_decision_surface(
             runtime_model,
             history_events=history,
             projection=projection,
+            exposure_resolvers=resolvers,
         )
 
 
@@ -552,17 +747,20 @@ def test_projection_rejects_global_history_and_final_snapshot_substitution() -> 
     )
     global_history = (*_history(), foreign)
     projection = _projection_input(observation_order=0)
+    resolvers = _projection_exposure_resolvers(projection)
     with pytest.raises(ValueError, match="one participant and episode"):
         project_participant_decision_surface(
             runtime_model,
             history_events=global_history,
             projection=projection,
+            exposure_resolvers=resolvers,
         )
     with pytest.raises(ValueError, match="time-indexed history"):
         project_participant_decision_surface(
             runtime_model,
             history_events=(),
             projection=projection,
+            exposure_resolvers=resolvers,
         )
 
 
@@ -579,14 +777,16 @@ def test_realization_kind_preserves_surface_semantic_refs(
     implementation_selection_ref: str,
     decision_control_mode: str,
 ) -> None:
+    projection = _projection_input(
+        observation_order=0,
+        implementation_selection_ref=implementation_selection_ref,
+        decision_control_mode=decision_control_mode,
+    )
     surface = project_participant_decision_surface(
         _runtime_model(),
         history_events=_history(),
-        projection=_projection_input(
-            observation_order=0,
-            implementation_selection_ref=implementation_selection_ref,
-            decision_control_mode=decision_control_mode,
-        ),
+        projection=projection,
+        exposure_resolvers=_projection_exposure_resolvers(projection),
     )
     assert surface.action_entries[0].action_contract_address == SCAN
     assert surface.action_entries[0].selection_shape_ref == "selection-shapes.scan.v1"

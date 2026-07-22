@@ -194,6 +194,10 @@ from .participant_decision_surface import (
     ParticipantDecisionSurfaceSelectionModel,
     validate_participant_decision_surface_context,
 )
+from .participant_decision_surface_exposure import (
+    ParticipantDecisionSurfaceExposureBindingModel,
+    ParticipantDecisionSurfaceExposureRealizationModel,
+)
 from .participant_envelopes import (
     EventClassificationModel,
     ParticipantJointActionAccessSetModel,
@@ -394,7 +398,8 @@ __all__ = [
     "ParticipantAttributionEvidenceBasisModel", "ParticipantAttributionOrderingBasisModel",
     "ParticipantBehaviorHistoryEventModel", "ParticipantContextViewModel",
     "ParticipantDecisionSurfaceActionEntryModel", "ParticipantDecisionSurfaceCandidateSetFormModel",
-    "ParticipantDecisionSurfaceConstrainedFormModel", "ParticipantDecisionSurfaceModel",
+    "ParticipantDecisionSurfaceConstrainedFormModel", "ParticipantDecisionSurfaceExposureBindingModel",
+    "ParticipantDecisionSurfaceExposureRealizationModel", "ParticipantDecisionSurfaceModel",
     "ParticipantDecisionSurfaceOpenEndedFormModel", "ParticipantDecisionSurfaceSelectionModel",
     "validate_participant_decision_surface_context", "ParticipantEpisodeHistoryEventModel",
     "ParticipantEpisodeStateModel", "ParticipantExposurePolicyModel", "ParticipantFeatureSupportLevel",
