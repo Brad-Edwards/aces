@@ -183,62 +183,8 @@ class OciDeploymentDriver:
         diagnostics.extend(self._network_namespace_diagnostics(containers))
         if diagnostics:
             return DriverResult(diagnostics=tuple(diagnostics))
-        network_handles: list[NetworkHandle] = []
-        for spec in networks:
-            runtime_name = provider_resource_name(spec.address, prefix="aces")
-            argv = [self._runtime, "network", "create", *self._label_args(spec.address), runtime_name]
-            ok, kind = self._run(argv)
-            if ok:
-                self._realized.add(spec.address)
-                self._names[spec.address] = runtime_name
-                network_handles.append(NetworkHandle(address=spec.address, realized=True))
-            else:
-                diagnostics.append(self._failure(spec.address, kind))
-        container_handles: list[ContainerHandle] = []
-        for spec in self._ordered_containers(containers):
-            if spec.network_namespace_target and not self._is_current_owned_container(spec.network_namespace_target):
-                diagnostics.append(
-                    self._network_namespace_diagnostic(
-                        spec.address,
-                        code=_CODE_NETWORK_NAMESPACE_TARGET_UNAVAILABLE,
-                        message="The network namespace target is not a current run-owned container.",
-                    )
-                )
-                continue
-            runtime_name = provider_resource_name(spec.address, prefix="aces")
-            image = self._image_policy.image_for(spec.image_ref)
-            if not self._image_policy.permits(image):
-                diagnostics.append(self._image_rejected(spec.address))
-                continue
-            argv = [
-                self._runtime,
-                "run",
-                "--detach",
-                "--rm",
-                *self._label_args(spec.address),
-                "--name",
-                runtime_name,
-                # Attach the container to every requested network (created above
-                # in this same realize() call) so planned topology is honored,
-                # not silently left on the runtime default network. spec.networks
-                # carries network resource addresses; resolve each to the runtime
-                # name this driver actually created.
-                *self._network_args(spec),
-                image,
-                # Fixed keep-alive so generic images do not exit immediately.
-                # Pure argv tokens -- never a shell string.
-                *self._keep_alive,
-            ]
-            ok, kind, native_stdout = self._invoke(argv)
-            if ok:
-                self._realized.add(spec.address)
-                self._names[spec.address] = runtime_name
-                native_id = native_stdout.strip().splitlines()[0] if native_stdout.strip() else ""
-                if native_id:
-                    self._native_ids[spec.address] = native_id
-                container_handles.append(ContainerHandle(address=spec.address, realized=True))
-            else:
-                diagnostics.append(self._failure(spec.address, kind))
+        network_handles = self._realize_networks(networks, diagnostics)
+        container_handles = self._realize_containers(containers, diagnostics)
         result = DriverResult(
             networks=tuple(network_handles),
             containers=tuple(container_handles),
@@ -251,6 +197,83 @@ class OciDeploymentDriver:
             self._rollback(network_handles, container_handles)
             return DriverResult(diagnostics=result.diagnostics)
         return result
+
+    def _realize_networks(
+        self,
+        networks: tuple[NetworkSpec, ...],
+        diagnostics: list[Diagnostic],
+    ) -> list[NetworkHandle]:
+        handles: list[NetworkHandle] = []
+        for spec in networks:
+            runtime_name = provider_resource_name(spec.address, prefix="aces")
+            argv = [self._runtime, "network", "create", *self._label_args(spec.address), runtime_name]
+            ok, kind = self._run(argv)
+            if ok:
+                self._realized.add(spec.address)
+                self._names[spec.address] = runtime_name
+                handles.append(NetworkHandle(address=spec.address, realized=True))
+            else:
+                diagnostics.append(self._failure(spec.address, kind))
+        return handles
+
+    def _realize_containers(
+        self,
+        containers: tuple[ContainerSpec, ...],
+        diagnostics: list[Diagnostic],
+    ) -> list[ContainerHandle]:
+        handles: list[ContainerHandle] = []
+        for spec in self._ordered_containers(containers):
+            target_diagnostic = self._current_target_diagnostic(spec)
+            if target_diagnostic is not None:
+                diagnostics.append(target_diagnostic)
+                continue
+            image = self._image_policy.image_for(spec.image_ref)
+            if not self._image_policy.permits(image):
+                diagnostics.append(self._image_rejected(spec.address))
+                continue
+            runtime_name = provider_resource_name(spec.address, prefix="aces")
+            argv = self._container_run_argv(spec, runtime_name=runtime_name, image=image)
+            ok, kind, native_stdout = self._invoke(argv)
+            if ok:
+                self._record_realized_container(spec.address, runtime_name, native_stdout)
+                handles.append(ContainerHandle(address=spec.address, realized=True))
+            else:
+                diagnostics.append(self._failure(spec.address, kind))
+        return handles
+
+    def _current_target_diagnostic(self, spec: ContainerSpec) -> Diagnostic | None:
+        target = spec.network_namespace_target
+        if target and not self._is_current_owned_container(target):
+            return self._network_namespace_diagnostic(
+                spec.address,
+                code=_CODE_NETWORK_NAMESPACE_TARGET_UNAVAILABLE,
+                message="The network namespace target is not a current run-owned container.",
+            )
+        return None
+
+    def _container_run_argv(self, spec: ContainerSpec, *, runtime_name: str, image: str) -> list[str]:
+        return [
+            self._runtime,
+            "run",
+            "--detach",
+            "--rm",
+            *self._label_args(spec.address),
+            "--name",
+            runtime_name,
+            # Attach the container to every requested network created in this
+            # transaction, or to its verified namespace owner.
+            *self._network_args(spec),
+            image,
+            # Fixed keep-alive so generic images do not exit immediately.
+            *self._keep_alive,
+        ]
+
+    def _record_realized_container(self, address: str, runtime_name: str, native_stdout: str) -> None:
+        self._realized.add(address)
+        self._names[address] = runtime_name
+        native_id = native_stdout.strip().splitlines()[0] if native_stdout.strip() else ""
+        if native_id:
+            self._native_ids[address] = native_id
 
     def _network_args(self, spec: ContainerSpec) -> list[str]:
         if spec.network_namespace_target:
@@ -291,29 +314,27 @@ class OciDeploymentDriver:
     def _is_current_owned_container(self, address: str) -> bool:
         expected_native_id = self._native_ids.get(address)
         expected_name = self._names.get(address)
-        if not expected_native_id or not expected_name:
-            return False
-        ok, _kind, stdout = self._invoke(
-            [
-                self._runtime,
-                "inspect",
-                "--format",
-                _OWNERSHIP_INSPECT_FORMAT,
-                expected_name,
-            ]
-        )
-        if not ok:
-            return False
-        fields = stdout.rstrip("\n").split("\n")
-        if len(fields) != 4:
-            return False
-        native_id, workspace, owned_address, native_name = fields
-        return (
-            native_id == expected_native_id
-            and workspace == self._workspace
-            and owned_address == address
-            and native_name.removeprefix("/") == expected_name
-        )
+        current_and_owned = False
+        if expected_native_id and expected_name:
+            ok, _kind, stdout = self._invoke(
+                [
+                    self._runtime,
+                    "inspect",
+                    "--format",
+                    _OWNERSHIP_INSPECT_FORMAT,
+                    expected_name,
+                ]
+            )
+            fields = stdout.rstrip("\n").split("\n")
+            if ok and len(fields) == 4:
+                native_id, workspace, owned_address, native_name = fields
+                current_and_owned = (
+                    native_id == expected_native_id
+                    and workspace == self._workspace
+                    and owned_address == address
+                    and native_name.removeprefix("/") == expected_name
+                )
+        return current_and_owned
 
     @staticmethod
     def _ordered_containers(containers: tuple[ContainerSpec, ...]) -> tuple[ContainerSpec, ...]:

@@ -79,8 +79,9 @@ def test_network_namespace_target_is_typed_and_independent_from_pid() -> None:
     ],
 )
 def test_network_namespace_target_must_resolve_to_another_node(target: str, message: str) -> None:
+    yaml_text = _sharing_scenario(target=target)
     with pytest.raises(SDLValidationError, match=message):
-        _scenario(_sharing_scenario(target=target))
+        _scenario(yaml_text)
 
 
 def test_network_namespace_target_must_be_a_vm_node() -> None:
@@ -128,16 +129,15 @@ def test_network_namespace_target_cannot_chain() -> None:
 
 @pytest.mark.parametrize("replicated_node", ["owner", "capture"])
 def test_network_namespace_nodes_must_be_singletons(replicated_node: str) -> None:
-    with pytest.raises(SDLValidationError, match="requires singleton source and target nodes"):
-        _scenario(
-            _sharing_scenario(
-                sharing_infra=f"""
+    yaml_text = _sharing_scenario(
+        sharing_infra=f"""
 infrastructure:
   {replicated_node}:
     count: 2
 """
-            )
-        )
+    )
+    with pytest.raises(SDLValidationError, match="requires singleton source and target nodes"):
+        _scenario(yaml_text)
 
 
 @pytest.mark.parametrize(
@@ -163,8 +163,9 @@ infrastructure:
     ],
 )
 def test_network_namespace_sharer_rejects_independent_infrastructure(sharing_infra: str) -> None:
+    yaml_text = _sharing_scenario(sharing_infra=sharing_infra)
     with pytest.raises(SDLValidationError, match="cannot declare independent infrastructure network state"):
-        _scenario(_sharing_scenario(sharing_infra=sharing_infra))
+        _scenario(yaml_text)
 
 
 @pytest.mark.parametrize(

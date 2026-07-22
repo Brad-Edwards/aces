@@ -154,36 +154,44 @@ class _NodesInfraNetworkMixin:
             namespace = self._network_namespace(source)
             if namespace is None:
                 continue
-            authored_target = namespace.target_node_ref
-            if self._is_unresolved_var(authored_target):
-                continue
-            target_name = self._node_ref_name(authored_target)
-            target = self._s.nodes.get(target_name)
-            if target is None:
-                self._err(f"Node '{source_name}' network namespace references undefined node '{target_name}'")
-                continue
-            if source_name == target_name:
-                self._err(f"Node '{source_name}' cannot share its own network namespace")
-                continue
-            if target.type != NodeType.VM:
-                self._err(f"Node '{source_name}' network namespace target '{target_name}' must reference a VM node")
-            if self._network_namespace(target) is not None:
-                self._err(
-                    f"Node '{source_name}' network namespace target '{target_name}' must be a canonical namespace owner"
-                )
-            if not self._is_singleton_node(source_name) or not self._is_singleton_node(target_name):
-                self._err(f"Node '{source_name}' network namespace sharing requires singleton source and target nodes")
-            infra = self._s.infrastructure.get(source_name)
-            if infra is not None and (infra.links or infra.properties is not None or infra.acls):
-                self._err(
-                    f"Node '{source_name}' sharing a network namespace cannot declare independent "
-                    "infrastructure network state"
-                )
-            runtime_network = getattr(getattr(source, "runtime", None), "network", None)
-            if runtime_network is not None and (runtime_network.endpoints or runtime_network.published_ports):
-                self._err(
-                    f"Node '{source_name}' sharing a network namespace cannot declare independent runtime network state"
-                )
+            self._verify_network_namespace_relation(source_name, source, namespace.target_node_ref)
+
+    def _verify_network_namespace_relation(self, source_name: str, source: object, authored_target: str) -> None:
+        if self._is_unresolved_var(authored_target):
+            return
+        target_name = self._node_ref_name(authored_target)
+        target = self._s.nodes.get(target_name)
+        if target is None:
+            self._err(f"Node '{source_name}' network namespace references undefined node '{target_name}'")
+            return
+        if source_name == target_name:
+            self._err(f"Node '{source_name}' cannot share its own network namespace")
+            return
+        self._verify_network_namespace_target(source_name, target_name, target)
+        self._verify_network_namespace_source(source_name, target_name, source)
+
+    def _verify_network_namespace_target(self, source_name: str, target_name: str, target: object) -> None:
+        if target.type != NodeType.VM:
+            self._err(f"Node '{source_name}' network namespace target '{target_name}' must reference a VM node")
+        if self._network_namespace(target) is not None:
+            self._err(
+                f"Node '{source_name}' network namespace target '{target_name}' must be a canonical namespace owner"
+            )
+
+    def _verify_network_namespace_source(self, source_name: str, target_name: str, source: object) -> None:
+        if not self._is_singleton_node(source_name) or not self._is_singleton_node(target_name):
+            self._err(f"Node '{source_name}' network namespace sharing requires singleton source and target nodes")
+        infra = self._s.infrastructure.get(source_name)
+        if infra is not None and (infra.links or infra.properties is not None or infra.acls):
+            self._err(
+                f"Node '{source_name}' sharing a network namespace cannot declare independent "
+                "infrastructure network state"
+            )
+        runtime_network = getattr(getattr(source, "runtime", None), "network", None)
+        if runtime_network is not None and (runtime_network.endpoints or runtime_network.published_ports):
+            self._err(
+                f"Node '{source_name}' sharing a network namespace cannot declare independent runtime network state"
+            )
 
     @staticmethod
     def _network_namespace(node: object) -> object | None:

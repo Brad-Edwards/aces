@@ -141,7 +141,6 @@ def _compile_node_runtimes(
             dependency_addresses.append(_node_address(network_namespace_target))
         _record_node_runtime(
             node_name=node_name,
-            node_type=node.type,
             node_spec=node_spec,
             infra_spec=infra_spec,
             dependency_addresses=dependency_addresses,
@@ -155,7 +154,6 @@ def _compile_node_runtimes(
 def _record_node_runtime(
     *,
     node_name: str,
-    node_type: NodeType,
     node_spec: dict[str, Any],
     infra_spec: dict[str, Any],
     dependency_addresses: list[str],
@@ -164,7 +162,7 @@ def _record_node_runtime(
     targets: _NodeRuntimeTargets,
 ) -> None:
     spec = {"node": node_spec, "infrastructure": infra_spec}
-    if node_type == NodeType.SWITCH:
+    if node_spec.get("type") in (NodeType.SWITCH, NodeType.SWITCH.value):
         targets.networks[_network_address(node_name)] = NetworkRuntime(
             address=_network_address(node_name),
             name=node_name,
