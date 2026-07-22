@@ -60,6 +60,8 @@ BACKEND_SUPPORTED_CONTRACT_IDS = (
     "experiment-evidence-record-v1",
     "experiment-derived-measure-v1",
     "experiment-run-v1",
+    "trial-cleanup-plan-v1",
+    "trial-cleanup-receipt-v1",
 )
 
 PARTICIPANT_IMPLEMENTATION_SUPPORTED_CONTRACT_IDS = (

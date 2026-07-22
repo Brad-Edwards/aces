@@ -184,6 +184,9 @@ from .manifests import (
     ProcessorCapabilitiesV2Model,
     ProcessorManifestV2Model,
 )
+from .manifests import (
+    CleanupCapabilitiesModel as CleanupCapabilitiesModel,
+)
 from .participant_context import ParticipantContextViewModel
 from .participant_decision_surface import (
     ParticipantDecisionSurfaceActionEntryModel,
@@ -324,6 +327,39 @@ from .semantic_profiles import (
     SemanticBehaviorAssumptionModel,
     SemanticProfileModel,
     SemanticProfilePhaseModel,
+)
+from .trial_cleanup import (
+    CleanStateClaimModel as CleanStateClaimModel,
+)
+from .trial_cleanup import (
+    CleanStateRequirementModel as CleanStateRequirementModel,
+)
+from .trial_cleanup import (
+    CleanupObligationModel as CleanupObligationModel,
+)
+from .trial_cleanup import (
+    CleanupObligationResultModel as CleanupObligationResultModel,
+)
+from .trial_cleanup import (
+    CleanupResourceBoundaryModel as CleanupResourceBoundaryModel,
+)
+from .trial_cleanup import (
+    ExecutionRetryPolicyModel as ExecutionRetryPolicyModel,
+)
+from .trial_cleanup import (
+    IsolationDimensionEvidenceModel as IsolationDimensionEvidenceModel,
+)
+from .trial_cleanup import (
+    SchedulerIsolationProofModel as SchedulerIsolationProofModel,
+)
+from .trial_cleanup import (
+    TrialCleanupPlanModel as TrialCleanupPlanModel,
+)
+from .trial_cleanup import (
+    TrialCleanupReceiptModel as TrialCleanupReceiptModel,
+)
+from .trial_cleanup import (
+    validate_trial_cleanup_receipt as validate_trial_cleanup_receipt,
 )
 from .validators import _collapse_nullable_optional_schema as _collapse_nullable_optional_schema
 from .validators import _resolve_instance_path_schema as _resolve_instance_path_schema
