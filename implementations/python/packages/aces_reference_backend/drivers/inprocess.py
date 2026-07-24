@@ -11,6 +11,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from aces_contracts.diagnostics import Diagnostic, Severity
+
 from aces_reference_backend.driver import (
     ContainerHandle,
     ContainerSpec,
@@ -42,6 +44,23 @@ class InProcessDriver:
         networks: tuple[NetworkSpec, ...],
         containers: tuple[ContainerSpec, ...],
     ) -> DriverResult:
+        unsupported = tuple(spec for spec in containers if spec.network_namespace_target)
+        if unsupported:
+            return DriverResult(
+                diagnostics=tuple(
+                    Diagnostic(
+                        code="reference-backend.driver.network-namespace-unsupported",
+                        domain="runtime",
+                        address=spec.address,
+                        message=(
+                            f"The in-process driver cannot realize the network namespace requirement "
+                            f"for '{spec.address}'."
+                        ),
+                        severity=Severity.ERROR,
+                    )
+                    for spec in unsupported
+                )
+            )
         network_handles: list[NetworkHandle] = []
         for spec in networks:
             self.recorded_ops.append(RecordedOp(verb="realize", kind="network", address=spec.address))

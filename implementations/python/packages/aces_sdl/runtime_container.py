@@ -15,11 +15,25 @@ from .runtime_values import (
 )
 
 
+class RuntimeNetworkNamespace(SDLModel):
+    """A request to use the exact network namespace owned by another node."""
+
+    target_node_ref: str
+
+    @field_validator("target_node_ref")
+    @classmethod
+    def validate_target_node_ref(cls, v: str) -> str:
+        if not isinstance(v, str) or not v.strip():
+            raise ValueError("target_node_ref must be a non-empty node reference")
+        return v
+
+
 class RuntimeNamespaceConfiguration(SDLModel):
     """Required namespace modes for a runtime node or container."""
 
     cgroup: str = ""
     ipc: str = ""
+    network: RuntimeNetworkNamespace | None = None
     pid: str = ""
     userns: str = ""
     uts: str = ""
