@@ -243,7 +243,7 @@ def _rewrite_evidence_requirement(
             payload[field_name] = _maybe_rename(str(payload[field_name]), symbols["named"])
 
 
-def _rewrite_time_model(
+def _rewrite_time_clocks(
     namespaced: dict[str, Any],
     symbols: dict[str, dict[str, str] | set[str]],
 ) -> None:
@@ -253,6 +253,12 @@ def _rewrite_time_model(
                 str(clock["time_domain_ref"]),
                 symbols["time_domains"],
             )
+
+
+def _rewrite_time_mappings(
+    namespaced: dict[str, Any],
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
     for mapping in namespaced.get("time_domain_mappings", {}).values():
         if not isinstance(mapping, dict):
             continue
@@ -262,12 +268,24 @@ def _rewrite_time_model(
                     str(mapping[field_name]),
                     symbols["time_domains"],
                 )
+
+
+def _rewrite_time_progression(
+    namespaced: dict[str, Any],
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
     for policy in namespaced.get("time_progression_policies", {}).values():
         if isinstance(policy, dict) and policy.get("clock_ref"):
             policy["clock_ref"] = _maybe_rename(
                 str(policy["clock_ref"]),
                 symbols["clocks"],
             )
+
+
+def _rewrite_time_constraints(
+    namespaced: dict[str, Any],
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
     for constraint in namespaced.get("temporal_constraints", {}).values():
         if not isinstance(constraint, dict):
             continue
@@ -279,6 +297,16 @@ def _rewrite_time_model(
         constraint["subject_refs"] = [
             _maybe_rename(name, symbols["named"]) for name in constraint.get("subject_refs", [])
         ]
+
+
+def _rewrite_time_model(
+    namespaced: dict[str, Any],
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
+    _rewrite_time_clocks(namespaced, symbols)
+    _rewrite_time_mappings(namespaced, symbols)
+    _rewrite_time_progression(namespaced, symbols)
+    _rewrite_time_constraints(namespaced, symbols)
 
 
 def _rewrite_mixed_control_state(

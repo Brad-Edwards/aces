@@ -1,6 +1,6 @@
 """Semantic checks for the shared ACES time model."""
 
-from ..time_model import TimeReplayBehavior, TimeResetBehavior
+from ..time_model import TimeDomainMapping, TimeReplayBehavior, TimeResetBehavior
 from ._support import _topological_sort
 
 
@@ -23,29 +23,37 @@ class _TimeModelMixin:
         graph: dict[str, list[str]] = {name: [] for name in self._s.time_domains}
         pairs: set[tuple[str, str]] = set()
         for name, mapping in self._s.time_domain_mappings.items():
-            source = mapping.source_domain_ref
-            target = mapping.target_domain_ref
-            if source not in self._s.time_domains:
-                self._err(f"Time-domain mapping '{name}' references undefined source domain '{source}'")
-            if target not in self._s.time_domains:
-                self._err(f"Time-domain mapping '{name}' references undefined target domain '{target}'")
-            pair = (source, target)
-            if pair in pairs:
-                self._err(f"Time-domain mapping '{name}' duplicates the mapping from '{source}' to '{target}'")
-            pairs.add(pair)
-            if source in graph and target in graph:
-                graph[source].append(target)
-                source_domain = self._s.time_domains[source]
-                target_domain = self._s.time_domains[target]
-                if mapping.mapping_kind.value == "identity" and (
-                    source_domain.tick_period_seconds != target_domain.tick_period_seconds
-                    or source_domain.epoch != target_domain.epoch
-                ):
-                    self._err(
-                        f"Time-domain mapping '{name}' identity endpoints must have the same tick period and epoch"
-                    )
+            self._verify_time_domain_mapping(name, mapping, graph, pairs)
         if graph and _topological_sort(graph) is None:
             self._err("Time-domain mapping graph contains a cycle")
+
+    def _verify_time_domain_mapping(
+        self,
+        name: str,
+        mapping: TimeDomainMapping,
+        graph: dict[str, list[str]],
+        pairs: set[tuple[str, str]],
+    ) -> None:
+        source = mapping.source_domain_ref
+        target = mapping.target_domain_ref
+        if source not in self._s.time_domains:
+            self._err(f"Time-domain mapping '{name}' references undefined source domain '{source}'")
+        if target not in self._s.time_domains:
+            self._err(f"Time-domain mapping '{name}' references undefined target domain '{target}'")
+        pair = (source, target)
+        if pair in pairs:
+            self._err(f"Time-domain mapping '{name}' duplicates the mapping from '{source}' to '{target}'")
+        pairs.add(pair)
+        if source not in graph or target not in graph:
+            return
+        graph[source].append(target)
+        source_domain = self._s.time_domains[source]
+        target_domain = self._s.time_domains[target]
+        if mapping.mapping_kind.value == "identity" and (
+            source_domain.tick_period_seconds != target_domain.tick_period_seconds
+            or source_domain.epoch != target_domain.epoch
+        ):
+            self._err(f"Time-domain mapping '{name}' identity endpoints must have the same tick period and epoch")
 
     def _verify_time_progression_policies(self) -> None:
         owners: dict[str, str] = {}

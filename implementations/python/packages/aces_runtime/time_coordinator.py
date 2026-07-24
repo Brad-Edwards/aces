@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
 from fractions import Fraction
 
@@ -69,27 +69,27 @@ def _transition(
     *,
     sequence: int,
     kind: ClockTransitionKind,
-    segment: int,
-    tick: int,
-    microstep: int,
-    previous_segment: int | None,
-    previous_tick: int | None,
-    previous_microstep: int | None,
+    current: ClockReading,
+    previous: ClockReading | None,
 ) -> ClockTransitionEventModel:
-    previous = (
+    previous_coordinate = (
         TimeCoordinateModel(
-            segment=previous_segment,
-            tick=previous_tick,
-            microstep=previous_microstep or 0,
+            segment=previous.segment,
+            tick=previous.tick,
+            microstep=previous.microstep,
         )
-        if previous_segment is not None and previous_tick is not None
+        if previous is not None
         else None
     )
     return ClockTransitionEventModel(
         sequence=sequence,
         kind=kind.value,
-        previous=previous,
-        resulting=TimeCoordinateModel(segment=segment, tick=tick, microstep=microstep),
+        previous=previous_coordinate,
+        resulting=TimeCoordinateModel(
+            segment=current.segment,
+            tick=current.tick,
+            microstep=current.microstep,
+        ),
         resulting_state=(
             ClockLifecycleState.PAUSED.value if kind == ClockTransitionKind.PAUSE else ClockLifecycleState.RUNNING.value
         ),
@@ -119,12 +119,8 @@ class TimeCoordinator:
             initial_transition = _transition(
                 sequence=0,
                 kind=ClockTransitionKind.INITIALIZE,
-                segment=0,
-                tick=0,
-                microstep=0,
-                previous_segment=None,
-                previous_tick=None,
-                previous_microstep=None,
+                current=ClockReading(clock_address, 0, 0),
+                previous=None,
             )
             contexts[clock_address] = RuntimeClockStateModel(
                 clock_address=clock_address,
@@ -177,12 +173,9 @@ class TimeCoordinator:
             raise ValueError("clock advance must change tick or microstep")
         return self._replace_context(
             snapshot,
-            clock_address,
             context,
             kind=ClockTransitionKind.ADVANCE,
-            segment=previous.segment,
-            tick=next_tick,
-            microstep=next_microstep,
+            reading=replace(previous, tick=next_tick, microstep=next_microstep),
             state=ClockLifecycleState.RUNNING,
         )
 
@@ -196,12 +189,9 @@ class TimeCoordinator:
         reading = self.reading(snapshot, clock_address)
         return self._replace_context(
             snapshot,
-            clock_address,
             context,
             kind=ClockTransitionKind.PAUSE,
-            segment=reading.segment,
-            tick=reading.tick,
-            microstep=reading.microstep,
+            reading=reading,
             state=ClockLifecycleState.PAUSED,
         )
 
@@ -212,12 +202,9 @@ class TimeCoordinator:
         reading = self.reading(snapshot, clock_address)
         return self._replace_context(
             snapshot,
-            clock_address,
             context,
             kind=ClockTransitionKind.RESUME,
-            segment=reading.segment,
-            tick=reading.tick,
-            microstep=reading.microstep,
+            reading=reading,
             state=ClockLifecycleState.RUNNING,
         )
 
@@ -236,12 +223,9 @@ class TimeCoordinator:
         reading = self.reading(snapshot, clock_address)
         return self._replace_context(
             snapshot,
-            clock_address,
             context,
             kind=ClockTransitionKind.JUMP,
-            segment=reading.segment + 1,
-            tick=tick,
-            microstep=microstep,
+            reading=replace(reading, segment=reading.segment + 1, tick=tick, microstep=microstep),
             state=ClockLifecycleState(context.state),
         )
 
@@ -266,12 +250,14 @@ class TimeCoordinator:
         preserve = behavior == "new_segment_preserve_value"
         return self._replace_context(
             snapshot,
-            clock_address,
             context,
             kind=ClockTransitionKind.REPLAY if replay else ClockTransitionKind.RESET,
-            segment=reading.segment + 1,
-            tick=reading.tick if preserve else 0,
-            microstep=reading.microstep if preserve else 0,
+            reading=replace(
+                reading,
+                segment=reading.segment + 1,
+                tick=reading.tick if preserve else 0,
+                microstep=reading.microstep if preserve else 0,
+            ),
             state=ClockLifecycleState.RUNNING,
         )
 
@@ -310,29 +296,21 @@ class TimeCoordinator:
     def _replace_context(
         self,
         snapshot: RuntimeSnapshot,
-        clock_address: str,
         context: RuntimeClockStateModel,
         *,
         kind: ClockTransitionKind,
-        segment: int,
-        tick: int,
-        microstep: int,
+        reading: ClockReading,
         state: ClockLifecycleState,
     ) -> RuntimeSnapshot:
-        previous = self.reading(snapshot, clock_address)
+        previous = self.reading(snapshot, reading.clock_address)
         sequence = context.sequence + 1
         history = [*context.history]
         history.append(
-            ClockTransitionEventModel(
+            _transition(
                 sequence=sequence,
                 kind=kind,
-                previous=TimeCoordinateModel(
-                    segment=previous.segment,
-                    tick=previous.tick,
-                    microstep=previous.microstep,
-                ),
-                resulting=TimeCoordinateModel(segment=segment, tick=tick, microstep=microstep),
-                resulting_state=state.value,
+                current=reading,
+                previous=previous,
             )
         )
         next_clock = RuntimeClockStateModel(
@@ -342,13 +320,17 @@ class TimeCoordinator:
             authority_kind=context.authority_kind,
             authority_ref=context.authority_ref,
             state=state.value,
-            coordinate=TimeCoordinateModel(segment=segment, tick=tick, microstep=microstep),
+            coordinate=TimeCoordinateModel(
+                segment=reading.segment,
+                tick=reading.tick,
+                microstep=reading.microstep,
+            ),
             sequence=sequence,
             history=history,
         )
         assert snapshot.time_model_state is not None
         clocks = dict(snapshot.time_model_state.clocks)
-        clocks[clock_address] = next_clock
+        clocks[reading.clock_address] = next_clock
         next_state = TimeRuntimeStateModel(
             declaration_digest=snapshot.time_model_state.declaration_digest,
             clocks=clocks,
