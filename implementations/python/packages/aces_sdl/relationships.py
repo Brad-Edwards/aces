@@ -17,7 +17,6 @@ from pydantic import Field, field_validator
 from ._base import SDLModel, normalize_enum_value
 from .deployment_tenancy import RelationshipCarrierPlacement, RelationshipSharedService
 from .enterprise_identity import RelationshipForestTrust, RelationshipIdentityFederation
-from .historical_state import RelationshipHistoricalObjectLink
 from .identity_domains import RelationshipDomainController, RelationshipDomainJoin
 from .runtime_application import RelationshipProxyUpstream
 from .runtime_database import RelationshipDatabaseAccess
@@ -42,7 +41,6 @@ class RelationshipType(str, Enum):
     DIRECTORY_FEDERATES_TO = "directory_federates_to"
     PLACED_ON_CARRIER = "placed_on_carrier"
     USES_SHARED_SERVICE = "uses_shared_service"
-    HISTORICAL_OBJECT_LINK = "historical_object_link"
 
 
 class Relationship(SDLModel):
@@ -84,7 +82,6 @@ class Relationship(SDLModel):
     identity_federation: RelationshipIdentityFederation | None = None
     carrier_placement: RelationshipCarrierPlacement | None = None
     shared_service: RelationshipSharedService | None = None
-    historical_object_link: RelationshipHistoricalObjectLink | None = None
 
     @field_validator("type", mode="before")
     @classmethod

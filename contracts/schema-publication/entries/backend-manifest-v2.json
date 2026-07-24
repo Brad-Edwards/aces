@@ -2,9 +2,9 @@
   "contract_id": "backend-manifest-v2",
   "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
   "stability": "draft",
-  "content_hash": "668dd7394dadf0741424752e21f5d680fe9339e43f4bbe5e078903a11ee3c9ec",
+  "content_hash": "f635f3a7fc0ead873b52dc78ce51a3175d51faf574e83f5ee3ffca83eec4370c",
   "last_change": {
-    "summary": "Published DSL-436 exact historical materialization capability declarations.",
-    "content_hash": "668dd7394dadf0741424752e21f5d680fe9339e43f4bbe5e078903a11ee3c9ec"
+    "summary": "Published objective and scaffolded workflow-step capability terms for SCE-004.",
+    "content_hash": "f635f3a7fc0ead873b52dc78ce51a3175d51faf574e83f5ee3ffca83eec4370c"
   }
 }

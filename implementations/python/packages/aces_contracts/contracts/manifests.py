@@ -26,7 +26,6 @@ from .capabilities import (
     ProcessorCompatibilityModel,
     ProvisionerCapabilitiesModel,
 )
-from .historical_state import HistoricalStateCapabilitiesModel
 from .validators import (
     _validate_canonical_concept_bindings,
     _validate_controlled_vocabulary_terms,
@@ -244,7 +243,6 @@ class BackendCapabilitiesV2Model(ContractModel):
     evaluator: EvaluatorCapabilitiesModel | None = None
     participant_runtime: ParticipantRuntimeCapabilitiesModel | None = None
     observation: ObservationCapabilitiesModel | None = None
-    historical_state: HistoricalStateCapabilitiesModel | None = None
 
 
 class ProcessorManifestV2Model(ContractModel):

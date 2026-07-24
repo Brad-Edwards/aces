@@ -1,7 +1,6 @@
 """Backend-manifest capability validation for compiled runtime models."""
 
 from aces_backend_protocols.capabilities import BackendManifest, OrchestratorCapabilities, ProvisionerCapabilities
-from aces_backend_protocols.historical_state import HISTORICAL_MATERIALIZATION_KIND_BY_INTERFACE
 
 from ..models import Diagnostic, RuntimeModel
 from .capability_domains import _account_features, _resource_count_upper_bound, _validate_node_os_family
@@ -333,59 +332,6 @@ def _validate_evaluation_support(model: RuntimeModel, manifest: BackendManifest)
     return diagnostics
 
 
-HISTORICAL_STATE_PROVISION_ADDRESS = "provision.historical-state"
-
-
-def _validate_historical_state_support(
-    model: RuntimeModel,
-    manifest: BackendManifest,
-) -> list[Diagnostic]:
-    scenario = model.realization_instance
-    if scenario is None or not scenario.historical_baselines:
-        return []
-
-    required_profiles = {
-        binding.interface_profile.value
-        for baseline in scenario.historical_baselines.values()
-        for binding in baseline.materialization_bindings.values()
-    }
-    required_kinds = {HISTORICAL_MATERIALIZATION_KIND_BY_INTERFACE[profile] for profile in required_profiles}
-    capability = manifest.historical_state
-    if capability is None:
-        return [
-            Diagnostic(
-                code="historical-state.capability-missing",
-                domain="provisioning",
-                address=HISTORICAL_STATE_PROVISION_ADDRESS,
-                message=(
-                    "Scenario requires native historical-state materialization, "
-                    "but the backend declares no historical-state capability."
-                ),
-            )
-        ]
-
-    diagnostics: list[Diagnostic] = []
-    for profile in sorted(required_profiles - capability.supported_interface_profiles):
-        diagnostics.append(
-            Diagnostic(
-                code="historical-state.interface-unsupported",
-                domain="provisioning",
-                address=HISTORICAL_STATE_PROVISION_ADDRESS,
-                message=f"Backend does not support historical materialization interface '{profile}'.",
-            )
-        )
-    for kind in sorted(required_kinds - capability.supported_object_kinds):
-        diagnostics.append(
-            Diagnostic(
-                code="historical-state.object-kind-unsupported",
-                domain="provisioning",
-                address=HISTORICAL_STATE_PROVISION_ADDRESS,
-                message=f"Backend does not support historical materialization object kind '{kind}'.",
-            )
-        )
-    return diagnostics
-
-
 def _validate_manifest(model: RuntimeModel, manifest: BackendManifest) -> list[Diagnostic]:
     provisioner = manifest.provisioner
     diagnostics: list[Diagnostic] = []
@@ -398,5 +344,4 @@ def _validate_manifest(model: RuntimeModel, manifest: BackendManifest) -> list[D
     diagnostics.extend(_validate_artifact_and_volume_support(model, provisioner))
     diagnostics.extend(_validate_orchestration_support(model, manifest))
     diagnostics.extend(_validate_evaluation_support(model, manifest))
-    diagnostics.extend(_validate_historical_state_support(model, manifest))
     return diagnostics

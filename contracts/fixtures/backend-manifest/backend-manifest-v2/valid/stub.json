@@ -38,7 +38,6 @@
       "supports_objectives": true,
       "supports_scoring": true
     },
-    "historical_state": null,
     "observation": {
       "constraints": {},
       "name": "stub-observation",

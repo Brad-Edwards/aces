@@ -38,7 +38,6 @@ HASHMAP_SECTIONS = (
     "identity_facades",
     "deployment_tenants",
     "deployment_cells",
-    "historical_baselines",
     "relationships",
     "agents",
     "action_contracts",
@@ -154,31 +153,6 @@ def _nested_content_item_aliases(
     return aliases
 
 
-def _nested_historical_aliases(
-    scenario: ScenarioContent,
-    baseline_rename_map: Mapping[str, str],
-) -> dict[str, str]:
-    """Canonical refs to baseline-owned declarations."""
-
-    aliases: dict[str, str] = {}
-    for baseline_name, baseline in scenario.historical_baselines.items():
-        prefixed_baseline = baseline_rename_map.get(baseline_name, baseline_name)
-        if prefixed_baseline == baseline_name:
-            continue
-        for collection_name in (
-            "actors",
-            "objects",
-            "events",
-            "materialization_bindings",
-            "readback_requirements",
-        ):
-            for declaration_id in getattr(baseline, collection_name, {}):
-                bare_ref = f"historical_baselines.{baseline_name}.{collection_name}.{declaration_id}"
-                prefixed_ref = f"historical_baselines.{prefixed_baseline}.{collection_name}.{declaration_id}"
-                aliases[bare_ref] = prefixed_ref
-    return aliases
-
-
 def symbol_index(
     scenario: ScenarioContent,
     *,
@@ -218,12 +192,6 @@ def symbol_index(
     named.update(_nested_node_service_aliases(scenario, section_maps.get("nodes", {})))
     named.update(nested_node_runtime_aliases(scenario, section_maps.get("nodes", {})))
     named.update(_nested_content_item_aliases(scenario, section_maps.get("content", {})))
-    named.update(
-        _nested_historical_aliases(
-            scenario,
-            section_maps.get("historical_baselines", {}),
-        )
-    )
 
     forwarding_agent_map = _section_rename_map(
         {agent.forwarding_agent_id: agent for agent in scenario.forwarding_agents},
@@ -254,7 +222,6 @@ def symbol_index(
         "identity_facades": section_maps.get("identity_facades", {}),
         "deployment_tenants": section_maps.get("deployment_tenants", {}),
         "deployment_cells": section_maps.get("deployment_cells", {}),
-        "historical_baselines": section_maps.get("historical_baselines", {}),
         "relationships": section_maps.get("relationships", {}),
         "agents": section_maps.get("agents", {}),
         "action_contracts": section_maps.get("action_contracts", {}),

@@ -5,11 +5,7 @@ from ._runtime_service_families import RUNTIME_SERVICE_FAMILIES, RuntimeReferenc
 
 
 def is_declaration_key_path(tokens: list[str]) -> bool:
-    return (
-        _is_flat_declaration_scope(tokens)
-        or _is_nested_entity_scope(tokens)
-        or _is_historical_declaration_scope(tokens)
-    )
+    return _is_flat_declaration_scope(tokens) or _is_nested_entity_scope(tokens)
 
 
 def _is_flat_declaration_scope(tokens: list[str]) -> bool:
@@ -31,21 +27,6 @@ def _is_nested_entity_scope(tokens: list[str]) -> bool:
         and tokens[0] == "entities"
         and tokens[-1] == "entities"
         and all(segment == "entities" for segment in tokens[::2])
-    )
-
-
-def _is_historical_declaration_scope(tokens: list[str]) -> bool:
-    return (
-        len(tokens) == 3
-        and tokens[0] == "historical_baselines"
-        and tokens[2]
-        in {
-            "actors",
-            "objects",
-            "events",
-            "materialization_bindings",
-            "readback_requirements",
-        }
     )
 
 

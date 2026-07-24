@@ -2,9 +2,9 @@
   "contract_id": "sdl-authoring-input-v1",
   "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
   "stability": "draft",
-  "content_hash": "a665860344bdcb9db7b3daad9513fbb9524dee687c5aac5e6bc80a74e43ffbc5",
+  "content_hash": "5006e507297efea017d29dbbddf5943f6744e2634ce768f5d72a68b7cff3c2e2",
   "last_change": {
-    "summary": "Published DSL-436 initial-state declarations and typed network namespace sharing.",
-    "content_hash": "a665860344bdcb9db7b3daad9513fbb9524dee687c5aac5e6bc80a74e43ffbc5"
+    "summary": "Removed the rejected historical-baseline authoring shape.",
+    "content_hash": "5006e507297efea017d29dbbddf5943f6744e2634ce768f5d72a68b7cff3c2e2"
   }
 }

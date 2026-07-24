@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from typing import Annotated, Any, Literal
+from urllib.parse import parse_qsl, urlsplit
 
-from aces_sdl.uri_safety import unsafe_absolute_uri_reason
 from pydantic import Field, GetJsonSchemaHandler, model_validator
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema
@@ -18,9 +18,50 @@ from .schema_invariants import _add_aces_invariant
 AssociatedArtifactSetDigestString = Annotated[str, Field(pattern=r"^sha256:[a-f0-9]{64}$")]
 
 
+_ASSOCIATED_ARTIFACT_SECRET_QUERY_NAMES = frozenset(
+    {
+        "access_token",
+        "api_key",
+        "apikey",
+        "auth",
+        "credential",
+        "key",
+        "password",
+        "secret",
+        "sig",
+        "signature",
+        "token",
+    }
+)
+
+
+_ASSOCIATED_ARTIFACT_SECRET_QUERY_FRAGMENTS = (
+    "api-key",
+    "api_key",
+    "apikey",
+    "credential",
+    "password",
+    "secret",
+    "signature",
+    "token",
+)
+
+
 def _validate_associated_artifact_uri(artifact_id: str, uri: str) -> None:
-    if reason := unsafe_absolute_uri_reason(uri):
-        raise ValueError(f"associated artifact {artifact_id!r} uri {reason}")
+    parsed = urlsplit(uri)
+    if not parsed.scheme or (parsed.scheme in {"http", "https"} and not parsed.netloc):
+        raise ValueError(f"associated artifact {artifact_id!r} uri must be an absolute URI")
+    if parsed.username is not None or parsed.password is not None:
+        raise ValueError(f"associated artifact {artifact_id!r} uri must not contain credential userinfo")
+    query_names = {name.casefold() for name, _value in parse_qsl(parsed.query, keep_blank_values=True)}
+    secret_names = {
+        name
+        for name in query_names
+        if name in _ASSOCIATED_ARTIFACT_SECRET_QUERY_NAMES
+        or any(fragment in name for fragment in _ASSOCIATED_ARTIFACT_SECRET_QUERY_FRAGMENTS)
+    }
+    if secret_names:
+        raise ValueError(f"associated artifact {artifact_id!r} uri must not contain secret-bearing query fields")
 
 
 class AssociatedArtifactManifestModel(ContractModel):

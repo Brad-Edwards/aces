@@ -129,15 +129,6 @@ def test_reference_model_binding_resolves_nullable_optional_instance_path():
     )
 
 
-def test_reference_model_binding_resolves_identifier_keyed_nested_maps():
-    from aces_contracts.contracts import _resolve_instance_path_schema, _resolve_ref_schema, schema_bundle
-
-    root = schema_bundle()["sdl-authoring-input-v1"]
-    expected = _resolve_ref_schema(root, root["$defs"]["HistoricalObject"])
-
-    assert _resolve_instance_path_schema(root, "historical_baselines.*.objects.*") == expected
-
-
 def test_collapse_nullable_optional_schema_is_conservative():
     from aces_contracts.contracts import _collapse_nullable_optional_schema, _resolve_ref_schema
 

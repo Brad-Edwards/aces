@@ -45,9 +45,9 @@
     },
     "scenarios": {
       "title": "Scenarios",
-      "description": "SDL scenarios, compositions, modules, authored historical baselines, and authoring constructs.",
+      "description": "SDL scenarios, compositions, modules, and authoring constructs.",
       "provenance": "native",
-      "extension_scope": "SDL-native scenario authoring constructs, compositions, modules, historical-baseline containers, and scenario-bound declarations that are not UCO cyber object definitions.",
+      "extension_scope": "SDL-native scenario authoring constructs, compositions, modules, and scenario-bound declarations that are not UCO cyber object definitions.",
       "relation_rules": [
         "May bind to adopted cyber-domain families only when the scenario construct denotes a cyber object, observable, action, relationship, identity, or artifact.",
         "Must remain the container and authoring-intent layer rather than redefining adopted cyber-domain families."

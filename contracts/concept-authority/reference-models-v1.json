@@ -158,62 +158,6 @@
         "cross_tenant_isolation"
       ]
     },
-    "scenario-historical-baseline": {
-      "title": "Scenario Historical Baseline",
-      "description": "Shared reference model for one versioned authored historical-state authority.",
-      "concept_family": "scenarios",
-      "authoritative_schema": {
-        "contract_id": "sdl-authoring-input-v1",
-        "schema_pointer": "#/$defs/HistoricalBaseline",
-        "instance_path": "historical_baselines.*"
-      },
-      "reused_schemas": [
-        {
-          "contract_id": "instantiated-scenario-v1",
-          "schema_pointer": "#/$defs/HistoricalBaseline",
-          "instance_path": "historical_baselines.*"
-        }
-      ],
-      "key_fields": [
-        "version",
-        "address_profile",
-        "history_time_profile",
-        "range_instance_id",
-        "deployment_tenant_ref",
-        "deployment_cell_ref",
-        "reset_generation_id",
-        "reset_owner_relationship_ref",
-        "actors",
-        "objects",
-        "events",
-        "relationship_refs",
-        "materialization_bindings",
-        "readback_requirements"
-      ]
-    },
-    "scenario-historical-object": {
-      "title": "Scenario Historical Object",
-      "description": "Shared reference model for a baseline-local portable semantic object.",
-      "concept_family": "tools-and-artifacts",
-      "authoritative_schema": {
-        "contract_id": "sdl-authoring-input-v1",
-        "schema_pointer": "#/$defs/HistoricalObject",
-        "instance_path": "historical_baselines.*.objects.*"
-      },
-      "reused_schemas": [
-        {
-          "contract_id": "instantiated-scenario-v1",
-          "schema_pointer": "#/$defs/HistoricalObject",
-          "instance_path": "historical_baselines.*.objects.*"
-        }
-      ],
-      "key_fields": [
-        "kind",
-        "writer_actor_ref",
-        "content_ref",
-        "sensitivity"
-      ]
-    },
     "scenario-relationship": {
       "title": "Scenario Relationship",
       "description": "Shared reference model for typed directed relationships between scenario elements.",
@@ -240,8 +184,7 @@
         "forest_trust",
         "identity_federation",
         "carrier_placement",
-        "shared_service",
-        "historical_object_link"
+        "shared_service"
       ]
     },
     "scenario-condition": {

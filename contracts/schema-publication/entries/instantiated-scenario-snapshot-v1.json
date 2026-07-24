@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-snapshot-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "3fc6908f73d79e72207d6b62a2c6db9a82f280aa8538cfdf523907fc357a97ed",
+  "content_hash": "a390c998e5f7f3274054cf9a4a5bb076845e87a9856308ab18c7e679a5029a9e",
   "last_change": {
-    "summary": "Carried DSL-436 initial-state declarations and network namespace sharing into instantiated snapshots.",
-    "content_hash": "3fc6908f73d79e72207d6b62a2c6db9a82f280aa8538cfdf523907fc357a97ed"
+    "summary": "Removed the rejected historical-baseline shape while preserving enterprise and network namespace semantics.",
+    "content_hash": "a390c998e5f7f3274054cf9a4a5bb076845e87a9856308ab18c7e679a5029a9e"
   }
 }

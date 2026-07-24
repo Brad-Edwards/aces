@@ -231,7 +231,6 @@ class _ValidatorCore:
         self._verify_domain_topology()
         self._verify_enterprise_identity()
         self._verify_deployment_tenancy()
-        self._verify_historical_state()
         self._verify_relationship_database_access()
         self._verify_relationship_mail_access()
         self._verify_relationship_forwarding_edges()

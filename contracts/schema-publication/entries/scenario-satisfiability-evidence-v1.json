@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "085bc67881cb128e65ee7c747c41dfdf7bf7a867a101f64a33ba22ae609507a3",
+  "content_hash": "36d02857981c15422b430715bdec8819bc64f8fd6370b6a564534a5ea785cd2d",
   "last_change": {
-    "summary": "Carried DSL-436 initial-state semantics and network namespace sharing through satisfiability evidence.",
-    "content_hash": "085bc67881cb128e65ee7c747c41dfdf7bf7a867a101f64a33ba22ae609507a3"
+    "summary": "Removed the rejected historical-baseline shape from satisfiability evidence.",
+    "content_hash": "36d02857981c15422b430715bdec8819bc64f8fd6370b6a564534a5ea785cd2d"
   }
 }

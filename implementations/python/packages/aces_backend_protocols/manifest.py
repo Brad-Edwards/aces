@@ -12,7 +12,6 @@ from aces_contracts.contracts import (
     BackendManifestV2Model,
     ConceptBindingEntryModel,
     EvaluatorCapabilitiesModel,
-    HistoricalStateCapabilitiesModel,
     ObservationCapabilitiesModel,
     OrchestratorCapabilitiesModel,
     ParticipantFeatureSupportModel,
@@ -27,7 +26,6 @@ from .capabilities import (
     BackendCompatibility,
     BackendManifest,
     EvaluatorCapabilities,
-    HistoricalStateCapabilities,
     ObservationCapabilities,
     OrchestratorCapabilities,
     ParticipantFeatureSupport,
@@ -179,14 +177,6 @@ def backend_manifest_v2_model(manifest: BackendManifest) -> BackendManifestV2Mod
                 if manifest.observation is not None
                 else None
             ),
-            "historical_state": (
-                HistoricalStateCapabilitiesModel(
-                    supported_interface_profiles=sorted(manifest.historical_state.supported_interface_profiles),
-                    supported_object_kinds=sorted(manifest.historical_state.supported_object_kinds),
-                ).model_dump(mode="json")
-                if manifest.historical_state is not None
-                else None
-            ),
         },
     )
 
@@ -302,17 +292,6 @@ def _observation_from_model(model: ObservationCapabilitiesModel | None) -> Obser
     )
 
 
-def _historical_state_from_model(
-    model: HistoricalStateCapabilitiesModel | None,
-) -> HistoricalStateCapabilities | None:
-    if model is None:
-        return None
-    return HistoricalStateCapabilities(
-        supported_interface_profiles=frozenset(model.supported_interface_profiles),
-        supported_object_kinds=frozenset(model.supported_object_kinds),
-    )
-
-
 def _capability_set_from_model(model: BackendCapabilitiesV2Model) -> BackendCapabilitySet:
     return BackendCapabilitySet(
         provisioner=_provisioner_from_model(model.provisioner),
@@ -320,7 +299,6 @@ def _capability_set_from_model(model: BackendCapabilitiesV2Model) -> BackendCapa
         evaluator=_evaluator_from_model(model.evaluator),
         participant_runtime=_participant_runtime_from_model(model.participant_runtime),
         observation=_observation_from_model(model.observation),
-        historical_state=_historical_state_from_model(model.historical_state),
     )
 
 

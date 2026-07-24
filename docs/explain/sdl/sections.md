@@ -47,7 +47,6 @@ plane (ADR-055/064/069). Declarative `conditions` remain.
 | `content` | `dict[str, Content]` | Data placed into systems (files, datasets, emails) | CyRIS `copy_content` |
 | `accounts` | `dict[str, Account]` | Curated scenario/provisioning accounts on nodes, not full runtime identity inventory | CyRIS `add_account` |
 | `identity_domains` | `dict[str, IdentityDomain]` | Authored domain identity and authority for controller/join realization | ACES ADR-082 |
-| `historical_baselines` | `dict[str, HistoricalBaseline]` | Versioned logical history, semantic objects, native materialization intent, and participant readback obligations | ACES ADR-088 |
 | `relationships` | `dict[str, Relationship]` | Typed edges between elements (auth, trust, federation) | STIX Relationship SRO |
 | `forwarding_agents` | `list[RuntimeForwardingAgent]` | Scenario-level forwarding and shipping agents with element-carried identity | ACES ADR-050 |
 | `agents` | `dict[str, Agent]` | Autonomous participants (actions, knowledge, scope) | CybORG Agents, extended by ACES |

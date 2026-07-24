@@ -154,27 +154,6 @@ def _attach_stateful_resource_invariants(contract_id: str, json_schema: dict[str
     )
 
 
-def _attach_historical_state_invariants(contract_id: str, json_schema: dict[str, Any]) -> None:
-    instance_paths = {
-        "sdl-authoring-input-v1": "#",
-        "instantiated-scenario-v1": "#",
-        "instantiated-scenario-snapshot-v1": "#/scenario",
-        "scenario-satisfiability-evidence-v1": "#/snapshot/scenario",
-    }
-    instance_path = instance_paths.get(contract_id)
-    if instance_path is None:
-        return
-    _add_aces_invariant(
-        json_schema,
-        "authored-historical-state-semantics",
-        "Historical baseline actor authority, logical order, causality, object and relationship lifecycle, "
-        "single-writer authority, materialization interface compatibility, tenant/cell/reset agreement, "
-        "readback assertion coverage, and bounded corpus safety must all hold.",
-        validator="aces_sdl.semantics.historical_state.analyze_historical_state",
-        inputs=[{"contract_id": contract_id, "instance_path": instance_path}],
-    )
-
-
 def _validate_reported_value_status(
     value_status: str,
     value: object | None,

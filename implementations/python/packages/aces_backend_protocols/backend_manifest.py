@@ -12,7 +12,6 @@ from aces_contracts.realization_envelope import BackendRealizationEnvelopeModel
 from .capabilities import (
     BackendCapabilitySet,
     EvaluatorCapabilities,
-    HistoricalStateCapabilities,
     ObservationCapabilities,
     OrchestratorCapabilities,
     ParticipantRuntimeCapabilities,
@@ -49,7 +48,6 @@ class _BackendManifestOptions(TypedDict, total=False):
     evaluator: EvaluatorCapabilities | None
     participant_runtime: ParticipantRuntimeCapabilities | None
     observation: ObservationCapabilities | None
-    historical_state: HistoricalStateCapabilities | None
     realization_envelope: BackendRealizationEnvelopeModel | None
 
 
@@ -119,10 +117,6 @@ class BackendManifest:
         return self.capabilities.observation
 
     @property
-    def historical_state(self) -> HistoricalStateCapabilities | None:
-        return self.capabilities.historical_state
-
-    @property
     def has_orchestrator(self) -> bool:
         return self.orchestrator is not None
 
@@ -188,7 +182,6 @@ def _resolve_capabilities(options: _BackendManifestOptions) -> BackendCapability
         evaluator=options.get("evaluator"),
         participant_runtime=options.get("participant_runtime"),
         observation=options.get("observation"),
-        historical_state=options.get("historical_state"),
     )
 
 

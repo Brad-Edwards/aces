@@ -8,7 +8,6 @@ from ._deployment_tenancy import _DeploymentTenancyMixin
 from ._domain_topology import _DomainTopologyMixin
 from ._enterprise_identity import _EnterpriseIdentityMixin
 from ._evidence_requirements import _EvidenceRequirementsMixin
-from ._historical_state import _HistoricalStateMixin
 from ._mixed_control import _MixedControlMixin
 from ._nodes_infra_network import _NodesInfraNetworkMixin
 from ._participant_tool_affordances import _ParticipantToolAffordancesMixin
@@ -38,7 +37,6 @@ class SemanticValidator(
     _DomainTopologyMixin,
     _EnterpriseIdentityMixin,
     _DeploymentTenancyMixin,
-    _HistoricalStateMixin,
     _RelationshipsMixin,
     _RelationshipsProxyMixin,
     _MixedControlMixin,

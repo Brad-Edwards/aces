@@ -175,12 +175,6 @@ from .experiment_study import (
     ExperimentStudyMembershipModel,
     ExperimentUncertaintyMethodModel,
 )
-from .historical_state import (
-    HistoricalBaselineDigestModel,
-    HistoricalSemanticAddressContextModel,
-    HistoricalSemanticAddressModel,
-    HistoricalStateCapabilitiesModel,
-)
 from .manifests import (
     BackendCapabilitiesV2Model,
     ConceptBindingEntryModel,
@@ -394,9 +388,7 @@ __all__ = [
     "PropositionEvaluationBasis", "PropositionIndeterminacyReason", "PropositionLossDisclosureModel",
     "PropositionLossKind", "PropositionProbeBindingModel", "PropositionTemporalContextModel",
     "PropositionTruthOutcome", "PropositionTruthResultModel", "EVALUATION_STATE_SCHEMA_VERSION",
-    "EvaluatorCapabilitiesModel", "EventClassificationModel", "HistoricalBaselineDigestModel",
-    "HistoricalSemanticAddressContextModel",
-    "HistoricalSemanticAddressModel", "HistoricalStateCapabilitiesModel", "InstantiationRequestModel",
+    "EvaluatorCapabilitiesModel", "EventClassificationModel", "InstantiationRequestModel",
     "OPERATION_SCHEMA_VERSION", "OperationReceiptModel", "OperationStatusModel", "ObservationCapabilitiesModel",
     "OrchestrationPlanModel", "OrchestratorCapabilitiesModel", "PARTICIPANT_EPISODE_STATE_SCHEMA_VERSION",
     "PARTICIPANT_IMPLEMENTATION_MANIFEST_V1_SCHEMA_VERSION",

@@ -5,10 +5,6 @@ from typing import Any
 
 from aces_backend_protocols.capabilities import BackendManifest
 from aces_contracts.addressing import require_compiled_address
-from aces_contracts.contracts.historical_state import (
-    HistoricalBaselineDigestModel,
-    HistoricalSemanticAddressModel,
-)
 from aces_contracts.diagnostics import Diagnostic
 from aces_contracts.evaluation import EvaluationExecutionContract, EvaluationResultContract
 from aces_contracts.planning import EvaluationPlan, OrchestrationPlan, ProvisioningPlan
@@ -91,25 +87,6 @@ class CompiledCapabilityConstraint:
             raise ValueError("compiled capability constraint requires a non-empty domain")
 
 
-def _register_address_map_entries(
-    field_name: str,
-    entries: dict[str, ResolvedResource],
-    owners: dict[str, str],
-) -> None:
-    for map_key, item in entries.items():
-        address = getattr(item, "address", None)
-        if not isinstance(address, str):
-            raise TypeError(f"RuntimeModel {field_name} entries must carry an address")
-        require_compiled_address(address)
-        require_compiled_address(map_key, field_name="runtime model map key")
-        if map_key != address:
-            raise ValueError(f"RuntimeModel {field_name} map key must equal embedded address")
-        previous_owner = owners.get(address)
-        if previous_owner is not None and previous_owner != field_name:
-            raise ValueError(f"RuntimeModel duplicate compiled address across {previous_owner} and {field_name}")
-        owners[address] = field_name
-
-
 @dataclass(frozen=True)
 class RuntimeModel:
     """Compiled SDL runtime model.
@@ -126,8 +103,6 @@ class RuntimeModel:
     entity_specs: dict[str, dict[str, Any]] = field(default_factory=dict)
     agent_specs: dict[str, dict[str, Any]] = field(default_factory=dict)
     relationship_specs: dict[str, dict[str, Any]] = field(default_factory=dict)
-    historical_baseline_digests: dict[str, HistoricalBaselineDigestModel] = field(default_factory=dict)
-    historical_object_addresses: dict[str, HistoricalSemanticAddressModel] = field(default_factory=dict)
     # Typed compiler metadata for finite pre-instantiation domains. It is
     # consumed by planner capability checks and never enters backend resource
     # payloads.
@@ -192,16 +167,24 @@ class RuntimeModel:
             "objectives",
         )
         for field_name in address_map_fields:
-            _register_address_map_entries(field_name, getattr(self, field_name), owners)
+            value = getattr(self, field_name)
+            for map_key, item in value.items():
+                address = getattr(item, "address", None)
+                if not isinstance(address, str):
+                    raise TypeError(f"RuntimeModel {field_name} entries must carry an address")
+                require_compiled_address(address)
+                require_compiled_address(map_key, field_name="runtime model map key")
+                if map_key != address:
+                    raise ValueError(f"RuntimeModel {field_name} map key must equal embedded address")
+                previous_owner = owners.get(address)
+                if previous_owner is not None and previous_owner != field_name:
+                    raise ValueError(
+                        f"RuntimeModel duplicate compiled address across {previous_owner} and {field_name}"
+                    )
+                owners[address] = field_name
         capability_keys = [(constraint.address, constraint.concern) for constraint in self.capability_constraints]
         if len(capability_keys) != len(set(capability_keys)):
             raise ValueError("RuntimeModel capability constraints must address unique fields")
-        semantic_values = [address.value for address in self.historical_object_addresses.values()]
-        if len(semantic_values) != len(set(semantic_values)):
-            raise ValueError("RuntimeModel historical semantic addresses must be unique")
-        for baseline_id, digest in self.historical_baseline_digests.items():
-            if baseline_id != digest.baseline_id:
-                raise ValueError("RuntimeModel historical baseline digest key must equal embedded baseline_id")
 
 
 @dataclass(frozen=True)

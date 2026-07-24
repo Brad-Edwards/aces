@@ -1,6 +1,6 @@
 {
   "schema_version": "sdl-lineage-ledger/v1",
-  "reviewed_on": "2026-07-24",
+  "reviewed_on": "2026-07-19",
   "citations": [
     {
       "citation_id": "ocr-sdl-v0.21.2",
@@ -3584,99 +3584,6 @@
           ],
           "internal_authority_refs": [],
           "compatibility_direction": "aces_relative_to_source"
-        }
-      ]
-    },
-    {
-      "subject_id": "sdl-field:historical_baselines",
-      "subject_kind": "top_level_field",
-      "disposition": "current",
-      "authority": {
-        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
-        "pointer": "#/properties/historical_baselines"
-      },
-      "claims": [
-        {
-          "plane": "semantics",
-          "classification": "aces_native",
-          "source_refs": [],
-          "aces_boundaries": [
-            {
-              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
-              "symbol_or_pointer": "#/properties/historical_baselines"
-            }
-          ],
-          "source_boundaries": [],
-          "divergence": "Defined by the ACES authored historical-state contract; external scenario syntaxes do not define this closed graph, native materialization, or deterministic address profile.",
-          "compatibility": "not_applicable",
-          "citation_refs": [],
-          "internal_authority_refs": [
-            "docs/decisions/adrs/adr-088-authored-historical-state-and-native-materialization.md",
-            "specs/sdl/authored-historical-state.md"
-          ],
-          "compatibility_direction": "not_applicable"
-        }
-      ]
-    },
-    {
-      "subject_id": "reference-model:scenario-historical-baseline",
-      "subject_kind": "reference_model",
-      "disposition": "current",
-      "authority": {
-        "artifact": "contracts/concept-authority/reference-models-v1.json",
-        "pointer": "#/models/scenario-historical-baseline"
-      },
-      "claims": [
-        {
-          "plane": "semantics",
-          "classification": "aces_native",
-          "source_refs": [],
-          "aces_boundaries": [
-            {
-              "artifact": "contracts/concept-authority/reference-models-v1.json",
-              "symbol_or_pointer": "#/models/scenario-historical-baseline"
-            }
-          ],
-          "source_boundaries": [],
-          "divergence": "Defined by the current ACES normative authored historical-state contract.",
-          "compatibility": "not_applicable",
-          "citation_refs": [],
-          "internal_authority_refs": [
-            "docs/decisions/adrs/adr-088-authored-historical-state-and-native-materialization.md",
-            "specs/sdl/authored-historical-state.md"
-          ],
-          "compatibility_direction": "not_applicable"
-        }
-      ]
-    },
-    {
-      "subject_id": "reference-model:scenario-historical-object",
-      "subject_kind": "reference_model",
-      "disposition": "current",
-      "authority": {
-        "artifact": "contracts/concept-authority/reference-models-v1.json",
-        "pointer": "#/models/scenario-historical-object"
-      },
-      "claims": [
-        {
-          "plane": "semantics",
-          "classification": "aces_native",
-          "source_refs": [],
-          "aces_boundaries": [
-            {
-              "artifact": "contracts/concept-authority/reference-models-v1.json",
-              "symbol_or_pointer": "#/models/scenario-historical-object"
-            }
-          ],
-          "source_boundaries": [],
-          "divergence": "Defined by the current ACES normative authored historical-state contract.",
-          "compatibility": "not_applicable",
-          "citation_refs": [],
-          "internal_authority_refs": [
-            "docs/decisions/adrs/adr-088-authored-historical-state-and-native-materialization.md",
-            "specs/sdl/authored-historical-state.md"
-          ],
-          "compatibility_direction": "not_applicable"
         }
       ]
     },

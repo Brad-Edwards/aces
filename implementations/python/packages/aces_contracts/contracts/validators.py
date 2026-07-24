@@ -111,25 +111,15 @@ def _resolve_ref_schema(schema_root: dict[str, Any], schema_node: dict[str, Any]
         return current
 
 
-def _resolve_wildcard_schema(current: dict[str, Any], instance_path: str) -> dict[str, Any]:
-    additional_properties = current.get("additionalProperties")
-    if isinstance(additional_properties, dict):
-        return additional_properties
-    pattern_properties = current.get("patternProperties")
-    if not isinstance(pattern_properties, dict) or len(pattern_properties) != 1:
-        raise KeyError(instance_path)
-    wildcard_schema = next(iter(pattern_properties.values()))
-    if not isinstance(wildcard_schema, dict):
-        raise KeyError(instance_path)
-    return wildcard_schema
-
-
 def _resolve_instance_path_schema(schema_root: dict[str, Any], instance_path: str) -> dict[str, Any]:
     current = schema_root
     for segment in instance_path.split("."):
         current = _resolve_ref_schema(schema_root, current)
         if segment == "*":
-            current = _resolve_wildcard_schema(current, instance_path)
+            additional_properties = current.get("additionalProperties")
+            if not isinstance(additional_properties, dict):
+                raise KeyError(instance_path)
+            current = additional_properties
             continue
 
         properties = current.get("properties")
