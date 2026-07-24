@@ -80,6 +80,12 @@ class BackendManifestV2Model(ContractModel):
         if declared_time_contracts.intersection({"time-model-v1", "time-runtime-state-v1", "realized-time-model-v1"}):
             if self.capabilities.time is None:
                 raise ValueError("time contract support requires capabilities.time")
+        if (
+            self.capabilities.time is not None
+            and self.capabilities.time.supports_coordinated_participant_reset
+            and self.capabilities.participant_runtime is None
+        ):
+            raise ValueError("coordinated participant reset support requires participant runtime capabilities")
         scopes = [binding.scope for binding in self.concept_bindings]
         if len(scopes) != len(set(scopes)):
             raise ValueError("concept_bindings must not contain duplicate scopes")

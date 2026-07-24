@@ -5914,6 +5914,110 @@
       "title": "ParticipantActionPrecondition",
       "type": "object"
     },
+    "ParticipantAutonomousExecutionPolicy": {
+      "additionalProperties": false,
+      "description": "Deterministic scheduler binding over existing participant semantics.",
+      "properties": {
+        "action_order": {
+          "items": {
+            "not": {
+              "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+            },
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Action Order",
+          "type": "array"
+        },
+        "clock_ref": {
+          "minLength": 1,
+          "not": {
+            "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Clock Ref",
+          "type": "string"
+        },
+        "evaluation_authority": {
+          "$ref": "#/$defs/ParticipantEvaluationAuthority"
+        },
+        "failure_policy": {
+          "$ref": "#/$defs/ParticipantExecutionFailurePolicy",
+          "default": "stop"
+        },
+        "max_action_attempts": {
+          "maximum": 1000000,
+          "minimum": 1,
+          "title": "Max Action Attempts",
+          "type": "integer"
+        },
+        "max_in_flight": {
+          "default": 1,
+          "maximum": 1024,
+          "minimum": 1,
+          "title": "Max In Flight",
+          "type": "integer"
+        },
+        "observation_boundary_ref": {
+          "minLength": 1,
+          "not": {
+            "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Observation Boundary Ref",
+          "type": "string"
+        },
+        "participant_implementation_ref": {
+          "minLength": 1,
+          "not": {
+            "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Participant Implementation Ref",
+          "type": "string"
+        },
+        "profile": {
+          "const": "participant-autonomous-execution/v1",
+          "default": "participant-autonomous-execution/v1",
+          "title": "Profile",
+          "type": "string"
+        },
+        "progression_policy_ref": {
+          "minLength": 1,
+          "not": {
+            "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Progression Policy Ref",
+          "type": "string"
+        },
+        "selection_strategy": {
+          "const": "ordered_cycle",
+          "default": "ordered_cycle",
+          "title": "Selection Strategy",
+          "type": "string"
+        },
+        "temporal_constraint_refs": {
+          "items": {
+            "not": {
+              "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+            },
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Temporal Constraint Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "participant_implementation_ref",
+        "clock_ref",
+        "progression_policy_ref",
+        "temporal_constraint_refs",
+        "action_order",
+        "observation_boundary_ref",
+        "max_action_attempts",
+        "evaluation_authority"
+      ],
+      "title": "ParticipantAutonomousExecutionPolicy",
+      "type": "object"
+    },
     "ParticipantBackendFailureMapping": {
       "additionalProperties": false,
       "description": "Mapping from a backend diagnostic code to a portable SEM-211 failure.",
@@ -6045,6 +6149,17 @@
           },
           "title": "Authority Scope Refs",
           "type": "array"
+        },
+        "autonomous_execution": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ParticipantAutonomousExecutionPolicy"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "backend_feature_support_refs": {
           "items": {
@@ -6240,6 +6355,78 @@
         "unknown_effect"
       ],
       "title": "ParticipantEffectClass",
+      "type": "string"
+    },
+    "ParticipantEvaluationAuthority": {
+      "additionalProperties": false,
+      "description": "Explicit evaluator-plane authority kept separate from participant actions.",
+      "properties": {
+        "mode": {
+          "$ref": "#/$defs/ParticipantEvaluationAuthorityMode"
+        },
+        "objective_refs": {
+          "items": {
+            "not": {
+              "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+            },
+            "type": "string"
+          },
+          "title": "Objective Refs",
+          "type": "array"
+        },
+        "proof_producer_refs": {
+          "items": {
+            "not": {
+              "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+            },
+            "type": "string"
+          },
+          "title": "Proof Producer Refs",
+          "type": "array"
+        },
+        "receipt_authority_refs": {
+          "items": {
+            "not": {
+              "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+            },
+            "type": "string"
+          },
+          "title": "Receipt Authority Refs",
+          "type": "array"
+        },
+        "score_authority_refs": {
+          "items": {
+            "not": {
+              "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+            },
+            "type": "string"
+          },
+          "title": "Score Authority Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "mode"
+      ],
+      "title": "ParticipantEvaluationAuthority",
+      "type": "object"
+    },
+    "ParticipantEvaluationAuthorityMode": {
+      "description": "Whether a participant may contribute to evaluator-plane authority.",
+      "enum": [
+        "none",
+        "declared"
+      ],
+      "title": "ParticipantEvaluationAuthorityMode",
+      "type": "string"
+    },
+    "ParticipantExecutionFailurePolicy": {
+      "description": "Disposition after a native participant action fails.",
+      "enum": [
+        "continue",
+        "stop"
+      ],
+      "title": "ParticipantExecutionFailurePolicy",
       "type": "string"
     },
     "ParticipantFailureClass": {

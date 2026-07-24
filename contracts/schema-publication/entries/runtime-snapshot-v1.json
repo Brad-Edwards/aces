@@ -2,9 +2,9 @@
   "contract_id": "runtime-snapshot-v1",
   "schema_path": "contracts/schemas/snapshots/runtime-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "b9943e5331a41e04764c8b945f6306b59437e382a557379f2621529c69012984",
+  "content_hash": "e98bcb03deadcca8a7615ade1664297911993584f2c7959c0c628162ff1970d7",
   "last_change": {
-    "summary": "Added ASR-528 typed shared-time runtime state and readback.",
-    "content_hash": "b9943e5331a41e04764c8b945f6306b59437e382a557379f2621529c69012984"
+    "summary": "Bound DSL-437 autonomous scheduler state to its live participant episode.",
+    "content_hash": "e98bcb03deadcca8a7615ade1664297911993584f2c7959c0c628162ff1970d7"
   }
 }

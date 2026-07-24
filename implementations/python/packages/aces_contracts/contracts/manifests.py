@@ -9,6 +9,7 @@ from pydantic import Field, GetJsonSchemaHandler, model_validator
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema
 
+from ..addressing import require_compiled_address
 from ..manifest_authority import (
     PROCESSOR_SUPPORTED_CONTRACT_IDS,
     PROCESSOR_SUPPORTED_SDL_VERSION_IDS,
@@ -163,6 +164,26 @@ class ParticipantRuntimeCapabilitiesModel(ContractModel):
         json_schema_extra={"uniqueItems": True},
     )
     feature_support: list[ParticipantFeatureSupportModel] = Field(default_factory=list)
+    supports_autonomous_execution: bool = False
+    supported_autonomous_selection_strategies: list[Literal["ordered_cycle"]] = Field(
+        default_factory=list,
+        json_schema_extra={"uniqueItems": True},
+    )
+    supported_autonomous_action_contracts: list[NonEmptyString] = Field(
+        default_factory=list,
+        json_schema_extra={"uniqueItems": True},
+    )
+    supported_autonomous_observation_boundaries: list[NonEmptyString] = Field(
+        default_factory=list,
+        json_schema_extra={"uniqueItems": True},
+    )
+    supported_autonomous_target_addresses: list[NonEmptyString] = Field(
+        default_factory=list,
+        json_schema_extra={"uniqueItems": True},
+    )
+    max_autonomous_participants: int | None = Field(default=None, ge=1)
+    max_autonomous_action_attempts: int | None = Field(default=None, ge=1)
+    max_autonomous_in_flight: int | None = Field(default=None, ge=1)
     constraints: dict[str, str] = Field(default_factory=dict)
 
     @model_validator(mode="after")
@@ -195,6 +216,44 @@ class ParticipantRuntimeCapabilitiesModel(ContractModel):
                     f"feature_support entry '{entry.feature}' declares support_level 'unsupported' but the "
                     "feature is declared in supported_behavior_features or supported_interaction_features"
                 )
+        declares_autonomous = "autonomous_execution" in self.supported_behavior_features
+        if declares_autonomous != self.supports_autonomous_execution:
+            raise ValueError("autonomous_execution feature and support flag must agree")
+        limits = (
+            self.max_autonomous_participants,
+            self.max_autonomous_action_attempts,
+            self.max_autonomous_in_flight,
+        )
+        if self.supports_autonomous_execution and (
+            not self.supported_autonomous_selection_strategies
+            or not self.supported_autonomous_action_contracts
+            or not self.supported_autonomous_observation_boundaries
+            or any(value is None for value in limits)
+        ):
+            raise ValueError(
+                "autonomous execution requires selection strategies, exact action and observation support, "
+                "and finite limits"
+            )
+        if not self.supports_autonomous_execution and (
+            self.supported_autonomous_selection_strategies
+            or self.supported_autonomous_action_contracts
+            or self.supported_autonomous_observation_boundaries
+            or self.supported_autonomous_target_addresses
+            or any(value is not None for value in limits)
+        ):
+            raise ValueError("autonomous execution limits require autonomous execution support")
+        for field_name in (
+            "supported_autonomous_action_contracts",
+            "supported_autonomous_observation_boundaries",
+            "supported_autonomous_target_addresses",
+        ):
+            values = getattr(self, field_name)
+            _validate_unique_string_values(field_name, values)
+            for address in values:
+                try:
+                    require_compiled_address(address, field_name=field_name)
+                except (TypeError, ValueError) as exc:
+                    raise ValueError(str(exc)) from exc
         return self
 
 
@@ -311,6 +370,7 @@ class TimeCapabilitiesModel(ContractModel):
     supports_exact_rational_mappings: bool = False
     supports_append_only_history: bool = False
     supports_run_provenance: bool = False
+    supports_coordinated_participant_reset: bool = False
     constraints: dict[str, str] = Field(default_factory=dict)
 
     @model_validator(mode="after")

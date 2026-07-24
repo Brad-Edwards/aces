@@ -397,6 +397,17 @@ adrs:
   - id: ADR-090
     path: docs/decisions/adrs/adr-090-shared-time-domain-clock-and-progression-authority.md
     pin: 5b8fa008e2e8c8893e8a0c0376c947ef6f840d1e09fd75d579d36d477219d1e2
+    amendments:
+      - date: 2026-07-24
+        ref: "#117"
+        summary: "Replaced a documentation link that the strict Sphinx build could not resolve with its repository-relative path."
   - id: ADR-091
     path: docs/decisions/adrs/adr-091-portable-time-capability-control-and-provenance-contracts.md
     pin: c2a0e6ac9fb87aa10fbb571b0f70efe0b99520b806f6ffe706f1556b0ec7e84b
+  - id: ADR-092
+    path: docs/decisions/adrs/adr-092-autonomous-benign-participants-under-shared-time.md
+    pin: f813aebad329c94ad78bd97f945c683ec1426e781666b7136a5dd2904476acd5
+    amendments:
+      - date: 2026-07-24
+        ref: "#861"
+        summary: "Required exact action provenance and capability-specific atomic participant batching."

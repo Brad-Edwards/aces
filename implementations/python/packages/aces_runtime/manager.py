@@ -5,15 +5,14 @@ from dataclasses import dataclass
 from aces_contracts.contracts.time_model import TimeModelDeclarationModel
 from aces_contracts.diagnostics import Diagnostic
 from aces_contracts.planning import ChangeAction, ProvisioningPlan, ProvisionOp, RuntimeDomain
-from aces_contracts.runtime_state import ApplyResult, RuntimeSnapshot, SnapshotEntry
+from aces_contracts.runtime_state import ApplyResult, RuntimeSnapshot
 from aces_processor.compiler import compile_scenario_runtime_model
-from aces_processor.models import (
-    ExecutionPlan,
-)
+from aces_processor.models import ExecutionPlan
 from aces_processor.planner import plan, snapshot_delete_order
 
 from .backend_calls import _call_backend_apply, _call_backend_diagnostics
 from .diagnostics import _failure_diagnostic, _has_error_diagnostic
+from .participant_execution_control import RuntimeParticipantExecutionMixin
 from .registry import RuntimeTarget, _validate_runtime_target_shape
 from .time_control import RuntimeTimeControlMixin
 
@@ -31,10 +30,6 @@ class _RuntimeApplyState:
     changed_addresses: list[str]
     started_evaluator: bool = False
     failure: ApplyResult | None = None
-
-
-def _delete_order(entries: dict[str, SnapshotEntry]) -> list[str]:
-    return snapshot_delete_order(entries)
 
 
 def _provenance_diagnostics(
@@ -130,7 +125,7 @@ def _rollback_services(
     )
 
 
-class RuntimeManager(RuntimeTimeControlMixin):
+class RuntimeManager(RuntimeParticipantExecutionMixin, RuntimeTimeControlMixin):
     """Plans and executes SDL runtime work against a target."""
 
     def __init__(
@@ -150,6 +145,7 @@ class RuntimeManager(RuntimeTimeControlMixin):
         self._target = target
         self._snapshot = initial_snapshot if initial_snapshot is not None else RuntimeSnapshot()
         self._time_declaration: TimeModelDeclarationModel | None = None
+        self._initialize_participant_scheduler()
 
     @property
     def snapshot(self) -> RuntimeSnapshot:
@@ -173,6 +169,9 @@ class RuntimeManager(RuntimeTimeControlMixin):
         )
 
     def apply(self, execution_plan: ExecutionPlan) -> ApplyResult:
+        driver_precondition = self._participant_driver_apply_precondition()
+        if driver_precondition is not None:
+            return driver_precondition
         diagnostics: list[Diagnostic] = list(execution_plan.diagnostics)
         self._time_declaration = None
 
@@ -189,17 +188,24 @@ class RuntimeManager(RuntimeTimeControlMixin):
         if state.failure is None:
             self._apply_time_phase(execution_plan, state)
         if state.failure is None:
+            self._apply_participant_execution_phase(execution_plan, state)
+        if state.failure is None:
             self._apply_evaluation_phase(execution_plan, state)
         if state.failure is None:
             self._apply_orchestration_phase(execution_plan, state)
         if state.failure is None:
-            self._snapshot = state.working_snapshot
-            state.failure = ApplyResult(
-                success=not _has_error_diagnostic(state.diagnostics),
-                snapshot=self._snapshot,
-                diagnostics=state.diagnostics,
-                changed_addresses=state.changed_addresses,
-            )
+            participant_started = self._start_participant_execution_phase(execution_plan, state)
+            if not participant_started:
+                rollback_services = []
+                if execution_plan.orchestration.actionable_operations and self._target.orchestrator is not None:
+                    rollback_services.append(("runtime.rollback.orchestrator", self._target.orchestrator))
+                if state.started_evaluator and self._target.evaluator is not None:
+                    rollback_services.append(("runtime.rollback.evaluator", self._target.evaluator))
+                rollback_result = _rollback_services(state.working_snapshot, rollback_services)
+                self._record_phase_result(state, rollback_result)
+                self._fail_apply_state(state)
+        if state.failure is None:
+            self._finalize_participant_driver_apply(state)
         return state.failure
 
     def _apply_provisioning_phase(
@@ -302,7 +308,7 @@ class RuntimeManager(RuntimeTimeControlMixin):
             success=False,
             snapshot=self._snapshot,
             diagnostics=state.diagnostics,
-            changed_addresses=state.changed_addresses,
+            changed_addresses=list(dict.fromkeys(state.changed_addresses)),
         )
 
     def _apply_precondition_failure(
@@ -384,9 +390,24 @@ class RuntimeManager(RuntimeTimeControlMixin):
             info["evaluation_history"] = self._target.evaluator.history()
         if self._target.time_runtime is not None and self._snapshot.time_model_state is not None:
             info["time_model_state"] = self.read_time_state().model_dump(mode="json")
+        if self._participant_execution_policies:
+            info["participant_clock_driver"] = self.participant_clock_driver_status()
         return info
 
     def destroy(self) -> ApplyResult:
+        if not self._stop_participant_clock_driver():
+            return ApplyResult(
+                success=False,
+                snapshot=self._snapshot,
+                diagnostics=[
+                    Diagnostic(
+                        code="runtime.participant-clock-driver-stop-timeout",
+                        domain="participant",
+                        address="runtime.destroy",
+                        message="Destroy did not start because the participant clock driver is still active.",
+                    )
+                ],
+            )
         diagnostics: list[Diagnostic] = []
         changed_addresses: list[str] = []
         working_snapshot = self._snapshot
@@ -444,7 +465,7 @@ class RuntimeManager(RuntimeTimeControlMixin):
                     ordering_dependencies=(provisioning_entries[address].ordering_dependencies),
                     refresh_dependencies=(provisioning_entries[address].refresh_dependencies),
                 )
-                for address in _delete_order(provisioning_entries)
+                for address in snapshot_delete_order(provisioning_entries)
             ],
             realization_envelope=working_snapshot.realization_envelope,
         )

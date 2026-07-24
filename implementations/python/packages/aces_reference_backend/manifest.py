@@ -46,7 +46,7 @@ _TIME_DEDICATED_CONTRACT_VERSIONS = frozenset({"time-model-v1", "time-runtime-st
 _PARTICIPANT_ROLES = frozenset(PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_ROLE_SCOPE])
 _PARTICIPANT_BEHAVIOR_FEATURES = frozenset(
     PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE]
-)
+) - {"autonomous_execution"}
 _PARTICIPANT_INTERACTION_FEATURES = frozenset(
     PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE]
 )
@@ -150,6 +150,7 @@ def _time_capabilities(*, enabled: bool) -> TimeCapabilities | None:
         supports_exact_rational_mappings=True,
         supports_append_only_history=True,
         supports_run_provenance=True,
+        supports_coordinated_participant_reset=True,
     )
 
 

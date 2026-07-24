@@ -2,9 +2,9 @@
   "contract_id": "backend-manifest-v2",
   "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
   "stability": "draft",
-  "content_hash": "00faa9cf105b63289077ceb1f3b41edf8ad0b2faa50d35330c86179e486af143",
+  "content_hash": "604766ff1dc5ef54066310d2037b122ff2107237c2eb11b7394875a6457d232b",
   "last_change": {
-    "summary": "Added API-421 portable shared-time capabilities and contract-version coherence rules.",
-    "content_hash": "00faa9cf105b63289077ceb1f3b41edf8ad0b2faa50d35330c86179e486af143"
+    "summary": "Added autonomous participant limits and coordinated participant-time reset support.",
+    "content_hash": "604766ff1dc5ef54066310d2037b122ff2107237c2eb11b7394875a6457d232b"
   }
 }

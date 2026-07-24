@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "ec3d0f6b90b639780027d124d7f56a4a69b0179d7aaded897a1e05910a18a507",
+  "content_hash": "9646bac227ef2466b1a1e0a7a8159b5597498df7ac8613356109b7c2614549d9",
   "last_change": {
-    "summary": "Carried the shared time model through whole-scenario satisfiability evidence.",
-    "content_hash": "ec3d0f6b90b639780027d124d7f56a4a69b0179d7aaded897a1e05910a18a507"
+    "summary": "Carried DSL-437 autonomous participant execution through satisfiability evidence.",
+    "content_hash": "9646bac227ef2466b1a1e0a7a8159b5597498df7ac8613356109b7c2614549d9"
   }
 }

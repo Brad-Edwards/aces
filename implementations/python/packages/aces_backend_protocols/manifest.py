@@ -160,6 +160,22 @@ def backend_manifest_v2_model(manifest: BackendManifest) -> BackendManifestV2Mod
                         )
                         for entry in manifest.participant_runtime.feature_support
                     ],
+                    "supports_autonomous_execution": manifest.participant_runtime.supports_autonomous_execution,
+                    "supported_autonomous_selection_strategies": sorted(
+                        manifest.participant_runtime.supported_autonomous_selection_strategies
+                    ),
+                    "supported_autonomous_action_contracts": sorted(
+                        manifest.participant_runtime.supported_autonomous_action_contracts
+                    ),
+                    "supported_autonomous_observation_boundaries": sorted(
+                        manifest.participant_runtime.supported_autonomous_observation_boundaries
+                    ),
+                    "supported_autonomous_target_addresses": sorted(
+                        manifest.participant_runtime.supported_autonomous_target_addresses
+                    ),
+                    "max_autonomous_participants": manifest.participant_runtime.max_autonomous_participants,
+                    "max_autonomous_action_attempts": (manifest.participant_runtime.max_autonomous_action_attempts),
+                    "max_autonomous_in_flight": manifest.participant_runtime.max_autonomous_in_flight,
                     "constraints": dict(manifest.participant_runtime.constraints),
                 }
                 if manifest.participant_runtime is not None
@@ -212,6 +228,7 @@ def backend_manifest_v2_model(manifest: BackendManifest) -> BackendManifestV2Mod
                     supports_exact_rational_mappings=manifest.time.supports_exact_rational_mappings,
                     supports_append_only_history=manifest.time.supports_append_only_history,
                     supports_run_provenance=manifest.time.supports_run_provenance,
+                    supports_coordinated_participant_reset=(manifest.time.supports_coordinated_participant_reset),
                     constraints=dict(manifest.time.constraints),
                 ).model_dump(mode="json")
                 if manifest.time is not None
@@ -313,6 +330,14 @@ def _participant_runtime_from_model(
         supported_behavior_features=frozenset(model.supported_behavior_features),
         supported_interaction_features=frozenset(model.supported_interaction_features),
         feature_support=tuple(_participant_feature_support_from_model(entry) for entry in model.feature_support),
+        supports_autonomous_execution=model.supports_autonomous_execution,
+        supported_autonomous_selection_strategies=frozenset(model.supported_autonomous_selection_strategies),
+        supported_autonomous_action_contracts=frozenset(model.supported_autonomous_action_contracts),
+        supported_autonomous_observation_boundaries=frozenset(model.supported_autonomous_observation_boundaries),
+        supported_autonomous_target_addresses=frozenset(model.supported_autonomous_target_addresses),
+        max_autonomous_participants=model.max_autonomous_participants,
+        max_autonomous_action_attempts=model.max_autonomous_action_attempts,
+        max_autonomous_in_flight=model.max_autonomous_in_flight,
         constraints=dict(model.constraints),
     )
 
@@ -368,6 +393,7 @@ def _time_from_model(model: TimeCapabilitiesModel | None) -> TimeCapabilities | 
         supports_exact_rational_mappings=model.supports_exact_rational_mappings,
         supports_append_only_history=model.supports_append_only_history,
         supports_run_provenance=model.supports_run_provenance,
+        supports_coordinated_participant_reset=model.supports_coordinated_participant_reset,
         constraints=dict(model.constraints),
     )
 

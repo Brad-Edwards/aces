@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
   "stability": "draft",
-  "content_hash": "7c32fc5ce9224b495b12ffdc683a56de5bd8ad049a6a6d08a953df84a0b4d726",
+  "content_hash": "254fe9e9b0e2e107be8bb69a1b7884e2db691b45046b1292bef31f3dc3014175",
   "last_change": {
-    "summary": "Carried the shared time model into instantiated scenarios.",
-    "content_hash": "7c32fc5ce9224b495b12ffdc683a56de5bd8ad049a6a6d08a953df84a0b4d726"
+    "summary": "Carried DSL-437 autonomous participant execution into instantiated scenarios.",
+    "content_hash": "254fe9e9b0e2e107be8bb69a1b7884e2db691b45046b1292bef31f3dc3014175"
   }
 }

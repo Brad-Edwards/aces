@@ -24,6 +24,7 @@ from .participant_envelopes import (
     ParticipantTimeManagementContextModel,
 )
 from .participant_runtime import (
+    ParticipantAutonomousExecutionStateModel,
     ParticipantBehaviorHistoryEventModel,
     ParticipantEpisodeHistoryEventModel,
     ParticipantEpisodeStateModel,
@@ -164,6 +165,9 @@ class RuntimeSnapshotEnvelopeModel(ContractModel):
     participant_episode_results: dict[str, ParticipantEpisodeStateModel] = Field(default_factory=dict)
     participant_episode_history: dict[str, list[ParticipantEpisodeHistoryEventModel]] = Field(default_factory=dict)
     participant_behavior_history: dict[str, list[ParticipantBehaviorHistoryEventModel]] = Field(default_factory=dict)
+    participant_autonomous_execution_states: dict[str, ParticipantAutonomousExecutionStateModel] = Field(
+        default_factory=dict
+    )
     shared_state_records: dict[str, ParticipantSharedStateRecordModel] = Field(default_factory=dict)
     shared_state_history: dict[str, list[ParticipantSharedStateRecordModel]] = Field(default_factory=dict)
     joint_action_records: dict[str, ParticipantJointActionRecordModel] = Field(default_factory=dict)
@@ -178,6 +182,12 @@ class RuntimeSnapshotEnvelopeModel(ContractModel):
         for map_key, entry in self.entries.items():
             if map_key != entry.address:
                 raise ValueError("Runtime snapshot entries map key must equal embedded address")
+        for map_key, state in self.participant_autonomous_execution_states.items():
+            expected = f"{state.policy_address}.state.{state.participant_address}"
+            if map_key != expected:
+                raise ValueError(
+                    "Autonomous participant state map key must equal the embedded policy and participant address"
+                )
         return self
 
 

@@ -7,6 +7,10 @@ from typing import Any
 
 from aces_contracts.contracts import RuntimeSnapshotEnvelopeModel
 from aces_contracts.diagnostics import Diagnostic
+from aces_contracts.participant_autonomous_state import (
+    iter_participant_autonomous_runtime_snapshot_violations,
+    iter_participant_autonomous_state_snapshot_violations,
+)
 from aces_contracts.participant_concurrency import iter_participant_concurrency_snapshot_violations
 from aces_contracts.participant_episode import iter_participant_episode_snapshot_violations
 from aces_contracts.participant_shared_state import iter_participant_shared_state_snapshot_violations
@@ -68,6 +72,10 @@ def _snapshot_from_envelope(payload: dict[str, Any]) -> RuntimeSnapshot:
         participant_behavior_history={
             participant_address: [event.model_dump(mode="json") for event in history]
             for participant_address, history in validated.participant_behavior_history.items()
+        },
+        participant_autonomous_execution_states={
+            state_address: state.model_dump(mode="json")
+            for state_address, state in validated.participant_autonomous_execution_states.items()
         },
         shared_state_records={
             state_address: record.model_dump(mode="json")
@@ -353,8 +361,31 @@ def _participant_concurrency_snapshot_diagnostics(snapshot: RuntimeSnapshot) -> 
     ]
 
 
+def _participant_autonomous_state_snapshot_diagnostics(
+    states: object,
+) -> list[Diagnostic]:
+    return [
+        _diagnostic(_SEMANTIC_INVALID_DIAGNOSTIC_CODE, address, message)
+        for address, message in iter_participant_autonomous_state_snapshot_violations(states)
+    ]
+
+
 def _runtime_snapshot_semantic_diagnostics(payload: object) -> list[Diagnostic]:
-    snapshot = _snapshot_from_envelope(payload)
+    validated = RuntimeSnapshotEnvelopeModel.model_validate(payload)
+    autonomous_states = {
+        state_address: state.model_dump(mode="json")
+        for state_address, state in validated.participant_autonomous_execution_states.items()
+    }
+    autonomous_diagnostics = _participant_autonomous_state_snapshot_diagnostics(autonomous_states)
+    if autonomous_diagnostics:
+        return autonomous_diagnostics
+    snapshot = _snapshot_from_envelope(validated.model_dump(mode="json"))
+    autonomous_diagnostics = [
+        _diagnostic(_SEMANTIC_INVALID_DIAGNOSTIC_CODE, address, message)
+        for address, message in iter_participant_autonomous_runtime_snapshot_violations(snapshot)
+    ]
+    if autonomous_diagnostics:
+        return autonomous_diagnostics
     return [
         *workflow_result_contract_diagnostics(snapshot),
         *evaluation_result_contract_diagnostics(snapshot),
@@ -362,4 +393,5 @@ def _runtime_snapshot_semantic_diagnostics(payload: object) -> list[Diagnostic]:
         *_participant_behavior_snapshot_diagnostics(snapshot),
         *_shared_state_snapshot_diagnostics(snapshot),
         *_participant_concurrency_snapshot_diagnostics(snapshot),
+        *autonomous_diagnostics,
     ]

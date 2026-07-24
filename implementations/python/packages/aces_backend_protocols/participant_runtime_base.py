@@ -8,12 +8,15 @@ calls) before behavior history events are recorded.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime
 from hashlib import sha256
 
 from aces_contracts.diagnostics import Diagnostic
 from aces_contracts.participant_binding import (
     ParticipantActionAdmissionRequest,
+    ParticipantActionApplyResult,
+    ParticipantNativeActionExecution,
     participant_action_binding_events,
     participant_behavior_event_payload,
 )
@@ -30,6 +33,8 @@ from aces_contracts.participant_episode import (
     ParticipantEpisodeTerminateRequest,
 )
 from aces_contracts.runtime_state import ApplyResult, RuntimeSnapshot
+
+from .participant_reset import reset_many_atomically
 
 _EMPTY_ADDRESS_MSG = "participant_address must be non-empty"
 
@@ -133,6 +138,21 @@ class BaseParticipantRuntime:
             no_episode_message="cannot reset participant {address!r}: no live episode",
             wrong_state_message="cannot reset terminated participant {address!r}; use restart",
         )
+
+    def reset_many(
+        self,
+        requests: tuple[ParticipantEpisodeResetRequest, ...],
+        snapshot: RuntimeSnapshot,
+    ) -> ApplyResult:
+        """Atomically reset a batch for the in-memory reference implementation."""
+
+        if type(self).reset is not BaseParticipantRuntime.reset:
+            return self._reject(
+                snapshot,
+                "participant runtimes with native reset behavior must implement their own atomic reset_many",
+                "",
+            )
+        return reset_many_atomically(self, requests, snapshot)
 
     def restart(
         self,
@@ -246,7 +266,7 @@ class BaseParticipantRuntime:
         self,
         request: ParticipantActionAdmissionRequest,
         snapshot: RuntimeSnapshot,
-    ) -> ApplyResult:
+    ) -> ParticipantActionApplyResult:
         address = request.participant_address
         current_state = self._live_predecessor(
             snapshot,
@@ -254,13 +274,76 @@ class BaseParticipantRuntime:
             "cannot admit participant action for {address!r}: no live episode",
         )
         if isinstance(current_state, ApplyResult):
-            return current_state
+            return self._as_action_result(current_state)
         if current_state.status == ParticipantEpisodeStatus.TERMINATED:
-            return self._reject(
-                snapshot,
-                f"cannot admit participant action for terminated participant {address!r}",
-                address,
+            return self._as_action_result(
+                self._reject(
+                    snapshot,
+                    f"cannot admit participant action for terminated participant {address!r}",
+                    address,
+                )
             )
+        native = self._model_action(request, snapshot, episode_id=current_state.episode_id)
+        modeled = native.apply_result
+        if not modeled.success:
+            return ParticipantActionApplyResult(
+                success=False,
+                snapshot=modeled.snapshot,
+                diagnostics=list(modeled.diagnostics),
+                changed_addresses=list(modeled.changed_addresses),
+                details=dict(modeled.details),
+                action_result=native.action_result,
+            )
+        if native.action_result is not None and native.action_result.episode_id != current_state.episode_id:
+            return self._as_action_result(
+                self._reject(
+                    snapshot,
+                    "native action result episode_id must match the live participant episode",
+                    address,
+                )
+            )
+        if request.requires_terminal_outcome and native.action_result is None:
+            return self._reject_action_outcome(
+                snapshot,
+                modeled,
+                address,
+                "runtime.participant-autonomous-native-outcome-missing",
+                "Autonomous native execution did not publish a typed action outcome.",
+            )
+        if (
+            request.requires_terminal_outcome
+            and native.action_result is not None
+            and native.action_result.status
+            not in {
+                "succeeded",
+                "failed",
+                "partial_success",
+                "rejected",
+                "withheld",
+            }
+        ):
+            return self._reject_action_outcome(
+                snapshot,
+                modeled,
+                address,
+                "runtime.participant-autonomous-native-outcome-nonterminal",
+                "Autonomous native execution must publish a terminal typed action outcome.",
+            )
+        try:
+            request = replace(
+                request,
+                action_result=native.action_result,
+                post_state_digest=native.post_state_digest or request.post_state_digest,
+            )
+        except (TypeError, ValueError) as exc:
+            return self._reject_action_outcome(
+                snapshot,
+                modeled,
+                address,
+                "runtime.participant-autonomous-native-outcome-mismatch",
+                f"Native action outcome contradicts its autonomous binding: {exc}",
+            )
+        working_snapshot = modeled.snapshot
         now = _now_iso()
         post_state_digest = request.post_state_digest or _participant_binding_post_state_digest(request)
         events = participant_action_binding_events(
@@ -271,17 +354,69 @@ class BaseParticipantRuntime:
         )
         behavior_history = {
             participant_address: list(events)
-            for participant_address, events in snapshot.participant_behavior_history.items()
+            for participant_address, events in working_snapshot.participant_behavior_history.items()
         }
         behavior_history.setdefault(address, [])
         behavior_history[address].extend(participant_behavior_event_payload(event) for event in events)
-        return ApplyResult(
+        return ParticipantActionApplyResult(
             success=True,
-            snapshot=snapshot.with_entries(
-                dict(snapshot.entries),
+            snapshot=working_snapshot.with_entries(
+                dict(working_snapshot.entries),
                 participant_behavior_history=behavior_history,
             ),
-            changed_addresses=[address],
+            diagnostics=list(modeled.diagnostics),
+            changed_addresses=list(dict.fromkeys([*modeled.changed_addresses, address])),
+            details=dict(modeled.details),
+            action_result=native.action_result,
+        )
+
+    @staticmethod
+    def _as_action_result(result: ApplyResult) -> ParticipantActionApplyResult:
+        return ParticipantActionApplyResult(
+            success=result.success,
+            snapshot=result.snapshot,
+            diagnostics=list(result.diagnostics),
+            changed_addresses=list(result.changed_addresses),
+            details=dict(result.details),
+        )
+
+    @staticmethod
+    def _reject_action_outcome(
+        snapshot: RuntimeSnapshot,
+        modeled: ApplyResult,
+        address: str,
+        code: str,
+        message: str,
+    ) -> ParticipantActionApplyResult:
+        return ParticipantActionApplyResult(
+            success=False,
+            snapshot=snapshot,
+            diagnostics=[
+                *modeled.diagnostics,
+                Diagnostic(code=code, domain="participant", address=address, message=message),
+            ],
+            action_result=None,
+        )
+
+    def _model_action(
+        self,
+        request: ParticipantActionAdmissionRequest,
+        snapshot: RuntimeSnapshot,
+        *,
+        episode_id: str,
+    ) -> ParticipantNativeActionExecution:
+        """Execute one native participant action before portable history is committed.
+
+        Backend participant runtimes override this method to call their product
+        or service adapter. The default reference behavior is an explicit
+        no-op used only by the in-tree conformance implementations.
+        """
+
+        del episode_id
+        return ParticipantNativeActionExecution(
+            apply_result=ApplyResult(success=True, snapshot=snapshot),
+            action_result=request.action_result,
+            post_state_digest=request.post_state_digest,
         )
 
     def status(self) -> dict[str, object]:

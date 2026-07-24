@@ -11,6 +11,7 @@ from aces_sdl.explicitness import ExplicitnessClass, ExplicitnessProvenance
 
 from aces_contracts.addressing import require_compiled_address
 from aces_contracts.diagnostics import Diagnostic
+from aces_contracts.participant_autonomous_state import require_participant_autonomous_state_snapshot
 from aces_contracts.planning import RuntimeDomain
 from aces_contracts.versions import OPERATION_SCHEMA_VERSION, RUNTIME_SNAPSHOT_SCHEMA_VERSION
 
@@ -83,6 +84,7 @@ class RuntimeSnapshot:
     participant_episode_results: dict[str, dict[str, Any]] = field(default_factory=dict)
     participant_episode_history: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
     participant_behavior_history: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
+    participant_autonomous_execution_states: dict[str, dict[str, Any]] = field(default_factory=dict)
     shared_state_records: dict[str, dict[str, Any]] = field(default_factory=dict)
     shared_state_history: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
     joint_action_records: dict[str, dict[str, Any]] = field(default_factory=dict)
@@ -99,6 +101,7 @@ class RuntimeSnapshot:
             require_compiled_address(map_key, field_name="snapshot map key")
             if map_key != entry.address:
                 raise ValueError("RuntimeSnapshot entries map key must equal embedded address")
+        require_participant_autonomous_state_snapshot(self.participant_autonomous_execution_states)
 
     def get(self, address: str) -> SnapshotEntry | None:
         return self.entries.get(address)
@@ -145,6 +148,11 @@ class RuntimeSnapshot:
                 updates,
                 "participant_behavior_history",
                 self.participant_behavior_history,
+            ),
+            participant_autonomous_execution_states=_mapping_update(
+                updates,
+                "participant_autonomous_execution_states",
+                self.participant_autonomous_execution_states,
             ),
             shared_state_records=_mapping_update(
                 updates,
@@ -194,6 +202,7 @@ _SNAPSHOT_UPDATE_KEYS = {
     "participant_episode_results",
     "participant_episode_history",
     "participant_behavior_history",
+    "participant_autonomous_execution_states",
     "shared_state_records",
     "shared_state_history",
     "joint_action_records",

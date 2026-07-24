@@ -6,6 +6,7 @@ from dataclasses import dataclass, replace
 from enum import Enum
 from fractions import Fraction
 
+from aces_backend_protocols.protocols import CoordinatedParticipantResetRuntime
 from aces_contracts.contracts.time_model import (
     ClockTransitionEventModel,
     RuntimeClockStateModel,
@@ -13,6 +14,8 @@ from aces_contracts.contracts.time_model import (
     TimeModelDeclarationModel,
     TimeRuntimeStateModel,
 )
+from aces_contracts.diagnostics import Diagnostic
+from aces_contracts.participant_episode import ParticipantEpisodeResetRequest
 from aces_contracts.runtime_state import ApplyResult, RuntimeSnapshot
 from aces_processor.compiler.time_model import compiled_time_model_from_contract, time_model_contract_model
 from aces_processor.models.time_model import (
@@ -395,6 +398,42 @@ class ReferenceTimeRuntime:
     ) -> ApplyResult:
         coordinator = self._require_coordinator()
         return self._result(coordinator.reset(snapshot, clock_address, replay=replay), clock_address)
+
+    def reset_with_participants(
+        self,
+        clock_address: str,
+        replay: bool,
+        participant_runtime: CoordinatedParticipantResetRuntime,
+        participant_requests: tuple[ParticipantEpisodeResetRequest, ...],
+        snapshot: RuntimeSnapshot,
+    ) -> ApplyResult:
+        """Stage the in-memory reference reset and publish it as one result."""
+
+        time_result = self.reset(clock_address, replay, snapshot)
+        participant_result = participant_runtime.reset_many(
+            participant_requests,
+            time_result.snapshot,
+        )
+        diagnostics = list(time_result.diagnostics)
+        diagnostics.extend(participant_result.diagnostics)
+        changed = list(time_result.changed_addresses)
+        if not participant_result.success:
+            diagnostics.append(
+                Diagnostic(
+                    code="runtime.coordinated-reset-aborted",
+                    domain="participant",
+                    address=clock_address,
+                    message="Coordinated time and participant reset aborted before commit.",
+                )
+            )
+            return ApplyResult(success=False, snapshot=snapshot, diagnostics=diagnostics)
+        changed.extend(participant_result.changed_addresses)
+        return ApplyResult(
+            success=True,
+            snapshot=participant_result.snapshot,
+            diagnostics=diagnostics,
+            changed_addresses=list(dict.fromkeys(changed)),
+        )
 
     def state(self, snapshot: RuntimeSnapshot) -> TimeRuntimeStateModel:
         self._require_coordinator()

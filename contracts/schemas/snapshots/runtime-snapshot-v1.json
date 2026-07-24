@@ -845,6 +845,117 @@
       "title": "ParticipantAttributionSupportClass",
       "type": "string"
     },
+    "ParticipantAutonomousExecutionStateModel": {
+      "additionalProperties": false,
+      "description": "Typed scheduler readback for one participant execution policy.",
+      "properties": {
+        "attempted_actions": {
+          "minimum": 0,
+          "title": "Attempted Actions",
+          "type": "integer"
+        },
+        "clock_address": {
+          "minLength": 1,
+          "title": "Clock Address",
+          "type": "string"
+        },
+        "episode_id": {
+          "minLength": 1,
+          "title": "Episode Id",
+          "type": "string"
+        },
+        "failed_actions": {
+          "minimum": 0,
+          "title": "Failed Actions",
+          "type": "integer"
+        },
+        "in_flight": {
+          "default": 0,
+          "minimum": 0,
+          "title": "In Flight",
+          "type": "integer"
+        },
+        "last_action_instance_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Action Instance Id"
+        },
+        "lifecycle_state": {
+          "enum": [
+            "running",
+            "paused",
+            "completed",
+            "failed"
+          ],
+          "title": "Lifecycle State",
+          "type": "string"
+        },
+        "next_action_index": {
+          "minimum": 0,
+          "title": "Next Action Index",
+          "type": "integer"
+        },
+        "next_tick": {
+          "minimum": 0,
+          "title": "Next Tick",
+          "type": "integer"
+        },
+        "participant_address": {
+          "minLength": 1,
+          "title": "Participant Address",
+          "type": "string"
+        },
+        "participant_implementation_ref": {
+          "minLength": 1,
+          "title": "Participant Implementation Ref",
+          "type": "string"
+        },
+        "policy_address": {
+          "minLength": 1,
+          "title": "Policy Address",
+          "type": "string"
+        },
+        "policy_digest": {
+          "minLength": 1,
+          "title": "Policy Digest",
+          "type": "string"
+        },
+        "succeeded_actions": {
+          "minimum": 0,
+          "title": "Succeeded Actions",
+          "type": "integer"
+        },
+        "time_segment": {
+          "minimum": 0,
+          "title": "Time Segment",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "policy_address",
+        "policy_digest",
+        "participant_address",
+        "episode_id",
+        "participant_implementation_ref",
+        "clock_address",
+        "time_segment",
+        "lifecycle_state",
+        "next_tick",
+        "next_action_index",
+        "attempted_actions",
+        "succeeded_actions",
+        "failed_actions"
+      ],
+      "title": "ParticipantAutonomousExecutionStateModel",
+      "type": "object"
+    },
     "ParticipantBehaviorHistoryEventModel": {
       "additionalProperties": false,
       "properties": {
@@ -4810,6 +4921,13 @@
         "$ref": "#/$defs/WorkflowExecutionStateModel"
       },
       "title": "Orchestration Results",
+      "type": "object"
+    },
+    "participant_autonomous_execution_states": {
+      "additionalProperties": {
+        "$ref": "#/$defs/ParticipantAutonomousExecutionStateModel"
+      },
+      "title": "Participant Autonomous Execution States",
       "type": "object"
     },
     "participant_behavior_history": {
