@@ -1566,8 +1566,8 @@ to reconcile the ordinary content through the named service, reject
 unowned-item collisions, preserve declared tenant/reset ownership, and return
 independent digest readback that can satisfy the observed-state postcondition
 and participant projection. Backend profile support is separate from ordinary
-`file`/`dataset`/`directory` support. See the normative
-[initial-service-state contract](../../../specs/sdl/initial-service-state.md).
+`file`/`dataset`/`directory` support. The normative contract is
+`specs/sdl/initial-service-state.md`.
 
 `file` content requires `path`; `dataset` content requires either `source` or
 non-empty `items`; `directory` content requires `destination`.
