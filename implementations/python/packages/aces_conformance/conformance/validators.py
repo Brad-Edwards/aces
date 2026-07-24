@@ -39,6 +39,7 @@ from aces_contracts.scientific_completeness import (
     ScientificCompletenessAssessmentModel,
     ScientificCompletenessTaxonomyModel,
 )
+from aces_contracts.validation_profiles import ValidationProfileCatalogModel
 
 from aces_conformance.conformance.diagnostics import _diagnostic
 
@@ -77,6 +78,7 @@ _STRUCTURAL_ONLY_VALIDATORS = {
     "realization-envelope-v1": BackendRealizationEnvelopeModel.model_validate,
     "scientific-completeness-assessment-v1": ScientificCompletenessAssessmentModel.model_validate,
     "scientific-completeness-taxonomy-v1": ScientificCompletenessTaxonomyModel.model_validate,
+    "validation-profile-catalog-v1": ValidationProfileCatalogModel.model_validate,
 }
 
 
