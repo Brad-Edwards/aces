@@ -131,6 +131,28 @@ def _realization_support() -> tuple[RealizationSupportDeclaration, ...]:
     )
 
 
+def _time_capabilities(*, enabled: bool) -> TimeCapabilities | None:
+    if not enabled:
+        return None
+    return TimeCapabilities(
+        name="reference-emulation-time-runtime",
+        supported_contract_versions=TIME_CAPABILITY_REQUIRED_CONTRACTS,
+        supported_domain_kinds=frozenset({"wall_clock", "monotonic", "simulated", "logical", "external"}),
+        supported_authority_kinds=frozenset({"runtime", "backend", "system", "external"}),
+        supported_advancement_modes=frozenset({"real_time", "dilated", "stepped", "event_driven", "externally_paced"}),
+        supported_synchronization_modes=frozenset({"none", "authority", "barrier", "conservative"}),
+        supported_mapping_kinds=frozenset({"identity", "affine_rational"}),
+        supported_constraint_kinds=frozenset({"precedence", "duration", "window", "deadline", "cadence"}),
+        supported_reset_behaviors=frozenset({"unsupported", "new_segment_zero", "new_segment_preserve_value"}),
+        supported_replay_behaviors=frozenset({"unsupported", "restart_from_anchor", "restore_recorded_advances"}),
+        supports_pause=True,
+        supports_jump=True,
+        supports_exact_rational_mappings=True,
+        supports_append_only_history=True,
+        supports_run_provenance=True,
+    )
+
+
 def _capabilities(*, with_time: bool) -> BackendCapabilitySet:
     return BackendCapabilitySet(
         provisioner=ProvisionerCapabilities(
@@ -223,27 +245,7 @@ def _capabilities(*, with_time: bool) -> BackendCapabilitySet:
             supports_reusable_state=True,
             supports_residual_state_disclosure=True,
         ),
-        time=TimeCapabilities(
-            name="reference-emulation-time-runtime",
-            supported_contract_versions=TIME_CAPABILITY_REQUIRED_CONTRACTS,
-            supported_domain_kinds=frozenset({"wall_clock", "monotonic", "simulated", "logical", "external"}),
-            supported_authority_kinds=frozenset({"runtime", "backend", "system", "external"}),
-            supported_advancement_modes=frozenset(
-                {"real_time", "dilated", "stepped", "event_driven", "externally_paced"}
-            ),
-            supported_synchronization_modes=frozenset({"none", "authority", "barrier", "conservative"}),
-            supported_mapping_kinds=frozenset({"identity", "affine_rational"}),
-            supported_constraint_kinds=frozenset({"precedence", "duration", "window", "deadline", "cadence"}),
-            supported_reset_behaviors=frozenset({"unsupported", "new_segment_zero", "new_segment_preserve_value"}),
-            supported_replay_behaviors=frozenset({"unsupported", "restart_from_anchor", "restore_recorded_advances"}),
-            supports_pause=True,
-            supports_jump=True,
-            supports_exact_rational_mappings=True,
-            supports_append_only_history=True,
-            supports_run_provenance=True,
-        )
-        if with_time
-        else None,
+        time=_time_capabilities(enabled=with_time),
     )
 
 

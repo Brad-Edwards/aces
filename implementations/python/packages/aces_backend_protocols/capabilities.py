@@ -6,8 +6,10 @@ from aces_contracts.controlled_vocabularies import validate_controlled_vocabular
 from aces_contracts.manifest_authority import validate_backend_supported_contract_versions
 from aces_contracts.vocabulary import ParticipantFeatureSupportLevel, WorkflowFeature, WorkflowStatePredicateFeature
 
-from .time_capabilities import TIME_CAPABILITY_REQUIRED_CONTRACTS as TIME_CAPABILITY_REQUIRED_CONTRACTS
-from .time_capabilities import TimeCapabilities as TimeCapabilities
+from . import time_capabilities as _time_capabilities
+
+TIME_CAPABILITY_REQUIRED_CONTRACTS = _time_capabilities.TIME_CAPABILITY_REQUIRED_CONTRACTS
+TimeCapabilities = _time_capabilities.TimeCapabilities
 
 PARTICIPANT_RUNTIME_ROLE_SCOPE = "capabilities.participant_runtime.supported_participant_roles"
 PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE = "capabilities.participant_runtime.supported_behavior_features"

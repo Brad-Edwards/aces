@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from .manager import _RuntimeApplyState
 
 _APPLY_TIME_ADDRESS = "runtime.apply.time"
+_TIME_READBACK_INVALID = "runtime.time-readback-invalid"
 
 
 class RuntimeTimeControlMixin:
@@ -56,7 +57,7 @@ class RuntimeTimeControlMixin:
             except ValueError as exc:
                 state.diagnostics.append(
                     _failure_diagnostic(
-                        "runtime.time-readback-invalid",
+                        _TIME_READBACK_INVALID,
                         _APPLY_TIME_ADDRESS,
                         str(exc),
                     )
@@ -114,31 +115,34 @@ class RuntimeTimeControlMixin:
         )
         if not result.success:
             return result
-        if result.snapshot.time_model_state is None:
-            return ApplyResult(
-                success=False,
-                snapshot=self._snapshot,
-                diagnostics=[
-                    _failure_diagnostic(
-                        "runtime.time-readback-invalid",
-                        f"runtime.time.{method_name}",
-                        "time runtime removed typed state",
-                    )
-                ],
-            )
-        try:
-            validate_time_runtime_state(self._time_declaration, result.snapshot.time_model_state)
-        except ValueError as exc:
-            return ApplyResult(
-                success=False,
-                snapshot=self._snapshot,
-                diagnostics=[
-                    _failure_diagnostic(
-                        "runtime.time-readback-invalid",
-                        f"runtime.time.{method_name}",
-                        str(exc),
-                    )
-                ],
-            )
+        readback_failure = self._time_control_readback_failure(method_name, result)
+        if readback_failure is not None:
+            return readback_failure
         self._snapshot = result.snapshot
         return result
+
+    def _time_control_readback_failure(
+        self,
+        method_name: str,
+        result: ApplyResult,
+    ) -> ApplyResult | None:
+        if result.snapshot.time_model_state is None:
+            message = "time runtime removed typed state"
+        else:
+            try:
+                validate_time_runtime_state(self._time_declaration, result.snapshot.time_model_state)
+            except ValueError as exc:
+                message = str(exc)
+            else:
+                return None
+        return ApplyResult(
+            success=False,
+            snapshot=self._snapshot,
+            diagnostics=[
+                _failure_diagnostic(
+                    _TIME_READBACK_INVALID,
+                    f"runtime.time.{method_name}",
+                    message,
+                )
+            ],
+        )

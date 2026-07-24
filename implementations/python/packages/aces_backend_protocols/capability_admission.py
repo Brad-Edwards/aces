@@ -90,62 +90,43 @@ def time_model_capability_gaps(
         return ("backend does not declare time capabilities",)
 
     gaps: list[str] = [*time_capability_contract_gaps(manifest)]
-    gaps.extend(
-        _unsupported_time_terms(
-            "domain kinds",
-            {domain.kind for domain in declaration.domains.values()},
-            capability.supported_domain_kinds,
-        )
-    )
-    gaps.extend(
-        _unsupported_time_terms(
-            "authority kinds",
-            {clock.authority_kind for clock in declaration.clocks.values()},
-            capability.supported_authority_kinds,
-        )
-    )
-    gaps.extend(
-        _unsupported_time_terms(
+    term_sources = (
+        ("domain kinds", declaration.domains.values(), "kind", capability.supported_domain_kinds),
+        ("authority kinds", declaration.clocks.values(), "authority_kind", capability.supported_authority_kinds),
+        (
             "advancement modes",
-            {policy.advancement_mode for policy in declaration.progression_policies.values()},
+            declaration.progression_policies.values(),
+            "advancement_mode",
             capability.supported_advancement_modes,
-        )
-    )
-    gaps.extend(
-        _unsupported_time_terms(
+        ),
+        (
             "synchronization modes",
-            {policy.synchronization_mode for policy in declaration.progression_policies.values()},
+            declaration.progression_policies.values(),
+            "synchronization_mode",
             capability.supported_synchronization_modes,
-        )
-    )
-    gaps.extend(
-        _unsupported_time_terms(
-            "mapping kinds",
-            {mapping.mapping_kind for mapping in declaration.mappings.values()},
-            capability.supported_mapping_kinds,
-        )
-    )
-    gaps.extend(
-        _unsupported_time_terms(
+        ),
+        ("mapping kinds", declaration.mappings.values(), "mapping_kind", capability.supported_mapping_kinds),
+        (
             "constraint kinds",
-            {constraint.kind for constraint in declaration.temporal_constraints.values()},
+            declaration.temporal_constraints.values(),
+            "kind",
             capability.supported_constraint_kinds,
-        )
-    )
-    gaps.extend(
-        _unsupported_time_terms(
+        ),
+        (
             "reset behaviors",
-            {policy.reset_behavior for policy in declaration.progression_policies.values()},
+            declaration.progression_policies.values(),
+            "reset_behavior",
             capability.supported_reset_behaviors,
-        )
-    )
-    gaps.extend(
-        _unsupported_time_terms(
+        ),
+        (
             "replay behaviors",
-            {policy.replay_behavior for policy in declaration.progression_policies.values()},
+            declaration.progression_policies.values(),
+            "replay_behavior",
             capability.supported_replay_behaviors,
-        )
+        ),
     )
+    for label, values, attribute, supported in term_sources:
+        gaps.extend(_unsupported_time_terms(label, {getattr(value, attribute) for value in values}, supported))
     if capability.max_time_domains is not None and len(declaration.domains) > capability.max_time_domains:
         gaps.append(
             f"time model requires {len(declaration.domains)} domains; backend limit is {capability.max_time_domains}"

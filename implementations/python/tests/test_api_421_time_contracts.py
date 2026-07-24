@@ -203,5 +203,6 @@ def test_published_time_fixture_corpora(
     for path in valid:
         model.model_validate_json(path.read_text(encoding="utf-8"))
     for path in invalid:
+        payload = path.read_text(encoding="utf-8")
         with pytest.raises(ValueError):
-            model.model_validate_json(path.read_text(encoding="utf-8"))
+            model.model_validate_json(payload)

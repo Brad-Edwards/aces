@@ -19,7 +19,10 @@ from aces_contracts.contracts import (
 )
 from aces_contracts.participant_binding import ParticipantActionAdmissionRequest
 
-from .time_coordinator import ReferenceTimeRuntime as ReferenceTimeRuntime
+from . import time_coordinator as _time_coordinator
+
+ReferenceTimeRuntime = _time_coordinator.ReferenceTimeRuntime
+_TIME_CLOCK_PROBE = "time.clock.probe"
 
 
 def _require_invokable_method(
@@ -262,11 +265,11 @@ def _validate_time_runtime_methods(
 ) -> None:
     for method_name, invocation_args in (
         ("initialize", (sample_declaration, sample_snapshot)),
-        ("advance", ("time.clock.probe", 1, 0, sample_snapshot)),
-        ("pause", ("time.clock.probe", sample_snapshot)),
-        ("resume", ("time.clock.probe", sample_snapshot)),
-        ("jump", ("time.clock.probe", 1, 0, sample_snapshot)),
-        ("reset", ("time.clock.probe", False, sample_snapshot)),
+        ("advance", (_TIME_CLOCK_PROBE, 1, 0, sample_snapshot)),
+        ("pause", (_TIME_CLOCK_PROBE, sample_snapshot)),
+        ("resume", (_TIME_CLOCK_PROBE, sample_snapshot)),
+        ("jump", (_TIME_CLOCK_PROBE, 1, 0, sample_snapshot)),
+        ("reset", (_TIME_CLOCK_PROBE, False, sample_snapshot)),
         ("state", (sample_snapshot,)),
     ):
         _require_invokable_method(

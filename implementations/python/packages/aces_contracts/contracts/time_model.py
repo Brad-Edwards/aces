@@ -151,13 +151,21 @@ class TemporalConstraintDeclarationModel(ContractModel):
         valid, requirement = required_by_kind[self.kind]
         if not valid:
             raise ValueError(f"{self.kind} temporal constraint requires {requirement}")
-        if self.start is not None and self.end is not None:
-            if (self.start.segment, self.start.tick, self.start.microstep) > (
+        if (
+            self.start is not None
+            and self.end is not None
+            and (
+                self.start.segment,
+                self.start.tick,
+                self.start.microstep,
+            )
+            > (
                 self.end.segment,
                 self.end.tick,
                 self.end.microstep,
-            ):
-                raise ValueError("temporal constraint start must not follow end")
+            )
+        ):
+            raise ValueError("temporal constraint start must not follow end")
         return self
 
 
@@ -206,10 +214,18 @@ class TimeModelDeclarationModel(ContractModel):
         _validate_address_map("mappings", self.mappings)
         _validate_address_map("progression_policies", self.progression_policies)
         _validate_address_map("temporal_constraints", self.temporal_constraints)
+        self._validate_clock_references()
+        self._validate_mapping_references()
+        self._validate_policy_references()
+        self._validate_constraint_references()
+        return self
 
+    def _validate_clock_references(self) -> None:
         for clock in self.clocks.values():
             if clock.time_domain_address not in self.domains:
                 raise ValueError(f"clock {clock.address!r} references an unknown time domain")
+
+    def _validate_mapping_references(self) -> None:
         for mapping in self.mappings.values():
             if mapping.source_domain_address not in self.domains or mapping.target_domain_address not in self.domains:
                 raise ValueError(f"mapping {mapping.address!r} references an unknown time domain")
@@ -224,6 +240,7 @@ class TimeModelDeclarationModel(ContractModel):
                     raise ValueError("identity mappings require unit scale and zero offset")
         _validate_acyclic_mappings(self.mappings)
 
+    def _validate_policy_references(self) -> None:
         policy_clocks: list[str] = []
         for policy in self.progression_policies.values():
             if policy.clock_address not in self.clocks:
@@ -237,6 +254,7 @@ class TimeModelDeclarationModel(ContractModel):
         if len(policy_clocks) != len(set(policy_clocks)):
             raise ValueError("a clock may have at most one progression policy")
 
+    def _validate_constraint_references(self) -> None:
         known_subjects = set(self.domains) | set(self.clocks) | set(self.progression_policies)
         for constraint in self.temporal_constraints.values():
             if constraint.clock_address not in self.clocks:
@@ -246,7 +264,6 @@ class TimeModelDeclarationModel(ContractModel):
                 for subject in constraint.subject_addresses
             ):
                 raise ValueError(f"temporal constraint {constraint.address!r} references an unknown subject")
-        return self
 
     def canonical_digest(self) -> str:
         payload = json.dumps(self.model_dump(mode="json"), sort_keys=True, separators=(",", ":")).encode()
