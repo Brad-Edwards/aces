@@ -63,9 +63,12 @@ rather than create another tenancy or reset lifecycle.
    or realization claim. Backend manifests declare exact supported historical
    interface profiles and object kinds in a dedicated optional capability
    block; this declaration does not replace exact SEM-218 realization support.
-7. Baseline and binding tenant, cell, reset owner, and target must agree with
-   ADR-087's `uses_shared_service` relationship. A reset generation is an
-   address isolation input, not a reset controller.
+7. Baseline and binding tenant and cell must agree. The baseline names the
+   range-level reset lifecycle authority, while every materialization binding
+   names an ADR-087 `uses_shared_service` relationship from that tenant to its
+   exact native target service. This permits one causal baseline to span real
+   products without weakening per-product reset ownership. A reset generation
+   is an address isolation input, not a reset controller.
 8. Readback requirements reuse existing observed-state `Proposition`,
    `Assertion`, evidence, and participant observation-boundary semantics. A
    readback assertion must name the exact semantic object. Unsupported or
@@ -140,3 +143,9 @@ An admitted or compiled historical baseline proves authored intent and
 deterministic semantic addressing only. It does not prove native object
 creation, product timestamps, native causality, participant visibility,
 successful reset, adapter correctness, or cross-backend equivalence.
+
+## Amendments
+
+| Date | Commit/PR | Summary |
+|------|-----------|---------|
+| 2026-07-24 | #859 | Separated range-level baseline reset authority from per-binding native reset ownership so one causal baseline can span multiple real product services while every binding remains tenant-bound to its exact target. |
