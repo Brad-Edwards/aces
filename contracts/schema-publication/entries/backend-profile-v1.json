@@ -2,9 +2,9 @@
   "contract_id": "backend-profile-v1",
   "schema_path": "contracts/schemas/profiles/backend-profile-v1.json",
   "stability": "draft",
-  "content_hash": "7796e171b81cc47e15446d77097c63d56564235b96a5f82e8e813753d4f7b709",
+  "content_hash": "b14f1b9e1467a7fa0106172ae09e613e106a97fba76fa9c82dc0b2cd66bf1ca1",
   "last_change": {
-    "summary": "Added proposition-truth-result-v1 to the governed backend contract vocabulary.",
-    "content_hash": "7796e171b81cc47e15446d77097c63d56564235b96a5f82e8e813753d4f7b709"
+    "summary": "Added the SCE-007 trial cleanup plan and receipt contract ids to the governed backend contract vocabulary.",
+    "content_hash": "b14f1b9e1467a7fa0106172ae09e613e106a97fba76fa9c82dc0b2cd66bf1ca1"
   }
 }

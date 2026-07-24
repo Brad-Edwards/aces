@@ -2,9 +2,9 @@
   "contract_id": "backend-manifest-v2",
   "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
   "stability": "draft",
-  "content_hash": "f635f3a7fc0ead873b52dc78ce51a3175d51faf574e83f5ee3ffca83eec4370c",
+  "content_hash": "04913bbaebe086c4e2f00ff421e9f14837afd95c04ff7b877897bb7a2bd30a87",
   "last_change": {
-    "summary": "Published objective and scaffolded workflow-step capability terms for SCE-004.",
-    "content_hash": "f635f3a7fc0ead873b52dc78ce51a3175d51faf574e83f5ee3ffca83eec4370c"
+    "summary": "Added the SCE-007 typed cleanup capability declaration and cleanup contract-version coherence rules.",
+    "content_hash": "04913bbaebe086c4e2f00ff421e9f14837afd95c04ff7b877897bb7a2bd30a87"
   }
 }

@@ -26,6 +26,7 @@ from .capabilities import (
     ProcessorCompatibilityModel,
     ProvisionerCapabilitiesModel,
 )
+from .trial_cleanup import CleanupActionKind
 from .validators import (
     _validate_canonical_concept_bindings,
     _validate_controlled_vocabulary_terms,
@@ -237,12 +238,39 @@ class ObservationCapabilitiesModel(ContractModel):
         return self
 
 
+class CleanupCapabilitiesModel(ContractModel):
+    """Backend support for the portable SCE-007 cleanup contract family."""
+
+    name: NonEmptyString
+    supported_contract_versions: list[NonEmptyString] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
+    supported_action_kinds: list[CleanupActionKind] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
+    supported_verification_methods: list[NonEmptyString] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
+    supports_reusable_state: bool = False
+    supports_residual_state_disclosure: bool = False
+
+    @model_validator(mode="after")
+    def _validate_cleanup_capability(self) -> CleanupCapabilitiesModel:
+        _validate_unique_string_values("cleanup supported_contract_versions", self.supported_contract_versions)
+        _validate_unique_string_values("cleanup supported_action_kinds", self.supported_action_kinds)
+        _validate_unique_string_values("cleanup supported_verification_methods", self.supported_verification_methods)
+        required = {"trial-cleanup-plan-v1", "trial-cleanup-receipt-v1"}
+        if set(self.supported_contract_versions) != required:
+            raise ValueError(
+                "cleanup capabilities require contract versions trial-cleanup-plan-v1 and trial-cleanup-receipt-v1"
+            )
+        validate_backend_supported_contract_versions(self.supported_contract_versions)
+        if self.supports_reusable_state and not self.supports_residual_state_disclosure:
+            raise ValueError("reusable-state support requires residual-state disclosure")
+        return self
+
+
 class BackendCapabilitiesV2Model(ContractModel):
     provisioner: ProvisionerCapabilitiesModel
     orchestrator: OrchestratorCapabilitiesModel | None = None
     evaluator: EvaluatorCapabilitiesModel | None = None
     participant_runtime: ParticipantRuntimeCapabilitiesModel | None = None
     observation: ObservationCapabilitiesModel | None = None
+    cleanup: CleanupCapabilitiesModel | None = None
 
 
 class ProcessorManifestV2Model(ContractModel):

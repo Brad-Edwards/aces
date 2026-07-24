@@ -85,6 +85,7 @@ from .schema_invariants import (
     _attach_stateful_resource_invariants,
 )
 from .semantic_profiles import SemanticProfileModel
+from .trial_cleanup import SchedulerIsolationProofModel, TrialCleanupPlanModel, TrialCleanupReceiptModel
 from .vocabulary_sources import (
     AtlasTacticsSourceModel,
     AttackEnterpriseTacticsSourceModel,
@@ -138,6 +139,9 @@ def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
         "experiment-run-v1": ExperimentRunModel.model_json_schema(),
         "experiment-study-v1": ExperimentStudyModel.model_json_schema(),
         "experiment-task-v1": ExperimentTaskModel.model_json_schema(),
+        "trial-cleanup-plan-v1": TrialCleanupPlanModel.model_json_schema(),
+        "trial-cleanup-receipt-v1": TrialCleanupReceiptModel.model_json_schema(),
+        "scheduler-isolation-proof-v1": SchedulerIsolationProofModel.model_json_schema(),
         "provisioning-plan-v1": ProvisioningPlanModel.model_json_schema(),
         "orchestration-plan-v1": OrchestrationPlanModel.model_json_schema(),
         "evaluation-plan-v1": EvaluationPlanModel.model_json_schema(),

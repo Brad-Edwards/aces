@@ -24,6 +24,17 @@
     "BackendCapabilitiesV2Model": {
       "additionalProperties": false,
       "properties": {
+        "cleanup": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CleanupCapabilitiesModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "evaluator": {
           "anyOf": [
             {
@@ -95,6 +106,72 @@
         "processors"
       ],
       "title": "BackendCompatibilityModel",
+      "type": "object"
+    },
+    "CleanupCapabilitiesModel": {
+      "additionalProperties": false,
+      "description": "Backend support for the portable SCE-007 cleanup contract family.",
+      "properties": {
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "supported_action_kinds": {
+          "items": {
+            "enum": [
+              "destroy",
+              "reset",
+              "restore",
+              "compensate",
+              "verify",
+              "custom"
+            ],
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Action Kinds",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supported_contract_versions": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Contract Versions",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supported_verification_methods": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Verification Methods",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supports_residual_state_disclosure": {
+          "default": false,
+          "title": "Supports Residual State Disclosure",
+          "type": "boolean"
+        },
+        "supports_reusable_state": {
+          "default": false,
+          "title": "Supports Reusable State",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "supported_contract_versions",
+        "supported_action_kinds",
+        "supported_verification_methods"
+      ],
+      "title": "CleanupCapabilitiesModel",
       "type": "object"
     },
     "ConceptBindingEntryModel": {
@@ -962,6 +1039,29 @@
           "realization_envelope"
         ]
       }
+    },
+    {
+      "if": {
+        "properties": {
+          "supported_contract_versions": {
+            "contains": {
+              "const": "trial-cleanup-plan-v1"
+            }
+          }
+        },
+        "required": [
+          "supported_contract_versions"
+        ]
+      },
+      "then": {
+        "properties": {
+          "capabilities": {
+            "required": [
+              "cleanup"
+            ]
+          }
+        }
+      }
     }
   ],
   "properties": {
@@ -1042,7 +1142,9 @@
           "experiment-capture-spec-v1",
           "experiment-evidence-record-v1",
           "experiment-derived-measure-v1",
-          "experiment-run-v1"
+          "experiment-run-v1",
+          "trial-cleanup-plan-v1",
+          "trial-cleanup-receipt-v1"
         ],
         "minLength": 1,
         "type": "string"

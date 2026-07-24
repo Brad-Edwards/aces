@@ -18,12 +18,14 @@ from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as distribution_version
 
 from aces_backend_protocols.capabilities import (
+    CLEANUP_CAPABILITY_REQUIRED_CONTRACTS,
     PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE,
     PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS,
     PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE,
     PARTICIPANT_RUNTIME_ROLE_SCOPE,
     BackendCapabilitySet,
     BackendManifest,
+    CleanupCapabilities,
     EvaluatorCapabilities,
     ObservationCapabilities,
     OrchestratorCapabilities,
@@ -228,6 +230,17 @@ def _stub_observation() -> ObservationCapabilities:
     )
 
 
+def _stub_cleanup() -> CleanupCapabilities:
+    return CleanupCapabilities(
+        name="stub-cleanup",
+        supported_contract_versions=CLEANUP_CAPABILITY_REQUIRED_CONTRACTS,
+        supported_action_kinds=frozenset({"destroy", "reset", "restore", "compensate", "verify"}),
+        supported_verification_methods=frozenset({"probe", "receipt"}),
+        supports_reusable_state=True,
+        supports_residual_state_disclosure=True,
+    )
+
+
 def _stub_capabilities(*, with_participant_runtime: bool, with_observation: bool) -> BackendCapabilitySet:
     return BackendCapabilitySet(
         provisioner=_stub_provisioner(),
@@ -235,6 +248,7 @@ def _stub_capabilities(*, with_participant_runtime: bool, with_observation: bool
         evaluator=_stub_evaluator(),
         participant_runtime=_stub_participant_runtime() if with_participant_runtime else None,
         observation=_stub_observation() if with_observation else None,
+        cleanup=_stub_cleanup(),
     )
 
 
