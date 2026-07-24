@@ -128,16 +128,17 @@ def _bound_parameter_issues(
                 f"{label} parameter '{parameter_name}' does not resolve to one {parameter.kind.value} declaration",
             )
         ]
+    issues: list[LiveActivityIssue] = []
     if parameter.kind.value == "historical_object_ref":
         prefix = f"historical_baselines.{analysis.historical_baseline_id}.objects."
         if analysis.historical_baseline_id is None or not next(iter(candidates)).startswith(prefix):
-            return [
+            issues.append(
                 activity_issue(
                     "live-activity.parameter-baseline-mismatch",
                     f"{label} historical object parameter is outside the selected baseline",
                 )
-            ]
-    return []
+            )
+    return issues
 
 
 def _actor_context_issues(
