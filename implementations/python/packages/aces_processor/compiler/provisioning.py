@@ -23,6 +23,7 @@ from ..models import (
 )
 from .addresses import (
     _compiled_domain_binding,
+    _domain_controller_address,
     _feature_binding_address,
     _network_address,
     _node_address,
@@ -135,7 +136,9 @@ def _compile_node_runtimes(
             _compiled_domain_binding(scenario, domain_binding) if domain_binding is not None else None
         )
         if domain_binding is not None and domain_binding.role is DomainNodeRole.MEMBER:
-            dependency_addresses.extend(_node_address(name) for name in domain_binding.controller_names)
+            dependency_addresses.extend(
+                _domain_controller_address(name, domain_binding.domain_name) for name in domain_binding.controller_names
+            )
         network_namespace_target = _network_namespace_target(node)
         if network_namespace_target:
             dependency_addresses.append(_node_address(network_namespace_target))

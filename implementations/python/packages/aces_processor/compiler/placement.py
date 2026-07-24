@@ -3,6 +3,7 @@
 from aces_sdl.nodes import NodeType
 from aces_sdl.scenario import InstantiatedScenario
 from aces_sdl.semantics.domain_topology import (
+    DomainNodeRole,
     DomainTopologyAnalysis,
 )
 
@@ -10,10 +11,17 @@ from ..models import (
     AccountPlacement,
     ContentPlacement,
     Diagnostic,
+    DomainControllerPlacement,
 )
-from .addresses import _account_address, _compiled_domain_binding, _content_address
+from .addresses import (
+    _account_address,
+    _compiled_domain_binding,
+    _content_address,
+    _domain_controller_address,
+    _node_address,
+)
 from .ref_resolution import _resolve_node_ref
-from .support import _dump
+from .support import _dedupe, _dump
 
 
 def _compile_content_placements(
@@ -52,8 +60,12 @@ def _compile_account_placements(
     scenario: InstantiatedScenario,
     diagnostics: list[Diagnostic],
     domain_analysis: DomainTopologyAnalysis,
+    domain_controller_placements: dict[str, DomainControllerPlacement],
 ) -> dict[str, AccountPlacement]:
     account_placements: dict[str, AccountPlacement] = {}
+    controller_placements_by_domain: dict[str, list[str]] = {}
+    for placement in domain_controller_placements.values():
+        controller_placements_by_domain.setdefault(placement.domain_topology.domain_id, []).append(placement.address)
     for name, account in scenario.accounts.items():
         address = _account_address(name)
         target_address, target_diagnostics = _resolve_node_ref(
@@ -74,17 +86,50 @@ def _compile_account_placements(
             if account_domain_binding is not None
             else None
         )
+        domain_topology = (
+            _compiled_domain_binding(scenario, node_domain_binding) if node_domain_binding is not None else None
+        )
+        dependencies = _dedupe(
+            [
+                target_address,
+                *(
+                    controller_placements_by_domain.get(domain_topology.domain_id, ())
+                    if domain_topology is not None
+                    else ()
+                ),
+            ]
+        )
         account_placements[address] = AccountPlacement(
             address=address,
             name=name,
             account_name=name,
             node_name=account.node,
             target_address=target_address,
-            domain_topology=(
-                _compiled_domain_binding(scenario, node_domain_binding) if node_domain_binding is not None else None
-            ),
-            ordering_dependencies=(target_address,),
-            refresh_dependencies=(target_address,),
+            domain_topology=domain_topology,
+            ordering_dependencies=dependencies,
+            refresh_dependencies=dependencies,
             spec=_dump(account),
         )
     return account_placements
+
+
+def _compile_domain_controller_placements(
+    scenario: InstantiatedScenario,
+    domain_analysis: DomainTopologyAnalysis,
+) -> dict[str, DomainControllerPlacement]:
+    placements: dict[str, DomainControllerPlacement] = {}
+    for controller_node_name, binding in domain_analysis.node_bindings.items():
+        if binding.role is not DomainNodeRole.CONTROLLER:
+            continue
+        address = _domain_controller_address(controller_node_name, binding.domain_name)
+        target_address = _node_address(controller_node_name)
+        placements[address] = DomainControllerPlacement(
+            address=address,
+            name=f"{controller_node_name}.{binding.domain_name}",
+            target_address=target_address,
+            domain_topology=_compiled_domain_binding(scenario, binding),
+            ordering_dependencies=(target_address,),
+            refresh_dependencies=(target_address,),
+            spec={},
+        )
+    return placements

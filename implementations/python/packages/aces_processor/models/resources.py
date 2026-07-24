@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from aces_backend_protocols.domain_topology import DomainTopologyBinding
+from aces_contracts.addressing import require_compiled_address
 from aces_contracts.diagnostics import Diagnostic
 from aces_contracts.evaluation import EvaluationExecutionContract, EvaluationResultContract
 from aces_contracts.participant_episode import PARTICIPANT_EPISODE_CONTROL_EVENTS, PARTICIPANT_EPISODE_TERMINAL_EVENTS
@@ -144,6 +145,28 @@ class AccountPlacement(ResolvedResource):
     node_name: str = ""
     target_address: str = ""
     domain_topology: DomainTopologyBinding | None = None
+
+
+@dataclass(frozen=True, kw_only=True)
+class DomainControllerPlacement(ResolvedResource):
+    """Identity domain bootstrap intent bound to one controller node."""
+
+    target_address: str
+    domain_topology: DomainTopologyBinding
+
+    def __post_init__(self) -> None:
+        require_compiled_address(
+            self.target_address,
+            field_name="DomainControllerPlacement.target_address",
+        )
+        if self.spec:
+            raise ValueError(
+                "DomainControllerPlacement.spec must be empty; the payload is restricted to typed non-secret fields"
+            )
+        if self.domain_topology.role != "controller":
+            raise ValueError("DomainControllerPlacement.domain_topology must carry the controller role")
+        if self.target_address not in self.domain_topology.controller_addresses:
+            raise ValueError("DomainControllerPlacement target must be one of the domain controller addresses")
 
 
 @dataclass(frozen=True)

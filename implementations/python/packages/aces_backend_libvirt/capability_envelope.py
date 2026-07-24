@@ -23,6 +23,7 @@ from aces_contracts.planning import ChangeAction, ProvisioningPlan, RuntimeDomai
 from ._payload import (
     ACCOUNT_PLACEMENT_RESOURCE_TYPE,
     CONTENT_PLACEMENT_RESOURCE_TYPE,
+    DOMAIN_CONTROLLER_PLACEMENT_RESOURCE_TYPE,
     NETWORK_RESOURCE_TYPE,
     NODE_RESOURCE_TYPE,
     _node_type,
@@ -98,7 +99,13 @@ _ENVELOPE_DIMENSIONS: tuple[_EnvelopeDimension, ...] = (
         supported=lambda caps: caps.supported_account_features,
     ),
     _EnvelopeDimension(
-        resource_types=frozenset({NODE_RESOURCE_TYPE, ACCOUNT_PLACEMENT_RESOURCE_TYPE}),
+        resource_types=frozenset(
+            {
+                NODE_RESOURCE_TYPE,
+                ACCOUNT_PLACEMENT_RESOURCE_TYPE,
+                DOMAIN_CONTROLLER_PLACEMENT_RESOURCE_TYPE,
+            }
+        ),
         code=_CODE_UNSUPPORTED_DOMAIN_PROFILE,
         noun="identity-domain profile",
         extract=lambda payload: _requested_domain_profiles(payload),

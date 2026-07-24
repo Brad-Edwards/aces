@@ -2,8 +2,8 @@
 
 Maps an ACES :class:`ProvisioningPlan` into a driver-neutral :class:`Realization`
 of portable network/domain specs. Node resources become libvirt domains; network
-resources become libvirt networks; and the three placement resource types are
-realized into the target domain's cloud-init seed:
+resources become libvirt networks; and placement resources are bound to their
+target domains. Content, account, and feature placements contribute to cloud-init:
 
 - ``account-placement`` → cloud-init ``users`` (groups, shell, home, disabled,
   auth_method) plus ``/etc/aliases.d`` (mail) and ``/etc/aces/spn`` (spn) files;
@@ -30,6 +30,7 @@ from aces_contracts.planning import PlannedResource, ProvisioningPlan, RuntimeDo
 from ._payload import (
     ACCOUNT_PLACEMENT_RESOURCE_TYPE,
     CONTENT_PLACEMENT_RESOURCE_TYPE,
+    DOMAIN_CONTROLLER_PLACEMENT_RESOURCE_TYPE,
     NETWORK_RESOURCE_TYPE,
     NODE_RESOURCE_TYPE,
     SUPPORTED_RESOURCE_TYPES,
@@ -232,6 +233,10 @@ def _aggregate_cloud_init(
             _realize_account(accumulator, payload, dialect)
         elif resource.resource_type == CONTENT_PLACEMENT_RESOURCE_TYPE:
             _realize_content(accumulator, resource, payload)
+        elif resource.resource_type == DOMAIN_CONTROLLER_PLACEMENT_RESOURCE_TYPE:
+            # This generic carrier intentionally emits no provider- or
+            # product-specific bootstrap commands.
+            pass
         else:
             _realize_feature(accumulator, resource, payload, dialect)
     return accumulators, diagnostics, placement_targets

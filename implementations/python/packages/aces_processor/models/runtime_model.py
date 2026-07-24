@@ -30,6 +30,7 @@ from .resources import (
     AssertionRuntime,
     ConditionBinding,
     ContentPlacement,
+    DomainControllerPlacement,
     FeatureBinding,
     GeneratedArtifactRuntime,
     InjectBinding,
@@ -115,6 +116,7 @@ class RuntimeModel:
     injects: dict[str, InjectRuntime] = field(default_factory=dict)
     inject_bindings: dict[str, InjectBinding] = field(default_factory=dict)
     content_placements: dict[str, ContentPlacement] = field(default_factory=dict)
+    domain_controller_placements: dict[str, DomainControllerPlacement] = field(default_factory=dict)
     account_placements: dict[str, AccountPlacement] = field(default_factory=dict)
     generated_artifacts: dict[str, GeneratedArtifactRuntime] = field(default_factory=dict)
     persistent_volumes: dict[str, PersistentVolumeRuntime] = field(default_factory=dict)
@@ -148,6 +150,7 @@ class RuntimeModel:
             "injects",
             "inject_bindings",
             "content_placements",
+            "domain_controller_placements",
             "account_placements",
             "generated_artifacts",
             "persistent_volumes",

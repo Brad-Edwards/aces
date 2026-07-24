@@ -33,7 +33,11 @@ from .participant_contracts import (
     _compile_observation_boundaries,
     _compile_outcome_interpretation_rules,
 )
-from .placement import _compile_account_placements, _compile_content_placements
+from .placement import (
+    _compile_account_placements,
+    _compile_content_placements,
+    _compile_domain_controller_placements,
+)
 from .provisioning import (
     _compile_capability_constraints,
     _compile_feature_bindings,
@@ -101,7 +105,13 @@ def compile_runtime_model(scenario: Scenario | ExpandedScenario | InstantiatedSc
     injects = _compile_inject_runtimes(inject_templates)
     inject_bindings = _compile_inject_bindings(scenario, inject_templates, diagnostics)
     content_placements = _compile_content_placements(scenario, diagnostics)
-    account_placements = _compile_account_placements(scenario, diagnostics, domain_analysis)
+    domain_controller_placements = _compile_domain_controller_placements(scenario, domain_analysis)
+    account_placements = _compile_account_placements(
+        scenario,
+        diagnostics,
+        domain_analysis,
+        domain_controller_placements,
+    )
     generated_artifacts = _compile_generated_artifacts(scenario)
     persistent_volumes = _compile_persistent_volumes(scenario)
     action_contracts = _compile_action_contracts(scenario)
@@ -135,6 +145,7 @@ def compile_runtime_model(scenario: Scenario | ExpandedScenario | InstantiatedSc
         injects=injects,
         inject_bindings=inject_bindings,
         content_placements=content_placements,
+        domain_controller_placements=domain_controller_placements,
         account_placements=account_placements,
         generated_artifacts=generated_artifacts,
         persistent_volumes=persistent_volumes,

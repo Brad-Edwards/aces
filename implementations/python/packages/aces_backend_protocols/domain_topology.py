@@ -6,77 +6,18 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from aces_contracts.addressing import require_compiled_address
 from aces_contracts.diagnostics import Diagnostic, Severity
 from aces_contracts.planning import ChangeAction, RuntimeDomain
+
+from ._domain_topology_binding import (
+    DOMAIN_NODE_ROLES,
+    DomainTopologyBinding,
+    domain_topology_profile,
+)
 
 if TYPE_CHECKING:
     from aces_contracts.planning import PlannedResource, PlanOperation, ProvisioningPlan
     from aces_contracts.runtime_state import RuntimeSnapshot, SnapshotEntry
-
-DOMAIN_NODE_ROLES = frozenset({"controller", "member"})
-
-
-def domain_topology_profile(payload: Mapping[str, object]) -> str:
-    """Return the concrete domain profile carried by a resource payload."""
-
-    binding = payload.get("domain_topology")
-    if not isinstance(binding, Mapping):
-        return ""
-    profile = binding.get("profile")
-    return profile if isinstance(profile, str) else ""
-
-
-@dataclass(frozen=True)
-class DomainTopologyBinding:
-    """Normalized domain realization intent attached to a plan resource."""
-
-    domain_id: str
-    profile: str
-    dns_name: str
-    netbios_name: str
-    authority_account_address: str
-    role: str
-    controller_addresses: tuple[str, ...]
-
-    def __post_init__(self) -> None:
-        for field_name in ("domain_id", "profile", "dns_name", "netbios_name"):
-            value = getattr(self, field_name)
-            if not isinstance(value, str) or not value.strip():
-                raise ValueError(f"DomainTopologyBinding.{field_name} must be non-empty")
-        require_compiled_address(
-            self.authority_account_address,
-            field_name="DomainTopologyBinding.authority_account_address",
-        )
-        if self.role not in DOMAIN_NODE_ROLES:
-            raise ValueError("DomainTopologyBinding.role must be 'controller' or 'member'")
-        if not self.controller_addresses:
-            raise ValueError("DomainTopologyBinding.controller_addresses must not be empty")
-        if len(self.controller_addresses) != len(set(self.controller_addresses)):
-            raise ValueError("DomainTopologyBinding.controller_addresses must be unique")
-        for address in self.controller_addresses:
-            require_compiled_address(address, field_name="DomainTopologyBinding.controller_addresses")
-
-    @classmethod
-    def from_mapping(cls, payload: Mapping[str, object]) -> DomainTopologyBinding:
-        """Parse the plain-data plan carrier into its typed representation."""
-
-        controller_addresses = payload.get("controller_addresses", ())
-        if isinstance(controller_addresses, (str, bytes, Mapping)):
-            raise ValueError("DomainTopologyBinding.controller_addresses must be a sequence")
-        try:
-            controllers = tuple(str(value) for value in controller_addresses)
-        except TypeError as error:
-            raise ValueError("DomainTopologyBinding.controller_addresses must be a sequence") from error
-        return cls(
-            domain_id=str(payload.get("domain_id", "")),
-            profile=str(payload.get("profile", "")),
-            dns_name=str(payload.get("dns_name", "")),
-            netbios_name=str(payload.get("netbios_name", "")),
-            authority_account_address=str(payload.get("authority_account_address", "")),
-            role=str(payload.get("role", "")),
-            controller_addresses=controllers,
-        )
 
 
 @dataclass(frozen=True)
@@ -230,7 +171,15 @@ def _collect_bindings(
         if diagnostic is not None:
             diagnostics.append(diagnostic)
         elif binding is None:
-            if resource.resource_type == "account-placement" and _account_spn(resource):
+            if resource.resource_type == "domain-controller-placement":
+                diagnostics.append(
+                    _diagnostic(
+                        "provisioning.domain-topology.binding-missing",
+                        address,
+                        "A domain-controller placement requires an explicit domain topology binding.",
+                    )
+                )
+            elif resource.resource_type == "account-placement" and _account_spn(resource):
                 diagnostics.append(
                     _diagnostic(
                         "provisioning.domain-topology.spn-binding-missing",
@@ -238,12 +187,13 @@ def _collect_bindings(
                         "An account placement carrying an SPN requires an explicit domain topology binding.",
                     )
                 )
-        elif resource.resource_type not in {"node", "account-placement"}:
+        elif resource.resource_type not in {"node", "domain-controller-placement", "account-placement"}:
             diagnostics.append(
                 _diagnostic(
                     "provisioning.domain-topology.carrier-invalid",
                     address,
-                    "Domain topology bindings may appear only on node and account-placement resources.",
+                    "Domain topology bindings may appear only on node, domain-controller-placement, "
+                    "and account-placement resources.",
                 )
             )
         else:
@@ -300,6 +250,7 @@ def _controller_matches_domain(
 def _node_binding_diagnostics(
     resources: Mapping[str, _MaterializedResource],
     node_bindings: Mapping[str, DomainTopologyBinding],
+    controller_placement_bindings: Mapping[str, DomainTopologyBinding],
 ) -> list[Diagnostic]:
     diagnostics: list[Diagnostic] = []
     for address, binding in node_bindings.items():
@@ -322,13 +273,19 @@ def _node_binding_diagnostics(
                         f"domain '{binding.domain_id}'.",
                     )
                 )
-        missing_dependencies = set(binding.controller_addresses) - set(resource.ordering_dependencies)
+        placement_addresses = {
+            placement_address
+            for placement_address, placement_binding in controller_placement_bindings.items()
+            if _binding_core(placement_binding) == _binding_core(binding)
+            and _account_target(resources[placement_address]) in binding.controller_addresses
+        }
+        missing_dependencies = placement_addresses - set(resource.ordering_dependencies)
         if binding.role == "member" and missing_dependencies:
             diagnostics.append(
                 _diagnostic(
                     "provisioning.domain-topology.controller-dependency-missing",
                     address,
-                    "A member node must order after every selected domain controller.",
+                    "A member node must order after every selected domain controller placement.",
                 )
             )
     return diagnostics
@@ -337,6 +294,7 @@ def _node_binding_diagnostics(
 def _account_binding_diagnostics(
     resources: Mapping[str, _MaterializedResource],
     node_bindings: Mapping[str, DomainTopologyBinding],
+    controller_placement_bindings: Mapping[str, DomainTopologyBinding],
     account_bindings: Mapping[str, DomainTopologyBinding],
 ) -> list[Diagnostic]:
     diagnostics: list[Diagnostic] = []
@@ -348,6 +306,78 @@ def _account_binding_diagnostics(
                     "provisioning.domain-topology.account-node-mismatch",
                     address,
                     "An account domain binding must exactly match its target node's domain binding.",
+                )
+            )
+        required_placements = {
+            placement_address
+            for placement_address, placement_binding in controller_placement_bindings.items()
+            if _binding_core(placement_binding) == _binding_core(binding)
+        }
+        resource = resources[address]
+        if required_placements - set(resource.ordering_dependencies):
+            diagnostics.append(
+                _diagnostic(
+                    "provisioning.domain-topology.controller-placement-ordering-missing",
+                    address,
+                    "A domain account placement must order after every controller placement for its domain.",
+                )
+            )
+        if required_placements - set(resource.refresh_dependencies):
+            diagnostics.append(
+                _diagnostic(
+                    "provisioning.domain-topology.controller-placement-refresh-missing",
+                    address,
+                    "A domain account placement must refresh after every controller placement for its domain.",
+                )
+            )
+    return diagnostics
+
+
+def _controller_placement_diagnostics(
+    resources: Mapping[str, _MaterializedResource],
+    node_bindings: Mapping[str, DomainTopologyBinding],
+    controller_placement_bindings: Mapping[str, DomainTopologyBinding],
+) -> list[Diagnostic]:
+    diagnostics: list[Diagnostic] = []
+    placements_by_controller: dict[tuple[str, tuple[str, str, str, str, str]], list[str]] = {}
+    for address, binding in controller_placement_bindings.items():
+        resource = resources[address]
+        target_address = _account_target(resource)
+        placements_by_controller.setdefault((target_address, _binding_core(binding)), []).append(address)
+        if binding.role != "controller" or node_bindings.get(target_address) != binding:
+            diagnostics.append(
+                _diagnostic(
+                    "provisioning.domain-topology.controller-placement-invalid",
+                    address,
+                    "A domain-controller placement must target a node with the same controller binding.",
+                )
+            )
+        if target_address not in resource.ordering_dependencies:
+            diagnostics.append(
+                _diagnostic(
+                    "provisioning.domain-topology.controller-placement-ordering-missing",
+                    address,
+                    "A domain-controller placement must order after its target controller node.",
+                )
+            )
+        if target_address not in resource.refresh_dependencies:
+            diagnostics.append(
+                _diagnostic(
+                    "provisioning.domain-topology.controller-placement-refresh-missing",
+                    address,
+                    "A domain-controller placement must refresh after its target controller node.",
+                )
+            )
+    for node_address, binding in node_bindings.items():
+        if binding.role != "controller":
+            continue
+        placement_addresses = placements_by_controller.get((node_address, _binding_core(binding)), ())
+        if len(placement_addresses) != 1:
+            diagnostics.append(
+                _diagnostic(
+                    "provisioning.domain-topology.controller-placement-cardinality-invalid",
+                    node_address,
+                    "A controller node must have exactly one matching domain-controller placement.",
                 )
             )
     return diagnostics
@@ -408,9 +438,34 @@ def domain_topology_plan_diagnostics(
     diagnostics.extend(_domain_definition_diagnostics(bindings))
 
     node_bindings = _bindings_for_resource_type(bindings, resources, "node")
+    controller_placement_bindings = _bindings_for_resource_type(
+        bindings,
+        resources,
+        "domain-controller-placement",
+    )
     account_bindings = _bindings_for_resource_type(bindings, resources, "account-placement")
-    diagnostics.extend(_node_binding_diagnostics(resources, node_bindings))
-    diagnostics.extend(_account_binding_diagnostics(resources, node_bindings, account_bindings))
+    diagnostics.extend(
+        _controller_placement_diagnostics(
+            resources,
+            node_bindings,
+            controller_placement_bindings,
+        )
+    )
+    diagnostics.extend(
+        _node_binding_diagnostics(
+            resources,
+            node_bindings,
+            controller_placement_bindings,
+        )
+    )
+    diagnostics.extend(
+        _account_binding_diagnostics(
+            resources,
+            node_bindings,
+            controller_placement_bindings,
+            account_bindings,
+        )
+    )
     diagnostics.extend(_authority_account_diagnostics(resources, node_bindings, account_bindings))
 
     return _dedupe_diagnostics(diagnostics)
