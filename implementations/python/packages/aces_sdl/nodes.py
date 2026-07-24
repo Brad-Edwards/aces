@@ -295,7 +295,7 @@ class Node(SDLModel):
 
     @field_validator("endpoint_persona", mode="before")
     @classmethod
-    def normalize_endpoint_persona(cls, v):
+    def normalize_endpoint_persona(cls, v: object) -> object:
         return parse_enum_or_var(v, EndpointPersona, field_name="endpoint_persona") if v is not None else v
 
     @model_validator(mode="after")

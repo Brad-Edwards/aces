@@ -24,6 +24,81 @@ def _issue(code: str, message: str) -> EnterpriseIdentityIssue:
     return EnterpriseIdentityIssue(code=code, message=message)
 
 
+def _resolve_forest_members(
+    forest_name: str,
+    domain_refs: tuple[object, ...],
+    identity_domains: Mapping[str, object],
+    memberships: defaultdict[str, list[str]],
+    is_unresolved: Callable[[object], bool],
+) -> tuple[set[str], list[EnterpriseIdentityIssue]]:
+    members: set[str] = set()
+    issues: list[EnterpriseIdentityIssue] = []
+    for domain_ref in domain_refs:
+        if is_unresolved(domain_ref):
+            continue
+        domain_name = resolve_section_ref(domain_ref, "identity_domains", identity_domains)
+        if domain_name is None:
+            issues.append(
+                _issue(
+                    "enterprise-identity.forest.domain-unbound",
+                    f"Identity forest '{forest_name}' domain_ref '{domain_ref}' does not resolve to an identity domain",
+                )
+            )
+            continue
+        members.add(domain_name)
+        memberships[domain_name].append(forest_name)
+    return members, issues
+
+
+def _forest_root_issue(
+    forest_name: str,
+    root_ref: object,
+    members: set[str],
+    identity_domains: Mapping[str, object],
+    is_unresolved: Callable[[object], bool],
+) -> EnterpriseIdentityIssue | None:
+    if is_unresolved(root_ref):
+        return None
+    root_name = resolve_section_ref(root_ref, "identity_domains", identity_domains)
+    if root_name is None:
+        return _issue(
+            "enterprise-identity.forest.root-unbound",
+            f"Identity forest '{forest_name}' root_domain_ref '{root_ref}' does not resolve to an identity domain",
+        )
+    if root_name not in members:
+        return _issue(
+            "enterprise-identity.forest.root-not-member",
+            f"Identity forest '{forest_name}' root_domain_ref '{root_ref}' must appear in domain_refs",
+        )
+    return None
+
+
+def _forest_membership_issues(
+    identity_domains: Mapping[str, object],
+    identity_forests: Mapping[str, object],
+    memberships: Mapping[str, list[str]],
+) -> list[EnterpriseIdentityIssue]:
+    issues = [
+        _issue(
+            "enterprise-identity.forest.domain-multiple",
+            f"Identity domain '{domain_name}' belongs to multiple forests: {', '.join(sorted(forests))}",
+        )
+        for domain_name, forests in memberships.items()
+        if len(forests) > 1
+    ]
+    if not identity_forests:
+        return issues
+    issues.extend(
+        _issue(
+            "enterprise-identity.forest.domain-missing",
+            f"Identity domain '{domain_name}' must belong to exactly one identity forest",
+        )
+        for domain_name in identity_domains
+        if domain_name not in memberships
+    )
+    return issues
+
+
 def _forest_issues(
     identity_domains: Mapping[str, object],
     identity_forests: Mapping[str, object],
@@ -34,56 +109,18 @@ def _forest_issues(
     for forest_name, forest in identity_forests.items():
         root_ref = getattr(forest, "root_domain_ref", "")
         domain_refs = tuple(getattr(forest, "domain_refs", ()))
-        resolved_members: set[str] = set()
-        for domain_ref in domain_refs:
-            if is_unresolved(domain_ref):
-                continue
-            domain_name = resolve_section_ref(domain_ref, "identity_domains", identity_domains)
-            if domain_name is None:
-                issues.append(
-                    _issue(
-                        "enterprise-identity.forest.domain-unbound",
-                        f"Identity forest '{forest_name}' domain_ref '{domain_ref}' does not resolve "
-                        "to an identity domain",
-                    )
-                )
-                continue
-            resolved_members.add(domain_name)
-            memberships[domain_name].append(forest_name)
-        if not is_unresolved(root_ref):
-            root_name = resolve_section_ref(root_ref, "identity_domains", identity_domains)
-            if root_name is None:
-                issues.append(
-                    _issue(
-                        "enterprise-identity.forest.root-unbound",
-                        f"Identity forest '{forest_name}' root_domain_ref '{root_ref}' does not resolve "
-                        "to an identity domain",
-                    )
-                )
-            elif root_name not in resolved_members:
-                issues.append(
-                    _issue(
-                        "enterprise-identity.forest.root-not-member",
-                        f"Identity forest '{forest_name}' root_domain_ref '{root_ref}' must appear in domain_refs",
-                    )
-                )
-    for domain_name, forests in memberships.items():
-        if len(forests) > 1:
-            issues.append(
-                _issue(
-                    "enterprise-identity.forest.domain-multiple",
-                    f"Identity domain '{domain_name}' belongs to multiple forests: {', '.join(sorted(forests))}",
-                )
-            )
-    if identity_forests:
-        for domain_name in identity_domains:
-            if domain_name not in memberships:
-                issues.append(
-                    _issue(
-                        "enterprise-identity.forest.domain-missing",
-                        f"Identity domain '{domain_name}' must belong to exactly one identity forest",
-                    )
-                )
+        members, member_issues = _resolve_forest_members(
+            forest_name,
+            domain_refs,
+            identity_domains,
+            memberships,
+            is_unresolved,
+        )
+        issues.extend(member_issues)
+        root_issue = _forest_root_issue(forest_name, root_ref, members, identity_domains, is_unresolved)
+        if root_issue is not None:
+            issues.append(root_issue)
+    issues.extend(_forest_membership_issues(identity_domains, identity_forests, memberships))
     return issues
 
 
@@ -172,55 +209,86 @@ def _typed_edge_issues(
             continue
         type_name = _type_value(type_value)
         if type_name == RelationshipType.FOREST_TRUSTS.value:
-            source_name = resolve_section_ref(source, "identity_forests", identity_forests)
-            target_name = resolve_section_ref(target, "identity_forests", identity_forests)
-            if source_name is None or target_name is None:
-                issues.append(
-                    _issue(
-                        "enterprise-identity.forest-trust.endpoint-invalid",
-                        f"Relationship '{name}' forest trust endpoints must resolve to identity forests",
-                    )
-                )
-            elif source_name == target_name:
-                issues.append(
-                    _issue(
-                        "enterprise-identity.forest-trust.self",
-                        f"Relationship '{name}' cannot trust a forest with itself",
-                    )
-                )
-            else:
-                pair = frozenset((source_name, target_name))
-                if pair in seen_trust_pairs:
-                    issues.append(
-                        _issue(
-                            "enterprise-identity.forest-trust.duplicate",
-                            f"Relationship '{name}' duplicates a forest trust for the same forest pair",
-                        )
-                    )
-                seen_trust_pairs.add(pair)
+            issue = _forest_trust_issue(name, source, target, identity_forests, seen_trust_pairs)
+            if issue is not None:
+                issues.append(issue)
         elif type_name == RelationshipType.DIRECTORY_FEDERATES_TO.value:
-            authority_resolves = (
-                resolve_section_ref(source, "identity_domains", identity_domains) is not None
-                or resolve_section_ref(source, "identity_forests", identity_forests) is not None
+            issue, facade_name = _federation_issue(
+                name,
+                source,
+                target,
+                identity_domains,
+                identity_forests,
+                identity_facades,
+                federated_facades,
             )
-            facade_resolves = resolve_section_ref(target, "identity_facades", identity_facades)
-            if not authority_resolves or facade_resolves is None:
-                issues.append(
-                    _issue(
-                        "enterprise-identity.federation.endpoint-invalid",
-                        f"Relationship '{name}' must connect one identity domain or forest to an identity facade",
-                    )
-                )
-            elif facade_resolves in federated_facades:
-                issues.append(
-                    _issue(
-                        "enterprise-identity.federation.facade-multiple",
-                        f"Identity facade '{facade_resolves}' has multiple authored human authorities",
-                    )
-                )
-            else:
-                federated_facades.add(facade_resolves)
+            if issue is not None:
+                issues.append(issue)
+            elif facade_name is not None:
+                federated_facades.add(facade_name)
     return issues
+
+
+def _forest_trust_issue(
+    relationship_name: str,
+    source: object,
+    target: object,
+    identity_forests: Mapping[str, object],
+    seen_trust_pairs: set[frozenset[str]],
+) -> EnterpriseIdentityIssue | None:
+    source_name = resolve_section_ref(source, "identity_forests", identity_forests)
+    target_name = resolve_section_ref(target, "identity_forests", identity_forests)
+    if source_name is None or target_name is None:
+        return _issue(
+            "enterprise-identity.forest-trust.endpoint-invalid",
+            f"Relationship '{relationship_name}' forest trust endpoints must resolve to identity forests",
+        )
+    if source_name == target_name:
+        return _issue(
+            "enterprise-identity.forest-trust.self",
+            f"Relationship '{relationship_name}' cannot trust a forest with itself",
+        )
+    pair = frozenset((source_name, target_name))
+    if pair in seen_trust_pairs:
+        return _issue(
+            "enterprise-identity.forest-trust.duplicate",
+            f"Relationship '{relationship_name}' duplicates a forest trust for the same forest pair",
+        )
+    seen_trust_pairs.add(pair)
+    return None
+
+
+def _federation_issue(
+    relationship_name: str,
+    source: object,
+    target: object,
+    identity_domains: Mapping[str, object],
+    identity_forests: Mapping[str, object],
+    identity_facades: Mapping[str, object],
+    federated_facades: set[str],
+) -> tuple[EnterpriseIdentityIssue | None, str | None]:
+    authority_resolves = (
+        resolve_section_ref(source, "identity_domains", identity_domains) is not None
+        or resolve_section_ref(source, "identity_forests", identity_forests) is not None
+    )
+    facade_name = resolve_section_ref(target, "identity_facades", identity_facades)
+    if not authority_resolves or facade_name is None:
+        return (
+            _issue(
+                "enterprise-identity.federation.endpoint-invalid",
+                f"Relationship '{relationship_name}' must connect one identity domain or forest to an identity facade",
+            ),
+            None,
+        )
+    if facade_name in federated_facades:
+        return (
+            _issue(
+                "enterprise-identity.federation.facade-multiple",
+                f"Identity facade '{facade_name}' has multiple authored human authorities",
+            ),
+            None,
+        )
+    return None, facade_name
 
 
 def analyze_enterprise_identity(
