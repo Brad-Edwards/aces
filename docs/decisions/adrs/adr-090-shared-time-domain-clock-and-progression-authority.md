@@ -28,7 +28,7 @@ private scheduling concepts such as the rejected live-activity clock.
 
 The [research note](../../research/time-model/prior-art-and-design-criteria.md)
 reviews ROS 2, FMI, HLA, TENA, and OpenSCENARIO. The normative algebra and
-runtime invariants are in the [formal time-model specification](../../../specs/formal/time-model/README.md).
+runtime invariants are in `specs/formal/time-model/README.md`.
 
 ## Decision
 
