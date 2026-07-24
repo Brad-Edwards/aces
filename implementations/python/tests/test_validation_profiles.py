@@ -35,7 +35,7 @@ def test_canonical_catalog_defines_the_ordered_validation_strengths() -> None:
         "evidence_backed": 4,
         "falsification_backed": 5,
     }
-    assert {
+    assert {subject.subject_kind for subject in catalog.subject_kinds} == {
         "scenario",
         "scenario_snapshot",
         "experiment_task",
@@ -44,7 +44,7 @@ def test_canonical_catalog_defines_the_ordered_validation_strengths() -> None:
         "backend_conformance_claim",
         "participant_conformance_claim",
         "published_claim",
-    } == {subject.subject_kind for subject in catalog.subject_kinds}
+    }
 
 
 def test_profiles_reference_governed_terms_without_implying_gate_execution() -> None:

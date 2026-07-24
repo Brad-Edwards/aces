@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from functools import cache
+from pathlib import Path
 from typing import Annotated, Literal
 
 from pydantic import Field, model_validator
@@ -169,7 +170,7 @@ class ValidationProfileCatalogModel(ContractModel):
             raise ValueError(f"profile {profile.profile_id!r} references unknown {label}: {missing}")
 
 
-def validation_profiles_root():
+def validation_profiles_root() -> Path:
     """Return the canonical validation-profile corpus directory."""
 
     return corpus_family_root(PROFILES) / "validation"
