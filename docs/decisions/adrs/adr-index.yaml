@@ -396,4 +396,4 @@ adrs:
     pin: c34101fb3b5ddeba1e11f02666fb7747a38f52784087514ec76867df152aefa0
   - id: ADR-090
     path: docs/decisions/adrs/adr-090-shared-time-domain-clock-and-progression-authority.md
-    pin: 2873d1649a5dcf9c54a45d75d9405c4676e7f2f42ebb186c15ce22dad4b99daf
+    pin: 5b8fa008e2e8c8893e8a0c0376c947ef6f840d1e09fd75d579d36d477219d1e2
