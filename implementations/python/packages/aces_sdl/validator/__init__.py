@@ -18,6 +18,7 @@ from ._runtime_orchestration import _RuntimeOrchestrationMixin
 from ._runtime_platform import _RuntimePlatformMixin
 from ._runtime_services import _RuntimeServicesMixin
 from ._sections import _SectionsMixin
+from ._time_model import _TimeModelMixin
 from ._variation import _VariationMixin
 from ._workflows_analysis import _WorkflowAnalysisMixin
 from ._workflows_verify import _WorkflowVerifyMixin
@@ -43,6 +44,7 @@ class SemanticValidator(
     _WorkflowAnalysisMixin,
     _WorkflowVerifyMixin,
     _VariationMixin,
+    _TimeModelMixin,
     _SectionsMixin,
     _ValidatorCore,
 ):

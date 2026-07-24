@@ -79,7 +79,9 @@ to match `contracts/schemas/sdl/sdl-authoring-input-v1.json`.
 > **Reconciliation note.** Earlier descriptions treated the authoring surface
 > as uniformly map-keyed. The live contract is **not** uniform:
 > `forwarding_agents` is list-valued, and the participant surfaces (`action_contracts`,
-> `observation_boundaries`, `outcome_interpretation_rules`) are present. The
+> `observation_boundaries`, `outcome_interpretation_rules`) and shared time
+> surfaces (`time_domains`, `clocks`, `time_domain_mappings`,
+> `time_progression_policies`, `temporal_constraints`) are present. The
 > section catalog states and mechanically checks the live set; this specification reconciles the
 > language to the published schema rather than freezing a historical count.
 

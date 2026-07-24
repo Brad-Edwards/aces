@@ -285,6 +285,11 @@ _REFERENCEABLE_SECTIONS = frozenset(
         "observation_boundaries",
         "behavior_specifications",
         "evidence_requirements",
+        "time_domains",
+        "clocks",
+        "time_domain_mappings",
+        "time_progression_policies",
+        "temporal_constraints",
         "objectives",
         "variation_points",
     }

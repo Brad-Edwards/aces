@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-snapshot-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "d52faa1cc68c95c0897db38e21765951a2d458a91610b350b44120f7505c723e",
+  "content_hash": "c38a623187aa48b270ac3fc405380d60742431cda90a488d43432acf2d8ae8bb",
   "last_change": {
-    "summary": "Carried typed node-to-node network namespace sharing into instantiated snapshots.",
-    "content_hash": "d52faa1cc68c95c0897db38e21765951a2d458a91610b350b44120f7505c723e"
+    "summary": "Carried the shared time model into instantiated scenario snapshots.",
+    "content_hash": "c38a623187aa48b270ac3fc405380d60742431cda90a488d43432acf2d8ae8bb"
   }
 }

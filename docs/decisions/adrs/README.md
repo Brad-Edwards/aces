@@ -222,3 +222,4 @@ adr-086-governed-whole-scenario-satisfiability
 | [084](adr-084-scenario-variation-and-deterministic-trial-realization.md) | Scenario Variation And Deterministic Trial Realization | accepted | 2026-07-15 |
 | [085](adr-085-participant-information-flow-and-control.md) | Participant Information-Flow And Control | accepted | 2026-07-15 |
 | [086](adr-086-governed-whole-scenario-satisfiability.md) | Governed Whole-Scenario Satisfiability | accepted | 2026-07-19 |
+| [090](adr-090-shared-time-domain-clock-and-progression-authority.md) | Shared Time-Domain, Clock, And Progression Authority | accepted | 2026-07-24 |

@@ -179,6 +179,14 @@ from .temporal import (
     ParticipantTemporalStateTransition,
     iter_participant_temporal_state_machine_violations,
 )
+from .time_model import (
+    CompiledClock,
+    CompiledTemporalConstraint,
+    CompiledTimeDomain,
+    CompiledTimeDomainMapping,
+    CompiledTimeModel,
+    CompiledTimeProgressionPolicy,
+)
 
 __all__ = [
     "AccountPlacement",
@@ -186,7 +194,13 @@ __all__ = [
     "AssertionRuntime",
     "ChangeAction",
     "CompiledCapabilityConstraint",
+    "CompiledClock",
     "CompiledRealizationRequirement",
+    "CompiledTemporalConstraint",
+    "CompiledTimeDomain",
+    "CompiledTimeDomainMapping",
+    "CompiledTimeModel",
+    "CompiledTimeProgressionPolicy",
     "ConditionBinding",
     "ContentPlacement",
     "DomainControllerPlacement",

@@ -394,3 +394,6 @@ adrs:
   - id: ADR-086
     path: docs/decisions/adrs/adr-086-governed-whole-scenario-satisfiability.md
     pin: c34101fb3b5ddeba1e11f02666fb7747a38f52784087514ec76867df152aefa0
+  - id: ADR-090
+    path: docs/decisions/adrs/adr-090-shared-time-domain-clock-and-progression-authority.md
+    pin: 2873d1649a5dcf9c54a45d75d9405c4676e7f2f42ebb186c15ce22dad4b99daf
