@@ -188,6 +188,11 @@ from .manifests import (
     CleanupCapabilitiesModel as CleanupCapabilitiesModel,
 )
 from .participant_context import ParticipantContextViewModel
+from .participant_control import (
+    ParticipantControlDeclarationModel,
+    ParticipantControlOccurrenceModel,
+)
+from .participant_control_validation import validate_participant_control_occurrence_context
 from .participant_decision_surface import (
     ParticipantDecisionSurfaceActionEntryModel,
     ParticipantDecisionSurfaceCandidateSetFormModel,
@@ -433,6 +438,8 @@ __all__ = [
     "ParticipantAttributionCandidateModel", "ParticipantAttributionEdgeModel",
     "ParticipantAttributionEvidenceBasisModel", "ParticipantAttributionOrderingBasisModel",
     "ParticipantBehaviorHistoryEventModel", "ParticipantContextViewModel",
+    "ParticipantControlDeclarationModel", "ParticipantControlOccurrenceModel",
+    "validate_participant_control_occurrence_context",
     "ParticipantDecisionSurfaceActionEntryModel", "ParticipantDecisionSurfaceCandidateSetFormModel",
     "ParticipantDecisionSurfaceConstrainedFormModel", "ParticipantDecisionSurfaceExposureBindingModel",
     "ParticipantDecisionSurfaceExposureRealizationModel", "ParticipantDecisionSurfaceModel",
