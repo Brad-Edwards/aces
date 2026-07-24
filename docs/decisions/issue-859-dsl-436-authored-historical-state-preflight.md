@@ -1,443 +1,305 @@
-# Issue 859 / DSL-436 Authored Historical State Preflight
+# Issue 859 / DSL-436 Initial Service State Preflight
 
 Date: 2026-07-24
 
-Issue: #859. Requirement: DSL-436.
+This note records architecture guardrails only. It does not implement the
+issue or prescribe an implementation sequence.
 
-This note records repository-wide architecture guardrails for authored
-historical scenario state and native materialization semantics. It does not
-implement SDL syntax, schemas, compiler resources, adapters, persistence,
-fixtures, tests, or an implementation plan.
+## Preflight Finding
 
-A follow-on ADR is required before this contract is declared stable. Existing
-decisions deliberately separate authored desired state, observed runtime
-inventory, participant history, experiment baselines, runtime snapshots, and
-backend realization, but none owns a versioned historical-state authority or
-the semantic-object-to-product-object materialization relation. The ADR must
-preserve the boundaries below and compose with ADR-087 / issue #857 after that
-work reaches `dev`.
+The current draft is not a viable base for incremental completion. It adds a
+parallel `historical_baselines` ontology across SDL, schemas, compiler models,
+backend capabilities, lineage, examples, and tests. That conflicts with the
+authoritative issue boundary: age and narrative history are not a distinct
+semantic object class, and initial scenario data must reuse top-level
+`content`. The draft also declares backend support without an executable native
+service materializer or participant-equivalent readback path, so it cannot
+satisfy the operational acceptance criterion.
 
-## Binding Decisions
+The demonstrated repository gap is precise:
 
-### Establish one historical-baseline authority
+- `Content` already owns files, directories, datasets, item identities,
+  sources, sensitivity, and node targets.
+- `_compile_content_placements()` already lowers each entry to a canonical
+  `ContentPlacement`.
+- planner admission already checks `supported_content_types`.
+- the libvirt reference backend already realizes node content through
+  cloud-init and has guest-observation infrastructure.
+- none of those contracts can request or prove exact materialization into a
+  named service-owned store through a provider-neutral native interface.
 
-Add one keyed, closed historical-baseline declaration family to the instantiated
-SDL graph. A baseline key and explicit baseline version identify authored
-meaning; the enclosing baseline owns its semantic objects, historical events,
-actor bindings, materialization bindings, and readback requirements. Do not add
-separate pack manifests, bootstrap documents, product exports, or runtime
-inventories that can independently claim the same history.
+The intended design therefore extends content placement in place. It does not
+add a historical topology.
 
-The baseline is authored desired state. It is not:
+## Architecture Decisions and Guardrails
 
-- the experiment comparison baselines in ADR-054/068;
-- the pre-apply `RuntimeSnapshot` called a baseline in backend reconciliation;
-- participant behavior or episode history;
-- `Node.runtime` observed inventory;
-- a generated artifact, persistent-volume snapshot, or content package;
-- a scheduler job, reset workflow, or product adapter result; or
-- proof that any product accepted or exposed the state.
+### Keep one content authority
 
-Each organization actor is a typed binding to an incumbent declaration. Human,
-team, and organization identity comes from `entities`; participant identity
-comes from `agents`; system login identity comes from `accounts`; service
-actors come from existing node/service declarations. The historical contract
-may classify an actor's role in one baseline, but it must not copy those
-declarations, reinterpret exercise role as product authorization, or use
-observed platform `organizations` as authored authority.
+The stable authored identity is the existing `content.<id>` address within an
+immutable instantiated-scenario snapshot. The content payload digest identifies
+the revision. A staged payload also retains its existing immutable
+`Source`/associated-artifact identity, version, checksum, size, sensitivity, and
+trust result. Do not mint historical-object ids, semantic-address profiles,
+baseline digests, or native-id aliases.
 
-Each semantic object has one baseline-local portable id and kind. Product
-objects, runtime inventory children, files, messages, cases, alerts, tickets,
-dashboard objects, and other native records may realize that object, but they
-do not supply its identity. Mutable labels, bodies, timestamps, product names,
-native ids, adapter selections, and materialization order never enter semantic
-object identity.
+Ordinary node placement stays unchanged. The optional extension is used only
+when a concrete gap case proves that node placement cannot establish the
+required service state. It must bind:
 
-Historical object links follow the existing `Relationship` discipline:
-stable edge identity, explicit endpoints, a governed relationship type, and a
-closed typed detail. Extend that typed-detail seam and the central declaration
-index; do not use free-form `Relationship.properties`, a second generic edge
-model, or object-kind-specific reference resolvers. Event causality is owned by
-the historical event graph because it also carries event order and state
-transition meaning; it is not inferred from an ordinary object relationship.
+- one existing content identity;
+- one existing named `nodes.<node>.services.<service>` target;
+- one versioned, provider-neutral materialization-interface profile;
+- closed exact requirements for that profile;
+- the applicable ADR-087 `uses_shared_service` relationship and reset owner
+  when the target owns shared mutable state;
+- existing ordering/refresh dependencies; and
+- existing observed-state assertions, evidence requirements, and participant
+  observation-boundary refs.
 
-### Keep history time, causality, and product time separate
+The service profile owns only operation semantics and readback mapping. Content
+payload structure stays in `content`; corpus bytes stay in content or an
+associated artifact. Product exports and runtime inventory remain observed
+state.
 
-Every historical event has an explicit coordinate in one baseline-declared
-history time domain and a deterministic tie/order rule. The initial profile
-should be finite and logical: a canonical order coordinate plus an optional
-authored display instant or relative offset. The profile must not depend on
-parse order, map iteration, wall time, scheduler time, product timestamps, or
-materialization completion order.
+### Evidence-gate standardized profiles
 
-History order and causal support are separate:
+Do not add speculative standard profiles. For every profile admitted to the
+controlled vocabulary, the same change must provide:
 
-- predecessor/causal references resolve to events in the same baseline;
-- causal and transition graphs are acyclic;
-- causes precede effects under the declared history order;
-- object creation precedes mutation, linkage, or deletion;
-- deletion/tombstone prevents later use unless a governed restoration event
-  explicitly permits it;
-- one event/object authority is explicit where conflicting writers would
-  otherwise make state ambiguous; and
-- timestamp adjacency, equal display time, shared actor, or declaration order
-  never establishes causality.
+1. an operational adapter reached through the production
+   compile/plan/validate/apply path;
+2. ownership-safe native create/update/reset behavior;
+3. fresh, independently bound `RealizationObservation` readback from the native
+   service;
+4. projection through the declared participant observation boundary;
+5. proposition/assertion evaluation with evidence; and
+6. negative conformance cases proving unsupported, stale, echoed, partial,
+   cross-tenant, and mismatched results fail.
 
-Product-native event time, creation time, update time, ingestion time, and the
-time at which a materializer ran are observed mapping facts. Reuse the
-ADR-054 distinction among occurred/recorded/ingested and source-pipeline times
-where runtime evidence needs those values. Never copy them into the authored
-history coordinate or silently shift authored time to satisfy a product API.
+A fake adapter can test orchestration but cannot be the acceptance proof. A
+backend manifest flag, realization envelope, successful API status, planned
+payload echo, or native id is not evidence that materialization occurred.
 
-Historical events are not `aces_sdl.events` orchestration triggers and are not
-`ParticipantBehaviorHistoryEvent` records. Those incumbents have different
-lifecycle, participant, evidence, and execution authority.
+### Reuse the existing execution and persistence path
 
-### Derive semantic addresses from a versioned, closed context
+Service-target content remains a `content-placement` resolved resource unless
+an operational adapter demonstrates that the existing resource lifecycle
+cannot represent it. Preserve its identity and exact requirement through
+`RuntimeModel`, `resource_payload()`, `PlannedResource`, `PlanOperation`,
+`ProvisioningPlanModel`, direct-submission validation, backend `validate()`,
+`apply()`, `SnapshotEntry`, and control-plane persistence.
 
-A materialized semantic object address is a typed value, not a concatenated
-string, provider id, compiled runtime address, JSON Pointer, or hash of a
-display label. Its complete v1 context consists only of:
+Admission is conjunctive:
 
-- an exact address-profile id;
-- a portable range-instance identity;
-- the deployment-tenant identity from DSL-143 / ADR-087;
-- an explicit reset-generation identity governed by that tenant/service
-  ownership contract;
-- baseline id and baseline version; and
-- the baseline-local semantic object id.
+- `supported_content_types` admits the content kind;
+- the profile-specific provisioner capability admits the exact interface
+  profile/version and content kind;
+- SEM-218 admits the complete exact requirement;
+- the selected realization envelope admits the required observation strength;
+  and
+- ADR-087 tenancy/reset ownership agrees with the exact target service.
 
-The address profile fixes the closed DTO, RFC 8785/JCS byte encoding, digest or
-derivation algorithm, domain-separation label, output encoding, and collision
-behavior. Follow the accepted random-stream profile discipline in
-`StreamAddressModel` and `random_stream_engine`: typed canonical inputs,
-versioned domain separation, stateless derivation, duplicate semantic-coordinate
-and duplicate canonical-byte detection, deterministic failure, and no partial
-output. Do not reuse `StreamAddressModel`, its randomness namespace, or its
-derived bytes; historical identity needs a distinct profile and separation
-label.
+Any missing term produces a blocking `Diagnostic` before I/O. There is no
+downgrade, approximation, fallback profile, first-success routing, or implicit
+adapter selection.
 
-Tenant, range, reset generation, and baseline version are mandatory isolation
-inputs. A native id, hostname, worker, process, thread, backend, queue, retry,
-wall time, declaration index, map order, or random seed is forbidden. A reset
-that intentionally creates a fresh product corpus advances the governed reset
-generation; an idempotent retry of the same generation preserves every
-semantic address.
+Successful apply preserves the normalized admitted content identity and reset
+correlation in the existing snapshot/provenance carrier, with a safe reference
+to fresh observed evidence. Raw native payloads do not enter snapshots,
+operation details, audit details, or logs. The observed result is an
+`experiment-evidence-record-v1`; `experiment-run-v1` remains the archival join
+point through its scenario snapshot ref, apparatus context, realized-form
+disclosures, evidence traceability, and stochastic controls. Do not add a
+materialization-result database or a second run-provenance schema.
 
-The authored local id, typed address material, derived semantic address, SDL
-declaration address, compiler-owned resource address, product-assigned native
-id, and evidence record id remain distinct identities. Equality in one domain
-does not imply equality in another.
+### Reuse reset and deterministic-generation authority
 
-### Bind to native interfaces without making providers authoritative
+ADR-087 owns shared-service state and reset-generation ownership. The new
+contract references that authority; it does not create a reset controller or
+generation lifecycle. A reset must use the same content identity and exact
+profile, bind the new run/reset correlation, produce fresh readback, and retain
+prior archival evidence. Native cleanup/adoption requires ownership proof for
+the exact tenant, service, content identity, profile/version, and reset
+correlation; name matching is insufficient.
 
-Each materialization binding references:
-
-- one semantic object or governed object set;
-- one existing logical `nodes.<node>.services.<service>` target;
-- one closed, versioned provider-neutral materialization-interface profile;
-- the deployment tenant/cell and reset owner supplied by ADR-087;
-- any explicit ordering dependencies; and
-- participant-equivalent readback assertion refs.
-
-The interface profile describes a portable operation class and supported
-object semantics, not a vendor endpoint, HTTP path, query, SDK type, database
-table, shell command, credentials, or arbitrary options map. A backend manifest
-must declare the exact interface profiles and object kinds it supports. The
-existing SEM-218 realization-support gate separately requires exact,
-non-approximating support for the complete binding. A generic "supports
-history" Boolean, service presence, product name, or realization-envelope
-membership cannot satisfy both obligations.
-
-Compilation preserves the admitted baseline graph on
-`RuntimeModel.realization_instance`. If executable materialization resources
-are introduced, use the existing `ResolvedResource` -> `PlannedResource` ->
-`PlanOperation` -> `SnapshotEntry` path, canonical address checks, dependency
-ordering, capability admission, and SEM-218 provenance. Do not add plan
-resources merely to carry baseline metadata, and do not create a second plan or
-lifecycle engine.
-
-Product-assigned ids are returned only as observed binding evidence after
-ownership-safe creation or readback. They may be retained in a bounded,
-tenant-scoped native-correlation record or as protected backend evidence, but
-never become authored identity, a compiler address segment, a reference key,
-an idempotency key, or a cross-reset adoption key. A native id alone is not
-ownership proof. Correlation must bind semantic address, exact target service,
-tenant, reset generation, interface/profile version, operation, and observation
-provenance.
-
-### Reuse proposition, participant-view, and claim semantics for readback
-
-Do not add a second predicate language. Historical readback requirements extend
-the closed typed `Proposition` / `Assertion` seam from ADR-079. They name the
-semantic object, governed participant-visible property/link projection,
-expected typed value or relation, quantification, temporal observation point,
-and evidence requirement. Unsupported product semantics remain `unsupported`;
-missing, stale, conflicting, redacted, or inadequate evidence remains
-`unknown`; neither becomes success.
-
-"Participant-equivalent" means that the native readback satisfies the same
-declared participant-visible properties and links under one named observation
-boundary/projection revision. It does not require native byte equality, native
-id equality, hidden-state equality, identical product timestamps, or global
-state equality. Reuse compiled `ParticipantObservationBoundaryRuntime`,
-`view_relation_timeline`, participant context/history view contracts, markings,
-redaction, and evidence/provenance boundaries.
-
-Do not label one successful readback as backend equivalence, trace equivalence,
-bisimulation, or `participant-projected-history-equivalence`. If an artifact
-actually compares two projected histories, ADR-081's
-`BehavioralClaimBindingModel` and relation catalog govern the claim and its
-bounded evidence.
-
-### Keep reset ownership subordinate to ADR-087
-
-DSL-436 declares which historical baseline and object set a reset generation
-governs; it does not create a reset controller or lifecycle state machine.
-Reset-generation ownership must reference and agree with ADR-087's deployment
-tenant, shared-service state owner, and reset-generation owner. It remains
-separate from participant episode reset/restart, backend process restart,
-workflow compensation, persistent-volume `retain`/`ephemeral`, runtime snapshot
-version, and a product-native generation number.
-
-Missing, conflicting, or cross-tenant ownership fails semantic admission. Do
-not infer ownership from a sole tenant, service location, volume consumer,
-native namespace, product account, or declaration order.
-
-### Treat corpus safety as semantic admission, not a scanner side effect
-
-The authored baseline carries bounded semantic metadata and inert participant
-content only. It must not inline raw product exports, MIME archives, database
-dumps, mapper documents, executable scripts, macros, private keys, bearer
-tokens, password/hash material, live credentialed URLs, backend payloads, or
-unbounded binary/text bodies.
-
-Reuse `Content` for ordinary scenario content and associated-artifact manifests
-for separately staged bytes, with checksums, sizes, sensitivity, byte binding,
-and ADR-071 trust policy. A historical object may reference such content; it
-must not duplicate or absorb the bytes. Product-specific parsed manifests stay
-observed runtime inventory and are not bootstrap input.
-
-The requirement's forbidden-content rule needs one pure, bounded corpus-policy
-analyzer at the SDL semantic layer. It should reuse shared URI secret checks,
-redaction/classification vocabulary, artifact trust/integrity results, and the
-repository's private-key/secret hygiene policy, while publishing its relational
-limits through `x-aces-invariants`. Do not import the libvirt-specific
-`redaction_violations()` helper into `aces_sdl`, copy its regex table into
-models, or claim that gitleaks alone validates arbitrary user-supplied
-documents. Shape validators reject unrepresentable fields; the one semantic
-analyzer owns cross-field content/ref/sensitivity policy.
+Generated content reuses scenario variables, variation points,
+`InstantiationProvenance`, random-stream profiles and addresses, draw records,
+and experiment-run stochastic controls. Profile requirements may reference
+their resolved outputs but may not define another seed, random generator,
+clock, retry-based id, timestamp-derived version, or provider-selected corpus.
 
 ## Canonical Incumbents to Reuse
 
-- **Authority and phase contracts:** ADR-009/061/075/078,
-  `ScenarioContent`, `Scenario`, `ExpandedScenario`,
-  `InstantiatedScenario`, `InstantiationProvenance`,
-  `InstantiatedScenarioSnapshot`, `admit_instantiated_scenario()`,
-  `canonical_sdl_digest()`, and `canonical_instantiated_sdl_digest()`.
-- **Source admission:** `load_sdl_yaml()`, `SDLSourceParseOptions`,
-  `SDLParserLimits`, duplicate-key and YAML-domain checks,
+- **SDL identity and phases:** `Content`, `ContentItem`, `Source`,
+  `ScenarioContent`, `Scenario`, `ExpandedScenario`, `InstantiatedScenario`,
+  `InstantiationProvenance`, `InstantiatedScenarioSnapshot`,
+  `canonical_sdl_digest()`, `canonical_instantiated_sdl_digest()`, and
+  `admit_instantiated_scenario()`.
+- **Parsing and shape:** `load_sdl_yaml()`, `SDLSourceParseOptions`,
+  `SDLParserLimits`, duplicate-key/YAML-domain checks,
   `SDLModel(extra="forbid")`, `PortableIdentifier`, and `QualifiedName`.
-- **Declarations, references, and composition:**
-  `_mapping_scopes.HASHMAP_SECTIONS`,
-  `_module_symbols.HASHMAP_SECTIONS`, `symbol_index()`,
-  `build_declaration_index()`, `_namespace_payload()`,
-  `_rewrite_section_ref()`, module export/collision checks, composition
-  budgets, and post-instantiation semantic revalidation. Extend the owning
-  catalogs; do not add another list or resolver.
-- **Actors, services, tenancy, and state:** `Entity`, `Agent`, `Account`,
-  canonical node/service refs, `IdentityDomain`, `PersistentVolume`, and
-  ADR-082/087. Runtime platform organizations/tenants/content objects remain
-  observed inventory under ADR-049.
-- **Pure graph semantics:** `analyze_domain_topology()` and its thin
-  `SemanticValidator` adapter pattern, typed `Relationship` details, stable
-  issue codes, collect-all `SDLValidationError`, and instantiated differential
-  admission. One historical-baseline analyzer owns actor, event, link,
-  identity, target, tenant, reset, and readback agreement.
-- **Time, causality, visibility, and truth:** ADR-022/054/079/081/085,
-  participant attribution ordering rules, `Proposition`, `Assertion`,
-  proposition truth tables/results, observation boundaries,
-  `view_relation_timeline`, participant context/history views, and
-  `BehavioralClaimBindingModel`.
-- **Addressing and determinism:** ADR-076, `ContractModel(extra="forbid")`,
-  RFC 8785/JCS canonicalization, `StreamAddressModel` and
-  `random_stream_engine` as the domain-separated stateless-derivation
-  precedent, `require_compiled_address()`, and `RuntimeModel.__post_init__`.
-- **Compilation and realization:** ADR-004/036/070,
-  `RuntimeModel.realization_instance`, `ResolvedResource`,
-  `resource_payload()`, existing planner graph semantics,
-  `ProvisionerCapabilities`, `BackendManifest`,
+- **References and composition:** `HASHMAP_SECTIONS`,
+  `NESTED_HASHMAP_FIELDS`, `symbol_index()`, `build_declaration_index()`,
+  `_namespace_payload()`, `_rewrite_section_ref()`, module collision/export
+  checks, composition budgets, and post-instantiation revalidation.
+- **Compilation and planning:** `_compile_content_placements()`,
+  `ContentPlacement`, `RuntimeModel`, `ResolvedResource`,
+  `resource_payload()`, planner dependency/cycle checks,
+  `PLAN_RESOURCE_TYPES_BY_DOMAIN`, `ProvisioningPlan`, and
+  `ProvisioningPlanModel`.
+- **Admission and realization:** `ProvisionerCapabilities`,
+  `BackendManifest`, controlled capability vocabularies,
   `CompiledRealizationRequirement`, `realization_support_diagnostics()`,
-  `realization_disclosure()`, `RealizationObservation`, and backend result
-  admission.
-- **Persistence, errors, and observability:** `RuntimeSnapshot`,
-  `SnapshotEntry`, `ControlPlaneStore` atomic persistence,
-  `RealizationProvenanceEntry`, `Diagnostic`, operation receipts/statuses,
-  audit events, and existing SDL parse/validation/instantiation errors. Authored
-  baseline content is carried by the instantiated scenario, not snapshot
-  `metadata` or operation `details`.
-- **Content and trust:** `Content`, ADR-056/057/066/071/077,
-  `AssociatedArtifactManifestModel`,
-  `validate_associated_artifact_manifest()`, artifact validation limits,
-  checksum/size binding, and the canonical hygiene/private-key/gitleaks graph.
-- **Publication and workflow:** all scenario-containing published schemas,
-  especially `sdl-authoring-input-v1`, `instantiated-scenario-v1`,
-  `instantiated-scenario-snapshot-v1`, and
-  `scenario-satisfiability-evidence-v1`; `schema_bundle()`;
-  schema-publication entries; SDL catalog parity; controlled vocabularies;
-  reference models; the SDL lineage ledger; `.ground-control.yaml`;
-  `.gc/plan-rules.md`; and the canonical nox verification graph.
+  `realization_envelope_diagnostics()`, `realization_disclosure()`,
+  `RealizationObservation`, backend contract validation, and conformance
+  observation binding/freshness checks.
+- **Tenancy, reset, and state:** ADR-087 `deployment_tenants`,
+  `deployment_cells`, `RelationshipSharedService`, `PersistentVolume`, state
+  owner, and reset-generation owner. Participant episode reset, volume
+  lifecycle, and backend restart are not substitutes.
+- **Readback and evidence:** `Proposition`, `Assertion`,
+  `EvidenceRequirement`, `ParticipantObservationBoundary`,
+  `ParticipantObservationBoundaryRuntime`, truth outcomes,
+  `experiment-evidence-record-v1`, ADR-066 evidence-plane separation, and
+  `experiment-run-v1`.
+- **Determinism:** variation points, instantiation binding provenance,
+  `StreamAddressModel`, `random_stream_engine`, random-stream profiles/draw
+  records, and experiment stochastic controls. Reuse their discipline, not
+  necessarily their byte namespace.
+- **Persistence and errors:** `Diagnostic`, `Severity`, `ApplyResult`,
+  `RuntimeSnapshot`, `SnapshotEntry`, `RealizationProvenanceEntry`,
+  `_call_backend_diagnostics()`, `_call_backend_apply()`,
+  `ControlPlaneStore`, atomic writes, operation receipts/statuses, and audit
+  events. Reuse `SDLError`, `SDLParseError`, `SDLValidationError`, and
+  `SDLInstantiationError`; add no parallel exception hierarchy.
+- **Artifact trust and publication:** associated-artifact manifests, ADR-071
+  trust/integrity rules, schema publication manifest/entries,
+  `schema_bundle()`, SDL catalog parity, controlled vocabularies, concept
+  authority, lineage ledger, fixtures, and the authority-boundary manifest.
+- **Workflow:** `.ground-control.yaml`, `.gc/plan-rules.md`, `noxfile.py`,
+  `tools/check_repo_policy.py`, `tools/check_requirement_governance.py`,
+  `tools/check_authority_boundary.py`, `tools/check_schema_publication.py`,
+  `tools/check_generated_schemas.py`, `tools/check_sdl_catalog_parity.py`,
+  `tools/check_sdl_lineage.py`, and `tools/verify_all.py`.
 
-## Cross-Cutting Layers and Gates
+## Cross-Cutting Layers the Design Must Pass
 
-1. **Source/parser gate.** Historical declarations remain inert bounded
-   `sdl-yaml/v1` data. Existing UTF-8, byte/scalar/node/depth/alias/import
-   budgets, duplicate-key rejection, forbidden tags/directives, key
-   classification, JSON-domain checks, and source diagnostics apply before
-   model construction. Parsing performs no product, filesystem, network, LDAP,
-   mail, database, or provider activity.
-2. **Closed-shape/config gate.** Focused closed models and controlled
-   vocabularies own baseline/object/event/link/interface/readback shapes.
-   Declaration ids cannot be variables. Unknown fields, provider option maps,
-   native queries, environment bindings, executable templates, and
-   `other`-style dispatch for security-sensitive semantics fail closed.
-3. **Reference/semantic gate.** Every actor, object, event, relationship,
-   service, tenant, cell, state, proposition, assertion, reset owner, and
-   content/artifact ref enters the central declaration index and resolves
-   exactly once. One pure analyzer owns graph and compatibility invariants;
-   field validators do not duplicate graph checks.
-4. **Composition/instantiation gate.** Module expansion namespaces baseline and
-   nested declaration identities and rewrites every reference with the owning
-   symbol map. Parameter substitution may fill permitted scalar/reference
-   values but may not rename objects, change address-profile identity, inject
-   native ids, or leave `${...}` unresolved. Instantiation reruns every
-   invariant.
-5. **Schema/publication gate.** JSON Schema owns closed shape and local
-   cardinality. Cross-reference, causality, ownership, collision, tenant,
-   content-safety, and compatibility rules are published as semantic
-   invariants and enforced by artifact admission. All embedding phase schemas,
-   generator parity, fixtures, publication hashes, lineage, concept authority,
-   and catalog parity move together. Structural validity is not semantic
-   validity under ADR-072.
-6. **Compiler/plan/capability gate.** Compiler output preserves the canonical
-   admitted graph and deterministic semantic addresses. Any executable resource
-   uses existing compiled-address, unique-address, dependency-cycle, plan
-   resource-type, direct-submission, interface-profile capability, SEM-218
-   exactness, and backend `validate()` gates before `apply()`.
-7. **Authentication/authorization gate.** Authoring adds no API privilege.
-   Any later control-plane route reuses
-   `ControlPlaneSecurityConfig.strict_defaults()`, bearer/proxy identity
-   verification, target binding, read/mutating role separation, request-size
-   limits, idempotency fingerprints, and audit. An authored actor, tenant,
-   reset owner, or product principal is not a control-plane caller identity.
-8. **Secret/configuration gate.** Credentials, tokens, private keys, product
-   endpoints, environment values, secret URIs, client configuration, and raw
-   claims are unrepresentable. Adapters resolve credentials outside portable
-   contracts at an independently authorized sink. No new CLI secret option,
-   environment variable, `.env` shape, ambient config, or credential resolver
-   is authorized.
-9. **OS/process exposure gate.** Authoring, validation, compilation, and
-   address derivation require no subprocess, listener, mount, host path, or
-   privilege. Future adapters use fixed argv/no shell, bounded input/output and
-   time, controlled working directories, and non-argv secret delivery.
-   Historical content, native ids, credentials, parameter maps, and product
-   payloads never enter argv, filenames, stdout/stderr, environment captures,
-   or shell interpolation.
-10. **Backend-result/error/logging gate.** Expected failures use bounded SDL
-    errors or structured `Diagnostic` values with safe ids, paths, codes, and
-    counts. They do not echo corpus bodies, native ids, product payloads,
-    credentials, rejected documents, backend exceptions, or tracebacks.
-    Unexpected HTTP failures retain `{"detail":"internal server error"}`.
-    `_call_backend_apply()` retains the prior snapshot on malformed,
-    approximate, cross-tenant, or unverifiable results.
-11. **Persistence/evidence gate.** Instantiated snapshots preserve authored
-    intent and derivation provenance. Runtime native bindings and readback
-    results are observed evidence with tenant/reset/profile/operation
-    provenance. Do not store either in `RuntimeSnapshot.metadata`,
-    operation/audit `details`, generic tags, logs, or a new mutable global
-    repository. A desired-state snapshot is not proof of native state.
+1. **Source/parser validation.** Input remains inert bounded YAML. Existing
+   UTF-8, byte/scalar/node/depth/alias/import budgets, duplicate-key rejection,
+   forbidden tag/directive handling, canonical key rules, and parse diagnostics
+   run before model construction. Parsing performs no product or network I/O.
+2. **Closed config shapes.** `Content` and a discriminated profile contract
+   reject unknown fields. Profile requirements have typed bounds and no
+   `options`, `properties`, `command`, `query`, `endpoint`, `env`, or `other`
+   escape hatch. Provider credentials and native identifiers are
+   unrepresentable.
+3. **Semantic validation.** The central declaration index resolves content,
+   service, relationship, state, assertion, evidence, and observation refs.
+   One pure analyzer owns cross-field profile/target/tenancy/reset/readback
+   agreement; field validators do not duplicate graph rules.
+4. **Composition and instantiation.** Existing namespace and rewrite catalogs
+   carry every new ref. Mapping keys remain non-variable; allowed variable
+   values must resolve; all invariants rerun after substitution. The
+   instantiated snapshot/digest freezes exact content identity and generation
+   inputs.
+5. **Published contract validation.** The four scenario-containing schemas,
+   `x-aces-invariants`, valid/invalid fixtures, generator parity, publication
+   hashes, reference catalog, concept vocabulary, and lineage must agree.
+   Editing only Python or only a generated schema is invalid.
+6. **Planner/backend admission.** Canonical address/resource-type checks,
+   dependency ordering, content-kind capability, exact profile capability,
+   SEM-218 exactness, realization-envelope observation strength, and backend
+   `validate()` all pass before `apply()`. Directly submitted plans pass the
+   same gates.
+7. **Authentication/authorization.** No new authoring privilege is created. Any
+   HTTP execution surface retains `ControlPlaneSecurityConfig.strict_defaults`,
+   verified bearer/proxy identity, target binding, mutating/read role
+   separation, request-size limits, idempotency fingerprints, and audit.
+   Authored tenant/product principals are never control-plane identities.
+8. **Secret/config handling.** Scenario fixture secrets remain subject to
+   ADR-057, but real adapter credentials are external operational secrets
+   resolved at an authorized sink. No new CLI credential argument, portable
+   environment binding, `.env` contract, URI userinfo, raw token, or private
+   key field is authorized.
+9. **OS/process exposure.** SDL and plan data never becomes a shell command.
+   An adapter uses an injected client or fixed allowlisted argv, no shell,
+   bounded input/output/time, controlled cwd/environment, and non-argv secret
+   delivery. Corpus bodies, credentials, native ids, queries, and rejected
+   payloads never enter argv, filenames, stdout/stderr, or environment
+   captures.
+10. **Error envelopes and logging.** Expected failures are bounded
+    `Diagnostic`/SDL errors with stable codes, safe ACES addresses, and generic
+    messages. `_call_backend_apply()` rejects malformed results and preserves
+    the prior snapshot. HTTP 500 remains `{"detail":"internal server error"}`.
+    Do not expose native exception text, response bodies, queries, credentials,
+    paths, ids, or tracebacks in diagnostics, audit, logs, or evidence
+    summaries.
+11. **Persistence and evidence.** Atomic control-plane persistence retains
+    portable desired identity and safe provenance/evidence refs. Native
+    readback becomes validated evidence with operation, apparatus, profile,
+    target, tenant/reset, freshness, and participant-projection bindings.
+    Support declarations and desired snapshots cannot satisfy observation.
 
-## Dependency and Extensibility Guardrails
+## Extensibility Seam
 
-Issue #857 / DSL-143 is a semantic dependency, not optional nearby work. The
-local `857-enterprise-deployment-tenancy` branch defines ADR-087,
-`deployment_tenants`, deployment cells, typed shared-service bindings, mutable
-state ownership, and reset-generation ownership, but it is not in current
-`dev` ancestry. DSL-436 implementation must first reconcile with the landed
-form of that contract using a normal merge and semantic conflict resolution.
-It must not recreate tenant, cell, shared-service, state-owner, or reset-owner
-fields as a temporary historical-state schema.
+The seam is the versioned tuple:
 
-The primary extension seam is the versioned triple:
+`(interface_profile, profile_version, content_kind, participant_projection)`
 
-`(semantic_object_kind, materialization_interface_profile,
-participant_readback_projection_profile)`.
+Each profile supplies a closed requirement model, capability predicate,
+materializer, readback mapper, required observation strength, and conformance
+cases behind the existing content-placement and backend protocol. A second
+service implementation of the same profile changes the adapter and apparatus
+evidence, not SDL identity. A genuinely different portable operation adds a new
+evidence-backed profile without changing unrelated content kinds.
 
-The binding also carries the closed semantic-address profile. A new product
-object family should add governed object/interface/projection profile terms,
-profile-specific typed fields, capability evidence, validators, fixtures, and
-readback mapping while preserving baseline and object identity. It must not
-require a provider extension bag, a new top-level topology, another predicate
-AST, another graph engine, or edits to unrelated object kinds.
-
-Replica-aware targets belong behind an explicit stable instance-selector
-profile. Multi-interface fan-out requires a declared authority/consistency
-policy. Neither variation may use product ids, list positions, discovery order,
-or first-success behavior to choose the authoritative object.
+Replica selection and fan-out are not implicit. A future replica-aware profile
+must add a stable instance-selection and consistency policy; it may not use
+native ids, discovery/list order, first success, or provider defaults.
 
 ## Gotchas and Anti-Patterns
 
-- Do not reuse the word `baseline` without its owner: historical baseline,
-  experiment comparison baseline, and runtime reconciliation snapshot are
-  different concepts.
-- Do not treat `entities.events`, orchestration `events`, participant history,
-  runtime inventory, `Content`, or a product export as historical authority.
-- Do not duplicate entities, agents, accounts, nodes, services, tenants,
-  cells, persistent volumes, propositions, observation boundaries, or
-  associated artifacts inside a baseline.
-- Do not infer organization actor, tenant, authority, reset owner, causal edge,
-  object creator, or materialization target from names, DNS suffixes, native
-  namespaces, product accounts, declaration order, or a sole candidate.
-- Do not derive identity by delimiter concatenation, mutable labels, timestamps,
-  native ids, provider names, hashes of secret material, random values,
-  iteration order, retries, or worker identity.
-- Do not adopt or overwrite an existing native object by name. Ownership-safe
-  readback must prove the semantic-address binding for the exact tenant and
-  reset generation before update or cleanup.
-- Do not make product time the authored timeline, use timestamps as causality,
-  or silently coerce unsupported historical timestamps into a product's range.
-- Do not collapse target interface, product capability, exact realization,
-  execution success, readback success, participant visibility, and equivalence
-  into one `supported` or `materialized` Boolean.
-- Do not treat native-id equality, payload equality, final-state equality, or
-  one passed predicate as participant-history equivalence or backend
-  equivalence.
-- Do not place raw corpus bodies, provider exports, commands, scripts, queries,
-  credentials, attachments, stdout/stderr, or native exception text in SDL,
-  diagnostics, snapshots, audit, fixtures, or provenance summaries.
-- Do not add duplicate section catalogs, reference resolvers, identity/hash
-  helpers, graph validators, predicate languages, truth tables, exception
-  hierarchies, loggers, stores, lifecycle machines, schema registries, or CI
-  workflows.
-- Do not implement logic under compatibility-only
-  `implementations/python/src/aces/`, hand-edit only generated schemas, omit
-  schema-publication ledger changes, or update only one phase schema.
+- Do not retain, rename, or slim `historical_baselines`; remove the concept.
+- Do not create historical actors, events, relationships, address/digest
+  profiles, lifecycle graphs, or object kinds for messages/records already
+  represented by content.
+- Do not treat old timestamps as identity, causality, generation input, or
+  proof of history.
+- Do not put product exports, SDK objects, commands, queries, table/mailbox
+  schemas, adapter options, credentials, or native ids in SDL.
+- Do not duplicate content identities inside a materialization binding.
+- Do not infer target, tenant, reset owner, participant visibility, or profile
+  from product/service names or a sole candidate.
+- Do not adopt, update, or delete a native object by name alone.
+- Do not collapse content support, profile support, exact realization,
+  execution success, native readback, participant visibility, and assertion
+  truth into one Boolean.
+- Do not call planned data, a capability flag, a success response, or a value
+  echoed by the adapter independent readback.
+- Do not store native results in `RuntimeSnapshot.metadata`,
+  `ApplyResult.details`, audit details, generic tags, or logs.
+- Do not create duplicate schemas, validators, resolvers, exception
+  hierarchies, stores, lifecycle engines, predicate languages, evidence
+  formats, run-provenance roots, or CI workflows.
+- Do not standardize a profile with only unit tests, a fake backend, or
+  self-skipping integration evidence.
+- Do not implement owning logic under compatibility-only
+  `implementations/python/src/aces/`, hand-edit generated output alone, omit
+  schema publication records, or update only one document phase.
 
-## Non-Goals and Implementation Boundary
+## Non-Goals and Implementation Boundaries
 
-- No product adapter, product SDK/client, credential broker, product discovery,
-  native object creation, database mutation, audit-history forgery, direct
-  product-database writes, or management-plane proof.
-- No fleet/range scheduler, placement optimizer, reset controller, parallel
-  lifecycle state machine, global identity service, tenant database, event
-  store, or product-object repository.
-- No generated filler, stochastic corpus generation, live data import, raw
-  MIME/STIX/vendor bundle authority, archive format, package layout, artifact
-  registry, or acquisition workflow.
-- No claim that authored history proves native creation time, audit log
-  provenance, product-internal causality, participant exposure, adapter
-  correctness, cross-backend equivalence, or successful reset.
-- No provider ids, endpoints, database keys, host paths, cloud/project ids,
-  credentials, or backend handles in authored identity.
-- Runtime native ids, materialization receipts, and readback results remain
-  observed evidence. They never become authored authority.
+- No general historical ontology, event-history/replay contract, age model,
+  narrative reconstruction, product audit-log authoring, or trajectory model.
+- No product-specific SDL schema, native inventory authority, provider id,
+  endpoint, query, command, credential, or corpus export format.
+- No new reset controller, scheduler, tenant database, identity service,
+  materialization repository, observation database, or archival run root.
+- No claim that authored initial state proves native creation time, past user
+  activity, audit provenance, participant exposure, adapter correctness,
+  successful reset, or backend equivalence.
+- No standard interface profile without an operational adapter and
+  participant-equivalent readback proof in the same supported surface.
+- Event-history semantics remain a separate future contract, justified only
+  when an authoritative replayable event sequence—not initial service
+  state—is the requirement.

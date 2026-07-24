@@ -399,8 +399,11 @@ adrs:
     pin: 9654e999d520fb642e1dbeee0ec582902755bff4d5f7d9c0011c3a7a5efa478c
   - id: ADR-088
     path: docs/decisions/adrs/adr-088-authored-historical-state-and-native-materialization.md
-    pin: b4d4b60dd28be80d5d795217da308ddb31666d13994f259c62c577542346b4af
+    pin: 39fa4c97aea7af8b772e6fbeb929edb616f5d94330bcccb149177450600ca1cd
     amendments:
       - date: 2026-07-24
         ref: "#859"
         summary: "Separated range-level baseline reset authority from per-binding native reset ownership so one causal baseline can span multiple real product services while every binding remains tenant-bound to its exact target."
+      - date: 2026-07-24
+        ref: "#862"
+        summary: "Replaced the historical-baseline ontology with the smallest content-owned, evidence-gated service-materialization extension required by the redesigned issue boundary."

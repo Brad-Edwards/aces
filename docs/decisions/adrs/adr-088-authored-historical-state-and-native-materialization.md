@@ -1,4 +1,4 @@
-# ADR-088: Authored Historical State and Native Materialization
+# ADR-088: Initial Service State and Native Materialization
 
 ## Status
 
@@ -12,140 +12,161 @@ accepted
 
 Classification: FM2
 
-Required artifacts: an explicit invariant list, pure finite-graph analysis,
-composition and instantiation differential tests, deterministic-address
-collision tests, published schema parity, and compiler-preservation tests.
+Required artifacts: one concrete gap case, closed profile contracts, an
+operational native materializer and participant-equivalent readback proof for
+each standardized profile, negative admission tests, phase/schema parity,
+reset correlation, and run-provenance evidence.
 
-Waivers: no model checker is required. Historical event, object, relationship,
-materialization, and readback graphs are finite and scenario-local; exhaustive
-graph passes and property-oriented tests cover their invariants.
+Waivers: none. A schema, manifest declaration, fake adapter, or planned-state
+echo cannot substitute for operational materialization and readback evidence.
 
 ## Context
 
-Scenario authors need coherent pre-existing enterprise history across native
-products. Existing SDL content, orchestration events, participant histories,
-runtime inventory, experiment baselines, and reconciliation snapshots have
-different owners and cannot serve as an authored historical authority.
+Top-level `content` already owns authored files, directories, datasets, items,
+and source references. It compiles through `ContentPlacement` into the existing
+provisioning plan, and provisioner manifests already declare supported content
+types. Scenario snapshots, variation bindings, random-stream controls,
+stateful resources, deployment tenancy, reset ownership, propositions,
+observation boundaries, evidence records, and experiment-run provenance own
+their adjacent concerns.
 
-Product exports, native identifiers, adapter options, credentials, and raw
-corpus bodies would make authored meaning provider-specific and unsafe.
-Inferring time or causality from product timestamps or materialization order
-would also make identity and lifecycle nondeterministic.
+The concrete gap is narrower: `Content.target` currently resolves only to a VM
+node, and the reference materializer realizes content through node bootstrap.
+That cannot express or prove exact insertion into a named service-owned store
+such as a mailbox, application collection, or database through the service's
+native interface. A content-type capability declaration also cannot prove that
+the native object was created or that a participant can read the required
+state.
 
-ADR-087 already owns deployment tenants, cells, shared-service mutable state,
-and reset-generation ownership. Historical state must bind to that contract
-rather than create another tenancy or reset lifecycle.
+Age, old timestamps, narrative history, and product event logs do not create a
+new authored object family. A prior design added `historical_baselines`,
+historical objects, actors, events, relationships, address profiles, and
+lifecycle graphs. That parallel ontology duplicated existing content,
+relationship, assertion, tenancy, and provenance authorities while still
+lacking an operational native materializer. This decision rejects that design.
 
 ## Decision
 
-1. SDL adds one keyed, closed `historical_baselines` section. A baseline owns
-   its version, actor bindings, semantic objects, logical events, historical
-   relationship refs, provider-neutral materialization bindings, and
-   participant-equivalent readback requirements.
-2. Actor bindings classify one baseline-local role while identity resolves to
-   an existing entity, agent, account, or named node service. Exercise roles
-   and product authorization are not reinterpreted.
-3. Semantic object identity is the baseline-local object key and kind. Labels,
-   content, timestamps, product names, native ids, adapter choices, and event
-   order never contribute to that identity.
-4. Historical object links reuse top-level `Relationship` declarations with
-   the `historical_object_link` type and closed typed detail. Both endpoints
-   are distinct objects in one owning baseline. Free-form relationship
-   properties cannot carry historical semantics.
-5. Events use a finite unique logical order coordinate. Predecessor and causal
-   refs are separate same-baseline graphs; both are acyclic and point
-   backward. Object creation, mutation, deletion, governed restoration,
-   linkage, and single-writer authority are checked as one lifecycle.
-6. Every semantic object has exactly one provider-neutral materialization
-   binding to an existing named service and a versioned interface profile.
-   Bindings declare explicit ordering and readback requirements but add no
-   provider adapter, endpoint, command, credential, native id, plan resource,
-   or realization claim. Backend manifests declare exact supported historical
-   interface profiles and object kinds in a dedicated optional capability
-   block; this declaration does not replace exact SEM-218 realization support.
-7. Baseline and binding tenant and cell must agree. The baseline names the
-   range-level reset lifecycle authority, while every materialization binding
-   names an ADR-087 `uses_shared_service` relationship from that tenant to its
-   exact native target service. This permits one causal baseline to span real
-   products without weakening per-product reset ownership. A reset generation
-   is an address isolation input, not a reset controller.
-8. Readback requirements reuse existing observed-state `Proposition`,
-   `Assertion`, evidence, and participant observation-boundary semantics. A
-   readback assertion must name the exact semantic object. Unsupported or
-   unknown remains distinct from success.
-9. Semantic addresses use the
-   `aces-historical-semantic-address/v1` profile. RFC 8785 canonical bytes over
-   the exact profile, range instance, deployment tenant, reset generation,
-   baseline id/version, and local object id are hashed with the distinct
-   `aces-authored-historical-state|semantic-address|v1` domain. Duplicate
-   coordinates, canonical bytes, and digest collisions fail the whole batch.
-   The complete admitted baseline also receives an
-   `aces-historical-baseline-digest/v1` identity over its id and full typed
-   payload under the separate
-   `aces-authored-historical-state|baseline-digest|v1` domain.
-10. The compiler preserves the admitted instantiated baseline graph on
-    `RuntimeModel.realization_instance` and emits typed baseline-digest and
-    semantic-address maps. It does not create historical provisioning,
-    orchestration, or evaluation resources.
-11. Baseline metadata is bounded and inert. Historical objects may reference
-    ordinary SDL `Content`, but inline historical corpus bodies, executable
-    material, private keys, credential literals, and credential-bearing URIs
-    fail semantic admission.
-12. Module composition namespaces the baseline and all nested declaration
-    addresses, rewrites external and canonical nested refs through the central
-    symbol maps, and reruns all invariants after instantiation.
+1. Top-level `content` remains the only authored authority for initial files,
+   datasets, messages, records, and comparable scenario data. SDL adds no
+   `historical_baselines`, historical object, age, narrative-history, or
+   product-event-history class.
+2. Versioned content identity reuses the canonical `content.<id>` declaration
+   address under the immutable instantiated-scenario snapshot identity. The
+   canonical content payload digest distinguishes revisions. Externally staged
+   bytes also require the existing immutable source or associated-artifact
+   identity and digest rules. Product-native ids never participate.
+3. Ordinary node content placement remains unchanged. Only content that cannot
+   be realized by node placement may carry a closed service-target
+   materialization requirement. It references one existing named service, one
+   versioned provider-neutral interface profile, exact typed requirements, the
+   governing ADR-087 shared-service/reset-ownership relationship when state is
+   shared, ordering dependencies, and existing assertion/evidence/participant
+   observation-boundary refs.
+4. A standardized interface profile is a closed discriminated contract, not an
+   arbitrary options map. It describes portable operation and readback
+   semantics; it cannot contain vendor names, endpoints, commands, queries,
+   table names, SDK types, credentials, environment variables, host paths, or
+   native ids.
+5. No interface profile becomes standard until one production execution path
+   proves all of the following together: ownership-safe native
+   materialization, fresh native readback, projection through the declared
+   participant observation boundary, and assertion/evidence satisfaction.
+   Manifest support is necessary for admission but is never proof of
+   execution. A profile without that proof remains absent from the standard
+   vocabulary.
+6. Compilation extends the existing content-placement path. Service-target
+   requirements retain the canonical content identity, exact target service,
+   profile/version, typed requirements, dependencies, tenancy/reset ownership,
+   and readback refs through `RuntimeModel`, `PlannedResource`,
+   `PlanOperation`, and `SnapshotEntry`. A second materialization plan,
+   repository, lifecycle engine, or exception hierarchy is forbidden.
+7. Admission composes the existing provisioner content capability check with a
+   profile-specific capability declaration and SEM-218 exact-realization
+   support. Missing profile, content-kind, exact requirement, target, reset
+   ownership, or required observation support fails before backend I/O. No
+   downgrade or first-supported-profile selection is permitted.
+8. Successful execution produces a fresh `RealizationObservation` at the
+   profile's required strength. The current snapshot/provenance carrier retains
+   the admitted content identity and a safe evidence reference, not raw service
+   data. `experiment-evidence-record-v1` retains the observed result, and
+   `experiment-run-v1` retains the scenario snapshot, apparatus manifests,
+   reset/run correlation, realized-form disclosure, and evidence traceability.
+   Desired state, backend support, and observation remain distinct.
+9. Reset ownership is reused from ADR-087. A reset re-executes the same admitted
+   materialization contract under its run/reset correlation, records a fresh
+   observation, and never adopts or deletes a native object by name alone.
+   Participant episode reset, backend restart, volume lifecycle, and
+   shared-service reset ownership remain separate concepts.
+10. Deterministic generated content reuses variation bindings,
+    `InstantiationProvenance`, random-stream profiles/addresses/draw records,
+    and run stochastic controls. Interface profiles do not add seeds, clocks,
+    implicit randomness, declaration-order selection, or provider-generated
+    authored identity.
+11. Composition, instantiation, the four scenario-containing published
+    schemas, schema publication records, content capability vocabulary,
+    lineage, reference catalogs, fixtures, conformance, examples, and tests
+    move together. Schema validity alone is not semantic or operational
+    conformance.
 
 ## Alternatives Considered
 
-### Treat content or runtime inventory as historical authority
+### Add an authored historical-state graph
 
-Rejected. Content carries staged scenario data and runtime inventory records
-observed product state; neither owns authored versioned history.
+Rejected. It violates the issue boundary, duplicates existing authorities, and
+turns age or narrative history into a semantic object class without addressing
+the actual service-target execution gap.
 
-### Add product-specific bootstrap blocks
+### Put product bootstrap payloads in content
 
-Rejected. Native ids, endpoints, commands, exports, and option maps would make
-portable meaning depend on one adapter and would bypass existing realization
-and evidence boundaries.
+Rejected. Vendor exports, native queries, commands, credentials, and provider
+options would make SDL provider-specific and bypass exact capability,
+secret-handling, and evidence gates.
 
-### Add another edge, predicate, or lifecycle system
+### Treat a capability declaration or planned snapshot as proof
 
-Rejected. `Relationship`, `Proposition`/`Assertion`, ADR-087 ownership, and the
-existing semantic-validator pattern already own those concerns.
+Rejected. A manifest describes apparatus support and a snapshot records desired
+or admitted state. Neither is independent evidence that native state exists or
+is participant-visible.
 
-### Compile one plan resource per historical object
+### Standardize several profiles before adapters exist
 
-Rejected. Metadata carriage is not an executable operation. A future native
-materializer must enter the existing resolved-resource and plan lifecycle only
-when an executable adapter contract exists.
+Rejected. Every standardized profile creates a portability claim. The claim is
+allowed only after an operational adapter and readback path falsifiably support
+it.
 
 ## Consequences
 
 ### Positive
 
-- Authored history has one portable authority and deterministic identity.
-- Causality, lifecycle, tenancy, reset, native-interface, and readback
-  inconsistencies fail before provider selection.
-- Module composition and instantiation preserve nested historical identity.
-- Runtime compilation carries intent without overstating realization support.
+- The change is confined to the demonstrated service-target gap.
+- Content, tenancy, reset, assertion, evidence, and run-provenance authorities
+  remain singular.
+- Unsupported exact requirements fail closed before mutation.
+- New service families can add evidence-backed profiles without changing
+  content identity or creating a new topology.
 
 ### Negative
 
-- Authors must provide complete event, ownership, materialization, and readback
-  graphs for every historical object.
-- New object, interface, and projection families require coordinated closed
-  vocabulary, schema, validator, capability, and readback work.
-- Provider adapters and native correlation evidence remain separate work.
+- The first standardized profile cannot ship as schema-only work; it needs a
+  real product adapter, readback projection, and operational evidence.
+- Existing content placement and manifest contracts need a narrow typed
+  extension across every published phase.
+- Reset/run evidence must retain correlation without persisting raw product
+  content or native identifiers in portable state.
 
 ### Limits
 
-An admitted or compiled historical baseline proves authored intent and
-deterministic semantic addressing only. It does not prove native object
-creation, product timestamps, native causality, participant visibility,
-successful reset, adapter correctness, or cross-backend equivalence.
+An admitted materialization contract proves authored intent. A manifest proves
+declared support. Only fresh evidence from the operational path can prove the
+observed materialization result, and only the declared participant projection
+can support participant-equivalent readback. None of these establishes product
+history, native creation time, event-log authenticity, or cross-backend
+equivalence.
 
 ## Amendments
 
 | Date | Commit/PR | Summary |
 |------|-----------|---------|
 | 2026-07-24 | #859 | Separated range-level baseline reset authority from per-binding native reset ownership so one causal baseline can span multiple real product services while every binding remains tenant-bound to its exact target. |
+| 2026-07-24 | #862 | Replaced the historical-baseline ontology with the smallest content-owned, evidence-gated service-materialization extension required by the redesigned issue boundary. |
