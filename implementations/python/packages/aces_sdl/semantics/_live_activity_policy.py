@@ -60,74 +60,94 @@ def _rational(value: object) -> Fraction:
     return Fraction(value.numerator, value.denominator)  # type: ignore[attr-defined]
 
 
-def budget_issues(profile_name: str, profile: object) -> list[LiveActivityIssue]:
+def _budget_envelope_issues(
+    profile_name: str,
+    budget: object,
+    *,
+    actions: set[str],
+    duplicate_dimension: bool,
+) -> list[LiveActivityIssue]:
     issues: list[LiveActivityIssue] = []
-    actions = set(getattr(profile, "actions", {}))
-    seen_dimensions: set[str] = set()
+    dimension = budget.dimension.value  # type: ignore[attr-defined]
     expected_unit = {
         "operations": "operation",
         "bytes": "byte",
         "connections": "connection",
         "cpu_milliseconds": "cpu_millisecond",
     }
+    if duplicate_dimension:
+        issues.append(
+            activity_issue(
+                "live-activity.budget-duplicate",
+                f"Activity profile '{profile_name}' repeats budget dimension '{dimension}'",
+            )
+        )
+    if budget.unit.value != expected_unit[dimension]:  # type: ignore[attr-defined]
+        issues.append(
+            activity_issue(
+                "live-activity.budget-unit-mismatch",
+                f"Activity profile '{profile_name}' budget dimension and unit disagree",
+            )
+        )
+    if set(budget.action_demands) != actions:  # type: ignore[attr-defined]
+        issues.append(
+            activity_issue(
+                "live-activity.budget-action-coverage",
+                f"Activity profile '{profile_name}' budget must cover every action exactly",
+            )
+        )
+    reservation = _rational(budget.participant_reservation)  # type: ignore[attr-defined]
+    range_capacity = _rational(budget.range_capacity)  # type: ignore[attr-defined]
+    fleet_capacity = _rational(budget.fleet_capacity)  # type: ignore[attr-defined]
+    if reservation > range_capacity:
+        issues.append(
+            activity_issue(
+                "live-activity.participant-reservation-exceeded",
+                f"Activity profile '{profile_name}' participant reservation exceeds range capacity",
+            )
+        )
+    if range_capacity > fleet_capacity:
+        issues.append(
+            activity_issue(
+                "live-activity.range-capacity-exceeded",
+                f"Activity profile '{profile_name}' range capacity exceeds fleet capacity",
+            )
+        )
+    available = range_capacity - reservation
+    demands = [_rational(demand) for demand in budget.action_demands.values()]  # type: ignore[attr-defined]
+    if any(demand <= 0 or demand > available for demand in demands):
+        issues.append(
+            activity_issue(
+                "live-activity.action-demand-exceeded",
+                f"Activity profile '{profile_name}' action demand exceeds participant-reserved range allowance",
+            )
+        )
+    if sum(demands, start=Fraction()) > available:
+        issues.append(
+            activity_issue(
+                "live-activity.aggregate-demand-exceeded",
+                f"Activity profile '{profile_name}' aggregate action demand exceeds "
+                "participant-reserved range allowance",
+            )
+        )
+    return issues
+
+
+def budget_issues(profile_name: str, profile: object) -> list[LiveActivityIssue]:
+    issues: list[LiveActivityIssue] = []
+    actions = set(getattr(profile, "actions", {}))
+    seen_dimensions: set[str] = set()
     for budget in getattr(profile, "budgets", ()):
         dimension = budget.dimension.value
-        if dimension in seen_dimensions:
-            issues.append(
-                activity_issue(
-                    "live-activity.budget-duplicate",
-                    f"Activity profile '{profile_name}' repeats budget dimension '{dimension}'",
-                )
+        issues.extend(
+            _budget_envelope_issues(
+                profile_name,
+                budget,
+                actions=actions,
+                duplicate_dimension=dimension in seen_dimensions,
             )
+        )
         seen_dimensions.add(dimension)
-        if budget.unit.value != expected_unit[dimension]:
-            issues.append(
-                activity_issue(
-                    "live-activity.budget-unit-mismatch",
-                    f"Activity profile '{profile_name}' budget dimension and unit disagree",
-                )
-            )
-        if set(budget.action_demands) != actions:
-            issues.append(
-                activity_issue(
-                    "live-activity.budget-action-coverage",
-                    f"Activity profile '{profile_name}' budget must cover every action exactly",
-                )
-            )
-        reservation = _rational(budget.participant_reservation)
-        range_capacity = _rational(budget.range_capacity)
-        fleet_capacity = _rational(budget.fleet_capacity)
-        if reservation > range_capacity:
-            issues.append(
-                activity_issue(
-                    "live-activity.participant-reservation-exceeded",
-                    f"Activity profile '{profile_name}' participant reservation exceeds range capacity",
-                )
-            )
-        if range_capacity > fleet_capacity:
-            issues.append(
-                activity_issue(
-                    "live-activity.range-capacity-exceeded",
-                    f"Activity profile '{profile_name}' range capacity exceeds fleet capacity",
-                )
-            )
-        available = range_capacity - reservation
-        demands = [_rational(demand) for demand in budget.action_demands.values()]
-        if any(demand <= 0 or demand > available for demand in demands):
-            issues.append(
-                activity_issue(
-                    "live-activity.action-demand-exceeded",
-                    f"Activity profile '{profile_name}' action demand exceeds participant-reserved range allowance",
-                )
-            )
-        if sum(demands, start=Fraction()) > available:
-            issues.append(
-                activity_issue(
-                    "live-activity.aggregate-demand-exceeded",
-                    f"Activity profile '{profile_name}' aggregate action demand exceeds "
-                    "participant-reserved range allowance",
-                )
-            )
     return issues
 
 
@@ -148,7 +168,8 @@ def evidence_issues(
                 issues.append(
                     activity_issue(
                         f"live-activity.{policy_name}-observability-unresolved",
-                        f"Activity profile '{profile_name}' {policy_name} reference is not scenario-native observability",
+                        f"Activity profile '{profile_name}' {policy_name} reference is not "
+                        "scenario-native observability",
                     )
                 )
         for ref in getattr(policy, "evidence_requirement_refs", ()):

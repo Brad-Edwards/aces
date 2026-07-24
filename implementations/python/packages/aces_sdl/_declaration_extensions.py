@@ -2,13 +2,19 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
-from typing import Any
+from collections.abc import Callable, Mapping
+from typing import Protocol
+
+
+class _ScenarioDeclarations(Protocol):
+    historical_baselines: Mapping[str, object]
+    activity_templates: Mapping[str, object]
+    activity_profiles: Mapping[str, object]
 
 
 def add_historical_declarations(
-    index: Any,
-    scenario: Any,
+    index: object,
+    scenario: _ScenarioDeclarations,
     *,
     add: Callable[..., None],
     qualified_parts: Callable[[str], tuple[str, ...]],
@@ -39,8 +45,8 @@ def add_historical_declarations(
 
 
 def add_live_activity_declarations(
-    index: Any,
-    scenario: Any,
+    index: object,
+    scenario: _ScenarioDeclarations,
     *,
     add: Callable[..., None],
     qualified_parts: Callable[[str], tuple[str, ...]],

@@ -3,16 +3,14 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
+from dataclasses import dataclass
 
 from .._declarations import DeclarationIndex, build_declaration_index
 from ..entities import flatten_entities
+from ._live_activity_actions import ActionAnalysis, action_issues
 from ._live_activity_policy import budget_issues, dependency_issues, evidence_issues
 from ._live_activity_types import LiveActivityIssue, activity_issue
 from .domain_topology import resolve_section_ref
-
-
-def _enum_value(value: object) -> str:
-    return str(getattr(value, "value", value))
 
 
 def _resolve_service(ref: object, nodes: Mapping[str, object]) -> tuple[str, str] | None:
@@ -103,285 +101,200 @@ def _baseline_facts(
     return issues, baseline, tenant_id, cell_nodes, materialization_targets
 
 
-def _actor_issues(
-    profile_name: str,
-    profile: object,
-    *,
-    tenant_id: str | None,
-    entities: Mapping[str, object],
-    accounts: Mapping[str, object],
-    agents: Mapping[str, object],
-    declaration_index: DeclarationIndex,
-    is_unresolved: Callable[[object], bool],
-) -> list[LiveActivityIssue]:
+@dataclass(frozen=True)
+class _ActorAnalysis:
+    tenant_id: str | None
+    entities: Mapping[str, object]
+    accounts: Mapping[str, object]
+    participant_entities: set[str]
+    participant_accounts: set[str]
+    declaration_index: DeclarationIndex
+    is_unresolved: Callable[[object], bool]
+
+
+def _actor_identity_issues(label: str, actor: object, analysis: _ActorAnalysis) -> list[LiveActivityIssue]:
     issues: list[LiveActivityIssue] = []
-    all_entities = flatten_entities(dict(entities))
-    participant_entities, participant_accounts = _participant_bindings(
-        agents,
-        entity_declarations=all_entities,
-        accounts=accounts,
+    bindings = (
+        (
+            getattr(actor, "entity_ref", ""),
+            "entities",
+            analysis.entities,
+            analysis.participant_entities,
+            "live-activity.actor-entity-unresolved",
+            "live-activity.actor-participant-entity",
+            "entity",
+        ),
+        (
+            getattr(actor, "account_ref", ""),
+            "accounts",
+            analysis.accounts,
+            analysis.participant_accounts,
+            "live-activity.actor-account-unresolved",
+            "live-activity.actor-participant-account",
+            "account",
+        ),
     )
-    for actor_id, actor in getattr(profile, "actors", {}).items():
-        label = f"Activity actor '{profile_name}.{actor_id}'"
-        entity_ref = getattr(actor, "entity_ref", "")
-        account_ref = getattr(actor, "account_ref", "")
-        actor_tenant_ref = getattr(actor, "deployment_tenant_ref", "")
-        if not is_unresolved(entity_ref):
-            entity_id = resolve_section_ref(entity_ref, "entities", all_entities)
-            if entity_id is None:
-                issues.append(
-                    activity_issue("live-activity.actor-entity-unresolved", f"{label} entity does not resolve")
-                )
-            elif entity_id in participant_entities:
-                issues.append(
-                    activity_issue(
-                        "live-activity.actor-participant-entity",
-                        f"{label} entity is bound to a participant agent",
-                    )
-                )
-        if not is_unresolved(account_ref):
-            account_id = resolve_section_ref(account_ref, "accounts", accounts)
-            if account_id is None:
-                issues.append(
-                    activity_issue("live-activity.actor-account-unresolved", f"{label} account does not resolve")
-                )
-            elif account_id in participant_accounts:
-                issues.append(
-                    activity_issue(
-                        "live-activity.actor-participant-account",
-                        f"{label} account is bound to a participant agent",
-                    )
-                )
-        if not is_unresolved(actor_tenant_ref):
-            resolved_tenant = resolve_section_ref(
-                actor_tenant_ref,
-                "deployment_tenants",
-                {tenant_id: object()} if tenant_id is not None else {},
-            )
-            if resolved_tenant != tenant_id:
-                issues.append(
-                    activity_issue(
-                        "live-activity.actor-tenant-mismatch",
-                        f"{label} tenant does not match its historical baseline tenant",
-                    )
-                )
-        for scope_ref in getattr(actor, "operating_scope_refs", ()):
-            if not is_unresolved(scope_ref) and len(_targetable_addresses(declaration_index, scope_ref)) != 1:
-                issues.append(
-                    activity_issue(
-                        "live-activity.actor-scope-unresolved",
-                        f"{label} operating scope does not resolve to one named existing target",
-                    )
-                )
+    for ref, section, declarations, participant_bindings, unresolved_code, participant_code, noun in bindings:
+        if analysis.is_unresolved(ref):
+            continue
+        declaration_id = resolve_section_ref(ref, section, declarations)
+        if declaration_id is None:
+            issues.append(activity_issue(unresolved_code, f"{label} {noun} does not resolve"))
+        elif declaration_id in participant_bindings:
+            issues.append(activity_issue(participant_code, f"{label} {noun} is bound to a participant agent"))
     return issues
 
 
-def _context_issues(
-    profile_name: str,
-    profile: object,
-    *,
-    tenant_id: str | None,
-    cell_nodes: set[str],
-    materialization_targets: set[str],
-    accounts: Mapping[str, object],
-    nodes: Mapping[str, object],
-    is_unresolved: Callable[[object], bool],
-) -> tuple[list[LiveActivityIssue], dict[str, tuple[str, str]]]:
-    issues: list[LiveActivityIssue] = []
-    services: dict[str, tuple[str, str]] = {}
-    for context_id, context in getattr(profile, "execution_contexts", {}).items():
-        label = f"Activity execution context '{profile_name}.{context_id}'"
-        context_tenant_ref = getattr(context, "deployment_tenant_ref", "")
-        if not is_unresolved(context_tenant_ref):
-            context_tenant = resolve_section_ref(
-                context_tenant_ref,
-                "deployment_tenants",
-                {tenant_id: object()} if tenant_id is not None else {},
-            )
-            if context_tenant != tenant_id:
-                issues.append(
-                    activity_issue("live-activity.context-tenant-mismatch", f"{label} tenant does not match baseline")
-                )
-        account_ref = getattr(context, "account_ref", "")
-        account_id = None if is_unresolved(account_ref) else resolve_section_ref(account_ref, "accounts", accounts)
-        if account_id is None and not is_unresolved(account_ref):
-            issues.append(
-                activity_issue("live-activity.context-account-unresolved", f"{label} account does not resolve")
-            )
-        target_ref = getattr(context, "target_service_ref", "")
-        service = None if is_unresolved(target_ref) else _resolve_service(target_ref, nodes)
-        if service is None and not is_unresolved(target_ref):
-            issues.append(
+def _actor_tenancy_issues(label: str, actor: object, analysis: _ActorAnalysis) -> list[LiveActivityIssue]:
+    tenant_ref = getattr(actor, "deployment_tenant_ref", "")
+    if not analysis.is_unresolved(tenant_ref):
+        resolved_tenant = resolve_section_ref(
+            tenant_ref,
+            "deployment_tenants",
+            {analysis.tenant_id: object()} if analysis.tenant_id is not None else {},
+        )
+        if resolved_tenant != analysis.tenant_id:
+            return [
                 activity_issue(
-                    "live-activity.context-service-unresolved",
-                    f"{label} target service does not resolve to a named existing service",
+                    "live-activity.actor-tenant-mismatch",
+                    f"{label} tenant does not match its historical baseline tenant",
                 )
-            )
-            continue
-        if service is None:
-            continue
-        services[context_id] = service
-        node_name, _service_name = service
-        if node_name not in cell_nodes:
-            issues.append(
-                activity_issue(
-                    "live-activity.context-cell-mismatch",
-                    f"{label} target service is outside the historical baseline deployment cell",
-                )
-            )
-        if account_id is not None and getattr(accounts[account_id], "node", "") != node_name:
-            issues.append(
-                activity_issue(
-                    "live-activity.context-account-target-mismatch",
-                    f"{label} account and target service must belong to the same named node",
-                )
-            )
-        if target_ref not in materialization_targets:
-            issues.append(
-                activity_issue(
-                    "live-activity.context-materialization-target-mismatch",
-                    f"{label} target service is not governed by a historical baseline materialization binding",
-                )
-            )
-    return issues, services
+            ]
+    return []
 
 
-def _action_issues(
-    profile_name: str,
-    profile: object,
-    *,
-    activity_templates: Mapping[str, object],
-    accounts: Mapping[str, object],
-    historical_baseline_id: str | None,
-    declaration_index: DeclarationIndex,
-    is_unresolved: Callable[[object], bool],
-) -> tuple[list[LiveActivityIssue], dict[str, object]]:
+def _actor_scope_issues(label: str, actor: object, analysis: _ActorAnalysis) -> list[LiveActivityIssue]:
     issues: list[LiveActivityIssue] = []
-    templates: dict[str, object] = {}
-    actors = getattr(profile, "actors", {})
-    contexts = getattr(profile, "execution_contexts", {})
-    schedules = getattr(profile, "schedules", {})
-    readback_actions = set(getattr(getattr(profile, "readback", None), "action_refs", ()))
-    unresolved_readback_actions = readback_actions - set(getattr(profile, "actions", {}))
-    if unresolved_readback_actions:
+    for scope_ref in getattr(actor, "operating_scope_refs", ()):
+        if (
+            not analysis.is_unresolved(scope_ref)
+            and len(_targetable_addresses(analysis.declaration_index, scope_ref)) != 1
+        ):
+            issues.append(
+                activity_issue(
+                    "live-activity.actor-scope-unresolved",
+                    f"{label} operating scope does not resolve to one named existing target",
+                )
+            )
+    return issues
+
+
+def _actor_issues(profile_name: str, profile: object, analysis: _ActorAnalysis) -> list[LiveActivityIssue]:
+    issues: list[LiveActivityIssue] = []
+    for actor_id, actor in getattr(profile, "actors", {}).items():
+        label = f"Activity actor '{profile_name}.{actor_id}'"
+        issues.extend(_actor_identity_issues(label, actor, analysis))
+        issues.extend(_actor_tenancy_issues(label, actor, analysis))
+        issues.extend(_actor_scope_issues(label, actor, analysis))
+    return issues
+
+
+@dataclass(frozen=True)
+class _ContextAnalysis:
+    tenant_id: str | None
+    cell_nodes: set[str]
+    materialization_targets: set[str]
+    accounts: Mapping[str, object]
+    nodes: Mapping[str, object]
+    is_unresolved: Callable[[object], bool]
+
+
+def _context_tenant_issues(label: str, context: object, analysis: _ContextAnalysis) -> list[LiveActivityIssue]:
+    tenant_ref = getattr(context, "deployment_tenant_ref", "")
+    if not analysis.is_unresolved(tenant_ref):
+        context_tenant = resolve_section_ref(
+            tenant_ref,
+            "deployment_tenants",
+            {analysis.tenant_id: object()} if analysis.tenant_id is not None else {},
+        )
+        if context_tenant != analysis.tenant_id:
+            return [
+                activity_issue(
+                    "live-activity.context-tenant-mismatch",
+                    f"{label} tenant does not match baseline",
+                )
+            ]
+    return []
+
+
+def _context_account(
+    label: str,
+    context: object,
+    analysis: _ContextAnalysis,
+) -> tuple[str | None, list[LiveActivityIssue]]:
+    account_ref = getattr(context, "account_ref", "")
+    account_id = (
+        None if analysis.is_unresolved(account_ref) else resolve_section_ref(account_ref, "accounts", analysis.accounts)
+    )
+    issues = []
+    if account_id is None and not analysis.is_unresolved(account_ref):
+        issues.append(activity_issue("live-activity.context-account-unresolved", f"{label} account does not resolve"))
+    return account_id, issues
+
+
+def _context_service(
+    label: str,
+    context: object,
+    analysis: _ContextAnalysis,
+) -> tuple[tuple[str, str] | None, list[LiveActivityIssue]]:
+    target_ref = getattr(context, "target_service_ref", "")
+    service = None if analysis.is_unresolved(target_ref) else _resolve_service(target_ref, analysis.nodes)
+    issues = []
+    if service is None and not analysis.is_unresolved(target_ref):
         issues.append(
             activity_issue(
-                "live-activity.readback-action-unresolved",
-                f"Activity profile '{profile_name}' readback action reference does not resolve",
+                "live-activity.context-service-unresolved",
+                f"{label} target service does not resolve to a named existing service",
             )
         )
-    for action_id, action in getattr(profile, "actions", {}).items():
-        label = f"Activity action '{profile_name}.{action_id}'"
-        template_ref = getattr(action, "template_ref", "")
-        template_id = (
-            None
-            if is_unresolved(template_ref)
-            else resolve_section_ref(template_ref, "activity_templates", activity_templates)
+    return service, issues
+
+
+def _context_service_issues(
+    label: str,
+    context: object,
+    account_id: str | None,
+    service: tuple[str, str],
+    analysis: _ContextAnalysis,
+) -> list[LiveActivityIssue]:
+    issues: list[LiveActivityIssue] = []
+    node_name, _service_name = service
+    if node_name not in analysis.cell_nodes:
+        issues.append(
+            activity_issue(
+                "live-activity.context-cell-mismatch",
+                f"{label} target service is outside the historical baseline deployment cell",
+            )
         )
-        if template_id is None and not is_unresolved(template_ref):
-            issues.append(activity_issue("live-activity.template-unresolved", f"{label} template does not resolve"))
-            continue
-        if template_id is None:
-            continue
-        template = activity_templates[template_id]
-        templates[action_id] = template
-        actor_ref = getattr(action, "actor_ref", "")
-        context_ref = getattr(action, "execution_context_ref", "")
-        schedule_ref = getattr(action, "schedule_ref", "")
-        for ref, declarations, code, noun in (
-            (actor_ref, actors, "live-activity.actor-unresolved", "actor"),
-            (context_ref, contexts, "live-activity.context-unresolved", "execution context"),
-            (schedule_ref, schedules, "live-activity.schedule-unresolved", "schedule"),
-        ):
-            if not is_unresolved(ref) and ref not in declarations:
-                issues.append(activity_issue(code, f"{label} {noun} reference does not resolve"))
-        if context_ref in contexts and not is_unresolved(getattr(contexts[context_ref], "protocol", "")):
-            if _enum_value(getattr(contexts[context_ref], "protocol", "")) != template.capability.protocol.value:
-                issues.append(
-                    activity_issue(
-                        "live-activity.protocol-mismatch",
-                        f"{label} template capability and execution-context protocol disagree",
-                    )
-                )
-        parameters = getattr(template, "parameters", {})
-        bindings = {binding.parameter_ref: binding for binding in getattr(action, "parameter_bindings", ())}
-        if set(bindings) - set(parameters):
-            issues.append(
-                activity_issue("live-activity.parameter-unknown", f"{label} binds an undeclared template parameter")
+    if account_id is not None and getattr(analysis.accounts[account_id], "node", "") != node_name:
+        issues.append(
+            activity_issue(
+                "live-activity.context-account-target-mismatch",
+                f"{label} account and target service must belong to the same named node",
             )
-        missing = {name for name, parameter in parameters.items() if parameter.required} - set(bindings)
-        if missing:
-            issues.append(
-                activity_issue("live-activity.parameter-missing", f"{label} omits required template parameters")
+        )
+    if getattr(context, "target_service_ref", "") not in analysis.materialization_targets:
+        issues.append(
+            activity_issue(
+                "live-activity.context-materialization-target-mismatch",
+                f"{label} target service is not governed by a historical baseline materialization binding",
             )
-        for parameter_name, binding in bindings.items():
-            parameter = parameters.get(parameter_name)
-            if parameter is None or is_unresolved(binding.value_ref):
-                continue
-            expected_kind = {
-                "historical_object_ref": "historical-object",
-                "content_ref": "content",
-                "entity_ref": "entity",
-                "account_ref": "accounts",
-            }[parameter.kind.value]
-            candidates = {
-                address
-                for address in declaration_index.resolve(binding.value_ref)
-                if (declaration := declaration_index.declaration_for(address)) is not None
-                and declaration.kind == expected_kind
-            }
-            if len(candidates) != 1:
-                issues.append(
-                    activity_issue(
-                        "live-activity.parameter-unresolved",
-                        f"{label} parameter '{parameter_name}' does not resolve to one "
-                        f"{parameter.kind.value} declaration",
-                    )
-                )
-            elif parameter.kind.value == "historical_object_ref":
-                prefix = f"historical_baselines.{historical_baseline_id}.objects."
-                if historical_baseline_id is None or not next(iter(candidates)).startswith(prefix):
-                    issues.append(
-                        activity_issue(
-                            "live-activity.parameter-baseline-mismatch",
-                            f"{label} historical object parameter is outside the selected baseline",
-                        )
-                    )
-        if template.readback_class.value != "none" and action_id not in readback_actions:
-            issues.append(
-                activity_issue(
-                    "live-activity.readback-action-missing",
-                    f"{label} requires readback but is absent from the profile readback policy",
-                )
-            )
-        if actor_ref in actors and context_ref in contexts:
-            actor = actors[actor_ref]
-            context = contexts[context_ref]
-            actor_account = resolve_section_ref(actor.account_ref, "accounts", accounts)
-            context_account = resolve_section_ref(context.account_ref, "accounts", accounts)
-            if actor_account != context_account:
-                issues.append(
-                    activity_issue(
-                        "live-activity.action-actor-account-mismatch",
-                        f"{label} execution context does not use its actor account",
-                    )
-                )
-            target_addresses = _targetable_addresses(declaration_index, context.target_service_ref)
-            scope_addresses = set().union(
-                *(
-                    _targetable_addresses(declaration_index, scope_ref)
-                    for scope_ref in actor.operating_scope_refs
-                    if not is_unresolved(scope_ref)
-                )
-            )
-            if target_addresses and target_addresses.isdisjoint(scope_addresses):
-                issues.append(
-                    activity_issue(
-                        "live-activity.action-scope-mismatch",
-                        f"{label} target service is outside its actor operating scope",
-                    )
-                )
-    return issues, templates
+        )
+    return issues
+
+
+def _context_issues(profile_name: str, profile: object, analysis: _ContextAnalysis) -> list[LiveActivityIssue]:
+    issues: list[LiveActivityIssue] = []
+    for context_id, context in getattr(profile, "execution_contexts", {}).items():
+        label = f"Activity execution context '{profile_name}.{context_id}'"
+        issues.extend(_context_tenant_issues(label, context, analysis))
+        account_id, account_issues = _context_account(label, context, analysis)
+        issues.extend(account_issues)
+        service, service_issues = _context_service(label, context, analysis)
+        issues.extend(service_issues)
+        if service is not None:
+            issues.extend(_context_service_issues(label, context, account_id, service, analysis))
+    return issues
 
 
 def analyze_live_activity(
@@ -393,6 +306,12 @@ def analyze_live_activity(
 
     issues: list[LiveActivityIssue] = []
     declaration_index = build_declaration_index(scenario, raise_on_collision=False)
+    all_entities = flatten_entities(dict(scenario.entities))
+    participant_entities, participant_accounts = _participant_bindings(
+        scenario.agents,
+        entity_declarations=all_entities,
+        accounts=scenario.accounts,
+    )
     for profile_name, profile in getattr(scenario, "activity_profiles", {}).items():
         baseline_issues, baseline, tenant_id, cell_nodes, materialization_targets = _baseline_facts(
             profile_name,
@@ -416,35 +335,44 @@ def analyze_live_activity(
             _actor_issues(
                 profile_name,
                 profile,
-                tenant_id=tenant_id,
-                entities=scenario.entities,
-                accounts=scenario.accounts,
-                agents=scenario.agents,
-                declaration_index=declaration_index,
-                is_unresolved=is_unresolved,
+                _ActorAnalysis(
+                    tenant_id=tenant_id,
+                    entities=all_entities,
+                    accounts=scenario.accounts,
+                    participant_entities=participant_entities,
+                    participant_accounts=participant_accounts,
+                    declaration_index=declaration_index,
+                    is_unresolved=is_unresolved,
+                ),
             )
         )
-        context_issues, _services = _context_issues(
-            profile_name,
-            profile,
-            tenant_id=tenant_id,
-            cell_nodes=cell_nodes,
-            materialization_targets=materialization_targets,
-            accounts=scenario.accounts,
-            nodes=scenario.nodes,
-            is_unresolved=is_unresolved,
+        issues.extend(
+            _context_issues(
+                profile_name,
+                profile,
+                _ContextAnalysis(
+                    tenant_id=tenant_id,
+                    cell_nodes=cell_nodes,
+                    materialization_targets=materialization_targets,
+                    accounts=scenario.accounts,
+                    nodes=scenario.nodes,
+                    is_unresolved=is_unresolved,
+                ),
+            )
         )
-        issues.extend(context_issues)
-        action_issues, _templates = _action_issues(
-            profile_name,
-            profile,
-            activity_templates=scenario.activity_templates,
-            accounts=scenario.accounts,
-            historical_baseline_id=baseline_id,
-            declaration_index=declaration_index,
-            is_unresolved=is_unresolved,
+        issues.extend(
+            action_issues(
+                profile_name,
+                profile,
+                ActionAnalysis(
+                    activity_templates=scenario.activity_templates,
+                    accounts=scenario.accounts,
+                    historical_baseline_id=baseline_id,
+                    declaration_index=declaration_index,
+                    is_unresolved=is_unresolved,
+                ),
+            )
         )
-        issues.extend(action_issues)
         issues.extend(dependency_issues(profile_name, profile))
         issues.extend(budget_issues(profile_name, profile))
         issues.extend(

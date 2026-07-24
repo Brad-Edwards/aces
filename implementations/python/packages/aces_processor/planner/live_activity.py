@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections import defaultdict
 from fractions import Fraction
 
-from aces_backend_protocols.capabilities import BackendManifest
+from aces_backend_protocols.capabilities import BackendManifest, LiveActivityCapabilities
 
 from ..models import Diagnostic, RuntimeModel
 
@@ -72,6 +72,111 @@ def _fleet_budget_diagnostics(model: RuntimeModel) -> list[Diagnostic]:
     return diagnostics
 
 
+def _contract_diagnostics(manifest: BackendManifest) -> list[Diagnostic]:
+    required_contracts = {"live-activity-profile-v1", "live-activity-occurrence-v1"}
+    return [
+        Diagnostic(
+            code="live-activity.contract-unsupported",
+            domain="provisioning",
+            address=_ADDRESS,
+            message=f"Backend does not publish required live activity contract '{contract_id}'.",
+        )
+        for contract_id in sorted(required_contracts - manifest.supported_contract_versions)
+    ]
+
+
+def _profile_capability_diagnostics(profile: object, capability: LiveActivityCapabilities) -> list[Diagnostic]:
+    diagnostics: list[Diagnostic] = []
+    requirements = (
+        (
+            "live-activity.profile-unsupported",
+            "contract profile",
+            [profile.contract_profile],
+            capability.supported_contract_profiles,
+        ),
+        (
+            "live-activity.operation-unsupported",
+            "operation profile",
+            profile.required_operation_profiles,
+            capability.supported_operation_profiles,
+        ),
+        (
+            "live-activity.schedule-unsupported",
+            "schedule profile",
+            profile.required_schedule_profiles,
+            capability.supported_schedule_profiles,
+        ),
+        (
+            "live-activity.readback-unsupported",
+            "readback profile",
+            profile.required_readback_profiles,
+            capability.supported_readback_profiles,
+        ),
+        (
+            "live-activity.lifecycle-unsupported",
+            "lifecycle profile",
+            profile.required_lifecycle_profiles,
+            capability.supported_lifecycle_profiles,
+        ),
+        (
+            "live-activity.resource-dimension-unsupported",
+            "resource dimension",
+            profile.required_resource_dimensions,
+            capability.supported_resource_dimensions,
+        ),
+        (
+            "live-activity.dependency-kind-unsupported",
+            "dependency kind",
+            profile.required_dependency_kinds,
+            capability.supported_dependency_kinds,
+        ),
+    )
+    for code, label, required, supported in requirements:
+        diagnostics.extend(_unsupported(code, label, required, supported))
+    return diagnostics
+
+
+def _profile_feature_diagnostics(profile: object, capability: LiveActivityCapabilities) -> list[Diagnostic]:
+    diagnostics: list[Diagnostic] = []
+    requirements = (
+        (
+            profile.requires_bounded_retry,
+            capability.supports_bounded_retry,
+            "live-activity.bounded-retry-unsupported",
+            "bounded retry",
+        ),
+        (
+            profile.requires_generation_lifecycle,
+            capability.supports_generation_lifecycle,
+            "live-activity.generation-lifecycle-unsupported",
+            "generation lifecycle",
+        ),
+        (
+            profile.requires_participant_reservation,
+            capability.supports_participant_reservation,
+            "live-activity.participant-reservation-unsupported",
+            "participant reservation",
+        ),
+        (
+            profile.requires_readback_provenance,
+            capability.supports_readback_provenance,
+            "live-activity.readback-provenance-unsupported",
+            "readback provenance",
+        ),
+    )
+    for required, supported, code, label in requirements:
+        if required and not supported:
+            diagnostics.append(
+                Diagnostic(
+                    code=code,
+                    domain="provisioning",
+                    address=_ADDRESS,
+                    message=f"Backend does not support required live activity {label}.",
+                )
+            )
+    return diagnostics
+
+
 def validate_live_activity_support(
     model: RuntimeModel,
     manifest: BackendManifest,
@@ -88,109 +193,10 @@ def validate_live_activity_support(
                 message="Scenario requires live activity, but the backend declares no live-activity capability.",
             )
         ]
-    diagnostics: list[Diagnostic] = []
-    required_contracts = {"live-activity-profile-v1", "live-activity-occurrence-v1"}
-    for contract_id in sorted(required_contracts - manifest.supported_contract_versions):
-        diagnostics.append(
-            Diagnostic(
-                code="live-activity.contract-unsupported",
-                domain="provisioning",
-                address=_ADDRESS,
-                message=f"Backend does not publish required live activity contract '{contract_id}'.",
-            )
-        )
+    diagnostics = _contract_diagnostics(manifest)
     for profile in model.activity_profiles.values():
-        diagnostics.extend(
-            _unsupported(
-                "live-activity.profile-unsupported",
-                "contract profile",
-                [profile.contract_profile],
-                capability.supported_contract_profiles,
-            )
-        )
-        diagnostics.extend(
-            _unsupported(
-                "live-activity.operation-unsupported",
-                "operation profile",
-                profile.required_operation_profiles,
-                capability.supported_operation_profiles,
-            )
-        )
-        diagnostics.extend(
-            _unsupported(
-                "live-activity.schedule-unsupported",
-                "schedule profile",
-                profile.required_schedule_profiles,
-                capability.supported_schedule_profiles,
-            )
-        )
-        diagnostics.extend(
-            _unsupported(
-                "live-activity.readback-unsupported",
-                "readback profile",
-                profile.required_readback_profiles,
-                capability.supported_readback_profiles,
-            )
-        )
-        diagnostics.extend(
-            _unsupported(
-                "live-activity.lifecycle-unsupported",
-                "lifecycle profile",
-                profile.required_lifecycle_profiles,
-                capability.supported_lifecycle_profiles,
-            )
-        )
-        diagnostics.extend(
-            _unsupported(
-                "live-activity.resource-dimension-unsupported",
-                "resource dimension",
-                profile.required_resource_dimensions,
-                capability.supported_resource_dimensions,
-            )
-        )
-        diagnostics.extend(
-            _unsupported(
-                "live-activity.dependency-kind-unsupported",
-                "dependency kind",
-                profile.required_dependency_kinds,
-                capability.supported_dependency_kinds,
-            )
-        )
-        for required, supported, code, label in (
-            (
-                profile.requires_bounded_retry,
-                capability.supports_bounded_retry,
-                "live-activity.bounded-retry-unsupported",
-                "bounded retry",
-            ),
-            (
-                profile.requires_generation_lifecycle,
-                capability.supports_generation_lifecycle,
-                "live-activity.generation-lifecycle-unsupported",
-                "generation lifecycle",
-            ),
-            (
-                profile.requires_participant_reservation,
-                capability.supports_participant_reservation,
-                "live-activity.participant-reservation-unsupported",
-                "participant reservation",
-            ),
-            (
-                profile.requires_readback_provenance,
-                capability.supports_readback_provenance,
-                "live-activity.readback-provenance-unsupported",
-                "readback provenance",
-            ),
-        ):
-            if required and not supported:
-                diagnostics.append(
-                    Diagnostic(
-                        code=code,
-                        domain="provisioning",
-                        address=_ADDRESS,
-                        message=f"Backend does not support required live activity {label}.",
-                    )
-                )
+        diagnostics.extend(_profile_capability_diagnostics(profile, capability))
+        diagnostics.extend(_profile_feature_diagnostics(profile, capability))
     diagnostics.extend(_fleet_budget_diagnostics(model))
     return diagnostics
 

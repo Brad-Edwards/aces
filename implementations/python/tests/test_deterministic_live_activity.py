@@ -307,76 +307,73 @@ def test_occurrence_batch_rejects_duplicate_coordinates_atomically() -> None:
         derive_activity_occurrence_identities([context, context])
 
 
-def test_schedule_dependency_retry_and_budget_fail_closed() -> None:
-    payload = valid_live_activity_payload()
-    action = _profile(payload)["actions"]["update-record"]  # type: ignore[index]
-    action["retry"]["max_attempts"] = 0  # type: ignore[index]
-    with pytest.raises(SDLParseError):
-        _parse(payload)
-
-    payload = valid_live_activity_payload()
-    _profile(payload)["schedules"]["steady"]["max_occurrences"] = 0  # type: ignore[index]
-    with pytest.raises(SDLParseError):
-        _parse(payload)
-
-    payload = valid_live_activity_payload()
-    budget = _profile(payload)["budgets"][0]  # type: ignore[index]
-    budget["participant_reservation"] = {"numerator": 11, "denominator": 1}
-    with pytest.raises(SDLValidationError, match="participant reservation"):
-        _parse(payload)
-
-    payload = valid_live_activity_payload()
+def _mutate_fail_closed_case(payload: dict[str, object], case: str) -> None:
     profile = _profile(payload)
-    profile["actions"]["update-second"] = deepcopy(profile["actions"]["update-record"])  # type: ignore[index]
-    profile["readback"]["action_refs"].append("update-second")  # type: ignore[index]
-    budget = profile["budgets"][0]  # type: ignore[index]
-    budget["action_demands"] = {  # type: ignore[index]
-        "update-record": {"numerator": 4, "denominator": 1},
-        "update-second": {"numerator": 4, "denominator": 1},
-    }
-    with pytest.raises(SDLValidationError, match="aggregate action demand"):
-        _parse(payload)
-
-    payload = valid_live_activity_payload()
-    _profile(payload)["budgets"][0]["range_capacity"] = {  # type: ignore[index]
-        "numerator": 2,
-        "denominator": 2,
-    }
-    with pytest.raises(SDLParseError, match="lowest terms"):
-        _parse(payload)
-
-    payload = valid_live_activity_payload()
-    _profile(payload)["dependencies"] = [
-        {
-            "action_ref": "update-record",
-            "depends_on_ref": "update-record",
-            "kind": "ordering",
+    if case == "retry-attempts":
+        profile["actions"]["update-record"]["retry"]["max_attempts"] = 0  # type: ignore[index]
+    elif case == "schedule-occurrences":
+        profile["schedules"]["steady"]["max_occurrences"] = 0  # type: ignore[index]
+    elif case == "participant-reservation":
+        profile["budgets"][0]["participant_reservation"] = {  # type: ignore[index]
+            "numerator": 11,
+            "denominator": 1,
         }
-    ]
-    with pytest.raises(SDLValidationError, match="cycle|itself"):
-        _parse(payload)
+    elif case == "aggregate-demand":
+        _with_second_action(payload)
+        profile["budgets"][0]["action_demands"] = {  # type: ignore[index]
+            "update-record": {"numerator": 4, "denominator": 1},
+            "update-second": {"numerator": 4, "denominator": 1},
+        }
+    elif case == "noncanonical-rational":
+        profile["budgets"][0]["range_capacity"] = {  # type: ignore[index]
+            "numerator": 2,
+            "denominator": 2,
+        }
+    elif case == "self-dependency":
+        profile["dependencies"] = [
+            {
+                "action_ref": "update-record",
+                "depends_on_ref": "update-record",
+                "kind": "ordering",
+            }
+        ]
+    else:
+        _with_second_action(payload)
+        profile["dependencies"] = [
+            {
+                "action_ref": "update-record",
+                "depends_on_ref": "update-second",
+                "kind": "ordering",
+            },
+            {
+                "action_ref": "update-second",
+                "depends_on_ref": "update-record",
+                "kind": "refresh",
+            },
+        ]
 
+
+@pytest.mark.parametrize(
+    ("case", "error_type", "message"),
+    [
+        ("retry-attempts", SDLParseError, None),
+        ("schedule-occurrences", SDLParseError, None),
+        ("participant-reservation", SDLValidationError, "participant reservation"),
+        ("aggregate-demand", SDLValidationError, "aggregate action demand"),
+        ("noncanonical-rational", SDLParseError, "lowest terms"),
+        ("self-dependency", SDLValidationError, "cycle|itself"),
+        ("dependency-cycle", SDLValidationError, "dependency cycle"),
+    ],
+)
+def test_schedule_dependency_retry_and_budget_fail_closed(
+    case: str,
+    error_type: type[Exception],
+    message: str | None,
+) -> None:
     payload = valid_live_activity_payload()
-    profile = _profile(payload)
-    profile["actions"]["update-second"] = deepcopy(profile["actions"]["update-record"])  # type: ignore[index]
-    profile["readback"]["action_refs"].append("update-second")  # type: ignore[index]
-    profile["budgets"][0]["action_demands"]["update-second"] = {  # type: ignore[index]
-        "numerator": 1,
-        "denominator": 1,
-    }
-    profile["dependencies"] = [
-        {
-            "action_ref": "update-record",
-            "depends_on_ref": "update-second",
-            "kind": "ordering",
-        },
-        {
-            "action_ref": "update-second",
-            "depends_on_ref": "update-record",
-            "kind": "refresh",
-        },
-    ]
-    with pytest.raises(SDLValidationError, match="dependency cycle"):
+    _mutate_fail_closed_case(payload, case)
+
+    with pytest.raises(error_type, match=message):
         _parse(payload)
 
 
@@ -468,6 +465,101 @@ def test_live_activity_policy_diagnostic_codes(case: str, code: str) -> None:
     else:
         policy = case.removesuffix("-evidence")
         profile[policy]["evidence_requirement_refs"] = ["missing"]  # type: ignore[index]
+
+    _assert_validation_code(payload, code)
+
+
+def _add_staging_node(payload: dict[str, object]) -> None:
+    payload["nodes"]["staging"] = {  # type: ignore[index]
+        "type": "vm",
+        "os": "linux",
+        "services": [],
+    }
+
+
+def _mutate_context_diagnostic_case(payload: dict[str, object], case: str) -> None:
+    context = _profile(payload)["execution_contexts"]["records-api"]  # type: ignore[index]
+    if case == "tenant-mismatch":
+        payload["deployment_tenants"]["range-b"] = {}  # type: ignore[index]
+        context["deployment_tenant_ref"] = "range-b"  # type: ignore[index]
+    elif case == "account-unresolved":
+        context["account_ref"] = "missing"  # type: ignore[index]
+    elif case == "cell-mismatch":
+        _add_staging_node(payload)
+        payload["deployment_cells"]["range-a-cell"]["node_refs"] = ["staging"]  # type: ignore[index]
+    else:
+        _add_staging_node(payload)
+        payload["accounts"]["records-operator"]["node"] = "staging"  # type: ignore[index]
+
+
+@pytest.mark.parametrize(
+    ("case", "code"),
+    [
+        ("tenant-mismatch", "live-activity.context-tenant-mismatch"),
+        ("account-unresolved", "live-activity.context-account-unresolved"),
+        ("cell-mismatch", "live-activity.context-cell-mismatch"),
+        ("account-target-mismatch", "live-activity.context-account-target-mismatch"),
+    ],
+)
+def test_live_activity_context_diagnostic_codes(case: str, code: str) -> None:
+    payload = valid_live_activity_payload()
+    _mutate_context_diagnostic_case(payload, case)
+
+    _assert_validation_code(payload, code)
+
+
+def _mutate_action_diagnostic_case(payload: dict[str, object], case: str) -> None:
+    profile = _profile(payload)
+    action = profile["actions"]["update-record"]  # type: ignore[index]
+    if case in {"actor-unresolved", "context-unresolved", "schedule-unresolved"}:
+        field = {
+            "actor-unresolved": "actor_ref",
+            "context-unresolved": "execution_context_ref",
+            "schedule-unresolved": "schedule_ref",
+        }[case]
+        action[field] = "missing"  # type: ignore[index]
+    elif case == "protocol-mismatch":
+        profile["execution_contexts"]["records-api"]["protocol"] = "smtp"  # type: ignore[index]
+    elif case == "parameter-unknown":
+        action["parameter_bindings"].append(  # type: ignore[index]
+            {
+                "parameter_ref": "undeclared",
+                "value_ref": "historical_baselines.enterprise.objects.message-001",
+            }
+        )
+    elif case == "parameter-missing":
+        action["parameter_bindings"] = []  # type: ignore[index]
+    elif case == "parameter-baseline-mismatch":
+        payload["historical_baselines"]["other"] = deepcopy(  # type: ignore[index]
+            payload["historical_baselines"]["enterprise"]  # type: ignore[index]
+        )
+        action["parameter_bindings"][0]["value_ref"] = (  # type: ignore[index]
+            "historical_baselines.other.objects.message-001"
+        )
+    elif case == "readback-action-missing":
+        _with_second_action(payload)
+        profile["readback"]["action_refs"].remove("update-second")  # type: ignore[index]
+    else:
+        profile["readback"]["action_refs"].append("missing")  # type: ignore[index]
+
+
+@pytest.mark.parametrize(
+    ("case", "code"),
+    [
+        ("actor-unresolved", "live-activity.actor-unresolved"),
+        ("context-unresolved", "live-activity.context-unresolved"),
+        ("schedule-unresolved", "live-activity.schedule-unresolved"),
+        ("protocol-mismatch", "live-activity.protocol-mismatch"),
+        ("parameter-unknown", "live-activity.parameter-unknown"),
+        ("parameter-missing", "live-activity.parameter-missing"),
+        ("parameter-baseline-mismatch", "live-activity.parameter-baseline-mismatch"),
+        ("readback-action-missing", "live-activity.readback-action-missing"),
+        ("readback-action-unresolved", "live-activity.readback-action-unresolved"),
+    ],
+)
+def test_live_activity_action_diagnostic_codes(case: str, code: str) -> None:
+    payload = valid_live_activity_payload()
+    _mutate_action_diagnostic_case(payload, case)
 
     _assert_validation_code(payload, code)
 
@@ -672,11 +764,9 @@ def test_stale_generation_occurrence_is_rejected() -> None:
     )
 
     validate_activity_occurrence_context(compiled, context)
+    stale_context = context.model_copy(update={"reset_generation_id": "generation-stale"})
     with pytest.raises(ValueError, match="stale reset generation"):
-        validate_activity_occurrence_context(
-            compiled,
-            context.model_copy(update={"reset_generation_id": "generation-stale"}),
-        )
+        validate_activity_occurrence_context(compiled, stale_context)
 
 
 def test_readback_and_telemetry_are_evidence_only() -> None:

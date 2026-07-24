@@ -8,6 +8,11 @@ if TYPE_CHECKING:
     from .backend_manifest import BackendManifest
 
 
+def _missing_contract_gap(label: str, required: set[str], supported: frozenset[str]) -> tuple[str, ...]:
+    missing = sorted(required - supported)
+    return tuple([f"{label} missing required contracts: {', '.join(missing)}"] if missing else [])
+
+
 def participant_runtime_capability_contract_gaps(manifest: BackendManifest) -> tuple[str, ...]:
     from .capabilities import PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS
 
@@ -45,20 +50,14 @@ def observation_capability_contract_gaps(manifest: BackendManifest) -> tuple[str
     if observation is None:
         return ()
     required = set(observation.supported_evidence_contracts) | set(OBSERVATION_CAPABILITY_REQUIRED_CONTRACTS)
-    missing = sorted(required - manifest.supported_contract_versions)
-    if missing:
-        return (f"capabilities.observation missing required contracts: {', '.join(missing)}",)
-    return ()
+    return _missing_contract_gap("capabilities.observation", required, manifest.supported_contract_versions)
 
 
 def live_activity_capability_contract_gaps(manifest: BackendManifest) -> tuple[str, ...]:
     if manifest.live_activity is None:
         return ()
     required = {"live-activity-profile-v1", "live-activity-occurrence-v1"}
-    missing = sorted(required - manifest.supported_contract_versions)
-    if missing:
-        return (f"capabilities.live_activity missing required contracts: {', '.join(missing)}",)
-    return ()
+    return _missing_contract_gap("capabilities.live_activity", required, manifest.supported_contract_versions)
 
 
 __all__ = [

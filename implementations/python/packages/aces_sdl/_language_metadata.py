@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+_ACTIVITY_ACTIONS_TARGET = "derived:activity_actions"
+
 REFERENCE_COMPLETION_TARGETS = {
     ("nodes", "features"): "features",
     ("nodes", "conditions"): "conditions",
@@ -47,9 +49,9 @@ REFERENCE_COMPLETION_TARGETS = {
     ("activity_profiles", "schedule_ref"): "derived:activity_schedules",
     ("activity_profiles", "parameter_ref"): "derived:activity_template_parameters",
     ("activity_profiles", "value_ref"): "targetable",
-    ("activity_profiles", "action_ref"): "derived:activity_actions",
-    ("activity_profiles", "depends_on_ref"): "derived:activity_actions",
-    ("activity_profiles", "action_refs"): "derived:activity_actions",
+    ("activity_profiles", "action_ref"): _ACTIVITY_ACTIONS_TARGET,
+    ("activity_profiles", "depends_on_ref"): _ACTIVITY_ACTIONS_TARGET,
+    ("activity_profiles", "action_refs"): _ACTIVITY_ACTIONS_TARGET,
     ("activity_profiles", "observability_refs"): "targetable",
     ("activity_profiles", "evidence_requirement_refs"): "evidence_requirements",
     ("relationships", "source"): "targetable",

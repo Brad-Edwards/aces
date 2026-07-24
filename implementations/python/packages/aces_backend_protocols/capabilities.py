@@ -442,16 +442,17 @@ class BackendCapabilitySet:
     live_activity: LiveActivityCapabilities | None = None
 
 
-from .capability_gaps import (  # noqa: E402, I001
-    live_activity_capability_contract_gaps as live_activity_capability_contract_gaps,
-    observation_capability_contract_gaps as observation_capability_contract_gaps,
-    participant_runtime_capability_contract_gaps as participant_runtime_capability_contract_gaps,
-)
-
-
 def __getattr__(name: str) -> object:
     """Preserve the historical manifest imports without a circular import."""
 
+    if name in {
+        "live_activity_capability_contract_gaps",
+        "observation_capability_contract_gaps",
+        "participant_runtime_capability_contract_gaps",
+    }:
+        from . import capability_gaps
+
+        return getattr(capability_gaps, name)
     if name in {"BackendCompatibility", "BackendManifest"}:
         from . import backend_manifest
 

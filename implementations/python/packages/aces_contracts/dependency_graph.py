@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections import deque
 from collections.abc import Callable, Iterable, Mapping
+from dataclasses import dataclass, field
 
 SortKey = Callable[[str], object]
 
@@ -24,6 +25,47 @@ def dependency_graph(
     }
 
 
+@dataclass
+class _TarjanState:
+    graph: dict[str, tuple[str, ...]]
+    index: int = 0
+    indices: dict[str, int] = field(default_factory=dict)
+    lowlinks: dict[str, int] = field(default_factory=dict)
+    stack: list[str] = field(default_factory=list)
+    on_stack: set[str] = field(default_factory=set)
+    cycles: list[tuple[str, ...]] = field(default_factory=list)
+
+    def connect(self, node: str) -> None:
+        self.indices[node] = self.index
+        self.lowlinks[node] = self.index
+        self.index += 1
+        self.stack.append(node)
+        self.on_stack.add(node)
+        for dependency in self.graph[node]:
+            self._visit_dependency(node, dependency)
+        if self.lowlinks[node] == self.indices[node]:
+            self._record_component(node)
+
+    def _visit_dependency(self, node: str, dependency: str) -> None:
+        if dependency not in self.indices:
+            self.connect(dependency)
+            self.lowlinks[node] = min(self.lowlinks[node], self.lowlinks[dependency])
+        elif dependency in self.on_stack:
+            self.lowlinks[node] = min(self.lowlinks[node], self.indices[dependency])
+
+    def _record_component(self, root: str) -> None:
+        component: list[str] = []
+        while self.stack:
+            member = self.stack.pop()
+            self.on_stack.remove(member)
+            component.append(member)
+            if member == root:
+                break
+        component.sort()
+        if len(component) > 1 or component[0] in self.graph[component[0]]:
+            self.cycles.append(tuple(component))
+
+
 def dependency_cycles(
     dependencies_by_node: Mapping[str, Iterable[str]],
     *,
@@ -35,48 +77,12 @@ def dependency_cycles(
     if not graph:
         return []
 
-    index = 0
-    indices: dict[str, int] = {}
-    lowlinks: dict[str, int] = {}
-    stack: list[str] = []
-    on_stack: set[str] = set()
-    cycles: list[tuple[str, ...]] = []
-
-    def strongconnect(node: str) -> None:
-        nonlocal index
-        indices[node] = index
-        lowlinks[node] = index
-        index += 1
-        stack.append(node)
-        on_stack.add(node)
-
-        for dependency in graph[node]:
-            if dependency not in indices:
-                strongconnect(dependency)
-                lowlinks[node] = min(lowlinks[node], lowlinks[dependency])
-            elif dependency in on_stack:
-                lowlinks[node] = min(lowlinks[node], indices[dependency])
-
-        if lowlinks[node] != indices[node]:
-            return
-
-        component: list[str] = []
-        while stack:
-            member = stack.pop()
-            on_stack.remove(member)
-            component.append(member)
-            if member == node:
-                break
-
-        component = sorted(component)
-        if len(component) > 1 or component[0] in graph[component[0]]:
-            cycles.append(tuple(component))
-
+    state = _TarjanState(graph)
     for node in sorted(graph, key=sort_key):
-        if node not in indices:
-            strongconnect(node)
+        if node not in state.indices:
+            state.connect(node)
 
-    return sorted(cycles, key=lambda cycle: tuple(sort_key(node) for node in cycle))
+    return sorted(state.cycles, key=lambda cycle: tuple(sort_key(node) for node in cycle))
 
 
 def topological_dependency_order(
@@ -88,7 +94,7 @@ def topological_dependency_order(
 
     graph = dependency_graph(dependencies_by_node)
     dependents: dict[str, list[str]] = {node: [] for node in graph}
-    indegree: dict[str, int] = {node: 0 for node in graph}
+    indegree: dict[str, int] = dict.fromkeys(graph, 0)
 
     for node, dependencies in graph.items():
         for dependency in dependencies:
