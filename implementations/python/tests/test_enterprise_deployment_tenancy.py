@@ -401,11 +401,18 @@ def test_nested_carrier_placement_is_rejected_without_a_cycle() -> None:
         _parse_payload(payload)
 
 
-def test_cross_cell_shared_service_requires_tenant_safe_authentication() -> None:
+@pytest.mark.parametrize(
+    ("field_name", "value"),
+    [
+        ("workload_authentication", "none"),
+        ("tenant_isolation", "none"),
+    ],
+)
+def test_cross_cell_shared_service_requires_tenant_safe_policy(field_name: str, value: str) -> None:
     payload = _valid_payload()
-    payload["relationships"]["range-inference"]["shared_service"]["workload_authentication"] = "none"
+    payload["relationships"]["range-inference"]["shared_service"][field_name] = value
 
-    with pytest.raises(SDLValidationError, match="stateless.*tenant-scoped workload"):
+    with pytest.raises(SDLValidationError, match="isolation requires tenant-scoped workload authentication"):
         _parse_payload(payload)
 
 
@@ -434,6 +441,25 @@ def test_shared_service_state_and_reset_ownership_are_consistent() -> None:
     payload = _valid_payload()
     payload["relationships"]["range-inference"]["shared_service"]["reset_generation_owner"] = "none"
     with pytest.raises(SDLValidationError, match="reset_generation_owner"):
+        _parse_payload(payload)
+
+
+def test_consumer_owned_shared_state_must_stay_with_its_tenant() -> None:
+    payload = _valid_payload()
+    payload["persistent_volumes"]["range-state"]["consumers"][0]["node"] = "inference"
+
+    with pytest.raises(SDLValidationError, match="consumed only by its tenant"):
+        _parse_payload(payload)
+
+
+def test_service_owned_shared_state_must_be_consumed_by_the_service_node() -> None:
+    payload = _valid_payload()
+    binding = payload["relationships"]["range-inference"]["shared_service"]
+    binding["tenant_isolation"] = "tenant_partitioned"
+    binding["mutable_state_owner"] = "shared_service"
+    binding["reset_generation_owner"] = "shared_service"
+
+    with pytest.raises(SDLValidationError, match="consumed by the service node"):
         _parse_payload(payload)
 
 
