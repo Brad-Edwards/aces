@@ -47,102 +47,125 @@ def _shared_service_context(
     is_unresolved: Callable[[object], bool],
 ) -> tuple[_SharedServiceContext | None, DeploymentTenancyIssue | None]:
     detail = getattr(relationship, "shared_service", None)
-    if detail is None:
-        return None, None
-    source_ref = getattr(relationship, "source", "")
-    target_ref = getattr(relationship, "target", "")
-    if any(is_unresolved(value) for value in (source_ref, target_ref)):
-        return None, None
-    tenant_name = resolve_section_ref(source_ref, "deployment_tenants", deployment_tenants)
-    service_node = service_owner(target_ref, nodes)
-    if tenant_name is None or service_node is None:
-        return None, issue(
-            "deployment-tenancy.shared-service.endpoint-invalid",
-            f"Relationship '{relationship_name}' must connect a deployment tenant to a named VM service",
-        )
-    service_cell = cell_index.node_cell.get(service_node)
-    service_tenant = cell_index.cell_tenant.get(service_cell, "") if service_cell is not None else ""
-    return (
-        _SharedServiceContext(
-            relationship_name=relationship_name,
-            tenant_name=tenant_name,
-            service_node=service_node,
-            service_tenant=service_tenant,
-            isolation=enum_value(getattr(detail, "tenant_isolation", "")),
-            authentication=enum_value(getattr(detail, "workload_authentication", "")),
-            state_owner=enum_value(getattr(detail, "mutable_state_owner", "")),
-            reset_owner=enum_value(getattr(detail, "reset_generation_owner", "")),
-            state_refs=tuple(getattr(detail, "mutable_state_refs", ())),
-        ),
-        None,
-    )
+    context: _SharedServiceContext | None = None
+    issue_record: DeploymentTenancyIssue | None = None
+    if detail is not None:
+        source_ref = getattr(relationship, "source", "")
+        target_ref = getattr(relationship, "target", "")
+        unresolved = any(is_unresolved(value) for value in (source_ref, target_ref))
+        tenant_name = None if unresolved else resolve_section_ref(source_ref, "deployment_tenants", deployment_tenants)
+        service_node = None if unresolved else service_owner(target_ref, nodes)
+        if not unresolved and (tenant_name is None or service_node is None):
+            issue_record = issue(
+                "deployment-tenancy.shared-service.endpoint-invalid",
+                f"Relationship '{relationship_name}' must connect a deployment tenant to a named VM service",
+            )
+        elif tenant_name is not None and service_node is not None:
+            service_cell = cell_index.node_cell.get(service_node)
+            service_tenant = cell_index.cell_tenant.get(service_cell, "") if service_cell is not None else ""
+            context = _SharedServiceContext(
+                relationship_name=relationship_name,
+                tenant_name=tenant_name,
+                service_node=service_node,
+                service_tenant=service_tenant,
+                isolation=enum_value(getattr(detail, "tenant_isolation", "")),
+                authentication=enum_value(getattr(detail, "workload_authentication", "")),
+                state_owner=enum_value(getattr(detail, "mutable_state_owner", "")),
+                reset_owner=enum_value(getattr(detail, "reset_generation_owner", "")),
+                state_refs=tuple(getattr(detail, "mutable_state_refs", ())),
+            )
+    return context, issue_record
 
 
-def _shared_service_policy_issues(context: _SharedServiceContext) -> list[DeploymentTenancyIssue]:
-    issues: list[DeploymentTenancyIssue] = []
-    if context.tenant_name != context.service_tenant and (
+def _cross_tenant_policy_issue(context: _SharedServiceContext) -> DeploymentTenancyIssue | None:
+    unsafe_cross_tenant = context.tenant_name != context.service_tenant and (
         context.isolation not in {TenantIsolationMode.STATELESS.value, TenantIsolationMode.TENANT_PARTITIONED.value}
         or context.authentication != WorkloadAuthenticationMode.TENANT_SCOPED_WORKLOAD_IDENTITY.value
-    ):
-        issues.append(
-            issue(
-                "deployment-tenancy.shared-service.cross-tenant-unsafe",
-                f"Relationship '{context.relationship_name}' {context.isolation or 'cross-tenant'} isolation "
-                "requires tenant-scoped workload authentication",
-            )
+    )
+    if unsafe_cross_tenant:
+        return issue(
+            "deployment-tenancy.shared-service.cross-tenant-unsafe",
+            f"Relationship '{context.relationship_name}' {context.isolation or 'cross-tenant'} isolation "
+            "requires tenant-scoped workload authentication",
         )
+    return None
+
+
+def _stateless_policy_issue(context: _SharedServiceContext) -> DeploymentTenancyIssue | None:
     if (
         context.isolation == TenantIsolationMode.STATELESS.value
         and context.state_owner == StateOwner.SHARED_SERVICE.value
     ):
-        issues.append(
-            issue(
-                "deployment-tenancy.shared-service.stateless-service-state",
-                f"Relationship '{context.relationship_name}' stateless isolation forbids "
-                "shared-service-owned mutable state",
-            )
+        return issue(
+            "deployment-tenancy.shared-service.stateless-service-state",
+            f"Relationship '{context.relationship_name}' stateless isolation forbids "
+            "shared-service-owned mutable state",
         )
-    if context.isolation == TenantIsolationMode.TENANT_PARTITIONED.value and (
+    return None
+
+
+def _partitioned_policy_issue(context: _SharedServiceContext) -> DeploymentTenancyIssue | None:
+    incomplete_partition = context.isolation == TenantIsolationMode.TENANT_PARTITIONED.value and (
         not context.state_refs
         or context.state_owner != StateOwner.SHARED_SERVICE.value
         or context.reset_owner != StateOwner.SHARED_SERVICE.value
-    ):
-        issues.append(
-            issue(
-                "deployment-tenancy.shared-service.partitioned-state-required",
-                f"Relationship '{context.relationship_name}' tenant_partitioned isolation requires "
-                "shared-service-owned state and reset generation",
-            )
+    )
+    if incomplete_partition:
+        return issue(
+            "deployment-tenancy.shared-service.partitioned-state-required",
+            f"Relationship '{context.relationship_name}' tenant_partitioned isolation requires "
+            "shared-service-owned state and reset generation",
         )
+    return None
+
+
+def _state_owner_policy_issue(context: _SharedServiceContext) -> DeploymentTenancyIssue | None:
     if context.state_refs and context.state_owner == StateOwner.NONE.value:
-        issues.append(
-            issue(
-                "deployment-tenancy.shared-service.state-owner-missing",
-                f"Relationship '{context.relationship_name}' mutable_state_refs require a non-none owner",
-            )
+        return issue(
+            "deployment-tenancy.shared-service.state-owner-missing",
+            f"Relationship '{context.relationship_name}' mutable_state_refs require a non-none owner",
         )
+    return None
+
+
+def _state_refs_policy_issue(context: _SharedServiceContext) -> DeploymentTenancyIssue | None:
     if not context.state_refs and context.state_owner != StateOwner.NONE.value:
-        issues.append(
-            issue(
-                "deployment-tenancy.shared-service.state-refs-missing",
-                f"Relationship '{context.relationship_name}' mutable state owner requires mutable_state_refs",
-            )
+        return issue(
+            "deployment-tenancy.shared-service.state-refs-missing",
+            f"Relationship '{context.relationship_name}' mutable state owner requires mutable_state_refs",
         )
+    return None
+
+
+def _reset_owner_policy_issue(context: _SharedServiceContext) -> DeploymentTenancyIssue | None:
     if context.state_owner != StateOwner.NONE.value and context.reset_owner != context.state_owner:
-        issues.append(
-            issue(
-                "deployment-tenancy.shared-service.reset-owner-mismatch",
-                f"Relationship '{context.relationship_name}' reset_generation_owner must equal mutable state owner",
-            )
+        return issue(
+            "deployment-tenancy.shared-service.reset-owner-mismatch",
+            f"Relationship '{context.relationship_name}' reset_generation_owner must equal mutable state owner",
         )
+    return None
+
+
+def _reset_without_state_policy_issue(context: _SharedServiceContext) -> DeploymentTenancyIssue | None:
     if context.state_owner == StateOwner.NONE.value and context.reset_owner != StateOwner.NONE.value:
-        issues.append(
-            issue(
-                "deployment-tenancy.shared-service.reset-owner-without-state",
-                f"Relationship '{context.relationship_name}' reset_generation_owner must be none without mutable state",
-            )
+        return issue(
+            "deployment-tenancy.shared-service.reset-owner-without-state",
+            f"Relationship '{context.relationship_name}' reset_generation_owner must be none without mutable state",
         )
-    return issues
+    return None
+
+
+def _shared_service_policy_issues(context: _SharedServiceContext) -> list[DeploymentTenancyIssue]:
+    candidates = (
+        _cross_tenant_policy_issue(context),
+        _stateless_policy_issue(context),
+        _partitioned_policy_issue(context),
+        _state_owner_policy_issue(context),
+        _state_refs_policy_issue(context),
+        _reset_owner_policy_issue(context),
+        _reset_without_state_policy_issue(context),
+    )
+    return [candidate for candidate in candidates if candidate is not None]
 
 
 def _shared_state_ref_issues(
@@ -265,28 +288,44 @@ def _cross_cell_consumption_issue(
     permitted: set[tuple[str, str]],
     is_unresolved: Callable[[object], bool],
 ) -> DeploymentTenancyIssue | None:
-    if enum_value(getattr(relationship, "type", "")) == RelationshipType.USES_SHARED_SERVICE.value:
-        return None
+    issue_record: DeploymentTenancyIssue | None = None
     source_ref = getattr(relationship, "source", "")
     target_ref = getattr(relationship, "target", "")
-    if any(is_unresolved(value) for value in (source_ref, target_ref)):
-        return None
+    eligible = enum_value(getattr(relationship, "type", "")) != RelationshipType.USES_SHARED_SERVICE.value and not any(
+        is_unresolved(value) for value in (source_ref, target_ref)
+    )
+    node_pair = _service_consumption_nodes(source_ref, target_ref, nodes) if eligible else None
+    source_tenant = _cross_cell_source_tenant(node_pair, cell_index)
+    if source_tenant is not None and (source_tenant, target_ref) not in permitted:
+        issue_record = issue(
+            "deployment-tenancy.shared-service.binding-required",
+            f"Relationship '{relationship_name}' cross-cell service consumption requires an explicit "
+            "shared-service binding for the consumer tenant and target service",
+        )
+    return issue_record
+
+
+def _service_consumption_nodes(
+    source_ref: object,
+    target_ref: object,
+    nodes: Mapping[str, object],
+) -> tuple[str, str] | None:
     source_node = resolve_section_ref(source_ref, "nodes", nodes) or service_owner(source_ref, nodes)
     target_node = service_owner(target_ref, nodes)
-    if source_node is None or target_node is None:
+    return (source_node, target_node) if source_node is not None and target_node is not None else None
+
+
+def _cross_cell_source_tenant(
+    node_pair: tuple[str, str] | None,
+    cell_index: CellIndex,
+) -> str | None:
+    if node_pair is None:
         return None
+    source_node, target_node = node_pair
     source_cell = cell_index.node_cell.get(source_node)
     target_cell = cell_index.node_cell.get(target_node)
-    if source_cell is None or target_cell is None or source_cell == target_cell:
-        return None
-    source_tenant = cell_index.cell_tenant.get(source_cell)
-    if source_tenant is None or (source_tenant, target_ref) in permitted:
-        return None
-    return issue(
-        "deployment-tenancy.shared-service.binding-required",
-        f"Relationship '{relationship_name}' cross-cell service consumption requires an explicit "
-        "shared-service binding for the consumer tenant and target service",
-    )
+    crosses_cells = source_cell is not None and target_cell is not None and source_cell != target_cell
+    return cell_index.cell_tenant.get(source_cell) if crosses_cells else None
 
 
 def cross_cell_service_consumption_issues(

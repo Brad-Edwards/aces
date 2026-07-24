@@ -57,20 +57,20 @@ def _forest_root_issue(
     identity_domains: Mapping[str, object],
     is_unresolved: Callable[[object], bool],
 ) -> EnterpriseIdentityIssue | None:
-    if is_unresolved(root_ref):
-        return None
-    root_name = resolve_section_ref(root_ref, "identity_domains", identity_domains)
-    if root_name is None:
-        return _issue(
+    issue: EnterpriseIdentityIssue | None = None
+    unresolved = is_unresolved(root_ref)
+    root_name = None if unresolved else resolve_section_ref(root_ref, "identity_domains", identity_domains)
+    if not unresolved and root_name is None:
+        issue = _issue(
             "enterprise-identity.forest.root-unbound",
             f"Identity forest '{forest_name}' root_domain_ref '{root_ref}' does not resolve to an identity domain",
         )
-    if root_name not in members:
-        return _issue(
+    elif root_name is not None and root_name not in members:
+        issue = _issue(
             "enterprise-identity.forest.root-not-member",
             f"Identity forest '{forest_name}' root_domain_ref '{root_ref}' must appear in domain_refs",
         )
-    return None
+    return issue
 
 
 def _forest_membership_issues(
@@ -238,24 +238,26 @@ def _forest_trust_issue(
 ) -> EnterpriseIdentityIssue | None:
     source_name = resolve_section_ref(source, "identity_forests", identity_forests)
     target_name = resolve_section_ref(target, "identity_forests", identity_forests)
+    issue: EnterpriseIdentityIssue | None = None
     if source_name is None or target_name is None:
-        return _issue(
+        issue = _issue(
             "enterprise-identity.forest-trust.endpoint-invalid",
             f"Relationship '{relationship_name}' forest trust endpoints must resolve to identity forests",
         )
-    if source_name == target_name:
-        return _issue(
+    elif source_name == target_name:
+        issue = _issue(
             "enterprise-identity.forest-trust.self",
             f"Relationship '{relationship_name}' cannot trust a forest with itself",
         )
-    pair = frozenset((source_name, target_name))
-    if pair in seen_trust_pairs:
-        return _issue(
-            "enterprise-identity.forest-trust.duplicate",
-            f"Relationship '{relationship_name}' duplicates a forest trust for the same forest pair",
-        )
-    seen_trust_pairs.add(pair)
-    return None
+    else:
+        pair = frozenset((source_name, target_name))
+        if pair in seen_trust_pairs:
+            issue = _issue(
+                "enterprise-identity.forest-trust.duplicate",
+                f"Relationship '{relationship_name}' duplicates a forest trust for the same forest pair",
+            )
+        seen_trust_pairs.add(pair)
+    return issue
 
 
 def _federation_issue(
