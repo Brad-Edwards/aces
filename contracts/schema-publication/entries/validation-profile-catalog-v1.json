@@ -1,0 +1,10 @@
+{
+  "contract_id": "validation-profile-catalog-v1",
+  "schema_path": "contracts/schemas/profiles/validation-profile-catalog-v1.json",
+  "stability": "draft",
+  "content_hash": "fe3f991ff7cc85228bbd197c535b412dbccfb1bb1f677d169f71ef4d7e44720f",
+  "last_change": {
+    "summary": "Published the ASR-511 validation-strength, subject, gate, limitation, and versioned profile catalog.",
+    "content_hash": "fe3f991ff7cc85228bbd197c535b412dbccfb1bb1f677d169f71ef4d7e44720f"
+  }
+}
