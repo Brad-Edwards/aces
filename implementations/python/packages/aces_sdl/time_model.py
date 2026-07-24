@@ -269,11 +269,21 @@ class TemporalConstraint(SDLModel):
 
     @model_validator(mode="after")
     def _validate_constraint_shape(self) -> "TemporalConstraint":
+        self._validate_coordinate_order()
+        self._validate_subject_cardinality()
+        self._validate_required_coordinates()
+        return self
+
+    def _validate_coordinate_order(self) -> None:
         if self.start is not None and self.end is not None:
             if (self.end.tick, self.end.microstep) < (self.start.tick, self.start.microstep):
                 raise ValueError("temporal constraint end must not precede start")
+
+    def _validate_subject_cardinality(self) -> None:
         if self.constraint_kind == TemporalConstraintKind.PRECEDENCE and len(self.subject_refs) != 2:
             raise ValueError("precedence constraints require exactly two subject_refs")
+
+    def _validate_required_coordinates(self) -> None:
         if self.constraint_kind == TemporalConstraintKind.DURATION and self.duration_ticks is None:
             raise ValueError("duration constraints require duration_ticks")
         if self.constraint_kind == TemporalConstraintKind.WINDOW and (self.start is None or self.end is None):
@@ -282,7 +292,6 @@ class TemporalConstraint(SDLModel):
             raise ValueError("deadline constraints require end")
         if self.constraint_kind == TemporalConstraintKind.CADENCE and self.cadence_ticks is None:
             raise ValueError("cadence constraints require cadence_ticks")
-        return self
 
 
 __all__ = [

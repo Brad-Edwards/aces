@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
 from fractions import Fraction
 
@@ -61,22 +61,18 @@ def _transition(
     *,
     sequence: int,
     kind: ClockTransitionKind,
-    segment: int,
-    tick: int,
-    microstep: int,
-    previous_segment: int | None,
-    previous_tick: int | None,
-    previous_microstep: int | None,
+    current: ClockReading,
+    previous: ClockReading | None,
 ) -> dict[str, object]:
     return {
         "sequence": sequence,
         "kind": kind.value,
-        "segment": segment,
-        "tick": tick,
-        "microstep": microstep,
-        "previous_segment": previous_segment,
-        "previous_tick": previous_tick,
-        "previous_microstep": previous_microstep,
+        "segment": current.segment,
+        "tick": current.tick,
+        "microstep": current.microstep,
+        "previous_segment": previous.segment if previous else None,
+        "previous_tick": previous.tick if previous else None,
+        "previous_microstep": previous.microstep if previous else None,
     }
 
 
@@ -113,12 +109,8 @@ class TimeCoordinator:
                     _transition(
                         sequence=0,
                         kind=ClockTransitionKind.INITIALIZE,
-                        segment=0,
-                        tick=0,
-                        microstep=0,
-                        previous_segment=None,
-                        previous_tick=None,
-                        previous_microstep=None,
+                        current=ClockReading(clock_address, 0, 0),
+                        previous=None,
                     )
                 ],
             }
@@ -158,12 +150,9 @@ class TimeCoordinator:
             raise ValueError("clock advance must change tick or microstep")
         return self._replace_context(
             snapshot,
-            clock_address,
             context,
             kind=ClockTransitionKind.ADVANCE,
-            segment=previous.segment,
-            tick=next_tick,
-            microstep=next_microstep,
+            reading=replace(previous, tick=next_tick, microstep=next_microstep),
             state=ClockLifecycleState.RUNNING,
         )
 
@@ -177,12 +166,9 @@ class TimeCoordinator:
         reading = self.reading(snapshot, clock_address)
         return self._replace_context(
             snapshot,
-            clock_address,
             context,
             kind=ClockTransitionKind.PAUSE,
-            segment=reading.segment,
-            tick=reading.tick,
-            microstep=reading.microstep,
+            reading=reading,
             state=ClockLifecycleState.PAUSED,
         )
 
@@ -193,12 +179,9 @@ class TimeCoordinator:
         reading = self.reading(snapshot, clock_address)
         return self._replace_context(
             snapshot,
-            clock_address,
             context,
             kind=ClockTransitionKind.RESUME,
-            segment=reading.segment,
-            tick=reading.tick,
-            microstep=reading.microstep,
+            reading=reading,
             state=ClockLifecycleState.RUNNING,
         )
 
@@ -217,12 +200,9 @@ class TimeCoordinator:
         reading = self.reading(snapshot, clock_address)
         return self._replace_context(
             snapshot,
-            clock_address,
             context,
             kind=ClockTransitionKind.JUMP,
-            segment=reading.segment + 1,
-            tick=tick,
-            microstep=microstep,
+            reading=replace(reading, segment=reading.segment + 1, tick=tick, microstep=microstep),
             state=ClockLifecycleState(str(context["state"])),
         )
 
@@ -247,12 +227,14 @@ class TimeCoordinator:
         preserve = behavior == "new_segment_preserve_value"
         return self._replace_context(
             snapshot,
-            clock_address,
             context,
             kind=ClockTransitionKind.REPLAY if replay else ClockTransitionKind.RESET,
-            segment=reading.segment + 1,
-            tick=reading.tick if preserve else 0,
-            microstep=reading.microstep if preserve else 0,
+            reading=replace(
+                reading,
+                segment=reading.segment + 1,
+                tick=reading.tick if preserve else 0,
+                microstep=reading.microstep if preserve else 0,
+            ),
             state=ClockLifecycleState.RUNNING,
         )
 
@@ -289,42 +271,35 @@ class TimeCoordinator:
     def _replace_context(
         self,
         snapshot: RuntimeSnapshot,
-        clock_address: str,
         context: dict[str, object],
         *,
         kind: ClockTransitionKind,
-        segment: int,
-        tick: int,
-        microstep: int,
+        reading: ClockReading,
         state: ClockLifecycleState,
     ) -> RuntimeSnapshot:
-        previous = self.reading(snapshot, clock_address)
+        previous = self.reading(snapshot, reading.clock_address)
         sequence = int(context["sequence"]) + 1
         history = [*list(context.get("history", []))]
         history.append(
             _transition(
                 sequence=sequence,
                 kind=kind,
-                segment=segment,
-                tick=tick,
-                microstep=microstep,
-                previous_segment=previous.segment,
-                previous_tick=previous.tick,
-                previous_microstep=previous.microstep,
+                current=reading,
+                previous=previous,
             )
         )
         context.update(
             {
-                "segment": segment,
-                "tick": tick,
-                "microstep": microstep,
+                "segment": reading.segment,
+                "tick": reading.tick,
+                "microstep": reading.microstep,
                 "state": state.value,
                 "sequence": sequence,
                 "history": history,
             }
         )
         contexts = dict(snapshot.time_management_contexts)
-        contexts[clock_address] = context
+        contexts[reading.clock_address] = context
         return snapshot.with_entries(snapshot.entries, time_management_contexts=contexts)
 
 
