@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "8e70642f6c51d026b930771e3f638ff067a556332a73ec1e256c5d2b7d72faab",
+  "content_hash": "36d02857981c15422b430715bdec8819bc64f8fd6370b6a564534a5ea785cd2d",
   "last_change": {
-    "summary": "Carried DSL-143 enterprise identity and deployment-tenancy semantics through satisfiability evidence.",
-    "content_hash": "8e70642f6c51d026b930771e3f638ff067a556332a73ec1e256c5d2b7d72faab"
+    "summary": "Carried enterprise tenancy and typed network namespace sharing through satisfiability evidence.",
+    "content_hash": "36d02857981c15422b430715bdec8819bc64f8fd6370b6a564534a5ea785cd2d"
   }
 }

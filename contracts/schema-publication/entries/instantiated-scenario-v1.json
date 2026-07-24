@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
   "stability": "draft",
-  "content_hash": "d2b5f66606404b2939e8e7f89e687c6378c045f97ede6f7637d85ae330c40dca",
+  "content_hash": "98bd41a187206b00834487489218daea6c81ba3d9c1cbe6af3dd2a74156480e0",
   "last_change": {
-    "summary": "Published instantiated DSL-143 enterprise identity and deployment-tenancy semantics.",
-    "content_hash": "d2b5f66606404b2939e8e7f89e687c6378c045f97ede6f7637d85ae330c40dca"
+    "summary": "Published enterprise tenancy and typed network namespace sharing in instantiated scenarios.",
+    "content_hash": "98bd41a187206b00834487489218daea6c81ba3d9c1cbe6af3dd2a74156480e0"
   }
 }

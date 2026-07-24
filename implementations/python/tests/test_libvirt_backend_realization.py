@@ -78,6 +78,17 @@ def test_node_without_placements_gets_hostname_only_cloud_init():
     assert cloud_init.write_files == ()
 
 
+def test_network_namespace_sharing_is_rejected_instead_of_approximated():
+    node = _node()
+    node.payload["network_namespace_target"] = "provision.node.owner"
+
+    realization = interpret_provisioning_plan(_plan(node))
+
+    assert {diagnostic.code for diagnostic in realization.diagnostics} >= {
+        "libvirt-backend.network-namespace-unsupported"
+    }
+
+
 def test_network_preserves_explicit_false_internal_setting():
     network = _resource(
         "network",

@@ -2,9 +2,9 @@
   "contract_id": "sdl-authoring-input-v1",
   "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
   "stability": "draft",
-  "content_hash": "1839fa97c3636f9740fe4b2ebbfea8826d0fd8c3c876221f526f5433cf2abb69",
+  "content_hash": "5006e507297efea017d29dbbddf5943f6744e2634ce768f5d72a68b7cff3c2e2",
   "last_change": {
-    "summary": "Published DSL-143 enterprise identity and deployment-tenancy authoring semantics.",
-    "content_hash": "1839fa97c3636f9740fe4b2ebbfea8826d0fd8c3c876221f526f5433cf2abb69"
+    "summary": "Published enterprise tenancy and typed network namespace sharing authoring semantics.",
+    "content_hash": "5006e507297efea017d29dbbddf5943f6744e2634ce768f5d72a68b7cff3c2e2"
   }
 }
