@@ -105,6 +105,7 @@ def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
         ScientificCompletenessAssessmentModel,
         ScientificCompletenessTaxonomyModel,
     )
+    from ..validation_profiles import ValidationProfileCatalogModel
 
     return {
         "aces-semantic-invariants-v1": _aces_semantic_invariant_profile_schema_for_bundle(),
@@ -157,6 +158,7 @@ def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
         "sdl-lineage-ledger-v1": SDLLineageLedgerModel.model_json_schema(),
         "scientific-completeness-taxonomy-v1": ScientificCompletenessTaxonomyModel.model_json_schema(),
         "scientific-completeness-assessment-v1": ScientificCompletenessAssessmentModel.model_json_schema(),
+        "validation-profile-catalog-v1": ValidationProfileCatalogModel.model_json_schema(),
         "evaluation-history-event-stream-v1": _event_stream_schema(
             "EvaluationHistoryEventStream",
             EvaluationHistoryEventModel.model_json_schema(),
@@ -258,6 +260,20 @@ def _schema_bundle_template() -> dict[str, dict[str, Any]]:
         inputs=[
             {"contract_id": "scientific-completeness-taxonomy-v1", "instance_path": "#"},
             {"contract_id": "scientific-completeness-assessment-v1", "instance_path": "#"},
+        ],
+    )
+    _add_aces_invariant(
+        bundle["validation-profile-catalog-v1"],
+        "validation-profile-catalog-reference-integrity",
+        "Strength ranks and term ids must be unique, profile identities must "
+        "be unique, required and optional gates must be disjoint, and every "
+        "profile reference must resolve within the catalog.",
+        validator=("aces_contracts.validation_profiles.ValidationProfileCatalogModel"),
+        inputs=[
+            {
+                "contract_id": "validation-profile-catalog-v1",
+                "instance_path": "#",
+            }
         ],
     )
     for contract_id, json_schema in bundle.items():
