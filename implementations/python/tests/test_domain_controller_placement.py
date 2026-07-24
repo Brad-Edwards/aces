@@ -230,17 +230,15 @@ def test_plan_identity_rejects_controller_placement_when_vocabulary_omits_it(mon
         admitted - {_RESOURCE_TYPE},
     )
 
+    operation = ProvisionOp(
+        action=ChangeAction.CREATE,
+        address="provision.domain-controller.domain-0.dc-0-0",
+        resource_type=_RESOURCE_TYPE,
+        payload={},
+    )
+
     with pytest.raises(ValueError, match="resource_type must belong"):
-        ProvisioningPlan(
-            operations=[
-                ProvisionOp(
-                    action=ChangeAction.CREATE,
-                    address="provision.domain-controller.domain-0.dc-0-0",
-                    resource_type=_RESOURCE_TYPE,
-                    payload={},
-                )
-            ]
-        )
+        ProvisioningPlan(operations=[operation])
 
 
 def test_topology_admission_rejects_unknown_binding_field_and_missing_account_edges() -> None:
