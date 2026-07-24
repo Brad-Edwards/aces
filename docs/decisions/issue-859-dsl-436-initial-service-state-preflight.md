@@ -1,5 +1,7 @@
 # Issue 859 / DSL-436 Initial Service State Preflight
 
+Status: architecture guardrails
+
 Date: 2026-07-24
 
 This note records architecture guardrails only. It does not implement the
@@ -61,10 +63,15 @@ payload structure stays in `content`; corpus bytes stay in content or an
 associated artifact. Product exports and runtime inventory remain observed
 state.
 
-### Evidence-gate standardized profiles
+### Separate standard vocabulary from backend claims
 
-Do not add speculative standard profiles. For every profile admitted to the
-controlled vocabulary, the same change must provide:
+ACES can define a closed provider-neutral profile before a concrete backend
+implements it. That profile is the interoperability target and must be
+specific enough for independent backend implementations to make the same
+observable promise. Vocabulary support is not backend support.
+
+For every profile a backend manifest claims, that backend's conformance record
+must provide:
 
 1. an operational adapter reached through the production
    compile/plan/validate/apply path;
@@ -76,7 +83,8 @@ controlled vocabulary, the same change must provide:
 6. negative conformance cases proving unsupported, stale, echoed, partial,
    cross-tenant, and mismatched results fail.
 
-A fake adapter can test orchestration but cannot be the acceptance proof. A
+A fake adapter can test orchestration but cannot prove a backend capability
+claim. A
 backend manifest flag, realization envelope, successful API status, planned
 payload echo, or native id is not evidence that materialization occurred.
 
@@ -248,10 +256,12 @@ The seam is the versioned tuple:
 
 Each profile supplies a closed requirement model, capability predicate,
 materializer, readback mapper, required observation strength, and conformance
-cases behind the existing content-placement and backend protocol. A second
-service implementation of the same profile changes the adapter and apparatus
-evidence, not SDL identity. A genuinely different portable operation adds a new
-evidence-backed profile without changing unrelated content kinds.
+cases behind the existing content-placement and backend protocol. ACES owns the
+requirement model, capability predicate, compiler/runtime control contract, and
+portable observation contract. Each backend owns its materializer and readback
+mapper. A second service implementation of the same profile changes the adapter
+and apparatus evidence, not SDL identity. A genuinely different portable
+operation adds a new profile without changing unrelated content kinds.
 
 Replica selection and fan-out are not implicit. A future replica-aware profile
 must add a stable instance-selection and consistency policy; it may not use
@@ -281,8 +291,8 @@ native ids, discovery/list order, first success, or provider defaults.
 - Do not create duplicate schemas, validators, resolvers, exception
   hierarchies, stores, lifecycle engines, predicate languages, evidence
   formats, run-provenance roots, or CI workflows.
-- Do not standardize a profile with only unit tests, a fake backend, or
-  self-skipping integration evidence.
+- Do not let a backend claim a standardized profile with only unit tests, a
+  fake backend, or self-skipping integration evidence.
 - Do not implement owning logic under compatibility-only
   `implementations/python/src/aces/`, hand-edit generated output alone, omit
   schema publication records, or update only one document phase.
@@ -298,8 +308,13 @@ native ids, discovery/list order, first success, or provider defaults.
 - No claim that authored initial state proves native creation time, past user
   activity, audit provenance, participant exposure, adapter correctness,
   successful reset, or backend equivalence.
-- No standard interface profile without an operational adapter and
-  participant-equivalent readback proof in the same supported surface.
+- No backend capability claim or scenario admission without an operational
+  adapter, ACES control-path conformance, and participant-equivalent readback
+  proof for that backend.
+- No requirement that a delivery backend reproduce the golden range's
+  provider, adapter, topology, bootstrap mechanism, or native identifiers.
+  Equivalence is assessed against the portable contract and declared
+  participant-visible assertions/evidence.
 - Event-history semantics remain a separate future contract, justified only
   when an authoritative replayable event sequence—not initial service
   state—is the requirement.

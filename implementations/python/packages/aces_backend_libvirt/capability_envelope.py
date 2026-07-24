@@ -41,6 +41,9 @@ _SWITCH_NODE_TYPE = "switch"
 _CODE_UNSUPPORTED_NODE_TYPE = "libvirt-backend.realization.unsupported-node-type"
 _CODE_UNSUPPORTED_OS_FAMILY = "libvirt-backend.realization.unsupported-os-family"
 _CODE_UNSUPPORTED_CONTENT_TYPE = "libvirt-backend.realization.unsupported-content-type"
+_CODE_UNSUPPORTED_SERVICE_MATERIALIZATION_PROFILE = (
+    "libvirt-backend.realization.unsupported-service-materialization-profile"
+)
 _CODE_UNSUPPORTED_ACCOUNT_FEATURE = "libvirt-backend.realization.unsupported-account-feature"
 _CODE_UNSUPPORTED_DOMAIN_PROFILE = "libvirt-backend.realization.unsupported-domain-profile"
 
@@ -92,6 +95,13 @@ _ENVELOPE_DIMENSIONS: tuple[_EnvelopeDimension, ...] = (
         supported=lambda caps: caps.supported_content_types,
     ),
     _EnvelopeDimension(
+        resource_types=frozenset({CONTENT_PLACEMENT_RESOURCE_TYPE}),
+        code=_CODE_UNSUPPORTED_SERVICE_MATERIALIZATION_PROFILE,
+        noun="service materialization profile",
+        extract=lambda payload: (_service_materialization_profile(payload),),
+        supported=lambda caps: caps.supported_service_materialization_profiles,
+    ),
+    _EnvelopeDimension(
         resource_types=frozenset({ACCOUNT_PLACEMENT_RESOURCE_TYPE}),
         code=_CODE_UNSUPPORTED_ACCOUNT_FEATURE,
         noun="account feature",
@@ -112,6 +122,15 @@ _ENVELOPE_DIMENSIONS: tuple[_EnvelopeDimension, ...] = (
         supported=lambda caps: caps.supported_domain_profiles,
     ),
 )
+
+
+def _service_materialization_profile(payload: Mapping[str, object]) -> str:
+    binding = payload.get("service_materialization")
+    if not isinstance(binding, Mapping):
+        return ""
+    profile = _str(binding.get("interface_profile"))
+    version = _str(binding.get("profile_version"))
+    return f"{profile}-v{version}" if profile and version else ""
 
 
 def _requested_domain_profiles(payload: Mapping[str, object]) -> tuple[str, ...]:

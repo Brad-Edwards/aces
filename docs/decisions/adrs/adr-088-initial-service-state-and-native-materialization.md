@@ -1,5 +1,7 @@
 # ADR-088: Initial Service State and Native Materialization
 
+Issue: #859. Requirement: DSL-436.
+
 ## Status
 
 accepted
@@ -12,10 +14,11 @@ accepted
 
 Classification: FM2
 
-Required artifacts: one concrete gap case, closed profile contracts, an
-operational native materializer and participant-equivalent readback proof for
-each standardized profile, negative admission tests, phase/schema parity,
-reset correlation, and run-provenance evidence.
+Required artifacts: one concrete gap case, closed profile contracts, negative
+admission tests, phase/schema parity, reset correlation, and run-provenance
+contracts. Before a backend claims a standardized profile, that backend also
+requires an operational native materializer, control-path conformance, and
+participant-equivalent readback proof for the claimed profile.
 
 Waivers: none. A schema, manifest declaration, fake adapter, or planned-state
 echo cannot substitute for operational materialization and readback evidence.
@@ -68,13 +71,15 @@ lacking an operational native materializer. This decision rejects that design.
    semantics; it cannot contain vendor names, endpoints, commands, queries,
    table names, SDK types, credentials, environment variables, host paths, or
    native ids.
-5. No interface profile becomes standard until one production execution path
-   proves all of the following together: ownership-safe native
-   materialization, fresh native readback, projection through the declared
-   participant observation boundary, and assertion/evidence satisfaction.
-   Manifest support is necessary for admission but is never proof of
-   execution. A profile without that proof remains absent from the standard
-   vocabulary.
+5. ACES may standardize a provider-neutral interface profile independently of
+   any concrete backend so that scenario authors, validators, compilers, and
+   runtimes share one portable control contract. Standardization does not
+   declare backend support. Before a backend manifest claims the profile, that
+   backend's conformance evidence must prove ownership-safe native
+   materialization, control through the ACES runtime path, fresh native
+   readback, projection through the declared participant observation boundary,
+   and assertion/evidence satisfaction. Manifest support is necessary for
+   scenario admission but is never proof of an execution result.
 6. Compilation extends the existing content-placement path. Service-target
    requirements retain the canonical content identity, exact target service,
    profile/version, typed requirements, dependencies, tenancy/reset ownership,
@@ -108,6 +113,12 @@ lacking an operational native materializer. This decision rejects that design.
     lineage, reference catalogs, fixtures, conformance, examples, and tests
     move together. Schema validity alone is not semantic or operational
     conformance.
+12. Backend and golden-range equivalence is observational, not structural.
+    ACES does not require the delivery backend to reproduce the golden range's
+    provider, product adapter, deployment topology, bootstrap mechanism, or
+    native identifiers. It requires the backend to admit and control the same
+    portable contracts and the realized scenario to satisfy the same declared
+    participant-visible assertions and evidence requirements.
 
 ## Alternatives Considered
 
@@ -129,11 +140,11 @@ Rejected. A manifest describes apparatus support and a snapshot records desired
 or admitted state. Neither is independent evidence that native state exists or
 is participant-visible.
 
-### Standardize several profiles before adapters exist
+### Require a product adapter before defining the portable contract
 
-Rejected. Every standardized profile creates a portability claim. The claim is
-allowed only after an operational adapter and readback path falsifiably support
-it.
+Rejected. It would make ACES vocabulary depend on a favored backend and prevent
+independent backend implementation. The portable profile defines what a
+conformant backend must do; backend support remains a separately tested claim.
 
 ## Consequences
 
@@ -148,8 +159,9 @@ it.
 
 ### Negative
 
-- The first standardized profile cannot ship as schema-only work; it needs a
-  real product adapter, readback projection, and operational evidence.
+- A standardized profile can exist before any backend implements it, so tools
+  must keep vocabulary support, backend capability support, and observed
+  execution evidence visibly distinct.
 - Existing content placement and manifest contracts need a narrow typed
   extension across every published phase.
 - Reset/run evidence must retain correlation without persisting raw product
@@ -160,9 +172,10 @@ it.
 An admitted materialization contract proves authored intent. A manifest proves
 declared support. Only fresh evidence from the operational path can prove the
 observed materialization result, and only the declared participant projection
-can support participant-equivalent readback. None of these establishes product
-history, native creation time, event-log authenticity, or cross-backend
-equivalence.
+can support participant-equivalent readback. Cross-backend equivalence is
+limited to the declared portable contract and observable assertions; it does
+not establish product history, native creation time, event-log authenticity,
+provider identity, or implementation equivalence.
 
 ## Amendments
 

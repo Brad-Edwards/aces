@@ -61,6 +61,10 @@ def _concept_bindings() -> tuple[ConceptBinding, ...]:
         ConceptBinding(scope="capabilities.provisioner.supported_content_types", family="tools-and-artifacts"),
         ConceptBinding(scope="capabilities.provisioner.supported_account_features", family="identities"),
         ConceptBinding(scope="capabilities.provisioner.supported_domain_profiles", family="identities"),
+        ConceptBinding(
+            scope="capabilities.provisioner.supported_service_materialization_profiles",
+            family="tools-and-artifacts",
+        ),
         ConceptBinding(scope="capabilities.orchestrator.supported_sections", family="actions-and-events"),
         ConceptBinding(scope="capabilities.evaluator.supported_sections", family="observables"),
         ConceptBinding(

@@ -18,6 +18,7 @@ class ProvisionerCapabilitiesModel(ContractModel):
     supported_content_types: list[NonEmptyString] = Field(default_factory=list)
     supported_account_features: list[NonEmptyString] = Field(default_factory=list)
     supported_domain_profiles: list[NonEmptyString] = Field(default_factory=list)
+    supported_service_materialization_profiles: list[NonEmptyString] = Field(default_factory=list)
     max_total_nodes: int | None = Field(default=None, gt=0)
     supports_acls: bool = False
     supports_accounts: bool = False
@@ -46,6 +47,10 @@ class ProvisionerCapabilitiesModel(ContractModel):
         _validate_controlled_vocabulary_terms(
             "capabilities.provisioner.supported_domain_profiles",
             self.supported_domain_profiles,
+        )
+        _validate_controlled_vocabulary_terms(
+            "capabilities.provisioner.supported_service_materialization_profiles",
+            self.supported_service_materialization_profiles,
         )
         if self.supports_accounts and not self.supported_account_features:
             raise ValueError("provisioners that support accounts must declare supported_account_features")

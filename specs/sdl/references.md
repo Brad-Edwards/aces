@@ -135,6 +135,12 @@ probe implementations; propositions and assertions carry portable truth.
 | `nodes` | feature/condition/inject/vulnerability refs | `features` / `conditions` / `injects` / `vulnerabilities` |
 | `infrastructure` | node / link / dependency | `nodes` / switch-backed `infrastructure` |
 | `content` | target | `nodes` (VM) |
+| `content` | `service_materialization.target_service_ref` | a named service on the target VM |
+| `content` | `service_materialization.shared_service_relationship_ref` | `relationships` |
+| `content` | `service_materialization.ordering_content_refs[]` | `content` |
+| `content` | `service_materialization.readback_assertion_refs[]` | `assertions` |
+| `content` | `service_materialization.evidence_requirement_refs[]` | `evidence_requirements` |
+| `content` | `service_materialization.observation_boundary_refs[]` | `observation_boundaries` |
 | `generated_artifacts` | consumers[].node | `nodes` |
 | `generated_artifacts` | ordering/refresh dependencies | `generated_artifacts` / `persistent_volumes` (acyclic ordering) |
 | `persistent_volumes` | consumers[].node | `nodes` |
@@ -286,7 +292,13 @@ the source of the row's normative meaning.
 | `events.*.injects[]` | `injects` | semantic validation | fatal dangling or ambiguous | [reference rules](#5-cross-section-reference-edge-catalog) | [section validator](../../implementations/python/packages/aces_sdl/validator/_sections.py) |
 | `scripts.*.events[]` | `events` | semantic validation | fatal dangling or ambiguous | [reference rules](#5-cross-section-reference-edge-catalog) | [section validator](../../implementations/python/packages/aces_sdl/validator/_sections.py) |
 | `stories.*.scripts[]` | `scripts` | semantic validation | fatal dangling or ambiguous | [reference rules](#5-cross-section-reference-edge-catalog) | [section validator](../../implementations/python/packages/aces_sdl/validator/_sections.py) |
-| `content.*.target` | `nodes` | semantic validation | fatal unless target is a vm node | [reference rules](#5-cross-section-reference-edge-catalog) | [content validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py) |
+| `content.*.target` | `nodes` | semantic validation | fatal unless target is a VM node | [initial service state](initial-service-state.md) | [content validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py) |
+| `content.*.service_materialization.target_service_ref` | `derived:node_services` | semantic validation | fatal unless the exact service exists on the content target VM | [initial service state](initial-service-state.md) | [service materialization validator](../../implementations/python/packages/aces_sdl/validator/_service_materialization.py) |
+| `content.*.service_materialization.shared_service_relationship_ref` | `relationships` | semantic validation | fatal unless a matching typed shared-service relationship owns cross-tenant mutable state/reset | [initial service state](initial-service-state.md) | [service materialization validator](../../implementations/python/packages/aces_sdl/validator/_service_materialization.py) |
+| `content.*.service_materialization.ordering_content_refs[]` | `content` | semantic validation and planner ordering | fatal dangling, self, or cyclic dependency | [initial service state](initial-service-state.md) | [content compiler](../../implementations/python/packages/aces_processor/compiler/placement.py) |
+| `content.*.service_materialization.readback_assertion_refs[]` | `assertions` | semantic validation | fatal unless each ref is an observed-state postcondition | [initial service state](initial-service-state.md) | [service materialization validator](../../implementations/python/packages/aces_sdl/validator/_service_materialization.py) |
+| `content.*.service_materialization.evidence_requirement_refs[]` | `evidence_requirements` | semantic validation | fatal unless each ref exists and every readback proposition requires it | [initial service state](initial-service-state.md) | [service materialization validator](../../implementations/python/packages/aces_sdl/validator/_service_materialization.py) |
+| `content.*.service_materialization.observation_boundary_refs[]` | `observation_boundaries` | semantic validation | fatal dangling ref | [initial service state](initial-service-state.md) | [service materialization validator](../../implementations/python/packages/aces_sdl/validator/_service_materialization.py) |
 | `generated_artifacts.*.consumers[].node` | `nodes` | structural model validation | fatal dangling or ambiguous | [stateful resources](stateful-resources.md) | [scenario model](../../implementations/python/packages/aces_sdl/scenario.py) |
 | `generated_artifacts.*.ordering_dependencies[]` | `generated_artifacts,persistent_volumes` | structural model and planner graph validation | fatal dangling, ambiguous, or cyclic | [stateful resources](stateful-resources.md) | [scenario model](../../implementations/python/packages/aces_sdl/scenario.py) |
 | `generated_artifacts.*.refresh_dependencies[]` | `generated_artifacts,persistent_volumes` | structural model validation | fatal dangling or ambiguous | [stateful resources](stateful-resources.md) | [scenario model](../../implementations/python/packages/aces_sdl/scenario.py) |

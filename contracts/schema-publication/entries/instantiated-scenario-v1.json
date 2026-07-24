@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
   "stability": "draft",
-  "content_hash": "98bd41a187206b00834487489218daea6c81ba3d9c1cbe6af3dd2a74156480e0",
+  "content_hash": "863248c84c17ce59303260f6f9f87bd554eac8b122ddd1f32419f4c93c3654c8",
   "last_change": {
-    "summary": "Removed the rejected historical-baseline shape while preserving enterprise and network namespace semantics.",
-    "content_hash": "98bd41a187206b00834487489218daea6c81ba3d9c1cbe6af3dd2a74156480e0"
+    "summary": "Published instantiated service-target content materialization and readback bindings.",
+    "content_hash": "863248c84c17ce59303260f6f9f87bd554eac8b122ddd1f32419f4c93c3654c8"
   }
 }

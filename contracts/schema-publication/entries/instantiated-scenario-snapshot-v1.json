@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-snapshot-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "a390c998e5f7f3274054cf9a4a5bb076845e87a9856308ab18c7e679a5029a9e",
+  "content_hash": "b575a70e1ce4f5ffb2206bdc81834f5a3d6badfe1376fd45c03a6f617e2186e3",
   "last_change": {
-    "summary": "Removed the rejected historical-baseline shape while preserving enterprise and network namespace semantics.",
-    "content_hash": "a390c998e5f7f3274054cf9a4a5bb076845e87a9856308ab18c7e679a5029a9e"
+    "summary": "Published content-owned service materialization and readback bindings in immutable scenario snapshots.",
+    "content_hash": "b575a70e1ce4f5ffb2206bdc81834f5a3d6badfe1376fd45c03a6f617e2186e3"
   }
 }

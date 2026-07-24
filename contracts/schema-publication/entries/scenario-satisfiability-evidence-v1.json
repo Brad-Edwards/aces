@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "36d02857981c15422b430715bdec8819bc64f8fd6370b6a564534a5ea785cd2d",
+  "content_hash": "b9f9c45b3e491deb361715dea5003881303311074f544976726bd0cefe1de9f5",
   "last_change": {
-    "summary": "Removed the rejected historical-baseline shape from satisfiability evidence.",
-    "content_hash": "36d02857981c15422b430715bdec8819bc64f8fd6370b6a564534a5ea785cd2d"
+    "summary": "Carried initial service-state materialization invariants into scenario satisfiability evidence.",
+    "content_hash": "b9f9c45b3e491deb361715dea5003881303311074f544976726bd0cefe1de9f5"
   }
 }
