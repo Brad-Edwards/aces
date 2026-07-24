@@ -3,14 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
 
 from aces_contracts.controlled_vocabularies import validate_controlled_vocabulary_scope_values
 from aces_contracts.manifest_authority import validate_backend_supported_contract_versions
 from aces_contracts.vocabulary import ParticipantFeatureSupportLevel, WorkflowFeature, WorkflowStatePredicateFeature
-
-if TYPE_CHECKING:
-    from .backend_manifest import BackendManifest
 
 PARTICIPANT_RUNTIME_ROLE_SCOPE = "capabilities.participant_runtime.supported_participant_roles"
 PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE = "capabilities.participant_runtime.supported_behavior_features"
@@ -69,12 +65,8 @@ PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS = {
         "shared_state_change": _PARTICIPANT_INTERACTION_CONTRACTS,
     },
 }
-"""Minimum published contract surfaces needed to make API-405 claims checkable.
-
-The table is intentionally conservative. It gives the conformance runner a
-falsifiable floor for standard terms, so a manifest cannot claim ACES participant support
-while omitting the contracts that carry the corresponding runtime evidence.
-"""
+# Conservative published contract floor that makes standard API-405 claims
+# falsifiable in conformance and downstream review.
 
 OBSERVATION_CAPABILITY_REQUIRED_CONTRACTS = frozenset(
     {
@@ -84,6 +76,9 @@ OBSERVATION_CAPABILITY_REQUIRED_CONTRACTS = frozenset(
         "experiment-run-v1",
     }
 )
+
+CLEANUP_CAPABILITY_REQUIRED_CONTRACTS = frozenset({"trial-cleanup-plan-v1", "trial-cleanup-receipt-v1"})
+_CLEANUP_ACTION_KINDS = frozenset({"destroy", "reset", "restore", "compensate", "verify", "custom"})
 
 
 @dataclass(frozen=True)
@@ -433,6 +428,46 @@ class ObservationCapabilities:
 
 
 @dataclass(frozen=True)
+class CleanupCapabilities:
+    """Backend support for portable cleanup intent, receipts, and verification."""
+
+    name: str
+    supported_contract_versions: frozenset[str] = frozenset()
+    supported_action_kinds: frozenset[str] = frozenset()
+    supported_verification_methods: frozenset[str] = frozenset()
+    supports_reusable_state: bool = False
+    supports_residual_state_disclosure: bool = False
+
+    def __post_init__(self) -> None:
+        if not self.name.strip():
+            raise ValueError("CleanupCapabilities.name must be non-empty")
+        _validate_unique_non_empty_strings(
+            "CleanupCapabilities.supported_contract_versions", self.supported_contract_versions
+        )
+        _validate_unique_non_empty_strings("CleanupCapabilities.supported_action_kinds", self.supported_action_kinds)
+        _validate_unique_non_empty_strings(
+            "CleanupCapabilities.supported_verification_methods", self.supported_verification_methods
+        )
+        if self.supported_contract_versions != CLEANUP_CAPABILITY_REQUIRED_CONTRACTS:
+            raise ValueError(
+                "CleanupCapabilities.supported_contract_versions must contain trial-cleanup-plan-v1 "
+                "and trial-cleanup-receipt-v1"
+            )
+        validate_backend_supported_contract_versions(self.supported_contract_versions)
+        unknown_actions = sorted(self.supported_action_kinds - _CLEANUP_ACTION_KINDS)
+        if unknown_actions:
+            raise ValueError(
+                f"CleanupCapabilities.supported_action_kinds contains unknown values: {', '.join(unknown_actions)}"
+            )
+        if not self.supported_action_kinds:
+            raise ValueError("CleanupCapabilities.supported_action_kinds must not be empty")
+        if not self.supported_verification_methods:
+            raise ValueError("CleanupCapabilities.supported_verification_methods must not be empty")
+        if self.supports_reusable_state and not self.supports_residual_state_disclosure:
+            raise ValueError("CleanupCapabilities reusable-state support requires residual-state disclosure")
+
+
+@dataclass(frozen=True)
 class BackendCapabilitySet:
     """Backend-specific nested capability blocks."""
 
@@ -441,52 +476,7 @@ class BackendCapabilitySet:
     evaluator: EvaluatorCapabilities | None = None
     participant_runtime: ParticipantRuntimeCapabilities | None = None
     observation: ObservationCapabilities | None = None
-
-
-def participant_runtime_capability_contract_gaps(manifest: BackendManifest) -> tuple[str, ...]:
-    """Return missing contract surfaces for declared standard API-405 claims.
-
-    Governed extension terms remain valid vocabulary values, but ACES cannot
-    know their backend-specific evidence obligations. Standard terms are tied to
-    the published contract families that make the claim falsifiable in
-    conformance and downstream review.
-    """
-
-    participant_runtime = manifest.participant_runtime
-    if participant_runtime is None:
-        return ()
-
-    declared_terms = {
-        PARTICIPANT_RUNTIME_ROLE_SCOPE: participant_runtime.supported_participant_roles,
-        PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE: participant_runtime.supported_behavior_features,
-        PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE: participant_runtime.supported_interaction_features,
-    }
-    gaps: list[str] = []
-    for scope, terms in declared_terms.items():
-        required_by_term = PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[scope]
-        for term in sorted(terms):
-            required_contracts = required_by_term.get(term)
-            if required_contracts is None:
-                continue
-            missing = sorted(required_contracts - manifest.supported_contract_versions)
-            if missing:
-                gaps.append(f"{scope}.{term} missing required contracts: {', '.join(missing)}")
-    return tuple(gaps)
-
-
-def observation_capability_contract_gaps(manifest: BackendManifest) -> tuple[str, ...]:
-    """Return missing contract surfaces for declared EXP-715 observation claims."""
-
-    observation = manifest.observation
-    if observation is None:
-        return ()
-
-    required_contracts = set(observation.supported_evidence_contracts) | set(OBSERVATION_CAPABILITY_REQUIRED_CONTRACTS)
-    missing = sorted(required_contracts - manifest.supported_contract_versions)
-    gaps: list[str] = []
-    if missing:
-        gaps.append(f"capabilities.observation missing required contracts: {', '.join(missing)}")
-    return tuple(gaps)
+    cleanup: CleanupCapabilities | None = None
 
 
 def __getattr__(name: str) -> object:
@@ -496,4 +486,12 @@ def __getattr__(name: str) -> object:
         from . import backend_manifest
 
         return getattr(backend_manifest, name)
+    if name in {
+        "observation_capability_contract_gaps",
+        "participant_runtime_capability_contract_gaps",
+        "require_cleanup_plan_capability",
+    }:
+        from . import capability_admission
+
+        return getattr(capability_admission, name)
     raise AttributeError(name)

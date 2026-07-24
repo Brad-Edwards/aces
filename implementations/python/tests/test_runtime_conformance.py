@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -814,7 +815,7 @@ def test_target_conformance_fails_when_declared_contracts_do_not_cover_profile_r
         realization_support=reference_manifest.realization_support,
         concept_bindings=reference_manifest.concept_bindings,
         constraints=reference_manifest.constraints,
-        capabilities=reference_manifest.capabilities,
+        capabilities=replace(reference_manifest.capabilities, cleanup=None),
     )
     components = create_stub_components(manifest=manifest)
     target = RuntimeTarget(

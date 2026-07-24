@@ -37,7 +37,9 @@
           "experiment-capture-spec-v1",
           "experiment-evidence-record-v1",
           "experiment-derived-measure-v1",
-          "experiment-run-v1"
+          "experiment-run-v1",
+          "trial-cleanup-plan-v1",
+          "trial-cleanup-receipt-v1"
         ],
         "type": "string"
       },

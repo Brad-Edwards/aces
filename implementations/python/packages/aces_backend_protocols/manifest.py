@@ -10,6 +10,7 @@ from aces_contracts.contracts import (
     BackendCapabilitiesV2Model,
     BackendCompatibilityModel,
     BackendManifestV2Model,
+    CleanupCapabilitiesModel,
     ConceptBindingEntryModel,
     EvaluatorCapabilitiesModel,
     ObservationCapabilitiesModel,
@@ -25,6 +26,7 @@ from .capabilities import (
     BackendCapabilitySet,
     BackendCompatibility,
     BackendManifest,
+    CleanupCapabilities,
     EvaluatorCapabilities,
     ObservationCapabilities,
     OrchestratorCapabilities,
@@ -177,6 +179,18 @@ def backend_manifest_v2_model(manifest: BackendManifest) -> BackendManifestV2Mod
                 if manifest.observation is not None
                 else None
             ),
+            "cleanup": (
+                CleanupCapabilitiesModel(
+                    name=manifest.cleanup.name,
+                    supported_contract_versions=sorted(manifest.cleanup.supported_contract_versions),
+                    supported_action_kinds=sorted(manifest.cleanup.supported_action_kinds),
+                    supported_verification_methods=sorted(manifest.cleanup.supported_verification_methods),
+                    supports_reusable_state=manifest.cleanup.supports_reusable_state,
+                    supports_residual_state_disclosure=manifest.cleanup.supports_residual_state_disclosure,
+                ).model_dump(mode="json")
+                if manifest.cleanup is not None
+                else None
+            ),
         },
     )
 
@@ -292,6 +306,19 @@ def _observation_from_model(model: ObservationCapabilitiesModel | None) -> Obser
     )
 
 
+def _cleanup_from_model(model: CleanupCapabilitiesModel | None) -> CleanupCapabilities | None:
+    if model is None:
+        return None
+    return CleanupCapabilities(
+        name=model.name,
+        supported_contract_versions=frozenset(model.supported_contract_versions),
+        supported_action_kinds=frozenset(model.supported_action_kinds),
+        supported_verification_methods=frozenset(model.supported_verification_methods),
+        supports_reusable_state=model.supports_reusable_state,
+        supports_residual_state_disclosure=model.supports_residual_state_disclosure,
+    )
+
+
 def _capability_set_from_model(model: BackendCapabilitiesV2Model) -> BackendCapabilitySet:
     return BackendCapabilitySet(
         provisioner=_provisioner_from_model(model.provisioner),
@@ -299,6 +326,7 @@ def _capability_set_from_model(model: BackendCapabilitiesV2Model) -> BackendCapa
         evaluator=_evaluator_from_model(model.evaluator),
         participant_runtime=_participant_runtime_from_model(model.participant_runtime),
         observation=_observation_from_model(model.observation),
+        cleanup=_cleanup_from_model(model.cleanup),
     )
 
 
