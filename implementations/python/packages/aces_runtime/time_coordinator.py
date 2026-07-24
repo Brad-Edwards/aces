@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from enum import Enum
 from fractions import Fraction
 
@@ -178,7 +178,12 @@ class TimeCoordinator:
             snapshot,
             context,
             kind=ClockTransitionKind.ADVANCE,
-            reading=replace(previous, tick=next_tick, microstep=next_microstep),
+            reading=ClockReading(
+                clock_address=previous.clock_address,
+                segment=previous.segment,
+                tick=next_tick,
+                microstep=next_microstep,
+            ),
             state=ClockLifecycleState.RUNNING,
         )
 
@@ -228,7 +233,12 @@ class TimeCoordinator:
             snapshot,
             context,
             kind=ClockTransitionKind.JUMP,
-            reading=replace(reading, segment=reading.segment + 1, tick=tick, microstep=microstep),
+            reading=ClockReading(
+                clock_address=reading.clock_address,
+                segment=reading.segment + 1,
+                tick=tick,
+                microstep=microstep,
+            ),
             state=ClockLifecycleState(context.state),
         )
 
@@ -255,8 +265,8 @@ class TimeCoordinator:
             snapshot,
             context,
             kind=ClockTransitionKind.REPLAY if replay else ClockTransitionKind.RESET,
-            reading=replace(
-                reading,
+            reading=ClockReading(
+                clock_address=reading.clock_address,
                 segment=reading.segment + 1,
                 tick=reading.tick if preserve else 0,
                 microstep=reading.microstep if preserve else 0,
