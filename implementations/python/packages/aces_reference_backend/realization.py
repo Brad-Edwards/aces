@@ -23,7 +23,14 @@ _DOMAIN = "runtime"
 
 NODE_RESOURCE_TYPE = "node"
 NETWORK_RESOURCE_TYPE = "network"
-PLACEMENT_RESOURCE_TYPES = frozenset({"feature-binding", "content-placement", "account-placement"})
+PLACEMENT_RESOURCE_TYPES = frozenset(
+    {
+        "feature-binding",
+        "content-placement",
+        "account-placement",
+        "domain-controller-placement",
+    }
+)
 SUPPORTED_RESOURCE_TYPES = frozenset({NODE_RESOURCE_TYPE, NETWORK_RESOURCE_TYPE}) | PLACEMENT_RESOURCE_TYPES
 
 

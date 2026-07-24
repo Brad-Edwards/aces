@@ -17,6 +17,7 @@ from ..semantics.realization import (
 from .addresses import (
     _account_address,
     _content_address,
+    _domain_controller_address,
     _generated_artifact_address,
     _network_address,
     _node_address,
@@ -54,6 +55,11 @@ def _append_domain_topology_requirements(
         *(
             (_account_address(account_name), binding.domain_name)
             for account_name, binding in domain_analysis.account_bindings.items()
+        ),
+        *(
+            (_domain_controller_address(node_name, binding.domain_name), binding.domain_name)
+            for node_name, binding in domain_analysis.node_bindings.items()
+            if binding.role.value == "controller"
         ),
     ]
     for address, domain_name in domain_carriers:

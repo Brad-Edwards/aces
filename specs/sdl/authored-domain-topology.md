@@ -94,9 +94,26 @@ Each participating node and domain-bound account compiles to a
 - the node role (`controller` or `member`); and
 - canonical, ordered controller addresses.
 
-Member node resources MUST order after all selected controller resources.
-Account placements MUST order after their target node. The same normalized
-binding MUST appear on an account placement and its target node.
+These bindings are normalized topology context and exact readback carriers.
+They are not, by themselves, an instruction to bootstrap a controller.
+
+Each `domain_controller_for` node/domain fact MUST additionally compile to one
+`domain-controller-placement` provisioning resource. The placement MUST target
+that controller node and carry the same `DomainTopologyBinding`; it MUST NOT
+copy the domain into a second payload shape. The placement is the portable
+instruction to establish the controller role and MUST order after its target
+node.
+
+Member node resources MUST order after the selected controllers' placement
+resources. Every account placement bound to the domain, including the logical
+authority account, MUST order after the domain's controller placements as well
+as its own target node. This preserves bootstrap order without making the
+controller placement depend on an account that cannot exist until the domain
+is established. Reverse deletion therefore removes domain accounts and members
+before their controller placement and node.
+
+The same normalized binding MUST appear on a placement and its target
+controller node, and on a domain-bound account placement and its target node.
 
 Provisioners declare supported profiles through
 `capabilities.provisioner.supported_domain_profiles`. Generic account or SPN
@@ -106,10 +123,10 @@ operations, and admitted snapshot entries before invoking a backend.
 
 ## 7. Realization and evidence
 
-Every topology carrier is an exact `domain-topology` realization requirement
-under SEM-218. A returned snapshot MUST preserve the whole normalized binding.
-Omission or a different binding is silent approximation and MUST be rejected as
-a backend-contract error.
+Every topology carrier, including `domain-controller-placement`, is an exact
+`domain-topology` realization requirement under SEM-218. A returned snapshot
+MUST preserve the whole normalized binding. Omission or a different binding is
+silent approximation and MUST be rejected as a backend-contract error.
 
 This readback proves carrier fidelity, not successful controller promotion or
 guest domain membership. Those claims require explicit backend or guest

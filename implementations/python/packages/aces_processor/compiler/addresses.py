@@ -48,6 +48,10 @@ def _account_address(name: str) -> str:
     return _address("provision", "account", name)
 
 
+def _domain_controller_address(controller_node_name: str, domain_name: str) -> str:
+    return _address("provision", "domain-controller", domain_name, controller_node_name)
+
+
 def _section_ref_name(ref: str, section: str, declarations: Mapping[str, object]) -> str:
     """Return the declaration key denoted by a bare or section-qualified ref."""
 

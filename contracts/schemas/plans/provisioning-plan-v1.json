@@ -57,6 +57,7 @@
           "enum": [
             "account-placement",
             "content-placement",
+            "domain-controller-placement",
             "feature-binding",
             "generated-artifact",
             "network",
