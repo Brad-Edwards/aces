@@ -15,12 +15,14 @@ from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as distribution_version
 
 from aces_backend_protocols.capabilities import (
+    CLEANUP_CAPABILITY_REQUIRED_CONTRACTS,
     PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE,
     PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS,
     PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE,
     PARTICIPANT_RUNTIME_ROLE_SCOPE,
     BackendCapabilitySet,
     BackendManifest,
+    CleanupCapabilities,
     EvaluatorCapabilities,
     ObservationCapabilities,
     OrchestratorCapabilities,
@@ -204,6 +206,14 @@ def _capabilities() -> BackendCapabilitySet:
             supports_redaction=True,
             supports_loss_disclosure=True,
             supports_chain_of_custody=False,
+        ),
+        cleanup=CleanupCapabilities(
+            name="reference-emulation-cleanup",
+            supported_contract_versions=CLEANUP_CAPABILITY_REQUIRED_CONTRACTS,
+            supported_action_kinds=frozenset({"destroy", "reset", "restore", "compensate", "verify"}),
+            supported_verification_methods=frozenset({"probe", "receipt"}),
+            supports_reusable_state=True,
+            supports_residual_state_disclosure=True,
         ),
     )
 

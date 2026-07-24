@@ -1,5 +1,25 @@
 {
   "capabilities": {
+    "cleanup": {
+      "name": "stub-cleanup",
+      "supported_action_kinds": [
+        "compensate",
+        "destroy",
+        "reset",
+        "restore",
+        "verify"
+      ],
+      "supported_contract_versions": [
+        "trial-cleanup-plan-v1",
+        "trial-cleanup-receipt-v1"
+      ],
+      "supported_verification_methods": [
+        "probe",
+        "receipt"
+      ],
+      "supports_residual_state_disclosure": true,
+      "supports_reusable_state": true
+    },
     "evaluator": {
       "constraints": {},
       "name": "stub-evaluator",
@@ -288,6 +308,8 @@
     "experiment-capture-spec-v1",
     "experiment-evidence-record-v1",
     "experiment-derived-measure-v1",
-    "experiment-run-v1"
+    "experiment-run-v1",
+    "trial-cleanup-plan-v1",
+    "trial-cleanup-receipt-v1"
   ]
 }

@@ -4,7 +4,7 @@ Status: normative design invariant set
 
 Classification: FM2 (semantic graph / constraint)
 
-Requirements: SCE-002, DSL-101, DSL-103, EXP-706, EXP-718, EXP-719,
+Requirements: SCE-002, SCE-006, SCE-007, DSL-101, DSL-103, EXP-706, EXP-718, EXP-719,
 EXP-720, EXP-736, RUN-300, RUN-301
 
 Decisions: ADR-084 and accepted ADR-070
@@ -337,6 +337,11 @@ Any two valid scheduler placements/orders for the same `P` observe identical
 plan entries, run ids, selections, factors, snapshots, and streams. A scheduler
 may control placement, isolation, bounded parallelism, timeouts, cancellation,
 and cleanup only.
+
+Portable cleanup intent, receipts, clean-state claims, retry safety, backend
+capability, and bounded-parallelism proof are defined in
+[cleanup-contracts.md](cleanup-contracts.md). Scheduler policy and worker
+management remain outside these contract semantics.
 
 ### SVR-032 — Archival separation
 

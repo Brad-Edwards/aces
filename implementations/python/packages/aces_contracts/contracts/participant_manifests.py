@@ -59,6 +59,14 @@ class BackendManifestV2Model(ContractModel):
             raise ValueError("realization_envelope requires realization-envelope-v1 support")
         if envelope_contract_declared and self.realization_envelope is None:
             raise ValueError("realization-envelope-v1 support requires realization_envelope identity")
+        cleanup_contracts = {"trial-cleanup-plan-v1", "trial-cleanup-receipt-v1"}
+        declared_cleanup_contracts = cleanup_contracts.intersection(self.supported_contract_versions)
+        if self.capabilities.cleanup is not None and declared_cleanup_contracts != cleanup_contracts:
+            raise ValueError(
+                "cleanup capabilities require both cleanup contract versions in supported_contract_versions"
+            )
+        if declared_cleanup_contracts and self.capabilities.cleanup is None:
+            raise ValueError("cleanup contract support requires capabilities.cleanup")
         scopes = [binding.scope for binding in self.concept_bindings]
         if len(scopes) != len(set(scopes)):
             raise ValueError("concept_bindings must not contain duplicate scopes")
@@ -97,6 +105,15 @@ class BackendManifestV2Model(ContractModel):
                     "then": {
                         "properties": {"realization_envelope": {"not": {"type": "null"}}},
                         "required": ["realization_envelope"],
+                    },
+                },
+                {
+                    "if": {
+                        "properties": {"supported_contract_versions": {"contains": {"const": "trial-cleanup-plan-v1"}}},
+                        "required": ["supported_contract_versions"],
+                    },
+                    "then": {
+                        "properties": {"capabilities": {"required": ["cleanup"]}},
                     },
                 },
             ]

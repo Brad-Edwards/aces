@@ -2,9 +2,9 @@
   "contract_id": "backend-manifest-v2",
   "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
   "stability": "draft",
-  "content_hash": "429c281728dfd291c1d890c3024b29168a014cc0d558e52bafc41ead00026cbf",
+  "content_hash": "79a477ac13650bd20b97f4d4f8a25e2172419a78372ce66694c45702f5b134a2",
   "last_change": {
-    "summary": "Published exact provider-neutral service content materialization profile capabilities.",
-    "content_hash": "429c281728dfd291c1d890c3024b29168a014cc0d558e52bafc41ead00026cbf"
+    "summary": "Published service materialization profiles and typed cleanup capability coherence rules.",
+    "content_hash": "79a477ac13650bd20b97f4d4f8a25e2172419a78372ce66694c45702f5b134a2"
   }
 }
