@@ -133,6 +133,14 @@ phases.
 
 The initial profile lives at `contracts/profiles/semantic/reference-stack-v1.json`.
 
+The `validation-profile-catalog-v1` schema publishes the ASR-511 authority for
+ordered validation strengths, subject kinds, gate kinds, limitation
+categories, and versioned validation profiles. Its single canonical artifact
+lives at
+`contracts/profiles/validation/validation-profile-catalog-v1.json`. Profile
+selection uses the exact profile id/version plus a declared subject kind; the
+catalog does not execute gates or carry per-subject results.
+
 The `scientific-completeness-taxonomy-v1` and
 `scientific-completeness-assessment-v1` schemas keep stable intended-use
 profiles separate from time-varying delivery evidence. Their normative

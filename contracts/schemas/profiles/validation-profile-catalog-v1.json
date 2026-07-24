@@ -1,0 +1,285 @@
+{
+  "$defs": {
+    "ValidationGateKindDefinitionModel": {
+      "additionalProperties": false,
+      "properties": {
+        "definition": {
+          "minLength": 1,
+          "title": "Definition",
+          "type": "string"
+        },
+        "gate_kind": {
+          "pattern": "^(?:[a-z][a-z0-9_]*|x-[a-z][a-z0-9-]*:[a-z][a-z0-9_-]*)$",
+          "title": "Gate Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "gate_kind",
+        "definition"
+      ],
+      "title": "ValidationGateKindDefinitionModel",
+      "type": "object"
+    },
+    "ValidationLimitationCategoryDefinitionModel": {
+      "additionalProperties": false,
+      "properties": {
+        "definition": {
+          "minLength": 1,
+          "title": "Definition",
+          "type": "string"
+        },
+        "limitation_category": {
+          "pattern": "^(?:[a-z][a-z0-9_]*|x-[a-z][a-z0-9-]*:[a-z][a-z0-9_-]*)$",
+          "title": "Limitation Category",
+          "type": "string"
+        }
+      },
+      "required": [
+        "limitation_category",
+        "definition"
+      ],
+      "title": "ValidationLimitationCategoryDefinitionModel",
+      "type": "object"
+    },
+    "ValidationProfileDefinitionModel": {
+      "additionalProperties": false,
+      "properties": {
+        "diagnostic_expectations": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Diagnostic Expectations",
+          "type": "array"
+        },
+        "evidence_expectations": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Expectations",
+          "type": "array"
+        },
+        "extension_terms_allowed": {
+          "default": false,
+          "title": "Extension Terms Allowed",
+          "type": "boolean"
+        },
+        "intended_subject_kinds": {
+          "items": {
+            "pattern": "^(?:[a-z][a-z0-9_]*|x-[a-z][a-z0-9-]*:[a-z][a-z0-9_-]*)$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Intended Subject Kinds",
+          "type": "array"
+        },
+        "limitation_categories": {
+          "items": {
+            "pattern": "^(?:[a-z][a-z0-9_]*|x-[a-z][a-z0-9-]*:[a-z][a-z0-9_-]*)$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Limitation Categories",
+          "type": "array"
+        },
+        "minimum_strength": {
+          "pattern": "^(?:[a-z][a-z0-9_]*|x-[a-z][a-z0-9-]*:[a-z][a-z0-9_-]*)$",
+          "title": "Minimum Strength",
+          "type": "string"
+        },
+        "optional_gate_kinds": {
+          "items": {
+            "pattern": "^(?:[a-z][a-z0-9_]*|x-[a-z][a-z0-9-]*:[a-z][a-z0-9_-]*)$",
+            "type": "string"
+          },
+          "title": "Optional Gate Kinds",
+          "type": "array"
+        },
+        "profile_id": {
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "title": "Profile Id",
+          "type": "string"
+        },
+        "profile_version": {
+          "pattern": "^v[1-9][0-9]*$",
+          "title": "Profile Version",
+          "type": "string"
+        },
+        "required_gate_kinds": {
+          "items": {
+            "pattern": "^(?:[a-z][a-z0-9_]*|x-[a-z][a-z0-9-]*:[a-z][a-z0-9_-]*)$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Required Gate Kinds",
+          "type": "array"
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "profile_id",
+        "profile_version",
+        "title",
+        "intended_subject_kinds",
+        "minimum_strength",
+        "required_gate_kinds",
+        "evidence_expectations",
+        "diagnostic_expectations",
+        "limitation_categories"
+      ],
+      "title": "ValidationProfileDefinitionModel",
+      "type": "object"
+    },
+    "ValidationStrengthDefinitionModel": {
+      "additionalProperties": false,
+      "properties": {
+        "definition": {
+          "minLength": 1,
+          "title": "Definition",
+          "type": "string"
+        },
+        "rank": {
+          "minimum": 1,
+          "title": "Rank",
+          "type": "integer"
+        },
+        "strength_id": {
+          "pattern": "^(?:[a-z][a-z0-9_]*|x-[a-z][a-z0-9-]*:[a-z][a-z0-9_-]*)$",
+          "title": "Strength Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "strength_id",
+        "rank",
+        "definition"
+      ],
+      "title": "ValidationStrengthDefinitionModel",
+      "type": "object"
+    },
+    "ValidationSubjectKindDefinitionModel": {
+      "additionalProperties": false,
+      "properties": {
+        "definition": {
+          "minLength": 1,
+          "title": "Definition",
+          "type": "string"
+        },
+        "subject_kind": {
+          "pattern": "^(?:[a-z][a-z0-9_]*|x-[a-z][a-z0-9-]*:[a-z][a-z0-9_-]*)$",
+          "title": "Subject Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "subject_kind",
+        "definition"
+      ],
+      "title": "ValidationSubjectKindDefinitionModel",
+      "type": "object"
+    }
+  },
+  "$id": "https://aces.dev/schemas/validation-profile-catalog-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "catalog_version": {
+      "pattern": "^v[1-9][0-9]*$",
+      "title": "Catalog Version",
+      "type": "string"
+    },
+    "gate_kinds": {
+      "items": {
+        "$ref": "#/$defs/ValidationGateKindDefinitionModel"
+      },
+      "minItems": 1,
+      "title": "Gate Kinds",
+      "type": "array"
+    },
+    "limitation_categories": {
+      "items": {
+        "$ref": "#/$defs/ValidationLimitationCategoryDefinitionModel"
+      },
+      "minItems": 1,
+      "title": "Limitation Categories",
+      "type": "array"
+    },
+    "profile_family": {
+      "const": "aces-validation",
+      "default": "aces-validation",
+      "title": "Profile Family",
+      "type": "string"
+    },
+    "profiles": {
+      "items": {
+        "$ref": "#/$defs/ValidationProfileDefinitionModel"
+      },
+      "minItems": 1,
+      "title": "Profiles",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "validation-profile-catalog/v1",
+      "default": "validation-profile-catalog/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "strengths": {
+      "items": {
+        "$ref": "#/$defs/ValidationStrengthDefinitionModel"
+      },
+      "minItems": 1,
+      "title": "Strengths",
+      "type": "array"
+    },
+    "subject_kinds": {
+      "items": {
+        "$ref": "#/$defs/ValidationSubjectKindDefinitionModel"
+      },
+      "minItems": 1,
+      "title": "Subject Kinds",
+      "type": "array"
+    }
+  },
+  "required": [
+    "catalog_version",
+    "strengths",
+    "subject_kinds",
+    "gate_kinds",
+    "limitation_categories",
+    "profiles"
+  ],
+  "title": "ValidationProfileCatalogModel",
+  "type": "object",
+  "x-aces-invariants": [
+    {
+      "description": "Strength ranks and term ids must be unique, profile identities must be unique, required and optional gates must be disjoint, and every profile reference must resolve within the catalog.",
+      "id": "validation-profile-catalog-reference-integrity",
+      "inputs": [
+        {
+          "contract_id": "validation-profile-catalog-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_contracts.validation_profiles.ValidationProfileCatalogModel"
+    }
+  ],
+  "x-aces-semantic-profile": {
+    "contract_id": "validation-profile-catalog-v1",
+    "entry_schema_contract_id": "aces-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
+    "id": "aces-semantic-invariants-v1",
+    "keyword": "x-aces-invariants",
+    "required": true,
+    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+  }
+}

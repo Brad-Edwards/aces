@@ -1,0 +1,380 @@
+{
+  "schema_version": "validation-profile-catalog/v1",
+  "profile_family": "aces-validation",
+  "catalog_version": "v1",
+  "strengths": [
+    {
+      "strength_id": "structural",
+      "rank": 1,
+      "definition": "Syntax, schema, closed-world shape, type, and governed vocabulary checks."
+    },
+    {
+      "strength_id": "semantic",
+      "rank": 2,
+      "definition": "Structural validation plus ACES domain invariants, reference resolution, lifecycle separation, and cross-artifact consistency."
+    },
+    {
+      "strength_id": "behavioral",
+      "rank": 3,
+      "definition": "Semantic validation plus a concrete processor, backend, conformance, runtime, or admission path that exercised the relevant behavior."
+    },
+    {
+      "strength_id": "evidence_backed",
+      "rank": 4,
+      "definition": "Semantic or behavioral validation backed by preserved evidence, provenance, diagnostics, and limitations sufficient for review."
+    },
+    {
+      "strength_id": "falsification_backed",
+      "rank": 5,
+      "definition": "Evidence-backed validation with an explicit falsification protocol and governed evidence status."
+    }
+  ],
+  "subject_kinds": [
+    {
+      "subject_kind": "scenario",
+      "definition": "An authored SDL scenario."
+    },
+    {
+      "subject_kind": "scenario_snapshot",
+      "definition": "A canonical instantiated scenario snapshot."
+    },
+    {
+      "subject_kind": "experiment_task",
+      "definition": "An experiment task protocol and its declared support."
+    },
+    {
+      "subject_kind": "experiment_run",
+      "definition": "An archival experiment run and its provenance."
+    },
+    {
+      "subject_kind": "experiment_study",
+      "definition": "An experiment study, allocation, and analysis plan."
+    },
+    {
+      "subject_kind": "backend_conformance_claim",
+      "definition": "A governed claim about backend conformance."
+    },
+    {
+      "subject_kind": "participant_conformance_claim",
+      "definition": "A governed claim about participant conformance."
+    },
+    {
+      "subject_kind": "published_claim",
+      "definition": "A published claim or report artifact."
+    }
+  ],
+  "gate_kinds": [
+    {
+      "gate_kind": "syntax_validation",
+      "definition": "The subject parses under its declared syntax."
+    },
+    {
+      "gate_kind": "schema_validation",
+      "definition": "The subject conforms to its published closed schema."
+    },
+    {
+      "gate_kind": "vocabulary_validation",
+      "definition": "Portable terms resolve against their governed vocabularies."
+    },
+    {
+      "gate_kind": "semantic_invariant_validation",
+      "definition": "ACES domain invariants have been evaluated."
+    },
+    {
+      "gate_kind": "reference_resolution",
+      "definition": "Required references resolve within their governed authority."
+    },
+    {
+      "gate_kind": "lifecycle_separation",
+      "definition": "Authored, planned, realized, observed, and derived facts remain separated."
+    },
+    {
+      "gate_kind": "cross_artifact_consistency",
+      "definition": "Related artifacts satisfy their declared join and consistency rules."
+    },
+    {
+      "gate_kind": "behavioral_execution",
+      "definition": "A concrete processor, backend, runtime, conformance, or admission path exercised the relevant behavior."
+    },
+    {
+      "gate_kind": "governed_diagnostics",
+      "definition": "The exercised path returned bounded governed diagnostics."
+    },
+    {
+      "gate_kind": "evidence_preservation",
+      "definition": "Reviewable evidence or artifact references are preserved."
+    },
+    {
+      "gate_kind": "provenance_validation",
+      "definition": "Evidence and results retain their governed provenance chain."
+    },
+    {
+      "gate_kind": "limitation_disclosure",
+      "definition": "Coverage limits, redactions, omissions, and unsupported behavior are explicit."
+    },
+    {
+      "gate_kind": "falsification_protocol",
+      "definition": "An explicit falsification protocol is bound to the claim."
+    },
+    {
+      "gate_kind": "evidence_status",
+      "definition": "The falsification evidence carries a governed ADR-021 evidence status."
+    }
+  ],
+  "limitation_categories": [
+    {
+      "limitation_category": "structural_only",
+      "definition": "No semantic or behavioral claim follows from this basis."
+    },
+    {
+      "limitation_category": "semantic_only",
+      "definition": "No concrete behavioral path was exercised."
+    },
+    {
+      "limitation_category": "bounded_coverage",
+      "definition": "The basis covers only a declared subset of the subject or behavior."
+    },
+    {
+      "limitation_category": "environment_specific",
+      "definition": "The result depends on a declared implementation or environment."
+    },
+    {
+      "limitation_category": "evidence_unavailable",
+      "definition": "Expected evidence is unavailable to the audience."
+    },
+    {
+      "limitation_category": "evidence_withheld",
+      "definition": "Evidence exists but is intentionally withheld."
+    },
+    {
+      "limitation_category": "evidence_redacted",
+      "definition": "Evidence has been redacted for the receiving audience."
+    },
+    {
+      "limitation_category": "partial_evidence",
+      "definition": "Only part of the expected evidence chain is available."
+    },
+    {
+      "limitation_category": "unsupported_capability",
+      "definition": "A relevant capability is unsupported by the exercised path."
+    },
+    {
+      "limitation_category": "audience_restricted",
+      "definition": "The exposed basis is weaker than an internal view because of audience restrictions."
+    }
+  ],
+  "profiles": [
+    {
+      "profile_id": "aces-structural-validation",
+      "profile_version": "v1",
+      "title": "ACES structural validation",
+      "intended_subject_kinds": [
+        "scenario",
+        "scenario_snapshot",
+        "experiment_task",
+        "experiment_run",
+        "experiment_study",
+        "backend_conformance_claim",
+        "participant_conformance_claim",
+        "published_claim"
+      ],
+      "minimum_strength": "structural",
+      "required_gate_kinds": [
+        "syntax_validation",
+        "schema_validation",
+        "vocabulary_validation"
+      ],
+      "optional_gate_kinds": [],
+      "evidence_expectations": [
+        "Identify the published schema or parser version used."
+      ],
+      "diagnostic_expectations": [
+        "Report bounded contract paths and governed diagnostic codes."
+      ],
+      "limitation_categories": [
+        "structural_only",
+        "bounded_coverage"
+      ],
+      "extension_terms_allowed": false
+    },
+    {
+      "profile_id": "aces-semantic-validation",
+      "profile_version": "v1",
+      "title": "ACES semantic validation",
+      "intended_subject_kinds": [
+        "scenario",
+        "scenario_snapshot",
+        "experiment_task",
+        "experiment_run",
+        "experiment_study",
+        "backend_conformance_claim",
+        "participant_conformance_claim",
+        "published_claim"
+      ],
+      "minimum_strength": "semantic",
+      "required_gate_kinds": [
+        "syntax_validation",
+        "schema_validation",
+        "vocabulary_validation",
+        "semantic_invariant_validation",
+        "reference_resolution",
+        "lifecycle_separation",
+        "cross_artifact_consistency"
+      ],
+      "optional_gate_kinds": [],
+      "evidence_expectations": [
+        "Identify the semantic validator and the governed authority revisions used."
+      ],
+      "diagnostic_expectations": [
+        "Report failed invariant and reference identifiers without rejected payload bodies."
+      ],
+      "limitation_categories": [
+        "semantic_only",
+        "bounded_coverage"
+      ],
+      "extension_terms_allowed": false
+    },
+    {
+      "profile_id": "aces-behavioral-validation",
+      "profile_version": "v1",
+      "title": "ACES behavioral validation",
+      "intended_subject_kinds": [
+        "scenario",
+        "scenario_snapshot",
+        "experiment_task",
+        "experiment_run",
+        "backend_conformance_claim",
+        "participant_conformance_claim"
+      ],
+      "minimum_strength": "behavioral",
+      "required_gate_kinds": [
+        "syntax_validation",
+        "schema_validation",
+        "vocabulary_validation",
+        "semantic_invariant_validation",
+        "reference_resolution",
+        "lifecycle_separation",
+        "cross_artifact_consistency",
+        "behavioral_execution",
+        "governed_diagnostics"
+      ],
+      "optional_gate_kinds": [
+        "evidence_preservation",
+        "provenance_validation",
+        "limitation_disclosure"
+      ],
+      "evidence_expectations": [
+        "Identify the concrete processor, backend, runtime, conformance, or admission path exercised."
+      ],
+      "diagnostic_expectations": [
+        "Preserve the governed diagnostics returned by the exercised path."
+      ],
+      "limitation_categories": [
+        "bounded_coverage",
+        "environment_specific",
+        "unsupported_capability"
+      ],
+      "extension_terms_allowed": false
+    },
+    {
+      "profile_id": "aces-evidence-backed-validation",
+      "profile_version": "v1",
+      "title": "ACES evidence-backed validation",
+      "intended_subject_kinds": [
+        "scenario",
+        "scenario_snapshot",
+        "experiment_task",
+        "experiment_run",
+        "experiment_study",
+        "backend_conformance_claim",
+        "participant_conformance_claim",
+        "published_claim"
+      ],
+      "minimum_strength": "evidence_backed",
+      "required_gate_kinds": [
+        "syntax_validation",
+        "schema_validation",
+        "vocabulary_validation",
+        "semantic_invariant_validation",
+        "reference_resolution",
+        "evidence_preservation",
+        "provenance_validation",
+        "limitation_disclosure"
+      ],
+      "optional_gate_kinds": [
+        "lifecycle_separation",
+        "cross_artifact_consistency",
+        "behavioral_execution",
+        "governed_diagnostics"
+      ],
+      "evidence_expectations": [
+        "Preserve reviewable evidence, provenance, diagnostics, and limitations for the declared basis."
+      ],
+      "diagnostic_expectations": [
+        "Expose governed diagnostic or artifact references appropriate to the audience."
+      ],
+      "limitation_categories": [
+        "bounded_coverage",
+        "environment_specific",
+        "evidence_unavailable",
+        "evidence_withheld",
+        "evidence_redacted",
+        "partial_evidence",
+        "unsupported_capability",
+        "audience_restricted"
+      ],
+      "extension_terms_allowed": false
+    },
+    {
+      "profile_id": "aces-falsification-backed-validation",
+      "profile_version": "v1",
+      "title": "ACES falsification-backed validation",
+      "intended_subject_kinds": [
+        "scenario",
+        "scenario_snapshot",
+        "experiment_task",
+        "experiment_run",
+        "experiment_study",
+        "backend_conformance_claim",
+        "participant_conformance_claim",
+        "published_claim"
+      ],
+      "minimum_strength": "falsification_backed",
+      "required_gate_kinds": [
+        "syntax_validation",
+        "schema_validation",
+        "vocabulary_validation",
+        "semantic_invariant_validation",
+        "reference_resolution",
+        "evidence_preservation",
+        "provenance_validation",
+        "limitation_disclosure",
+        "falsification_protocol",
+        "evidence_status"
+      ],
+      "optional_gate_kinds": [
+        "lifecycle_separation",
+        "cross_artifact_consistency",
+        "behavioral_execution",
+        "governed_diagnostics"
+      ],
+      "evidence_expectations": [
+        "Bind the claim to an explicit falsification protocol, reviewable evidence, provenance, and ADR-021 evidence status."
+      ],
+      "diagnostic_expectations": [
+        "Expose governed falsification outcomes and bounded evidence references."
+      ],
+      "limitation_categories": [
+        "bounded_coverage",
+        "environment_specific",
+        "evidence_unavailable",
+        "evidence_withheld",
+        "evidence_redacted",
+        "partial_evidence",
+        "unsupported_capability",
+        "audience_restricted"
+      ],
+      "extension_terms_allowed": false
+    }
+  ]
+}
