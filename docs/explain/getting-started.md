@@ -125,9 +125,6 @@ intended-use scope and inspect current RAES delivery blockers. Use
 or range-readiness claims. These tools do not execute participant actions or
 start a live range.
 
-The legacy `aces`, `aces-mcp`, and `aces_*` MCP tool names remain supported as
-compatibility aliases; new workflows should use the RAES names above.
-
 When an agent is authoring SDL, use the language-service tools before and
 after text changes:
 

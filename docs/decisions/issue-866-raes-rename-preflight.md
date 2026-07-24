@@ -5,14 +5,14 @@ Date: 2026-07-24
 Issue: #866. Requirement: GOV-866, `ae359130-4cf5-4043-9a2e-58e6ada0c47c`.
 
 This note records architecture preflight guardrails for renaming the project to
-Reproducible Agentic Environments System (RAES). It is guidance for the later
-implementation and does not rename packages, schemas, fixtures, generated
-artifacts, commands, or user-facing prose.
+Reproducible Agentic Environments System (RAES). The initial pass classified
+rename surfaces; the implementation follows the July 24, 2026 hard-cutover
+clarification for public command, MCP, distribution, and guidance surfaces.
 
 ## Binding Sources
 
 - ADR-087 records the RAES rename decision, workshop context, project
-  provenance, and compatibility boundary.
+  provenance, and hard-cutover boundary.
 - ADR-009, ADR-019, and `specs/authority/authority-boundary.yaml` define
   normative authority roots. Rename source-of-truth files first; regenerate or
   verify derived outputs afterward.
@@ -35,8 +35,8 @@ artifacts, commands, or user-facing prose.
 - Treat the rename as a classified migration. Every ACES-bearing occurrence
   must be classified as current prose, source API, distribution metadata,
   CLI/MCP surface, contract/profile id, fixture data, generated artifact,
-  compatibility alias, historical record, or external reference before it is
-  changed or intentionally left alone.
+  removed legacy public alias, historical record, or external reference before
+  it is changed or intentionally left alone.
 - Keep project identity separate from SDL semantics. RAES names the ecosystem;
   SDL remains the scenario description language unless a separate language
   decision changes that term.
@@ -44,26 +44,25 @@ artifacts, commands, or user-facing prose.
   import rename, CLI rename, MCP tool rename, schema `$id`, profile id, wire
   discriminator, and artifact envelope id are different surfaces with different
   compatibility rules.
-- Leave compatibility at the owning boundary. `aces.*` compatibility imports
-  stay in `implementations/python/src/aces/`; owning packages must not start
-  importing from that tree. CLI aliases belong in `aces_cli`, MCP aliases in
-  `aces_mcp`, contract readers in `aces_contracts`, and SDL source migration in
-  `aces_sdl`.
+- Leave retained identifiers at the owning boundary. `aces.*` compatibility
+  imports stay in `implementations/python/src/aces/`; owning packages must not
+  start importing from that tree. Public CLI and MCP aliases are removed by the
+  hard cutover. Contract readers remain in `aces_contracts`, and SDL source
+  migration remains in `aces_sdl`.
 - Prefer source-of-truth edits and regeneration. Published schemas remain
   hand-governed under `contracts/schemas/`; generated-schema parity must be
   restored through `schema_bundle()` and `tools/check_generated_schemas.py`.
   Sphinx output, package metadata, corpus packaging, and release artifacts
   must be produced by their existing tooling rather than hand-edited.
-- Document every retained old name. The downstream migration note should map
-  old ACES names to RAES names by surface and state each alias's status:
-  supported, deprecated, removed, historical, or external.
+- Document every retained or removed old name. The downstream migration note
+  should map old ACES names to RAES names by surface and state each surface as
+  migrated, removed, retained source/contract identity, historical, or external.
 - Treat machine-readable guidance fields as public contracts, not prose.
   In `specs/agent-guidance/agent-guidance.yaml`, classify the `profile` id,
   `recommended_workflow` tool ids, and `source_refs` path values separately.
-  A changed canonical guidance id must update its existing structural checker
-  and consumer; an unchanged legacy tool or path must be recorded as an alias,
-  historical reference, or external dependency. Do not silently transform
-  guidance values at runtime.
+  The hard cutover changes the canonical guidance id to `raes-agent-guidance`
+  and updates its existing structural checker and consumer. Do not silently
+  transform guidance values at runtime.
 - Do not add a central rename registry, runtime lookup service, persistence
   table, endpoint, or exception hierarchy. The extension point is a
   surface-class migration mapping in docs plus the owning surface's existing
@@ -97,7 +96,7 @@ artifacts, commands, or user-facing prose.
 - Machine-readable agent guidance:
   `specs/agent-guidance/agent-guidance.yaml`,
   `tools/check_agent_guidance.py`, `aces_sdl.agent_guidance`, and the MCP
-  `aces_agent_guidance` / `aces_tool_surface` registrations. Retain the
+  `raes_agent_guidance` / `raes_tool_surface` registrations. Retain the
   existing YAML-shape gate and structured response rather than adding a second
   guidance schema or an identity-translation layer.
 - CLI, MCP, and user-facing adapters:
@@ -135,12 +134,12 @@ artifacts, commands, or user-facing prose.
 - Environment and config shapes: existing workflow/config keys such as
   `ACES_REQUIREMENT_UID`, Ground Control project ids, Sonar project keys,
   console-script names, and MCP server ids are external integration surfaces.
-  Rename them only when their owning integration is updated, and keep explicit
-  compatibility aliases where downstream automation still depends on old names.
+  Rename them only when their owning integration is updated and the current
+  verification graph proves the new surface.
 - OS/process exposure: do not pass tokens, private keys, PR titles, schema
   payloads, or migration mappings through shell interpolation or logged argv.
   Existing workflows use fixed command argv and scoped environment variables;
-  keep that pattern for any new RAES/legacy alias checks.
+  keep that pattern for any new RAES/removal checks.
 - Config/schema parsers: use `json.loads`, `yaml.safe_load` or existing SDL
   loaders, Pydantic/contract models, and repo-relative path checks. Do not
   evaluate metadata, fetch remote `$ref` targets, follow unchecked paths, or
@@ -184,9 +183,8 @@ Avoid:
   `aces.challenge`, `aces-reference-processor`, and
   `aces-semantic-invariants-v1` are different surfaces;
 - treating `aces-agent-guidance`, `aces_tool_surface`,
-  `aces_agent_guidance`, and its `recommended_workflow` entries as prose.
-  Their identifiers and the guidance consumer/checker must evolve together or
-  remain documented compatibility identifiers;
+  `aces_agent_guidance`, and old `recommended_workflow` entries as prose.
+  Their identifiers and the guidance consumer/checker must evolve together;
 - adding new implementation logic under `implementations/python/src/aces/` or
   importing `aces.*` from owning packages;
 - changing published schema ids, `$id` URIs, profile ids, or wire
@@ -196,9 +194,10 @@ Avoid:
   release notes, or version literals;
 - renaming GitHub, SonarCloud, PyPI, docs, or source repository URLs to values
   that do not yet exist externally;
-- removing old CLI commands, MCP tools, import paths, config variables,
-  package names, media types, OCI labels, kernel parameters, or lockfile names
-  before downstream compatibility and removal rules are documented and tested;
+- leaving old public CLI commands or MCP tools in place after the hard cutover;
+- renaming import paths, config variables, media types, OCI labels, kernel
+  parameters, lockfile names, or published contract identifiers without the
+  owning migration evidence;
 - introducing duplicate schema registries, alias tables, validators,
   exception hierarchies, nox sessions, release scripts, or migration services;
 - weakening the request-size, auth, redacted-error, gitleaks, JSON-artifact,
@@ -214,6 +213,6 @@ Avoid:
   endpoint, database table, or cross-package exception hierarchy.
 - Editing `CHANGELOG.md`, release-please version literals, generated docs, or
   build outputs by hand.
-- Removing old ACES identifiers without explicit compatibility, deprecation,
-  migration, and verification evidence.
+- Renaming old ACES source imports, published contract identifiers, historical
+  records, or external integration keys without their owning migration evidence.
 - Rewriting historical records solely to erase the old project name.

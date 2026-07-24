@@ -4,7 +4,7 @@
 # The profile is intentionally static data: MCP tools and docs may expose or
 # explain it, but this YAML is the source of truth for the rule ids.
 
-profile: aces-agent-guidance
+profile: raes-agent-guidance
 version: 1
 
 requirement_refs:

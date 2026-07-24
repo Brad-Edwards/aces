@@ -29,7 +29,6 @@ from aces_mcp.tools.operation_support import (
 def _tool_surface_payload() -> dict[str, object]:
     return {
         "surface": "raes-sdl",
-        "legacy_surfaces": ["aces-sdl"],
         "intent": (
             "Author, parse, validate, inspect, assess, and dry-run RAES scenarios for researchers and range designers."
         ),
@@ -85,7 +84,6 @@ def _tool_surface_payload() -> dict[str, object]:
                 "sdl_compile",
                 "sdl_plan",
                 "raes_reference_manifests",
-                "aces_reference_manifests",
             ],
             "assessment": [
                 "sdl_design_assessment",
@@ -94,8 +92,6 @@ def _tool_surface_payload() -> dict[str, object]:
             "guidance": [
                 "raes_agent_guidance",
                 "raes_intended_use_profiles",
-                "aces_agent_guidance",
-                "aces_intended_use_profiles",
             ],
         },
         "boundaries": [
@@ -145,15 +141,6 @@ def register(mcp: FastMCP) -> None:
         return json_response(_tool_surface_payload())
 
     @mcp.tool(
-        name="aces_tool_surface",
-        description=(
-            "Compatibility alias for raes_tool_surface. Describes the RAES SDL MCP tool surface and safety boundaries."
-        ),
-    )
-    def aces_tool_surface() -> str:
-        return json_response(_tool_surface_payload())
-
-    @mcp.tool(
         name="raes_agent_guidance",
         description=(
             "Return the AUT-811 machine-readable guidance profile for RAES "
@@ -163,17 +150,6 @@ def register(mcp: FastMCP) -> None:
         ),
     )
     def raes_agent_guidance(audience: str = "all") -> str:
-        from aces_sdl.agent_guidance import agent_guidance
-
-        return json_response(agent_guidance(audience=audience))
-
-    @mcp.tool(
-        name="aces_agent_guidance",
-        description=(
-            "Compatibility alias for raes_agent_guidance. Returns the AUT-811 machine-readable RAES guidance profile."
-        ),
-    )
-    def aces_agent_guidance(audience: str = "all") -> str:
         from aces_sdl.agent_guidance import agent_guidance
 
         return json_response(agent_guidance(audience=audience))
@@ -326,16 +302,6 @@ def register(mcp: FastMCP) -> None:
         ),
     )
     def raes_reference_manifests() -> str:
-        return json_response(_reference_manifest_payload())
-
-    @mcp.tool(
-        name="aces_reference_manifests",
-        description=(
-            "Compatibility alias for raes_reference_manifests. Returns JSON "
-            "summaries of the reference RAES processor and backend manifests."
-        ),
-    )
-    def aces_reference_manifests() -> str:
         return json_response(_reference_manifest_payload())
 
     @mcp.tool(

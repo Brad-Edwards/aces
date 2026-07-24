@@ -7,7 +7,7 @@ def test_agent_guidance_exposes_required_categories() -> None:
     payload = agent_guidance()
 
     assert payload["status"] == "ok"
-    assert payload["profile"] == "aces-agent-guidance"
+    assert payload["profile"] == "raes-agent-guidance"
     assert "AUT-811" in payload["requirement_refs"]
     assert set(payload["guidance"]) == {
         "scope_boundaries",

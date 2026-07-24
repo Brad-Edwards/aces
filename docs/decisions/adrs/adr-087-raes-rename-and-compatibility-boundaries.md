@@ -11,7 +11,7 @@ accepted
 ## Classification
 
 Classification: FM2
-Required artifacts: ADR, downstream migration note, compatibility/deprecation records, verification evidence
+Required artifacts: ADR, downstream migration note, removal/migration evidence, verification evidence
 Waivers: none
 
 ## Context
@@ -63,21 +63,25 @@ before it is changed:
 - published contracts, profile ids, schema annotations, and fixture data;
 - generated artifacts;
 - workflow, release, CI, and quality-service metadata;
-- compatibility aliases; or
+- removed legacy public aliases; or
 - historical/external records.
 
 Remaining ACES references are intentional only when they are historical
-records, external references, compatibility aliases, or migration
+records, external references, retained source import paths, governed contract
+identifiers, workflow keys owned by external automation, or migration
 documentation. Current emitted identifiers should use RAES by default once the
 owning surface is migrated.
 
-Compatibility stays at the owning boundary. Legacy `aces.*` imports remain in
-the existing compatibility tree unless a future removal record says otherwise.
-CLI aliases, MCP tool aliases, schema/profile-id aliases, environment/config
-aliases, and package/distribution aliases must be handled by their owning
-surface and documented in the downstream migration note. Do not add a central
-runtime rename service, universal identifier registry, persistence table, API
-endpoint, or cross-package exception hierarchy for the rename.
+Public command and MCP surfaces make a hard cut to RAES. The `aces` and
+`aces-mcp` console scripts and the `aces_*` MCP tool aliases are removed instead
+of retained as compatibility aliases. The Python distribution surface moves to
+`raes-sdl` for new PyPI publication.
+
+Legacy `aces.*` and `aces_*` Python import packages remain source/API names for
+this issue because changing module namespaces is a separate package-boundary
+migration. Do not add a central runtime rename service, universal identifier
+registry, persistence table, API endpoint, or cross-package exception hierarchy
+for the rename.
 
 Published schema and contract identifiers remain governed by ADR-061 and the
 schema-publication manifest. If a contract id, schema `$id`, profile id, or
@@ -98,18 +102,20 @@ surfaces, contracts, examples, fixtures, and generated artifacts contradicting
 the new project identity.
 
 Blind repository-wide replacement. Rejected: it would break compatibility
-aliases, historical records, contract/profile ids, external URLs, generated
-outputs, release metadata, and fixtures that intentionally preserve previous
-identifiers.
+source imports, historical records, contract/profile ids, external URLs,
+generated outputs, release metadata, and fixtures that intentionally preserve
+previous identifiers.
 
 Create a central rename/alias registry. Rejected: the repository already has
 surface-specific authorities and compatibility mechanisms. A central registry
 would blur package, schema, CLI, MCP, workflow, and documentation ownership.
 
-Remove all ACES identifiers immediately. Rejected: downstream users may depend
-on import paths, package names, CLI commands, MCP tool names, schema/profile
-ids, corpus artifacts, and environment/config keys. Removal requires explicit
-deprecation/removal records and evidence under the existing governance policy.
+Remove all ACES identifiers immediately. Rejected: import paths, published
+schema/profile ids, corpus artifacts, historical records, and
+environment/config keys have different owning authorities. Issue #866 removes
+old public command, MCP, distribution, and guidance names now, while leaving
+source-module and governed-contract migrations to their own evidence-backed
+work.
 
 ## Consequences
 
@@ -117,10 +123,11 @@ RAES becomes the canonical current project identity while preserving the
 project's Heron Fellowship and ACES provenance as history.
 
 The implementation must ship with a downstream migration note that maps old
-ACES names to new RAES names by surface and states which aliases remain
-supported, deprecated, removed, or historical.
+ACES names to new RAES names by surface and states which names are removed,
+migrated, retained as source/contract identifiers, external, or historical.
 
-The rename may be breaking on some surfaces. Compatibility claims must name the
+The rename is intentionally breaking on the public command, MCP, guidance, and
+Python distribution surfaces. Remaining compatibility claims must name the
 surface, direction, dimension, version or lineage, and verification evidence as
 required by the ecosystem evolution policy.
 
@@ -131,3 +138,9 @@ was migrated.
 The rename does not change SDL semantics, runtime semantics, contract meaning,
 security policy, or authority boundaries by itself. Any semantic change must
 land under its own owning ADR/spec/contract process.
+
+## Amendments
+
+| Date | Commit/PR | Summary |
+|---|---|---|
+| 2026-07-24 | #866 | Revised the decision from compatibility-preserving rename boundaries to a hard cutover for public command, MCP, guidance, and Python distribution surfaces after implementation clarification. |

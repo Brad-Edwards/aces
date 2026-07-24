@@ -151,14 +151,14 @@ def _control_plane_api_version() -> str:
     """OpenAPI description version for the control-plane adapter.
 
     Classified (GOV-901; specs/evolution/versioning-deprecation-and-migration.md)
-    as the API-description version of the same bundled ``aces-sdl`` distribution.
+    as the API-description version of the same bundled ``raes-sdl`` distribution.
     It derives from installed distribution metadata rather than a hard-coded
     literal, with the honest PEP 440 ``0.0.0+unknown`` sentinel when the
     distribution is not installed.
     """
 
     try:
-        return distribution_version("aces-sdl")
+        return distribution_version("raes-sdl")
     except PackageNotFoundError:
         return "0.0.0+unknown"
 

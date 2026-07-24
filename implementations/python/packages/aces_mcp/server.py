@@ -40,9 +40,6 @@ workflows. Use `sdl_validate`, `sdl_design_assessment`, `sdl_plan`, and \
 `sdl_claims_assessment` to check SDL YAML and avoid overstating what a \
 scenario or dry run can prove.
 
-Legacy `aces_*` tool names remain available as compatibility aliases for \
-existing integrations.
-
 To author an *experiment* (the pre-run specification that binds a task to a \
 run plan — seeds, episode controls, red-variant selection, and replication — \
 distinct from the archival run/study records), use `experiment_scaffold` to \
@@ -68,5 +65,5 @@ def create_server() -> FastMCP:
 
 
 def main() -> None:
-    """Console-script entry point for the `raes-mcp` and `aces-mcp` commands."""
+    """Console-script entry point for the `raes-mcp` command."""
     create_server().run()

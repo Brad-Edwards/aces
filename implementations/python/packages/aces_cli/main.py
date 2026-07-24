@@ -22,7 +22,7 @@ app.add_typer(corpus.app, name="corpus")
 def _version_callback(value: bool) -> None:
     if value:
         try:
-            current_version = version("aces-sdl")
+            current_version = version("raes-sdl")
         except PackageNotFoundError:
             # Honest PEP 440 not-installed sentinel (GOV-901): do not report a
             # plausible-looking release when the distribution is absent.

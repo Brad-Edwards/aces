@@ -39,7 +39,7 @@ def _profile_summary(
         "title": profile.title,
         "intended_claim": profile.intended_claim,
         "disposition_counts": dict(sorted(disposition_counts.items())),
-        "aces_delivery": {
+        "raes_delivery": {
             "complete": outcome.complete,
             "blocking_concern_count": len(outcome.blocking_concerns),
             "blocking_concern_ids": list(outcome.blocking_concerns),
@@ -67,7 +67,6 @@ def intended_use_profiles(profile_id: str = "") -> dict[str, Any]:
     base: dict[str, Any] = {
         "status": "ok",
         "scope": "raes-delivery-capability",
-        "legacy_scope": "aces-delivery-capability",
         "profile_family": taxonomy.profile_family,
         "taxonomy_revision": taxonomy.revision,
         "assessment_revision": assessment.assessment_revision,
@@ -92,7 +91,7 @@ def intended_use_profiles(profile_id: str = "") -> dict[str, Any]:
             "status": "invalid",
             "diagnostics": [
                 {
-                    "code": "aces.intended_use_profile.unknown",
+                    "code": "raes.intended_use_profile.unknown",
                     "message": f"Unknown intended-use profile {selected_id!r}.",
                     "available_profile_ids": list(profiles),
                 }
@@ -133,16 +132,6 @@ def register(mcp: FastMCP) -> None:
         ),
     )
     def raes_intended_use_profiles(profile_id: str = "") -> str:
-        return json_response(intended_use_profiles(profile_id))
-
-    @mcp.tool(
-        name="aces_intended_use_profiles",
-        description=(
-            "Compatibility alias for raes_intended_use_profiles. Lists RAES "
-            "scientific-scenario intended-use profiles and delivery blockers."
-        ),
-    )
-    def aces_intended_use_profiles(profile_id: str = "") -> str:
         return json_response(intended_use_profiles(profile_id))
 
 

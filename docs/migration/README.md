@@ -5,9 +5,10 @@ established the current layout. The paths below describe historical moves, not
 current uncertainty about where authoritative material lives.
 
 The current project identity migration is recorded separately in
-[RAES Rename Migration Map](raes-rename.md). That map explains which ACES names
-remain as compatibility aliases, governed contract identifiers, historical
-records, or external references.
+[RAES Rename Migration Map](raes-rename.md). That map records the hard cutover
+to RAES names and identifies the narrow ACES identifiers that remain only as
+source import paths, governed contract identifiers, historical records, or
+external references.
 
 The reorganization moved existing material into the current long-term buckets:
 

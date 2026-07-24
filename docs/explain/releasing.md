@@ -1,11 +1,11 @@
-# Releasing RAES via aces-sdl
+# Releasing RAES via raes-sdl
 
-`aces-sdl` is published to **PyPI**, and releases are automated with
+`raes-sdl` is published to **PyPI**, and releases are automated with
 [release-please](https://github.com/googleapis/release-please) (#684). You never
 hand-edit the version or `CHANGELOG.md`: release-please derives both from the
 Conventional Commit history on `main`.
 
-`aces-sdl` also ships the published contract corpus as package data, so
+`raes-sdl` also ships the published contract corpus as package data, so
 `raes conformance backend` and SDL semantic validation work from an installed
 wheel. Every release binds the code and the corpus in one versioned artifact
 (#537).
@@ -40,14 +40,14 @@ Use `feat:`/`fix:` for consumer-visible changes so release-please cuts a release
 ## Configuration
 
 - `release-please-config.json` — package at repo root (so `CHANGELOG.md` stays at
-  the root), `release-type: python`, `package-name: aces-sdl`. The actual version
+  the root), `release-type: python`, `package-name: raes-sdl`. The actual version
   literal lives in the subdir pyproject and is bumped via `extra-files`
   (`implementations/python/pyproject.toml` → `$.project.version`).
 - `.release-please-manifest.json` — the version source of truth: `{".": "X.Y.Z"}`.
 - `implementations/python/pyproject.toml` — static `[project] version`
-  (release-please rewrites it). `aces.__version__` derives from the installed
-  distribution metadata. The `raes` and `raes-mcp` console scripts are the
-  preferred current commands; `aces` and `aces-mcp` remain compatibility aliases.
+  (release-please rewrites it). The legacy `aces` import namespace's
+  `__version__` derives from the installed `raes-sdl` distribution metadata.
+  The `raes` and `raes-mcp` console scripts are the only current commands.
 
 ## Caveat: the release PR and required checks
 
@@ -71,8 +71,8 @@ Register a **pending** trusted publisher on PyPI before the first upload (no
 token stored):
 
 - PyPI → *Your projects* → *Publishing* → *Add a pending publisher* → GitHub
-- PyPI Project Name: `aces-sdl`
-- Owner: `Brad-Edwards`  ·  Repository: `aces`
+- PyPI Project Name: `raes-sdl`
+- Owner: `RAESystem`  ·  Repository: `rae`
 - **Workflow name: `release-please.yml`**  ·  Environment name: `pypi`
 
 > If you previously registered the publisher against `release.yml`, update it to
@@ -82,5 +82,5 @@ token stored):
 ## Pinning from a downstream backend
 
 ```
-aces-sdl==<X.Y.Z>
+raes-sdl==<X.Y.Z>
 ```

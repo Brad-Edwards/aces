@@ -9,8 +9,8 @@ The canonical artifact is
 `raes_agent_guidance` returns that profile as JSON so an agent can consume it
 without scraping prose.
 
-The profile id remains `aces-agent-guidance` as a governed compatibility
-identifier; the preferred MCP tool name is `raes_agent_guidance`.
+The profile id is `raes-agent-guidance`; the MCP tool name is
+`raes_agent_guidance`.
 
 ## What Users Get
 
@@ -59,7 +59,7 @@ Example response shape:
 {
   "status": "ok",
   "audience": "operator",
-  "profile": "aces-agent-guidance",
+  "profile": "raes-agent-guidance",
   "version": 1,
   "requirement_refs": ["AUT-811"],
   "guidance": {

@@ -70,9 +70,9 @@ nodes:
     roles: {mail-admin: postfix}
 ```
 
-Complete examples live in [`examples/scenarios/`](https://github.com/Brad-Edwards/aces/tree/main/examples/scenarios).
+Complete examples live in [`examples/scenarios/`](https://github.com/RAESystem/rae/tree/main/examples/scenarios).
 Reusable non-normative templates and patterns are indexed by
-[`examples/library/catalog.yaml`](https://github.com/Brad-Edwards/aces/blob/main/examples/library/catalog.yaml).
+[`examples/library/catalog.yaml`](https://github.com/RAESystem/rae/blob/main/examples/library/catalog.yaml).
 
 ## Getting Started
 
@@ -86,8 +86,8 @@ Prerequisites:
 Set up the Python reference implementation:
 
 ```shell
-git clone https://github.com/Brad-Edwards/aces.git
-cd aces/implementations/python
+git clone https://github.com/RAESystem/rae.git
+cd rae/implementations/python
 uv sync --all-extras
 uv run raes --help
 ```
@@ -146,25 +146,25 @@ uv run raes-mcp
 
 For a dimension-by-dimension comparison against these systems — what RAES
 expresses that they do not, and where they still lead RAES — see
-[Related-Work Comparison](https://github.com/Brad-Edwards/aces/blob/main/docs/explain/sdl/related-work-comparison.md).
+[Related-Work Comparison](https://github.com/RAESystem/rae/blob/main/docs/explain/sdl/related-work-comparison.md).
 
 ## Documentation
 
-The documentation source is under [`docs/`](https://github.com/Brad-Edwards/aces/tree/main/docs). Important entry points:
+The documentation source is under [`docs/`](https://github.com/RAESystem/rae/tree/main/docs). Important entry points:
 
-- [`docs/index.md`](https://github.com/Brad-Edwards/aces/blob/main/docs/index.md) - documentation index
-- [`docs/explain/getting-started.md`](https://github.com/Brad-Edwards/aces/blob/main/docs/explain/getting-started.md) - use-case and rigor-level entrypoint
-- [`docs/migration/raes-rename.md`](https://github.com/Brad-Edwards/aces/blob/main/docs/migration/raes-rename.md) - RAES rename and ACES compatibility map
-- [`examples/README.md`](https://github.com/Brad-Edwards/aces/blob/main/examples/README.md) - current worked example inventory
-- [`examples/library/catalog.yaml`](https://github.com/Brad-Edwards/aces/blob/main/examples/library/catalog.yaml) - template and pattern library catalog
-- [`docs/explain/reference/canonical-reference-map.md`](https://github.com/Brad-Edwards/aces/blob/main/docs/explain/reference/canonical-reference-map.md) - current reference map
-- [`docs/explain/reference/documentation-style-guide.md`](https://github.com/Brad-Edwards/aces/blob/main/docs/explain/reference/documentation-style-guide.md) - documentation style and citation rules
-- [`docs/explain/reference/glossary.md`](https://github.com/Brad-Edwards/aces/blob/main/docs/explain/reference/glossary.md) - current terminology
-- [`docs/explain/sdl/index.md`](https://github.com/Brad-Edwards/aces/blob/main/docs/explain/sdl/index.md) - SDL guide
-- [`docs/explain/sdl/runtime-architecture.md`](https://github.com/Brad-Edwards/aces/blob/main/docs/explain/sdl/runtime-architecture.md) - runtime architecture
-- [`docs/explain/reference/backend-conformance.md`](https://github.com/Brad-Edwards/aces/blob/main/docs/explain/reference/backend-conformance.md) - backend conformance model
-- [`docs/decisions/adrs/README.md`](https://github.com/Brad-Edwards/aces/blob/main/docs/decisions/adrs/README.md) - architecture decisions
-- [`contracts/README.md`](https://github.com/Brad-Edwards/aces/blob/main/contracts/README.md) - contract publication surface
+- [`docs/index.md`](https://github.com/RAESystem/rae/blob/main/docs/index.md) - documentation index
+- [`docs/explain/getting-started.md`](https://github.com/RAESystem/rae/blob/main/docs/explain/getting-started.md) - use-case and rigor-level entrypoint
+- [`docs/migration/raes-rename.md`](https://github.com/RAESystem/rae/blob/main/docs/migration/raes-rename.md) - RAES rename hard-cutover map
+- [`examples/README.md`](https://github.com/RAESystem/rae/blob/main/examples/README.md) - current worked example inventory
+- [`examples/library/catalog.yaml`](https://github.com/RAESystem/rae/blob/main/examples/library/catalog.yaml) - template and pattern library catalog
+- [`docs/explain/reference/canonical-reference-map.md`](https://github.com/RAESystem/rae/blob/main/docs/explain/reference/canonical-reference-map.md) - current reference map
+- [`docs/explain/reference/documentation-style-guide.md`](https://github.com/RAESystem/rae/blob/main/docs/explain/reference/documentation-style-guide.md) - documentation style and citation rules
+- [`docs/explain/reference/glossary.md`](https://github.com/RAESystem/rae/blob/main/docs/explain/reference/glossary.md) - current terminology
+- [`docs/explain/sdl/index.md`](https://github.com/RAESystem/rae/blob/main/docs/explain/sdl/index.md) - SDL guide
+- [`docs/explain/sdl/runtime-architecture.md`](https://github.com/RAESystem/rae/blob/main/docs/explain/sdl/runtime-architecture.md) - runtime architecture
+- [`docs/explain/reference/backend-conformance.md`](https://github.com/RAESystem/rae/blob/main/docs/explain/reference/backend-conformance.md) - backend conformance model
+- [`docs/decisions/adrs/README.md`](https://github.com/RAESystem/rae/blob/main/docs/decisions/adrs/README.md) - architecture decisions
+- [`contracts/README.md`](https://github.com/RAESystem/rae/blob/main/contracts/README.md) - contract publication surface
 
 ## Verification
 
@@ -204,7 +204,7 @@ bounded target coverage and nonclaims.
 
 Contributions are welcome where they improve the language, reference
 implementation, contracts, tests, examples, or documentation. Start with
-[CONTRIBUTING.md](https://github.com/Brad-Edwards/aces/blob/main/CONTRIBUTING.md).
+[CONTRIBUTING.md](https://github.com/RAESystem/rae/blob/main/CONTRIBUTING.md).
 
 Language and contract changes should be discussed before implementation because
 small SDL changes can affect validation, generated schemas, backend
@@ -213,11 +213,11 @@ conformance, and existing scenario examples.
 ## Versioning
 
 The Python package version lives in
-[`implementations/python/pyproject.toml`](https://github.com/Brad-Edwards/aces/blob/main/implementations/python/pyproject.toml)
+[`implementations/python/pyproject.toml`](https://github.com/RAESystem/rae/blob/main/implementations/python/pyproject.toml)
 and is bumped by [release-please](https://github.com/googleapis/release-please)
 from the Conventional Commit history on `main`, which also generates
 `CHANGELOG.md`. Do not hand-edit the version or `CHANGELOG.md`. See
-[`docs/explain/releasing.md`](https://github.com/Brad-Edwards/aces/blob/main/docs/explain/releasing.md).
+[`docs/explain/releasing.md`](https://github.com/RAESystem/rae/blob/main/docs/explain/releasing.md).
 
 Published JSON Schemas use versioned contract identifiers such as
 `sdl-authoring-input-v1`, but the suffix is not the same as a stability promise.
@@ -226,7 +226,7 @@ records, each carrying its schema's `draft` or `stable` stability class and
 canonical content hash. Current checked-in schemas
 are draft until a maintainer explicitly promotes them; stable breaking changes
 must mint a new schema version as described in
-[ADR-061](https://github.com/Brad-Edwards/aces/blob/main/docs/decisions/adrs/adr-061-published-schema-evolution-policy.md).
+[ADR-061](https://github.com/RAESystem/rae/blob/main/docs/decisions/adrs/adr-061-published-schema-evolution-policy.md).
 
 ## Maintainers
 
@@ -242,12 +242,12 @@ If you use RAES SDL in academic work, cite the repository:
   title        = {RAES SDL: Backend-Agnostic Scenario Description Language for Cyber Range Experiments},
   year         = {2026},
   license      = {MIT},
-  url          = {https://github.com/Brad-Edwards/aces}
+  url          = {https://github.com/RAESystem/rae}
 }
 ```
 
 ## License
 
-Released under the MIT License. See [LICENSE](https://github.com/Brad-Edwards/aces/blob/main/LICENSE).
+Released under the MIT License. See [LICENSE](https://github.com/RAESystem/rae/blob/main/LICENSE).
 Third-party attribution and license notices are recorded in
-[THIRD_PARTY_NOTICES.md](https://github.com/Brad-Edwards/aces/blob/main/THIRD_PARTY_NOTICES.md).
+[THIRD_PARTY_NOTICES.md](https://github.com/RAESystem/rae/blob/main/THIRD_PARTY_NOTICES.md).
