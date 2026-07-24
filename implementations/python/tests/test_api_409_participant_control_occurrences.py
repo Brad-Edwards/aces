@@ -353,17 +353,19 @@ def test_typed_target_context_enforces_kind_revision_and_scope_for_external_rela
         known_targets=[target],
     )
 
+    stale_target = target.model_copy(update={"target_revision": 1})
     with pytest.raises(ValueError, match="target revision must match"):
         validate_participant_control_occurrence_context(
             [direction],
             declarations=[declaration],
-            known_targets=[target.model_copy(update={"target_revision": 1})],
+            known_targets=[stale_target],
         )
+    other_scope_target = target.model_copy(update={"episode_id": "episode-other"})
     with pytest.raises(ValueError, match="target scope must match"):
         validate_participant_control_occurrence_context(
             [direction],
             declarations=[declaration],
-            known_targets=[target.model_copy(update={"episode_id": "episode-other"})],
+            known_targets=[other_scope_target],
         )
 
 
@@ -378,11 +380,12 @@ def test_typed_target_context_rejects_an_unknown_kind_and_reference_pair() -> No
             }
         )
     )
+    declaration = _declaration("external-direction")
 
     with pytest.raises(ValueError, match="typed target reference and kind must resolve"):
         validate_participant_control_occurrence_context(
             [direction],
-            declarations=[_declaration("external-direction")],
+            declarations=[declaration],
         )
 
 
@@ -391,16 +394,17 @@ def test_transformed_proposal_requires_source_provenance_and_marking_inheritance
     assert transformed.occurrence.admission_status == "not-admitted"
 
     transformed.provenance_refs = ["provenance:transformation.1"]
+    declaration = _declaration("proposal")
     with pytest.raises(ValueError, match="transformed proposal provenance must bind its source and transformation"):
         validate_participant_control_occurrence_context(
             [source, transformed],
-            declarations=[_declaration("proposal")],
+            declarations=[declaration],
         )
 
     transformed.provenance_refs.extend([source.event_id, "transformation:redaction.1"])
     validate_participant_control_occurrence_context(
         [source, transformed],
-        declarations=[_declaration("proposal")],
+        declarations=[declaration],
     )
 
 
@@ -479,11 +483,12 @@ def test_handoff_rejects_a_prior_controller_state_that_disagrees_with_the_occurr
             }
         )
     )
+    declaration = _declaration("handoff")
 
     with pytest.raises(ValueError, match="handoff prior controller state must match"):
         validate_participant_control_occurrence_context(
             [handoff],
-            declarations=[_declaration("handoff")],
+            declarations=[declaration],
         )
 
 

@@ -30,12 +30,32 @@ def validate_participant_control_occurrence_context(
 ) -> None:
     """Fail closed when API-409 occurrences disagree across identity and policy joins."""
 
+    declarations_by_ref = _index_declarations(declarations)
+    records_by_event_id, proposal_records, target_contexts = _index_records(records, known_targets)
+    for record in records_by_event_id.values():
+        _validate_record(
+            record,
+            declarations_by_ref=declarations_by_ref,
+            proposal_records=proposal_records,
+            target_contexts=target_contexts,
+        )
+
+
+def _index_declarations(
+    declarations: Sequence[ParticipantControlDeclarationModel],
+) -> dict[str, ParticipantControlDeclarationModel]:
     declarations_by_ref: dict[str, ParticipantControlDeclarationModel] = {}
     for declaration in declarations:
         existing = declarations_by_ref.setdefault(declaration.declaration_ref, declaration)
         if existing != declaration:
             raise ValueError("declaration identity was reused with different semantics")
+    return declarations_by_ref
 
+
+def _index_records(
+    records: Sequence[ParticipantControlOccurrenceModel],
+    known_targets: Sequence[ParticipantControlTargetContextModel],
+) -> tuple[dict[str, ParticipantControlOccurrenceModel], dict[str, ParticipantControlOccurrenceModel], TargetIndex]:
     records_by_event_id: dict[str, ParticipantControlOccurrenceModel] = {}
     proposal_records: dict[str, ParticipantControlOccurrenceModel] = {}
     decision_refs: set[str] = set()
@@ -49,60 +69,78 @@ def validate_participant_control_occurrence_context(
                 raise ValueError("event identity was reused with different semantics")
             continue
         records_by_event_id[record.event_id] = record
-        occurrence = record.occurrence
-        _register_target(
-            target_contexts,
-            ParticipantControlTargetContextModel(
-                target_kind=ParticipantControlTargetKind.CONTROL,
-                target_ref=record.event_id,
-                target_revision=occurrence.occurrence_revision,
-                participant_address=record.participant_address,
-                episode_id=record.episode_id,
-            ),
+        _register_record_targets(
+            record,
+            proposal_records=proposal_records,
+            decision_refs=decision_refs,
+            target_contexts=target_contexts,
         )
-        if isinstance(occurrence, ParticipantProposalOccurrenceModel):
-            existing_proposal = proposal_records.setdefault(occurrence.proposal_id, record)
-            if existing_proposal != record:
-                raise ValueError("proposal identity was reused with different semantics")
-            _register_target(
-                target_contexts,
-                ParticipantControlTargetContextModel(
-                    target_kind=ParticipantControlTargetKind.PROPOSAL,
-                    target_ref=occurrence.proposal_id,
-                    target_revision=occurrence.proposal_revision,
-                    participant_address=record.participant_address,
-                    episode_id=record.episode_id,
-                ),
-            )
-        elif isinstance(occurrence, (ParticipantApprovalOccurrenceModel, ParticipantDenialOccurrenceModel)):
-            if occurrence.decision_ref in decision_refs:
-                raise ValueError("decision identity was reused")
-            decision_refs.add(occurrence.decision_ref)
-            _register_target(
-                target_contexts,
-                ParticipantControlTargetContextModel(
-                    target_kind=ParticipantControlTargetKind.DECISION,
-                    target_ref=occurrence.decision_ref,
-                    target_revision=occurrence.decision_revision,
-                    participant_address=record.participant_address,
-                    episode_id=record.episode_id,
-                ),
-            )
+    return records_by_event_id, proposal_records, target_contexts
 
-    for record in records_by_event_id.values():
-        occurrence = record.occurrence
-        declaration = declarations_by_ref.get(occurrence.declaration_ref)
-        if declaration is None:
-            raise ValueError("declaration reference must resolve")
-        if not _declaration_agrees(record, declaration):
-            raise ValueError("occurrence and declaration coordinates disagree")
 
-        if isinstance(occurrence, ParticipantProposalOccurrenceModel):
-            _validate_transformed_proposal(record, proposal_records)
-        elif isinstance(occurrence, (ParticipantApprovalOccurrenceModel, ParticipantDenialOccurrenceModel)):
-            _validate_proposal_decision(record, proposal_records)
-        else:
-            _validate_occurrence_target(record, target_contexts=target_contexts)
+def _register_record_targets(
+    record: ParticipantControlOccurrenceModel,
+    *,
+    proposal_records: dict[str, ParticipantControlOccurrenceModel],
+    decision_refs: set[str],
+    target_contexts: TargetIndex,
+) -> None:
+    occurrence = record.occurrence
+    _register_target(
+        target_contexts,
+        ParticipantControlTargetContextModel(
+            target_kind=ParticipantControlTargetKind.CONTROL,
+            target_ref=record.event_id,
+            target_revision=occurrence.occurrence_revision,
+            participant_address=record.participant_address,
+            episode_id=record.episode_id,
+        ),
+    )
+    if isinstance(occurrence, ParticipantProposalOccurrenceModel):
+        existing = proposal_records.setdefault(occurrence.proposal_id, record)
+        if existing != record:
+            raise ValueError("proposal identity was reused with different semantics")
+        target = ParticipantControlTargetContextModel(
+            target_kind=ParticipantControlTargetKind.PROPOSAL,
+            target_ref=occurrence.proposal_id,
+            target_revision=occurrence.proposal_revision,
+            participant_address=record.participant_address,
+            episode_id=record.episode_id,
+        )
+        _register_target(target_contexts, target)
+    elif isinstance(occurrence, (ParticipantApprovalOccurrenceModel, ParticipantDenialOccurrenceModel)):
+        if occurrence.decision_ref in decision_refs:
+            raise ValueError("decision identity was reused")
+        decision_refs.add(occurrence.decision_ref)
+        target = ParticipantControlTargetContextModel(
+            target_kind=ParticipantControlTargetKind.DECISION,
+            target_ref=occurrence.decision_ref,
+            target_revision=occurrence.decision_revision,
+            participant_address=record.participant_address,
+            episode_id=record.episode_id,
+        )
+        _register_target(target_contexts, target)
+
+
+def _validate_record(
+    record: ParticipantControlOccurrenceModel,
+    *,
+    declarations_by_ref: dict[str, ParticipantControlDeclarationModel],
+    proposal_records: dict[str, ParticipantControlOccurrenceModel],
+    target_contexts: TargetIndex,
+) -> None:
+    occurrence = record.occurrence
+    declaration = declarations_by_ref.get(occurrence.declaration_ref)
+    if declaration is None:
+        raise ValueError("declaration reference must resolve")
+    if not _declaration_agrees(record, declaration):
+        raise ValueError("occurrence and declaration coordinates disagree")
+    if isinstance(occurrence, ParticipantProposalOccurrenceModel):
+        _validate_transformed_proposal(record, proposal_records)
+    elif isinstance(occurrence, (ParticipantApprovalOccurrenceModel, ParticipantDenialOccurrenceModel)):
+        _validate_proposal_decision(record, proposal_records)
+    else:
+        _validate_occurrence_target(record, target_contexts=target_contexts)
 
 
 def _declaration_agrees(
