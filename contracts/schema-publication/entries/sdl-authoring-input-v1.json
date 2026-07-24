@@ -2,9 +2,9 @@
   "contract_id": "sdl-authoring-input-v1",
   "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
   "stability": "draft",
-  "content_hash": "23934d7a854614c3f9314d0d9fd4b9b03a037edbcd908f886d16ca817c467dcb",
+  "content_hash": "a665860344bdcb9db7b3daad9513fbb9524dee687c5aac5e6bc80a74e43ffbc5",
   "last_change": {
-    "summary": "Published DSL-436 authored historical-state declarations and semantic invariants.",
-    "content_hash": "23934d7a854614c3f9314d0d9fd4b9b03a037edbcd908f886d16ca817c467dcb"
+    "summary": "Published DSL-436 initial-state declarations and typed network namespace sharing.",
+    "content_hash": "a665860344bdcb9db7b3daad9513fbb9524dee687c5aac5e6bc80a74e43ffbc5"
   }
 }

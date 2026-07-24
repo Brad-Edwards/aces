@@ -7,6 +7,7 @@ import subprocess
 import pytest
 from aces_backend_protocols.naming import provider_resource_name
 from aces_reference_backend.driver import ContainerSpec, NetworkSpec, ServiceSpec
+from aces_reference_backend.drivers.inprocess import InProcessDriver
 from aces_reference_backend.drivers.oci import ImageTrustPolicy, OciDeploymentDriver
 
 
@@ -208,6 +209,212 @@ def test_oci_attaches_container_to_requested_networks():
     run_argv = next(call["argv"] for call in recorder.calls if "run" in call["argv"])
     assert "--network" in run_argv
     assert run_argv[run_argv.index("--network") + 1] == provider_resource_name("provision.network.lan", prefix="aces")
+
+
+def test_oci_joins_only_a_run_owned_target_network_namespace():
+    owner_address = "provision.node.zzz-owner"
+    capture_address = "provision.node.aaa-capture"
+    owner_name = provider_resource_name(owner_address, prefix="aces")
+
+    class _OwnedTargetRecorder:
+        def __init__(self) -> None:
+            self.calls: list[dict[str, object]] = []
+
+        def __call__(self, argv, **kwargs):
+            self.calls.append({"argv": argv, "kwargs": kwargs})
+            if "inspect" in argv:
+                stdout = f"owner-native-id\naces-ref-test\n{owner_address}\n/{owner_name}\n"
+            elif "run" in argv and owner_name in argv:
+                stdout = "owner-native-id\n"
+            else:
+                stdout = "capture-native-id\n"
+            return subprocess.CompletedProcess(args=argv, returncode=0, stdout=stdout, stderr="")
+
+    recorder = _OwnedTargetRecorder()
+    driver = _driver(recorder)
+
+    result = driver.realize(
+        networks=(),
+        containers=(
+            ContainerSpec(
+                address=capture_address,
+                name="capture",
+                image_ref="img",
+                network_namespace_target=owner_address,
+            ),
+            ContainerSpec(address=owner_address, name="owner", image_ref="img"),
+        ),
+    )
+
+    assert not result.diagnostics
+    run_calls = [call["argv"] for call in recorder.calls if "run" in call["argv"]]
+    assert [argv[argv.index("--name") + 1] for argv in run_calls] == [
+        owner_name,
+        provider_resource_name(capture_address, prefix="aces"),
+    ]
+    inspect_argv = next(call["argv"] for call in recorder.calls if "inspect" in call["argv"])
+    assert inspect_argv[-1] == owner_name
+    capture_argv = run_calls[1]
+    assert capture_argv[capture_argv.index("--network") + 1] == ("container:" + owner_name)
+
+
+def test_oci_rejects_stale_realized_namespace_target_before_side_effects():
+    recorder = _Recorder(stdout="owner-native-id\n")
+    driver = _driver(recorder)
+    owner_address = "provision.node.owner"
+
+    owner_result = driver.realize(
+        networks=(),
+        containers=(ContainerSpec(address=owner_address, name="owner", image_ref="img"),),
+    )
+    assert not owner_result.diagnostics
+    recorder.calls.clear()
+
+    result = driver.realize(
+        networks=(),
+        containers=(
+            ContainerSpec(
+                address="provision.node.capture",
+                name="capture",
+                image_ref="img",
+                network_namespace_target=owner_address,
+            ),
+        ),
+    )
+
+    assert not recorder.calls
+    assert {diagnostic.code for diagnostic in result.diagnostics} == {
+        "reference-backend.driver.network-namespace-target-unavailable"
+    }
+
+
+def test_oci_rejects_namespace_target_when_native_id_alone_mismatches():
+    owner_address = "provision.node.owner"
+    owner_name = provider_resource_name(owner_address, prefix="aces")
+
+    class _MismatchedOwnershipRecorder:
+        def __init__(self) -> None:
+            self.calls: list[list[str]] = []
+
+        def __call__(self, argv, **kwargs):
+            self.calls.append(argv)
+            if "inspect" in argv:
+                stdout = f"replacement-native-id\naces-ref-test\n{owner_address}\n/{owner_name}\n"
+            else:
+                stdout = "owner-native-id\n"
+            return subprocess.CompletedProcess(args=argv, returncode=0, stdout=stdout, stderr="")
+
+    recorder = _MismatchedOwnershipRecorder()
+    driver = _driver(recorder)
+    result = driver.realize(
+        networks=(),
+        containers=(
+            ContainerSpec(address=owner_address, name="owner", image_ref="img"),
+            ContainerSpec(
+                address="provision.node.capture",
+                name="capture",
+                image_ref="img",
+                network_namespace_target=owner_address,
+            ),
+        ),
+    )
+
+    assert {diagnostic.code for diagnostic in result.diagnostics} == {
+        "reference-backend.driver.network-namespace-target-unavailable"
+    }
+    assert sum("run" in argv for argv in recorder.calls) == 1
+    assert ["docker", "rm", "--force", owner_name] in recorder.calls
+
+
+def test_oci_rejects_unknown_network_namespace_target_before_side_effects():
+    recorder = _Recorder(stdout="id\n")
+    driver = _driver(recorder)
+
+    result = driver.realize(
+        networks=(NetworkSpec(address="provision.network.lan", name="lan"),),
+        containers=(
+            ContainerSpec(
+                address="provision.node.capture",
+                name="capture",
+                image_ref="img",
+                network_namespace_target="provision.node.not-owned",
+            ),
+        ),
+    )
+
+    assert not recorder.calls
+    assert {diagnostic.code for diagnostic in result.diagnostics} == {
+        "reference-backend.driver.network-namespace-target-unavailable"
+    }
+
+
+def test_oci_rejects_network_namespace_target_with_independent_networks():
+    recorder = _Recorder(stdout="id\n")
+    driver = _driver(recorder)
+
+    result = driver.realize(
+        networks=(NetworkSpec(address="provision.network.lan", name="lan"),),
+        containers=(
+            ContainerSpec(address="provision.node.owner", name="owner", image_ref="img"),
+            ContainerSpec(
+                address="provision.node.capture",
+                name="capture",
+                image_ref="img",
+                networks=("provision.network.lan",),
+                network_namespace_target="provision.node.owner",
+            ),
+        ),
+    )
+
+    assert not recorder.calls
+    assert {diagnostic.code for diagnostic in result.diagnostics} == {
+        "reference-backend.driver.network-namespace-conflict"
+    }
+
+
+def test_oci_rejects_self_referential_network_namespace_target():
+    recorder = _Recorder(stdout="id\n")
+    driver = _driver(recorder)
+    address = "provision.node.capture"
+
+    result = driver.realize(
+        networks=(),
+        containers=(
+            ContainerSpec(
+                address=address,
+                name="capture",
+                image_ref="img",
+                network_namespace_target=address,
+            ),
+        ),
+    )
+
+    assert not recorder.calls
+    assert {diagnostic.code for diagnostic in result.diagnostics} == {
+        "reference-backend.driver.network-namespace-target-unavailable"
+    }
+
+
+def test_inprocess_driver_rejects_network_namespace_sharing_without_recording_ops():
+    driver = InProcessDriver()
+
+    result = driver.realize(
+        networks=(),
+        containers=(
+            ContainerSpec(address="provision.node.owner", name="owner", image_ref="img"),
+            ContainerSpec(
+                address="provision.node.capture",
+                name="capture",
+                image_ref="img",
+                network_namespace_target="provision.node.owner",
+            ),
+        ),
+    )
+
+    assert not driver.recorded_ops
+    assert {diagnostic.code for diagnostic in result.diagnostics} == {
+        "reference-backend.driver.network-namespace-unsupported"
+    }
 
 
 def test_oci_service_descriptors_do_not_publish_host_ports():

@@ -66,6 +66,7 @@ class ContainerSpec:
     networks: tuple[str, ...] = ()
     labels: dict[str, str] = field(default_factory=dict)
     services: tuple[ServiceSpec, ...] = ()
+    network_namespace_target: str = ""
 
 
 @dataclass(frozen=True)

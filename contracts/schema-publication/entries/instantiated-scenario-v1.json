@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
   "stability": "draft",
-  "content_hash": "0e2c8ac0b42c0ff796aefbe8dafae0d393b5ac71e43e792a90788c9beeb87769",
+  "content_hash": "6fb6ac178bbba0a340072aa86a4f4a04afd1d8a3c9e15c0c8e2da04212bfcd40",
   "last_change": {
-    "summary": "Published instantiated DSL-436 authored historical-state declarations and semantic invariants.",
-    "content_hash": "0e2c8ac0b42c0ff796aefbe8dafae0d393b5ac71e43e792a90788c9beeb87769"
+    "summary": "Carried DSL-436 initial-state declarations and network namespace sharing into instantiated scenarios.",
+    "content_hash": "6fb6ac178bbba0a340072aa86a4f4a04afd1d8a3c9e15c0c8e2da04212bfcd40"
   }
 }

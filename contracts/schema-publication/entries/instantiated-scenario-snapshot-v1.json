@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-snapshot-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "cdf2e8597127f3798ef57c4784fbe6e96e2841f3ee5ce538d0e32e5ef46f3510",
+  "content_hash": "3fc6908f73d79e72207d6b62a2c6db9a82f280aa8538cfdf523907fc357a97ed",
   "last_change": {
-    "summary": "Published DSL-436 authored historical-state semantics in instantiated snapshots.",
-    "content_hash": "cdf2e8597127f3798ef57c4784fbe6e96e2841f3ee5ce538d0e32e5ef46f3510"
+    "summary": "Carried DSL-436 initial-state declarations and network namespace sharing into instantiated snapshots.",
+    "content_hash": "3fc6908f73d79e72207d6b62a2c6db9a82f280aa8538cfdf523907fc357a97ed"
   }
 }
