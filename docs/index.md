@@ -156,6 +156,7 @@ research/formal-semantic-validation/index
 research/participant-backend-contracts/index
 research/participant-io-control/index
 research/participant-interactive-access/index
+research/time-model/prior-art-and-design-criteria
 ```
 
 ```{toctree}
