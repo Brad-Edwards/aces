@@ -1,4 +1,4 @@
-# ACES Examples
+# RAES Examples
 
 This directory contains non-normative worked examples, templates, and reusable
 patterns. They are useful for reading, testing, and adapting current SDL

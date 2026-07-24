@@ -41,7 +41,16 @@ def test_cli_version_reports_installed_distribution() -> None:
     result = CliRunner().invoke(app, ["--version"])
 
     assert result.exit_code == 0
-    assert version("aces-sdl") in result.stdout
+    assert result.stdout == f"raes {version('aces-sdl')}\n"
+
+
+def test_cli_help_uses_raes_project_identity() -> None:
+    from aces_cli.main import app
+
+    result = CliRunner().invoke(app, ["--help"])
+
+    assert result.exit_code == 0
+    assert "RAES" in result.stdout
 
 
 def test_cli_version_fallback_is_honest_sentinel(monkeypatch) -> None:
@@ -83,4 +92,5 @@ def test_control_plane_app_openapi_version_matches_distribution() -> None:
 
     app = create_control_plane_app(RuntimeControlPlane(create_stub_target()))
 
+    assert app.title == "RAES Runtime Control Plane"
     assert app.version == version("aces-sdl")

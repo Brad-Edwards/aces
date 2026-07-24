@@ -131,6 +131,7 @@ adr-083-participant-tool-decision-surface-and-exposure-semantics
 adr-084-scenario-variation-and-deterministic-trial-realization
 adr-085-participant-information-flow-and-control
 adr-086-governed-whole-scenario-satisfiability
+adr-087-raes-rename-and-compatibility-boundaries
 ```
 
 | ADR | Title | Status | Date |
@@ -222,3 +223,4 @@ adr-086-governed-whole-scenario-satisfiability
 | [084](adr-084-scenario-variation-and-deterministic-trial-realization.md) | Scenario Variation And Deterministic Trial Realization | accepted | 2026-07-15 |
 | [085](adr-085-participant-information-flow-and-control.md) | Participant Information-Flow And Control | accepted | 2026-07-15 |
 | [086](adr-086-governed-whole-scenario-satisfiability.md) | Governed Whole-Scenario Satisfiability | accepted | 2026-07-19 |
+| [087](adr-087-raes-rename-and-compatibility-boundaries.md) | RAES Rename and Compatibility Boundaries | accepted | 2026-07-23 |

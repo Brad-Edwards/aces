@@ -25,7 +25,7 @@ def build(
     scenario: Path = typer.Option(
         _DEFAULT_SCENARIO,
         "--scenario",
-        help="Authored reference ACES SDL scenario realized by both backends.",
+        help="Authored reference RAES SDL scenario realized by both backends.",
     ),
     output: Path = typer.Option(
         _DEFAULT_OUTPUT,

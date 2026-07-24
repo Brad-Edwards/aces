@@ -46,6 +46,8 @@ docs = [
 ]
 
 [project.scripts]
+raes = "aces.cli.main:app"
+raes-mcp = "aces_mcp.server:main"
 aces = "aces.cli.main:app"
 aces-mcp = "aces_mcp.server:main"
 

@@ -26,112 +26,151 @@ from aces_mcp.tools.operation_support import (
 )
 
 
+def _tool_surface_payload() -> dict[str, object]:
+    return {
+        "surface": "raes-sdl",
+        "legacy_surfaces": ["aces-sdl"],
+        "intent": (
+            "Author, parse, validate, inspect, assess, and dry-run RAES scenarios for researchers and range designers."
+        ),
+        "recommended_workflow": [
+            "raes_agent_guidance",
+            "raes_intended_use_profiles",
+            "sdl_overview",
+            "sdl_section_reference",
+            "sdl_scaffold or user-authored SDL",
+            "sdl_completions / sdl_diagnostics / sdl_apply_edit while authoring",
+            "sdl_parse",
+            "sdl_validate",
+            "sdl_design_assessment",
+            "sdl_compile",
+            "sdl_plan",
+            "sdl_claims_assessment",
+        ],
+        "tool_families": {
+            "reference": [
+                "sdl_overview",
+                "sdl_section_reference",
+                "sdl_get_example",
+                "sdl_parser_reference",
+                "sdl_validation_reference",
+            ],
+            "authoring": [
+                "sdl_scaffold",
+                "sdl_validate",
+                "sdl_validate_section",
+                "sdl_instantiate",
+            ],
+            "experiment_authoring": [
+                "experiment_scaffold",
+                "experiment_validate",
+                "experiment_get_example",
+            ],
+            "language_service": [
+                "sdl_completions",
+                "sdl_references",
+                "sdl_format",
+                "sdl_diagnostics",
+                "sdl_apply_edit",
+            ],
+            "parsing": ["sdl_parse"],
+            "inspection": [
+                "sdl_summarize",
+                "sdl_list_elements",
+                "sdl_get_element",
+                "sdl_check_references",
+                "sdl_diagram",
+            ],
+            "experiment_operations": [
+                "sdl_compile",
+                "sdl_plan",
+                "raes_reference_manifests",
+                "aces_reference_manifests",
+            ],
+            "assessment": [
+                "sdl_design_assessment",
+                "sdl_claims_assessment",
+            ],
+            "guidance": [
+                "raes_agent_guidance",
+                "raes_intended_use_profiles",
+                "aces_agent_guidance",
+                "aces_intended_use_profiles",
+            ],
+        },
+        "boundaries": [
+            (
+                "This surface helps design and assess scenarios; it does "
+                "not expose participant cyber actions such as scan, exploit, "
+                "SSH, command execution, or hidden-state access."
+            ),
+            (
+                "Planning is a dry-run against declared manifests. Actual "
+                "run claims require runtime results, evidence, and provenance."
+            ),
+            (
+                "Participant skill, causality, visibility, and evidence "
+                "claims require participant contracts and run evidence beyond "
+                "basic SDL validity."
+            ),
+        ],
+    }
+
+
+def _reference_manifest_payload() -> dict[str, object]:
+    from aces_backend_protocols.manifest import backend_manifest_payload
+    from aces_backend_stubs.stubs import create_stub_manifest
+    from aces_processor.manifest import reference_processor_manifest_payload
+
+    backend = backend_manifest_payload(create_stub_manifest())
+    processor = reference_processor_manifest_payload()
+    return {
+        "status": "ok",
+        "processor": manifest_summary(processor),
+        "backend": manifest_summary(backend),
+    }
+
+
 def register(mcp: FastMCP) -> None:
     """Register operation, assessment, and claim tools on the MCP server."""
 
     @mcp.tool(
-        name="aces_tool_surface",
+        name="raes_tool_surface",
         description=(
-            "Describe the ACES SDL MCP tool surface, recommended agent workflow, "
+            "Describe the RAES SDL MCP tool surface, recommended agent workflow, "
             "and safety boundaries. Start here when deciding which tool to call."
         ),
     )
+    def raes_tool_surface() -> str:
+        return json_response(_tool_surface_payload())
+
+    @mcp.tool(
+        name="aces_tool_surface",
+        description=(
+            "Compatibility alias for raes_tool_surface. Describes the RAES SDL MCP tool surface and safety boundaries."
+        ),
+    )
     def aces_tool_surface() -> str:
-        return json_response(
-            {
-                "surface": "aces-sdl",
-                "intent": (
-                    "Author, parse, validate, inspect, assess, and dry-run "
-                    "ACES scenarios for researchers and range designers."
-                ),
-                "recommended_workflow": [
-                    "aces_agent_guidance",
-                    "aces_intended_use_profiles",
-                    "sdl_overview",
-                    "sdl_section_reference",
-                    "sdl_scaffold or user-authored SDL",
-                    "sdl_completions / sdl_diagnostics / sdl_apply_edit while authoring",
-                    "sdl_parse",
-                    "sdl_validate",
-                    "sdl_design_assessment",
-                    "sdl_compile",
-                    "sdl_plan",
-                    "sdl_claims_assessment",
-                ],
-                "tool_families": {
-                    "reference": [
-                        "sdl_overview",
-                        "sdl_section_reference",
-                        "sdl_get_example",
-                        "sdl_parser_reference",
-                        "sdl_validation_reference",
-                    ],
-                    "authoring": [
-                        "sdl_scaffold",
-                        "sdl_validate",
-                        "sdl_validate_section",
-                        "sdl_instantiate",
-                    ],
-                    "experiment_authoring": [
-                        "experiment_scaffold",
-                        "experiment_validate",
-                        "experiment_get_example",
-                    ],
-                    "language_service": [
-                        "sdl_completions",
-                        "sdl_references",
-                        "sdl_format",
-                        "sdl_diagnostics",
-                        "sdl_apply_edit",
-                    ],
-                    "parsing": ["sdl_parse"],
-                    "inspection": [
-                        "sdl_summarize",
-                        "sdl_list_elements",
-                        "sdl_get_element",
-                        "sdl_check_references",
-                        "sdl_diagram",
-                    ],
-                    "experiment_operations": [
-                        "sdl_compile",
-                        "sdl_plan",
-                        "aces_reference_manifests",
-                    ],
-                    "assessment": [
-                        "sdl_design_assessment",
-                        "sdl_claims_assessment",
-                    ],
-                    "guidance": [
-                        "aces_agent_guidance",
-                        "aces_intended_use_profiles",
-                    ],
-                },
-                "boundaries": [
-                    (
-                        "This surface helps design and assess scenarios; it does "
-                        "not expose participant cyber actions such as scan, exploit, "
-                        "SSH, command execution, or hidden-state access."
-                    ),
-                    (
-                        "Planning is a dry-run against declared manifests. Actual "
-                        "run claims require runtime results, evidence, and provenance."
-                    ),
-                    (
-                        "Participant skill, causality, visibility, and evidence "
-                        "claims require participant contracts and run evidence beyond "
-                        "basic SDL validity."
-                    ),
-                ],
-            }
-        )
+        return json_response(_tool_surface_payload())
+
+    @mcp.tool(
+        name="raes_agent_guidance",
+        description=(
+            "Return the AUT-811 machine-readable guidance profile for RAES "
+            "agents and operators. Includes scope boundaries, invariants, "
+            "review priorities, safe-operating expectations, source refs, and "
+            "an optional audience filter: all, contributor, or operator."
+        ),
+    )
+    def raes_agent_guidance(audience: str = "all") -> str:
+        from aces_sdl.agent_guidance import agent_guidance
+
+        return json_response(agent_guidance(audience=audience))
 
     @mcp.tool(
         name="aces_agent_guidance",
         description=(
-            "Return the AUT-811 machine-readable guidance profile for ACES "
-            "agents and operators. Includes scope boundaries, invariants, "
-            "review priorities, safe-operating expectations, source refs, and "
-            "an optional audience filter: all, contributor, or operator."
+            "Compatibility alias for raes_agent_guidance. Returns the AUT-811 machine-readable RAES guidance profile."
         ),
     )
     def aces_agent_guidance(audience: str = "all") -> str:
@@ -200,7 +239,7 @@ def register(mcp: FastMCP) -> None:
         name="sdl_compile",
         description=(
             "Parse, semantically validate, instantiate, and compile SDL YAML "
-            "into the ACES runtime model. Returns JSON with domain counts, "
+            "into the RAES runtime model. Returns JSON with domain counts, "
             "participant-contract counts, source migration advisories, and "
             "structured compiler diagnostics."
         ),
@@ -236,7 +275,7 @@ def register(mcp: FastMCP) -> None:
     @mcp.tool(
         name="sdl_plan",
         description=(
-            "Dry-run an ACES execution plan by parsing, validating, "
+            "Dry-run a RAES execution plan by parsing, validating, "
             "instantiating, compiling, and planning the scenario against the "
             "reference stub backend manifest. Returns JSON with resource and "
             "operation counts, capability diagnostics, and manifest identity. "
@@ -279,27 +318,25 @@ def register(mcp: FastMCP) -> None:
         )
 
     @mcp.tool(
-        name="aces_reference_manifests",
+        name="raes_reference_manifests",
         description=(
-            "Return JSON summaries of the reference ACES processor manifest and "
+            "Return JSON summaries of the reference RAES processor manifest and "
             "reference stub backend manifest used by the MCP dry-run planning "
             "tools."
         ),
     )
-    def aces_reference_manifests() -> str:
-        from aces_backend_protocols.manifest import backend_manifest_payload
-        from aces_backend_stubs.stubs import create_stub_manifest
-        from aces_processor.manifest import reference_processor_manifest_payload
+    def raes_reference_manifests() -> str:
+        return json_response(_reference_manifest_payload())
 
-        backend = backend_manifest_payload(create_stub_manifest())
-        processor = reference_processor_manifest_payload()
-        return json_response(
-            {
-                "status": "ok",
-                "processor": manifest_summary(processor),
-                "backend": manifest_summary(backend),
-            }
-        )
+    @mcp.tool(
+        name="aces_reference_manifests",
+        description=(
+            "Compatibility alias for raes_reference_manifests. Returns JSON "
+            "summaries of the reference RAES processor and backend manifests."
+        ),
+    )
+    def aces_reference_manifests() -> str:
+        return json_response(_reference_manifest_payload())
 
     @mcp.tool(
         name="sdl_design_assessment",

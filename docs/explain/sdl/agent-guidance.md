@@ -1,26 +1,29 @@
 # Agent Guidance Profile
 
-ACES exposes a machine-readable guidance profile for agents and operators. The
+RAES exposes a machine-readable guidance profile for agents and operators. The
 profile gives agents stable rule ids for scope boundaries, invariants, review
 priorities, and safe-operating expectations.
 
 The canonical artifact is
 `specs/agent-guidance/agent-guidance.yaml`. The MCP tool
-`aces_agent_guidance` returns that profile as JSON so an agent can consume it
+`raes_agent_guidance` returns that profile as JSON so an agent can consume it
 without scraping prose.
+
+The profile id remains `aces-agent-guidance` as a governed compatibility
+identifier; the preferred MCP tool name is `raes_agent_guidance`.
 
 ## What Users Get
 
 Before this profile, agent guidance was split across repository instructions,
 MCP tool descriptions, ADRs, policy files, and explanatory docs. An agent could
 read those sources, but it had no single structured payload that said what
-boundaries and review rules apply before authoring or operating against ACES
+boundaries and review rules apply before authoring or operating against RAES
 SDL.
 
 With the guidance profile, users get:
 
 - stable ids for scope and safety rules agents can cite in plans or reviews
-- a shared contributor/operator vocabulary for what ACES tools can and cannot
+- a shared contributor/operator vocabulary for what RAES tools can and cannot
   do
 - source references back to the docs, ADRs, policy files, and code that ground
   each rule
@@ -33,7 +36,7 @@ read-only guidance surface.
 
 ## MCP Tool
 
-Call `aces_agent_guidance` after `aces_tool_surface` and before an agent starts
+Call `raes_agent_guidance` after `raes_tool_surface` and before an agent starts
 authoring, dry-run planning, or making claims about a scenario.
 
 The tool accepts:
@@ -77,10 +80,10 @@ Example response shape:
 
 A conservative agent workflow is:
 
-1. Call `aces_tool_surface` to discover the available tool families.
-2. Call `aces_agent_guidance` for current boundaries and review priorities.
-3. Call `aces_intended_use_profiles` to select the intended claim scope and
-   inspect current ACES delivery blockers.
+1. Call `raes_tool_surface` to discover the available tool families.
+2. Call `raes_agent_guidance` for current boundaries and review priorities.
+3. Call `raes_intended_use_profiles` to select the intended claim scope and
+   inspect current RAES delivery blockers.
 4. Use `sdl_overview` and `sdl_section_reference` for SDL structure.
 5. Use language-service tools for small edits and diagnostics.
 6. Use `sdl_validate`, `sdl_design_assessment`, `sdl_plan`, and

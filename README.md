@@ -1,6 +1,6 @@
-# Agentic Cyber Environment System
+# Reproducible Agentic Environments System
 
-Agentic Cyber Environment System (ACES) is a backend-agnostic scenario
+Reproducible Agentic Environments System (RAES) is a backend-agnostic scenario
 description language, Python reference implementation, and contract surface
 for cyber range scenarios and experiments.
 
@@ -19,14 +19,14 @@ The repository is not a managed cyber range and does not include a production
 backend. Backend contracts, stubs, conformance checks, and examples are present;
 real deployment backends remain separate implementations.
 
-A worked example of ACES SDL driving a concrete range is
+A worked example of RAES SDL driving a concrete range is
 [APTL (Advanced Purple Team Lab)](https://github.com/Brad-Edwards/aptl), a
-separate project that specifies its scenarios as ACES SDL documents and
+separate project that specifies its scenarios as RAES SDL documents and
 realizes the selected topology on a Docker Compose backend.
 
 ## Contents
 
-- [What ACES SDL Describes](#what-aces-sdl-describes)
+- [What RAES SDL Describes](#what-raes-sdl-describes)
 - [Getting Started](#getting-started)
 - [Using the Python Reference Implementation](#using-the-python-reference-implementation)
 - [Repository Layout](#repository-layout)
@@ -39,7 +39,7 @@ realizes the selected topology on a Docker Compose backend.
 - [License](#license)
 - [Maintainer](#maintainer)
 
-## What ACES SDL Describes
+## What RAES SDL Describes
 
 An SDL file is a declarative scenario document. It can describe topology,
 hosts, services, identities, content, relationships, agents, objectives,
@@ -89,7 +89,7 @@ Set up the Python reference implementation:
 git clone https://github.com/Brad-Edwards/aces.git
 cd aces/implementations/python
 uv sync --all-extras
-uv run aces --help
+uv run raes --help
 ```
 
 ## Using the Python Reference Implementation
@@ -112,12 +112,12 @@ for advisory in scenario.advisories:
 Run the CLI from `implementations/python`:
 
 ```shell
-uv run aces sdl resolve ../../examples/scenarios/hospital-ransomware-surgery-day.sdl.yaml
-uv run aces sdl verify-imports ../../examples/scenarios/hospital-ransomware-surgery-day.sdl.yaml
-uv run aces sdl publish ../../examples/scenarios/hospital-ransomware-surgery-day.sdl.yaml
-uv run aces processor --help
-uv run aces conformance --help
-uv run aces-mcp
+uv run raes sdl resolve ../../examples/scenarios/hospital-ransomware-surgery-day.sdl.yaml
+uv run raes sdl verify-imports ../../examples/scenarios/hospital-ransomware-surgery-day.sdl.yaml
+uv run raes sdl publish ../../examples/scenarios/hospital-ransomware-surgery-day.sdl.yaml
+uv run raes processor --help
+uv run raes conformance --help
+uv run raes-mcp
 ```
 
 ## Repository Layout
@@ -144,8 +144,8 @@ uv run aces-mcp
 - [MITRE CALDERA](https://github.com/mitre/caldera)
 - [Atomic Red Team](https://github.com/redcanaryco/atomic-red-team)
 
-For a dimension-by-dimension comparison against these systems — what ACES
-expresses that they do not, and where they still lead ACES — see
+For a dimension-by-dimension comparison against these systems — what RAES
+expresses that they do not, and where they still lead RAES — see
 [Related-Work Comparison](https://github.com/Brad-Edwards/aces/blob/main/docs/explain/sdl/related-work-comparison.md).
 
 ## Documentation
@@ -154,6 +154,7 @@ The documentation source is under [`docs/`](https://github.com/Brad-Edwards/aces
 
 - [`docs/index.md`](https://github.com/Brad-Edwards/aces/blob/main/docs/index.md) - documentation index
 - [`docs/explain/getting-started.md`](https://github.com/Brad-Edwards/aces/blob/main/docs/explain/getting-started.md) - use-case and rigor-level entrypoint
+- [`docs/migration/raes-rename.md`](https://github.com/Brad-Edwards/aces/blob/main/docs/migration/raes-rename.md) - RAES rename and ACES compatibility map
 - [`examples/README.md`](https://github.com/Brad-Edwards/aces/blob/main/examples/README.md) - current worked example inventory
 - [`examples/library/catalog.yaml`](https://github.com/Brad-Edwards/aces/blob/main/examples/library/catalog.yaml) - template and pattern library catalog
 - [`docs/explain/reference/canonical-reference-map.md`](https://github.com/Brad-Edwards/aces/blob/main/docs/explain/reference/canonical-reference-map.md) - current reference map
@@ -189,7 +190,7 @@ Whole-scenario finite-domain satisfiability can be inspected without applying
 or provisioning a scenario:
 
 ```shell
-uv run --project implementations/python aces processor satisfiability \
+uv run --project implementations/python raes processor satisfiability \
   path/to/scenario.sdl.yaml \
   --profile aces-finite-domain-satisfiability-v1
 ```
@@ -233,12 +234,12 @@ must mint a new schema version as described in
 
 ## Citation
 
-If you use ACES SDL in academic work, cite the repository:
+If you use RAES SDL in academic work, cite the repository:
 
 ```bibtex
-@software{aces_sdl,
+@software{raes_sdl,
   author       = {Edwards, Brad},
-  title        = {ACES SDL: Backend-Agnostic Scenario Description Language for Cyber Range Experiments},
+  title        = {RAES SDL: Backend-Agnostic Scenario Description Language for Cyber Range Experiments},
   year         = {2026},
   license      = {MIT},
   url          = {https://github.com/Brad-Edwards/aces}

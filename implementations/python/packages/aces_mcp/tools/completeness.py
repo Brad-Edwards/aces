@@ -66,7 +66,8 @@ def intended_use_profiles(profile_id: str = "") -> dict[str, Any]:
 
     base: dict[str, Any] = {
         "status": "ok",
-        "scope": "aces-delivery-capability",
+        "scope": "raes-delivery-capability",
+        "legacy_scope": "aces-delivery-capability",
         "profile_family": taxonomy.profile_family,
         "taxonomy_revision": taxonomy.revision,
         "assessment_revision": assessment.assessment_revision,
@@ -75,7 +76,7 @@ def intended_use_profiles(profile_id: str = "") -> dict[str, Any]:
             "performed": False,
             "status": "not-assessed",
             "reason": (
-                "This tool reports whether ACES delivers the concerns required by an intended-use profile. "
+                "This tool reports whether RAES delivers the concerns required by an intended-use profile. "
                 "It does not inspect or certify an individual scenario, experiment, backend, or run."
             ),
         },
@@ -122,13 +123,23 @@ def register(mcp: FastMCP) -> None:
     """Register intended-use profile discovery on the MCP server."""
 
     @mcp.tool(
-        name="aces_intended_use_profiles",
+        name="raes_intended_use_profiles",
         description=(
-            "List ACES scientific-scenario intended-use profiles or inspect one profile's "
-            "required concerns, current ACES delivery blockers, evidence, limitations, "
+            "List RAES scientific-scenario intended-use profiles or inspect one profile's "
+            "required concerns, current RAES delivery blockers, evidence, limitations, "
             "nonclaims, and recommended authoring tools. Call without profile_id to discover "
             "the catalog, then select a profile before authoring or making readiness claims. "
-            "This assesses ACES delivery capability, not an individual scenario or run."
+            "This assesses RAES delivery capability, not an individual scenario or run."
+        ),
+    )
+    def raes_intended_use_profiles(profile_id: str = "") -> str:
+        return json_response(intended_use_profiles(profile_id))
+
+    @mcp.tool(
+        name="aces_intended_use_profiles",
+        description=(
+            "Compatibility alias for raes_intended_use_profiles. Lists RAES "
+            "scientific-scenario intended-use profiles and delivery blockers."
         ),
     )
     def aces_intended_use_profiles(profile_id: str = "") -> str:

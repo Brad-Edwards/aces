@@ -1,9 +1,9 @@
-"""ACES SDL MCP Server — tools for understanding, authoring, and validating SDL scenarios.
+"""RAES SDL MCP Server - tools for understanding, authoring, and validating SDL scenarios.
 
 Launch via:
     python -m aces_mcp
     # or
-    aces mcp serve
+    raes-mcp
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ from aces_mcp.tools.operations import register as register_operation_tools
 from aces_mcp.tools.reference import register as register_reference_tools
 
 _INSTRUCTIONS = """\
-You are connected to the ACES SDL (Scenario Description Language) server.
+You are connected to the RAES SDL (Scenario Description Language) server.
 
 The SDL is a YAML-based language for specifying cyber-range scenarios — \
 who (entities, accounts, agents), what (nodes, features, vulnerabilities, \
@@ -27,10 +27,10 @@ content), when (scripts, stories, events), and declarative experiment \
 semantics (objectives, scoring, conditions, relationships, workflows, \
 variables).
 
-Start with `aces_tool_surface` to understand the available tool families, \
-then use `aces_agent_guidance` for scope boundaries, invariants, review \
-priorities, and safe-operating expectations. Use `aces_intended_use_profiles` \
-to select the claim scope and inspect current ACES delivery blockers. Use \
+Start with `raes_tool_surface` to understand the available tool families, \
+then use `raes_agent_guidance` for scope boundaries, invariants, review \
+priorities, and safe-operating expectations. Use `raes_intended_use_profiles` \
+to select the claim scope and inspect current RAES delivery blockers. Use \
 `sdl_overview` to orient \
 yourself. Use `sdl_section_reference` for any section you need to understand. \
 Use `sdl_get_example` to see real-world annotated scenarios. Use \
@@ -39,6 +39,9 @@ Use `sdl_get_example` to see real-world annotated scenarios. Use \
 workflows. Use `sdl_validate`, `sdl_design_assessment`, `sdl_plan`, and \
 `sdl_claims_assessment` to check SDL YAML and avoid overstating what a \
 scenario or dry run can prove.
+
+Legacy `aces_*` tool names remain available as compatibility aliases for \
+existing integrations.
 
 To author an *experiment* (the pre-run specification that binds a task to a \
 run plan — seeds, episode controls, red-variant selection, and replication — \
@@ -51,7 +54,7 @@ to check it.\
 def create_server() -> FastMCP:
     """Build and return the configured MCP server instance."""
     mcp = FastMCP(
-        name="aces-sdl",
+        name="raes-sdl",
         instructions=_INSTRUCTIONS,
     )
     register_reference_tools(mcp)
@@ -65,5 +68,5 @@ def create_server() -> FastMCP:
 
 
 def main() -> None:
-    """Console-script entry point for the `aces-mcp` command."""
+    """Console-script entry point for the `raes-mcp` and `aces-mcp` commands."""
     create_server().run()

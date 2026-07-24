@@ -1,7 +1,7 @@
 # SDL Specification
 
 Status: **normative**. This directory is the language-neutral authority for the
-ACES **Scenario Description Language (SDL)** authoring model and portable
+RAES **Scenario Description Language (SDL)** authoring model and portable
 derived phase contracts. It is binding on
 the ecosystem independent of any reference implementation or code-generation
 pipeline, per [ADR-009](../../docs/decisions/adrs/adr-009-normative-artifact-authority-and-repository-structure.md)

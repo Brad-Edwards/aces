@@ -1,4 +1,4 @@
-# Releasing aces-sdl
+# Releasing RAES via aces-sdl
 
 `aces-sdl` is published to **PyPI**, and releases are automated with
 [release-please](https://github.com/googleapis/release-please) (#684). You never
@@ -6,7 +6,7 @@ hand-edit the version or `CHANGELOG.md`: release-please derives both from the
 Conventional Commit history on `main`.
 
 `aces-sdl` also ships the published contract corpus as package data, so
-`aces conformance backend` and SDL semantic validation work from an installed
+`raes conformance backend` and SDL semantic validation work from an installed
 wheel. Every release binds the code and the corpus in one versioned artifact
 (#537).
 
@@ -46,7 +46,8 @@ Use `feat:`/`fix:` for consumer-visible changes so release-please cuts a release
 - `.release-please-manifest.json` — the version source of truth: `{".": "X.Y.Z"}`.
 - `implementations/python/pyproject.toml` — static `[project] version`
   (release-please rewrites it). `aces.__version__` derives from the installed
-  distribution metadata.
+  distribution metadata. The `raes` and `raes-mcp` console scripts are the
+  preferred current commands; `aces` and `aces-mcp` remain compatibility aliases.
 
 ## Caveat: the release PR and required checks
 

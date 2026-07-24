@@ -3,7 +3,7 @@ from importlib.metadata import version as _distribution_version
 
 # -- Project information -------------------------------------------------------
 
-project = "ACES SDL"
+project = "RAES SDL"
 copyright = "2026, Brad Edwards"
 author = "Brad Edwards"
 
@@ -44,7 +44,7 @@ myst_heading_anchors = 3
 # -- Options for HTML output ---------------------------------------------------
 
 html_theme = "furo"
-html_title = "ACES SDL"
+html_title = "RAES SDL"
 html_static_path = ["_static"]
 
 html_theme_options = {

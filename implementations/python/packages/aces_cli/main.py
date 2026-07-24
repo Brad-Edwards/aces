@@ -1,4 +1,4 @@
-"""Main entry point for the ACES SDL CLI."""
+"""Main entry point for the RAES CLI."""
 
 from importlib.metadata import PackageNotFoundError, version
 
@@ -7,8 +7,8 @@ import typer
 from aces_cli import conformance, corpus, libvirt, processor, sdl
 
 app = typer.Typer(
-    name="aces",
-    help="ACES SDL and runtime CLI",
+    name="raes",
+    help="RAES SDL and runtime CLI",
     no_args_is_help=True,
 )
 
@@ -27,7 +27,7 @@ def _version_callback(value: bool) -> None:
             # Honest PEP 440 not-installed sentinel (GOV-901): do not report a
             # plausible-looking release when the distribution is absent.
             current_version = "0.0.0+unknown"
-        typer.echo(f"aces {current_version}")
+        typer.echo(f"raes {current_version}")
         raise typer.Exit()
 
 
@@ -42,4 +42,4 @@ def main(
         is_eager=True,
     ),
 ) -> None:
-    """ACES SDL and runtime CLI."""
+    """RAES SDL and runtime CLI."""

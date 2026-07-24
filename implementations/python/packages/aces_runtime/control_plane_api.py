@@ -172,7 +172,7 @@ def create_control_plane_app(
 
     security = security or ControlPlaneSecurityConfig.strict_defaults()
     app = FastAPI(
-        title="ACES Runtime Control Plane",
+        title="RAES Runtime Control Plane",
         version=_control_plane_api_version(),
         description="Reference HTTP/JSON adapter over the repo-owned runtime control plane.",
     )

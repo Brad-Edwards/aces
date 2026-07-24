@@ -672,18 +672,21 @@ infrastructure:
 
 class TestOperationTools:
     def test_tool_surface_self_describes_boundaries(self, server):
-        payload = _json_call(server, "aces_tool_surface")
-        assert payload["surface"] == "aces-sdl"
-        assert "aces_agent_guidance" in payload["recommended_workflow"]
-        assert "aces_intended_use_profiles" in payload["recommended_workflow"]
+        payload = _json_call(server, "raes_tool_surface")
+        assert payload["surface"] == "raes-sdl"
+        assert "aces-sdl" in payload["legacy_surfaces"]
+        assert "raes_agent_guidance" in payload["recommended_workflow"]
+        assert "raes_intended_use_profiles" in payload["recommended_workflow"]
         assert "sdl_claims_assessment" in payload["recommended_workflow"]
         assert "sdl_completions" in payload["tool_families"]["language_service"]
+        assert "raes_agent_guidance" in payload["tool_families"]["guidance"]
+        assert "raes_intended_use_profiles" in payload["tool_families"]["guidance"]
         assert "aces_agent_guidance" in payload["tool_families"]["guidance"]
         assert "aces_intended_use_profiles" in payload["tool_families"]["guidance"]
         assert any("does not expose participant cyber actions" in item for item in payload["boundaries"])
 
     def test_agent_guidance_returns_machine_usable_profile(self, server):
-        payload = _json_call(server, "aces_agent_guidance")
+        payload = _json_call(server, "raes_agent_guidance")
         assert payload["status"] == "ok"
         assert payload["profile"] == "aces-agent-guidance"
         assert "AUT-811" in payload["requirement_refs"]
@@ -697,17 +700,18 @@ class TestOperationTools:
         assert payload["guidance"]["scope_boundaries"][0]["source_refs"]
 
     def test_agent_guidance_filters_by_audience(self, server):
-        payload = _json_call(server, "aces_agent_guidance", {"audience": "operator"})
+        payload = _json_call(server, "raes_agent_guidance", {"audience": "operator"})
         assert payload["status"] == "ok"
         for entries in payload["guidance"].values():
             assert entries
             assert all("operator" in entry["audience"] for entry in entries)
 
     def test_intended_use_profiles_exposes_canonical_catalog(self, server):
-        payload = _json_call(server, "aces_intended_use_profiles")
+        payload = _json_call(server, "raes_intended_use_profiles")
 
         assert payload["status"] == "ok"
-        assert payload["scope"] == "aces-delivery-capability"
+        assert payload["scope"] == "raes-delivery-capability"
+        assert payload["legacy_scope"] == "aces-delivery-capability"
         assert payload["taxonomy_revision"] == "rev1"
         assert len(payload["profiles"]) == 5
         assert payload["scenario_assessment"]["status"] == "not-assessed"
@@ -722,7 +726,7 @@ class TestOperationTools:
     def test_intended_use_profile_exposes_blockers_and_authoring_route(self, server):
         payload = _json_call(
             server,
-            "aces_intended_use_profiles",
+            "raes_intended_use_profiles",
             {"profile_id": "controlled-experiment-scenario"},
         )
 
@@ -736,16 +740,21 @@ class TestOperationTools:
         assert payload["scenario_assessment"]["performed"] is False
 
     def test_intended_use_profile_rejects_unknown_id(self, server):
-        payload = _json_call(server, "aces_intended_use_profiles", {"profile_id": "attack-scenario"})
+        payload = _json_call(server, "raes_intended_use_profiles", {"profile_id": "attack-scenario"})
 
         assert payload["status"] == "invalid"
         assert payload["diagnostics"][0]["code"] == "aces.intended_use_profile.unknown"
         assert "valid-sdl-fragment" in payload["diagnostics"][0]["available_profile_ids"]
 
     def test_non_experiment_profile_does_not_recommend_experiment_tools(self, server):
-        payload = _json_call(server, "aces_intended_use_profiles", {"profile_id": "valid-sdl-fragment"})
+        payload = _json_call(server, "raes_intended_use_profiles", {"profile_id": "valid-sdl-fragment"})
 
         assert "experiment_validate" not in payload["profile"]["next_tools"]
+
+    def test_legacy_aces_mcp_aliases_remain_supported(self, server):
+        assert _json_call(server, "aces_tool_surface")["surface"] == "raes-sdl"
+        assert _json_call(server, "aces_agent_guidance")["profile"] == "aces-agent-guidance"
+        assert _json_call(server, "aces_intended_use_profiles")["legacy_scope"] == "aces-delivery-capability"
 
     def test_parse_returns_machine_readable_summary(self, server):
         payload = _json_call(server, "sdl_parse", {"sdl_content": MINIMAL_SDL})
@@ -889,16 +898,16 @@ class TestServerConstruction:
         # Ground truth: the tools actually registered on the FastMCP server.
         # Using the real registration surface (rather than a hand-copied
         # literal) means a drift between what the server exposes and what
-        # aces_tool_surface advertises cannot pass silently.
+        # raes_tool_surface advertises cannot pass silently.
         registered = asyncio.get_event_loop().run_until_complete(server.list_tools())
         registered_names = {tool.name for tool in registered}
         assert registered_names, "server registered no tools"
 
-        # The advertised surface from aces_tool_surface must equal the real
-        # registered set. aces_tool_surface documents itself outside the
-        # family listing, so seed it explicitly.
-        payload = _json_call(server, "aces_tool_surface")
-        advertised = {"aces_tool_surface"}
+        # The advertised surface from raes_tool_surface must equal the real
+        # registered set. Tool-surface aliases document themselves outside the
+        # family listing, so seed them explicitly.
+        payload = _json_call(server, "raes_tool_surface")
+        advertised = {"raes_tool_surface", "aces_tool_surface"}
         for family in payload["tool_families"].values():
             advertised.update(family)
         assert advertised == registered_names
