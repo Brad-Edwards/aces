@@ -2,9 +2,9 @@
   "contract_id": "provisioning-plan-v1",
   "schema_path": "contracts/schemas/plans/provisioning-plan-v1.json",
   "stability": "draft",
-  "content_hash": "c4aef8660b30ee4fbdf29b22180a7da60e1cd42e5a5b087ad3f83c45dc21713c",
+  "content_hash": "7775808973fc934776a5d7ed073bb6f9dfb007c40197fee771e1767dc1f1745b",
   "last_change": {
-    "summary": "Added generated-artifact and persistent-volume provisioning resource identities (issue #780).",
-    "content_hash": "c4aef8660b30ee4fbdf29b22180a7da60e1cd42e5a5b087ad3f83c45dc21713c"
+    "summary": "Added the domain-controller-placement provisioning resource identity for typed identity-domain bootstrap intent (issue #845).",
+    "content_hash": "7775808973fc934776a5d7ed073bb6f9dfb007c40197fee771e1767dc1f1745b"
   }
 }

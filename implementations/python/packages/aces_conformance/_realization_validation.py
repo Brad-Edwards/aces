@@ -34,6 +34,7 @@ _RESOURCE_CONCERNS: dict[str, frozenset[RealizationConcern]] = {
     ),
     "content-placement": frozenset({RealizationConcern.CONTENT_PLACEMENT}),
     "account-placement": frozenset({RealizationConcern.ACCOUNT_PLACEMENT}),
+    "domain-controller-placement": frozenset({RealizationConcern.TOPOLOGY}),
     "feature-binding": frozenset({RealizationConcern.FEATURE_BINDING}),
 }
 _STRENGTH_RANK = {

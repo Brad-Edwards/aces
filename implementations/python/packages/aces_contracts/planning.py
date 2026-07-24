@@ -35,6 +35,7 @@ PLAN_RESOURCE_TYPES_BY_DOMAIN = {
             "feature-binding",
             "content-placement",
             "account-placement",
+            "domain-controller-placement",
             "generated-artifact",
             "persistent-volume",
         }

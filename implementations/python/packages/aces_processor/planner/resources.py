@@ -24,6 +24,11 @@ def _collect_resources(model: RuntimeModel) -> dict[str, PlannedResource]:
         (model.node_deployments, RuntimeDomain.PROVISIONING, "node"),
         (model.feature_bindings, RuntimeDomain.PROVISIONING, "feature-binding"),
         (model.content_placements, RuntimeDomain.PROVISIONING, "content-placement"),
+        (
+            model.domain_controller_placements,
+            RuntimeDomain.PROVISIONING,
+            "domain-controller-placement",
+        ),
         (model.account_placements, RuntimeDomain.PROVISIONING, "account-placement"),
         (model.generated_artifacts, RuntimeDomain.PROVISIONING, "generated-artifact"),
         (model.persistent_volumes, RuntimeDomain.PROVISIONING, "persistent-volume"),
