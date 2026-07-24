@@ -91,6 +91,25 @@ class CompiledCapabilityConstraint:
             raise ValueError("compiled capability constraint requires a non-empty domain")
 
 
+def _register_address_map_entries(
+    field_name: str,
+    entries: dict[str, ResolvedResource],
+    owners: dict[str, str],
+) -> None:
+    for map_key, item in entries.items():
+        address = getattr(item, "address", None)
+        if not isinstance(address, str):
+            raise TypeError(f"RuntimeModel {field_name} entries must carry an address")
+        require_compiled_address(address)
+        require_compiled_address(map_key, field_name="runtime model map key")
+        if map_key != address:
+            raise ValueError(f"RuntimeModel {field_name} map key must equal embedded address")
+        previous_owner = owners.get(address)
+        if previous_owner is not None and previous_owner != field_name:
+            raise ValueError(f"RuntimeModel duplicate compiled address across {previous_owner} and {field_name}")
+        owners[address] = field_name
+
+
 @dataclass(frozen=True)
 class RuntimeModel:
     """Compiled SDL runtime model.
@@ -173,21 +192,7 @@ class RuntimeModel:
             "objectives",
         )
         for field_name in address_map_fields:
-            value = getattr(self, field_name)
-            for map_key, item in value.items():
-                address = getattr(item, "address", None)
-                if not isinstance(address, str):
-                    raise TypeError(f"RuntimeModel {field_name} entries must carry an address")
-                require_compiled_address(address)
-                require_compiled_address(map_key, field_name="runtime model map key")
-                if map_key != address:
-                    raise ValueError(f"RuntimeModel {field_name} map key must equal embedded address")
-                previous_owner = owners.get(address)
-                if previous_owner is not None and previous_owner != field_name:
-                    raise ValueError(
-                        f"RuntimeModel duplicate compiled address across {previous_owner} and {field_name}"
-                    )
-                owners[address] = field_name
+            _register_address_map_entries(field_name, getattr(self, field_name), owners)
         capability_keys = [(constraint.address, constraint.concern) for constraint in self.capability_constraints]
         if len(capability_keys) != len(set(capability_keys)):
             raise ValueError("RuntimeModel capability constraints must address unique fields")

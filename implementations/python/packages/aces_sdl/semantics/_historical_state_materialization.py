@@ -1,417 +1,370 @@
-"""Tenancy, materialization, and readback checks for historical state."""
+"""Native materialization checks for authored historical state."""
 
 from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Callable, Mapping
+from dataclasses import dataclass, field
 
-from ..propositions import AssertionRole, PropositionBasis
-from ..relationships import RelationshipType
 from ._domain_topology_types import resolve_section_ref
 from ._historical_state_types import (
     INTERFACE_OBJECT_KIND,
     HistoricalStateIssue,
     enum_value,
     has_cycle,
-    historical_object_ref,
     issue,
     resolve_local_ref,
     service_owner,
 )
 
 
-def baseline_tenancy_issues(
-    baseline_name: str,
-    baseline: object,
-    *,
-    deployment_tenants: Mapping[str, object],
-    deployment_cells: Mapping[str, object],
-    relationships: Mapping[str, object],
-    is_unresolved: Callable[[object], bool],
-) -> tuple[list[HistoricalStateIssue], tuple[str | None, str | None, str | None]]:
-    issues: list[HistoricalStateIssue] = []
-    tenant_ref = getattr(baseline, "deployment_tenant_ref", "")
-    cell_ref = getattr(baseline, "deployment_cell_ref", "")
-    reset_ref = getattr(baseline, "reset_owner_relationship_ref", "")
-    tenant_name = (
-        None if is_unresolved(tenant_ref) else resolve_section_ref(tenant_ref, "deployment_tenants", deployment_tenants)
-    )
-    cell_name = None if is_unresolved(cell_ref) else resolve_section_ref(cell_ref, "deployment_cells", deployment_cells)
-    reset_name = None if is_unresolved(reset_ref) else resolve_section_ref(reset_ref, "relationships", relationships)
-    if tenant_name is None and not is_unresolved(tenant_ref):
-        issues.append(
-            issue(
-                "historical-state.tenant.unbound",
-                f"Historical baseline '{baseline_name}' deployment_tenant_ref does not resolve",
-            )
-        )
-    if cell_name is None and not is_unresolved(cell_ref):
-        issues.append(
-            issue(
-                "historical-state.cell.unbound",
-                f"Historical baseline '{baseline_name}' deployment_cell_ref does not resolve",
-            )
-        )
-    if tenant_name is not None and cell_name is not None:
-        cell_tenant_ref = getattr(deployment_cells[cell_name], "tenant_ref", "")
-        cell_tenant_name = (
-            None
-            if is_unresolved(cell_tenant_ref)
-            else resolve_section_ref(cell_tenant_ref, "deployment_tenants", deployment_tenants)
-        )
-        if not is_unresolved(cell_tenant_ref) and cell_tenant_name != tenant_name:
-            issues.append(
-                issue(
-                    "historical-state.cell.tenant-mismatch",
-                    f"Historical baseline '{baseline_name}' deployment cell and tenant must agree",
-                )
-            )
-    if reset_name is None and not is_unresolved(reset_ref):
-        issues.append(
-            issue(
-                "historical-state.reset.unbound",
-                f"Historical baseline '{baseline_name}' reset_owner_relationship_ref does not resolve",
-            )
-        )
-    elif reset_name is not None:
-        relationship = relationships[reset_name]
-        detail = getattr(relationship, "shared_service", None)
-        relationship_type = getattr(relationship, "type", "")
-        source_ref = getattr(relationship, "source", "")
-        reset_owner = getattr(detail, "reset_generation_owner", "") if detail is not None else ""
-        source_name = resolve_section_ref(
-            source_ref,
-            "deployment_tenants",
-            deployment_tenants,
-        )
-        if not any(is_unresolved(value) for value in (tenant_ref, relationship_type, source_ref, reset_owner)) and (
-            enum_value(relationship_type) != RelationshipType.USES_SHARED_SERVICE.value
-            or detail is None
-            or source_name != tenant_name
-            or enum_value(reset_owner) == "none"
-        ):
-            issues.append(
-                issue(
-                    "historical-state.reset.owner-mismatch",
-                    f"Historical baseline '{baseline_name}' reset owner must be an agreeing ADR-087 "
-                    "shared-service binding",
-                )
-            )
-    return issues, (tenant_name, cell_name, reset_name)
+@dataclass(frozen=True)
+class MaterializationContext:
+    baseline_name: str
+    baseline: object
+    nodes: Mapping[str, object]
+    deployment_tenants: Mapping[str, object]
+    deployment_cells: Mapping[str, object]
+    relationships: Mapping[str, object]
+    is_unresolved: Callable[[object], bool]
+
+    @property
+    def objects(self) -> Mapping[str, object]:
+        return getattr(self.baseline, "objects", {})
+
+    @property
+    def bindings(self) -> Mapping[str, object]:
+        return getattr(self.baseline, "materialization_bindings", {})
+
+    @property
+    def readbacks(self) -> Mapping[str, object]:
+        return getattr(self.baseline, "readback_requirements", {})
 
 
-def materialization_issues(
-    baseline_name: str,
-    baseline: object,
-    *,
-    nodes: Mapping[str, object],
-    deployment_tenants: Mapping[str, object],
-    deployment_cells: Mapping[str, object],
-    relationships: Mapping[str, object],
-    tenancy: tuple[str | None, str | None, str | None],
+@dataclass
+class _MaterializationState:
+    object_bindings: defaultdict[str, list[str]] = field(default_factory=lambda: defaultdict(list))
+    dependency_graph: dict[str, set[str]] = field(default_factory=dict)
+    object_binding_authority_incomplete: bool = False
+
+
+def _ownership_is_unresolved(
+    value: object,
     is_unresolved: Callable[[object], bool],
-) -> list[HistoricalStateIssue]:
-    issues: list[HistoricalStateIssue] = []
-    objects = getattr(baseline, "objects", {})
-    bindings = getattr(baseline, "materialization_bindings", {})
-    readbacks = getattr(baseline, "readback_requirements", {})
-    tenant_name, cell_name, reset_name = tenancy
-    object_bindings: defaultdict[str, list[str]] = defaultdict(list)
-    object_binding_authority_incomplete = False
-    dependency_graph: dict[str, set[str]] = {binding_id: set() for binding_id in bindings}
-    baseline_ownership_unresolved = any(
-        is_unresolved(getattr(baseline, field_name, ""))
+) -> bool:
+    return any(
+        is_unresolved(getattr(value, field_name, ""))
         for field_name in (
             "deployment_tenant_ref",
             "deployment_cell_ref",
             "reset_owner_relationship_ref",
         )
     )
-    for binding_id, binding in bindings.items():
-        target_ref = getattr(binding, "target_service_ref", "")
-        target_resolves = is_unresolved(target_ref) or service_owner(target_ref, nodes) is not None
-        if not target_resolves:
-            issues.append(
+
+
+def _binding_target_issues(
+    context: MaterializationContext,
+    binding_id: str,
+    binding: object,
+) -> list[HistoricalStateIssue]:
+    target_ref = getattr(binding, "target_service_ref", "")
+    target_resolves = context.is_unresolved(target_ref) or service_owner(target_ref, context.nodes) is not None
+    if target_resolves:
+        return []
+    return [
+        issue(
+            "historical-state.materialization.target-unbound",
+            f"Historical baseline '{context.baseline_name}' materialization binding '{binding_id}' target "
+            "must resolve to a named VM service",
+        )
+    ]
+
+
+def _binding_reset_target_issues(
+    context: MaterializationContext,
+    binding_id: str,
+    binding: object,
+    reset_name: str | None,
+) -> list[HistoricalStateIssue]:
+    target_ref = getattr(binding, "target_service_ref", "")
+    target_resolves = context.is_unresolved(target_ref) or service_owner(target_ref, context.nodes) is not None
+    if reset_name is not None and target_resolves and not context.is_unresolved(target_ref):
+        reset_target = getattr(context.relationships[reset_name], "target", "")
+        if not context.is_unresolved(reset_target) and reset_target != target_ref:
+            return [
                 issue(
-                    "historical-state.materialization.target-unbound",
-                    f"Historical baseline '{baseline_name}' materialization binding '{binding_id}' target "
-                    "must resolve to a named VM service",
+                    "historical-state.materialization.reset-target-mismatch",
+                    f"Historical baseline '{context.baseline_name}' materialization binding '{binding_id}' target "
+                    "must agree with its reset-owner relationship",
                 )
-            )
-        binding_tenant = resolve_section_ref(
+            ]
+    return []
+
+
+def _binding_tenancy_issues(
+    context: MaterializationContext,
+    binding_id: str,
+    binding: object,
+    tenancy: tuple[str | None, str | None, str | None],
+) -> list[HistoricalStateIssue]:
+    binding_ownership = (
+        resolve_section_ref(
             getattr(binding, "deployment_tenant_ref", ""),
             "deployment_tenants",
-            deployment_tenants,
-        )
-        binding_cell = resolve_section_ref(
+            context.deployment_tenants,
+        ),
+        resolve_section_ref(
             getattr(binding, "deployment_cell_ref", ""),
             "deployment_cells",
-            deployment_cells,
-        )
-        binding_reset = resolve_section_ref(
+            context.deployment_cells,
+        ),
+        resolve_section_ref(
             getattr(binding, "reset_owner_relationship_ref", ""),
             "relationships",
-            relationships,
-        )
-        binding_ownership_unresolved = any(
-            is_unresolved(getattr(binding, field_name, ""))
-            for field_name in (
-                "deployment_tenant_ref",
-                "deployment_cell_ref",
-                "reset_owner_relationship_ref",
+            context.relationships,
+        ),
+    )
+    if (
+        not _ownership_is_unresolved(context.baseline, context.is_unresolved)
+        and not _ownership_is_unresolved(binding, context.is_unresolved)
+        and all(value is not None for value in tenancy)
+        and binding_ownership != tenancy
+    ):
+        return [
+            issue(
+                "historical-state.materialization.ownership-mismatch",
+                f"Historical baseline '{context.baseline_name}' materialization binding '{binding_id}' tenant, "
+                "cell, and reset owner must agree with the baseline",
             )
+        ]
+    return []
+
+
+def _binding_ownership_issues(
+    context: MaterializationContext,
+    binding_id: str,
+    binding: object,
+    tenancy: tuple[str | None, str | None, str | None],
+) -> list[HistoricalStateIssue]:
+    return [
+        *_binding_target_issues(context, binding_id, binding),
+        *_binding_tenancy_issues(context, binding_id, binding, tenancy),
+        *_binding_reset_target_issues(context, binding_id, binding, tenancy[2]),
+    ]
+
+
+def _binding_object_issues(
+    context: MaterializationContext,
+    state: _MaterializationState,
+    binding_id: str,
+    binding: object,
+) -> tuple[list[HistoricalStateIssue], bool]:
+    issues: list[HistoricalStateIssue] = []
+    interface_value = getattr(binding, "interface_profile", "")
+    expected_kind = INTERFACE_OBJECT_KIND.get(enum_value(interface_value))
+    binding_object_refs = getattr(binding, "object_refs", ())
+    binding_objects_unresolved = any(context.is_unresolved(ref) for ref in binding_object_refs)
+    state.object_binding_authority_incomplete = state.object_binding_authority_incomplete or binding_objects_unresolved
+    for object_ref in binding_object_refs:
+        if context.is_unresolved(object_ref):
+            continue
+        object_id = resolve_local_ref(
+            object_ref,
+            baseline_name=context.baseline_name,
+            collection_name="objects",
+            declarations=context.objects,
         )
-        if (
-            not baseline_ownership_unresolved
-            and not binding_ownership_unresolved
-            and all(value is not None for value in tenancy)
-            and (binding_tenant, binding_cell, binding_reset) != tenancy
-        ):
+        if object_id is None:
             issues.append(
                 issue(
-                    "historical-state.materialization.ownership-mismatch",
-                    f"Historical baseline '{baseline_name}' materialization binding '{binding_id}' tenant, "
-                    "cell, and reset owner must agree with the baseline",
+                    "historical-state.materialization.object-unbound",
+                    f"Historical baseline '{context.baseline_name}' materialization binding '{binding_id}' "
+                    "object_ref does not resolve",
                 )
             )
-        if reset_name is not None and target_resolves and not is_unresolved(target_ref):
-            reset_target = getattr(relationships[reset_name], "target", "")
-            if not is_unresolved(reset_target) and reset_target != target_ref:
-                issues.append(
-                    issue(
-                        "historical-state.materialization.reset-target-mismatch",
-                        f"Historical baseline '{baseline_name}' materialization binding '{binding_id}' target "
-                        "must agree with its reset-owner relationship",
-                    )
-                )
-        interface = enum_value(getattr(binding, "interface_profile", ""))
-        expected_kind = INTERFACE_OBJECT_KIND.get(interface)
-        binding_object_refs = getattr(binding, "object_refs", ())
-        binding_objects_unresolved = any(is_unresolved(object_ref) for object_ref in binding_object_refs)
-        object_binding_authority_incomplete = object_binding_authority_incomplete or binding_objects_unresolved
-        for object_ref in binding_object_refs:
-            if is_unresolved(object_ref):
-                continue
-            object_id = resolve_local_ref(
-                object_ref,
-                baseline_name=baseline_name,
-                collection_name="objects",
-                declarations=objects,
-            )
-            if object_id is None:
-                issues.append(
-                    issue(
-                        "historical-state.materialization.object-unbound",
-                        f"Historical baseline '{baseline_name}' materialization binding '{binding_id}' "
-                        "object_ref does not resolve",
-                    )
-                )
-                continue
-            object_bindings[object_id].append(binding_id)
-            object_kind = enum_value(getattr(objects[object_id], "kind", ""))
-            if not is_unresolved(getattr(binding, "interface_profile", "")) and object_kind != expected_kind:
-                issues.append(
-                    issue(
-                        "historical-state.materialization.interface-mismatch",
-                        f"Historical baseline '{baseline_name}' materialization binding '{binding_id}' interface "
-                        f"does not support object '{object_id}' kind",
-                    )
-                )
-        for dependency_ref in getattr(binding, "ordering_dependencies", ()):
-            if is_unresolved(dependency_ref):
-                continue
-            dependency_id = resolve_local_ref(
-                dependency_ref,
-                baseline_name=baseline_name,
-                collection_name="materialization_bindings",
-                declarations=bindings,
-            )
-            if dependency_id is None:
-                issues.append(
-                    issue(
-                        "historical-state.materialization.dependency-unbound",
-                        f"Historical baseline '{baseline_name}' materialization binding '{binding_id}' "
-                        "ordering dependency does not resolve",
-                    )
-                )
-            else:
-                dependency_graph[binding_id].add(dependency_id)
-        bound_readback_objects: set[str] = set()
-        binding_readback_refs = getattr(binding, "readback_requirement_refs", ())
-        readback_coverage_incomplete = any(is_unresolved(readback_ref) for readback_ref in binding_readback_refs)
-        for readback_ref in binding_readback_refs:
-            if is_unresolved(readback_ref):
-                continue
-            readback_id = resolve_local_ref(
-                readback_ref,
-                baseline_name=baseline_name,
-                collection_name="readback_requirements",
-                declarations=readbacks,
-            )
-            if readback_id is None:
-                issues.append(
-                    issue(
-                        "historical-state.materialization.readback-unbound",
-                        f"Historical baseline '{baseline_name}' materialization binding '{binding_id}' "
-                        "readback requirement does not resolve",
-                    )
-                )
-                continue
-            readback_object_ref = getattr(readbacks[readback_id], "object_ref", "")
-            if is_unresolved(readback_object_ref):
-                readback_coverage_incomplete = True
-                continue
-            readback_object = resolve_local_ref(
-                readback_object_ref,
-                baseline_name=baseline_name,
-                collection_name="objects",
-                declarations=objects,
-            )
-            if readback_object is not None:
-                bound_readback_objects.add(readback_object)
-        bound_object_ids = {
-            object_id
-            for ref in binding_object_refs
-            if (
-                object_id := resolve_local_ref(
-                    ref,
-                    baseline_name=baseline_name,
-                    collection_name="objects",
-                    declarations=objects,
-                )
-            )
-            is not None
-        }
-        if (
-            not binding_objects_unresolved
-            and not readback_coverage_incomplete
-            and not bound_object_ids.issubset(bound_readback_objects)
-        ):
+            continue
+        state.object_bindings[object_id].append(binding_id)
+        object_kind = enum_value(getattr(context.objects[object_id], "kind", ""))
+        if not context.is_unresolved(interface_value) and object_kind != expected_kind:
             issues.append(
                 issue(
-                    "historical-state.materialization.readback-coverage",
-                    f"Historical baseline '{baseline_name}' materialization binding '{binding_id}' requires "
-                    "participant readback for every bound object",
+                    "historical-state.materialization.interface-mismatch",
+                    f"Historical baseline '{context.baseline_name}' materialization binding '{binding_id}' "
+                    f"interface does not support object '{object_id}' kind",
                 )
             )
-    if has_cycle(dependency_graph):
+    return issues, binding_objects_unresolved
+
+
+def _binding_dependency_issues(
+    context: MaterializationContext,
+    state: _MaterializationState,
+    binding_id: str,
+    binding: object,
+) -> list[HistoricalStateIssue]:
+    issues: list[HistoricalStateIssue] = []
+    for dependency_ref in getattr(binding, "ordering_dependencies", ()):
+        if context.is_unresolved(dependency_ref):
+            continue
+        dependency_id = resolve_local_ref(
+            dependency_ref,
+            baseline_name=context.baseline_name,
+            collection_name="materialization_bindings",
+            declarations=context.bindings,
+        )
+        if dependency_id is None:
+            issues.append(
+                issue(
+                    "historical-state.materialization.dependency-unbound",
+                    f"Historical baseline '{context.baseline_name}' materialization binding '{binding_id}' "
+                    "ordering dependency does not resolve",
+                )
+            )
+        else:
+            state.dependency_graph[binding_id].add(dependency_id)
+    return issues
+
+
+def _binding_readback_object(
+    context: MaterializationContext,
+    binding_id: str,
+    readback_ref: object,
+) -> tuple[list[HistoricalStateIssue], str | None, bool]:
+    readback_id = resolve_local_ref(
+        readback_ref,
+        baseline_name=context.baseline_name,
+        collection_name="readback_requirements",
+        declarations=context.readbacks,
+    )
+    if readback_id is None:
+        return (
+            [
+                issue(
+                    "historical-state.materialization.readback-unbound",
+                    f"Historical baseline '{context.baseline_name}' materialization binding '{binding_id}' "
+                    "readback requirement does not resolve",
+                )
+            ],
+            None,
+            False,
+        )
+    readback_object_ref = getattr(context.readbacks[readback_id], "object_ref", "")
+    if context.is_unresolved(readback_object_ref):
+        return [], None, True
+    return (
+        [],
+        resolve_local_ref(
+            readback_object_ref,
+            baseline_name=context.baseline_name,
+            collection_name="objects",
+            declarations=context.objects,
+        ),
+        False,
+    )
+
+
+def _resolved_binding_object_ids(
+    context: MaterializationContext,
+    binding: object,
+) -> set[str]:
+    return {
+        object_id
+        for ref in getattr(binding, "object_refs", ())
+        if (
+            object_id := resolve_local_ref(
+                ref,
+                baseline_name=context.baseline_name,
+                collection_name="objects",
+                declarations=context.objects,
+            )
+        )
+        is not None
+    }
+
+
+def _binding_readback_issues(
+    context: MaterializationContext,
+    binding_id: str,
+    binding: object,
+    binding_objects_unresolved: bool,
+) -> list[HistoricalStateIssue]:
+    issues: list[HistoricalStateIssue] = []
+    bound_readback_objects: set[str] = set()
+    binding_readback_refs = getattr(binding, "readback_requirement_refs", ())
+    readback_coverage_incomplete = any(context.is_unresolved(ref) for ref in binding_readback_refs)
+    for readback_ref in binding_readback_refs:
+        if context.is_unresolved(readback_ref):
+            continue
+        readback_issues, readback_object, object_ref_unresolved = _binding_readback_object(
+            context,
+            binding_id,
+            readback_ref,
+        )
+        issues.extend(readback_issues)
+        readback_coverage_incomplete = readback_coverage_incomplete or object_ref_unresolved
+        if readback_object is not None:
+            bound_readback_objects.add(readback_object)
+    bound_object_ids = _resolved_binding_object_ids(context, binding)
+    if (
+        not binding_objects_unresolved
+        and not readback_coverage_incomplete
+        and not bound_object_ids.issubset(bound_readback_objects)
+    ):
+        issues.append(
+            issue(
+                "historical-state.materialization.readback-coverage",
+                f"Historical baseline '{context.baseline_name}' materialization binding '{binding_id}' requires "
+                "participant readback for every bound object",
+            )
+        )
+    return issues
+
+
+def _materialization_summary_issues(
+    context: MaterializationContext,
+    state: _MaterializationState,
+) -> list[HistoricalStateIssue]:
+    issues: list[HistoricalStateIssue] = []
+    if has_cycle(state.dependency_graph):
         issues.append(
             issue(
                 "historical-state.materialization.dependency-cycle",
-                f"Historical baseline '{baseline_name}' materialization dependency graph contains a cycle",
+                f"Historical baseline '{context.baseline_name}' materialization dependency graph contains a cycle",
             )
         )
-    if not object_binding_authority_incomplete:
-        for object_id in objects:
-            owners = object_bindings.get(object_id, [])
-            if len(owners) != 1:
+    if not state.object_binding_authority_incomplete:
+        for object_id in context.objects:
+            if len(state.object_bindings.get(object_id, [])) != 1:
                 issues.append(
                     issue(
                         "historical-state.materialization.object-authority",
-                        f"Historical baseline '{baseline_name}' object '{object_id}' must have exactly one "
+                        f"Historical baseline '{context.baseline_name}' object '{object_id}' must have exactly one "
                         "materialization binding",
                     )
                 )
     return issues
 
 
-def readback_issues(
-    baseline_name: str,
-    baseline: object,
-    *,
-    propositions: Mapping[str, object],
-    assertions: Mapping[str, object],
-    observation_boundaries: Mapping[str, object],
-    is_unresolved: Callable[[object], bool],
+def materialization_issues(
+    context: MaterializationContext,
+    tenancy: tuple[str | None, str | None, str | None],
 ) -> list[HistoricalStateIssue]:
+    state = _MaterializationState(
+        dependency_graph={binding_id: set() for binding_id in context.bindings},
+    )
     issues: list[HistoricalStateIssue] = []
-    objects = getattr(baseline, "objects", {})
-    for readback_id, readback in getattr(baseline, "readback_requirements", {}).items():
-        object_id = resolve_local_ref(
-            getattr(readback, "object_ref", ""),
-            baseline_name=baseline_name,
-            collection_name="objects",
-            declarations=objects,
-        )
-        if object_id is None and not is_unresolved(getattr(readback, "object_ref", "")):
-            issues.append(
-                issue(
-                    "historical-state.readback.object-unbound",
-                    f"Historical baseline '{baseline_name}' readback '{readback_id}' object_ref does not resolve",
-                )
-            )
-        boundary_ref = getattr(readback, "observation_boundary_ref", "")
-        boundary_name = (
-            None
-            if is_unresolved(boundary_ref)
-            else resolve_section_ref(
-                boundary_ref,
-                "observation_boundaries",
-                observation_boundaries,
+    for binding_id, binding in context.bindings.items():
+        issues.extend(_binding_ownership_issues(context, binding_id, binding, tenancy))
+        object_issues, binding_objects_unresolved = _binding_object_issues(context, state, binding_id, binding)
+        issues.extend(object_issues)
+        issues.extend(_binding_dependency_issues(context, state, binding_id, binding))
+        issues.extend(
+            _binding_readback_issues(
+                context,
+                binding_id,
+                binding,
+                binding_objects_unresolved,
             )
         )
-        if not is_unresolved(boundary_ref) and boundary_name is None:
-            issues.append(
-                issue(
-                    "historical-state.readback.boundary-unbound",
-                    f"Historical baseline '{baseline_name}' readback '{readback_id}' observation boundary "
-                    "does not resolve",
-                )
-            )
-        expected_subject = historical_object_ref(baseline_name, object_id) if object_id is not None else None
-        if boundary_name is not None and expected_subject is not None:
-            observable_refs = getattr(
-                observation_boundaries[boundary_name],
-                "observable_refs",
-                (),
-            )
-            if not any(is_unresolved(ref) for ref in observable_refs) and expected_subject not in observable_refs:
-                issues.append(
-                    issue(
-                        "historical-state.readback.boundary-visibility",
-                        f"Historical baseline '{baseline_name}' readback '{readback_id}' object must be "
-                        "participant-visible through its observation boundary",
-                    )
-                )
-        for assertion_ref in getattr(readback, "assertion_refs", ()):
-            if is_unresolved(assertion_ref):
-                continue
-            assertion_name = resolve_section_ref(assertion_ref, "assertions", assertions)
-            if assertion_name is None:
-                issues.append(
-                    issue(
-                        "historical-state.readback.assertion-unbound",
-                        f"Historical baseline '{baseline_name}' readback '{readback_id}' assertion_ref "
-                        "does not resolve",
-                    )
-                )
-                continue
-            assertion = assertions[assertion_name]
-            proposition_ref = getattr(assertion, "proposition", "")
-            if is_unresolved(proposition_ref) or expected_subject is None:
-                continue
-            proposition_name = resolve_section_ref(
-                proposition_ref,
-                "propositions",
-                propositions,
-            )
-            proposition = propositions.get(proposition_name) if proposition_name is not None else None
-            role = enum_value(getattr(assertion, "role", ""))
-            proposition_basis = getattr(proposition, "basis", "") if proposition is not None else ""
-            proposition_subjects = getattr(proposition, "subjects", ()) if proposition is not None else ()
-            if any(is_unresolved(value) for value in (proposition_basis, role, *proposition_subjects)):
-                continue
-            if (
-                proposition is None
-                or enum_value(proposition_basis) != PropositionBasis.OBSERVED_STATE.value
-                or expected_subject not in set(proposition_subjects)
-                or role not in {AssertionRole.INVARIANT.value, AssertionRole.POSTCONDITION.value}
-            ):
-                issues.append(
-                    issue(
-                        "historical-state.readback.assertion-mismatch",
-                        f"Historical baseline '{baseline_name}' readback '{readback_id}' assertion must be an "
-                        "observed-state invariant or postcondition over its exact semantic object",
-                    )
-                )
+    issues.extend(_materialization_summary_issues(context, state))
     return issues

@@ -31,23 +31,27 @@ SECRET_QUERY_FRAGMENTS = (
 )
 
 
-def unsafe_absolute_uri_reason(uri: str) -> str | None:
-    """Return a bounded reason when an absolute URI is invalid or secret-bearing."""
-
-    parsed = urlsplit(uri)
-    if not parsed.scheme or (parsed.scheme in {"http", "https"} and not parsed.netloc):
-        return "must be an absolute URI"
-    if parsed.username is not None or parsed.password is not None:
-        return "must not contain credential userinfo"
-    query_names = {name.casefold() for name, _value in parse_qsl(parsed.query, keep_blank_values=True)}
-    secret_names = {
+def _secret_query_names(query: str) -> set[str]:
+    query_names = {name.casefold() for name, _value in parse_qsl(query, keep_blank_values=True)}
+    return {
         name
         for name in query_names
         if name in SECRET_QUERY_NAMES or any(fragment in name for fragment in SECRET_QUERY_FRAGMENTS)
     }
-    if secret_names:
-        return "must not contain secret-bearing query fields"
-    return None
+
+
+def unsafe_absolute_uri_reason(uri: str) -> str | None:
+    """Return a bounded reason when an absolute URI is invalid or secret-bearing."""
+
+    parsed = urlsplit(uri)
+    reason = None
+    if not parsed.scheme or (parsed.scheme in {"http", "https"} and not parsed.netloc):
+        reason = "must be an absolute URI"
+    elif parsed.username is not None or parsed.password is not None:
+        reason = "must not contain credential userinfo"
+    elif _secret_query_names(parsed.query):
+        reason = "must not contain secret-bearing query fields"
+    return reason
 
 
 __all__ = ["SECRET_QUERY_FRAGMENTS", "SECRET_QUERY_NAMES", "unsafe_absolute_uri_reason"]

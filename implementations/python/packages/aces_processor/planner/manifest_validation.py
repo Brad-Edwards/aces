@@ -333,6 +333,9 @@ def _validate_evaluation_support(model: RuntimeModel, manifest: BackendManifest)
     return diagnostics
 
 
+HISTORICAL_STATE_PROVISION_ADDRESS = "provision.historical-state"
+
+
 def _validate_historical_state_support(
     model: RuntimeModel,
     manifest: BackendManifest,
@@ -353,7 +356,7 @@ def _validate_historical_state_support(
             Diagnostic(
                 code="historical-state.capability-missing",
                 domain="provisioning",
-                address="provision.historical-state",
+                address=HISTORICAL_STATE_PROVISION_ADDRESS,
                 message=(
                     "Scenario requires native historical-state materialization, "
                     "but the backend declares no historical-state capability."
@@ -367,7 +370,7 @@ def _validate_historical_state_support(
             Diagnostic(
                 code="historical-state.interface-unsupported",
                 domain="provisioning",
-                address="provision.historical-state",
+                address=HISTORICAL_STATE_PROVISION_ADDRESS,
                 message=f"Backend does not support historical materialization interface '{profile}'.",
             )
         )
@@ -376,7 +379,7 @@ def _validate_historical_state_support(
             Diagnostic(
                 code="historical-state.object-kind-unsupported",
                 domain="provisioning",
-                address="provision.historical-state",
+                address=HISTORICAL_STATE_PROVISION_ADDRESS,
                 message=f"Backend does not support historical materialization object kind '{kind}'.",
             )
         )

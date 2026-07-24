@@ -23,7 +23,7 @@ UNSAFE_TEXT_PATTERNS = (
         re.IGNORECASE,
     ),
     re.compile(r"(?:^|\n)\s*#!\s*/", re.IGNORECASE),
-    re.compile(r"<script(?:\s|>)", re.IGNORECASE),
+    re.compile(r"<script[\s>]", re.IGNORECASE),
 )
 
 INTERFACE_OBJECT_KIND = {
@@ -64,17 +64,21 @@ def resolve_local_ref(
     collection_name: str,
     declarations: Mapping[str, object],
 ) -> str | None:
-    if not isinstance(ref, str):
-        return None
-    if ref in declarations:
-        return ref
-    local_prefix = f"{collection_name}."
-    local = ref.removeprefix(local_prefix) if ref.startswith(local_prefix) else ""
-    if local in declarations:
-        return local
-    canonical_prefix = f"historical_baselines.{baseline_name}.{collection_name}."
-    canonical = ref.removeprefix(canonical_prefix) if ref.startswith(canonical_prefix) else ""
-    return canonical if canonical in declarations else None
+    resolved = None
+    if isinstance(ref, str):
+        if ref in declarations:
+            resolved = ref
+        else:
+            local_prefix = f"{collection_name}."
+            local = ref.removeprefix(local_prefix) if ref.startswith(local_prefix) else ""
+            if local in declarations:
+                resolved = local
+            else:
+                canonical_prefix = f"historical_baselines.{baseline_name}.{collection_name}."
+                canonical = ref.removeprefix(canonical_prefix) if ref.startswith(canonical_prefix) else ""
+                if canonical in declarations:
+                    resolved = canonical
+    return resolved
 
 
 def has_cycle(graph: Mapping[str, set[str]]) -> bool:
@@ -84,13 +88,12 @@ def has_cycle(graph: Mapping[str, set[str]]) -> bool:
     def visit(node: str) -> bool:
         if node in visiting:
             return True
-        if node in visited:
-            return False
-        visiting.add(node)
-        if any(dependency in graph and visit(dependency) for dependency in graph[node]):
-            return True
-        visiting.remove(node)
-        visited.add(node)
+        if node not in visited:
+            visiting.add(node)
+            if any(dependency in graph and visit(dependency) for dependency in graph[node]):
+                return True
+            visiting.remove(node)
+            visited.add(node)
         return False
 
     return any(visit(node) for node in graph)

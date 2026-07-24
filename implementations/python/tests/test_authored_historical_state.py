@@ -26,12 +26,14 @@ from aces_contracts.historical_addressing import (
 from aces_processor.compiler import compile_runtime_model
 from aces_processor.planner import plan
 from aces_sdl import (
+    SDLInstantiationError,
     SDLParseError,
     SDLValidationError,
     instantiate_scenario,
     parse_sdl,
     parse_sdl_file,
 )
+from aces_sdl.semantics.historical_state import HistoricalStateAnalysisContext, analyze_historical_state
 from jsonschema import Draft202012Validator
 
 _INSTANTIATION_PROVENANCE = {
@@ -286,6 +288,28 @@ def test_complete_historical_baseline_is_admitted() -> None:
     assert scenario.relationships["message-case"].historical_object_link.kind.value == "associated_with"
 
 
+def test_historical_analysis_context_preserves_legacy_keyword_calls() -> None:
+    scenario = _parse(_valid_payload())
+    declarations = {
+        "historical_baselines": scenario.historical_baselines,
+        "entities": scenario.entities,
+        "agents": scenario.agents,
+        "accounts": scenario.accounts,
+        "nodes": scenario.nodes,
+        "content": scenario.content,
+        "propositions": scenario.propositions,
+        "assertions": scenario.assertions,
+        "observation_boundaries": scenario.observation_boundaries,
+        "deployment_tenants": scenario.deployment_tenants,
+        "deployment_cells": scenario.deployment_cells,
+        "relationships": scenario.relationships,
+        "is_unresolved": lambda _value: False,
+    }
+
+    assert analyze_historical_state(HistoricalStateAnalysisContext(**declarations)) == ()
+    assert analyze_historical_state(**declarations) == ()
+
+
 @pytest.mark.parametrize("field", ["native_id", "provider_options", "raw_body", "script"])
 def test_unrepresentable_product_and_corpus_fields_fail_closed(field: str) -> None:
     payload = _valid_payload()
@@ -466,16 +490,18 @@ def test_backend_manifest_declares_exact_historical_materialization_support() ->
     ]
     assert roundtrip.historical_state == capability
 
+    unknown_profile = {
+        "supported_interface_profiles": frozenset({"vendor-message/v1"}),
+        "supported_object_kinds": frozenset({"message"}),
+    }
     with pytest.raises(ValueError, match="unknown profiles"):
-        HistoricalStateCapabilities(
-            supported_interface_profiles=frozenset({"vendor-message/v1"}),
-            supported_object_kinds=frozenset({"message"}),
-        )
+        HistoricalStateCapabilities(**unknown_profile)
+    mismatched_support = {
+        "supported_interface_profiles": frozenset({"native-message/v1"}),
+        "supported_object_kinds": frozenset({"case"}),
+    }
     with pytest.raises(ValueError, match="same exact support pairs"):
-        HistoricalStateCapabilities(
-            supported_interface_profiles=frozenset({"native-message/v1"}),
-            supported_object_kinds=frozenset({"case"}),
-        )
+        HistoricalStateCapabilities(**mismatched_support)
 
 
 def _historical_manifest(
@@ -783,6 +809,13 @@ def test_variables_instantiate_address_context_and_revalidate() -> None:
     assert address.context.reset_generation_id == "generation-009"
 
 
+def _scenario_path_value(scenario: object, path: tuple[str, ...]) -> object:
+    value = scenario
+    for segment in path:
+        value = value[segment] if isinstance(value, dict) else getattr(value, segment)
+    return value
+
+
 @pytest.mark.parametrize(
     ("path", "default", "explicit", "is_list"),
     [
@@ -931,8 +964,13 @@ def test_reference_variables_defer_aggregate_checks_until_instantiation(
         parameters={"historical_ref": explicit},
     )
 
-    assert defaulted.historical_baselines["enterprise"]
-    assert supplied.historical_baselines["enterprise"]
+    assert _scenario_path_value(defaulted, path) == ([default] if is_list else default)
+    assert _scenario_path_value(supplied, path) == ([explicit] if is_list else explicit)
+    with pytest.raises(SDLInstantiationError):
+        instantiate_scenario(
+            authored,
+            parameters={"historical_ref": "missing-reference"},
+        )
 
 
 def _address_context(**overrides: str) -> HistoricalSemanticAddressContextModel:
@@ -992,13 +1030,15 @@ def test_semantic_address_batch_rejects_duplicate_coordinates_and_collisions(
         "aces_contracts.historical_addressing.canonical_historical_address_bytes",
         lambda _context: b"same",
     )
+    second_context = _address_context(object_id="object-b")
     with pytest.raises(ValueError, match="duplicate canonical bytes"):
-        derive_historical_semantic_addresses((context, _address_context(object_id="object-b")))
+        derive_historical_semantic_addresses((context, second_context))
 
     monkeypatch.undo()
     monkeypatch.setattr("aces_contracts.historical_addressing._digest_address", lambda _value: b"x" * 32)
+    second_context = _address_context(object_id="object-b")
     with pytest.raises(ValueError, match="digest collision"):
-        derive_historical_semantic_addresses((context, _address_context(object_id="object-b")))
+        derive_historical_semantic_addresses((context, second_context))
 
 
 def test_historical_baseline_digest_is_complete_deterministic_and_domain_separated() -> None:
