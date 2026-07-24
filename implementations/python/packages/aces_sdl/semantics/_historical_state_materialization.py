@@ -6,7 +6,6 @@ from collections import defaultdict
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 
-from ..relationships import RelationshipType
 from ._domain_topology_types import resolve_section_ref
 from ._historical_state_types import (
     INTERFACE_OBJECT_KIND,
@@ -49,7 +48,7 @@ class _MaterializationState:
     object_binding_authority_incomplete: bool = False
 
 
-def _tenancy_is_unresolved(
+def _ownership_is_unresolved(
     value: object,
     is_unresolved: Callable[[object], bool],
 ) -> bool:
@@ -58,6 +57,7 @@ def _tenancy_is_unresolved(
         for field_name in (
             "deployment_tenant_ref",
             "deployment_cell_ref",
+            "reset_owner_relationship_ref",
         )
     )
 
@@ -84,47 +84,21 @@ def _binding_reset_target_issues(
     context: MaterializationContext,
     binding_id: str,
     binding: object,
+    reset_name: str | None,
 ) -> list[HistoricalStateIssue]:
-    issues: list[HistoricalStateIssue] = []
-    reset_ref = getattr(binding, "reset_owner_relationship_ref", "")
-    if not context.is_unresolved(reset_ref):
-        reset_name = resolve_section_ref(reset_ref, "relationships", context.relationships)
-        if reset_name is None:
-            issues.append(
+    target_ref = getattr(binding, "target_service_ref", "")
+    target_resolves = context.is_unresolved(target_ref) or service_owner(target_ref, context.nodes) is not None
+    if reset_name is not None and target_resolves and not context.is_unresolved(target_ref):
+        reset_target = getattr(context.relationships[reset_name], "target", "")
+        if not context.is_unresolved(reset_target) and reset_target != target_ref:
+            return [
                 issue(
-                    "historical-state.materialization.reset-owner-unbound",
-                    f"Historical baseline '{context.baseline_name}' materialization binding '{binding_id}' "
-                    "reset-owner relationship does not resolve",
+                    "historical-state.materialization.reset-target-mismatch",
+                    f"Historical baseline '{context.baseline_name}' materialization binding '{binding_id}' target "
+                    "must agree with its reset-owner relationship",
                 )
-            )
-        else:
-            relationship = context.relationships[reset_name]
-            detail = getattr(relationship, "shared_service", None)
-            target_ref = getattr(binding, "target_service_ref", "")
-            tenant_ref = getattr(binding, "deployment_tenant_ref", "")
-            source_ref = getattr(relationship, "source", "")
-            reset_target = getattr(relationship, "target", "")
-            relationship_type = getattr(relationship, "type", "")
-            reset_owner = getattr(detail, "reset_generation_owner", "") if detail is not None else ""
-            tenant_name = resolve_section_ref(tenant_ref, "deployment_tenants", context.deployment_tenants)
-            source_name = resolve_section_ref(source_ref, "deployment_tenants", context.deployment_tenants)
-            ownership_values = (tenant_ref, source_ref, reset_target, relationship_type, reset_owner, target_ref)
-            mismatch = (
-                enum_value(relationship_type) != RelationshipType.USES_SHARED_SERVICE.value
-                or detail is None
-                or source_name != tenant_name
-                or enum_value(reset_owner) == "none"
-                or reset_target != target_ref
-            )
-            if not any(context.is_unresolved(value) for value in ownership_values) and mismatch:
-                issues.append(
-                    issue(
-                        "historical-state.materialization.reset-owner-mismatch",
-                        f"Historical baseline '{context.baseline_name}' materialization binding '{binding_id}' "
-                        "reset-owner relationship must bind its tenant to its exact target service",
-                    )
-                )
-    return issues
+            ]
+    return []
 
 
 def _binding_tenancy_issues(
@@ -133,7 +107,7 @@ def _binding_tenancy_issues(
     binding: object,
     tenancy: tuple[str | None, str | None, str | None],
 ) -> list[HistoricalStateIssue]:
-    binding_tenancy = (
+    binding_ownership = (
         resolve_section_ref(
             getattr(binding, "deployment_tenant_ref", ""),
             "deployment_tenants",
@@ -144,18 +118,23 @@ def _binding_tenancy_issues(
             "deployment_cells",
             context.deployment_cells,
         ),
+        resolve_section_ref(
+            getattr(binding, "reset_owner_relationship_ref", ""),
+            "relationships",
+            context.relationships,
+        ),
     )
     if (
-        not _tenancy_is_unresolved(context.baseline, context.is_unresolved)
-        and not _tenancy_is_unresolved(binding, context.is_unresolved)
-        and all(value is not None for value in tenancy[:2])
-        and binding_tenancy != tenancy[:2]
+        not _ownership_is_unresolved(context.baseline, context.is_unresolved)
+        and not _ownership_is_unresolved(binding, context.is_unresolved)
+        and all(value is not None for value in tenancy)
+        and binding_ownership != tenancy
     ):
         return [
             issue(
                 "historical-state.materialization.ownership-mismatch",
                 f"Historical baseline '{context.baseline_name}' materialization binding '{binding_id}' tenant, "
-                "and cell must agree with the baseline",
+                "cell, and reset owner must agree with the baseline",
             )
         ]
     return []
@@ -170,7 +149,7 @@ def _binding_ownership_issues(
     return [
         *_binding_target_issues(context, binding_id, binding),
         *_binding_tenancy_issues(context, binding_id, binding, tenancy),
-        *_binding_reset_target_issues(context, binding_id, binding),
+        *_binding_reset_target_issues(context, binding_id, binding, tenancy[2]),
     ]
 
 

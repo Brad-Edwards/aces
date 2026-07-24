@@ -422,18 +422,18 @@ def test_historical_object_links_require_typed_local_endpoints_and_no_properties
         _parse(payload)
 
 
-def test_tenant_cell_and_binding_reset_owner_must_agree() -> None:
+def test_tenant_cell_reset_owner_and_target_must_agree() -> None:
     payload = _valid_payload()
     binding = _baseline(payload)["materialization_bindings"]["message-native"]  # type: ignore[index]
     binding["deployment_tenant_ref"] = "missing"
-    with pytest.raises(SDLValidationError, match="tenant, and cell must agree"):
+    with pytest.raises(SDLValidationError, match="tenant, cell, and reset owner must agree"):
         _parse(payload)
 
     payload = _valid_payload()
     payload["nodes"]["archive"]["services"].append({"name": "other", "port": 9443})  # type: ignore[index]
     binding = _baseline(payload)["materialization_bindings"]["message-native"]  # type: ignore[index]
     binding["target_service_ref"] = "nodes.archive.services.other"
-    with pytest.raises(SDLValidationError, match="reset-owner relationship must bind its tenant"):
+    with pytest.raises(SDLValidationError, match="reset-owner relationship"):
         _parse(payload)
 
     payload = _valid_payload()
@@ -444,44 +444,6 @@ def test_tenant_cell_and_binding_reset_owner_must_agree() -> None:
         match="Historical baseline 'enterprise' reset owner must be an agreeing ADR-087 shared-service binding",
     ):
         _parse(payload)
-
-
-def test_one_causal_baseline_may_span_multiple_native_services() -> None:
-    payload = _valid_payload()
-    payload["nodes"]["archive"]["services"].append({"name": "cases", "port": 9443})  # type: ignore[index]
-    payload["persistent_volumes"]["tenant-cases"] = {  # type: ignore[index]
-        "lifecycle": "ephemeral",
-        "access_mode": "read_write_once",
-        "consumers": [
-            {
-                "node": "archive",
-                "mount_destination": "/var/lib/cases",
-                "access_mode": "read_write",
-            }
-        ],
-    }
-    payload["relationships"]["cases-reset-owner"] = {  # type: ignore[index]
-        "type": "uses_shared_service",
-        "source": "range-a",
-        "target": "nodes.archive.services.cases",
-        "shared_service": {
-            "tenant_isolation": "none",
-            "workload_authentication": "workload_identity",
-            "mutable_state_refs": ["tenant-cases"],
-            "mutable_state_owner": "consumer_tenant",
-            "reset_generation_owner": "consumer_tenant",
-        },
-    }
-    case_binding = _baseline(payload)["materialization_bindings"]["case-native"]  # type: ignore[index]
-    case_binding["target_service_ref"] = "nodes.archive.services.cases"
-    case_binding["reset_owner_relationship_ref"] = "cases-reset-owner"
-
-    scenario = _parse(payload)
-
-    bindings = scenario.historical_baselines["enterprise"].materialization_bindings
-    assert bindings["message-native"].target_service_ref == "nodes.archive.services.records"
-    assert bindings["case-native"].target_service_ref == "nodes.archive.services.cases"
-    assert bindings["case-native"].reset_owner_relationship_ref == "cases-reset-owner"
 
 
 def test_materialization_interface_single_authority_and_dependencies_are_validated() -> None:

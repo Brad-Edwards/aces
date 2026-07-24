@@ -64,14 +64,21 @@ def resolve_local_ref(
     collection_name: str,
     declarations: Mapping[str, object],
 ) -> str | None:
-    if not isinstance(ref, str):
-        return None
-    prefixes = (
-        f"{collection_name}.",
-        f"historical_baselines.{baseline_name}.{collection_name}.",
-    )
-    candidates = [ref, *(ref.removeprefix(prefix) for prefix in prefixes if ref.startswith(prefix))]
-    return next((candidate for candidate in candidates if candidate in declarations), None)
+    resolved = None
+    if isinstance(ref, str):
+        if ref in declarations:
+            resolved = ref
+        else:
+            local_prefix = f"{collection_name}."
+            local = ref.removeprefix(local_prefix) if ref.startswith(local_prefix) else ""
+            if local in declarations:
+                resolved = local
+            else:
+                canonical_prefix = f"historical_baselines.{baseline_name}.{collection_name}."
+                canonical = ref.removeprefix(canonical_prefix) if ref.startswith(canonical_prefix) else ""
+                if canonical in declarations:
+                    resolved = canonical
+    return resolved
 
 
 def has_cycle(graph: Mapping[str, set[str]]) -> bool:

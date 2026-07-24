@@ -69,18 +69,16 @@ object refs exactly match the relationship endpoints.
 
 - one exact existing `nodes.<node>.services.<service>` target;
 - one closed versioned provider-neutral interface profile;
-- the same deployment tenant and cell as the baseline;
-- one ADR-087 reset-owner relationship from that tenant to the binding's exact
-  native target service;
+- the same deployment tenant, cell, and reset-owner relationship as the
+  baseline;
 - explicit binding-order dependencies; and
 - one or more local readback requirement refs.
 
 Every object MUST have exactly one binding. The interface profile MUST support
-the object's closed kind. Binding dependencies MUST be acyclic. The baseline
-reset owner governs range-level lifecycle; each binding reset owner MUST be
-`uses_shared_service`, MUST originate at the baseline tenant, MUST declare a
-non-`none` reset-generation owner, and MUST target that binding's exact service.
-This permits one causal baseline to span multiple real product services.
+the object's closed kind. Binding dependencies MUST be acyclic. The reset-owner
+relationship MUST be `uses_shared_service`, MUST originate at the baseline
+tenant, MUST declare a non-`none` reset-generation owner, and MUST target the
+binding's exact service.
 
 A backend claiming authored historical-state support MUST publish a
 `capabilities.historical_state` block in its backend manifest with the exact

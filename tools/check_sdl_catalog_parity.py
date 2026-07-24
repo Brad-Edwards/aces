@@ -455,7 +455,7 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
     "historical_baselines.*.materialization_bindings.*.target_service_ref": (
         "targetable",
         _SEMANTIC,
-        "fatal unless a named vm service governed by the binding's reset-owner relationship",
+        "fatal unless a named vm service agreeing with the reset-owner target",
         _HISTORICAL_STATE_SEMANTICS,
     ),
     "historical_baselines.*.materialization_bindings.*.deployment_tenant_ref": (
@@ -473,7 +473,7 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
     "historical_baselines.*.materialization_bindings.*.reset_owner_relationship_ref": (
         "relationships",
         _SEMANTIC,
-        "fatal unless an adr-087 tenant binding to that materialization's exact native target service",
+        "fatal dangling or baseline/target disagreement",
         _HISTORICAL_STATE_SEMANTICS,
     ),
     "historical_baselines.*.materialization_bindings.*.ordering_dependencies[]": (
