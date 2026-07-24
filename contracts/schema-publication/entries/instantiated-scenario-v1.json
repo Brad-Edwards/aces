@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
   "stability": "draft",
-  "content_hash": "bed7ebe95f4a323d00e45be196ab218870e2ef76b0b6e726fba15bd9ca5d8fab",
+  "content_hash": "d2b5f66606404b2939e8e7f89e687c6378c045f97ede6f7637d85ae330c40dca",
   "last_change": {
-    "summary": "Published SCE-004 goal-oriented workflow-step semantics for instantiated scenarios.",
-    "content_hash": "bed7ebe95f4a323d00e45be196ab218870e2ef76b0b6e726fba15bd9ca5d8fab"
+    "summary": "Published instantiated DSL-143 enterprise identity and deployment-tenancy semantics.",
+    "content_hash": "d2b5f66606404b2939e8e7f89e687c6378c045f97ede6f7637d85ae330c40dca"
   }
 }

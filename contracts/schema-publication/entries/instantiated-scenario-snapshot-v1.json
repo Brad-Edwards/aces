@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-snapshot-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "3160e7e75273205becd93392976cb9e166b06cbd1dfde768c79c018c932603ed",
+  "content_hash": "2d0a10d7b728557b166a8cb36fd4dabdcd4f45fd78c119ccb661a97674337590",
   "last_change": {
-    "summary": "Published SCE-004 goal-oriented workflow-step semantics in instantiated snapshots.",
-    "content_hash": "3160e7e75273205becd93392976cb9e166b06cbd1dfde768c79c018c932603ed"
+    "summary": "Published DSL-143 enterprise identity and deployment-tenancy semantics in instantiated snapshots.",
+    "content_hash": "2d0a10d7b728557b166a8cb36fd4dabdcd4f45fd78c119ccb661a97674337590"
   }
 }

@@ -394,3 +394,6 @@ adrs:
   - id: ADR-086
     path: docs/decisions/adrs/adr-086-governed-whole-scenario-satisfiability.md
     pin: c34101fb3b5ddeba1e11f02666fb7747a38f52784087514ec76867df152aefa0
+  - id: ADR-087
+    path: docs/decisions/adrs/adr-087-enterprise-identity-and-deployment-tenancy-authoring.md
+    pin: 9654e999d520fb642e1dbeee0ec582902755bff4d5f7d9c0011c3a7a5efa478c

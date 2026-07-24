@@ -104,6 +104,12 @@ _MAIL_VALIDATOR = "[mail validator](../../implementations/python/packages/aces_s
 _DOMAIN_TOPOLOGY_SEMANTICS = (
     "[domain topology semantics](../../implementations/python/packages/aces_sdl/semantics/domain_topology.py)"
 )
+_ENTERPRISE_IDENTITY_SEMANTICS = (
+    "[enterprise identity semantics](../../implementations/python/packages/aces_sdl/semantics/enterprise_identity.py)"
+)
+_DEPLOYMENT_TENANCY_SEMANTICS = (
+    "[deployment tenancy semantics](../../implementations/python/packages/aces_sdl/semantics/deployment_tenancy.py)"
+)
 _PARTICIPANT_VALIDATOR = (
     "[participant validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py)"
 )
@@ -335,6 +341,36 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         "fatal dangling, ambiguous, or authority outside domain controllers",
         _DOMAIN_TOPOLOGY_SEMANTICS,
     ),
+    "identity_forests.*.root_domain_ref": (
+        "identity_domains",
+        _SEMANTIC,
+        "fatal dangling or root outside declared membership",
+        _ENTERPRISE_IDENTITY_SEMANTICS,
+    ),
+    "identity_forests.*.domain_refs[]": (
+        "identity_domains",
+        _SEMANTIC,
+        "fatal dangling, duplicate, or domain in multiple forests",
+        _ENTERPRISE_IDENTITY_SEMANTICS,
+    ),
+    "identity_facades.*.service_ref": (
+        "targetable",
+        _SEMANTIC,
+        "fatal unless target is a named vm service",
+        _ENTERPRISE_IDENTITY_SEMANTICS,
+    ),
+    "deployment_cells.*.tenant_ref": (
+        "deployment_tenants",
+        _SEMANTIC,
+        _DANGLING,
+        _DEPLOYMENT_TENANCY_SEMANTICS,
+    ),
+    "deployment_cells.*.node_refs[]": (
+        "nodes",
+        _SEMANTIC,
+        "fatal dangling, duplicate, or node in multiple cells",
+        _DEPLOYMENT_TENANCY_SEMANTICS,
+    ),
     "accounts.*.node": (
         "nodes",
         _SEMANTIC,
@@ -424,6 +460,12 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         _SEMANTIC,
         "fatal dangling, ambiguous, or controller outside target domain",
         _DOMAIN_TOPOLOGY_SEMANTICS,
+    ),
+    "relationships.*.shared_service.mutable_state_refs[]": (
+        "persistent_volumes",
+        _SEMANTIC,
+        "fatal dangling or conflicting state ownership",
+        _DEPLOYMENT_TENANCY_SEMANTICS,
     ),
     "agents.*.entity": ("entities", _SEMANTIC, _DANGLING, _PARTICIPANT_VALIDATOR),
     "agents.*.actions[]": (

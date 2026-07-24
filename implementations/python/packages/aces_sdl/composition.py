@@ -525,6 +525,34 @@ def _namespace_payload(
                 str(identity_domain["authority_account_ref"]),
                 symbols["accounts"],
             )
+    for identity_forest in namespaced.get("identity_forests", {}).values():
+        if not isinstance(identity_forest, dict):
+            continue
+        if identity_forest.get("root_domain_ref"):
+            identity_forest["root_domain_ref"] = _maybe_rename(
+                str(identity_forest["root_domain_ref"]),
+                symbols["identity_domains"],
+            )
+        identity_forest["domain_refs"] = [
+            _maybe_rename(name, symbols["identity_domains"]) for name in identity_forest.get("domain_refs", [])
+        ]
+    for identity_facade in namespaced.get("identity_facades", {}).values():
+        if isinstance(identity_facade, dict) and identity_facade.get("service_ref"):
+            identity_facade["service_ref"] = _maybe_rename(
+                str(identity_facade["service_ref"]),
+                symbols["named"],
+            )
+    for deployment_cell in namespaced.get("deployment_cells", {}).values():
+        if not isinstance(deployment_cell, dict):
+            continue
+        if deployment_cell.get("tenant_ref"):
+            deployment_cell["tenant_ref"] = _maybe_rename(
+                str(deployment_cell["tenant_ref"]),
+                symbols["deployment_tenants"],
+            )
+        deployment_cell["node_refs"] = [
+            _maybe_rename(name, symbols["nodes"]) for name in deployment_cell.get("node_refs", [])
+        ]
     for relationship in namespaced.get("relationships", {}).values():
         if isinstance(relationship, dict):
             if relationship.get("source"):
@@ -535,6 +563,12 @@ def _namespace_payload(
             if isinstance(domain_join, dict):
                 domain_join["controller_refs"] = [
                     _maybe_rename(name, symbols["nodes"]) for name in domain_join.get("controller_refs", [])
+                ]
+            shared_service = relationship.get("shared_service")
+            if isinstance(shared_service, dict):
+                shared_service["mutable_state_refs"] = [
+                    _maybe_rename(name, symbols["persistent_volumes"])
+                    for name in shared_service.get("mutable_state_refs", [])
                 ]
             forwarding_edge = relationship.get("forwarding_edge")
             if isinstance(forwarding_edge, dict) and forwarding_edge.get("forwarder_ref"):
