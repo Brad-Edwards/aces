@@ -69,6 +69,7 @@ def _target_with_provisioner(provisioner) -> RuntimeTarget:
         orchestrator=base.orchestrator,
         evaluator=base.evaluator,
         participant_runtime=base.participant_runtime,
+        time_runtime=base.time_runtime,
     )
 
 

@@ -23,6 +23,7 @@ from aces_backend_protocols.capabilities import (
     PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS,
     PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE,
     PARTICIPANT_RUNTIME_ROLE_SCOPE,
+    TIME_CAPABILITY_REQUIRED_CONTRACTS,
     BackendCapabilitySet,
     BackendManifest,
     CleanupCapabilities,
@@ -31,6 +32,7 @@ from aces_backend_protocols.capabilities import (
     OrchestratorCapabilities,
     ParticipantRuntimeCapabilities,
     ProvisionerCapabilities,
+    TimeCapabilities,
     WorkflowFeature,
     WorkflowStatePredicateFeature,
 )
@@ -70,6 +72,7 @@ _OBSERVATION_CONTRACT_VERSIONS = frozenset(
         "experiment-run-v1",
     }
 )
+_TIME_DEDICATED_CONTRACT_VERSIONS = frozenset({"time-model-v1", "time-runtime-state-v1", "realized-time-model-v1"})
 
 
 def _current_backend_version() -> str:
@@ -79,16 +82,28 @@ def _current_backend_version() -> str:
         return "0.0.0+unknown"
 
 
-def _stub_supported_contract_versions(*, with_participant_runtime: bool, with_observation: bool) -> frozenset[str]:
+def _stub_supported_contract_versions(
+    *,
+    with_participant_runtime: bool,
+    with_observation: bool,
+    with_time: bool,
+) -> frozenset[str]:
     versions = set(REFERENCE_BACKEND_SUPPORTED_CONTRACT_VERSIONS)
     if not with_participant_runtime:
         versions -= _PARTICIPANT_CONTRACT_VERSIONS
     if not with_observation:
-        versions -= _OBSERVATION_CONTRACT_VERSIONS
+        versions -= _OBSERVATION_CONTRACT_VERSIONS - {"experiment-run-v1"}
+    if not with_time:
+        versions -= _TIME_DEDICATED_CONTRACT_VERSIONS
     return frozenset(versions)
 
 
-def _stub_concept_bindings(*, with_participant_runtime: bool, with_observation: bool) -> tuple[ConceptBinding, ...]:
+def _stub_concept_bindings(
+    *,
+    with_participant_runtime: bool,
+    with_observation: bool,
+    with_time: bool,
+) -> tuple[ConceptBinding, ...]:
     bindings = (
         ConceptBinding(scope="capabilities.provisioner.supported_node_types", family="assets"),
         ConceptBinding(scope="capabilities.provisioner.supported_os_families", family="assets"),
@@ -113,6 +128,14 @@ def _stub_concept_bindings(*, with_participant_runtime: bool, with_observation: 
             ConceptBinding(scope="capabilities.observation.supported_capture_kinds", family="provenance-and-evidence"),
             ConceptBinding(scope="capabilities.observation.supported_channel_kinds", family="apparatus-declarations"),
             ConceptBinding(scope="capabilities.observation.supported_sealing_modes", family="provenance-and-evidence"),
+        )
+    if with_time:
+        bindings += (
+            ConceptBinding(scope="capabilities.time.supported_domain_kinds", family="time-and-apparatus"),
+            ConceptBinding(scope="capabilities.time.supported_authority_kinds", family="time-and-apparatus"),
+            ConceptBinding(scope="capabilities.time.supported_advancement_modes", family="time-and-apparatus"),
+            ConceptBinding(scope="capabilities.time.supported_synchronization_modes", family="time-and-apparatus"),
+            ConceptBinding(scope="capabilities.time.supported_constraint_kinds", family="time-and-apparatus"),
         )
     return bindings
 
@@ -241,7 +264,32 @@ def _stub_cleanup() -> CleanupCapabilities:
     )
 
 
-def _stub_capabilities(*, with_participant_runtime: bool, with_observation: bool) -> BackendCapabilitySet:
+def _stub_time() -> TimeCapabilities:
+    return TimeCapabilities(
+        name="stub-time-runtime",
+        supported_contract_versions=TIME_CAPABILITY_REQUIRED_CONTRACTS,
+        supported_domain_kinds=frozenset({"wall_clock", "monotonic", "simulated", "logical", "external"}),
+        supported_authority_kinds=frozenset({"runtime", "backend", "system", "external"}),
+        supported_advancement_modes=frozenset({"real_time", "dilated", "stepped", "event_driven", "externally_paced"}),
+        supported_synchronization_modes=frozenset({"none", "authority", "barrier", "conservative"}),
+        supported_mapping_kinds=frozenset({"identity", "affine_rational"}),
+        supported_constraint_kinds=frozenset({"precedence", "duration", "window", "deadline", "cadence"}),
+        supported_reset_behaviors=frozenset({"unsupported", "new_segment_zero", "new_segment_preserve_value"}),
+        supported_replay_behaviors=frozenset({"unsupported", "restart_from_anchor", "restore_recorded_advances"}),
+        supports_pause=True,
+        supports_jump=True,
+        supports_exact_rational_mappings=True,
+        supports_append_only_history=True,
+        supports_run_provenance=True,
+    )
+
+
+def _stub_capabilities(
+    *,
+    with_participant_runtime: bool,
+    with_observation: bool,
+    with_time: bool,
+) -> BackendCapabilitySet:
     return BackendCapabilitySet(
         provisioner=_stub_provisioner(),
         orchestrator=_stub_orchestrator(),
@@ -249,6 +297,7 @@ def _stub_capabilities(*, with_participant_runtime: bool, with_observation: bool
         participant_runtime=_stub_participant_runtime() if with_participant_runtime else None,
         observation=_stub_observation() if with_observation else None,
         cleanup=_stub_cleanup(),
+        time=_stub_time() if with_time else None,
     )
 
 
@@ -256,6 +305,7 @@ def create_stub_manifest(
     *,
     with_participant_runtime: bool = True,
     with_observation: bool = True,
+    with_time: bool = False,
     **config,
 ) -> BackendManifest:
     """Return the fully capable stub manifest.
@@ -274,15 +324,18 @@ def create_stub_manifest(
         supported_contract_versions=_stub_supported_contract_versions(
             with_participant_runtime=with_participant_runtime,
             with_observation=with_observation,
+            with_time=with_time,
         ),
         compatible_processors=frozenset({"aces-reference-processor"}),
         concept_bindings=_stub_concept_bindings(
             with_participant_runtime=with_participant_runtime,
             with_observation=with_observation,
+            with_time=with_time,
         ),
         realization_support=_stub_realization_support(),
         capabilities=_stub_capabilities(
             with_participant_runtime=with_participant_runtime,
             with_observation=with_observation,
+            with_time=with_time,
         ),
     )

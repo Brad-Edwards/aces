@@ -150,6 +150,11 @@ _BACKEND_CONCEPT_BINDING_SCOPES = frozenset(
         "capabilities.participant_runtime.supported_participant_roles",
         "capabilities.participant_runtime.supported_behavior_features",
         "capabilities.participant_runtime.supported_interaction_features",
+        "capabilities.time.supported_domain_kinds",
+        "capabilities.time.supported_authority_kinds",
+        "capabilities.time.supported_advancement_modes",
+        "capabilities.time.supported_synchronization_modes",
+        "capabilities.time.supported_constraint_kinds",
     }
 )
 

@@ -160,6 +160,9 @@ def _snapshot_model(envelope: RuntimeSnapshotEnvelope) -> RuntimeSnapshotEnvelop
             "shared_state_history": dict(snapshot.shared_state_history),
             "joint_action_records": dict(snapshot.joint_action_records),
             "time_management_contexts": dict(snapshot.time_management_contexts),
+            "time_model_state": (
+                snapshot.time_model_state.model_dump(mode="json") if snapshot.time_model_state is not None else None
+            ),
             "realization_provenance": [
                 {
                     "address": entry.address,

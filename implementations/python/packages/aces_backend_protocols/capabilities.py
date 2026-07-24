@@ -1,12 +1,13 @@
 """Domain-specific runtime capability declarations."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass, field
 
 from aces_contracts.controlled_vocabularies import validate_controlled_vocabulary_scope_values
 from aces_contracts.manifest_authority import validate_backend_supported_contract_versions
 from aces_contracts.vocabulary import ParticipantFeatureSupportLevel, WorkflowFeature, WorkflowStatePredicateFeature
+
+from .time_capabilities import TIME_CAPABILITY_REQUIRED_CONTRACTS as TIME_CAPABILITY_REQUIRED_CONTRACTS
+from .time_capabilities import TimeCapabilities as TimeCapabilities
 
 PARTICIPANT_RUNTIME_ROLE_SCOPE = "capabilities.participant_runtime.supported_participant_roles"
 PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE = "capabilities.participant_runtime.supported_behavior_features"
@@ -65,9 +66,6 @@ PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS = {
         "shared_state_change": _PARTICIPANT_INTERACTION_CONTRACTS,
     },
 }
-# Conservative published contract floor that makes standard API-405 claims
-# falsifiable in conformance and downstream review.
-
 OBSERVATION_CAPABILITY_REQUIRED_CONTRACTS = frozenset(
     {
         "experiment-capture-spec-v1",
@@ -477,6 +475,7 @@ class BackendCapabilitySet:
     participant_runtime: ParticipantRuntimeCapabilities | None = None
     observation: ObservationCapabilities | None = None
     cleanup: CleanupCapabilities | None = None
+    time: TimeCapabilities | None = None
 
 
 def __getattr__(name: str) -> object:
@@ -490,6 +489,9 @@ def __getattr__(name: str) -> object:
         "observation_capability_contract_gaps",
         "participant_runtime_capability_contract_gaps",
         "require_cleanup_plan_capability",
+        "require_time_model_capability",
+        "time_capability_contract_gaps",
+        "time_model_capability_gaps",
     }:
         from . import capability_admission
 

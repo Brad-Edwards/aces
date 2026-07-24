@@ -130,4 +130,9 @@ shared clock from matching strings.
 | Compiled identity | `aces_processor.models.time_model` |
 | Runtime lifecycle | `aces_runtime.time_coordinator` |
 | Focused evidence | `test_sem_227_shared_time_model.py` |
-| Backend contracts/conformance/provenance | issue #118 |
+| Portable declaration contracts | `aces_contracts.contracts.time_model` |
+| Backend capability and admission | `aces_backend_protocols.time_capabilities`, `aces_backend_protocols.capability_admission` |
+| Runtime protocol and validated readback | `aces_backend_protocols.protocols.TimeRuntime`, `aces_runtime.time_control.RuntimeTimeControlMixin`, `aces_runtime.manager.RuntimeManager` |
+| Semantic conformance | `aces_conformance.time_semantics` |
+| Run provenance | `aces_contracts.contracts.experiment_run` |
+| Focused portable-contract evidence | `test_api_421_time_contracts.py` |

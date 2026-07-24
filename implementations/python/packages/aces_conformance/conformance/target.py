@@ -10,6 +10,7 @@ from aces_backend_protocols.capabilities import (
     BackendManifest,
     observation_capability_contract_gaps,
     participant_runtime_capability_contract_gaps,
+    time_capability_contract_gaps,
 )
 from aces_contracts.diagnostics import Diagnostic
 from aces_contracts.realization_envelope import BackendRealizationEnvelopeModel
@@ -203,8 +204,7 @@ def _gap_diagnostics(
             _diagnostic(
                 "conformance.unsupported-capability-claim",
                 target.name,
-                "Target declares participant capability claims without required contract surfaces: "
-                + "; ".join(claim_gaps),
+                "Target declares capability claims without required contract surfaces: " + "; ".join(claim_gaps),
             )
         )
     return diagnostics
@@ -221,6 +221,7 @@ def _known_profile_report(
     claim_gaps = (
         *participant_runtime_capability_contract_gaps(target.manifest),
         *observation_capability_contract_gaps(target.manifest),
+        *time_capability_contract_gaps(target.manifest),
     )
     capability_gaps = (*surface_gaps, *claim_gaps)
     diagnostics = [

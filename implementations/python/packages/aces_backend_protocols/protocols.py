@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
 from aces_contracts.diagnostics import Diagnostic
 from aces_contracts.participant_binding import ParticipantActionAdmissionRequest
@@ -14,6 +14,9 @@ from aces_contracts.participant_episode import (
 )
 from aces_contracts.planning import EvaluationPlan, OrchestrationPlan, ProvisioningPlan
 from aces_contracts.runtime_state import ApplyResult, RuntimeSnapshot
+
+if TYPE_CHECKING:
+    from aces_contracts.contracts.time_model import TimeModelDeclarationModel, TimeRuntimeStateModel
 
 
 class Provisioner(Protocol):
@@ -161,4 +164,57 @@ class ParticipantRuntime(Protocol):
 
     def history(self) -> dict[str, list[dict[str, object]]]:
         """Return participant episode history events."""
+        ...
+
+
+class TimeRuntime(Protocol):
+    """Materializes and controls one admitted portable shared-time model."""
+
+    def initialize(
+        self,
+        declaration: TimeModelDeclarationModel,
+        snapshot: RuntimeSnapshot,
+    ) -> ApplyResult:
+        """Materialize clock authorities and publish typed initial readback."""
+        ...
+
+    def advance(
+        self,
+        clock_address: str,
+        ticks: int,
+        microstep: int,
+        snapshot: RuntimeSnapshot,
+    ) -> ApplyResult:
+        """Advance one admitted clock exactly."""
+        ...
+
+    def pause(self, clock_address: str, snapshot: RuntimeSnapshot) -> ApplyResult:
+        """Pause one admitted clock."""
+        ...
+
+    def resume(self, clock_address: str, snapshot: RuntimeSnapshot) -> ApplyResult:
+        """Resume one admitted clock."""
+        ...
+
+    def jump(
+        self,
+        clock_address: str,
+        tick: int,
+        microstep: int,
+        snapshot: RuntimeSnapshot,
+    ) -> ApplyResult:
+        """Apply one declared discontinuity."""
+        ...
+
+    def reset(
+        self,
+        clock_address: str,
+        replay: bool,
+        snapshot: RuntimeSnapshot,
+    ) -> ApplyResult:
+        """Apply declared reset or replay semantics."""
+        ...
+
+    def state(self, snapshot: RuntimeSnapshot) -> TimeRuntimeStateModel:
+        """Return typed clock state bound to the admitted declaration digest."""
         ...

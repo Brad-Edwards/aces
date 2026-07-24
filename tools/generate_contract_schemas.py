@@ -80,6 +80,8 @@ def _schema_output_path(schemas_dir: Path, name: str) -> Path:
         return schemas_dir / "control-plane" / f"{name}.json"
     if name.startswith("experiment-"):
         return schemas_dir / "experiment-core" / f"{name}.json"
+    if name in {"time-model-v1", "time-runtime-state-v1", "realized-time-model-v1"}:
+        return schemas_dir / "time" / f"{name}.json"
     if name.endswith("-plan-v1"):
         return schemas_dir / "plans" / f"{name}.json"
     if name == "runtime-snapshot-v1":

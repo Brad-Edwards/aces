@@ -16,6 +16,7 @@ from aces_contracts.versions import OPERATION_SCHEMA_VERSION, RUNTIME_SNAPSHOT_S
 
 if TYPE_CHECKING:
     from aces_contracts.contracts import RealizationEnvelopeIdentityModel
+    from aces_contracts.contracts.time_model import TimeRuntimeStateModel
 
 
 class OperationState(str, Enum):
@@ -86,6 +87,7 @@ class RuntimeSnapshot:
     shared_state_history: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
     joint_action_records: dict[str, dict[str, Any]] = field(default_factory=dict)
     time_management_contexts: dict[str, dict[str, Any]] = field(default_factory=dict)
+    time_model_state: TimeRuntimeStateModel | None = None
     # SEM-218 invariant I5: per-concern provenance for realized realization
     # concerns recorded across this snapshot's result / history surfaces.
     realization_provenance: tuple[RealizationProvenanceEntry, ...] = ()
@@ -164,6 +166,11 @@ class RuntimeSnapshot:
                 "time_management_contexts",
                 self.time_management_contexts,
             ),
+            time_model_state=_time_model_state_update(
+                updates,
+                "time_model_state",
+                self.time_model_state,
+            ),
             realization_provenance=_provenance_update(
                 updates,
                 "realization_provenance",
@@ -191,6 +198,7 @@ _SNAPSHOT_UPDATE_KEYS = {
     "shared_state_history",
     "joint_action_records",
     "time_management_contexts",
+    "time_model_state",
     "realization_provenance",
     "realization_envelope",
     "metadata",
@@ -254,6 +262,23 @@ def _identity_update(
         return current
     if not isinstance(raw, RealizationEnvelopeIdentityModel):
         raise TypeError(f"{key} must be a RealizationEnvelopeIdentityModel")
+    return raw
+
+
+def _time_model_state_update(
+    updates: Mapping[str, object],
+    key: str,
+    current: TimeRuntimeStateModel | None,
+) -> TimeRuntimeStateModel | None:
+    from aces_contracts.contracts.time_model import TimeRuntimeStateModel
+
+    if key not in updates:
+        return current
+    raw = updates[key]
+    if raw is None:
+        return None
+    if not isinstance(raw, TimeRuntimeStateModel):
+        raise TypeError(f"{key} must be a TimeRuntimeStateModel")
     return raw
 
 

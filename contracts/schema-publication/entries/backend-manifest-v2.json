@@ -2,9 +2,9 @@
   "contract_id": "backend-manifest-v2",
   "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
   "stability": "draft",
-  "content_hash": "04913bbaebe086c4e2f00ff421e9f14837afd95c04ff7b877897bb7a2bd30a87",
+  "content_hash": "00faa9cf105b63289077ceb1f3b41edf8ad0b2faa50d35330c86179e486af143",
   "last_change": {
-    "summary": "Added the SCE-007 typed cleanup capability declaration and cleanup contract-version coherence rules.",
-    "content_hash": "04913bbaebe086c4e2f00ff421e9f14837afd95c04ff7b877897bb7a2bd30a87"
+    "summary": "Added API-421 portable shared-time capabilities and contract-version coherence rules.",
+    "content_hash": "00faa9cf105b63289077ceb1f3b41edf8ad0b2faa50d35330c86179e486af143"
   }
 }

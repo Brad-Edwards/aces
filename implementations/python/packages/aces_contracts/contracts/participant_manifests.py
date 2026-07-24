@@ -67,6 +67,19 @@ class BackendManifestV2Model(ContractModel):
             )
         if declared_cleanup_contracts and self.capabilities.cleanup is None:
             raise ValueError("cleanup contract support requires capabilities.cleanup")
+        time_contracts = {
+            "time-model-v1",
+            "time-runtime-state-v1",
+            "realized-time-model-v1",
+            "runtime-snapshot-v1",
+            "experiment-run-v1",
+        }
+        declared_time_contracts = time_contracts.intersection(self.supported_contract_versions)
+        if self.capabilities.time is not None and declared_time_contracts != time_contracts:
+            raise ValueError("time capabilities require the complete time contract family")
+        if declared_time_contracts.intersection({"time-model-v1", "time-runtime-state-v1", "realized-time-model-v1"}):
+            if self.capabilities.time is None:
+                raise ValueError("time contract support requires capabilities.time")
         scopes = [binding.scope for binding in self.concept_bindings]
         if len(scopes) != len(set(scopes)):
             raise ValueError("concept_bindings must not contain duplicate scopes")
@@ -114,6 +127,15 @@ class BackendManifestV2Model(ContractModel):
                     },
                     "then": {
                         "properties": {"capabilities": {"required": ["cleanup"]}},
+                    },
+                },
+                {
+                    "if": {
+                        "properties": {"supported_contract_versions": {"contains": {"const": "time-model-v1"}}},
+                        "required": ["supported_contract_versions"],
+                    },
+                    "then": {
+                        "properties": {"capabilities": {"required": ["time"]}},
                     },
                 },
             ]

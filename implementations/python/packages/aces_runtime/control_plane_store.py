@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from aces_contracts.contracts import RealizationEnvelopeIdentityModel
+from aces_contracts.contracts.time_model import TimeRuntimeStateModel
 from aces_contracts.diagnostics import Diagnostic, Severity
 from aces_contracts.planning import RuntimeDomain
 from aces_contracts.runtime_state import (
@@ -106,6 +107,9 @@ def _snapshot_payload(snapshot: RuntimeSnapshot) -> dict[str, Any]:
         },
         "joint_action_records": dict(snapshot.joint_action_records),
         "time_management_contexts": dict(snapshot.time_management_contexts),
+        "time_model_state": (
+            snapshot.time_model_state.model_dump(mode="json") if snapshot.time_model_state is not None else None
+        ),
         "realization_provenance": [
             {
                 "address": entry.address,
@@ -164,6 +168,11 @@ def _snapshot_from_payload(payload: dict[str, Any]) -> RuntimeSnapshot:
         },
         joint_action_records=dict(payload.get("joint_action_records", {})),
         time_management_contexts=dict(payload.get("time_management_contexts", {})),
+        time_model_state=(
+            TimeRuntimeStateModel.model_validate(payload["time_model_state"])
+            if payload.get("time_model_state") is not None
+            else None
+        ),
         realization_provenance=tuple(
             RealizationProvenanceEntry(
                 address=str(item.get("address", "")),

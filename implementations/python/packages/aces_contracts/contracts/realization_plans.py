@@ -28,6 +28,7 @@ from .participant_runtime import (
     ParticipantEpisodeHistoryEventModel,
     ParticipantEpisodeStateModel,
 )
+from .time_model import TimeRuntimeStateModel
 
 
 class PlanOperationModel(ContractModel):
@@ -167,6 +168,7 @@ class RuntimeSnapshotEnvelopeModel(ContractModel):
     shared_state_history: dict[str, list[ParticipantSharedStateRecordModel]] = Field(default_factory=dict)
     joint_action_records: dict[str, ParticipantJointActionRecordModel] = Field(default_factory=dict)
     time_management_contexts: dict[str, ParticipantTimeManagementContextModel] = Field(default_factory=dict)
+    time_model_state: TimeRuntimeStateModel | None = None
     realization_provenance: list[RealizationProvenanceEntryModel] = Field(default_factory=list)
     realization_envelope: RealizationEnvelopeIdentityModel | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)

@@ -2,9 +2,9 @@
   "contract_id": "runtime-snapshot-v1",
   "schema_path": "contracts/schemas/snapshots/runtime-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "e36df8206305baeb136c8ac2c28472acf8bce1dbc239aa1dcec4a6948d31a5c3",
+  "content_hash": "b9943e5331a41e04764c8b945f6306b59437e382a557379f2621529c69012984",
   "last_change": {
-    "summary": "Carried SCE-004 workflow-step attempt provenance through runtime snapshots.",
-    "content_hash": "e36df8206305baeb136c8ac2c28472acf8bce1dbc239aa1dcec4a6948d31a5c3"
+    "summary": "Added ASR-528 typed shared-time runtime state and readback.",
+    "content_hash": "b9943e5331a41e04764c8b945f6306b59437e382a557379f2621529c69012984"
   }
 }

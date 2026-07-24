@@ -9,7 +9,7 @@ default driver is the hermetic :class:`InProcessDriver`.
 from __future__ import annotations
 
 from aces_backend_protocols.capabilities import BackendManifest
-from aces_runtime.registry import BackendRegistry, RuntimeTarget, RuntimeTargetComponents
+from aces_runtime.registry import BackendRegistry, ReferenceTimeRuntime, RuntimeTarget, RuntimeTargetComponents
 
 from .driver import DeploymentDriver
 from .drivers.inprocess import InProcessDriver
@@ -39,12 +39,14 @@ def create_reference_backend_components(
         orchestrator=ReferenceOrchestrator() if manifest.has_orchestrator else None,
         evaluator=ReferenceEvaluator() if manifest.has_evaluator else None,
         participant_runtime=ReferenceParticipantRuntime() if manifest.has_participant_runtime else None,
+        time_runtime=ReferenceTimeRuntime() if manifest.has_time else None,
     )
 
 
 def create_reference_backend_target(**config) -> RuntimeTarget:
     """Return a fully configured reference emulation backend target."""
 
+    config.setdefault("with_time", True)
     manifest = create_reference_backend_manifest(**config)
     components = create_reference_backend_components(manifest=manifest, **config)
     return RuntimeTarget(
@@ -54,6 +56,7 @@ def create_reference_backend_target(**config) -> RuntimeTarget:
         orchestrator=components.orchestrator,
         evaluator=components.evaluator,
         participant_runtime=components.participant_runtime,
+        time_runtime=components.time_runtime,
     )
 
 

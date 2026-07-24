@@ -90,7 +90,7 @@ def test_provisioner_capabilities_reject_hollow_declaration():
 
 
 def test_backend_manifest_v2_roundtrip_from_stub_manifest():
-    payload = backend_manifest_payload(create_stub_manifest())
+    payload = backend_manifest_payload(create_stub_manifest(with_time=True))
     model = BackendManifestV2Model.model_validate(payload)
 
     assert model.schema_version == "backend-manifest/v2"

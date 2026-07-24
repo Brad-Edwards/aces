@@ -11,12 +11,15 @@ from aces_backend_protocols.protocols import (
     Orchestrator,
     ParticipantRuntime,
     Provisioner,
+    TimeRuntime,
 )
 from aces_contracts.contracts import (
     ParticipantImplementationManifestModel,
     ParticipantImplementationSelectionModel,
 )
 from aces_contracts.participant_binding import ParticipantActionAdmissionRequest
+
+from .time_coordinator import ReferenceTimeRuntime as ReferenceTimeRuntime
 
 
 def _require_invokable_method(
@@ -59,6 +62,7 @@ def _validate_runtime_target_shape(
     orchestrator: Orchestrator | None,
     evaluator: Evaluator | None,
     participant_runtime: ParticipantRuntime | None,
+    time_runtime: TimeRuntime | None,
 ) -> None:
     if manifest is None:
         raise ValueError("RuntimeTarget requires an explicit manifest.")
@@ -69,6 +73,7 @@ def _validate_runtime_target_shape(
         orchestrator=orchestrator,
         evaluator=evaluator,
         participant_runtime=participant_runtime,
+        time_runtime=time_runtime,
     )
     sample_plan = object()
     sample_snapshot = object()
@@ -80,6 +85,7 @@ def _validate_runtime_target_shape(
     _validate_participant_runtime_methods(
         participant_runtime, sample_request, sample_admission_request, sample_snapshot
     )
+    _validate_time_runtime_methods(time_runtime, sample_plan, sample_snapshot)
 
 
 def _validate_optional_component_presence(
@@ -88,6 +94,7 @@ def _validate_optional_component_presence(
     orchestrator: Orchestrator | None,
     evaluator: Evaluator | None,
     participant_runtime: ParticipantRuntime | None,
+    time_runtime: TimeRuntime | None,
 ) -> None:
     if manifest.has_orchestrator != (orchestrator is not None):
         raise ValueError("registry.target-shape-mismatch: orchestrator presence does not match the manifest.")
@@ -95,6 +102,8 @@ def _validate_optional_component_presence(
         raise ValueError("registry.target-shape-mismatch: evaluator presence does not match the manifest.")
     if manifest.has_participant_runtime != (participant_runtime is not None):
         raise ValueError("registry.target-shape-mismatch: participant_runtime presence does not match the manifest.")
+    if manifest.has_time != (time_runtime is not None):
+        raise ValueError("registry.target-shape-mismatch: time_runtime presence does not match the manifest.")
 
 
 def _validate_provisioner_methods(
@@ -246,6 +255,28 @@ def _validate_participant_runtime_methods(
     )
 
 
+def _validate_time_runtime_methods(
+    time_runtime: TimeRuntime | None,
+    sample_declaration: object,
+    sample_snapshot: object,
+) -> None:
+    for method_name, invocation_args in (
+        ("initialize", (sample_declaration, sample_snapshot)),
+        ("advance", ("time.clock.probe", 1, 0, sample_snapshot)),
+        ("pause", ("time.clock.probe", sample_snapshot)),
+        ("resume", ("time.clock.probe", sample_snapshot)),
+        ("jump", ("time.clock.probe", 1, 0, sample_snapshot)),
+        ("reset", ("time.clock.probe", False, sample_snapshot)),
+        ("state", (sample_snapshot,)),
+    ):
+        _require_invokable_method(
+            time_runtime,
+            label="time_runtime",
+            method_name=method_name,
+            invocation_args=invocation_args,
+        )
+
+
 def _sample_participant_action_admission_request() -> ParticipantActionAdmissionRequest:
     manifest = ParticipantImplementationManifestModel.model_validate(
         {
@@ -324,6 +355,7 @@ class RuntimeTarget:
     orchestrator: Orchestrator | None = None
     evaluator: Evaluator | None = None
     participant_runtime: ParticipantRuntime | None = None
+    time_runtime: TimeRuntime | None = None
 
     def __post_init__(self) -> None:
         _validate_runtime_target_shape(
@@ -332,6 +364,7 @@ class RuntimeTarget:
             orchestrator=self.orchestrator,
             evaluator=self.evaluator,
             participant_runtime=self.participant_runtime,
+            time_runtime=self.time_runtime,
         )
 
 
@@ -343,6 +376,7 @@ class RuntimeTargetComponents:
     orchestrator: Orchestrator | None = None
     evaluator: Evaluator | None = None
     participant_runtime: ParticipantRuntime | None = None
+    time_runtime: TimeRuntime | None = None
 
 
 @dataclass(frozen=True)
@@ -397,6 +431,7 @@ class BackendRegistry:
             orchestrator=components.orchestrator,
             evaluator=components.evaluator,
             participant_runtime=components.participant_runtime,
+            time_runtime=components.time_runtime,
         )
 
         return RuntimeTarget(
@@ -406,6 +441,7 @@ class BackendRegistry:
             orchestrator=components.orchestrator,
             evaluator=components.evaluator,
             participant_runtime=components.participant_runtime,
+            time_runtime=components.time_runtime,
         )
 
     def list_backends(self) -> list[str]:

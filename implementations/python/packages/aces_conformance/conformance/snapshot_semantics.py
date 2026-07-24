@@ -84,6 +84,7 @@ def _snapshot_from_envelope(payload: dict[str, Any]) -> RuntimeSnapshot:
             context_id: context.model_dump(mode="json")
             for context_id, context in validated.time_management_contexts.items()
         },
+        time_model_state=validated.time_model_state,
         metadata=dict(validated.metadata),
     )
 

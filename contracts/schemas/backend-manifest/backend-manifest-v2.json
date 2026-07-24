@@ -81,6 +81,17 @@
         },
         "provisioner": {
           "$ref": "#/$defs/ProvisionerCapabilitiesModel"
+        },
+        "time": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TimeCapabilitiesModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -959,6 +970,175 @@
       "title": "RealizationSupportMode",
       "type": "string"
     },
+    "TimeCapabilitiesModel": {
+      "additionalProperties": false,
+      "description": "Backend support for the API-421 portable shared-time contract family.",
+      "properties": {
+        "constraints": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Constraints",
+          "type": "object"
+        },
+        "max_clocks": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Clocks"
+        },
+        "max_time_domains": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Time Domains"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "supported_advancement_modes": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Advancement Modes",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supported_authority_kinds": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Authority Kinds",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supported_constraint_kinds": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Supported Constraint Kinds",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supported_contract_versions": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Contract Versions",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supported_domain_kinds": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Domain Kinds",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supported_mapping_kinds": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Supported Mapping Kinds",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supported_replay_behaviors": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Replay Behaviors",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supported_reset_behaviors": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Reset Behaviors",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supported_synchronization_modes": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Synchronization Modes",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supports_append_only_history": {
+          "default": false,
+          "title": "Supports Append Only History",
+          "type": "boolean"
+        },
+        "supports_exact_rational_mappings": {
+          "default": false,
+          "title": "Supports Exact Rational Mappings",
+          "type": "boolean"
+        },
+        "supports_jump": {
+          "default": false,
+          "title": "Supports Jump",
+          "type": "boolean"
+        },
+        "supports_pause": {
+          "default": false,
+          "title": "Supports Pause",
+          "type": "boolean"
+        },
+        "supports_run_provenance": {
+          "default": false,
+          "title": "Supports Run Provenance",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "supported_contract_versions",
+        "supported_domain_kinds",
+        "supported_authority_kinds",
+        "supported_advancement_modes",
+        "supported_synchronization_modes",
+        "supported_reset_behaviors",
+        "supported_replay_behaviors"
+      ],
+      "title": "TimeCapabilitiesModel",
+      "type": "object"
+    },
     "WorkflowFeature": {
       "description": "Portable workflow control features that an orchestrator may support.",
       "enum": [
@@ -1062,6 +1242,29 @@
           }
         }
       }
+    },
+    {
+      "if": {
+        "properties": {
+          "supported_contract_versions": {
+            "contains": {
+              "const": "time-model-v1"
+            }
+          }
+        },
+        "required": [
+          "supported_contract_versions"
+        ]
+      },
+      "then": {
+        "properties": {
+          "capabilities": {
+            "required": [
+              "time"
+            ]
+          }
+        }
+      }
     }
   ],
   "properties": {
@@ -1144,7 +1347,10 @@
           "experiment-derived-measure-v1",
           "experiment-run-v1",
           "trial-cleanup-plan-v1",
-          "trial-cleanup-receipt-v1"
+          "trial-cleanup-receipt-v1",
+          "time-model-v1",
+          "time-runtime-state-v1",
+          "realized-time-model-v1"
         ],
         "minLength": 1,
         "type": "string"
