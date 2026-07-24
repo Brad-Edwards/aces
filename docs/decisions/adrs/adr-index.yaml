@@ -397,3 +397,6 @@ adrs:
   - id: ADR-087
     path: docs/decisions/adrs/adr-087-enterprise-identity-and-deployment-tenancy-authoring.md
     pin: 9654e999d520fb642e1dbeee0ec582902755bff4d5f7d9c0011c3a7a5efa478c
+  - id: ADR-088
+    path: docs/decisions/adrs/adr-088-authored-historical-state-and-native-materialization.md
+    pin: 5955977ffc5e7328f2f6422015069e843fe1d18207d154e629510624a1a5772f

@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "8e70642f6c51d026b930771e3f638ff067a556332a73ec1e256c5d2b7d72faab",
+  "content_hash": "ae885fe2db9ecc31eaff264f10c40969570fd9fc79e32e02b4daf225ae6de942",
   "last_change": {
-    "summary": "Carried DSL-143 enterprise identity and deployment-tenancy semantics through satisfiability evidence.",
-    "content_hash": "8e70642f6c51d026b930771e3f638ff067a556332a73ec1e256c5d2b7d72faab"
+    "summary": "Carried DSL-436 authored historical-state semantics through satisfiability evidence.",
+    "content_hash": "ae885fe2db9ecc31eaff264f10c40969570fd9fc79e32e02b4daf225ae6de942"
   }
 }

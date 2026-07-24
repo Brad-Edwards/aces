@@ -9,6 +9,8 @@ from aces_contracts.controlled_vocabularies import validate_controlled_vocabular
 from aces_contracts.manifest_authority import validate_backend_supported_contract_versions
 from aces_contracts.vocabulary import ParticipantFeatureSupportLevel, WorkflowFeature, WorkflowStatePredicateFeature
 
+from .historical_state import HistoricalStateCapabilities
+
 if TYPE_CHECKING:
     from .backend_manifest import BackendManifest
 
@@ -300,15 +302,13 @@ class ParticipantFeatureSupport:
 class ParticipantRuntimeCapabilities:
     """Participant-episode lifecycle support declaration.
 
-    Declaring this capability means the backend exposes the full
-    participant episode control surface defined in RUN-311:
+    Declaring this capability exposes the RUN-311 participant episode control surface:
     ``initialize``, ``reset``, ``restart``, and ``terminate`` on the
     ``ParticipantRuntime`` protocol, plus the ``status``/``results``/
     ``history`` observation methods. A backend that advertises this
     capability MUST populate ``RuntimeSnapshot.participant_episode_results``
     and ``participant_episode_history`` so downstream consumers see the
     state machine transitions.
-
     API-405 support dimensions live here because they are backend apparatus
     claims: which participant roles, behavior features, and interaction
     features this participant runtime can actually realize.
@@ -441,6 +441,7 @@ class BackendCapabilitySet:
     evaluator: EvaluatorCapabilities | None = None
     participant_runtime: ParticipantRuntimeCapabilities | None = None
     observation: ObservationCapabilities | None = None
+    historical_state: HistoricalStateCapabilities | None = None
 
 
 def participant_runtime_capability_contract_gaps(manifest: BackendManifest) -> tuple[str, ...]:

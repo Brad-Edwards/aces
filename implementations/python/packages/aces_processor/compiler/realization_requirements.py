@@ -1,5 +1,6 @@
 """Realization-requirement compilation (SEM-218)."""
 
+from aces_backend_protocols.historical_state import HISTORICAL_MATERIALIZATION_KIND_BY_INTERFACE
 from aces_sdl.explicitness import ExplicitnessClass, ExplicitnessProvenance
 from aces_sdl.identifiers import QualifiedName
 from aces_sdl.nodes import NodeType
@@ -22,6 +23,8 @@ from .addresses import (
     _network_address,
     _node_address,
     _persistent_volume_address,
+    _resolve_node_service_ref,
+    _service_address,
 )
 
 
@@ -109,6 +112,40 @@ def _append_stateful_resource_requirements(
             )
 
 
+def _append_historical_materialization_requirements(
+    requirements: list[CompiledRealizationRequirement],
+    scenario: InstantiatedScenario,
+) -> None:
+    """Append exact SEM-218 demands for each native materialization binding."""
+
+    for baseline_name, baseline in scenario.historical_baselines.items():
+        for binding_name, binding in baseline.materialization_bindings.items():
+            service = _resolve_node_service_ref(scenario, binding.target_service_ref)
+            if service is None:
+                raise ValueError("admitted historical materialization target must resolve")
+            address = _service_address(*service)
+            object_kind = HISTORICAL_MATERIALIZATION_KIND_BY_INTERFACE[binding.interface_profile.value]
+            base_path = f"historical_baselines.{baseline_name}.materialization_bindings.{binding_name}"
+            pointer_base = f"#/historical_baselines/{baseline_name}/materialization_bindings/{binding_name}"
+            for field_name, requirement_kind in (
+                ("interface_profile", "historical-materialization-interface"),
+                ("object_refs", f"historical-materialization-object-kind:{object_kind}"),
+                ("ordering_dependencies", "historical-materialization-ordering"),
+                ("readback_requirement_refs", "historical-materialization-readback"),
+            ):
+                requirements.append(
+                    CompiledRealizationRequirement(
+                        field_path=f"{base_path}.{field_name}",
+                        address=address,
+                        domain=REALIZATION_DOMAIN,
+                        requirement_kind=requirement_kind,
+                        explicitness=ExplicitnessClass.EXACT,
+                        provenance=ExplicitnessProvenance.AUTHOR_DECLARED,
+                        governing_scope=f"{pointer_base}/{field_name}",
+                    )
+                )
+
+
 def _compile_realization_requirements(
     scenario: InstantiatedScenario,
     domain_analysis: DomainTopologyAnalysis,
@@ -174,4 +211,5 @@ def _compile_realization_requirements(
         )
     _append_domain_topology_requirements(requirements, domain_analysis)
     _append_stateful_resource_requirements(requirements, scenario)
+    _append_historical_materialization_requirements(requirements, scenario)
     return tuple(requirements)

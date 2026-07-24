@@ -128,7 +128,7 @@ ecosystem-specific concerns.
 
 | Family | Scope |
 |--------|-------|
-| `scenarios` | SDL scenarios, compositions, modules, and authoring constructs. |
+| `scenarios` | SDL scenarios, compositions, modules, authored historical-baseline containers, and authoring constructs. |
 | `tasks-runs-studies` | Execution lifecycle, run records, and study organization. |
 | `behavioral-relations` | Revisioned validation, conformance, comparison, refinement, equivalence, and empirical claim semantics. |
 | `episodes` | Participant runtime episode identity, lifecycle state, and history boundaries. |

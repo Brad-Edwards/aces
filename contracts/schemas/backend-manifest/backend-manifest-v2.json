@@ -35,6 +35,17 @@
           ],
           "default": null
         },
+        "historical_state": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HistoricalStateCapabilitiesModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "observation": {
           "anyOf": [
             {
@@ -234,6 +245,54 @@
         "supported_sections"
       ],
       "title": "EvaluatorCapabilitiesModel",
+      "type": "object"
+    },
+    "HistoricalStateCapabilitiesModel": {
+      "additionalProperties": false,
+      "description": "Exact provider-neutral historical materialization support.",
+      "properties": {
+        "supported_interface_profiles": {
+          "items": {
+            "enum": [
+              "native-message/v1",
+              "native-case/v1",
+              "native-alert/v1",
+              "native-ticket/v1",
+              "native-dashboard/v1",
+              "native-file/v1",
+              "native-record/v1"
+            ],
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Interface Profiles",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supported_object_kinds": {
+          "items": {
+            "enum": [
+              "message",
+              "case",
+              "alert",
+              "ticket",
+              "dashboard",
+              "file",
+              "record"
+            ],
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Object Kinds",
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "supported_interface_profiles",
+        "supported_object_kinds"
+      ],
+      "title": "HistoricalStateCapabilitiesModel",
       "type": "object"
     },
     "ObservationCapabilitiesModel": {

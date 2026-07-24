@@ -92,6 +92,23 @@ def _rewrite_section_ref(name: str, section: str, name_map: Mapping[str, str]) -
     return name_map.get(name, name)
 
 
+def _rewrite_historical_local_ref(
+    name: str,
+    *,
+    baseline_name: str,
+    namespaced_baseline_name: str,
+    collection_name: str,
+) -> str:
+    """Rewrite only canonical baseline-local refs; portable local ids stay local."""
+
+    if not name or is_variable_ref(name):
+        return name
+    prefix = f"historical_baselines.{baseline_name}.{collection_name}."
+    if not name.startswith(prefix):
+        return name
+    return f"historical_baselines.{namespaced_baseline_name}.{collection_name}.{name.removeprefix(prefix)}"
+
+
 def _rewrite_stateful_dependency_ref(
     reference: str,
     symbols: dict[str, dict[str, str] | set[str]],
@@ -428,6 +445,18 @@ def _namespace_payload(
             tool_affordance_ref_map[tool_affordance_reference(spec_name, affordance_id)] = tool_affordance_reference(
                 namespaced_spec_name, affordance_id
             )
+    historical_object_ref_map: dict[str, str] = {}
+    for baseline_name, baseline in namespaced.get("historical_baselines", {}).items():
+        if not isinstance(baseline, dict):
+            continue
+        namespaced_baseline_name = symbols["historical_baselines"].get(
+            baseline_name,
+            _prefix(namespace, baseline_name),
+        )
+        for object_id in baseline.get("objects", {}):
+            historical_object_ref_map[f"historical_baselines.{baseline_name}.objects.{object_id}"] = (
+                f"historical_baselines.{namespaced_baseline_name}.objects.{object_id}"
+            )
 
     for node in namespaced.get("nodes", {}).values():
         if isinstance(node, dict):
@@ -477,7 +506,13 @@ def _namespace_payload(
         if not isinstance(boundary, dict):
             continue
         for field_name in ("observable_refs", "hidden_refs", "evidence_refs"):
-            boundary[field_name] = [tool_affordance_ref_map.get(ref, ref) for ref in boundary.get(field_name, [])]
+            boundary[field_name] = [
+                historical_object_ref_map.get(
+                    ref,
+                    tool_affordance_ref_map.get(ref, ref),
+                )
+                for ref in boundary.get(field_name, [])
+            ]
         for field_name in ("view_rules", "view_transitions"):
             for item in boundary.get(field_name, []):
                 if not isinstance(item, dict):
@@ -553,6 +588,145 @@ def _namespace_payload(
         deployment_cell["node_refs"] = [
             _maybe_rename(name, symbols["nodes"]) for name in deployment_cell.get("node_refs", [])
         ]
+    for baseline_name, baseline in namespaced.get("historical_baselines", {}).items():
+        if not isinstance(baseline, dict):
+            continue
+        namespaced_baseline_name = symbols["historical_baselines"].get(
+            baseline_name,
+            _prefix(namespace, baseline_name),
+        )
+        for field_name, section_name in (
+            ("deployment_tenant_ref", "deployment_tenants"),
+            ("deployment_cell_ref", "deployment_cells"),
+            ("reset_owner_relationship_ref", "relationships"),
+        ):
+            if baseline.get(field_name):
+                baseline[field_name] = _rewrite_section_ref(
+                    str(baseline[field_name]),
+                    section_name,
+                    symbols[section_name],
+                )
+        baseline["relationship_refs"] = [
+            _rewrite_section_ref(ref, "relationships", symbols["relationships"])
+            for ref in baseline.get("relationship_refs", [])
+        ]
+        for actor in baseline.get("actors", {}).values():
+            if isinstance(actor, dict) and actor.get("authority_ref"):
+                authority_value = actor.get("authority", "")
+                authority = str(getattr(authority_value, "value", authority_value))
+                section_name = {
+                    "entity": "entities",
+                    "agent": "agents",
+                    "account": "accounts",
+                }.get(authority)
+                if section_name is None:
+                    actor["authority_ref"] = _maybe_rename(
+                        str(actor["authority_ref"]),
+                        symbols["named"],
+                    )
+                else:
+                    actor["authority_ref"] = _rewrite_section_ref(
+                        str(actor["authority_ref"]),
+                        section_name,
+                        symbols[section_name],
+                    )
+        for historical_object in baseline.get("objects", {}).values():
+            if not isinstance(historical_object, dict):
+                continue
+            if historical_object.get("writer_actor_ref"):
+                historical_object["writer_actor_ref"] = _rewrite_historical_local_ref(
+                    str(historical_object["writer_actor_ref"]),
+                    baseline_name=baseline_name,
+                    namespaced_baseline_name=namespaced_baseline_name,
+                    collection_name="actors",
+                )
+            if historical_object.get("content_ref"):
+                historical_object["content_ref"] = _rewrite_section_ref(
+                    str(historical_object["content_ref"]),
+                    "content",
+                    symbols["content"],
+                )
+        for event in baseline.get("events", {}).values():
+            if not isinstance(event, dict):
+                continue
+            if event.get("actor_ref"):
+                event["actor_ref"] = _rewrite_historical_local_ref(
+                    str(event["actor_ref"]),
+                    baseline_name=baseline_name,
+                    namespaced_baseline_name=namespaced_baseline_name,
+                    collection_name="actors",
+                )
+            for field_name, collection_name in (
+                ("object_refs", "objects"),
+                ("predecessor_refs", "events"),
+                ("cause_refs", "events"),
+            ):
+                event[field_name] = [
+                    _rewrite_historical_local_ref(
+                        ref,
+                        baseline_name=baseline_name,
+                        namespaced_baseline_name=namespaced_baseline_name,
+                        collection_name=collection_name,
+                    )
+                    for ref in event.get(field_name, [])
+                ]
+            event["relationship_refs"] = [
+                _rewrite_section_ref(ref, "relationships", symbols["relationships"])
+                for ref in event.get("relationship_refs", [])
+            ]
+        for binding in baseline.get("materialization_bindings", {}).values():
+            if not isinstance(binding, dict):
+                continue
+            if binding.get("target_service_ref"):
+                binding["target_service_ref"] = _maybe_rename(
+                    str(binding["target_service_ref"]),
+                    symbols["named"],
+                )
+            for field_name, section_name in (
+                ("deployment_tenant_ref", "deployment_tenants"),
+                ("deployment_cell_ref", "deployment_cells"),
+                ("reset_owner_relationship_ref", "relationships"),
+            ):
+                if binding.get(field_name):
+                    binding[field_name] = _rewrite_section_ref(
+                        str(binding[field_name]),
+                        section_name,
+                        symbols[section_name],
+                    )
+            for field_name, collection_name in (
+                ("object_refs", "objects"),
+                ("ordering_dependencies", "materialization_bindings"),
+                ("readback_requirement_refs", "readback_requirements"),
+            ):
+                binding[field_name] = [
+                    _rewrite_historical_local_ref(
+                        ref,
+                        baseline_name=baseline_name,
+                        namespaced_baseline_name=namespaced_baseline_name,
+                        collection_name=collection_name,
+                    )
+                    for ref in binding.get(field_name, [])
+                ]
+        for readback in baseline.get("readback_requirements", {}).values():
+            if not isinstance(readback, dict):
+                continue
+            if readback.get("object_ref"):
+                readback["object_ref"] = _rewrite_historical_local_ref(
+                    str(readback["object_ref"]),
+                    baseline_name=baseline_name,
+                    namespaced_baseline_name=namespaced_baseline_name,
+                    collection_name="objects",
+                )
+            readback["assertion_refs"] = [
+                _rewrite_section_ref(ref, "assertions", symbols["assertions"])
+                for ref in readback.get("assertion_refs", [])
+            ]
+            if readback.get("observation_boundary_ref"):
+                readback["observation_boundary_ref"] = _rewrite_section_ref(
+                    str(readback["observation_boundary_ref"]),
+                    "observation_boundaries",
+                    symbols["observation_boundaries"],
+                )
     for relationship in namespaced.get("relationships", {}).values():
         if isinstance(relationship, dict):
             if relationship.get("source"):

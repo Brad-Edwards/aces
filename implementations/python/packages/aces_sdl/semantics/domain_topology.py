@@ -53,6 +53,12 @@ def _relationship_type(value: object) -> str:
     return value.value if isinstance(value, RelationshipType) else str(value)
 
 
+def resolve_section_ref(ref: object, section: str, declarations: Mapping[str, object]) -> str | None:
+    """Resolve a bare or section-qualified declaration reference exactly."""
+
+    return _resolve_section_ref(ref, section, declarations)
+
+
 _RELATIONSHIP_DETAIL_MISMATCH = "domain.relationship.detail-mismatch"
 
 
@@ -381,4 +387,5 @@ __all__ = [
     "DomainTopologyAnalysis",
     "DomainTopologyIssue",
     "analyze_domain_topology",
+    "resolve_section_ref",
 ]

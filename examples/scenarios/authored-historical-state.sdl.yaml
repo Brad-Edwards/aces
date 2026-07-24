@@ -1,0 +1,189 @@
+name: authored-historical-state
+description: Provider-neutral two-object history with deterministic native materialization intent.
+
+nodes:
+  archive:
+    type: vm
+    os: linux
+    resources: {ram: 1 GiB, cpu: 1}
+    services:
+      - name: records
+        port: 8443
+
+entities:
+  operations:
+    name: Operations
+    role: blue
+
+content:
+  message-metadata:
+    type: dataset
+    target: archive
+    items:
+      - name: message-001
+        display_name: Quarterly review
+        description: Bounded inert metadata for the historical message.
+
+persistent_volumes:
+  tenant-records:
+    lifecycle: ephemeral
+    access_mode: read_write_once
+    consumers:
+      - node: archive
+        mount_destination: /var/lib/records
+        access_mode: read_write
+
+deployment_tenants:
+  range-a: {}
+
+deployment_cells:
+  range-a-cell:
+    tenant_ref: range-a
+    node_refs: [archive]
+    cross_tenant_isolation: default_deny
+
+evidence_requirements:
+  native-readback:
+    source_class: participant_observation
+    scope: participant-visible historical object readback
+    boundary_kind: historical_readback
+    channel: api_response
+    sensitivity: plain
+    redaction: redact_secrets
+    integrity: checksum
+    retention: run_lifetime
+    loss_disclosure: required
+
+propositions:
+  message-visible:
+    description: The historical message is visible through the participant projection.
+    subjects: [historical_baselines.enterprise.objects.message-001]
+    basis: observed_state
+    predicate:
+      kind: presence
+      property: historical.object
+      semantic_ref: urn:aces:historical:object
+    evidence_requirements: [native-readback]
+  case-visible:
+    description: The historical case is visible through the participant projection.
+    subjects: [historical_baselines.enterprise.objects.case-001]
+    basis: observed_state
+    predicate:
+      kind: presence
+      property: historical.object
+      semantic_ref: urn:aces:historical:object
+    evidence_requirements: [native-readback]
+
+assertions:
+  message-readback:
+    proposition: message-visible
+    role: postcondition
+  case-readback:
+    proposition: case-visible
+    role: postcondition
+
+observation_boundaries:
+  participant-history:
+    projection_basis: Participant-visible native history projection revision 1.
+    observable_refs:
+      - historical_baselines.enterprise.objects.message-001
+      - historical_baselines.enterprise.objects.case-001
+    redaction_policy: Operator-only and secret-bearing state remains hidden.
+    latency_profile: Readback occurs after materialization.
+
+relationships:
+  records-reset-owner:
+    type: uses_shared_service
+    source: range-a
+    target: nodes.archive.services.records
+    shared_service:
+      tenant_isolation: none
+      workload_authentication: workload_identity
+      mutable_state_refs: [tenant-records]
+      mutable_state_owner: consumer_tenant
+      reset_generation_owner: consumer_tenant
+  message-case:
+    type: historical_object_link
+    source: historical_baselines.enterprise.objects.message-001
+    target: historical_baselines.enterprise.objects.case-001
+    historical_object_link:
+      kind: associated_with
+
+historical_baselines:
+  enterprise:
+    version: 1.0.0
+    address_profile: aces-historical-semantic-address/v1
+    history_time_profile: logical-order/v1
+    range_instance_id: range-instance-001
+    deployment_tenant_ref: range-a
+    deployment_cell_ref: range-a-cell
+    reset_generation_id: generation-001
+    reset_owner_relationship_ref: records-reset-owner
+    actors:
+      records-owner:
+        authority: entity
+        authority_ref: operations
+        role: owner
+    objects:
+      message-001:
+        kind: message
+        writer_actor_ref: records-owner
+        title: Quarterly review
+        content_ref: message-metadata
+      case-001:
+        kind: case
+        writer_actor_ref: records-owner
+        title: Review follow-up
+    events:
+      create-message:
+        order: 0
+        operation: create
+        actor_ref: records-owner
+        object_refs: [message-001]
+      create-case:
+        order: 1
+        operation: create
+        actor_ref: records-owner
+        object_refs: [case-001]
+        predecessor_refs: [create-message]
+        cause_refs: [create-message]
+      link-message-case:
+        order: 2
+        operation: link
+        actor_ref: records-owner
+        object_refs: [message-001, case-001]
+        predecessor_refs: [create-case]
+        cause_refs: [create-case]
+        relationship_refs: [message-case]
+    relationship_refs: [message-case]
+    materialization_bindings:
+      message-native:
+        object_refs: [message-001]
+        target_service_ref: nodes.archive.services.records
+        interface_profile: native-message/v1
+        deployment_tenant_ref: range-a
+        deployment_cell_ref: range-a-cell
+        reset_owner_relationship_ref: records-reset-owner
+        readback_requirement_refs: [message-readback]
+      case-native:
+        object_refs: [case-001]
+        target_service_ref: nodes.archive.services.records
+        interface_profile: native-case/v1
+        deployment_tenant_ref: range-a
+        deployment_cell_ref: range-a-cell
+        reset_owner_relationship_ref: records-reset-owner
+        ordering_dependencies: [message-native]
+        readback_requirement_refs: [case-readback]
+    readback_requirements:
+      message-readback:
+        object_ref: message-001
+        assertion_refs: [message-readback]
+        observation_boundary_ref: participant-history
+        projection_profile: participant-visible-object/v1
+        observation_point: after_materialization
+      case-readback:
+        object_ref: case-001
+        assertion_refs: [case-readback]
+        observation_boundary_ref: participant-history
+        projection_profile: participant-visible-object-and-links/v1
+        observation_point: after_history

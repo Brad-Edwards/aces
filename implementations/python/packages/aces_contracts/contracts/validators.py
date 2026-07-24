@@ -117,9 +117,16 @@ def _resolve_instance_path_schema(schema_root: dict[str, Any], instance_path: st
         current = _resolve_ref_schema(schema_root, current)
         if segment == "*":
             additional_properties = current.get("additionalProperties")
-            if not isinstance(additional_properties, dict):
+            if isinstance(additional_properties, dict):
+                current = additional_properties
+                continue
+            pattern_properties = current.get("patternProperties")
+            if not isinstance(pattern_properties, dict) or len(pattern_properties) != 1:
                 raise KeyError(instance_path)
-            current = additional_properties
+            wildcard_schema = next(iter(pattern_properties.values()))
+            if not isinstance(wildcard_schema, dict):
+                raise KeyError(instance_path)
+            current = wildcard_schema
             continue
 
         properties = current.get("properties")

@@ -82,6 +82,7 @@ from .schema_invariants import (
     _add_aces_invariant,
     _attach_aces_semantic_profile,
     _attach_experiment_datetime_invariants,
+    _attach_historical_state_invariants,
     _attach_stateful_resource_invariants,
 )
 from .semantic_profiles import SemanticProfileModel
@@ -261,6 +262,7 @@ def _schema_bundle_template() -> dict[str, dict[str, Any]]:
         _attach_instantiation_invariants(contract_id, json_schema)
         _attach_experiment_datetime_invariants(contract_id, json_schema)
         _attach_stateful_resource_invariants(contract_id, json_schema)
+        _attach_historical_state_invariants(contract_id, json_schema)
         _attach_json_schema_metadata(contract_id, json_schema)
         _attach_compiled_address_map_constraints(contract_id, json_schema)
         _attach_plan_identity_constraints(contract_id, json_schema)

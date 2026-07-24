@@ -5,6 +5,10 @@ from typing import Any
 
 from aces_backend_protocols.capabilities import BackendManifest
 from aces_contracts.addressing import require_compiled_address
+from aces_contracts.contracts.historical_state import (
+    HistoricalBaselineDigestModel,
+    HistoricalSemanticAddressModel,
+)
 from aces_contracts.diagnostics import Diagnostic
 from aces_contracts.evaluation import EvaluationExecutionContract, EvaluationResultContract
 from aces_contracts.planning import EvaluationPlan, OrchestrationPlan, ProvisioningPlan
@@ -103,6 +107,8 @@ class RuntimeModel:
     entity_specs: dict[str, dict[str, Any]] = field(default_factory=dict)
     agent_specs: dict[str, dict[str, Any]] = field(default_factory=dict)
     relationship_specs: dict[str, dict[str, Any]] = field(default_factory=dict)
+    historical_baseline_digests: dict[str, HistoricalBaselineDigestModel] = field(default_factory=dict)
+    historical_object_addresses: dict[str, HistoricalSemanticAddressModel] = field(default_factory=dict)
     # Typed compiler metadata for finite pre-instantiation domains. It is
     # consumed by planner capability checks and never enters backend resource
     # payloads.
@@ -185,6 +191,12 @@ class RuntimeModel:
         capability_keys = [(constraint.address, constraint.concern) for constraint in self.capability_constraints]
         if len(capability_keys) != len(set(capability_keys)):
             raise ValueError("RuntimeModel capability constraints must address unique fields")
+        semantic_values = [address.value for address in self.historical_object_addresses.values()]
+        if len(semantic_values) != len(set(semantic_values)):
+            raise ValueError("RuntimeModel historical semantic addresses must be unique")
+        for baseline_id, digest in self.historical_baseline_digests.items():
+            if baseline_id != digest.baseline_id:
+                raise ValueError("RuntimeModel historical baseline digest key must equal embedded baseline_id")
 
 
 @dataclass(frozen=True)

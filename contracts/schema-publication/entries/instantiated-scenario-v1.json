@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
   "stability": "draft",
-  "content_hash": "d2b5f66606404b2939e8e7f89e687c6378c045f97ede6f7637d85ae330c40dca",
+  "content_hash": "0e2c8ac0b42c0ff796aefbe8dafae0d393b5ac71e43e792a90788c9beeb87769",
   "last_change": {
-    "summary": "Published instantiated DSL-143 enterprise identity and deployment-tenancy semantics.",
-    "content_hash": "d2b5f66606404b2939e8e7f89e687c6378c045f97ede6f7637d85ae330c40dca"
+    "summary": "Published instantiated DSL-436 authored historical-state declarations and semantic invariants.",
+    "content_hash": "0e2c8ac0b42c0ff796aefbe8dafae0d393b5ac71e43e792a90788c9beeb87769"
   }
 }

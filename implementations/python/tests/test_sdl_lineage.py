@@ -36,7 +36,7 @@ def test_real_lineage_ledger_is_valid_and_covers_exact_current_subject_set() -> 
     ledger = SDLLineageLedgerModel.model_validate(_payload())
     current = {subject.subject_id for subject in ledger.subjects if subject.disposition.value == "current"}
     assert current == _canonical_subjects(REPO_ROOT)
-    assert len(current) == 85
+    assert len(current) == 88
     assert {subject.subject_id for subject in ledger.subjects if subject.disposition.value == "removed"} == {
         "sdl-field:evaluations",
         "sdl-field:goals",
@@ -128,8 +128,7 @@ def test_native_claim_cannot_smuggle_external_source_or_compatibility() -> None:
         subject for subject in payload["subjects"] if subject["claims"][0]["classification"] == "aces_native"
     )
     native_subject["claims"][0]["source_refs"] = [payload["sources"][0]["source_id"]]
-    native_subject["claims"][0]["compatibility"] = "compatible"
-    with pytest.raises(ValidationError, match="ACES-native claims"):
+    with pytest.raises(ValidationError, match="ACES-native claims must not name an external source boundary"):
         SDLLineageLedgerModel.model_validate(payload)
 
 

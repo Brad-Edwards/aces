@@ -42,8 +42,8 @@ realizes the selected topology on a Docker Compose backend.
 ## What ACES SDL Describes
 
 An SDL file is a declarative scenario document. It can describe topology,
-hosts, services, identities, content, relationships, agents, objectives,
-workflows, variables, and evaluation material without directly describing a
+hosts, services, identities, content, authored historical baselines,
+relationships, agents, objectives, workflows, variables, and evaluation material without directly describing a
 specific backend's infrastructure primitives.
 
 ```yaml

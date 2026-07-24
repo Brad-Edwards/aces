@@ -3202,6 +3202,546 @@
       "title": "GeneratedArtifactOutput",
       "type": "object"
     },
+    "HistoricalActorAuthority": {
+      "description": "Incumbent declaration family that supplies an actor's identity.",
+      "enum": [
+        "entity",
+        "agent",
+        "account",
+        "service"
+      ],
+      "title": "HistoricalActorAuthority",
+      "type": "string"
+    },
+    "HistoricalActorBinding": {
+      "additionalProperties": false,
+      "description": "Baseline-local role bound to one incumbent SDL declaration.",
+      "properties": {
+        "authority": {
+          "$ref": "#/$defs/HistoricalActorAuthority"
+        },
+        "authority_ref": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Authority Ref",
+          "type": "string"
+        },
+        "role": {
+          "$ref": "#/$defs/HistoricalActorRole"
+        }
+      },
+      "required": [
+        "authority",
+        "authority_ref",
+        "role"
+      ],
+      "title": "HistoricalActorBinding",
+      "type": "object"
+    },
+    "HistoricalActorRole": {
+      "description": "One baseline-local role without product-authorization meaning.",
+      "enum": [
+        "author",
+        "sender",
+        "recipient",
+        "owner",
+        "observer",
+        "service"
+      ],
+      "title": "HistoricalActorRole",
+      "type": "string"
+    },
+    "HistoricalBaseline": {
+      "additionalProperties": false,
+      "description": "One closed authored authority for deterministic historical state.",
+      "properties": {
+        "actors": {
+          "maxProperties": 256,
+          "minProperties": 1,
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/HistoricalActorBinding"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Actors",
+          "type": "object"
+        },
+        "address_profile": {
+          "const": "aces-historical-semantic-address/v1",
+          "default": "aces-historical-semantic-address/v1",
+          "title": "Address Profile",
+          "type": "string"
+        },
+        "deployment_cell_ref": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Deployment Cell Ref",
+          "type": "string"
+        },
+        "deployment_tenant_ref": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Deployment Tenant Ref",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "maxLength": 1024,
+          "title": "Description",
+          "type": "string"
+        },
+        "events": {
+          "maxProperties": 16384,
+          "minProperties": 1,
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/HistoricalEvent"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Events",
+          "type": "object"
+        },
+        "history_time_profile": {
+          "const": "logical-order/v1",
+          "default": "logical-order/v1",
+          "title": "History Time Profile",
+          "type": "string"
+        },
+        "materialization_bindings": {
+          "maxProperties": 4096,
+          "minProperties": 1,
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/HistoricalMaterializationBinding"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Materialization Bindings",
+          "type": "object"
+        },
+        "objects": {
+          "maxProperties": 4096,
+          "minProperties": 1,
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/HistoricalObject"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Objects",
+          "type": "object"
+        },
+        "range_instance_id": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Range Instance Id",
+          "type": "string"
+        },
+        "readback_requirements": {
+          "maxProperties": 4096,
+          "minProperties": 1,
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/HistoricalReadbackRequirement"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Readback Requirements",
+          "type": "object"
+        },
+        "relationship_refs": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 4096,
+          "title": "Relationship Refs",
+          "type": "array"
+        },
+        "reset_generation_id": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Reset Generation Id",
+          "type": "string"
+        },
+        "reset_owner_relationship_ref": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Reset Owner Relationship Ref",
+          "type": "string"
+        },
+        "version": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "version",
+        "range_instance_id",
+        "deployment_tenant_ref",
+        "deployment_cell_ref",
+        "reset_generation_id",
+        "reset_owner_relationship_ref",
+        "actors",
+        "objects",
+        "events",
+        "materialization_bindings",
+        "readback_requirements"
+      ],
+      "title": "HistoricalBaseline",
+      "type": "object"
+    },
+    "HistoricalContentSensitivity": {
+      "description": "Bounded participant-content sensitivity, excluding secret material.",
+      "enum": [
+        "public",
+        "internal",
+        "restricted"
+      ],
+      "title": "HistoricalContentSensitivity",
+      "type": "string"
+    },
+    "HistoricalEvent": {
+      "additionalProperties": false,
+      "description": "One finite event in a baseline-owned logical history.",
+      "properties": {
+        "actor_ref": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Actor Ref",
+          "type": "string"
+        },
+        "cause_refs": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 256,
+          "title": "Cause Refs",
+          "type": "array"
+        },
+        "display_instant": {
+          "default": "",
+          "maxLength": 64,
+          "pattern": "^(?:|\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d))$",
+          "title": "Display Instant",
+          "type": "string"
+        },
+        "object_refs": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 256,
+          "minItems": 1,
+          "title": "Object Refs",
+          "type": "array"
+        },
+        "operation": {
+          "$ref": "#/$defs/HistoricalEventOperation"
+        },
+        "order": {
+          "minimum": 0,
+          "title": "Order",
+          "type": "integer"
+        },
+        "predecessor_refs": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 256,
+          "title": "Predecessor Refs",
+          "type": "array"
+        },
+        "relationship_refs": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 256,
+          "title": "Relationship Refs",
+          "type": "array"
+        },
+        "relative_offset_seconds": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Relative Offset Seconds"
+        }
+      },
+      "required": [
+        "order",
+        "operation",
+        "actor_ref",
+        "object_refs"
+      ],
+      "title": "HistoricalEvent",
+      "type": "object"
+    },
+    "HistoricalEventOperation": {
+      "description": "Portable state transition performed by one historical event.",
+      "enum": [
+        "create",
+        "update",
+        "link",
+        "unlink",
+        "delete",
+        "restore"
+      ],
+      "title": "HistoricalEventOperation",
+      "type": "string"
+    },
+    "HistoricalMaterializationBinding": {
+      "additionalProperties": false,
+      "description": "Objects bound to one logical service and one portable interface.",
+      "properties": {
+        "deployment_cell_ref": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Deployment Cell Ref",
+          "type": "string"
+        },
+        "deployment_tenant_ref": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Deployment Tenant Ref",
+          "type": "string"
+        },
+        "interface_profile": {
+          "$ref": "#/$defs/HistoricalMaterializationInterface"
+        },
+        "object_refs": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 256,
+          "minItems": 1,
+          "title": "Object Refs",
+          "type": "array"
+        },
+        "ordering_dependencies": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 256,
+          "title": "Ordering Dependencies",
+          "type": "array"
+        },
+        "readback_requirement_refs": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 256,
+          "minItems": 1,
+          "title": "Readback Requirement Refs",
+          "type": "array"
+        },
+        "reset_owner_relationship_ref": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Reset Owner Relationship Ref",
+          "type": "string"
+        },
+        "target_service_ref": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Target Service Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "object_refs",
+        "target_service_ref",
+        "interface_profile",
+        "deployment_tenant_ref",
+        "deployment_cell_ref",
+        "reset_owner_relationship_ref",
+        "readback_requirement_refs"
+      ],
+      "title": "HistoricalMaterializationBinding",
+      "type": "object"
+    },
+    "HistoricalMaterializationInterface": {
+      "description": "Versioned provider-neutral native materialization interface profiles.",
+      "enum": [
+        "native-message/v1",
+        "native-case/v1",
+        "native-alert/v1",
+        "native-ticket/v1",
+        "native-dashboard/v1",
+        "native-file/v1",
+        "native-record/v1"
+      ],
+      "title": "HistoricalMaterializationInterface",
+      "type": "string"
+    },
+    "HistoricalObject": {
+      "additionalProperties": false,
+      "description": "One baseline-local semantic object, independent of product identity.",
+      "properties": {
+        "content_ref": {
+          "default": "",
+          "maxLength": 2048,
+          "title": "Content Ref",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/HistoricalObjectKind"
+        },
+        "sensitivity": {
+          "$ref": "#/$defs/HistoricalContentSensitivity",
+          "default": "internal"
+        },
+        "summary": {
+          "default": "",
+          "maxLength": 1024,
+          "title": "Summary",
+          "type": "string"
+        },
+        "title": {
+          "default": "",
+          "maxLength": 256,
+          "title": "Title",
+          "type": "string"
+        },
+        "writer_actor_ref": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Writer Actor Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "writer_actor_ref"
+      ],
+      "title": "HistoricalObject",
+      "type": "object"
+    },
+    "HistoricalObjectKind": {
+      "description": "Portable semantic object families admitted by the initial profile.",
+      "enum": [
+        "message",
+        "case",
+        "alert",
+        "ticket",
+        "dashboard",
+        "file",
+        "record"
+      ],
+      "title": "HistoricalObjectKind",
+      "type": "string"
+    },
+    "HistoricalObjectLinkKind": {
+      "description": "Governed semantic relationship between two historical objects.",
+      "enum": [
+        "contains",
+        "replies_to",
+        "references",
+        "duplicates",
+        "associated_with"
+      ],
+      "title": "HistoricalObjectLinkKind",
+      "type": "string"
+    },
+    "HistoricalObservationPoint": {
+      "description": "Authored boundary at which a readback assertion is required.",
+      "enum": [
+        "after_materialization",
+        "after_history"
+      ],
+      "title": "HistoricalObservationPoint",
+      "type": "string"
+    },
+    "HistoricalReadbackProjection": {
+      "description": "Governed participant-visible projection used for native readback.",
+      "enum": [
+        "participant-visible-object/v1",
+        "participant-visible-links/v1",
+        "participant-visible-object-and-links/v1"
+      ],
+      "title": "HistoricalReadbackProjection",
+      "type": "string"
+    },
+    "HistoricalReadbackRequirement": {
+      "additionalProperties": false,
+      "description": "Participant-equivalent readback over existing Assertion declarations.",
+      "properties": {
+        "assertion_refs": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 256,
+          "minItems": 1,
+          "title": "Assertion Refs",
+          "type": "array"
+        },
+        "object_ref": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Object Ref",
+          "type": "string"
+        },
+        "observation_boundary_ref": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Observation Boundary Ref",
+          "type": "string"
+        },
+        "observation_point": {
+          "$ref": "#/$defs/HistoricalObservationPoint"
+        },
+        "projection_profile": {
+          "$ref": "#/$defs/HistoricalReadbackProjection"
+        }
+      },
+      "required": [
+        "object_ref",
+        "assertion_refs",
+        "observation_boundary_ref",
+        "projection_profile",
+        "observation_point"
+      ],
+      "title": "HistoricalReadbackRequirement",
+      "type": "object"
+    },
     "IdentityDomain": {
       "additionalProperties": false,
       "description": "Scenario-scoped authored identity domain.",
@@ -3928,6 +4468,13 @@
             "$ref": "#/$defs/GeneratedArtifact"
           },
           "title": "Generated Artifacts",
+          "type": "object"
+        },
+        "historical_baselines": {
+          "additionalProperties": {
+            "$ref": "#/$defs/HistoricalBaseline"
+          },
+          "title": "Historical Baselines",
           "type": "object"
         },
         "identity_domains": {
@@ -6694,6 +7241,17 @@
           ],
           "default": null
         },
+        "historical_object_link": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RelationshipHistoricalObjectLink"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "identity_federation": {
           "anyOf": [
             {
@@ -6972,6 +7530,20 @@
         "forwarder_ref"
       ],
       "title": "RelationshipForwardingEdge",
+      "type": "object"
+    },
+    "RelationshipHistoricalObjectLink": {
+      "additionalProperties": false,
+      "description": "Closed typed detail for a historical-object Relationship edge.",
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/HistoricalObjectLinkKind"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "RelationshipHistoricalObjectLink",
       "type": "object"
     },
     "RelationshipIdentityFederation": {
@@ -7378,7 +7950,8 @@
         "forest_trusts",
         "directory_federates_to",
         "placed_on_carrier",
-        "uses_shared_service"
+        "uses_shared_service",
+        "historical_object_link"
       ],
       "title": "RelationshipType",
       "type": "string"
@@ -19796,5 +20369,28 @@
     "diagnostics"
   ],
   "title": "ScenarioSatisfiabilityEvidenceModel",
-  "type": "object"
+  "type": "object",
+  "x-aces-invariants": [
+    {
+      "description": "Historical baseline actor authority, logical order, causality, object and relationship lifecycle, single-writer authority, materialization interface compatibility, tenant/cell/reset agreement, readback assertion coverage, and bounded corpus safety must all hold.",
+      "id": "authored-historical-state-semantics",
+      "inputs": [
+        {
+          "contract_id": "scenario-satisfiability-evidence-v1",
+          "instance_path": "#/snapshot/scenario"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_sdl.semantics.historical_state.analyze_historical_state"
+    }
+  ],
+  "x-aces-semantic-profile": {
+    "contract_id": "scenario-satisfiability-evidence-v1",
+    "entry_schema_contract_id": "aces-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
+    "id": "aces-semantic-invariants-v1",
+    "keyword": "x-aces-invariants",
+    "required": true,
+    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+  }
 }

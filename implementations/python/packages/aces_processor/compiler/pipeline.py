@@ -15,6 +15,7 @@ from ..models import (
     RuntimeModel,
 )
 from .evaluation import _compile_assertions, _compile_condition_bindings, _compile_propositions
+from .historical_state import compile_historical_baseline_digests, compile_historical_object_addresses
 from .objectives import _compile_objectives
 from .orchestration import (
     _compile_events,
@@ -135,6 +136,8 @@ def compile_runtime_model(scenario: Scenario | ExpandedScenario | InstantiatedSc
         entity_specs=entity_specs,
         agent_specs=agent_specs,
         relationship_specs=relationship_specs,
+        historical_baseline_digests=compile_historical_baseline_digests(scenario),
+        historical_object_addresses=compile_historical_object_addresses(scenario),
         capability_constraints=_compile_capability_constraints(scenario),
         networks=networks,
         node_deployments=node_deployments,

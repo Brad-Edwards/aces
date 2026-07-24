@@ -231,6 +231,11 @@ def test_domain_cannot_belong_to_multiple_forests() -> None:
 
 
 def test_forest_mode_requires_every_domain_to_have_one_forest() -> None:
+    without_forest = _valid_payload()
+    del without_forest["identity_forests"]
+    del without_forest["relationships"]["workforce-federation"]
+    assert _parse_payload(without_forest).identity_forests == {}
+
     payload = _valid_payload()
     payload["identity_domains"]["unassigned"] = {
         "profile": "active_directory",
@@ -350,6 +355,17 @@ def test_node_cannot_belong_to_multiple_deployment_cells() -> None:
 
 
 def test_all_vm_nodes_require_cell_membership_when_tenancy_is_declared() -> None:
+    without_tenancy = {
+        "name": "standalone-vm",
+        "nodes": {
+            "standalone": {
+                "type": "vm",
+                "os": "linux",
+            }
+        },
+    }
+    assert _parse_payload(without_tenancy).deployment_cells == {}
+
     payload = _valid_payload()
     payload["deployment_cells"]["range-a-cell"]["node_refs"].remove("workstation")
 

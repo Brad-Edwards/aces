@@ -36,6 +36,7 @@ from .entities import Entity
 from .evidence_requirements import EvidenceRequirement
 from .explicitness import ExplicitnessRecord
 from .features import Feature
+from .historical_state import HistoricalBaseline
 from .identity_domains import IdentityDomain
 from .infrastructure import InfraNode
 from .nodes import Node
@@ -265,6 +266,7 @@ class ScenarioContent(SDLModel):
     identity_facades: dict[str, IdentityFacade] = Field(default_factory=dict)
     deployment_tenants: dict[str, DeploymentTenant] = Field(default_factory=dict)
     deployment_cells: dict[str, DeploymentCell] = Field(default_factory=dict)
+    historical_baselines: dict[str, HistoricalBaseline] = Field(default_factory=dict)
     relationships: dict[str, Relationship] = Field(default_factory=dict)
     forwarding_agents: list[RuntimeForwardingAgent] = Field(default_factory=list)
     agents: dict[str, Agent] = Field(default_factory=dict)

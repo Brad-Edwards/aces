@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-snapshot-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "2d0a10d7b728557b166a8cb36fd4dabdcd4f45fd78c119ccb661a97674337590",
+  "content_hash": "cdf2e8597127f3798ef57c4784fbe6e96e2841f3ee5ce538d0e32e5ef46f3510",
   "last_change": {
-    "summary": "Published DSL-143 enterprise identity and deployment-tenancy semantics in instantiated snapshots.",
-    "content_hash": "2d0a10d7b728557b166a8cb36fd4dabdcd4f45fd78c119ccb661a97674337590"
+    "summary": "Published DSL-436 authored historical-state semantics in instantiated snapshots.",
+    "content_hash": "cdf2e8597127f3798ef57c4784fbe6e96e2841f3ee5ce538d0e32e5ef46f3510"
   }
 }
