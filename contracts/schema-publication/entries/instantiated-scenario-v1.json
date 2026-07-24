@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
   "stability": "draft",
-  "content_hash": "be9a929dc6488d411fbd54735ca553fb1008ba4ccc9dbaf9ca6721fd197c7961",
+  "content_hash": "ff6998dd44d2762d606297a0ad57ecb4ef8a15a4478e7263643ad8a9879f219a",
   "last_change": {
-    "summary": "Published instantiated DSL-437 deterministic live-activity declarations and invariants.",
-    "content_hash": "be9a929dc6488d411fbd54735ca553fb1008ba4ccc9dbaf9ca6721fd197c7961"
+    "summary": "Published instantiated DSL-436, DSL-437, and network namespace declarations.",
+    "content_hash": "ff6998dd44d2762d606297a0ad57ecb4ef8a15a4478e7263643ad8a9879f219a"
   }
 }

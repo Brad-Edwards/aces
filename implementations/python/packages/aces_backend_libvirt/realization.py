@@ -46,6 +46,7 @@ from .driver import DomainSpec, NetworkAcl, NetworkSpec, ServiceSpec
 from .manifest import LIBVIRT_PROVISIONER_CAPABILITIES
 
 _DOMAIN = "runtime"
+_NETWORK_NAMESPACE_UNSUPPORTED = "libvirt-backend.network-namespace-unsupported"
 
 
 @dataclass(frozen=True)
@@ -97,26 +98,7 @@ def interpret_provisioning_plan(
 
     capabilities = provisioner_capabilities or LIBVIRT_PROVISIONER_CAPABILITIES
     diagnostics: list[Diagnostic] = list(capability_envelope_diagnostics(plan, capabilities))
-    network_resources: list[tuple[PlannedResource, Mapping[str, object]]] = []
-    node_resources: list[tuple[PlannedResource, Mapping[str, object]]] = []
-    placement_resources: list[tuple[PlannedResource, Mapping[str, object]]] = []
-
-    for resource in sorted(plan.resources.values(), key=lambda item: item.address):
-        if resource.domain != RuntimeDomain.PROVISIONING:
-            continue
-        if resource.resource_type not in SUPPORTED_RESOURCE_TYPES:
-            diagnostics.append(_unsupported_resource(resource))
-            continue
-        payload = resource.payload
-        if not isinstance(payload, Mapping):
-            diagnostics.append(_invalid_payload(resource))
-            continue
-        if resource.resource_type == NETWORK_RESOURCE_TYPE:
-            network_resources.append((resource, payload))
-        elif resource.resource_type == NODE_RESOURCE_TYPE:
-            node_resources.append((resource, payload))
-        else:
-            placement_resources.append((resource, payload))
+    network_resources, node_resources, placement_resources = _collect_supported_resources(plan, diagnostics)
 
     networks = [_network_spec(resource, payload) for resource, payload in network_resources]
     network_lookup = _network_address_lookup(networks)
@@ -143,6 +125,38 @@ def interpret_provisioning_plan(
         diagnostics=tuple(diagnostics),
         placement_targets=placement_targets,
     )
+
+
+def _collect_supported_resources(
+    plan: ProvisioningPlan,
+    diagnostics: list[Diagnostic],
+) -> tuple[
+    list[tuple[PlannedResource, Mapping[str, object]]],
+    list[tuple[PlannedResource, Mapping[str, object]]],
+    list[tuple[PlannedResource, Mapping[str, object]]],
+]:
+    network_resources: list[tuple[PlannedResource, Mapping[str, object]]] = []
+    node_resources: list[tuple[PlannedResource, Mapping[str, object]]] = []
+    placement_resources: list[tuple[PlannedResource, Mapping[str, object]]] = []
+    for resource in sorted(plan.resources.values(), key=lambda item: item.address):
+        if resource.domain != RuntimeDomain.PROVISIONING:
+            continue
+        if resource.resource_type not in SUPPORTED_RESOURCE_TYPES:
+            diagnostics.append(_unsupported_resource(resource))
+            continue
+        payload = resource.payload
+        if not isinstance(payload, Mapping):
+            diagnostics.append(_invalid_payload(resource))
+            continue
+        if resource.resource_type == NETWORK_RESOURCE_TYPE:
+            network_resources.append((resource, payload))
+        elif resource.resource_type == NODE_RESOURCE_TYPE:
+            node_resources.append((resource, payload))
+            if payload.get("network_namespace_target"):
+                diagnostics.append(_network_namespace_unsupported(resource.address))
+        else:
+            placement_resources.append((resource, payload))
+    return network_resources, node_resources, placement_resources
 
 
 def _network_address_lookup(networks: list[NetworkSpec]) -> dict[str, str]:
@@ -512,6 +526,16 @@ def _unsupported_resource(resource: PlannedResource) -> Diagnostic:
             "Libvirt backend does not realize provisioning resource type "
             f"'{resource.resource_type}' for '{resource.address}'."
         ),
+        severity=Severity.ERROR,
+    )
+
+
+def _network_namespace_unsupported(address: str) -> Diagnostic:
+    return Diagnostic(
+        code=_NETWORK_NAMESPACE_UNSUPPORTED,
+        domain=_DOMAIN,
+        address=address,
+        message=(f"Libvirt backend cannot realize exact container network namespace sharing for '{address}'."),
         severity=Severity.ERROR,
     )
 

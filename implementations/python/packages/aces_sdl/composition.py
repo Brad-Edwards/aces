@@ -176,6 +176,16 @@ def _rewrite_node(payload: dict[str, Any], symbols: dict[str, dict[str, str] | s
     for role in payload.get("roles", {}).values():
         if isinstance(role, dict):
             role["entities"] = [_maybe_rename(name, symbols["entities"]) for name in role.get("entities", [])]
+    runtime = payload.get("runtime")
+    container = runtime.get("container") if isinstance(runtime, dict) else None
+    namespaces = container.get("namespaces") if isinstance(container, dict) else None
+    network = namespaces.get("network") if isinstance(namespaces, dict) else None
+    if isinstance(network, dict) and network.get("target_node_ref"):
+        network["target_node_ref"] = _rewrite_section_ref(
+            str(network["target_node_ref"]),
+            "nodes",
+            symbols["nodes"],
+        )
 
 
 def _rewrite_infrastructure(payload: dict[str, Any], symbols: dict[str, dict[str, str] | set[str]]) -> None:

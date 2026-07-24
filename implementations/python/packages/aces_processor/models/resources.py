@@ -60,6 +60,7 @@ class NodeRuntime(ResolvedResource):
     node_type: str = ""
     os_family: str = ""
     count: int | str | None = None
+    network_namespace_target: str = ""
     domain_topology: DomainTopologyBinding | None = None
 
 

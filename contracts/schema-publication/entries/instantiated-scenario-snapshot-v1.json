@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-snapshot-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "e6f5e9472e379b3d3d82249fcfc0c56d39d873ecfddbce4f6d10f3e4c129eba1",
+  "content_hash": "dafc93305132e01dbe40d0fcc36da81797e80e2948f6940b4205045ddfaa37b0",
   "last_change": {
-    "summary": "Published DSL-437 deterministic live-activity semantics in instantiated snapshots.",
-    "content_hash": "e6f5e9472e379b3d3d82249fcfc0c56d39d873ecfddbce4f6d10f3e4c129eba1"
+    "summary": "Carried DSL-436, DSL-437, and network namespace declarations into instantiated snapshots.",
+    "content_hash": "dafc93305132e01dbe40d0fcc36da81797e80e2948f6940b4205045ddfaa37b0"
   }
 }

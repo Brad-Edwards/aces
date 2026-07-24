@@ -19112,6 +19112,17 @@
           "title": "Ipc",
           "type": "string"
         },
+        "network": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeNetworkNamespace"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "pid": {
           "default": "",
           "not": {
@@ -20060,6 +20071,24 @@
         "network"
       ],
       "title": "RuntimeNetworkEndpoint",
+      "type": "object"
+    },
+    "RuntimeNetworkNamespace": {
+      "additionalProperties": false,
+      "description": "A request to use the exact network namespace owned by another node.",
+      "properties": {
+        "target_node_ref": {
+          "not": {
+            "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Target Node Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "target_node_ref"
+      ],
+      "title": "RuntimeNetworkNamespace",
       "type": "object"
     },
     "RuntimeNetworkRealization": {

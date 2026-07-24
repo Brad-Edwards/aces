@@ -2,9 +2,9 @@
   "contract_id": "sdl-authoring-input-v1",
   "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
   "stability": "draft",
-  "content_hash": "41ff9be4429db4091811c46248950e71b691093ad3b1badc43de2823b7c9439d",
+  "content_hash": "b3a62f519b52ca1eb6aeaaacc28e123a355e14e40c0335b879065836da3cc21e",
   "last_change": {
-    "summary": "Published DSL-437 deterministic live-activity declarations and semantic invariants.",
-    "content_hash": "41ff9be4429db4091811c46248950e71b691093ad3b1badc43de2823b7c9439d"
+    "summary": "Published DSL-436, DSL-437, and typed network namespace declarations.",
+    "content_hash": "b3a62f519b52ca1eb6aeaaacc28e123a355e14e40c0335b879065836da3cc21e"
   }
 }
