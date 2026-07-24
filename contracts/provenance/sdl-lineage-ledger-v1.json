@@ -3681,6 +3681,130 @@
       ]
     },
     {
+      "subject_id": "sdl-field:activity_templates",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/activity_templates"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/activity_templates"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the ACES deterministic live-activity contract; external scenario syntaxes do not define this provider-neutral template surface.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "docs/decisions/adrs/adr-089-deterministic-range-bound-live-activity-policy.md",
+            "specs/sdl/deterministic-live-activity.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "sdl-field:activity_profiles",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/activity_profiles"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/activity_profiles"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the ACES deterministic range-bound live-activity policy and its baseline, lifecycle, budget, and evidence invariants.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "docs/decisions/adrs/adr-089-deterministic-range-bound-live-activity-policy.md",
+            "specs/sdl/deterministic-live-activity.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "reference-model:scenario-activity-template",
+      "subject_kind": "reference_model",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/concept-authority/reference-models-v1.json",
+        "pointer": "#/models/scenario-activity-template"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/concept-authority/reference-models-v1.json",
+              "symbol_or_pointer": "#/models/scenario-activity-template"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative deterministic live-activity contract.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "docs/decisions/adrs/adr-089-deterministic-range-bound-live-activity-policy.md",
+            "specs/sdl/deterministic-live-activity.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "reference-model:scenario-activity-profile",
+      "subject_kind": "reference_model",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/concept-authority/reference-models-v1.json",
+        "pointer": "#/models/scenario-activity-profile"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/concept-authority/reference-models-v1.json",
+              "symbol_or_pointer": "#/models/scenario-activity-profile"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative deterministic live-activity contract.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "docs/decisions/adrs/adr-089-deterministic-range-bound-live-activity-policy.md",
+            "specs/sdl/deterministic-live-activity.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
       "subject_id": "sdl-field:metrics",
       "subject_kind": "top_level_field",
       "disposition": "removed",

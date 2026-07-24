@@ -2,9 +2,9 @@
   "contract_id": "backend-manifest-v2",
   "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
   "stability": "draft",
-  "content_hash": "668dd7394dadf0741424752e21f5d680fe9339e43f4bbe5e078903a11ee3c9ec",
+  "content_hash": "34de55888325b736da45545963ad73602d855c90dca40cfad24d69bf347a397d",
   "last_change": {
-    "summary": "Published DSL-436 exact historical materialization capability declarations.",
-    "content_hash": "668dd7394dadf0741424752e21f5d680fe9339e43f4bbe5e078903a11ee3c9ec"
+    "summary": "Published DSL-437 deterministic live-activity capability declarations.",
+    "content_hash": "34de55888325b736da45545963ad73602d855c90dca40cfad24d69bf347a397d"
   }
 }

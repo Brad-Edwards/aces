@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-snapshot-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "cdf2e8597127f3798ef57c4784fbe6e96e2841f3ee5ce538d0e32e5ef46f3510",
+  "content_hash": "e6f5e9472e379b3d3d82249fcfc0c56d39d873ecfddbce4f6d10f3e4c129eba1",
   "last_change": {
-    "summary": "Published DSL-436 authored historical-state semantics in instantiated snapshots.",
-    "content_hash": "cdf2e8597127f3798ef57c4784fbe6e96e2841f3ee5ce538d0e32e5ef46f3510"
+    "summary": "Published DSL-437 deterministic live-activity semantics in instantiated snapshots.",
+    "content_hash": "e6f5e9472e379b3d3d82249fcfc0c56d39d873ecfddbce4f6d10f3e4c129eba1"
   }
 }

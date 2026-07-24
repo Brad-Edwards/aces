@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
   "stability": "draft",
-  "content_hash": "0e2c8ac0b42c0ff796aefbe8dafae0d393b5ac71e43e792a90788c9beeb87769",
+  "content_hash": "be9a929dc6488d411fbd54735ca553fb1008ba4ccc9dbaf9ca6721fd197c7961",
   "last_change": {
-    "summary": "Published instantiated DSL-436 authored historical-state declarations and semantic invariants.",
-    "content_hash": "0e2c8ac0b42c0ff796aefbe8dafae0d393b5ac71e43e792a90788c9beeb87769"
+    "summary": "Published instantiated DSL-437 deterministic live-activity declarations and invariants.",
+    "content_hash": "be9a929dc6488d411fbd54735ca553fb1008ba4ccc9dbaf9ca6721fd197c7961"
   }
 }

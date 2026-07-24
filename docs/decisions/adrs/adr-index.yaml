@@ -404,3 +404,10 @@ adrs:
       - date: 2026-07-24
         ref: "#859"
         summary: "Separated range-level baseline reset authority from per-binding native reset ownership so one causal baseline can span multiple real product services while every binding remains tenant-bound to its exact target."
+  - id: ADR-089
+    path: docs/decisions/adrs/adr-089-deterministic-range-bound-live-activity-policy.md
+    pin: 54edcf09cbb081dd632af3f4f77650519e0eb32f5425e7f23ec48aac1574947d
+    amendments:
+      - date: 2026-07-24
+        ref: "#861"
+        summary: "Clarified that each execution context may target any native materialization binding in its causal baseline and inherits that binding's product-specific reset ownership."

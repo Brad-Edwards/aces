@@ -29,6 +29,7 @@ from .experiment_capture import ExperimentCaptureSpecModel
 from .experiment_evidence import ExperimentDerivedMeasureModel, ExperimentEvidenceRecordModel
 from .experiment_run import ExperimentRunModel
 from .experiment_spec import ExperimentSpecModel, ExperimentStudyModel
+from .live_activity import ActivityOccurrenceIdentityModel, CompiledActivityProfileModel
 from .manifests import ProcessorManifestV2Model
 from .participant_context import ParticipantContextViewModel
 from .participant_decision_surface import ParticipantDecisionSurfaceModel
@@ -83,6 +84,7 @@ from .schema_invariants import (
     _attach_aces_semantic_profile,
     _attach_experiment_datetime_invariants,
     _attach_historical_state_invariants,
+    _attach_live_activity_invariants,
     _attach_stateful_resource_invariants,
 )
 from .semantic_profiles import SemanticProfileModel
@@ -115,6 +117,8 @@ def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
         "exploit-path-analysis-evidence-v1": ExploitPathAnalysisEvidenceModel.model_json_schema(),
         "scenario-satisfiability-evidence-v1": ScenarioSatisfiabilityEvidenceModel.model_json_schema(),
         "backend-manifest-v2": BackendManifestV2Model.model_json_schema(),
+        "live-activity-profile-v1": CompiledActivityProfileModel.model_json_schema(),
+        "live-activity-occurrence-v1": ActivityOccurrenceIdentityModel.model_json_schema(),
         "realization-envelope-v1": BackendRealizationEnvelopeModel.model_json_schema(),
         "processor-manifest-v2": ProcessorManifestV2Model.model_json_schema(),
         "participant-implementation-manifest-v1": ParticipantImplementationManifestModel.model_json_schema(),
@@ -263,6 +267,7 @@ def _schema_bundle_template() -> dict[str, dict[str, Any]]:
         _attach_experiment_datetime_invariants(contract_id, json_schema)
         _attach_stateful_resource_invariants(contract_id, json_schema)
         _attach_historical_state_invariants(contract_id, json_schema)
+        _attach_live_activity_invariants(contract_id, json_schema)
         _attach_json_schema_metadata(contract_id, json_schema)
         _attach_compiled_address_map_constraints(contract_id, json_schema)
         _attach_plan_identity_constraints(contract_id, json_schema)

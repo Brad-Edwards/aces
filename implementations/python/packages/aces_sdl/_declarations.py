@@ -7,6 +7,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from ._declaration_extensions import add_historical_declarations, add_live_activity_declarations
 from ._errors import SDLValidationError
 from ._identifiers import QualifiedName
 from ._module_symbols import HASHMAP_SECTIONS
@@ -284,6 +285,8 @@ _REFERENCEABLE_SECTIONS = frozenset(
         "deployment_tenants",
         "deployment_cells",
         "historical_baselines",
+        "activity_templates",
+        "activity_profiles",
         "relationships",
         "agents",
         "action_contracts",
@@ -330,32 +333,6 @@ def _add_tool_affordance_declarations(index: DeclarationIndex, scenario: Scenari
                 model_path=(f"behavior_specifications.{spec_name}.tool_affordances.{affordance_id}"),
                 referenceable=True,
             )
-
-
-def _add_historical_declarations(index: DeclarationIndex, scenario: ScenarioContent) -> None:
-    for baseline_name, baseline in scenario.historical_baselines.items():
-        baseline_parts = _qualified_parts(baseline_name)
-        for collection_name, kind, targetable in (
-            ("actors", "historical-actor", False),
-            ("objects", "historical-object", True),
-            ("events", "historical-event", False),
-            ("materialization_bindings", "historical-materialization-binding", False),
-            ("readback_requirements", "historical-readback-requirement", False),
-        ):
-            for declaration_id in getattr(baseline, collection_name):
-                _add(
-                    index,
-                    kind=kind,
-                    address_parts=(
-                        "historical_baselines",
-                        *baseline_parts,
-                        collection_name,
-                        declaration_id,
-                    ),
-                    model_path=f"historical_baselines.{baseline_name}.{collection_name}.{declaration_id}",
-                    referenceable=True,
-                    targetable=targetable,
-                )
 
 
 def _add_variable_declarations(index: DeclarationIndex, scenario: ScenarioContent) -> None:
@@ -479,7 +456,8 @@ def build_declaration_index(
 
     _add_section_declarations(index, scenario)
     _add_tool_affordance_declarations(index, scenario)
-    _add_historical_declarations(index, scenario)
+    add_historical_declarations(index, scenario, add=_add, qualified_parts=_qualified_parts)
+    add_live_activity_declarations(index, scenario, add=_add, qualified_parts=_qualified_parts)
     _add_variable_declarations(index, scenario)
     _add_node_declarations(index, scenario)
     _add_infrastructure_declarations(index, scenario)

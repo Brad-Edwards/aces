@@ -1,0 +1,10 @@
+{
+  "contract_id": "live-activity-occurrence-v1",
+  "schema_path": "contracts/schemas/live-activity/live-activity-occurrence-v1.json",
+  "stability": "draft",
+  "content_hash": "b839782af9dda01f091c1f9f103d2fde79b89fc57cc704fd7f63cc4e38dcec56",
+  "last_change": {
+    "summary": "Initial publication of the DSL-437 deterministic live-activity occurrence identity.",
+    "content_hash": "b839782af9dda01f091c1f9f103d2fde79b89fc57cc704fd7f63cc4e38dcec56"
+  }
+}

@@ -27,6 +27,7 @@ from ._composition_provenance import (
 )
 from ._errors import SDLInstantiationError, SDLParseDiagnostic, SDLParseError, SDLValidationError
 from ._identifiers import QualifiedName
+from ._live_activity_composition import rewrite_live_activity_references
 from ._module_symbols import FORWARDING_AGENTS_SECTION
 from ._module_symbols import HASHMAP_SECTIONS as _HASHMAP_SECTIONS
 from ._module_symbols import (
@@ -864,6 +865,7 @@ def _namespace_payload(
         if isinstance(variation_point, dict):
             _rewrite_variation_point(variation_point, symbols)
 
+    rewrite_live_activity_references(namespaced, symbols, rename=_maybe_rename)
     namespaced = _rewrite_variable_tokens(namespaced, symbols["variables"])
 
     for section_name in _HASHMAP_SECTIONS:

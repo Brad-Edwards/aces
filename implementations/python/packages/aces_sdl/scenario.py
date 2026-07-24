@@ -39,6 +39,7 @@ from .features import Feature
 from .historical_state import HistoricalBaseline
 from .identity_domains import IdentityDomain
 from .infrastructure import InfraNode
+from .live_activity import ActivityProfile, ActivityTemplate
 from .nodes import Node
 from .objectives import Objective
 from .orchestration import Event, Inject, Script, Story, Workflow
@@ -267,6 +268,8 @@ class ScenarioContent(SDLModel):
     deployment_tenants: dict[str, DeploymentTenant] = Field(default_factory=dict)
     deployment_cells: dict[str, DeploymentCell] = Field(default_factory=dict)
     historical_baselines: dict[str, HistoricalBaseline] = Field(default_factory=dict)
+    activity_templates: dict[str, ActivityTemplate] = Field(default_factory=dict)
+    activity_profiles: dict[str, ActivityProfile] = Field(default_factory=dict)
     relationships: dict[str, Relationship] = Field(default_factory=dict)
     forwarding_agents: list[RuntimeForwardingAgent] = Field(default_factory=list)
     agents: dict[str, Agent] = Field(default_factory=dict)

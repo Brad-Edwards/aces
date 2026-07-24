@@ -28,6 +28,8 @@ def test_load_reference_model_catalog():
         "scenario-condition",
         "scenario-event",
         "scenario-content",
+        "scenario-activity-template",
+        "scenario-activity-profile",
     }
 
 

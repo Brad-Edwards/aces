@@ -13,6 +13,7 @@ from aces_contracts.contracts import (
     ConceptBindingEntryModel,
     EvaluatorCapabilitiesModel,
     HistoricalStateCapabilitiesModel,
+    LiveActivityCapabilitiesModel,
     ObservationCapabilitiesModel,
     OrchestratorCapabilitiesModel,
     ParticipantFeatureSupportModel,
@@ -28,6 +29,7 @@ from .capabilities import (
     BackendManifest,
     EvaluatorCapabilities,
     HistoricalStateCapabilities,
+    LiveActivityCapabilities,
     ObservationCapabilities,
     OrchestratorCapabilities,
     ParticipantFeatureSupport,
@@ -187,6 +189,23 @@ def backend_manifest_v2_model(manifest: BackendManifest) -> BackendManifestV2Mod
                 if manifest.historical_state is not None
                 else None
             ),
+            "live_activity": (
+                LiveActivityCapabilitiesModel(
+                    supported_contract_profiles=sorted(manifest.live_activity.supported_contract_profiles),
+                    supported_operation_profiles=sorted(manifest.live_activity.supported_operation_profiles),
+                    supported_schedule_profiles=sorted(manifest.live_activity.supported_schedule_profiles),
+                    supported_readback_profiles=sorted(manifest.live_activity.supported_readback_profiles),
+                    supported_lifecycle_profiles=sorted(manifest.live_activity.supported_lifecycle_profiles),
+                    supported_resource_dimensions=sorted(manifest.live_activity.supported_resource_dimensions),
+                    supported_dependency_kinds=sorted(manifest.live_activity.supported_dependency_kinds),
+                    supports_bounded_retry=manifest.live_activity.supports_bounded_retry,
+                    supports_generation_lifecycle=manifest.live_activity.supports_generation_lifecycle,
+                    supports_participant_reservation=manifest.live_activity.supports_participant_reservation,
+                    supports_readback_provenance=manifest.live_activity.supports_readback_provenance,
+                ).model_dump(mode="json")
+                if manifest.live_activity is not None
+                else None
+            ),
         },
     )
 
@@ -313,6 +332,26 @@ def _historical_state_from_model(
     )
 
 
+def _live_activity_from_model(
+    model: LiveActivityCapabilitiesModel | None,
+) -> LiveActivityCapabilities | None:
+    if model is None:
+        return None
+    return LiveActivityCapabilities(
+        supported_contract_profiles=frozenset(model.supported_contract_profiles),
+        supported_operation_profiles=frozenset(model.supported_operation_profiles),
+        supported_schedule_profiles=frozenset(model.supported_schedule_profiles),
+        supported_readback_profiles=frozenset(model.supported_readback_profiles),
+        supported_lifecycle_profiles=frozenset(model.supported_lifecycle_profiles),
+        supported_resource_dimensions=frozenset(model.supported_resource_dimensions),
+        supported_dependency_kinds=frozenset(model.supported_dependency_kinds),
+        supports_bounded_retry=model.supports_bounded_retry,
+        supports_generation_lifecycle=model.supports_generation_lifecycle,
+        supports_participant_reservation=model.supports_participant_reservation,
+        supports_readback_provenance=model.supports_readback_provenance,
+    )
+
+
 def _capability_set_from_model(model: BackendCapabilitiesV2Model) -> BackendCapabilitySet:
     return BackendCapabilitySet(
         provisioner=_provisioner_from_model(model.provisioner),
@@ -321,6 +360,7 @@ def _capability_set_from_model(model: BackendCapabilitiesV2Model) -> BackendCapa
         participant_runtime=_participant_runtime_from_model(model.participant_runtime),
         observation=_observation_from_model(model.observation),
         historical_state=_historical_state_from_model(model.historical_state),
+        live_activity=_live_activity_from_model(model.live_activity),
     )
 
 

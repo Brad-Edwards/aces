@@ -1,0 +1,583 @@
+{
+  "$defs": {
+    "ActivityProfileDigestModel": {
+      "additionalProperties": false,
+      "properties": {
+        "activity_profile_id": {
+          "title": "Activity Profile Id",
+          "type": "string"
+        },
+        "activity_profile_version": {
+          "minLength": 1,
+          "title": "Activity Profile Version",
+          "type": "string"
+        },
+        "algorithm": {
+          "const": "sha256",
+          "title": "Algorithm",
+          "type": "string"
+        },
+        "historical_baseline_digest": {
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "title": "Historical Baseline Digest",
+          "type": "string"
+        },
+        "profile": {
+          "const": "aces-live-activity-profile-digest/v1",
+          "title": "Profile",
+          "type": "string"
+        },
+        "value": {
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "profile",
+        "activity_profile_id",
+        "activity_profile_version",
+        "historical_baseline_digest",
+        "algorithm",
+        "value"
+      ],
+      "title": "ActivityProfileDigestModel",
+      "type": "object"
+    },
+    "ActivityRationalQuantityModel": {
+      "additionalProperties": false,
+      "properties": {
+        "denominator": {
+          "minimum": 1,
+          "title": "Denominator",
+          "type": "integer"
+        },
+        "numerator": {
+          "minimum": 0,
+          "title": "Numerator",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "numerator",
+        "denominator"
+      ],
+      "title": "ActivityRationalQuantityModel",
+      "type": "object"
+    },
+    "CompiledActivityActionModel": {
+      "additionalProperties": false,
+      "properties": {
+        "action_id": {
+          "title": "Action Id",
+          "type": "string"
+        },
+        "address_profile": {
+          "minLength": 1,
+          "title": "Address Profile",
+          "type": "string"
+        },
+        "execution_context_id": {
+          "title": "Execution Context Id",
+          "type": "string"
+        },
+        "lifecycle_profile": {
+          "minLength": 1,
+          "title": "Lifecycle Profile",
+          "type": "string"
+        },
+        "max_occurrences": {
+          "minimum": 1,
+          "title": "Max Occurrences",
+          "type": "integer"
+        },
+        "max_retry_attempts": {
+          "minimum": 1,
+          "title": "Max Retry Attempts",
+          "type": "integer"
+        },
+        "operation_profile": {
+          "minLength": 1,
+          "title": "Operation Profile",
+          "type": "string"
+        },
+        "ordering_dependencies": {
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            },
+            "pattern": "^[a-z0-9]",
+            "type": "string"
+          },
+          "title": "Ordering Dependencies",
+          "type": "array"
+        },
+        "random_stream_profile": {
+          "minLength": 1,
+          "title": "Random Stream Profile",
+          "type": "string"
+        },
+        "readback_profile": {
+          "minLength": 1,
+          "title": "Readback Profile",
+          "type": "string"
+        },
+        "refresh_dependencies": {
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            },
+            "pattern": "^[a-z0-9]",
+            "type": "string"
+          },
+          "title": "Refresh Dependencies",
+          "type": "array"
+        },
+        "schedule_anchor_seconds": {
+          "minimum": 0,
+          "title": "Schedule Anchor Seconds",
+          "type": "integer"
+        },
+        "schedule_interval_seconds": {
+          "minimum": 1,
+          "title": "Schedule Interval Seconds",
+          "type": "integer"
+        },
+        "schedule_profile": {
+          "minLength": 1,
+          "title": "Schedule Profile",
+          "type": "string"
+        },
+        "target_service_id": {
+          "title": "Target Service Id",
+          "type": "string"
+        },
+        "template_id": {
+          "title": "Template Id",
+          "type": "string"
+        },
+        "transform_profile": {
+          "minLength": 1,
+          "title": "Transform Profile",
+          "type": "string"
+        }
+      },
+      "required": [
+        "action_id",
+        "template_id",
+        "execution_context_id",
+        "target_service_id",
+        "operation_profile",
+        "schedule_profile",
+        "schedule_anchor_seconds",
+        "schedule_interval_seconds",
+        "max_occurrences",
+        "max_retry_attempts",
+        "random_stream_profile",
+        "transform_profile",
+        "address_profile",
+        "readback_profile",
+        "lifecycle_profile"
+      ],
+      "title": "CompiledActivityActionModel",
+      "type": "object"
+    },
+    "CompiledActivityBudgetEnvelopeModel": {
+      "additionalProperties": false,
+      "properties": {
+        "action_demands": {
+          "minProperties": 1,
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/ActivityRationalQuantityModel"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Action Demands",
+          "type": "object"
+        },
+        "dimension": {
+          "enum": [
+            "operations",
+            "bytes",
+            "connections",
+            "cpu_milliseconds"
+          ],
+          "title": "Dimension",
+          "type": "string"
+        },
+        "fleet_capacity": {
+          "$ref": "#/$defs/ActivityRationalQuantityModel"
+        },
+        "participant_reservation": {
+          "$ref": "#/$defs/ActivityRationalQuantityModel"
+        },
+        "range_capacity": {
+          "$ref": "#/$defs/ActivityRationalQuantityModel"
+        },
+        "unit": {
+          "enum": [
+            "operation",
+            "byte",
+            "connection",
+            "cpu_millisecond"
+          ],
+          "title": "Unit",
+          "type": "string"
+        },
+        "window_seconds": {
+          "minimum": 1,
+          "title": "Window Seconds",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "dimension",
+        "unit",
+        "window_seconds",
+        "action_demands",
+        "range_capacity",
+        "fleet_capacity",
+        "participant_reservation"
+      ],
+      "title": "CompiledActivityBudgetEnvelopeModel",
+      "type": "object"
+    },
+    "GovernedEntropyRefModel": {
+      "additionalProperties": false,
+      "description": "Governed reference to sensitive root entropy; never carries raw bytes.\n\nRaw entropy is resolved only at an authorized in-process boundary (out of\nscope here) and is never serialized back into this model, a diagnostic, a\nfixture, argv, or telemetry (SVR-028).",
+      "properties": {
+        "kind": {
+          "const": "governed-reference",
+          "title": "Kind",
+          "type": "string"
+        },
+        "reference_id": {
+          "minLength": 1,
+          "title": "Reference Id",
+          "type": "string"
+        },
+        "reference_version": {
+          "minLength": 1,
+          "title": "Reference Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "reference_id",
+        "reference_version"
+      ],
+      "title": "GovernedEntropyRefModel",
+      "type": "object"
+    },
+    "HistoricalBaselineDigestModel": {
+      "additionalProperties": false,
+      "description": "Domain-separated identity of one complete admitted historical baseline.",
+      "properties": {
+        "algorithm": {
+          "const": "sha256",
+          "title": "Algorithm",
+          "type": "string"
+        },
+        "baseline_id": {
+          "title": "Baseline Id",
+          "type": "string"
+        },
+        "baseline_version": {
+          "minLength": 1,
+          "title": "Baseline Version",
+          "type": "string"
+        },
+        "profile": {
+          "const": "aces-historical-baseline-digest/v1",
+          "title": "Profile",
+          "type": "string"
+        },
+        "value": {
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "profile",
+        "baseline_id",
+        "baseline_version",
+        "algorithm",
+        "value"
+      ],
+      "title": "HistoricalBaselineDigestModel",
+      "type": "object"
+    },
+    "PublicSeedModel": {
+      "additionalProperties": false,
+      "description": "Inline public root-entropy seed: fixed-width canonical hex bytes.\n\nFixed-width lowercase hex removes leading-zero, integer-width, sign, and\nUnicode ambiguity from the executable entropy encoding (per the EXP-718\npreflight's \"Canonical Inputs\" section).",
+      "properties": {
+        "encoding": {
+          "const": "hex-fixed-width",
+          "title": "Encoding",
+          "type": "string"
+        },
+        "kind": {
+          "const": "public-seed",
+          "title": "Kind",
+          "type": "string"
+        },
+        "value": {
+          "minLength": 1,
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "encoding",
+        "value"
+      ],
+      "title": "PublicSeedModel",
+      "type": "object"
+    }
+  },
+  "$id": "https://aces.dev/schemas/live-activity-profile-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "actions": {
+      "minProperties": 1,
+      "patternProperties": {
+        "^[a-z0-9]": {
+          "$ref": "#/$defs/CompiledActivityActionModel"
+        }
+      },
+      "propertyNames": {
+        "maxLength": 64,
+        "minLength": 1,
+        "not": {
+          "pattern": "[^a-z0-9_-]"
+        }
+      },
+      "title": "Actions",
+      "type": "object"
+    },
+    "activity_digest": {
+      "$ref": "#/$defs/ActivityProfileDigestModel"
+    },
+    "activity_profile_id": {
+      "title": "Activity Profile Id",
+      "type": "string"
+    },
+    "activity_profile_version": {
+      "minLength": 1,
+      "title": "Activity Profile Version",
+      "type": "string"
+    },
+    "baseline_digest": {
+      "$ref": "#/$defs/HistoricalBaselineDigestModel"
+    },
+    "budget_envelopes": {
+      "items": {
+        "$ref": "#/$defs/CompiledActivityBudgetEnvelopeModel"
+      },
+      "minItems": 1,
+      "title": "Budget Envelopes",
+      "type": "array"
+    },
+    "contract_profile": {
+      "const": "aces-live-activity/v1",
+      "title": "Contract Profile",
+      "type": "string"
+    },
+    "dependency_order": {
+      "items": {
+        "maxLength": 64,
+        "minLength": 1,
+        "not": {
+          "pattern": "[^a-z0-9_-]"
+        },
+        "pattern": "^[a-z0-9]",
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Dependency Order",
+      "type": "array"
+    },
+    "deployment_tenant_id": {
+      "title": "Deployment Tenant Id",
+      "type": "string"
+    },
+    "entropy_identity": {
+      "discriminator": {
+        "mapping": {
+          "governed-reference": "#/$defs/GovernedEntropyRefModel",
+          "public-seed": "#/$defs/PublicSeedModel"
+        },
+        "propertyName": "kind"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/PublicSeedModel"
+        },
+        {
+          "$ref": "#/$defs/GovernedEntropyRefModel"
+        }
+      ],
+      "title": "Entropy Identity"
+    },
+    "range_instance_id": {
+      "title": "Range Instance Id",
+      "type": "string"
+    },
+    "required_dependency_kinds": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Required Dependency Kinds",
+      "type": "array"
+    },
+    "required_lifecycle_profiles": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Required Lifecycle Profiles",
+      "type": "array"
+    },
+    "required_operation_profiles": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Required Operation Profiles",
+      "type": "array"
+    },
+    "required_readback_profiles": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Required Readback Profiles",
+      "type": "array"
+    },
+    "required_resource_dimensions": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Required Resource Dimensions",
+      "type": "array"
+    },
+    "required_schedule_profiles": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Required Schedule Profiles",
+      "type": "array"
+    },
+    "requires_bounded_retry": {
+      "const": true,
+      "default": true,
+      "title": "Requires Bounded Retry",
+      "type": "boolean"
+    },
+    "requires_generation_lifecycle": {
+      "const": true,
+      "default": true,
+      "title": "Requires Generation Lifecycle",
+      "type": "boolean"
+    },
+    "requires_participant_reservation": {
+      "const": true,
+      "default": true,
+      "title": "Requires Participant Reservation",
+      "type": "boolean"
+    },
+    "requires_readback_provenance": {
+      "const": true,
+      "default": true,
+      "title": "Requires Readback Provenance",
+      "type": "boolean"
+    },
+    "reset_generation_id": {
+      "title": "Reset Generation Id",
+      "type": "string"
+    },
+    "reverse_teardown_order": {
+      "items": {
+        "maxLength": 64,
+        "minLength": 1,
+        "not": {
+          "pattern": "[^a-z0-9_-]"
+        },
+        "pattern": "^[a-z0-9]",
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Reverse Teardown Order",
+      "type": "array"
+    }
+  },
+  "required": [
+    "contract_profile",
+    "activity_profile_id",
+    "activity_profile_version",
+    "activity_digest",
+    "baseline_digest",
+    "deployment_tenant_id",
+    "range_instance_id",
+    "reset_generation_id",
+    "entropy_identity",
+    "actions",
+    "budget_envelopes",
+    "dependency_order",
+    "reverse_teardown_order",
+    "required_operation_profiles",
+    "required_schedule_profiles",
+    "required_readback_profiles",
+    "required_lifecycle_profiles",
+    "required_resource_dimensions"
+  ],
+  "title": "CompiledActivityProfileModel",
+  "type": "object",
+  "x-aces-invariants": [
+    {
+      "description": "The compiled profile must reuse the exact ADR-088 baseline digest and carry exact budget envelopes plus complete stable typed dependency and teardown order without enumerating occurrences.",
+      "id": "compiled-live-activity-profile-identity",
+      "inputs": [
+        {
+          "contract_id": "live-activity-profile-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_contracts.contracts.live_activity.CompiledActivityProfileModel._validate_compiled_identity"
+    }
+  ],
+  "x-aces-semantic-profile": {
+    "contract_id": "live-activity-profile-v1",
+    "entry_schema_contract_id": "aces-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
+    "id": "aces-semantic-invariants-v1",
+    "keyword": "x-aces-invariants",
+    "required": true,
+    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+  }
+}

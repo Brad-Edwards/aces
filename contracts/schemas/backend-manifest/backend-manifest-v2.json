@@ -46,6 +46,17 @@
           ],
           "default": null
         },
+        "live_activity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LiveActivityCapabilitiesModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "observation": {
           "anyOf": [
             {
@@ -293,6 +304,104 @@
         "supported_object_kinds"
       ],
       "title": "HistoricalStateCapabilitiesModel",
+      "type": "object"
+    },
+    "LiveActivityCapabilitiesModel": {
+      "additionalProperties": false,
+      "properties": {
+        "supported_contract_profiles": {
+          "items": {
+            "const": "aces-live-activity/v1",
+            "type": "string"
+          },
+          "maxItems": 1,
+          "title": "Supported Contract Profiles",
+          "type": "array"
+        },
+        "supported_dependency_kinds": {
+          "items": {
+            "enum": [
+              "ordering",
+              "refresh"
+            ],
+            "type": "string"
+          },
+          "maxItems": 2,
+          "title": "Supported Dependency Kinds",
+          "type": "array"
+        },
+        "supported_lifecycle_profiles": {
+          "items": {
+            "const": "range-lifecycle/v1",
+            "type": "string"
+          },
+          "maxItems": 1,
+          "title": "Supported Lifecycle Profiles",
+          "type": "array"
+        },
+        "supported_operation_profiles": {
+          "items": {
+            "pattern": "^protocol-operation/v1:[a-z_]+:[a-z_]+$",
+            "type": "string"
+          },
+          "maxItems": 64,
+          "title": "Supported Operation Profiles",
+          "type": "array"
+        },
+        "supported_readback_profiles": {
+          "items": {
+            "const": "evidence-readback/v1",
+            "type": "string"
+          },
+          "maxItems": 1,
+          "title": "Supported Readback Profiles",
+          "type": "array"
+        },
+        "supported_resource_dimensions": {
+          "items": {
+            "enum": [
+              "operations",
+              "bytes",
+              "connections",
+              "cpu_milliseconds"
+            ],
+            "type": "string"
+          },
+          "maxItems": 4,
+          "title": "Supported Resource Dimensions",
+          "type": "array"
+        },
+        "supported_schedule_profiles": {
+          "items": {
+            "const": "finite-logical-schedule/v1",
+            "type": "string"
+          },
+          "maxItems": 1,
+          "title": "Supported Schedule Profiles",
+          "type": "array"
+        },
+        "supports_bounded_retry": {
+          "default": false,
+          "title": "Supports Bounded Retry",
+          "type": "boolean"
+        },
+        "supports_generation_lifecycle": {
+          "default": false,
+          "title": "Supports Generation Lifecycle",
+          "type": "boolean"
+        },
+        "supports_participant_reservation": {
+          "default": false,
+          "title": "Supports Participant Reservation",
+          "type": "boolean"
+        },
+        "supports_readback_provenance": {
+          "default": false,
+          "title": "Supports Readback Provenance",
+          "type": "boolean"
+        }
+      },
+      "title": "LiveActivityCapabilitiesModel",
       "type": "object"
     },
     "ObservationCapabilitiesModel": {
@@ -1101,7 +1210,9 @@
           "experiment-capture-spec-v1",
           "experiment-evidence-record-v1",
           "experiment-derived-measure-v1",
-          "experiment-run-v1"
+          "experiment-run-v1",
+          "live-activity-profile-v1",
+          "live-activity-occurrence-v1"
         ],
         "minLength": 1,
         "type": "string"
@@ -1120,5 +1231,28 @@
     "capabilities"
   ],
   "title": "BackendManifestV2Model",
-  "type": "object"
+  "type": "object",
+  "x-aces-invariants": [
+    {
+      "description": "A live-activity capability declaration must use governed profile terms and publish both the compiled-profile and occurrence-identity contracts.",
+      "id": "live-activity-capability-contract-agreement",
+      "inputs": [
+        {
+          "contract_id": "backend-manifest-v2",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_backend_protocols.capabilities.live_activity_capability_contract_gaps"
+    }
+  ],
+  "x-aces-semantic-profile": {
+    "contract_id": "backend-manifest-v2",
+    "entry_schema_contract_id": "aces-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
+    "id": "aces-semantic-invariants-v1",
+    "keyword": "x-aces-invariants",
+    "required": true,
+    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+  }
 }

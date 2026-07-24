@@ -175,6 +175,54 @@ def _attach_historical_state_invariants(contract_id: str, json_schema: dict[str,
     )
 
 
+def _attach_live_activity_invariants(contract_id: str, json_schema: dict[str, Any]) -> None:
+    instance_paths = {
+        "sdl-authoring-input-v1": "#",
+        "instantiated-scenario-v1": "#",
+        "instantiated-scenario-snapshot-v1": "#/scenario",
+        "scenario-satisfiability-evidence-v1": "#/snapshot/scenario",
+    }
+    instance_path = instance_paths.get(contract_id)
+    if instance_path is not None:
+        _add_aces_invariant(
+            json_schema,
+            "deterministic-live-activity-semantics",
+            "Background actor isolation, baseline-bound tenancy and reset ownership, target contexts, finite "
+            "schedules, typed dependencies, bounded retry, exact rational budgets, participant reservation, "
+            "lifecycle policy, and evidence-only readback provenance must all hold.",
+            validator="aces_sdl.semantics.live_activity.analyze_live_activity",
+            inputs=[{"contract_id": contract_id, "instance_path": instance_path}],
+        )
+    if contract_id == "backend-manifest-v2":
+        _add_aces_invariant(
+            json_schema,
+            "live-activity-capability-contract-agreement",
+            "A live-activity capability declaration must use governed profile terms and publish both the "
+            "compiled-profile and occurrence-identity contracts.",
+            validator="aces_backend_protocols.capabilities.live_activity_capability_contract_gaps",
+            inputs=[{"contract_id": contract_id, "instance_path": "#"}],
+        )
+    if contract_id == "live-activity-profile-v1":
+        _add_aces_invariant(
+            json_schema,
+            "compiled-live-activity-profile-identity",
+            "The compiled profile must reuse the exact ADR-088 baseline digest and carry exact budget "
+            "envelopes plus complete stable typed dependency and teardown order without enumerating occurrences.",
+            validator=(
+                "aces_contracts.contracts.live_activity.CompiledActivityProfileModel._validate_compiled_identity"
+            ),
+            inputs=[{"contract_id": contract_id, "instance_path": "#"}],
+        )
+    if contract_id == "live-activity-occurrence-v1":
+        _add_aces_invariant(
+            json_schema,
+            "live-activity-occurrence-jcs-identity",
+            "Occurrence identity is domain-separated SHA-256 over the complete closed RFC 8785/JCS context.",
+            validator="aces_contracts.live_activity_addressing.derive_activity_occurrence_identities",
+            inputs=[{"contract_id": contract_id, "instance_path": "#/context"}],
+        )
+
+
 def _validate_reported_value_status(
     value_status: str,
     value: object | None,

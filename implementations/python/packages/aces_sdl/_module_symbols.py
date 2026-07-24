@@ -39,6 +39,8 @@ HASHMAP_SECTIONS = (
     "deployment_tenants",
     "deployment_cells",
     "historical_baselines",
+    "activity_templates",
+    "activity_profiles",
     "relationships",
     "agents",
     "action_contracts",
@@ -179,6 +181,30 @@ def _nested_historical_aliases(
     return aliases
 
 
+def _nested_live_activity_aliases(
+    scenario: ScenarioContent,
+    template_rename_map: Mapping[str, str],
+    profile_rename_map: Mapping[str, str],
+) -> dict[str, str]:
+    """Canonical refs to template- and profile-owned declarations."""
+
+    aliases: dict[str, str] = {}
+    for template_name, template in scenario.activity_templates.items():
+        prefixed_template = template_rename_map.get(template_name, template_name)
+        for parameter_id in template.parameters:
+            aliases[f"activity_templates.{template_name}.parameters.{parameter_id}"] = (
+                f"activity_templates.{prefixed_template}.parameters.{parameter_id}"
+            )
+    for profile_name, profile in scenario.activity_profiles.items():
+        prefixed_profile = profile_rename_map.get(profile_name, profile_name)
+        for collection_name in ("actors", "execution_contexts", "schedules", "actions"):
+            for declaration_id in getattr(profile, collection_name):
+                aliases[f"activity_profiles.{profile_name}.{collection_name}.{declaration_id}"] = (
+                    f"activity_profiles.{prefixed_profile}.{collection_name}.{declaration_id}"
+                )
+    return aliases
+
+
 def symbol_index(
     scenario: ScenarioContent,
     *,
@@ -224,6 +250,13 @@ def symbol_index(
             section_maps.get("historical_baselines", {}),
         )
     )
+    named.update(
+        _nested_live_activity_aliases(
+            scenario,
+            section_maps.get("activity_templates", {}),
+            section_maps.get("activity_profiles", {}),
+        )
+    )
 
     forwarding_agent_map = _section_rename_map(
         {agent.forwarding_agent_id: agent for agent in scenario.forwarding_agents},
@@ -255,6 +288,8 @@ def symbol_index(
         "deployment_tenants": section_maps.get("deployment_tenants", {}),
         "deployment_cells": section_maps.get("deployment_cells", {}),
         "historical_baselines": section_maps.get("historical_baselines", {}),
+        "activity_templates": section_maps.get("activity_templates", {}),
+        "activity_profiles": section_maps.get("activity_profiles", {}),
         "relationships": section_maps.get("relationships", {}),
         "agents": section_maps.get("agents", {}),
         "action_contracts": section_maps.get("action_contracts", {}),

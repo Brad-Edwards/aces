@@ -24,6 +24,8 @@ def _schema_output_path(schemas_dir: Path, name: str) -> Path:
         return schemas_dir / "exploit-path-analysis" / f"{name}.json"
     if name.startswith("backend-manifest-v"):
         return schemas_dir / "backend-manifest" / f"{name}.json"
+    if name.startswith("live-activity-"):
+        return schemas_dir / "live-activity" / f"{name}.json"
     if name.startswith("realization-envelope-v"):
         return schemas_dir / "realization-envelope" / f"{name}.json"
     if name.startswith("processor-manifest-v"):

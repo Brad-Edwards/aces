@@ -60,6 +60,8 @@ BACKEND_SUPPORTED_CONTRACT_IDS = (
     "experiment-evidence-record-v1",
     "experiment-derived-measure-v1",
     "experiment-run-v1",
+    "live-activity-profile-v1",
+    "live-activity-occurrence-v1",
 )
 
 PARTICIPANT_IMPLEMENTATION_SUPPORTED_CONTRACT_IDS = (

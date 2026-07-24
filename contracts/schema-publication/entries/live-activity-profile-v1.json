@@ -1,0 +1,10 @@
+{
+  "contract_id": "live-activity-profile-v1",
+  "schema_path": "contracts/schemas/live-activity/live-activity-profile-v1.json",
+  "stability": "draft",
+  "content_hash": "516c676e6eee878bd47f15824dacfd08cf8283683ced6fe47a065123a9199eba",
+  "last_change": {
+    "summary": "Initial publication of the DSL-437 compiled deterministic live-activity profile carrier.",
+    "content_hash": "516c676e6eee878bd47f15824dacfd08cf8283683ced6fe47a065123a9199eba"
+  }
+}

@@ -224,3 +224,4 @@ adr-086-governed-whole-scenario-satisfiability
 | [086](adr-086-governed-whole-scenario-satisfiability.md) | Governed Whole-Scenario Satisfiability | accepted | 2026-07-19 |
 | [087](adr-087-enterprise-identity-and-deployment-tenancy-authoring.md) | Enterprise Identity and Deployment-Tenancy Authoring | accepted | 2026-07-24 |
 | [088](adr-088-authored-historical-state-and-native-materialization.md) | Authored Historical State and Native Materialization | accepted | 2026-07-24 |
+| [089](adr-089-deterministic-range-bound-live-activity-policy.md) | Deterministic Range-Bound Live Activity Policy | accepted | 2026-07-24 |

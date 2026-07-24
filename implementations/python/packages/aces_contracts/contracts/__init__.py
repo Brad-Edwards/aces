@@ -181,6 +181,16 @@ from .historical_state import (
     HistoricalSemanticAddressModel,
     HistoricalStateCapabilitiesModel,
 )
+from .live_activity import (
+    ActivityOccurrenceContextModel,
+    ActivityOccurrenceIdentityModel,
+    ActivityProfileDigestModel,
+    ActivityRationalQuantityModel,
+    CompiledActivityActionModel,
+    CompiledActivityBudgetEnvelopeModel,
+    CompiledActivityProfileModel,
+    LiveActivityCapabilitiesModel,
+)
 from .manifests import (
     BackendCapabilitiesV2Model,
     ConceptBindingEntryModel,
@@ -396,7 +406,10 @@ __all__ = [
     "PropositionTruthOutcome", "PropositionTruthResultModel", "EVALUATION_STATE_SCHEMA_VERSION",
     "EvaluatorCapabilitiesModel", "EventClassificationModel", "HistoricalBaselineDigestModel",
     "HistoricalSemanticAddressContextModel",
-    "HistoricalSemanticAddressModel", "HistoricalStateCapabilitiesModel", "InstantiationRequestModel",
+    "HistoricalSemanticAddressModel", "HistoricalStateCapabilitiesModel", "ActivityOccurrenceContextModel",
+    "ActivityOccurrenceIdentityModel", "ActivityProfileDigestModel", "ActivityRationalQuantityModel",
+    "CompiledActivityActionModel", "CompiledActivityBudgetEnvelopeModel", "CompiledActivityProfileModel",
+    "LiveActivityCapabilitiesModel", "InstantiationRequestModel",
     "OPERATION_SCHEMA_VERSION", "OperationReceiptModel", "OperationStatusModel", "ObservationCapabilitiesModel",
     "OrchestrationPlanModel", "OrchestratorCapabilitiesModel", "PARTICIPANT_EPISODE_STATE_SCHEMA_VERSION",
     "PARTICIPANT_IMPLEMENTATION_MANIFEST_V1_SCHEMA_VERSION",

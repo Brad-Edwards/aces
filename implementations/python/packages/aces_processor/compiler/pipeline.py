@@ -16,6 +16,7 @@ from ..models import (
 )
 from .evaluation import _compile_assertions, _compile_condition_bindings, _compile_propositions
 from .historical_state import compile_historical_baseline_digests, compile_historical_object_addresses
+from .live_activity import compile_activity_profiles
 from .objectives import _compile_objectives
 from .orchestration import (
     _compile_events,
@@ -126,6 +127,7 @@ def compile_runtime_model(scenario: Scenario | ExpandedScenario | InstantiatedSc
     stories = _compile_stories(scenario, diagnostics)
     objectives = _compile_objectives(scenario, assertions, diagnostics)
     workflows = _compile_workflows(scenario, assertions, diagnostics)
+    historical_baseline_digests = compile_historical_baseline_digests(scenario)
 
     return RuntimeModel(
         scenario_name=scenario.name,
@@ -136,8 +138,9 @@ def compile_runtime_model(scenario: Scenario | ExpandedScenario | InstantiatedSc
         entity_specs=entity_specs,
         agent_specs=agent_specs,
         relationship_specs=relationship_specs,
-        historical_baseline_digests=compile_historical_baseline_digests(scenario),
+        historical_baseline_digests=historical_baseline_digests,
         historical_object_addresses=compile_historical_object_addresses(scenario),
+        activity_profiles=compile_activity_profiles(scenario, historical_baseline_digests),
         capability_constraints=_compile_capability_constraints(scenario),
         networks=networks,
         node_deployments=node_deployments,

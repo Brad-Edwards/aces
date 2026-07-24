@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "ae885fe2db9ecc31eaff264f10c40969570fd9fc79e32e02b4daf225ae6de942",
+  "content_hash": "f76afae3ec7648749bf06d711b4122a063661eeea53abdb006b89dc9e3eaeddb",
   "last_change": {
-    "summary": "Carried DSL-436 authored historical-state semantics through satisfiability evidence.",
-    "content_hash": "ae885fe2db9ecc31eaff264f10c40969570fd9fc79e32e02b4daf225ae6de942"
+    "summary": "Carried DSL-437 deterministic live-activity semantics through satisfiability evidence.",
+    "content_hash": "f76afae3ec7648749bf06d711b4122a063661eeea53abdb006b89dc9e3eaeddb"
   }
 }

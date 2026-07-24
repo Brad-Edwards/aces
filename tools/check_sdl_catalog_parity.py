@@ -113,6 +113,9 @@ _DEPLOYMENT_TENANCY_SEMANTICS = (
 _HISTORICAL_STATE_SEMANTICS = (
     "[historical-state semantics](../../implementations/python/packages/aces_sdl/semantics/historical_state.py)"
 )
+_LIVE_ACTIVITY_SEMANTICS = (
+    "[live-activity semantics](../../implementations/python/packages/aces_sdl/semantics/live_activity.py)"
+)
 _PARTICIPANT_VALIDATOR = (
     "[participant validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py)"
 )
@@ -505,6 +508,132 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         _SEMANTIC,
         "fatal dangling",
         _HISTORICAL_STATE_SEMANTICS,
+    ),
+    "activity_profiles.*.historical_baseline_ref": (
+        "historical_baselines",
+        _SEMANTIC,
+        "fatal dangling or baseline identity disagreement",
+        _LIVE_ACTIVITY_SEMANTICS,
+    ),
+    "activity_profiles.*.actors.*.entity_ref": (
+        "entities",
+        _SEMANTIC,
+        "fatal dangling or participant entity overlap",
+        _LIVE_ACTIVITY_SEMANTICS,
+    ),
+    "activity_profiles.*.actors.*.account_ref": (
+        "accounts",
+        _SEMANTIC,
+        "fatal dangling, tenant mismatch, or participant account overlap",
+        _LIVE_ACTIVITY_SEMANTICS,
+    ),
+    "activity_profiles.*.actors.*.deployment_tenant_ref": (
+        "deployment_tenants",
+        _SEMANTIC,
+        "fatal dangling or baseline disagreement",
+        _LIVE_ACTIVITY_SEMANTICS,
+    ),
+    "activity_profiles.*.actors.*.operating_scope_refs[]": (
+        "targetable",
+        _SEMANTIC,
+        "fatal dangling or participant authority overlap",
+        _LIVE_ACTIVITY_SEMANTICS,
+    ),
+    "activity_profiles.*.execution_contexts.*.target_service_ref": (
+        "targetable",
+        _SEMANTIC,
+        "fatal unless the exact named baseline target service",
+        _LIVE_ACTIVITY_SEMANTICS,
+    ),
+    "activity_profiles.*.execution_contexts.*.deployment_tenant_ref": (
+        "deployment_tenants",
+        _SEMANTIC,
+        "fatal dangling or baseline disagreement",
+        _LIVE_ACTIVITY_SEMANTICS,
+    ),
+    "activity_profiles.*.execution_contexts.*.account_ref": (
+        "accounts",
+        _SEMANTIC,
+        "fatal dangling or actor ownership disagreement",
+        _LIVE_ACTIVITY_SEMANTICS,
+    ),
+    "activity_profiles.*.actions.*.template_ref": (
+        "activity_templates",
+        _SEMANTIC,
+        "fatal dangling or protocol-operation disagreement",
+        _LIVE_ACTIVITY_SEMANTICS,
+    ),
+    "activity_profiles.*.actions.*.actor_ref": (
+        "derived:activity_actors",
+        _SEMANTIC,
+        "fatal dangling",
+        _LIVE_ACTIVITY_SEMANTICS,
+    ),
+    "activity_profiles.*.actions.*.execution_context_ref": (
+        "derived:activity_execution_contexts",
+        _SEMANTIC,
+        "fatal dangling or account/tenant/target disagreement",
+        _LIVE_ACTIVITY_SEMANTICS,
+    ),
+    "activity_profiles.*.actions.*.schedule_ref": (
+        "derived:activity_schedules",
+        _SEMANTIC,
+        "fatal dangling or non-finite schedule",
+        _LIVE_ACTIVITY_SEMANTICS,
+    ),
+    "activity_profiles.*.actions.*.parameter_bindings.*.parameter_ref": (
+        "derived:activity_template_parameters",
+        _SEMANTIC,
+        "fatal unless declared by the bound template",
+        _LIVE_ACTIVITY_SEMANTICS,
+    ),
+    "activity_profiles.*.actions.*.parameter_bindings.*.value_ref": (
+        "targetable",
+        _SEMANTIC,
+        "fatal dangling or template parameter-kind mismatch",
+        _LIVE_ACTIVITY_SEMANTICS,
+    ),
+    "activity_profiles.*.readback.action_refs[]": (
+        "derived:activity_actions",
+        _SEMANTIC,
+        "fatal dangling or incomplete action coverage",
+        _LIVE_ACTIVITY_SEMANTICS,
+    ),
+    "activity_profiles.*.readback.observability_refs[]": (
+        "targetable",
+        _SEMANTIC,
+        "fatal unless scenario-native observability",
+        _LIVE_ACTIVITY_SEMANTICS,
+    ),
+    "activity_profiles.*.readback.evidence_requirement_refs[]": (
+        "evidence_requirements",
+        _SEMANTIC,
+        "fatal dangling or inadequate target coverage",
+        _LIVE_ACTIVITY_SEMANTICS,
+    ),
+    "activity_profiles.*.dependencies[].action_ref": (
+        "derived:activity_actions",
+        _SEMANTIC,
+        "fatal dangling, duplicate, self-referential, or cyclic",
+        _LIVE_ACTIVITY_SEMANTICS,
+    ),
+    "activity_profiles.*.dependencies[].depends_on_ref": (
+        "derived:activity_actions",
+        _SEMANTIC,
+        "fatal dangling, duplicate, self-referential, or cyclic",
+        _LIVE_ACTIVITY_SEMANTICS,
+    ),
+    "activity_profiles.*.telemetry.observability_refs[]": (
+        "targetable",
+        _SEMANTIC,
+        "fatal unless scenario-native observability",
+        _LIVE_ACTIVITY_SEMANTICS,
+    ),
+    "activity_profiles.*.telemetry.evidence_requirement_refs[]": (
+        "evidence_requirements",
+        _SEMANTIC,
+        "fatal dangling or inadequate target coverage",
+        _LIVE_ACTIVITY_SEMANTICS,
     ),
     "accounts.*.node": (
         "nodes",

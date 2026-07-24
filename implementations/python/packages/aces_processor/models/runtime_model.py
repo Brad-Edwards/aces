@@ -9,6 +9,7 @@ from aces_contracts.contracts.historical_state import (
     HistoricalBaselineDigestModel,
     HistoricalSemanticAddressModel,
 )
+from aces_contracts.contracts.live_activity import CompiledActivityProfileModel
 from aces_contracts.diagnostics import Diagnostic
 from aces_contracts.evaluation import EvaluationExecutionContract, EvaluationResultContract
 from aces_contracts.planning import EvaluationPlan, OrchestrationPlan, ProvisioningPlan
@@ -128,6 +129,7 @@ class RuntimeModel:
     relationship_specs: dict[str, dict[str, Any]] = field(default_factory=dict)
     historical_baseline_digests: dict[str, HistoricalBaselineDigestModel] = field(default_factory=dict)
     historical_object_addresses: dict[str, HistoricalSemanticAddressModel] = field(default_factory=dict)
+    activity_profiles: dict[str, CompiledActivityProfileModel] = field(default_factory=dict)
     # Typed compiler metadata for finite pre-instantiation domains. It is
     # consumed by planner capability checks and never enters backend resource
     # payloads.
@@ -202,6 +204,9 @@ class RuntimeModel:
         for baseline_id, digest in self.historical_baseline_digests.items():
             if baseline_id != digest.baseline_id:
                 raise ValueError("RuntimeModel historical baseline digest key must equal embedded baseline_id")
+        for profile_id, profile in self.activity_profiles.items():
+            if profile_id != profile.activity_profile_id:
+                raise ValueError("RuntimeModel activity profile key must equal embedded activity_profile_id")
 
 
 @dataclass(frozen=True)

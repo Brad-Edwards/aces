@@ -8,6 +8,7 @@ from aces_sdl.realization_designation import resolve_realization_designation
 from aces_sdl.scenario import InstantiatedScenario
 from aces_sdl.semantics.domain_topology import (
     DomainTopologyAnalysis,
+    resolve_section_ref,
 )
 
 from ..semantics.realization import (
@@ -146,6 +147,52 @@ def _append_historical_materialization_requirements(
                 )
 
 
+def _append_live_activity_requirements(
+    requirements: list[CompiledRealizationRequirement],
+    scenario: InstantiatedScenario,
+) -> None:
+    """Lower every target-service execution semantic as an exact SEM-218 demand."""
+
+    for profile_name, profile in scenario.activity_profiles.items():
+        dimensions = sorted({budget.dimension.value for budget in profile.budgets})
+        for action_name, action in profile.actions.items():
+            context = profile.execution_contexts[action.execution_context_ref]
+            service = _resolve_node_service_ref(scenario, context.target_service_ref)
+            if service is None:
+                raise ValueError("admitted live activity target must resolve")
+            address = _service_address(*service)
+            template_name = resolve_section_ref(
+                action.template_ref,
+                "activity_templates",
+                scenario.activity_templates,
+            )
+            if template_name is None:
+                raise ValueError("admitted live activity template must resolve")
+            template = scenario.activity_templates[template_name]
+            schedule = profile.schedules[action.schedule_ref]
+            base_path = f"activity_profiles.{profile_name}.actions.{action_name}"
+            pointer_base = f"#/activity_profiles/{profile_name}/actions/{action_name}"
+            demands = [
+                ("template_ref", f"live-activity-operation:{template.capability.identity}"),
+                ("schedule_ref", f"live-activity-schedule:{schedule.profile}"),
+                ("readback", f"live-activity-readback:{profile.readback.profile}"),
+                ("lifecycle", f"live-activity-lifecycle:{profile.lifecycle.profile}"),
+                *(("budgets", f"live-activity-resource-dimension:{dimension}") for dimension in dimensions),
+            ]
+            for field_name, requirement_kind in demands:
+                requirements.append(
+                    CompiledRealizationRequirement(
+                        field_path=f"{base_path}.{field_name}",
+                        address=address,
+                        domain=REALIZATION_DOMAIN,
+                        requirement_kind=requirement_kind,
+                        explicitness=ExplicitnessClass.EXACT,
+                        provenance=ExplicitnessProvenance.AUTHOR_DECLARED,
+                        governing_scope=f"{pointer_base}/{field_name}",
+                    )
+                )
+
+
 def _compile_realization_requirements(
     scenario: InstantiatedScenario,
     domain_analysis: DomainTopologyAnalysis,
@@ -212,4 +259,5 @@ def _compile_realization_requirements(
     _append_domain_topology_requirements(requirements, domain_analysis)
     _append_stateful_resource_requirements(requirements, scenario)
     _append_historical_materialization_requirements(requirements, scenario)
+    _append_live_activity_requirements(requirements, scenario)
     return tuple(requirements)

@@ -2,9 +2,9 @@
   "contract_id": "sdl-authoring-input-v1",
   "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
   "stability": "draft",
-  "content_hash": "23934d7a854614c3f9314d0d9fd4b9b03a037edbcd908f886d16ca817c467dcb",
+  "content_hash": "41ff9be4429db4091811c46248950e71b691093ad3b1badc43de2823b7c9439d",
   "last_change": {
-    "summary": "Published DSL-436 authored historical-state declarations and semantic invariants.",
-    "content_hash": "23934d7a854614c3f9314d0d9fd4b9b03a037edbcd908f886d16ca817c467dcb"
+    "summary": "Published DSL-437 deterministic live-activity declarations and semantic invariants.",
+    "content_hash": "41ff9be4429db4091811c46248950e71b691093ad3b1badc43de2823b7c9439d"
   }
 }

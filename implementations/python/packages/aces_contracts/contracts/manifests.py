@@ -27,6 +27,7 @@ from .capabilities import (
     ProvisionerCapabilitiesModel,
 )
 from .historical_state import HistoricalStateCapabilitiesModel
+from .live_activity import LiveActivityCapabilitiesModel
 from .validators import (
     _validate_canonical_concept_bindings,
     _validate_controlled_vocabulary_terms,
@@ -245,6 +246,7 @@ class BackendCapabilitiesV2Model(ContractModel):
     participant_runtime: ParticipantRuntimeCapabilitiesModel | None = None
     observation: ObservationCapabilitiesModel | None = None
     historical_state: HistoricalStateCapabilitiesModel | None = None
+    live_activity: LiveActivityCapabilitiesModel | None = None
 
 
 class ProcessorManifestV2Model(ContractModel):

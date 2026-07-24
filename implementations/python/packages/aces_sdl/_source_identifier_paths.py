@@ -9,6 +9,7 @@ def is_declaration_key_path(tokens: list[str]) -> bool:
         _is_flat_declaration_scope(tokens)
         or _is_nested_entity_scope(tokens)
         or _is_historical_declaration_scope(tokens)
+        or _is_activity_declaration_scope(tokens)
     )
 
 
@@ -47,6 +48,19 @@ def _is_historical_declaration_scope(tokens: list[str]) -> bool:
             "readback_requirements",
         }
     )
+
+
+def _is_activity_declaration_scope(tokens: list[str]) -> bool:
+    if len(tokens) != 3:
+        return False
+    if tokens[0] == "activity_templates":
+        return tokens[2] == "parameters"
+    return tokens[0] == "activity_profiles" and tokens[2] in {
+        "actors",
+        "execution_contexts",
+        "schedules",
+        "actions",
+    }
 
 
 def is_scalar_identifier_path(tokens: list[str]) -> bool:

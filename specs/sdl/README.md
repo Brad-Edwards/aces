@@ -74,6 +74,7 @@ tests, rather than a prose rewrite. The catalogs are:
 | [`runtime-inventory.md`](runtime-inventory.md) | **4. Runtime-family index** | The node-scoped runtime-inventory index — family key, collection name, primary `<noun>_id`, child-ref collections, owning ADR — and the shared invariants stated once, delegating per-field semantics to the family ADRs. |
 | [`authored-domain-topology.md`](authored-domain-topology.md) | — | Authored identity domains, controller/member topology, account domain bindings, compiled ordering, provisioner capability, admission, and readback invariants. |
 | [`authored-historical-state.md`](authored-historical-state.md) | — | Versioned historical baselines, logical event/object/link semantics, tenancy/reset agreement, native materialization bindings, readback assertions, corpus safety, and deterministic semantic addresses. |
+| [`deterministic-live-activity.md`](deterministic-live-activity.md) | — | Reusable activity templates, baseline-bound profiles, finite logical schedules, exact budgets, deterministic occurrence identity, lifecycle, evidence boundaries, and backend admission. |
 | [`observability-and-evidence.md`](observability-and-evidence.md) | **5. Observability and evidence planes** | Scenario-native observability, authored evidence requirements, processor/backend operational observability, captured evidence, derived analysis, and augmentation classification rules. |
 | [`scientific-scenario-completeness.md`](scientific-scenario-completeness.md) | — | REV1 intended-use profiles, atomic concern dispositions, separately revisioned delivery assessment, computed completeness, and explicit scientific non-claims. |
 | [`diagnostics.md`](diagnostics.md) | — | The parse / semantic-validation / instantiation stages, direct-artifact admission, and the normative error-vs-advisory classification criterion. |
@@ -104,6 +105,9 @@ An implementer can answer each structural question from the named file alone:
 - *How is deterministic pre-existing native product history authored without
   making product ids or adapters authoritative?* →
   [`authored-historical-state.md`](authored-historical-state.md).
+- *How is bounded ordinary service activity authored without creating a
+  participant or provider execution authority?* →
+  [`deterministic-live-activity.md`](deterministic-live-activity.md).
 - *How are scenario-native observability systems and authored evidence
   requirements kept distinct?* →
   [`observability-and-evidence.md`](observability-and-evidence.md).
@@ -118,7 +122,8 @@ An implementer can answer each structural question from the named file alone:
 In scope: the SDL authoring model and portable derived phase contracts —
 document structure, references, variables, instantiation/provenance,
 scenario-family variation declarations, canonical snapshots, the runtime-inventory index, observability/evidence plane
-rules, authored identity-domain topology, authored historical state, and the diagnostic boundary.
+rules, authored identity-domain topology, authored historical state,
+deterministic live activity, and the diagnostic boundary.
 
 Out of scope: delivery-level concerns (container, infrastructure-as-code, and
 cloud-API mechanics), processor and backend execution contracts, and the

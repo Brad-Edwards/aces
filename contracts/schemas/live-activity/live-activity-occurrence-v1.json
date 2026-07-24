@@ -1,0 +1,237 @@
+{
+  "$defs": {
+    "ActivityOccurrenceContextModel": {
+      "additionalProperties": false,
+      "properties": {
+        "action_id": {
+          "title": "Action Id",
+          "type": "string"
+        },
+        "activity_digest": {
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "title": "Activity Digest",
+          "type": "string"
+        },
+        "activity_profile_id": {
+          "title": "Activity Profile Id",
+          "type": "string"
+        },
+        "address_profile": {
+          "minLength": 1,
+          "title": "Address Profile",
+          "type": "string"
+        },
+        "deployment_tenant_id": {
+          "title": "Deployment Tenant Id",
+          "type": "string"
+        },
+        "entropy_identity": {
+          "discriminator": {
+            "mapping": {
+              "governed-reference": "#/$defs/GovernedEntropyRefModel",
+              "public-seed": "#/$defs/PublicSeedModel"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/PublicSeedModel"
+            },
+            {
+              "$ref": "#/$defs/GovernedEntropyRefModel"
+            }
+          ],
+          "title": "Entropy Identity"
+        },
+        "execution_context_id": {
+          "title": "Execution Context Id",
+          "type": "string"
+        },
+        "historical_baseline_digest": {
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "title": "Historical Baseline Digest",
+          "type": "string"
+        },
+        "logical_time_seconds": {
+          "minimum": 0,
+          "title": "Logical Time Seconds",
+          "type": "integer"
+        },
+        "occurrence_ordinal": {
+          "minimum": 0,
+          "title": "Occurrence Ordinal",
+          "type": "integer"
+        },
+        "occurrence_profile": {
+          "const": "aces-live-activity-occurrence/v1",
+          "title": "Occurrence Profile",
+          "type": "string"
+        },
+        "random_stream_profile": {
+          "minLength": 1,
+          "title": "Random Stream Profile",
+          "type": "string"
+        },
+        "range_instance_id": {
+          "title": "Range Instance Id",
+          "type": "string"
+        },
+        "reset_generation_id": {
+          "title": "Reset Generation Id",
+          "type": "string"
+        },
+        "schedule_profile": {
+          "minLength": 1,
+          "title": "Schedule Profile",
+          "type": "string"
+        },
+        "target_service_id": {
+          "title": "Target Service Id",
+          "type": "string"
+        },
+        "template_id": {
+          "title": "Template Id",
+          "type": "string"
+        },
+        "transform_profile": {
+          "minLength": 1,
+          "title": "Transform Profile",
+          "type": "string"
+        }
+      },
+      "required": [
+        "occurrence_profile",
+        "deployment_tenant_id",
+        "range_instance_id",
+        "reset_generation_id",
+        "activity_profile_id",
+        "activity_digest",
+        "historical_baseline_digest",
+        "logical_time_seconds",
+        "occurrence_ordinal",
+        "action_id",
+        "template_id",
+        "execution_context_id",
+        "target_service_id",
+        "entropy_identity",
+        "random_stream_profile",
+        "schedule_profile",
+        "transform_profile",
+        "address_profile"
+      ],
+      "title": "ActivityOccurrenceContextModel",
+      "type": "object"
+    },
+    "GovernedEntropyRefModel": {
+      "additionalProperties": false,
+      "description": "Governed reference to sensitive root entropy; never carries raw bytes.\n\nRaw entropy is resolved only at an authorized in-process boundary (out of\nscope here) and is never serialized back into this model, a diagnostic, a\nfixture, argv, or telemetry (SVR-028).",
+      "properties": {
+        "kind": {
+          "const": "governed-reference",
+          "title": "Kind",
+          "type": "string"
+        },
+        "reference_id": {
+          "minLength": 1,
+          "title": "Reference Id",
+          "type": "string"
+        },
+        "reference_version": {
+          "minLength": 1,
+          "title": "Reference Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "reference_id",
+        "reference_version"
+      ],
+      "title": "GovernedEntropyRefModel",
+      "type": "object"
+    },
+    "PublicSeedModel": {
+      "additionalProperties": false,
+      "description": "Inline public root-entropy seed: fixed-width canonical hex bytes.\n\nFixed-width lowercase hex removes leading-zero, integer-width, sign, and\nUnicode ambiguity from the executable entropy encoding (per the EXP-718\npreflight's \"Canonical Inputs\" section).",
+      "properties": {
+        "encoding": {
+          "const": "hex-fixed-width",
+          "title": "Encoding",
+          "type": "string"
+        },
+        "kind": {
+          "const": "public-seed",
+          "title": "Kind",
+          "type": "string"
+        },
+        "value": {
+          "minLength": 1,
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "encoding",
+        "value"
+      ],
+      "title": "PublicSeedModel",
+      "type": "object"
+    }
+  },
+  "$id": "https://aces.dev/schemas/live-activity-occurrence-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "algorithm": {
+      "const": "sha256",
+      "title": "Algorithm",
+      "type": "string"
+    },
+    "context": {
+      "$ref": "#/$defs/ActivityOccurrenceContextModel"
+    },
+    "profile": {
+      "const": "aces-live-activity-occurrence/v1",
+      "title": "Profile",
+      "type": "string"
+    },
+    "value": {
+      "pattern": "^lao1:[a-f0-9]{64}$",
+      "title": "Value",
+      "type": "string"
+    }
+  },
+  "required": [
+    "profile",
+    "context",
+    "algorithm",
+    "value"
+  ],
+  "title": "ActivityOccurrenceIdentityModel",
+  "type": "object",
+  "x-aces-invariants": [
+    {
+      "description": "Occurrence identity is domain-separated SHA-256 over the complete closed RFC 8785/JCS context.",
+      "id": "live-activity-occurrence-jcs-identity",
+      "inputs": [
+        {
+          "contract_id": "live-activity-occurrence-v1",
+          "instance_path": "#/context"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_contracts.live_activity_addressing.derive_activity_occurrence_identities"
+    }
+  ],
+  "x-aces-semantic-profile": {
+    "contract_id": "live-activity-occurrence-v1",
+    "entry_schema_contract_id": "aces-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
+    "id": "aces-semantic-invariants-v1",
+    "keyword": "x-aces-invariants",
+    "required": true,
+    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+  }
+}

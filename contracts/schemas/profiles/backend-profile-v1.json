@@ -37,7 +37,9 @@
           "experiment-capture-spec-v1",
           "experiment-evidence-record-v1",
           "experiment-derived-measure-v1",
-          "experiment-run-v1"
+          "experiment-run-v1",
+          "live-activity-profile-v1",
+          "live-activity-occurrence-v1"
         ],
         "type": "string"
       },

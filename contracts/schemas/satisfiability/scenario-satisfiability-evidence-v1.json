@@ -172,6 +172,857 @@
       "title": "Account",
       "type": "object"
     },
+    "ActivityAction": {
+      "additionalProperties": false,
+      "properties": {
+        "actor_ref": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Actor Ref",
+          "type": "string"
+        },
+        "execution_context_ref": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Execution Context Ref",
+          "type": "string"
+        },
+        "parameter_bindings": {
+          "items": {
+            "$ref": "#/$defs/ActivityParameterBinding"
+          },
+          "maxItems": 64,
+          "title": "Parameter Bindings",
+          "type": "array"
+        },
+        "retry": {
+          "$ref": "#/$defs/ActivityRetryPolicy"
+        },
+        "schedule_ref": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Schedule Ref",
+          "type": "string"
+        },
+        "template_ref": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Template Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "template_ref",
+        "actor_ref",
+        "execution_context_ref",
+        "schedule_ref"
+      ],
+      "title": "ActivityAction",
+      "type": "object"
+    },
+    "ActivityBudgetEnvelope": {
+      "additionalProperties": false,
+      "properties": {
+        "action_demands": {
+          "maxProperties": 4096,
+          "minProperties": 1,
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/ExactRational"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Action Demands",
+          "type": "object"
+        },
+        "dimension": {
+          "$ref": "#/$defs/ActivityResourceDimension"
+        },
+        "fleet_capacity": {
+          "$ref": "#/$defs/ExactRational"
+        },
+        "participant_reservation": {
+          "$ref": "#/$defs/ExactRational"
+        },
+        "range_capacity": {
+          "$ref": "#/$defs/ExactRational"
+        },
+        "unit": {
+          "$ref": "#/$defs/ActivityResourceUnit"
+        },
+        "window_seconds": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Window Seconds"
+        }
+      },
+      "required": [
+        "dimension",
+        "unit",
+        "window_seconds",
+        "action_demands",
+        "range_capacity",
+        "fleet_capacity",
+        "participant_reservation"
+      ],
+      "title": "ActivityBudgetEnvelope",
+      "type": "object"
+    },
+    "ActivityCapabilityRequirement": {
+      "additionalProperties": false,
+      "properties": {
+        "operation": {
+          "$ref": "#/$defs/ActivityOperation"
+        },
+        "profile": {
+          "const": "protocol-operation/v1",
+          "default": "protocol-operation/v1",
+          "title": "Profile",
+          "type": "string"
+        },
+        "protocol": {
+          "$ref": "#/$defs/ActivityProtocol"
+        }
+      },
+      "required": [
+        "protocol",
+        "operation"
+      ],
+      "title": "ActivityCapabilityRequirement",
+      "type": "object"
+    },
+    "ActivityDependency": {
+      "additionalProperties": false,
+      "properties": {
+        "action_ref": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Action Ref",
+          "type": "string"
+        },
+        "depends_on_ref": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Depends On Ref",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/ActivityDependencyKind"
+        }
+      },
+      "required": [
+        "action_ref",
+        "depends_on_ref",
+        "kind"
+      ],
+      "title": "ActivityDependency",
+      "type": "object"
+    },
+    "ActivityDependencyKind": {
+      "enum": [
+        "ordering",
+        "refresh"
+      ],
+      "title": "ActivityDependencyKind",
+      "type": "string"
+    },
+    "ActivityExecutionContext": {
+      "additionalProperties": false,
+      "properties": {
+        "account_ref": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Account Ref",
+          "type": "string"
+        },
+        "deployment_tenant_ref": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Deployment Tenant Ref",
+          "type": "string"
+        },
+        "protocol": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ActivityProtocol"
+            },
+            {
+              "not": {
+                "pattern": "[\\r\\n]"
+              },
+              "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
+              "type": "string",
+              "x-aces-variable-reference": true
+            }
+          ],
+          "title": "Protocol"
+        },
+        "target_service_ref": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Target Service Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "deployment_tenant_ref",
+        "account_ref",
+        "target_service_ref",
+        "protocol"
+      ],
+      "title": "ActivityExecutionContext",
+      "type": "object"
+    },
+    "ActivityGovernedEntropyRef": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "governed-reference",
+          "title": "Kind",
+          "type": "string"
+        },
+        "reference_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Reference Id",
+          "type": "string"
+        },
+        "reference_version": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Reference Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "reference_id",
+        "reference_version"
+      ],
+      "title": "ActivityGovernedEntropyRef",
+      "type": "object"
+    },
+    "ActivityLifecyclePolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "drain_timeout_seconds": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Drain Timeout Seconds"
+        },
+        "in_flight_on_pause": {
+          "enum": [
+            "finish",
+            "cancel"
+          ],
+          "title": "In Flight On Pause",
+          "type": "string"
+        },
+        "on_drain": {
+          "const": "drain",
+          "title": "On Drain",
+          "type": "string"
+        },
+        "on_pause": {
+          "const": "suspend_new",
+          "title": "On Pause",
+          "type": "string"
+        },
+        "on_reset_generation_advance": {
+          "const": "discard_stale",
+          "title": "On Reset Generation Advance",
+          "type": "string"
+        },
+        "on_resume": {
+          "const": "admit_new",
+          "title": "On Resume",
+          "type": "string"
+        },
+        "on_start": {
+          "const": "admit_new",
+          "title": "On Start",
+          "type": "string"
+        },
+        "on_teardown": {
+          "const": "discard_pending",
+          "title": "On Teardown",
+          "type": "string"
+        },
+        "profile": {
+          "const": "range-lifecycle/v1",
+          "default": "range-lifecycle/v1",
+          "title": "Profile",
+          "type": "string"
+        }
+      },
+      "required": [
+        "on_start",
+        "on_resume",
+        "on_pause",
+        "in_flight_on_pause",
+        "on_drain",
+        "on_reset_generation_advance",
+        "on_teardown",
+        "drain_timeout_seconds"
+      ],
+      "title": "ActivityLifecyclePolicy",
+      "type": "object"
+    },
+    "ActivityOperation": {
+      "enum": [
+        "create",
+        "read",
+        "update",
+        "delete",
+        "send",
+        "receive",
+        "query",
+        "list",
+        "authenticate"
+      ],
+      "title": "ActivityOperation",
+      "type": "string"
+    },
+    "ActivityParameterBinding": {
+      "additionalProperties": false,
+      "properties": {
+        "parameter_ref": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Parameter Ref",
+          "type": "string"
+        },
+        "value_ref": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Value Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "parameter_ref",
+        "value_ref"
+      ],
+      "title": "ActivityParameterBinding",
+      "type": "object"
+    },
+    "ActivityParameterKind": {
+      "enum": [
+        "historical_object_ref",
+        "content_ref",
+        "entity_ref",
+        "account_ref"
+      ],
+      "title": "ActivityParameterKind",
+      "type": "string"
+    },
+    "ActivityProfile": {
+      "additionalProperties": false,
+      "properties": {
+        "actions": {
+          "maxProperties": 4096,
+          "minProperties": 1,
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/ActivityAction"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Actions",
+          "type": "object"
+        },
+        "actors": {
+          "maxProperties": 256,
+          "minProperties": 1,
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/BackgroundActivityActor"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Actors",
+          "type": "object"
+        },
+        "budgets": {
+          "items": {
+            "$ref": "#/$defs/ActivityBudgetEnvelope"
+          },
+          "maxItems": 256,
+          "minItems": 1,
+          "title": "Budgets",
+          "type": "array"
+        },
+        "contract_profile": {
+          "const": "aces-live-activity/v1",
+          "default": "aces-live-activity/v1",
+          "title": "Contract Profile",
+          "type": "string"
+        },
+        "dependencies": {
+          "items": {
+            "$ref": "#/$defs/ActivityDependency"
+          },
+          "maxItems": 16384,
+          "title": "Dependencies",
+          "type": "array"
+        },
+        "execution_contexts": {
+          "maxProperties": 256,
+          "minProperties": 1,
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/ActivityExecutionContext"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Execution Contexts",
+          "type": "object"
+        },
+        "historical_baseline_ref": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Historical Baseline Ref",
+          "type": "string"
+        },
+        "lifecycle": {
+          "$ref": "#/$defs/ActivityLifecyclePolicy"
+        },
+        "randomness": {
+          "$ref": "#/$defs/ActivityRandomnessBinding"
+        },
+        "readback": {
+          "$ref": "#/$defs/ActivityReadbackPolicy"
+        },
+        "schedules": {
+          "maxProperties": 256,
+          "minProperties": 1,
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/LogicalActivitySchedule"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Schedules",
+          "type": "object"
+        },
+        "telemetry": {
+          "$ref": "#/$defs/ActivityTelemetryPolicy"
+        },
+        "version": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "version",
+        "historical_baseline_ref",
+        "randomness",
+        "actors",
+        "execution_contexts",
+        "schedules",
+        "actions",
+        "budgets",
+        "lifecycle",
+        "readback",
+        "telemetry"
+      ],
+      "title": "ActivityProfile",
+      "type": "object"
+    },
+    "ActivityProtocol": {
+      "enum": [
+        "http_api",
+        "smtp",
+        "imap",
+        "ldap",
+        "database",
+        "file_service"
+      ],
+      "title": "ActivityProtocol",
+      "type": "string"
+    },
+    "ActivityPublicSeed": {
+      "additionalProperties": false,
+      "properties": {
+        "encoding": {
+          "const": "hex-fixed-width",
+          "title": "Encoding",
+          "type": "string"
+        },
+        "kind": {
+          "const": "public-seed",
+          "title": "Kind",
+          "type": "string"
+        },
+        "value": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "encoding",
+        "value"
+      ],
+      "title": "ActivityPublicSeed",
+      "type": "object"
+    },
+    "ActivityRandomnessBinding": {
+      "additionalProperties": false,
+      "properties": {
+        "address_profile": {
+          "const": "activity-random-address/v1",
+          "default": "activity-random-address/v1",
+          "title": "Address Profile",
+          "type": "string"
+        },
+        "random_stream_profile": {
+          "const": "blake3-xof-v1",
+          "default": "blake3-xof-v1",
+          "title": "Random Stream Profile",
+          "type": "string"
+        },
+        "root_entropy": {
+          "discriminator": {
+            "mapping": {
+              "governed-reference": "#/$defs/ActivityGovernedEntropyRef",
+              "public-seed": "#/$defs/ActivityPublicSeed"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ActivityPublicSeed"
+            },
+            {
+              "$ref": "#/$defs/ActivityGovernedEntropyRef"
+            }
+          ],
+          "title": "Root Entropy"
+        },
+        "transform_profile": {
+          "const": "bounded-integer/v1",
+          "default": "bounded-integer/v1",
+          "title": "Transform Profile",
+          "type": "string"
+        }
+      },
+      "required": [
+        "root_entropy"
+      ],
+      "title": "ActivityRandomnessBinding",
+      "type": "object"
+    },
+    "ActivityReadbackClass": {
+      "enum": [
+        "none",
+        "status",
+        "object_state",
+        "collection_state"
+      ],
+      "title": "ActivityReadbackClass",
+      "type": "string"
+    },
+    "ActivityReadbackPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "action_refs": {
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            },
+            "pattern": "^[a-z0-9]",
+            "type": "string"
+          },
+          "maxItems": 4096,
+          "minItems": 1,
+          "title": "Action Refs",
+          "type": "array"
+        },
+        "evidence_requirement_refs": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 256,
+          "minItems": 1,
+          "title": "Evidence Requirement Refs",
+          "type": "array"
+        },
+        "observability_refs": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 256,
+          "minItems": 1,
+          "title": "Observability Refs",
+          "type": "array"
+        },
+        "participant_proof": {
+          "const": false,
+          "default": false,
+          "title": "Participant Proof",
+          "type": "boolean"
+        },
+        "profile": {
+          "const": "evidence-readback/v1",
+          "default": "evidence-readback/v1",
+          "title": "Profile",
+          "type": "string"
+        }
+      },
+      "required": [
+        "action_refs",
+        "observability_refs",
+        "evidence_requirement_refs"
+      ],
+      "title": "ActivityReadbackPolicy",
+      "type": "object"
+    },
+    "ActivityResourceDimension": {
+      "enum": [
+        "operations",
+        "bytes",
+        "connections",
+        "cpu_milliseconds"
+      ],
+      "title": "ActivityResourceDimension",
+      "type": "string"
+    },
+    "ActivityResourceUnit": {
+      "enum": [
+        "operation",
+        "byte",
+        "connection",
+        "cpu_millisecond"
+      ],
+      "title": "ActivityResourceUnit",
+      "type": "string"
+    },
+    "ActivityRetryPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "interval_seconds": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": 1,
+          "title": "Interval Seconds"
+        },
+        "max_attempts": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "not": {
+                "pattern": "[\\r\\n]"
+              },
+              "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
+              "type": "string",
+              "x-aces-variable-reference": true
+            }
+          ],
+          "default": 1,
+          "title": "Max Attempts"
+        }
+      },
+      "title": "ActivityRetryPolicy",
+      "type": "object"
+    },
+    "ActivityTelemetryPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "emits_participant_receipts": {
+          "const": false,
+          "default": false,
+          "title": "Emits Participant Receipts",
+          "type": "boolean"
+        },
+        "establishes_objective_truth": {
+          "const": false,
+          "default": false,
+          "title": "Establishes Objective Truth",
+          "type": "boolean"
+        },
+        "evidence_requirement_refs": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 256,
+          "minItems": 1,
+          "title": "Evidence Requirement Refs",
+          "type": "array"
+        },
+        "observability_refs": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 256,
+          "minItems": 1,
+          "title": "Observability Refs",
+          "type": "array"
+        },
+        "participant_proof": {
+          "const": false,
+          "default": false,
+          "title": "Participant Proof",
+          "type": "boolean"
+        },
+        "profile": {
+          "const": "evidence-provenance/v1",
+          "default": "evidence-provenance/v1",
+          "title": "Profile",
+          "type": "string"
+        }
+      },
+      "required": [
+        "observability_refs",
+        "evidence_requirement_refs"
+      ],
+      "title": "ActivityTelemetryPolicy",
+      "type": "object"
+    },
+    "ActivityTemplate": {
+      "additionalProperties": false,
+      "properties": {
+        "capability": {
+          "$ref": "#/$defs/ActivityCapabilityRequirement"
+        },
+        "description": {
+          "default": "",
+          "maxLength": 1024,
+          "title": "Description",
+          "type": "string"
+        },
+        "parameters": {
+          "maxProperties": 64,
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/ActivityTemplateParameter"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Parameters",
+          "type": "object"
+        },
+        "readback_class": {
+          "$ref": "#/$defs/ActivityReadbackClass"
+        },
+        "version": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "version",
+        "capability",
+        "readback_class"
+      ],
+      "title": "ActivityTemplate",
+      "type": "object"
+    },
+    "ActivityTemplateParameter": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/ActivityParameterKind"
+        },
+        "required": {
+          "default": true,
+          "title": "Required",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "ActivityTemplateParameter",
+      "type": "object"
+    },
     "Agent": {
       "additionalProperties": false,
       "description": "A role-neutral participant in the scenario.\n\nAgents reference existing scenario elements:\n\n- ``entity`` links to the entities section (team/role) and supplies\n  identity and role per ADR-020\n- ``starting_accounts`` links to the accounts section\n- ``allowed_subnets`` links to infrastructure entries\n- ``initial_knowledge`` references nodes and infrastructure\n- ``starting_assertions`` links to precondition assertions, giving the\n  authoring surface a declarative hook for participant-relevant starting\n  state without equating a probe implementation with truth (ACT-601)\n- ``authority_anchors`` links to declared SDL elements (entities,\n  relationships, content, etc.) that anchor what the participant is\n  allowed or expected to do in scenario meaning (ACT-601, ADR-020)\n- ``operating_scope`` links to targetable named scenario elements\n  (subnets, hosts, services, content) defining where the participant\n  may act or observe (ACT-601, ADR-020)\n- ``observation_boundaries`` links to declared participant observation\n  boundaries that define participant-specific projections of world and\n  evidence state (SEM-208)\n- ``interactive_access`` declares the VM/channel pairs that may be offered\n  to this participant, without inferring a listener, locator, credential,\n  operating scope, action authority, or successful realization (DSL-117)\n\nPer ADR-073 the CybORG-inherited ``reward_calculator`` label was removed;\nit was an unbound, unvalidated string and graded reward lives in the\nexperiment/evaluator plane (ADR-055/064/069).",
@@ -379,6 +1230,46 @@
       ],
       "title": "AuthorRealizationPosture",
       "type": "string"
+    },
+    "BackgroundActivityActor": {
+      "additionalProperties": false,
+      "properties": {
+        "account_ref": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Account Ref",
+          "type": "string"
+        },
+        "deployment_tenant_ref": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Deployment Tenant Ref",
+          "type": "string"
+        },
+        "entity_ref": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Entity Ref",
+          "type": "string"
+        },
+        "operating_scope_refs": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 256,
+          "minItems": 1,
+          "title": "Operating Scope Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "entity_ref",
+        "account_ref",
+        "deployment_tenant_ref",
+        "operating_scope_refs"
+      ],
+      "title": "BackgroundActivityActor",
+      "type": "object"
     },
     "BehaviorSpecificationExtensionValue": {
       "anyOf": [
@@ -2873,6 +3764,27 @@
       "title": "EvidenceRetentionExpectation",
       "type": "string"
     },
+    "ExactRational": {
+      "additionalProperties": false,
+      "properties": {
+        "denominator": {
+          "minimum": 1,
+          "title": "Denominator",
+          "type": "integer"
+        },
+        "numerator": {
+          "minimum": 0,
+          "title": "Numerator",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "numerator",
+        "denominator"
+      ],
+      "title": "ExactRational",
+      "type": "object"
+    },
     "ExerciseRole": {
       "description": "Role in the exercise.",
       "enum": [
@@ -4374,6 +5286,20 @@
           "title": "Action Contracts",
           "type": "object"
         },
+        "activity_profiles": {
+          "additionalProperties": {
+            "$ref": "#/$defs/ActivityProfile"
+          },
+          "title": "Activity Profiles",
+          "type": "object"
+        },
+        "activity_templates": {
+          "additionalProperties": {
+            "$ref": "#/$defs/ActivityTemplate"
+          },
+          "title": "Activity Templates",
+          "type": "object"
+        },
         "agents": {
           "additionalProperties": {
             "$ref": "#/$defs/Agent"
@@ -4714,6 +5640,88 @@
       ],
       "title": "KernelBoundary",
       "type": "string"
+    },
+    "LogicalActivitySchedule": {
+      "additionalProperties": false,
+      "properties": {
+        "anchor_seconds": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "not": {
+                "pattern": "[\\r\\n]"
+              },
+              "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
+              "type": "string",
+              "x-aces-variable-reference": true
+            }
+          ],
+          "default": 0,
+          "title": "Anchor Seconds"
+        },
+        "horizon_seconds": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Horizon Seconds"
+        },
+        "interval_seconds": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Interval Seconds"
+        },
+        "max_occurrences": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "not": {
+                "pattern": "[\\r\\n]"
+              },
+              "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
+              "type": "string",
+              "x-aces-variable-reference": true
+            }
+          ],
+          "title": "Max Occurrences"
+        },
+        "profile": {
+          "const": "finite-logical-schedule/v1",
+          "default": "finite-logical-schedule/v1",
+          "title": "Profile",
+          "type": "string"
+        },
+        "time_domain": {
+          "const": "logical",
+          "default": "logical",
+          "title": "Time Domain",
+          "type": "string"
+        }
+      },
+      "required": [
+        "interval_seconds",
+        "max_occurrences"
+      ],
+      "title": "LogicalActivitySchedule",
+      "type": "object"
     },
     "MixedControlAuthorityStatus": {
       "description": "Authored authority state for one controller binding.",
@@ -20382,6 +21390,18 @@
       ],
       "level": "error",
       "validator": "aces_sdl.semantics.historical_state.analyze_historical_state"
+    },
+    {
+      "description": "Background actor isolation, baseline-bound tenancy and reset ownership, target contexts, finite schedules, typed dependencies, bounded retry, exact rational budgets, participant reservation, lifecycle policy, and evidence-only readback provenance must all hold.",
+      "id": "deterministic-live-activity-semantics",
+      "inputs": [
+        {
+          "contract_id": "scenario-satisfiability-evidence-v1",
+          "instance_path": "#/snapshot/scenario"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_sdl.semantics.live_activity.analyze_live_activity"
     }
   ],
   "x-aces-semantic-profile": {

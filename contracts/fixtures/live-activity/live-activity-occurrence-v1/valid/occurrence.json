@@ -1,0 +1,29 @@
+{
+  "profile": "aces-live-activity-occurrence/v1",
+  "context": {
+    "occurrence_profile": "aces-live-activity-occurrence/v1",
+    "deployment_tenant_id": "range-a",
+    "range_instance_id": "range-instance-001",
+    "reset_generation_id": "generation-001",
+    "activity_profile_id": "ordinary-records",
+    "activity_digest": "sha256:259c9d0cddf6dc731e3b5f398c8d1c40216954cc3b9294be9e92157a291c338c",
+    "historical_baseline_digest": "sha256:863139b902b8f4f4fdc93463a89e8051e6c42ba1ed50ece2efded06e27b2d385",
+    "logical_time_seconds": 0,
+    "occurrence_ordinal": 0,
+    "action_id": "activity_profiles.ordinary-records.actions.update-record",
+    "template_id": "activity_templates.record-update",
+    "execution_context_id": "activity_profiles.ordinary-records.execution_contexts.records-api",
+    "target_service_id": "nodes.archive.services.records",
+    "entropy_identity": {
+      "kind": "public-seed",
+      "encoding": "hex-fixed-width",
+      "value": "1111111111111111111111111111111111111111111111111111111111111111"
+    },
+    "random_stream_profile": "blake3-xof-v1",
+    "schedule_profile": "finite-logical-schedule/v1",
+    "transform_profile": "bounded-integer/v1",
+    "address_profile": "activity-random-address/v1"
+  },
+  "algorithm": "sha256",
+  "value": "lao1:a6afab087681b4f4833cec8df4cfa6f7b9091f58f10ee19242bfbaafdeb84355"
+}

@@ -1,0 +1,241 @@
+name: deterministic-live-activity
+description: Finite baseline-bound ordinary activity against one named service.
+
+nodes:
+  archive:
+    type: vm
+    os: linux
+    resources: {ram: 1 GiB, cpu: 1}
+    services:
+      - name: records
+        port: 8443
+    runtime:
+      service_listeners:
+        - service_listener_id: records-observer
+          service: records
+          address: 127.0.0.1
+          port: 8443
+          protocol: tcp
+          address_family: ipv4
+          scope: loopback_only
+
+entities:
+  operations:
+    name: Operations
+    role: blue
+
+content:
+  message-metadata:
+    type: dataset
+    target: archive
+    items:
+      - name: message-001
+        display_name: Quarterly review
+        description: Bounded inert metadata for one historical record.
+
+persistent_volumes:
+  tenant-records:
+    lifecycle: ephemeral
+    access_mode: read_write_once
+    consumers:
+      - node: archive
+        mount_destination: /var/lib/records
+        access_mode: read_write
+
+accounts:
+  records-operator:
+    username: records-operator
+    node: archive
+
+deployment_tenants:
+  range-a: {}
+
+deployment_cells:
+  range-a-cell:
+    tenant_ref: range-a
+    node_refs: [archive]
+    cross_tenant_isolation: default_deny
+
+evidence_requirements:
+  native-readback:
+    source_class: participant_observation
+    scope: participant-visible historical object readback
+    boundary_kind: historical_readback
+    channel: api_response
+    sensitivity: plain
+    redaction: redact_secrets
+    integrity: checksum
+    retention: run_lifetime
+    loss_disclosure: required
+
+propositions:
+  message-visible:
+    description: The historical message is visible through the participant projection.
+    subjects: [historical_baselines.enterprise.objects.message-001]
+    basis: observed_state
+    predicate:
+      kind: presence
+      property: historical.object
+      semantic_ref: urn:aces:historical:object
+    evidence_requirements: [native-readback]
+
+assertions:
+  message-readback:
+    proposition: message-visible
+    role: postcondition
+
+observation_boundaries:
+  participant-history:
+    projection_basis: Participant-visible native history projection revision 1.
+    observable_refs: [historical_baselines.enterprise.objects.message-001]
+    redaction_policy: Operator-only and secret-bearing state remains hidden.
+    latency_profile: Readback occurs after materialization.
+
+relationships:
+  records-reset-owner:
+    type: uses_shared_service
+    source: range-a
+    target: nodes.archive.services.records
+    shared_service:
+      tenant_isolation: none
+      workload_authentication: workload_identity
+      mutable_state_refs: [tenant-records]
+      mutable_state_owner: consumer_tenant
+      reset_generation_owner: consumer_tenant
+
+historical_baselines:
+  enterprise:
+    version: 1.0.0
+    address_profile: aces-historical-semantic-address/v1
+    history_time_profile: logical-order/v1
+    range_instance_id: range-instance-001
+    deployment_tenant_ref: range-a
+    deployment_cell_ref: range-a-cell
+    reset_generation_id: generation-001
+    reset_owner_relationship_ref: records-reset-owner
+    actors:
+      records-owner:
+        authority: entity
+        authority_ref: operations
+        role: owner
+    objects:
+      message-001:
+        kind: message
+        writer_actor_ref: records-owner
+        title: Quarterly review
+        content_ref: message-metadata
+    events:
+      create-message:
+        order: 0
+        operation: create
+        actor_ref: records-owner
+        object_refs: [message-001]
+    materialization_bindings:
+      message-native:
+        object_refs: [message-001]
+        target_service_ref: nodes.archive.services.records
+        interface_profile: native-message/v1
+        deployment_tenant_ref: range-a
+        deployment_cell_ref: range-a-cell
+        reset_owner_relationship_ref: records-reset-owner
+        readback_requirement_refs: [message-readback]
+    readback_requirements:
+      message-readback:
+        object_ref: message-001
+        assertion_refs: [message-readback]
+        observation_boundary_ref: participant-history
+        projection_profile: participant-visible-object/v1
+        observation_point: after_materialization
+
+activity_templates:
+  record-update:
+    version: 1.0.0
+    description: Update one existing logical record.
+    capability:
+      profile: protocol-operation/v1
+      protocol: http_api
+      operation: update
+    parameters:
+      record:
+        kind: historical_object_ref
+        required: true
+    readback_class: object_state
+
+activity_profiles:
+  ordinary-records:
+    version: 1.0.0
+    contract_profile: aces-live-activity/v1
+    historical_baseline_ref: enterprise
+    randomness:
+      random_stream_profile: blake3-xof-v1
+      address_profile: activity-random-address/v1
+      transform_profile: bounded-integer/v1
+      root_entropy:
+        kind: public-seed
+        encoding: hex-fixed-width
+        value: "1111111111111111111111111111111111111111111111111111111111111111"
+    actors:
+      records-clerk:
+        entity_ref: operations
+        account_ref: records-operator
+        deployment_tenant_ref: range-a
+        operating_scope_refs: [nodes.archive.services.records]
+    execution_contexts:
+      records-api:
+        deployment_tenant_ref: range-a
+        account_ref: records-operator
+        target_service_ref: nodes.archive.services.records
+        protocol: http_api
+    schedules:
+      steady:
+        profile: finite-logical-schedule/v1
+        time_domain: logical
+        anchor_seconds: 0
+        interval_seconds: 15s
+        horizon_seconds: 60s
+        max_occurrences: 4
+    actions:
+      update-record:
+        template_ref: record-update
+        actor_ref: records-clerk
+        execution_context_ref: records-api
+        schedule_ref: steady
+        parameter_bindings:
+          - parameter_ref: record
+            value_ref: historical_baselines.enterprise.objects.message-001
+        retry:
+          max_attempts: 2
+          interval_seconds: 2s
+    dependencies: []
+    budgets:
+      - dimension: operations
+        unit: operation
+        window_seconds: 60s
+        action_demands:
+          update-record: {numerator: 1, denominator: 1}
+        range_capacity: {numerator: 10, denominator: 1}
+        fleet_capacity: {numerator: 100, denominator: 1}
+        participant_reservation: {numerator: 4, denominator: 1}
+    lifecycle:
+      profile: range-lifecycle/v1
+      on_start: admit_new
+      on_resume: admit_new
+      on_pause: suspend_new
+      in_flight_on_pause: finish
+      on_drain: drain
+      on_reset_generation_advance: discard_stale
+      on_teardown: discard_pending
+      drain_timeout_seconds: 30s
+    readback:
+      profile: evidence-readback/v1
+      action_refs: [update-record]
+      observability_refs: [nodes.archive.runtime.service_listeners.records-observer]
+      evidence_requirement_refs: [native-readback]
+      participant_proof: false
+    telemetry:
+      profile: evidence-provenance/v1
+      observability_refs: [nodes.archive.runtime.service_listeners.records-observer]
+      evidence_requirement_refs: [native-readback]
+      participant_proof: false
+      emits_participant_receipts: false
+      establishes_objective_truth: false

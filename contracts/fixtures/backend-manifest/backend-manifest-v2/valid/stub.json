@@ -39,6 +39,7 @@
       "supports_scoring": true
     },
     "historical_state": null,
+    "live_activity": null,
     "observation": {
       "constraints": {},
       "name": "stub-observation",
@@ -284,6 +285,8 @@
     "experiment-capture-spec-v1",
     "experiment-evidence-record-v1",
     "experiment-derived-measure-v1",
-    "experiment-run-v1"
+    "experiment-run-v1",
+    "live-activity-profile-v1",
+    "live-activity-occurrence-v1"
   ]
 }

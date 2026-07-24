@@ -13,6 +13,7 @@ from .capabilities import (
     BackendCapabilitySet,
     EvaluatorCapabilities,
     HistoricalStateCapabilities,
+    LiveActivityCapabilities,
     ObservationCapabilities,
     OrchestratorCapabilities,
     ParticipantRuntimeCapabilities,
@@ -50,6 +51,7 @@ class _BackendManifestOptions(TypedDict, total=False):
     participant_runtime: ParticipantRuntimeCapabilities | None
     observation: ObservationCapabilities | None
     historical_state: HistoricalStateCapabilities | None
+    live_activity: LiveActivityCapabilities | None
     realization_envelope: BackendRealizationEnvelopeModel | None
 
 
@@ -123,6 +125,10 @@ class BackendManifest:
         return self.capabilities.historical_state
 
     @property
+    def live_activity(self) -> LiveActivityCapabilities | None:
+        return self.capabilities.live_activity
+
+    @property
     def has_orchestrator(self) -> bool:
         return self.orchestrator is not None
 
@@ -189,6 +195,7 @@ def _resolve_capabilities(options: _BackendManifestOptions) -> BackendCapability
         participant_runtime=options.get("participant_runtime"),
         observation=options.get("observation"),
         historical_state=options.get("historical_state"),
+        live_activity=options.get("live_activity"),
     )
 
 

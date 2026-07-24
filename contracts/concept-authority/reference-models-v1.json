@@ -214,6 +214,61 @@
         "sensitivity"
       ]
     },
+    "scenario-activity-template": {
+      "title": "Scenario Activity Template",
+      "description": "Shared reference model for reusable provider-neutral live-activity meaning.",
+      "concept_family": "actions-and-events",
+      "authoritative_schema": {
+        "contract_id": "sdl-authoring-input-v1",
+        "schema_pointer": "#/$defs/ActivityTemplate",
+        "instance_path": "activity_templates.*"
+      },
+      "reused_schemas": [
+        {
+          "contract_id": "instantiated-scenario-v1",
+          "schema_pointer": "#/$defs/ActivityTemplate",
+          "instance_path": "activity_templates.*"
+        }
+      ],
+      "key_fields": [
+        "version",
+        "capability",
+        "parameters",
+        "readback_class"
+      ]
+    },
+    "scenario-activity-profile": {
+      "title": "Scenario Activity Profile",
+      "description": "Shared reference model for one deterministic baseline-bound live-activity policy.",
+      "concept_family": "scenarios",
+      "authoritative_schema": {
+        "contract_id": "sdl-authoring-input-v1",
+        "schema_pointer": "#/$defs/ActivityProfile",
+        "instance_path": "activity_profiles.*"
+      },
+      "reused_schemas": [
+        {
+          "contract_id": "instantiated-scenario-v1",
+          "schema_pointer": "#/$defs/ActivityProfile",
+          "instance_path": "activity_profiles.*"
+        }
+      ],
+      "key_fields": [
+        "version",
+        "contract_profile",
+        "historical_baseline_ref",
+        "randomness",
+        "actors",
+        "execution_contexts",
+        "schedules",
+        "actions",
+        "dependencies",
+        "budgets",
+        "lifecycle",
+        "readback",
+        "telemetry"
+      ]
+    },
     "scenario-relationship": {
       "title": "Scenario Relationship",
       "description": "Shared reference model for typed directed relationships between scenario elements.",

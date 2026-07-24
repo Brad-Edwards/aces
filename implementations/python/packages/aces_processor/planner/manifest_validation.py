@@ -5,6 +5,7 @@ from aces_backend_protocols.historical_state import HISTORICAL_MATERIALIZATION_K
 
 from ..models import Diagnostic, RuntimeModel
 from .capability_domains import _account_features, _resource_count_upper_bound, _validate_node_os_family
+from .live_activity import validate_live_activity_support
 
 _ORCHESTRATION_WORKFLOWS_ADDRESS = "orchestration.workflows"
 
@@ -399,4 +400,5 @@ def _validate_manifest(model: RuntimeModel, manifest: BackendManifest) -> list[D
     diagnostics.extend(_validate_orchestration_support(model, manifest))
     diagnostics.extend(_validate_evaluation_support(model, manifest))
     diagnostics.extend(_validate_historical_state_support(model, manifest))
+    diagnostics.extend(validate_live_activity_support(model, manifest))
     return diagnostics

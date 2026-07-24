@@ -49,6 +49,10 @@ necessity remains `untested`.
   records fixed-argv, network-disabled commands and source/model/configuration
   digest observations for those controls. The supplement analysis joins this
   execution id and revision rather than rewriting the issue-168 v1 snapshot.
+- [`live-activity-replay-v1.json`](live-activity-replay-v1.json) publishes the
+  DSL-437 profile and occurrence domain bytes, canonical payload digests, and
+  replay identities for the normative example. Focused contract tests
+  recompute every value through the production parser and compiler.
 
 The participant matrix includes positive and negative fixtures for hidden
 world versus participant-visible projection, fail-closed action applicability,

@@ -48,6 +48,8 @@ plane (ADR-055/064/069). Declarative `conditions` remain.
 | `accounts` | `dict[str, Account]` | Curated scenario/provisioning accounts on nodes, not full runtime identity inventory | CyRIS `add_account` |
 | `identity_domains` | `dict[str, IdentityDomain]` | Authored domain identity and authority for controller/join realization | ACES ADR-082 |
 | `historical_baselines` | `dict[str, HistoricalBaseline]` | Versioned logical history, semantic objects, native materialization intent, and participant readback obligations | ACES ADR-088 |
+| `activity_templates` | `dict[str, ActivityTemplate]` | Reusable provider-neutral live-activity action meaning and capability requirements | ACES ADR-089 |
+| `activity_profiles` | `dict[str, ActivityProfile]` | Baseline-bound actors, targets, finite schedules, budgets, lifecycle, readback, and telemetry policy | ACES ADR-089 |
 | `relationships` | `dict[str, Relationship]` | Typed edges between elements (auth, trust, federation) | STIX Relationship SRO |
 | `forwarding_agents` | `list[RuntimeForwardingAgent]` | Scenario-level forwarding and shipping agents with element-carried identity | ACES ADR-050 |
 | `agents` | `dict[str, Agent]` | Autonomous participants (actions, knowledge, scope) | CybORG Agents, extended by ACES |

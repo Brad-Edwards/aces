@@ -36,6 +36,8 @@ HASHMAP_SECTIONS = frozenset(
         "deployment_tenants",
         "deployment_cells",
         "historical_baselines",
+        "activity_templates",
+        "activity_profiles",
         "relationships",
         "agents",
         "action_contracts",
@@ -76,6 +78,11 @@ NESTED_HASHMAP_FIELDS = frozenset(
         "objects",
         "materialization_bindings",
         "readback_requirements",
+        "parameters",
+        "execution_contexts",
+        "schedules",
+        "actions",
+        "action_demands",
     }
 )
 

@@ -1,0 +1,86 @@
+{
+  "contract_profile": "aces-live-activity/v1",
+  "activity_profile_id": "ordinary-records",
+  "activity_profile_version": "1.0.0",
+  "activity_digest": {
+    "profile": "aces-live-activity-profile-digest/v1",
+    "activity_profile_id": "ordinary-records",
+    "activity_profile_version": "1.0.0",
+    "historical_baseline_digest": "sha256:863139b902b8f4f4fdc93463a89e8051e6c42ba1ed50ece2efded06e27b2d385",
+    "algorithm": "sha256",
+    "value": "sha256:259c9d0cddf6dc731e3b5f398c8d1c40216954cc3b9294be9e92157a291c338c"
+  },
+  "baseline_digest": {
+    "profile": "aces-historical-baseline-digest/v1",
+    "baseline_id": "enterprise",
+    "baseline_version": "1.0.0",
+    "algorithm": "sha256",
+    "value": "sha256:863139b902b8f4f4fdc93463a89e8051e6c42ba1ed50ece2efded06e27b2d385"
+  },
+  "deployment_tenant_id": "range-a",
+  "range_instance_id": "range-instance-001",
+  "reset_generation_id": "generation-001",
+  "entropy_identity": {
+    "kind": "public-seed",
+    "encoding": "hex-fixed-width",
+    "value": "1111111111111111111111111111111111111111111111111111111111111111"
+  },
+  "actions": {
+    "update-record": {
+      "action_id": "activity_profiles.ordinary-records.actions.update-record",
+      "template_id": "activity_templates.record-update",
+      "execution_context_id": "activity_profiles.ordinary-records.execution_contexts.records-api",
+      "target_service_id": "nodes.archive.services.records",
+      "operation_profile": "protocol-operation/v1:http_api:update",
+      "schedule_profile": "finite-logical-schedule/v1",
+      "schedule_anchor_seconds": 0,
+      "schedule_interval_seconds": 15,
+      "max_occurrences": 4,
+      "max_retry_attempts": 2,
+      "random_stream_profile": "blake3-xof-v1",
+      "transform_profile": "bounded-integer/v1",
+      "address_profile": "activity-random-address/v1",
+      "readback_profile": "evidence-readback/v1",
+      "lifecycle_profile": "range-lifecycle/v1",
+      "ordering_dependencies": [],
+      "refresh_dependencies": []
+    }
+  },
+  "budget_envelopes": [
+    {
+      "dimension": "operations",
+      "unit": "operation",
+      "window_seconds": 60,
+      "action_demands": {
+        "update-record": {
+          "numerator": 1,
+          "denominator": 1
+        }
+      },
+      "range_capacity": {
+        "numerator": 10,
+        "denominator": 1
+      },
+      "fleet_capacity": {
+        "numerator": 100,
+        "denominator": 1
+      },
+      "participant_reservation": {
+        "numerator": 4,
+        "denominator": 1
+      }
+    }
+  ],
+  "dependency_order": ["update-record"],
+  "reverse_teardown_order": ["update-record"],
+  "required_operation_profiles": ["protocol-operation/v1:http_api:update"],
+  "required_schedule_profiles": ["finite-logical-schedule/v1"],
+  "required_readback_profiles": ["evidence-readback/v1"],
+  "required_lifecycle_profiles": ["range-lifecycle/v1"],
+  "required_resource_dimensions": ["operations"],
+  "required_dependency_kinds": [],
+  "requires_bounded_retry": true,
+  "requires_generation_lifecycle": true,
+  "requires_participant_reservation": true,
+  "requires_readback_provenance": true
+}

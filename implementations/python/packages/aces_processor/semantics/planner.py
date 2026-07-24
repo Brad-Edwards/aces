@@ -9,6 +9,18 @@ from enum import Enum
 from typing import Protocol, TypeVar
 
 from aces_contracts.addressing import require_compiled_address
+from aces_contracts.dependency_graph import (
+    dependency_cycles as _shared_dependency_cycles,
+)
+from aces_contracts.dependency_graph import (
+    dependency_graph as _shared_dependency_graph,
+)
+from aces_contracts.dependency_graph import (
+    reverse_delete_order as _shared_reverse_delete_order,
+)
+from aces_contracts.dependency_graph import (
+    topological_dependency_order as _shared_topological_dependency_order,
+)
 
 
 class DependencyKind(str, Enum):
@@ -54,11 +66,7 @@ def dependency_graph(
 ) -> dict[str, tuple[str, ...]]:
     """Normalize a dependency graph to only include known nodes."""
 
-    known_nodes = set(dependencies_by_node)
-    return {
-        node: tuple(dependency for dependency in dependencies if dependency in known_nodes)
-        for node, dependencies in dependencies_by_node.items()
-    }
+    return _shared_dependency_graph(dependencies_by_node)
 
 
 def dependency_graph_from_edges(
@@ -112,52 +120,10 @@ def dependency_cycles(
 ) -> list[tuple[str, ...]]:
     """Return strongly connected components that represent dependency cycles."""
 
-    graph = dependency_graph(dependencies_by_node)
-    if not graph:
-        return []
-
-    index = 0
-    indices: dict[str, int] = {}
-    lowlinks: dict[str, int] = {}
-    stack: list[str] = []
-    on_stack: set[str] = set()
-    cycles: list[tuple[str, ...]] = []
-
-    def strongconnect(node: str) -> None:
-        nonlocal index
-        indices[node] = index
-        lowlinks[node] = index
-        index += 1
-        stack.append(node)
-        on_stack.add(node)
-
-        for dependency in graph[node]:
-            if dependency not in indices:
-                strongconnect(dependency)
-                lowlinks[node] = min(lowlinks[node], lowlinks[dependency])
-            elif dependency in on_stack:
-                lowlinks[node] = min(lowlinks[node], indices[dependency])
-
-        if lowlinks[node] != indices[node]:
-            return
-
-        component: list[str] = []
-        while stack:
-            member = stack.pop()
-            on_stack.remove(member)
-            component.append(member)
-            if member == node:
-                break
-
-        component = sorted(component)
-        if len(component) > 1 or component[0] in graph[component[0]]:
-            cycles.append(tuple(component))
-
-    for node in sorted(graph, key=canonical_resource_identity):
-        if node not in indices:
-            strongconnect(node)
-
-    return sorted(cycles, key=lambda cycle: tuple(canonical_resource_identity(node) for node in cycle))
+    return _shared_dependency_cycles(
+        dependencies_by_node,
+        sort_key=canonical_resource_identity,
+    )
 
 
 def topological_dependency_order(
@@ -165,40 +131,10 @@ def topological_dependency_order(
 ) -> list[str]:
     """Return a stable topological order, appending residual nodes on cycles."""
 
-    graph = dependency_graph(dependencies_by_node)
-    dependents: dict[str, list[str]] = {node: [] for node in graph}
-    indegree: dict[str, int] = {node: 0 for node in graph}
-
-    for node, dependencies in graph.items():
-        for dependency in dependencies:
-            dependents[dependency].append(node)
-            indegree[node] += 1
-
-    queue = deque(
-        sorted(
-            (node for node, degree in indegree.items() if degree == 0),
-            key=canonical_resource_identity,
-        )
+    return _shared_topological_dependency_order(
+        dependencies_by_node,
+        sort_key=canonical_resource_identity,
     )
-    order: list[str] = []
-
-    while queue:
-        current = queue.popleft()
-        order.append(current)
-        for dependent in sorted(dependents[current], key=canonical_resource_identity):
-            indegree[dependent] -= 1
-            if indegree[dependent] == 0:
-                queue.append(dependent)
-
-    if len(order) != len(graph):
-        order.extend(
-            sorted(
-                (node for node in graph if node not in order),
-                key=canonical_resource_identity,
-            )
-        )
-
-    return order
 
 
 def reverse_delete_order(
@@ -206,7 +142,10 @@ def reverse_delete_order(
 ) -> list[str]:
     """Return reverse topological order for delete/teardown semantics."""
 
-    return list(reversed(topological_dependency_order(dependencies_by_node)))
+    return _shared_reverse_delete_order(
+        dependencies_by_node,
+        sort_key=canonical_resource_identity,
+    )
 
 
 def resource_topological_order(
