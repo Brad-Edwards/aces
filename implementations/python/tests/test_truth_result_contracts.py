@@ -5,8 +5,8 @@ from __future__ import annotations
 from copy import deepcopy
 
 import pytest
-from raes_contracts.contracts import PropositionTruthResultModel, schema_bundle
 from pydantic import ValidationError
+from raes_contracts.contracts import PropositionTruthResultModel, schema_bundle
 
 
 def _observed_result() -> dict[str, object]:

@@ -5,12 +5,11 @@ from __future__ import annotations
 import textwrap
 
 import pytest
-
+from raes import SDLInstantiationError, SDLValidationError, parse_sdl
 from raes_backend_stubs.stubs import create_stub_manifest
 from raes_processor.compiler import compile_runtime_model
 from raes_processor.models import RuntimeDomain, RuntimeSnapshot, SnapshotEntry
 from raes_processor.planner import plan
-from raes import SDLInstantiationError, SDLValidationError, parse_sdl
 
 
 def _scenario(yaml_str: str):

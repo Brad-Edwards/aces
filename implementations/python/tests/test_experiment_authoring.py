@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 import pytest
+from paths import EXPERIMENTS_DIR, REPO_ROOT
 from raes_contracts.contracts import ExperimentSpecModel
 from raes_contracts.experiment_spec import (
     ExperimentSpecValidationError,
@@ -19,7 +20,6 @@ from raes_mcp.tools.experiment_authoring import (
     _run_experiment_scaffold,
     _run_experiment_validate,
 )
-from paths import EXPERIMENTS_DIR, REPO_ROOT
 
 _VALID_FIXTURE = (
     REPO_ROOT

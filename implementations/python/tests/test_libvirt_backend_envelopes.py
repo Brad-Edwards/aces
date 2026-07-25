@@ -5,8 +5,10 @@ from __future__ import annotations
 from dataclasses import replace
 from textwrap import dedent
 
-import raes_backend_libvirt.manifest as libvirt_manifest_module
 import pytest
+import raes_backend_libvirt.manifest as libvirt_manifest_module
+from libvirt_conformance_fixtures import RecordingLibvirtDriver
+from raes.parser import parse_sdl
 from raes_backend_libvirt.envelopes import LibvirtDriverMode, load_libvirt_realization_envelope
 from raes_backend_libvirt.manifest import create_libvirt_manifest
 from raes_backend_libvirt.provisioner import LibvirtProvisioner
@@ -15,8 +17,6 @@ from raes_backend_libvirt.techvault_native import TechVaultNativeLibvirtDriver
 from raes_backend_protocols.manifest import backend_manifest_payload
 from raes_contracts.realization_envelope import BackendRealizationEnvelopeModel, realization_envelope_digest
 from raes_processor.reference import run_reference_processor
-from libvirt_conformance_fixtures import RecordingLibvirtDriver
-from raes.parser import parse_sdl
 
 
 def test_default_libvirt_manifest_selects_generic_envelope():

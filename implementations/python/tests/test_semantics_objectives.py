@@ -8,7 +8,6 @@ from types import SimpleNamespace
 import pytest
 from hypothesis import given
 from hypothesis import strategies as st
-
 from raes.parser import parse_sdl_file
 from raes.semantics.assessment import AssessmentResourceKind
 from raes.semantics.objective_semantics import (

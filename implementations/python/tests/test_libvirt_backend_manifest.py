@@ -4,9 +4,8 @@ from __future__ import annotations
 
 from raes_backend_libvirt import create_libvirt_manifest
 from raes_backend_protocols.manifest import backend_manifest_payload
-from raes_contracts.contracts import BackendManifestV2Model
-
 from raes_conformance.conformance import BackendCapabilityProfile, profile_for_manifest
+from raes_contracts.contracts import BackendManifestV2Model
 
 
 def test_libvirt_manifest_renders_as_provisioning_only_manifest_v2():

@@ -9,17 +9,6 @@ from pathlib import Path
 
 import jsonschema
 import pytest
-from raes_backend_libvirt.manifest import create_libvirt_manifest
-from raes_backend_protocols.capabilities import BackendManifest, ProvisionerCapabilities
-from raes_contracts.apparatus import ConceptBinding, RealizationSupportDeclaration
-from raes_contracts.planning import ChangeAction, ProvisioningPlan, ProvisionOp, RuntimeDomain
-from raes_contracts.realization_envelope import BackendRealizationEnvelopeModel, realization_envelope_digest
-from raes_contracts.runtime_state import RuntimeSnapshot, RuntimeSnapshotEnvelope, SnapshotEntry
-from raes_contracts.vocabulary import Closure, RealizationSupportMode
-from raes_processor.compiler import compile_runtime_model
-from raes_processor.planner import plan
-from raes_processor.semantics.realization import realization_disclosure
-from raes_runtime.control_plane_api_models import _snapshot_model
 from pydantic import ValidationError
 from raes._errors import SDLParseError
 from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance
@@ -31,6 +20,17 @@ from raes.realization_designation import (
     RealizationScopeDesignation,
     resolve_json_pointer_surface,
 )
+from raes_backend_libvirt.manifest import create_libvirt_manifest
+from raes_backend_protocols.capabilities import BackendManifest, ProvisionerCapabilities
+from raes_contracts.apparatus import ConceptBinding, RealizationSupportDeclaration
+from raes_contracts.planning import ChangeAction, ProvisioningPlan, ProvisionOp, RuntimeDomain
+from raes_contracts.realization_envelope import BackendRealizationEnvelopeModel, realization_envelope_digest
+from raes_contracts.runtime_state import RuntimeSnapshot, RuntimeSnapshotEnvelope, SnapshotEntry
+from raes_contracts.vocabulary import Closure, RealizationSupportMode
+from raes_processor.compiler import compile_runtime_model
+from raes_processor.planner import plan
+from raes_processor.semantics.realization import realization_disclosure
+from raes_runtime.control_plane_api_models import _snapshot_model
 
 
 def _scenario(realization: str = "", *, web_os: str = ""):

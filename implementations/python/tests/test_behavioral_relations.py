@@ -8,6 +8,9 @@ from copy import deepcopy
 from pathlib import Path
 
 import pytest
+from hypothesis import assume, given, settings
+from hypothesis import strategies as st
+from pydantic import ValidationError
 from raes_conformance.conformance import _fixture_case_diagnostics
 from raes_contracts.behavioral_relations import (
     ExampleTransitionModel,
@@ -20,9 +23,6 @@ from raes_contracts.contracts import (
     schema_bundle,
 )
 from raes_contracts.scientific_completeness import load_scientific_completeness_taxonomy
-from hypothesis import assume, given, settings
-from hypothesis import strategies as st
-from pydantic import ValidationError
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 REQUIRED_RELATION_IDS = {

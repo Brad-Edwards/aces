@@ -16,12 +16,12 @@ import shutil
 from pathlib import Path
 
 import pytest
+from paths import EXAMPLES_DIR
 from raes_operations.libvirt_evidence_run import (
     LibvirtEvidenceRunConfig,
     run_libvirt_evidence_run,
     validate_libvirt_evidence_run_artifact,
 )
-from paths import EXAMPLES_DIR
 
 
 @pytest.mark.integration

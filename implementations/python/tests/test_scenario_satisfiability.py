@@ -7,6 +7,7 @@ from copy import deepcopy
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 from raes_contracts.satisfiability import (
     SatisfiabilityOutcome,
     ScenarioSatisfiabilityEvidenceModel,
@@ -16,7 +17,6 @@ from raes_processor.satisfiability import (
     analyze_scenario_file,
     replay_satisfiability_evidence,
 )
-from pydantic import ValidationError
 
 _SATISFIABLE = """\
 name: satisfiable-control

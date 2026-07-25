@@ -6,6 +6,7 @@ import json
 from enum import Enum
 from pathlib import Path
 
+from pydantic import ValidationError
 from raes_contracts.backend_profiles import (
     BackendProfileModel,
     backend_profile_path,
@@ -14,7 +15,6 @@ from raes_contracts.backend_profiles import (
 )
 from raes_contracts.corpus import FIXTURES, corpus_family_root
 from raes_contracts.diagnostics import Diagnostic
-from pydantic import ValidationError
 
 from raes_conformance.conformance.diagnostics import _diagnostic
 

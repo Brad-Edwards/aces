@@ -4,11 +4,10 @@ from __future__ import annotations
 
 import textwrap
 
-from raes_reference_backend import create_reference_backend_target
-from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance
-
-from raes_runtime.manager import RuntimeManager
 from raes import parse_sdl
+from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance
+from raes_reference_backend import create_reference_backend_target
+from raes_runtime.manager import RuntimeManager
 
 _EXACT_SCENARIO = """
 name: ref-sem-218

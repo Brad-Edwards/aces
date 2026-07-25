@@ -9,6 +9,8 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
+from paths import EXAMPLES_DIR
+from raes import parse_sdl
 from raes_backend_libvirt import create_libvirt_target
 from raes_backend_libvirt.cloudinit import CloudInitSpec, CloudInitUser
 from raes_backend_libvirt.driver import DomainSpec, NetworkAcl, NetworkSpec, ServiceSpec
@@ -28,11 +30,8 @@ from raes_operations.techvault_live import (
     validate_techvault_live,
     validate_techvault_live_manifest,
 )
-from paths import EXAMPLES_DIR
-
 from raes_runtime.control_plane import RuntimeControlPlane
 from raes_runtime.manager import RuntimeManager
-from raes import parse_sdl
 
 
 class _NativeObject:

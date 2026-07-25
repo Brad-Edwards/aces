@@ -7,6 +7,7 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 from raes_backend_protocols.capabilities import (
     OBSERVATION_CAPABILITY_CAPTURE_KIND_SCOPE,
     OBSERVATION_CAPABILITY_CHANNEL_KIND_SCOPE,
@@ -33,7 +34,6 @@ from raes_contracts.vocabulary import (
     WorkflowFeature,
     WorkflowStatePredicateFeature,
 )
-from pydantic import ValidationError
 
 FIXTURES_ROOT = Path(__file__).resolve().parents[3] / "contracts" / "fixtures"
 V2_VALID_DIR = FIXTURES_ROOT / "backend-manifest" / "backend-manifest-v2" / "valid"

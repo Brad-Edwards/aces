@@ -16,7 +16,6 @@ import pytest
 import yaml
 from hypothesis import HealthCheck, assume, given, settings
 from hypothesis import strategies as st
-
 from raes import SDLParseError, SDLValidationError, parse_sdl
 from raes.scenario import Scenario
 

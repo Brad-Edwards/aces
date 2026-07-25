@@ -9,8 +9,8 @@ import xml.etree.ElementTree as StdET
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 
-from raes_contracts.realization_envelope import ObservationStrength, RealizationConcern
 from defusedxml import ElementTree as SafeET
+from raes_contracts.realization_envelope import ObservationStrength, RealizationConcern
 
 from .driver import RealizationObservation
 from .techvault_matrix import as_sequence

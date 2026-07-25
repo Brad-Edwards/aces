@@ -12,20 +12,19 @@ from raes_backend_protocols.capabilities import (
     BackendManifest,
     ProvisionerCapabilities,
 )
-from raes_conformance.conformance import _semantic_diagnostics
-from raes_contracts.apparatus import ConceptBinding, RealizationSupportDeclaration
-from raes_contracts.planning import ChangeAction, RuntimeDomain
-from raes_contracts.runtime_state import ApplyResult, RuntimeSnapshot, SnapshotEntry
-from raes_contracts.vocabulary import RealizationSupportMode
-
 from raes_backend_stubs.stubs import create_stub_components, create_stub_manifest, create_stub_target
 from raes_conformance.conformance import (
     BackendCapabilityProfile,
+    _semantic_diagnostics,
     profile_for_manifest,
     required_contracts,
     run_fixture_suite,
     run_target_conformance,
 )
+from raes_contracts.apparatus import ConceptBinding, RealizationSupportDeclaration
+from raes_contracts.planning import ChangeAction, RuntimeDomain
+from raes_contracts.runtime_state import ApplyResult, RuntimeSnapshot, SnapshotEntry
+from raes_contracts.vocabulary import RealizationSupportMode
 from raes_runtime.registry import RuntimeTarget
 
 API_406_CARRIER_CONTRACTS = {

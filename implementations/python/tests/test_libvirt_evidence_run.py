@@ -14,6 +14,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import pytest
+from paths import EXAMPLES_DIR
 from raes_backend_libvirt.techvault_native import TechVaultNativeLibvirtDriver
 from raes_backend_protocols.naming import provider_resource_name
 from raes_contracts.contracts import (
@@ -33,7 +34,6 @@ from raes_operations.run_artifacts import (
     is_valid_run_id_label,
     run_artifact_path,
 )
-from paths import EXAMPLES_DIR
 
 _REFERENCE_SCENARIO = EXAMPLES_DIR / "enterprise-participant-evidence-loop.sdl.yaml"
 _TECHVAULT_SCENARIO = EXAMPLES_DIR / "techvault-operational.sdl.yaml"

@@ -22,6 +22,9 @@ import json
 from pathlib import Path
 from textwrap import dedent
 
+from libvirt_conformance_fixtures import RecordingLibvirtDriver
+from libvirt_participant_fixtures import NullLibvirtDriver
+from raes.parser import parse_sdl
 from raes_backend_libvirt.target import create_libvirt_target
 from raes_conformance.conformance import (
     BackendCapabilityProfile,
@@ -31,9 +34,6 @@ from raes_conformance.conformance import (
 from raes_contracts.planning import RuntimeDomain
 from raes_processor.reference import run_reference_processor
 from raes_runtime.control_plane import RuntimeControlPlane
-from libvirt_conformance_fixtures import RecordingLibvirtDriver
-from libvirt_participant_fixtures import NullLibvirtDriver
-from raes.parser import parse_sdl
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 COMMITTED_REPORT = REPO_ROOT / "docs" / "conformance" / "libvirt-qemu.provisioning-only.report.json"

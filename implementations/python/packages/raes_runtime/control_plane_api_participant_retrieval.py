@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from typing import Annotated
 
+from fastapi import Depends, FastAPI, HTTPException, Request
 from raes_contracts.contracts import (
     ParticipantContextViewModel,
     ParticipantHistoryViewModel,
     ParticipantStatusViewModel,
 )
-from fastapi import Depends, FastAPI, HTTPException, Request
 
 from .control_plane import RuntimeControlPlane
 from .control_plane_security import ControlPlaneIdentity

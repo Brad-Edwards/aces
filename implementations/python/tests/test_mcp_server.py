@@ -10,8 +10,8 @@ import asyncio
 import json
 
 import pytest
-from raes_mcp.server import create_server
 from paths import EXAMPLES_DIR
+from raes_mcp.server import create_server
 
 # ---------------------------------------------------------------------------
 # Helpers

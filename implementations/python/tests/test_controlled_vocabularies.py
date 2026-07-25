@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 from raes_contracts.contracts import (
     AtlasTacticsSourceModel,
     AttackEnterpriseTacticsSourceModel,
@@ -27,7 +28,6 @@ from raes_contracts.vocabulary import (
     WorkflowFeature,
     WorkflowStatePredicateFeature,
 )
-from pydantic import ValidationError
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 CATALOG_PATH = REPO_ROOT / "contracts" / "concept-authority" / "controlled-vocabularies-v1.json"

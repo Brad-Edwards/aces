@@ -2,7 +2,6 @@
 
 import pytest
 from pydantic import ValidationError
-
 from raes._errors import SDLValidationError
 from raes.scenario import Scenario
 from raes.validator import SemanticValidator

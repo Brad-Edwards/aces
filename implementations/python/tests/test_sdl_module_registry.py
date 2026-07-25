@@ -18,10 +18,6 @@ import raes.module_registry as module_registry
 import raes.parser as sdl_parser
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from typer.testing import CliRunner
-
-from raes_cli.main import app
-from raes_processor.compiler import compile_runtime_model
 from raes._errors import SDLParseError, SDLValidationError
 from raes.module_registry import (
     LOCKFILE_NAME,
@@ -29,6 +25,9 @@ from raes.module_registry import (
     publish_module_to_oci_layout,
 )
 from raes.parser import parse_sdl_file
+from raes_cli.main import app
+from raes_processor.compiler import compile_runtime_model
+from typer.testing import CliRunner
 
 
 def _write(path: Path, content: str) -> Path:
@@ -826,7 +825,6 @@ def test_database_and_application_refs_survive_module_namespacing():
     survives being imported under a namespace.
     """
     from raes._module_symbols import symbol_index
-
     from raes.scenario import ModuleDescriptor, Scenario
 
     scenario = Scenario(

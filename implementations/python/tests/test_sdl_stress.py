@@ -8,7 +8,6 @@ expressiveness boundaries of the language.
 import textwrap
 
 import pytest
-
 from raes import SDLParseError, SDLValidationError, parse_sdl
 
 

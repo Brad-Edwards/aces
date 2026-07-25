@@ -3,6 +3,17 @@
 from __future__ import annotations
 
 import pytest
+from raes.participant_attribution_semantics import (
+    OUTCOME_ATTRIBUTION_CANDIDATE_KINDS,
+    STRONG_ATTRIBUTION_SUPPORT_CLASSES,
+    ParticipantAttributionCandidateKind,
+    ParticipantAttributionOrderingBasisKind,
+    ParticipantAttributionSupportClass,
+)
+from raes.participant_behavior import (
+    ParticipantEffectClass,
+    ParticipantPreconditionClass,
+)
 from raes_contracts.contracts import ParticipantBehaviorHistoryEventModel
 from raes_processor.models import (
     ParticipantActionEffectResult,
@@ -20,17 +31,6 @@ from raes_processor.models import (
     ParticipantObservationBoundaryRuntime,
     ParticipantObservationStatus,
     iter_participant_behavior_history_violations,
-)
-from raes.participant_attribution_semantics import (
-    OUTCOME_ATTRIBUTION_CANDIDATE_KINDS,
-    STRONG_ATTRIBUTION_SUPPORT_CLASSES,
-    ParticipantAttributionCandidateKind,
-    ParticipantAttributionOrderingBasisKind,
-    ParticipantAttributionSupportClass,
-)
-from raes.participant_behavior import (
-    ParticipantEffectClass,
-    ParticipantPreconditionClass,
 )
 
 T0 = "2026-05-21T02:00:00Z"

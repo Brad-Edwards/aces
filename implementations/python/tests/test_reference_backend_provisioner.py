@@ -5,6 +5,7 @@ from __future__ import annotations
 import textwrap
 
 import pytest
+from raes import parse_sdl
 from raes_contracts.planning import (
     ChangeAction,
     PlannedResource,
@@ -17,11 +18,9 @@ from raes_reference_backend import (
     create_reference_backend_manifest,
 )
 from raes_reference_backend.drivers.inprocess import InProcessDriver
-
 from raes_runtime.control_plane import RuntimeControlPlane
 from raes_runtime.manager import RuntimeManager
 from raes_runtime.registry import RuntimeTarget
-from raes import parse_sdl
 
 _SCENARIO = """
 name: ref-provisioner

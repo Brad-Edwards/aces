@@ -2,9 +2,9 @@
 
 from collections.abc import Iterable, Iterator, Mapping
 
+from raes.participant_outcome_semantics import OutcomeInterpretationSourceLayer
 from raes_contracts.participant_behavior import ParticipantBehaviorHistoryEventType
 from raes_contracts.participant_episode import ParticipantEpisodeHistoryEvent
-from raes.participant_outcome_semantics import OutcomeInterpretationSourceLayer
 
 from .behavior_ref_checks import (
     _participant_behavior_attribution_candidate_ref_violations,

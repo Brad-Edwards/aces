@@ -107,10 +107,9 @@ def test_control_plane_api_version_fallback_is_honest_sentinel(monkeypatch) -> N
 
 
 def test_control_plane_app_openapi_version_matches_distribution() -> None:
+    from raes_backend_stubs.stubs import create_stub_target
     from raes_runtime.control_plane import RuntimeControlPlane
     from raes_runtime.control_plane_api import create_control_plane_app
-
-    from raes_backend_stubs.stubs import create_stub_target
 
     app = create_control_plane_app(RuntimeControlPlane(create_stub_target()))
 

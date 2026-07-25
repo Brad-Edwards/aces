@@ -4,6 +4,11 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
+from raes.participant_attribution_semantics import (
+    OUTCOME_ATTRIBUTION_CANDIDATE_KINDS,
+    ParticipantAttributionCandidateKind,
+)
+from raes.participant_behavior import ParticipantInteractionClass
 from raes_contracts.participant_behavior import (
     ParticipantActionResultStatus,
     ParticipantAdmissionDisposition,
@@ -14,11 +19,6 @@ from raes_contracts.participant_behavior import (
     ParticipantRuntimeLifecyclePhase,
     participant_lifecycle_field_violation_messages,
 )
-from raes.participant_attribution_semantics import (
-    OUTCOME_ATTRIBUTION_CANDIDATE_KINDS,
-    ParticipantAttributionCandidateKind,
-)
-from raes.participant_behavior import ParticipantInteractionClass
 
 from .action_results import ParticipantActionResult
 from .attribution import ParticipantAttributionEdge

@@ -6,6 +6,27 @@ from pathlib import Path
 
 import jsonschema
 import pytest
+from hypothesis import given
+from hypothesis import strategies as st
+from pydantic import ValidationError
+from raes._declarations import build_declaration_index
+from raes._errors import SDLParseError, SDLValidationError
+from raes._model_diagnostics import _bounded_model_message
+from raes._source_profile import SDLParserLimits
+from raes.identifiers import (
+    PORTABLE_IDENTIFIER_JSON_SCHEMA,
+    QUALIFIED_IDENTIFIER_MAX_LENGTH,
+    QualifiedName,
+    is_portable_identifier,
+    require_portable_identifier,
+)
+from raes.infrastructure import ACLRule
+from raes.instantiate import instantiate_scenario
+from raes.nodes import ServicePort
+from raes.parser import parse_sdl
+from raes.runtime_values import require_symbol
+from raes.scenario import ExpandedScenario, ImportDecl, ModuleDescriptor, Scenario
+from raes.validator import SemanticValidator
 from raes_backend_protocols.naming import provider_resource_name
 from raes_contracts.addressing import (
     COMPILED_ADDRESS_JSON_SCHEMA,
@@ -31,27 +52,6 @@ from raes_contracts.planning import (
 from raes_contracts.runtime_state import ApplyResult, OperationStatus, RuntimeSnapshot, SnapshotEntry
 from raes_processor.compiler import compile_runtime_model
 from raes_processor.models import NetworkRuntime, NodeRuntime, RuntimeModel
-from hypothesis import given
-from hypothesis import strategies as st
-from pydantic import ValidationError
-from raes._declarations import build_declaration_index
-from raes._errors import SDLParseError, SDLValidationError
-from raes._model_diagnostics import _bounded_model_message
-from raes._source_profile import SDLParserLimits
-from raes.identifiers import (
-    PORTABLE_IDENTIFIER_JSON_SCHEMA,
-    QUALIFIED_IDENTIFIER_MAX_LENGTH,
-    QualifiedName,
-    is_portable_identifier,
-    require_portable_identifier,
-)
-from raes.infrastructure import ACLRule
-from raes.instantiate import instantiate_scenario
-from raes.nodes import ServicePort
-from raes.parser import parse_sdl
-from raes.runtime_values import require_symbol
-from raes.scenario import ExpandedScenario, ImportDecl, ModuleDescriptor, Scenario
-from raes.validator import SemanticValidator
 
 _PORTABLE_CHARACTERS = "abcdefghijklmnopqrstuvwxyz0123456789-_"
 _PORTABLE_START = "abcdefghijklmnopqrstuvwxyz0123456789"

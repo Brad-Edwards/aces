@@ -40,7 +40,6 @@ from raes.runtime_datastore_vocab import (
     RuntimeDatastoreSettingScope,
     RuntimeDatastoreTransportSecurityMode,
 )
-
 from raes.scenario import Scenario
 
 _PUBLISHED_SDL_SCHEMA_NAMES = (

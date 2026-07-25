@@ -11,7 +11,6 @@ from raes_reference_backend import (
 )
 from raes_reference_backend.drivers.inprocess import InProcessDriver
 from raes_reference_backend.provisioner import ReferenceProvisioner
-
 from raes_runtime.registry import BackendRegistry, RuntimeTarget
 
 

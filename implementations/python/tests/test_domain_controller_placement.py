@@ -14,6 +14,8 @@ from dataclasses import replace
 
 import pytest
 import yaml
+from jsonschema import Draft202012Validator
+from raes import parse_sdl
 from raes_backend_libvirt.realization import interpret_provisioning_plan as interpret_libvirt_plan
 from raes_backend_protocols.backend_manifest import BackendManifest
 from raes_backend_protocols.domain_topology import DomainTopologyBinding, domain_topology_plan_diagnostics
@@ -36,8 +38,6 @@ from raes_processor.models import DomainControllerPlacement, resource_payload
 from raes_processor.planner import plan
 from raes_processor.semantics.realization import realization_disclosure
 from raes_reference_backend import interpret_provisioning_plan as interpret_reference_plan
-from jsonschema import Draft202012Validator
-from raes import parse_sdl
 
 _RESOURCE_TYPE = "domain-controller-placement"
 

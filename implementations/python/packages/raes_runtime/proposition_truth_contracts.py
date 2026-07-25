@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
+from pydantic import ValidationError
 from raes_contracts.contracts import PropositionTruthResultModel
 from raes_contracts.diagnostics import Diagnostic
 from raes_contracts.runtime_state import RuntimeSnapshot
-from pydantic import ValidationError
 
 from .diagnostics import _failure_diagnostic
 

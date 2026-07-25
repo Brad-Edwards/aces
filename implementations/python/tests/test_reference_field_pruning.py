@@ -18,6 +18,8 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from jsonschema import Draft202012Validator
+from pydantic import BaseModel, ValidationError
 from raes_contracts.contracts import (
     ExperimentApparatusCompatibilityReferenceModel,
     ExperimentBackendReferenceModel,
@@ -36,8 +38,6 @@ from raes_contracts.contracts.validation_disclosure import (
     ValidationBasisDisclosureDocumentModel,
     ValidationProducerReferenceModel,
 )
-from jsonschema import Draft202012Validator
-from pydantic import BaseModel, ValidationError
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PUBLISHED_DISCLOSURE_SCHEMA_PATH = REPO_ROOT / "contracts/schemas/profiles/validation-basis-disclosure-v1.json"

@@ -9,7 +9,6 @@ team structures, and scoring — and identifies what it can't express.
 import textwrap
 
 import pytest
-
 from raes import SDLParseError, SDLValidationError, parse_sdl
 
 

@@ -4,7 +4,6 @@ import pytest
 from jsonschema import Draft202012Validator
 from jsonschema import ValidationError as JsonSchemaValidationError
 from pydantic import ValidationError
-
 from raes._source import Source
 from raes.conditions import Condition
 from raes.entities import Entity, ExerciseRole, flatten_entities

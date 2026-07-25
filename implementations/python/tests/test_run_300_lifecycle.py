@@ -20,10 +20,14 @@ import json
 import textwrap
 
 import pytest
-
+from raes import (
+    InstantiatedScenario,
+    SDLInstantiationError,
+    instantiate_scenario,
+    parse_sdl,
+)
 from raes_backend_stubs.stubs import create_stub_target
 from raes_processor.compiler import compile_runtime_model
-from raes_runtime.manager import RuntimeManager
 from raes_processor.models import (
     ChangeAction,
     ExecutionPlan,
@@ -31,12 +35,7 @@ from raes_processor.models import (
     RuntimeSnapshot,
 )
 from raes_processor.planner import plan as plan_execution
-from raes import (
-    InstantiatedScenario,
-    SDLInstantiationError,
-    instantiate_scenario,
-    parse_sdl,
-)
+from raes_runtime.manager import RuntimeManager
 
 NODE_NAME = "vm1"
 EXPECTED_NODE_ADDRESS = f"provision.node.{NODE_NAME}"

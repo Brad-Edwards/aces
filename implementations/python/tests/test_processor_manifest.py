@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 from raes_cli.main import app
 from raes_contracts.apparatus import ConceptBinding
 from raes_contracts.contracts import ProcessorManifestV2Model
@@ -19,7 +20,6 @@ from raes_processor.manifest import (
     create_reference_processor_manifest,
     reference_processor_manifest_payload,
 )
-from pydantic import ValidationError
 from typer.testing import CliRunner
 
 FIXTURES_ROOT = Path(__file__).resolve().parents[3] / "contracts" / "fixtures"

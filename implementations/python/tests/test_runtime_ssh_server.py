@@ -8,9 +8,12 @@ discipline without going through the YAML parser.
 
 import pytest
 import raes._runtime_service_families as runtime_family_registry
+import raes.nodes as compat_nodes
 import raes.nodes as nodes_facade
 import raes.runtime_configuration as runtime_configuration_facade
 from pydantic import ValidationError
+from raes import parse_sdl_file
+from raes._errors import SDLValidationError
 from raes._module_symbols import symbol_index
 from raes._runtime_service_families import (
     RUNTIME_SERVICE_FAMILIES,
@@ -26,10 +29,6 @@ from raes.runtime_ssh_server import (
     SshMatchCriterionKind,
     SshMatchRule,
 )
-
-import raes.nodes as compat_nodes
-from raes import parse_sdl_file
-from raes._errors import SDLValidationError
 from raes.scenario import ModuleDescriptor, Scenario
 from raes.validator import SemanticValidator
 

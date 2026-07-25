@@ -21,19 +21,18 @@ from __future__ import annotations
 import textwrap
 from dataclasses import replace
 
+from raes import parse_sdl
+from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance
+from raes_backend_stubs.stubs import StubProvisioner, create_stub_target
 from raes_contracts.runtime_state import (
     ApplyResult,
     RealizationProvenanceEntry,
     RuntimeSnapshot,
 )
 from raes_contracts.versions import RUNTIME_SNAPSHOT_SCHEMA_VERSION
-from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance
-
-from raes_backend_stubs.stubs import StubProvisioner, create_stub_target
 from raes_runtime.control_plane_store import _snapshot_from_payload, _snapshot_payload
 from raes_runtime.manager import RuntimeManager
 from raes_runtime.registry import RuntimeTarget
-from raes import parse_sdl
 
 _EXACT_SCENARIO = """
 name: sem-218-runtime-exact

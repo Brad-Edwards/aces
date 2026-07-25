@@ -4,12 +4,12 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from raes.participant_behavior import ParticipantFailureClass
 from raes_backend_protocols.domain_topology import DomainTopologyBinding
 from raes_contracts.addressing import require_compiled_address
 from raes_contracts.diagnostics import Diagnostic
 from raes_contracts.evaluation import EvaluationExecutionContract, EvaluationResultContract
 from raes_contracts.participant_episode import PARTICIPANT_EPISODE_CONTROL_EVENTS, PARTICIPANT_EPISODE_TERMINAL_EVENTS
-from raes.participant_behavior import ParticipantFailureClass
 
 if TYPE_CHECKING:
     # Forward reference only: ParticipantActionResult is defined in the later

@@ -14,13 +14,13 @@ import re
 from collections.abc import Mapping
 from typing import Any
 
+from pydantic import BaseModel
 from raes_contracts.contracts import (
     BackendManifestV2Model,
     EvaluationHistoryEventModel,
     EvaluationResultStateModel,
     ExperimentRealizedFormDisclosureModel,
 )
-from pydantic import BaseModel
 
 from raes_operations._evidence_run_artifact import EVIDENCE_RUN_SCHEMA
 from raes_operations._evidence_run_realization import _validate_realization_sources

@@ -6,6 +6,7 @@ import json
 from dataclasses import replace
 from pathlib import Path
 
+from paths import EXAMPLES_DIR, REPO_ROOT
 from raes_backend_stubs.manifest import create_stub_manifest
 from raes_contracts.contracts import (
     EvaluationPlanModel,
@@ -21,7 +22,6 @@ from raes_contracts.plan_projection import (
 )
 from raes_contracts.planning import ProvisioningPlan
 from raes_processor.reference import run_reference_processor
-from paths import EXAMPLES_DIR, REPO_ROOT
 
 _PLAN_FIXTURES = REPO_ROOT / "contracts" / "fixtures" / "plans"
 _SCENARIO = EXAMPLES_DIR / "techvault-defensive-min.sdl.yaml"

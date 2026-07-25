@@ -9,6 +9,8 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, replace
 
+from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance
+from raes.realization_envelope import effective_constraints, subsumes, tokenize_path
 from raes_backend_protocols.capabilities import BackendManifest
 from raes_contracts.addressing import require_compiled_address
 from raes_contracts.apparatus import (
@@ -26,8 +28,6 @@ from raes_contracts.realization_envelope import (
 )
 from raes_contracts.runtime_state import RealizationProvenanceEntry, RuntimeSnapshot
 from raes_contracts.vocabulary import Closure, RealizationSupportMode
-from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance
-from raes.realization_envelope import effective_constraints, subsumes, tokenize_path
 
 __all__ = [
     "CONCERN_PAYLOAD_PATH",

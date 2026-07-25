@@ -405,11 +405,10 @@ def _facts_from_matrix(matrix, challenge: str) -> dict[str, str]:
 
 
 def _guest_matrix(scenario: Path):
+    from raes.parser import parse_sdl_file
     from raes_backend_libvirt.manifest import create_libvirt_manifest
     from raes_backend_libvirt.realization import interpret_provisioning_plan
     from raes_backend_libvirt.techvault_matrix import native_matrix
-    from raes.parser import parse_sdl_file
-
     from raes_runtime.manager import RuntimeManager
 
     scout = GuestCertifiedLibvirtDriver(

@@ -8,6 +8,15 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from pydantic import ValidationError
+from raes.canonical import (
+    INSTANTIATED_SNAPSHOT_PROFILE,
+    InstantiatedScenarioSnapshot,
+    canonical_instantiated_sdl_digest,
+    canonical_sdl_digest,
+)
+from raes.instantiate import instantiate_scenario
+from raes.parser import parse_sdl
 from raes_conformance.conformance import _fixture_case_diagnostics
 from raes_contracts.contracts import (
     ExperimentRunModel,
@@ -21,15 +30,6 @@ from raes_contracts.contracts.validation_disclosure import (
     ValidationGateResultModel,
     ValidationSubjectReferenceModel,
 )
-from pydantic import ValidationError
-from raes.canonical import (
-    INSTANTIATED_SNAPSHOT_PROFILE,
-    InstantiatedScenarioSnapshot,
-    canonical_instantiated_sdl_digest,
-    canonical_sdl_digest,
-)
-from raes.instantiate import instantiate_scenario
-from raes.parser import parse_sdl
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 FIXTURES_ROOT = REPO_ROOT / "contracts/fixtures/profiles/validation-basis-disclosure-v1"

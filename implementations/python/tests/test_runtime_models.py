@@ -6,13 +6,12 @@ import textwrap
 from pathlib import Path
 
 import pytest
-
+from raes import SDLInstantiationError, parse_sdl, parse_sdl_file
 from raes_backend_protocols.capabilities import (
     WorkflowFeature,
     WorkflowStatePredicateFeature,
 )
 from raes_processor.compiler import compile_runtime_model
-from raes import SDLInstantiationError, parse_sdl, parse_sdl_file
 
 
 def _scenario(yaml_str: str):

@@ -6,9 +6,9 @@ import json
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 from raes_contracts.contracts import ReferenceModelCatalogModel
 from raes_contracts.reference_models import load_reference_model_catalog, reference_model_catalog_path
-from pydantic import ValidationError
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 CATALOG_PATH = REPO_ROOT / "contracts" / "concept-authority" / "reference-models-v1.json"

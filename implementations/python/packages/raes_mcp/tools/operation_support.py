@@ -41,7 +41,6 @@ def compile_pipeline(
     if size_error is not None:
         return {"error": json.loads(size_error), "stages": [], "scenario": None, "model": None}
 
-    from raes_processor.compiler import compile_runtime_model
     from raes import (
         SDLInstantiationError,
         SDLMigrationPolicy,
@@ -50,6 +49,7 @@ def compile_pipeline(
         instantiate_scenario,
         parse_sdl,
     )
+    from raes_processor.compiler import compile_runtime_model
 
     params, parameter_error = parse_parameters(parameters_json)
     if parameter_error is not None:

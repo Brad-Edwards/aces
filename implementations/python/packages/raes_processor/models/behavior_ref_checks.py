@@ -3,8 +3,8 @@
 from collections.abc import Iterable, Mapping
 from typing import Any
 
-from raes_contracts.participant_behavior import ParticipantBehaviorHistoryEventType
 from raes.participant_attribution_semantics import ParticipantAttributionCandidateKind
+from raes_contracts.participant_behavior import ParticipantBehaviorHistoryEventType
 
 from .attribution import ParticipantAttributionCandidate, ParticipantAttributionEdge
 from .behavior_resources import (

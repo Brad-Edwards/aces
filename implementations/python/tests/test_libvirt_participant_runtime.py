@@ -11,16 +11,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from raes_backend_libvirt.manifest import create_libvirt_manifest
-from raes_backend_libvirt.participant_runtime import LibvirtParticipantRuntime
-from raes_backend_libvirt.target import create_libvirt_components
-from raes_backend_protocols.capabilities import participant_runtime_capability_contract_gaps
-from raes_conformance.conformance import run_target_conformance
-from raes_contracts.participant_binding import ParticipantActionAdmissionRequest
-from raes_processor.models import (
-    iter_participant_behavior_history_violations,
-    iter_participant_episode_snapshot_violations,
-)
 from libvirt_conformance_fixtures import RecordingLibvirtDriver
 from libvirt_participant_fixtures import (
     NullLibvirtDriver,
@@ -29,15 +19,22 @@ from libvirt_participant_fixtures import (
     build_implementation_selection,
 )
 from libvirt_participant_proof import LibvirtParticipantProofResult, run_libvirt_participant_proof
-
+from raes import parse_sdl
+from raes_backend_libvirt.manifest import create_libvirt_manifest
+from raes_backend_libvirt.participant_runtime import LibvirtParticipantRuntime
+from raes_backend_libvirt.target import create_libvirt_components
+from raes_backend_protocols.capabilities import participant_runtime_capability_contract_gaps
+from raes_conformance.conformance import run_target_conformance
+from raes_contracts.participant_binding import ParticipantActionAdmissionRequest
 from raes_processor.compiler import compile_runtime_model
-from raes_runtime.control_plane import RuntimeControlPlane
 from raes_processor.models import (
     OperationState,
     ParticipantEpisodeTerminalReason,
+    iter_participant_behavior_history_violations,
+    iter_participant_episode_snapshot_violations,
 )
+from raes_runtime.control_plane import RuntimeControlPlane
 from raes_runtime.registry import RuntimeTarget
-from raes import parse_sdl
 
 _REFERENCE_SCENARIO_PATH = (
     Path(__file__).parents[3] / "examples" / "scenarios" / "enterprise-participant-evidence-loop.sdl.yaml"

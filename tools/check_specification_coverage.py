@@ -791,8 +791,12 @@ def _validate_implementation_surfaces(
 
 def _execute_artifact(repo_root: Path, kind: str, path: Path) -> dict[str, object]:
     if kind == "sdl":
+        from raes import (
+            admit_instantiated_scenario,
+            instantiate_scenario,
+            parse_sdl_file,
+        )
         from raes_processor.compiler import compile_runtime_model
-        from raes import admit_instantiated_scenario, instantiate_scenario, parse_sdl_file
 
         authored = parse_sdl_file(path)
         instantiated = instantiate_scenario(authored)

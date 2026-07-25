@@ -16,6 +16,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import Enum
 
+from pydantic import BaseModel
 from raes_contracts.realization_envelope import (
     Closure,
     ClosureOverlay,
@@ -27,7 +28,6 @@ from raes_contracts.realization_envelope import (
     WitnessPolicy,
     scope_specificity,
 )
-from pydantic import BaseModel
 
 from ._realization_envelope_domains import default_witness_value, domain_subset
 

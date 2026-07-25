@@ -5,6 +5,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Annotated, Literal
 
+from pydantic import AfterValidator, Field, WithJsonSchema, model_validator
 from raes_contracts.bounded_domains import (
     BooleanDomain,
     EnumDomain,
@@ -12,7 +13,6 @@ from raes_contracts.bounded_domains import (
     GovernedReferenceDomain,
     NumericIntervalDomain,
 )
-from pydantic import AfterValidator, Field, WithJsonSchema, model_validator
 
 from ._base import SDLModel
 from ._identifiers import PortableIdentifier, require_qualified_identifier

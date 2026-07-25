@@ -4,8 +4,8 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from raes_contracts.participant_behavior import ParticipantActionPreconditionStatus, ParticipantActionResultStatus
 from raes.participant_behavior import ParticipantEffectClass, ParticipantFailureClass, ParticipantPreconditionClass
+from raes_contracts.participant_behavior import ParticipantActionPreconditionStatus, ParticipantActionResultStatus
 
 from .behavior_resources import (
     _observation_point_matches_action_instance,

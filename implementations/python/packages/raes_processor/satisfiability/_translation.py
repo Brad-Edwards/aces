@@ -8,6 +8,12 @@ from dataclasses import dataclass
 from typing import cast
 
 import rfc8785
+from raes.canonical import canonical_sdl_digest
+from raes.infrastructure import ACLAction
+from raes.nodes import OSFamily
+from raes.scenario import ExpandedScenario, Scenario
+from raes.value_parsing import extract_variable_name, normalize_enum_value, variable_names_in_value
+from raes.variables import Variable, VariableType
 from raes_contracts.diagnostics import DiagnosticModel
 from raes_contracts.satisfiability import (
     ConstraintClauseKind,
@@ -16,12 +22,6 @@ from raes_contracts.satisfiability import (
     ConstraintSymbolModel,
     NormalizedConstraintModel,
 )
-from raes.canonical import canonical_sdl_digest
-from raes.infrastructure import ACLAction
-from raes.nodes import OSFamily
-from raes.scenario import ExpandedScenario, Scenario
-from raes.value_parsing import extract_variable_name, normalize_enum_value, variable_names_in_value
-from raes.variables import Variable, VariableType
 
 _MAX_SYMBOLS = 128
 _MAX_CLAUSES = 512

@@ -57,9 +57,8 @@ from pathlib import Path
 
 import pytest
 from paths import EXAMPLES_DIR
-
-from raes_processor.compiler import compile_runtime_model
 from raes import instantiate_scenario, parse_sdl_file
+from raes_processor.compiler import compile_runtime_model
 
 # This whole witness is integration-style: it reads shipped scenarios from the
 # real repo on disk and spawns subprocesses, so it is excluded from the default

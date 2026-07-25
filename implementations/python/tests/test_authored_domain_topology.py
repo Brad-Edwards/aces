@@ -9,6 +9,9 @@ from pathlib import Path
 
 import pytest
 import yaml
+from jsonschema import Draft202012Validator
+from raes import SDLParseError, SDLValidationError, parse_sdl, parse_sdl_file
+from raes.language_service import language_completions
 from raes_backend_libvirt.capability_envelope import capability_envelope_diagnostics
 from raes_backend_libvirt.manifest import LIBVIRT_PROVISIONER_CAPABILITIES
 from raes_backend_protocols.backend_manifest import BackendManifest
@@ -23,9 +26,6 @@ from raes_processor.planner import plan
 from raes_processor.semantics.realization import realization_disclosure
 from raes_reference_backend import create_reference_backend_manifest
 from raes_runtime.control_plane import RuntimeControlPlane
-from jsonschema import Draft202012Validator
-from raes import SDLParseError, SDLValidationError, parse_sdl, parse_sdl_file
-from raes.language_service import language_completions
 
 _INSTANTIATION_PROVENANCE = {
     "authored_digest": {

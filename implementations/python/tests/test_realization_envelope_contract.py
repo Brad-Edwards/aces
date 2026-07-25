@@ -7,6 +7,8 @@ from copy import deepcopy
 from pathlib import Path
 
 import pytest
+from jsonschema import Draft202012Validator
+from pydantic import ValidationError
 from raes_contracts.contracts import BackendManifestV2Model, ProvisioningPlanModel, RuntimeSnapshotEnvelopeModel
 from raes_contracts.realization_envelope import (
     BackendRealizationEnvelopeModel,
@@ -23,8 +25,6 @@ from raes_contracts.realization_envelope import (
 )
 from raes_contracts.runtime_state import RuntimeSnapshot
 from raes_runtime.control_plane_store import LocalControlPlaneStore
-from jsonschema import Draft202012Validator
-from pydantic import ValidationError
 
 
 def _payload() -> dict[str, object]:

@@ -10,7 +10,6 @@ from raes_backend_libvirt import (
     create_libvirt_target,
     register_libvirt_backend,
 )
-
 from raes_runtime.registry import BackendRegistry, RuntimeTarget
 
 

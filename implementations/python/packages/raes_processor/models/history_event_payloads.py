@@ -3,6 +3,7 @@
 from collections.abc import Iterable, Mapping
 from typing import Any
 
+from raes.participant_behavior import ParticipantInteractionClass
 from raes_contracts.participant_behavior import (
     ParticipantAdmissionDisposition,
     ParticipantBehaviorHistoryEventType,
@@ -10,7 +11,6 @@ from raes_contracts.participant_behavior import (
     ParticipantPhaseRealization,
     ParticipantRuntimeLifecyclePhase,
 )
-from raes.participant_behavior import ParticipantInteractionClass
 
 from .action_results import ParticipantActionResult
 from .attribution import ParticipantAttributionEdge

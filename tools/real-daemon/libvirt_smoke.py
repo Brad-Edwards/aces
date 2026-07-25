@@ -19,8 +19,17 @@ import libvirt
 from raes_backend_libvirt import LibvirtProvisioner
 from raes_backend_libvirt.cloudinit import CloudInitSpec, CloudInitUser
 from raes_backend_libvirt.driver import DomainSpec, NetworkAcl, NetworkSpec
-from raes_backend_libvirt.drivers.libvirt import LibvirtDeploymentDriver, _filter_owner_uuid
-from raes_contracts.planning import ChangeAction, PlannedResource, ProvisioningPlan, ProvisionOp, RuntimeDomain
+from raes_backend_libvirt.drivers.libvirt import (
+    LibvirtDeploymentDriver,
+    _filter_owner_uuid,
+)
+from raes_contracts.planning import (
+    ChangeAction,
+    PlannedResource,
+    ProvisioningPlan,
+    ProvisionOp,
+    RuntimeDomain,
+)
 from raes_contracts.runtime_state import RuntimeSnapshot
 
 URI = "qemu:///system"

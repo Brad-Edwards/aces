@@ -7,10 +7,9 @@ import textwrap
 from datetime import UTC, datetime
 
 import pytest
-
+from raes import parse_sdl
 from raes_backend_stubs.stubs import create_stub_manifest, create_stub_target
 from raes_processor.compiler import compile_runtime_model
-from raes_runtime.manager import RuntimeManager
 from raes_processor.models import (
     EVALUATION_STATE_SCHEMA_VERSION,
     ApplyResult,
@@ -20,8 +19,8 @@ from raes_processor.models import (
     SnapshotEntry,
 )
 from raes_processor.planner import plan
+from raes_runtime.manager import RuntimeManager
 from raes_runtime.registry import RuntimeTarget
-from raes import parse_sdl
 
 
 def _scenario(yaml_str: str):

@@ -3,9 +3,7 @@
 from pathlib import Path
 
 import pytest
-from raes import SDLMigrationPolicy
-
-from raes import instantiate_scenario
+from raes import SDLMigrationPolicy, instantiate_scenario
 from raes._errors import SDLParseError, SDLValidationError
 from raes.nodes import NodeType
 from raes.parser import parse_sdl, parse_sdl_file

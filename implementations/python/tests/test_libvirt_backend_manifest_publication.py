@@ -30,18 +30,17 @@ import json
 from pathlib import Path
 
 import jsonschema
+from libvirt_conformance_fixtures import RecordingLibvirtDriver
 from raes_backend_libvirt import create_libvirt_manifest
 from raes_backend_libvirt.target import create_libvirt_target
 from raes_backend_protocols.manifest import backend_manifest_payload
-from raes_contracts.backend_profiles import load_backend_profile
-from raes_contracts.contracts import BackendManifestV2Model
-from libvirt_conformance_fixtures import RecordingLibvirtDriver
-
 from raes_conformance.conformance import (
     BackendCapabilityProfile,
     required_contracts,
     run_target_conformance,
 )
+from raes_contracts.backend_profiles import load_backend_profile
+from raes_contracts.contracts import BackendManifestV2Model
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 BACKEND_MANIFEST_V2_SCHEMA = REPO_ROOT / "contracts" / "schemas" / "backend-manifest" / "backend-manifest-v2.json"

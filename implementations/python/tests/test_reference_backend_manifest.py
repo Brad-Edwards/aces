@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 from raes_backend_protocols.manifest import backend_manifest_payload
-from raes_contracts.contracts import BackendManifestV2Model
-from raes_reference_backend import create_reference_backend_manifest
-
 from raes_conformance.conformance import (
     BackendCapabilityProfile,
     profile_for_manifest,
 )
+from raes_contracts.contracts import BackendManifestV2Model
+from raes_reference_backend import create_reference_backend_manifest
 
 
 def test_manifest_renders_as_valid_backend_manifest_v2():

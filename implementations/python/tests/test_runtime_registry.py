@@ -1,11 +1,10 @@
 """Runtime registry tests."""
 
 import pytest
+from raes_backend_protocols.capabilities import BackendManifest, ProvisionerCapabilities
+from raes_backend_stubs.stubs import create_stub_components, create_stub_manifest
 from raes_contracts.apparatus import ConceptBinding, RealizationSupportDeclaration
 from raes_contracts.vocabulary import RealizationSupportMode
-
-from raes_backend_stubs.stubs import create_stub_components, create_stub_manifest
-from raes_backend_protocols.capabilities import BackendManifest, ProvisionerCapabilities
 from raes_runtime.registry import (
     BackendRegistry,
     RuntimeTarget,

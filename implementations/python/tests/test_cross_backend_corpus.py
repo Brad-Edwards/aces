@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from paths import EXAMPLES_DIR
 from raes_operations.cross_backend_corpus import (
     CORPUS_SCHEMA,
     CrossBackendCorpusConfig,
@@ -20,7 +21,6 @@ from raes_operations.cross_backend_corpus import (
     validate_cross_backend_corpus_artifact,
 )
 from raes_operations.run_artifacts import serialize_run_artifact
-from paths import EXAMPLES_DIR
 
 _REFERENCE_SCENARIO = EXAMPLES_DIR / "enterprise-participant-evidence-loop.sdl.yaml"
 

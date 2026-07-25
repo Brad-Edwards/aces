@@ -6,6 +6,7 @@ import textwrap
 from pathlib import Path
 
 import pytest
+from raes.parser import parse_sdl
 from raes_backend_protocols.capability_admission import time_model_capability_gaps
 from raes_backend_stubs.stubs import create_stub_manifest, create_stub_target
 from raes_conformance.time_semantics import time_model_conformance_diagnostics
@@ -22,7 +23,6 @@ from raes_processor.compiler.time_model import (
     time_model_contract_model,
 )
 from raes_runtime import RuntimeManager
-from raes.parser import parse_sdl
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 FIXTURE_ROOT = REPO_ROOT / "contracts" / "fixtures" / "time"

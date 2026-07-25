@@ -3,7 +3,6 @@
 from dataclasses import dataclass
 from typing import Any
 
-from raes_backend_protocols.domain_topology import DomainTopologyBinding
 from raes.entities import flatten_entities
 from raes.features import Feature
 from raes.nodes import Node, NodeType
@@ -12,6 +11,7 @@ from raes.semantics.domain_topology import (
     DomainNodeRole,
     DomainTopologyAnalysis,
 )
+from raes_backend_protocols.domain_topology import DomainTopologyBinding
 
 from ..models import (
     CompiledCapabilityConstraint,

@@ -16,6 +16,7 @@ import json
 from textwrap import dedent
 
 import pytest
+from raes import parse_sdl
 from raes_backend_stubs.stubs import create_stub_manifest, create_stub_target
 from raes_contracts.contracts import (
     ProcessorManifestV2Model,
@@ -34,7 +35,6 @@ from raes_processor.reference import (
 from raes_runtime import RuntimeControlPlane
 from raes_runtime.control_plane_api import _receipt_response
 from raes_runtime.control_plane_api_models import _operation_status_model, _snapshot_model
-from raes import parse_sdl
 
 WORKFLOW_ADDRESS = "orchestration.workflow.response"
 

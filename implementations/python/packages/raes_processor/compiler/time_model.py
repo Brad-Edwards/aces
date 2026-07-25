@@ -1,5 +1,6 @@
 """Compile authored shared time declarations into canonical runtime metadata."""
 
+from raes.scenario import InstantiatedScenario
 from raes_contracts.addressing import render_compiled_address
 from raes_contracts.contracts.time_model import (
     ClockDeclarationModel,
@@ -11,7 +12,6 @@ from raes_contracts.contracts.time_model import (
     TimeModelDeclarationModel,
     TimeProgressionPolicyDeclarationModel,
 )
-from raes.scenario import InstantiatedScenario
 
 from ..models.time_model import (
     CompiledClock,

@@ -7,6 +7,14 @@ from importlib.metadata import version
 from pathlib import Path
 
 import z3
+from raes.canonical import (
+    INSTANTIATED_SNAPSHOT_PROFILE,
+    InstantiatedScenarioSnapshot,
+    canonical_instantiated_sdl_digest,
+)
+from raes.instantiate import instantiate_scenario
+from raes.parser import parse_sdl, read_sdl_source
+from raes.scenario import ExpandedScenario
 from raes_contracts.satisfiability import (
     SatisfiabilityOutcome,
     SatisfiableWitnessModel,
@@ -17,14 +25,6 @@ from raes_contracts.satisfiability import (
     UnsupportedAnalysisModel,
     canonical_contract_digest,
 )
-from raes.canonical import (
-    INSTANTIATED_SNAPSHOT_PROFILE,
-    InstantiatedScenarioSnapshot,
-    canonical_instantiated_sdl_digest,
-)
-from raes.instantiate import instantiate_scenario
-from raes.parser import parse_sdl, read_sdl_source
-from raes.scenario import ExpandedScenario
 
 from ._solver import SolverOperationalError, solve_model
 from ._translation import translate_scenario

@@ -13,15 +13,14 @@ from __future__ import annotations
 
 import textwrap
 
+from raes import instantiate_scenario, parse_sdl
+from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance
+from raes_backend_protocols.capabilities import BackendManifest, ProvisionerCapabilities
+from raes_backend_stubs.stubs import create_stub_manifest
 from raes_contracts.apparatus import ConceptBinding, RealizationSupportDeclaration
 from raes_contracts.vocabulary import RealizationSupportMode
-from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance
-
-from raes_backend_stubs.stubs import create_stub_manifest
-from raes_backend_protocols.capabilities import BackendManifest, ProvisionerCapabilities
 from raes_processor.compiler import compile_runtime_model
 from raes_processor.planner import plan
-from raes import instantiate_scenario, parse_sdl
 
 _EXACT_SCENARIO = """
 name: sem-218-exact-realization

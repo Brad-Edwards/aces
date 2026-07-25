@@ -30,6 +30,8 @@ import textwrap
 from concurrent.futures import ThreadPoolExecutor
 
 import pytest
+from hypothesis import HealthCheck, given, settings
+from hypothesis import strategies as st
 from raes_contracts.contracts.random_stream import StreamAddressModel, TrialCoordinateModel
 from raes_contracts.random_stream_engine import (
     BLOCK_BYTES,
@@ -38,8 +40,6 @@ from raes_contracts.random_stream_engine import (
     draw_bounded_integer,
     raw_block,
 )
-from hypothesis import HealthCheck, given, settings
-from hypothesis import strategies as st
 
 pytestmark = pytest.mark.integration
 

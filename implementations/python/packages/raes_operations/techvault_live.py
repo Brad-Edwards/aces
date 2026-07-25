@@ -11,11 +11,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from raes.parser import parse_sdl_file
 from raes_backend_libvirt.target import create_libvirt_target
 from raes_backend_libvirt.techvault_native import TechVaultNativeLibvirtDriver, expected_surface
 from raes_runtime.control_plane import RuntimeControlPlane
 from raes_runtime.manager import RuntimeManager
-from raes.parser import parse_sdl_file
 
 from raes_operations._evidence_run_validation import redaction_violations
 from raes_operations._techvault_cleanup import cleanup_native_snapshot

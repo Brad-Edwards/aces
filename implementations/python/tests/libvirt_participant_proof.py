@@ -19,6 +19,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from libvirt_participant_fixtures import NullLibvirtDriver
+from raes.parser import parse_sdl
 from raes_backend_libvirt.manifest import create_libvirt_manifest
 from raes_backend_libvirt.participant_runtime import LibvirtParticipantRuntime
 from raes_backend_libvirt.provisioner import LibvirtProvisioner
@@ -33,8 +35,6 @@ from raes_processor.models import (
 )
 from raes_runtime.control_plane import RuntimeControlPlane
 from raes_runtime.registry import RuntimeTarget
-from libvirt_participant_fixtures import NullLibvirtDriver
-from raes.parser import parse_sdl
 
 
 @dataclass(frozen=True)

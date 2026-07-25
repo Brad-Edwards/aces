@@ -2,9 +2,9 @@
 
 from typing import Any
 
-from raes_contracts.versions import WORKFLOW_STATE_SCHEMA_VERSION
 from raes.orchestration import Workflow, WorkflowStepType
 from raes.scenario import InstantiatedScenario
+from raes_contracts.versions import WORKFLOW_STATE_SCHEMA_VERSION
 
 from ..models import (
     AssertionRuntime,

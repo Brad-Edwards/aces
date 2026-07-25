@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import pytest
+from jsonschema import Draft202012Validator
+from pydantic import ValidationError
 from raes_contracts.contracts import ParticipantBehaviorHistoryEventModel, schema_bundle
 from raes_contracts.runtime_state import RuntimeSnapshot
 from raes_processor.models import (
@@ -14,8 +16,6 @@ from raes_processor.models import (
     ParticipantRuntimeLifecyclePhase,
 )
 from raes_runtime.participant_result_contracts import participant_runtime_state_contract_diagnostics
-from jsonschema import Draft202012Validator
-from pydantic import ValidationError
 
 PARTICIPANT = "participant.red"
 EPISODE = "episode-1"

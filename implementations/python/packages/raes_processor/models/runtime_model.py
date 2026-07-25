@@ -3,13 +3,13 @@
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
+from raes.scenario import InstantiatedScenario
 from raes_backend_protocols.capabilities import BackendManifest
 from raes_contracts.addressing import require_compiled_address
 from raes_contracts.diagnostics import Diagnostic
 from raes_contracts.evaluation import EvaluationExecutionContract, EvaluationResultContract
 from raes_contracts.planning import EvaluationPlan, OrchestrationPlan, ProvisioningPlan
 from raes_contracts.runtime_state import RuntimeSnapshot
-from raes.scenario import InstantiatedScenario
 
 from raes_processor.semantics.realization import CompiledRealizationRequirement
 

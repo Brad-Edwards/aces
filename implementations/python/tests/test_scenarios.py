@@ -183,8 +183,8 @@ def test_complex_examples_cover_new_sdl_surfaces():
 
 def test_reference_scenario_compiles_participant_loop():
     """Issue #598: the reference scenario proves the participant handoff surface."""
-    from raes_processor.compiler import compile_runtime_model
     from raes.scenarios import load_scenario
+    from raes_processor.compiler import compile_runtime_model
 
     scenario = load_scenario(REFERENCE_SCENARIO)
     model = compile_runtime_model(scenario)

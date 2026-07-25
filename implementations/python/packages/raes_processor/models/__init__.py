@@ -11,6 +11,7 @@ from bound runtime instances. The planner reconciles those instances against
 the current ``RuntimeSnapshot`` and emits a composite ``ExecutionPlan``.
 """
 
+from raes.participant_temporal_semantics import ParticipantTemporalState as ParticipantTemporalState
 from raes_contracts.diagnostics import Diagnostic as Diagnostic
 from raes_contracts.diagnostics import Severity as Severity
 from raes_contracts.evaluation import EvaluationExecutionContract as EvaluationExecutionContract
@@ -85,7 +86,6 @@ from raes_contracts.workflow import WorkflowStepExecutionState as WorkflowStepEx
 from raes_contracts.workflow import WorkflowStepLifecycle as WorkflowStepLifecycle
 from raes_contracts.workflow import WorkflowStepOutcome as WorkflowStepOutcome
 from raes_contracts.workflow import validate_workflow_step_result_contract as validate_workflow_step_result_contract
-from raes.participant_temporal_semantics import ParticipantTemporalState as ParticipantTemporalState
 
 from raes_processor.semantics.realization import CompiledRealizationRequirement as CompiledRealizationRequirement
 

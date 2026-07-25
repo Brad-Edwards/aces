@@ -7,6 +7,8 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
+from jsonschema import Draft202012Validator
+from pydantic import ValidationError
 from raes_backend_protocols.capabilities import (
     BackendManifest,
     CleanupCapabilities,
@@ -28,8 +30,6 @@ from raes_contracts.contracts.trial_cleanup import (
     TrialCleanupReceiptModel,
     validate_trial_cleanup_receipt,
 )
-from jsonschema import Draft202012Validator
-from pydantic import ValidationError
 
 FIXTURES_ROOT = Path(__file__).resolve().parents[3] / "contracts" / "fixtures"
 FIXTURE_GROUPS = {

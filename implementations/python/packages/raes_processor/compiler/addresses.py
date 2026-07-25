@@ -2,12 +2,12 @@
 
 from collections.abc import Mapping
 
-from raes_backend_protocols.domain_topology import DomainTopologyBinding
 from raes.nodes import NodeType
 from raes.scenario import InstantiatedScenario, Scenario
 from raes.semantics.domain_topology import (
     DomainNodeBinding,
 )
+from raes_backend_protocols.domain_topology import DomainTopologyBinding
 
 from .support import _address
 

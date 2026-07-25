@@ -6,12 +6,6 @@ import textwrap
 from pathlib import Path
 
 import pytest
-from raes.nodes import RuntimeNetworkNamespace
-
-from raes_backend_stubs.stubs import create_stub_manifest
-from raes_processor.compiler import compile_runtime_model
-from raes_processor.models import RuntimeDomain, RuntimeSnapshot, SnapshotEntry
-from raes_processor.planner import plan
 from raes import (
     SDLInstantiationError,
     SDLValidationError,
@@ -19,6 +13,11 @@ from raes import (
     parse_sdl,
     parse_sdl_file,
 )
+from raes.nodes import RuntimeNetworkNamespace
+from raes_backend_stubs.stubs import create_stub_manifest
+from raes_processor.compiler import compile_runtime_model
+from raes_processor.models import RuntimeDomain, RuntimeSnapshot, SnapshotEntry
+from raes_processor.planner import plan
 
 
 def _scenario(yaml_text: str):

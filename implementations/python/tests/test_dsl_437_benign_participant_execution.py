@@ -9,6 +9,9 @@ from pathlib import Path
 
 import pytest
 import yaml
+from raes._errors import SDLValidationError
+from raes.parser import parse_sdl
+from raes.participant_behavior import ParticipantFailureClass
 from raes_backend_protocols.capability_admission import participant_autonomous_execution_capability_gaps
 from raes_backend_protocols.participant_runtime_base import BaseParticipantRuntime
 from raes_backend_stubs.manifest import create_stub_manifest
@@ -38,9 +41,6 @@ from raes_runtime.manager import RuntimeManager
 from raes_runtime.participant_clock_driver import ParticipantClockDriver
 from raes_runtime.participant_scheduler import ParticipantScheduler
 from raes_runtime.time_coordinator import ReferenceTimeRuntime, TimeCoordinator
-from raes._errors import SDLValidationError
-from raes.parser import parse_sdl
-from raes.participant_behavior import ParticipantFailureClass
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 EXAMPLE = REPO_ROOT / "examples" / "scenarios" / "enterprise-participant-evidence-loop.sdl.yaml"

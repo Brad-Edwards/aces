@@ -21,10 +21,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from raes_backend_protocols.capabilities import BackendManifest
-from raes_contracts.diagnostics import Diagnostic
 from raes.parser import parse_sdl, parse_sdl_file
 from raes.scenario import ExpandedScenario, InstantiatedScenario, Scenario
+from raes_backend_protocols.capabilities import BackendManifest
+from raes_contracts.diagnostics import Diagnostic
 
 from raes_processor.compiler import compile_scenario_runtime_model
 from raes_processor.manifest import (

@@ -2,6 +2,7 @@
 
 from dataclasses import replace
 
+from raes.realization_envelope import member
 from raes_backend_protocols.capabilities import BackendManifest
 from raes_backend_protocols.capability_admission import (
     participant_autonomous_execution_capability_gaps,
@@ -10,7 +11,6 @@ from raes_backend_protocols.capability_admission import (
 from raes_backend_protocols.domain_topology import domain_topology_plan_diagnostics
 from raes_backend_protocols.service_materialization import service_materialization_plan_diagnostics
 from raes_contracts.diagnostics import Diagnostic
-from raes.realization_envelope import member
 
 from ..compiler.time_model import time_model_contract_model
 from ..models import ExecutionPlan, RuntimeModel, RuntimeSnapshot

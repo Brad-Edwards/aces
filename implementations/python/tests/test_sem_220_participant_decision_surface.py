@@ -8,6 +8,8 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from jsonschema import Draft202012Validator
+from pydantic import ValidationError
 from raes_contracts.contracts import (
     ParticipantContextViewModel,
     ParticipantDecisionSurfaceModel,
@@ -40,8 +42,6 @@ from raes_processor.models import (
     project_participant_decision_surface,
 )
 from raes_runtime.participant_control import ParticipantControlMixin
-from jsonschema import Draft202012Validator
-from pydantic import ValidationError
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 FIXTURE_ROOT = REPO_ROOT / "contracts" / "fixtures" / "control-plane" / "participant-decision-surface-v1"

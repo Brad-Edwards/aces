@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 
 import pytest
+from pydantic import ValidationError
 from raes_contracts.contracts import ExperimentReferenceModel
 from raes_contracts.contracts.random_stream import (
     GovernedEntropyRefModel,
@@ -24,7 +25,6 @@ from raes_contracts.contracts.random_stream import (
     StreamAddressModel,
     TrialCoordinateModel,
 )
-from pydantic import ValidationError
 
 VALID_HEX_SEED = "00" * 31 + "01"
 

@@ -8,6 +8,8 @@ from io import BytesIO
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
+from raes import canonical_sdl_digest, parse_sdl
 from raes_conformance.conformance import _MODEL_VALIDATORS, _fixture_case_diagnostics
 from raes_contracts.associated_artifacts import (
     AssociatedArtifactValidationLimits,
@@ -26,8 +28,6 @@ from raes_contracts.contracts import (
     schema_bundle,
 )
 from raes_contracts.versions import ASSOCIATED_ARTIFACT_MANIFEST_SCHEMA_VERSION
-from pydantic import ValidationError
-from raes import canonical_sdl_digest, parse_sdl
 
 PAYLOAD = b"operator guide\n"
 PAYLOAD_SHA256 = hashlib.sha256(PAYLOAD).hexdigest()

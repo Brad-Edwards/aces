@@ -5,8 +5,10 @@ from __future__ import annotations
 import textwrap
 from pathlib import Path
 
-import raes_runtime.control_plane_store as control_plane_store_module
 import pytest
+import raes_runtime.control_plane_store as control_plane_store_module
+from raes import parse_sdl
+from raes_backend_stubs.stubs import create_stub_target
 from raes_contracts.contracts import (
     ParticipantContextViewModel,
     ParticipantHistoryViewModel,
@@ -18,10 +20,9 @@ from raes_contracts.runtime_state import (
     RealizationProvenanceEntry,
     RuntimeSnapshot,
 )
-from starlette.testclient import TestClient
-
-from raes_backend_stubs.stubs import create_stub_target
 from raes_processor.compiler import compile_runtime_model
+from raes_processor.models import OperationReceipt, OperationState, OperationStatus, RuntimeDomain
+from raes_processor.planner import plan
 from raes_runtime.control_plane import RuntimeControlPlane
 from raes_runtime.control_plane_api import create_control_plane_app
 from raes_runtime.control_plane_security import (
@@ -30,9 +31,7 @@ from raes_runtime.control_plane_security import (
     ControlPlaneSecurityConfig,
 )
 from raes_runtime.control_plane_store import ControlPlaneOperationRecord, LocalControlPlaneStore
-from raes_processor.models import OperationReceipt, OperationState, OperationStatus, RuntimeDomain
-from raes_processor.planner import plan
-from raes import parse_sdl
+from starlette.testclient import TestClient
 
 
 def _scenario(yaml_str: str):

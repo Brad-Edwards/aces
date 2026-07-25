@@ -7,9 +7,6 @@ from copy import deepcopy
 from pathlib import Path
 
 import pytest
-from raes_contracts.bounded_domains import EnumDomain
-from raes_contracts.contracts import schema_bundle
-from raes_contracts.realization_envelope import EnumDomain as EnvelopeEnumDomain
 from jsonschema import Draft202012Validator
 from pydantic import ValidationError
 from raes import SDLInstantiationError, SDLParseError, SDLValidationError
@@ -20,6 +17,9 @@ from raes.language_service import language_completions, language_references
 from raes.parser import parse_sdl_file
 from raes.scenario import InstantiatedScenario, Scenario
 from raes.validator import SemanticValidator
+from raes_contracts.bounded_domains import EnumDomain
+from raes_contracts.contracts import schema_bundle
+from raes_contracts.realization_envelope import EnumDomain as EnvelopeEnumDomain
 
 FIXTURE_DIR = Path(__file__).parents[3] / "contracts" / "fixtures" / "sdl" / "variation-points-v1"
 

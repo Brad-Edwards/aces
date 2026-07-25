@@ -26,8 +26,6 @@ from pathlib import Path
 
 import pytest
 from raes_contracts.contracts import schema_bundle
-from raes_runtime.result_contracts import participant_episode_contract_diagnostics
-
 from raes_processor.models import (
     ParticipantEpisodeControlAction,
     ParticipantEpisodeExecutionState,
@@ -37,6 +35,7 @@ from raes_processor.models import (
     ParticipantEpisodeTerminalReason,
     RuntimeSnapshot,
 )
+from raes_runtime.result_contracts import participant_episode_contract_diagnostics
 
 PARTICIPANT_ADDRESS = "participant.alice"
 EP1 = "ep-0001"

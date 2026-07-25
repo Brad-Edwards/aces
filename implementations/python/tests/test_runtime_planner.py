@@ -5,11 +5,8 @@ from __future__ import annotations
 import textwrap
 
 import pytest
-from raes_contracts.apparatus import ConceptBinding, RealizationSupportDeclaration
-from raes_contracts.vocabulary import RealizationSupportMode
 from paths import EXAMPLES_DIR
-
-from raes_backend_stubs.stubs import create_stub_manifest
+from raes import SDLInstantiationError, parse_sdl
 from raes_backend_protocols.capabilities import (
     BackendManifest,
     EvaluatorCapabilities,
@@ -18,10 +15,12 @@ from raes_backend_protocols.capabilities import (
     WorkflowFeature,
     WorkflowStatePredicateFeature,
 )
+from raes_backend_stubs.stubs import create_stub_manifest
+from raes_contracts.apparatus import ConceptBinding, RealizationSupportDeclaration
+from raes_contracts.vocabulary import RealizationSupportMode
 from raes_processor.compiler import compile_runtime_model
 from raes_processor.models import RuntimeDomain, RuntimeSnapshot, SnapshotEntry
 from raes_processor.planner import plan
-from raes import SDLInstantiationError, parse_sdl
 
 
 def _scenario(yaml_str: str):

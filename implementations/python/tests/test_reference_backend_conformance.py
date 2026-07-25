@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-from raes_reference_backend import create_reference_backend_target
-
 from raes_conformance.conformance import (
     BackendCapabilityProfile,
     run_target_conformance,
 )
+from raes_reference_backend import create_reference_backend_target
 
 
 def test_reference_target_passes_full_remote_control_plane_conformance():

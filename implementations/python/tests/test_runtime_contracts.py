@@ -7,6 +7,8 @@ from copy import deepcopy
 from pathlib import Path
 
 import pytest
+from jsonschema import Draft202012Validator
+from pydantic import ValidationError
 from raes_conformance.conformance import observability_evidence_conformance_diagnostics
 from raes_contracts.contracts import (
     AcesSemanticInvariantEntryModel,
@@ -38,8 +40,6 @@ from raes_contracts.manifest_authority import (
     PROCESSOR_SUPPORTED_CONTRACT_IDS,
     PROCESSOR_SUPPORTED_SDL_VERSION_IDS,
 )
-from jsonschema import Draft202012Validator
-from pydantic import ValidationError
 
 EXPERIMENT_CORE_FIXTURE_MODELS = {
     "experiment-apparatus-context-v1": ExperimentApparatusContextModel,

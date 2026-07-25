@@ -2,10 +2,6 @@
 
 from dataclasses import dataclass, field
 
-from raes_backend_protocols.capabilities import (
-    WorkflowFeature,
-    WorkflowStatePredicateFeature,
-)
 from raes.orchestration import (
     Workflow,
     WorkflowPredicate,
@@ -16,6 +12,10 @@ from raes.orchestration import (
 from raes.scenario import InstantiatedScenario
 from raes.semantics.workflow import (
     workflow_step_semantic_contract,
+)
+from raes_backend_protocols.capabilities import (
+    WorkflowFeature,
+    WorkflowStatePredicateFeature,
 )
 
 from ..models import (

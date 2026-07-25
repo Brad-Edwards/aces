@@ -4,11 +4,11 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
+from raes.semantics.workflow import WorkflowStepSemanticContract
 from raes_backend_protocols.capabilities import WorkflowFeature, WorkflowStatePredicateFeature
 from raes_contracts.participant_behavior import ParticipantObservationStatus
 from raes_contracts.versions import WORKFLOW_STATE_SCHEMA_VERSION
 from raes_contracts.workflow import WorkflowExecutionContract, WorkflowResultContract, WorkflowStepOutcome
-from raes.semantics.workflow import WorkflowStepSemanticContract
 
 from .resources import ResolvedResource
 

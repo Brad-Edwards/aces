@@ -22,11 +22,6 @@ import json
 from pathlib import Path
 
 import pytest
-from raes_contracts.contracts import (
-    ExperimentDerivedMeasureModel,
-    ExperimentEvidenceRecordModel,
-    schema_bundle,
-)
 from jsonschema import Draft202012Validator
 from pydantic import ValidationError
 from raes._runtime_service_families import RUNTIME_SERVICE_FAMILIES
@@ -40,6 +35,11 @@ from raes.observability_plane_semantics import (
     classify_contract_plane,
     classify_runtime_family,
     token_decides_plane,
+)
+from raes_contracts.contracts import (
+    ExperimentDerivedMeasureModel,
+    ExperimentEvidenceRecordModel,
+    schema_bundle,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[3]

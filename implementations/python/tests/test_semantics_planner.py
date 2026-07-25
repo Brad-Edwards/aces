@@ -6,7 +6,6 @@ from types import SimpleNamespace
 
 from hypothesis import given
 from hypothesis import strategies as st
-
 from raes_processor.semantics.planner import (
     DependencyKind,
     dependency_edges,

@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 
 import pytest
+from jsonschema import Draft202012Validator
+from pydantic import ValidationError
 from raes_contracts.contracts import (
     VIEW_SCOPE_PROJECTED_FIELDS,
     ParticipantBehaviorHistoryEventModel,
@@ -25,8 +27,6 @@ from raes_contracts.contracts import (
     ParticipantTimeManagementContextModel,
     schema_bundle,
 )
-from jsonschema import Draft202012Validator
-from pydantic import ValidationError
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 FIXTURES_ROOT = REPO_ROOT / "contracts" / "fixtures"

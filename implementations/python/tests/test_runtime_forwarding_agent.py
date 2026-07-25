@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import pytest
 from pydantic import ValidationError
+from raes._errors import SDLValidationError
 from raes.runtime_forwarding_agent import (
     RelationshipForwardingEdge,
     RuntimeForwardingAgent,
@@ -31,8 +32,6 @@ from raes.runtime_forwarding_agent import (
     RuntimeForwardingTransformKind,
 )
 from raes.runtime_security_monitoring import RuntimeSecurityMonitoringListenerRole
-
-from raes._errors import SDLValidationError
 from raes.scenario import Scenario
 from raes.validator import SemanticValidator
 

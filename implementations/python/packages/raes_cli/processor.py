@@ -8,6 +8,8 @@ from pathlib import Path
 from typing import Any
 
 import typer
+from pydantic import ValidationError
+from raes import SDLError, SDLInstantiationError, SDLParseError, SDLValidationError
 from raes_backend_protocols.manifest import (
     BackendManifest,
     BackendManifestEnvelopeUnsupportedError,
@@ -36,8 +38,6 @@ from raes_processor.satisfiability import (
     SatisfiabilityOperationalError,
     analyze_scenario_file,
 )
-from pydantic import ValidationError
-from raes import SDLError, SDLInstantiationError, SDLParseError, SDLValidationError
 
 app = typer.Typer(help="Processor declarations and compatibility surfaces.")
 

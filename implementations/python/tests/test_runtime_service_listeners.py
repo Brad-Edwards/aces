@@ -4,10 +4,9 @@ from __future__ import annotations
 
 import pytest
 from pydantic import ValidationError
-from raes._module_symbols import symbol_index
-
 from raes import parse_sdl
 from raes._errors import SDLValidationError
+from raes._module_symbols import symbol_index
 from raes.nodes import (
     Node,
     RuntimeConfiguration,
