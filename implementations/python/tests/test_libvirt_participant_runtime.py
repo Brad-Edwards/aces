@@ -11,13 +11,13 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from aces_backend_libvirt.manifest import create_libvirt_manifest
-from aces_backend_libvirt.participant_runtime import LibvirtParticipantRuntime
-from aces_backend_libvirt.target import create_libvirt_components
-from aces_backend_protocols.capabilities import participant_runtime_capability_contract_gaps
-from aces_conformance.conformance import run_target_conformance
-from aces_contracts.participant_binding import ParticipantActionAdmissionRequest
-from aces_processor.models import (
+from raes_backend_libvirt.manifest import create_libvirt_manifest
+from raes_backend_libvirt.participant_runtime import LibvirtParticipantRuntime
+from raes_backend_libvirt.target import create_libvirt_components
+from raes_backend_protocols.capabilities import participant_runtime_capability_contract_gaps
+from raes_conformance.conformance import run_target_conformance
+from raes_contracts.participant_binding import ParticipantActionAdmissionRequest
+from raes_processor.models import (
     iter_participant_behavior_history_violations,
     iter_participant_episode_snapshot_violations,
 )
@@ -30,14 +30,14 @@ from libvirt_participant_fixtures import (
 )
 from libvirt_participant_proof import LibvirtParticipantProofResult, run_libvirt_participant_proof
 
-from aces.core.runtime.compiler import compile_runtime_model
-from aces.core.runtime.control_plane import RuntimeControlPlane
-from aces.core.runtime.models import (
+from raes_processor.compiler import compile_runtime_model
+from raes_runtime.control_plane import RuntimeControlPlane
+from raes_processor.models import (
     OperationState,
     ParticipantEpisodeTerminalReason,
 )
-from aces.core.runtime.registry import RuntimeTarget
-from aces.core.sdl import parse_sdl
+from raes_runtime.registry import RuntimeTarget
+from raes import parse_sdl
 
 _REFERENCE_SCENARIO_PATH = (
     Path(__file__).parents[3] / "examples" / "scenarios" / "enterprise-participant-evidence-loop.sdl.yaml"
@@ -128,7 +128,7 @@ def test_ac3_components_construction_succeeds_with_participant_runtime():
 
 
 def test_ac3_components_construction_still_raises_for_orchestrator():
-    from aces_backend_stubs.stubs import create_stub_manifest
+    from raes_backend_stubs.stubs import create_stub_manifest
 
     orchestrator_manifest = create_stub_manifest()
     with pytest.raises(ValueError, match="orchestrator"):

@@ -2,9 +2,9 @@
   "contract_id": "participant-outcome-report-v1",
   "schema_path": "contracts/schemas/participant-runtime/participant-outcome-report-v1.json",
   "stability": "draft",
-  "content_hash": "e7c8cb7fa41803e16c7fd99f71365621cce9e1cf21f13701c8d482cc030dcea7",
+  "content_hash": "e8e3eb397095e91753b6235f52c849c6c4cd823433b2bd2a1dcc15fafbcbd268",
   "last_change": {
-    "summary": "Require participant outcome reports to carry at least one explicit state relationship for API-411.",
-    "content_hash": "e7c8cb7fa41803e16c7fd99f71365621cce9e1cf21f13701c8d482cc030dcea7"
+    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
+    "content_hash": "e8e3eb397095e91753b6235f52c849c6c4cd823433b2bd2a1dcc15fafbcbd268"
   }
 }

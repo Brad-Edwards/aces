@@ -6,10 +6,10 @@ import json
 from pathlib import Path
 
 import pytest
-from aces_backend_stubs.stubs import create_stub_manifest
-from aces_contracts.contracts import SemanticProfileModel
-from aces_contracts.semantic_profiles import load_semantic_profile, semantic_profile_path
-from aces_processor.manifest import create_reference_processor_manifest
+from raes_backend_stubs.stubs import create_stub_manifest
+from raes_contracts.contracts import SemanticProfileModel
+from raes_contracts.semantic_profiles import load_semantic_profile, semantic_profile_path
+from raes_processor.manifest import create_reference_processor_manifest
 from pydantic import ValidationError
 
 REPO_ROOT = Path(__file__).resolve().parents[3]

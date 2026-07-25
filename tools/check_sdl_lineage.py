@@ -14,7 +14,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from aces_contracts.provenance import LineageDisposition, SDLLineageLedgerModel
+from raes_contracts.provenance import LineageDisposition, SDLLineageLedgerModel
 from pydantic import ValidationError
 from raes._runtime_service_families import RUNTIME_SERVICE_FAMILIES
 

@@ -15,7 +15,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 import tools.check_sdl_lineage as lineage_checker  # noqa: E402
-from aces_contracts.provenance import SDLLineageLedgerModel  # noqa: E402
+from raes_contracts.provenance import SDLLineageLedgerModel  # noqa: E402
 from tools.check_sdl_lineage import (  # noqa: E402
     _canonical_subjects,
     _validate_authorities,

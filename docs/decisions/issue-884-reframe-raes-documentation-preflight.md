@@ -149,8 +149,8 @@ taxonomy or project-description registry:
 - Published metadata: `implementations/python/pyproject.toml` for the short
   distribution description; the root `README.md` for the Hatch-injected PyPI
   long description; the root README citation metadata;
-  `implementations/python/packages/aces_mcp/server.py` for MCP discovery
-  instructions; `implementations/python/packages/aces_mcp/tools/reference.py`
+  `implementations/python/packages/raes_mcp/server.py` for MCP discovery
+  instructions; `implementations/python/packages/raes_mcp/tools/reference.py`
   for the emitted SDL overview; and `docs/conf.py` for generated Sphinx
   project/title metadata. Do not add another package README or metadata
   source.
@@ -347,7 +347,7 @@ Avoid:
 - implementing the guard as a repository-wide keyword ban, allowing a
   hand-maintained exclusion list to grow around false positives, or treating a
   negated limitation as a forbidden positive claim;
-- importing `aces_mcp.server`, evaluating `docs/conf.py`, building the package,
+- importing `raes_mcp.server`, evaluating `docs/conf.py`, building the package,
   or running examples merely to extract user-facing strings for the policy
   check;
 - adding a second CI workflow, test runner, result class, waiver format, or

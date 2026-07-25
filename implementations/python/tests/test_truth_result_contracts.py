@@ -5,7 +5,7 @@ from __future__ import annotations
 from copy import deepcopy
 
 import pytest
-from aces_contracts.contracts import PropositionTruthResultModel, schema_bundle
+from raes_contracts.contracts import PropositionTruthResultModel, schema_bundle
 from pydantic import ValidationError
 
 

@@ -107,7 +107,7 @@
             }
           ],
           "level": "error",
-          "validator": "aces_contracts.contracts.ExperimentApparatusConstraintModel._validate_allowed_identity_manifest_refs"
+          "validator": "raes_contracts.contracts.ExperimentApparatusConstraintModel._validate_allowed_identity_manifest_refs"
         }
       ]
     },
@@ -1006,7 +1006,7 @@
             }
           ],
           "level": "error",
-          "validator": "aces_contracts.contracts.ExperimentManifestReferenceModel._validate_manifest_reference_scope"
+          "validator": "raes_contracts.contracts.ExperimentManifestReferenceModel._validate_manifest_reference_scope"
         }
       ]
     },
@@ -1172,7 +1172,7 @@
     },
     "ExperimentReferenceModel": {
       "additionalProperties": false,
-      "description": "Typed reference to an experiment-core or adjacent ACES artifact.",
+      "description": "Typed reference to an experiment-core or adjacent RAES artifact.",
       "properties": {
         "ref_digest": {
           "anyOf": [
@@ -1358,7 +1358,7 @@
             }
           ],
           "level": "error",
-          "validator": "aces_contracts.contracts.ExperimentRunAllocationPlanModel._validate_condition_assignments"
+          "validator": "raes_contracts.contracts.ExperimentRunAllocationPlanModel._validate_condition_assignments"
         }
       ]
     },
@@ -1472,7 +1472,7 @@
             }
           ],
           "level": "error",
-          "validator": "aces_contracts.contracts.ExperimentRunPlanModel._validate_run_plan"
+          "validator": "raes_contracts.contracts.ExperimentRunPlanModel._validate_run_plan"
         }
       ]
     },
@@ -2029,7 +2029,7 @@
         }
       ],
       "level": "error",
-      "validator": "aces_contracts.contracts.ExperimentSpecModel._validate_experiment_spec"
+      "validator": "raes_contracts.contracts.ExperimentSpecModel._validate_experiment_spec"
     }
   ],
   "x-aces-semantic-profile": {

@@ -6,16 +6,16 @@ import json
 from pathlib import Path
 
 import pytest
-from aces_cli.main import app
-from aces_contracts.apparatus import ConceptBinding
-from aces_contracts.contracts import ProcessorManifestV2Model
-from aces_contracts.manifest_authority import (
+from raes_cli.main import app
+from raes_contracts.apparatus import ConceptBinding
+from raes_contracts.contracts import ProcessorManifestV2Model
+from raes_contracts.manifest_authority import (
     PROCESSOR_SUPPORTED_CONTRACT_IDS,
     PROCESSOR_SUPPORTED_SDL_VERSION_IDS,
 )
-from aces_contracts.vocabulary import ProcessorFeature
-from aces_processor.capabilities import ProcessorManifest
-from aces_processor.manifest import (
+from raes_contracts.vocabulary import ProcessorFeature
+from raes_processor.capabilities import ProcessorManifest
+from raes_processor.manifest import (
     create_reference_processor_manifest,
     reference_processor_manifest_payload,
 )

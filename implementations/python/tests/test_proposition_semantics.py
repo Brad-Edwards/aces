@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from aces_processor.compiler import compile_runtime_model
+from raes_processor.compiler import compile_runtime_model
 from pydantic import ValidationError
 from raes._errors import SDLParseError, SDLValidationError
 from raes.parser import parse_sdl

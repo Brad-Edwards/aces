@@ -1,4 +1,0 @@
-interface:
-  display_name: "ACES Asset Inventory Capture"
-  short_description: "Run the ACES asset inventory methodology."
-  default_prompt: "Use $aces-asset-inventory-capture to capture a methodology-conformant ACES asset inventory bundle for a target image or container."

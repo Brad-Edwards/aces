@@ -5,8 +5,8 @@ from __future__ import annotations
 from dataclasses import fields, replace
 
 import pytest
-from aces_contracts.contracts import ParticipantDecisionSurfaceModel, ParticipantImplementationSelectionModel
-from aces_processor.models import (
+from raes_contracts.contracts import ParticipantDecisionSurfaceModel, ParticipantImplementationSelectionModel
+from raes_processor.models import (
     ParticipantBehaviorHistoryEvent,
     ParticipantDecisionSurfaceActionAssessment,
     ParticipantDecisionSurfaceProjectionInput,

@@ -3,18 +3,18 @@
 from __future__ import annotations
 
 import pytest
-from aces_contracts.contracts import ParticipantBehaviorHistoryEventModel, schema_bundle
-from aces_contracts.runtime_state import ApplyResult, RuntimeSnapshot
-from aces_runtime.backend_calls import _call_backend_apply
-from aces_runtime.participant_result_contracts import participant_runtime_state_contract_diagnostics
+from raes_contracts.contracts import ParticipantBehaviorHistoryEventModel, schema_bundle
+from raes_contracts.runtime_state import ApplyResult, RuntimeSnapshot
+from raes_runtime.backend_calls import _call_backend_apply
+from raes_runtime.participant_result_contracts import participant_runtime_state_contract_diagnostics
 from jsonschema import Draft202012Validator
 from pydantic import ValidationError
 from starlette.testclient import TestClient
 
-from aces.backends.stubs import create_stub_target
-from aces.core.runtime.control_plane import RuntimeControlPlane
-from aces.core.runtime.control_plane_api import create_control_plane_app
-from aces.core.runtime.control_plane_security import (
+from raes_backend_stubs.stubs import create_stub_target
+from raes_runtime.control_plane import RuntimeControlPlane
+from raes_runtime.control_plane_api import create_control_plane_app
+from raes_runtime.control_plane_security import (
     ControlPlaneIdentity,
     ControlPlaneRole,
     ControlPlaneSecurityConfig,

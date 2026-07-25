@@ -8,11 +8,11 @@ from pathlib import Path
 import pytest
 from raes.nodes import RuntimeNetworkNamespace
 
-from aces.backends.stubs import create_stub_manifest
-from aces.core.runtime.compiler import compile_runtime_model
-from aces.core.runtime.models import RuntimeDomain, RuntimeSnapshot, SnapshotEntry
-from aces.core.runtime.planner import plan
-from aces.core.sdl import (
+from raes_backend_stubs.stubs import create_stub_manifest
+from raes_processor.compiler import compile_runtime_model
+from raes_processor.models import RuntimeDomain, RuntimeSnapshot, SnapshotEntry
+from raes_processor.planner import plan
+from raes import (
     SDLInstantiationError,
     SDLValidationError,
     instantiate_scenario,

@@ -23,11 +23,11 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from aces_contracts.behavioral_relations import (
+from raes_contracts.behavioral_relations import (
     BehavioralRelationCatalogModel,
     validate_behavioral_claim_binding,
 )  # noqa: E402
-from aces_contracts.contracts import BehavioralClaimBindingModel  # noqa: E402
+from raes_contracts.contracts import BehavioralClaimBindingModel  # noqa: E402
 from pydantic import ValidationError  # noqa: E402
 
 from tools.policy.common import (

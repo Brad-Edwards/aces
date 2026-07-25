@@ -13,8 +13,8 @@ import json
 from pathlib import Path
 
 import pytest
-from aces_contracts.contracts import RandomStreamProfileModel
-from aces_contracts.random_stream_profiles import (
+from raes_contracts.contracts import RandomStreamProfileModel
+from raes_contracts.random_stream_profiles import (
     SUPPORTED_RANDOM_STREAM_PROFILE_IDS,
     load_random_stream_profile,
     random_stream_profile_path,

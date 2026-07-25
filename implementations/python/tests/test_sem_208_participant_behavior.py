@@ -5,9 +5,9 @@ from __future__ import annotations
 import textwrap
 
 import pytest
-from aces_contracts.contracts import schema_bundle
-from aces_processor.compiler import compile_runtime_model
-from aces_processor.models import (
+from raes_contracts.contracts import schema_bundle
+from raes_processor.compiler import compile_runtime_model
+from raes_processor.models import (
     ParticipantBehaviorHistoryEvent,
     ParticipantBehaviorHistoryEventType,
     ParticipantHistoryAddressScope,

@@ -107,7 +107,7 @@
             }
           ],
           "level": "error",
-          "validator": "aces_contracts.contracts.ExperimentApparatusConstraintModel._validate_allowed_identity_manifest_refs"
+          "validator": "raes_contracts.contracts.ExperimentApparatusConstraintModel._validate_allowed_identity_manifest_refs"
         }
       ]
     },
@@ -458,7 +458,7 @@
             }
           ],
           "level": "error",
-          "validator": "aces_contracts.contracts.ExperimentEvaluationProtocolModel._validate_metric_definition_keys"
+          "validator": "raes_contracts.contracts.ExperimentEvaluationProtocolModel._validate_metric_definition_keys"
         }
       ]
     },
@@ -812,7 +812,7 @@
             }
           ],
           "level": "error",
-          "validator": "aces_contracts.contracts.ExperimentManifestReferenceModel._validate_manifest_reference_scope"
+          "validator": "raes_contracts.contracts.ExperimentManifestReferenceModel._validate_manifest_reference_scope"
         }
       ]
     },
@@ -966,7 +966,7 @@
     },
     "ExperimentReferenceModel": {
       "additionalProperties": false,
-      "description": "Typed reference to an experiment-core or adjacent ACES artifact.",
+      "description": "Typed reference to an experiment-core or adjacent RAES artifact.",
       "properties": {
         "ref_digest": {
           "anyOf": [
@@ -1465,7 +1465,7 @@
             }
           ],
           "level": "error",
-          "validator": "aces_contracts.contracts.validation_disclosure.ValidationBasisDisclosureModel._validate_validation_basis_disclosure"
+          "validator": "raes_contracts.contracts.validation_disclosure.ValidationBasisDisclosureModel._validate_validation_basis_disclosure"
         },
         {
           "description": "gate_results gate_kind values must be unique, drawn from the resolved profile's required/optional union, and every required gate_kind must be present.",
@@ -1489,7 +1489,7 @@
             }
           ],
           "level": "error",
-          "validator": "aces_contracts.contracts.validation_disclosure.ValidationBasisDisclosureModel._validate_validation_basis_disclosure"
+          "validator": "raes_contracts.contracts.validation_disclosure.ValidationBasisDisclosureModel._validate_validation_basis_disclosure"
         },
         {
           "description": "achieved_strength must be supported by ADR-072-ordered passed gate rows for its own rank (structural never implies semantic; semantic never implies behavioral); evidence_backed/falsification_backed additionally require at least one evidence_ref.",
@@ -1513,7 +1513,7 @@
             }
           ],
           "level": "error",
-          "validator": "aces_contracts.contracts.validation_disclosure.ValidationBasisDisclosureModel._validate_validation_basis_disclosure"
+          "validator": "raes_contracts.contracts.validation_disclosure.ValidationBasisDisclosureModel._validate_validation_basis_disclosure"
         },
         {
           "description": "A required gate not passed, a not_applicable gate outcome, a below-minimum achieved_strength, and a public/audience-restricted audience each require an explicit, profile-declared limitation (the audience-restricted case specifically requires the audience_restricted category).",
@@ -1537,7 +1537,7 @@
             }
           ],
           "level": "error",
-          "validator": "aces_contracts.contracts.validation_disclosure.ValidationBasisDisclosureModel._validate_validation_basis_disclosure"
+          "validator": "raes_contracts.contracts.validation_disclosure.ValidationBasisDisclosureModel._validate_validation_basis_disclosure"
         }
       ]
     },
@@ -1955,7 +1955,7 @@
         }
       ],
       "level": "error",
-      "validator": "aces_contracts.contracts.validation_disclosure.validate_carrier_validation_basis_disclosures"
+      "validator": "raes_contracts.contracts.validation_disclosure.validate_carrier_validation_basis_disclosures"
     },
     {
       "description": "Task artifact_refs created_at values must be valid RFC 3339 date-times, including only known valid UTC leap-second instants.",
@@ -1967,7 +1967,7 @@
         }
       ],
       "level": "error",
-      "validator": "aces_contracts.contracts.validate_experiment_task_archival_datetimes"
+      "validator": "raes_contracts.contracts.validate_experiment_task_archival_datetimes"
     }
   ],
   "x-aces-semantic-profile": {

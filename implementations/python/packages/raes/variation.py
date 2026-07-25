@@ -5,7 +5,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Annotated, Literal
 
-from aces_contracts.bounded_domains import (
+from raes_contracts.bounded_domains import (
     BooleanDomain,
     EnumDomain,
     ExactDomain,

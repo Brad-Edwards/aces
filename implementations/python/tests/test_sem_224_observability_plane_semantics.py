@@ -22,7 +22,7 @@ import json
 from pathlib import Path
 
 import pytest
-from aces_contracts.contracts import (
+from raes_contracts.contracts import (
     ExperimentDerivedMeasureModel,
     ExperimentEvidenceRecordModel,
     schema_bundle,
@@ -135,7 +135,7 @@ def test_backend_observability_is_not_a_participant_observation():
     # SEM-216 B5 fixture: a backend observability stream presented as a portable
     # participant observation is rejected -- the scenario-native plane is not the
     # processor/backend operational plane.
-    from aces_contracts.contracts import ParticipantContextViewModel
+    from raes_contracts.contracts import ParticipantContextViewModel
 
     payload = _load(CONTEXT_VIEW_DIR / "invalid" / "sem216-backend-observability-as-observation.json")
     _assert_schema_and_model_reject("participant-context-view-v1", ParticipantContextViewModel, payload)

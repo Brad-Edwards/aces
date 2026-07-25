@@ -7,9 +7,9 @@ from copy import deepcopy
 from pathlib import Path
 
 import pytest
-from aces_conformance.conformance import _fixture_case_diagnostics
-from aces_contracts.contracts import schema_bundle
-from aces_contracts.validation_profiles import (
+from raes_conformance.conformance import _fixture_case_diagnostics
+from raes_contracts.contracts import schema_bundle
+from raes_contracts.validation_profiles import (
     ValidationProfileCatalogModel,
     load_validation_profile_catalog,
     select_validation_profile,

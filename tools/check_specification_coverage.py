@@ -42,12 +42,12 @@ EXPECTED_STRATA = {
     "simulation-emulation-platform",
 }
 IMPLEMENTATION_SURFACE_PATHS = {
-    "contract-models": "implementations/python/packages/aces_contracts",
-    "processor-pipeline": "implementations/python/packages/aces_processor",
+    "contract-models": "implementations/python/packages/raes_contracts",
+    "processor-pipeline": "implementations/python/packages/raes_processor",
     "sdl-pipeline": "implementations/python/packages/raes",
 }
 HISTORICAL_IMPLEMENTATION_SURFACE_PATHS = {
-    "sdl-pipeline": "implementations/python/packages/aces_sdl",
+    "sdl-pipeline": "implementations/python/packages/raes",
 }
 
 _MAX_FILE_BYTES = 2 * 1024 * 1024
@@ -791,7 +791,7 @@ def _validate_implementation_surfaces(
 
 def _execute_artifact(repo_root: Path, kind: str, path: Path) -> dict[str, object]:
     if kind == "sdl":
-        from aces_processor.compiler import compile_runtime_model
+        from raes_processor.compiler import compile_runtime_model
         from raes import admit_instantiated_scenario, instantiate_scenario, parse_sdl_file
 
         authored = parse_sdl_file(path)
@@ -815,17 +815,17 @@ def _execute_artifact(repo_root: Path, kind: str, path: Path) -> dict[str, objec
         return {}
     payload = load_bounded_json_object(repo_root, path.relative_to(repo_root).as_posix(), max_bytes=_MAX_FILE_BYTES)
     if kind == "experiment-task":
-        from aces_contracts.contracts import ExperimentTaskModel
+        from raes_contracts.contracts import ExperimentTaskModel
 
         model = ExperimentTaskModel.model_validate(payload)
         return {"contract": model.model_dump(mode="json", by_alias=True)}
     if kind == "experiment-apparatus-context":
-        from aces_contracts.contracts import ExperimentApparatusContextModel
+        from raes_contracts.contracts import ExperimentApparatusContextModel
 
         model = ExperimentApparatusContextModel.model_validate(payload)
         return {"contract": model.model_dump(mode="json", by_alias=True)}
     if kind == "backend-profile":
-        from aces_contracts.backend_profiles import BackendProfileModel
+        from raes_contracts.backend_profiles import BackendProfileModel
 
         model = BackendProfileModel.model_validate(payload)
         return {"profile-manifest": model.model_dump(mode="json", by_alias=True)}

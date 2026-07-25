@@ -2,9 +2,9 @@
   "contract_id": "validation-basis-disclosure-v1",
   "schema_path": "contracts/schemas/profiles/validation-basis-disclosure-v1.json",
   "stability": "draft",
-  "content_hash": "cbb825c1d985ff4f2ee4d3de1ff80c371cf7a3bc54b2d60c8dcf9d517f64f2b0",
+  "content_hash": "f24834c634f9cf1fc30dd16e5649b7898dc2e867ab7c80b30652e8a75ebfc49b",
   "last_change": {
-    "summary": "Tightened ValidationSubjectReferenceModel (issue #259 CLASS finding): ref_version is now required when ref_kind is task, run, or study, since those are the versioned experiment-core carrier kinds. Without this, a disclosure could carry the correct ref_id but omit ref_version and be accepted against any revision that reuses that id, replaying a validation-strength claim established for one revision onto a later one. scenario stays id-only, scenario-snapshot stays digest-bound, and backend/participant-implementation/result keep optional-version semantics.",
-    "content_hash": "cbb825c1d985ff4f2ee4d3de1ff80c371cf7a3bc54b2d60c8dcf9d517f64f2b0"
+    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
+    "content_hash": "f24834c634f9cf1fc30dd16e5649b7898dc2e867ab7c80b30652e8a75ebfc49b"
   }
 }

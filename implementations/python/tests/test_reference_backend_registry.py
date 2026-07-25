@@ -2,17 +2,17 @@
 
 from __future__ import annotations
 
-from aces_reference_backend import (
+from raes_reference_backend import (
     REFERENCE_BACKEND_NAME,
     create_reference_backend_components,
     create_reference_backend_manifest,
     create_reference_backend_target,
     register_reference_backend,
 )
-from aces_reference_backend.drivers.inprocess import InProcessDriver
-from aces_reference_backend.provisioner import ReferenceProvisioner
+from raes_reference_backend.drivers.inprocess import InProcessDriver
+from raes_reference_backend.provisioner import ReferenceProvisioner
 
-from aces.core.runtime.registry import BackendRegistry, RuntimeTarget
+from raes_runtime.registry import BackendRegistry, RuntimeTarget
 
 
 def test_create_target_passes_shape_validation():

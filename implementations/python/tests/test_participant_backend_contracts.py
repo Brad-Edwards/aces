@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 import pytest
-from aces_contracts.contracts import (
+from raes_contracts.contracts import (
     VIEW_SCOPE_PROJECTED_FIELDS,
     ParticipantBehaviorHistoryEventModel,
     ParticipantContextViewModel,

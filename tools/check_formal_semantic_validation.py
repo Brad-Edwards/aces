@@ -314,7 +314,7 @@ def _diagnostic_payload(exc: Exception, repo_root: Path) -> object:
 
 def replay_case(repo_root: Path, case: Mapping[str, object]) -> dict[str, str | None]:
     """Replay one supported case through its declared production boundary."""
-    from aces_processor.compiler import compile_runtime_model
+    from raes_processor.compiler import compile_runtime_model
     from raes import SDLError, instantiate_scenario, parse_sdl_file
 
     fixture_value = case.get("fixture_path")
@@ -1339,7 +1339,7 @@ def validate_satisfiability_analysis(
                 )
             )
 
-    from aces_processor.satisfiability import analyze_scenario_file, replay_satisfiability_evidence
+    from raes_processor.satisfiability import analyze_scenario_file, replay_satisfiability_evidence
 
     for item in cases:
         if not _closed_object(

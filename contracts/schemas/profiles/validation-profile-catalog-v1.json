@@ -270,7 +270,7 @@
         }
       ],
       "level": "error",
-      "validator": "aces_contracts.validation_profiles.ValidationProfileCatalogModel"
+      "validator": "raes_contracts.validation_profiles.ValidationProfileCatalogModel"
     }
   ],
   "x-aces-semantic-profile": {

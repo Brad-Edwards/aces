@@ -5,11 +5,11 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from aces_backend_protocols.manifest import backend_manifest_payload
-from aces_backend_stubs.manifest import create_stub_manifest
-from aces_cli.main import app
-from aces_cli.processor import _sdl_error_summary
-from aces_contracts.contracts import (
+from raes_backend_protocols.manifest import backend_manifest_payload
+from raes_backend_stubs.manifest import create_stub_manifest
+from raes_cli.main import app
+from raes_cli.processor import _sdl_error_summary
+from raes_contracts.contracts import (
     EvaluationPlanModel,
     OrchestrationPlanModel,
     ProvisioningPlanModel,

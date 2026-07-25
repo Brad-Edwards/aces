@@ -50,12 +50,12 @@ docs = [
 ]
 
 [project.scripts]
-raes = "aces.cli.main:app"
-raes-mcp = "aces_mcp.server:main"
+raes = "raes_cli.main:app"
+raes-mcp = "raes_mcp.server:main"
 
 # Version is sourced from the dedicated RAES package file below. Release Please
 # rewrites that file, keeping routine release bumps out of this package metadata;
-# `aces.__version__` derives from the installed distribution metadata.
+# `raes.__version__` derives from the installed distribution metadata.
 
 [tool.hatch.version]
 path = "packages/raes/_version.py"
@@ -68,29 +68,28 @@ path = "hatch_build.py"
 
 [tool.hatch.build.targets.wheel]
 packages = [
-    "src/aces",
-    "packages/aces_contracts",
-    "packages/aces_backend_protocols",
-    "packages/aces_backend_stubs",
-    "packages/aces_backend_libvirt",
-    "packages/aces_operations",
-    "packages/aces_reference_backend",
-    "packages/aces_cli",
-    "packages/aces_conformance",
-    "packages/aces_mcp",
-    "packages/aces_processor",
-    "packages/aces_runtime",
+    "packages/raes_contracts",
+    "packages/raes_backend_protocols",
+    "packages/raes_backend_stubs",
+    "packages/raes_backend_libvirt",
+    "packages/raes_operations",
+    "packages/raes_reference_backend",
+    "packages/raes_cli",
+    "packages/raes_conformance",
+    "packages/raes_mcp",
+    "packages/raes_processor",
+    "packages/raes_runtime",
     "packages/raes",
 ]
 
 # Ship the published contract corpus (the ADR-009 normative authority at the
 # repo-root `contracts/` tree) as package data so conformance + SDL semantic
 # validation work from an installed wheel. The corpus is resolved at runtime
-# via `importlib.resources` in `aces_contracts.corpus`; `contracts/` stays the
+# via `importlib.resources` in `raes_contracts.corpus`; `contracts/` stays the
 # single source of truth — this is a build-time distribution copy only.
 #
 # A custom build hook (hatch_build.py) force-includes the corpus into the wheel
-# at `aces_contracts/_corpus`, resolving it from the source checkout
+# at `raes_contracts/_corpus`, resolving it from the source checkout
 # (`../../contracts`) or from the corpus vendored into the sdist below — so both
 # a direct wheel build and `uv build`'s sdist→wheel path produce a wheel that
 # contains the corpus. The sdist vendors the corpus at top-level `_corpus/`.
@@ -115,18 +114,17 @@ timeout = 120
 
 [tool.coverage.run]
 source = [
-    "aces",
-    "aces_contracts",
-    "aces_backend_protocols",
-    "aces_backend_stubs",
-    "aces_backend_libvirt",
-    "aces_operations",
-    "aces_reference_backend",
-    "aces_cli",
-    "aces_conformance",
-    "aces_mcp",
-    "aces_processor",
-    "aces_runtime",
+    "raes_contracts",
+    "raes_backend_protocols",
+    "raes_backend_stubs",
+    "raes_backend_libvirt",
+    "raes_operations",
+    "raes_reference_backend",
+    "raes_cli",
+    "raes_conformance",
+    "raes_mcp",
+    "raes_processor",
+    "raes_runtime",
     "raes",
 ]
 
@@ -168,8 +166,8 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "S105", "S106", "S108", "E402", "SIM105", "F841"]
-"packages/aces_cli/**" = ["B008"]      # typer requires function calls in defaults
-"packages/aces_runtime/control_plane_api.py" = ["B008"]  # fastapi Depends() pattern
-"packages/aces_runtime/control_plane.py" = ["S112"]      # intentional exception suppression
+"packages/raes_cli/**" = ["B008"]      # typer requires function calls in defaults
+"packages/raes_runtime/control_plane_api.py" = ["B008"]  # fastapi Depends() pattern
+"packages/raes_runtime/control_plane.py" = ["S112"]      # intentional exception suppression
 "packages/raes/module_registry.py" = ["S310", "S202"]  # explicit OCI URL fetch and tarball extract
-"packages/aces_contracts/realization_envelope.py" = ["E402"]  # late import breaks a carrier dependency cycle
+"packages/raes_contracts/realization_envelope.py" = ["E402"]  # late import breaks a carrier dependency cycle

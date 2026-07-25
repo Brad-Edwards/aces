@@ -7,8 +7,8 @@ import textwrap
 from pathlib import Path
 
 import pytest
-from aces_contracts.contracts import schema_bundle
-from aces_processor.compiler import compile_runtime_model
+from raes_contracts.contracts import schema_bundle
+from raes_processor.compiler import compile_runtime_model
 from raes import (
     SDLInstantiationError,
     SDLParseError,

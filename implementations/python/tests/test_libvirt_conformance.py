@@ -22,15 +22,15 @@ import json
 from pathlib import Path
 from textwrap import dedent
 
-from aces_backend_libvirt.target import create_libvirt_target
-from aces_conformance.conformance import (
+from raes_backend_libvirt.target import create_libvirt_target
+from raes_conformance.conformance import (
     BackendCapabilityProfile,
     run_fixture_suite,
     run_target_conformance,
 )
-from aces_contracts.planning import RuntimeDomain
-from aces_processor.reference import run_reference_processor
-from aces_runtime.control_plane import RuntimeControlPlane
+from raes_contracts.planning import RuntimeDomain
+from raes_processor.reference import run_reference_processor
+from raes_runtime.control_plane import RuntimeControlPlane
 from libvirt_conformance_fixtures import RecordingLibvirtDriver
 from libvirt_participant_fixtures import NullLibvirtDriver
 from raes.parser import parse_sdl

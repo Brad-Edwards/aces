@@ -5,12 +5,12 @@ from __future__ import annotations
 import textwrap
 
 import pytest
-from aces_contracts.apparatus import ConceptBinding, RealizationSupportDeclaration
-from aces_contracts.vocabulary import RealizationSupportMode
+from raes_contracts.apparatus import ConceptBinding, RealizationSupportDeclaration
+from raes_contracts.vocabulary import RealizationSupportMode
 from paths import EXAMPLES_DIR
 
-from aces.backends.stubs import create_stub_manifest
-from aces.core.runtime.capabilities import (
+from raes_backend_stubs.stubs import create_stub_manifest
+from raes_backend_protocols.capabilities import (
     BackendManifest,
     EvaluatorCapabilities,
     OrchestratorCapabilities,
@@ -18,10 +18,10 @@ from aces.core.runtime.capabilities import (
     WorkflowFeature,
     WorkflowStatePredicateFeature,
 )
-from aces.core.runtime.compiler import compile_runtime_model
-from aces.core.runtime.models import RuntimeDomain, RuntimeSnapshot, SnapshotEntry
-from aces.core.runtime.planner import plan
-from aces.core.sdl import SDLInstantiationError, parse_sdl
+from raes_processor.compiler import compile_runtime_model
+from raes_processor.models import RuntimeDomain, RuntimeSnapshot, SnapshotEntry
+from raes_processor.planner import plan
+from raes import SDLInstantiationError, parse_sdl
 
 
 def _scenario(yaml_str: str):
@@ -1317,7 +1317,7 @@ infrastructure:
         # end-to-end via parse_sdl_file.
         from pathlib import Path
 
-        from aces.core.sdl import parse_sdl_file
+        from raes import parse_sdl_file
 
         imported = tmp_path / "shared.yaml"
         imported.write_text(

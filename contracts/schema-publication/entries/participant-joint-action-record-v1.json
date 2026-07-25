@@ -2,9 +2,9 @@
   "contract_id": "participant-joint-action-record-v1",
   "schema_path": "contracts/schemas/participant-runtime/participant-joint-action-record-v1.json",
   "stability": "draft",
-  "content_hash": "bfd0f43f8b19f3658d71ca81520c481aa447f0486eee669edfc4521d0cdbd1a8",
+  "content_hash": "412ed8b1156463900b6d06c28b3ed39ccd3fa4a693d78bff534a7f82226a2a1c",
   "last_change": {
-    "summary": "Initial publication of the RUN-308 participant joint-action runtime contract: membership, access-set, conflict, isolation, and realized-order evidence.",
-    "content_hash": "bfd0f43f8b19f3658d71ca81520c481aa447f0486eee669edfc4521d0cdbd1a8"
+    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
+    "content_hash": "412ed8b1156463900b6d06c28b3ed39ccd3fa4a693d78bff534a7f82226a2a1c"
   }
 }

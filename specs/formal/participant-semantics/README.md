@@ -740,10 +740,10 @@ Current implementation artifacts for the `SEM-208` slice:
 - `implementations/python/packages/raes/semantics/participant_behavior.py`
   and `implementations/python/packages/raes/validator/` fail closed on
   unbound action-contract and observation-boundary references;
-- `implementations/python/packages/aces_processor/compiler/` maps authored
+- `implementations/python/packages/raes_processor/compiler/` maps authored
   participants to compiled participant action, observation, and behavior
   addresses;
-- `implementations/python/packages/aces_processor/models/` defines
+- `implementations/python/packages/raes_processor/models/` defines
   participant behavior-history events and validates action/observation/state
   transition totality over compiled addresses;
 - `implementations/python/tests/test_sem_208_participant_behavior.py` covers
@@ -783,14 +783,14 @@ Current implementation artifacts for the `SEM-209` slice:
 - `implementations/python/packages/raes/semantics/participant_behavior.py`
   and `implementations/python/packages/raes/validator/` fail closed on
   unbound related actions, interaction targets, and shared-state references;
-- `implementations/python/packages/aces_processor/compiler/` carries declared
+- `implementations/python/packages/raes_processor/compiler/` carries declared
   interaction classes and shared-state references into compiled participant
   action contracts;
-- `implementations/python/packages/aces_processor/models/` records
+- `implementations/python/packages/raes_processor/models/` records
   `joint_action_set_id`, `realized_order`, interaction class, interaction
   reference, and shared-state references in participant behavior history, and
   rejects duplicate realized orders within one joint action set;
-- `implementations/python/packages/aces_conformance/conformance.py` applies the
+- `implementations/python/packages/raes_conformance/conformance.py` applies the
   joint-action ordering invariant across participant-local histories in runtime
   snapshots.
 
@@ -855,12 +855,12 @@ Current implementation artifacts for the `SEM-210` slice:
   and `implementations/python/packages/raes/validator/` continue to
   fail closed on unbound participant observation-boundary references, view-rule
   references, and view-transition evidence references;
-- `implementations/python/packages/aces_processor/compiler/` carries hidden,
+- `implementations/python/packages/raes_processor/compiler/` carries hidden,
   observable, discovered, inferred, concealed, disclosed, deceptive,
   evidence-only, and realized-view disclosure metadata into compiled
   participant observation boundaries, including an ordered
   `view_relation_timeline` snapshot series for `V_p,t`;
-- `implementations/python/packages/aces_processor/models/` exposes the
+- `implementations/python/packages/raes_processor/models/` exposes the
   compiled visibility metadata for runtime planning, snapshots, and
   conformance consumers, and validates observation detail refs against the
   corresponding timeline snapshot;
@@ -929,16 +929,16 @@ Current implementation artifacts for the `SEM-211` slice:
   plus typed action-contract declarations and backend failure mappings;
 - `implementations/python/packages/raes/participant_behavior.py` embeds
   those typed declarations in governed participant action contracts;
-- `implementations/python/packages/aces_processor/compiler/` carries the
+- `implementations/python/packages/raes_processor/compiler/` carries the
   typed precondition classes, effect classes, failure classes, and backend
   failure mappings into compiled participant action contracts;
-- `implementations/python/packages/aces_processor/models/` defines typed
+- `implementations/python/packages/raes_processor/models/` defines typed
   action precondition results, action effect results, action results,
   fail-closed validation for unsatisfied or unresolved preconditions, behavior
   history action-result embedding, compiled-contract validation for declared
   effects and failure classes, and backend diagnostic mapping to portable
   failure classes;
-- `implementations/python/packages/aces_contracts/contracts/` publishes the
+- `implementations/python/packages/raes_contracts/contracts/` publishes the
   action-result payload shape in the participant behavior-history and runtime
   snapshot schemas;
 - `implementations/python/tests/test_sem_211_participant_action_semantics.py`
@@ -973,15 +973,15 @@ Current implementation artifacts for the first `SEM-212` slice:
 - `implementations/python/packages/raes/participant_attribution_semantics.py`
   defines controlled candidate, ordering-basis, and support-class
   vocabularies;
-- `implementations/python/packages/aces_processor/models/` defines typed
+- `implementations/python/packages/raes_processor/models/` defines typed
   attribution candidates, ordering bases, evidence bases, and attribution
   edges on participant behavior-history observation events;
-- `implementations/python/packages/aces_processor/models/` validates
+- `implementations/python/packages/raes_processor/models/` validates
   participant/episode/observation scope, explicit ordering and evidence
   bases, outcome interpretation-rule refs, timestamp-adjacency limits for
   strong causal support, effect grounding in actual observations/action
   results, and participant-boundary authorization for attribution evidence;
-- `implementations/python/packages/aces_contracts/contracts/` publishes the
+- `implementations/python/packages/raes_contracts/contracts/` publishes the
   attribution-edge payload under participant behavior-history event contracts;
 - `implementations/python/tests/test_sem_212_participant_attribution_semantics.py`
   covers positive attribution, missing bases, timestamp-only strong-causality
@@ -1026,14 +1026,14 @@ Current implementation artifacts for the first `SEM-213` slice:
   temporal contracts and backend timing disclosures in governed participant
   action contracts, requires temporal preconditions to resolve to typed
   temporal contracts, and fails closed on unknown backend disclosure refs;
-- `implementations/python/packages/aces_processor/compiler/` carries temporal
+- `implementations/python/packages/raes_processor/compiler/` carries temporal
   contract ids, kinds, time domains, clock authorities, and backend timing
   disclosures into compiled participant action contracts;
-- `implementations/python/packages/aces_processor/models/` defines runtime
+- `implementations/python/packages/raes_processor/models/` defines runtime
   temporal context on participant behavior-history events, validates it
   against the compiled action contract, and exposes an abstract state-machine
   checker for cadence, deadline, dwell, timeout, reset, and replay interactions;
-- `implementations/python/packages/aces_contracts/contracts/` publishes the
+- `implementations/python/packages/raes_contracts/contracts/` publishes the
   runtime temporal-context payload in participant behavior-history and runtime
   snapshot schemas;
 - `implementations/python/tests/test_sem_213_temporal_participant_semantics.py`
@@ -1072,12 +1072,12 @@ Implementation artifacts:
 
 - `participant-context-view-v1` carries the SEM-214 envelope in the existing
   API-408 control-plane carrier;
-- `implementations/python/packages/aces_contracts/contracts/` defines the
+- `implementations/python/packages/raes_contracts/contracts/` defines the
   closed-world Pydantic model and JSON Schema reference output;
 - `contracts/fixtures/control-plane/participant-context-view-v1/` contains
   positive and negative fixtures for source-layer, temporal, audience-scope,
   evidence/provenance, and comparability constraints;
-- `implementations/python/packages/aces_runtime/participant_retrieval.py`
+- `implementations/python/packages/raes_runtime/participant_retrieval.py`
   constructs the SEM-214 envelope for the existing context retrieval path;
 - `implementations/python/tests/test_participant_backend_contracts.py`,
   `test_runtime_control_plane.py`, and `test_runtime_control_plane_api.py`
@@ -1204,7 +1204,7 @@ Stratum boundary traceability:
 
 | Stratum | Carrier (contract / model) | Enforcement point | Invariant |
 | ------- | -------------------------- | ----------------- | --------- |
-| runtime-observable state | `RuntimeSnapshotEnvelopeModel` / `RuntimeSnapshot` | runtime snapshot diagnostics in `aces_conformance/conformance.py` | I2, I13 |
+| runtime-observable state | `RuntimeSnapshotEnvelopeModel` / `RuntimeSnapshot` | runtime snapshot diagnostics in `raes_conformance/conformance.py` | I2, I13 |
 | captured evidence | `experiment-evidence-record-v1` / `ExperimentEvidenceRecordModel` | `_validate_evidence_record`, `_validate_raw_content`, closed-world `evidence_kind` (B3, B4) | I3, I13 |
 | derived evaluations | `experiment-derived-measure-v1` / `ExperimentDerivedMeasureModel` | `_validate_derived_measure`, typed `source_evidence_refs` | I10 |
 | analysis outputs | derived measure `measure_kind: analysis-output` + `ExperimentRunTraceabilityModel` | `_validate_run_traceability` claim grounding | I10, I15 |
@@ -1218,7 +1218,7 @@ invariant oracle is unchanged.
 
 Current implementation artifacts for the `SEM-216` slice:
 
-- `implementations/python/packages/aces_contracts/contracts/` adds
+- `implementations/python/packages/raes_contracts/contracts/` adds
   `ParticipantContextViewModel._validate_sem216_audience_boundary` with its
   published `allOf` (required view rule + redaction policy) and
   `x-aces-invariants` (archival source mediation, `payload_ref` non-aliasing)
@@ -1274,7 +1274,7 @@ Design commitments:
 
 Current implementation artifacts for the `SEM-217` slice:
 
-- `implementations/python/packages/aces_contracts/semantic_binding_effects.py`
+- `implementations/python/packages/raes_contracts/semantic_binding_effects.py`
   resolves the four SEM-217 effects over the existing UCO alignment and shared
   semantic-profile records;
 - `implementations/python/tests/test_sem_217_knowledge_bindings.py` proves that

@@ -6,8 +6,8 @@ import json
 from pathlib import Path
 
 import pytest
-from aces_contracts.contracts import ReferenceModelCatalogModel
-from aces_contracts.reference_models import load_reference_model_catalog, reference_model_catalog_path
+from raes_contracts.contracts import ReferenceModelCatalogModel
+from raes_contracts.reference_models import load_reference_model_catalog, reference_model_catalog_path
 from pydantic import ValidationError
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -101,7 +101,7 @@ def test_reference_model_binding_resolves_nullable_optional_instance_path():
     # `nodes.*.runtime` is an optional node field (anyOf[RuntimeConfiguration, null]),
     # so binding resolution must look through the nullable-optional wrapper. This is
     # what lets the scenario-node-runtime reference model bind to a real definition.
-    from aces_contracts.contracts import (
+    from raes_contracts.contracts import (
         ReferenceModelSchemaBindingModel,
         _resolve_instance_path_schema,
         _resolve_ref_schema,
@@ -130,7 +130,7 @@ def test_reference_model_binding_resolves_nullable_optional_instance_path():
 
 
 def test_collapse_nullable_optional_schema_is_conservative():
-    from aces_contracts.contracts import _collapse_nullable_optional_schema, _resolve_ref_schema
+    from raes_contracts.contracts import _collapse_nullable_optional_schema, _resolve_ref_schema
 
     ref_branch = {"$ref": "#/$defs/RuntimeConfiguration"}
     nullable = {"anyOf": [ref_branch, {"type": "null"}], "default": None}

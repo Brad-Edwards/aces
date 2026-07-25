@@ -1,6 +1,6 @@
 """RUN-313: repository-owned reference processor.
 
-The reference processor (``aces_processor.reference``) realizes the normative
+The reference processor (``raes_processor.reference``) realizes the normative
 processing model: it carries SDL authoring input through instantiation,
 compilation, and planning to a portable :class:`ExecutionPlan`, and exposes the
 published processor manifest. Per ADR-008 the processor's responsibility ends at
@@ -16,24 +16,24 @@ import json
 from textwrap import dedent
 
 import pytest
-from aces_backend_stubs.stubs import create_stub_manifest, create_stub_target
-from aces_contracts.contracts import (
+from raes_backend_stubs.stubs import create_stub_manifest, create_stub_target
+from raes_contracts.contracts import (
     ProcessorManifestV2Model,
     WorkflowCancellationRequestModel,
 )
-from aces_processor.manifest import (
+from raes_processor.manifest import (
     REFERENCE_SUPPORTED_CONTRACT_VERSIONS_V2,
     reference_processor_manifest_payload,
 )
-from aces_processor.models import ExecutionPlan, RuntimeModel
-from aces_processor.reference import (
+from raes_processor.models import ExecutionPlan, RuntimeModel
+from raes_processor.reference import (
     ReferenceProcessor,
     ReferenceProcessorResult,
     run_reference_processor,
 )
-from aces_runtime import RuntimeControlPlane
-from aces_runtime.control_plane_api import _receipt_response
-from aces_runtime.control_plane_api_models import _operation_status_model, _snapshot_model
+from raes_runtime import RuntimeControlPlane
+from raes_runtime.control_plane_api import _receipt_response
+from raes_runtime.control_plane_api_models import _operation_status_model, _snapshot_model
 from raes import parse_sdl
 
 WORKFLOW_ADDRESS = "orchestration.workflow.response"

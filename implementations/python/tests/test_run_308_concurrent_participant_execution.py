@@ -6,19 +6,19 @@ import json
 from pathlib import Path
 
 import pytest
-from aces_contracts.contracts import (
+from raes_contracts.contracts import (
     ParticipantJointActionRecordModel,
     ParticipantTimeManagementContextModel,
     RuntimeSnapshotEnvelopeModel,
     schema_bundle,
 )
-from aces_contracts.participant_concurrency import (
+from raes_contracts.participant_concurrency import (
     iter_participant_concurrency_snapshot_violations,
     iter_participant_concurrency_transition_violations,
 )
-from aces_contracts.runtime_state import ApplyResult, RuntimeSnapshot
-from aces_runtime.backend_calls import _call_backend_apply
-from aces_runtime.participant_result_contracts import participant_runtime_state_contract_diagnostics
+from raes_contracts.runtime_state import ApplyResult, RuntimeSnapshot
+from raes_runtime.backend_calls import _call_backend_apply
+from raes_runtime.participant_result_contracts import participant_runtime_state_contract_diagnostics
 from jsonschema import Draft202012Validator
 from pydantic import ValidationError
 

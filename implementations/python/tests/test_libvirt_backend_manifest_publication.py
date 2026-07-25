@@ -18,7 +18,7 @@ The manifest is the capability surface the planner checks plans against, so this
 bar is the SEM-218 realization-honesty guard. Under issue #603 the libvirt
 interpreter realizes ``node``, ``network``, ``account-placement``,
 ``content-placement``, and ``feature-binding`` provisioning resources via
-cloud-init (see ``aces_backend_libvirt/realization.py``), so the manifest
+cloud-init (see ``raes_backend_libvirt/realization.py``), so the manifest
 declares the full governed vocabulary it actually realizes — every declared term
 is backed, so it cannot over-claim. "Provisioning-only" remains true in the
 domain sense (no orchestrator / evaluator / participant runtime).
@@ -30,14 +30,14 @@ import json
 from pathlib import Path
 
 import jsonschema
-from aces_backend_libvirt import create_libvirt_manifest
-from aces_backend_libvirt.target import create_libvirt_target
-from aces_backend_protocols.manifest import backend_manifest_payload
-from aces_contracts.backend_profiles import load_backend_profile
-from aces_contracts.contracts import BackendManifestV2Model
+from raes_backend_libvirt import create_libvirt_manifest
+from raes_backend_libvirt.target import create_libvirt_target
+from raes_backend_protocols.manifest import backend_manifest_payload
+from raes_contracts.backend_profiles import load_backend_profile
+from raes_contracts.contracts import BackendManifestV2Model
 from libvirt_conformance_fixtures import RecordingLibvirtDriver
 
-from aces.core.runtime.conformance import (
+from raes_conformance.conformance import (
     BackendCapabilityProfile,
     required_contracts,
     run_target_conformance,

@@ -33,7 +33,7 @@ Out of scope:
 This spec is design authority. The relation helper, the envelope expression
 contract model, fixtures, and property tests are implemented by issue #668:
 
-- `aces_contracts.realization_envelope` carries the closed, versioned envelope
+- `raes_contracts.realization_envelope` carries the closed, versioned envelope
   expression (`realization-envelope/v1`) — the admitted-fragment domain kinds,
   scoped bindings, posture, closure, and witness policy of this note;
 - `raes.realization_envelope` implements `member`, `subsumes`, `witness`, and
@@ -322,13 +322,13 @@ exists today.
 
 | Concern | Future owner | Existing incumbent |
 | --- | --- | --- |
-| Envelope contract DTO | `aces_contracts` | `ContractModel`, generated schema bundle |
+| Envelope contract DTO | `raes_contracts` | `ContractModel`, generated schema bundle |
 | SDL envelope syntax and validation | `raes` | variables, instantiation, semantic validation |
 | Relation helper | `raes` or shared semantics helper | SEM-218 explicitness helper pattern |
-| Backend manifest carriage | `aces_backend_protocols` / `aces_contracts` | `BackendManifest`, `backend_manifest_payload()` |
-| Planning admission | `aces_processor` | `realization_support_diagnostics()` |
-| Target conformance witness and negative probes | `aces_conformance` | `run_target_conformance(reference_scenario=...)` |
-| Runtime refusal evidence | `aces_runtime` / control plane | `OperationStatus`, `Diagnostic` |
+| Backend manifest carriage | `raes_backend_protocols` / `raes_contracts` | `BackendManifest`, `backend_manifest_payload()` |
+| Planning admission | `raes_processor` | `realization_support_diagnostics()` |
+| Target conformance witness and negative probes | `raes_conformance` | `run_target_conformance(reference_scenario=...)` |
+| Runtime refusal evidence | `raes_runtime` / control plane | `OperationStatus`, `Diagnostic` |
 
 ## Non-Goals
 

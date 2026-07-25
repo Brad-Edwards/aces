@@ -7,8 +7,8 @@ import json
 
 import pytest
 import raes
-from aces_contracts.contracts import schema_bundle
-from aces_processor.compiler import compile_runtime_model
+from raes_contracts.contracts import schema_bundle
+from raes_processor.compiler import compile_runtime_model
 from jsonschema import Draft202012Validator
 from pydantic import ValidationError
 from raes import SDLInstantiationError, SDLValidationError

@@ -6,14 +6,14 @@ import json
 from pathlib import Path
 
 import pytest
-from aces_contracts.contracts import (
+from raes_contracts.contracts import (
     BackendManifestV2Model,
     ConceptBindingEntryModel,
     ConceptFamilyCatalogModel,
     ConceptFamilyDefinitionModel,
     ProcessorManifestV2Model,
 )
-from aces_contracts.vocabulary import (
+from raes_contracts.vocabulary import (
     ConceptProvenanceCategory,
 )
 from pydantic import ValidationError

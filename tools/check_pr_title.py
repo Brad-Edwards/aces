@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Repository-side PR title guard (issue #567).
 
-This is the single source of truth for ACES pull-request title policy. The
+This is the single source of truth for RAES pull-request title policy. The
 `.github/workflows/pr-title-lint.yml` CI workflow and the
 `implementations/python/tests/test_pr_title_guard.py` tests both call
 ``validate_pr_title`` here, so the policy cannot drift between the workflow
@@ -39,7 +39,7 @@ from dataclasses import dataclass
 BRANDED_PREFIXES: tuple[str, ...] = ("codex", "claude", "openai", "chatgpt")
 
 #: Canonical Ground Control ``/implement`` Step 9 allow-list, applied unless
-#: ACES declares its own ``.ground-control.yaml`` ``workflow.pr_title`` block.
+#: RAES declares its own ``.ground-control.yaml`` ``workflow.pr_title`` block.
 CONVENTIONAL_TYPES: tuple[str, ...] = (
     "security",
     "added",

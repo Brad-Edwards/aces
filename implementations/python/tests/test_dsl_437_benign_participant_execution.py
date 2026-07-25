@@ -9,35 +9,35 @@ from pathlib import Path
 
 import pytest
 import yaml
-from aces_backend_protocols.capability_admission import participant_autonomous_execution_capability_gaps
-from aces_backend_protocols.participant_runtime_base import BaseParticipantRuntime
-from aces_backend_stubs.manifest import create_stub_manifest
-from aces_backend_stubs.stubs import create_stub_target
-from aces_contracts.contracts import (
+from raes_backend_protocols.capability_admission import participant_autonomous_execution_capability_gaps
+from raes_backend_protocols.participant_runtime_base import BaseParticipantRuntime
+from raes_backend_stubs.manifest import create_stub_manifest
+from raes_backend_stubs.stubs import create_stub_target
+from raes_contracts.contracts import (
     ParticipantActionResultModel,
     ParticipantAutonomousExecutionStateModel,
     ParticipantImplementationManifestModel,
     ParticipantImplementationSelectionModel,
     RuntimeSnapshotEnvelopeModel,
 )
-from aces_contracts.contracts.time_model import TimeRuntimeStateModel
-from aces_contracts.participant_binding import (
+from raes_contracts.contracts.time_model import TimeRuntimeStateModel
+from raes_contracts.participant_binding import (
     ParticipantActionAdmissionRequest,
     ParticipantActionApplyResult,
     ParticipantNativeActionExecution,
 )
-from aces_contracts.participant_episode import (
+from raes_contracts.participant_episode import (
     ParticipantEpisodeInitializeRequest,
     ParticipantEpisodeResetRequest,
 )
-from aces_contracts.runtime_state import ApplyResult, RuntimeSnapshot
-from aces_processor.compiler import compile_runtime_model
-from aces_processor.compiler.time_model import time_model_contract_model
-from aces_processor.planner import plan
-from aces_runtime.manager import RuntimeManager
-from aces_runtime.participant_clock_driver import ParticipantClockDriver
-from aces_runtime.participant_scheduler import ParticipantScheduler
-from aces_runtime.time_coordinator import ReferenceTimeRuntime, TimeCoordinator
+from raes_contracts.runtime_state import ApplyResult, RuntimeSnapshot
+from raes_processor.compiler import compile_runtime_model
+from raes_processor.compiler.time_model import time_model_contract_model
+from raes_processor.planner import plan
+from raes_runtime.manager import RuntimeManager
+from raes_runtime.participant_clock_driver import ParticipantClockDriver
+from raes_runtime.participant_scheduler import ParticipantScheduler
+from raes_runtime.time_coordinator import ReferenceTimeRuntime, TimeCoordinator
 from raes._errors import SDLValidationError
 from raes.parser import parse_sdl
 from raes.participant_behavior import ParticipantFailureClass

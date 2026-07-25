@@ -8,14 +8,14 @@ from io import BytesIO
 from pathlib import Path
 
 import pytest
-from aces_conformance.conformance import _MODEL_VALIDATORS, _fixture_case_diagnostics
-from aces_contracts.associated_artifacts import (
+from raes_conformance.conformance import _MODEL_VALIDATORS, _fixture_case_diagnostics
+from raes_contracts.associated_artifacts import (
     AssociatedArtifactValidationLimits,
     associated_artifact_set_digest,
     load_associated_artifact_manifest_json,
     validate_associated_artifact_manifest,
 )
-from aces_contracts.contracts import (
+from raes_contracts.contracts import (
     REUSABLE_ASSET_FAMILIES,
     AssociatedArtifactManifestModel,
     ExperimentApparatusContextModel,
@@ -25,7 +25,7 @@ from aces_contracts.contracts import (
     ExperimentTaskModel,
     schema_bundle,
 )
-from aces_contracts.versions import ASSOCIATED_ARTIFACT_MANIFEST_SCHEMA_VERSION
+from raes_contracts.versions import ASSOCIATED_ARTIFACT_MANIFEST_SCHEMA_VERSION
 from pydantic import ValidationError
 from raes import canonical_sdl_digest, parse_sdl
 

@@ -8,18 +8,18 @@ from copy import deepcopy
 from pathlib import Path
 
 import pytest
-from aces_conformance.conformance import _fixture_case_diagnostics
-from aces_contracts.behavioral_relations import (
+from raes_conformance.conformance import _fixture_case_diagnostics
+from raes_contracts.behavioral_relations import (
     ExampleTransitionModel,
     ExampleTransitionSystemModel,
     load_behavioral_relation_catalog,
 )
-from aces_contracts.contracts import (
+from raes_contracts.contracts import (
     BehavioralClaimBindingModel,
     ExperimentStudyModel,
     schema_bundle,
 )
-from aces_contracts.scientific_completeness import load_scientific_completeness_taxonomy
+from raes_contracts.scientific_completeness import load_scientific_completeness_taxonomy
 from hypothesis import assume, given, settings
 from hypothesis import strategies as st
 from pydantic import ValidationError

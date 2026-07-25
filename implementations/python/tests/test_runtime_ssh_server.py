@@ -27,11 +27,11 @@ from raes.runtime_ssh_server import (
     SshMatchRule,
 )
 
-import aces.core.sdl.nodes as compat_nodes
-from aces.core.sdl import parse_sdl_file
-from aces.core.sdl._errors import SDLValidationError
-from aces.core.sdl.scenario import ModuleDescriptor, Scenario
-from aces.core.sdl.validator import SemanticValidator
+import raes.nodes as compat_nodes
+from raes import parse_sdl_file
+from raes._errors import SDLValidationError
+from raes.scenario import ModuleDescriptor, Scenario
+from raes.validator import SemanticValidator
 
 
 def _validate(scenario: Scenario) -> list[str]:

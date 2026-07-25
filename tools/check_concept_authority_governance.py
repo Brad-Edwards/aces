@@ -2,8 +2,8 @@
 # ruff: noqa: E402, I001
 """Structural gate for concept-authority catalog governance (ADR-062).
 
-ADR-012 ("Shared Concept Authority and ACES Extension Discipline") §3 demands
-that ACES-native concept families be explicit, disciplined extensions over the
+ADR-012 ("Shared Concept Authority and RAES Extension Discipline") §3 demands
+that RAES-native concept families be explicit, disciplined extensions over the
 shared concept authority. The JSON Schema for ``concept-families-v1.json``
 validates field *presence* (a native family must declare ``extension_scope``,
 ``relation_rules``, and ``non_ambiguity_constraints``), but nothing structural
@@ -52,7 +52,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from pydantic import ValidationError
 
-from aces_contracts.contracts import (
+from raes_contracts.contracts import (
     ConceptFamilyCatalogModel,
     ControlledVocabularyCatalogModel,
 )
@@ -77,7 +77,7 @@ GOVERNANCE_ADR_REF = "ADR-062"
 REQUIREMENT_REFS: tuple[str, ...] = ("GOV-918", "GOV-919")
 
 # The shared concept-family / controlled-vocabulary identifier grammar — the
-# same pattern as aces_contracts.vocabulary.ConceptFamilyId and the keys of
+# same pattern as raes_contracts.vocabulary.ConceptFamilyId and the keys of
 # controlled-vocabularies-v1.json. Only inline-code spans whose full content
 # matches this grammar are treated as catalog references.
 _ID_TOKEN_RE = re.compile(r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$")

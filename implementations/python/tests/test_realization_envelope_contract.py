@@ -7,8 +7,8 @@ from copy import deepcopy
 from pathlib import Path
 
 import pytest
-from aces_contracts.contracts import BackendManifestV2Model, ProvisioningPlanModel, RuntimeSnapshotEnvelopeModel
-from aces_contracts.realization_envelope import (
+from raes_contracts.contracts import BackendManifestV2Model, ProvisioningPlanModel, RuntimeSnapshotEnvelopeModel
+from raes_contracts.realization_envelope import (
     BackendRealizationEnvelopeModel,
     ConcernDisposition,
     ObservationStrength,
@@ -21,8 +21,8 @@ from aces_contracts.realization_envelope import (
     realizer_configuration_digest,
     validate_backend_realization_envelope,
 )
-from aces_contracts.runtime_state import RuntimeSnapshot
-from aces_runtime.control_plane_store import LocalControlPlaneStore
+from raes_contracts.runtime_state import RuntimeSnapshot
+from raes_runtime.control_plane_store import LocalControlPlaneStore
 from jsonschema import Draft202012Validator
 from pydantic import ValidationError
 
@@ -180,7 +180,7 @@ def test_published_schema_declares_callable_canonical_semantic_validator():
     schema = BackendRealizationEnvelopeModel.model_json_schema()
     invariant = schema["x-aces-invariants"][0]
 
-    assert invariant["validator"] == "aces_contracts.realization_envelope.validate_backend_realization_envelope"
+    assert invariant["validator"] == "raes_contracts.realization_envelope.validate_backend_realization_envelope"
     with pytest.raises(ValidationError, match="digest does not match"):
         validate_backend_realization_envelope({**_payload(), "digest": "sha256:" + "f" * 64})
 

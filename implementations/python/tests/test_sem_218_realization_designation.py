@@ -9,17 +9,17 @@ from pathlib import Path
 
 import jsonschema
 import pytest
-from aces_backend_libvirt.manifest import create_libvirt_manifest
-from aces_backend_protocols.capabilities import BackendManifest, ProvisionerCapabilities
-from aces_contracts.apparatus import ConceptBinding, RealizationSupportDeclaration
-from aces_contracts.planning import ChangeAction, ProvisioningPlan, ProvisionOp, RuntimeDomain
-from aces_contracts.realization_envelope import BackendRealizationEnvelopeModel, realization_envelope_digest
-from aces_contracts.runtime_state import RuntimeSnapshot, RuntimeSnapshotEnvelope, SnapshotEntry
-from aces_contracts.vocabulary import Closure, RealizationSupportMode
-from aces_processor.compiler import compile_runtime_model
-from aces_processor.planner import plan
-from aces_processor.semantics.realization import realization_disclosure
-from aces_runtime.control_plane_api_models import _snapshot_model
+from raes_backend_libvirt.manifest import create_libvirt_manifest
+from raes_backend_protocols.capabilities import BackendManifest, ProvisionerCapabilities
+from raes_contracts.apparatus import ConceptBinding, RealizationSupportDeclaration
+from raes_contracts.planning import ChangeAction, ProvisioningPlan, ProvisionOp, RuntimeDomain
+from raes_contracts.realization_envelope import BackendRealizationEnvelopeModel, realization_envelope_digest
+from raes_contracts.runtime_state import RuntimeSnapshot, RuntimeSnapshotEnvelope, SnapshotEntry
+from raes_contracts.vocabulary import Closure, RealizationSupportMode
+from raes_processor.compiler import compile_runtime_model
+from raes_processor.planner import plan
+from raes_processor.semantics.realization import realization_disclosure
+from raes_runtime.control_plane_api_models import _snapshot_model
 from pydantic import ValidationError
 from raes._errors import SDLParseError
 from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance

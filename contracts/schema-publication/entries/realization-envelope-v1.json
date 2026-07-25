@@ -2,9 +2,9 @@
   "contract_id": "realization-envelope-v1",
   "schema_path": "contracts/schemas/realization-envelope/realization-envelope-v1.json",
   "stability": "draft",
-  "content_hash": "0eb46ba5c89a8eee9e2ba74fb9079f690bca392eacf774da0900379b4fd79580",
+  "content_hash": "bdb320445010600d2f5e3d5c750504ca7b2244f22589468194d70a341d55981b",
   "last_change": {
-    "summary": "Added domain-profile capability disclosure to material backend realization configurations (issue #763).",
-    "content_hash": "0eb46ba5c89a8eee9e2ba74fb9079f690bca392eacf774da0900379b4fd79580"
+    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
+    "content_hash": "bdb320445010600d2f5e3d5c750504ca7b2244f22589468194d70a341d55981b"
   }
 }

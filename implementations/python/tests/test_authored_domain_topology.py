@@ -9,20 +9,20 @@ from pathlib import Path
 
 import pytest
 import yaml
-from aces_backend_libvirt.capability_envelope import capability_envelope_diagnostics
-from aces_backend_libvirt.manifest import LIBVIRT_PROVISIONER_CAPABILITIES
-from aces_backend_protocols.backend_manifest import BackendManifest
-from aces_backend_protocols.domain_topology import domain_topology_plan_diagnostics
-from aces_backend_stubs.stubs import create_stub_manifest, create_stub_target
-from aces_contracts.contracts import schema_bundle
-from aces_contracts.planning import ProvisioningPlan, ProvisionOp, RuntimeDomain
-from aces_contracts.runtime_state import RuntimeSnapshot, SnapshotEntry
-from aces_processor.compiler import compile_runtime_model
-from aces_processor.models import resource_payload
-from aces_processor.planner import plan
-from aces_processor.semantics.realization import realization_disclosure
-from aces_reference_backend import create_reference_backend_manifest
-from aces_runtime.control_plane import RuntimeControlPlane
+from raes_backend_libvirt.capability_envelope import capability_envelope_diagnostics
+from raes_backend_libvirt.manifest import LIBVIRT_PROVISIONER_CAPABILITIES
+from raes_backend_protocols.backend_manifest import BackendManifest
+from raes_backend_protocols.domain_topology import domain_topology_plan_diagnostics
+from raes_backend_stubs.stubs import create_stub_manifest, create_stub_target
+from raes_contracts.contracts import schema_bundle
+from raes_contracts.planning import ProvisioningPlan, ProvisionOp, RuntimeDomain
+from raes_contracts.runtime_state import RuntimeSnapshot, SnapshotEntry
+from raes_processor.compiler import compile_runtime_model
+from raes_processor.models import resource_payload
+from raes_processor.planner import plan
+from raes_processor.semantics.realization import realization_disclosure
+from raes_reference_backend import create_reference_backend_manifest
+from raes_runtime.control_plane import RuntimeControlPlane
 from jsonschema import Draft202012Validator
 from raes import SDLParseError, SDLValidationError, parse_sdl, parse_sdl_file
 from raes.language_service import language_completions

@@ -41,7 +41,7 @@ from raes.runtime_datastore_vocab import (
     RuntimeDatastoreTransportSecurityMode,
 )
 
-from aces.core.sdl.scenario import Scenario
+from raes.scenario import Scenario
 
 _PUBLISHED_SDL_SCHEMA_NAMES = (
     "instantiated-scenario-snapshot-v1",
@@ -145,7 +145,7 @@ def _search_index_service(**overrides) -> dict:
                 },
                 "mapping_ref": "wazuh-alerts-mapping",
                 "template_digest": "sha256:wazuh-template",
-                "evidence_refs": ["docs/aces/inventory/wazuh.indexer/evidence/wazuh-indexer-templates.json.gz"],
+                "evidence_refs": ["docs/raes/inventory/wazuh.indexer/evidence/wazuh-indexer-templates.json.gz"],
             }
         ],
         "aliases": ["wazuh-alerts"],
@@ -161,7 +161,7 @@ def _search_index_service(**overrides) -> dict:
                 "dynamic_template_count": 5,
                 "date_detection": True,
                 "schema_digest": "sha256:wazuh-alerts-mapping",
-                "evidence_refs": ["docs/aces/inventory/wazuh.indexer/evidence/wazuh-indexer-family-mappings.json.gz"],
+                "evidence_refs": ["docs/raes/inventory/wazuh.indexer/evidence/wazuh-indexer-family-mappings.json.gz"],
             }
         ],
         "lifecycle_policies": ["wazuh-ism"],
@@ -281,7 +281,7 @@ def test_search_index_service_typed_children() -> None:
     assert svc.mappings[0].date_detection is True
     assert svc.mappings[0].schema_digest == "sha256:wazuh-alerts-mapping"
     assert svc.mappings[0].evidence_refs == [
-        "docs/aces/inventory/wazuh.indexer/evidence/wazuh-indexer-family-mappings.json.gz"
+        "docs/raes/inventory/wazuh.indexer/evidence/wazuh-indexer-family-mappings.json.gz"
     ]
     assert isinstance(svc.templates[0], RuntimeDatastoreTemplate)
     assert svc.templates[0].index_patterns == ["wazuh-alerts-4.x-*", "wazuh-archives-4.x-*"]
@@ -293,7 +293,7 @@ def test_search_index_service_typed_children() -> None:
     assert svc.templates[0].mapping_ref == "wazuh-alerts-mapping"
     assert svc.templates[0].template_digest == "sha256:wazuh-template"
     assert svc.templates[0].evidence_refs == [
-        "docs/aces/inventory/wazuh.indexer/evidence/wazuh-indexer-templates.json.gz"
+        "docs/raes/inventory/wazuh.indexer/evidence/wazuh-indexer-templates.json.gz"
     ]
     assert isinstance(svc.transport_security, RuntimeDatastoreTransportSecurity)
     assert svc.transport_security.mode is RuntimeDatastoreTransportSecurityMode.MUTUAL_TLS

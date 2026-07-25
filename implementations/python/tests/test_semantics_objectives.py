@@ -9,9 +9,9 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
-from aces.core.sdl.parser import parse_sdl_file
-from aces.core.semantics.assessment import AssessmentResourceKind
-from aces.core.semantics.objective_semantics import (
+from raes.parser import parse_sdl_file
+from raes.semantics.assessment import AssessmentResourceKind
+from raes.semantics.objective_semantics import (
     OBJECTIVE_ACTOR_DEPENDENCY_ROLES,
     OBJECTIVE_DEPENDENCY_DEPENDENCY_ROLES,
     OBJECTIVE_SUCCESS_DEPENDENCY_ROLES,
@@ -23,7 +23,7 @@ from aces.core.semantics.objective_semantics import (
     analyze_objective_semantics,
     partition_objective_dependencies,
 )
-from aces.core.semantics.objectives import (
+from raes.semantics.objectives import (
     ObjectiveDependencyRole,
     ObjectiveWindowReferenceKind,
     analyze_objective_window,

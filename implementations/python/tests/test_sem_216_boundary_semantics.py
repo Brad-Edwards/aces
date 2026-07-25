@@ -19,7 +19,7 @@ import json
 from pathlib import Path
 
 import pytest
-from aces_contracts.contracts import (
+from raes_contracts.contracts import (
     ExperimentEvidenceRecordModel,
     ParticipantContextViewModel,
     schema_bundle,

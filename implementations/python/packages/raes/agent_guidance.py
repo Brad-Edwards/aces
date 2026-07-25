@@ -1,4 +1,4 @@
-"""Machine-readable ACES agent guidance profile."""
+"""Machine-readable RAES agent guidance profile."""
 
 from __future__ import annotations
 

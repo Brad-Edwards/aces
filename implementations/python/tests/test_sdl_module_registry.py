@@ -20,15 +20,15 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from typer.testing import CliRunner
 
-from aces.cli.main import app
-from aces.core.runtime.compiler import compile_runtime_model
-from aces.core.sdl._errors import SDLParseError, SDLValidationError
-from aces.core.sdl.module_registry import (
+from raes_cli.main import app
+from raes_processor.compiler import compile_runtime_model
+from raes._errors import SDLParseError, SDLValidationError
+from raes.module_registry import (
     LOCKFILE_NAME,
     load_lockfile,
     publish_module_to_oci_layout,
 )
-from aces.core.sdl.parser import parse_sdl_file
+from raes.parser import parse_sdl_file
 
 
 def _write(path: Path, content: str) -> Path:
@@ -827,7 +827,7 @@ def test_database_and_application_refs_survive_module_namespacing():
     """
     from raes._module_symbols import symbol_index
 
-    from aces.core.sdl.scenario import ModuleDescriptor, Scenario
+    from raes.scenario import ModuleDescriptor, Scenario
 
     scenario = Scenario(
         name="db-module",

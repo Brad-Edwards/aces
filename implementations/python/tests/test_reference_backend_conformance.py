@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from aces_reference_backend import create_reference_backend_target
+from raes_reference_backend import create_reference_backend_target
 
-from aces.core.runtime.conformance import (
+from raes_conformance.conformance import (
     BackendCapabilityProfile,
     run_target_conformance,
 )
@@ -40,7 +40,7 @@ def test_reference_target_drives_full_participant_probe_case_set():
 
 
 def test_reference_target_conformance_matches_stub_acceptance():
-    from aces.backends.stubs import create_stub_target
+    from raes_backend_stubs.stubs import create_stub_target
 
     reference_report = run_target_conformance(create_reference_backend_target())
     stub_report = run_target_conformance(create_stub_target())

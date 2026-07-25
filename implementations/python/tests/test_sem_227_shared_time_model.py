@@ -7,8 +7,8 @@ from fractions import Fraction
 from pathlib import Path
 
 import pytest
-from aces_processor.compiler import compile_runtime_model
-from aces_runtime.time_coordinator import ClockLifecycleState, TimeCoordinator
+from raes_processor.compiler import compile_runtime_model
+from raes_runtime.time_coordinator import ClockLifecycleState, TimeCoordinator
 from hypothesis import given
 from hypothesis import strategies as st
 from raes._errors import SDLParseError, SDLValidationError

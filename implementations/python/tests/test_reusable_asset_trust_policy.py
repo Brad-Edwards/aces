@@ -15,12 +15,12 @@ import json
 from pathlib import Path
 
 import pytest
-from aces_contracts.contracts import (
+from raes_contracts.contracts import (
     REUSABLE_ASSET_FAMILIES,
     ReusableAssetTrustPolicyModel,
     schema_bundle,
 )
-from aces_contracts.versions import REUSABLE_ASSET_TRUST_POLICY_SCHEMA_VERSION
+from raes_contracts.versions import REUSABLE_ASSET_TRUST_POLICY_SCHEMA_VERSION
 from pydantic import ValidationError
 from tools.check_schema_publication import load_schema_publication_catalog
 

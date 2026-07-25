@@ -5,23 +5,23 @@ from __future__ import annotations
 import textwrap
 
 import pytest
-from aces_contracts.planning import (
+from raes_contracts.planning import (
     ChangeAction,
     PlannedResource,
     ProvisioningPlan,
     ProvisionOp,
     RuntimeDomain,
 )
-from aces_reference_backend import (
+from raes_reference_backend import (
     create_reference_backend_components,
     create_reference_backend_manifest,
 )
-from aces_reference_backend.drivers.inprocess import InProcessDriver
+from raes_reference_backend.drivers.inprocess import InProcessDriver
 
-from aces.core.runtime.control_plane import RuntimeControlPlane
-from aces.core.runtime.manager import RuntimeManager
-from aces.core.runtime.registry import RuntimeTarget
-from aces.core.sdl import parse_sdl
+from raes_runtime.control_plane import RuntimeControlPlane
+from raes_runtime.manager import RuntimeManager
+from raes_runtime.registry import RuntimeTarget
+from raes import parse_sdl
 
 _SCENARIO = """
 name: ref-provisioner

@@ -103,7 +103,7 @@ a standalone Suricata IDS node is the existing `network_detection_engines` +
 OS-local users/groups/sudo are `runtime.local_identity`, and transport/TLS
 exposure is `service_listeners` + `applications` + `runtime.network`. The
 SCN-010 expressivity gap analysis
-([scn010-expressivity-gap-analysis](../../aces/inventory/scn010-expressivity-gap-analysis.md))
+([scn010-expressivity-gap-analysis](../../raes/inventory/scn010-expressivity-gap-analysis.md))
 records each fold field-for-field, so the observable-parity gate is shown to cut
 against over-building as well as under-coverage.
 Container image build

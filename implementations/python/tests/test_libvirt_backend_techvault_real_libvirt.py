@@ -9,7 +9,7 @@ import shutil
 from pathlib import Path
 
 import pytest
-from aces_operations.techvault_live import TechVaultLiveConfig, validate_techvault_live
+from raes_operations.techvault_live import TechVaultLiveConfig, validate_techvault_live
 from paths import EXAMPLES_DIR
 
 

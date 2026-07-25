@@ -12,8 +12,8 @@ from __future__ import annotations
 import json
 
 import pytest
-from aces_contracts.contracts import ExperimentReferenceModel
-from aces_contracts.contracts.random_stream import (
+from raes_contracts.contracts import ExperimentReferenceModel
+from raes_contracts.contracts.random_stream import (
     GovernedEntropyRefModel,
     GovernedRandomOutcomeRefModel,
     PublicRandomOutcomeModel,

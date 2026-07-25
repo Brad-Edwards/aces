@@ -6,12 +6,12 @@ import json
 from pathlib import Path
 
 import pytest
-from aces_conformance.conformance import _validate_payload
-from aces_contracts.contracts import (
+from raes_conformance.conformance import _validate_payload
+from raes_contracts.contracts import (
     ParticipantImplementationManifestModel,
     ParticipantImplementationProvenanceModel,
 )
-from aces_contracts.manifest_authority import PARTICIPANT_IMPLEMENTATION_SUPPORTED_CONTRACT_IDS
+from raes_contracts.manifest_authority import PARTICIPANT_IMPLEMENTATION_SUPPORTED_CONTRACT_IDS
 from pydantic import ValidationError
 
 FIXTURES_ROOT = Path(__file__).resolve().parents[3] / "contracts" / "fixtures"

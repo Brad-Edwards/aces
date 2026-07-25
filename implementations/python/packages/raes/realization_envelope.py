@@ -35,8 +35,8 @@ import json
 from copy import deepcopy
 from dataclasses import dataclass
 
-from aces_contracts.diagnostics import Diagnostic, Severity
-from aces_contracts.realization_envelope import RealizationEnvelopeModel, WitnessPolicy, scalar_in_domain
+from raes_contracts.diagnostics import Diagnostic, Severity
+from raes_contracts.realization_envelope import RealizationEnvelopeModel, WitnessPolicy, scalar_in_domain
 from pydantic import ValidationError
 
 from ._errors import SDLInstantiationError, SDLValidationError

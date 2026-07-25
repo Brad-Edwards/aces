@@ -43,7 +43,7 @@ engineering risk is concept conflation: treating "not specified yet",
   manifest declares compatible support.
 - Keep rejection semantics fail-closed and diagnostic-driven. Unsupported exact
   requirements should surface through existing `SDLValidationError`,
-  `SDLInstantiationError`, or `aces_processor.models.Diagnostic` paths,
+  `SDLInstantiationError`, or `raes_processor.models.Diagnostic` paths,
   depending on the phase where support is known.
 
 ## Canonical Incumbents
@@ -57,19 +57,19 @@ Build on these existing surfaces before adding anything new:
 - static semantics: `SemanticValidator` and `SDLValidationError`
 - instantiation: `instantiate_scenario()` and `SDLInstantiationError`
 - shared semantic helpers: `raes.semantics.*` and
-  `aces_processor.semantics.*`
-- processor/backend declarations: `aces_processor.manifest`,
-  `aces_processor.capabilities`, `aces_backend_protocols.capabilities`, and
-  `aces_backend_protocols.manifest.backend_manifest_payload()`
-- apparatus contract primitives: `aces_contracts.apparatus`,
+  `raes_processor.semantics.*`
+- processor/backend declarations: `raes_processor.manifest`,
+  `raes_processor.capabilities`, `raes_backend_protocols.capabilities`, and
+  `raes_backend_protocols.manifest.backend_manifest_payload()`
+- apparatus contract primitives: `raes_contracts.apparatus`,
   `RealizationSupportDeclaration`, `ConceptBinding`, and
   `RealizationSupportMode`
-- contract validation: `aces_contracts.contracts.ContractModel`,
+- contract validation: `raes_contracts.contracts.ContractModel`,
   `BackendManifestV2Model`, `ProcessorManifestV2Model`, `schema_bundle()`,
   generated `contracts/schemas/`, and fixture validation
 - authority helpers: `manifest_authority`, `controlled_vocabularies`,
   `semantic_profiles`, `reference_models`, and the concept-authority catalogs
-- runtime diagnostics and envelopes: `aces_processor.models.Diagnostic`,
+- runtime diagnostics and envelopes: `raes_processor.models.Diagnostic`,
   runtime plan/result/snapshot models, and published control-plane contracts
 - workflow gates: `.ground-control.yaml`, `.gc/plan-rules.md`,
   `tools/check_repo_policy.py`, `tools/check_requirement_governance.py`,
@@ -179,13 +179,13 @@ envelopes, or experiment-core contracts.
 ## Part 2 Implementation Boundary
 
 The typed compiler emission and planner gate must preserve the classifier output
-as runtime-model metadata owned by `aces_processor.models.RuntimeModel` and
-emitted by `aces_processor.compiler`. The planner should consume that compiled
+as runtime-model metadata owned by `raes_processor.models.RuntimeModel` and
+emitted by `raes_processor.compiler`. The planner should consume that compiled
 metadata directly; it must not re-walk SDL YAML, rerun the classifier, infer
 exactness from backend capability failures, or treat the backend manifest as an
 author-intent source.
 
-Planner rejection belongs in the existing `aces_processor.planner.plan()` /
+Planner rejection belongs in the existing `raes_processor.planner.plan()` /
 `ExecutionPlan.diagnostics` path. Unsupported exact or constrained requirement
 kinds and open demand without explicit `OPEN_REALIZATION` support should be
 reported as stable `Diagnostic` objects that name the compiled

@@ -67,21 +67,20 @@ before it is changed:
 - historical/external records.
 
 Remaining ACES references are intentional only when they are historical
-records, external references, retained source import paths, governed contract
-identifiers, workflow keys owned by external automation, or migration
-documentation. Current emitted identifiers should use RAES by default once the
-owning surface is migrated.
+records, external references, governed contract identifiers, workflow keys
+owned by external automation, or migration documentation. Current source
+imports and emitted identifiers use RAES.
 
 Public command and MCP surfaces make a hard cut to RAES. The `aces` and
 `aces-mcp` console scripts and the `aces_*` MCP tool aliases are removed instead
 of retained as compatibility aliases. The Python distribution surface moves to
 `raes` for new PyPI publication.
 
-Legacy `aces.*` and `aces_*` Python import packages remain source/API names for
-this issue because changing module namespaces is a separate package-boundary
-migration. Do not add a central runtime rename service, universal identifier
-registry, persistence table, API endpoint, or cross-package exception hierarchy
-for the rename.
+Legacy `aces.*`, `aces_sdl`, and `aces_*` Python import packages are removed by
+the package-boundary hard cut. No aliases, wrappers, import hooks, or fallback
+imports are provided. Do not add a central runtime rename service, universal
+identifier registry, persistence table, API endpoint, or cross-package
+exception hierarchy for the rename.
 
 Published schema and contract identifiers remain governed by ADR-061 and the
 schema-publication manifest. If a contract id, schema `$id`, profile id, or

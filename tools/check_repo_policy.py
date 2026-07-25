@@ -15,7 +15,7 @@ from tools.policy.repo_policy import evaluate_repo_policy
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Validate ACES SDL repo policy rules.")
+    parser = argparse.ArgumentParser(description="Validate RAES SDL repo policy rules.")
     parser.add_argument("--staged", action="store_true", help="Check staged changes instead of working tree changes.")
     parser.add_argument("--base-rev", help="Compare against a specific git revision.")
     parser.add_argument("--json", action="store_true", help="Emit JSON failures.")

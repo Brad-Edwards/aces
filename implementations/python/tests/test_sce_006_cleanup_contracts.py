@@ -7,15 +7,15 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
-from aces_backend_protocols.capabilities import (
+from raes_backend_protocols.capabilities import (
     BackendManifest,
     CleanupCapabilities,
     require_cleanup_plan_capability,
 )
-from aces_backend_protocols.manifest import backend_manifest_from_v2_model, backend_manifest_payload
-from aces_backend_stubs.stubs import create_stub_manifest
-from aces_contracts.contracts import BackendManifestV2Model, CleanupCapabilitiesModel, schema_bundle
-from aces_contracts.contracts.trial_cleanup import (
+from raes_backend_protocols.manifest import backend_manifest_from_v2_model, backend_manifest_payload
+from raes_backend_stubs.stubs import create_stub_manifest
+from raes_contracts.contracts import BackendManifestV2Model, CleanupCapabilitiesModel, schema_bundle
+from raes_contracts.contracts.trial_cleanup import (
     CleanStateClaimModel,
     CleanStateRequirementModel,
     CleanupObligationModel,

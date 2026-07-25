@@ -6,22 +6,22 @@ import textwrap
 from pathlib import Path
 
 import pytest
-from aces_backend_protocols.capability_admission import time_model_capability_gaps
-from aces_backend_stubs.stubs import create_stub_manifest, create_stub_target
-from aces_conformance.time_semantics import time_model_conformance_diagnostics
-from aces_contracts.contracts.time_model import (
+from raes_backend_protocols.capability_admission import time_model_capability_gaps
+from raes_backend_stubs.stubs import create_stub_manifest, create_stub_target
+from raes_conformance.time_semantics import time_model_conformance_diagnostics
+from raes_contracts.contracts.time_model import (
     RealizedTimeModelProvenanceModel,
     TimeApparatusBindingModel,
     TimeModelDeclarationModel,
     TimeRuntimeStateModel,
     validate_time_runtime_transition,
 )
-from aces_processor.compiler import compile_runtime_model
-from aces_processor.compiler.time_model import (
+from raes_processor.compiler import compile_runtime_model
+from raes_processor.compiler.time_model import (
     compiled_time_model_from_contract,
     time_model_contract_model,
 )
-from aces_runtime import RuntimeManager
+from raes_runtime import RuntimeManager
 from raes.parser import parse_sdl
 
 REPO_ROOT = Path(__file__).resolve().parents[3]

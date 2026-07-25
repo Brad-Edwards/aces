@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from aces_backend_libvirt import (
+from raes_backend_libvirt import (
     LIBVIRT_BACKEND_NAME,
     LibvirtProvisioner,
     create_libvirt_components,
@@ -11,19 +11,19 @@ from aces_backend_libvirt import (
     register_libvirt_backend,
 )
 
-from aces.core.runtime.registry import BackendRegistry, RuntimeTarget
+from raes_runtime.registry import BackendRegistry, RuntimeTarget
 
 
 class _NoopDriver:
     driver_mode = "generic"
 
     def realize(self, *, networks, domains):
-        from aces_backend_libvirt.driver import DriverResult
+        from raes_backend_libvirt.driver import DriverResult
 
         return DriverResult()
 
     def destroy(self, *, networks, domains):
-        from aces_backend_libvirt.driver import DriverResult
+        from raes_backend_libvirt.driver import DriverResult
 
         return DriverResult()
 

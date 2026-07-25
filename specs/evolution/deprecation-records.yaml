@@ -35,19 +35,17 @@ adr_refs:
 spec: specs/evolution/versioning-deprecation-and-migration.md
 
 records:
-  # The legacy `aces.*` re-export namespace. ADR-010 treats it as
-  # compatibility-only and one-directional; the spec (migration section) blesses
-  # it staying in the compatibility tree. It carried no complete lifecycle
-  # record until GOV-902.
+  # The legacy `aces.*` re-export namespace was removed by the RAES hard cut.
   - id: aces-compat-namespace
     surface_class: python-distribution
     identifier: "implementations/python/src/aces/ (the legacy `aces.*` re-export namespace)"
-    status: deprecated
+    status: removed
     first_notice: "ADR-010 (repository realignment order and compatibility policy)"
-    replacement: "the owning packages under implementations/python/packages/ (raes, aces_contracts, aces_cli, aces_runtime, and siblings)"
-    migration_reference: "docs/decisions/adrs/adr-010-repository-realignment-order-and-compatibility-policy.md; docs/explain/sdl/runtime-architecture.md"
-    notice_window: "Supported through the pre-1.0 package series; removal eligible no earlier than the first major (post-1.0) package release and only via a complete removal record."
-    verification_evidence: "tools/check_repo_policy.py enforces the compatibility-wrapper-only rule for aces.* modules and the one-way import ban (owning packages must not import aces.*), proving the layer remains a supported wrapper during the notice window."
+    replacement: "the owning packages under implementations/python/packages/ (raes, raes_contracts, raes_cli, raes_runtime, and siblings)"
+    migration_reference: "docs/migration/raes-rename.md"
+    notice_window: "Removed at the 1.0 hard cut; no compatibility window or alias is provided."
+    verification_evidence: "The wheel excludes implementations/python/src/aces, and repo policy rejects reintroduction of the retired namespace or imports."
+    removal_record: "RAES 1.0 removes the deprecated aces and aces_* Python import surfaces in favor of raes and raes_* owners."
 
   # The module-import `path:` field, superseded by `source:` in ADR-053. The
   # parser still accepts it as a backward-compatible alias, normalizing it to

@@ -89,7 +89,7 @@ a new backend manifest shape, or APTL-private keys inside the scenario body.
 
 ## Libvirt Scenario Evidence Artifact (#615)
 
-`aces_operations.libvirt_evidence_run.run_libvirt_evidence_run` (CLI: `aces
+`raes_operations.libvirt_evidence_run.run_libvirt_evidence_run` (CLI: `aces
 libvirt evidence validate`) produces a stable, validated evaluator-evidence
 run artifact for this scenario — `aces.libvirt.scenario-evidence-run/v1`, written to
 `runs/<run-id>/scenario-evidence/libvirt-scenario-evidence-run.json`. It composes the
@@ -152,12 +152,12 @@ semantic equivalence.
 
 ## Downstream Links
 
-- RAES issue: Brad-Edwards/aces#598
-- Participant implementation binding: Brad-Edwards/aces#599
-- RAES n=2 backend proof: Brad-Edwards/aces#600
+- RAES issue: RAESystem/rae#598
+- Participant implementation binding: RAESystem/rae#599
+- RAES n=2 backend proof: RAESystem/rae#600
   (corpus: `examples/corpus/reference-demonstration/`)
-- Libvirt participant runtime: Brad-Edwards/aces#614
-- Libvirt evaluator/Wazuh evidence readback: Brad-Edwards/aces#615
+- Libvirt participant runtime: RAESystem/rae#614
+- Libvirt evaluator/Wazuh evidence readback: RAESystem/rae#615
 - APTL realization and proof: Brad-Edwards/aptl#556,
   Brad-Edwards/aptl#557, Brad-Edwards/aptl#558
 

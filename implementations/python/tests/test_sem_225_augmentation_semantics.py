@@ -7,7 +7,7 @@ from copy import deepcopy
 from pathlib import Path
 
 import pytest
-from aces_contracts.contracts import (
+from raes_contracts.contracts import (
     ExperimentAugmentationDisclosureModel,
     ExperimentRunModel,
     schema_bundle,

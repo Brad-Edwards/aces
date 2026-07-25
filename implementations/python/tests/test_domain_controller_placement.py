@@ -14,28 +14,28 @@ from dataclasses import replace
 
 import pytest
 import yaml
-from aces_backend_libvirt.realization import interpret_provisioning_plan as interpret_libvirt_plan
-from aces_backend_protocols.backend_manifest import BackendManifest
-from aces_backend_protocols.domain_topology import DomainTopologyBinding, domain_topology_plan_diagnostics
-from aces_backend_stubs.stubs import create_stub_manifest
-from aces_conformance._realization_validation import operation_inventory_diagnostics
-from aces_conformance.realization import RealizationProbeEvidence
-from aces_contracts.contracts import ProvisioningPlanModel, schema_bundle
-from aces_contracts.plan_projection import provisioning_plan_model
-from aces_contracts.planning import (
+from raes_backend_libvirt.realization import interpret_provisioning_plan as interpret_libvirt_plan
+from raes_backend_protocols.backend_manifest import BackendManifest
+from raes_backend_protocols.domain_topology import DomainTopologyBinding, domain_topology_plan_diagnostics
+from raes_backend_stubs.stubs import create_stub_manifest
+from raes_conformance._realization_validation import operation_inventory_diagnostics
+from raes_conformance.realization import RealizationProbeEvidence
+from raes_contracts.contracts import ProvisioningPlanModel, schema_bundle
+from raes_contracts.plan_projection import provisioning_plan_model
+from raes_contracts.planning import (
     PLAN_RESOURCE_TYPES_BY_DOMAIN,
     ChangeAction,
     ProvisioningPlan,
     ProvisionOp,
     RuntimeDomain,
 )
-from aces_contracts.realization_envelope import ObservationStrength, RealizationConcern
-from aces_contracts.runtime_state import RuntimeSnapshot, SnapshotEntry
-from aces_processor.compiler import compile_runtime_model
-from aces_processor.models import DomainControllerPlacement, resource_payload
-from aces_processor.planner import plan
-from aces_processor.semantics.realization import realization_disclosure
-from aces_reference_backend import interpret_provisioning_plan as interpret_reference_plan
+from raes_contracts.realization_envelope import ObservationStrength, RealizationConcern
+from raes_contracts.runtime_state import RuntimeSnapshot, SnapshotEntry
+from raes_processor.compiler import compile_runtime_model
+from raes_processor.models import DomainControllerPlacement, resource_payload
+from raes_processor.planner import plan
+from raes_processor.semantics.realization import realization_disclosure
+from raes_reference_backend import interpret_provisioning_plan as interpret_reference_plan
 from jsonschema import Draft202012Validator
 from raes import parse_sdl
 

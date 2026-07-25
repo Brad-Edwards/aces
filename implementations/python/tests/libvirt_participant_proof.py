@@ -11,7 +11,7 @@ conformance proofs. It lives in the tests layer because it composes the processo
 validation iterators with the libvirt backend runtime, a cross-layer composition
 the ADR-036 module boundaries reserve for tests. The deterministic
 manifest/selection/action-result/admission fixtures are shared with the shipped
-scenario-evidence producer via ``aces_operations.deterministic_participant_fixtures``.
+scenario-evidence producer via ``raes_operations.deterministic_participant_fixtures``.
 """
 
 from __future__ import annotations
@@ -19,20 +19,20 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from aces_backend_libvirt.manifest import create_libvirt_manifest
-from aces_backend_libvirt.participant_runtime import LibvirtParticipantRuntime
-from aces_backend_libvirt.provisioner import LibvirtProvisioner
-from aces_operations.deterministic_participant_fixtures import (
+from raes_backend_libvirt.manifest import create_libvirt_manifest
+from raes_backend_libvirt.participant_runtime import LibvirtParticipantRuntime
+from raes_backend_libvirt.provisioner import LibvirtProvisioner
+from raes_operations.deterministic_participant_fixtures import (
     build_participant_admission_request,
     iter_admission_pairs,
 )
-from aces_processor.compiler import compile_runtime_model
-from aces_processor.models import (
+from raes_processor.compiler import compile_runtime_model
+from raes_processor.models import (
     iter_participant_behavior_history_violations,
     iter_participant_episode_snapshot_violations,
 )
-from aces_runtime.control_plane import RuntimeControlPlane
-from aces_runtime.registry import RuntimeTarget
+from raes_runtime.control_plane import RuntimeControlPlane
+from raes_runtime.registry import RuntimeTarget
 from libvirt_participant_fixtures import NullLibvirtDriver
 from raes.parser import parse_sdl
 

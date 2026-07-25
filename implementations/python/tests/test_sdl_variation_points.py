@@ -7,9 +7,9 @@ from copy import deepcopy
 from pathlib import Path
 
 import pytest
-from aces_contracts.bounded_domains import EnumDomain
-from aces_contracts.contracts import schema_bundle
-from aces_contracts.realization_envelope import EnumDomain as EnvelopeEnumDomain
+from raes_contracts.bounded_domains import EnumDomain
+from raes_contracts.contracts import schema_bundle
+from raes_contracts.realization_envelope import EnumDomain as EnvelopeEnumDomain
 from jsonschema import Draft202012Validator
 from pydantic import ValidationError
 from raes import SDLInstantiationError, SDLParseError, SDLValidationError

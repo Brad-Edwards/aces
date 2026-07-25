@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 import yaml
-from aces_processor.compiler import compile_runtime_model
+from raes_processor.compiler import compile_runtime_model
 from raes._errors import SDLValidationError
 from raes.parser import parse_sdl
 from test_dsl_437_benign_participant_execution import _scenario_yaml

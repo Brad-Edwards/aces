@@ -7,9 +7,9 @@ from dataclasses import replace
 from typing import Any
 
 import pytest
-from aces_backend_protocols.capabilities import BackendManifest
-from aces_backend_stubs.stubs import create_stub_components, create_stub_manifest
-from aces_contracts.contracts import (
+from raes_backend_protocols.capabilities import BackendManifest
+from raes_backend_stubs.stubs import create_stub_components, create_stub_manifest
+from raes_contracts.contracts import (
     ParticipantActionResultModel,
     ParticipantContextViewModel,
     ParticipantHistoryViewModel,
@@ -17,28 +17,28 @@ from aces_contracts.contracts import (
     ParticipantImplementationSelectionModel,
     ParticipantStatusViewModel,
 )
-from aces_contracts.participant_binding import ParticipantActionAdmissionRequest
-from aces_contracts.planning import ChangeAction, ProvisioningPlan, ProvisionOp
-from aces_contracts.runtime_state import RuntimeSnapshot, SnapshotEntry
-from aces_processor.models import (
+from raes_contracts.participant_binding import ParticipantActionAdmissionRequest
+from raes_contracts.planning import ChangeAction, ProvisioningPlan, ProvisionOp
+from raes_contracts.runtime_state import RuntimeSnapshot, SnapshotEntry
+from raes_processor.models import (
     iter_participant_behavior_history_violations,
     iter_participant_episode_snapshot_violations,
 )
 
-from aces.backends.stubs import create_stub_target
-from aces.core.runtime.compiler import compile_runtime_model
-from aces.core.runtime.control_plane import RuntimeControlPlane
-from aces.core.runtime.control_plane_store import ControlPlaneOperationRecord
-from aces.core.runtime.models import (
+from raes_backend_stubs.stubs import create_stub_target
+from raes_processor.compiler import compile_runtime_model
+from raes_runtime.control_plane import RuntimeControlPlane
+from raes_runtime.control_plane_store import ControlPlaneOperationRecord
+from raes_processor.models import (
     OperationReceipt,
     OperationState,
     OperationStatus,
     ParticipantEpisodeTerminalReason,
     RuntimeDomain,
 )
-from aces.core.runtime.planner import plan
-from aces.core.runtime.registry import RuntimeTarget
-from aces.core.sdl import parse_sdl
+from raes_processor.planner import plan
+from raes_runtime.registry import RuntimeTarget
+from raes import parse_sdl
 
 
 def _scenario(yaml_str: str):

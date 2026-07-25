@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import pytest
-from aces_contracts.contracts import ParticipantBehaviorHistoryEventModel
-from aces_processor.models import (
+from raes_contracts.contracts import ParticipantBehaviorHistoryEventModel
+from raes_processor.models import (
     ParticipantActionEffectResult,
     ParticipantActionPreconditionResult,
     ParticipantActionPreconditionStatus,

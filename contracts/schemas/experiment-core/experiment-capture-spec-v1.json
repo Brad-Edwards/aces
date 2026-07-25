@@ -392,7 +392,7 @@
             }
           ],
           "level": "error",
-          "validator": "aces_contracts.contracts.ExperimentCaptureWindowModel._validate_capture_window"
+          "validator": "raes_contracts.contracts.ExperimentCaptureWindowModel._validate_capture_window"
         }
       ]
     },
@@ -574,7 +574,7 @@
     },
     "ExperimentReferenceModel": {
       "additionalProperties": false,
-      "description": "Typed reference to an experiment-core or adjacent ACES artifact.",
+      "description": "Typed reference to an experiment-core or adjacent RAES artifact.",
       "properties": {
         "ref_digest": {
           "anyOf": [
@@ -799,7 +799,7 @@
         }
       ],
       "level": "error",
-      "validator": "aces_contracts.contracts.ExperimentCaptureSpecModel._validate_capture_spec"
+      "validator": "raes_contracts.contracts.ExperimentCaptureSpecModel._validate_capture_spec"
     }
   ],
   "x-aces-plane": "authored_evidence_requirement",

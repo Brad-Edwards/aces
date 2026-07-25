@@ -16,12 +16,12 @@ import tempfile
 import traceback
 
 import libvirt
-from aces_backend_libvirt import LibvirtProvisioner
-from aces_backend_libvirt.cloudinit import CloudInitSpec, CloudInitUser
-from aces_backend_libvirt.driver import DomainSpec, NetworkAcl, NetworkSpec
-from aces_backend_libvirt.drivers.libvirt import LibvirtDeploymentDriver, _filter_owner_uuid
-from aces_contracts.planning import ChangeAction, PlannedResource, ProvisioningPlan, ProvisionOp, RuntimeDomain
-from aces_contracts.runtime_state import RuntimeSnapshot
+from raes_backend_libvirt import LibvirtProvisioner
+from raes_backend_libvirt.cloudinit import CloudInitSpec, CloudInitUser
+from raes_backend_libvirt.driver import DomainSpec, NetworkAcl, NetworkSpec
+from raes_backend_libvirt.drivers.libvirt import LibvirtDeploymentDriver, _filter_owner_uuid
+from raes_contracts.planning import ChangeAction, PlannedResource, ProvisioningPlan, ProvisionOp, RuntimeDomain
+from raes_contracts.runtime_state import RuntimeSnapshot
 
 URI = "qemu:///system"
 PREFIX = "acestest"

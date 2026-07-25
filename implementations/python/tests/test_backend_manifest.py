@@ -7,7 +7,7 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
-from aces_backend_protocols.capabilities import (
+from raes_backend_protocols.capabilities import (
     OBSERVATION_CAPABILITY_CAPTURE_KIND_SCOPE,
     OBSERVATION_CAPABILITY_CHANNEL_KIND_SCOPE,
     OBSERVATION_CAPABILITY_SEALING_MODE_SCOPE,
@@ -24,11 +24,11 @@ from aces_backend_protocols.capabilities import (
     observation_capability_contract_gaps,
     participant_runtime_capability_contract_gaps,
 )
-from aces_backend_protocols.manifest import backend_manifest_payload
-from aces_backend_stubs.stubs import create_stub_manifest
-from aces_contracts.contracts import BackendManifestV2Model
-from aces_contracts.manifest_authority import BACKEND_SUPPORTED_CONTRACT_IDS
-from aces_contracts.vocabulary import (
+from raes_backend_protocols.manifest import backend_manifest_payload
+from raes_backend_stubs.stubs import create_stub_manifest
+from raes_contracts.contracts import BackendManifestV2Model
+from raes_contracts.manifest_authority import BACKEND_SUPPORTED_CONTRACT_IDS
+from raes_contracts.vocabulary import (
     ParticipantFeatureSupportLevel,
     WorkflowFeature,
     WorkflowStatePredicateFeature,
@@ -602,7 +602,7 @@ def test_backend_manifest_v2_rejects_below_exact_feature_support_without_disclos
 
 
 def test_backend_manifest_v2_schema_publishes_feature_support_disclosure_rule():
-    from aces_contracts.contracts import schema_bundle
+    from raes_contracts.contracts import schema_bundle
 
     schema = schema_bundle()["backend-manifest-v2"]
     feature_support_schema = schema["$defs"]["ParticipantFeatureSupportModel"]

@@ -32,9 +32,9 @@ from raes.runtime_forwarding_agent import (
 )
 from raes.runtime_security_monitoring import RuntimeSecurityMonitoringListenerRole
 
-from aces.core.sdl._errors import SDLValidationError
-from aces.core.sdl.scenario import Scenario
-from aces.core.sdl.validator import SemanticValidator
+from raes._errors import SDLValidationError
+from raes.scenario import Scenario
+from raes.validator import SemanticValidator
 
 # --------------------------------------------------------------------------- #
 # Fixtures                                                                     #

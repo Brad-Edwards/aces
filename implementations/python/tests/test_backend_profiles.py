@@ -6,14 +6,14 @@ import json
 from pathlib import Path
 
 import pytest
-from aces_contracts.backend_profiles import (
+from raes_contracts.backend_profiles import (
     BackendProfileModel,
     backend_profile_path,
     backend_profiles_root,
     load_backend_profile,
     load_backend_profile_from_path,
 )
-from aces_contracts.manifest_authority import BACKEND_SUPPORTED_CONTRACT_IDS
+from raes_contracts.manifest_authority import BACKEND_SUPPORTED_CONTRACT_IDS
 from pydantic import ValidationError
 
 REPO_ROOT = Path(__file__).resolve().parents[3]

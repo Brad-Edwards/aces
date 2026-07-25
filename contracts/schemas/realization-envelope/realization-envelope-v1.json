@@ -976,7 +976,7 @@
         }
       ],
       "level": "error",
-      "validator": "aces_contracts.realization_envelope.validate_backend_realization_envelope"
+      "validator": "raes_contracts.realization_envelope.validate_backend_realization_envelope"
     }
   ],
   "x-aces-semantic-profile": {

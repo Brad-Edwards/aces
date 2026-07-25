@@ -13,11 +13,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import pytest
-from aces_backend_libvirt.cloudinit import CloudInitFile, CloudInitSpec, CloudInitUser
-from aces_backend_libvirt.driver import DomainSpec, NetworkSpec, ServiceSpec
-from aces_backend_libvirt.guest_appliance import GuestObservingInitramfsBuilder
-from aces_backend_libvirt.guest_certified_driver import GuestCertifiedLibvirtDriver
-from aces_backend_libvirt.techvault_matrix import mac_address
+from raes_backend_libvirt.cloudinit import CloudInitFile, CloudInitSpec, CloudInitUser
+from raes_backend_libvirt.driver import DomainSpec, NetworkSpec, ServiceSpec
+from raes_backend_libvirt.guest_appliance import GuestObservingInitramfsBuilder
+from raes_backend_libvirt.guest_certified_driver import GuestCertifiedLibvirtDriver
+from raes_backend_libvirt.techvault_matrix import mac_address
 
 _CHALLENGE = "deadbeefcafef00d"
 
@@ -405,12 +405,12 @@ def _facts_from_matrix(matrix, challenge: str) -> dict[str, str]:
 
 
 def _guest_matrix(scenario: Path):
-    from aces_backend_libvirt.manifest import create_libvirt_manifest
-    from aces_backend_libvirt.realization import interpret_provisioning_plan
-    from aces_backend_libvirt.techvault_matrix import native_matrix
+    from raes_backend_libvirt.manifest import create_libvirt_manifest
+    from raes_backend_libvirt.realization import interpret_provisioning_plan
+    from raes_backend_libvirt.techvault_matrix import native_matrix
     from raes.parser import parse_sdl_file
 
-    from aces.core.runtime.manager import RuntimeManager
+    from raes_runtime.manager import RuntimeManager
 
     scout = GuestCertifiedLibvirtDriver(
         state_dir=scenario.parent / "scout",
@@ -421,7 +421,7 @@ def _guest_matrix(scenario: Path):
         guest_transport=_StubTransport(facts_by_address={}),
         challenge=_CHALLENGE,
     )
-    from aces_backend_libvirt import create_libvirt_target
+    from raes_backend_libvirt import create_libvirt_target
 
     target = create_libvirt_target(participant_runtime=True, driver=scout)
     plan = RuntimeManager(target).plan(parse_sdl_file(scenario)).provisioning
@@ -457,7 +457,7 @@ def _guest_factory(tmp_path: Path, transport: _StubTransport):
 
 
 def test_evidence_run_guest_certified_publishes_bound_observations(tmp_path: Path) -> None:
-    from aces_operations.libvirt_evidence_run import (
+    from raes_operations.libvirt_evidence_run import (
         LibvirtEvidenceRunConfig,
         run_libvirt_evidence_run,
         validate_libvirt_evidence_run_artifact,
@@ -490,7 +490,7 @@ def test_evidence_run_guest_certified_publishes_bound_observations(tmp_path: Pat
 
 
 def test_evidence_run_guest_certified_transport_failure_fails_closed(tmp_path: Path) -> None:
-    from aces_operations.libvirt_evidence_run import LibvirtEvidenceRunConfig, run_libvirt_evidence_run
+    from raes_operations.libvirt_evidence_run import LibvirtEvidenceRunConfig, run_libvirt_evidence_run
 
     scenario = _bounded_guest_scenario(tmp_path)
     transport = _StubTransport(facts_by_address={}, failure="boot-timeout")
@@ -512,7 +512,7 @@ def test_evidence_run_guest_certified_transport_failure_fails_closed(tmp_path: P
 def test_evidence_run_guest_certified_residual_probe_artifacts_fail_closed(tmp_path: Path) -> None:
     # Native domains/networks are torn down cleanly, but residual guest-probe state
     # survives: the run must fail closed rather than claim verified cleanup.
-    from aces_operations.libvirt_evidence_run import LibvirtEvidenceRunConfig, run_libvirt_evidence_run
+    from raes_operations.libvirt_evidence_run import LibvirtEvidenceRunConfig, run_libvirt_evidence_run
 
     class _ResidualGuestDriver(GuestCertifiedLibvirtDriver):
         def destroy(self, *, networks: tuple[str, ...], domains: tuple[str, ...]):

@@ -92,7 +92,7 @@ _SERVICE_MATERIALIZATION_VALIDATOR = (
     "[service materialization validator]"
     "(../../implementations/python/packages/raes/validator/_service_materialization.py)"
 )
-_CONTENT_COMPILER = "[content compiler](../../implementations/python/packages/aces_processor/compiler/placement.py)"
+_CONTENT_COMPILER = "[content compiler](../../implementations/python/packages/raes_processor/compiler/placement.py)"
 _ACCOUNT_VALIDATOR = "[account validator](../../implementations/python/packages/raes/validator/_content_objectives.py)"
 _STATEFUL_MODEL = "[scenario model](../../implementations/python/packages/raes/scenario.py)"
 _RELATIONSHIP_VALIDATOR = (

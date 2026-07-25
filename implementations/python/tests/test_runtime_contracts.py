@@ -7,8 +7,8 @@ from copy import deepcopy
 from pathlib import Path
 
 import pytest
-from aces_conformance.conformance import observability_evidence_conformance_diagnostics
-from aces_contracts.contracts import (
+from raes_conformance.conformance import observability_evidence_conformance_diagnostics
+from raes_contracts.contracts import (
     AcesSemanticInvariantEntryModel,
     AcesSemanticInvariantProfileReferenceModel,
     BackendManifestV2Model,
@@ -31,8 +31,8 @@ from aces_contracts.contracts import (
     validate_experiment_run_archival_datetimes,
     validate_experiment_study_against_tasks_and_runs,
 )
-from aces_contracts.contracts import bundle as contract_bundle
-from aces_contracts.manifest_authority import (
+from raes_contracts.contracts import bundle as contract_bundle
+from raes_contracts.manifest_authority import (
     BACKEND_SUPPORTED_CONTRACT_IDS,
     PARTICIPANT_IMPLEMENTATION_SUPPORTED_CONTRACT_IDS,
     PROCESSOR_SUPPORTED_CONTRACT_IDS,
@@ -40,8 +40,6 @@ from aces_contracts.manifest_authority import (
 )
 from jsonschema import Draft202012Validator
 from pydantic import ValidationError
-
-from aces.core.runtime import contracts as compat_runtime_contracts
 
 EXPERIMENT_CORE_FIXTURE_MODELS = {
     "experiment-apparatus-context-v1": ExperimentApparatusContextModel,
@@ -122,14 +120,6 @@ def test_schema_bundle_caches_generation_but_returns_isolated_copies(mocker):
         assert second["runtime-snapshot-v1"].get("title") != "caller mutation"
     finally:
         contract_bundle._schema_bundle_template.cache_clear()
-
-
-def test_compat_contract_imports_reexport_neutral_contracts():
-    assert compat_runtime_contracts.ProcessorManifestV2Model is ProcessorManifestV2Model
-    assert compat_runtime_contracts.BackendManifestV2Model is BackendManifestV2Model
-    assert compat_runtime_contracts.ParticipantImplementationManifestModel is ParticipantImplementationManifestModel
-    assert compat_runtime_contracts.ParticipantImplementationProvenanceModel is ParticipantImplementationProvenanceModel
-    assert compat_runtime_contracts.schema_bundle() == schema_bundle()
 
 
 def test_closed_world_contract_models_for_runtime_envelopes():
@@ -340,7 +330,7 @@ def test_experiment_core_schemas_publish_closed_world_contracts():
     assert "ended-at-not-before-started-at" in _invariant_ids(run_schema)
     assert "result-evidence-ref-resolves" in _invariant_ids(run_schema)
     task_run_invariant = _invariant_by_id(run_schema, "task-run-protocol-binding-valid")
-    assert task_run_invariant["validator"] == "aces_contracts.contracts.validate_experiment_run_against_task"
+    assert task_run_invariant["validator"] == "raes_contracts.contracts.validate_experiment_run_against_task"
     assert task_run_invariant["inputs"] == [
         {"contract_id": "experiment-task-v1", "instance_path": "#"},
         {"contract_id": "experiment-run-v1", "instance_path": "#"},
@@ -594,7 +584,7 @@ def test_aces_semantic_invariant_annotations_have_published_shape():
         validate_aces_semantic_invariant_annotations("experiment-run-v1", corrupted_schema)
 
     unresolved_validator_schema = deepcopy(run_schema)
-    unresolved_validator_schema["x-aces-invariants"][0]["validator"] = "aces_contracts.contracts.DoesNotExist"
+    unresolved_validator_schema["x-aces-invariants"][0]["validator"] = "raes_contracts.contracts.DoesNotExist"
     with pytest.raises(ValueError, match="does not resolve"):
         validate_aces_semantic_invariant_annotations("experiment-run-v1", unresolved_validator_schema)
 

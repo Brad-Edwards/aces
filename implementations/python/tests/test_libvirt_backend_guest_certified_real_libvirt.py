@@ -16,7 +16,7 @@ import shutil
 from pathlib import Path
 
 import pytest
-from aces_operations.libvirt_evidence_run import (
+from raes_operations.libvirt_evidence_run import (
     LibvirtEvidenceRunConfig,
     run_libvirt_evidence_run,
     validate_libvirt_evidence_run_artifact,

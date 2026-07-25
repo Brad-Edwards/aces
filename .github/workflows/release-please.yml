@@ -10,7 +10,7 @@ name: Release Please
 #
 # Feature PRs never touch CHANGELOG.md (release-please owns it) — no fragment
 # collisions. The version literal is in the dedicated RAES package version file;
-# `aces.__version__` derives from the installed distribution metadata.
+# `raes.__version__` derives from the installed distribution metadata.
 #
 # Caveat: the release PR is opened by GITHUB_TOKEN, so required CI checks do not
 # auto-run on it — admin-merge it, or give release-please a PAT so checks run.
@@ -78,15 +78,15 @@ jobs:
               sys.exit(f"expected exactly one wheel, found {wheels}")
           names = zipfile.ZipFile(wheels[0]).namelist()
           required = [
-              "aces_contracts/_corpus/profiles/backend/provisioning-only.json",
-              "aces_contracts/_corpus/fixtures/",
-              "aces_contracts/_corpus/concept-authority/controlled-vocabularies-v1.json",
-              "aces_contracts/_corpus/schemas/",
+              "raes_contracts/_corpus/profiles/backend/provisioning-only.json",
+              "raes_contracts/_corpus/fixtures/",
+              "raes_contracts/_corpus/concept-authority/controlled-vocabularies-v1.json",
+              "raes_contracts/_corpus/schemas/",
           ]
           missing = [r for r in required if not any(n == r or n.startswith(r) for n in names)]
           if missing:
               sys.exit(f"wheel is missing corpus payload: {missing}")
-          print(f"corpus payload present: {sum(n.startswith('aces_contracts/_corpus/') for n in names)} files")
+          print(f"corpus payload present: {sum(n.startswith('raes_contracts/_corpus/') for n in names)} files")
           PY
 
       - name: Publish to PyPI (OIDC trusted publishing)

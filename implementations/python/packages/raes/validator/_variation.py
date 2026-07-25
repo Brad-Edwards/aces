@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 
-from aces_contracts.bounded_domains import (
+from raes_contracts.bounded_domains import (
     BooleanDomain,
     EnumDomain,
     ExactDomain,

@@ -37,7 +37,7 @@ Canonical serializer notes:
   ``parse -> instantiate -> compile`` path injects no wall-clock / uuid / random
   values, so the compiled ``RuntimeModel`` carries no per-run fields (verified:
   no ``datetime.now`` / ``time.time`` / ``uuid4`` / ``random`` / ``secrets`` in
-  ``raes`` or ``aces_processor``). Author-provided time-typed values
+  ``raes`` or ``raes_processor``). Author-provided time-typed values
   (``start_time``, OCR durations, script ``time``) are deterministic functions
   of the input and need no exclusion. The strip mechanism is retained and
   check (1) is the tripwire: a future generated timestamp would differ between
@@ -58,8 +58,8 @@ from pathlib import Path
 import pytest
 from paths import EXAMPLES_DIR
 
-from aces.core.runtime.compiler import compile_runtime_model
-from aces.core.sdl import instantiate_scenario, parse_sdl_file
+from raes_processor.compiler import compile_runtime_model
+from raes import instantiate_scenario, parse_sdl_file
 
 # This whole witness is integration-style: it reads shipped scenarios from the
 # real repo on disk and spawns subprocesses, so it is excluded from the default
@@ -202,8 +202,8 @@ _SUBPROCESS_DRIVER = textwrap.dedent(
     import sys
     from pathlib import Path
 
-    from aces.core.runtime.compiler import compile_runtime_model
-    from aces.core.sdl import instantiate_scenario, parse_sdl_file
+    from raes_processor.compiler import compile_runtime_model
+    from raes import instantiate_scenario, parse_sdl_file
 
     exclude = set(json.loads(sys.argv[2]))
 

@@ -21,17 +21,17 @@ import textwrap
 
 import pytest
 
-from aces.backends.stubs import create_stub_target
-from aces.core.runtime.compiler import compile_runtime_model
-from aces.core.runtime.manager import RuntimeManager
-from aces.core.runtime.models import (
+from raes_backend_stubs.stubs import create_stub_target
+from raes_processor.compiler import compile_runtime_model
+from raes_runtime.manager import RuntimeManager
+from raes_processor.models import (
     ChangeAction,
     ExecutionPlan,
     RuntimeDomain,
     RuntimeSnapshot,
 )
-from aces.core.runtime.planner import plan as plan_execution
-from aces.core.sdl import (
+from raes_processor.planner import plan as plan_execution
+from raes import (
     InstantiatedScenario,
     SDLInstantiationError,
     instantiate_scenario,
@@ -338,7 +338,7 @@ class TestRun300Lifecycle:
         the original plan — whose ``base_snapshot`` is now stale — must
         surface a ``runtime.plan-snapshot-mismatch`` diagnostic and must
         not perform a second (partial) apply against the advanced state.
-        This exercises the provenance check in ``aces_processor/manager.py``
+        This exercises the provenance check in ``raes_processor/manager.py``
         (the base_snapshot comparison in ``_provenance_diagnostics``) and
         is the concrete guarantee that RUN-300's "preserving scenario
         meaning across those stages" clause is enforced even against

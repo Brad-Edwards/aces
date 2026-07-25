@@ -6,14 +6,14 @@ import json
 from pathlib import Path
 
 import pytest
-from aces_contracts.contracts import ExperimentSpecModel
-from aces_contracts.experiment_spec import (
+from raes_contracts.contracts import ExperimentSpecModel
+from raes_contracts.experiment_spec import (
     ExperimentSpecValidationError,
     find_experiment_specs,
     load_experiment_spec,
     parse_experiment_spec,
 )
-from aces_mcp.tools.experiment_authoring import (
+from raes_mcp.tools.experiment_authoring import (
     _MAX_INPUT_BYTES,
     _run_experiment_get_example,
     _run_experiment_scaffold,

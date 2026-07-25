@@ -5,14 +5,14 @@ from __future__ import annotations
 import textwrap
 from pathlib import Path
 
-import aces_runtime.control_plane_store as control_plane_store_module
+import raes_runtime.control_plane_store as control_plane_store_module
 import pytest
-from aces_contracts.contracts import (
+from raes_contracts.contracts import (
     ParticipantContextViewModel,
     ParticipantHistoryViewModel,
     ParticipantStatusViewModel,
 )
-from aces_contracts.runtime_state import (
+from raes_contracts.runtime_state import (
     ExplicitnessClass,
     ExplicitnessProvenance,
     RealizationProvenanceEntry,
@@ -20,19 +20,19 @@ from aces_contracts.runtime_state import (
 )
 from starlette.testclient import TestClient
 
-from aces.backends.stubs import create_stub_target
-from aces.core.runtime.compiler import compile_runtime_model
-from aces.core.runtime.control_plane import RuntimeControlPlane
-from aces.core.runtime.control_plane_api import create_control_plane_app
-from aces.core.runtime.control_plane_security import (
+from raes_backend_stubs.stubs import create_stub_target
+from raes_processor.compiler import compile_runtime_model
+from raes_runtime.control_plane import RuntimeControlPlane
+from raes_runtime.control_plane_api import create_control_plane_app
+from raes_runtime.control_plane_security import (
     ControlPlaneIdentity,
     ControlPlaneRole,
     ControlPlaneSecurityConfig,
 )
-from aces.core.runtime.control_plane_store import ControlPlaneOperationRecord, LocalControlPlaneStore
-from aces.core.runtime.models import OperationReceipt, OperationState, OperationStatus, RuntimeDomain
-from aces.core.runtime.planner import plan
-from aces.core.sdl import parse_sdl
+from raes_runtime.control_plane_store import ControlPlaneOperationRecord, LocalControlPlaneStore
+from raes_processor.models import OperationReceipt, OperationState, OperationStatus, RuntimeDomain
+from raes_processor.planner import plan
+from raes import parse_sdl
 
 
 def _scenario(yaml_str: str):

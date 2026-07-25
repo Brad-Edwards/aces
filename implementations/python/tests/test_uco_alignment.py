@@ -13,12 +13,12 @@ import json
 from pathlib import Path
 
 import pytest
-from aces_contracts.contracts import ConceptFamilyCatalogModel, UcoAlignmentCatalogModel
-from aces_contracts.uco_alignment import (
+from raes_contracts.contracts import ConceptFamilyCatalogModel, UcoAlignmentCatalogModel
+from raes_contracts.uco_alignment import (
     load_uco_alignment_catalog,
     uco_alignment_catalog_path,
 )
-from aces_contracts.versions import UCO_ALIGNMENT_SCHEMA_VERSION
+from raes_contracts.versions import UCO_ALIGNMENT_SCHEMA_VERSION
 from pydantic import ValidationError
 
 REPO_ROOT = Path(__file__).resolve().parents[3]

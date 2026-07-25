@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from aces_cli.main import app
-from aces_operations.libvirt_evidence_run import LibvirtEvidenceRunConfig
-from aces_operations.techvault_live import TechVaultLiveConfig
+from raes_cli.main import app
+from raes_operations.libvirt_evidence_run import LibvirtEvidenceRunConfig
+from raes_operations.techvault_live import TechVaultLiveConfig
 from typer.testing import CliRunner
 
 
@@ -25,7 +25,7 @@ def test_libvirt_techvault_validate_live_cli_invokes_gate(monkeypatch, tmp_path)
         calls.append(kwargs)
         return _Report()
 
-    monkeypatch.setattr("aces_cli.libvirt.validate_techvault_live", _validate)
+    monkeypatch.setattr("raes_cli.libvirt.validate_techvault_live", _validate)
     scenario = tmp_path / "scenario.sdl.yaml"
     scenario.write_text("name: cli\n", encoding="utf-8")
     runner = CliRunner()
@@ -64,7 +64,7 @@ def test_libvirt_techvault_validate_live_cli_invokes_gate(monkeypatch, tmp_path)
 
 def test_libvirt_techvault_validate_live_cli_returns_failure_exit(monkeypatch, tmp_path):
     monkeypatch.setattr(
-        "aces_cli.libvirt.validate_techvault_live",
+        "raes_cli.libvirt.validate_techvault_live",
         lambda **_kwargs: _Report(passed=False),
     )
     scenario = tmp_path / "scenario.sdl.yaml"
@@ -97,7 +97,7 @@ def test_libvirt_techvault_cli_has_no_unbound_memory_override(monkeypatch, tmp_p
         calls.append(kwargs)
         return _Report()
 
-    monkeypatch.setattr("aces_cli.libvirt.validate_techvault_live", _validate)
+    monkeypatch.setattr("raes_cli.libvirt.validate_techvault_live", _validate)
     scenario = tmp_path / "scenario.sdl.yaml"
     scenario.write_text("name: cli\n", encoding="utf-8")
 
@@ -130,7 +130,7 @@ def test_libvirt_techvault_guest_certify_cli_invokes_evidence_run(monkeypatch, t
         calls.append(kwargs)
         return _Report()
 
-    monkeypatch.setattr("aces_cli.libvirt.run_libvirt_evidence_run", _run)
+    monkeypatch.setattr("raes_cli.libvirt.run_libvirt_evidence_run", _run)
     scenario = tmp_path / "scenario.sdl.yaml"
     scenario.write_text("name: cli\n", encoding="utf-8")
 
@@ -168,7 +168,7 @@ def test_libvirt_techvault_guest_certify_cli_invokes_evidence_run(monkeypatch, t
 
 def test_libvirt_techvault_guest_certify_cli_returns_failure_exit(monkeypatch, tmp_path):
     monkeypatch.setattr(
-        "aces_cli.libvirt.run_libvirt_evidence_run",
+        "raes_cli.libvirt.run_libvirt_evidence_run",
         lambda **_kwargs: _Report(passed=False),
     )
     scenario = tmp_path / "scenario.sdl.yaml"
@@ -184,7 +184,7 @@ def test_libvirt_techvault_guest_certify_cli_returns_failure_exit(monkeypatch, t
 
 def test_libvirt_techvault_guest_certify_cli_rejects_credentials(monkeypatch, tmp_path):
     calls: list[dict[str, object]] = []
-    monkeypatch.setattr("aces_cli.libvirt.run_libvirt_evidence_run", lambda **kwargs: calls.append(kwargs))
+    monkeypatch.setattr("raes_cli.libvirt.run_libvirt_evidence_run", lambda **kwargs: calls.append(kwargs))
     scenario = tmp_path / "scenario.sdl.yaml"
     scenario.write_text("name: cli\n", encoding="utf-8")
 
@@ -208,7 +208,7 @@ def test_libvirt_techvault_guest_certify_cli_rejects_credentials(monkeypatch, tm
 
 def test_libvirt_techvault_cli_rejects_connection_uri_credentials(monkeypatch, tmp_path):
     calls: list[dict[str, object]] = []
-    monkeypatch.setattr("aces_cli.libvirt.validate_techvault_live", lambda **kwargs: calls.append(kwargs))
+    monkeypatch.setattr("raes_cli.libvirt.validate_techvault_live", lambda **kwargs: calls.append(kwargs))
     scenario = tmp_path / "scenario.sdl.yaml"
     scenario.write_text("name: cli\n", encoding="utf-8")
 

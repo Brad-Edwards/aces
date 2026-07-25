@@ -10,7 +10,7 @@ import asyncio
 import json
 
 import pytest
-from aces_mcp.server import create_server
+from raes_mcp.server import create_server
 from paths import EXAMPLES_DIR
 
 # ---------------------------------------------------------------------------
@@ -755,7 +755,7 @@ class TestOperationTools:
 
         assert "experiment_validate" not in payload["profile"]["next_tools"]
 
-    def test_legacy_aces_mcp_aliases_are_removed(self, server):
+    def test_legacy_raes_mcp_aliases_are_removed(self, server):
         registered = asyncio.get_event_loop().run_until_complete(server.list_tools())
         registered_names = {tool.name for tool in registered}
         assert "aces_tool_surface" not in registered_names

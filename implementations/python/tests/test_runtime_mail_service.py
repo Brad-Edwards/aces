@@ -6,9 +6,9 @@ import pytest
 from pydantic import ValidationError
 from raes._module_symbols import symbol_index
 
-from aces.core.sdl import parse_sdl
-from aces.core.sdl._errors import SDLValidationError
-from aces.core.sdl.nodes import (
+from raes import parse_sdl
+from raes._errors import SDLValidationError
+from raes.nodes import (
     Node,
     RuntimeConfiguration,
     RuntimeMailAuthMechanism,
@@ -22,9 +22,9 @@ from aces.core.sdl.nodes import (
     RuntimeMailSettingProvenance,
     RuntimeMailTlsMode,
 )
-from aces.core.sdl.relationships import Relationship, RelationshipMailAccess
-from aces.core.sdl.scenario import ModuleDescriptor, Scenario
-from aces.core.sdl.validator import SemanticValidator
+from raes.relationships import Relationship, RelationshipMailAccess
+from raes.scenario import ModuleDescriptor, Scenario
+from raes.validator import SemanticValidator
 
 
 def _validate(scenario: Scenario) -> list[str]:

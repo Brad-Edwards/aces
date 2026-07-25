@@ -6,21 +6,21 @@ from pathlib import Path
 
 import jsonschema
 import pytest
-from aces_backend_protocols.naming import provider_resource_name
-from aces_contracts.addressing import (
+from raes_backend_protocols.naming import provider_resource_name
+from raes_contracts.addressing import (
     COMPILED_ADDRESS_JSON_SCHEMA,
     COMPILED_ADDRESS_MAX_LENGTH,
     render_compiled_address,
     require_compiled_address,
 )
-from aces_contracts.contracts import (
+from raes_contracts.contracts import (
     EvaluationPlanModel,
     OrchestrationPlanModel,
     ProvisioningPlanModel,
     RuntimeSnapshotEnvelopeModel,
     schema_bundle,
 )
-from aces_contracts.planning import (
+from raes_contracts.planning import (
     ChangeAction,
     OrchestrationPlan,
     PlannedResource,
@@ -28,9 +28,9 @@ from aces_contracts.planning import (
     ProvisionOp,
     RuntimeDomain,
 )
-from aces_contracts.runtime_state import ApplyResult, OperationStatus, RuntimeSnapshot, SnapshotEntry
-from aces_processor.compiler import compile_runtime_model
-from aces_processor.models import NetworkRuntime, NodeRuntime, RuntimeModel
+from raes_contracts.runtime_state import ApplyResult, OperationStatus, RuntimeSnapshot, SnapshotEntry
+from raes_processor.compiler import compile_runtime_model
+from raes_processor.models import NetworkRuntime, NodeRuntime, RuntimeModel
 from hypothesis import given
 from hypothesis import strategies as st
 from pydantic import ValidationError
