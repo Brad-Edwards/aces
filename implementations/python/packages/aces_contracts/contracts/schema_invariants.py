@@ -183,6 +183,24 @@ def _add_carrier_validation_basis_disclosure_invariant(
     )
 
 
+def _attach_initial_service_state_invariants(contract_id: str, json_schema: dict[str, Any]) -> None:
+    if contract_id not in {
+        "sdl-authoring-input-v1",
+        "instantiated-scenario-v1",
+        "instantiated-scenario-snapshot-v1",
+        "scenario-satisfiability-evidence-v1",
+    }:
+        return
+    _add_aces_invariant(
+        json_schema,
+        "initial-service-state-semantics",
+        "Service-target content must resolve to one named service, retain exact tenant/reset ownership and "
+        "content ordering, and bind observed-state postconditions to participant observation boundaries.",
+        validator="aces_sdl.validator.SemanticValidator._verify_service_materialization",
+        inputs=[{"contract_id": contract_id, "instance_path": "#"}],
+    )
+
+
 def _validate_reported_value_status(
     value_status: str,
     value: object | None,

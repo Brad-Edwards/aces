@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "2eb7df8241ae9450a7577f1daf6b90d13121ee4d060217038d7d27d1c6473fe8",
+  "content_hash": "b9f9c45b3e491deb361715dea5003881303311074f544976726bd0cefe1de9f5",
   "last_change": {
-    "summary": "Carried typed node-to-node network namespace sharing through satisfiability evidence.",
-    "content_hash": "2eb7df8241ae9450a7577f1daf6b90d13121ee4d060217038d7d27d1c6473fe8"
+    "summary": "Carried enterprise tenancy, typed network namespace sharing, and initial service-state materialization invariants into scenario satisfiability evidence.",
+    "content_hash": "b9f9c45b3e491deb361715dea5003881303311074f544976726bd0cefe1de9f5"
   }
 }
