@@ -5,8 +5,8 @@ from __future__ import annotations
 import pytest
 import yaml
 from aces_processor.compiler import compile_runtime_model
-from aces_sdl._errors import SDLValidationError
-from aces_sdl.parser import parse_sdl
+from raes._errors import SDLValidationError
+from raes.parser import parse_sdl
 from test_dsl_437_benign_participant_execution import _scenario_yaml
 
 

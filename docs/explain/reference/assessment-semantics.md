@@ -52,7 +52,7 @@ evaluation outputs are an experiment/evaluator-plane concern, never authored SDL
 - **the backend Evaluator**
   ([ADR-069](../../decisions/adrs/adr-069-cage-2-replication-architecture.md)
   §3), which projects reward, objective, terminal-condition, and scoring facts
-  into ACES evaluation results, evidence records, and derived measures.
+  into RAES evaluation results, evidence records, and derived measures.
 
 The runtime evaluator-result and execution contracts (`EvaluationResultContract`,
 `EvaluationExecutionContract`, `validate_evaluation_result()`) remain the

@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 
-from aces_sdl.participant_outcome_semantics import (
+from raes.participant_outcome_semantics import (
     OutcomeInterpretationSourceLayer,
     OutcomeInterpretationTargetLayer,
 )

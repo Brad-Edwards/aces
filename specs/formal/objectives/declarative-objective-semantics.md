@@ -20,12 +20,12 @@ control-plane behavior.
 
 The implementation must build on these existing authorities:
 
-- SDL structure: `aces_sdl.objectives.Objective`,
+- SDL structure: `raes.objectives.Objective`,
   `ObjectiveSuccess`, and `ObjectiveWindow`
 - parser/model gates: `sdl-yaml/v1`, `SDLModel`, canonical-field enforcement,
   explicit migration, variable-key rejection, and `SDLParseError`
 - static validation: `SemanticValidator` and `SDLValidationError`
-- objective-window analysis: `aces_sdl.semantics.objectives`
+- objective-window analysis: `raes.semantics.objectives`
 - assertion resolution over declared backend-neutral propositions
 - runtime compilation: `compile_runtime_model()` and
   `aces_processor.models.ObjectiveRuntime`
@@ -72,7 +72,7 @@ Success interpretation:
 Windows:
 
 - window reference parsing, reachability, consistency, and refresh dependency
-  derivation come from `aces_sdl.semantics.objectives`
+  derivation come from `raes.semantics.objectives`
 - implementation must not duplicate window rules in validator, compiler,
   planner, or tests
 
@@ -130,7 +130,7 @@ The design must satisfy every layer it passes through:
 ## Extensibility Seam
 
 The extensibility seam is the pure objective-semantics helper
-`aces_sdl.semantics.objective_semantics.analyze_objective_semantics`: it produces
+`raes.semantics.objective_semantics.analyze_objective_semantics`: it produces
 a normalized objective analysis (`ObjectiveReference` /
 `ObjectiveResourceDependencies` / `ObjectiveSemanticAnalysis`) reused by
 validation, compilation, planning, and agreement tests, parameterized by the
@@ -149,7 +149,7 @@ acyclicity/fail-closed rules above.
 
 Avoid:
 
-- a second objective schema beside `aces_sdl.objectives`
+- a second objective schema beside `raes.objectives`
 - a second reference resolver beside `SemanticValidator`'s named-reference
   index or the compiler's canonical address helpers
 - a second objective-dependency graph implementation
@@ -165,15 +165,15 @@ Avoid:
 ## Implementation Mapping
 
 - shared name-level semantic source of truth:
-  `implementations/python/packages/aces_sdl/semantics/objective_semantics.py`
+  `implementations/python/packages/raes/semantics/objective_semantics.py`
   (`analyze_objective_semantics`, `partition_objective_dependencies`,
   `OBJECTIVE_*_DEPENDENCY_ROLES`)
 - objective-window analysis (reused, not re-implemented):
-  `implementations/python/packages/aces_sdl/semantics/objectives.py`
+  `implementations/python/packages/raes/semantics/objectives.py`
 - authoring models (closed Pydantic shape; `agent` xor `entity`; non-empty
-  `success`): `implementations/python/packages/aces_sdl/objectives.py`
+  `success`): `implementations/python/packages/raes/objectives.py`
 - semantic validation:
-  `implementations/python/packages/aces_sdl/validator/` (`_verify_objectives`,
+  `implementations/python/packages/raes/validator/` (`_verify_objectives`,
   rendering the issue codes back onto the authoring-error strings)
 - compiled runtime objective resource, canonical addresses, diagnostics, and
   ordering/refresh derivation:

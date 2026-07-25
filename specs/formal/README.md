@@ -1,6 +1,6 @@
 # Formal Specs
 
-Optional formal artifacts for ACES SDL semantic and stateful subsystems live under:
+Optional formal artifacts for RAES SDL semantic and stateful subsystems live under:
 
 `specs/formal/<domain>/`
 

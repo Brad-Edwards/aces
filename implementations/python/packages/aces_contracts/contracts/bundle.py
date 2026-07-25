@@ -6,8 +6,8 @@ from copy import deepcopy
 from functools import cache
 from typing import Any
 
-from aces_sdl.canonical import InstantiatedScenarioSnapshot
-from aces_sdl.scenario import InstantiatedScenario, Scenario
+from raes.canonical import InstantiatedScenarioSnapshot
+from raes.scenario import InstantiatedScenario, Scenario
 
 from .associated_artifacts import AssociatedArtifactManifestModel
 from .catalogs import (

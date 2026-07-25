@@ -111,6 +111,24 @@ def test_built_wheel_includes_third_party_notice(built_wheel: Path):
 
 
 @requires_uv
+def test_installed_wheel_hard_cuts_sdl_import_namespace(installed_python: Path, tmp_path: Path):
+    """The wheel exposes ``raes`` and contains no importable ``aces_sdl`` residue."""
+
+    script = (
+        "import importlib.util\n"
+        "import raes\n"
+        "assert raes.parse_sdl\n"
+        "assert importlib.util.find_spec('aces_sdl') is None\n"
+    )
+    result = _run(
+        [str(installed_python), "-c", script],
+        cwd=tmp_path,
+        env=_sanitized_runtime_env(tmp_path),
+    )
+    assert result.returncode == 0, f"namespace hard cut failed:\n{result.stdout}\n{result.stderr}"
+
+
+@requires_uv
 def test_corpus_discoverable_via_importlib_resources_from_installed_wheel(installed_python: Path, tmp_path: Path):
     """Acceptance: the corpus is discoverable via ``importlib.resources`` from
     the installed distribution, resolved out of site-packages — NOT the repo

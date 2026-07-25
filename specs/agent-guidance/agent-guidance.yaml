@@ -191,7 +191,7 @@ guidance:
         diagnostics over broad YAML rewrites when modifying SDL.
       source_refs:
         - docs/explain/sdl/language-service.md
-        - implementations/python/packages/aces_sdl/language_service.py
+        - implementations/python/packages/raes/language_service.py
 
     - id: no-participant-actions-through-guidance
       audience: [operator]

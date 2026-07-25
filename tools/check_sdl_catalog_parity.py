@@ -28,15 +28,15 @@ for import_root in (REPO_ROOT, PYTHON_PACKAGES):
     if str(import_root) not in sys.path:
         sys.path.insert(0, str(import_root))
 
-from aces_sdl._language_metadata import REFERENCE_COMPLETION_TARGETS
-from aces_sdl._mapping_scopes import HASHMAP_SECTIONS
-from aces_sdl._module_symbols import HASHMAP_SECTIONS as MODULE_HASHMAP_SECTIONS
-from aces_sdl._runtime_service_families import (
+from raes._language_metadata import REFERENCE_COMPLETION_TARGETS
+from raes._mapping_scopes import HASHMAP_SECTIONS
+from raes._module_symbols import HASHMAP_SECTIONS as MODULE_HASHMAP_SECTIONS
+from raes._runtime_service_families import (
     RUNTIME_SERVICE_FAMILIES,
     RuntimeReferenceChild,
 )
-from aces_sdl.phase_contracts import ExpansionProvenance, InstantiationProvenance
-from aces_sdl.scenario import (
+from raes.phase_contracts import ExpansionProvenance, InstantiationProvenance
+from raes.scenario import (
     ExpandedScenario,
     InstantiatedScenario,
     Scenario,
@@ -82,88 +82,77 @@ _MAX_CATALOG_ROWS = 512
 _METADATA_FIELDS = frozenset({"name", "version", "description"})
 _COMPOSITION_FIELDS = frozenset({"module", "imports", "realization"})
 
-_NODE_VALIDATOR = "[node validator](../../implementations/python/packages/aces_sdl/validator/_nodes_infra_network.py)"
+_NODE_VALIDATOR = "[node validator](../../implementations/python/packages/raes/validator/_nodes_infra_network.py)"
 _INFRASTRUCTURE_VALIDATOR = (
-    "[infrastructure validator](../../implementations/python/packages/aces_sdl/validator/_nodes_infra_network.py)"
+    "[infrastructure validator](../../implementations/python/packages/raes/validator/_nodes_infra_network.py)"
 )
-_SECTION_VALIDATOR = "[section validator](../../implementations/python/packages/aces_sdl/validator/_sections.py)"
-_CONTENT_VALIDATOR = (
-    "[content validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py)"
-)
+_SECTION_VALIDATOR = "[section validator](../../implementations/python/packages/raes/validator/_sections.py)"
+_CONTENT_VALIDATOR = "[content validator](../../implementations/python/packages/raes/validator/_content_objectives.py)"
 _SERVICE_MATERIALIZATION_VALIDATOR = (
     "[service materialization validator]"
-    "(../../implementations/python/packages/aces_sdl/validator/_service_materialization.py)"
+    "(../../implementations/python/packages/raes/validator/_service_materialization.py)"
 )
 _CONTENT_COMPILER = "[content compiler](../../implementations/python/packages/aces_processor/compiler/placement.py)"
-_ACCOUNT_VALIDATOR = (
-    "[account validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py)"
-)
-_STATEFUL_MODEL = "[scenario model](../../implementations/python/packages/aces_sdl/scenario.py)"
+_ACCOUNT_VALIDATOR = "[account validator](../../implementations/python/packages/raes/validator/_content_objectives.py)"
+_STATEFUL_MODEL = "[scenario model](../../implementations/python/packages/raes/scenario.py)"
 _RELATIONSHIP_VALIDATOR = (
-    "[relationship validator](../../implementations/python/packages/aces_sdl/validator/_relationships.py)"
+    "[relationship validator](../../implementations/python/packages/raes/validator/_relationships.py)"
 )
 _RELATIONSHIP_PROXY_VALIDATOR = (
-    "[proxy relationship validator](../../implementations/python/packages/aces_sdl/validator/_relationships_proxy.py)"
+    "[proxy relationship validator](../../implementations/python/packages/raes/validator/_relationships_proxy.py)"
 )
-_MAIL_VALIDATOR = "[mail validator](../../implementations/python/packages/aces_sdl/validator/_runtime_mail.py)"
+_MAIL_VALIDATOR = "[mail validator](../../implementations/python/packages/raes/validator/_runtime_mail.py)"
 _DOMAIN_TOPOLOGY_SEMANTICS = (
-    "[domain topology semantics](../../implementations/python/packages/aces_sdl/semantics/domain_topology.py)"
+    "[domain topology semantics](../../implementations/python/packages/raes/semantics/domain_topology.py)"
 )
 _ENTERPRISE_IDENTITY_SEMANTICS = (
-    "[enterprise identity semantics](../../implementations/python/packages/aces_sdl/semantics/enterprise_identity.py)"
+    "[enterprise identity semantics](../../implementations/python/packages/raes/semantics/enterprise_identity.py)"
 )
 _DEPLOYMENT_TENANCY_SEMANTICS = (
-    "[deployment tenancy semantics](../../implementations/python/packages/aces_sdl/semantics/deployment_tenancy.py)"
+    "[deployment tenancy semantics](../../implementations/python/packages/raes/semantics/deployment_tenancy.py)"
 )
 _PARTICIPANT_VALIDATOR = (
-    "[participant validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py)"
+    "[participant validator](../../implementations/python/packages/raes/validator/_content_objectives.py)"
 )
 _PARTICIPANT_SEMANTICS = (
-    "[participant semantics](../../implementations/python/packages/aces_sdl/semantics/participant_behavior.py)"
+    "[participant semantics](../../implementations/python/packages/raes/semantics/participant_behavior.py)"
 )
 _PARTICIPANT_INTERACTIVE_ACCESS_SEMANTICS = (
     "[participant interactive-access semantics]"
-    "(../../implementations/python/packages/aces_sdl/semantics/participant_interactive_access.py)"
+    "(../../implementations/python/packages/raes/semantics/participant_interactive_access.py)"
 )
-_OUTCOME_SEMANTICS = (
-    "[outcome semantics](../../implementations/python/packages/aces_sdl/semantics/participant_outcome.py)"
-)
+_OUTCOME_SEMANTICS = "[outcome semantics](../../implementations/python/packages/raes/semantics/participant_outcome.py)"
 _BEHAVIOR_SEMANTICS = (
-    "[behavior semantics](../../implementations/python/packages/aces_sdl/semantics/participant_behavior.py)"
+    "[behavior semantics](../../implementations/python/packages/raes/semantics/participant_behavior.py)"
 )
 _BEHAVIOR_VALIDATOR = (
-    "[behavior validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py)"
+    "[behavior validator](../../implementations/python/packages/raes/validator/_content_objectives.py)"
 )
 _MIXED_CONTROL_VALIDATOR = (
-    "[behavior validator](../../implementations/python/packages/aces_sdl/validator/_mixed_control.py)"
+    "[behavior validator](../../implementations/python/packages/raes/validator/_mixed_control.py)"
 )
 _TOOL_AFFORDANCE_VALIDATOR = (
-    "[tool-affordance validator]"
-    "(../../implementations/python/packages/aces_sdl/validator/_participant_tool_affordances.py)"
+    "[tool-affordance validator](../../implementations/python/packages/raes/validator/_participant_tool_affordances.py)"
 )
-_BEHAVIOR_MODEL = "[behavior model](../../implementations/python/packages/aces_sdl/participant_behavior.py)"
+_BEHAVIOR_MODEL = "[behavior model](../../implementations/python/packages/raes/participant_behavior.py)"
 _MIXED_CONTROL_MODEL = (
-    "[behavior model](../../implementations/python/packages/aces_sdl/participant_behavior_specification.py)"
+    "[behavior model](../../implementations/python/packages/raes/participant_behavior_specification.py)"
 )
 _EVIDENCE_VALIDATOR = (
-    "[evidence validator](../../implementations/python/packages/aces_sdl/validator/_evidence_requirements.py)"
+    "[evidence validator](../../implementations/python/packages/raes/validator/_evidence_requirements.py)"
 )
 _OBJECTIVE_SEMANTICS = (
-    "[objective semantics](../../implementations/python/packages/aces_sdl/semantics/objective_semantics.py)"
+    "[objective semantics](../../implementations/python/packages/raes/semantics/objective_semantics.py)"
 )
-_WORKFLOW_SEMANTICS = (
-    "[workflow validator](../../implementations/python/packages/aces_sdl/validator/_workflows_verify.py)"
-)
+_WORKFLOW_SEMANTICS = "[workflow validator](../../implementations/python/packages/raes/validator/_workflows_verify.py)"
 _PROPOSITION_VALIDATOR = (
-    "[proposition validator](../../implementations/python/packages/aces_sdl/validator/_propositions.py)"
+    "[proposition validator](../../implementations/python/packages/raes/validator/_propositions.py)"
 )
-_VARIATION_VALIDATOR = "[variation validator](../../implementations/python/packages/aces_sdl/validator/_variation.py)"
+_VARIATION_VALIDATOR = "[variation validator](../../implementations/python/packages/raes/validator/_variation.py)"
 _PARTICIPANT_TEMPORAL_MODEL = (
-    "[temporal model](../../implementations/python/packages/aces_sdl/participant_temporal_semantics.py)"
+    "[temporal model](../../implementations/python/packages/raes/participant_temporal_semantics.py)"
 )
-_TIME_MODEL_VALIDATOR = (
-    "[time-model validator](../../implementations/python/packages/aces_sdl/validator/_time_model.py)"
-)
+_TIME_MODEL_VALIDATOR = "[time-model validator](../../implementations/python/packages/raes/validator/_time_model.py)"
 _SEMANTIC = "semantic validation"
 _STRUCTURAL = "structural validation"
 _DANGLING = "fatal dangling or ambiguous"

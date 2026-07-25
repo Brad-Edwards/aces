@@ -1,15 +1,15 @@
 SDL Authoring Layer
 ===================
 
-The ``aces_sdl`` package provides the author-facing SDL models, parser,
+The ``raes`` package provides the author-facing SDL models, parser,
 validator, instantiation, and composition machinery.
 
-.. currentmodule:: aces_sdl
+.. currentmodule:: raes
 
 Public API
 ----------
 
-.. automodule:: aces_sdl
+.. automodule:: raes
    :members:
    :undoc-members:
    :noindex:
@@ -17,49 +17,49 @@ Public API
 Parser
 ------
 
-.. automodule:: aces_sdl.parser
+.. automodule:: raes.parser
    :members:
 
 Scenario Model
 --------------
 
-.. automodule:: aces_sdl.scenario
+.. automodule:: raes.scenario
    :members:
 
 Instantiation
 -------------
 
-.. automodule:: aces_sdl.instantiate
+.. automodule:: raes.instantiate
    :members:
 
 Validator
 ---------
 
-.. automodule:: aces_sdl.validator
+.. automodule:: raes.validator
    :members:
 
 Language Service
 ----------------
 
-.. automodule:: aces_sdl.language_service
+.. automodule:: raes.language_service
    :members:
 
 Agent Guidance
 --------------
 
-.. automodule:: aces_sdl.agent_guidance
+.. automodule:: raes.agent_guidance
    :members:
 
 Composition
 -----------
 
-.. automodule:: aces_sdl.composition
+.. automodule:: raes.composition
    :members:
 
 Module Registry
 ---------------
 
-.. automodule:: aces_sdl.module_registry
+.. automodule:: raes.module_registry
    :members:
 
 SDL Models
@@ -68,77 +68,77 @@ SDL Models
 Nodes
 ~~~~~
 
-.. automodule:: aces_sdl.nodes
+.. automodule:: raes.nodes
    :members:
 
 Infrastructure
 ~~~~~~~~~~~~~~
 
-.. automodule:: aces_sdl.infrastructure
+.. automodule:: raes.infrastructure
    :members:
 
 Features
 ~~~~~~~~
 
-.. automodule:: aces_sdl.features
+.. automodule:: raes.features
    :members:
 
 Vulnerabilities
 ~~~~~~~~~~~~~~~
 
-.. automodule:: aces_sdl.vulnerabilities
+.. automodule:: raes.vulnerabilities
    :members:
 
 Relationships
 ~~~~~~~~~~~~~
 
-.. automodule:: aces_sdl.relationships
+.. automodule:: raes.relationships
    :members:
 
 Accounts
 ~~~~~~~~
 
-.. automodule:: aces_sdl.accounts
+.. automodule:: raes.accounts
    :members:
 
 Agents
 ~~~~~~
 
-.. automodule:: aces_sdl.agents
+.. automodule:: raes.agents
    :members:
 
 Content
 ~~~~~~~
 
-.. automodule:: aces_sdl.content
+.. automodule:: raes.content
    :members:
 
 Entities
 ~~~~~~~~
 
-.. automodule:: aces_sdl.entities
+.. automodule:: raes.entities
    :members:
 
 Conditions
 ~~~~~~~~~~
 
-.. automodule:: aces_sdl.conditions
+.. automodule:: raes.conditions
    :members:
 
 Orchestration
 ~~~~~~~~~~~~~
 
-.. automodule:: aces_sdl.orchestration
+.. automodule:: raes.orchestration
    :members:
 
 Objectives
 ~~~~~~~~~~
 
-.. automodule:: aces_sdl.objectives
+.. automodule:: raes.objectives
    :members:
 
 Variables
 ~~~~~~~~~
 
-.. automodule:: aces_sdl.variables
+.. automodule:: raes.variables
    :members:

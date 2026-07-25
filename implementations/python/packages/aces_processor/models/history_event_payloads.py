@@ -10,7 +10,7 @@ from aces_contracts.participant_behavior import (
     ParticipantPhaseRealization,
     ParticipantRuntimeLifecyclePhase,
 )
-from aces_sdl.participant_behavior import ParticipantInteractionClass
+from raes.participant_behavior import ParticipantInteractionClass
 
 from .action_results import ParticipantActionResult
 from .attribution import ParticipantAttributionEdge

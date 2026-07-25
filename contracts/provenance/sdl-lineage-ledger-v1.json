@@ -914,7 +914,7 @@
           ],
           "aces_boundaries": [
             {
-              "artifact": "implementations/python/packages/aces_sdl/conditions.py",
+              "artifact": "implementations/python/packages/raes/conditions.py",
               "symbol_or_pointer": "conditions"
             }
           ],
@@ -1037,7 +1037,7 @@
           ],
           "aces_boundaries": [
             {
-              "artifact": "implementations/python/packages/aces_sdl/scenario.py",
+              "artifact": "implementations/python/packages/raes/scenario.py",
               "symbol_or_pointer": "description"
             }
           ],
@@ -1132,7 +1132,7 @@
           ],
           "aces_boundaries": [
             {
-              "artifact": "implementations/python/packages/aces_sdl/entities.py",
+              "artifact": "implementations/python/packages/raes/entities.py",
               "symbol_or_pointer": "entities"
             }
           ],
@@ -1196,7 +1196,7 @@
           ],
           "aces_boundaries": [
             {
-              "artifact": "implementations/python/packages/aces_sdl/orchestration.py",
+              "artifact": "implementations/python/packages/raes/orchestration.py",
               "symbol_or_pointer": "events"
             }
           ],
@@ -1291,7 +1291,7 @@
           ],
           "aces_boundaries": [
             {
-              "artifact": "implementations/python/packages/aces_sdl/features.py",
+              "artifact": "implementations/python/packages/raes/features.py",
               "symbol_or_pointer": "features"
             }
           ],
@@ -1417,7 +1417,7 @@
           ],
           "aces_boundaries": [
             {
-              "artifact": "implementations/python/packages/aces_sdl/infrastructure.py",
+              "artifact": "implementations/python/packages/raes/infrastructure.py",
               "symbol_or_pointer": "infrastructure"
             }
           ],
@@ -1481,7 +1481,7 @@
           ],
           "aces_boundaries": [
             {
-              "artifact": "implementations/python/packages/aces_sdl/orchestration.py",
+              "artifact": "implementations/python/packages/raes/orchestration.py",
               "symbol_or_pointer": "injects"
             }
           ],
@@ -1576,7 +1576,7 @@
           ],
           "aces_boundaries": [
             {
-              "artifact": "implementations/python/packages/aces_sdl/scenario.py",
+              "artifact": "implementations/python/packages/raes/scenario.py",
               "symbol_or_pointer": "name"
             }
           ],
@@ -1640,7 +1640,7 @@
           ],
           "aces_boundaries": [
             {
-              "artifact": "implementations/python/packages/aces_sdl/nodes.py",
+              "artifact": "implementations/python/packages/raes/nodes.py",
               "symbol_or_pointer": "nodes"
             }
           ],
@@ -1935,7 +1935,7 @@
           ],
           "aces_boundaries": [
             {
-              "artifact": "implementations/python/packages/aces_sdl/orchestration.py",
+              "artifact": "implementations/python/packages/raes/orchestration.py",
               "symbol_or_pointer": "scripts"
             }
           ],
@@ -1999,7 +1999,7 @@
           ],
           "aces_boundaries": [
             {
-              "artifact": "implementations/python/packages/aces_sdl/orchestration.py",
+              "artifact": "implementations/python/packages/raes/orchestration.py",
               "symbol_or_pointer": "stories"
             }
           ],
@@ -2132,7 +2132,7 @@
           ],
           "aces_boundaries": [
             {
-              "artifact": "implementations/python/packages/aces_sdl/scenario.py",
+              "artifact": "implementations/python/packages/raes/scenario.py",
               "symbol_or_pointer": "version"
             }
           ],
@@ -2196,7 +2196,7 @@
           ],
           "aces_boundaries": [
             {
-              "artifact": "implementations/python/packages/aces_sdl/vulnerabilities.py",
+              "artifact": "implementations/python/packages/raes/vulnerabilities.py",
               "symbol_or_pointer": "vulnerabilities"
             }
           ],
@@ -3551,7 +3551,7 @@
           ],
           "aces_boundaries": [
             {
-              "artifact": "implementations/python/packages/aces_sdl/conditions.py",
+              "artifact": "implementations/python/packages/raes/conditions.py",
               "symbol_or_pointer": "conditions"
             }
           ],
@@ -3672,7 +3672,7 @@
           ],
           "aces_boundaries": [
             {
-              "artifact": "implementations/python/packages/aces_sdl/orchestration.py",
+              "artifact": "implementations/python/packages/raes/orchestration.py",
               "symbol_or_pointer": "events"
             }
           ],
@@ -3735,7 +3735,7 @@
           ],
           "aces_boundaries": [
             {
-              "artifact": "implementations/python/packages/aces_sdl/nodes.py",
+              "artifact": "implementations/python/packages/raes/nodes.py",
               "symbol_or_pointer": "nodes"
             }
           ],
@@ -4154,35 +4154,35 @@
       "source_ref": "ocr-sdl-v0.21.2",
       "derivation_scope": [
         {
-          "artifact": "implementations/python/packages/aces_sdl/scenario.py",
+          "artifact": "implementations/python/packages/raes/scenario.py",
           "symbol_or_pointer": "Scenario identity fields and OCR-derived top-level section structure"
         },
         {
-          "artifact": "implementations/python/packages/aces_sdl/nodes.py",
+          "artifact": "implementations/python/packages/raes/nodes.py",
           "symbol_or_pointer": "Node, VM, Switch, Resources, and Role model lineage"
         },
         {
-          "artifact": "implementations/python/packages/aces_sdl/conditions.py",
+          "artifact": "implementations/python/packages/raes/conditions.py",
           "symbol_or_pointer": "Condition model lineage"
         },
         {
-          "artifact": "implementations/python/packages/aces_sdl/entities.py",
+          "artifact": "implementations/python/packages/raes/entities.py",
           "symbol_or_pointer": "Entity model lineage"
         },
         {
-          "artifact": "implementations/python/packages/aces_sdl/orchestration.py",
+          "artifact": "implementations/python/packages/raes/orchestration.py",
           "symbol_or_pointer": "Inject, Event, Script, and Story model lineage"
         },
         {
-          "artifact": "implementations/python/packages/aces_sdl/infrastructure.py",
+          "artifact": "implementations/python/packages/raes/infrastructure.py",
           "symbol_or_pointer": "InfraNode model lineage"
         },
         {
-          "artifact": "implementations/python/packages/aces_sdl/features.py",
+          "artifact": "implementations/python/packages/raes/features.py",
           "symbol_or_pointer": "Feature model lineage"
         },
         {
-          "artifact": "implementations/python/packages/aces_sdl/vulnerabilities.py",
+          "artifact": "implementations/python/packages/raes/vulnerabilities.py",
           "symbol_or_pointer": "Vulnerability model lineage"
         }
       ],

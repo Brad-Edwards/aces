@@ -5,8 +5,8 @@ from __future__ import annotations
 import textwrap
 
 import pytest
-from aces_sdl import SDLValidationError, instantiate_scenario, parse_sdl
-from aces_sdl.explicitness import ExplicitnessClass, ExplicitnessProvenance
+from raes import SDLValidationError, instantiate_scenario, parse_sdl
+from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance
 
 
 def _scenario_with_explicitness_cases():

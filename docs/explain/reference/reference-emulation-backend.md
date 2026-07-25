@@ -12,7 +12,7 @@ contracts.
 Unlike the non-normative in-memory stub (`aces_backend_stubs`), the reference
 backend realizes provisioning plans against a pluggable deployment driver. The
 default driver is hermetic; an opt-in OCI driver realizes against a real
-container runtime (docker/podman). Either way, only portable ACES facts reach
+container runtime (docker/podman). Either way, only portable RAES facts reach
 snapshots, diagnostics, and conformance reports.
 
 ## Constructing and registering a target

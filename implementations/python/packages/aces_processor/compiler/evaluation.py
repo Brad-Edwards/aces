@@ -1,7 +1,7 @@
 """Evaluation-domain compilation: propositions, assertions, condition bindings."""
 
-from aces_sdl.nodes import NodeType
-from aces_sdl.scenario import InstantiatedScenario
+from raes.nodes import NodeType
+from raes.scenario import InstantiatedScenario
 
 from ..models import (
     AssertionRuntime,

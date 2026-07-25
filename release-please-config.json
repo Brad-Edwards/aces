@@ -7,11 +7,7 @@
       "package-name": "raes",
       "changelog-path": "CHANGELOG.md",
       "extra-files": [
-        {
-          "type": "toml",
-          "path": "implementations/python/pyproject.toml",
-          "jsonpath": "$.project.version"
-        }
+        "implementations/python/packages/raes/_version.py"
       ]
     }
   }

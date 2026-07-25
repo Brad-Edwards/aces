@@ -1,6 +1,6 @@
 # Participant-Discoverable Asset Inventory Methodology
 
-This is the ACES-owned methodology for participant-discoverable asset
+This is the RAES-owned methodology for participant-discoverable asset
 inventory capture. It was first validated against the TechVault
 `shuffle-backend` asset during APTL issue #353, with later APTL asset
 captures used as downstream proof work. The companion assurance report
@@ -9,18 +9,18 @@ supply-chain, reproducible-research, and verification/validation basis for the
 methodology. The method has one inclusion rule:
 
 > If a participant or agent could discover a fact from inside the range,
-> capture it and attempt to specify it in ACES.
+> capture it and attempt to specify it in RAES.
 
 There is no relevance filter during capture, no accidental-versus-deliberate
 filter, and no early split that sends facts to backend evidence merely because
-they came from Docker or another realization layer. ACES is the methodology and
+they came from Docker or another realization layer. RAES is the methodology and
 specification authority. A downstream runtime such as APTL can provide
 reference reality for a proof pass, but it does not own the inclusion rule.
 The participant-discoverable rule is the evidence boundary for inventory
 capture; it is not the semantic frame for extending the SDL. Backend and
 provenance evidence explain how the configuration was realized and how the
 claim was captured; they do not shrink the set of facts that must be attempted
-in ACES.
+in RAES.
 
 ## Scope and Claim Boundary
 
@@ -43,7 +43,7 @@ The practical reproducibility standard is therefore:
 
 - another maintainer can identify every captured participant-discoverable
   fact, its discovery vantage, and the evidence that supports it;
-- every captured fact has either an ACES specification mapping or an ACES
+- every captured fact has either an RAES specification mapping or an RAES
   issue for the expressivity gap;
 - the capture can be rerun with non-commercial tooling on a local lab;
 - limits, time-sensitive scanner output, mutable tags, operator/out-of-scenario
@@ -57,7 +57,7 @@ scientific replication.
 
 ## Requirement Alignment
 
-This methodology is support for the ACES requirements that govern apparatus,
+This methodology is support for the RAES requirements that govern apparatus,
 provenance, realized-form disclosure, replay, and realization honesty. It does
 not replace those requirements or define final SDL syntax. Its role is to make
 the evidence and gap trail explicit enough for those requirement surfaces to
@@ -74,7 +74,7 @@ consume:
   it differs from authored intent or backend defaults.
 - `ASR-519` realization honesty: force explicit mappings, caveats, and gap
   issues instead of silent approximation or evidence-only claims.
-- `DSL-115` and follow-on DSL gap work: route missing SDL expressivity to ACES
+- `DSL-115` and follow-on DSL gap work: route missing SDL expressivity to RAES
   issue records with evidence and checked surfaces.
 
 The reusable downstream issue skeleton for applying this method lives in
@@ -88,7 +88,7 @@ Each asset is described across five layers:
 | --- | --- | --- |
 | Discovery vantage | Where an in-range participant or agent could learn the fact. | Kali/red-agent shell, compromised app shell, blue console, service API, filesystem, network scan. |
 | Captured configuration fact | The discovered fact itself, with no intent/relevance filtering. | IPs, DNS names, routes, ports, banners, versions, files, packages, env names/values visible in-range, processes, mounts, data, credentials. |
-| ACES specification mapping | The SDL element or ACES contract that represents the fact. | `nodes`, `infrastructure`, `services`, `features`, `content`, `accounts`, `relationships`, `agents`, `objectives`, variables, or a cited ACES issue. |
+| RAES specification mapping | The SDL element or RAES contract that represents the fact. | `nodes`, `infrastructure`, `services`, `features`, `content`, `accounts`, `relationships`, `agents`, `objectives`, variables, or a cited RAES issue. |
 | Provenance | Where the realized artifact came from and which immutable identifiers were observed. | Image digest, image history, Dockerfile or upstream absence, source lockfiles, scanner/tool versions. |
 | Assurance products | Derived artifacts used for audit, comparison, and gap filing. | CycloneDX or SPDX SBOM, vulnerability JSON, package list, filesystem hashes, evidence checksums. |
 
@@ -154,7 +154,7 @@ instead of pretending a local build recipe exists.
    facts and must not be redacted from source inventory bundles. For example,
    Wazuh/OpenSearch Security `internal_users.yml` bcrypt hashes are target
    configuration facts; replacing them with `<REDACTED-...>` corrupts the
-   inventory and prevents later ACES/APTL mapping from seeing the realized
+   inventory and prevents later RAES/APTL mapping from seeing the realized
    system.
 
    Operator/out-of-scenario secrets remain outside the capture boundary:
@@ -204,20 +204,20 @@ instead of pretending a local build recipe exists.
    binds, service DNS names, static IPs, and healthcheck dependencies
    become visible.
 
-10. Attempt maximal ACES mapping without silently promoting evidence.
+10. Attempt maximal RAES mapping without silently promoting evidence.
 
-   For every participant-discoverable fact, identify the most specific ACES
+   For every participant-discoverable fact, identify the most specific RAES
    carrier. First preserve the exact observation in the source evidence bundle
    and `mapping-ledger.yaml`. Then decide whether it is authored/defaulted
    contract state, a planned or realized choice, an observation, or a derived
    interpretation. Schema compatibility alone does not authorize copying a
    captured value into SDL.
 
-   Attempt to represent deliberate scenario requirements in ACES SDL.
+   Attempt to represent deliberate scenario requirements in RAES SDL.
    Use the most specific existing SDL surface available: nodes,
    infrastructure, services, features, content, accounts, relationships,
    agents, objectives, workflows, variables, or a contract surface if one
-   already exists. The questions at this stage are "where can ACES preserve
+   already exists. The questions at this stage are "where can RAES preserve
    this fact exactly?" and, separately, "does the scenario author intend to
    require it?" Generated Docker network/endpoint IDs, generated DNS
    identities, health results, and scanner version/database/time/findings
@@ -226,11 +226,11 @@ instead of pretending a local build recipe exists.
    Record the result in `mapping-ledger.yaml` instead of relying on prose.
    Each captured fact must have one of these dispositions:
 
-   - `encoded` when current ACES can represent the fact directly;
-   - `encoded_with_caveat` when current ACES can represent the fact but the
+   - `encoded` when current RAES can represent the fact directly;
+   - `encoded_with_caveat` when current RAES can represent the fact but the
      later encoding issue must preserve a stated limitation;
-   - `blocked_by_aces_gap` when ACES lacks a semantically correct surface;
-   - `blocked_by_aptl_gap` when ACES can express the fact but APTL cannot yet
+   - `blocked_by_aces_gap` when RAES lacks a semantically correct surface;
+   - `blocked_by_aptl_gap` when RAES can express the fact but APTL cannot yet
      realize or consume that SDL;
    - `needs_gap_triage` only as a temporary local state before filing or
      linking the required issue.
@@ -241,19 +241,19 @@ instead of pretending a local build recipe exists.
    and `aptl aces-inventory validate <asset-dir>` fails schema, evidence-path,
    and mapping-accountability violations.
 
-11. Handle ACES gaps immediately.
+11. Handle RAES gaps immediately.
 
    When a captured participant-discoverable fact cannot be fully expressed in
-   ACES, search the ACES issue tracker for an existing issue that covers the
+   RAES, search the RAES issue tracker for an existing issue that covers the
    missing expressivity. If an issue exists, record the evidence path and
-   stop for discussion. If none exists, create a new ACES issue with:
+   stop for discussion. If none exists, create a new RAES issue with:
 
    - the discovered fact or class of facts;
    - the in-range vantage point that can discover it;
    - the evidence path in the downstream bundle;
-   - the ACES surfaces that were checked;
+   - the RAES surfaces that were checked;
    - why those surfaces are insufficient;
-   - the proposed ACES expressivity requirement.
+   - the proposed RAES expressivity requirement.
 
    After linking or creating the issue, stop and discuss before continuing
    with additional gaps.
@@ -269,8 +269,8 @@ instead of pretending a local build recipe exists.
 
 13. Plan correspondence checks.
 
-    Methodology issues do not have to finish the ACES encoding, but they must
-    define how later issues will prove correspondence between encoded ACES
+    Methodology issues do not have to finish the RAES encoding, but they must
+    define how later issues will prove correspondence between encoded RAES
     surfaces and realized downstream state. Record these checks in the
     ledger's `correspondence_checks` section. A check names the source surface,
     captured
@@ -295,7 +295,7 @@ Required local tools:
 - A downstream ledger validator. The current reference implementation is
   `aptl aces-inventory validate <asset-dir>` to validate the mapping ledger
   and its evidence references.
-- `aptl aces-inventory gaps <asset-dir>` to list the ACES and downstream
+- `aptl aces-inventory gaps <asset-dir>` to list the RAES and downstream
   implementation issues later encoding work must resolve or consume.
 - `aptl aces-inventory schema` to inspect the reference ledger schema.
 - Docker Buildx `imagetools inspect`, build-time `--sbom`, and `--provenance`
@@ -338,7 +338,7 @@ The pass proved that the method can capture an upstream-image asset with:
 This proof pass is not yet a full maximal-discovery pass because it mostly
 uses host-side Docker evidence plus a container runtime baseline. The next
 pass must add in-range participant/agent discovery commands and then attempt
-maximal ACES specification from the discovered facts.
+maximal RAES specification from the discovered facts.
 
 Known limits are first-class methodology data, not prose footnotes. The
 shuffle-backend ledger records that registry-visible in-toto/SLSA provenance
@@ -349,10 +349,10 @@ implemented in this methodology issue.
 ## Issue Breakdown Implication
 
 APTL #330, #331, #332, and #353 were useful as a downstream per-asset
-validation queue, but they should not define ACES methodology ownership or
-drive cloning/spec/capture order by themselves. The method should land in ACES
+validation queue, but they should not define RAES methodology ownership or
+drive cloning/spec/capture order by themselves. The method should land in RAES
 first, then one upstream-image asset and one custom-build asset should exercise
-it before a wave of ACES or downstream implementation gap issues is filed.
+it before a wave of RAES or downstream implementation gap issues is filed.
 
 In practice:
 
@@ -360,8 +360,8 @@ In practice:
 - APTL #331 (`db`) is a second upstream-image comparison point.
 - APTL #330 (`webapp`) and #332 (`ad`) are custom-build cases that should
   decide whether source package capture needs more structure.
-- ACES SDL encoding should happen as soon as a participant-discoverable fact
-  is captured. Where ACES cannot express the fact, create or link the ACES
+- RAES SDL encoding should happen as soon as a participant-discoverable fact
+  is captured. Where RAES cannot express the fact, create or link the RAES
   gap issue and stop for discussion.
 
 If those captures show that cloning/spec/capture need a different split,

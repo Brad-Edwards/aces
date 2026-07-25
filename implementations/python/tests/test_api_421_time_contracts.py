@@ -22,7 +22,7 @@ from aces_processor.compiler.time_model import (
     time_model_contract_model,
 )
 from aces_runtime import RuntimeManager
-from aces_sdl.parser import parse_sdl
+from raes.parser import parse_sdl
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 FIXTURE_ROOT = REPO_ROOT / "contracts" / "fixtures" / "time"

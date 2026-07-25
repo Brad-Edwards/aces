@@ -2,7 +2,7 @@
 
 This directory holds the normative semantic boundary for binding author
 declarations versus concerns left open to backend realization (`SEM-218`).
-In ACES the processor layer does not realize underspecified author
+In RAES the processor layer does not realize underspecified author
 concerns: it compiles the typed runtime requirement and plans against
 backend support. Realization happens at the backend layer, and only
 backend manifests carry `realization_support`.
@@ -75,9 +75,9 @@ work the SEM-218 row tracks.
   `contracts/concept-authority/concept-families-v1.json`
   (`realization-and-disclosure`)
 - SDL classifier and instantiation downgrade:
-  `implementations/python/packages/aces_sdl/explicitness.py`,
-  `implementations/python/packages/aces_sdl/validator/`,
-  `implementations/python/packages/aces_sdl/instantiate.py`
+  `implementations/python/packages/raes/explicitness.py`,
+  `implementations/python/packages/raes/validator/`,
+  `implementations/python/packages/raes/instantiate.py`
 - invalid fixtures evidencing fail-closed rejection:
   `contracts/fixtures/backend-manifest/backend-manifest-v2/invalid/hollow-realization-support.json`,
   `contracts/fixtures/backend-manifest/backend-manifest-v2/invalid/malformed-realization-support.json`,

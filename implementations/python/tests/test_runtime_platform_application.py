@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import pytest
-from aces_sdl.runtime_platform_application import (
+from pydantic import ValidationError
+from raes.runtime_platform_application import (
     RelationshipServiceIntegration,
     RelationshipServiceIntegrationDirection,
     RelationshipServiceIntegrationKind,
@@ -24,7 +25,6 @@ from aces_sdl.runtime_platform_application import (
     RuntimePlatformApplicationUpstreamBinding,
     RuntimePlatformApplicationUpstreamBindingRole,
 )
-from pydantic import ValidationError
 
 # --------------------------------------------------------------------------- #
 # Per-platform_kind valid fixtures (each carries its required profile)

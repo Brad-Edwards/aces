@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 import pytest
-from aces_sdl.runtime_scheduled_job import (
+from pydantic import ValidationError
+from raes.runtime_scheduled_job import (
     RuntimeScheduledJob,
     RuntimeScheduledJobLastResult,
     RuntimeScheduledJobRunState,
     RuntimeScheduledJobSchedule,
     RuntimeScheduledJobScheduleKind,
 )
-from pydantic import ValidationError
 
 
 def _job(**overrides) -> dict:

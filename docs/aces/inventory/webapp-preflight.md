@@ -1,31 +1,31 @@
-# Webapp ACES Inventory Preflight
+# Webapp RAES Inventory Preflight
 
-This is a historical APTL TechVault validation note imported into ACES as a
-reference example. It is not the methodology authority; the canonical ACES
+This is a historical APTL TechVault validation note imported into RAES as a
+reference example. It is not the methodology authority; the canonical RAES
 methodology is `docs/aces/inventory/asset-inventory-methodology.md`.
 
 This note is the local architecture preflight for SCN-010 / issue #330 after
 `gc_codex_architecture_preflight` timed out twice on 2026-05-21. It is a
 binding implementation guardrail for the webapp steady-state inventory, not a
-replacement for downstream APTL ADR-035 or the ACES asset-inventorying
+replacement for downstream APTL ADR-035 or the RAES asset-inventorying
 methodology.
 
 ## Architecture Decisions
 
-- The completion artifact is an ACES inventory bundle under
+- The completion artifact is an RAES inventory bundle under
   `docs/aces/inventory/webapp/`, using the same ledger schema and validation
   CLI as the existing `shuffle-backend` proof pass.
 - The inventory captures the realized `aptl-webapp` container at one
   steady-state point. It does not claim byte-identical rebuildability, dynamic
   attack-state coverage, or clean-lab proof unless the evidence says that was
   performed.
-- Current ACES SDL can express webapp node identity, OS, source, resources,
+- Current RAES SDL can express webapp node identity, OS, source, resources,
   network service, runtime mounts, process identity, package inventory,
   dependency manifests, scanner findings, and declared CWE weaknesses. These
   fields belong in `scenarios/techvault.sdl.yaml`.
 - APTL-specific realization and public start-path interpretation are outside
-  this issue. This issue records ACES expressivity gaps only when the webapp
-  ACES SDL/spec inventory cannot express an observed fact. It must not
+  this issue. This issue records RAES expressivity gaps only when the webapp
+  RAES SDL/spec inventory cannot express an observed fact. It must not
   implement a TechVault-only backend shortcut.
 - `docs/aces/parity-inventory.yaml` remains the audit router for SCN-010.
   Update rows only to point at the new webapp inventory/SDL evidence; do not
@@ -45,8 +45,8 @@ methodology.
   `docker-compose.yml` service `webapp`, `containers/webapp/Dockerfile`,
   `containers/webapp/entrypoint.sh`, `containers/webapp/supervisord.conf`,
   `containers/webapp/requirements.txt`, and `containers/webapp/app/`.
-- ACES SDL authority: sibling `../aces-sdl` parser/model documentation and
-  the closed ACES #354 runtime-surface gap. Do not parse
+- RAES SDL authority: sibling `../aces-sdl` parser/model documentation and
+  the closed RAES #354 runtime-surface gap. Do not parse
   `techvault.sdl.yaml` with `aptl.core.sdl`.
 - Secret and evidence safety: ADR-057, ADR-029, `aptl.utils.redaction`, the
   existing test pattern for explicit redaction classifications, and source
@@ -62,12 +62,12 @@ methodology.
   Docker inspect/history/network/volume/top, in-container runtime baseline,
   package manifests, filesystem hashes, and scanner output when available.
 - `mapping-ledger.yaml` must validate through `aptl aces-inventory validate`
-  with every captured fact assigned an ACES/APTL disposition and no temporary
+  with every captured fact assigned an RAES/APTL disposition and no temporary
   `needs_gap_triage` rows.
 - Tests must fail if the webapp bundle omits required evidence, if evidence
-  checksums drift, if raw secret assignments leak, if the ledger loses ACES gap
+  checksums drift, if raw secret assignments leak, if the ledger loses RAES gap
   accountability, or if `scenarios/techvault.sdl.yaml` stops declaring the
-  ACES-expressible webapp runtime fields.
+  RAES-expressible webapp runtime fields.
 - The issue changes executable tests and YAML artifacts, so the documentation
   carve-out does not apply. The documentation carve-out does not apply. Run
   focused pytest while iterating, then the
@@ -75,19 +75,19 @@ methodology.
 
 ## Extensibility Seam
 
-The seam is the versioned inventory ledger plus ACES runtime fields on the
+The seam is the versioned inventory ledger plus RAES runtime fields on the
 TechVault SDL node. Later per-asset inventory issues should be able to add
 their own bundle by reusing the same validator and tests with a different asset
 fixture, without adding new parser branches or a second inventory schema.
 
-When APTL later consumes these ACES fields, that work must land behind the ACES
+When APTL later consumes these RAES fields, that work must land behind the RAES
 backend boundary, not in this evidence pass.
 
 ## Non-Goals
 
 - Do not run a destructive `aptl lab stop -v && aptl lab start` unless the user
   explicitly authorizes resetting the current lab.
-- Do not implement the ACES backend interpreter, default-scenario flip, legacy
+- Do not implement the RAES backend interpreter, default-scenario flip, legacy
   SDL deletion, scenario archive move, or public start-path routing.
 - Do not add a second scenario model, second inventory validator, or
   TechVault-name-dispatch shortcut.

@@ -2,8 +2,8 @@
 
 SDL-path navigation, most-specific-wins constraint flattening (R2), and closure
 bookkeeping shared by the four relation kinds in
-:mod:`aces_sdl.realization_envelope`. Domain-kind dispatch (subset, witness,
-variation) lives in :mod:`aces_sdl._realization_envelope_domains`. Kept separate
+:mod:`raes.realization_envelope`. Domain-kind dispatch (subset, witness,
+variation) lives in :mod:`raes._realization_envelope_domains`. Kept separate
 from the public relation module so neither file exceeds the repo source-size cap.
 This module has no diagnostic, parser, or validator dependency; those live in the
 public module.

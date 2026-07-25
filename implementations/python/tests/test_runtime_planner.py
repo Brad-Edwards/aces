@@ -1413,7 +1413,7 @@ infrastructure:
             ),
         )
 
-        from aces_sdl.instantiate import instantiate_scenario
+        from raes.instantiate import instantiate_scenario
 
         instantiated = instantiate_scenario(
             _scenario("""

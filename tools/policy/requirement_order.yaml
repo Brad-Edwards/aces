@@ -67,6 +67,12 @@ phases:
   - id: project-identity-migration
     requirements:
       - GOV-866
+      - GOV-884
+  - id: python-import-migration
+    requirements:
+      - MOD-884
+    blocked_until:
+      - project-identity-migration
   - id: modularity-initiative
     requirements:
       - MOD-001
@@ -127,7 +133,7 @@ ownership:
     - implementations/python/packages/aces_backend_stubs
     - implementations/python/packages/aces_contracts
     - implementations/python/packages/aces_processor
-    - implementations/python/packages/aces_sdl
+    - implementations/python/packages/raes
     - implementations/python/tests
     - specs/formal/participant-semantics
     - specs/formal/sdl-phases
@@ -176,7 +182,7 @@ ownership:
     - contracts/schemas/sdl
     - docs/explain/reference
     - implementations/python/packages/aces_processor
-    - implementations/python/packages/aces_sdl
+    - implementations/python/packages/raes
     - implementations/python/tests
     - specs/formal
     - CHANGELOG.md
@@ -202,12 +208,28 @@ ownership:
     - implementations/python/packages/aces_runtime/control_plane_api.py
     - implementations/python/tests/test_mcp_server.py
     - implementations/python/tests/test_version_classification.py
+    - implementations/python/tests/test_project_positioning.py
     - specs/README.md
     - specs/agent-guidance
     - specs/sdl/README.md
     - tools/policy/requirement_order.yaml
+  python-import-migration:
+    - README.md
+    - contracts/schema-publication
+    - contracts/schema-publication-manifest.json
+    - contracts/schemas
+    - docs
+    - examples
+    - implementations/python/hatch_build.py
+    - implementations/python/packages
+    - implementations/python/pyproject.toml
+    - implementations/python/src/aces
+    - implementations/python/tests
+    - noxfile.py
+    - specs
+    - tools
   modularity-initiative:
-    - implementations/python/packages/aces_sdl
+    - implementations/python/packages/raes
     - implementations/python/packages/aces_processor
     - implementations/python/packages/aces_contracts
     - implementations/python/packages/aces_conformance

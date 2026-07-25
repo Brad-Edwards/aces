@@ -134,7 +134,7 @@ def _parse_or_error(sdl_content: str):
     if len(sdl_content.encode("utf-8", errors="replace")) > _MAX_INPUT_BYTES:
         return f"INPUT TOO LARGE — limit is {_MAX_INPUT_BYTES} bytes."
 
-    from aces_sdl import SDLParseError, SDLValidationError, parse_sdl
+    from raes import SDLParseError, SDLValidationError, parse_sdl
 
     try:
         return parse_sdl(sdl_content, skip_semantic_validation=True)
@@ -148,7 +148,7 @@ def _parse_or_error(sdl_content: str):
 
 def _build_summary(scenario) -> str:
     """Build a human-readable summary of a scenario."""
-    from aces_sdl.nodes import NodeType
+    from raes.nodes import NodeType
 
     lines = [
         f"Scenario: {scenario.name}",
@@ -232,7 +232,7 @@ def _format_entities(entities: dict, lines: list[str], indent: int, depth: int =
 
 def _list_elements(scenario, section_filter: str) -> str:
     """List named elements, optionally filtered by section."""
-    from aces_sdl.entities import flatten_entities
+    from raes.entities import flatten_entities
 
     lines: list[str] = []
     for field in _SECTION_FIELDS:
@@ -287,7 +287,7 @@ def _get_element_detail(scenario, name: str) -> str:
 
     if not matches:
         # Try nested entity names
-        from aces_sdl.entities import flatten_entities
+        from raes.entities import flatten_entities
 
         if scenario.entities:
             flat = flatten_entities(scenario.entities)
@@ -527,7 +527,7 @@ def _build_reference_map(scenario) -> dict[tuple[str, str], list[str]]:
 
 def _build_diagram(scenario) -> str:
     """Build an ASCII topology diagram."""
-    from aces_sdl.nodes import NodeType
+    from raes.nodes import NodeType
 
     lines = [f"Topology: {scenario.name}", "=" * 40]
 

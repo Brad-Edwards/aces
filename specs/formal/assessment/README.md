@@ -37,7 +37,7 @@ authored SDL:
 - the backend **Evaluator**
   ([ADR-069](../../../docs/decisions/adrs/adr-069-cage-2-replication-architecture.md)
   §3), which projects reward, objective, terminal-condition, and scoring facts
-  into ACES evaluation results, evidence records, and derived measures.
+  into RAES evaluation results, evidence records, and derived measures.
 
 The governing requirement remains **SEM-206 (Assessment Semantics)**;
 [`../../../docs/explain/reference/assessment-semantics.md`](../../../docs/explain/reference/assessment-semantics.md)

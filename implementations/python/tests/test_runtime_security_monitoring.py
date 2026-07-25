@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import pytest
-from aces_sdl._module_symbols import symbol_index
 from pydantic import ValidationError
+from raes._module_symbols import symbol_index
 
 from aces.core.sdl import parse_sdl
 from aces.core.sdl._errors import SDLValidationError

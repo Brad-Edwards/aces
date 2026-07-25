@@ -6,7 +6,8 @@ import textwrap
 from pathlib import Path
 
 import pytest
-from aces_sdl import (
+from paths import REPO_ROOT
+from raes import (
     SDL_SOURCE_FORMAT,
     SDLMigrationPolicy,
     SDLParseError,
@@ -15,7 +16,6 @@ from aces_sdl import (
     parse_sdl,
     parse_sdl_file,
 )
-from paths import REPO_ROOT
 
 
 def _diagnostic_codes(error: SDLParseError) -> set[str]:

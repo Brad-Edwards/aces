@@ -156,7 +156,7 @@ action outcome, history, and backend evidence establish what occurred.
 
 This contract does not prove participant intelligence, human realism, service
 fidelity, throughput, causal attribution, evaluator correctness, or
-golden-range equivalence. Those claims require their existing ACES evidence and
+golden-range equivalence. Those claims require their existing RAES evidence and
 conformance surfaces.
 
 ## Delivery Status

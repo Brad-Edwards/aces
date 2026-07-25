@@ -15,8 +15,8 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from aces_contracts.provenance import LineageDisposition, SDLLineageLedgerModel
-from aces_sdl._runtime_service_families import RUNTIME_SERVICE_FAMILIES
 from pydantic import ValidationError
+from raes._runtime_service_families import RUNTIME_SERVICE_FAMILIES
 
 from tools.check_schema_publication import load_schema_publication_catalog
 from tools.policy.common import PolicyFailure, safe_repo_path
@@ -31,7 +31,7 @@ CURRENT_PROSE_PATHS = (
     "docs/explain/sdl/lineage.md",
     "docs/explain/sdl/related-work-comparison.md",
     "docs/explain/sdl/validation.md",
-    "implementations/python/packages/aces_sdl/__init__.py",
+    "implementations/python/packages/raes/__init__.py",
 )
 DOI_LINK_RE = re.compile(
     r"\[([^\]]+)\]\(https://doi\.org/(10\.\d{4,9}/[^)\s]+)\)",

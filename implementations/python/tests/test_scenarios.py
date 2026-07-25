@@ -184,7 +184,7 @@ def test_complex_examples_cover_new_sdl_surfaces():
 def test_reference_scenario_compiles_participant_loop():
     """Issue #598: the reference scenario proves the participant handoff surface."""
     from aces_processor.compiler import compile_runtime_model
-    from aces_sdl.scenarios import load_scenario
+    from raes.scenarios import load_scenario
 
     scenario = load_scenario(REFERENCE_SCENARIO)
     model = compile_runtime_model(scenario)

@@ -31,9 +31,9 @@ from aces_conformance.conformance import (
 from aces_contracts.planning import RuntimeDomain
 from aces_processor.reference import run_reference_processor
 from aces_runtime.control_plane import RuntimeControlPlane
-from aces_sdl.parser import parse_sdl
 from libvirt_conformance_fixtures import RecordingLibvirtDriver
 from libvirt_participant_fixtures import NullLibvirtDriver
+from raes.parser import parse_sdl
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 COMMITTED_REPORT = REPO_ROOT / "docs" / "conformance" / "libvirt-qemu.provisioning-only.report.json"

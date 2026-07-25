@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import pytest
-from aces_sdl.runtime_app_authorization import (
+from pydantic import ValidationError
+from raes.runtime_app_authorization import (
     RuntimeAppAuthorization,
     RuntimeAppAuthorizationCredentialClassification,
     RuntimeAppAuthorizationGrant,
@@ -15,7 +16,6 @@ from aces_sdl.runtime_app_authorization import (
     RuntimeAppAuthorizationRoleMapping,
     RuntimeAppAuthorizationTenant,
 )
-from pydantic import ValidationError
 
 
 def _opensearch_authorization(**overrides) -> dict:

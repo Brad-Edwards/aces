@@ -67,7 +67,7 @@ derived from that envelope after validation.
 ## Implementation Mapping
 
 - semantic contract definitions: `implementations/python/packages/aces_processor/semantics/workflow.py`
-- validation and visibility checks: `implementations/python/packages/aces_sdl/validator/`
+- validation and visibility checks: `implementations/python/packages/raes/validator/`
 - compiled step contracts: `implementations/python/packages/aces_processor/compiler/`
 - typed runtime envelopes and result validation:
   - `implementations/python/packages/aces_processor/models/`

@@ -6,7 +6,7 @@ import textwrap
 from pathlib import Path
 
 import pytest
-from aces_sdl.nodes import RuntimeNetworkNamespace
+from raes.nodes import RuntimeNetworkNamespace
 
 from aces.backends.stubs import create_stub_manifest
 from aces.core.runtime.compiler import compile_runtime_model

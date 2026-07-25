@@ -35,14 +35,14 @@ target-resolution, success-interpretation, and dependency-ordering semantics
 ## Implementation Mapping
 
 - shared name-level source of truth for whole-objective semantics:
-  `implementations/python/packages/aces_sdl/semantics/objective_semantics.py`
+  `implementations/python/packages/raes/semantics/objective_semantics.py`
   (`analyze_objective_semantics`, `partition_objective_dependencies`,
   `OBJECTIVE_*_DEPENDENCY_ROLES`)
 - shared objective-window helper:
-  `implementations/python/packages/aces_sdl/semantics/objectives.py`
+  `implementations/python/packages/raes/semantics/objectives.py`
   (`analyze_objective_window`)
-- authoring models: `implementations/python/packages/aces_sdl/objectives.py`
-- semantic validation: `implementations/python/packages/aces_sdl/validator/`
+- authoring models: `implementations/python/packages/raes/objectives.py`
+- semantic validation: `implementations/python/packages/raes/validator/`
   (`_verify_objectives`)
 - compiled runtime objective resource, addresses, diagnostics, and
   ordering/refresh derivation:

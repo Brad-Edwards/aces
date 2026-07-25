@@ -27,7 +27,7 @@ from aces_contracts.runtime_state import (
     RuntimeSnapshot,
 )
 from aces_contracts.versions import RUNTIME_SNAPSHOT_SCHEMA_VERSION
-from aces_sdl.explicitness import ExplicitnessClass, ExplicitnessProvenance
+from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance
 
 from aces.backends.stubs import StubProvisioner, create_stub_target
 from aces.core.runtime.control_plane_store import _snapshot_from_payload, _snapshot_payload

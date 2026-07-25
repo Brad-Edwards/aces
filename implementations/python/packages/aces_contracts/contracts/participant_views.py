@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from aces_sdl.participant_behavior import ParticipantInteractionClass
 from pydantic import Field, GetJsonSchemaHandler, StrictInt, model_validator
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema
+from raes.participant_behavior import ParticipantInteractionClass
 
 from ..participant_behavior import (
     ParticipantAdmissionDisposition,

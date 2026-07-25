@@ -3,11 +3,41 @@
 This glossary is a reference aid. Normative definitions remain in `specs/`,
 published schemas, source code, and ADRs.
 
+## System And Environments
+
+**RAES**
+: Reproducible Agentic Environments System, the overall system of
+  specifications, contracts, reference implementations, examples, and
+  assurance material in this repository. RAES is broader than its SDL, any one
+  backend, and any one application domain.
+
+**Agentic environment**
+: A declared and realized setting in which one or more participants receive
+  observations, take actions, interact with resources or other participants,
+  and are evaluated under stated controls. Participants can include software
+  agents, policies, scripts, and human-control proxies. This explanatory term
+  does not introduce a new schema or runtime guarantee.
+
+**Reproducibility support**
+: Preservation and connection of authored intent, deterministic or governed
+  variation, realization inputs, participant behavior and observations,
+  apparatus identity, provenance, evidence, replay boundaries, and conformance
+  results so a bounded reproduction attempt can be made and assessed. RAES does
+  not guarantee deterministic runtime behavior, equal outcomes, exact replay,
+  scientific validity, or reproducibility.
+
+**Realized environment**
+: The concrete environment produced from an authored scenario by a selected
+  processor, backend, participant implementations, configuration, and runtime
+  choices. It is not identical to the authored scenario, and underspecified
+  choices require realized-form and apparatus disclosure where the applicable
+  contracts provide it.
+
 ## Authoring And SDL
 
-**ACES SDL**
+**RAES SDL**
 : The YAML-based scenario description language implemented in this repository.
-  It starts from the Open Cyber Range SDL surface and adds ACES-specific
+  It starts from the Open Cyber Range SDL surface and adds RAES-specific
   sections and semantics. See [Open Cyber Range SDL](https://documentation.opencyberrange.ee/docs/sdl/).
 
 **SDL document**
@@ -59,7 +89,7 @@ published schemas, source code, and ADRs.
   criteria.
 
 **Workflow**
-: A control graph over objectives and workflow steps. ACES workflow semantics
+: A control graph over objectives and workflow steps. RAES workflow semantics
   are owned by this repository; CACAO is prior art for playbook workflow
   structure. See [CACAO Security Playbooks v2.0](https://docs.oasis-open.org/cacao/security-playbooks/v2.0/security-playbooks-v2.0.pdf).
 
@@ -161,10 +191,10 @@ published schemas, source code, and ADRs.
 
 **Backend conformance**
 : The contract and fixture discipline used to check that backend-facing
-  declarations and results satisfy published ACES contracts.
+  declarations and results satisfy published RAES contracts.
 
 **Surface**
-: A named, bounded, contract-bearing scope of an ACES artifact or apparatus to
+: A named, bounded, contract-bearing scope of an RAES artifact or apparatus to
   which governed vocabularies and concept bindings apply. The normative
   definition, including the one-surface-versus-two decision rule, lives in
   `specs/concept-authority/concept-authority.md`.

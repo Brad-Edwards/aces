@@ -12,9 +12,11 @@ from __future__ import annotations
 import json
 
 import pytest
-from aces_sdl import VARIABLE_TOKEN_PATTERN
-from aces_sdl._runtime_service_families import collect_qualified_runtime_family_refs
-from aces_sdl.runtime_datastore import (
+from paths import REPO_ROOT
+from pydantic import ValidationError
+from raes import VARIABLE_TOKEN_PATTERN
+from raes._runtime_service_families import collect_qualified_runtime_family_refs
+from raes.runtime_datastore import (
     RuntimeDatastoreCluster,
     RuntimeDatastoreDataModel,
     RuntimeDatastoreEngine,
@@ -29,7 +31,7 @@ from aces_sdl.runtime_datastore import (
     RuntimeDatastoreTemplate,
     RuntimeDatastoreTransportSecurity,
 )
-from aces_sdl.runtime_datastore_vocab import (
+from raes.runtime_datastore_vocab import (
     RuntimeDatastoreEvictionPolicy,
     RuntimeDatastoreNodeEndpointRole,
     RuntimeDatastoreNodeRole,
@@ -38,8 +40,6 @@ from aces_sdl.runtime_datastore_vocab import (
     RuntimeDatastoreSettingScope,
     RuntimeDatastoreTransportSecurityMode,
 )
-from paths import REPO_ROOT
-from pydantic import ValidationError
 
 from aces.core.sdl.scenario import Scenario
 

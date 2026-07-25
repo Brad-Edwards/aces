@@ -117,7 +117,7 @@ def evaluate_repo_policy(
 # ADR-015: SDL→processor layering rule + 500-line source-file cap.
 #
 # These two gates catch unintentional regressions in normal contributions:
-# a developer who accidentally writes `import aces_processor` in `aces_sdl/`,
+# a developer who accidentally writes `import aces_processor` in `raes/`,
 # or one who pushes a >500-line file, or a split PR that forgets to drain
 # its allowlist entry. The policy and its YAML config are PR-mutable; PR
 # review (not this code) defends against deliberate weakening. See ADR-015.
@@ -155,14 +155,14 @@ _ADR015_INITIAL_OVERSIZED_FILES: frozenset[str] = frozenset(
         "implementations/python/packages/aces_runtime/control_plane.py",
         "implementations/python/packages/aces_runtime/control_plane_api.py",
         "implementations/python/packages/aces_runtime/workflow_result_contract_checks.py",
-        "implementations/python/packages/aces_sdl/composition.py",
-        "implementations/python/packages/aces_sdl/module_registry.py",
-        "implementations/python/packages/aces_sdl/orchestration.py",
-        "implementations/python/packages/aces_sdl/participant_behavior.py",
-        "implementations/python/packages/aces_sdl/runtime_mail_service.py",
-        "implementations/python/packages/aces_sdl/runtime_security_monitoring.py",
-        "implementations/python/packages/aces_sdl/semantics/objective_semantics.py",
-        "implementations/python/packages/aces_sdl/semantics/participant_behavior.py",
+        "implementations/python/packages/raes/composition.py",
+        "implementations/python/packages/raes/module_registry.py",
+        "implementations/python/packages/raes/orchestration.py",
+        "implementations/python/packages/raes/participant_behavior.py",
+        "implementations/python/packages/raes/runtime_mail_service.py",
+        "implementations/python/packages/raes/runtime_security_monitoring.py",
+        "implementations/python/packages/raes/semantics/objective_semantics.py",
+        "implementations/python/packages/raes/semantics/participant_behavior.py",
     }
 )
 

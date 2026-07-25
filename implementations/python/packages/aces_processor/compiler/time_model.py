@@ -11,7 +11,7 @@ from aces_contracts.contracts.time_model import (
     TimeModelDeclarationModel,
     TimeProgressionPolicyDeclarationModel,
 )
-from aces_sdl.scenario import InstantiatedScenario
+from raes.scenario import InstantiatedScenario
 
 from ..models.time_model import (
     CompiledClock,

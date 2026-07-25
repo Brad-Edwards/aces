@@ -408,7 +408,7 @@ def _guest_matrix(scenario: Path):
     from aces_backend_libvirt.manifest import create_libvirt_manifest
     from aces_backend_libvirt.realization import interpret_provisioning_plan
     from aces_backend_libvirt.techvault_matrix import native_matrix
-    from aces_sdl.parser import parse_sdl_file
+    from raes.parser import parse_sdl_file
 
     from aces.core.runtime.manager import RuntimeManager
 

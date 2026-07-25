@@ -33,8 +33,8 @@ from aces_processor.models import (
 )
 from aces_runtime.control_plane import RuntimeControlPlane
 from aces_runtime.registry import RuntimeTarget
-from aces_sdl.parser import parse_sdl
 from libvirt_participant_fixtures import NullLibvirtDriver
+from raes.parser import parse_sdl
 
 
 @dataclass(frozen=True)

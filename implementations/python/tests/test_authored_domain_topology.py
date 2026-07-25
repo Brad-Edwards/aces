@@ -23,9 +23,9 @@ from aces_processor.planner import plan
 from aces_processor.semantics.realization import realization_disclosure
 from aces_reference_backend import create_reference_backend_manifest
 from aces_runtime.control_plane import RuntimeControlPlane
-from aces_sdl import SDLParseError, SDLValidationError, parse_sdl, parse_sdl_file
-from aces_sdl.language_service import language_completions
 from jsonschema import Draft202012Validator
+from raes import SDLParseError, SDLValidationError, parse_sdl, parse_sdl_file
+from raes.language_service import language_completions
 
 _INSTANTIATION_PROVENANCE = {
     "authored_digest": {

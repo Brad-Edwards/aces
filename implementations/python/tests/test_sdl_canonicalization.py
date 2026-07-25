@@ -6,7 +6,7 @@ import textwrap
 from pathlib import Path
 
 import pytest
-from aces_sdl import (
+from raes import (
     SDL_CANONICAL_PROFILE,
     SDLMigrationPolicy,
     SDLParseError,
