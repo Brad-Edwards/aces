@@ -8,6 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 PRs do **not** edit this file directly. release-please maintains it from the
 Conventional Commit history on `main` (#684).
 
+## [1.0.0](https://github.com/RAESystem/rae/compare/v0.25.0...v1.0.0) (2026-07-25)
+
+
+### ⚠ BREAKING CHANGES
+
+* The published SDL import namespace changes from aces_sdl to raes with no compatibility alias.
+
+### Features
+
+* adopt raes import namespace and system framing ([#885](https://github.com/RAESystem/rae/issues/885)) ([0366281](https://github.com/RAESystem/rae/commit/0366281e00305987ef32b1697f28a396818b378a))
+
+
+### Bug Fixes
+
+* synchronize main release ancestry into dev ([#890](https://github.com/RAESystem/rae/issues/890)) ([b87309a](https://github.com/RAESystem/rae/commit/b87309acbb616f491558d71cff869bc21f15b8d4))
+
 ## [0.25.0](https://github.com/RAESystem/rae/compare/v0.24.0...v0.25.0) (2026-07-25)
 
 
