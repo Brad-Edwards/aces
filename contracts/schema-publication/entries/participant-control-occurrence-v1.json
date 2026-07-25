@@ -1,0 +1,10 @@
+{
+  "contract_id": "participant-control-occurrence-v1",
+  "schema_path": "contracts/schemas/participant-runtime/participant-control-occurrence-v1.json",
+  "stability": "draft",
+  "content_hash": "de375ee8e71d9277e8916cb8078f70bd9019ac55add9dd4449a0c62526103d94",
+  "last_change": {
+    "summary": "Initial publication of the API-409 participant proposal, decision, direction, intervention, handoff, override, and cancellation occurrence contract.",
+    "content_hash": "de375ee8e71d9277e8916cb8078f70bd9019ac55add9dd4449a0c62526103d94"
+  }
+}

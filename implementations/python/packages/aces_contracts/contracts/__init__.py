@@ -186,10 +186,10 @@ from .manifests import (
     ProcessorManifestV2Model,
     TimeCapabilitiesModel,
 )
-from .manifests import (
-    CleanupCapabilitiesModel as CleanupCapabilitiesModel,
-)
+from .manifests import CleanupCapabilitiesModel as CleanupCapabilitiesModel
 from .participant_context import ParticipantContextViewModel
+from .participant_control import ParticipantControlDeclarationModel, ParticipantControlOccurrenceModel
+from .participant_control_validation import validate_participant_control_occurrence_context
 from .participant_decision_surface import (
     ParticipantDecisionSurfaceActionEntryModel,
     ParticipantDecisionSurfaceCandidateSetFormModel,
@@ -364,6 +364,7 @@ from .trial_cleanup import (
 from .trial_cleanup import (
     validate_trial_cleanup_receipt as validate_trial_cleanup_receipt,
 )
+from .validation_disclosure import ValidationBasisDisclosureDocumentModel
 from .validators import _collapse_nullable_optional_schema as _collapse_nullable_optional_schema
 from .validators import _resolve_instance_path_schema as _resolve_instance_path_schema
 from .validators import _resolve_ref_schema as _resolve_ref_schema
@@ -435,7 +436,9 @@ __all__ = [
     "ParticipantActionPreconditionResultModel", "ParticipantActionResultModel",
     "ParticipantAttributionCandidateModel", "ParticipantAttributionEdgeModel",
     "ParticipantAttributionEvidenceBasisModel", "ParticipantAttributionOrderingBasisModel",
-    "ParticipantAutonomousExecutionStateModel", "ParticipantBehaviorHistoryEventModel", "ParticipantContextViewModel",
+    "ParticipantAutonomousExecutionStateModel", "ParticipantBehaviorHistoryEventModel",
+    "ParticipantContextViewModel", "ParticipantControlDeclarationModel",
+    "ParticipantControlOccurrenceModel", "validate_participant_control_occurrence_context",
     "ParticipantDecisionSurfaceActionEntryModel", "ParticipantDecisionSurfaceCandidateSetFormModel",
     "ParticipantDecisionSurfaceConstrainedFormModel", "ParticipantDecisionSurfaceExposureBindingModel",
     "ParticipantDecisionSurfaceExposureRealizationModel", "ParticipantDecisionSurfaceModel",
@@ -492,6 +495,7 @@ __all__ = [
     "validate_experiment_apparatus_context_archival_datetimes", "validate_experiment_run_against_task",
     "validate_experiment_run_archival_datetimes", "validate_experiment_study_against_tasks_and_runs",
     "validate_experiment_study_archival_datetimes", "validate_experiment_task_archival_datetimes",
+    "ValidationBasisDisclosureDocumentModel",
     "validate_experiment_run_time_model",
     "TimeCapabilitiesModel",
 ]

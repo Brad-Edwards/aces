@@ -141,6 +141,16 @@ lives at
 selection uses the exact profile id/version plus a declared subject kind; the
 catalog does not execute gates or carry per-subject results.
 
+The `validation-basis-disclosure-v1` schema publishes the ASR-515 record of
+the validation/admission basis used for one concrete subject, joined to the
+`validation-profile-catalog-v1` authority by `(profile_id, profile_version,
+subject_kind)`. It carries the achieved strength, gate-result rows,
+limitations, and safe evidence/producer/diagnostic references; scenario and
+scenario-snapshot subjects are referenced (never re-modeled), and experiment
+task/run/study contracts embed it as an optional `validation_basis_disclosures`
+list. It does not execute gates, does not replace the ASR-511 catalog, and
+does not add an admission, endpoint, or persistence surface.
+
 The `scientific-completeness-taxonomy-v1` and
 `scientific-completeness-assessment-v1` schemas keep stable intended-use
 profiles separate from time-varying delivery evidence. Their normative

@@ -31,6 +31,7 @@ from .experiment_run import ExperimentRunModel
 from .experiment_spec import ExperimentSpecModel, ExperimentStudyModel
 from .manifests import ProcessorManifestV2Model
 from .participant_context import ParticipantContextViewModel
+from .participant_control import ParticipantControlOccurrenceModel
 from .participant_decision_surface import ParticipantDecisionSurfaceModel
 from .participant_envelopes import (
     ParticipantJointActionRecordModel,
@@ -88,6 +89,7 @@ from .schema_invariants import (
 from .semantic_profiles import SemanticProfileModel
 from .time_model import RealizedTimeModelProvenanceModel, TimeModelDeclarationModel, TimeRuntimeStateModel
 from .trial_cleanup import SchedulerIsolationProofModel, TrialCleanupPlanModel, TrialCleanupReceiptModel
+from .validation_disclosure import ValidationBasisDisclosureDocumentModel
 from .vocabulary_sources import (
     AtlasTacticsSourceModel,
     AttackEnterpriseTacticsSourceModel,
@@ -164,6 +166,7 @@ def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
         "scientific-completeness-taxonomy-v1": ScientificCompletenessTaxonomyModel.model_json_schema(),
         "scientific-completeness-assessment-v1": ScientificCompletenessAssessmentModel.model_json_schema(),
         "validation-profile-catalog-v1": ValidationProfileCatalogModel.model_json_schema(),
+        "validation-basis-disclosure-v1": ValidationBasisDisclosureDocumentModel.model_json_schema(),
         "evaluation-history-event-stream-v1": _event_stream_schema(
             "EvaluationHistoryEventStream",
             EvaluationHistoryEventModel.model_json_schema(),
@@ -182,6 +185,7 @@ def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
         "participant-shared-state-record-v1": ParticipantSharedStateRecordModel.model_json_schema(),
         "participant-joint-action-record-v1": ParticipantJointActionRecordModel.model_json_schema(),
         "participant-time-management-context-v1": ParticipantTimeManagementContextModel.model_json_schema(),
+        "participant-control-occurrence-v1": ParticipantControlOccurrenceModel.model_json_schema(),
         "participant-outcome-report-v1": ParticipantOutcomeReportModel.model_json_schema(),
         "participant-status-view-v1": ParticipantStatusViewModel.model_json_schema(),
         "participant-history-view-v1": ParticipantHistoryViewModel.model_json_schema(),
