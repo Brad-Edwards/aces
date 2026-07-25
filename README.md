@@ -26,7 +26,7 @@ realizes the selected topology on a Docker Compose backend.
 
 ## Contents
 
-- [What RAES SDL Describes](#what-raes-sdl-describes)
+- [What RAES Describes](#what-raes-describes)
 - [Getting Started](#getting-started)
 - [Using the Python Reference Implementation](#using-the-python-reference-implementation)
 - [Repository Layout](#repository-layout)
@@ -39,7 +39,7 @@ realizes the selected topology on a Docker Compose backend.
 - [License](#license)
 - [Maintainer](#maintainer)
 
-## What RAES SDL Describes
+## What RAES Describes
 
 An SDL file is a declarative scenario document. It can describe topology,
 hosts, services, identities, content, relationships, agents, objectives,
@@ -237,7 +237,7 @@ must mint a new schema version as described in
 If you use RAES SDL in academic work, cite the repository:
 
 ```bibtex
-@software{raes_sdl,
+@software{raes,
   author       = {Edwards, Brad},
   title        = {RAES SDL: Backend-Agnostic Scenario Description Language for Cyber Range Experiments},
   year         = {2026},

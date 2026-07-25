@@ -28,7 +28,7 @@ from aces_mcp.tools.operation_support import (
 
 def _tool_surface_payload() -> dict[str, object]:
     return {
-        "surface": "raes-sdl",
+        "surface": "raes",
         "intent": (
             "Author, parse, validate, inspect, assess, and dry-run RAES scenarios for researchers and range designers."
         ),

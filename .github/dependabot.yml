@@ -20,7 +20,7 @@ updates:
       github-actions:
         patterns: ["*"]
 
-  # Python package dependencies for the raes-sdl distribution.
+  # Python package dependencies for the raes distribution.
   - package-ecosystem: "pip"
     directory: "/implementations/python"
     target-branch: "dev"

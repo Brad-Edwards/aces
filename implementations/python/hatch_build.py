@@ -1,4 +1,4 @@
-"""Hatchling hooks for the raes-sdl package (#537, #684).
+"""Hatchling hooks for the raes package (#537, #684).
 
 Two things this package needs live *outside* this Python project directory, at
 the repository root, and are pulled in at build time:

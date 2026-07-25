@@ -22,7 +22,7 @@ DISHONEST_LITERAL = "0.1.0"
 def test_aces_namespace_version_derives_from_distribution() -> None:
     import aces
 
-    assert aces.__version__ == version("raes-sdl")
+    assert aces.__version__ == version("raes")
 
 
 def test_package_version_helper_uses_supplied_sentinel(monkeypatch) -> None:
@@ -32,7 +32,7 @@ def test_package_version_helper_uses_supplied_sentinel(monkeypatch) -> None:
         raise PackageNotFoundError
 
     monkeypatch.setattr(compat, "version", _raise)
-    assert compat.package_version("raes-sdl", default=NOT_INSTALLED_SENTINEL) == NOT_INSTALLED_SENTINEL
+    assert compat.package_version("raes", default=NOT_INSTALLED_SENTINEL) == NOT_INSTALLED_SENTINEL
 
 
 def test_cli_version_reports_installed_distribution() -> None:
@@ -41,7 +41,7 @@ def test_cli_version_reports_installed_distribution() -> None:
     result = CliRunner().invoke(app, ["--version"])
 
     assert result.exit_code == 0
-    assert result.stdout == f"raes {version('raes-sdl')}\n"
+    assert result.stdout == f"raes {version('raes')}\n"
 
 
 def test_cli_help_uses_raes_project_identity() -> None:
@@ -82,7 +82,7 @@ def test_cli_version_fallback_is_honest_sentinel(monkeypatch) -> None:
 def test_control_plane_api_version_derives_from_distribution() -> None:
     from aces_runtime.control_plane_api import _control_plane_api_version
 
-    assert _control_plane_api_version() == version("raes-sdl")
+    assert _control_plane_api_version() == version("raes")
 
 
 def test_control_plane_api_version_fallback_is_honest_sentinel(monkeypatch) -> None:
@@ -105,4 +105,4 @@ def test_control_plane_app_openapi_version_matches_distribution() -> None:
     app = create_control_plane_app(RuntimeControlPlane(create_stub_target()))
 
     assert app.title == "RAES Runtime Control Plane"
-    assert app.version == version("raes-sdl")
+    assert app.version == version("raes")
