@@ -197,6 +197,20 @@ def _validate_acyclic_mappings(mappings: dict[str, TimeDomainMappingDeclarationM
         visit(domain)
 
 
+def _validate_identity_mapping(
+    mapping: TimeDomainMappingDeclarationModel,
+    domains: dict[CompiledAddress, TimeDomainDeclarationModel],
+) -> None:
+    if mapping.mapping_kind != "identity":
+        return
+    source = domains[mapping.source_domain_address]
+    target = domains[mapping.target_domain_address]
+    if source.tick_period_seconds != target.tick_period_seconds or source.epoch != target.epoch:
+        raise ValueError("identity mappings require matching tick periods and epochs")
+    if mapping.scale != ExactRatioModel(numerator=1, denominator=1) or mapping.offset_ticks != 0:
+        raise ValueError("identity mappings require unit scale and zero offset")
+
+
 class TimeModelDeclarationModel(ContractModel):
     """Canonical backend-neutral declaration compiled from authored SDL."""
 
@@ -231,13 +245,7 @@ class TimeModelDeclarationModel(ContractModel):
                 raise ValueError(f"mapping {mapping.address!r} references an unknown time domain")
             if mapping.source_domain_address == mapping.target_domain_address:
                 raise ValueError("time-domain mappings must connect distinct domains")
-            if mapping.mapping_kind == "identity":
-                source = self.domains[mapping.source_domain_address]
-                target = self.domains[mapping.target_domain_address]
-                if source.tick_period_seconds != target.tick_period_seconds or source.epoch != target.epoch:
-                    raise ValueError("identity mappings require matching tick periods and epochs")
-                if mapping.scale != ExactRatioModel(numerator=1, denominator=1) or mapping.offset_ticks != 0:
-                    raise ValueError("identity mappings require unit scale and zero offset")
+            _validate_identity_mapping(mapping, self.domains)
         _validate_acyclic_mappings(self.mappings)
 
     def _validate_policy_references(self) -> None:
