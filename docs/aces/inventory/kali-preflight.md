@@ -68,7 +68,7 @@ asset-inventorying methodology.
 ## Security And Validation Layers
 
 - **ACES SDL shape:** Kali SDL additions must parse with
-  `aces_sdl.parse_sdl_file` and compile through the ACES runtime compiler.
+  `raes.parse_sdl_file` and compile through the RAES runtime compiler.
   Do not add local structural validators for ACES fields.
 - **Inventory ledger:** every captured fact needs an existing
   `AcesSurface` mapping, caveat, or linked ACES issue in

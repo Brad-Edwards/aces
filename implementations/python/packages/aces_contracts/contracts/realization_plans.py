@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Annotated, Any, Literal
 
-from aces_sdl.explicitness import ExplicitnessClass, ExplicitnessProvenance
 from pydantic import Field, model_validator
+from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance
 
 from ..addressing import CompiledAddress
 from ..planning import RuntimeDomain, require_plan_operation_identity

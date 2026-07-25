@@ -126,7 +126,7 @@ new participant stack. The canonical incumbents are:
 
 - SDL authored semantics: `agents.*`, `action_contracts`,
   `observation_boundaries`, and `outcome_interpretation_rules` in
-  `implementations/python/packages/aces_sdl/`.
+  `implementations/python/packages/raes/`.
 - SDL shape and reference validation: `SDLModel`, `parse_sdl`,
   `SemanticValidator`, `analyze_participant_behavior`, and
   `analyze_participant_outcome_interpretations`.

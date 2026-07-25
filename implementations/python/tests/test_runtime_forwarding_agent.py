@@ -10,7 +10,8 @@ correctness feature — the ``require_profile_for_agent_kind`` guard (positive f
 from __future__ import annotations
 
 import pytest
-from aces_sdl.runtime_forwarding_agent import (
+from pydantic import ValidationError
+from raes.runtime_forwarding_agent import (
     RelationshipForwardingEdge,
     RuntimeForwardingAgent,
     RuntimeForwardingAgentImplementation,
@@ -29,8 +30,7 @@ from aces_sdl.runtime_forwarding_agent import (
     RuntimeForwardingTransform,
     RuntimeForwardingTransformKind,
 )
-from aces_sdl.runtime_security_monitoring import RuntimeSecurityMonitoringListenerRole
-from pydantic import ValidationError
+from raes.runtime_security_monitoring import RuntimeSecurityMonitoringListenerRole
 
 from aces.core.sdl._errors import SDLValidationError
 from aces.core.sdl.scenario import Scenario

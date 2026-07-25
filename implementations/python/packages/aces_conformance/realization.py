@@ -10,13 +10,13 @@ from aces_contracts.diagnostics import Diagnostic
 from aces_contracts.realization_envelope import BackendRealizationEnvelopeModel
 from aces_processor.reference import run_reference_processor
 from aces_runtime.registry import RuntimeTarget
-from aces_sdl.realization_envelope import (
+from raes.realization_envelope import (
     NegativeProbe,
     PositiveProbe,
     generate_negative_probes,
     generate_positive_probes,
 )
-from aces_sdl.scenario import Scenario
+from raes.scenario import Scenario
 
 from ._realization_models import (
     ExecutionBasis,

@@ -419,7 +419,7 @@ enum fields cannot drift on accepted spellings. The shared behavior is covered b
 
 ## Runtime enum sentinel convention
 
-Runtime service-family enums (every `Enum` defined in an `aces_sdl` module whose
+Runtime service-family enums (every `Enum` defined in an `raes` module whose
 name starts with `runtime_`, including the `*_vocab` and `*_definitions`
 modules) follow a single, executable sentinel convention:
 

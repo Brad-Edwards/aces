@@ -8,13 +8,13 @@ from enum import Enum
 from typing import Annotated, Literal
 
 import rfc8785
-from aces_sdl.canonical import (
+from pydantic import Field, model_validator
+from raes.canonical import (
     INSTANTIATED_SNAPSHOT_PROFILE,
     InstantiatedScenarioSnapshot,
     canonical_instantiated_sdl_digest,
 )
-from aces_sdl.phase_contracts import ResolvedImportProvenance, SemanticDigest
-from pydantic import Field, model_validator
+from raes.phase_contracts import ResolvedImportProvenance, SemanticDigest
 
 from .contracts.base import ContractModel, PrefixedDigestString
 from .diagnostics import DiagnosticModel

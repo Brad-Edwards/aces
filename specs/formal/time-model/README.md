@@ -124,8 +124,8 @@ shared clock from matching strings.
 
 | Concern | Authority |
 | --- | --- |
-| SDL declarations | `aces_sdl.time_model` |
-| Cross-reference validation | `aces_sdl.validator._time_model` |
+| SDL declarations | `raes.time_model` |
+| Cross-reference validation | `raes.validator._time_model` |
 | Compilation | `aces_processor.compiler.time_model` |
 | Compiled identity | `aces_processor.models.time_model` |
 | Runtime lifecycle | `aces_runtime.time_coordinator` |

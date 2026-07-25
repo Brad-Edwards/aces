@@ -701,7 +701,7 @@ class TestObjectiveDependencyPartition:
         # runtime tuples. Toggle just OBJECTIVE_DEPENDENCY_DEPENDENCY_ROLES to
         # refresh-only and assert the partition output reflects exactly that
         # difference — proving each category is keyed independently.
-        import aces_sdl.semantics.objective_semantics as os_module
+        import raes.semantics.objective_semantics as os_module
 
         monkeypatch.setattr(
             os_module,

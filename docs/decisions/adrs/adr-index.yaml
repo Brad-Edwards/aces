@@ -430,3 +430,4 @@ adrs:
     amendments:
       - ref: "#866"
       - ref: "#866-pypi-name-correction"
+      - ref: "#884"

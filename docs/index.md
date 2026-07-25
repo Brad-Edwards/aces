@@ -1,21 +1,35 @@
-# RAES SDL Documentation
+# Reproducible Agentic Environments System
 
-**A backend-agnostic cyber range scenario description language and reference
-implementation.**
+Reproducible Agentic Environments System (RAES) describes, realizes, controls,
+evaluates, and supports bounded reproduction of agentic environments. An
+agentic environment is a declared and realized setting in which participants
+receive observations, take actions, interact with resources or other
+participants, and are evaluated under stated controls.
 
-`raes` provides the RAES Python implementation for describing cyber
-range scenarios and experiments, validating their authored meaning, compiling
-runtime models, and checking published backend contracts.
+Cyber, AI security, AI safety, testing, research, and evaluation are
+non-exhaustive application areas. Additional domains can use the same
+authored-intent, realization, participant, observation, evidence, provenance,
+and conformance boundaries through their own profiles, assets, examples, and
+backends.
 
-The repository is not a managed cyber range and does not ship production
-backend implementations. It is a working codebase for testing language,
-semantic, runtime, and assurance claims against source code, schemas, examples,
-and tests.
+The current `raes` distribution provides RAES SDL, a Python reference
+implementation, published contracts, examples, and assurance material. RAES
+names the overall system; RAES SDL is the authored scenario language. The
+reference implementation can validate authored meaning, instantiate and
+compile runtime models, plan against backend manifests, and check published
+backend contracts.
+
+The repository is not a managed environment service and does not ship
+production backend implementations. It is a working codebase for evaluating
+language, semantic, runtime, and assurance claims against source code, schemas,
+examples, and tests. Its reproducibility surfaces support a bounded
+reproduction attempt; they do not guarantee deterministic runtime behavior,
+equal outcomes, exact replay, or reproducibility.
 
 ## Quick Start
 
 ```python
-from aces_sdl import parse_sdl, parse_sdl_file
+from raes import parse_sdl, parse_sdl_file
 
 # Parse from a string
 scenario = parse_sdl(yaml_string)
@@ -43,6 +57,9 @@ for advisory in scenario.advisories:
 
 - New users can start with the getting-started guide to choose the smallest
   current entrypoint for their task and rigor level.
+- Agentic-environment users can start with the glossary and reference map to
+  distinguish authored scenarios, realized environments, apparatus, evidence,
+  and conformance.
 - Scenario authors usually start with the SDL guide, sections reference,
   parser behavior, validation rules, and limitations.
 - Backend implementers usually start with runtime architecture, contract

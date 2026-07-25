@@ -2,13 +2,13 @@
 
 from dataclasses import dataclass
 
-from aces_sdl.objectives import Objective
-from aces_sdl.scenario import InstantiatedScenario
-from aces_sdl.semantics.objective_semantics import (
+from raes.objectives import Objective
+from raes.scenario import InstantiatedScenario
+from raes.semantics.objective_semantics import (
     OBJECTIVE_WINDOW_DEPENDENCY_ROLES,
     partition_objective_dependencies,
 )
-from aces_sdl.semantics.objectives import ObjectiveWindowIssue, analyze_objective_window
+from raes.semantics.objectives import ObjectiveWindowIssue, analyze_objective_window
 
 from ..models import (
     AssertionRuntime,

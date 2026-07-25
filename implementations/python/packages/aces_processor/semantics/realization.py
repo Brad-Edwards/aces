@@ -26,8 +26,8 @@ from aces_contracts.realization_envelope import (
 )
 from aces_contracts.runtime_state import RealizationProvenanceEntry, RuntimeSnapshot
 from aces_contracts.vocabulary import Closure, RealizationSupportMode
-from aces_sdl.explicitness import ExplicitnessClass, ExplicitnessProvenance
-from aces_sdl.realization_envelope import effective_constraints, subsumes, tokenize_path
+from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance
+from raes.realization_envelope import effective_constraints, subsumes, tokenize_path
 
 __all__ = [
     "CONCERN_PAYLOAD_PATH",

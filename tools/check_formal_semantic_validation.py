@@ -315,7 +315,7 @@ def _diagnostic_payload(exc: Exception, repo_root: Path) -> object:
 def replay_case(repo_root: Path, case: Mapping[str, object]) -> dict[str, str | None]:
     """Replay one supported case through its declared production boundary."""
     from aces_processor.compiler import compile_runtime_model
-    from aces_sdl import SDLError, instantiate_scenario, parse_sdl_file
+    from raes import SDLError, instantiate_scenario, parse_sdl_file
 
     fixture_value = case.get("fixture_path")
     fixture = safe_repo_path(repo_root, str(fixture_value)) if _nonempty_string(fixture_value) else None

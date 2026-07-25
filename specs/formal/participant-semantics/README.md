@@ -735,10 +735,10 @@ Minimum future implementation artifacts:
 
 Current implementation artifacts for the `SEM-208` slice:
 
-- `implementations/python/packages/aces_sdl/participant_behavior.py` defines
+- `implementations/python/packages/raes/participant_behavior.py` defines
   typed action contracts and observation boundaries;
-- `implementations/python/packages/aces_sdl/semantics/participant_behavior.py`
-  and `implementations/python/packages/aces_sdl/validator/` fail closed on
+- `implementations/python/packages/raes/semantics/participant_behavior.py`
+  and `implementations/python/packages/raes/validator/` fail closed on
   unbound action-contract and observation-boundary references;
 - `implementations/python/packages/aces_processor/compiler/` maps authored
   participants to compiled participant action, observation, and behavior
@@ -777,11 +777,11 @@ Minimum future implementation artifacts:
 
 Current implementation artifacts for the `SEM-209` slice:
 
-- `implementations/python/packages/aces_sdl/participant_behavior.py` defines
+- `implementations/python/packages/raes/participant_behavior.py` defines
   interaction classes, target references, related actions, and shared-state
   references on action contracts;
-- `implementations/python/packages/aces_sdl/semantics/participant_behavior.py`
-  and `implementations/python/packages/aces_sdl/validator/` fail closed on
+- `implementations/python/packages/raes/semantics/participant_behavior.py`
+  and `implementations/python/packages/raes/validator/` fail closed on
   unbound related actions, interaction targets, and shared-state references;
 - `implementations/python/packages/aces_processor/compiler/` carries declared
   interaction classes and shared-state references into compiled participant
@@ -846,13 +846,13 @@ Implemented transition discipline:
 
 Current implementation artifacts for the `SEM-210` slice:
 
-- `implementations/python/packages/aces_sdl/participant_behavior.py` defines
+- `implementations/python/packages/raes/participant_behavior.py` defines
   participant information-boundary classes, view dispositions, explicit view
   rules, time-indexed view transitions, realized-view disclosure metadata, and
   observation-boundary hidden, observable, and evidence-only reference
   separation;
-- `implementations/python/packages/aces_sdl/semantics/participant_behavior.py`
-  and `implementations/python/packages/aces_sdl/validator/` continue to
+- `implementations/python/packages/raes/semantics/participant_behavior.py`
+  and `implementations/python/packages/raes/validator/` continue to
   fail closed on unbound participant observation-boundary references, view-rule
   references, and view-transition evidence references;
 - `implementations/python/packages/aces_processor/compiler/` carries hidden,
@@ -924,10 +924,10 @@ Failure classes:
 
 Current implementation artifacts for the `SEM-211` slice:
 
-- `implementations/python/packages/aces_sdl/participant_action_semantics.py`
+- `implementations/python/packages/raes/participant_action_semantics.py`
   defines controlled precondition, effect, and portable failure vocabularies
   plus typed action-contract declarations and backend failure mappings;
-- `implementations/python/packages/aces_sdl/participant_behavior.py` embeds
+- `implementations/python/packages/raes/participant_behavior.py` embeds
   those typed declarations in governed participant action contracts;
 - `implementations/python/packages/aces_processor/compiler/` carries the
   typed precondition classes, effect classes, failure classes, and backend
@@ -970,7 +970,7 @@ Design commitments:
 
 Current implementation artifacts for the first `SEM-212` slice:
 
-- `implementations/python/packages/aces_sdl/participant_attribution_semantics.py`
+- `implementations/python/packages/raes/participant_attribution_semantics.py`
   defines controlled candidate, ordering-basis, and support-class
   vocabularies;
 - `implementations/python/packages/aces_processor/models/` defines typed
@@ -1018,11 +1018,11 @@ Minimum future implementation artifacts:
 
 Current implementation artifacts for the first `SEM-213` slice:
 
-- `implementations/python/packages/aces_sdl/participant_temporal_semantics.py`
+- `implementations/python/packages/raes/participant_temporal_semantics.py`
   defines typed time domains, temporal event points, schedule/cadence/deadline/
   dwell/latency/time-window contract kinds, backend timing disclosure kinds,
   support modes, and abstract temporal states;
-- `implementations/python/packages/aces_sdl/participant_behavior.py` embeds
+- `implementations/python/packages/raes/participant_behavior.py` embeds
   temporal contracts and backend timing disclosures in governed participant
   action contracts, requires temporal preconditions to resolve to typed
   temporal contracts, and fails closed on unknown backend disclosure refs;

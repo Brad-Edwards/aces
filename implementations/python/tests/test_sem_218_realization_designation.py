@@ -20,17 +20,17 @@ from aces_processor.compiler import compile_runtime_model
 from aces_processor.planner import plan
 from aces_processor.semantics.realization import realization_disclosure
 from aces_runtime.control_plane_api_models import _snapshot_model
-from aces_sdl._errors import SDLParseError
-from aces_sdl.explicitness import ExplicitnessClass, ExplicitnessProvenance
-from aces_sdl.instantiate import instantiate_scenario
-from aces_sdl.parser import parse_sdl, parse_sdl_file
-from aces_sdl.realization_designation import (
+from pydantic import ValidationError
+from raes._errors import SDLParseError
+from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance
+from raes.instantiate import instantiate_scenario
+from raes.parser import parse_sdl, parse_sdl_file
+from raes.realization_designation import (
     AuthorRealizationPosture,
     RealizationDesignationRecord,
     RealizationScopeDesignation,
     resolve_json_pointer_surface,
 )
-from pydantic import ValidationError
 
 
 def _scenario(realization: str = "", *, web_os: str = ""):

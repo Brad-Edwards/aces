@@ -28,7 +28,7 @@ from aces_contracts.scientific_completeness import (  # noqa: E402
     load_scientific_completeness_assessment,
     load_scientific_completeness_taxonomy,
 )
-from aces_sdl.parser import parse_sdl  # noqa: E402
+from raes.parser import parse_sdl  # noqa: E402
 from tools.check_scientific_scenario_completeness import (  # noqa: E402
     _validate_contract_evidence,
     _validate_evidence_paths,

@@ -27,6 +27,8 @@ ANALYSIS_PATH = "docs/research/related-work-comparison/analysis-v1.json"
 PUBLICATION_PATH = "docs/explain/sdl/related-work-comparison.md"
 PUBLICATION_START = "<!-- related-work-comparison:start -->"
 PUBLICATION_END = "<!-- related-work-comparison:end -->"
+_HISTORICAL_PACKAGE_PREFIX = "implementations/python/packages/aces_sdl"
+_CURRENT_PACKAGE_PREFIX = "implementations/python/packages/raes"
 
 EXPECTED_AXIS_IDS = {
     "expressive-breadth",
@@ -232,6 +234,15 @@ _MEASURE_BY_SCORE = {0: "absent", 1: "limited", 2: "substantial", 3: "strong"}
 
 def _failure(rule_id: str, message: str, path: str | None = None) -> PolicyFailure:
     return PolicyFailure(rule_id, message, path)
+
+
+def _resolve_repository_artifact(repo_root: Path, artifact_path: str) -> Path | None:
+    """Resolve an immutable evidence locator through the SDL package move."""
+
+    resolved_path = artifact_path
+    if artifact_path == _HISTORICAL_PACKAGE_PREFIX or artifact_path.startswith(f"{_HISTORICAL_PACKAGE_PREFIX}/"):
+        resolved_path = f"{_CURRENT_PACKAGE_PREFIX}{artifact_path[len(_HISTORICAL_PACKAGE_PREFIX) :]}"
+    return safe_repo_path(repo_root, resolved_path)
 
 
 def load_bundle(
@@ -512,7 +523,7 @@ def _validate_sources(
                     )
                 )
             elif source["kind"] == "repository-internal" and validate_paths:
-                resolved = safe_repo_path(repo_root, artifact_path)
+                resolved = _resolve_repository_artifact(repo_root, artifact_path)
                 if resolved is None or not resolved.exists():
                     failures.append(
                         _failure(

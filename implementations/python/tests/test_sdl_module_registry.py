@@ -13,9 +13,9 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-import aces_sdl.module_registry as module_registry
-import aces_sdl.parser as sdl_parser
 import pytest
+import raes.module_registry as module_registry
+import raes.parser as sdl_parser
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from typer.testing import CliRunner
@@ -825,7 +825,7 @@ def test_database_and_application_refs_survive_module_namespacing():
     rewritten by module composition so an application-to-database relationship
     survives being imported under a namespace.
     """
-    from aces_sdl._module_symbols import symbol_index
+    from raes._module_symbols import symbol_index
 
     from aces.core.sdl.scenario import ModuleDescriptor, Scenario
 

@@ -92,7 +92,7 @@ Status vocabulary:
 | precedents.md | `docs/explain/sdl/precedents.md` | already-corrected baseline plus principled retention |
 | specs/ | `specs/formal/participant-semantics/`, `specs/formal/runtime-contracts/`, `specs/formal/realization/` | no-drift-found |
 | contracts/ | `contracts/README.md`, `contracts/concept-authority/`, `contracts/schemas/` | no-drift-found |
-| implementations/python/packages/aces_sdl/ | runtime models, parser, validator, and tests for runtime surfaces | aligned with corrected boundary |
+| implementations/python/packages/raes/ | runtime models, parser, validator, and tests for runtime surfaces | aligned with corrected boundary |
 
 ## Findings
 
@@ -157,8 +157,8 @@ places container network realization facts under `Node.runtime`, and
 `docs/decisions/adrs/adr-025-container-network-realization-surface.md:63`
 separates host publication from services and image exposed ports.
 Implementation evidence appears in
-`implementations/python/packages/aces_sdl/runtime_network.py` and validator
-references around `implementations/python/packages/aces_sdl/validator/`.
+`implementations/python/packages/raes/runtime_network.py` and validator
+references around `implementations/python/packages/raes/validator/`.
 
 **Suspect exclusion or scope language:** Host port bindings, aliases, endpoint
 IDs, DNS names, and backend driver/IPAM details can look like Docker or
@@ -183,8 +183,8 @@ puts seccomp and backend-native security options under runtime container
 configuration; `docs/decisions/adrs/adr-030-process-scoped-linux-capability-policy.md:35`
 keeps process-scoped Linux capability facts under
 `Node.runtime.linux_capabilities`. Implementation evidence appears in
-`implementations/python/packages/aces_sdl/runtime_container.py` and
-`implementations/python/packages/aces_sdl/runtime_capabilities.py`.
+`implementations/python/packages/raes/runtime_container.py` and
+`implementations/python/packages/raes/runtime_capabilities.py`.
 
 **Suspect exclusion or scope language:** `init: true`, `security_opt`, and
 `cap_add`/`cap_drop` are backend-looking configuration terms.
@@ -207,8 +207,8 @@ puts SSH server configuration under node runtime; lines around
 `docs/decisions/adrs/adr-031-ssh-server-configuration-surface.md:47` identify
 `AcceptEnv`, `ForceCommand`, and `Match` rules as participant-observable sshd
 policy. Implementation evidence appears in
-`implementations/python/packages/aces_sdl/runtime_ssh_server.py` and
-`implementations/python/packages/aces_sdl/validator/`.
+`implementations/python/packages/raes/runtime_ssh_server.py` and
+`implementations/python/packages/raes/validator/`.
 
 **Suspect exclusion or scope language:** `sshd_config`, wrapper commands, and
 accepted environment names can look like backend or process implementation
@@ -232,8 +232,8 @@ puts database logical-state observations under `Node.runtime`; `docs/decisions/a
 does the same for directory and domain identity observations. Generated schema
 descriptions in `contracts/schemas/sdl/sdl-authoring-input-v1.json` and
 `contracts/schemas/sdl/instantiated-scenario-v1.json` carry those surfaces,
-and model evidence appears in `implementations/python/packages/aces_sdl/runtime_database.py`
-and `implementations/python/packages/aces_sdl/runtime_directory_identity.py`.
+and model evidence appears in `implementations/python/packages/raes/runtime_database.py`
+and `implementations/python/packages/raes/runtime_directory_identity.py`.
 
 **Suspect exclusion or scope language:** Database catalogs, database roles,
 LDAP/AD/SCIM/OIDC/SAML/IAM authority facts, and provider identifiers can look
@@ -259,9 +259,9 @@ enumerate the participant-observable fields (manager kind, native unit name,
 load/enable/active/sub state, result/exit code, main PID, unit-file path,
 redactable `ExecStart`, optional same-node service ref). Implementation
 evidence appears in
-`implementations/python/packages/aces_sdl/runtime_service_units.py` and the
+`implementations/python/packages/raes/runtime_service_units.py` and the
 new validator hook in
-`implementations/python/packages/aces_sdl/validator/`.
+`implementations/python/packages/raes/validator/`.
 
 **Suspect exclusion or scope language:** `systemctl` output, unit-file text,
 journal excerpts, and Docker/container-host configuration adjacency can look
@@ -440,14 +440,14 @@ vocabulary.
 
 ### R-007 Actual code matches the corrected typed-surface boundary
 
-**Surface:** `implementations/python/packages/aces_sdl/`
+**Surface:** `implementations/python/packages/raes/`
 
-**Citation:** `implementations/python/packages/aces_sdl/runtime_configuration.py`
+**Citation:** `implementations/python/packages/raes/runtime_configuration.py`
 owns `mounts`, `filesystem_inventory`, `container`, `network`,
 `linux_capabilities`, `local_identity`, `identity_authorities`,
 `applications`, `database_services`, `ssh_servers`, and
 `software_components`;
-`implementations/python/packages/aces_sdl/validator/` adds runtime
+`implementations/python/packages/raes/validator/` adds runtime
 application, database, identity authority, SSH, network, and capability
 cross-checks; tests in `implementations/python/tests/test_sdl_models.py`,
 `test_runtime_models.py`, `test_sdl_parser.py`, `test_sdl_validator.py`, and

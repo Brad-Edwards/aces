@@ -164,7 +164,7 @@ ambiguous or lossy cases, and fail closed rather than drop unknown fields.
 Compatibility adapters stay at the owning boundary:
 
 - legacy `aces.*` re-exports stay in the compatibility tree;
-- SDL normalization and module composition stay in `aces_sdl`;
+- SDL normalization and module composition stay in `raes`;
 - contract readers stay in `aces_contracts`;
 - CLI presentation stays in `aces_cli`; and
 - backend/runtime layers do not reinterpret authored source to hide migration

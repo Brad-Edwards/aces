@@ -3,8 +3,8 @@
 from typing import Any
 
 from aces_contracts.versions import WORKFLOW_STATE_SCHEMA_VERSION
-from aces_sdl.orchestration import Workflow, WorkflowStepType
-from aces_sdl.scenario import InstantiatedScenario
+from raes.orchestration import Workflow, WorkflowStepType
+from raes.scenario import InstantiatedScenario
 
 from ..models import (
     AssertionRuntime,

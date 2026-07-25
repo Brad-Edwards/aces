@@ -4,7 +4,7 @@ A realization envelope is a closed, versioned expression that denotes a *set* of
 SDL scenario instances. The same expression is used in both directions: an author
 describes an acceptable scenario family, and a backend describes the family it can
 realize. The membership / subsumption / witness / negative-probe relation over
-this contract lives in :mod:`aces_sdl.realization_envelope`.
+this contract lives in :mod:`raes.realization_envelope`.
 
 The model is deliberately *closed* (``extra="forbid"`` plus a finite discriminated
 union of domain kinds). That closedness is the portability guarantee of

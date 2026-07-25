@@ -428,9 +428,9 @@ def _check_artifact_common(
 
 def _check_template_body(body: dict[str, Any], relative_path: str) -> list[PolicyFailure]:
     try:
-        from aces_sdl import parse_sdl
+        from raes import parse_sdl
     except ImportError as exc:  # pragma: no cover - policy runs inside the project environment
-        return [_fail("example-library-template-import", f"could not import aces_sdl: {exc}", relative_path)]
+        return [_fail("example-library-template-import", f"could not import raes: {exc}", relative_path)]
 
     try:
         scenario = parse_sdl(yaml.safe_dump(body, sort_keys=False))

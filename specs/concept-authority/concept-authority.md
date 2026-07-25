@@ -189,7 +189,7 @@ steps from this section and the machine-readable catalog alone:
 
 1. **Extend the existing runtime surface first.** A new observed node fact
    should extend `RuntimeConfiguration` and register through the canonical
-   runtime service-family registry (`aces_sdl._runtime_service_families`)
+   runtime service-family registry (`raes._runtime_service_families`)
    instead of introducing a new top-level concept family. The
    `runtime-inventory` family and the `nodes.*.runtime` reference model are the
    shared seam for this surface.
@@ -204,7 +204,7 @@ steps from this section and the machine-readable catalog alone:
    an invariant fails the suite immediately.
 3. **Keep observed values redaction-safe.** Values that can carry secrets must
    route through the runtime redaction helpers (ADR-056 / ADR-057,
-   `aces_sdl.runtime_values`); raw credential material is unrepresentable on the
+   `raes.runtime_values`); raw credential material is unrepresentable on the
    model surface.
 4. **Add controlled vocabulary, not free strings.** New enumerated terms belong
    in `contracts/concept-authority/controlled-vocabularies-v1.json` (GOV-922),

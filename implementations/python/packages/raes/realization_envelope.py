@@ -3,8 +3,8 @@
 One deterministic semantic relation over :class:`RealizationEnvelopeModel` and
 validated SDL instances (ADR-070 §2, ``specs/formal/realization/envelope-semantics.md``
 R1-R8). Membership, subsumption, witness generation, and negative-probe generation
-share a single flattening/closure engine (:mod:`aces_sdl._realization_envelope_engine`)
-and domain-kind dispatch (:mod:`aces_sdl._realization_envelope_domains`) — there are
+share a single flattening/closure engine (:mod:`raes._realization_envelope_engine`)
+and domain-kind dispatch (:mod:`raes._realization_envelope_domains`) — there are
 no separate author-side, backend-side, or conformance-side interpretations.
 
 Guarantees:

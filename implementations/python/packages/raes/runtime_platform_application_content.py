@@ -1,7 +1,7 @@
 """Typed child models for the platform-applications runtime family.
 
 These are the bounded, typed sub-collections held by
-:class:`~aces_sdl.runtime_platform_application.RuntimePlatformApplication`:
+:class:`~raes.runtime_platform_application.RuntimePlatformApplication`:
 content objects (bounded parsed manifests — never raw bodies), releasability
 markings, organizations, tenants, outbound upstream bindings, connectors, the
 optional execution policy, and provenance-bearing settings.

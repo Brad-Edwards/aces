@@ -17,14 +17,14 @@ from aces_contracts.satisfiability import (
     UnsupportedAnalysisModel,
     canonical_contract_digest,
 )
-from aces_sdl.canonical import (
+from raes.canonical import (
     INSTANTIATED_SNAPSHOT_PROFILE,
     InstantiatedScenarioSnapshot,
     canonical_instantiated_sdl_digest,
 )
-from aces_sdl.instantiate import instantiate_scenario
-from aces_sdl.parser import parse_sdl, read_sdl_source
-from aces_sdl.scenario import ExpandedScenario
+from raes.instantiate import instantiate_scenario
+from raes.parser import parse_sdl, read_sdl_source
+from raes.scenario import ExpandedScenario
 
 from ._solver import SolverOperationalError, solve_model
 from ._translation import translate_scenario

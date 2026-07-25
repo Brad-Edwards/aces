@@ -34,7 +34,7 @@ from aces_processor.reference import (
 from aces_runtime import RuntimeControlPlane
 from aces_runtime.control_plane_api import _receipt_response
 from aces_runtime.control_plane_api_models import _operation_status_model, _snapshot_model
-from aces_sdl import parse_sdl
+from raes import parse_sdl
 
 WORKFLOW_ADDRESS = "orchestration.workflow.response"
 

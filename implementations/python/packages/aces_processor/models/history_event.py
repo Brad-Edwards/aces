@@ -14,11 +14,11 @@ from aces_contracts.participant_behavior import (
     ParticipantRuntimeLifecyclePhase,
     participant_lifecycle_field_violation_messages,
 )
-from aces_sdl.participant_attribution_semantics import (
+from raes.participant_attribution_semantics import (
     OUTCOME_ATTRIBUTION_CANDIDATE_KINDS,
     ParticipantAttributionCandidateKind,
 )
-from aces_sdl.participant_behavior import ParticipantInteractionClass
+from raes.participant_behavior import ParticipantInteractionClass
 
 from .action_results import ParticipantActionResult
 from .attribution import ParticipantAttributionEdge

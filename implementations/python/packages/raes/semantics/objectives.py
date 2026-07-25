@@ -25,7 +25,7 @@ class ObjectiveDependencyRole(str, Enum):
     ``ORDERING`` constrains evaluation order (the dependent is computed after
     its inputs); ``REFRESH`` propagates change (the dependent is recomputed when
     an input changes). Window references carry only ``REFRESH``; success and
-    ``depends_on`` references (see :mod:`aces_sdl.semantics.objective_semantics`)
+    ``depends_on`` references (see :mod:`raes.semantics.objective_semantics`)
     carry both.
     """
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from aces_sdl.agent_guidance import agent_guidance
+from raes.agent_guidance import agent_guidance
 
 
 def test_agent_guidance_exposes_required_categories() -> None:

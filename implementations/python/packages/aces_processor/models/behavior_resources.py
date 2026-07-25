@@ -8,7 +8,7 @@ from aces_backend_protocols.capabilities import WorkflowFeature, WorkflowStatePr
 from aces_contracts.participant_behavior import ParticipantObservationStatus
 from aces_contracts.versions import WORKFLOW_STATE_SCHEMA_VERSION
 from aces_contracts.workflow import WorkflowExecutionContract, WorkflowResultContract, WorkflowStepOutcome
-from aces_sdl.semantics.workflow import WorkflowStepSemanticContract
+from raes.semantics.workflow import WorkflowStepSemanticContract
 
 from .resources import ResolvedResource
 

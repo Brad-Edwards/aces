@@ -22,10 +22,10 @@ from aces_processor.models import (
     iter_participant_behavior_history_violations,
     iter_participant_temporal_state_machine_violations,
 )
-from aces_sdl._errors import SDLParseError
-from aces_sdl.parser import parse_sdl
-from aces_sdl.participant_behavior import ParticipantEffectClass, ParticipantPreconditionClass
-from aces_sdl.participant_temporal_semantics import (
+from raes._errors import SDLParseError
+from raes.parser import parse_sdl
+from raes.participant_behavior import ParticipantEffectClass, ParticipantPreconditionClass
+from raes.participant_temporal_semantics import (
     ParticipantTemporalContractKind,
     ParticipantTemporalEventPoint,
     ParticipantTimeDomain,

@@ -12,6 +12,7 @@ that would imply a compatibility guarantee the repository cannot honour.
 from __future__ import annotations
 
 from importlib.metadata import PackageNotFoundError, entry_points, version
+from importlib.util import find_spec
 
 from typer.testing import CliRunner
 
@@ -19,10 +20,14 @@ NOT_INSTALLED_SENTINEL = "0.0.0+unknown"
 DISHONEST_LITERAL = "0.1.0"
 
 
-def test_aces_namespace_version_derives_from_distribution() -> None:
-    import aces
+def test_raes_namespace_version_derives_from_distribution() -> None:
+    import raes
 
-    assert aces.__version__ == version("raes")
+    assert raes.__version__ == version("raes")
+
+
+def test_legacy_aces_sdl_namespace_is_absent() -> None:
+    assert find_spec("aces_sdl") is None
 
 
 def test_package_version_helper_uses_supplied_sentinel(monkeypatch) -> None:

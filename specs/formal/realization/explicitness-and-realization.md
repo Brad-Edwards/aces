@@ -50,10 +50,10 @@ is `active`. What is *enforced today* spans authoring through observation:
 - the closed-Pydantic SDL model boundary (`extra="forbid"`), which
   fails closed on unknown keys at points the schema does not designate
   as realizable;
-- the SEM-218 classifier in `aces_sdl.explicitness`, invoked by
+- the SEM-218 classifier in `raes.explicitness`, invoked by
   `SemanticValidator`, which tags authored SDL declarations as
   *exact*, *constrained*, or *open* for downstream consumers;
-- the typed `aces_sdl.realization_designation` authoring surface, which carries
+- the typed `raes.realization_designation` authoring surface, which carries
   a scenario default and RFC 6901 scoped overrides using `closed`, `open`, or
   `unspecified`, resolved by semantic specificity rather than list order;
 - the instantiation downgrade rule in `instantiate_scenario`, which
@@ -106,12 +106,12 @@ extend these rather than introduce parallel registries:
   `contracts/concept-authority/concept-families-v1.json`
   (`realization-and-disclosure`)
 - shared SDL static semantics:
-  `implementations/python/packages/aces_sdl/validator/`
+  `implementations/python/packages/raes/validator/`
   (`SemanticValidator`, `SDLValidationError`)
 - scoped author designation and canonical scope resolution:
-  `implementations/python/packages/aces_sdl/realization_designation.py`
+  `implementations/python/packages/raes/realization_designation.py`
 - instantiation and revalidation:
-  `implementations/python/packages/aces_sdl/instantiate.py`
+  `implementations/python/packages/raes/instantiate.py`
   (`instantiate_scenario`, `SDLInstantiationError`)
 - runtime compilation and planning:
   `implementations/python/packages/aces_processor/compiler/`,
@@ -294,7 +294,7 @@ realization status, are:
 
 - **SDL parser gate** — `${var}` substitution MUST NOT create or rename
   an exact-declaration identity (I1, I3). *Enforced today* by the
-  variable-key rejection rules in `aces_sdl.parser`.
+  variable-key rejection rules in `raes.parser`.
 - **SDL model gate** — explicit-vs-open state MUST live in typed fields
   or structured extension surfaces, not untyped `dict` side channels
   (I3). *Enforced today* by the closed Pydantic SDL models
@@ -316,7 +316,7 @@ realization status, are:
 - **Instantiation gate** — substitution MUST NOT downgrade an exact
   declaration; concrete scenarios MUST be revalidated after
   substitution (I1). *Enforced today* by `instantiate_scenario`,
-  `SDLInstantiationError`, and `aces_sdl.explicitness` deriving the
+  `SDLInstantiationError`, and `raes.explicitness` deriving the
   instantiated explicitness map from the pre-substitution authored map.
 - **Compiler / planner gate** — compiled exact, constrained, and open
   requirements MUST be matched against the selected backend's
@@ -445,9 +445,9 @@ invariant I1–I5 is enforced by named code.
   (`realization-and-disclosure` family is the native authority for what
   may be realized at all).
 - I1, I3 fail-closed authoring / validation —
-  `implementations/python/packages/aces_sdl/explicitness.py`,
-  `implementations/python/packages/aces_sdl/validator/`,
-  `implementations/python/packages/aces_sdl/instantiate.py`
+  `implementations/python/packages/raes/explicitness.py`,
+  `implementations/python/packages/raes/validator/`,
+  `implementations/python/packages/raes/instantiate.py`
   (closed-world validation, classifier output on validated scenarios,
   and substitution-downgrade metadata on instantiated scenarios).
 - I4 fail-closed evidence — invalid fixtures

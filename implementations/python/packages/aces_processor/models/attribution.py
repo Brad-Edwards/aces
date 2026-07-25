@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from aces_sdl.participant_attribution_semantics import (
+from raes.participant_attribution_semantics import (
     OUTCOME_ATTRIBUTION_CANDIDATE_KINDS,
     STRONG_ATTRIBUTION_SUPPORT_CLASSES,
     ParticipantAttributionCandidateKind,

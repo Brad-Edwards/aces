@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-snapshot-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "02ffc6e11ecc9cb171208df98faeb059f6fbb61b52848f1e7635ce06272b4df8",
+  "content_hash": "f8edcfb9f653ad387daa3f83d86e882d101af188b5878a7e7641bedc7019cf60",
   "last_change": {
-    "summary": "Published enterprise tenancy, service materialization, shared time, and autonomous participant execution in immutable snapshots.",
-    "content_hash": "02ffc6e11ecc9cb171208df98faeb059f6fbb61b52848f1e7635ce06272b4df8"
+    "summary": "Retargeted qualified Python validator references from aces_sdl to raes without changing schema identifiers or semantics.",
+    "content_hash": "f8edcfb9f653ad387daa3f83d86e882d101af188b5878a7e7641bedc7019cf60"
   }
 }

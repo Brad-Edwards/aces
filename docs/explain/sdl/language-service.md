@@ -188,7 +188,7 @@ be JSON strings:
 The Python helper receives the already-decoded `value`:
 
 ```python
-from aces_sdl.language_service import apply_structured_edit
+from raes.language_service import apply_structured_edit
 
 result = apply_structured_edit(
     sdl_content,
@@ -204,10 +204,10 @@ sequence of small edits and validate after each meaningful step.
 ## Python Helpers
 
 The MCP tools wrap the editor-agnostic helpers in
-`aces_sdl.language_service`:
+`raes.language_service`:
 
 ```python
-from aces_sdl.language_service import (
+from raes.language_service import (
     apply_structured_edit,
     language_completions,
     language_diagnostics,

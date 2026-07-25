@@ -21,14 +21,14 @@ from aces_processor.models import (
     ParticipantOutcomeTargetRecord,
     iter_participant_behavior_history_violations,
 )
-from aces_sdl._errors import SDLParseError, SDLValidationError
-from aces_sdl.parser import parse_sdl
-from aces_sdl.participant_behavior import (
+from raes._errors import SDLParseError, SDLValidationError
+from raes.parser import parse_sdl
+from raes.participant_behavior import (
     ParticipantEffectClass,
     ParticipantFailureClass,
     ParticipantPreconditionClass,
 )
-from aces_sdl.participant_outcome_semantics import (
+from raes.participant_outcome_semantics import (
     OutcomeInterpretationSourceLayer,
     OutcomeInterpretationTargetLayer,
 )

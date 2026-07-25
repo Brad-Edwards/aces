@@ -21,15 +21,15 @@ from aces_contracts.contracts.validation_disclosure import (
     ValidationGateResultModel,
     ValidationSubjectReferenceModel,
 )
-from aces_sdl.canonical import (
+from pydantic import ValidationError
+from raes.canonical import (
     INSTANTIATED_SNAPSHOT_PROFILE,
     InstantiatedScenarioSnapshot,
     canonical_instantiated_sdl_digest,
     canonical_sdl_digest,
 )
-from aces_sdl.instantiate import instantiate_scenario
-from aces_sdl.parser import parse_sdl
-from pydantic import ValidationError
+from raes.instantiate import instantiate_scenario
+from raes.parser import parse_sdl
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 FIXTURES_ROOT = REPO_ROOT / "contracts/fixtures/profiles/validation-basis-disclosure-v1"
