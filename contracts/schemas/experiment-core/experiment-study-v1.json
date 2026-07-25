@@ -689,6 +689,41 @@
       "title": "ExperimentConditionAssignmentReferenceModel",
       "type": "object"
     },
+    "ExperimentEvidenceRecordReferenceModel": {
+      "additionalProperties": false,
+      "description": "Reference constrained to a raw captured evidence record.",
+      "properties": {
+        "ref_id": {
+          "minLength": 1,
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "ref_kind": {
+          "const": "evidence-record",
+          "title": "Ref Kind",
+          "type": "string"
+        },
+        "ref_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Version"
+        }
+      },
+      "required": [
+        "ref_kind",
+        "ref_id"
+      ],
+      "title": "ExperimentEvidenceRecordReferenceModel",
+      "type": "object"
+    },
     "ExperimentEvidenceSatisfactionReferenceModel": {
       "additionalProperties": false,
       "description": "Evidence concept reference that an artifact claims to satisfy.",
@@ -1382,6 +1417,522 @@
       ],
       "title": "ExperimentValidityNoteModel",
       "type": "object"
+    },
+    "ValidationBasisDisclosureModel": {
+      "additionalProperties": false,
+      "description": "Governed disclosure of the validation/admission basis for one subject (ASR-515).\n\nEmbeddable core for task/run/study carriers; scenario/scenario-snapshot\nsubjects publish standalone via :class:`ValidationBasisDisclosureDocumentModel`.",
+      "properties": {
+        "achieved_strength": {
+          "enum": [
+            "structural",
+            "semantic",
+            "behavioral",
+            "evidence_backed",
+            "falsification_backed"
+          ],
+          "title": "Achieved Strength",
+          "type": "string"
+        },
+        "audience": {
+          "anyOf": [
+            {
+              "enum": [
+                "internal",
+                "public",
+                "audience-restricted"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Audience"
+        },
+        "diagnostic_refs": {
+          "items": {
+            "maxLength": 128,
+            "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$",
+            "type": "string"
+          },
+          "title": "Diagnostic Refs",
+          "type": "array"
+        },
+        "evidence_refs": {
+          "items": {
+            "$ref": "#/$defs/ExperimentEvidenceRecordReferenceModel"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "gate_results": {
+          "items": {
+            "$ref": "#/$defs/ValidationGateResultModel"
+          },
+          "minItems": 1,
+          "title": "Gate Results",
+          "type": "array"
+        },
+        "limitations": {
+          "items": {
+            "$ref": "#/$defs/ValidationLimitationModel"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "producer_refs": {
+          "items": {
+            "$ref": "#/$defs/ValidationProducerReferenceModel"
+          },
+          "title": "Producer Refs",
+          "type": "array"
+        },
+        "profile_id": {
+          "minLength": 1,
+          "title": "Profile Id",
+          "type": "string"
+        },
+        "profile_version": {
+          "minLength": 1,
+          "title": "Profile Version",
+          "type": "string"
+        },
+        "recorded_at": {
+          "format": "date-time",
+          "minLength": 1,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+          "title": "Recorded At",
+          "type": "string"
+        },
+        "subject_kind": {
+          "enum": [
+            "scenario",
+            "scenario_snapshot",
+            "experiment_task",
+            "experiment_run",
+            "experiment_study",
+            "backend_conformance_claim",
+            "participant_conformance_claim",
+            "published_claim"
+          ],
+          "title": "Subject Kind",
+          "type": "string"
+        },
+        "subject_ref": {
+          "$ref": "#/$defs/ValidationSubjectReferenceModel"
+        }
+      },
+      "required": [
+        "profile_id",
+        "profile_version",
+        "subject_kind",
+        "subject_ref",
+        "achieved_strength",
+        "gate_results",
+        "recorded_at"
+      ],
+      "title": "ValidationBasisDisclosureModel",
+      "type": "object",
+      "x-aces-invariants": [
+        {
+          "description": "profile_id/profile_version/subject_kind must resolve one validation profile that declares the subject kind, and subject_ref.ref_kind must match the profile's ONE subject_kind mapping.",
+          "id": "validation-basis-profile-join-resolves",
+          "inputs": [
+            {
+              "contract_id": "validation-basis-disclosure-v1",
+              "instance_path": "#"
+            },
+            {
+              "contract_id": "experiment-task-v1",
+              "instance_path": "#/validation_basis_disclosures"
+            },
+            {
+              "contract_id": "experiment-run-v1",
+              "instance_path": "#/validation_basis_disclosures"
+            },
+            {
+              "contract_id": "experiment-study-v1",
+              "instance_path": "#/validation_basis_disclosures"
+            }
+          ],
+          "level": "error",
+          "validator": "aces_contracts.contracts.validation_disclosure.ValidationBasisDisclosureModel._validate_validation_basis_disclosure"
+        },
+        {
+          "description": "gate_results gate_kind values must be unique, drawn from the resolved profile's required/optional union, and every required gate_kind must be present.",
+          "id": "validation-basis-gate-rows-declared",
+          "inputs": [
+            {
+              "contract_id": "validation-basis-disclosure-v1",
+              "instance_path": "#"
+            },
+            {
+              "contract_id": "experiment-task-v1",
+              "instance_path": "#/validation_basis_disclosures"
+            },
+            {
+              "contract_id": "experiment-run-v1",
+              "instance_path": "#/validation_basis_disclosures"
+            },
+            {
+              "contract_id": "experiment-study-v1",
+              "instance_path": "#/validation_basis_disclosures"
+            }
+          ],
+          "level": "error",
+          "validator": "aces_contracts.contracts.validation_disclosure.ValidationBasisDisclosureModel._validate_validation_basis_disclosure"
+        },
+        {
+          "description": "achieved_strength must be supported by ADR-072-ordered passed gate rows for its own rank (structural never implies semantic; semantic never implies behavioral); evidence_backed/falsification_backed additionally require at least one evidence_ref.",
+          "id": "validation-basis-strength-ordering-valid",
+          "inputs": [
+            {
+              "contract_id": "validation-basis-disclosure-v1",
+              "instance_path": "#"
+            },
+            {
+              "contract_id": "experiment-task-v1",
+              "instance_path": "#/validation_basis_disclosures"
+            },
+            {
+              "contract_id": "experiment-run-v1",
+              "instance_path": "#/validation_basis_disclosures"
+            },
+            {
+              "contract_id": "experiment-study-v1",
+              "instance_path": "#/validation_basis_disclosures"
+            }
+          ],
+          "level": "error",
+          "validator": "aces_contracts.contracts.validation_disclosure.ValidationBasisDisclosureModel._validate_validation_basis_disclosure"
+        },
+        {
+          "description": "A required gate not passed, a not_applicable gate outcome, a below-minimum achieved_strength, and a public/audience-restricted audience each require an explicit, profile-declared limitation (the audience-restricted case specifically requires the audience_restricted category).",
+          "id": "validation-basis-claim-capped-and-disclosed",
+          "inputs": [
+            {
+              "contract_id": "validation-basis-disclosure-v1",
+              "instance_path": "#"
+            },
+            {
+              "contract_id": "experiment-task-v1",
+              "instance_path": "#/validation_basis_disclosures"
+            },
+            {
+              "contract_id": "experiment-run-v1",
+              "instance_path": "#/validation_basis_disclosures"
+            },
+            {
+              "contract_id": "experiment-study-v1",
+              "instance_path": "#/validation_basis_disclosures"
+            }
+          ],
+          "level": "error",
+          "validator": "aces_contracts.contracts.validation_disclosure.ValidationBasisDisclosureModel._validate_validation_basis_disclosure"
+        }
+      ]
+    },
+    "ValidationGateResultModel": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "outcome": {
+                "const": "not_applicable"
+              }
+            },
+            "required": [
+              "outcome"
+            ]
+          },
+          "then": {
+            "properties": {
+              "detail": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "detail"
+            ]
+          }
+        }
+      ],
+      "description": "One executed gate's outcome, contributing to a validation-basis disclosure.\n\nGate rows are declarative results, never callables, module names, shell\ncommands, or remote URLs to execute (the profile's owning validator,\nparser, or conformance runner is the authority for whether the gate ran).",
+      "properties": {
+        "detail": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Detail"
+        },
+        "diagnostic_refs": {
+          "items": {
+            "maxLength": 128,
+            "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$",
+            "type": "string"
+          },
+          "title": "Diagnostic Refs",
+          "type": "array"
+        },
+        "evidence_refs": {
+          "items": {
+            "$ref": "#/$defs/ExperimentEvidenceRecordReferenceModel"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "gate_kind": {
+          "minLength": 1,
+          "title": "Gate Kind",
+          "type": "string"
+        },
+        "outcome": {
+          "enum": [
+            "passed",
+            "failed",
+            "partial",
+            "not_run",
+            "unknown",
+            "unsupported",
+            "withheld",
+            "not_applicable"
+          ],
+          "title": "Outcome",
+          "type": "string"
+        }
+      },
+      "required": [
+        "gate_kind",
+        "outcome"
+      ],
+      "title": "ValidationGateResultModel",
+      "type": "object"
+    },
+    "ValidationLimitationModel": {
+      "additionalProperties": false,
+      "description": "A bounded, profile-declared limitation on a validation-basis disclosure.",
+      "properties": {
+        "detail": {
+          "minLength": 1,
+          "title": "Detail",
+          "type": "string"
+        },
+        "limitation_category": {
+          "minLength": 1,
+          "title": "Limitation Category",
+          "type": "string"
+        }
+      },
+      "required": [
+        "limitation_category",
+        "detail"
+      ],
+      "title": "ValidationLimitationModel",
+      "type": "object"
+    },
+    "ValidationProducerReferenceModel": {
+      "additionalProperties": false,
+      "description": "Reference constrained to the processor/backend/participant implementation that ran a gate.",
+      "properties": {
+        "ref_id": {
+          "minLength": 1,
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "ref_kind": {
+          "enum": [
+            "processor",
+            "backend",
+            "participant-implementation"
+          ],
+          "title": "Ref Kind",
+          "type": "string"
+        },
+        "ref_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Version"
+        }
+      },
+      "required": [
+        "ref_kind",
+        "ref_id"
+      ],
+      "title": "ValidationProducerReferenceModel",
+      "type": "object"
+    },
+    "ValidationSubjectReferenceModel": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "ref_kind": {
+                "const": "scenario-snapshot"
+              }
+            },
+            "required": [
+              "ref_kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "ref_digest": {
+                "type": "string"
+              },
+              "ref_path": {
+                "type": "null"
+              }
+            },
+            "required": [
+              "ref_digest"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "ref_kind": {
+                "enum": [
+                  "scenario",
+                  "task",
+                  "run",
+                  "study",
+                  "backend",
+                  "participant-implementation",
+                  "result"
+                ]
+              }
+            },
+            "required": [
+              "ref_kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "ref_digest": {
+                "type": "null"
+              },
+              "ref_path": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "ref_kind": {
+                "enum": [
+                  "task",
+                  "run",
+                  "study"
+                ]
+              }
+            },
+            "required": [
+              "ref_kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "ref_version": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "ref_version"
+            ]
+          }
+        }
+      ],
+      "description": "Reference to a validation-basis disclosure's concrete subject.\n\nConstrained to the eight ref_kind values the ASR-511 catalog's subject\nkinds map onto. A ``scenario-snapshot`` reference must bind by digest\n(``ref_digest``, sourced from ``canonical_instantiated_sdl_digest()``)\nrather than modifying the snapshot contract. ``task``/``run``/``study``\nreference the versioned experiment-core carriers and must bind by\n``ref_version`` -- a disclosure with the right id but no version could\notherwise be replayed against a later revision that reuses the same id,\ndefeating the carrier identity invariant those contracts promise.\n``scenario`` stays an id-only reference (matching the identity-only\n``ExperimentScenarioReferenceModel`` precedent), and ``backend``/\n``participant-implementation``/``result`` keep optional-version semantics\nbecause those subjects are not necessarily versioned.",
+      "properties": {
+        "ref_digest": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Digest"
+        },
+        "ref_id": {
+          "minLength": 1,
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "ref_kind": {
+          "enum": [
+            "scenario",
+            "scenario-snapshot",
+            "task",
+            "run",
+            "study",
+            "backend",
+            "participant-implementation",
+            "result"
+          ],
+          "title": "Ref Kind",
+          "type": "string"
+        },
+        "ref_path": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Path"
+        },
+        "ref_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Version"
+        }
+      },
+      "required": [
+        "ref_kind",
+        "ref_id"
+      ],
+      "title": "ValidationSubjectReferenceModel",
+      "type": "object"
     }
   },
   "$id": "https://aces.dev/schemas/experiment-study-v1.json",
@@ -1558,6 +2109,13 @@
       "title": "Title",
       "type": "string"
     },
+    "validation_basis_disclosures": {
+      "items": {
+        "$ref": "#/$defs/ValidationBasisDisclosureModel"
+      },
+      "title": "Validation Basis Disclosures",
+      "type": "array"
+    },
     "validity_notes": {
       "items": {
         "$ref": "#/$defs/ExperimentValidityNoteModel"
@@ -1668,6 +2226,18 @@
       ],
       "level": "error",
       "validator": "aces_contracts.contracts.validate_experiment_study_against_tasks_and_runs"
+    },
+    {
+      "description": "Every validation_basis_disclosures entry must declare subject_kind='experiment_study' and a subject_ref matching this study's study_id/study_version.",
+      "id": "study-validation-basis-disclosure-identity-matches",
+      "inputs": [
+        {
+          "contract_id": "experiment-study-v1",
+          "instance_path": "#/validation_basis_disclosures"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_contracts.contracts.validation_disclosure.validate_carrier_validation_basis_disclosures"
     },
     {
       "description": "When run_allocation compares evaluation runs, every shared stochastic_controls control_id across those runs must use a consistent executable_binding profile_ref and namespace, and either all or none of the runs that share the control_id may carry an executable_binding (EXP-718 common random numbers / controlled-variation comparability).",

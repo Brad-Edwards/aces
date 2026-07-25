@@ -2,9 +2,9 @@
   "contract_id": "experiment-study-v1",
   "schema_path": "contracts/schemas/experiment-core/experiment-study-v1.json",
   "stability": "draft",
-  "content_hash": "e58418ef49b514e49744d4908e4a8b3b128e918037b0464375dbb9d5eee625c5",
+  "content_hash": "4904d1cb58bb104b5e177fd85eee004d5f0791c7a53daee7488012d14b004a2d",
   "last_change": {
-    "summary": "Documented the EXP-718 study run_allocation stochastic-control consistency invariant (common-random-number/controlled-variation comparability across compared evaluation runs, issue #274). The invariant now also rejects a shared control_id that carries an executable_binding on only some of the compared runs (asymmetric claim), not just a mismatched profile_ref/namespace.",
-    "content_hash": "e58418ef49b514e49744d4908e4a8b3b128e918037b0464375dbb9d5eee625c5"
+    "summary": "Tightened the embedded validation_basis_disclosures subject_ref binding (issue #259 CLASS finding): a study subject_ref now requires ref_version, so a disclosure can no longer carry the correct study_id while omitting ref_version to be replayed unchanged against a later study_version.",
+    "content_hash": "4904d1cb58bb104b5e177fd85eee004d5f0791c7a53daee7488012d14b004a2d"
   }
 }

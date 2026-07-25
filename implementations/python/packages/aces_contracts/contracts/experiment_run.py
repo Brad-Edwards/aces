@@ -51,6 +51,7 @@ from .participant_manifests import ParticipantImplementationProvenanceModel
 from .random_stream import RandomStreamDrawRecordModel
 from .schema_invariants import (
     _add_aces_invariant,
+    _add_carrier_validation_basis_disclosure_invariant,
     _extend_reported_value_status_schema,
     _validate_reported_value_status,
 )
@@ -59,6 +60,7 @@ from .time_model import (
     TimeModelDeclarationModel,
     validate_realized_time_model,
 )
+from .validation_disclosure import ValidationBasisDisclosureModel, validate_carrier_validation_basis_disclosures
 from .validators import _validate_unique_string_values
 
 _ARCHIVAL_RUN_VALIDATOR = "aces_contracts.contracts.ExperimentRunModel._validate_archival_run"
@@ -138,6 +140,7 @@ class ExperimentRunModel(ContractModel):
     used_refs: list[ExperimentReferenceModel] = Field(default_factory=list)
     generated_refs: list[ExperimentReferenceModel] = Field(default_factory=list)
     derived_from_refs: list[ExperimentReferenceModel] = Field(default_factory=list)
+    validation_basis_disclosures: list[ValidationBasisDisclosureModel] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _validate_archival_run(self) -> ExperimentRunModel:
@@ -149,6 +152,7 @@ class ExperimentRunModel(ContractModel):
         _validate_run_evidence_artifact_refs(self)
         _validate_run_realized_form_disclosures(self)
         _validate_run_augmentation_disclosures(self)
+        validate_carrier_validation_basis_disclosures(self, subject_kind="experiment_run")
         if self.realized_time_model is not None:
             validate_realized_time_model(
                 self.realized_time_model.declared_model,
@@ -212,6 +216,9 @@ class ExperimentRunModel(ContractModel):
             "and augmentation_id values must be unique within the run.",
             validator=_ARCHIVAL_RUN_VALIDATOR,
             inputs=[{"contract_id": "experiment-run-v1", "instance_path": "#"}],
+        )
+        _add_carrier_validation_basis_disclosure_invariant(
+            json_schema, contract_id="experiment-run-v1", subject_kind="experiment_run"
         )
         _add_aces_invariant(
             json_schema,

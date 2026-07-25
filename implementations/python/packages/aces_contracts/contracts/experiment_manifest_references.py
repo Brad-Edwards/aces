@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import ClassVar, Literal
 
 from pydantic import GetJsonSchemaHandler, model_validator
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema
 
 from ..versions import BACKEND_MANIFEST_V2_SCHEMA_VERSION, PROCESSOR_MANIFEST_V2_SCHEMA_VERSION
-from .experiment_references import ExperimentReferenceModel
+from .experiment_references import ExperimentReferenceModel, PrunedReferenceFieldsMixin
 from .schema_invariants import _add_aces_invariant
 
 _MANIFEST_REFERENCE_DEFS_POINTER = "#/$defs/ExperimentManifestReferenceModel"
@@ -152,10 +152,11 @@ class ExperimentManifestReferenceModel(ExperimentReferenceModel):
         return json_schema
 
 
-class ExperimentProcessorReferenceModel(ExperimentReferenceModel):
+class ExperimentProcessorReferenceModel(PrunedReferenceFieldsMixin, ExperimentReferenceModel):
     """Reference constrained to a processor identity."""
 
     ref_kind: Literal["processor"]
+    _PRUNED_REF_FIELDS: ClassVar[tuple[str, ...]] = ("ref_digest", "ref_path")
 
     @model_validator(mode="after")
     def _validate_identity_reference_scope(self) -> ExperimentProcessorReferenceModel:
@@ -163,45 +164,18 @@ class ExperimentProcessorReferenceModel(ExperimentReferenceModel):
             raise ValueError("processor identity references must not carry ref_digest or ref_path")
         return self
 
-    @classmethod
-    def __get_pydantic_json_schema__(
-        cls,
-        core_schema: CoreSchema,
-        handler: GetJsonSchemaHandler,
-    ) -> JsonSchemaValue:
-        json_schema = handler(core_schema)
-        json_schema = handler.resolve_ref_schema(json_schema)
-        properties = json_schema.get("properties")
-        if isinstance(properties, dict):
-            properties.pop("ref_digest", None)
-            properties.pop("ref_path", None)
-        return json_schema
 
-
-class ExperimentBackendReferenceModel(ExperimentReferenceModel):
+class ExperimentBackendReferenceModel(PrunedReferenceFieldsMixin, ExperimentReferenceModel):
     """Reference constrained to a backend identity."""
 
     ref_kind: Literal["backend"]
+    _PRUNED_REF_FIELDS: ClassVar[tuple[str, ...]] = ("ref_digest", "ref_path")
 
     @model_validator(mode="after")
     def _validate_identity_reference_scope(self) -> ExperimentBackendReferenceModel:
         if "ref_digest" in self.model_fields_set or "ref_path" in self.model_fields_set:
             raise ValueError("backend identity references must not carry ref_digest or ref_path")
         return self
-
-    @classmethod
-    def __get_pydantic_json_schema__(
-        cls,
-        core_schema: CoreSchema,
-        handler: GetJsonSchemaHandler,
-    ) -> JsonSchemaValue:
-        json_schema = handler(core_schema)
-        json_schema = handler.resolve_ref_schema(json_schema)
-        properties = json_schema.get("properties")
-        if isinstance(properties, dict):
-            properties.pop("ref_digest", None)
-            properties.pop("ref_path", None)
-        return json_schema
 
 
 class ExperimentEvidenceReferenceModel(ExperimentReferenceModel):
@@ -210,8 +184,10 @@ class ExperimentEvidenceReferenceModel(ExperimentReferenceModel):
     ref_kind: Literal["evidence"]
 
 
-class ExperimentEvidenceSatisfactionReferenceModel(ExperimentEvidenceReferenceModel):
+class ExperimentEvidenceSatisfactionReferenceModel(PrunedReferenceFieldsMixin, ExperimentEvidenceReferenceModel):
     """Evidence concept reference that an artifact claims to satisfy."""
+
+    _PRUNED_REF_FIELDS: ClassVar[tuple[str, ...]] = ("ref_digest", "ref_path")
 
     @model_validator(mode="after")
     def _validate_satisfaction_reference_scope(self) -> ExperimentEvidenceSatisfactionReferenceModel:
@@ -219,23 +195,11 @@ class ExperimentEvidenceSatisfactionReferenceModel(ExperimentEvidenceReferenceMo
             raise ValueError("artifact satisfies_refs must not carry ref_digest or ref_path")
         return self
 
-    @classmethod
-    def __get_pydantic_json_schema__(
-        cls,
-        core_schema: CoreSchema,
-        handler: GetJsonSchemaHandler,
-    ) -> JsonSchemaValue:
-        json_schema = handler(core_schema)
-        json_schema = handler.resolve_ref_schema(json_schema)
-        properties = json_schema.get("properties")
-        if isinstance(properties, dict):
-            properties.pop("ref_digest", None)
-            properties.pop("ref_path", None)
-        return json_schema
 
-
-class ExperimentRunEvidenceArtifactReferenceModel(ExperimentEvidenceReferenceModel):
+class ExperimentRunEvidenceArtifactReferenceModel(PrunedReferenceFieldsMixin, ExperimentEvidenceReferenceModel):
     """Run-internal reference to a concrete evidence artifact id."""
+
+    _PRUNED_REF_FIELDS: ClassVar[tuple[str, ...]] = ("ref_version", "ref_digest", "ref_path")
 
     @model_validator(mode="after")
     def _validate_run_evidence_artifact_reference_scope(self) -> ExperimentRunEvidenceArtifactReferenceModel:
@@ -243,26 +207,12 @@ class ExperimentRunEvidenceArtifactReferenceModel(ExperimentEvidenceReferenceMod
             raise ValueError("run result evidence_refs are artifact-id references and must not carry qualifiers")
         return self
 
-    @classmethod
-    def __get_pydantic_json_schema__(
-        cls,
-        core_schema: CoreSchema,
-        handler: GetJsonSchemaHandler,
-    ) -> JsonSchemaValue:
-        json_schema = handler(core_schema)
-        json_schema = handler.resolve_ref_schema(json_schema)
-        properties = json_schema.get("properties")
-        if isinstance(properties, dict):
-            properties.pop("ref_version", None)
-            properties.pop("ref_digest", None)
-            properties.pop("ref_path", None)
-        return json_schema
 
-
-class ExperimentCaptureSpecReferenceModel(ExperimentReferenceModel):
+class ExperimentCaptureSpecReferenceModel(PrunedReferenceFieldsMixin, ExperimentReferenceModel):
     """Reference constrained to a declarative capture specification."""
 
     ref_kind: Literal["capture-spec"]
+    _PRUNED_REF_FIELDS: ClassVar[tuple[str, ...]] = ("ref_digest", "ref_path")
 
     @model_validator(mode="after")
     def _validate_capture_spec_reference_scope(self) -> ExperimentCaptureSpecReferenceModel:
@@ -270,42 +220,15 @@ class ExperimentCaptureSpecReferenceModel(ExperimentReferenceModel):
             raise ValueError("capture-spec references must not carry ref_digest or ref_path")
         return self
 
-    @classmethod
-    def __get_pydantic_json_schema__(
-        cls,
-        core_schema: CoreSchema,
-        handler: GetJsonSchemaHandler,
-    ) -> JsonSchemaValue:
-        json_schema = handler(core_schema)
-        json_schema = handler.resolve_ref_schema(json_schema)
-        properties = json_schema.get("properties")
-        if isinstance(properties, dict):
-            properties.pop("ref_digest", None)
-            properties.pop("ref_path", None)
-        return json_schema
 
-
-class ExperimentEvidenceRecordReferenceModel(ExperimentReferenceModel):
+class ExperimentEvidenceRecordReferenceModel(PrunedReferenceFieldsMixin, ExperimentReferenceModel):
     """Reference constrained to a raw captured evidence record."""
 
     ref_kind: Literal["evidence-record"]
+    _PRUNED_REF_FIELDS: ClassVar[tuple[str, ...]] = ("ref_digest", "ref_path")
 
     @model_validator(mode="after")
     def _validate_evidence_record_reference_scope(self) -> ExperimentEvidenceRecordReferenceModel:
         if "ref_digest" in self.model_fields_set or "ref_path" in self.model_fields_set:
             raise ValueError("evidence-record references must not carry ref_digest or ref_path")
         return self
-
-    @classmethod
-    def __get_pydantic_json_schema__(
-        cls,
-        core_schema: CoreSchema,
-        handler: GetJsonSchemaHandler,
-    ) -> JsonSchemaValue:
-        json_schema = handler(core_schema)
-        json_schema = handler.resolve_ref_schema(json_schema)
-        properties = json_schema.get("properties")
-        if isinstance(properties, dict):
-            properties.pop("ref_digest", None)
-            properties.pop("ref_path", None)
-        return json_schema

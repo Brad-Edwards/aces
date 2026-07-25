@@ -59,7 +59,7 @@ semantics, examples, or code from that source.
   the SDL schema.
 
 The authored/defaulted/planned/realized/observed/derived distinction tested by
-[issue #160](https://github.com/Brad-Edwards/aces/issues/160) is a carrier
+[issue #160](https://github.com/RAESystem/rae/issues/160) is a carrier
 boundary, not a vocabulary tag. SDL and `model_fields_set` carry authored and
 defaulted meaning; compiler plans carry planned operations; realization
 provenance and realized-form disclosures carry admitted choices; evidence

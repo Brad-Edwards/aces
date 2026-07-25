@@ -415,38 +415,35 @@ entries:
           No property-based or differential coverage of the realization gate yet.
 
   - subsystem: validation-admission-profiles
-    # Design coverage only (ASR-511/ASR-515): issue #97 publishes the profile
-    # taxonomy and disclosure invariants. Executable carriers, validators, and
-    # test evidence are owned by the spawned implementation issues.
+    # Issue #97 publishes the joint ASR-511/ASR-515 profile taxonomy and
+    # disclosure design. #258 delivers the executable ASR-511 profile catalog
+    # contract/schema/tests; #259 delivers the executable ASR-515
+    # validation-basis disclosure contract/schema/fixtures/tests (carrier
+    # embedding on experiment task/run/study). This entry now distinguishes
+    # delivered typed-contract and unit-test coverage from the remaining
+    # property-based/differential waiver.
     delivered_artifacts:
       - kind: invariant_list
         path: specs/formal/validation-admission-profiles/README.md
-    waived_artifacts:
-      - kind: unit_tests
-        date: 2026-07-05
-        tracking:
-          - "#258"
-          - "#259"
-        rationale: >-
-          Issue #97 publishes design coverage only; executable profile and
-          disclosure tests are owned by the spawned ASR-511/ASR-515
-          implementation issues.
       - kind: typed_ir_or_contract_coverage
-        date: 2026-07-05
-        tracking:
-          - "#258"
-          - "#259"
-        rationale: >-
-          No typed contract or carrier is published by issue #97; contract
-          coverage belongs with the spawned implementation issues.
+        path: contracts/schemas/profiles/validation-profile-catalog-v1.json
+      - kind: typed_ir_or_contract_coverage
+        path: contracts/schemas/profiles/validation-basis-disclosure-v1.json
+      - kind: unit_tests
+        path: implementations/python/tests/test_validation_profiles.py
+      - kind: unit_tests
+        path: implementations/python/tests/test_validation_disclosure.py
+    waived_artifacts:
       - kind: property_based_or_differential_tests
-        date: 2026-07-05
+        date: 2026-07-24
         tracking:
           - "#258"
           - "#259"
         rationale: >-
-          No property-based or differential validation-basis coverage ships
-          with this design-only issue.
+          No property-based or differential validation-basis coverage has
+          been added; the fixture-corpus (valid + invalid) and the
+          clause-by-clause unit-test matrix are the delivered evidence for
+          ASR-511/ASR-515.
 
   - subsystem: sdl-phases
     delivered_artifacts:

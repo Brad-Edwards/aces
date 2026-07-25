@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from typing import Any, Literal
+from typing import Any, ClassVar, Literal
 
 from pydantic import Field, GetJsonSchemaHandler, model_validator
 from pydantic.json_schema import JsonSchemaValue
@@ -24,13 +24,14 @@ from .experiment_manifest_references import (
     ExperimentEvidenceSatisfactionReferenceModel,
     ExperimentManifestReferenceModel,
 )
-from .experiment_references import ExperimentReferenceModel
+from .experiment_references import ExperimentReferenceModel, PrunedReferenceFieldsMixin
 
 
-class ExperimentDerivedMeasureReferenceModel(ExperimentReferenceModel):
+class ExperimentDerivedMeasureReferenceModel(PrunedReferenceFieldsMixin, ExperimentReferenceModel):
     """Reference constrained to a derived measure or analysis output."""
 
     ref_kind: Literal["derived-measure"]
+    _PRUNED_REF_FIELDS: ClassVar[tuple[str, ...]] = ("ref_digest", "ref_path")
 
     @model_validator(mode="after")
     def _validate_derived_measure_reference_scope(self) -> ExperimentDerivedMeasureReferenceModel:
@@ -38,25 +39,12 @@ class ExperimentDerivedMeasureReferenceModel(ExperimentReferenceModel):
             raise ValueError("derived-measure references must not carry ref_digest or ref_path")
         return self
 
-    @classmethod
-    def __get_pydantic_json_schema__(
-        cls,
-        core_schema: CoreSchema,
-        handler: GetJsonSchemaHandler,
-    ) -> JsonSchemaValue:
-        json_schema = handler(core_schema)
-        json_schema = handler.resolve_ref_schema(json_schema)
-        properties = json_schema.get("properties")
-        if isinstance(properties, dict):
-            properties.pop("ref_digest", None)
-            properties.pop("ref_path", None)
-        return json_schema
 
-
-class ExperimentMeasurementChannelReferenceModel(ExperimentReferenceModel):
+class ExperimentMeasurementChannelReferenceModel(PrunedReferenceFieldsMixin, ExperimentReferenceModel):
     """Reference constrained to a declared measurement channel."""
 
     ref_kind: Literal["measurement-channel"]
+    _PRUNED_REF_FIELDS: ClassVar[tuple[str, ...]] = ("ref_digest", "ref_path")
 
     @model_validator(mode="after")
     def _validate_measurement_channel_reference_scope(self) -> ExperimentMeasurementChannelReferenceModel:
@@ -64,45 +52,18 @@ class ExperimentMeasurementChannelReferenceModel(ExperimentReferenceModel):
             raise ValueError("measurement-channel references must not carry ref_digest or ref_path")
         return self
 
-    @classmethod
-    def __get_pydantic_json_schema__(
-        cls,
-        core_schema: CoreSchema,
-        handler: GetJsonSchemaHandler,
-    ) -> JsonSchemaValue:
-        json_schema = handler(core_schema)
-        json_schema = handler.resolve_ref_schema(json_schema)
-        properties = json_schema.get("properties")
-        if isinstance(properties, dict):
-            properties.pop("ref_digest", None)
-            properties.pop("ref_path", None)
-        return json_schema
 
-
-class ExperimentApparatusCompatibilityReferenceModel(ExperimentReferenceModel):
+class ExperimentApparatusCompatibilityReferenceModel(PrunedReferenceFieldsMixin, ExperimentReferenceModel):
     """Profile or capability reference declared by apparatus compatibility metadata."""
 
     ref_kind: Literal["profile", "capability"]
+    _PRUNED_REF_FIELDS: ClassVar[tuple[str, ...]] = ("ref_digest", "ref_path")
 
     @model_validator(mode="after")
     def _validate_compatibility_reference_scope(self) -> ExperimentApparatusCompatibilityReferenceModel:
         if "ref_digest" in self.model_fields_set or "ref_path" in self.model_fields_set:
             raise ValueError("apparatus compatibility references must not carry ref_digest or ref_path")
         return self
-
-    @classmethod
-    def __get_pydantic_json_schema__(
-        cls,
-        core_schema: CoreSchema,
-        handler: GetJsonSchemaHandler,
-    ) -> JsonSchemaValue:
-        json_schema = handler(core_schema)
-        json_schema = handler.resolve_ref_schema(json_schema)
-        properties = json_schema.get("properties")
-        if isinstance(properties, dict):
-            properties.pop("ref_digest", None)
-            properties.pop("ref_path", None)
-        return json_schema
 
 
 class ExperimentConditionAssignmentReferenceModel(ExperimentReferenceModel):

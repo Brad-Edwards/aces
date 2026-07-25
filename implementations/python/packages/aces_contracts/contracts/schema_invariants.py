@@ -9,6 +9,14 @@ from pydantic.json_schema import JsonSchemaValue
 
 from .base import _ACES_SEMANTIC_INVARIANT_PROFILE_URI
 
+# Shared instance_path for the ASR-515 carrier-embedded
+# validation_basis_disclosures invariant inputs. Defined once here and
+# re-exported for validation_disclosure.py so both call sites (this module's
+# _add_carrier_validation_basis_disclosure_invariant and
+# ValidationBasisDisclosureModel.__get_pydantic_json_schema__) share one
+# canonical literal rather than each declaring their own copy.
+_CARRIER_DISCLOSURES_INSTANCE_PATH = "#/validation_basis_disclosures"
+
 
 def _add_aces_invariant(
     json_schema: JsonSchemaValue,
@@ -151,6 +159,27 @@ def _attach_stateful_resource_invariants(contract_id: str, json_schema: dict[str
         "and must not collide on a consumer node mount destination.",
         validator="aces_sdl._stateful_resource_references.stateful_resource_reference_errors",
         inputs=input_contract,
+    )
+
+
+def _add_carrier_validation_basis_disclosure_invariant(
+    json_schema: JsonSchemaValue, *, contract_id: str, subject_kind: str
+) -> None:
+    """Attach the shared ASR-515 carrier-embedded disclosure identity invariant.
+
+    Reused by ``ExperimentTaskModel``/``ExperimentRunModel``/``ExperimentStudyModel``
+    so the wording and validator pointer live in one place; ``subject_kind``
+    derives the carrier label the same way
+    ``validate_carrier_validation_basis_disclosures`` does.
+    """
+    carrier_label = subject_kind.removeprefix("experiment_")
+    _add_aces_invariant(
+        json_schema,
+        f"{carrier_label}-validation-basis-disclosure-identity-matches",
+        f"Every validation_basis_disclosures entry must declare subject_kind={subject_kind!r} and a subject_ref "
+        f"matching this {carrier_label}'s {carrier_label}_id/{carrier_label}_version.",
+        validator="aces_contracts.contracts.validation_disclosure.validate_carrier_validation_basis_disclosures",
+        inputs=[{"contract_id": contract_id, "instance_path": _CARRIER_DISCLOSURES_INSTANCE_PATH}],
     )
 
 
