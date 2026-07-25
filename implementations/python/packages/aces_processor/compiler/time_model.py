@@ -28,6 +28,19 @@ def _address(kind: str, name: str) -> str:
 
 
 def _subject_address(scenario: InstantiatedScenario, ref: str) -> str:
+    for spec_name, behavior_spec in scenario.behavior_specifications.items():
+        prefix = f"behavior_specifications.{spec_name}.participant_inject_deliveries."
+        if not ref.startswith(prefix):
+            continue
+        binding_id = ref[len(prefix) :]
+        if binding_id in behavior_spec.participant_inject_deliveries:
+            return render_compiled_address(
+                "participant",
+                "behavior-specification",
+                spec_name,
+                "inject-delivery",
+                binding_id,
+            )
     for section_name in (
         "nodes",
         "infrastructure",

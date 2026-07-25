@@ -141,6 +141,10 @@ _TOOL_AFFORDANCE_VALIDATOR = (
     "[tool-affordance validator]"
     "(../../implementations/python/packages/aces_sdl/validator/_participant_tool_affordances.py)"
 )
+_PARTICIPANT_INJECT_DELIVERY_VALIDATOR = (
+    "[participant-inject delivery validator]"
+    "(../../implementations/python/packages/aces_sdl/validator/_participant_inject_deliveries.py)"
+)
 _BEHAVIOR_MODEL = "[behavior model](../../implementations/python/packages/aces_sdl/participant_behavior.py)"
 _MIXED_CONTROL_MODEL = (
     "[behavior model](../../implementations/python/packages/aces_sdl/participant_behavior_specification.py)"
@@ -709,6 +713,90 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         _SEMANTIC,
         "fatal dangling, outside the owner/participant, or without explicit view classification",
         _BEHAVIOR_SEMANTICS,
+    ),
+    "behavior_specifications.*.participant_inject_deliveries.*.participant_ref": (
+        "agents",
+        _SEMANTIC,
+        "fatal dangling or outside the owning behavior specification",
+        _PARTICIPANT_INJECT_DELIVERY_VALIDATOR,
+    ),
+    "behavior_specifications.*.participant_inject_deliveries.*.inject_ref": (
+        "injects",
+        _SEMANTIC,
+        "fatal dangling or outside the anchored event occurrence",
+        _PARTICIPANT_INJECT_DELIVERY_VALIDATOR,
+    ),
+    "behavior_specifications.*.participant_inject_deliveries.*.occurrence.event_ref": (
+        "events",
+        _SEMANTIC,
+        "fatal dangling or not containing the bound inject",
+        _PARTICIPANT_INJECT_DELIVERY_VALIDATOR,
+    ),
+    "behavior_specifications.*.participant_inject_deliveries.*.occurrence.script_ref": (
+        "scripts",
+        _SEMANTIC,
+        "fatal dangling or not containing the anchored event",
+        _PARTICIPANT_INJECT_DELIVERY_VALIDATOR,
+    ),
+    "behavior_specifications.*.participant_inject_deliveries.*.occurrence.story_ref": (
+        "stories",
+        _SEMANTIC,
+        "fatal dangling or not containing the anchored script",
+        _PARTICIPANT_INJECT_DELIVERY_VALIDATOR,
+    ),
+    "behavior_specifications.*.participant_inject_deliveries.*.source_item_ref": (
+        "targetable",
+        _SEMANTIC,
+        _DANGLING,
+        _PARTICIPANT_INJECT_DELIVERY_VALIDATOR,
+    ),
+    "behavior_specifications.*.participant_inject_deliveries.*.result_item_ref": (
+        "targetable",
+        _SEMANTIC,
+        "fatal dangling, ambiguous, hidden, or unclassified at the participant boundary",
+        _PARTICIPANT_INJECT_DELIVERY_VALIDATOR,
+    ),
+    "behavior_specifications.*.participant_inject_deliveries.*.observation_boundary_ref": (
+        "observation_boundaries",
+        _SEMANTIC,
+        "fatal dangling or outside the owner/participant",
+        _PARTICIPANT_INJECT_DELIVERY_VALIDATOR,
+    ),
+    "behavior_specifications.*.participant_inject_deliveries.*.temporal_constraint_refs[]": (
+        "temporal_constraints",
+        _SEMANTIC,
+        "fatal dangling or not binding this delivery declaration",
+        _PARTICIPANT_INJECT_DELIVERY_VALIDATOR,
+    ),
+    "behavior_specifications.*.participant_inject_deliveries.*.evidence_requirement_refs[]": (
+        "evidence_requirements",
+        _SEMANTIC,
+        "fatal dangling or not binding this delivery declaration",
+        _PARTICIPANT_INJECT_DELIVERY_VALIDATOR,
+    ),
+    "behavior_specifications.*.participant_inject_deliveries.*.control_transition_ref": (
+        "derived:mixed_control_local_ids",
+        "structural and semantic validation",
+        "fatal dangling, wrong-kind, or incomplete control agreement",
+        _PARTICIPANT_INJECT_DELIVERY_VALIDATOR,
+    ),
+    "behavior_specifications.*.participant_inject_deliveries.*.controller_ref": (
+        "agents",
+        _SEMANTIC,
+        "fatal disagreement with the selected control-transition target controller",
+        _PARTICIPANT_INJECT_DELIVERY_VALIDATOR,
+    ),
+    "behavior_specifications.*.participant_inject_deliveries.*.control_authority_scope_refs[]": (
+        "targetable",
+        _SEMANTIC,
+        "fatal dangling, ambiguous, or disagreement with the selected target-state scope",
+        _PARTICIPANT_INJECT_DELIVERY_VALIDATOR,
+    ),
+    "behavior_specifications.*.participant_inject_deliveries.*.control_evidence_refs[]": (
+        "targetable",
+        _SEMANTIC,
+        "fatal dangling, control disagreement, or absent evidence-requirement coverage",
+        _PARTICIPANT_INJECT_DELIVERY_VALIDATOR,
     ),
     "behavior_specifications.*.behavior_mode": (
         "vocabulary:behavior_mode",

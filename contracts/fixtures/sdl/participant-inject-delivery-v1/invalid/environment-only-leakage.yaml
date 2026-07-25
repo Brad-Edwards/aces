@@ -1,0 +1,113 @@
+name: dsl-142-hidden-leakage
+nodes:
+  web:
+    type: vm
+    resources: {ram: 1 gib, cpu: 1}
+entities:
+  red-team:
+    role: red
+content:
+  answer-key:
+    type: file
+    target: web
+    path: /opt/answer-key.txt
+    text: hidden adjudication content
+    sensitive: true
+injects:
+  environment-inject:
+    description: environment-only effect
+    environment: [set-exercise-banner]
+events:
+  environment-event:
+    injects: [environment-inject]
+scripts:
+  environment-script:
+    start_time: 0
+    end_time: 10
+    speed: 1
+    events:
+      environment-event: 5
+stories:
+  environment-story:
+    scripts: [environment-script]
+time_domains:
+  exercise-time:
+    kind: logical
+    tick_period_seconds: {numerator: 1, denominator: 1}
+    epoch: scenario_start
+    visibility: participant_visible
+    description: exercise logical time
+clocks:
+  exercise-clock:
+    time_domain_ref: exercise-time
+    authority_kind: runtime
+    authority_ref: runtime.scheduler
+    monotonicity: non_decreasing
+    description: exercise scheduler clock
+temporal_constraints:
+  delivery-window:
+    constraint_kind: window
+    clock_ref: exercise-clock
+    subject_refs:
+      - behavior_specifications.red-briefing.participant_inject_deliveries.leak
+    start: {tick: 4}
+    end: {tick: 6}
+    description: attempted delivery window
+evidence_requirements:
+  delivery-evidence:
+    description: capture attempted delivery evidence
+    source_refs:
+      - behavior_specifications.red-briefing.participant_inject_deliveries.leak
+    scope_refs: [web]
+    window: attempted delivery window
+    channel: log
+    artifact_role: delivery_evidence
+    sensitivity: plain
+    redaction: none
+    integrity: checksum
+    retention: study_lifetime
+    loss_disclosure: required
+observation_boundaries:
+  red-view:
+    projection_basis: participant-local hidden-answer view
+    observable_refs: [nodes.web]
+    hidden_refs: [content.answer-key]
+    redaction_policy: hidden answer remains hidden
+    latency_profile: delivery-order bound
+    view_rules:
+      - information_ref: content.answer-key
+        boundary_class: private_answer_key
+        disposition: hidden
+        visibility_basis: adjudication-only hidden truth
+agents:
+  red-agent:
+    entity: red-team
+    observation_boundaries: [red-view]
+behavior_specifications:
+  red-briefing:
+    semantic_version: 1.0.0
+    participant_refs: [red-agent]
+    observation_boundary_refs: [red-view]
+    participant_inject_deliveries:
+      leak:
+        participant_ref: red-agent
+        inject_ref: environment-inject
+        occurrence:
+          event_ref: environment-event
+          script_ref: environment-script
+          story_ref: environment-story
+        source_item_ref: content.answer-key
+        result_item_ref: content.answer-key
+        observation_boundary_ref: red-view
+        delivery_kind: disclosure
+        delivery_policy:
+          policy_ref: projection-policy.red.v1
+          policy_revision: 1.0.0
+          exposure_policy_ref: exposure-policy.red.v1
+          audience_scope_ref: audience.participant.red-agent
+          visibility_basis_ref: visibility-bases.answer-key.v1
+          disclosure_basis_ref: disclosures.answer-key.v1
+        order_basis: orchestration-occurrence-and-shared-time
+        temporal_constraint_refs: [delivery-window]
+        evidence_requirement_refs: [delivery-evidence]
+        failure_disposition: reject-no-delivery

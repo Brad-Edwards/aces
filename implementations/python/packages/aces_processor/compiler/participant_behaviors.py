@@ -22,6 +22,7 @@ from .addresses import (
     _observation_boundary_address,
     _outcome_interpretation_rule_address,
     _participant_behavior_address,
+    _participant_inject_delivery_address,
     _section_ref_name,
     _tool_affordance_address,
 )
@@ -384,6 +385,10 @@ def _compile_behavior_specifications(
         tool_affordance_addresses = tuple(
             _tool_affordance_address(name, affordance_id) for affordance_id in sorted(behavior_spec.tool_affordances)
         )
+        participant_inject_delivery_addresses = tuple(
+            _participant_inject_delivery_address(name, binding_id)
+            for binding_id in sorted(behavior_spec.participant_inject_deliveries)
+        )
         autonomous_execution = _compile_autonomous_execution(
             scenario=scenario,
             spec_name=name,
@@ -419,6 +424,7 @@ def _compile_behavior_specifications(
             backend_feature_support_refs=tuple(behavior_spec.backend_feature_support_refs),
             evidence_contract_refs=tuple(behavior_spec.evidence_contract_refs),
             tool_affordance_addresses=tool_affordance_addresses,
+            participant_inject_delivery_addresses=participant_inject_delivery_addresses,
             extension_policy=str(behavior_spec.extension_policy),
             extension_keys=tuple(sorted(behavior_spec.extensions)),
             refresh_dependencies=dependencies,

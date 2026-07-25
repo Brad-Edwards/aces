@@ -33,6 +33,7 @@ from .participant_contracts import (
     _compile_observation_boundaries,
     _compile_outcome_interpretation_rules,
 )
+from .participant_inject_deliveries import _compile_participant_inject_deliveries
 from .placement import (
     _compile_account_placements,
     _compile_content_placements,
@@ -122,6 +123,7 @@ def compile_runtime_model(scenario: Scenario | ExpandedScenario | InstantiatedSc
     participant_behaviors = _compile_participant_behaviors(scenario, diagnostics)
     behavior_specifications = _compile_behavior_specifications(scenario, diagnostics)
     tool_affordances = _compile_tool_affordances(scenario, diagnostics)
+    participant_inject_deliveries = _compile_participant_inject_deliveries(scenario)
     events = _compile_events(scenario, assertions, injects, inject_bindings, diagnostics)
     scripts = _compile_scripts(scenario, diagnostics)
     stories = _compile_stories(scenario, diagnostics)
@@ -158,6 +160,7 @@ def compile_runtime_model(scenario: Scenario | ExpandedScenario | InstantiatedSc
         participant_behaviors=participant_behaviors,
         behavior_specifications=behavior_specifications,
         tool_affordances=tool_affordances,
+        participant_inject_deliveries=participant_inject_deliveries,
         events=events,
         scripts=scripts,
         stories=stories,

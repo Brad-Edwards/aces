@@ -141,6 +141,16 @@ def _tool_affordance_address(spec_name: str, affordance_id: str) -> str:
     )
 
 
+def _participant_inject_delivery_address(spec_name: str, binding_id: str) -> str:
+    return _address(
+        "participant",
+        "behavior-specification",
+        spec_name,
+        "inject-delivery",
+        binding_id,
+    )
+
+
 def _condition_binding_address(node_name: str, condition_name: str) -> str:
     return _address("evaluation", "condition", node_name, condition_name)
 
