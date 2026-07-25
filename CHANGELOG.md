@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 PRs do **not** edit this file directly. release-please maintains it from the
 Conventional Commit history on `main` (#684).
 
+## [0.25.0](https://github.com/RAESystem/rae/compare/v0.24.0...v0.25.0) (2026-07-25)
+
+
+### Features
+
+* add ASR-515 validation-basis disclosure contract ([#871](https://github.com/RAESystem/rae/issues/871)) ([1cd7362](https://github.com/RAESystem/rae/commit/1cd73624c2a2a694e428f12969bc71f0899d29d3))
+* **contracts:** add participant control occurrence contracts ([#868](https://github.com/RAESystem/rae/issues/868)) ([9122de5](https://github.com/RAESystem/rae/commit/9122de5be5a961c6954a5ec501748f1a5f486c57))
+
+
+### Bug Fixes
+
+* **release:** publish package as raes ([#879](https://github.com/RAESystem/rae/issues/879)) ([dad6692](https://github.com/RAESystem/rae/commit/dad6692322eccede19d81fe424ff61d20b1a253b))
+
 ## [0.24.0](https://github.com/RAESystem/rae/compare/v0.23.1...v0.24.0) (2026-07-25)
 
 
