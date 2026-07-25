@@ -86,6 +86,7 @@ from .schema_invariants import (
 )
 from .semantic_profiles import SemanticProfileModel
 from .trial_cleanup import SchedulerIsolationProofModel, TrialCleanupPlanModel, TrialCleanupReceiptModel
+from .validation_disclosure import ValidationBasisDisclosureDocumentModel
 from .vocabulary_sources import (
     AtlasTacticsSourceModel,
     AttackEnterpriseTacticsSourceModel,
@@ -159,6 +160,7 @@ def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
         "scientific-completeness-taxonomy-v1": ScientificCompletenessTaxonomyModel.model_json_schema(),
         "scientific-completeness-assessment-v1": ScientificCompletenessAssessmentModel.model_json_schema(),
         "validation-profile-catalog-v1": ValidationProfileCatalogModel.model_json_schema(),
+        "validation-basis-disclosure-v1": ValidationBasisDisclosureDocumentModel.model_json_schema(),
         "evaluation-history-event-stream-v1": _event_stream_schema(
             "EvaluationHistoryEventStream",
             EvaluationHistoryEventModel.model_json_schema(),

@@ -361,6 +361,7 @@ from .trial_cleanup import (
 from .trial_cleanup import (
     validate_trial_cleanup_receipt as validate_trial_cleanup_receipt,
 )
+from .validation_disclosure import ValidationBasisDisclosureDocumentModel
 from .validators import _collapse_nullable_optional_schema as _collapse_nullable_optional_schema
 from .validators import _resolve_instance_path_schema as _resolve_instance_path_schema
 from .validators import _resolve_ref_schema as _resolve_ref_schema
@@ -489,5 +490,6 @@ __all__ = [
     "validate_experiment_apparatus_context_archival_datetimes", "validate_experiment_run_against_task",
     "validate_experiment_run_archival_datetimes", "validate_experiment_study_against_tasks_and_runs",
     "validate_experiment_study_archival_datetimes", "validate_experiment_task_archival_datetimes",
+    "ValidationBasisDisclosureDocumentModel",
 ]
 # fmt: on

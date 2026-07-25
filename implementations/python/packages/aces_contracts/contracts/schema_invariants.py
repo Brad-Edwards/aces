@@ -154,6 +154,27 @@ def _attach_stateful_resource_invariants(contract_id: str, json_schema: dict[str
     )
 
 
+def _add_carrier_validation_basis_disclosure_invariant(
+    json_schema: JsonSchemaValue, *, contract_id: str, subject_kind: str
+) -> None:
+    """Attach the shared ASR-515 carrier-embedded disclosure identity invariant.
+
+    Reused by ``ExperimentTaskModel``/``ExperimentRunModel``/``ExperimentStudyModel``
+    so the wording and validator pointer live in one place; ``subject_kind``
+    derives the carrier label the same way
+    ``validate_carrier_validation_basis_disclosures`` does.
+    """
+    carrier_label = subject_kind.removeprefix("experiment_")
+    _add_aces_invariant(
+        json_schema,
+        f"{carrier_label}-validation-basis-disclosure-identity-matches",
+        f"Every validation_basis_disclosures entry must declare subject_kind={subject_kind!r} and a subject_ref "
+        f"matching this {carrier_label}'s {carrier_label}_id/{carrier_label}_version.",
+        validator="aces_contracts.contracts.validation_disclosure.validate_carrier_validation_basis_disclosures",
+        inputs=[{"contract_id": contract_id, "instance_path": "#/validation_basis_disclosures"}],
+    )
+
+
 def _validate_reported_value_status(
     value_status: str,
     value: object | None,
