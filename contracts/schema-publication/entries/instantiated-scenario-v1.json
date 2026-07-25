@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
   "stability": "draft",
-  "content_hash": "0f29ce7ba6ecefdaff0df3212aa676196e88ec7b91f416f7ad08dfbe2f439e8c",
+  "content_hash": "98bd41a187206b00834487489218daea6c81ba3d9c1cbe6af3dd2a74156480e0",
   "last_change": {
-    "summary": "Carried typed node-to-node network namespace sharing into instantiated scenarios.",
-    "content_hash": "0f29ce7ba6ecefdaff0df3212aa676196e88ec7b91f416f7ad08dfbe2f439e8c"
+    "summary": "Published enterprise tenancy and typed network namespace sharing in instantiated scenarios.",
+    "content_hash": "98bd41a187206b00834487489218daea6c81ba3d9c1cbe6af3dd2a74156480e0"
   }
 }

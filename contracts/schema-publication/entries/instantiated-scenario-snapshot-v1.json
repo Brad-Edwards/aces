@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-snapshot-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "d52faa1cc68c95c0897db38e21765951a2d458a91610b350b44120f7505c723e",
+  "content_hash": "a390c998e5f7f3274054cf9a4a5bb076845e87a9856308ab18c7e679a5029a9e",
   "last_change": {
-    "summary": "Carried typed node-to-node network namespace sharing into instantiated snapshots.",
-    "content_hash": "d52faa1cc68c95c0897db38e21765951a2d458a91610b350b44120f7505c723e"
+    "summary": "Published enterprise tenancy and typed network namespace sharing in instantiated snapshots.",
+    "content_hash": "a390c998e5f7f3274054cf9a4a5bb076845e87a9856308ab18c7e679a5029a9e"
   }
 }

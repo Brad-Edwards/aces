@@ -46,7 +46,7 @@
       "replayable": true,
       "actual_outcome": "accepted",
       "diagnostic_kind": null,
-      "result_digest": "83e13fb83080bef0aaf6c5d40f196a23d021717d206d601f54e848fbc51cf035",
+      "result_digest": "2f5706e3b9a483ae49e75e4cdf4ad2a262213cab67238bb475089b8b29d89940",
       "evidence_refs": [
         "docs/research/formal-semantic-validation/corpus/schema-valid.sdl.yaml"
       ],
@@ -76,7 +76,7 @@
       "replayable": true,
       "actual_outcome": "accepted",
       "diagnostic_kind": null,
-      "result_digest": "ee2eb992e729a7de12f1f3a35b8a5a712231dc7567dcfd8e7578a9192bb19660",
+      "result_digest": "6844cd3686d83d6c50683c8a377e92afd94d1193ced5cdf973e508444910e47c",
       "evidence_refs": [
         "docs/research/formal-semantic-validation/corpus/semantic-valid.sdl.yaml"
       ],
@@ -136,7 +136,7 @@
       "replayable": true,
       "actual_outcome": "accepted",
       "diagnostic_kind": null,
-      "result_digest": "ca1d8c86996e90dabb6196d47e310f90efb27abb32a843d892af0ab470dc261e",
+      "result_digest": "bac1b2d17c6fbaca386c243e68da59c00ae6c882885999cb5290070166b6f73b",
       "evidence_refs": [
         "docs/research/formal-semantic-validation/corpus/workflow-reachable.sdl.yaml",
         "implementations/python/tests/test_semantics_planner.py",
@@ -230,7 +230,7 @@
       "replayable": true,
       "actual_outcome": "stable",
       "diagnostic_kind": null,
-      "result_digest": "516f6c5150d393035e688b107377652c0614674a6895f33bedf9a4a84b0468f9",
+      "result_digest": "96b530ff03c867b8d744a67322f134659d9a5cccc22b27dd1876a4c6027435a4",
       "evidence_refs": [
         "docs/research/formal-semantic-validation/corpus/determinism-a.sdl.yaml",
         "implementations/python/tests/test_pipeline_determinism.py"
@@ -246,7 +246,7 @@
       "replayable": true,
       "actual_outcome": "distinguishable",
       "diagnostic_kind": null,
-      "result_digest": "b6bcc84a9c919a1fe3db9efd2cf14d6b4fd19498d70b164e79245c07c785f689",
+      "result_digest": "acc21ce5246810ee3c542df8ac3fbc23a2db52c918f39b7ecd102e76019d2d99",
       "evidence_refs": [
         "docs/research/formal-semantic-validation/corpus/determinism-a.sdl.yaml",
         "docs/research/formal-semantic-validation/corpus/determinism-b.sdl.yaml"

@@ -2,9 +2,9 @@
   "contract_id": "sdl-authoring-input-v1",
   "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
   "stability": "draft",
-  "content_hash": "d7718b3dcf0bea4d281401b7f6ec5d02d18b670700f6c5e12c03ccc258594d02",
+  "content_hash": "5006e507297efea017d29dbbddf5943f6744e2634ce768f5d72a68b7cff3c2e2",
   "last_change": {
-    "summary": "Published typed node-to-node network namespace sharing for issue 849.",
-    "content_hash": "d7718b3dcf0bea4d281401b7f6ec5d02d18b670700f6c5e12c03ccc258594d02"
+    "summary": "Published enterprise tenancy and typed network namespace sharing authoring semantics.",
+    "content_hash": "5006e507297efea017d29dbbddf5943f6744e2634ce768f5d72a68b7cff3c2e2"
   }
 }
