@@ -140,6 +140,7 @@ from .outcome import (
     ParticipantOutcomeTargetRecord,
 )
 from .outcome_interpretation_validation import validate_participant_outcome_interpretation_record
+from .participant_action_arguments import resolve_participant_action_arguments
 from .participant_exposure_authority import (
     ParticipantExposureAssessment,
     ParticipantExposureAuthorizationRecord,
@@ -329,6 +330,7 @@ __all__ = [
     "map_backend_diagnostic_to_participant_failure",
     "participant_lifecycle_field_violation_messages",
     "resource_payload",
+    "resolve_participant_action_arguments",
     "validate_evaluation_result",
     "validate_participant_action_result_contract",
     "validate_participant_outcome_interpretation_record",

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Literal
+from typing import Annotated, Literal, TypeAlias
 
 from pydantic import Field, GetJsonSchemaHandler, StrictInt, model_validator
 from pydantic.json_schema import JsonSchemaValue
@@ -24,6 +24,10 @@ ParticipantDecisionSurfaceVisibility = Literal[
 ]
 ParticipantDecisionSurfaceEligibility = Literal["eligible", "ineligible", "unknown", "unsupported"]
 ParticipantDecisionSurfaceSupport = Literal["supported", "unsupported", "unknown"]
+ParticipantDecisionSurfaceArgumentScalar: TypeAlias = str | int | float | bool
+ParticipantDecisionSurfaceArgumentValue: TypeAlias = (
+    ParticipantDecisionSurfaceArgumentScalar | list[ParticipantDecisionSurfaceArgumentScalar]
+)
 
 
 def _require_unique(values: list[str], field_name: str) -> None:
@@ -406,6 +410,7 @@ class ParticipantDecisionSurfaceSelectionModel(ContractModel):
     action_contract_address: NonEmptyString
     argument_shape_ref: NonEmptyString
     proposal_ref: NonEmptyString
+    arguments: dict[NonEmptyString, ParticipantDecisionSurfaceArgumentValue] = Field(default_factory=dict)
 
 
 def validate_participant_decision_surface_context(

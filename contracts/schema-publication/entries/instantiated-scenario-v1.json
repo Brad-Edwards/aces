@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
   "stability": "draft",
-  "content_hash": "41698ee5c3340e69345aaef67a82dd906c46d686b46646444e1164a8ba1fba9c",
+  "content_hash": "c56fc31d299c1658e2bded096fc56a1b206d8d6208d0ff33ad15bdab96bb5e57",
   "last_change": {
-    "summary": "Retargeted qualified Python validator references from aces_sdl to raes without changing schema identifiers or semantics.",
-    "content_hash": "41698ee5c3340e69345aaef67a82dd906c46d686b46646444e1164a8ba1fba9c"
+    "summary": "Published governed participant action-argument domains in instantiated scenarios after the raes import hard cut.",
+    "content_hash": "c56fc31d299c1658e2bded096fc56a1b206d8d6208d0ff33ad15bdab96bb5e57"
   }
 }

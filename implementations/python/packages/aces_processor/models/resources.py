@@ -212,6 +212,8 @@ class ParticipantActionContractRuntime(ResolvedResource):
     """Compiled participant action contract."""
 
     action_name: str = ""
+    argument_shape_ref: str = ""
+    argument_definitions: tuple[dict[str, Any], ...] = ()
     semantic_version: str = ""
     lifecycle_state: str = ""
     behavioral_granularity: str = ""

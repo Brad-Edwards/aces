@@ -2,9 +2,9 @@
   "contract_id": "sdl-authoring-input-v1",
   "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
   "stability": "draft",
-  "content_hash": "422eb2a20af82a59c42ce1064a4b973207ca7099e4e8ea808b4fdfb9ccfeb471",
+  "content_hash": "afb01aba739f38e3c102ee7d78bbad665f865651770a12b1e5df2c0ad629f2f2",
   "last_change": {
-    "summary": "Retargeted qualified Python validator references from aces_sdl to raes without changing schema identifiers or semantics.",
-    "content_hash": "422eb2a20af82a59c42ce1064a4b973207ca7099e4e8ea808b4fdfb9ccfeb471"
+    "summary": "Published closed governed participant action-argument authoring semantics after the raes import hard cut.",
+    "content_hash": "afb01aba739f38e3c102ee7d78bbad665f865651770a12b1e5df2c0ad629f2f2"
   }
 }

@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "4f49b1c744b930b4e100bfef12e105ab3a569208356d06016b7d06e8b5a669c0",
+  "content_hash": "21d9ef8cade288a5420e06259d1d30dd0ca69a0576f74d3f6a311edeff67ea24",
   "last_change": {
-    "summary": "Retargeted qualified Python validator references from aces_sdl to raes without changing schema identifiers or semantics.",
-    "content_hash": "4f49b1c744b930b4e100bfef12e105ab3a569208356d06016b7d06e8b5a669c0"
+    "summary": "Carried governed participant action-argument domains into satisfiability evidence after the raes import hard cut.",
+    "content_hash": "21d9ef8cade288a5420e06259d1d30dd0ca69a0576f74d3f6a311edeff67ea24"
   }
 }
