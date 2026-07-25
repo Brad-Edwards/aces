@@ -4,7 +4,7 @@
   "stability": "draft",
   "content_hash": "b575a70e1ce4f5ffb2206bdc81834f5a3d6badfe1376fd45c03a6f617e2186e3",
   "last_change": {
-    "summary": "Published content-owned service materialization and readback bindings in immutable scenario snapshots.",
+    "summary": "Published enterprise tenancy, typed network namespace sharing, and content-owned service materialization in immutable scenario snapshots.",
     "content_hash": "b575a70e1ce4f5ffb2206bdc81834f5a3d6badfe1376fd45c03a6f617e2186e3"
   }
 }
