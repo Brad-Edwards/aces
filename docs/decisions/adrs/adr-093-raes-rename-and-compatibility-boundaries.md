@@ -145,3 +145,4 @@ land under its own owning ADR/spec/contract process.
 | 2026-07-24 | #866 | Revised the decision from compatibility-preserving rename boundaries to a hard cutover for public command, MCP, guidance, and Python distribution surfaces after implementation clarification. |
 | 2026-07-25 | #866-pypi-name-correction | Corrected the RAES PyPI distribution target to the `raes` project name and removed the erroneous suffix-bearing slug from current emitted surfaces. |
 | 2026-07-25 | #884 | MOD-884 supersedes the retained `aces_sdl` source-import boundary: top-level `raes` becomes the only SDL import namespace, with no compatibility alias or shim. |
+| 2026-07-25 | #894 | Completed the hard cut across every owning Python package: `aces`, `aces_sdl`, and all `aces_*` import namespaces are removed without aliases, wrappers, import hooks, or fallbacks. |
