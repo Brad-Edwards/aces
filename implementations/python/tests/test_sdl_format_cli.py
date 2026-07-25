@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from aces_cli.main import app
-from aces_sdl import format_sdl_source
+from raes import format_sdl_source
 from typer.testing import CliRunner
 
 

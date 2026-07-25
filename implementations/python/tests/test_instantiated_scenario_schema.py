@@ -14,10 +14,10 @@ from pathlib import Path
 
 import pytest
 from aces_contracts.contracts import schema_bundle
-from aces_sdl._base import VARIABLE_TOKEN_PATTERN
-from aces_sdl.scenario import InstantiatedScenario, Scenario
 from jsonschema import Draft202012Validator
 from pydantic import ValidationError
+from raes._base import VARIABLE_TOKEN_PATTERN
+from raes.scenario import InstantiatedScenario, Scenario
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SDL_SCHEMA_DIR = REPO_ROOT / "contracts" / "schemas" / "sdl"

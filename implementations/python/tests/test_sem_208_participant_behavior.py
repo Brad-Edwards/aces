@@ -15,12 +15,12 @@ from aces_processor.models import (
     ParticipantObservationStatus,
     iter_participant_behavior_history_violations,
 )
-from aces_sdl._declarations import build_declaration_index
-from aces_sdl._errors import SDLInstantiationError, SDLParseError, SDLValidationError
-from aces_sdl.instantiate import instantiate_scenario
-from aces_sdl.parser import parse_sdl, parse_sdl_file
-from aces_sdl.participant_behavior import ParticipantInteractionClass
 from jsonschema import Draft202012Validator
+from raes._declarations import build_declaration_index
+from raes._errors import SDLInstantiationError, SDLParseError, SDLValidationError
+from raes.instantiate import instantiate_scenario
+from raes.parser import parse_sdl, parse_sdl_file
+from raes.participant_behavior import ParticipantInteractionClass
 
 T0 = "2026-05-18T18:30:00Z"
 T1 = "2026-05-18T18:30:05Z"

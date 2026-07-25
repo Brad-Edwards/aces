@@ -1,14 +1,15 @@
 """Model-level tests for the service-manager unit state runtime surface.
 
-Covers ``aces_sdl.runtime_service_units`` (see ADR-035). These tests construct
+Covers ``raes.runtime_service_units`` (see ADR-035). These tests construct
 ``ServiceManagerUnit`` and ``ServiceUnitExecStart`` directly to exercise field
 validators, redaction invariants, duplicate detection, and stable-identifier
 discipline without going through the YAML parser.
 """
 
 import pytest
-from aces_sdl.runtime_configuration import RuntimeConfiguration
-from aces_sdl.runtime_service_units import (
+from pydantic import ValidationError
+from raes.runtime_configuration import RuntimeConfiguration
+from raes.runtime_service_units import (
     ServiceManagerKind,
     ServiceManagerUnit,
     ServiceUnitActiveState,
@@ -19,7 +20,6 @@ from aces_sdl.runtime_service_units import (
     ServiceUnitLoadState,
     ServiceUnitResult,
 )
-from pydantic import ValidationError
 
 # ---------------------------------------------------------------------------
 # ServiceUnitExecStart
@@ -423,8 +423,8 @@ class TestRuntimeConfigurationServiceManagerUnits:
 def _validate(scenario) -> list[str]:
     """Run validation and return errors (empty list = valid). Mirrors
     test_sdl_validator.py's helper so failures surface as readable lists."""
-    from aces_sdl._errors import SDLValidationError
-    from aces_sdl.validator import SemanticValidator
+    from raes._errors import SDLValidationError
+    from raes.validator import SemanticValidator
 
     try:
         SemanticValidator(scenario).validate()
@@ -435,7 +435,7 @@ def _validate(scenario) -> list[str]:
 
 def _scenario_with_units(units: list[dict], *, fs_inventory: list[dict] | None = None, nodes: dict | None = None):
     """Build a Scenario where `box` carries the units (and optional fs inventory)."""
-    from aces_sdl.scenario import Scenario
+    from raes.scenario import Scenario
 
     runtime: dict = {"service_manager_units": units}
     if fs_inventory is not None:
@@ -488,7 +488,7 @@ class TestSemanticValidatorServiceManagerUnits:
         assert any("same node" in e for e in errors)
 
     def test_variable_service_ref_deferred(self):
-        from aces_sdl.scenario import Scenario
+        from raes.scenario import Scenario
 
         s = Scenario(
             name="t",
@@ -541,7 +541,7 @@ class TestSemanticValidatorServiceManagerUnits:
         assert _validate(s) == []
 
     def test_variable_unit_file_path_deferred(self):
-        from aces_sdl.scenario import Scenario
+        from raes.scenario import Scenario
 
         s = Scenario(
             name="t",

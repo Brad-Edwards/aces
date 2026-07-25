@@ -30,7 +30,7 @@ REQUIRED_SURFACES = (
     "precedents.md",
     "specs/",
     "contracts/",
-    "implementations/python/packages/aces_sdl/",
+    "implementations/python/packages/raes/",
 )
 
 REQUIRED_FINDING_FIELDS = (

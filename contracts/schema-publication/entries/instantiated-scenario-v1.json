@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
   "stability": "draft",
-  "content_hash": "2501d05645a48ed1d883e5467f6742d646975ae69cdb2f71a2f6f2066877d458",
+  "content_hash": "41698ee5c3340e69345aaef67a82dd906c46d686b46646444e1164a8ba1fba9c",
   "last_change": {
-    "summary": "Published enterprise tenancy, service materialization, shared time, and autonomous participant execution in instantiated scenarios.",
-    "content_hash": "2501d05645a48ed1d883e5467f6742d646975ae69cdb2f71a2f6f2066877d458"
+    "summary": "Retargeted qualified Python validator references from aces_sdl to raes without changing schema identifiers or semantics.",
+    "content_hash": "41698ee5c3340e69345aaef67a82dd906c46d686b46646444e1164a8ba1fba9c"
   }
 }

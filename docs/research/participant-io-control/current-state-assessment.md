@@ -79,9 +79,9 @@ section-per-UID implementation mappings.
 
 Implementation exists in:
 
-- `implementations/python/packages/aces_sdl/participant_behavior.py` and
+- `implementations/python/packages/raes/participant_behavior.py` and
   `participant_action_semantics.py`;
-- `implementations/python/packages/aces_sdl/semantics/participant_behavior.py`;
+- `implementations/python/packages/raes/semantics/participant_behavior.py`;
 - `implementations/python/packages/aces_processor/compiler/` and
   `aces_processor/models/`;
 - `implementations/python/packages/aces_contracts/contracts/`; and
@@ -206,7 +206,7 @@ capability booleans are added.
 
 ### Orchestration injects: DSL-111
 
-`aces_sdl/orchestration.py` defines `Inject`; scenario, composition, validation,
+`raes/orchestration.py` defines `Inject`; scenario, composition, validation,
 planning, compilation, published schemas, and tests preserve inject/event/
 script/story identity and schedule. These are orchestration resources. They do
 not bind a participant addressee, observation boundary, authorization,

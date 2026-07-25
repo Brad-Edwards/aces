@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from aces_sdl.scenario import InstantiatedScenario
+from raes.scenario import InstantiatedScenario
 
 from ..models import GeneratedArtifactRuntime, PersistentVolumeRuntime
 from .addresses import (

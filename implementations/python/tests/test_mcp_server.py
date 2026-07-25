@@ -207,6 +207,8 @@ nodes:
 class TestReferenceTools:
     def test_sdl_overview_returns_content(self, server):
         text = _call(server, "sdl_overview")
+        assert "agentic environments" in text
+        assert "authored scenarios" in text
         assert "SDL" in text
         assert "authoring sections" in text.lower()
         assert "17 sections" not in text.lower()
@@ -921,6 +923,8 @@ class TestServerConstruction:
         server = create_server()
         assert server.instructions
         assert "SDL" in server.instructions
+        assert "agentic environments" in server.instructions
+        assert "authored scenario" in server.instructions
 
 
 # ---------------------------------------------------------------------------

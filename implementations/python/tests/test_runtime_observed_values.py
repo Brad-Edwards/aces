@@ -6,19 +6,19 @@ from collections.abc import Callable
 from typing import Any
 
 import pytest
-from aces_sdl.image_provenance import ImageBuildArg, ImageEnvironmentDefault
-from aces_sdl.runtime_app_authorization import RuntimeAppAuthorizationPrincipal
-from aces_sdl.runtime_application import RuntimeApplicationExposedField
-from aces_sdl.runtime_configuration import RuntimeEnvironmentValueClassification, RuntimeEnvironmentVariable
-from aces_sdl.runtime_database import DatabaseSetting
-from aces_sdl.runtime_datastore import RuntimeDatastoreSetting
-from aces_sdl.runtime_directory_identity import RuntimeIdentityAttribute
-from aces_sdl.runtime_dns import DnsRuntimeSetting
-from aces_sdl.runtime_forwarding_agent import RuntimeForwardingSetting, RuntimeForwardingShipTarget
-from aces_sdl.runtime_mail_service import RuntimeMailSetting
-from aces_sdl.runtime_platform_application import RuntimePlatformApplicationConnector, RuntimePlatformApplicationSetting
-from aces_sdl.runtime_security_monitoring import RuntimeSecurityMonitoringSetting
 from pydantic import ValidationError
+from raes.image_provenance import ImageBuildArg, ImageEnvironmentDefault
+from raes.runtime_app_authorization import RuntimeAppAuthorizationPrincipal
+from raes.runtime_application import RuntimeApplicationExposedField
+from raes.runtime_configuration import RuntimeEnvironmentValueClassification, RuntimeEnvironmentVariable
+from raes.runtime_database import DatabaseSetting
+from raes.runtime_datastore import RuntimeDatastoreSetting
+from raes.runtime_directory_identity import RuntimeIdentityAttribute
+from raes.runtime_dns import DnsRuntimeSetting
+from raes.runtime_forwarding_agent import RuntimeForwardingSetting, RuntimeForwardingShipTarget
+from raes.runtime_mail_service import RuntimeMailSetting
+from raes.runtime_platform_application import RuntimePlatformApplicationConnector, RuntimePlatformApplicationSetting
+from raes.runtime_security_monitoring import RuntimeSecurityMonitoringSetting
 
 SecretValueFactory = Callable[[], object]
 SecretValueReader = Callable[[object], Any]

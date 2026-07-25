@@ -1,6 +1,6 @@
 # Versioning, Deprecation, and Migration Governance
 
-This specification is normative for ACES ecosystem evolution policy. It
+This specification is normative for RAES ecosystem evolution policy. It
 implements the joint design surface for GOV-901, GOV-902, and GOV-903.
 
 ## Scope
@@ -37,7 +37,7 @@ the named surface and dimension.
 **Structural acceptance** means the consumer accepts the artifact's syntactic
 or schema shape.
 
-**Semantic equivalence** means accepted input preserves the same ACES meaning.
+**Semantic equivalence** means accepted input preserves the same RAES meaning.
 
 **Behavioral compatibility** means runtime, CLI, API, validation, or
 conformance behavior remains within the documented contract.
@@ -164,7 +164,7 @@ ambiguous or lossy cases, and fail closed rather than drop unknown fields.
 Compatibility adapters stay at the owning boundary:
 
 - legacy `aces.*` re-exports stay in the compatibility tree;
-- SDL normalization and module composition stay in `aces_sdl`;
+- SDL normalization and module composition stay in `raes`;
 - contract readers stay in `aces_contracts`;
 - CLI presentation stays in `aces_cli`; and
 - backend/runtime layers do not reinterpret authored source to hide migration

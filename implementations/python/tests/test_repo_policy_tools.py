@@ -183,7 +183,7 @@ def setup_policy_repo(tmp_path: Path) -> Path:
         "What are the positive, negative, and risk trade-offs?\n",
     )
     for package in (
-        "aces_sdl",
+        "raes",
         "aces_processor",
         "aces_runtime",
         "aces_backend_protocols",
@@ -420,8 +420,8 @@ def test_adr_template_requires_alternatives_considered(tmp_path: Path) -> None:
 
 
 def _aces_sdl_file(repo_root: Path, name: str, content: str) -> str:
-    """Write a synthetic file under aces_sdl/ and return its repo-relative path."""
-    rel = f"implementations/python/packages/aces_sdl/{name}"
+    """Write a synthetic file under raes/ and return its repo-relative path."""
+    rel = f"implementations/python/packages/raes/{name}"
     write_text(repo_root / rel, content)
     return rel
 
@@ -462,7 +462,7 @@ def test_layering_rule_allows_aces_sdl_importing_other_packages(tmp_path: Path) 
     rel = _aces_sdl_file(
         repo_root,
         "_normal.py",
-        "from aces_contracts.contracts import Scenario\nfrom aces_sdl.semantics.objectives import analyze_objective_window\n",
+        "from aces_contracts.contracts import Scenario\nfrom raes.semantics.objectives import analyze_objective_window\n",
     )
 
     failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
@@ -472,7 +472,7 @@ def test_layering_rule_allows_aces_sdl_importing_other_packages(tmp_path: Path) 
 
 def test_layering_rule_does_not_check_files_outside_scope(tmp_path: Path) -> None:
     """An `import aces_processor` inside aces_processor itself (or any
-    package other than aces_sdl) is not a layering violation."""
+    package other than raes) is not a layering violation."""
     repo_root = setup_policy_repo(tmp_path)
     rel = "implementations/python/packages/aces_processor/internal.py"
     write_text(repo_root / rel, "import aces_processor.models\n")
@@ -541,7 +541,7 @@ def test_module_boundaries_reject_runtime_using_non_public_processor_module(tmp_
 def test_module_boundaries_reject_sdl_importing_runtime(tmp_path: Path) -> None:
     repo_root = setup_policy_repo(tmp_path)
     install_module_boundary_policy(repo_root)
-    rel = "implementations/python/packages/aces_sdl/uses_runtime.py"
+    rel = "implementations/python/packages/raes/uses_runtime.py"
     write_text(repo_root / rel, "import aces_runtime\n")
 
     failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
@@ -671,7 +671,7 @@ def test_module_boundaries_full_check_scans_all_module_sources(tmp_path: Path) -
 def test_module_boundaries_reject_runtime_importing_sdl_semantics(tmp_path: Path) -> None:
     repo_root = setup_policy_repo(tmp_path)
     rel = "implementations/python/packages/aces_runtime/uses_sdl_workflow_semantics.py"
-    write_text(repo_root / rel, "from aces_sdl.semantics.workflow import validate_workflow_step_result\n")
+    write_text(repo_root / rel, "from raes.semantics.workflow import validate_workflow_step_result\n")
 
     failures = evaluate_repo_policy(
         repo_root,
@@ -1025,8 +1025,8 @@ def test_unsafe_changed_path_is_rejected(tmp_path: Path) -> None:
     repo_root = setup_policy_repo(tmp_path)
     outside = tmp_path.parent / "outside_secret.py"
     write_text(outside, "import aces_processor\n")
-    link_rel = "implementations/python/packages/aces_sdl/_link.py"
-    (repo_root / "implementations" / "python" / "packages" / "aces_sdl").mkdir(parents=True, exist_ok=True)
+    link_rel = "implementations/python/packages/raes/_link.py"
+    (repo_root / "implementations" / "python" / "packages" / "raes").mkdir(parents=True, exist_ok=True)
     (repo_root / link_rel).symlink_to(outside)
 
     failures = evaluate_repo_policy(
@@ -1184,9 +1184,9 @@ def _published_schema(properties: dict[str, Any], *, required: list[str] | None 
 def test_should_run_full_validation_for_schema_driver_paths() -> None:
     assert should_run_full_validation(["tools/generate_contract_schemas.py"]) is True
     assert should_run_full_validation(["implementations/python/packages/aces_contracts/contracts.py"]) is True
-    # aces_sdl supplies the Scenario Pydantic model exposed by schema_bundle();
+    # raes supplies the Scenario Pydantic model exposed by schema_bundle();
     # a change there must trigger full schema validation just like aces_contracts.
-    assert should_run_full_validation(["implementations/python/packages/aces_sdl/agents.py"]) is True
+    assert should_run_full_validation(["implementations/python/packages/raes/agents.py"]) is True
     assert should_run_full_validation(["contracts/concept-authority/concept-families-v1.json"]) is False
 
 

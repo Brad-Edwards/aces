@@ -1,9 +1,16 @@
 # RAES Examples
 
 This directory contains non-normative worked examples, templates, and reusable
-patterns. They are useful for reading, testing, and adapting current SDL
-behavior. They are not conformance fixtures, schemas, deployment recipes, or
-backend guarantees.
+patterns for authoring agentic environments with RAES SDL. They are useful for
+reading, testing, and adapting current SDL behavior. They are not conformance
+fixtures, schemas, deployment recipes, or backend guarantees.
+
+The current corpus is strongest in cyber and infrastructure scenarios. Those
+examples demonstrate the domain-neutral authored-scenario model; they do not
+limit RAES to cyber or prove complete support for AI security, AI safety,
+testing, research, evaluation, or any additional domain. Future application
+areas extend through their own examples, vocabularies, profiles, assets,
+backends, and evidence requirements.
 
 ## Current Corpus
 
@@ -54,7 +61,7 @@ For one file, use the parser boundary directly:
 ```python
 from pathlib import Path
 
-from aces_sdl import parse_sdl_file
+from raes import parse_sdl_file
 
 scenario = parse_sdl_file(
     Path("../../examples/scenarios/port-authority-surge-response.sdl.yaml")

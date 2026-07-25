@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import pytest
-from aces_sdl._errors import SDLParseError, SDLValidationError
-from aces_sdl.observability_plane_semantics import (
+from raes._errors import SDLParseError, SDLValidationError
+from raes.observability_plane_semantics import (
     ObservabilityEvidencePlane,
     classify_sdl_section_plane,
     collect_scenario_native_observability_refs,
 )
-from aces_sdl.parser import parse_sdl
+from raes.parser import parse_sdl
 
 OBSERVABILITY_REF = "nodes.siem.runtime.service_listeners.siem-http"
 

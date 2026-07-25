@@ -1,7 +1,7 @@
-# AD ACES Inventory Preflight
+# AD RAES Inventory Preflight
 
-This is a historical APTL TechVault validation note imported into ACES as a
-reference example. It is not the methodology authority; the canonical ACES
+This is a historical APTL TechVault validation note imported into RAES as a
+reference example. It is not the methodology authority; the canonical RAES
 methodology is `docs/aces/inventory/asset-inventory-methodology.md`.
 
 This note records the local architecture preflight for SCN-010 / issue #332.
@@ -10,9 +10,9 @@ the issue phase marker, but the tool did not create a repo-local note file.
 
 ## Binding Guardrails
 
-- Keep this work as an ACES inventory and specification update. Evidence,
+- Keep this work as an RAES inventory and specification update. Evidence,
   Docker output, package manifests, scanner output, checksums, and ledgers are
-  proof inputs only; catalogued facts that ACES can express belong in
+  proof inputs only; catalogued facts that RAES can express belong in
   `scenarios/techvault.sdl.yaml`.
 - Do not create an APTL-local schema, parser, validator, Pydantic model, or
   runtime exception hierarchy for AD inventory facts.

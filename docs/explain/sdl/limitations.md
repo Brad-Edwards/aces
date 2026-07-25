@@ -190,14 +190,14 @@ Additionally, a 28-node enterprise lab topology (4 networks, 17 health checks, 1
 The directory/domain identity surface was added after the older Enterprise AD
 and AD trust/federation corpus entries. It is now covered by targeted parser
 and model tests plus the hospital ransomware scenario's AD/ADFS
-`runtime.identity_authorities` example. That coverage validates ACES's neutral
-reference and redaction mechanics; it is not a claim that ACES mirrors full
+`runtime.identity_authorities` example. That coverage validates RAES's neutral
+reference and redaction mechanics; it is not a claim that RAES mirrors full
 AD DS, LDAP, Kerberos, SCIM, SAML, OIDC, cloud IAM, or BloodHound schemas.
 
 The DNS runtime surface is covered by targeted parser, model, validator, and
-module-composition tests. That coverage validates ACES's neutral RRset,
+module-composition tests. That coverage validates RAES's neutral RRset,
 resolver-policy, evidence-ref, and reference mechanics; it is not a claim that
-ACES mirrors full BIND, CoreDNS, PowerDNS, NSD, Knot, provider API, passive
+RAES mirrors full BIND, CoreDNS, PowerDNS, NSD, Knot, provider API, passive
 DNS, or telemetry schemas.
 
 Property-based fuzz testing (Hypothesis) has run 1,050+ random inputs through the parser with zero unhandled crashes.

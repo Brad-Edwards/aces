@@ -1,9 +1,9 @@
 """Pydantic-error → SDL-diagnostic rendering for the SDL parser.
 
 Converts a Pydantic :class:`ValidationError` into bounded, source-anchored
-:class:`SDLParseError` diagnostics. Kept separate from :mod:`aces_sdl.parser`
+:class:`SDLParseError` diagnostics. Kept separate from :mod:`raes.parser`
 so the parser module stays focused on loading/normalization; ``parser`` re-imports
-these helpers so ``from aces_sdl.parser import ...`` call sites remain stable.
+these helpers so ``from raes.parser import ...`` call sites remain stable.
 """
 
 from __future__ import annotations

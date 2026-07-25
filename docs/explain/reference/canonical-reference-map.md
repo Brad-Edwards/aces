@@ -1,18 +1,36 @@
 # Canonical Reference Map
 
-This page identifies the current repository locations for ACES SDL reference
-material. It is an index, not a replacement for the linked artifacts.
+This page identifies the current repository locations for Reproducible Agentic
+Environments System (RAES) and RAES SDL reference material. RAES is the overall
+system for agentic environments; SDL is its authored scenario language. This
+page is an index, not a replacement for the linked artifacts.
 
 ## How To Use This Map
 
 - Scenario authors: start with the SDL guide, section reference, parser
   behavior, validation rules, and limitations.
+- Agentic-environment users: start with the glossary, getting-started guide,
+  runtime architecture, realization semantics, and conformance notes to follow
+  the path from authored scenario to realized environment and evidence.
 - Backend implementers: start with the contract root, schema inventory,
   runtime architecture, and backend conformance notes.
 - Researchers: start with lineage, design precedents, formal specifications,
   glossary, and current materialization notes.
 - Reviewers: use the authority boundary, ADRs, and documentation style guide
   to distinguish normative claims from explanatory prose.
+
+## RAES Lifecycle And Boundaries
+
+| Surface | Current reference |
+|---------|-------------------|
+| RAES and agentic-environment terminology | [`glossary.md`](glossary.md) |
+| Current system boundary and entrypoints | [`docs/explain/getting-started.md`](../getting-started.md) |
+| Authored scenario language | [`docs/explain/sdl/index.md`](../sdl/index.md) |
+| Instantiation, planning, and realization path | [`docs/explain/sdl/runtime-architecture.md`](../sdl/runtime-architecture.md) |
+| Explicitness and realized-form semantics | [`explicitness-realization-semantics.md`](explicitness-realization-semantics.md), [`realization-envelopes.md`](realization-envelopes.md) |
+| Variation and trial realization | [`scenario-variation-and-trial-realization.md`](scenario-variation-and-trial-realization.md) |
+| Backend conformance | [`backend-conformance.md`](backend-conformance.md) |
+| Evidence-bounded claim guidance | [`docs/explain/sdl/agent-guidance.md`](../sdl/agent-guidance.md), [`docs/explain/sdl/scientific-scenario-completeness.md`](../sdl/scientific-scenario-completeness.md) |
 
 ## Repository Authority
 

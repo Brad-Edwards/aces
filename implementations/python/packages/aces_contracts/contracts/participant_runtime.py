@@ -4,26 +4,26 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from aces_sdl.participant_attribution_semantics import (
+from pydantic import Field, StrictInt, model_validator
+from raes.participant_attribution_semantics import (
     ParticipantAttributionCandidateKind,
     ParticipantAttributionOrderingBasisKind,
     ParticipantAttributionSupportClass,
 )
-from aces_sdl.participant_behavior import (
+from raes.participant_behavior import (
     ParticipantEffectClass,
     ParticipantFailureClass,
     ParticipantInteractionClass,
     ParticipantPreconditionClass,
 )
-from aces_sdl.participant_outcome_semantics import (
+from raes.participant_outcome_semantics import (
     OutcomeInterpretationSourceLayer,
     OutcomeInterpretationTargetLayer,
 )
-from aces_sdl.participant_temporal_semantics import (
+from raes.participant_temporal_semantics import (
     ParticipantTemporalEventPoint,
     ParticipantTimeDomain,
 )
-from pydantic import Field, StrictInt, model_validator
 
 from ..participant_behavior import (
     ParticipantAdmissionDisposition,

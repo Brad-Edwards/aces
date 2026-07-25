@@ -1,10 +1,22 @@
 # Scenario Description Language (SDL) Reference
 
-RAES SDL is a YAML-based specification language for describing cyber range scenarios and experiments. It starts from the [Open Cyber Range SDL](https://github.com/Open-Cyber-Range/SDL-parser) surface, preserves coverage across the OCR-derived sections, and extends that base with additional scenario concepts such as content, accounts, relationships, agents, objectives, workflows, and variables. It is intentionally its own SDL rather than a clone-level derivative.
+RAES SDL is the YAML-based authored scenario language within Reproducible
+Agentic Environments System. It describes declared intent for agentic
+environments: settings in which participants can receive observations, take
+actions, interact, and be evaluated under stated controls. The SDL is
+domain-neutral, while its strongest current examples and lineage are in cyber.
+
+The language starts from the
+[Open Cyber Range SDL](https://github.com/Open-Cyber-Range/SDL-parser) surface,
+preserves coverage across the OCR-derived sections, and extends that base with
+content, accounts, relationships, agents, objectives, workflows, variables,
+and other scenario concepts. It is intentionally its own SDL rather than a
+clone-level derivative.
 
 The SDL describes *what the scenario and experiment mean*; it is not a direct
-deployment recipe. Backend implementations realize SDL specifications through
-runtime contracts. The repository includes SDL-native instantiation,
+deployment recipe. Backend implementations realize SDL specifications as
+concrete agentic environments through runtime contracts. The repository
+includes SDL-native instantiation,
 compilation, planning, contracts, backend stubs, conformance checks, and a
 reference control-plane surface. It does not include a production backend.
 

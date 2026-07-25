@@ -50,7 +50,7 @@ def test_research_evidence_and_formal_specs_select_contract_replay() -> None:
     "path",
     [
         "contracts/schemas/sdl/sdl-authoring-input-v1.json",
-        "implementations/python/packages/aces_sdl/scenario.py",
+        "implementations/python/packages/raes/scenario.py",
         "implementations/python/tests/test_sdl_models.py",
         "implementations/python/pyproject.toml",
         "noxfile.py",
@@ -78,7 +78,7 @@ def test_destructive_or_structural_changes_fail_closed(status: str) -> None:
 
 
 def test_mixed_prose_and_source_changes_take_the_highest_risk_plan() -> None:
-    plan = _plan("docs/explain/sdl/sections.md", "implementations/python/packages/aces_sdl/scenario.py")
+    plan = _plan("docs/explain/sdl/sections.md", "implementations/python/packages/raes/scenario.py")
 
     assert plan.contracts
     assert plan.regression

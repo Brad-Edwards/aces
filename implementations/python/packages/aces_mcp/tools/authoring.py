@@ -41,7 +41,7 @@ def register(mcp: FastMCP) -> None:
         if len(sdl_content.encode("utf-8", errors="replace")) > _MAX_INPUT_BYTES:
             return f"INPUT TOO LARGE — limit is {_MAX_INPUT_BYTES} bytes."
 
-        from aces_sdl import (
+        from raes import (
             SDLMigrationPolicy,
             SDLParseError,
             SDLValidationError,
@@ -123,7 +123,7 @@ def register(mcp: FastMCP) -> None:
             return f"INPUT TOO LARGE — limit is {_MAX_INPUT_BYTES} bytes."
 
         import yaml as _yaml
-        from aces_sdl import SDLParseError, SDLValidationError, load_sdl_fragment, parse_sdl
+        from raes import SDLParseError, SDLValidationError, load_sdl_fragment, parse_sdl
 
         section = section.strip().lower().replace("-", "_")
         valid_sections = {
@@ -239,7 +239,7 @@ def register(mcp: FastMCP) -> None:
 
         import json
 
-        from aces_sdl import (
+        from raes import (
             SDLInstantiationError,
             SDLParseError,
             SDLValidationError,

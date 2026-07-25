@@ -14,7 +14,7 @@ conformance checks, and tests.
 
 Enum blocks use formal names. Implementation schemas should publish a single
 wire spelling and document the mapping; the intended wire spelling is lowercase
-snake_case unless an existing ACES contract family requires a different style.
+snake_case unless an existing RAES contract family requires a different style.
 
 ## Current Sufficiency Finding
 
@@ -70,7 +70,7 @@ This design is constrained by the primary sources listed in
 
 - Gymnasium and OpenAI Gym support an action/observation/reward/episode
   boundary with action spaces, observation spaces, termination, truncation,
-  reset, and seeding. ACES follows that boundary, while adding
+  reset, and seeding. RAES follows that boundary, while adding
   multi-participant provenance and shared-state records and without requiring
   access to private policy internals.
 - PettingZoo contributes the multi-agent environment API discipline: per-agent
@@ -79,7 +79,7 @@ This design is constrained by the primary sources listed in
   Environment Cycle versus parallel API split. OpenSpiel contributes the
   game-theoretic surface PettingZoo does not model: chance nodes,
   information-state discipline, simultaneous-move games, current-player
-  semantics, and mean-field game support. ACES therefore separates hidden
+  semantics, and mean-field game support. RAES therefore separates hidden
   state, participant-visible observations, action-observation histories,
   centralized-training state, reward/return signals, interaction context, and
   review evidence, attributing each requirement to the source family that
@@ -100,14 +100,14 @@ This design is constrained by the primary sources listed in
   vocabulary.
 - CybORG, CyberBattleSim, CyGIL, CALDERA, OpenC2, CACAO, and ATT&CK show that
   cyber actions carry command, target, session, credential, knowledge,
-  detection, foothold, and outcome semantics. ACES records those as portable
+  detection, foothold, and outcome semantics. RAES records those as portable
   references without adopting any one backend or playbook format as canonical.
 - OCSF and STIX establish the event-schema precedent for identity, schema
   versioning, classification, timestamps with distinct meanings, normalized
   status/severity, confidence, source/raw mapping, raw-data integrity,
   markings, granular selectors, and extension rules.
 - Lamport clocks, HLA time management, Time Warp, DEVS, FMI, and related
-  runtime literature require ACES to separate wall-clock timestamps, logical
+  runtime literature require RAES to separate wall-clock timestamps, logical
   ordering, simulation time, time-advance grants, lookahead, message
   send/receive causality, rollback/anti-message handling, pacing, and
   synchronization. Vector time (Fidge; Mattern) and the Schwarz-Mattern
@@ -124,11 +124,11 @@ This design is constrained by the primary sources listed in
   auditable comparisons.
 - W3C PROV, FAIR, RO-Crate, and ACM artifact-review practice require persistent
   identifiers, qualified references, provenance, licensing/access metadata,
-  reusable artifact bundles, and explicit artifact availability limits. ACES
+  reusable artifact bundles, and explicit artifact availability limits. RAES
   preserves enough runtime and support-graph information for those packages and
   reviews without making issue #74 a full research-object archive exporter.
 
-These sources do not make ACES a compatibility layer for any one project. They
+These sources do not make RAES a compatibility layer for any one project. They
 define review constraints: the model must preserve the concepts needed to make
 participant behavior, information boundaries, concurrency, and benchmark claims
 auditable.
@@ -183,7 +183,7 @@ Enforcement columns mean:
 | PRT-01 | Base runtime records carry stable identity, schema version, event type, provenance, source refs, clocks, markings, and extension policy. | v1 MUST | `BaseEnvelope` | required fields, enums, timestamp shape, closed extra fields | `BaseOK`, `RefOK`, schema/model drift check | missing schema version; unknown required extension accepted |
 | PRT-02 | Evidence and raw-data claims are digest-bound and cannot point to mismatched bytes or placeholder hashes. | v1 MUST | `source_raw_ref`, `raw_data_integrity`, `evidence_refs`, evidence index digest fields | digest algorithm/pattern pairs, size/truncation requiredness | `RawDataIntegrityOK`, `EvidenceRefIntegrityOK` | event cites evidence A but digest belongs to evidence B |
 | PRT-03 | Field-level marking and redaction run before any public record, fixture, schema example, diagnostic, or changelog exposure. | v1 MUST | `marking_definition_refs`, `object_marking_refs`, `granular_markings`, `redaction_policy_ref`, `authorization_scope` | selector shape and marking-ref requiredness | `MarkingOK`, `NoHiddenDisclosure`, redaction publication gate | hidden answer key appears in public observation or fixture |
-| PRT-04 | OCSF/STIX-style classification is ACES-native unless an explicit source mapping proves compatibility. | v1 MUST | `event_classification`, `source_status`, `source_pipeline` | nullable only for no-claim records; closed status vocab | classification registry and source-mapping validation | OCSF-looking tuple accepted with no governed OCSF mapping |
+| PRT-04 | OCSF/STIX-style classification is RAES-native unless an explicit source mapping proves compatibility. | v1 MUST | `event_classification`, `source_status`, `source_pipeline` | nullable only for no-claim records; closed status vocab | classification registry and source-mapping validation | OCSF-looking tuple accepted with no governed OCSF mapping |
 | PRT-05 | Observable lifecycle phases do not require participant-internal plans, prompts, chain-of-thought, policy state, or workflow steps. | v1 MUST | `LifecycleEnvelope.phase`, `phase_realization`, `admission_disposition`, `operation_ref` | closed lifecycle/realization/disposition enums | `Transition_k`, lifecycle boundary validator | opaque LLM action rejected because no proposal trace exists |
 | PRT-06 | Non-RL cyber, human, script, playbook, and external actions are valid through action contracts and provenance, not action-space membership. | v1 MUST | `action_contract_ref`, `command_ref`, `actor_provenance`, `action_validity_basis_ref` | validity-basis enum and conditional refs | `StepActionValid`, `ActionValidityBasisOK` | human action with no RL action-space ref is rejected despite action contract |
 | PRT-07 | Participant-visible observation, hidden truth, scoring state, centralized-training state, evidence, and information state remain separate. | v1 MUST | `ObservationEnvelope`, `VisibleHistory`, `information_guarantee` | required projection/history refs for stronger guarantees | `KernelOK`, `HistoryConsistent`, `PerfectRecall` | hidden state id enters visible history without projection |
@@ -258,7 +258,7 @@ or downgraded by the declared enforcement point.
   simultaneity groups.
 
 `Information state`
-: The participant information state ACES claims at an order point. It may be
+: The participant information state RAES claims at an order point. It may be
   only the emitted observation, a history-consistent reconstruction, a
   perfect-recall history, a lossy projection, unknown, or unsupported.
 
@@ -331,7 +331,7 @@ or downgraded by the declared enforcement point.
   field. Markings govern disclosure; they are not prose warnings.
 
 `Refinement`
-: A relation showing that concrete backend traces project to valid ACES traces
+: A relation showing that concrete backend traces project to valid RAES traces
   while preserving required identity, order, visibility, provenance, and
   capability guarantees.
 
@@ -386,7 +386,7 @@ Where:
 - `action_observation_histories[p,e,t]` is the prefix or lower set of visible
   actions and observations available to participant `p` at order point `t`,
   depending on whether the visible delivery claim is total or partial.
-- `information_states[p,e,t]` is the information state ACES claims for
+- `information_states[p,e,t]` is the information state RAES claims for
   participant `p` at order point `t`.
 - `shared_state[address]` is the version chain for a shared operational state
   address.
@@ -451,7 +451,7 @@ BaseEnvelope =
 Rules:
 
 - `event_id` is globally stable within the run.
-- `schema_name` and `schema_version` identify the ACES contract projection, not
+- `schema_name` and `schema_version` identify the RAES contract projection, not
   the backend's native object.
 - `event_classification` and `source_status` are nullable only when the record
   makes no normalized event-status, severity, or security-telemetry claim.
@@ -470,13 +470,13 @@ Rules:
   facts for raw data that supports a runtime claim.
 - `source_pipeline` records source product/version, original event identity,
   processed/logged/transmitted times, correlation, and sequence information
-  when a source telemetry or command system is mapped into ACES.
+  when a source telemetry or command system is mapped into RAES.
 - `markings` and `granular_markings` are enforceable field-level disclosure
   labels.
 
 Event classification, source status, source pipeline metadata, raw-data
 integrity, and marking selectors follow the OCSF/STIX design pattern while
-remaining ACES-native:
+remaining RAES-native:
 
 ```text
 EventClassification =
@@ -493,9 +493,9 @@ EventClassification =
 ```
 
 `EventClassification` is not an implicit OCSF event. The tuple
-`(category_uid, class_uid, activity_id, type_uid)` is governed by the ACES
+`(category_uid, class_uid, activity_id, type_uid)` is governed by the RAES
 classification registry for the record's `schema_name` and `schema_version`.
-ACES-native examples may use the OCSF-style composite identifier pattern, but
+RAES-native examples may use the OCSF-style composite identifier pattern, but
 that does not assert that OCSF category, class, activity, or profile values are
 being emitted. If a record claims OCSF compatibility, it must cite a governed
 source-classification mapping and the mapped values must validate against the
@@ -784,7 +784,7 @@ downgrade.
 
 Participant interface and step-signal records carry the RL/MARL-facing pieces
 that Gymnasium, PettingZoo, and OpenSpiel make first-class, without making them
-the ACES protocol:
+the RAES protocol:
 
 ```text
 ParticipantInterface =
@@ -1307,12 +1307,12 @@ Where:
   `RawDataIntegrityOK(ev)`, and `EvidenceRefIntegrityOK(ev)`.
 - `EventClassificationOK(ev)` is true when `event_classification` is null and
   `ClassificationClaim(ev)` is false, or when the classification tuple is
-  present in the ACES classification registry for the record schema version.
+  present in the RAES classification registry for the record schema version.
   OCSF compatibility is true only with a cited OCSF mapping and
   OCSF-schema-valid values.
 - `ClassificationClaim(ev)` defines "makes a claim" for classification, status,
   severity, and security-telemetry purposes. It is true exactly when at least
-  one of the following holds: the ACES classification registry marks the
+  one of the following holds: the RAES classification registry marks the
   record's `(schema_name, schema_version, event_type)` as
   classification-bearing; the record populates `event_classification` or maps
   `source_status` into a normalized status/severity vocabulary; another record
@@ -1746,7 +1746,7 @@ Let:
   or unsupported.
 - `ObsValue(obs)` be the governed observation value or digest carried by an
   observation envelope after visibility projection and redaction.
-- `I_tr(p,e,t)` be the `InformationState` ACES claim for participant `p` at
+- `I_tr(p,e,t)` be the `InformationState` RAES claim for participant `p` at
   order point `t`.
 - `h1 ~_{p,policy} h2` mean two visible histories are indistinguishable to
   participant `p` under the declared visibility projection, markings, delivery
@@ -1962,7 +1962,7 @@ time. A conforming implementation claims the witness, and reviewers judge the
 partition property through it; asserting the partition property without the
 witness is not a valid `PerfectRecall` claim.
 
-For belief-state consumers, ACES may record a belief support:
+For belief-state consumers, RAES may record a belief support:
 
 ```text
 B_p,t = { s in StateSpace |
@@ -1974,13 +1974,13 @@ B_p,t = { s in StateSpace |
 trajectory under the same projection and redaction policy; it is not a backend
 dump of hidden world truth.
 
-ACES does not require a participant to maintain this belief. It only records
+RAES does not require a participant to maintain this belief. It only records
 enough visibility, ordering, and stochastic evidence for downstream reviewers
 to know whether such a belief or information-state claim is supportable.
 
 Guarantee meanings:
 
-- `ObservationOnly`: only the emitted observation envelope is portable. ACES
+- `ObservationOnly`: only the emitted observation envelope is portable. RAES
   does not claim that `I_tr(p,e,t)` is reconstructible from history.
 - `HistoryConsistent`: `HistoryConsistent_{p,tr,policy}(e,t)` holds.
 - `PerfectRecall`: `PerfectRecall_{p,tr,policy}(e,t)` holds.
@@ -2036,7 +2036,7 @@ Rules:
 
 ## RL And Multi-Agent Step Signal Semantics
 
-ACES does not adopt Gymnasium, PettingZoo, or OpenSpiel as wire protocols, but
+RAES does not adopt Gymnasium, PettingZoo, or OpenSpiel as wire protocols, but
 it preserves the concepts that make RL/MARL results reviewable.
 
 Rules:
@@ -2044,7 +2044,7 @@ Rules:
 - `InteractionContextEnvelope` is required whenever a step claim depends on
   turn order, possible/live/active agent membership, an AEC current actor,
   simultaneous actors, a chance outcome, a mean-field population update, or
-  backend serialization. Without it, ACES can record observations but cannot
+  backend serialization. Without it, RAES can record observations but cannot
   claim MARL/game-node semantics.
 - In `SequentialTurn` and `AgentEnvironmentCycle` modes, `current_actor_ref`
   must be exactly one participant in `active_agent_set`. Ordinary non-null
@@ -2088,7 +2088,7 @@ Rules:
   limit, or administrative condition ended the step/episode before task
   terminal semantics. These fields must remain separate.
 - Per-participant termination/truncation may differ from global episode
-  closure. ACES episode closure follows ADR-013 and references the local
+  closure. RAES episode closure follows ADR-013 and references the local
   termination/truncation signals when they contributed to closure.
 - `info_refs` may preserve auxiliary metrics or debug data, but marked hidden
   state inside an info object is not participant-visible unless a visibility
@@ -2241,7 +2241,7 @@ or opaque adapter disclosure for the action. They do not imply an
 cannot support a stronger validity, legality, or benchmark-comparison claim.
 `ActionAttemptRecordOK` is therefore weaker than
 `PortableActionValidityClaimOK`: the former says the attempt is recorded with a
-declared support basis; the latter says ACES can make a portable validity claim
+declared support basis; the latter says RAES can make a portable validity claim
 for it.
 
 `JointActionLinkageOK(k)` requires a governed joint-action record or step-signal
@@ -2286,7 +2286,7 @@ unless the scenario explicitly models a population process as a participant.
 
 ## Concurrency And Conflict Semantics
 
-For attempts `a` and `b` in joint action set `J`, ACES records a conflict when
+For attempts `a` and `b` in joint action set `J`, RAES records a conflict when
 any of the following hold:
 
 - `write_set(a)` intersects `read_set(b)` or `write_set(b)`;
@@ -2375,7 +2375,7 @@ The isolation vocabulary is anchored in the transaction-isolation literature:
 Berenson et al.'s critique of the ANSI SQL isolation levels defines the anomaly
 taxonomy and snapshot isolation, and Adya's generalized isolation theory gives
 the implementation-independent serialization-graph definitions that make these
-levels portable claims rather than vendor labels. ACES uses those meanings;
+levels portable claims rather than vendor labels. RAES uses those meanings;
 `Causal` follows the causal-consistency usage in the distributed-systems
 literature rather than an ANSI level.
 
@@ -2412,7 +2412,7 @@ Policy meanings:
   satisfy the stronger required semantics.
 - `Unsupported`: the backend cannot supply a portable conflict semantics.
 
-Fairness and liveness claims are bounded claims. If ACES says a retry policy is
+Fairness and liveness claims are bounded claims. If RAES says a retry policy is
 fair or starvation-free, the retry bound, scheduler basis, or proof obligation
 must be present. Otherwise the claim must be limited to observed outcome facts.
 
@@ -2653,7 +2653,7 @@ Rules:
 ## Asynchronous And Long-Running Operations
 
 Cyber actions often start, block, stream observations, partially succeed, time
-out, or complete after later state changes. ACES models these with operation
+out, or complete after later state changes. RAES models these with operation
 records rather than by inventing participant-internal lifecycle phases.
 
 Operation records carry:
@@ -2757,7 +2757,7 @@ Rules:
 - `credential_ref` points to a redacted or controlled evidence/state reference,
   never a raw credential value.
 - OpenC2 mappings preserve command/response correlation through
-  `openc2_command_id`, `openc2_request_id`, and response refs. ACES lifecycle
+  `openc2_command_id`, `openc2_request_id`, and response refs. RAES lifecycle
   success or failure is not inferred from source response text without a
   normalized status mapping.
 - CACAO mappings preserve playbook/workflow-step identity, commands,
@@ -2769,12 +2769,12 @@ Rules:
   or provenance claims.
 - Command mappings may cite OpenC2 actions/targets, CACAO playbook steps,
   CALDERA abilities/links/facts, ATT&CK techniques, CybORG actions, or
-  backend-native commands as source mappings. Those mappings do not define ACES
+  backend-native commands as source mappings. Those mappings do not define RAES
   semantics by themselves.
 - Knowledge, foothold, visibility, and detection deltas must be state records or
   evidence references when used to support outcome or attribution claims.
 - Backend-native success or failure strings are source labels until normalized
-  into ACES lifecycle, operation, observation, state, and outcome records.
+  into RAES lifecycle, operation, observation, state, and outcome records.
 
 ## Benchmark And Reproducibility Context
 
@@ -3862,7 +3862,7 @@ to the supported conclusion scope or explicitly record
 
 The intended universal relation is `trace-inclusion`: under the named
 participant observation projection, every admitted concrete backend trace must
-map to a valid abstract ACES trace. This section defines that obligation; it
+map to a valid abstract RAES trace. This section defines that obligation; it
 does not establish it. Current executable evidence is bounded to named fixtures
 and target probes, so no simulation, data-refinement, trace-equivalence, or
 bisimulation claim follows. The evidence boundary for each executed check must
@@ -4033,7 +4033,7 @@ Lifecycle phase, phase realization, admission disposition, operation state,
 information guarantee, ordering basis, isolation guarantee, conflict policy,
 mapping loss, delivery basis, and capability strength values are closed at the
 portable contract layer. Source labels may be preserved, but source labels do
-not define ACES semantics.
+not define RAES semantics.
 
 ### I17 - Missingness Distinctions
 
@@ -4044,7 +4044,7 @@ absence, and backend capability limit respectively.
 ### I18 - Information-State Claim Strength
 
 An observation may be portable without a portable information-state claim.
-Whenever ACES claims history consistency or perfect recall, the
+Whenever RAES claims history consistency or perfect recall, the
 action-observation history, visibility projection, markings, stochastic/noise
 context, and order relation must be sufficient for that claim.
 
@@ -4179,7 +4179,7 @@ as `sha256:1111...` demonstrate field placement only; they do not support exact
 raw-data integrity or provenance claims. A reviewable fixture must either cite
 an evidence fixture manifest whose bytes hash to the recorded digest, or set
 the raw-data hash fields to null/unknown and downgrade provenance accordingly.
-Likewise, event-classification tuples in these examples are ACES-native
+Likewise, event-classification tuples in these examples are RAES-native
 registry examples. They are not OCSF events unless a governed OCSF mapping ref
 and OCSF-valid class/profile values are supplied.
 

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from aces_sdl.observability_plane_semantics import classify_contract_plane
 from pydantic.json_schema import JsonSchemaValue
+from raes.observability_plane_semantics import classify_contract_plane
 
 from .base import _ACES_SEMANTIC_INVARIANT_PROFILE_URI
 
@@ -44,7 +44,7 @@ def _add_aces_plane(json_schema: JsonSchemaValue, contract_id: str) -> None:
 
     Plane ownership is sourced from the carrier-oriented classifier so the
     portable ``x-aces-plane`` annotation cannot drift from
-    ``aces_sdl.observability_plane_semantics`` (ADR-066 / SEM-224).
+    ``raes.observability_plane_semantics`` (ADR-066 / SEM-224).
     """
 
     json_schema["x-aces-plane"] = classify_contract_plane(contract_id).value
@@ -141,7 +141,7 @@ def _attach_stateful_resource_invariants(contract_id: str, json_schema: dict[str
         "stateful-generated-artifact-semantics",
         "Generated artifact output names and paths, consumers, and dependency entries must be unique, and "
         "generated artifact consumers must be read-only.",
-        validator="aces_sdl.stateful_resources.GeneratedArtifact._unique_outputs_and_consumers",
+        validator="raes.stateful_resources.GeneratedArtifact._unique_outputs_and_consumers",
         inputs=input_contract,
     )
     _add_aces_invariant(
@@ -149,7 +149,7 @@ def _attach_stateful_resource_invariants(contract_id: str, json_schema: dict[str
         "stateful-persistent-volume-semantics",
         "Persistent volume consumers and dependency entries must be unique and access cardinality must match "
         "the declared portable access mode.",
-        validator="aces_sdl.stateful_resources.PersistentVolume._unique_consumers",
+        validator="raes.stateful_resources.PersistentVolume._unique_consumers",
         inputs=input_contract,
     )
     _add_aces_invariant(
@@ -157,7 +157,7 @@ def _attach_stateful_resource_invariants(contract_id: str, json_schema: dict[str
         "stateful-cross-resource-semantics",
         "Stateful resource consumers and dependencies must resolve unambiguously, use the POSIX v1 path dialect, "
         "and must not collide on a consumer node mount destination.",
-        validator="aces_sdl._stateful_resource_references.stateful_resource_reference_errors",
+        validator="raes._stateful_resource_references.stateful_resource_reference_errors",
         inputs=input_contract,
     )
 
@@ -196,7 +196,7 @@ def _attach_initial_service_state_invariants(contract_id: str, json_schema: dict
         "initial-service-state-semantics",
         "Service-target content must resolve to one named service, retain exact tenant/reset ownership and "
         "content ordering, and bind observed-state postconditions to participant observation boundaries.",
-        validator="aces_sdl.validator.SemanticValidator._verify_service_materialization",
+        validator="raes.validator.SemanticValidator._verify_service_materialization",
         inputs=[{"contract_id": contract_id, "instance_path": "#"}],
     )
 

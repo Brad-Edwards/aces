@@ -1,6 +1,6 @@
 # Evolution Governance
 
-This directory contains normative ACES ecosystem policy for artifact
+This directory contains normative RAES ecosystem policy for artifact
 evolution: versioning, compatibility, deprecation, removal, and migration.
 
 The governing decision is

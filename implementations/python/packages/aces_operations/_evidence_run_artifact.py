@@ -148,7 +148,7 @@ def _backend_section(
 
 
 def _scenario_section(scenario_path: Path, model: CompiledModel) -> dict[str, Any]:
-    from aces_sdl.parser import parse_sdl_file
+    from raes.parser import parse_sdl_file
 
     content = scenario_path.read_bytes()
     version: str | None = None

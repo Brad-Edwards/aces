@@ -1,8 +1,27 @@
 # Reproducible Agentic Environments System
 
-Reproducible Agentic Environments System (RAES) is a backend-agnostic scenario
-description language, Python reference implementation, and contract surface
-for cyber range scenarios and experiments.
+Reproducible Agentic Environments System (RAES) is a system for describing,
+realizing, controlling, evaluating, and reproducing agentic environments. An
+agentic environment is a declared and realized setting in which participants
+receive observations, take actions, interact with resources or other
+participants, and are evaluated under stated controls. Participants can
+include software agents, policies, scripts, and human-control proxies.
+
+RAES supports a bounded reproduction attempt by connecting authored intent,
+deterministic or governed variation, realization inputs, participant behavior,
+observations, apparatus identity, provenance, evidence, replay boundaries, and
+conformance results. It does not guarantee deterministic runtime behavior,
+equal outcomes, exact replay, scientific validity, or reproducibility.
+
+Cyber, AI security, AI safety, testing, research, and evaluation are
+non-exhaustive application areas. The general model can support additional
+domains through domain-specific examples, controlled vocabularies, semantic
+profiles, reusable assets, backend profiles, and evidence requirements.
+
+The current repository materializes RAES through its Scenario Description
+Language (SDL), Python reference implementation, published contracts, examples,
+and assurance material. RAES names the overall system; RAES SDL is the authored
+scenario language within it.
 
 The repository separates authored scenario meaning from processors, backends,
 participant implementations, runtime state, and archived evidence. In the
@@ -12,12 +31,13 @@ backend contracts without binding the authored scenario to one cloud, range
 implementation, or execution harness.
 
 This is an academic and engineering project. The repository is intended to be
-read, tested, and used as reference implementation code, not treated as a product
-surface.
+read, tested, and used as reference implementation code, not treated as a
+managed service.
 
-The repository is not a managed cyber range and does not include a production
-backend. Backend contracts, stubs, conformance checks, and examples are present;
-real deployment backends remain separate implementations.
+The repository is not a managed environment service and does not include a
+production backend. Backend contracts, stubs, conformance checks, and examples
+are present; real deployment backends remain separate implementations. Cyber is
+the strongest current example and lineage base, not the boundary of the core.
 
 A worked example of RAES SDL driving a concrete range is
 [APTL (Advanced Purple Team Lab)](https://github.com/Brad-Edwards/aptl), a
@@ -26,7 +46,7 @@ realizes the selected topology on a Docker Compose backend.
 
 ## Contents
 
-- [What RAES Describes](#what-raes-describes)
+- [Agentic Environments And RAES SDL](#agentic-environments-and-raes-sdl)
 - [Getting Started](#getting-started)
 - [Using the Python Reference Implementation](#using-the-python-reference-implementation)
 - [Repository Layout](#repository-layout)
@@ -39,12 +59,15 @@ realizes the selected topology on a Docker Compose backend.
 - [License](#license)
 - [Maintainer](#maintainer)
 
-## What RAES Describes
+## Agentic Environments And RAES SDL
 
-An SDL file is a declarative scenario document. It can describe topology,
-hosts, services, identities, content, relationships, agents, objectives,
-workflows, variables, and evaluation material without directly describing a
-specific backend's infrastructure primitives.
+RAES SDL records authored scenario and experiment intent. An SDL file can
+describe topology, hosts, services, identities, content, relationships, agents,
+objectives, workflows, variables, and evaluation material without directly
+describing a specific backend's infrastructure primitives. Processors,
+backends, participant implementations, and runtime choices turn that authored
+scenario into a realized environment; the realization is not identical to the
+SDL document.
 
 ```yaml
 name: hospital-ransomware-surgery-day
@@ -99,7 +122,7 @@ Parse and validate a scenario from Python:
 ```python
 from pathlib import Path
 
-from aces_sdl import parse_sdl_file
+from raes import parse_sdl_file
 
 scenario = parse_sdl_file(
     Path("../../examples/scenarios/hospital-ransomware-surgery-day.sdl.yaml")
@@ -234,12 +257,12 @@ must mint a new schema version as described in
 
 ## Citation
 
-If you use RAES SDL in academic work, cite the repository:
+If you use RAES in academic work, cite the system:
 
 ```bibtex
 @software{raes,
   author       = {Edwards, Brad},
-  title        = {RAES SDL: Backend-Agnostic Scenario Description Language for Cyber Range Experiments},
+  title        = {RAES: Reproducible Agentic Environments System},
   year         = {2026},
   license      = {MIT},
   url          = {https://github.com/RAESystem/rae}

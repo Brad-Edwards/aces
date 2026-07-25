@@ -1,6 +1,6 @@
 # Lineage and Prior Work
 
-ACES is not designed as a clean-room language. It is a consolidation layer over
+RAES is not designed as a clean-room language. It is a consolidation layer over
 cyber range SDLs, adversary emulation formats, agent-evaluation environments,
 runtime architectures, and security event schemas that solve adjacent parts of
 the same problem.
@@ -8,7 +8,7 @@ the same problem.
 This page is a short map of the main influences. It is not a provenance or
 compatibility claim, and it is not an exhaustive bibliography. For design
 rationale, see [Design Precedents](precedents.md). For a dimension-by-dimension
-comparison against precedent systems, including where those systems lead ACES, see
+comparison against precedent systems, including where those systems lead RAES, see
 [Related-Work Comparison](related-work-comparison.md).
 
 The normative audit record is
@@ -16,15 +16,15 @@ The normative audit record is
 It distinguishes intellectual lineage from artifact/code derivation and from
 implementation examples, pins source revisions and bibliographic identities,
 and records directional compatibility and notice disposition. An influence
-listed on this page is not, by itself, a claim that ACES adopted syntax,
+listed on this page is not, by itself, a claim that RAES adopted syntax,
 semantics, examples, or code from that source.
 
 ## Specification Surface
 
 - [Open Cyber Range SDL](https://documentation.opencyberrange.ee/docs/sdl/reference/)
-  is the closest direct SDL precedent. ACES starts from its author-facing
+  is the closest direct SDL precedent. RAES starts from its author-facing
   section surface, including logical nodes, infrastructure, features,
-  conditions, entities, injects, events, scripts, and stories. ACES keeps the
+  conditions, entities, injects, events, scripts, and stories. RAES keeps the
   logical scenario surface separate from backend realization instead of
   treating the SDL as a deployment format, and per
   [ADR-073](../../decisions/adrs/adr-073-scoring-reward-language-scope.md) it
@@ -45,7 +45,7 @@ semantics, examples, or code from that source.
   informs variables, objective composition, workflow graph structure, and the
   distinction between authored playbook intent and concrete execution.
 - [STIX 2.1](https://docs.oasis-open.org/cti/stix/v2.1/stix-v2.1.html)
-  informs typed directed relationships and cross-object references. ACES adapts
+  informs typed directed relationships and cross-object references. RAES adapts
   that pattern for scenario elements rather than threat-intelligence objects.
 - CyRIS, KYPO, OCR, VSDL, and CRACK are prior scenario-definition systems.
   Their strongest shared lesson is that scenario meaning must be more than a
@@ -53,7 +53,7 @@ semantics, examples, or code from that source.
 - SBOM standards such as [CycloneDX](https://cyclonedx.org/specification/overview/)
   and [SPDX](https://spdx.dev/use/specifications/) inform the runtime software
   component identity vocabulary: component type, version, purl/CPE, hashes, and
-  package or manifest lineage are useful portable facts. ACES adapts those
+  package or manifest lineage are useful portable facts. RAES adapts those
   identity concepts under `Node.runtime.software_components`; it does not import
   raw SBOM documents, scanner output, or invocation/capability semantics into
   the SDL schema.
@@ -76,14 +76,14 @@ observed gap in APTL's TechVault AD inventory. It is not a clean-room
 invention, but it also is not a clone of any one directory or attack-graph
 format.
 
-ACES relies on prior work in four different ways:
+RAES relies on prior work in four different ways:
 
 - **Scenario-language precedents:** top-level `accounts` keeps the CyRIS account
   placement lineage. CyRIS implements `add_account`/`modify_account` as
   host/user management operations in code
   ([modules.py](https://github.com/crond-jaist/cyris/blob/8b65a30581cdd8e126c7b1fa26db2a4b770b7f17/main/modules.py)),
-  so ACES continues to treat `accounts` as curated scenario/provisioning
-  resources. ACES does not infer a full directory service from those accounts.
+  so RAES continues to treat `accounts` as curated scenario/provisioning
+  resources. RAES does not infer a full directory service from those accounts.
 - **Primary industry standards:** LDAP/X.500 ([RFC 4510](https://www.rfc-editor.org/rfc/rfc4510),
   [RFC 4512](https://www.rfc-editor.org/rfc/rfc4512)), Kerberos
   ([RFC 4120](https://www.rfc-editor.org/rfc/rfc4120)), SCIM
@@ -98,19 +98,19 @@ ACES relies on prior work in four different ways:
   terminology for authorities, naming contexts, realms, issuers, tenants,
   subjects, groups, attributes, policy inputs, federation boundaries,
   attribute-based authorization, and zero-trust identity/resource boundaries.
-  ACES adapts their shared concepts, not their full protocol objects.
+  RAES adapts their shared concepts, not their full protocol objects.
 - **Primary access-control literature:** Lampson's
   [access matrix](https://doi.org/10.1145/775265.775268), Saltzer and
   Schroeder's [protection principles](https://doi.org/10.1109/PROC.1975.9939),
   Ferraiolo/Kuhn [RBAC](https://www.nist.gov/publications/role-based-access-controls),
   Sandhu et al.'s [RBAC96 model](https://doi.org/10.1109/2.485845), and NIST
   ABAC support the separation among subject, attribute, policy, relationship,
-  and authority boundary. That is why ACES models policies and
+  and authority boundary. That is why RAES models policies and
   membership/trust/federation edges as first-class records instead of storing
   them only as prose or untyped relationship properties.
 - **Downstream/evidence precedents:** BloodHound/OpenGraph validates the
   usefulness of node/edge identity graphs for attack-path analysis, while OCSF,
-  UCO, and CASE are evidence and concept-authority influences. ACES does not
+  UCO, and CASE are evidence and concept-authority influences. RAES does not
   make any of them the canonical runtime inventory schema: BloodHound graphs
   are downstream analysis overlays, OCSF is telemetry/event-oriented, and
   UCO/CASE are concept/evidence vocabularies broader than the SDL authoring
@@ -129,10 +129,10 @@ private, the Garg et al. preprint citation is also snapshotted in-repo under
 so the reference is verifiable from the repository alone.
 
 The design deliberately keeps provider-stable identifiers as data rather than
-as ACES reference identity. AD SIDs/objectGUIDs, LDAP DNs/entryUUIDs, SCIM
+as RAES reference identity. AD SIDs/objectGUIDs, LDAP DNs/entryUUIDs, SCIM
 `id`/`externalId`, SAML NameIDs, and OIDC `iss` + `sub` values are preserved in
 specific fields or bounded attributes when needed for translation/evidence, but
-the portable ACES references are stable `*_id` symbols scoped by the scenario
+the portable RAES references are stable `*_id` symbols scoped by the scenario
 and authority. Within one authority those ids share a single local namespace,
 so an id cannot be reused across service, subject, policy, relationship, and
 authority records. This matches the verification/validation posture in the
@@ -164,32 +164,32 @@ authority.
   [forest-root guidance](https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/plan/selecting-the-forest-root-domain)
   also makes the root an explicit, durable member of the forest. These are the
   product precedents for explicit forest membership, root identity, and typed
-  trust edges. ACES does not clone AD DS schemas, automatic intra-forest trust,
+  trust edges. RAES does not clone AD DS schemas, automatic intra-forest trust,
   administrative groups, sites, or replication behavior.
 - **Federation lineage:** OpenID Connect, SAML, SCIM, and NIST SP 800-63C-4,
   already cited for identity-authority semantics, motivate separating a
   directory authority from the facade that exposes a federation protocol.
-  ACES preserves portable direction, mapping intent, and claim ownership while
+  RAES preserves portable direction, mapping intent, and claim ownership while
   leaving clients, credentials, provider mapper documents, and realized issuer
   state to deployment and evidence surfaces.
 - **Placement lineage:** TOSCA's
   [`HostedOn` relationship](https://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.1/TOSCA-Simple-Profile-YAML-v1.1.html)
   is the direct topology precedent for preserving a logical node while
-  expressing placement on a distinct host. ACES narrows that idea to an
+  expressing placement on a distinct host. RAES narrows that idea to an
   explicit carrier relation and kernel-boundary intent. It does not adopt
   TOSCA lifecycle operations or imply container namespace sharing.
 - **Multi-tenancy lineage:** Kubernetes
   [multi-tenancy guidance](https://kubernetes.io/docs/concepts/security/multi-tenancy/)
   distinguishes tenant identity, control-plane and data-plane isolation,
   default-deny network policy, node isolation, workload identity, persistent
-  storage boundaries, and deliberately shared services. ACES uses those
+  storage boundaries, and deliberately shared services. RAES uses those
   distinctions to keep cell membership, cross-tenant posture, authentication,
   mutable-state ownership, and reset ownership separate. A deployment cell is
   not a Kubernetes namespace, cluster, cloud project, subnet, quota boundary,
   or proof that isolation was realized.
 
 The resulting forest, facade, tenant, cell, endpoint-persona, and shared-service
-vocabularies are ACES-native authoring contracts. The cited systems are
+vocabularies are RAES-native authoring contracts. The cited systems are
 intellectual and implementation precedents, not schema authorities or
 compatibility targets. Provider adapters still own allocation and
 materialization; realized-form disclosures and evidence still own claims that
@@ -203,13 +203,13 @@ gap for DNS authoritative and recursive runtime inventory. It is not a clone
 of any one DNS server configuration language, provider API, or DNS telemetry
 format.
 
-ACES relies on prior work in four ways:
+RAES relies on prior work in four ways:
 
 - **Scenario-language precedents:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
   model scenario topology, deployable services/features, and validation or
   deployment concerns. They do not expose a portable first-class DNS zone,
-  RRset, resolver-policy, or DNSSEC-posture inventory that ACES could reuse
-  directly, so ACES introduces a typed node-scoped runtime surface rather than
+  RRset, resolver-policy, or DNSSEC-posture inventory that RAES could reuse
+  directly, so RAES introduces a typed node-scoped runtime surface rather than
   encoding the state inside `Node.services`, `runtime.applications`,
   `runtime.network`, or raw content files.
 - **Primary DNS standards:** DNS concepts and record wire semantics come from
@@ -225,22 +225,22 @@ ACES relies on prior work in four ways:
   follows [RFC 2136](https://www.rfc-editor.org/rfc/rfc2136), and extension
   types are bounded by the
   [IANA DNS Parameters](https://www.iana.org/assignments/dns-parameters/dns-parameters.xhtml)
-  registry. ACES adapts shared protocol concepts rather than importing raw
+  registry. RAES adapts shared protocol concepts rather than importing raw
   zone-file syntax.
 - **Server and configuration precedents:** BIND, NSD, Knot DNS, PowerDNS,
   CoreDNS, Terraform DNS providers, DNSControl, octoDNS, Kubernetes DNS, and
-  Consul DNS show the recurring implementation facts ACES must preserve:
+  Consul DNS show the recurring implementation facts RAES must preserve:
   authoritative zones, RRsets, forwarders, recursion controls, transfer policy,
   dynamic updates, DNSSEC validation/signing posture, and evidence sources.
   These references are implementation lineage, not schema authority.
 - **Evidence and downstream consumers:** OCSF/ECS DNS fields, Zeek DNS logs,
   STIX domain-name objects, passive DNS, provider APIs, AXFR/IXFR captures,
   and backend inspect payloads remain evidence or downstream translation
-  concerns. ACES records bounded runtime inventory and evidence refs; it does
+  concerns. RAES records bounded runtime inventory and evidence refs; it does
   not make query telemetry or raw server config the SDL model.
 
 Observed DNS names are preserved as data and are not case-folded. Portable
-ACES references are stable `dns_service_id`, `zone_id`, and `rrset_id` symbols.
+RAES references are stable `dns_service_id`, `zone_id`, and `rrset_id` symbols.
 This follows the same validation posture used elsewhere in SDL: the model
 states which protocol facts it can preserve, and it leaves server-specific
 syntax as evidence rather than smuggling that syntax into untyped fields.
@@ -251,40 +251,40 @@ The `runtime.security_monitoring_managers` surface is issue #428's response to
 an observed gap for SIEM and security-monitoring manager inventory. It is not a
 clone of Wazuh, Splunk, Elastic Security, Security Onion, Microsoft Sentinel,
 or any one event schema. It is a portable node-scoped runtime inventory for the
-manager facts that surrounding ACES surfaces cannot own.
+manager facts that surrounding RAES surfaces cannot own.
 
-ACES relies on prior work in four ways:
+RAES relies on prior work in four ways:
 
 - **Scenario-language precedents:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
   model topology, deployable services/features, tasks, validation, and
   deployment concerns. None expose a portable first-class security-monitoring
-  manager inventory. ACES therefore adds a typed `Node.runtime` surface rather
+  manager inventory. RAES therefore adds a typed `Node.runtime` surface rather
   than encoding manager state inside `Node.services`, `runtime.processes`,
   `runtime.service_manager_units`, `runtime.filesystem_inventory`, or raw
   content files.
 - **Log-management and security-monitoring literature:** NIST SP 800-92 frames
   computer security log management as infrastructure and processes for
-  collection, analysis, storage, maintenance, and operational use. ACES adapts
+  collection, analysis, storage, maintenance, and operational use. RAES adapts
   that infrastructure/process split by recording manager identity, listeners,
   modules, agents, groups, content corpora, settings, and evidence refs without
   making log telemetry itself the SDL runtime inventory.
 - **Implementation precedents:** Wazuh demonstrates the recurring manager
-  concepts ACES must preserve: a central manager/server, agent connection and
+  concepts RAES must preserve: a central manager/server, agent connection and
   enrollment services, an analysis engine, manager API, agent groups and shared
   configuration, rules, decoders, queues, integrations, and manager components.
   These are implementation lineage and evidence sources, not schema authority.
 - **Event and detection-content precedents:** OCSF is vendor-neutral event
   schema lineage, and Sigma is portable detection-rule lineage. They justify a
-  product-neutral posture for content and telemetry vocabulary. ACES records a
+  product-neutral posture for content and telemetry vocabulary. RAES records a
   bounded parsed detection-definition manifest for loaded definitions, but it
   does not import OCSF events, raw Sigma rule bodies, Wazuh XML, SIEM queries,
   or alert records into SDL as first-class runtime records.
 
-Portable ACES references are stable `security_monitoring_manager_id`, `listener_id`,
+Portable RAES references are stable `security_monitoring_manager_id`, `listener_id`,
 `component_id`, `agent_id`, `group_id`, `content_id`, `definition_id`, and
 `setting_id` symbols. Native manager identifiers, daemon names, file names,
 ruleset ids, rule ids, decoder names, agent labels, and API ids are preserved
-as observed data or evidence when needed, but they are not automatically ACES
+as observed data or evidence when needed, but they are not automatically RAES
 reference identity. Manager settings such as passwords, enrollment secrets, API
 tokens, shared keys, keytabs, or private keys may be scenario values; explicit
 `redacted`/`operator_secret` classifications omit raw values when the author
@@ -305,12 +305,12 @@ inventories, or scanner output. It is the bounded node-scoped place for generic
 observed listener facts: bind endpoint, port, transport, address family,
 listener scope, owner, readiness evidence, and provenance.
 
-ACES relies on prior work in four ways:
+RAES relies on prior work in four ways:
 
 - **Scenario-language precedents:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
   model topology, deployable services/features, tasks, validation, and
   deployment concerns. They do not expose a portable first-class observed
-  listener inventory with bind-address/interface semantics. ACES therefore
+  listener inventory with bind-address/interface semantics. RAES therefore
   adds a typed `Node.runtime` surface instead of hiding bind state in
   `Node.services`, `runtime.network.published_ports`, `runtime.applications`,
   or free-text descriptions.
@@ -320,7 +320,7 @@ ACES relies on prior work in four ways:
   units such as
   [`ListenStream=` and `ListenDatagram=`](https://www.freedesktop.org/software/systemd/man/latest/systemd.socket.html)
   show the operational split between a socket endpoint and the service it can
-  activate. ACES adapts that separation through `service`, `process_ref`, and
+  activate. RAES adapts that separation through `service`, `process_ref`, and
   listener endpoint fields without importing systemd unit syntax.
 - **Container and orchestrator precedents:** Docker
   [port publishing](https://docs.docker.com/get-started/docker-concepts/running-containers/publishing-ports/)
@@ -329,7 +329,7 @@ ACES relies on prior work in four ways:
   [EndpointSlices](https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/),
   and readiness/liveness/startup
   [probes](https://kubernetes.io/docs/concepts/configuration/liveness-readiness-startup-probes/).
-  ACES keeps in-node listener state, host publication, and readiness evidence
+  RAES keeps in-node listener state, host publication, and readiness evidence
   as adjacent but distinct runtime facts.
 - **Evidence and telemetry precedents:** Nmap
   [XML output](https://nmap.org/book/output-formats-xml-output.html) can
@@ -340,7 +340,7 @@ ACES relies on prior work in four ways:
   product-neutral checks for endpoint terminology. They remain evidence and
   downstream translation lineage rather than SDL schema authority.
 
-Portable ACES references are stable listener ids under
+Portable RAES references are stable listener ids under
 `nodes.<node>.runtime.service_listeners.<listener_id>`. Native process names,
 PIDs, scanner table names, service-manager unit names, and probe strings remain
 observed data or evidence unless the author explicitly uses them in bounded ref
@@ -357,21 +357,21 @@ enabled app-layer parser families, loaded rule-source inventories, network
 zoning/address-set variables, bounded output streams, reload/control channels,
 and evidence refs.
 
-ACES relies on prior work in four ways:
+RAES relies on prior work in four ways:
 
 - **Scenario-language precedents:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
   model topology, deployable services/features, tasks, validation, and
   deployment concerns. None expose a portable first-class detection-engine
-  inventory. ACES therefore adds a typed `Node.runtime` surface rather than
+  inventory. RAES therefore adds a typed `Node.runtime` surface rather than
   encoding engine state inside `Node.services`, `runtime.network_sensors`,
   `runtime.filesystem_inventory`, `runtime.software_components`, or prose
   relationships.
 - **IDS/NDR tooling:** Suricata, Snort, Zeek, Security Onion, and NDR products
-  show recurring engine facts ACES must preserve: parser coverage, rule or IOC
+  show recurring engine facts RAES must preserve: parser coverage, rule or IOC
   sources, address sets, output streams, reload controls, and evidence refs.
   These references are implementation lineage, not schema authority.
 - **Telemetry and rule-content precedents:** OCSF, ECS, STIX, Sigma, YARA, and
-  vendor rule formats inform vocabulary boundaries. ACES does not replace
+  vendor rule formats inform vocabulary boundaries. RAES does not replace
   those schemas or inline their events, rules, packets, or IOC payloads.
 - **Evidence discipline:** raw rules, alerts, packet captures, IOC exports,
   config files, and backend inspect payloads remain evidence artifacts or
@@ -388,12 +388,12 @@ GRANT surface (that stays `runtime.database_services`). Its defining addition is
 the resource-scoped permission grant — role → actions → resource pattern — that
 neither adjacent surface can own.
 
-ACES relies on prior work in four ways:
+RAES relies on prior work in four ways:
 
 - **Scenario-language precedents:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
   model topology, deployable services/features, and validation/deployment
   concerns. None expose a portable first-class application-internal RBAC store,
-  so ACES adds a typed node-scoped seam rather than overloading
+  so RAES adds a typed node-scoped seam rather than overloading
   `runtime.identity_authorities`, `runtime.database_services`, or
   `runtime.applications`.
 - **Primary RBAC and ABAC standards:** Ferraiolo and Kuhn's
@@ -410,7 +410,7 @@ ACES relies on prior work in four ways:
   the authorization, not declared on the model.
 - **Product RBAC precedents:** OpenSearch Security, Elasticsearch security,
   Cassandra `system_auth`, Redis ACLs, Kibana/OpenSearch Dashboards roles,
-  MISP/TheHive/Cortex role catalogs, and Shuffle RBAC show recurring facts ACES
+  MISP/TheHive/Cortex role catalogs, and Shuffle RBAC show recurring facts RAES
   must preserve: principals with reserved/hidden flags, named roles,
   resource-scoped grants, role mappings, and tenants. These are implementation
   lineage, not schema authority.
@@ -429,12 +429,12 @@ cadence plus run-state only; inputs, outputs, and trigger targets belong to the
 referencing forwarding agent, and an event-triggered task is a trigger
 relationship rather than a recurrence.
 
-ACES relies on prior work in four ways:
+RAES relies on prior work in four ways:
 
 - **Scenario-language precedents:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
   model topology, deployable services/features, and validation/deployment
   concerns. None expose a portable first-class product-neutral scheduled-job
-  cadence, so ACES adds a typed node-scoped seam rather than overloading
+  cadence, so RAES adds a typed node-scoped seam rather than overloading
   `runtime.service_manager_units` (systemd-scoped) or the forwarding agent.
 - **Primary recurrence standards:** POSIX.1-2017
   [crontab](https://pubs.opengroup.org/onlinepubs/9699919799/utilities/crontab.html)
@@ -445,7 +445,7 @@ ACES relies on prior work in four ways:
   [`systemd.timer`](https://www.freedesktop.org/software/systemd/man/systemd.timer.html)
   and Kubernetes
   [CronJob](https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/)
-  show recurring scheduler facts ACES must preserve as cadence and run-state.
+  show recurring scheduler facts RAES must preserve as cadence and run-state.
   These are implementation lineage, not schema authority.
 - **Run-state observability:** NIST
   [SP 800-92](https://csrc.nist.gov/publications/detail/sp/800-92/final)
@@ -469,12 +469,12 @@ optional. Search-index mappings and templates are captured as bounded manifests
 with counts, summaries, digests, refs, and evidence pointers rather than as raw
 backend JSON bodies.
 
-ACES relies on prior work in four ways:
+RAES relies on prior work in four ways:
 
 - **Scenario-language precedents:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
   model topology, deployable services/features, and validation/deployment
   concerns. None expose a portable first-class non-relational datastore logical
-  state, so ACES adds a typed node-scoped seam rather than overloading
+  state, so RAES adds a typed node-scoped seam rather than overloading
   `runtime.database_services` (irreducibly relational), `Node.services`
   (transport), or `runtime.software_components` (component identity).
 - **Primary data-model and consensus standards:** Codd's relational model
@@ -493,7 +493,7 @@ ACES relies on prior work in four ways:
   [RESP3](https://github.com/redis/redis-specifications/blob/master/protocol/RESP3.md)
   / [ACL](https://redis.io/docs/management/security/acl/) /
   [persistence](https://redis.io/docs/management/persistence/) show recurring
-  facts ACES must preserve: keyspaces with replication strategy/factor, search
+  facts RAES must preserve: keyspaces with replication strategy/factor, search
   shard/replica geometry, and RDB/AOF/eviction persistence. These are
   implementation lineage, not schema authority.
 - **Hardening and transport discipline:** NIST
@@ -517,7 +517,7 @@ client/peer endpoint inventory. The Elasticsearch/OpenSearch
 [Nodes Info API](https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-nodes-info.html)
 reports each of these per node; the client/peer listener split is structural
 across the search-cluster tech class (OpenSearch http/transport, Cassandra
-native/internode, Redis client/cluster-bus), which is why ACES types an
+native/internode, Redis client/cluster-bus), which is why RAES types an
 engine-neutral `role` taxonomy rather than engine-named address fields.
 
 ## Security-Platform Application Semantics
@@ -530,12 +530,12 @@ management, and analytics dashboards. Its defining addition is the open
 guard, plus content objects modeled as bounded parsed manifests (typed kind +
 bounded attributes + typed references) rather than raw object bodies.
 
-ACES relies on prior work in four ways:
+RAES relies on prior work in four ways:
 
 - **Scenario-language precedents:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
   model topology, deployable services/features, and validation/deployment
   concerns. None expose a portable first-class security-platform application
-  inventory, so ACES adds a typed node-scoped seam rather than overloading
+  inventory, so RAES adds a typed node-scoped seam rather than overloading
   `runtime.applications` (HTTP routes) or `runtime.software_components`
   (component identity).
 - **Primary content and intelligence-sharing standards:** RDF 1.1
@@ -557,7 +557,7 @@ ACES relies on prior work in four ways:
   [CACAO v2.0](https://docs.oasis-open.org/cacao/security-playbooks/v2.0/security-playbooks-v2.0.html)
   and [OpenC2](https://docs.oasis-open.org/openc2/oc2ls/v1.0/oc2ls-v1.0.html)
   frame the SOAR/analyzer execution profile with the boundary stated explicitly:
-  ACES records the workflow/analyzer *inventory* and execution policy, not
+  RAES records the workflow/analyzer *inventory* and execution policy, not
   playbook execution semantics. NIST
   [SP 800-92](https://csrc.nist.gov/publications/detail/sp/800-92/final) and
   [ISO/IEC/IEEE 42010](https://www.iso.org/standard/74393.html) frame the
@@ -581,12 +581,12 @@ addition is the open `agent_kind` discriminator paired with a
 `require_profile_for_agent_kind` guard that makes each member's defining shipping
 profile executable rather than optional.
 
-ACES relies on prior work in four ways:
+RAES relies on prior work in four ways:
 
 - **Scenario-language precedents:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
   model topology, deployable services/features, and validation/deployment
   concerns. None expose a portable first-class forwarding-agent shipping
-  inventory, so ACES adds typed node-scoped and scenario-level seams rather than
+  inventory, so RAES adds typed node-scoped and scenario-level seams rather than
   overloading the manager surface, the detection-engine surface, or
   `runtime.scheduled_jobs` (cadence-only).
 - **Primary log-transport standards:** The syslog family —
@@ -610,7 +610,7 @@ ACES relies on prior work in four ways:
 - **Forwarder implementation lineage:** Elastic
   [Beats](https://www.elastic.co/beats/) and the
   [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) show the
-  recurring source/transform/ship/buffer facts ACES preserves (tailed inputs,
+  recurring source/transform/ship/buffer facts RAES preserves (tailed inputs,
   pipelines, exporters, back-pressure queues). These are implementation lineage,
   not schema authority; enrollment identities carry only their closed
   classification lattice, while forwarding settings use explicit redaction
@@ -627,12 +627,12 @@ the spawn contract (engine, scope, spawn templates, lifecycle policy, realized
 children) referencing that shell, paired with a `require_profile_for_privilege_class`
 guard that makes the host-root privilege-escalation fact executable.
 
-ACES relies on prior work in four ways:
+RAES relies on prior work in four ways:
 
 - **Scenario-language precedents:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
   model topology, deployable services/features, and validation/deployment
   concerns. None expose a portable first-class container-spawn authority
-  inventory, so ACES adds a typed node-scoped seam referencing the existing
+  inventory, so RAES adds a typed node-scoped seam referencing the existing
   `runtime.local_control_interfaces` shell rather than duplicating it.
 - **Primary runtime and orchestration standards:** The OCI
   [Runtime Spec](https://github.com/opencontainers/runtime-spec) and
@@ -652,7 +652,7 @@ ACES relies on prior work in four ways:
   adversary relevance the `host_root_equivalent` profile makes executable.
 - **Engine API lineage:** The
   [Docker Engine API](https://docs.docker.com/engine/api/) shows the spawn /
-  lifecycle surface (container create/start/stop, image references) ACES records
+  lifecycle surface (container create/start/stop, image references) RAES records
   as inventory. This is implementation lineage, not schema authority; the spawn
   contract is referenced through `control_interface_ref`, never duplicating the
   control-interface shell.
@@ -665,13 +665,13 @@ a clone of any one file-sharing protocol or ACL vocabulary, and the
 expected-but-absent extension to `runtime.filesystem_inventory` follows
 the same posture.
 
-ACES relies on prior work in four ways:
+RAES relies on prior work in four ways:
 
 - **Scenario-language precedents:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and
   CRACK model scenario topology, deployable services/features, and
   validation/deployment concerns. None expose a portable first-class
-  share-permission/passdb inventory that ACES could reuse directly, which
-  is why ACES introduces a typed node-scoped seam rather than encoding the
+  share-permission/passdb inventory that RAES could reuse directly, which
+  is why RAES introduces a typed node-scoped seam rather than encoding the
   state inside `Node.services` or `runtime.applications`.
 - **Primary protocol and filesystem-permission standards:** Microsoft's
   [MS-SMB2](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-smb2/5606ad47-5ee0-437a-817e-70c366052962),
@@ -687,7 +687,7 @@ ACES relies on prior work in four ways:
   and [NFSv4.1 (RFC 8881)](https://www.rfc-editor.org/rfc/rfc8881) supply
   terminology for shares/exports, share-level access modes, passdb
   semantics, anonymous and guest subjects, POSIX vs. Windows ACL
-  families, and NFSv4 ACEs. ACES adapts their shared concepts (subject, resource,
+  families, and NFSv4 ACEs. RAES adapts their shared concepts (subject, resource,
   action, effect, basis) rather than importing any single vendor ACL
   algebra. The access-control literature already cited above
   (Lampson, Saltzer/Schroeder, RBAC96, NIST ABAC) justifies that
@@ -695,9 +695,9 @@ ACES relies on prior work in four ways:
 - **Resource-relation modeling:** Pang et al.'s
   [Zanzibar: Google's Consistent, Global Authorization System](https://research.google/pubs/zanzibar-googles-consistent-global-authorization-system/)
   (USENIX ATC 2019) is design input for portable relationship-tuple
-  authorization. ACES uses it as a cross-check that bounded
+  authorization. RAES uses it as a cross-check that bounded
   subject/relation/resource records are workable at scale; it is not
-  forced into the SDL as a global authorization framework, and ACES does
+  forced into the SDL as a global authorization framework, and RAES does
   not encode share access only as relationship edges.
 - **Evidence and downstream consumers:** OCSF, UCO, CASE, STIX, and SBOM
   standards remain evidence/event/concept influences (already discussed
@@ -719,21 +719,21 @@ The `runtime.mail_services` surface is issue #420's response to a gap observed
 while encoding the APTL TechVault mailserver container. It is not a clone of
 Postfix, Dovecot, Docker Mailserver, or an RFC object tree. It is a portable
 node-scoped runtime inventory for mail-service logical facts that surrounding
-ACES surfaces cannot own.
+RAES surfaces cannot own.
 
-ACES relies on prior work in four ways:
+RAES relies on prior work in four ways:
 
 - **Scenario-language precedents:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
   model topology, deployable services/features, accounts, tasks, and
   validation/deployment concerns. None expose a portable first-class
-  mail-server logical-state inventory, which is why ACES adds a typed
+  mail-server logical-state inventory, which is why RAES adds a typed
   `Node.runtime` surface rather than encoding SMTP/IMAP state inside
   `Node.services`, `runtime.applications`, filesystem entries, content, or
   generic accounts.
 - **Protocol and service concepts:** SMTP transport/delivery, message
   submission, IMAP access, POP3/LMTP/Sieve extension points, TLS/STARTTLS
   posture, mailboxes, aliases, domains, queues, and MTA/MDA configuration
-  supply terminology. ACES adapts these as provider-neutral fields for
+  supply terminology. RAES adapts these as provider-neutral fields for
   listeners, capabilities, auth mechanisms, mailbox state, routing, queues, and
   settings.
 - **Evidence and redaction lineage:** Mailserver discovery output, `postconf`
@@ -762,7 +762,7 @@ ACES relies on prior work in four ways:
   validator (see validation.md).
 
 The result preserves the same V&V posture as database and file-service runtime
-surfaces: ACES states which mail concepts are stable enough to compare and
+surfaces: RAES states which mail concepts are stable enough to compare and
 which dynamic queue/log/config details remain evidence or bounded settings.
 
 ## Participant Semantics
@@ -776,11 +776,11 @@ which dynamic queue/log/config details remain evidence or bounded settings.
 - POMDP, Dec-POMDP, POSG, and Markov-game literature — with
   [Bernstein, Givan, Immerman, and Zilberstein's complexity result](https://doi.org/10.1287/moor.27.4.819.297)
   and [Oliehoek and Amato's Dec-POMDP monograph](https://doi.org/10.1007/978-3-319-28929-8)
-  as anchors — is the theoretical lineage behind ACES's insistence that
+  as anchors — is the theoretical lineage behind RAES's insistence that
   participant-visible observations are not world truth, and that
   multi-participant behavior cannot be reduced to a single centralized state
   stream. [Mean-field game theory](https://doi.org/10.1007/s11537-007-0657-8)
-  covers the population-limit regime ACES records as mean-field nodes.
+  covers the population-limit regime RAES records as mean-field nodes.
 - Interpreted systems
   ([Fagin, Halpern, Moses, Vardi](https://mitpress.mit.edu/9780262562003/reasoning-about-knowledge/)),
   [dynamic epistemic logic](https://doi.org/10.1007/978-1-4020-5839-4), and
@@ -790,7 +790,7 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   [Goguen-Meseguer noninterference](https://doi.org/10.1109/SP.1982.10014) and
   [Sabelfeld-Sands declassification](https://doi.org/10.3233/JCS-2009-0352)
   ground the hidden-truth boundary and disclosure-rule semantics.
-- SEM-230 adopts that lineage through ACES-native artifacts rather than source
+- SEM-230 adopts that lineage through RAES-native artifacts rather than source
   syntax or wire compatibility. The normative participant-policy model is
   `specs/formal/participant-semantics/information-flow-control.md`; the
   machine-readable relation is `policy-noninterference` in behavioral taxonomy
@@ -798,7 +798,7 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   `participant-information-flow-policy`. Existing `W`, `V`, qualified `H`,
   `X`, participant action/admission, visibility transition, ordering, marking,
   controller, authority, evidence, and provenance objects remain the mapped
-  ACES carriers. No generic participant-message or policy payload is derived
+  RAES carriers. No generic participant-message or policy payload is derived
   from either publication.
 - The derivation is deliberately compositional. Fagin, Halpern, Moses, and
   Vardi supply participant-local information-state/indistinguishability
@@ -807,9 +807,9 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   supply labelled-transition, hidden-action, and relation-separation
   discipline. Lamport happened-before, Winskel event structures, and
   Mazurkiewicz trace theory enter indirectly through the already governed
-  ADR-054 visible-order model. ACES extends those sources only with the
+  ADR-054 visible-order model. RAES extends those sources only with the
   participant/audience, policy-revision/effective-order, controller/authority,
-  marking, and evidence/provenance coordinates needed to bind existing ACES
+  marking, and evidence/provenance coordinates needed to bind existing RAES
   carriers. It does not fork their settled definitions.
 - Delivery status is definition-complete, catalogued, policy-checked, and
   bounded-tested. Evidence is the SEM-230 formal specification,
@@ -823,7 +823,7 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   security, or probabilistic security.
 - ACT-617 applies the already adopted SEM-230/ADR-085 control and ordering
   lineage to authored mixed-control behavior without introducing another
-  external derivation. The exact ACES mapping is
+  external derivation. The exact RAES mapping is
   `ParticipantBehaviorSpecification.mixed_control` for the revisioned policy,
   keyed typed controller states for participant/controller, authority, scope,
   validity, revocation, and evidence coordinates, keyed typed control
@@ -851,7 +851,7 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   episodes, and multi-agent interaction. ADR-090's reviewed ROS 2, FMI, HLA,
   TENA, and OpenSCENARIO sources remain the precedent for shared clock
   authority, progression, lifecycle, and scheduler coordination.
-  `ParticipantBehaviorSpecification.autonomous_execution` is ACES-native: it
+  `ParticipantBehaviorSpecification.autonomous_execution` is RAES-native: it
   binds ordinary participant/action/observation declarations to those existing
   shared-time declarations and participant implementation provenance.
 - The exact DSL-437 authority is ADR-092 and
@@ -864,16 +864,16 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   driving for runtime-authority clocks, manifest-admitted transactional
   clock/participant reset, lifecycle reporting, and durable/API/conformance
   clock/episode/scheduler consistency on both save and load. Externally paced
-  autonomous policies remain rejected until ACES governs a portable
+  autonomous policies remain rejected until RAES governs a portable
   backend-to-runtime transition driver. The
   focused evidence is in `test_dsl_437_benign_participant_execution.py`,
   `test_dsl_437_evaluation_authority.py`, and
   `test_dsl_437_snapshot_durability_conformance.py`. The ledger records exact
   semantic source boundaries for the participant-interface and shared-time
-  concerns. The coordinated reset method is an ACES backend transaction
+  concerns. The coordinated reset method is an RAES backend transaction
   obligation, not a claim that replacing a local snapshot reverses native
   backend effects.
-  ACES does not claim CybORG, Gymnasium, PettingZoo, OpenSpiel, ROS, FMI, HLA,
+  RAES does not claim CybORG, Gymnasium, PettingZoo, OpenSpiel, ROS, FMI, HLA,
   TENA, or OpenSCENARIO compatibility and does not derive a source wire schema.
   Historical files remain ordinary initial service state; injects remain
   exercise orchestration; stochastic participant implementations remain
@@ -896,18 +896,18 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   [unified emulation-simulation training environment](https://arxiv.org/abs/2304.01244)
   are the cyber-agent environment precedents. They show the value of explicit
   action/observation/reward/episode interfaces, and also expose the
-  sim-to-emulation gap that ACES must record through realization disclosure and
+  sim-to-emulation gap that RAES must record through realization disclosure and
   evidence provenance.
 - The participant interactive-access declaration has a narrower,
   revision-pinned lineage. CyRIS 1.2 explicitly marks an entry guest but infers
   SSH/RDP realization from OS family; CybORG v3.0 places explicit
-  host/user/session-type bindings under an agent. ACES adapts explicit
+  host/user/session-type bindings under an agent. RAES adapts explicit
   participant-local binding while rejecting OS inference, established-session
   state, locators, ports, and raw credentials. Exact source boundaries and
   divergences are recorded in the lineage ledger and participant
   interactive-access research note.
 - SEM-219's executable tool-affordance binding adopts no new external syntax.
-  It maps the existing ACES `scenario-content` reference model
+  It maps the existing RAES `scenario-content` reference model
   (`tools-and-artifacts`) to optional tool identity, existing participant
   action contracts to affordance meaning and complete SEM-211 constraints,
   `agents.*` plus behavior-specification refs to participant-local authored
@@ -925,7 +925,7 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   external derivation or compatibility claim.
 - SEM-220's executable participant decision surface adopts the existing
   action/observation-interface lineage above without importing a UI, prompt,
-  command, or backend-native parameter language. ACES maps one participant,
+  command, or backend-native parameter language. RAES maps one participant,
   episode, and behavior-history order point to
   `ParticipantDecisionSurfaceModel`; maps the three portable selection forms
   to its discriminated open-ended, constrained-form, and candidate-set
@@ -953,7 +953,7 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   or compatibility claim.
 - SEM-226 specializes that delivered decision-surface projection without
   adopting another visibility taxonomy, policy language, or participant I/O
-  envelope. ACES maps the participant/episode/audience/order coordinates to
+  envelope. RAES maps the participant/episode/audience/order coordinates to
   `ParticipantDecisionSurfaceExposureBindingModel`; maps `V_p,o` to the
   existing `participant_observation_effective_relation()` selector; maps the
   revisioned SEM-230 `Effective(rho,o)` coordinate to an authoritative
@@ -990,7 +990,7 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   derivation or compatibility claim.
 - API-409 adopts the existing participant-runtime, ACT-617 mixed-control, and
   SEM-220 decision-surface authorities without introducing a generic external
-  message or policy language. ACES maps one proposal, approval, denial,
+  message or policy language. RAES maps one proposal, approval, denial,
   external direction, intervention, handoff, override, or cancellation fact
   to the closed `participant-control-occurrence-v1` carrier; preserves the
   unchanged `ParticipantRuntimeBaseEnvelopeModel`; and binds each occurrence
@@ -1029,13 +1029,13 @@ which dynamic queue/log/config details remain evidence or bounded settings.
 ## Benchmark And Experiment Lineage
 
 - [Cybench](https://arxiv.org/abs/2408.08926) and
-  [AutoPenBench](https://arxiv.org/abs/2410.03225) inform ACES's treatment of
+  [AutoPenBench](https://arxiv.org/abs/2410.03225) inform RAES's treatment of
   task descriptions, starter files, evaluators, subtasks, gold steps,
   milestones, human assistance, and repeated runs as experiment artifacts.
-  ACES does not adopt flag capture or milestone completion as the complete
+  RAES does not adopt flag capture or milestone completion as the complete
   outcome model; those are inputs to explicit interpretation rules.
 - [CAIBench](https://arxiv.org/abs/2510.24317) motivates integrated offensive,
-  defensive, privacy, and cyber-physical evaluation surfaces. ACES adapts this
+  defensive, privacy, and cyber-physical evaluation surfaces. RAES adapts this
   as role-neutral multi-participant semantics and privacy/redaction disclosure,
   not as a bundled meta-benchmark score.
 - General agent-evaluation critiques such as
@@ -1043,7 +1043,7 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   [Benchmarking Practices in LLM-driven Offensive Security](https://arxiv.org/abs/2504.10112)
   motivate holdout discipline, anti-contamination controls, scaffold
   disclosure, baseline disclosure, cost/resource traces, and standardized run
-  records. ACES records these as provenance and information-boundary concerns
+  records. RAES records these as provenance and information-boundary concerns
   so downstream studies can audit what a participant actually could observe.
 
 ## DSL Evaluation Lineage
@@ -1053,7 +1053,7 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   ["When and How to Develop Domain-Specific Languages"](https://doi.org/10.1145/1118890.1118892),
   and Kosar, Bohra, and Mernik's
   ["Domain-Specific Languages: A Systematic Mapping Study"](https://doi.org/10.1016/j.infsof.2015.11.001)
-  inform ACES's treatment of language adequacy as an evidence claim. A language
+  inform RAES's treatment of language adequacy as an evidence claim. A language
   can be domain-aware and formally specified while still failing on ambiguity,
   usability, effectiveness, maintainability, or domain-expert reviewability.
 - Issue #346 tracks this as a dedicated evidence gate. It is related to
@@ -1069,7 +1069,7 @@ which dynamic queue/log/config details remain evidence or bounded settings.
 - [SISO Cyber DEM](https://cdn.ymaws.com/www.sisostandards.org/resource/resmgr/standards_products/siso-std-025-2023_cyberdem.pdf)
   and Cyber FOM are cyber-specific simulation-interoperability precedents.
 - Lamport logical clocks, HLA time management, Time Warp, DEVS, SimPy, ROS 2
-  time, ns-3 realtime mode, and FMI inform ACES's separation of timestamp,
+  time, ns-3 realtime mode, and FMI inform RAES's separation of timestamp,
   ordering, clock authority, pacing, synchronization, and causality.
 - [Fidge](https://doi.org/10.1109/ICDCS.1988.12501)/[Mattern](https://www.vs.inf.ethz.ch/publ/papers/VirtTimeGlobStates.pdf)
   vector time and the
@@ -1087,7 +1087,7 @@ which dynamic queue/log/config details remain evidence or bounded settings.
 - [Berenson et al.'s ANSI SQL isolation critique](https://doi.org/10.1145/223784.223785)
   and [Adya's generalized isolation theory](https://hdl.handle.net/1721.1/8703)
   anchor the shared-state isolation-guarantee vocabulary.
-- Halpern-Pearl structural causality informs ACES's treatment of attribution:
+- Halpern-Pearl structural causality informs RAES's treatment of attribution:
   a participant action followed by an alert is not automatically a causal
   explanation without an evidence basis.
   [Chockler-Halpern responsibility and blame](https://doi.org/10.1613/jair.1391)
@@ -1106,18 +1106,18 @@ federation object model derived from it.
 
 - **Adopted as precedent.** Cyber DEM's typed cyber-object and directed
   relationship vocabulary, and its attack/defend/recon effect taxonomy, are
-  precedent for ACES treating typed relationships
+  precedent for RAES treating typed relationships
   ([ADR-052](../../decisions/adrs/adr-052-typed-runtime-relationship-subtypes.md))
-  and observed runtime objects as first-class. ACES adopts the *concept* of a
+  and observed runtime objects as first-class. RAES adopts the *concept* of a
   typed cyber-object vocabulary, not the Cyber DEM object set or its identifiers.
-- **Out of scope.** ACES does not adopt Cyber DEM as its scenario model or the
+- **Out of scope.** RAES does not adopt Cyber DEM as its scenario model or the
   Cyber FOM as its backend contract. Cyber DEM is consumed at runtime by
-  federates; ACES keeps an authored scenario surface separate from any runtime
+  federates; RAES keeps an authored scenario surface separate from any runtime
   exchange model, and does not treat HLA federation conformance as equivalent to
-  ACES backend conformance.
-- **Where it leads ACES.** Because the Cyber FOM inherits IEEE 1516 HLA time
-  management and multi-vendor federation, it is more mature than ACES on
-  federated time and standardized interoperability. ACES's time-authoring
+  RAES backend conformance.
+- **Where it leads RAES.** Because the Cyber FOM inherits IEEE 1516 HLA time
+  management and multi-vendor federation, it is more mature than RAES on
+  federated time and standardized interoperability. RAES's time-authoring
   surface is partial and explicitly incomplete. This is detailed in the
   [Related-Work Comparison](related-work-comparison.md).
 
@@ -1125,19 +1125,19 @@ federation object model derived from it.
 
 - [MITRE ATT&CK](https://www.mitre.org/news-insights/publication/mitre-attck-design-and-philosophy),
   MITRE CALDERA, Atomic Red Team, and OpenC2 are adversary-emulation and
-  command/response precedents. ACES treats them as behavior and execution
+  command/response precedents. RAES treats them as behavior and execution
   sources that scenarios may bind to, not as replacements for the SDL.
-  From OpenC2 specifically, ACES borrows the command/response principle — an
+  From OpenC2 specifically, RAES borrows the command/response principle — an
   action requested against a target with a status-bearing response — but does
   not adopt OpenC2's action/target/argument payload structures as SDL or
   runtime-contract schema.
 - OCSF is the preferred lineage for normalized security event and finding
-  structure. ACES uses that style for observations and evidence without making
+  structure. RAES uses that style for observations and evidence without making
   raw telemetry equal to participant-visible state.
 
-## What ACES Adds
+## What RAES Adds
 
-ACES separates authored scenario meaning, processor/runtime contracts, backend
+RAES separates authored scenario meaning, processor/runtime contracts, backend
 realization, participant implementations, live state, and archival
 evidence/provenance. The participant-semantics design extends that separation:
 actions, observations, visibility, causality, temporal behavior, and outcomes
@@ -1146,7 +1146,7 @@ participants without collapsing into any one backend or learning API.
 
 ### Shared Time Authority
 
-The ACES shared time model has explicit external lineage but is not a translated
+The RAES shared time model has explicit external lineage but is not a translated
 copy of any one framework:
 
 - ROS 2 contributes the separation of system, steady/monotonic, and externally
@@ -1160,7 +1160,7 @@ copy of any one framework:
 - OpenSCENARIO contributes the separation of lifecycle, triggers, actions, and
   simulation-time predicates.
 
-ACES adds backend-neutral authored declarations, exact rational mappings,
+RAES adds backend-neutral authored declarations, exact rational mappings,
 ordinary SDL subject references, canonical compilation, and segment-preserving
 runtime control. It does not claim ROS, FMI, HLA, TENA, or OpenSCENARIO
 conformance through those generic declarations.

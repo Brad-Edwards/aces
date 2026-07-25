@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import json
 
-from aces_sdl.language_service import (
+from mcp.server.fastmcp import FastMCP
+from raes.language_service import (
     apply_structured_edit,
     language_completions,
     language_diagnostics,
     language_format,
     language_references,
 )
-from mcp.server.fastmcp import FastMCP
 
 from aces_mcp.tools.operation_support import json_response
 

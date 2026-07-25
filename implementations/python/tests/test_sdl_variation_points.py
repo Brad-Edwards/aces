@@ -10,16 +10,16 @@ import pytest
 from aces_contracts.bounded_domains import EnumDomain
 from aces_contracts.contracts import schema_bundle
 from aces_contracts.realization_envelope import EnumDomain as EnvelopeEnumDomain
-from aces_sdl import SDLInstantiationError, SDLParseError, SDLValidationError
-from aces_sdl._declarations import build_declaration_index
-from aces_sdl.canonical import canonical_sdl_bytes, canonical_sdl_digest
-from aces_sdl.instantiate import instantiate_scenario
-from aces_sdl.language_service import language_completions, language_references
-from aces_sdl.parser import parse_sdl_file
-from aces_sdl.scenario import InstantiatedScenario, Scenario
-from aces_sdl.validator import SemanticValidator
 from jsonschema import Draft202012Validator
 from pydantic import ValidationError
+from raes import SDLInstantiationError, SDLParseError, SDLValidationError
+from raes._declarations import build_declaration_index
+from raes.canonical import canonical_sdl_bytes, canonical_sdl_digest
+from raes.instantiate import instantiate_scenario
+from raes.language_service import language_completions, language_references
+from raes.parser import parse_sdl_file
+from raes.scenario import InstantiatedScenario, Scenario
+from raes.validator import SemanticValidator
 
 FIXTURE_DIR = Path(__file__).parents[3] / "contracts" / "fixtures" / "sdl" / "variation-points-v1"
 

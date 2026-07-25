@@ -1,23 +1,24 @@
 """Model-level tests for the SSH server configuration runtime surface.
 
-Covers ``aces_sdl.runtime_ssh_server`` (see ADR-031). These tests construct
+Covers ``raes.runtime_ssh_server`` (see ADR-031). These tests construct
 ``RuntimeSshServer`` / ``SshMatchRule`` / ``SshForcedCommand`` directly to
 exercise field validators, redaction invariants, and stable-identifier
 discipline without going through the YAML parser.
 """
 
-import aces_sdl._runtime_service_families as runtime_family_registry
-import aces_sdl.nodes as nodes_facade
-import aces_sdl.runtime_configuration as runtime_configuration_facade
 import pytest
-from aces_sdl._module_symbols import symbol_index
-from aces_sdl._runtime_service_families import (
+import raes._runtime_service_families as runtime_family_registry
+import raes.nodes as nodes_facade
+import raes.runtime_configuration as runtime_configuration_facade
+from pydantic import ValidationError
+from raes._module_symbols import symbol_index
+from raes._runtime_service_families import (
     RUNTIME_SERVICE_FAMILIES,
     RuntimeServiceFamily,
     runtime_service_family_export_names,
 )
-from aces_sdl.runtime_configuration import RuntimeConfiguration
-from aces_sdl.runtime_ssh_server import (
+from raes.runtime_configuration import RuntimeConfiguration
+from raes.runtime_ssh_server import (
     RuntimeSshServer,
     SshForcedCommand,
     SshForcedCommandKind,
@@ -25,7 +26,6 @@ from aces_sdl.runtime_ssh_server import (
     SshMatchCriterionKind,
     SshMatchRule,
 )
-from pydantic import ValidationError
 
 import aces.core.sdl.nodes as compat_nodes
 from aces.core.sdl import parse_sdl_file

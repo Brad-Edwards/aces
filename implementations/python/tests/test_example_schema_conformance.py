@@ -29,10 +29,10 @@ from typing import Any, Protocol
 import pytest
 from aces_contracts.corpus import corpus_family_root
 from aces_contracts.experiment_spec import load_experiment_spec
-from aces_sdl import load_sdl_fragment
-from aces_sdl.scenarios import load_scenario
 from jsonschema import Draft202012Validator
 from paths import EXAMPLES_DIR, EXPERIMENTS_DIR
+from raes import load_sdl_fragment
+from raes.scenarios import load_scenario
 
 
 class SupportsModelDump(Protocol):

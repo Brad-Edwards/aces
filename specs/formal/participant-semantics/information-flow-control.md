@@ -27,19 +27,19 @@ a universal proof.
 
 ## Prior-Art Adaptation Rule
 
-SEM-230 does not rename settled formal concepts and present them as ACES
+SEM-230 does not rename settled formal concepts and present them as RAES
 inventions. It imports the strongest clearly applicable prior definition,
-instantiates it over existing ACES carriers, and adds an ACES-specific
+instantiates it over existing RAES carriers, and adds an RAES-specific
 coordinate only where the prior formulation does not carry information needed
 by participant/runtime governance.
 
-| Semantic element | Formal lineage reused | ACES adaptation | Necessary extension, not reinvention |
+| Semantic element | Formal lineage reused | RAES adaptation | Necessary extension, not reinvention |
 | --- | --- | --- | --- |
-| participant-relative information state and low equivalence | Fagin, Halpern, Moses, and Vardi's interpreted-systems construction: points in runs are indistinguishable when the agent-local state agrees | local state is the existing `V_p,o` plus occurrence-preserving `H_{tr,rho}(p,e,o)` and every projection-visible control/policy coordinate | policy revision, audience, marking, and declared order are included because they can change the ACES projection |
-| noninterference and purge | Goguen and Meseguer's policy-relative noninterference and purge treatment of high actions | high variation is evaluated against ACES crossings, and low observations are participant-projected history support sets | policy changes are evaluated at each occurrence's effective order; the baseline composes an explicit declassification schedule |
-| declassification | Sabelfeld and Sands' dimensions and principles for what may be released, by whom, where, and when | release records bind source dimensions, participant/audience, actor/controller/authority, policy revision, order, markings, evidence, and provenance | ACES adds stable carrier/evidence coordinates and deny-first intersection with admission and marking; it does not redefine declassification as redaction |
-| labelled transition and hidden-action treatment | Milner's labelled transition/`tau` discipline and van Glabbeek's separation of trace and branching-time relations | the SEM-230 alphabet maps each label to an existing ACES action, lifecycle, visibility, control, delivery, or evidence owner | observability is indexed by participant, audience, policy revision, and order; this definition does not claim weak or strong bisimulation |
-| visible history and knowledge persistence | interpreted systems and the existing ADR-054 constructive visible-history/perfect-recall treatment | disclosure appends a stable visible occurrence to `H`; later concealment or revocation changes future projection | ACES preserves evidence/provenance and visible-order identity across rollback and supersession |
+| participant-relative information state and low equivalence | Fagin, Halpern, Moses, and Vardi's interpreted-systems construction: points in runs are indistinguishable when the agent-local state agrees | local state is the existing `V_p,o` plus occurrence-preserving `H_{tr,rho}(p,e,o)` and every projection-visible control/policy coordinate | policy revision, audience, marking, and declared order are included because they can change the RAES projection |
+| noninterference and purge | Goguen and Meseguer's policy-relative noninterference and purge treatment of high actions | high variation is evaluated against RAES crossings, and low observations are participant-projected history support sets | policy changes are evaluated at each occurrence's effective order; the baseline composes an explicit declassification schedule |
+| declassification | Sabelfeld and Sands' dimensions and principles for what may be released, by whom, where, and when | release records bind source dimensions, participant/audience, actor/controller/authority, policy revision, order, markings, evidence, and provenance | RAES adds stable carrier/evidence coordinates and deny-first intersection with admission and marking; it does not redefine declassification as redaction |
+| labelled transition and hidden-action treatment | Milner's labelled transition/`tau` discipline and van Glabbeek's separation of trace and branching-time relations | the SEM-230 alphabet maps each label to an existing RAES action, lifecycle, visibility, control, delivery, or evidence owner | observability is indexed by participant, audience, policy revision, and order; this definition does not claim weak or strong bisimulation |
+| visible history and knowledge persistence | interpreted systems and the existing ADR-054 constructive visible-history/perfect-recall treatment | disclosure appends a stable visible occurrence to `H`; later concealment or revocation changes future projection | RAES preserves evidence/provenance and visible-order identity across rollback and supersession |
 | causal and partial ordering | Lamport happened-before plus the Winskel event-structure and Mazurkiewicz trace-theory lineage already adopted by ADR-054 | SEM-230 reuses the existing `R_o`, visible partial order, and simultaneity groups | policy revisions and declassification events are located in that order; no new clock or concurrency formalism is introduced |
 
 The indirect derivations in the final two rows are intentional: SEM-230 reuses
@@ -354,7 +354,7 @@ realization.
 | authorization, admission, withholding, projection, redaction, declassification, disclosure, concealment, revocation, transformation, loss, and weakening remain distinct | this specification, “Distinct Operations” | deny-first, redaction, transformation, concealment, and revocation tests | defined and bounded-tested; no production enforcement claimed |
 | exact noninterference relation, low equivalence, purge, declassification, quantifiers, scheduler/environment, order, termination/progress/timing, nondeterminism, and probability | this specification plus catalog relation `policy-noninterference` | finite support-set/property cases | definition complete; test status bounded; proof deliberately unproved |
 | claims bind through the relation catalog with evidence status and nonclaims | behavioral-relation catalog revision `rev2` and claim surface `participant-information-flow-policy` | `tools/check_behavioral_relation_claims.py` and catalog/claim tests | catalog implemented and tested; no claim truth inferred from a valid binding |
-| intellectual lineage and exact ACES mappings | `docs/explain/sdl/lineage.md`, lineage ledger, and source audit | SDL-lineage policy gate | reviewed derivation record; no source syntax or compatibility claim |
+| intellectual lineage and exact RAES mappings | `docs/explain/sdl/lineage.md`, lineage ledger, and source audit | SDL-lineage policy gate | reviewed derivation record; no source syntax or compatibility claim |
 
 ## Follow-On Ownership And Nonclaims
 

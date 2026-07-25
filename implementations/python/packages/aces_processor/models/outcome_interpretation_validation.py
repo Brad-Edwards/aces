@@ -2,7 +2,7 @@
 
 from collections.abc import Iterable, Mapping
 
-from aces_sdl.participant_outcome_semantics import (
+from raes.participant_outcome_semantics import (
     PROVENANCE_REQUIRED_OUTCOME_SOURCE_LAYERS,
     OutcomeInterpretationSourceLayer,
 )

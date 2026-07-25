@@ -36,8 +36,8 @@ from aces_processor.models import DomainControllerPlacement, resource_payload
 from aces_processor.planner import plan
 from aces_processor.semantics.realization import realization_disclosure
 from aces_reference_backend import interpret_provisioning_plan as interpret_reference_plan
-from aces_sdl import parse_sdl
 from jsonschema import Draft202012Validator
+from raes import parse_sdl
 
 _RESOURCE_TYPE = "domain-controller-placement"
 

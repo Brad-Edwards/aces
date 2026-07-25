@@ -1,16 +1,23 @@
-"""ACES Scenario Description Language (SDL).
+"""RAES Scenario Description Language (SDL).
 
 A backend-agnostic scenario specification language with revision-pinned syntax
-and translated-model ancestry in Open Cyber Range SDL plus ACES-native
+and translated-model ancestry in Open Cyber Range SDL plus RAES-native
 extensions. The normative derivation boundary is recorded in
 ``contracts/provenance/sdl-lineage-ledger-v1.json``; this module does not claim
 drop-in compatibility.
 """
 
 from importlib import import_module
+from importlib.metadata import PackageNotFoundError, version
+
+try:
+    __version__ = version("raes")
+except PackageNotFoundError:
+    __version__ = "0.0.0+unknown"
 
 __all__ = [
     "admit_instantiated_scenario",
+    "__version__",
     "canonical_instantiated_sdl_bytes",
     "canonical_instantiated_sdl_digest",
     "canonical_sdl_bytes",
@@ -52,7 +59,7 @@ def __getattr__(name: str):
         "SDLSourceRange",
         "SDLValidationError",
     }:
-        module = import_module("aces_sdl._errors")
+        module = import_module("raes._errors")
     elif name in {
         "canonical_instantiated_sdl_bytes",
         "canonical_instantiated_sdl_digest",
@@ -62,26 +69,26 @@ def __getattr__(name: str):
         "InstantiatedScenarioSnapshot",
         "SDLCanonicalDigest",
     }:
-        module = import_module("aces_sdl.canonical")
+        module = import_module("raes.canonical")
     elif name in {"format_sdl_source", "SDLFormatResult"}:
-        module = import_module("aces_sdl.formatting")
+        module = import_module("raes.formatting")
     elif name in {
         "SDL_CANONICAL_PROFILE",
         "SDLMigrationPolicy",
         "SDLParserLimits",
         "SDL_SOURCE_FORMAT",
     }:
-        module = import_module("aces_sdl._source_profile")
+        module = import_module("raes._source_profile")
     elif name == "VARIABLE_TOKEN_PATTERN":
-        module = import_module("aces_sdl._base")
+        module = import_module("raes._base")
     elif name == "build_declaration_index":
-        module = import_module("aces_sdl._declarations")
+        module = import_module("raes._declarations")
     elif name in {"admit_instantiated_scenario", "instantiate_scenario"}:
-        module = import_module("aces_sdl.instantiate")
+        module = import_module("raes.instantiate")
     elif name in {"load_sdl_fragment", "parse_sdl", "parse_sdl_file"}:
-        module = import_module("aces_sdl.parser")
+        module = import_module("raes.parser")
     elif name in {"InstantiatedScenario", "Scenario"}:
-        module = import_module("aces_sdl.scenario")
+        module = import_module("raes.scenario")
     else:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
     return getattr(module, name)
