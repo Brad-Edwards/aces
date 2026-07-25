@@ -6,5 +6,5 @@
   "snapshot_path": "docs/research/specification-coverage/execution-snapshot-v1.1.json",
   "snapshot_sha256": "5f8e060dc651021350dcee3e0e8bf03d2d5a25849c1fe6f760255ef286712119",
   "analysis_path": "docs/research/specification-coverage/analysis-v1.1.json",
-  "analysis_sha256": "299ff4cd378e9f01cb22c94fd8ac92d41a006025b79cff676cc564e2fb51e5d6"
+  "analysis_sha256": "c3cd8dd7faeb7d7ea69164e6fb9e9069b1e7c3cc3e28989b70a9a1fe56b86114"
 }

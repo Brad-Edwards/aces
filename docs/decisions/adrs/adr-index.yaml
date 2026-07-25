@@ -163,8 +163,11 @@ adrs:
         summary: "Added primary-standards and access-control literature grounding (LDAP/Kerberos/SCIM/SAML/OAuth/OIDC RFCs, NIST SP 800-63C/162/207, RBAC/ABAC) for identity authorities and authority boundaries."
   - id: ADR-033
     path: docs/decisions/adrs/adr-033-scenario-delivery-boundary-for-runtime-node-state.md
-    pin: da01715747264384779a9bb203f4081ca401edaf7a947ecc48d791a18c97b69b
+    pin: 43b1b3a868e93ed5c70c0dce268227fda82fc5060d19466b719128d013c976d5
     amendments:
+      - date: 2026-07-25
+        ref: "#884"
+        summary: "Updated current implementation links for the breaking aces_sdl to raes package cutover."
       - date: 2026-07-13
         ref: "#417"
         summary: "Refined participant-discoverable capture versus deliberate authored runtime contract promotion across the six carrier categories."
