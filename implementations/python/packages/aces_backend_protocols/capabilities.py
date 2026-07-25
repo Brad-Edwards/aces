@@ -4,68 +4,28 @@ from dataclasses import dataclass, field
 
 from aces_contracts.controlled_vocabularies import validate_controlled_vocabulary_scope_values
 from aces_contracts.manifest_authority import validate_backend_supported_contract_versions
-from aces_contracts.vocabulary import ParticipantFeatureSupportLevel, WorkflowFeature, WorkflowStatePredicateFeature
+from aces_contracts.vocabulary import WorkflowFeature, WorkflowStatePredicateFeature
 
+from . import participant_capabilities as _participant_capabilities
+from . import provisioner_capabilities as _provisioner_capabilities
 from . import time_capabilities as _time_capabilities
-from .provisioner_capabilities import ProvisionerCapabilities
 
+PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE = _participant_capabilities.PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE
+PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS = (
+    _participant_capabilities.PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS
+)
+PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE = _participant_capabilities.PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE
+PARTICIPANT_RUNTIME_ROLE_SCOPE = _participant_capabilities.PARTICIPANT_RUNTIME_ROLE_SCOPE
+ParticipantFeatureSupport = _participant_capabilities.ParticipantFeatureSupport
+ParticipantRuntimeCapabilities = _participant_capabilities.ParticipantRuntimeCapabilities
+PROVISIONER_DOMAIN_PROFILE_SCOPE = _provisioner_capabilities.PROVISIONER_DOMAIN_PROFILE_SCOPE
+ProvisionerCapabilities = _provisioner_capabilities.ProvisionerCapabilities
 TIME_CAPABILITY_REQUIRED_CONTRACTS = _time_capabilities.TIME_CAPABILITY_REQUIRED_CONTRACTS
 TimeCapabilities = _time_capabilities.TimeCapabilities
-PARTICIPANT_RUNTIME_ROLE_SCOPE = "capabilities.participant_runtime.supported_participant_roles"
-PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE = "capabilities.participant_runtime.supported_behavior_features"
-PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE = "capabilities.participant_runtime.supported_interaction_features"
+
 OBSERVATION_CAPABILITY_CAPTURE_KIND_SCOPE = "capabilities.observation.supported_capture_kinds"
 OBSERVATION_CAPABILITY_CHANNEL_KIND_SCOPE = "capabilities.observation.supported_channel_kinds"
 OBSERVATION_CAPABILITY_SEALING_MODE_SCOPE = "capabilities.observation.supported_sealing_modes"
-_PARTICIPANT_EPISODE_CONTRACTS = frozenset(
-    {
-        "participant-episode-state-envelope-v1",
-        "participant-episode-history-event-stream-v1",
-        "runtime-snapshot-v1",
-    }
-)
-_PARTICIPANT_BEHAVIOR_CONTRACTS = frozenset(
-    {
-        "participant-behavior-history-event-stream-v1",
-        "runtime-snapshot-v1",
-    }
-)
-_PARTICIPANT_INTERACTION_CONTRACTS = frozenset(
-    {
-        "participant-behavior-history-event-stream-v1",
-        "participant-shared-state-record-v1",
-        "participant-joint-action-record-v1",
-        "participant-time-management-context-v1",
-        "runtime-snapshot-v1",
-    }
-)
-
-PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS = {
-    PARTICIPANT_RUNTIME_ROLE_SCOPE: {
-        "blue": _PARTICIPANT_EPISODE_CONTRACTS,
-        "green": _PARTICIPANT_EPISODE_CONTRACTS,
-        "red": _PARTICIPANT_EPISODE_CONTRACTS,
-        "white": _PARTICIPANT_EPISODE_CONTRACTS,
-    },
-    PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE: {
-        "action_contracts": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-        "attribution_support": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-        "behavior_history": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-        "effects": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-        "failure_classes": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-        "observation_boundaries": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-        "outcome_interpretation": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-        "preconditions": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-        "state_transitions": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-        "temporal_contracts": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-    },
-    PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE: {
-        "contention": _PARTICIPANT_INTERACTION_CONTRACTS,
-        "coordination": _PARTICIPANT_INTERACTION_CONTRACTS,
-        "interference": _PARTICIPANT_INTERACTION_CONTRACTS,
-        "shared_state_change": _PARTICIPANT_INTERACTION_CONTRACTS,
-    },
-}
 OBSERVATION_CAPABILITY_REQUIRED_CONTRACTS = frozenset(
     {
         "experiment-capture-spec-v1",
@@ -174,135 +134,6 @@ def _validate_unique_non_empty_strings(field_name: str, values: tuple[str, ...])
         raise ValueError(f"{field_name} must not contain empty strings")
     if len(set(values)) != len(values):
         raise ValueError(f"{field_name} must not contain duplicate values")
-
-
-def _validate_participant_feature_support_term(feature: str) -> None:
-    errors: list[str] = []
-    for scope in (PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE, PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE):
-        try:
-            validate_controlled_vocabulary_scope_values(scope, (feature,))
-        except ValueError as exc:
-            errors.append(str(exc))
-            continue
-        return
-    raise ValueError(
-        "ParticipantFeatureSupport.feature must be a governed participant behavior or interaction feature "
-        f"term, or match the governed extension pattern; got {feature!r}; "
-        f"validation details: {'; '.join(errors)}"
-    )
-
-
-@dataclass(frozen=True)
-class ParticipantFeatureSupport:
-    """API-407 per-feature participant runtime support declaration."""
-
-    feature: str
-    support_level: ParticipantFeatureSupportLevel | str
-    constraint_refs: tuple[str, ...] = ()
-    disclosure_refs: tuple[str, ...] = ()
-
-    def __post_init__(self) -> None:
-        if not self.feature.strip():
-            raise ValueError("ParticipantFeatureSupport.feature must be non-empty")
-        _validate_participant_feature_support_term(self.feature)
-
-        try:
-            support_level = (
-                self.support_level
-                if isinstance(self.support_level, ParticipantFeatureSupportLevel)
-                else ParticipantFeatureSupportLevel(str(self.support_level))
-            )
-        except ValueError as exc:
-            raise ValueError("ParticipantFeatureSupport.support_level must be a valid support level") from exc
-
-        constraint_refs = tuple(self.constraint_refs)
-        disclosure_refs = tuple(self.disclosure_refs)
-        _validate_unique_non_empty_strings("ParticipantFeatureSupport.constraint_refs", constraint_refs)
-        _validate_unique_non_empty_strings("ParticipantFeatureSupport.disclosure_refs", disclosure_refs)
-        if support_level != ParticipantFeatureSupportLevel.EXACT and not disclosure_refs:
-            raise ValueError(
-                "ParticipantFeatureSupport disclosure_refs must be non-empty when support_level is below exact"
-            )
-
-        object.__setattr__(self, "support_level", support_level)
-        object.__setattr__(self, "constraint_refs", constraint_refs)
-        object.__setattr__(self, "disclosure_refs", disclosure_refs)
-
-
-@dataclass(frozen=True)
-class ParticipantRuntimeCapabilities:
-    """Participant-episode lifecycle support declaration.
-
-    Declaring this capability means the backend exposes the full
-    participant episode control surface defined in RUN-311:
-    ``initialize``, ``reset``, ``restart``, and ``terminate`` on the
-    ``ParticipantRuntime`` protocol, plus the ``status``/``results``/
-    ``history`` observation methods. A backend that advertises this
-    capability MUST populate ``RuntimeSnapshot.participant_episode_results``
-    and ``participant_episode_history`` so downstream consumers see the
-    state machine transitions.
-
-    API-405 support dimensions live here because they are backend apparatus
-    claims: which participant roles, behavior features, and interaction
-    features this participant runtime can actually realize.
-    """
-
-    name: str
-    supported_participant_roles: frozenset[str] = frozenset()
-    supported_behavior_features: frozenset[str] = frozenset()
-    supported_interaction_features: frozenset[str] = frozenset()
-    feature_support: tuple[ParticipantFeatureSupport, ...] = ()
-    constraints: dict[str, str] = field(default_factory=dict)
-
-    def __post_init__(self) -> None:
-        if not self.name.strip():
-            raise ValueError("ParticipantRuntimeCapabilities.name must be non-empty")
-        if not self.supported_participant_roles:
-            raise ValueError("ParticipantRuntimeCapabilities.supported_participant_roles must not be empty")
-        if not self.supported_behavior_features:
-            raise ValueError("ParticipantRuntimeCapabilities.supported_behavior_features must not be empty")
-        if not self.supported_interaction_features:
-            raise ValueError("ParticipantRuntimeCapabilities.supported_interaction_features must not be empty")
-        if any(not role.strip() for role in self.supported_participant_roles):
-            raise ValueError(
-                "ParticipantRuntimeCapabilities.supported_participant_roles must not contain empty strings"
-            )
-        if any(not feature.strip() for feature in self.supported_behavior_features):
-            raise ValueError(
-                "ParticipantRuntimeCapabilities.supported_behavior_features must not contain empty strings"
-            )
-        if any(not feature.strip() for feature in self.supported_interaction_features):
-            raise ValueError(
-                "ParticipantRuntimeCapabilities.supported_interaction_features must not contain empty strings"
-            )
-        validate_controlled_vocabulary_scope_values(
-            PARTICIPANT_RUNTIME_ROLE_SCOPE,
-            self.supported_participant_roles,
-        )
-        validate_controlled_vocabulary_scope_values(
-            PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE,
-            self.supported_behavior_features,
-        )
-        validate_controlled_vocabulary_scope_values(
-            PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE,
-            self.supported_interaction_features,
-        )
-        feature_support = tuple(
-            entry if isinstance(entry, ParticipantFeatureSupport) else ParticipantFeatureSupport(**entry)
-            for entry in self.feature_support
-        )
-        feature_names = tuple(entry.feature for entry in feature_support)
-        _validate_unique_non_empty_strings("ParticipantRuntimeCapabilities.feature_support", feature_names)
-        supported_features = self.supported_behavior_features | self.supported_interaction_features
-        for entry in feature_support:
-            if (
-                entry.support_level == ParticipantFeatureSupportLevel.UNSUPPORTED
-                and entry.feature in supported_features
-            ):
-                raise ValueError(
-                    "ParticipantRuntimeCapabilities.feature_support cannot declare a supported feature unsupported"
-                )
-        object.__setattr__(self, "feature_support", feature_support)
 
 
 @dataclass(frozen=True)
@@ -427,6 +258,7 @@ def __getattr__(name: str) -> object:
         return getattr(backend_manifest, name)
     if name in {
         "observation_capability_contract_gaps",
+        "participant_autonomous_execution_capability_gaps",
         "participant_runtime_capability_contract_gaps",
         "require_cleanup_plan_capability",
         "require_time_model_capability",

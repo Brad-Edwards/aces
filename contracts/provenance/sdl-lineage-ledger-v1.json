@@ -66,6 +66,101 @@
       "verification_evidence": "docs/research/lineage/source-audit-2026-07-12.md#cyborg"
     },
     {
+      "citation_id": "gymnasium-2024",
+      "title": "Gymnasium: A Standard Interface for Reinforcement Learning Environments",
+      "authors_or_maintainer": [
+        "Mark Towers et al."
+      ],
+      "year": 2024,
+      "container_title": "arXiv:2407.17032",
+      "canonical_url": "https://arxiv.org/abs/2407.17032",
+      "verified_on": "2026-07-24",
+      "verification_evidence": "docs/research/lineage/source-audit-2026-07-12.md#dsl-437-participant-interface-sources"
+    },
+    {
+      "citation_id": "pettingzoo-2021",
+      "title": "PettingZoo: Gym for Multi-Agent Reinforcement Learning",
+      "authors_or_maintainer": [
+        "J. K. Terry et al."
+      ],
+      "year": 2021,
+      "container_title": "Advances in Neural Information Processing Systems 34",
+      "canonical_url": "https://arxiv.org/abs/2009.14471",
+      "verified_on": "2026-07-24",
+      "verification_evidence": "docs/research/lineage/source-audit-2026-07-12.md#dsl-437-participant-interface-sources"
+    },
+    {
+      "citation_id": "openspiel-2019",
+      "title": "OpenSpiel: A Framework for Reinforcement Learning in Games",
+      "authors_or_maintainer": [
+        "Marc Lanctot et al."
+      ],
+      "year": 2019,
+      "container_title": "arXiv:1908.09453",
+      "canonical_url": "https://arxiv.org/abs/1908.09453",
+      "verified_on": "2026-07-24",
+      "verification_evidence": "docs/research/lineage/source-audit-2026-07-12.md#dsl-437-participant-interface-sources"
+    },
+    {
+      "citation_id": "ros2-clock-time-2018",
+      "title": "Clock and Time",
+      "authors_or_maintainer": [
+        "Tully Foote"
+      ],
+      "year": 2018,
+      "container_title": "ROS 2 Design",
+      "canonical_url": "https://design.ros2.org/articles/clock_and_time.html",
+      "verified_on": "2026-07-24",
+      "verification_evidence": "docs/research/lineage/source-audit-2026-07-12.md#dsl-437-simulation-time-sources"
+    },
+    {
+      "citation_id": "fmi-3.0.2-2024",
+      "title": "Functional Mock-up Interface Specification",
+      "authors_or_maintainer": [
+        "Modelica Association Project FMI"
+      ],
+      "year": 2024,
+      "container_title": "FMI 3.0.2",
+      "canonical_url": "https://fmi-standard.org/docs/3.0.2/",
+      "verified_on": "2026-07-24",
+      "verification_evidence": "docs/research/lineage/source-audit-2026-07-12.md#dsl-437-simulation-time-sources"
+    },
+    {
+      "citation_id": "ieee-1516.1-2010",
+      "title": "IEEE Standard for Modeling and Simulation (M&S) High Level Architecture (HLA)--Federate Interface Specification",
+      "authors_or_maintainer": [
+        "IEEE Computer Society"
+      ],
+      "year": 2010,
+      "container_title": "IEEE Std 1516.1-2010",
+      "doi": "10.1109/IEEESTD.2010.5954120",
+      "canonical_url": "https://doi.org/10.1109/IEEESTD.2010.5954120",
+      "verified_on": "2026-07-24",
+      "verification_evidence": "docs/research/lineage/source-audit-2026-07-12.md#dsl-437-simulation-time-sources"
+    },
+    {
+      "citation_id": "tena-overview-2024",
+      "title": "TENA Is Establishing the Foundation for DoD Range Interoperability",
+      "authors_or_maintainer": [
+        "TENA Software Development Activity"
+      ],
+      "year": 2024,
+      "canonical_url": "https://www.tena-sda.org/attachments/TENA-Overview-FS-2024-02-29-DistA.pdf",
+      "verified_on": "2026-07-24",
+      "verification_evidence": "docs/research/lineage/source-audit-2026-07-12.md#dsl-437-simulation-time-sources"
+    },
+    {
+      "citation_id": "openscenario-xml-1.3.0-2024",
+      "title": "ASAM OpenSCENARIO XML 1.3.0",
+      "authors_or_maintainer": [
+        "ASAM e.V."
+      ],
+      "year": 2024,
+      "canonical_url": "https://publications.pages.asam.net/standards/ASAM_OpenSCENARIO/ASAM_OpenSCENARIO_XML/v1.3.0/",
+      "verified_on": "2026-07-24",
+      "verification_evidence": "docs/research/lineage/source-audit-2026-07-12.md#dsl-437-simulation-time-sources"
+    },
+    {
       "citation_id": "fagin-halpern-moses-vardi-1995",
       "title": "Reasoning About Knowledge",
       "authors_or_maintainer": [
@@ -238,6 +333,73 @@
       "version_or_edition": "arXiv:2108.09118v1",
       "canonical_url": "https://arxiv.org/abs/2108.09118",
       "citation_ref": "cyborg-2021"
+    },
+    {
+      "source_id": "gymnasium-2024",
+      "kind": "publication",
+      "title": "Gymnasium",
+      "version_or_edition": "arXiv:2407.17032v1",
+      "canonical_url": "https://arxiv.org/abs/2407.17032",
+      "citation_ref": "gymnasium-2024"
+    },
+    {
+      "source_id": "pettingzoo-2021",
+      "kind": "publication",
+      "title": "PettingZoo",
+      "version_or_edition": "NeurIPS 2021 publication",
+      "canonical_url": "https://arxiv.org/abs/2009.14471",
+      "citation_ref": "pettingzoo-2021"
+    },
+    {
+      "source_id": "openspiel-2019",
+      "kind": "publication",
+      "title": "OpenSpiel",
+      "version_or_edition": "arXiv:1908.09453v1",
+      "canonical_url": "https://arxiv.org/abs/1908.09453",
+      "citation_ref": "openspiel-2019"
+    },
+    {
+      "source_id": "ros2-clock-time-2018",
+      "kind": "publication",
+      "title": "ROS 2 Clock and Time",
+      "version_or_edition": "design article dated 2018-07",
+      "canonical_url": "https://design.ros2.org/articles/clock_and_time.html",
+      "citation_ref": "ros2-clock-time-2018"
+    },
+    {
+      "source_id": "fmi-3.0.2-2024",
+      "kind": "standard",
+      "title": "Functional Mock-up Interface",
+      "version_or_edition": "3.0.2",
+      "canonical_url": "https://fmi-standard.org/docs/3.0.2/",
+      "maintaining_body": "Modelica Association Project FMI",
+      "citation_ref": "fmi-3.0.2-2024"
+    },
+    {
+      "source_id": "ieee-1516.1-2010",
+      "kind": "standard",
+      "title": "High Level Architecture Federate Interface Specification",
+      "version_or_edition": "IEEE Std 1516.1-2010",
+      "canonical_url": "https://standards.ieee.org/ieee/1516.1/3745/",
+      "maintaining_body": "IEEE Computer Society",
+      "citation_ref": "ieee-1516.1-2010"
+    },
+    {
+      "source_id": "tena-overview-2024",
+      "kind": "publication",
+      "title": "TENA Overview",
+      "version_or_edition": "2024-02-29 fact sheet",
+      "canonical_url": "https://www.tena-sda.org/attachments/TENA-Overview-FS-2024-02-29-DistA.pdf",
+      "citation_ref": "tena-overview-2024"
+    },
+    {
+      "source_id": "openscenario-xml-1.3.0-2024",
+      "kind": "standard",
+      "title": "ASAM OpenSCENARIO XML",
+      "version_or_edition": "1.3.0",
+      "canonical_url": "https://publications.pages.asam.net/standards/ASAM_OpenSCENARIO/ASAM_OpenSCENARIO_XML/v1.3.0/",
+      "maintaining_body": "ASAM e.V.",
+      "citation_ref": "openscenario-xml-1.3.0-2024"
     },
     {
       "source_id": "fagin-halpern-moses-vardi-1995",
@@ -628,22 +790,83 @@
       "claims": [
         {
           "plane": "semantics",
-          "classification": "aces_native",
-          "source_refs": [],
+          "classification": "adapted",
+          "source_refs": [
+            "cyborg-v3.0",
+            "gymnasium-2024",
+            "pettingzoo-2021",
+            "openspiel-2019",
+            "ros2-clock-time-2018",
+            "fmi-3.0.2-2024",
+            "ieee-1516.1-2010",
+            "tena-overview-2024",
+            "openscenario-xml-1.3.0-2024"
+          ],
           "aces_boundaries": [
             {
               "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
-              "symbol_or_pointer": "#/properties/behavior_specifications"
+              "symbol_or_pointer": "#/$defs/ParticipantBehaviorSpecification/properties/autonomous_execution"
             }
           ],
-          "source_boundaries": [],
-          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
-          "compatibility": "not_applicable",
-          "citation_refs": [],
-          "internal_authority_refs": [
-            "specs/sdl/sections.md"
+          "source_boundaries": [
+            {
+              "artifact": "CybORG v3.0",
+              "symbol_or_pointer": "CybORG/Agents/SimpleAgents/GreenAgent.py and CybORG/Shared/AgentInterface.py"
+            },
+            {
+              "artifact": "Gymnasium: A Standard Interface for Reinforcement Learning Environments",
+              "symbol_or_pointer": "reset/step environment interface and termination/truncation signals"
+            },
+            {
+              "artifact": "PettingZoo: Gym for Multi-Agent Reinforcement Learning",
+              "symbol_or_pointer": "Agent Environment Cycle model and per-agent interaction ordering"
+            },
+            {
+              "artifact": "OpenSpiel: A Framework for Reinforcement Learning in Games",
+              "symbol_or_pointer": "current-player, legal-action, information-state, chance, and simultaneous-move interfaces"
+            },
+            {
+              "artifact": "ROS 2 Clock and Time",
+              "symbol_or_pointer": "Time Abstractions, ROS Time Source, and clock-jump lifecycle callbacks"
+            },
+            {
+              "artifact": "Functional Mock-up Interface Specification 3.0.2",
+              "symbol_or_pointer": "sections 1.2.2-1.2.4, 2.2.7.2, and 5: clocks, importer-controlled advancement, and Scheduled Execution"
+            },
+            {
+              "artifact": "IEEE Std 1516.1-2010",
+              "symbol_or_pointer": "Time Management service group: regulation, constrained advancement, and timestamp-order delivery"
+            },
+            {
+              "artifact": "TENA Overview 2024",
+              "symbol_or_pointer": "TENA Middleware, Object Models, Repository, and Logical Range Data Archive separation"
+            },
+            {
+              "artifact": "ASAM OpenSCENARIO XML 1.3.0",
+              "symbol_or_pointer": "sections 7.2 and 8.4: storyboard/entity/action/trigger lifecycle and execution"
+            }
           ],
-          "compatibility_direction": "not_applicable"
+          "divergence": "ACES adapts only the participant-environment, multi-participant ordering, shared-time coordination, and clock-jump callback concerns. The nested autonomous-execution policy, green-role restriction, evaluation-authority boundary, canonical references, reachable-cadence rule, runtime-owned wall pacing, capability admission, and clock/episode/scheduler readback contracts are ACES-defined. Externally paced autonomous execution remains unsupported pending a portable transition-notification contract. ACES adopts no source syntax, actor ontology, scheduler algorithm, clock protocol, federation middleware, automotive hierarchy, or wire compatibility.",
+          "compatibility": "none",
+          "citation_refs": [
+            "cyborg-2021",
+            "gymnasium-2024",
+            "pettingzoo-2021",
+            "openspiel-2019",
+            "ros2-clock-time-2018",
+            "fmi-3.0.2-2024",
+            "ieee-1516.1-2010",
+            "tena-overview-2024",
+            "openscenario-xml-1.3.0-2024"
+          ],
+          "internal_authority_refs": [
+            "specs/sdl/sections.md",
+            "docs/decisions/adrs/adr-092-autonomous-benign-participants-under-shared-time.md",
+            "specs/formal/participant-semantics/autonomous-execution.md",
+            "docs/research/participant-backend-contracts/prior-art-and-design-criteria.md",
+            "docs/research/time-model/prior-art-and-design-criteria.md"
+          ],
+          "compatibility_direction": "aces_relative_to_source"
         }
       ]
     },

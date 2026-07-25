@@ -46,7 +46,7 @@ REFERENCE_PARTICIPANT_ROLES = frozenset(
 )
 REFERENCE_PARTICIPANT_BEHAVIOR_FEATURES = frozenset(
     PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE]
-)
+) - {"autonomous_execution"}
 REFERENCE_PARTICIPANT_INTERACTION_FEATURES = frozenset(
     PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE]
 )
@@ -268,7 +268,7 @@ def _stub_cleanup() -> CleanupCapabilities:
     )
 
 
-def _stub_time() -> TimeCapabilities:
+def _stub_time(*, supports_coordinated_participant_reset: bool) -> TimeCapabilities:
     return TimeCapabilities(
         name="stub-time-runtime",
         supported_contract_versions=TIME_CAPABILITY_REQUIRED_CONTRACTS,
@@ -285,6 +285,7 @@ def _stub_time() -> TimeCapabilities:
         supports_exact_rational_mappings=True,
         supports_append_only_history=True,
         supports_run_provenance=True,
+        supports_coordinated_participant_reset=supports_coordinated_participant_reset,
     )
 
 
@@ -301,7 +302,7 @@ def _stub_capabilities(
         participant_runtime=_stub_participant_runtime() if with_participant_runtime else None,
         observation=_stub_observation() if with_observation else None,
         cleanup=_stub_cleanup(),
-        time=_stub_time() if with_time else None,
+        time=(_stub_time(supports_coordinated_participant_reset=with_participant_runtime) if with_time else None),
     )
 
 

@@ -2,9 +2,9 @@
   "contract_id": "backend-manifest-v2",
   "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
   "stability": "draft",
-  "content_hash": "58edfd579125c993c8d4e56130e443571569c73b7f34e9e224ce0a9d7d81681e",
+  "content_hash": "178db9d22d522e069bcad2bc91cfb985e58a22e01ee5dc2b8de506373c1952f0",
   "last_change": {
-    "summary": "Published service materialization profiles, typed cleanup capability coherence rules, and portable shared-time capabilities.",
-    "content_hash": "58edfd579125c993c8d4e56130e443571569c73b7f34e9e224ce0a9d7d81681e"
+    "summary": "Published service materialization, portable shared-time, and autonomous participant capability controls.",
+    "content_hash": "178db9d22d522e069bcad2bc91cfb985e58a22e01ee5dc2b8de506373c1952f0"
   }
 }

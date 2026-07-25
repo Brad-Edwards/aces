@@ -96,3 +96,9 @@ participant behavior. Neither becomes a special time ontology.
 - A live-activity-specific scheduler or clock.
 - Timestamp-derived causality.
 - Treating archived or historical content as a time-domain declaration.
+
+## Amendments
+
+| Date | Commit/PR | Summary |
+|------|-----------|---------|
+| 2026-07-24 | #117 | Replaced a documentation link that the strict Sphinx build could not resolve with its repository-relative path. |

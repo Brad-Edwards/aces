@@ -54,11 +54,20 @@ class BackendManifestV2Model(ContractModel):
     @model_validator(mode="after")
     def _validate_unique_binding_scopes(self) -> BackendManifestV2Model:
         validate_backend_supported_contract_versions(self.supported_contract_versions)
+        self._validate_realization_envelope_contract()
+        self._validate_cleanup_contracts()
+        self._validate_time_contracts()
+        self._validate_concept_bindings()
+        return self
+
+    def _validate_realization_envelope_contract(self) -> None:
         envelope_contract_declared = "realization-envelope-v1" in self.supported_contract_versions
         if self.realization_envelope is not None and not envelope_contract_declared:
             raise ValueError("realization_envelope requires realization-envelope-v1 support")
         if envelope_contract_declared and self.realization_envelope is None:
             raise ValueError("realization-envelope-v1 support requires realization_envelope identity")
+
+    def _validate_cleanup_contracts(self) -> None:
         cleanup_contracts = {"trial-cleanup-plan-v1", "trial-cleanup-receipt-v1"}
         declared_cleanup_contracts = cleanup_contracts.intersection(self.supported_contract_versions)
         if self.capabilities.cleanup is not None and declared_cleanup_contracts != cleanup_contracts:
@@ -67,6 +76,8 @@ class BackendManifestV2Model(ContractModel):
             )
         if declared_cleanup_contracts and self.capabilities.cleanup is None:
             raise ValueError("cleanup contract support requires capabilities.cleanup")
+
+    def _validate_time_contracts(self) -> None:
         time_contracts = {
             "time-model-v1",
             "time-runtime-state-v1",
@@ -77,14 +88,21 @@ class BackendManifestV2Model(ContractModel):
         declared_time_contracts = time_contracts.intersection(self.supported_contract_versions)
         if self.capabilities.time is not None and declared_time_contracts != time_contracts:
             raise ValueError("time capabilities require the complete time contract family")
-        if declared_time_contracts.intersection({"time-model-v1", "time-runtime-state-v1", "realized-time-model-v1"}):
-            if self.capabilities.time is None:
-                raise ValueError("time contract support requires capabilities.time")
+        portable_time_contracts = {"time-model-v1", "time-runtime-state-v1", "realized-time-model-v1"}
+        if declared_time_contracts.intersection(portable_time_contracts) and self.capabilities.time is None:
+            raise ValueError("time contract support requires capabilities.time")
+        if (
+            self.capabilities.time is not None
+            and self.capabilities.time.supports_coordinated_participant_reset
+            and self.capabilities.participant_runtime is None
+        ):
+            raise ValueError("coordinated participant reset support requires participant runtime capabilities")
+
+    def _validate_concept_bindings(self) -> None:
         scopes = [binding.scope for binding in self.concept_bindings]
         if len(scopes) != len(set(scopes)):
             raise ValueError("concept_bindings must not contain duplicate scopes")
         _validate_canonical_concept_bindings(self, allowed_scopes=_BACKEND_CONCEPT_BINDING_SCOPES)
-        return self
 
     @classmethod
     def __get_pydantic_json_schema__(

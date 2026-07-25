@@ -630,10 +630,85 @@
           "title": "Feature Support",
           "type": "array"
         },
+        "max_autonomous_action_attempts": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Autonomous Action Attempts"
+        },
+        "max_autonomous_in_flight": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Autonomous In Flight"
+        },
+        "max_autonomous_participants": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Autonomous Participants"
+        },
         "name": {
           "minLength": 1,
           "title": "Name",
           "type": "string"
+        },
+        "supported_autonomous_action_contracts": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Supported Autonomous Action Contracts",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supported_autonomous_observation_boundaries": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Supported Autonomous Observation Boundaries",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supported_autonomous_selection_strategies": {
+          "items": {
+            "const": "ordered_cycle",
+            "type": "string"
+          },
+          "title": "Supported Autonomous Selection Strategies",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supported_autonomous_target_addresses": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Supported Autonomous Target Addresses",
+          "type": "array",
+          "uniqueItems": true
         },
         "supported_behavior_features": {
           "items": {
@@ -664,6 +739,11 @@
           "title": "Supported Participant Roles",
           "type": "array",
           "uniqueItems": true
+        },
+        "supports_autonomous_execution": {
+          "default": false,
+          "title": "Supports Autonomous Execution",
+          "type": "boolean"
         }
       },
       "required": [
@@ -1111,6 +1191,11 @@
         "supports_append_only_history": {
           "default": false,
           "title": "Supports Append Only History",
+          "type": "boolean"
+        },
+        "supports_coordinated_participant_reset": {
+          "default": false,
+          "title": "Supports Coordinated Participant Reset",
           "type": "boolean"
         },
         "supports_exact_rational_mappings": {

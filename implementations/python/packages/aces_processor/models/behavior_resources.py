@@ -84,6 +84,30 @@ class ParticipantBehaviorRuntime(ResolvedResource):
 
 
 @dataclass(frozen=True)
+class ParticipantAutonomousExecutionRuntime(ResolvedResource):
+    """Compiled deterministic execution policy for ordinary participants."""
+
+    behavior_specification_address: str = ""
+    participant_addresses: tuple[str, ...] = ()
+    participant_implementation_ref: str = ""
+    clock_address: str = ""
+    progression_policy_address: str = ""
+    temporal_constraint_addresses: tuple[str, ...] = ()
+    action_contract_addresses: tuple[str, ...] = ()
+    target_addresses: tuple[str, ...] = ()
+    observation_boundary_address: str = ""
+    selection_strategy: str = ""
+    max_action_attempts: int = 0
+    max_in_flight: int = 0
+    failure_policy: str = ""
+    evaluation_authority_mode: str = ""
+    objective_refs: tuple[str, ...] = ()
+    proof_producer_refs: tuple[str, ...] = ()
+    score_authority_refs: tuple[str, ...] = ()
+    receipt_authority_refs: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class MixedControlDispositionRulesRuntime:
     """Compiled fail-closed decision disposition rules."""
 
@@ -151,6 +175,7 @@ class ParticipantBehaviorSpecificationRuntime(ResolvedResource):
     authority_scope_refs: tuple[str, ...] = ()
     authority_scope_addresses: tuple[str, ...] = ()
     behavior_mode: str = ""
+    autonomous_execution: ParticipantAutonomousExecutionRuntime | None = None
     mixed_control_participant_address: str = ""
     mixed_control_policy_revision: str = ""
     mixed_control_order_strategy: str = ""

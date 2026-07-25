@@ -58,6 +58,7 @@ class TimeCapabilities:
     supports_exact_rational_mappings: bool = False
     supports_append_only_history: bool = False
     supports_run_provenance: bool = False
+    supports_coordinated_participant_reset: bool = False
     constraints: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:

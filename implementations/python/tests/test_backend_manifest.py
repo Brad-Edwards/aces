@@ -117,6 +117,17 @@ def test_backend_manifest_v2_roundtrip_from_stub_manifest():
     assert roundtrip == payload
 
 
+def test_coordinated_reset_manifest_claim_requires_participant_runtime_capabilities():
+    manifest = create_stub_manifest(with_time=True, with_participant_runtime=False)
+    assert manifest.time is not None
+    assert not manifest.time.supports_coordinated_participant_reset
+
+    payload = backend_manifest_payload(create_stub_manifest(with_time=True))
+    payload["capabilities"]["participant_runtime"] = None
+    with pytest.raises(ValidationError, match="coordinated participant reset support"):
+        BackendManifestV2Model.model_validate(payload)
+
+
 def test_backend_manifest_v2_declares_participant_capability_dimensions():
     """API-405: participant-runtime backends must declare the participant
     roles, behavior features, and interaction features they support."""
@@ -144,6 +155,14 @@ def test_backend_manifest_v2_declares_participant_capability_dimensions():
         "shared_state_change",
     ]
     assert participant_runtime["feature_support"] == []
+    assert participant_runtime["supports_autonomous_execution"] is False
+    assert participant_runtime["supported_autonomous_action_contracts"] == []
+    assert participant_runtime["supported_autonomous_observation_boundaries"] == []
+    assert participant_runtime["supported_autonomous_selection_strategies"] == []
+    assert participant_runtime["supported_autonomous_target_addresses"] == []
+    assert participant_runtime["max_autonomous_participants"] is None
+    assert participant_runtime["max_autonomous_action_attempts"] is None
+    assert participant_runtime["max_autonomous_in_flight"] is None
 
     model = BackendManifestV2Model.model_validate(payload)
     assert model.capabilities.participant_runtime is not None

@@ -131,6 +131,9 @@ adr-083-participant-tool-decision-surface-and-exposure-semantics
 adr-084-scenario-variation-and-deterministic-trial-realization
 adr-085-participant-information-flow-and-control
 adr-086-governed-whole-scenario-satisfiability
+adr-090-shared-time-domain-clock-and-progression-authority
+adr-091-portable-time-capability-control-and-provenance-contracts
+adr-092-autonomous-benign-participants-under-shared-time
 ```
 
 | ADR | Title | Status | Date |
@@ -226,3 +229,4 @@ adr-086-governed-whole-scenario-satisfiability
 | [088](adr-088-initial-service-state-and-native-materialization.md) | Initial Service State and Native Materialization | accepted | 2026-07-24 |
 | [090](adr-090-shared-time-domain-clock-and-progression-authority.md) | Shared Time-Domain, Clock, And Progression Authority | accepted | 2026-07-24 |
 | [091](adr-091-portable-time-capability-control-and-provenance-contracts.md) | Portable Time Capability, Control, And Provenance Contracts | accepted | 2026-07-24 |
+| [092](adr-092-autonomous-benign-participants-under-shared-time.md) | Autonomous Benign Participants Under Shared Time | accepted | 2026-07-24 |

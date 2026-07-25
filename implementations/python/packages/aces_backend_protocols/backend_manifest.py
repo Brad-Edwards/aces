@@ -76,6 +76,7 @@ class BackendManifest:
         supported_contract_versions = _validate_supported_contract_versions(options)
         _validate_cleanup_capability_contracts(supported_contract_versions, capabilities.cleanup)
         _validate_time_capability_contracts(supported_contract_versions, capabilities.time)
+        _validate_coordinated_reset_capabilities(capabilities)
         realization_envelope = options.get("realization_envelope")
         _validate_realization_envelope_contract(supported_contract_versions, realization_envelope)
         realization_support = _require_non_empty_tuple(options.get("realization_support", ()), "realization_support")
@@ -254,6 +255,12 @@ def _validate_time_capability_contracts(
     dedicated = {"time-model-v1", "time-runtime-state-v1", "realized-time-model-v1"}
     if declared.intersection(dedicated) and time is None:
         raise ValueError("time contract support requires TimeCapabilities")
+
+
+def _validate_coordinated_reset_capabilities(capabilities: BackendCapabilitySet) -> None:
+    time = capabilities.time
+    if time is not None and time.supports_coordinated_participant_reset and capabilities.participant_runtime is None:
+        raise ValueError("coordinated participant reset support requires participant runtime capabilities")
 
 
 _T = TypeVar("_T")

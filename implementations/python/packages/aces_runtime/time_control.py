@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
+from aces_backend_protocols.protocols import CoordinatedParticipantTimeRuntime
 from aces_contracts.contracts.time_model import TimeRuntimeStateModel, validate_time_runtime_state
+from aces_contracts.participant_autonomous_state import require_participant_autonomous_runtime_snapshot
 from aces_contracts.runtime_state import ApplyResult
 from aces_processor.compiler.time_model import time_model_contract_model
 
@@ -79,6 +81,13 @@ class RuntimeTimeControlMixin:
     def read_time_state(self) -> TimeRuntimeStateModel:
         """Read and validate target-provided shared-time state."""
 
+        lock = getattr(self, "_participant_execution_lock", None)
+        if lock is not None:
+            with lock:
+                return self._read_time_state_locked()
+        return self._read_time_state_locked()
+
+    def _read_time_state_locked(self) -> TimeRuntimeStateModel:
         if self._target.time_runtime is None or self._time_declaration is None:
             raise ValueError("runtime manager has no initialized shared-time model")
         state = self._target.time_runtime.state(self._snapshot)
@@ -103,22 +112,164 @@ class RuntimeTimeControlMixin:
         return self._apply_time_control("reset", clock_address, replay)
 
     def _apply_time_control(self, method_name: str, *args: object) -> ApplyResult:
+        lock = getattr(self, "_participant_execution_lock", None)
+        if lock is not None:
+            with lock:
+                return self._apply_time_control_locked(method_name, *args)
+        return self._apply_time_control_locked(method_name, *args)
+
+    def _apply_time_control_locked(self, method_name: str, *args: object) -> ApplyResult:
         if self._target.time_runtime is None or self._time_declaration is None:
             raise ValueError("runtime manager has no initialized shared-time model")
-        method = getattr(self._target.time_runtime, method_name)
+        preflight_failure = self._time_control_preflight(method_name, args)
+        if preflight_failure is not None:
+            return preflight_failure
+        predecessor = self._snapshot
+        invocation = self._time_control_invocation(method_name, args)
+        if isinstance(invocation, ApplyResult):
+            return invocation
+        method, method_args = invocation
         result = _call_backend_apply(
             method,
-            *args,
-            self._snapshot,
+            *method_args,
             address=f"runtime.time.{method_name}",
             snapshot=self._snapshot,
         )
-        if not result.success:
-            return result
+        if result.success:
+            result = self._validated_time_control_result(method_name, result, predecessor, args)
+        return result
+
+    def _time_control_preflight(
+        self,
+        method_name: str,
+        args: tuple[object, ...],
+    ) -> ApplyResult | None:
+        participant_preflight = getattr(self, "_participant_execution_clock_preflight", None)
+        if participant_preflight is not None:
+            return participant_preflight(method_name, args)
+        return None
+
+    def _time_control_invocation(
+        self,
+        method_name: str,
+        args: tuple[object, ...],
+    ) -> tuple[object, tuple[object, ...]] | ApplyResult:
+        method = getattr(self._target.time_runtime, method_name)
+        method_args = (*args, self._snapshot)
+        if method_name != "reset":
+            return method, method_args
+        return self._coordinated_reset_invocation(method, method_args, args)
+
+    def _coordinated_reset_invocation(
+        self,
+        default_method: object,
+        default_args: tuple[object, ...],
+        args: tuple[object, ...],
+    ) -> tuple[object, tuple[object, ...]] | ApplyResult:
+        reset_requests_factory = getattr(self, "_participant_execution_clock_reset_requests", None)
+        reset_requests = reset_requests_factory(str(args[0])) if reset_requests_factory is not None else ()
+        if not reset_requests:
+            return default_method, default_args
+        capability = self._target.manifest.time
+        if (
+            capability is None
+            or not capability.supports_coordinated_participant_reset
+            or self._target.participant_runtime is None
+        ):
+            return ApplyResult(
+                success=False,
+                snapshot=self._snapshot,
+                diagnostics=[
+                    _failure_diagnostic(
+                        "runtime.coordinated-participant-reset-unsupported",
+                        "runtime.time.reset",
+                        "Autonomous clock reset requires one atomic time and participant reset operation.",
+                    )
+                ],
+            )
+        coordinated_time_runtime = cast(
+            CoordinatedParticipantTimeRuntime,
+            self._target.time_runtime,
+        )
+        return coordinated_time_runtime.reset_with_participants, (
+            str(args[0]),
+            bool(args[1]),
+            self._target.participant_runtime,
+            reset_requests,
+            self._snapshot,
+        )
+
+    def _validated_time_control_result(
+        self,
+        method_name: str,
+        result: ApplyResult,
+        predecessor: object,
+        args: tuple[object, ...],
+    ) -> ApplyResult:
         readback_failure = self._time_control_readback_failure(method_name, result)
         if readback_failure is not None:
             return readback_failure
         self._snapshot = result.snapshot
+        result = self._synchronize_participant_clock(method_name, args, result, predecessor)
+        if result.success:
+            result = self._participant_readback_result(method_name, result, predecessor)
+        return result
+
+    def _synchronize_participant_clock(
+        self,
+        method_name: str,
+        args: tuple[object, ...],
+        result: ApplyResult,
+        predecessor: object,
+    ) -> ApplyResult:
+        sync = getattr(self, "_sync_participant_execution_clock", None)
+        sync_result = sync(method_name, str(args[0])) if sync is not None else None
+        if sync_result is not None and not sync_result.success:
+            self._snapshot = predecessor
+            return ApplyResult(
+                success=False,
+                snapshot=predecessor,
+                diagnostics=[*result.diagnostics, *sync_result.diagnostics],
+            )
+        return ApplyResult(
+            success=True,
+            snapshot=self._snapshot,
+            diagnostics=[
+                *result.diagnostics,
+                *(sync_result.diagnostics if sync_result is not None else ()),
+            ],
+            changed_addresses=list(
+                dict.fromkeys(
+                    [
+                        *result.changed_addresses,
+                        *(sync_result.changed_addresses if sync_result is not None else ()),
+                    ]
+                )
+            ),
+        )
+
+    def _participant_readback_result(
+        self,
+        method_name: str,
+        result: ApplyResult,
+        predecessor: object,
+    ) -> ApplyResult:
+        try:
+            require_participant_autonomous_runtime_snapshot(self._snapshot)
+        except ValueError as exc:
+            self._snapshot = predecessor
+            return ApplyResult(
+                success=False,
+                snapshot=predecessor,
+                diagnostics=[
+                    *result.diagnostics,
+                    _failure_diagnostic(
+                        "runtime.participant-autonomous-readback-invalid",
+                        f"runtime.time.{method_name}",
+                        str(exc),
+                    ),
+                ],
+            )
         return result
 
     def _time_control_readback_failure(

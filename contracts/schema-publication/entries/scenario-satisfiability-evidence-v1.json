@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "681124de58a3b4ff9ae37f948dea6946c0fc6322c793dd1077924357956a7ce2",
+  "content_hash": "3574119edf519a577191c8be691bf4dcf747906eefab50a6bb22ca31725a87a2",
   "last_change": {
-    "summary": "Carried enterprise tenancy, initial service-state materialization, and shared time invariants into scenario satisfiability evidence.",
-    "content_hash": "681124de58a3b4ff9ae37f948dea6946c0fc6322c793dd1077924357956a7ce2"
+    "summary": "Carried enterprise tenancy, service materialization, shared time, and autonomous participant invariants into satisfiability evidence.",
+    "content_hash": "3574119edf519a577191c8be691bf4dcf747906eefab50a6bb22ca31725a87a2"
   }
 }

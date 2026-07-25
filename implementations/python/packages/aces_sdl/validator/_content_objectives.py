@@ -21,6 +21,7 @@ from ..semantics.participant_outcome import (
     ParticipantOutcomeIssue,
     analyze_participant_outcome_interpretations,
 )
+from ._participant_execution_renderers import AUTONOMOUS_PARTICIPANT_ISSUE_RENDERERS
 
 # Renders an objective-semantics issue (machine-readable code from
 # ``aces_sdl.semantics.objective_semantics``) into the authoring-error string
@@ -87,6 +88,7 @@ _OBJECTIVE_ISSUE_RENDERERS = {
 }
 
 _PARTICIPANT_BEHAVIOR_ISSUE_RENDERERS = {
+    **AUTONOMOUS_PARTICIPANT_ISSUE_RENDERERS,
     "participant.action-contract-unbound": (
         lambda i: f"Agent '{i.participant_name}' action '{i.ref}' does not reference a declared action_contract"
     ),
@@ -371,6 +373,10 @@ class _ContentObjectivesMixin:
             outcome_interpretation_rules=self._s.outcome_interpretation_rules,
             behavior_specifications=self._s.behavior_specifications,
             participant_roles_by_agent=self._participant_roles_by_agent(),
+            clocks=self._s.clocks,
+            time_progression_policies=self._s.time_progression_policies,
+            temporal_constraints=self._s.temporal_constraints,
+            objectives=self._s.objectives,
             is_unresolved=self._is_unresolved_var,
         )
         for issue in analysis.issues:

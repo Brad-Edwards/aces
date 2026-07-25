@@ -13,13 +13,10 @@ from aces_backend_protocols.protocols import (
     Provisioner,
     TimeRuntime,
 )
-from aces_contracts.contracts import (
-    ParticipantImplementationManifestModel,
-    ParticipantImplementationSelectionModel,
-)
 from aces_contracts.participant_binding import ParticipantActionAdmissionRequest
 
 from . import time_coordinator as _time_coordinator
+from .registry_probes import sample_participant_action_admission_request
 
 ReferenceTimeRuntime = _time_coordinator.ReferenceTimeRuntime
 _TIME_CLOCK_PROBE = "time.clock.probe"
@@ -81,14 +78,28 @@ def _validate_runtime_target_shape(
     sample_plan = object()
     sample_snapshot = object()
     sample_request = object()
-    sample_admission_request = _sample_participant_action_admission_request()
+    sample_admission_request = sample_participant_action_admission_request()
     _validate_provisioner_methods(provisioner, sample_plan, sample_snapshot)
     _validate_orchestrator_methods(orchestrator, sample_plan, sample_snapshot)
     _validate_evaluator_methods(evaluator, sample_plan, sample_snapshot)
     _validate_participant_runtime_methods(
-        participant_runtime, sample_request, sample_admission_request, sample_snapshot
+        participant_runtime,
+        sample_request,
+        sample_admission_request,
+        sample_snapshot,
+        require_autonomous_binding=bool(
+            manifest.participant_runtime and manifest.participant_runtime.supports_autonomous_execution
+        ),
+        require_coordinated_reset=bool(manifest.time and manifest.time.supports_coordinated_participant_reset),
     )
-    _validate_time_runtime_methods(time_runtime, sample_plan, sample_snapshot)
+    _validate_time_runtime_methods(
+        time_runtime,
+        sample_plan,
+        sample_snapshot,
+        require_coordinated_participant_reset=bool(
+            manifest.time and manifest.time.supports_coordinated_participant_reset
+        ),
+    )
 
 
 def _validate_optional_component_presence(
@@ -107,6 +118,10 @@ def _validate_optional_component_presence(
         raise ValueError("registry.target-shape-mismatch: participant_runtime presence does not match the manifest.")
     if manifest.has_time != (time_runtime is not None):
         raise ValueError("registry.target-shape-mismatch: time_runtime presence does not match the manifest.")
+    if manifest.time and manifest.time.supports_coordinated_participant_reset and participant_runtime is None:
+        raise ValueError(
+            "registry.target-shape-mismatch: coordinated participant reset requires a participant_runtime."
+        )
 
 
 def _validate_provisioner_methods(
@@ -207,6 +222,9 @@ def _validate_participant_runtime_methods(
     sample_request: object,
     sample_admission_request: ParticipantActionAdmissionRequest,
     sample_snapshot: object,
+    *,
+    require_autonomous_binding: bool,
+    require_coordinated_reset: bool,
 ) -> None:
     _require_invokable_method(
         participant_runtime,
@@ -256,12 +274,36 @@ def _validate_participant_runtime_methods(
         method_name="history",
         invocation_args=(),
     )
+    if require_autonomous_binding:
+        _require_invokable_method(
+            participant_runtime,
+            label="participant_runtime",
+            method_name="bind_autonomous_action",
+            invocation_args=(
+                "participant.behavior.registry-probe",
+                "participant.action-contract.registry-probe",
+                "participant.observation-boundary.registry-probe",
+                "participant-implementation-manifests.registry-probe.v1",
+                "participant.autonomous-execution.registry-probe:0",
+                (),
+                sample_snapshot,
+            ),
+        )
+    if require_coordinated_reset:
+        _require_invokable_method(
+            participant_runtime,
+            label="participant_runtime",
+            method_name="reset_many",
+            invocation_args=((sample_request,), sample_snapshot),
+        )
 
 
 def _validate_time_runtime_methods(
     time_runtime: TimeRuntime | None,
     sample_declaration: object,
     sample_snapshot: object,
+    *,
+    require_coordinated_participant_reset: bool,
 ) -> None:
     for method_name, invocation_args in (
         ("initialize", (sample_declaration, sample_snapshot)),
@@ -278,74 +320,13 @@ def _validate_time_runtime_methods(
             method_name=method_name,
             invocation_args=invocation_args,
         )
-
-
-def _sample_participant_action_admission_request() -> ParticipantActionAdmissionRequest:
-    manifest = ParticipantImplementationManifestModel.model_validate(
-        {
-            "schema_version": "participant-implementation-manifest/v1",
-            "identity": {"name": "registry-shape-probe", "version": "1.0.0"},
-            "implementation_kind": "agent",
-            "supported_contract_versions": [
-                "participant-implementation-manifest-v1",
-                "participant-implementation-provenance-v1",
-                "participant-episode-state-envelope-v1",
-                "participant-behavior-history-event-stream-v1",
-            ],
-            "compatibility": {"participant_runtimes": ["registry"], "processors": [], "backends": []},
-            "concept_bindings": [
-                {"scope": "implementation_kind", "family": "apparatus-declarations"},
-                {
-                    "scope": "capabilities.supported_participant_contracts",
-                    "family": "apparatus-declarations",
-                },
-                {
-                    "scope": "capabilities.supported_decision_surface_modes",
-                    "family": "apparatus-declarations",
-                },
-                {
-                    "scope": "capabilities.tool_affordance_expectations",
-                    "family": "tools-and-artifacts",
-                },
-                {"scope": "capabilities.exposure_policy_kinds", "family": "provenance-and-evidence"},
-            ],
-            "capabilities": {
-                "supported_participant_contracts": [
-                    "participant-episode-state-envelope-v1",
-                    "participant-behavior-history-event-stream-v1",
-                ],
-                "supported_decision_surface_modes": ["policy-directed"],
-                "tool_affordance_expectations": ["shell"],
-                "exposure_policy_kinds": ["task-statement"],
-            },
-        }
-    )
-    selection = ParticipantImplementationSelectionModel.model_validate(
-        {
-            "participant_address": "participant.behavior.registry-probe",
-            "implementation_identity": {"name": "registry-shape-probe", "version": "1.0.0"},
-            "manifest_ref": "registry://participant-implementation-manifest",
-            "manifest_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
-            "selected_decision_surface_mode": "policy-directed",
-            "participant_contract_versions": [
-                "participant-episode-state-envelope-v1",
-                "participant-behavior-history-event-stream-v1",
-            ],
-            "exposure_policy": {
-                "policy_id": "registry-shape-probe-policy",
-                "exposure_policy_kinds": ["task-statement"],
-                "disclosed_refs": ["scenario.registry-probe"],
-            },
-        }
-    )
-    return ParticipantActionAdmissionRequest(
-        participant_address="participant.behavior.registry-probe",
-        action_contract_address="participant.action-contract.registry-probe",
-        observation_boundary_address="participant.observation-boundary.registry-probe",
-        action_instance_id="registry-probe-action",
-        implementation_manifest=manifest,
-        implementation_selection=selection,
-    )
+    if require_coordinated_participant_reset:
+        _require_invokable_method(
+            time_runtime,
+            label="time_runtime",
+            method_name="reset_with_participants",
+            invocation_args=("time.clock.probe", False, object(), (), sample_snapshot),
+        )
 
 
 @dataclass(frozen=True)

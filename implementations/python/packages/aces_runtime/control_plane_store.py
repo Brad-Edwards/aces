@@ -13,6 +13,7 @@ from typing import Any, Protocol
 from aces_contracts.contracts import RealizationEnvelopeIdentityModel
 from aces_contracts.contracts.time_model import TimeRuntimeStateModel
 from aces_contracts.diagnostics import Diagnostic, Severity
+from aces_contracts.participant_autonomous_state import require_participant_autonomous_runtime_snapshot
 from aces_contracts.planning import RuntimeDomain
 from aces_contracts.runtime_state import (
     ExplicitnessClass,
@@ -73,6 +74,7 @@ class ControlPlaneStore(Protocol):
 
 
 def _snapshot_payload(snapshot: RuntimeSnapshot) -> dict[str, Any]:
+    require_participant_autonomous_runtime_snapshot(snapshot)
     return {
         "schema_version": RuntimeSnapshotEnvelope().schema_version,
         "entries": {
@@ -101,6 +103,7 @@ def _snapshot_payload(snapshot: RuntimeSnapshot) -> dict[str, Any]:
             participant_address: list(events)
             for participant_address, events in snapshot.participant_behavior_history.items()
         },
+        "participant_autonomous_execution_states": dict(snapshot.participant_autonomous_execution_states),
         "shared_state_records": dict(snapshot.shared_state_records),
         "shared_state_history": {
             state_address: list(records) for state_address, records in snapshot.shared_state_history.items()
@@ -144,7 +147,7 @@ def _snapshot_from_payload(payload: dict[str, Any]) -> RuntimeSnapshot:
         for address, entry in entries_payload.items()
         if isinstance(entry, dict)
     }
-    return RuntimeSnapshot(
+    snapshot = RuntimeSnapshot(
         entries=entries,
         orchestration_results=dict(payload.get("orchestration_results", {})),
         orchestration_history={
@@ -162,6 +165,7 @@ def _snapshot_from_payload(payload: dict[str, Any]) -> RuntimeSnapshot:
             participant_address: list(events)
             for participant_address, events in payload.get("participant_behavior_history", {}).items()
         },
+        participant_autonomous_execution_states=dict(payload.get("participant_autonomous_execution_states", {})),
         shared_state_records=dict(payload.get("shared_state_records", {})),
         shared_state_history={
             state_address: list(records) for state_address, records in payload.get("shared_state_history", {}).items()
@@ -195,6 +199,8 @@ def _snapshot_from_payload(payload: dict[str, Any]) -> RuntimeSnapshot:
         ),
         metadata=dict(payload.get("metadata", {})),
     )
+    require_participant_autonomous_runtime_snapshot(snapshot)
+    return snapshot
 
 
 def _diagnostics_payload(diagnostics: list[Diagnostic]) -> list[dict[str, Any]]:
@@ -290,6 +296,7 @@ class InMemoryControlPlaneStore:
         return self._snapshot
 
     def save_snapshot(self, snapshot: RuntimeSnapshot) -> None:
+        require_participant_autonomous_runtime_snapshot(snapshot)
         self._snapshot = snapshot
 
     def load_records(self) -> dict[str, ControlPlaneOperationRecord]:
