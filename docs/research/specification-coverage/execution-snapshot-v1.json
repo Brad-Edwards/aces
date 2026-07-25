@@ -28,7 +28,7 @@
       "artifact_id": "enterprise-participant-sdl",
       "kind": "sdl",
       "path": "examples/scenarios/enterprise-participant-evidence-loop.sdl.yaml",
-      "sha256": "a9bb41af8acaece9d467faf80c7542c98369f064c61c0312fa8bd57bb527050b",
+      "sha256": "54ba1a60220e27a55da9cd2a407d7d3ab836fa54460d0b0c6cad87c2e744ddbb",
       "validator": "aces_sdl parse, semantic, instantiation/admission, and compiler pipeline"
     },
     {
@@ -63,7 +63,7 @@
       "artifact_id": "known-limitations",
       "kind": "documentation",
       "path": "docs/explain/sdl/limitations.md",
-      "sha256": "8fd72ead4371fbb42da564587d8edf8f1815d99c81e8b7632ad9bfc8a41e32a4",
+      "sha256": "4a673316b341fd5beca10e3dd87aa35ba762e4668d78d1b48cb706074f0c720c",
       "validator": "documentation evidence only"
     }
   ],
