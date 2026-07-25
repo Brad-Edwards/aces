@@ -1086,3 +1086,24 @@ evidence/provenance. The participant-semantics design extends that separation:
 actions, observations, visibility, causality, temporal behavior, and outcomes
 must be portable across human, AI-agent, scripted, simulated, and hybrid
 participants without collapsing into any one backend or learning API.
+
+### Shared Time Authority
+
+The ACES shared time model has explicit external lineage but is not a translated
+copy of any one framework:
+
+- ROS 2 contributes the separation of system, steady/monotonic, and externally
+  controlled semantic time plus explicit pause/jump handling.
+- FMI contributes importer-controlled advancement, capability negotiation,
+  clock activation, and superdense event coordinates.
+- IEEE HLA contributes the separation of time regulation, constrained
+  advancement, and ordered delivery from timestamp values.
+- TENA contributes the separation between execution-time coordination and the
+  persistent range data archive.
+- OpenSCENARIO contributes the separation of lifecycle, triggers, actions, and
+  simulation-time predicates.
+
+ACES adds backend-neutral authored declarations, exact rational mappings,
+ordinary SDL subject references, canonical compilation, and segment-preserving
+runtime control. It does not claim ROS, FMI, HLA, TENA, or OpenSCENARIO
+conformance through those generic declarations.

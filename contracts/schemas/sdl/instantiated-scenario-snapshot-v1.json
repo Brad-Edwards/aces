@@ -655,6 +655,84 @@
       "title": "CapabilityConstraint",
       "type": "object"
     },
+    "Clock": {
+      "additionalProperties": false,
+      "description": "Authored clock authority over one time domain.",
+      "properties": {
+        "authority_kind": {
+          "$ref": "#/$defs/ClockAuthorityKind"
+        },
+        "authority_ref": {
+          "not": {
+            "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Authority Ref",
+          "type": "string"
+        },
+        "description": {
+          "not": {
+            "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Description",
+          "type": "string"
+        },
+        "monotonicity": {
+          "$ref": "#/$defs/ClockMonotonicity"
+        },
+        "supports_jump": {
+          "default": false,
+          "title": "Supports Jump",
+          "type": "boolean"
+        },
+        "supports_pause": {
+          "default": false,
+          "title": "Supports Pause",
+          "type": "boolean"
+        },
+        "supports_reset": {
+          "default": false,
+          "title": "Supports Reset",
+          "type": "boolean"
+        },
+        "time_domain_ref": {
+          "not": {
+            "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Time Domain Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "time_domain_ref",
+        "authority_kind",
+        "authority_ref",
+        "monotonicity",
+        "description"
+      ],
+      "title": "Clock",
+      "type": "object"
+    },
+    "ClockAuthorityKind": {
+      "description": "Plane that owns authoritative clock values.",
+      "enum": [
+        "runtime",
+        "backend",
+        "system",
+        "external"
+      ],
+      "title": "ClockAuthorityKind",
+      "type": "string"
+    },
+    "ClockMonotonicity": {
+      "description": "Allowed direction of authoritative clock movement.",
+      "enum": [
+        "strict",
+        "non_decreasing",
+        "may_jump"
+      ],
+      "title": "ClockMonotonicity",
+      "type": "string"
+    },
     "Condition": {
       "additionalProperties": false,
       "description": "A probe implementation deployed to a VM.\n\nEither ``command`` + ``interval`` or ``source`` must be set, not both.",
@@ -3339,6 +3417,28 @@
       "title": "EvidenceRetentionExpectation",
       "type": "string"
     },
+    "ExactRatio": {
+      "additionalProperties": false,
+      "description": "Reduced positive rational value.",
+      "properties": {
+        "denominator": {
+          "exclusiveMinimum": 0,
+          "title": "Denominator",
+          "type": "integer"
+        },
+        "numerator": {
+          "exclusiveMinimum": 0,
+          "title": "Numerator",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "numerator",
+        "denominator"
+      ],
+      "title": "ExactRatio",
+      "type": "object"
+    },
     "ExerciseRole": {
       "description": "Role in the exercise.",
       "enum": [
@@ -4569,6 +4669,22 @@
           "title": "Behavior Specifications",
           "type": "object"
         },
+        "clocks": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Clock"
+          },
+          "propertyNames": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_.-]"
+            },
+            "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Clocks",
+          "type": "object"
+        },
         "conditions": {
           "additionalProperties": {
             "$ref": "#/$defs/Condition"
@@ -4996,6 +5112,70 @@
             "type": "string"
           },
           "title": "Stories",
+          "type": "object"
+        },
+        "temporal_constraints": {
+          "additionalProperties": {
+            "$ref": "#/$defs/TemporalConstraint"
+          },
+          "propertyNames": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_.-]"
+            },
+            "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Temporal Constraints",
+          "type": "object"
+        },
+        "time_domain_mappings": {
+          "additionalProperties": {
+            "$ref": "#/$defs/TimeDomainMapping"
+          },
+          "propertyNames": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_.-]"
+            },
+            "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Time Domain Mappings",
+          "type": "object"
+        },
+        "time_domains": {
+          "additionalProperties": {
+            "$ref": "#/$defs/TimeDomain"
+          },
+          "propertyNames": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_.-]"
+            },
+            "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Time Domains",
+          "type": "object"
+        },
+        "time_progression_policies": {
+          "additionalProperties": {
+            "$ref": "#/$defs/TimeProgressionPolicy"
+          },
+          "propertyNames": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_.-]"
+            },
+            "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Time Progression Policies",
           "type": "object"
         },
         "version": {
@@ -23909,6 +24089,108 @@
       "title": "SubjectQuantifier",
       "type": "string"
     },
+    "TemporalConstraint": {
+      "additionalProperties": false,
+      "description": "One typed temporal predicate over ordinary ACES subjects.",
+      "properties": {
+        "cadence_ticks": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cadence Ticks"
+        },
+        "clock_ref": {
+          "not": {
+            "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Clock Ref",
+          "type": "string"
+        },
+        "constraint_kind": {
+          "$ref": "#/$defs/TemporalConstraintKind"
+        },
+        "description": {
+          "not": {
+            "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Description",
+          "type": "string"
+        },
+        "duration_ticks": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration Ticks"
+        },
+        "end": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TimeCoordinate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "start": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TimeCoordinate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "subject_refs": {
+          "items": {
+            "not": {
+              "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+            },
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Subject Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "constraint_kind",
+        "clock_ref",
+        "subject_refs",
+        "description"
+      ],
+      "title": "TemporalConstraint",
+      "type": "object"
+    },
+    "TemporalConstraintKind": {
+      "description": "Backend-independent temporal predicate families.",
+      "enum": [
+        "precedence",
+        "duration",
+        "window",
+        "deadline",
+        "cadence"
+      ],
+      "title": "TemporalConstraintKind",
+      "type": "string"
+    },
     "TenantClaimOwner": {
       "description": "Authority allowed to issue the server-controlled tenant claim.",
       "enum": [
@@ -23925,6 +24207,264 @@
         "tenant_partitioned"
       ],
       "title": "TenantIsolationMode",
+      "type": "string"
+    },
+    "TimeAdvancementMode": {
+      "description": "How a clock may advance.",
+      "enum": [
+        "real_time",
+        "dilated",
+        "stepped",
+        "event_driven",
+        "externally_paced"
+      ],
+      "title": "TimeAdvancementMode",
+      "type": "string"
+    },
+    "TimeCoordinate": {
+      "additionalProperties": false,
+      "description": "One superdense point on a declared clock.",
+      "properties": {
+        "microstep": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Microstep",
+          "type": "integer"
+        },
+        "tick": {
+          "title": "Tick",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "tick"
+      ],
+      "title": "TimeCoordinate",
+      "type": "object"
+    },
+    "TimeDomain": {
+      "additionalProperties": false,
+      "description": "Authored meaning and resolution of one time domain.",
+      "properties": {
+        "description": {
+          "not": {
+            "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Description",
+          "type": "string"
+        },
+        "epoch": {
+          "$ref": "#/$defs/TimeEpochKind"
+        },
+        "kind": {
+          "$ref": "#/$defs/TimeDomainKind"
+        },
+        "tick_period_seconds": {
+          "$ref": "#/$defs/ExactRatio"
+        },
+        "visibility": {
+          "$ref": "#/$defs/TimeDomainVisibility",
+          "default": "runtime_only"
+        }
+      },
+      "required": [
+        "kind",
+        "tick_period_seconds",
+        "epoch",
+        "description"
+      ],
+      "title": "TimeDomain",
+      "type": "object"
+    },
+    "TimeDomainKind": {
+      "description": "Meaning of values carried by a time domain.",
+      "enum": [
+        "wall_clock",
+        "monotonic",
+        "simulated",
+        "logical",
+        "external"
+      ],
+      "title": "TimeDomainKind",
+      "type": "string"
+    },
+    "TimeDomainMapping": {
+      "additionalProperties": false,
+      "description": "Explicit exact conversion between otherwise incomparable domains.",
+      "properties": {
+        "description": {
+          "not": {
+            "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Description",
+          "type": "string"
+        },
+        "mapping_kind": {
+          "$ref": "#/$defs/TimeMappingKind"
+        },
+        "offset_ticks": {
+          "default": 0,
+          "title": "Offset Ticks",
+          "type": "integer"
+        },
+        "scale": {
+          "$ref": "#/$defs/ExactRatio"
+        },
+        "source_domain_ref": {
+          "not": {
+            "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Source Domain Ref",
+          "type": "string"
+        },
+        "target_domain_ref": {
+          "not": {
+            "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Target Domain Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_domain_ref",
+        "target_domain_ref",
+        "mapping_kind",
+        "description"
+      ],
+      "title": "TimeDomainMapping",
+      "type": "object"
+    },
+    "TimeDomainVisibility": {
+      "description": "Who may observe a time domain.",
+      "enum": [
+        "runtime_only",
+        "participant_visible",
+        "evidence_only"
+      ],
+      "title": "TimeDomainVisibility",
+      "type": "string"
+    },
+    "TimeEpochKind": {
+      "description": "Interpretation of tick zero.",
+      "enum": [
+        "unix",
+        "scenario_start",
+        "run_start",
+        "unanchored",
+        "external"
+      ],
+      "title": "TimeEpochKind",
+      "type": "string"
+    },
+    "TimeMappingKind": {
+      "description": "Supported exact conversion families.",
+      "enum": [
+        "identity",
+        "affine_rational"
+      ],
+      "title": "TimeMappingKind",
+      "type": "string"
+    },
+    "TimeProgressionPolicy": {
+      "additionalProperties": false,
+      "description": "Authored advancement, pacing, synchronization, and lifecycle policy.",
+      "properties": {
+        "advancement_mode": {
+          "$ref": "#/$defs/TimeAdvancementMode"
+        },
+        "clock_ref": {
+          "not": {
+            "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Clock Ref",
+          "type": "string"
+        },
+        "description": {
+          "not": {
+            "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Description",
+          "type": "string"
+        },
+        "drift_bound_ticks": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Drift Bound Ticks"
+        },
+        "pacing_ratio": {
+          "$ref": "#/$defs/ExactRatio"
+        },
+        "replay_behavior": {
+          "$ref": "#/$defs/TimeReplayBehavior"
+        },
+        "reset_behavior": {
+          "$ref": "#/$defs/TimeResetBehavior"
+        },
+        "step_ticks": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Step Ticks"
+        },
+        "synchronization_mode": {
+          "$ref": "#/$defs/TimeSynchronizationMode"
+        }
+      },
+      "required": [
+        "clock_ref",
+        "advancement_mode",
+        "synchronization_mode",
+        "reset_behavior",
+        "replay_behavior",
+        "description"
+      ],
+      "title": "TimeProgressionPolicy",
+      "type": "object"
+    },
+    "TimeReplayBehavior": {
+      "description": "Clock behavior when a run is replayed.",
+      "enum": [
+        "restart_from_anchor",
+        "restore_recorded_advances",
+        "unsupported"
+      ],
+      "title": "TimeReplayBehavior",
+      "type": "string"
+    },
+    "TimeResetBehavior": {
+      "description": "Clock behavior at a reset boundary.",
+      "enum": [
+        "new_segment_zero",
+        "new_segment_preserve_value",
+        "unsupported"
+      ],
+      "title": "TimeResetBehavior",
+      "type": "string"
+    },
+    "TimeSynchronizationMode": {
+      "description": "How multiple time consumers coordinate progress.",
+      "enum": [
+        "none",
+        "authority",
+        "barrier",
+        "conservative"
+      ],
+      "title": "TimeSynchronizationMode",
       "type": "string"
     },
     "TruthCompositionMode": {

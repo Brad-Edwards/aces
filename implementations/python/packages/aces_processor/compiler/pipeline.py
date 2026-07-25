@@ -47,6 +47,7 @@ from .provisioning import (
 )
 from .realization_requirements import _compile_realization_requirements
 from .stateful_resources import _compile_generated_artifacts, _compile_persistent_volumes
+from .time_model import compile_time_model
 from .workflows import _compile_workflows
 
 
@@ -91,6 +92,7 @@ def compile_runtime_model(scenario: Scenario | ExpandedScenario | InstantiatedSc
         vulnerability_templates,
     ) = _compile_templates(scenario)
     entity_specs, agent_specs, relationship_specs = _metadata_specs(scenario)
+    time_model = compile_time_model(scenario)
 
     networks, node_deployments = _compile_node_runtimes(scenario, diagnostics, domain_analysis)
     feature_bindings = _compile_feature_bindings(scenario, feature_templates, diagnostics)
@@ -135,6 +137,7 @@ def compile_runtime_model(scenario: Scenario | ExpandedScenario | InstantiatedSc
         entity_specs=entity_specs,
         agent_specs=agent_specs,
         relationship_specs=relationship_specs,
+        time_model=time_model,
         capability_constraints=_compile_capability_constraints(scenario),
         networks=networks,
         node_deployments=node_deployments,

@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-snapshot-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "b575a70e1ce4f5ffb2206bdc81834f5a3d6badfe1376fd45c03a6f617e2186e3",
+  "content_hash": "a522bbcb4f365b92095ef0b759a01955e6da10092dc201a68a50295d6b07d29b",
   "last_change": {
-    "summary": "Published enterprise tenancy, typed network namespace sharing, and content-owned service materialization in immutable scenario snapshots.",
-    "content_hash": "b575a70e1ce4f5ffb2206bdc81834f5a3d6badfe1376fd45c03a6f617e2186e3"
+    "summary": "Published enterprise tenancy, content-owned service materialization, and shared time semantics in immutable scenario snapshots.",
+    "content_hash": "a522bbcb4f365b92095ef0b759a01955e6da10092dc201a68a50295d6b07d29b"
   }
 }

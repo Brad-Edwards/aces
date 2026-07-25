@@ -407,3 +407,6 @@ adrs:
       - date: 2026-07-24
         ref: "#862"
         summary: "Replaced the historical-baseline ontology with the smallest content-owned, evidence-gated service-materialization extension required by the redesigned issue boundary."
+  - id: ADR-090
+    path: docs/decisions/adrs/adr-090-shared-time-domain-clock-and-progression-authority.md
+    pin: 5b8fa008e2e8c8893e8a0c0376c947ef6f840d1e09fd75d579d36d477219d1e2

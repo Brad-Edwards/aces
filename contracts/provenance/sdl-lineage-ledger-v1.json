@@ -3784,6 +3784,146 @@
           "compatibility_direction": "aces_relative_to_source"
         }
       ]
+    },
+    {
+      "subject_id": "sdl-field:time_domains",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/time_domains",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [{
+        "plane": "semantics",
+        "classification": "aces_native",
+        "source_refs": [],
+        "aces_boundaries": [{
+          "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+          "symbol_or_pointer": "#/properties/time_domains"
+        }],
+        "source_boundaries": [],
+        "divergence": "ACES-native exact time-domain declarations informed by simulation precedent without adopting an external wire model.",
+        "compatibility": "not_applicable",
+        "citation_refs": [],
+        "internal_authority_refs": [
+          "docs/decisions/adrs/adr-090-shared-time-domain-clock-and-progression-authority.md",
+          "specs/formal/time-model/README.md"
+        ],
+        "compatibility_direction": "not_applicable"
+      }]
+    },
+    {
+      "subject_id": "sdl-field:clocks",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/clocks",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [{
+        "plane": "semantics",
+        "classification": "aces_native",
+        "source_refs": [],
+        "aces_boundaries": [{
+          "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+          "symbol_or_pointer": "#/properties/clocks"
+        }],
+        "source_boundaries": [],
+        "divergence": "ACES-native clock-authority and lifecycle declarations do not imply conformance with an external simulation middleware.",
+        "compatibility": "not_applicable",
+        "citation_refs": [],
+        "internal_authority_refs": [
+          "docs/decisions/adrs/adr-090-shared-time-domain-clock-and-progression-authority.md",
+          "specs/formal/time-model/README.md"
+        ],
+        "compatibility_direction": "not_applicable"
+      }]
+    },
+    {
+      "subject_id": "sdl-field:time_domain_mappings",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/time_domain_mappings",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [{
+        "plane": "semantics",
+        "classification": "aces_native",
+        "source_refs": [],
+        "aces_boundaries": [{
+          "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+          "symbol_or_pointer": "#/properties/time_domain_mappings"
+        }],
+        "source_boundaries": [],
+        "divergence": "ACES-native exact affine-rational conversion authority; no conversion is inferred from scheduler or timestamp behavior.",
+        "compatibility": "not_applicable",
+        "citation_refs": [],
+        "internal_authority_refs": [
+          "docs/decisions/adrs/adr-090-shared-time-domain-clock-and-progression-authority.md",
+          "specs/formal/time-model/README.md"
+        ],
+        "compatibility_direction": "not_applicable"
+      }]
+    },
+    {
+      "subject_id": "sdl-field:time_progression_policies",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/time_progression_policies",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [{
+        "plane": "semantics",
+        "classification": "aces_native",
+        "source_refs": [],
+        "aces_boundaries": [{
+          "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+          "symbol_or_pointer": "#/properties/time_progression_policies"
+        }],
+        "source_boundaries": [],
+        "divergence": "ACES-native separation of advancement, pacing, synchronization, drift, reset, and replay requirements.",
+        "compatibility": "not_applicable",
+        "citation_refs": [],
+        "internal_authority_refs": [
+          "docs/decisions/adrs/adr-090-shared-time-domain-clock-and-progression-authority.md",
+          "specs/formal/time-model/README.md"
+        ],
+        "compatibility_direction": "not_applicable"
+      }]
+    },
+    {
+      "subject_id": "sdl-field:temporal_constraints",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/temporal_constraints",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [{
+        "plane": "semantics",
+        "classification": "aces_native",
+        "source_refs": [],
+        "aces_boundaries": [{
+          "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+          "symbol_or_pointer": "#/properties/temporal_constraints"
+        }],
+        "source_boundaries": [],
+        "divergence": "ACES-native temporal predicates over ordinary SDL subjects; causality remains under participant attribution authority.",
+        "compatibility": "not_applicable",
+        "citation_refs": [],
+        "internal_authority_refs": [
+          "docs/decisions/adrs/adr-090-shared-time-domain-clock-and-progression-authority.md",
+          "specs/formal/time-model/README.md"
+        ],
+        "compatibility_direction": "not_applicable"
+      }]
     }
   ],
   "third_party_dispositions": [

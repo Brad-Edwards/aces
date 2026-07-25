@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
   "stability": "draft",
-  "content_hash": "863248c84c17ce59303260f6f9f87bd554eac8b122ddd1f32419f4c93c3654c8",
+  "content_hash": "8851945e6e07d29355f3272d2be06053d7458df109d3dc10db4d10f9b6a14363",
   "last_change": {
-    "summary": "Published enterprise tenancy, typed network namespace sharing, and service-target content materialization in instantiated scenarios.",
-    "content_hash": "863248c84c17ce59303260f6f9f87bd554eac8b122ddd1f32419f4c93c3654c8"
+    "summary": "Published enterprise tenancy, service-target content materialization, and shared time semantics in instantiated scenarios.",
+    "content_hash": "8851945e6e07d29355f3272d2be06053d7458df109d3dc10db4d10f9b6a14363"
   }
 }

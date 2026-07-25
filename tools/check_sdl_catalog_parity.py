@@ -161,6 +161,9 @@ _VARIATION_VALIDATOR = "[variation validator](../../implementations/python/packa
 _PARTICIPANT_TEMPORAL_MODEL = (
     "[temporal model](../../implementations/python/packages/aces_sdl/participant_temporal_semantics.py)"
 )
+_TIME_MODEL_VALIDATOR = (
+    "[time-model validator](../../implementations/python/packages/aces_sdl/validator/_time_model.py)"
+)
 _SEMANTIC = "semantic validation"
 _STRUCTURAL = "structural validation"
 _DANGLING = "fatal dangling or ambiguous"
@@ -838,6 +841,42 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         _SEMANTIC,
         _DANGLING,
         _EVIDENCE_VALIDATOR,
+    ),
+    "clocks.*.time_domain_ref": (
+        "time_domains",
+        _SEMANTIC,
+        "fatal dangling",
+        _TIME_MODEL_VALIDATOR,
+    ),
+    "time_domain_mappings.*.source_domain_ref": (
+        "time_domains",
+        _SEMANTIC,
+        "fatal dangling, duplicate, or cyclic mapping",
+        _TIME_MODEL_VALIDATOR,
+    ),
+    "time_domain_mappings.*.target_domain_ref": (
+        "time_domains",
+        _SEMANTIC,
+        "fatal dangling, duplicate, or cyclic mapping",
+        _TIME_MODEL_VALIDATOR,
+    ),
+    "time_progression_policies.*.clock_ref": (
+        "clocks",
+        _SEMANTIC,
+        "fatal dangling or incompatible reset/replay lifecycle",
+        _TIME_MODEL_VALIDATOR,
+    ),
+    "temporal_constraints.*.clock_ref": (
+        "clocks",
+        _SEMANTIC,
+        "fatal dangling",
+        _TIME_MODEL_VALIDATOR,
+    ),
+    "temporal_constraints.*.subject_refs[]": (
+        "targetable",
+        _SEMANTIC,
+        "fatal dangling or ambiguous",
+        _TIME_MODEL_VALIDATOR,
     ),
     "variation_points.*.target.variable": (
         "variables",

@@ -43,6 +43,7 @@ from .resources import (
     ResolvedResource,
     RuntimeTemplate,
 )
+from .time_model import CompiledTimeModel
 
 
 @dataclass(frozen=True)
@@ -103,6 +104,7 @@ class RuntimeModel:
     entity_specs: dict[str, dict[str, Any]] = field(default_factory=dict)
     agent_specs: dict[str, dict[str, Any]] = field(default_factory=dict)
     relationship_specs: dict[str, dict[str, Any]] = field(default_factory=dict)
+    time_model: CompiledTimeModel = field(default_factory=CompiledTimeModel)
     # Typed compiler metadata for finite pre-instantiation domains. It is
     # consumed by planner capability checks and never enters backend resource
     # payloads.
