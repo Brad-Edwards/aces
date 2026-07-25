@@ -7,9 +7,9 @@ an SDL document declares explicit participant behavior semantics.
 
 from enum import Enum
 from math import isfinite
-from typing import TypeAlias
 
 from pydantic import Field, field_validator, model_validator
+from typing_extensions import TypeAliasType
 
 from ._base import SDLModel
 from ._identifiers import PortableIdentifier
@@ -76,9 +76,13 @@ class ParticipantActionArgumentOmission(str, Enum):
     OMIT = "omit"
 
 
-ParticipantActionArgumentScalar: TypeAlias = str | int | float | bool
-ParticipantActionArgumentAuthoredValue: TypeAlias = (
-    ParticipantActionArgumentScalar | list[ParticipantActionArgumentScalar]
+ParticipantActionArgumentScalar = TypeAliasType(
+    "ParticipantActionArgumentScalar",
+    str | int | float | bool,
+)
+ParticipantActionArgumentAuthoredValue = TypeAliasType(
+    "ParticipantActionArgumentAuthoredValue",
+    ParticipantActionArgumentScalar | list[ParticipantActionArgumentScalar],
 )
 
 
@@ -90,12 +94,14 @@ def _participant_argument_scalar_matches(
         ParticipantActionArgumentValueType.STRING,
         ParticipantActionArgumentValueType.REFERENCE,
     }:
-        return isinstance(value, str)
-    if value_type == ParticipantActionArgumentValueType.INTEGER:
-        return isinstance(value, int) and not isinstance(value, bool)
-    if value_type == ParticipantActionArgumentValueType.NUMBER:
-        return isinstance(value, (int, float)) and not isinstance(value, bool) and isfinite(value)
-    return isinstance(value, bool)
+        matches = isinstance(value, str)
+    elif value_type == ParticipantActionArgumentValueType.INTEGER:
+        matches = isinstance(value, int) and not isinstance(value, bool)
+    elif value_type == ParticipantActionArgumentValueType.NUMBER:
+        matches = isinstance(value, (int, float)) and not isinstance(value, bool) and isfinite(value)
+    else:
+        matches = isinstance(value, bool)
+    return matches
 
 
 def _participant_argument_values_equal(
@@ -110,8 +116,8 @@ class ParticipantActionArgumentDefinition(SDLModel):
 
     value_type: ParticipantActionArgumentValueType
     cardinality: ParticipantActionArgumentCardinality = ParticipantActionArgumentCardinality.ONE
-    default: ParticipantActionArgumentAuthoredValue | None = None
-    allowed_values: list[ParticipantActionArgumentScalar] = Field(default_factory=list)
+    default: str | int | float | bool | list[str | int | float | bool] | None = None
+    allowed_values: list[str | int | float | bool] = Field(default_factory=list)
     minimum: int | float | None = None
     maximum: int | float | None = None
     min_length: int | None = Field(default=None, ge=0)
@@ -158,35 +164,50 @@ class ParticipantActionArgumentDefinition(SDLModel):
 
     def _validate_cardinality(self) -> None:
         if self.cardinality == ParticipantActionArgumentCardinality.ONE:
-            if self.min_items is not None or self.max_items is not None:
-                raise ValueError("min_items and max_items require cardinality many")
-            if isinstance(self.default, list):
-                raise ValueError("single-valued argument default must be a scalar")
-        else:
-            if self.min_items is not None and self.max_items is not None and self.min_items > self.max_items:
-                raise ValueError("min_items must not exceed max_items")
-            if self.default is not None and not isinstance(self.default, list):
-                raise ValueError("many-valued argument default must be a list")
-            if isinstance(self.default, list):
-                self._validate_collection(self.default, field_name="default")
+            self._validate_single_cardinality()
+            return
+        self._validate_many_cardinality()
+
+    def _validate_single_cardinality(self) -> None:
+        if self.min_items is not None or self.max_items is not None:
+            raise ValueError("min_items and max_items require cardinality many")
+        if isinstance(self.default, list):
+            raise ValueError("single-valued argument default must be a scalar")
+
+    def _validate_many_cardinality(self) -> None:
+        if self.min_items is not None and self.max_items is not None and self.min_items > self.max_items:
+            raise ValueError("min_items must not exceed max_items")
+        if self.default is not None and not isinstance(self.default, list):
+            raise ValueError("many-valued argument default must be a list")
+        if isinstance(self.default, list):
+            self._validate_collection(self.default, field_name="default")
 
     def _validate_type_specific_constraints(self) -> None:
+        self._validate_numeric_constraints()
+        self._validate_text_constraints()
+        self._validate_reference_normalization()
+
+    def _validate_numeric_constraints(self) -> None:
         numeric = self.value_type in {
             ParticipantActionArgumentValueType.INTEGER,
             ParticipantActionArgumentValueType.NUMBER,
-        }
-        textual = self.value_type in {
-            ParticipantActionArgumentValueType.STRING,
-            ParticipantActionArgumentValueType.REFERENCE,
         }
         if not numeric and (self.minimum is not None or self.maximum is not None):
             raise ValueError("minimum and maximum require an integer or number argument")
         if self.minimum is not None and self.maximum is not None and self.minimum > self.maximum:
             raise ValueError("minimum must not exceed maximum")
+
+    def _validate_text_constraints(self) -> None:
+        textual = self.value_type in {
+            ParticipantActionArgumentValueType.STRING,
+            ParticipantActionArgumentValueType.REFERENCE,
+        }
         if not textual and (self.min_length is not None or self.max_length is not None):
             raise ValueError("min_length and max_length require a string or reference argument")
         if self.min_length is not None and self.max_length is not None and self.min_length > self.max_length:
             raise ValueError("min_length must not exceed max_length")
+
+    def _validate_reference_normalization(self) -> None:
         if self.value_type == ParticipantActionArgumentValueType.REFERENCE and (
             self.normalization != ParticipantActionArgumentNormalization.IDENTITY
         ):
@@ -239,16 +260,32 @@ class ParticipantActionArgumentDefinition(SDLModel):
     ) -> None:
         if not _participant_argument_scalar_matches(value, self.value_type):
             raise ValueError(f"{field_name} must match argument value_type {self.value_type.value}")
-        if isinstance(value, str):
-            if self.min_length is not None and len(value) < self.min_length:
-                raise ValueError(f"{field_name} must satisfy min_length")
-            if self.max_length is not None and len(value) > self.max_length:
-                raise ValueError(f"{field_name} must satisfy max_length")
-        if isinstance(value, (int, float)) and not isinstance(value, bool):
-            if self.minimum is not None and value < self.minimum:
-                raise ValueError(f"{field_name} must satisfy minimum")
-            if self.maximum is not None and value > self.maximum:
-                raise ValueError(f"{field_name} must satisfy maximum")
+        self._validate_scalar_length(value, field_name)
+        self._validate_scalar_range(value, field_name)
+
+    def _validate_scalar_length(
+        self,
+        value: ParticipantActionArgumentScalar,
+        field_name: str,
+    ) -> None:
+        if not isinstance(value, str):
+            return
+        if self.min_length is not None and len(value) < self.min_length:
+            raise ValueError(f"{field_name} must satisfy min_length")
+        if self.max_length is not None and len(value) > self.max_length:
+            raise ValueError(f"{field_name} must satisfy max_length")
+
+    def _validate_scalar_range(
+        self,
+        value: ParticipantActionArgumentScalar,
+        field_name: str,
+    ) -> None:
+        if not isinstance(value, (int, float)) or isinstance(value, bool):
+            return
+        if self.minimum is not None and value < self.minimum:
+            raise ValueError(f"{field_name} must satisfy minimum")
+        if self.maximum is not None and value > self.maximum:
+            raise ValueError(f"{field_name} must satisfy maximum")
 
 
 class ParticipantInteractionClass(str, Enum):

@@ -810,13 +810,16 @@ def test_candidate_projection_rejects_an_action_address_used_as_an_entry_id() ->
             "open_extension_binding_ref": None,
         },
     )
+    runtime_model = _runtime_model()
+    history_events = _history()
+    exposure_resolvers = _projection_exposure_resolvers(projection)
 
     with pytest.raises(ValueError, match="candidate_entry_ids do not resolve"):
         project_participant_decision_surface(
-            _runtime_model(),
-            history_events=_history(),
+            runtime_model,
+            history_events=history_events,
             projection=projection,
-            exposure_resolvers=_projection_exposure_resolvers(projection),
+            exposure_resolvers=exposure_resolvers,
         )
 
 
@@ -829,13 +832,16 @@ def test_projection_rejects_duplicate_surface_entry_ids() -> None:
             EXFILTRATE: _assessment(EXFILTRATE, entry_id="decision-surface-entries.shared"),
         },
     )
+    runtime_model = _runtime_model()
+    history_events = _history()
+    exposure_resolvers = _projection_exposure_resolvers(projection)
 
     with pytest.raises(ValueError, match="action assessment entry_id values must be unique"):
         project_participant_decision_surface(
-            _runtime_model(),
-            history_events=_history(),
+            runtime_model,
+            history_events=history_events,
             projection=projection,
-            exposure_resolvers=_projection_exposure_resolvers(projection),
+            exposure_resolvers=exposure_resolvers,
         )
 
 
@@ -850,13 +856,16 @@ def test_projection_rejects_assessment_for_a_different_compiled_argument_shape()
             )
         },
     )
+    runtime_model = _runtime_model()
+    history_events = _history()
+    exposure_resolvers = _projection_exposure_resolvers(projection)
 
     with pytest.raises(ValueError, match="does not match its compiled argument shape"):
         project_participant_decision_surface(
-            _runtime_model(),
-            history_events=_history(),
+            runtime_model,
+            history_events=history_events,
             projection=projection,
-            exposure_resolvers=_projection_exposure_resolvers(projection),
+            exposure_resolvers=exposure_resolvers,
         )
 
 

@@ -4,13 +4,18 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import TypeAlias
+
+from typing_extensions import TypeAliasType
 
 _ACTION_CONTRACT_PREFIX = "participant.action-contract."
 
-ParticipantActionArgumentScalar: TypeAlias = str | int | float | bool
-ParticipantActionArgumentValue: TypeAlias = (
-    ParticipantActionArgumentScalar | tuple[ParticipantActionArgumentScalar, ...]
+ParticipantActionArgumentScalar = TypeAliasType(
+    "ParticipantActionArgumentScalar",
+    str | int | float | bool,
+)
+ParticipantActionArgumentValue = TypeAliasType(
+    "ParticipantActionArgumentValue",
+    ParticipantActionArgumentScalar | tuple[ParticipantActionArgumentScalar, ...],
 )
 
 
