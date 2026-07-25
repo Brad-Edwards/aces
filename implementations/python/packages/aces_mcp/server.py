@@ -51,7 +51,7 @@ to check it.\
 def create_server() -> FastMCP:
     """Build and return the configured MCP server instance."""
     mcp = FastMCP(
-        name="raes-sdl",
+        name="raes",
         instructions=_INSTRUCTIONS,
     )
     register_reference_tools(mcp)

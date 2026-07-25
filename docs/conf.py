@@ -7,12 +7,12 @@ project = "RAES SDL"
 copyright = "2026, Brad Edwards"
 author = "Brad Edwards"
 
-# The docs build version derives from the installed `raes-sdl` distribution
+# The docs build version derives from the installed `raes` distribution
 # metadata (the release-please-owned source of truth), not a hand-maintained
 # literal (GOV-901). The honest PEP 440 sentinel `0.0.0+unknown` is used when
 # the distribution is not installed, so the docs never imply a false release.
 try:
-    release = _distribution_version("raes-sdl")
+    release = _distribution_version("raes")
 except PackageNotFoundError:
     release = "0.0.0+unknown"
 version = release.split("+", 1)[0]
