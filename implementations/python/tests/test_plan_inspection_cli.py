@@ -14,7 +14,8 @@ from aces_contracts.contracts import (
     OrchestrationPlanModel,
     ProvisioningPlanModel,
 )
-from aces_sdl._errors import (
+from paths import EXAMPLES_DIR
+from raes._errors import (
     SDLInstantiationError,
     SDLParseDiagnostic,
     SDLParseError,
@@ -22,7 +23,6 @@ from aces_sdl._errors import (
     SDLSourceRange,
     SDLValidationError,
 )
-from paths import EXAMPLES_DIR
 from typer.testing import CliRunner
 
 _SCENARIO = EXAMPLES_DIR / "techvault-defensive-min.sdl.yaml"

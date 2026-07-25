@@ -11,7 +11,7 @@ contract.
 
 ADR-036 module boundary: ``aces_operations`` orchestrates the libvirt backend only
 through ``aces_backend_libvirt.target`` / ``aces_backend_libvirt.techvault_native``,
-the ``aces_runtime`` control plane / manager, ``aces_sdl.parser``, and
+the ``aces_runtime`` control plane / manager, ``raes.parser``, and
 ``aces_contracts``. It never imports the processor or backend internals; the
 compiled runtime model is read from ``ExecutionPlan.model`` (a runtime-layer
 output). Deep processor-iterator validation of the participant proof is performed
@@ -45,7 +45,7 @@ from aces_backend_libvirt.target import create_libvirt_target
 from aces_backend_libvirt.techvault_native import TechVaultNativeLibvirtDriver
 from aces_runtime.control_plane import RuntimeControlPlane
 from aces_runtime.manager import RuntimeManager
-from aces_sdl.parser import parse_sdl_file
+from raes.parser import parse_sdl_file
 
 from aces_operations._evidence_run_artifact import EVIDENCE_RUN_SCHEMA, assemble_artifact
 from aces_operations._evidence_run_native import _default_native_driver_factory, _run_native_mode

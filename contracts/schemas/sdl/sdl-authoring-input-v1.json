@@ -21341,7 +21341,7 @@
         }
       ],
       "level": "error",
-      "validator": "aces_sdl.stateful_resources.GeneratedArtifact._unique_outputs_and_consumers"
+      "validator": "raes.stateful_resources.GeneratedArtifact._unique_outputs_and_consumers"
     },
     {
       "description": "Persistent volume consumers and dependency entries must be unique and access cardinality must match the declared portable access mode.",
@@ -21353,7 +21353,7 @@
         }
       ],
       "level": "error",
-      "validator": "aces_sdl.stateful_resources.PersistentVolume._unique_consumers"
+      "validator": "raes.stateful_resources.PersistentVolume._unique_consumers"
     },
     {
       "description": "Stateful resource consumers and dependencies must resolve unambiguously, use the POSIX v1 path dialect, and must not collide on a consumer node mount destination.",
@@ -21365,7 +21365,7 @@
         }
       ],
       "level": "error",
-      "validator": "aces_sdl._stateful_resource_references.stateful_resource_reference_errors"
+      "validator": "raes._stateful_resource_references.stateful_resource_reference_errors"
     },
     {
       "description": "Service-target content must resolve to one named service, retain exact tenant/reset ownership and content ordering, and bind observed-state postconditions to participant observation boundaries.",
@@ -21377,7 +21377,7 @@
         }
       ],
       "level": "error",
-      "validator": "aces_sdl.validator.SemanticValidator._verify_service_materialization"
+      "validator": "raes.validator.SemanticValidator._verify_service_materialization"
     }
   ],
   "x-aces-semantic-profile": {

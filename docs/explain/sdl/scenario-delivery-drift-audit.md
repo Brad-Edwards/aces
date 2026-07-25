@@ -1,6 +1,6 @@
 # Scenario/Delivery Classification Drift Audit and Remediation
 
-Issue #400 audits and repairs ACES design surfaces for residue from the earlier
+Issue #400 audits and repairs RAES design surfaces for residue from the earlier
 scenario-vs-delivery classification error: treating a fact as outside SDL
 scope because it resembles Docker, Compose, SSH, seccomp, init, network, or
 process configuration vocabulary, instead of asking whether the fact exists on
@@ -23,7 +23,7 @@ harness, or an inspector exposed the evidence. Delivery mechanics remain the
 orchestrator, host kernel, container runtime, backend adapter, control plane,
 build executor, and host-local operator state.
 
-The external/source basis is the existing ACES lineage set rather than a new
+The external/source basis is the existing RAES lineage set rather than a new
 taxonomy:
 
 - [Open Cyber Range SDL](https://documentation.opencyberrange.ee/docs/sdl/reference/)
@@ -92,7 +92,7 @@ Status vocabulary:
 | precedents.md | `docs/explain/sdl/precedents.md` | already-corrected baseline plus principled retention |
 | specs/ | `specs/formal/participant-semantics/`, `specs/formal/runtime-contracts/`, `specs/formal/realization/` | no-drift-found |
 | contracts/ | `contracts/README.md`, `contracts/concept-authority/`, `contracts/schemas/` | no-drift-found |
-| implementations/python/packages/aces_sdl/ | runtime models, parser, validator, and tests for runtime surfaces | aligned with corrected boundary |
+| implementations/python/packages/raes/ | runtime models, parser, validator, and tests for runtime surfaces | aligned with corrected boundary |
 
 ## Findings
 
@@ -157,8 +157,8 @@ places container network realization facts under `Node.runtime`, and
 `docs/decisions/adrs/adr-025-container-network-realization-surface.md:63`
 separates host publication from services and image exposed ports.
 Implementation evidence appears in
-`implementations/python/packages/aces_sdl/runtime_network.py` and validator
-references around `implementations/python/packages/aces_sdl/validator/`.
+`implementations/python/packages/raes/runtime_network.py` and validator
+references around `implementations/python/packages/raes/validator/`.
 
 **Suspect exclusion or scope language:** Host port bindings, aliases, endpoint
 IDs, DNS names, and backend driver/IPAM details can look like Docker or
@@ -183,8 +183,8 @@ puts seccomp and backend-native security options under runtime container
 configuration; `docs/decisions/adrs/adr-030-process-scoped-linux-capability-policy.md:35`
 keeps process-scoped Linux capability facts under
 `Node.runtime.linux_capabilities`. Implementation evidence appears in
-`implementations/python/packages/aces_sdl/runtime_container.py` and
-`implementations/python/packages/aces_sdl/runtime_capabilities.py`.
+`implementations/python/packages/raes/runtime_container.py` and
+`implementations/python/packages/raes/runtime_capabilities.py`.
 
 **Suspect exclusion or scope language:** `init: true`, `security_opt`, and
 `cap_add`/`cap_drop` are backend-looking configuration terms.
@@ -207,8 +207,8 @@ puts SSH server configuration under node runtime; lines around
 `docs/decisions/adrs/adr-031-ssh-server-configuration-surface.md:47` identify
 `AcceptEnv`, `ForceCommand`, and `Match` rules as participant-observable sshd
 policy. Implementation evidence appears in
-`implementations/python/packages/aces_sdl/runtime_ssh_server.py` and
-`implementations/python/packages/aces_sdl/validator/`.
+`implementations/python/packages/raes/runtime_ssh_server.py` and
+`implementations/python/packages/raes/validator/`.
 
 **Suspect exclusion or scope language:** `sshd_config`, wrapper commands, and
 accepted environment names can look like backend or process implementation
@@ -232,15 +232,15 @@ puts database logical-state observations under `Node.runtime`; `docs/decisions/a
 does the same for directory and domain identity observations. Generated schema
 descriptions in `contracts/schemas/sdl/sdl-authoring-input-v1.json` and
 `contracts/schemas/sdl/instantiated-scenario-v1.json` carry those surfaces,
-and model evidence appears in `implementations/python/packages/aces_sdl/runtime_database.py`
-and `implementations/python/packages/aces_sdl/runtime_directory_identity.py`.
+and model evidence appears in `implementations/python/packages/raes/runtime_database.py`
+and `implementations/python/packages/raes/runtime_directory_identity.py`.
 
 **Suspect exclusion or scope language:** Database catalogs, database roles,
 LDAP/AD/SCIM/OIDC/SAML/IAM authority facts, and provider identifiers can look
 like product-specific backend payloads.
 
 **Boundary analysis:** The current decisions keep vendor/provider identifiers
-as data and preserve neutral stable ACES ids. They separate runtime logical
+as data and preserve neutral stable RAES ids. They separate runtime logical
 state from top-level authored accounts, `Node.services`, local identity,
 application routes, raw catalog dumps, and downstream attack-graph or telemetry
 schemas.
@@ -259,9 +259,9 @@ enumerate the participant-observable fields (manager kind, native unit name,
 load/enable/active/sub state, result/exit code, main PID, unit-file path,
 redactable `ExecStart`, optional same-node service ref). Implementation
 evidence appears in
-`implementations/python/packages/aces_sdl/runtime_service_units.py` and the
+`implementations/python/packages/raes/runtime_service_units.py` and the
 new validator hook in
-`implementations/python/packages/aces_sdl/validator/`.
+`implementations/python/packages/raes/validator/`.
 
 **Suspect exclusion or scope language:** `systemctl` output, unit-file text,
 journal excerpts, and Docker/container-host configuration adjacency can look
@@ -336,7 +336,7 @@ owners.
 **Surface:** `docs/explain/sdl/precedents.md`, ADR-033, contracts, and specs.
 
 **Citation:** `docs/explain/sdl/precedents.md:243` keeps Docker Compose
-profiles in the backend implementation layer unless promoted to an ACES
+profiles in the backend implementation layer unless promoted to an RAES
 scenario/profile composition surface; `docs/decisions/adrs/adr-033-scenario-delivery-boundary-for-runtime-node-state.md:77`
 defines delivery machinery as orchestrators, host kernels, container runtimes,
 backend adapters, control planes, build executors, and host-local operator
@@ -349,7 +349,7 @@ selection, and backend execution plans look adjacent to scenario composition.
 **Boundary analysis:** No participant-interactable range-node state is lost by
 not importing Compose profile labels as SDL. The realized node set is already
 represented by SDL nodes and runtime observations; backend packaging and
-selection machinery remains delivery unless a future ACES composition surface
+selection machinery remains delivery unless a future RAES composition surface
 is explicitly designed.
 
 **Disposition:** principled-retention. No current drift found.
@@ -410,7 +410,7 @@ replicating the old Docker/Compose vocabulary error.
 **Surface:** `lineage.md`, `validation.md`, `limitations.md`, and
 `runtime-architecture.md`.
 
-**Citation:** `docs/explain/sdl/lineage.md:14` says ACES keeps the logical
+**Citation:** `docs/explain/sdl/lineage.md:14` says RAES keeps the logical
 scenario surface separate from backend realization, and
 `docs/explain/sdl/lineage.md:200` separates authored scenario meaning,
 processor/runtime contracts, backend realization, participant implementations,
@@ -440,14 +440,14 @@ vocabulary.
 
 ### R-007 Actual code matches the corrected typed-surface boundary
 
-**Surface:** `implementations/python/packages/aces_sdl/`
+**Surface:** `implementations/python/packages/raes/`
 
-**Citation:** `implementations/python/packages/aces_sdl/runtime_configuration.py`
+**Citation:** `implementations/python/packages/raes/runtime_configuration.py`
 owns `mounts`, `filesystem_inventory`, `container`, `network`,
 `linux_capabilities`, `local_identity`, `identity_authorities`,
 `applications`, `database_services`, `ssh_servers`, and
 `software_components`;
-`implementations/python/packages/aces_sdl/validator/` adds runtime
+`implementations/python/packages/raes/validator/` adds runtime
 application, database, identity authority, SSH, network, and capability
 cross-checks; tests in `implementations/python/tests/test_sdl_models.py`,
 `test_runtime_models.py`, `test_sdl_parser.py`, `test_sdl_validator.py`, and

@@ -8,28 +8,28 @@
     {
       "concern_id": "source-profile-validity", "status": "implemented", "limitation": "Admission proves the governed source profile, not scientific adequacy.",
       "evidence": [
-        {"kind": "implementation", "path": "implementations/python/packages/aces_sdl/_yaml_loader.py", "claim": "Safe YAML ingress and source-profile enforcement."},
+        {"kind": "implementation", "path": "implementations/python/packages/raes/_yaml_loader.py", "claim": "Safe YAML ingress and source-profile enforcement."},
         {"kind": "test", "path": "implementations/python/tests/test_sdl_parser.py", "claim": "Source-profile and parser rejection coverage."}
       ]
     },
     {
       "concern_id": "closed-structural-model", "status": "implemented", "limitation": "Closed structure permits a name-only fragment and is not a completeness claim.",
       "evidence": [
-        {"kind": "implementation", "path": "implementations/python/packages/aces_sdl/scenario.py", "claim": "Closed Scenario model."},
+        {"kind": "implementation", "path": "implementations/python/packages/raes/scenario.py", "claim": "Closed Scenario model."},
         {"kind": "test", "path": "implementations/python/tests/test_sdl_models.py", "claim": "Closed-model validation coverage."}
       ]
     },
     {
       "concern_id": "semantic-reference-integrity", "status": "implemented", "limitation": "Semantic admission covers declared SDL references, not backend realization.",
       "evidence": [
-        {"kind": "implementation", "path": "implementations/python/packages/aces_sdl/validator/_core.py", "claim": "Collect-all semantic validation."},
+        {"kind": "implementation", "path": "implementations/python/packages/raes/validator/_core.py", "claim": "Collect-all semantic validation."},
         {"kind": "test", "path": "implementations/python/tests/test_sdl_validator.py", "claim": "Cross-section semantic validation coverage."}
       ]
     },
     {
       "concern_id": "topology-and-resource-intent", "status": "implemented", "limitation": "The SDL expresses intent; realizability remains apparatus and backend relative.",
       "evidence": [
-        {"kind": "implementation", "path": "implementations/python/packages/aces_sdl/scenario.py", "claim": "Typed scenario topology and resource surfaces."},
+        {"kind": "implementation", "path": "implementations/python/packages/raes/scenario.py", "claim": "Typed scenario topology and resource surfaces."},
         {"kind": "test", "path": "implementations/python/tests/test_sdl_realworld.py", "claim": "Real-world scenario authoring coverage."}
       ]
     },
@@ -39,12 +39,12 @@
     },
     {
       "concern_id": "scoped-specificity-open-world-intent", "status": "partial", "limitation": "Realization envelopes and explicitness semantics exist, but scenario-scoped default and most-specific override authority remain open.", "issue_refs": ["#539"],
-      "evidence": [{"kind": "implementation", "path": "implementations/python/packages/aces_sdl/explicitness.py", "claim": "Current explicitness analysis."}]
+      "evidence": [{"kind": "implementation", "path": "implementations/python/packages/raes/explicitness.py", "claim": "Current explicitness analysis."}]
     },
     {
       "concern_id": "parameter-typing", "status": "implemented", "limitation": "SDL variables instantiate scenario values; they do not define an experimental factor design.",
       "evidence": [
-        {"kind": "implementation", "path": "implementations/python/packages/aces_sdl/instantiate.py", "claim": "Typed variable binding and instantiation."},
+        {"kind": "implementation", "path": "implementations/python/packages/raes/instantiate.py", "claim": "Typed variable binding and instantiation."},
         {"kind": "test", "path": "implementations/python/tests/test_sdl_phase_contracts.py", "claim": "Instantiation and closed-phase coverage."}
       ]
     },
@@ -77,28 +77,28 @@
     {
       "concern_id": "propositions", "status": "implemented", "limitation": "The model defines claims and truth domains; it does not guarantee a backend can decide them.",
       "evidence": [
-        {"kind": "implementation", "path": "implementations/python/packages/aces_sdl/propositions.py", "claim": "Typed proposition model."},
+        {"kind": "implementation", "path": "implementations/python/packages/raes/propositions.py", "claim": "Typed proposition model."},
         {"kind": "test", "path": "implementations/python/tests/test_proposition_semantics.py", "claim": "Predicate, subject, and truth-composition coverage."}
       ]
     },
     {
       "concern_id": "assertions", "status": "implemented", "limitation": "Assertion composition is not evaluator lifecycle success or graded scoring.",
       "evidence": [
-        {"kind": "implementation", "path": "implementations/python/packages/aces_sdl/propositions.py", "claim": "Role-constrained assertion model."},
+        {"kind": "implementation", "path": "implementations/python/packages/raes/propositions.py", "claim": "Role-constrained assertion model."},
         {"kind": "test", "path": "implementations/python/tests/test_truth_result_contracts.py", "claim": "Assertion truth-result integrity coverage."}
       ]
     },
     {
       "concern_id": "condition-probe-binding", "status": "implemented", "limitation": "Conditions are probe realizations and cannot substitute command success for truth.",
       "evidence": [
-        {"kind": "implementation", "path": "implementations/python/packages/aces_sdl/conditions.py", "claim": "Explicit condition-to-proposition binding."},
+        {"kind": "implementation", "path": "implementations/python/packages/raes/conditions.py", "claim": "Explicit condition-to-proposition binding."},
         {"kind": "test", "path": "implementations/python/tests/test_proposition_capabilities.py", "claim": "Backend binding capability and rejection coverage."}
       ]
     },
     {
       "concern_id": "workflow-compensation", "status": "implemented", "limitation": "Compensation is bounded workflow behavior, not universal resource rollback.",
       "evidence": [
-        {"kind": "implementation", "path": "implementations/python/packages/aces_sdl/orchestration.py", "claim": "Workflow compensation surface."},
+        {"kind": "implementation", "path": "implementations/python/packages/raes/orchestration.py", "claim": "Workflow compensation surface."},
         {"kind": "test", "path": "implementations/python/tests/test_fm2_semantics.py", "claim": "Workflow semantic invariants."}
       ]
     },
@@ -123,7 +123,7 @@
     },
     {
       "concern_id": "deadlines-and-windows", "status": "partial", "limitation": "Objective windows exist, but a complete time-domain-bound deadline surface is not published.", "issue_refs": ["#285", "#288"],
-      "evidence": [{"kind": "implementation", "path": "implementations/python/packages/aces_sdl/semantics/objectives.py", "claim": "Current objective-window analysis."}]
+      "evidence": [{"kind": "implementation", "path": "implementations/python/packages/raes/semantics/objectives.py", "claim": "Current objective-window analysis."}]
     },
     {
       "concern_id": "pacing-and-synchronization", "status": "partial", "limitation": "Participant time-management records exist; general advancement and synchronization semantics remain open.", "issue_refs": ["#284", "#287", "#290"],
@@ -132,13 +132,13 @@
     {
       "concern_id": "participant-declaration", "status": "implemented", "limitation": "Participant declaration does not prove that an implementation respects every authority or observation boundary.",
       "evidence": [
-        {"kind": "implementation", "path": "implementations/python/packages/aces_sdl/agents.py", "claim": "Participant identity, scope, and boundary references."},
+        {"kind": "implementation", "path": "implementations/python/packages/raes/agents.py", "claim": "Participant identity, scope, and boundary references."},
         {"kind": "test", "path": "implementations/python/tests/test_sem_208_participant_behavior.py", "claim": "Participant semantic validation coverage."}
       ]
     },
     {
       "concern_id": "participant-action-observation", "status": "partial", "limitation": "Action contracts and observation boundaries exist, but participant-relative information-flow admission is not complete.", "issue_refs": ["#747"],
-      "evidence": [{"kind": "implementation", "path": "implementations/python/packages/aces_sdl/participant_behavior.py", "claim": "Current action-contract and observation-boundary models."}]
+      "evidence": [{"kind": "implementation", "path": "implementations/python/packages/raes/participant_behavior.py", "claim": "Current action-contract and observation-boundary models."}]
     },
     {
       "concern_id": "participant-episode-reset", "status": "partial", "limitation": "Runtime episode lifecycle is implemented, while complete authored episode/reset semantics and conformance remain open.", "issue_refs": ["#305", "#307", "#311", "#314"],
@@ -172,7 +172,7 @@
     },
     {
       "concern_id": "credential-intent", "status": "partial", "limitation": "Account and runtime-value posture exists, but authored credential-bearing setup remains unresolved.", "issue_refs": ["#673", "#708"],
-      "evidence": [{"kind": "implementation", "path": "implementations/python/packages/aces_sdl/accounts.py", "claim": "Current account and credential-posture authoring."}]
+      "evidence": [{"kind": "implementation", "path": "implementations/python/packages/raes/accounts.py", "claim": "Current account and credential-posture authoring."}]
     },
     {
       "concern_id": "credential-materialization", "status": "missing", "limitation": "No complete portable binding materializes authored credential-bearing accounts while preserving secret boundaries.", "issue_refs": ["#708"], "evidence": []
@@ -191,7 +191,7 @@
     {
       "concern_id": "vulnerability-inventory", "status": "implemented", "limitation": "A declared vulnerability is not proof of reachability, exploitability, or observation.",
       "evidence": [
-        {"kind": "implementation", "path": "implementations/python/packages/aces_sdl/vulnerabilities.py", "claim": "Typed vulnerability inventory."},
+        {"kind": "implementation", "path": "implementations/python/packages/raes/vulnerabilities.py", "claim": "Typed vulnerability inventory."},
         {"kind": "test", "path": "implementations/python/tests/test_sdl_models.py", "claim": "Vulnerability model validation coverage."}
       ]
     },
@@ -201,11 +201,11 @@
     },
     {
       "concern_id": "flexible-step-tooling", "status": "partial", "limitation": "Scripts and workflows exist, but portable tool selection and affordance binding remain incomplete.", "issue_refs": ["#653"],
-      "evidence": [{"kind": "implementation", "path": "implementations/python/packages/aces_sdl/orchestration.py", "claim": "Current script and workflow step surfaces."}]
+      "evidence": [{"kind": "implementation", "path": "implementations/python/packages/raes/orchestration.py", "claim": "Current script and workflow step surfaces."}]
     },
     {
       "concern_id": "portable-behavior-contracts", "status": "partial", "limitation": "Behavior specifications and action contracts exist, but portable participant affordance and realization coverage is incomplete.", "issue_refs": ["#653"],
-      "evidence": [{"kind": "implementation", "path": "implementations/python/packages/aces_sdl/participant_behavior_specification.py", "claim": "Current behavior specification surface."}]
+      "evidence": [{"kind": "implementation", "path": "implementations/python/packages/raes/participant_behavior_specification.py", "claim": "Current behavior specification surface."}]
     },
     {
       "concern_id": "behavioral-relation-taxonomy", "status": "implemented", "limitation": "The revisioned taxonomy, bindings, finite-evidence gate, and counterexamples are implemented; universal simulation, refinement, equivalence, bisimulation, epistemic, strategic, probabilistic, timed, and partial-order proofs remain deliberately unproved or future.", "issue_refs": [],

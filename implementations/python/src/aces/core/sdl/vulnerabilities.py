@@ -1,5 +1,5 @@
 from aces._compat import reexport as _reexport
 
-_reexport(globals(), "aces_sdl.vulnerabilities")
+_reexport(globals(), "raes.vulnerabilities")
 
 del _reexport

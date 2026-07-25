@@ -4,7 +4,7 @@ Status: normative
 
 Decision: [ADR-077](../../docs/decisions/adrs/adr-077-associated-artifact-manifest-boundary.md)
 
-This specification defines the portable ACES contract for non-semantic
+This specification defines the portable RAES contract for non-semantic
 artifacts associated with a scenario, sealed scenario snapshot, or experiment
 artifact. The normative machine-readable surface is
 `associated-artifact-manifest-v1` under
@@ -148,5 +148,5 @@ promotion, retention, and use-time verification. They validate the parent and
 every staged payload, derive rather than trust the set digest, retain the
 manifest with verified bytes, and reverify before use when storage guarantees
 do not make that redundant. A caller-supplied package digest may be retained as
-untrusted metadata, but cannot become ACES conformance or trust evidence unless
+untrusted metadata, but cannot become RAES conformance or trust evidence unless
 it equals the validator-derived set digest.

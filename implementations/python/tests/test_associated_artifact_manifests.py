@@ -26,8 +26,8 @@ from aces_contracts.contracts import (
     schema_bundle,
 )
 from aces_contracts.versions import ASSOCIATED_ARTIFACT_MANIFEST_SCHEMA_VERSION
-from aces_sdl import canonical_sdl_digest, parse_sdl
 from pydantic import ValidationError
+from raes import canonical_sdl_digest, parse_sdl
 
 PAYLOAD = b"operator guide\n"
 PAYLOAD_SHA256 = hashlib.sha256(PAYLOAD).hexdigest()

@@ -15,7 +15,7 @@ import textwrap
 
 from aces_contracts.apparatus import ConceptBinding, RealizationSupportDeclaration
 from aces_contracts.vocabulary import RealizationSupportMode
-from aces_sdl.explicitness import ExplicitnessClass, ExplicitnessProvenance
+from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance
 
 from aces.backends.stubs import create_stub_manifest
 from aces.core.runtime.capabilities import BackendManifest, ProvisionerCapabilities

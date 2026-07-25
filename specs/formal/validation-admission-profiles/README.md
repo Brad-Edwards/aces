@@ -1,7 +1,7 @@
 # Validation and Admission Profiles Formal Specification
 
 This domain specifies the ASR-511 and ASR-515 validation/admission profile
-model. It defines how ACES distinguishes structural, semantic, behavioral, and
+model. It defines how RAES distinguishes structural, semantic, behavioral, and
 stronger validity claims, and how artifacts disclose the basis and limitations
 of those claims.
 
@@ -88,7 +88,7 @@ Strength classes are ordered from weakest to strongest:
 `structural` means syntax, schema, closed-world shape, type, and vocabulary
 checks passed.
 
-`semantic` means structural validation passed and ACES domain invariants,
+`semantic` means structural validation passed and RAES domain invariants,
 reference resolution, lifecycle separation, and cross-artifact consistency
 checks passed for the subject.
 

@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "raes"
 version = "0.25.0"
-description = "Backend-agnostic cyber range scenario description language and runtime."
+description = "Contracts and reference tooling for reproducible agentic environments."
 dynamic = ["readme"]
 requires-python = ">=3.11"
 dependencies = [
@@ -78,7 +78,7 @@ packages = [
     "packages/aces_mcp",
     "packages/aces_processor",
     "packages/aces_runtime",
-    "packages/aces_sdl",
+    "packages/raes",
 ]
 
 # Ship the published contract corpus (the ADR-009 normative authority at the
@@ -125,7 +125,7 @@ source = [
     "aces_mcp",
     "aces_processor",
     "aces_runtime",
-    "aces_sdl",
+    "raes",
 ]
 
 [tool.coverage.report]
@@ -169,5 +169,5 @@ ignore = [
 "packages/aces_cli/**" = ["B008"]      # typer requires function calls in defaults
 "packages/aces_runtime/control_plane_api.py" = ["B008"]  # fastapi Depends() pattern
 "packages/aces_runtime/control_plane.py" = ["S112"]      # intentional exception suppression
-"packages/aces_sdl/module_registry.py" = ["S310", "S202"]  # explicit OCI URL fetch and tarball extract
+"packages/raes/module_registry.py" = ["S310", "S202"]  # explicit OCI URL fetch and tarball extract
 "packages/aces_contracts/realization_envelope.py" = ["E402"]  # late import breaks a carrier dependency cycle

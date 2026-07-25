@@ -4,7 +4,7 @@ from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from aces_sdl.participant_temporal_semantics import (
+from raes.participant_temporal_semantics import (
     ParticipantTemporalEventPoint,
     ParticipantTemporalState,
     ParticipantTimeDomain,

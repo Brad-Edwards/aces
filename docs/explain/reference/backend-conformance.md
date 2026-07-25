@@ -131,7 +131,7 @@ mandatory and set-like. The standard terms are grounded in
 `specs/formal/participant-semantics/`: exercise roles map to the existing
 `white`/`green`/`red`/`blue` framing vocabulary; behavior terms map to the
 action, observation, state-transition, failure, temporal, attribution, and
-outcome semantics already modeled in ACES; interaction terms map to the SEM-209
+outcome semantics already modeled in RAES; interaction terms map to the SEM-209
 coordination, contention, interference, and shared-state classes. Standard terms
 are not accepted as prose-only promises: target conformance checks that the
 manifest also declares the published participant episode or behavior-history
@@ -214,7 +214,7 @@ by issues #715-#717. The probe needs a scenario to exercise and defaults to a
 generic linux-vm scenario (`_DEFAULT_CONFORMANCE_SCENARIO`).
 
 A single hard-coded scenario wrongly assumes *every* backend can realize it.
-Fixed-topology emulation backends (which map ACES nodes onto a pre-built
+Fixed-topology emulation backends (which map RAES nodes onto a pre-built
 environment) and bounded simulation backends legitimately cannot realize an
 arbitrary scenario, yet still honor the provisioning contract. `run_target_conformance`
 therefore accepts an optional `reference_scenario` (issue #663): a backend or

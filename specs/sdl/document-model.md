@@ -162,7 +162,7 @@ its diagnostics.
 
 ## 6. Portable identifiers and declaration identity
 
-Every ACES-local **declaration identity** uses one portable local-identifier
+Every RAES-local **declaration identity** uses one portable local-identifier
 grammar:
 
 ```text
@@ -181,7 +181,7 @@ non-ASCII, whitespace, controls, `.`, `/`, `:`, and `${…}` are invalid.
 The rule applies by semantic role, not field spelling. It covers `Scenario.name`;
 map-valued section and variable keys; nested entity, role, and workflow-step
 keys; named services, ACLs, and content items; scenario-level forwarding-agent
-ids; and every ACES-local primary or child id in the runtime-family registry.
+ids; and every RAES-local primary or child id in the runtime-family registry.
 It does **not** apply merely because a field is called `name` or ends in `_id`.
 Display labels, usernames, DNS names, URLs, paths, LDAP DNs, environment names,
 versions, external/native/provider ids, and opaque evidence refs retain their

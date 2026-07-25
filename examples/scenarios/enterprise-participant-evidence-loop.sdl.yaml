@@ -497,7 +497,7 @@ outcome_interpretation_rules:
         target_layer: scenario_meaning
         ref: reference-demonstration
         relation: >
-          Shows that ACES can represent participant, target, internal
+          Shows that RAES can represent participant, target, internal
           dependency, OSS defender evidence, policy provenance, evaluator
           evidence, and observation boundaries in one focused enterprise slice.
         evidence_refs:

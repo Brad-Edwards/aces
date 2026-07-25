@@ -1,12 +1,12 @@
-# ACES Inventory Methodology Assurance Report
+# RAES Inventory Methodology Assurance Report
 
-This report reviews the ACES asset-inventory methodology for defensibility
+This report reviews the RAES asset-inventory methodology for defensibility
 under DevOps/security practice, supply-chain evidence practice,
 reproducible-research expectations, and verification/validation thinking. The
-method was first exercised through APTL #353, but ACES owns the methodology and
+method was first exercised through APTL #353, but RAES owns the methodology and
 semantic gates. This report is not a final TechVault asset specification; it
 exists to keep the methodology itself from drifting while downstream asset
-captures and later ACES/downstream gap issues do the full encoding work.
+captures and later RAES/downstream gap issues do the full encoding work.
 
 ## Current Position
 
@@ -23,7 +23,7 @@ used with explicit ledger gates. The current reference implementation is APTL's
   Pydantic ledger model.
 
 The methodology is not yet sufficient to claim final equivalence between a
-future ACES encoding and any realized downstream deployment. That requires the
+future RAES encoding and any realized downstream deployment. That requires the
 planned correspondence checks in the ledger to become implemented checks after
 the encoding exists.
 
@@ -38,12 +38,12 @@ the encoding exists.
 | Evidence provenance | Separates captured facts, evidence paths, tool output, and provenance metadata. | W3C PROV distinguishes entities, activities, and agents for auditable provenance. |
 | Reproducible research | Preserves enough artifact, tool, environment, and parameter evidence to rerun and challenge the claim. | Peng, Goodman et al., and ACM artifact-review guidance frame reproducibility as artifact-backed evaluation, not narrative alone. |
 | Cyber-range scenario rigor | Treats scenario assets, services, topology, and evidence as explicit artifacts rather than backend lore. | Cyber-range literature emphasizes scenario definition, infrastructure, tooling, monitoring, and evaluation as separable concerns. |
-| V&V / correspondence | Adds planned correspondence checks tying future ACES surfaces to realized evidence. | NASA model/simulation assurance guidance and IEEE-style V&V practice emphasize evidence that the model satisfies requirements and corresponds to intended use. |
+| V&V / correspondence | Adds planned correspondence checks tying future RAES surfaces to realized evidence. | NASA model/simulation assurance guidance and IEEE-style V&V practice emphasize evidence that the model satisfies requirements and corresponds to intended use. |
 
 ## Improvements Made In This Pass
 
 The first APTL validation proof captured useful evidence but left several
-methodology risks too implicit. The ACES methodology closes the visible
+methodology risks too implicit. The RAES methodology closes the visible
 problems now:
 
 - The ledger is now schema-governed by Pydantic models, with a schema CLI.
@@ -54,7 +54,7 @@ problems now:
   predicate type.
 - The ledger now has explicit correspondence-check records. They are planned,
   not implemented, because the first validation pass covered methodology and
-  tooling rather than final ACES encoding.
+  tooling rather than final RAES encoding.
 - The docs state scanner limits, attestation-verification limits, and
   correspondence limits directly.
 
@@ -70,11 +70,11 @@ later issues must not silently carry them into final claims:
   builder identity.
 - The Trivy SBOM and vulnerability outputs are scanner state tied to tool,
   database, advisory, and capture time. They are not permanent ground truth.
-- The ledger proves mapping accountability, not semantic completeness of ACES.
-  ACES #354 added the first typed runtime configuration surfaces, but later
+- The ledger proves mapping accountability, not semantic completeness of RAES.
+  RAES #354 added the first typed runtime configuration surfaces, but later
   captures may still expose additional SDL gaps that need their own issues.
 - Correspondence checks are planned. Final encoding issues must implement them
-  by comparing ACES/source-package content against fresh realized evidence.
+  by comparing RAES/source-package content against fresh realized evidence.
 
 ## Required Bar For Later Asset Issues
 
@@ -89,8 +89,8 @@ Each follow-on asset issue should meet this minimum:
    tooling.
 5. Validate the mapping ledger with `aptl aces-inventory validate`.
 6. Run `aptl aces-inventory gaps` and file/link gap issues before encoding
-   unsupported facts through semantically wrong ACES fields.
-7. Add or update correspondence checks so the future ACES encoding can be
+   unsupported facts through semantically wrong RAES fields.
+7. Add or update correspondence checks so the future RAES encoding can be
    verified against realized evidence.
 
 ## References

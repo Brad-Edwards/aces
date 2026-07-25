@@ -7,15 +7,15 @@ from copy import deepcopy
 from functools import cache
 from typing import Any, Literal
 
-from aces_sdl import VARIABLE_TOKEN_PATTERN
-from aces_sdl.identifiers import PORTABLE_IDENTIFIER_JSON_SCHEMA, QUALIFIED_IDENTIFIER_MAX_LENGTH
-from aces_sdl.schema_catalogs import (
+from pydantic import Field
+from raes import VARIABLE_TOKEN_PATTERN
+from raes.identifiers import PORTABLE_IDENTIFIER_JSON_SCHEMA, QUALIFIED_IDENTIFIER_MAX_LENGTH
+from raes.schema_catalogs import (
     HASHMAP_SECTIONS,
     RUNTIME_SERVICE_FAMILIES,
     RuntimeReferenceChild,
 )
-from aces_sdl.value_parsing import VARIABLE_REFERENCE_SCHEMA_MARKER
-from pydantic import Field
+from raes.value_parsing import VARIABLE_REFERENCE_SCHEMA_MARKER
 
 from ..addressing import COMPILED_ADDRESS_JSON_SCHEMA
 from ..planning import PLAN_ADDRESS_ROOT_BY_DOMAIN, PLAN_RESOURCE_TYPES_BY_DOMAIN, RuntimeDomain

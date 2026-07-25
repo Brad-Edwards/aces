@@ -4,11 +4,11 @@ from dataclasses import dataclass
 from typing import Any
 
 from aces_backend_protocols.domain_topology import DomainTopologyBinding
-from aces_sdl.entities import flatten_entities
-from aces_sdl.features import Feature
-from aces_sdl.nodes import Node, NodeType
-from aces_sdl.scenario import InstantiatedScenario
-from aces_sdl.semantics.domain_topology import (
+from raes.entities import flatten_entities
+from raes.features import Feature
+from raes.nodes import Node, NodeType
+from raes.scenario import InstantiatedScenario
+from raes.semantics.domain_topology import (
     DomainNodeRole,
     DomainTopologyAnalysis,
 )

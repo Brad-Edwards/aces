@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
-from aces_sdl.explicitness import ExplicitnessClass, ExplicitnessProvenance
+from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance
 
 from aces_contracts.addressing import require_compiled_address
 from aces_contracts.diagnostics import Diagnostic

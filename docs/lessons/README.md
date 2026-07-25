@@ -1,12 +1,12 @@
 # Integration Lessons
 
-This directory records integration findings from co-evolving ACES with
-sibling research projects that consume the ACES contract surface as
+This directory records integration findings from co-evolving RAES with
+sibling research projects that consume the RAES contract surface as
 backends. The first consumer is APTL (`Brad-Edwards/aptl`, sibling repo at
 `../aptl`).
 
 It is not a decision log. ADRs continue to record decisions; this directory
-records the **post-decision evidence** that emerges when ACES's published
+records the **post-decision evidence** that emerges when RAES's published
 contracts, profiles, fixtures, and runtime model meet a real-world backend.
 Findings here can produce follow-up issues, amendments to existing ADRs, or
 new ADRs. The finding entry stays as the historical record.
@@ -46,7 +46,7 @@ Each entry's frontmatter:
 ```markdown
 ---
 date: 2026-05-19
-side: ACES | APTL | both
+side: RAES | APTL | both
 sibling_entry: <link to the matching entry in the sibling repo, if any>
 follow_ups:
   - <repo>#<issue> — one-line description
@@ -72,7 +72,7 @@ Body sections (use the ones that apply, omit the rest):
   `fix-in-backend`, `cross-repo-coordination`, `accept`, `escalate`. Do
   not use `defer` — record a `follow_ups` issue instead.
 - **Why this side** — when fix could have landed on either repo, why we
-  chose the one we did. ACES's bias should be toward fixing the contract
+  chose the one we did. RAES's bias should be toward fixing the contract
   surface (not papering over it in the backend), but evidence from the
   first backend integration is exactly the moment to question that bias.
 - **Follow-ups** — issues opened on each side, with cross-references.
@@ -103,6 +103,6 @@ embodies them.
 
 `aces_backend_stubs` is the reference Python backend. When the same finding
 applies to both the reference stub and a real backend, prefer recording it
-on the ACES side with `contract_impact` / `profile_impact` populated, and
+on the RAES side with `contract_impact` / `profile_impact` populated, and
 cross-link the backend repo's entry only when the backend-specific
 adaptation cost is itself the lesson.

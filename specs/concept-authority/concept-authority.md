@@ -3,7 +3,7 @@
 ## Scope
 
 This specification defines the canonical concept authority for cyber-domain
-concepts used across ACES SDL, manifests, contracts, provenance, reporting,
+concepts used across RAES SDL, manifests, contracts, provenance, reporting,
 and related ecosystem artifacts.
 
 It establishes what concept families exist, where their meaning comes from,
@@ -33,10 +33,10 @@ It pins the reviewed UCO version and maps every adopted and adapted cyber-domain
 family to the UCO object types it aligns to, stating each adapted family's
 divergences explicitly so the alignment can be reviewed rather than assumed.
 
-### 2. ACES Concept Layer
+### 2. RAES Concept Layer
 
-Defines concepts that ACES needs beyond the cyber-domain authority. These
-are ACES-native extensions for experiment, runtime, apparatus, provenance,
+Defines concepts that RAES needs beyond the cyber-domain authority. These
+are RAES-native extensions for experiment, runtime, apparatus, provenance,
 and governance concerns.
 
 ### 3. Artifact Binding Layer
@@ -47,7 +47,7 @@ from becoming de facto semantics.
 
 ## Surface
 
-A **surface** is a named, bounded, contract-bearing scope of an ACES artifact
+A **surface** is a named, bounded, contract-bearing scope of an RAES artifact
 or apparatus — owned by a single declaring authority — across which concept
 bindings, governed vocabularies, and conformance rules apply. "Surface" is the
 ecosystem's central organizing term: authoring (the SDL surface), processing
@@ -99,8 +99,8 @@ Every concept family declares its provenance:
 | Category | Meaning |
 |----------|---------|
 | `adopted` | Imported from the external authority with equivalent meaning. |
-| `adapted` | Derived from the external authority with ACES-specific modifications. |
-| `native` | Defined by ACES with no external authority source. |
+| `adapted` | Derived from the external authority with RAES-specific modifications. |
+| `native` | Defined by RAES with no external authority source. |
 
 ## Concept Families
 
@@ -121,9 +121,9 @@ The `relationships` family uses `adapted` provenance because existing
 relationship types draw from STIX 2.1 Relationship SROs and OCR dependency
 patterns, not from UCO alone.
 
-### ACES-Native Families
+### RAES-Native Families
 
-These families have no external authority. They are defined by ACES for
+These families have no external authority. They are defined by RAES for
 ecosystem-specific concerns.
 
 | Family | Scope |
@@ -139,14 +139,14 @@ ecosystem-specific concerns.
 | `time-and-apparatus` | Clocks, timing constraints, and apparatus-level concerns. |
 
 The `episodes` family is native because participant episode semantics are an
-ACES runtime boundary, not a UCO cyber object and not a task/run/study alias.
+RAES runtime boundary, not a UCO cyber object and not a task/run/study alias.
 It covers participant-scoped episode identity, lifecycle state, reset/restart
 boundaries, and append-only episode history. Episode-bound behavior events,
 observables, actions, tools, artifacts, and evidence still bind to their
 narrower concept families when those records are the artifact's subject.
 
 The `runtime-inventory` family is native because observed node runtime state is
-an ACES extension over the cyber-domain authority, not a UCO object in its own
+an RAES extension over the cyber-domain authority, not a UCO object in its own
 right and not a task/run/study or apparatus declaration. It covers the typed
 runtime inventory carried under `nodes.*.runtime` — services, platforms,
 packages and software components, controls and security posture, filesystem and
@@ -156,22 +156,22 @@ asset, identity, observable, tool, artifact, or relationship — still bind to
 that narrower family. Runtime inventory records the observed or declared state,
 never the actions or events that produce, change, or react to it.
 
-The `behavioral-relations` family is native because ACES must govern how its
+The `behavioral-relations` family is native because RAES must govern how its
 artifacts bind formal and empirical relations to carriers, observation
 projections, quantifiers, evidence boundaries, and assurance states. The
 individual mathematical relations retain their revision-pinned publication
-lineage in the behavioral-relation catalog; this family owns ACES's claim
+lineage in the behavioral-relation catalog; this family owns RAES's claim
 discipline, not a replacement definition of actions, observations, scenarios,
 apparatuses, runs, studies, or evidence.
 
 ## Extension Discipline
 
-ACES-native families must be explicit extensions over the shared concept
+RAES-native families must be explicit extensions over the shared concept
 authority, not implicit forks of adopted or adapted cyber-domain meaning.
 
 Each `native` family must declare:
 
-- `extension_scope`: the ACES-specific concern covered by the family
+- `extension_scope`: the RAES-specific concern covered by the family
 - `relation_rules`: how the native concept may relate to adopted, adapted, or
   other native families
 - `non_ambiguity_constraints`: constraints that prevent the native concept
@@ -189,7 +189,7 @@ steps from this section and the machine-readable catalog alone:
 
 1. **Extend the existing runtime surface first.** A new observed node fact
    should extend `RuntimeConfiguration` and register through the canonical
-   runtime service-family registry (`aces_sdl._runtime_service_families`)
+   runtime service-family registry (`raes._runtime_service_families`)
    instead of introducing a new top-level concept family. The
    `runtime-inventory` family and the `nodes.*.runtime` reference model are the
    shared seam for this surface.
@@ -204,7 +204,7 @@ steps from this section and the machine-readable catalog alone:
    an invariant fails the suite immediately.
 3. **Keep observed values redaction-safe.** Values that can carry secrets must
    route through the runtime redaction helpers (ADR-056 / ADR-057,
-   `aces_sdl.runtime_values`); raw credential material is unrepresentable on the
+   `raes.runtime_values`); raw credential material is unrepresentable on the
    model surface.
 4. **Add controlled vocabulary, not free strings.** New enumerated terms belong
    in `contracts/concept-authority/controlled-vocabularies-v1.json` (GOV-922),

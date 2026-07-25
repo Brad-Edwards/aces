@@ -23,8 +23,8 @@ from typing import Any
 
 from aces_backend_protocols.capabilities import BackendManifest
 from aces_contracts.diagnostics import Diagnostic
-from aces_sdl.parser import parse_sdl, parse_sdl_file
-from aces_sdl.scenario import ExpandedScenario, InstantiatedScenario, Scenario
+from raes.parser import parse_sdl, parse_sdl_file
+from raes.scenario import ExpandedScenario, InstantiatedScenario, Scenario
 
 from aces_processor.compiler import compile_scenario_runtime_model
 from aces_processor.manifest import (

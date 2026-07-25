@@ -158,7 +158,7 @@ entries:
       - kind: unit_tests
         path: implementations/python/tests/test_semantics_objectives.py
       - kind: typed_ir_or_contract_coverage
-        path: implementations/python/packages/aces_sdl/objectives.py
+        path: implementations/python/packages/raes/objectives.py
       - kind: property_based_or_differential_tests
         path: implementations/python/tests/test_semantics_objectives.py
     waived_artifacts: []
@@ -452,7 +452,7 @@ entries:
       - kind: unit_tests
         path: implementations/python/tests/test_sdl_phase_contracts.py
       - kind: typed_ir_or_contract_coverage
-        path: implementations/python/packages/aces_sdl/phase_contracts.py
+        path: implementations/python/packages/raes/phase_contracts.py
       - kind: property_based_or_differential_tests
         path: implementations/python/tests/test_sdl_phase_contracts.py
     waived_artifacts: []

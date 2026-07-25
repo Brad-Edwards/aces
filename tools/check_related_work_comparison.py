@@ -27,6 +27,8 @@ ANALYSIS_PATH = "docs/research/related-work-comparison/analysis-v1.json"
 PUBLICATION_PATH = "docs/explain/sdl/related-work-comparison.md"
 PUBLICATION_START = "<!-- related-work-comparison:start -->"
 PUBLICATION_END = "<!-- related-work-comparison:end -->"
+_HISTORICAL_PACKAGE_PREFIX = "implementations/python/packages/aces_sdl"
+_CURRENT_PACKAGE_PREFIX = "implementations/python/packages/raes"
 
 EXPECTED_AXIS_IDS = {
     "expressive-breadth",
@@ -232,6 +234,15 @@ _MEASURE_BY_SCORE = {0: "absent", 1: "limited", 2: "substantial", 3: "strong"}
 
 def _failure(rule_id: str, message: str, path: str | None = None) -> PolicyFailure:
     return PolicyFailure(rule_id, message, path)
+
+
+def _resolve_repository_artifact(repo_root: Path, artifact_path: str) -> Path | None:
+    """Resolve an immutable evidence locator through the SDL package move."""
+
+    resolved_path = artifact_path
+    if artifact_path == _HISTORICAL_PACKAGE_PREFIX or artifact_path.startswith(f"{_HISTORICAL_PACKAGE_PREFIX}/"):
+        resolved_path = f"{_CURRENT_PACKAGE_PREFIX}{artifact_path[len(_HISTORICAL_PACKAGE_PREFIX) :]}"
+    return safe_repo_path(repo_root, resolved_path)
 
 
 def load_bundle(
@@ -512,7 +523,7 @@ def _validate_sources(
                     )
                 )
             elif source["kind"] == "repository-internal" and validate_paths:
-                resolved = safe_repo_path(repo_root, artifact_path)
+                resolved = _resolve_repository_artifact(repo_root, artifact_path)
                 if resolved is None or not resolved.exists():
                     failures.append(
                         _failure(
@@ -1396,6 +1407,12 @@ def _display_score(score: int | None) -> str:
     return "oos" if score is None else str(score)
 
 
+def _current_project_name(value: str) -> str:
+    """Render frozen ACES evidence with the current RAES project name."""
+
+    return re.sub(r"\bACES\b", "RAES", value)
+
+
 def render_publication(
     protocol: Mapping[str, object],
     snapshot: Mapping[str, object],
@@ -1408,14 +1425,14 @@ def render_publication(
     observations = snapshot["observations"]
     score_by_key = {(item["system_id"], item["axis_id"]): item["score"] for item in observations}
     system_ids = [system["system_id"] for system in systems]
-    system_name_by_id = {system["system_id"]: system["name"] for system in systems}
+    system_name_by_id = {system["system_id"]: _current_project_name(system["name"]) for system in systems}
     lines = [
         PUBLICATION_START,
         f"Frozen snapshot: `{snapshot['snapshot_id']}` under protocol `{protocol['revision']}`.",
         "Scores are axis-specific ordinal evidence levels: 0 absent, 1 limited, 2 substantial, 3 strong;",
         "`oos` means the axis is outside the system's declared scope and is never treated as zero.",
         "",
-        "| Axis | " + " | ".join(system["name"] for system in systems) + " |",
+        "| Axis | " + " | ".join(_current_project_name(system["name"]) for system in systems) + " |",
         "| --- | " + " | ".join("---" for _ in systems) + " |",
     ]
     for axis in axes:
@@ -1425,7 +1442,7 @@ def render_publication(
     for claim in analysis["claims"]:
         lines.append(
             f"- **{claim['kind'].replace('-', ' ').title()}.** Evidence status: "
-            f"`{claim['evidence_status']}`. {claim['statement']}"
+            f"`{claim['evidence_status']}`. {_current_project_name(claim['statement'])}"
         )
     lines.extend(["", "### Sensitivity of scenario-authoring rankings", ""])
     lines.append("| Weight profile | First-ranked system | Recorded totals |")
@@ -1435,7 +1452,7 @@ def render_publication(
             f"{system_name_by_id[system_id]}={profile['totals'][system_id]}" for system_id in profile["ranking"]
         )
         lines.append(f"| `{profile['profile_id']}` | {system_name_by_id[profile['ranking'][0]]} | {totals} |")
-    lines.extend(["", "### ACES delivery limits retained in the matrix", ""])
+    lines.extend(["", "### RAES delivery limits retained in the matrix", ""])
     axis_by_id = {axis["axis_id"]: axis["label"] for axis in axes}
     for observation in observations:
         if observation["system_id"] != "aces" or observation["score"] == 3:

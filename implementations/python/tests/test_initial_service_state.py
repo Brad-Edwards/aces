@@ -17,7 +17,7 @@ from aces_processor.planner import plan
 from aces_processor.semantics.realization import realization_disclosure
 from aces_runtime.control_plane import RuntimeControlPlane
 from aces_runtime.registry import RuntimeTarget
-from aces_sdl import SDLValidationError, parse_sdl, parse_sdl_file
+from raes import SDLValidationError, parse_sdl, parse_sdl_file
 
 from aces.backends.stubs import create_stub_manifest, create_stub_target
 

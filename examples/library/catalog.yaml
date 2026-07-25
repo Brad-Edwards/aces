@@ -6,9 +6,12 @@ source_refs:
   - docs/explain/getting-started.md
   - docs/explain/reference/canonical-reference-map.md
 description: >
-  Non-normative, validated authoring library for current ACES examples,
-  templates, and reusable patterns. Template bodies use current SDL so they can
-  be parsed and semantically validated by the Python reference implementation.
+  Domain-neutral RAES agentic-environment authoring library for non-normative,
+  validated examples, templates, and reusable patterns. Current examples are
+  strongest in cyber; additional domains extend through their own profiles,
+  assets, backends, and evidence requirements. Template bodies use current SDL
+  so they can be parsed and semantically validated by the Python reference
+  implementation.
 surfaces:
   scenario:
     summary: Complete scenario authoring from topology through objective flow.

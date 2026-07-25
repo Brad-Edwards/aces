@@ -2,7 +2,7 @@
 
 Walks a composed YAML node graph and emits source-anchored diagnostics for
 non-canonical fields/merges, duplicate/conflicting keys, invalid identifiers, and
-alias cycles. Split from :mod:`aces_sdl._yaml_loader` to keep each module under the
+alias cycles. Split from :mod:`raes._yaml_loader` to keep each module under the
 ADR-015 source-size cap; the loaders there drive ``_MappingAnalyzer`` via
 ``_validate_mapping_keys``.
 """

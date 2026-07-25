@@ -25,14 +25,14 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-import aces_sdl.validator as validator_module
+import raes.validator as validator_module
 
 
 def _all_class_methods(source: str) -> dict[str, ast.AST]:
     """Collect every method from every class in ``source``.
 
     The reference ``SemanticValidator`` is composed from per-seam mixin classes
-    split across the ``aces_sdl.validator`` package (issue #42), so the boundary
+    split across the ``raes.validator`` package (issue #42), so the boundary
     lint aggregates methods across all classes in the source rather than a single
     ``SemanticValidator`` ClassDef. Method names are unique across the mixins, so
     a flat name->node map faithfully reconstructs the composed method set.
@@ -133,7 +133,7 @@ def find_advisory_boundary_violations(source: str) -> set[str]:
 def test_validator_advisory_error_channels_are_separated() -> None:
     """The live ``SemanticValidator`` honours the diagnostics.md boundary.
 
-    ``aces_sdl.validator`` is a package (issue #42), so concatenate every
+    ``raes.validator`` is a package (issue #42), so concatenate every
     module's source and let the lint aggregate methods across the mixin classes
     that compose ``SemanticValidator``.
     """

@@ -342,10 +342,11 @@ _OVERVIEW_TEXT = """\
 
 ## What is the SDL?
 
-RAES SDL is a **YAML-based, backend-agnostic specification language** for \
-describing cyber range scenarios and experiments. It defines *what a scenario \
-means* — not how to deploy it. Backend implementations realize SDL \
-specifications through runtime contracts.
+Reproducible Agentic Environments System (RAES) supports agentic environments \
+across non-exhaustive application areas. RAES SDL is the **YAML-based, \
+backend-agnostic authored scenario language** within that system. It defines \
+what authored scenarios mean — not how to deploy them. Backend implementations \
+produce realized environments through runtime contracts.
 
 Its topology and exercise-narrative core descends from the Open Cyber Range
 (OCR) SDL. RAES adds composition, participant, evidence, objective, workflow,
@@ -471,7 +472,7 @@ relationships:
 ## Python API
 
 ```python
-from aces_sdl import parse_sdl, parse_sdl_file, instantiate_scenario
+from raes import parse_sdl, parse_sdl_file, instantiate_scenario
 
 # Parse from string or file
 scenario = parse_sdl(yaml_string)

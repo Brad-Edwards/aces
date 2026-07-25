@@ -44,7 +44,7 @@ records:
     identifier: "implementations/python/src/aces/ (the legacy `aces.*` re-export namespace)"
     status: deprecated
     first_notice: "ADR-010 (repository realignment order and compatibility policy)"
-    replacement: "the owning packages under implementations/python/packages/ (aces_sdl, aces_contracts, aces_cli, aces_runtime, and siblings)"
+    replacement: "the owning packages under implementations/python/packages/ (raes, aces_contracts, aces_cli, aces_runtime, and siblings)"
     migration_reference: "docs/decisions/adrs/adr-010-repository-realignment-order-and-compatibility-policy.md; docs/explain/sdl/runtime-architecture.md"
     notice_window: "Supported through the pre-1.0 package series; removal eligible no earlier than the first major (post-1.0) package release and only via a complete removal record."
     verification_evidence: "tools/check_repo_policy.py enforces the compatibility-wrapper-only rule for aces.* modules and the one-way import ban (owning packages must not import aces.*), proving the layer remains a supported wrapper during the notice window."
@@ -60,4 +60,4 @@ records:
     replacement: "the `source:` field (path form `local:{path}`)"
     migration_reference: "docs/decisions/adrs/adr-053-sdl-module-composition-for-inventory-backed-scenarios.md; docs/explain/sdl/parser.md"
     notice_window: "Supported indefinitely as a backward-compatible alias; removal eligible only after a complete removal record and a deterministic source rewrite per the migration rules."
-    verification_evidence: "aces_sdl.scenario.ImportDecl.normalized_source maps a `path:` value to `local:{path}`, and validate_source_fields keeps deprecated-but-supported use non-fatal; parser tests exercise both the `source:` and `path:` forms."
+    verification_evidence: "raes.scenario.ImportDecl.normalized_source maps a `path:` value to `local:{path}`, and validate_source_fields keeps deprecated-but-supported use non-fatal; parser tests exercise both the `source:` and `path:` forms."

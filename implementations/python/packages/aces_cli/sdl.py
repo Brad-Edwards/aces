@@ -6,14 +6,14 @@ import json
 from pathlib import Path
 
 import typer
-from aces_sdl import SDLParseError, format_sdl_source
-from aces_sdl.module_registry import (
+from raes import SDLParseError, format_sdl_source
+from raes.module_registry import (
     LOCKFILE_NAME,
     load_lockfile,
     publish_module_to_oci_layout,
     resolve_lock_records,
 )
-from aces_sdl.parser import parse_sdl_file
+from raes.parser import parse_sdl_file
 
 app = typer.Typer(help="SDL composition and packaging.")
 

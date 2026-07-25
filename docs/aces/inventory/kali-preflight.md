@@ -1,17 +1,17 @@
-# Kali ACES Inventory Preflight
+# Kali RAES Inventory Preflight
 
-This is a historical APTL TechVault validation note imported into ACES as a
-reference example. It is not the methodology authority; the canonical ACES
+This is a historical APTL TechVault validation note imported into RAES as a
+reference example. It is not the methodology authority; the canonical RAES
 methodology is `docs/aces/inventory/asset-inventory-methodology.md`.
 
 This note is the architecture preflight for SCN-010 / issue #339. It is a
 binding guardrail for the Kali steady-state inventory, not a replacement for
-downstream APTL ADR-035, ACES ADR-033, ACES ADR-029, or the ACES
+downstream APTL ADR-035, RAES ADR-033, RAES ADR-029, or the RAES
 asset-inventorying methodology.
 
 ## Architecture Decisions
 
-- The completion artifact is an ACES inventory bundle under
+- The completion artifact is an RAES inventory bundle under
   `docs/aces/inventory/kali/`, using the existing `mapping-ledger.yaml`
   schema, `aptl aces-inventory validate`, and the evidence/checksum shape
   already used by `shuffle-backend` and `webapp`.
@@ -19,19 +19,19 @@ asset-inventorying methodology.
   post-`aptl lab start` steady-state snapshot. If the capture is not from a
   destructive clean reset, record that boundary explicitly and do not claim
   clean-lab reproducibility or byte-identical rebuildability.
-- `scenarios/techvault.sdl.yaml` remains an ACES SDL document whose authority
-  is the sibling ACES parser and runtime compiler. Do not validate Kali
+- `scenarios/techvault.sdl.yaml` remains an RAES SDL document whose authority
+  is the sibling RAES parser and runtime compiler. Do not validate Kali
   additions through `aptl.core.sdl`, `aptl.core.scenarios`, or a local mirror
-  of ACES models.
-- Keep three concepts separate: the ACES red-side node/agent surface, the APTL
+  of RAES models.
+- Keep three concepts separate: the RAES red-side node/agent surface, the APTL
   Docker Compose realization, and ADR-033 experimental capture/runstore data.
   Participant-visible Kali facts must be captured and mapped; run archive and
   harvest mechanics stay owned by ADR-033, `LocalRunStore`, and the MCP common
   capture boundary.
 - Kali is not a target host for declared scenario weaknesses. Scanner CVEs and
-  patch state belong in runtime/package inventory evidence unless ACES has a
+  patch state belong in runtime/package inventory evidence unless RAES has a
   more specific non-target weakness surface.
-- Missing ACES expressivity must be represented as an upstream ACES blocker.
+- Missing RAES expressivity must be represented as an upstream RAES blocker.
   APTL backend consumption gaps do not justify leaving an observable fact as
   evidence-only for this inventory issue.
 
@@ -46,7 +46,7 @@ asset-inventorying methodology.
   `docs/aces/inventory/webapp/`,
   `docs/aces/inventory/webapp-preflight.md`, and
   `tests/test_webapp_inventory.py`.
-- ACES adoption and parity routing:
+- RAES adoption and parity routing:
   downstream APTL ADR-035, `docs/aces/parity-inventory.yaml`,
   `docs/aces/parity-inventory.md`, and `tests/test_parity_inventory.py`.
 - Kali realization owners:
@@ -60,18 +60,18 @@ asset-inventorying methodology.
   `_LAB_START_STEPS`, `DeploymentBackend`, `LabResult`,
   `StartupDiagnostic`, `RangeSnapshot.to_dict()`, `LocalRunStore`, and the
   MCP run/capture helpers mirrored under `mcp/aptl-mcp-common`.
-- Shared safety helpers and policies: ACES ADR-028, ACES ADR-029, ACES
+- Shared safety helpers and policies: RAES ADR-028, RAES ADR-029, RAES
   ADR-033, downstream APTL ADR-036, downstream APTL ADR-037,
   `aptl.utils.redaction.redact`, and `aptl.utils.curl_safe` when commands
   would otherwise put credentials in process argv.
 
 ## Security And Validation Layers
 
-- **ACES SDL shape:** Kali SDL additions must parse with
-  `aces_sdl.parse_sdl_file` and compile through the ACES runtime compiler.
-  Do not add local structural validators for ACES fields.
+- **RAES SDL shape:** Kali SDL additions must parse with
+  `raes.parse_sdl_file` and compile through the RAES runtime compiler.
+  Do not add local structural validators for RAES fields.
 - **Inventory ledger:** every captured fact needs an existing
-  `AcesSurface` mapping, caveat, or linked ACES issue in
+  `AcesSurface` mapping, caveat, or linked RAES issue in
   `mapping-ledger.yaml`. No `needs_gap_triage` rows should remain at review.
 - **Secret classification:** ADR-057 is canonical for scenario-target values,
   with ADR-029 still governing operator/control-plane handling. Preserve
@@ -87,7 +87,7 @@ asset-inventorying methodology.
   record contamination and redact or checksum sensitive content.
 - **Config and env binding:** durable toggles remain in strict `AptlConfig`.
   `.env` parsing and placeholder rejection remain in `EnvVars` /
-  `find_placeholder_env_values`. Do not add ACES-specific environment parsing
+  `find_placeholder_env_values`. Do not add RAES-specific environment parsing
   for Kali. Compose `VICTIM_IP` and SSH `APTL_*` session env vars are
   different surfaces and must not be collapsed.
 - **OS/process exposure:** inventory capture commands must not place
@@ -102,20 +102,20 @@ asset-inventorying methodology.
   `capsh --drop=cap_audit_control` behavior, and healthcheck degraded
   subsystem reporting. Do not flatten them into one generic privilege flag.
 - **Error envelopes and observability:** any new CLI/test helper must report
-  narrow diagnostics and reuse redaction. Raw Docker, scanner, SSH, or ACES
+  narrow diagnostics and reuse redaction. Raw Docker, scanner, SSH, or RAES
   exception payloads must not cross CLI, log, API, snapshot, or runstore
   boundaries unfiltered.
 
 ## Extensibility Seam
 
-The seam is the versioned inventory ledger plus ACES runtime fields for one
+The seam is the versioned inventory ledger plus RAES runtime fields for one
 asset id, source class, and Compose service. A future red-side asset or custom
 build should reuse the same schema and test fixture pattern by changing asset
 parameters, not by extending the validator with Kali-specific branches.
 
-For the SDL, parameterization belongs in ACES-native node, source, runtime,
+For the SDL, parameterization belongs in RAES-native node, source, runtime,
 agent, relationship, content, and account fields. Backend realization remains
-behind the ACES backend profile and existing APTL owners.
+behind the RAES backend profile and existing APTL owners.
 
 ## Gotchas And Anti-Patterns
 
@@ -123,7 +123,7 @@ behind the ACES backend profile and existing APTL owners.
   issue asks for participant/agent-observable steady-state facts, including
   logs, caches, generated state, and volume contents. If a full enumeration is
   not done, record the exact claim boundary and leave remaining facts encoded
-  later or blocked by ACES expressivity.
+  later or blocked by RAES expressivity.
 - Do not encode stale public SSH port assumptions. Current Compose declares no
   host port for `kali`; the control plane reaches it by container IP.
 - Do not treat `kalilinux/kali-last-release:latest` as immutable. Pair the
@@ -134,7 +134,7 @@ behind the ACES backend profile and existing APTL owners.
 - Do not model auditd/procacct as fully available unless the readiness marker
   and health log show those subsystems as `ok`; healthy Kali can still be
   capture-degraded.
-- Do not hide missing ACES expressivity in `metadata`, `x-aptl-*`, comments,
+- Do not hide missing RAES expressivity in `metadata`, `x-aptl-*`, comments,
   evidence-only ledgers, or TechVault-name dispatch.
 - Do not create a second scenario schema, second inventory validator, second
   secret taxonomy, second readiness taxonomy, or new exception hierarchy.
@@ -147,9 +147,9 @@ behind the ACES backend profile and existing APTL owners.
   tests from this preflight.
 - Do not run `aptl lab stop -v && aptl lab start` unless the user explicitly
   authorizes destroying the current lab state.
-- Do not implement the ACES backend interpreter, default-scenario flip,
+- Do not implement the RAES backend interpreter, default-scenario flip,
   legacy SDL deletion, scenario archive move, or Phase B cutover.
 - Do not redesign ADR-033 capture ownership, close the Kali tamper-resistance
   follow-up, redesign run archives, or add a red-to-SIEM path.
-- Do not use APTL runtime consumption gaps as a substitute for ACES SDL
-  expression or ACES expressivity blockers.
+- Do not use APTL runtime consumption gaps as a substitute for RAES SDL
+  expression or RAES expressivity blockers.

@@ -26,13 +26,13 @@ import types
 import typing
 from pathlib import Path
 
-import aces_sdl
-from aces_sdl import _runtime_service_families as rsf
-from aces_sdl._base import SDLModel, parse_enum_or_var
-from aces_sdl.runtime_configuration import RuntimeConfiguration
-from aces_sdl.runtime_directory_identity import RuntimeIdentityRelationshipKind
-from aces_sdl.runtime_values import parse_runtime_enum_or_var
+import raes
 from pydantic import Field
+from raes import _runtime_service_families as rsf
+from raes._base import SDLModel, parse_enum_or_var
+from raes.runtime_configuration import RuntimeConfiguration
+from raes.runtime_directory_identity import RuntimeIdentityRelationshipKind
+from raes.runtime_values import parse_runtime_enum_or_var
 
 
 def _singularize(plural: str) -> str:
@@ -322,7 +322,7 @@ def test_required_profile_lint_rejects_guardless_discriminated_family() -> None:
 def test_runtime_modules_do_not_redeclare_shared_validation_helpers() -> None:
     """Runtime families import shared helper policy instead of shadowing it."""
 
-    package_dir = Path(aces_sdl.__file__).resolve().parent
+    package_dir = Path(raes.__file__).resolve().parent
     offenders: list[str] = []
     for path in sorted(package_dir.glob("runtime_*.py")):
         if path.name == "runtime_values.py":
@@ -362,7 +362,7 @@ def test_primary_id_field_exists_on_model() -> None:
 def _runtime_family_enums() -> dict[str, type[enum.Enum]]:
     """Collect every Enum subclass *defined in* a runtime-family module.
 
-    A runtime-family module is any ``aces_sdl`` submodule whose name starts
+    A runtime-family module is any ``raes`` submodule whose name starts
     with ``runtime_`` (this includes the ``*_vocab`` and ``*_definitions``
     modules). Only enums whose ``__module__`` is that module are returned, so
     enums merely re-exported or imported from another module are not
@@ -370,11 +370,11 @@ def _runtime_family_enums() -> dict[str, type[enum.Enum]]:
     """
 
     found: dict[str, type[enum.Enum]] = {}
-    for module_info in pkgutil.iter_modules(aces_sdl.__path__):
+    for module_info in pkgutil.iter_modules(raes.__path__):
         name = module_info.name
         if not name.startswith("runtime_"):
             continue
-        qualified = f"aces_sdl.{name}"
+        qualified = f"raes.{name}"
         module = importlib.import_module(qualified)
         for value in vars(module).values():
             if (

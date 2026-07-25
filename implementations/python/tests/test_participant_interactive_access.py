@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 from aces_contracts.contracts import schema_bundle
 from aces_processor.compiler import compile_runtime_model
-from aces_sdl import (
+from raes import (
     SDLInstantiationError,
     SDLParseError,
     SDLValidationError,
@@ -17,7 +17,7 @@ from aces_sdl import (
     parse_sdl,
     parse_sdl_file,
 )
-from aces_sdl.language_service import language_completions, language_references
+from raes.language_service import language_completions, language_references
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 

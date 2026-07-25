@@ -2,7 +2,7 @@
 
 ## Scope
 
-This specification defines shared semantic profiles for ACES authoring,
+This specification defines shared semantic profiles for RAES authoring,
 exchange, processing, and execution surfaces.
 
 Shared semantic profiles declare the compatible concept, contract, and
@@ -91,7 +91,7 @@ The valid and invalid fixture corpus for semantic profiles is published under:
 
 ## UCO Alignment Evidence
 
-Semantic profiles compose ACES concept, contract, binding, and behavior
+Semantic profiles compose RAES concept, contract, binding, and behavior
 assumptions; they are not UCO profiles and do not adopt UCO authoring syntax.
 The concept-authority relationship behind the adopted and adapted cyber-domain
 families a profile may require is recorded as machine-checkable evidence in
@@ -103,7 +103,7 @@ divergences. See [ADR-012](../../docs/decisions/adrs/adr-012-shared-concept-auth
 
 - GOV-917: canonical concept authority
 - GOV-918: cross-artifact concept binding
-- GOV-919: disciplined ACES-native extensions
+- GOV-919: disciplined RAES-native extensions
 - GOV-920: shared semantic profiles
 - GOV-921: shared reference models
 - GOV-922: controlled vocabularies and enumerations

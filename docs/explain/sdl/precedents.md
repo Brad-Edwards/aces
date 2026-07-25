@@ -1,12 +1,12 @@
 # SDL Design Precedents
 
-ACES combines externally influenced and ACES-native language families. This
+RAES combines externally influenced and RAES-native language families. This
 document summarizes design influences and comparisons; the revision-pinned,
 machine-readable provenance record is
 [`contracts/provenance/sdl-lineage-ledger-v1.json`](../../../contracts/provenance/sdl-lineage-ledger-v1.json).
 Only the ledger classifies provenance, artifact/code derivation, compatibility,
 and notice obligations. A source named here may explain a design concern
-without being a source from which ACES adopted syntax, semantics, or code.
+without being a source from which RAES adopted syntax, semantics, or code.
 
 The SDL does not borrow every concern from the same place. In practice:
 
@@ -37,8 +37,8 @@ The "Deliberate Omissions" table carries no influence-plane column.
 The base sections have syntax and translated-model ancestry in
 [OCR SDL v0.21.2](https://github.com/Open-Cyber-Range/SDL-parser/tree/fe83e8281fc4b954967fbaa5a0d099007ddcb06c),
 pinned to revision `fe83e8281fc4b954967fbaa5a0d099007ddcb06c`.
-The ledger names exact Rust and ACES artifact boundaries and records partial
-syntax compatibility only. ACES does not claim drop-in parser, schema,
+The ledger names exact Rust and RAES artifact boundaries and records partial
+syntax compatibility only. RAES does not claim drop-in parser, schema,
 validation, or runtime compatibility. Per ADR-073, the OCR scoring pipeline
 (metrics/evaluations/TLOs/goals) was removed from authored SDL and lives in the
 experiment/evaluator plane. OCR SDL was developed by CR14 / the Norwegian
@@ -56,8 +56,8 @@ Cyber Range.
 | Condition | `Condition` | Both | Added `timeout`, `retries`, `start_period` |
 | Vulnerability | `Vulnerability` | Syntax | OCR-adapted syntax and translated model structure; partial syntax compatibility at the pinned revision |
 | Metric/Evaluation/TLO/Goal | OCR scoring pipeline | Not adopted | Removed from the SDL per ADR-073; graded scoring/reward lives in the experiment/evaluator plane (ADR-055/064/069) |
-| Entity | `Entity` + OCR entity surface | Both | OCR-adapted syntax and translated model structure, including fact-map ancestry; current semantics are ACES-governed |
-| Inject/Event/Script/Story | OCR orchestration | Both | OCR-adapted syntax and translated model structure; current orchestration semantics are ACES-governed |
+| Entity | `Entity` + OCR entity surface | Both | OCR-adapted syntax and translated model structure, including fact-map ancestry; current semantics are RAES-governed |
+| Inject/Event/Script/Story | OCR orchestration | Both | OCR-adapted syntax and translated model structure; current orchestration semantics are RAES-governed |
 | Source | `Source` (name + version) | Syntax | Made provider-neutral |
 
 
@@ -74,7 +74,7 @@ Cyber Range.
 | `AssetValue` | `ConfidentialityValue`, `AvailabilityValue` | Semantics | Extended to CIA triad |
 | `ACLRule` | `Subnets.NACLs` | Both | Simplified from nested dict to flat rule list |
 | `Objective.agent/actions` | Agent identity + action space | Semantics | Objective actor binding and optional action subset validation |
-| `Agent.interactive_access` | `Agents.*.starting_sessions[]` in CybORG v3.0 | Semantics | Adapted participant-local explicit host/channel association; ACES uses stable authored ids and references, not established simulator sessions, usernames, or copied syntax |
+| `Agent.interactive_access` | `Agents.*.starting_sessions[]` in CybORG v3.0 | Semantics | Adapted participant-local explicit host/channel association; RAES uses stable authored ids and references, not established simulator sessions, usernames, or copied syntax |
 
 
 ### From Newer Participant And Benchmark Ecosystems
@@ -98,7 +98,7 @@ full shape directly.
 
 Issue #71 adds a formal participant-semantics design in
 `specs/formal/participant-semantics/` and ADR-022. These precedents inform that
-design without becoming the ACES runtime API or authoring syntax.
+design without becoming the RAES runtime API or authoring syntax.
 
 | Concern | Primary Sources | Influence plane | What We Adapted |
 | ------- | --------------- | --- | --------------- |
@@ -114,7 +114,7 @@ design without becoming the ACES runtime API or authoring syntax.
 | Benchmark validity and overfitting controls | [AI Agents That Matter](https://arxiv.org/abs/2407.01502), [Benchmarking Practices in LLM-driven Offensive Security](https://arxiv.org/abs/2504.10112) | Semantics | Run/study provenance, holdout discipline, scaffold disclosure, hidden assets, baselines, and cost/resource traces are experimental-instrumentation concerns |
 | DSL language adequacy and evaluation | [Do Software Languages Engineers Evaluate their Languages?](https://arxiv.org/abs/1109.6794), [When and How to Develop Domain-Specific Languages](https://doi.org/10.1145/1118890.1118892), [Domain-Specific Languages: A Systematic Mapping Study](https://doi.org/10.1016/j.infsof.2015.11.001) | Semantics | Issue #346 treats expressiveness, usability, effectiveness, maintainability, ambiguity, and domain-expert reviewability as evidence-gated language claims |
 
-For the `SEM-209` implementation slice, ACES represents framework-neutral
+For the `SEM-209` implementation slice, RAES represents framework-neutral
 joint-action declarations and realized-order provenance. PettingZoo/OpenSpiel
 inform participant-local histories and joint behavior, Lamport informs ordering
 without causal overclaim, and cyber-agent systems motivate explicit target and
@@ -127,7 +127,7 @@ shared-state references without making framework/tool APIs the SDL authority.
 | SDL Element | CyRIS Source | Influence plane | What We Adapted |
 | ----------- | ----------------------------------------- | --- | ------------------------------------------------- |
 | `Content` | `copy_content`, `emulate_traffic_capture` | Semantics | Generalized to file/dataset/directory types |
-| `Account` | `add_account`, `modify_account` | Semantics | Preserved host account-placement lineage; ACES-specific account metadata such as groups, password strength, SPN, and auth method are extensions, not CyRIS-derived directory semantics |
+| `Account` | `add_account`, `modify_account` | Semantics | Preserved host account-placement lineage; RAES-specific account metadata such as groups, password strength, SPN, and auth method are extensions, not CyRIS-derived directory semantics |
 | `Agent.interactive_access` | `guest_settings[].entry_point` and tunnel selection in CyRIS 1.2 | Semantics | Adapted explicit entry-host eligibility but rejected OS-to-channel inference, tunnel/port mechanics, and generated credentials |
 
 
@@ -139,9 +139,9 @@ one provider schema as the SDL schema.
 
 | SDL Element | Source Class | Influence plane | What We Adapted |
 | ----------- | ------------ | --- | --------------- |
-| `RuntimeIdentityAuthority` | LDAP/X.500 naming contexts, Kerberos realms, SAML/OIDC issuers, SCIM/IAM tenants, NIST SP 800-63C-4 federation guidance | Semantics | An authority boundary with stable ACES id plus observed namespace facts such as domain, realm, issuer, tenant, and base DN; all authority-local stable ids share one namespace |
+| `RuntimeIdentityAuthority` | LDAP/X.500 naming contexts, Kerberos realms, SAML/OIDC issuers, SCIM/IAM tenants, NIST SP 800-63C-4 federation guidance | Semantics | An authority boundary with stable RAES id plus observed namespace facts such as domain, realm, issuer, tenant, and base DN; all authority-local stable ids share one namespace |
 | `RuntimeIdentityService` | LDAP/Kerberos/SAML/OIDC/SCIM/IAM protocol endpoints and same-node `Node.services` transport bindings | Semantics | Protocol/API endpoint inventory without treating the endpoint as the directory contents |
-| `RuntimeIdentitySubject` | LDAP entries, SCIM Users/Groups, AD users/groups/computers/service principals, SAML/OIDC subjects/clients, IAM roles/applications | Semantics | Identity-bearing subjects with stable ACES ids, observed names/principals, provider identifiers as data, and bounded attributes |
+| `RuntimeIdentitySubject` | LDAP entries, SCIM Users/Groups, AD users/groups/computers/service principals, SAML/OIDC subjects/clients, IAM roles/applications | Semantics | Identity-bearing subjects with stable RAES ids, observed names/principals, provider identifiers as data, and bounded attributes |
 | `RuntimeIdentityPolicy` | NIST SP 800-162 ABAC, RBAC, group policy, Kerberos/domain policy, conditional-access/MFA policy concepts | Semantics | Portable policy records with `applies_to_refs` rather than provider-specific policy-object cloning |
 | `RuntimeIdentityRelationship` | Access matrix/RBAC relationship concepts, directory membership, trust/federation/delegation/sync/ownership relations, BloodHound/OpenGraph node-edge analysis | Semantics | Typed local authority edges with stable ids, usable by top-level relationship/objective refs and later attack-graph translation |
 | Attribute and setting value classification | OCSF/UCO sensitivity/evidence posture, repository runtime sensitivity vocabulary | Semantics | Secret-bearing identity values are redacted/classified rather than copied into SDL fixtures or diagnostics |
@@ -159,7 +159,7 @@ directory above and from database engine GRANTs.
 
 | SDL Element | Source Class | Influence plane | What We Adapted |
 | ----------- | ------------ | --- | --------------- |
-| `RuntimeAppAuthorization` | Ferraiolo/Kuhn RBAC, Sandhu et al. RBAC96, ANSI INCITS 359 | Semantics | An application-internal authorization store with a stable ACES id and an open `resource_vocabulary` spine discriminator; tier placement is derived from the referencing spine, not declared |
+| `RuntimeAppAuthorization` | Ferraiolo/Kuhn RBAC, Sandhu et al. RBAC96, ANSI INCITS 359 | Semantics | An application-internal authorization store with a stable RAES id and an open `resource_vocabulary` spine discriminator; tier placement is derived from the referencing spine, not declared |
 | `RuntimeAppAuthorizationPrincipal` | OpenSearch/Elasticsearch security users, Cassandra `system_auth`, Redis ACL users, dashboard/platform accounts | Semantics | Users, service accounts, API keys, and backend roles with reserved/hidden flags and a `credential_classification` only — no raw bcrypt hash, API key, or password |
 | `RuntimeAppAuthorizationGrant` | RBAC96 / ANSI INCITS 359 permission-assignment, NIST SP 800-162 ABAC resource-scoping | Semantics | The defining resource-scoped grant: role reference → actions → resource patterns with an allow/deny effect and a `resource_kind` that is the single author-settable resource vocabulary |
 | `RuntimeAppAuthorizationRoleMapping` | OpenSearch backend-role mappings, directory-to-local role bindings | Semantics | Bindings of backend roles, users, or hosts onto a local role |
@@ -221,7 +221,7 @@ surface.
 ### From Time, Simulation, and Co-Simulation Systems
 
 These sources inform the emerging time-model requirements. They are not a
-claim that ACES adopts one simulator's worldview wholesale. They are precedents
+claim that RAES adopts one simulator's worldview wholesale. They are precedents
 for the recurring architectural concerns that show up once scenarios must run
 honestly across simulation, emulation, and live infrastructure.
 
@@ -267,13 +267,13 @@ host kernel, container runtime, backend adapter, control plane, build executor,
 and host-local machinery that creates or controls the range. See
 [ADR-033](../../decisions/adrs/adr-033-scenario-delivery-boundary-for-runtime-node-state.md).
 
-This table is checked against the current ACES runtime/source models and the
+This table is checked against the current RAES runtime/source models and the
 downstream [Brad-Edwards/aptl#339](https://github.com/Brad-Edwards/aptl/issues/339)
 Kali inventory evidence class: Compose service slices, Docker inspect output,
 runtime mount/network/capability observations, and image provenance are evidence
 to classify, not schema authority. The APTL inventory is motivating downstream
-evidence; it is not a claim that all APTL artifacts already satisfy the ACES
-redaction contract. The table is a current ACES disposition, not a complete
+evidence; it is not a claim that all APTL artifacts already satisfy the RAES
+redaction contract. The table is a current RAES disposition, not a complete
 taxonomy of container, orchestrator, or host-security concerns.
 
 
@@ -283,7 +283,7 @@ taxonomy of container, orchestrator, or host-security concerns.
 | Generic process listener bind state (address/interface, protocol, port, scope, owner, readiness evidence) | Observed in-node runtime state, distinct from authored service identity and host publication | `Node.runtime.service_listeners` when observed; same-node service refs remain in `Node.services`, host bindings remain in `runtime.network.published_ports`; see ADR-043 |
 | Volume mounts                           | Guest-visible filesystem attachments are runtime node state; host source paths and orchestration choices remain delivery/evidence concerns | `Node.runtime.mounts` and `runtime.filesystem_inventory` when observed; authored file placement remains `Content`; mount `source` and `options` carry sensitivity classification, and `redacted` / `operator_secret` values omit raw host-local details |
 | Linux capabilities (NET_RAW, SYS_ADMIN) | Participant-relevant capability posture is runtime node security state, not a raw Compose security field | `Node.runtime.linux_capabilities`, including scoped `process_overrides`; see ADR-030 |
-| Docker Compose profiles                 | Backend packaging/selection groups are delivery mechanics unless promoted to an ACES scenario/profile composition surface | Backend implementation layer today; realized node set is represented by SDL `nodes`, not raw Compose profile labels |
+| Docker Compose profiles                 | Backend packaging/selection groups are delivery mechanics unless promoted to an RAES scenario/profile composition surface | Backend implementation layer today; realized node set is represented by SDL `nodes`, not raw Compose profile labels |
 | Dockerfile/build execution              | Build executor mechanics are delivery/packaging; observable image/source provenance is an artifact-boundary fact | Backend implementation layer for execution mechanics; `Source.build` provenance when observed; see ADR-023 |
 | Observable container image build provenance | Artifact provenance, not deployment authoring | SDL source-artifact surface; see ADR-023 |
 | Runtime-effective container entrypoints | Backend/runtime state              | `Node.runtime.container` when observed |

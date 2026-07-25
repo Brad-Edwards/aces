@@ -1,4 +1,4 @@
-# ACES Shared Time Model
+# RAES Shared Time Model
 
 This specification defines the semantic authority implemented for SEM-227,
 SEM-228, SEM-229, DSL-126, DSL-127, DSL-128, RUN-317, and RUN-318.
@@ -73,7 +73,7 @@ ordering or causality.
 
 The first closed constraint family is:
 
-- precedence over exactly two ordinary ACES subjects;
+- precedence over exactly two ordinary RAES subjects;
 - duration;
 - window;
 - deadline; and
@@ -124,8 +124,8 @@ shared clock from matching strings.
 
 | Concern | Authority |
 | --- | --- |
-| SDL declarations | `aces_sdl.time_model` |
-| Cross-reference validation | `aces_sdl.validator._time_model` |
+| SDL declarations | `raes.time_model` |
+| Cross-reference validation | `raes.validator._time_model` |
 | Compilation | `aces_processor.compiler.time_model` |
 | Compiled identity | `aces_processor.models.time_model` |
 | Runtime lifecycle | `aces_runtime.time_coordinator` |

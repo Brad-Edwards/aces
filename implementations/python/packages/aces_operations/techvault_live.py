@@ -15,7 +15,7 @@ from aces_backend_libvirt.target import create_libvirt_target
 from aces_backend_libvirt.techvault_native import TechVaultNativeLibvirtDriver, expected_surface
 from aces_runtime.control_plane import RuntimeControlPlane
 from aces_runtime.manager import RuntimeManager
-from aces_sdl.parser import parse_sdl_file
+from raes.parser import parse_sdl_file
 
 from aces_operations._evidence_run_validation import redaction_violations
 from aces_operations._techvault_cleanup import cleanup_native_snapshot

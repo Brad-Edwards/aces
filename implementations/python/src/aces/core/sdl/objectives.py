@@ -1,5 +1,5 @@
 from aces._compat import reexport as _reexport
 
-_reexport(globals(), "aces_sdl.objectives")
+_reexport(globals(), "raes.objectives")
 
 del _reexport

@@ -25,10 +25,10 @@ from __future__ import annotations
 
 from typing import Annotated, Literal
 
-from aces_sdl.identifiers import PortableIdentifier
 from pydantic import Field, GetJsonSchemaHandler, model_validator
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema
+from raes.identifiers import PortableIdentifier
 
 from ..versions import RANDOM_STREAM_PROFILE_SCHEMA_VERSION, RANDOM_STREAM_VECTOR_SCHEMA_VERSION
 from .base import ContractModel, NonEmptyString, NonNegativeInteger, PositiveInteger, SemanticProfileId

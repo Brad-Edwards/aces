@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import pytest
 from aces_processor.compiler import compile_runtime_model
-from aces_sdl._errors import SDLParseError, SDLValidationError
-from aces_sdl.parser import parse_sdl
-from aces_sdl.propositions import (
+from pydantic import ValidationError
+from raes._errors import SDLParseError, SDLValidationError
+from raes.parser import parse_sdl
+from raes.propositions import (
     Assertion,
     AssertionPolarity,
     AssertionRole,
@@ -18,14 +19,13 @@ from aces_sdl.propositions import (
     SubjectQuantifier,
     TruthCompositionMode,
 )
-from aces_sdl.semantics.propositions import (
+from raes.semantics.propositions import (
     TruthValue,
     compose_truth,
     evaluate_assertion_polarity,
     negate_truth,
     quantify_subject_truth,
 )
-from pydantic import ValidationError
 
 
 def test_proposition_is_inspectable_without_probe_execution() -> None:

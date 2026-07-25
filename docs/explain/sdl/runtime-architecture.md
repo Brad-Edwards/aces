@@ -1,8 +1,11 @@
 # Runtime Architecture: SDL -> Processor -> Runtime -> Backend
 
 This document describes the processor and runtime path that turns authored SDL
-into executable backend operations. It is an SDL-native architecture built for
-the SDL itself and its backend contracts. See
+into executable backend operations for a realized agentic environment. The
+authored scenario, compiled plans, backend realization, participant execution,
+observations, and evidence remain distinct phases; a realized environment is
+not identical to its SDL document. This is an SDL-native architecture built
+for the SDL itself and its backend contracts. See
 [ADR-004](../../decisions/adrs/adr-004-sdl-runtime-layer.md) and
 [ADR-036](../../decisions/adrs/adr-036-sdl-processor-runtime-module-boundaries.md)
 for the decision records.
@@ -50,7 +53,7 @@ here come from mature workflow and distributed-runtime systems:
 ## Package Boundary
 
 ```text
-aces_sdl                -> parse + instantiate + SDL-language semantics
+raes                -> parse + instantiate + SDL-language semantics
 aces_processor          -> compile + plan + support/contract semantics
 aces_runtime            -> live control + manager + control-plane APIs
 aces_backend_protocols  -> backend capability/protocol declarations
