@@ -1,6 +1,16 @@
 """Compile authored shared time declarations into canonical runtime metadata."""
 
 from aces_contracts.addressing import render_compiled_address
+from aces_contracts.contracts.time_model import (
+    ClockDeclarationModel,
+    ExactRatioModel,
+    TemporalConstraintDeclarationModel,
+    TimeCoordinateModel,
+    TimeDomainDeclarationModel,
+    TimeDomainMappingDeclarationModel,
+    TimeModelDeclarationModel,
+    TimeProgressionPolicyDeclarationModel,
+)
 from aces_sdl.scenario import InstantiatedScenario
 
 from ..models.time_model import (
@@ -143,4 +153,180 @@ def compile_time_model(scenario: InstantiatedScenario) -> CompiledTimeModel:
     )
 
 
-__all__ = ["compile_time_model"]
+def time_model_contract_model(time_model: CompiledTimeModel) -> TimeModelDeclarationModel | None:
+    """Project compiled metadata into the portable backend-facing contract."""
+
+    if not time_model.domains and not time_model.clocks:
+        return None
+    return TimeModelDeclarationModel(
+        domains={
+            domain.address: TimeDomainDeclarationModel(
+                address=domain.address,
+                kind=domain.kind,
+                tick_period_seconds=ExactRatioModel(
+                    numerator=domain.tick_period_numerator,
+                    denominator=domain.tick_period_denominator,
+                ),
+                epoch=domain.epoch,
+                visibility=domain.visibility,
+                description=domain.description,
+            )
+            for domain in time_model.domains
+        },
+        clocks={
+            clock.address: ClockDeclarationModel(
+                address=clock.address,
+                time_domain_address=clock.time_domain_address,
+                authority_kind=clock.authority_kind,
+                authority_ref=clock.authority_ref,
+                monotonicity=clock.monotonicity,
+                supports_pause=clock.supports_pause,
+                supports_reset=clock.supports_reset,
+                supports_jump=clock.supports_jump,
+                description=clock.description,
+            )
+            for clock in time_model.clocks
+        },
+        mappings={
+            mapping.address: TimeDomainMappingDeclarationModel(
+                address=mapping.address,
+                source_domain_address=mapping.source_domain_address,
+                target_domain_address=mapping.target_domain_address,
+                mapping_kind=mapping.mapping_kind,
+                scale=ExactRatioModel(
+                    numerator=mapping.scale_numerator,
+                    denominator=mapping.scale_denominator,
+                ),
+                offset_ticks=mapping.offset_ticks,
+                description=mapping.description,
+            )
+            for mapping in time_model.mappings
+        },
+        progression_policies={
+            policy.address: TimeProgressionPolicyDeclarationModel(
+                address=policy.address,
+                clock_address=policy.clock_address,
+                advancement_mode=policy.advancement_mode,
+                pacing_ratio=ExactRatioModel(
+                    numerator=policy.pacing_numerator,
+                    denominator=policy.pacing_denominator,
+                ),
+                synchronization_mode=policy.synchronization_mode,
+                step_ticks=policy.step_ticks,
+                drift_bound_ticks=policy.drift_bound_ticks,
+                reset_behavior=policy.reset_behavior,
+                replay_behavior=policy.replay_behavior,
+                description=policy.description,
+            )
+            for policy in time_model.progression_policies
+        },
+        temporal_constraints={
+            constraint.address: TemporalConstraintDeclarationModel(
+                address=constraint.address,
+                kind=constraint.kind,
+                clock_address=constraint.clock_address,
+                subject_addresses=list(constraint.subject_addresses),
+                start=(
+                    TimeCoordinateModel(
+                        tick=constraint.start_tick,
+                        microstep=constraint.start_microstep or 0,
+                    )
+                    if constraint.start_tick is not None
+                    else None
+                ),
+                end=(
+                    TimeCoordinateModel(
+                        tick=constraint.end_tick,
+                        microstep=constraint.end_microstep or 0,
+                    )
+                    if constraint.end_tick is not None
+                    else None
+                ),
+                duration_ticks=constraint.duration_ticks,
+                cadence_ticks=constraint.cadence_ticks,
+                description=constraint.description,
+            )
+            for constraint in time_model.constraints
+        },
+    )
+
+
+def compiled_time_model_from_contract(declaration: TimeModelDeclarationModel) -> CompiledTimeModel:
+    """Reconstruct typed runtime metadata from a validated portable contract."""
+
+    return CompiledTimeModel(
+        domains=tuple(
+            CompiledTimeDomain(
+                address=domain.address,
+                kind=domain.kind,
+                tick_period_numerator=domain.tick_period_seconds.numerator,
+                tick_period_denominator=domain.tick_period_seconds.denominator,
+                epoch=domain.epoch,
+                visibility=domain.visibility,
+                description=domain.description,
+            )
+            for domain in declaration.domains.values()
+        ),
+        clocks=tuple(
+            CompiledClock(
+                address=clock.address,
+                time_domain_address=clock.time_domain_address,
+                authority_kind=clock.authority_kind,
+                authority_ref=clock.authority_ref,
+                monotonicity=clock.monotonicity,
+                supports_pause=clock.supports_pause,
+                supports_reset=clock.supports_reset,
+                supports_jump=clock.supports_jump,
+                description=clock.description,
+            )
+            for clock in declaration.clocks.values()
+        ),
+        mappings=tuple(
+            CompiledTimeDomainMapping(
+                address=mapping.address,
+                source_domain_address=mapping.source_domain_address,
+                target_domain_address=mapping.target_domain_address,
+                mapping_kind=mapping.mapping_kind,
+                scale_numerator=mapping.scale.numerator,
+                scale_denominator=mapping.scale.denominator,
+                offset_ticks=mapping.offset_ticks,
+                description=mapping.description,
+            )
+            for mapping in declaration.mappings.values()
+        ),
+        progression_policies=tuple(
+            CompiledTimeProgressionPolicy(
+                address=policy.address,
+                clock_address=policy.clock_address,
+                advancement_mode=policy.advancement_mode,
+                pacing_numerator=policy.pacing_ratio.numerator,
+                pacing_denominator=policy.pacing_ratio.denominator,
+                synchronization_mode=policy.synchronization_mode,
+                step_ticks=policy.step_ticks,
+                drift_bound_ticks=policy.drift_bound_ticks,
+                reset_behavior=policy.reset_behavior,
+                replay_behavior=policy.replay_behavior,
+                description=policy.description,
+            )
+            for policy in declaration.progression_policies.values()
+        ),
+        constraints=tuple(
+            CompiledTemporalConstraint(
+                address=constraint.address,
+                kind=constraint.kind,
+                clock_address=constraint.clock_address,
+                subject_addresses=tuple(constraint.subject_addresses),
+                start_tick=constraint.start.tick if constraint.start is not None else None,
+                start_microstep=constraint.start.microstep if constraint.start is not None else None,
+                end_tick=constraint.end.tick if constraint.end is not None else None,
+                end_microstep=constraint.end.microstep if constraint.end is not None else None,
+                duration_ticks=constraint.duration_ticks,
+                cadence_ticks=constraint.cadence_ticks,
+                description=constraint.description,
+            )
+            for constraint in declaration.temporal_constraints.values()
+        ),
+    )
+
+
+__all__ = ["compile_time_model", "compiled_time_model_from_contract", "time_model_contract_model"]

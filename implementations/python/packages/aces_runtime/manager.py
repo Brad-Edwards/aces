@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 
+from aces_contracts.contracts.time_model import TimeModelDeclarationModel
 from aces_contracts.diagnostics import Diagnostic
 from aces_contracts.planning import ChangeAction, ProvisioningPlan, ProvisionOp, RuntimeDomain
 from aces_contracts.runtime_state import ApplyResult, RuntimeSnapshot, SnapshotEntry
@@ -14,6 +15,7 @@ from aces_processor.planner import plan, snapshot_delete_order
 from .backend_calls import _call_backend_apply, _call_backend_diagnostics
 from .diagnostics import _failure_diagnostic, _has_error_diagnostic
 from .registry import RuntimeTarget, _validate_runtime_target_shape
+from .time_control import RuntimeTimeControlMixin
 
 _RUNTIME_APPLY_ADDRESS = "runtime.apply"
 _APPLY_EVALUATOR_ADDRESS = "runtime.apply.evaluator"
@@ -128,7 +130,7 @@ def _rollback_services(
     )
 
 
-class RuntimeManager:
+class RuntimeManager(RuntimeTimeControlMixin):
     """Plans and executes SDL runtime work against a target."""
 
     def __init__(
@@ -143,9 +145,11 @@ class RuntimeManager:
             orchestrator=target.orchestrator,
             evaluator=target.evaluator,
             participant_runtime=target.participant_runtime,
+            time_runtime=target.time_runtime,
         )
         self._target = target
         self._snapshot = initial_snapshot if initial_snapshot is not None else RuntimeSnapshot()
+        self._time_declaration: TimeModelDeclarationModel | None = None
 
     @property
     def snapshot(self) -> RuntimeSnapshot:
@@ -170,6 +174,7 @@ class RuntimeManager:
 
     def apply(self, execution_plan: ExecutionPlan) -> ApplyResult:
         diagnostics: list[Diagnostic] = list(execution_plan.diagnostics)
+        self._time_declaration = None
 
         precondition_failure = self._apply_precondition_failure(execution_plan, diagnostics)
         if precondition_failure is not None:
@@ -181,6 +186,8 @@ class RuntimeManager:
             changed_addresses=[],
         )
         self._apply_provisioning_phase(execution_plan, state)
+        if state.failure is None:
+            self._apply_time_phase(execution_plan, state)
         if state.failure is None:
             self._apply_evaluation_phase(execution_plan, state)
         if state.failure is None:
@@ -289,6 +296,7 @@ class RuntimeManager:
         state.working_snapshot = result.snapshot
 
     def _fail_apply_state(self, state: _RuntimeApplyState) -> None:
+        self._time_declaration = None
         self._snapshot = state.working_snapshot
         state.failure = ApplyResult(
             success=False,
@@ -374,6 +382,8 @@ class RuntimeManager:
             info["evaluator"] = self._target.evaluator.status()
             info["evaluation_results"] = self._target.evaluator.results()
             info["evaluation_history"] = self._target.evaluator.history()
+        if self._target.time_runtime is not None and self._snapshot.time_model_state is not None:
+            info["time_model_state"] = self.read_time_state().model_dump(mode="json")
         return info
 
     def destroy(self) -> ApplyResult:

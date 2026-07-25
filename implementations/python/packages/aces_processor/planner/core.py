@@ -3,10 +3,13 @@
 from dataclasses import replace
 
 from aces_backend_protocols.capabilities import BackendManifest
+from aces_backend_protocols.capability_admission import time_model_capability_gaps
 from aces_backend_protocols.domain_topology import domain_topology_plan_diagnostics
 from aces_backend_protocols.service_materialization import service_materialization_plan_diagnostics
+from aces_contracts.diagnostics import Diagnostic
 from aces_sdl.realization_envelope import member
 
+from ..compiler.time_model import time_model_contract_model
 from ..models import ExecutionPlan, RuntimeModel, RuntimeSnapshot
 from ..semantics.realization import (
     ApparatusRealizationDefaultResolver,
@@ -23,6 +26,21 @@ from .operations import (
 )
 from .ordering import _ordering_cycle_diagnostics
 from .resources import _collect_resources
+
+
+def _time_model_diagnostics(model: RuntimeModel, manifest: BackendManifest) -> list[Diagnostic]:
+    declaration = time_model_contract_model(model.time_model)
+    if declaration is None:
+        return []
+    return [
+        Diagnostic(
+            code="time.unsupported-capability",
+            domain="time",
+            address="time.model",
+            message=gap,
+        )
+        for gap in time_model_capability_gaps(manifest, declaration)
+    ]
 
 
 def plan(
@@ -51,6 +69,7 @@ def plan(
     diagnostics = [
         *effective_model.diagnostics,
         *_validate_manifest(effective_model, manifest),
+        *_time_model_diagnostics(effective_model, manifest),
         *realization_support_diagnostics(
             effective_requirements,
             manifest,

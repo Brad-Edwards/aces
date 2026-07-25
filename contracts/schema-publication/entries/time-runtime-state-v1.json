@@ -1,0 +1,10 @@
+{
+  "contract_id": "time-runtime-state-v1",
+  "schema_path": "contracts/schemas/time/time-runtime-state-v1.json",
+  "stability": "draft",
+  "content_hash": "69206696ef491df49037dcbaaf25a7b7a7766f87f142b743ca69d2b073cc9f57",
+  "last_change": {
+    "summary": "Published the ASR-528 typed clock readback and append-only transition history contract.",
+    "content_hash": "69206696ef491df49037dcbaaf25a7b7a7766f87f142b743ca69d2b073cc9f57"
+  }
+}

@@ -410,3 +410,6 @@ adrs:
   - id: ADR-090
     path: docs/decisions/adrs/adr-090-shared-time-domain-clock-and-progression-authority.md
     pin: 5b8fa008e2e8c8893e8a0c0376c947ef6f840d1e09fd75d579d36d477219d1e2
+  - id: ADR-091
+    path: docs/decisions/adrs/adr-091-portable-time-capability-control-and-provenance-contracts.md
+    pin: c2a0e6ac9fb87aa10fbb571b0f70efe0b99520b806f6ffe706f1556b0ec7e84b

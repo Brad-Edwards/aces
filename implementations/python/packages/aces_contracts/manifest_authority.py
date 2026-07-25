@@ -27,6 +27,7 @@ PROCESSOR_SUPPORTED_CONTRACT_IDS = (
     "participant-episode-state-envelope-v1",
     "participant-episode-history-event-stream-v1",
     "participant-behavior-history-event-stream-v1",
+    "time-model-v1",
 )
 
 # These are the published backend-facing and live-control-plane contracts a
@@ -62,6 +63,9 @@ BACKEND_SUPPORTED_CONTRACT_IDS = (
     "experiment-run-v1",
     "trial-cleanup-plan-v1",
     "trial-cleanup-receipt-v1",
+    "time-model-v1",
+    "time-runtime-state-v1",
+    "realized-time-model-v1",
 )
 
 PARTICIPANT_IMPLEMENTATION_SUPPORTED_CONTRACT_IDS = (

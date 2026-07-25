@@ -225,3 +225,4 @@ adr-086-governed-whole-scenario-satisfiability
 | [087](adr-087-enterprise-identity-and-deployment-tenancy-authoring.md) | Enterprise Identity and Deployment-Tenancy Authoring | accepted | 2026-07-24 |
 | [088](adr-088-initial-service-state-and-native-materialization.md) | Initial Service State and Native Materialization | accepted | 2026-07-24 |
 | [090](adr-090-shared-time-domain-clock-and-progression-authority.md) | Shared Time-Domain, Clock, And Progression Authority | accepted | 2026-07-24 |
+| [091](adr-091-portable-time-capability-control-and-provenance-contracts.md) | Portable Time Capability, Control, And Provenance Contracts | accepted | 2026-07-24 |

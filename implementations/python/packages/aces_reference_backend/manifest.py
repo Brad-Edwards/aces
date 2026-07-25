@@ -20,6 +20,7 @@ from aces_backend_protocols.capabilities import (
     PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS,
     PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE,
     PARTICIPANT_RUNTIME_ROLE_SCOPE,
+    TIME_CAPABILITY_REQUIRED_CONTRACTS,
     BackendCapabilitySet,
     BackendManifest,
     CleanupCapabilities,
@@ -28,6 +29,7 @@ from aces_backend_protocols.capabilities import (
     OrchestratorCapabilities,
     ParticipantRuntimeCapabilities,
     ProvisionerCapabilities,
+    TimeCapabilities,
     WorkflowFeature,
     WorkflowStatePredicateFeature,
 )
@@ -39,6 +41,7 @@ REFERENCE_BACKEND_NAME = "reference-emulation"
 REFERENCE_BACKEND_SUPPORTED_CONTRACT_VERSIONS = frozenset(
     contract_id for contract_id in BACKEND_SUPPORTED_CONTRACT_IDS if contract_id != "realization-envelope-v1"
 )
+_TIME_DEDICATED_CONTRACT_VERSIONS = frozenset({"time-model-v1", "time-runtime-state-v1", "realized-time-model-v1"})
 
 _PARTICIPANT_ROLES = frozenset(PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_ROLE_SCOPE])
 _PARTICIPANT_BEHAVIOR_FEATURES = frozenset(
@@ -56,8 +59,8 @@ def _current_backend_version() -> str:
         return "0.0.0+unknown"
 
 
-def _concept_bindings() -> tuple[ConceptBinding, ...]:
-    return (
+def _concept_bindings(*, with_time: bool) -> tuple[ConceptBinding, ...]:
+    bindings = (
         ConceptBinding(scope="capabilities.provisioner.supported_node_types", family="assets"),
         ConceptBinding(scope="capabilities.provisioner.supported_os_families", family="assets"),
         ConceptBinding(scope="capabilities.provisioner.supported_content_types", family="tools-and-artifacts"),
@@ -94,6 +97,15 @@ def _concept_bindings() -> tuple[ConceptBinding, ...]:
             family="provenance-and-evidence",
         ),
     )
+    if with_time:
+        bindings += (
+            ConceptBinding(scope="capabilities.time.supported_domain_kinds", family="time-and-apparatus"),
+            ConceptBinding(scope="capabilities.time.supported_authority_kinds", family="time-and-apparatus"),
+            ConceptBinding(scope="capabilities.time.supported_advancement_modes", family="time-and-apparatus"),
+            ConceptBinding(scope="capabilities.time.supported_synchronization_modes", family="time-and-apparatus"),
+            ConceptBinding(scope="capabilities.time.supported_constraint_kinds", family="time-and-apparatus"),
+        )
+    return bindings
 
 
 def _realization_support() -> tuple[RealizationSupportDeclaration, ...]:
@@ -123,7 +135,29 @@ def _realization_support() -> tuple[RealizationSupportDeclaration, ...]:
     )
 
 
-def _capabilities() -> BackendCapabilitySet:
+def _time_capabilities(*, enabled: bool) -> TimeCapabilities | None:
+    if not enabled:
+        return None
+    return TimeCapabilities(
+        name="reference-emulation-time-runtime",
+        supported_contract_versions=TIME_CAPABILITY_REQUIRED_CONTRACTS,
+        supported_domain_kinds=frozenset({"wall_clock", "monotonic", "simulated", "logical", "external"}),
+        supported_authority_kinds=frozenset({"runtime", "backend", "system", "external"}),
+        supported_advancement_modes=frozenset({"real_time", "dilated", "stepped", "event_driven", "externally_paced"}),
+        supported_synchronization_modes=frozenset({"none", "authority", "barrier", "conservative"}),
+        supported_mapping_kinds=frozenset({"identity", "affine_rational"}),
+        supported_constraint_kinds=frozenset({"precedence", "duration", "window", "deadline", "cadence"}),
+        supported_reset_behaviors=frozenset({"unsupported", "new_segment_zero", "new_segment_preserve_value"}),
+        supported_replay_behaviors=frozenset({"unsupported", "restart_from_anchor", "restore_recorded_advances"}),
+        supports_pause=True,
+        supports_jump=True,
+        supports_exact_rational_mappings=True,
+        supports_append_only_history=True,
+        supports_run_provenance=True,
+    )
+
+
+def _capabilities(*, with_time: bool) -> BackendCapabilitySet:
     return BackendCapabilitySet(
         provisioner=ProvisionerCapabilities(
             name="reference-emulation-provisioner",
@@ -215,10 +249,11 @@ def _capabilities() -> BackendCapabilitySet:
             supports_reusable_state=True,
             supports_residual_state_disclosure=True,
         ),
+        time=_time_capabilities(enabled=with_time),
     )
 
 
-def create_reference_backend_manifest(**config) -> BackendManifest:
+def create_reference_backend_manifest(*, with_time: bool = False, **config) -> BackendManifest:
     """Return the fully capable reference emulation backend manifest.
 
     Extra ``config`` kwargs (e.g. ``driver``, ``workspace``) flow through
@@ -230,9 +265,13 @@ def create_reference_backend_manifest(**config) -> BackendManifest:
     return BackendManifest(
         name=REFERENCE_BACKEND_NAME,
         version=_current_backend_version(),
-        supported_contract_versions=REFERENCE_BACKEND_SUPPORTED_CONTRACT_VERSIONS,
+        supported_contract_versions=(
+            REFERENCE_BACKEND_SUPPORTED_CONTRACT_VERSIONS
+            if with_time
+            else REFERENCE_BACKEND_SUPPORTED_CONTRACT_VERSIONS - _TIME_DEDICATED_CONTRACT_VERSIONS
+        ),
         compatible_processors=frozenset({"aces-reference-processor"}),
-        concept_bindings=_concept_bindings(),
+        concept_bindings=_concept_bindings(with_time=with_time),
         realization_support=_realization_support(),
-        capabilities=_capabilities(),
+        capabilities=_capabilities(with_time=with_time),
     )

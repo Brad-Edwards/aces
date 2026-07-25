@@ -13,9 +13,11 @@ from .capabilities import (
 )
 
 if TYPE_CHECKING:
+    from aces_contracts.contracts.time_model import TimeModelDeclarationModel
     from aces_contracts.contracts.trial_cleanup import TrialCleanupPlanModel
 
     from .backend_manifest import BackendManifest
+    from .capabilities import TimeCapabilities
 
 
 def participant_runtime_capability_contract_gaps(manifest: BackendManifest) -> tuple[str, ...]:
@@ -56,6 +58,122 @@ def observation_capability_contract_gaps(manifest: BackendManifest) -> tuple[str
     if missing:
         gaps.append(f"capabilities.observation missing required contracts: {', '.join(missing)}")
     return tuple(gaps)
+
+
+def time_capability_contract_gaps(manifest: BackendManifest) -> tuple[str, ...]:
+    """Return missing contract surfaces for a declared API-421 capability."""
+
+    from .capabilities import TIME_CAPABILITY_REQUIRED_CONTRACTS
+
+    if manifest.time is None:
+        return ()
+    missing = sorted(TIME_CAPABILITY_REQUIRED_CONTRACTS - manifest.supported_contract_versions)
+    return () if not missing else (f"capabilities.time missing required contracts: {', '.join(missing)}",)
+
+
+def _unsupported_time_terms(
+    label: str,
+    required: set[str],
+    supported: frozenset[str],
+) -> list[str]:
+    missing = sorted(required - supported)
+    return [] if not missing else [f"unsupported time {label}: {', '.join(missing)}"]
+
+
+def _time_capacity_gaps(
+    capability: TimeCapabilities,
+    declaration: TimeModelDeclarationModel,
+) -> list[str]:
+    gaps: list[str] = []
+    if capability.max_time_domains is not None and len(declaration.domains) > capability.max_time_domains:
+        gaps.append(
+            f"time model requires {len(declaration.domains)} domains; backend limit is {capability.max_time_domains}"
+        )
+    if capability.max_clocks is not None and len(declaration.clocks) > capability.max_clocks:
+        gaps.append(f"time model requires {len(declaration.clocks)} clocks; backend limit is {capability.max_clocks}")
+    return gaps
+
+
+def _time_control_gaps(
+    capability: TimeCapabilities,
+    declaration: TimeModelDeclarationModel,
+) -> list[str]:
+    requirements = (
+        (
+            any(clock.supports_pause for clock in declaration.clocks.values()),
+            capability.supports_pause,
+            "pause control",
+        ),
+        (any(clock.supports_jump for clock in declaration.clocks.values()), capability.supports_jump, "jump control"),
+        (bool(declaration.mappings), capability.supports_exact_rational_mappings, "exact rational mappings"),
+        (True, capability.supports_append_only_history, "append-only clock transition history"),
+        (True, capability.supports_run_provenance, "realized run provenance"),
+    )
+    return [f"time model requires {label}" for required, supported, label in requirements if required and not supported]
+
+
+def time_model_capability_gaps(
+    manifest: BackendManifest,
+    declaration: TimeModelDeclarationModel,
+) -> tuple[str, ...]:
+    """Return fail-closed admission gaps for one portable time declaration."""
+
+    capability = manifest.time
+    if capability is None:
+        return ("backend does not declare time capabilities",)
+
+    gaps: list[str] = [*time_capability_contract_gaps(manifest)]
+    term_sources = (
+        ("domain kinds", declaration.domains.values(), "kind", capability.supported_domain_kinds),
+        ("authority kinds", declaration.clocks.values(), "authority_kind", capability.supported_authority_kinds),
+        (
+            "advancement modes",
+            declaration.progression_policies.values(),
+            "advancement_mode",
+            capability.supported_advancement_modes,
+        ),
+        (
+            "synchronization modes",
+            declaration.progression_policies.values(),
+            "synchronization_mode",
+            capability.supported_synchronization_modes,
+        ),
+        ("mapping kinds", declaration.mappings.values(), "mapping_kind", capability.supported_mapping_kinds),
+        (
+            "constraint kinds",
+            declaration.temporal_constraints.values(),
+            "kind",
+            capability.supported_constraint_kinds,
+        ),
+        (
+            "reset behaviors",
+            declaration.progression_policies.values(),
+            "reset_behavior",
+            capability.supported_reset_behaviors,
+        ),
+        (
+            "replay behaviors",
+            declaration.progression_policies.values(),
+            "replay_behavior",
+            capability.supported_replay_behaviors,
+        ),
+    )
+    for label, values, attribute, supported in term_sources:
+        gaps.extend(_unsupported_time_terms(label, {getattr(value, attribute) for value in values}, supported))
+    gaps.extend(_time_capacity_gaps(capability, declaration))
+    gaps.extend(_time_control_gaps(capability, declaration))
+    return tuple(gaps)
+
+
+def require_time_model_capability(
+    manifest: BackendManifest,
+    declaration: TimeModelDeclarationModel,
+) -> None:
+    """Fail admission when a backend cannot honor the portable time model."""
+
+    gaps = time_model_capability_gaps(manifest, declaration)
+    if gaps:
+        raise ValueError("; ".join(gaps))
 
 
 def _required_cleanup_actions(plan: TrialCleanupPlanModel) -> set[str]:

@@ -107,7 +107,8 @@ def test_time_coordinator_preserves_segments_and_append_only_history() -> None:
     clock = "time.clock.scenario-clock"
     snapshot = coordinator.advance(snapshot, clock, ticks=10)
     snapshot = coordinator.pause(snapshot, clock)
-    assert snapshot.time_management_contexts[clock]["state"] == ClockLifecycleState.PAUSED.value
+    assert snapshot.time_model_state is not None
+    assert snapshot.time_model_state.clocks[clock].state == ClockLifecycleState.PAUSED.value
     with pytest.raises(ValueError, match="paused clock"):
         coordinator.advance(snapshot, clock, ticks=10)
     snapshot = coordinator.resume(snapshot, clock)
@@ -115,9 +116,9 @@ def test_time_coordinator_preserves_segments_and_append_only_history() -> None:
 
     reading = coordinator.reading(snapshot, clock)
     assert (reading.segment, reading.tick, reading.microstep) == (1, 0, 0)
-    history = snapshot.time_management_contexts[clock]["history"]
-    assert [event["sequence"] for event in history] == list(range(5))
-    assert [event["kind"] for event in history] == [
+    history = snapshot.time_model_state.clocks[clock].history
+    assert [event.sequence for event in history] == list(range(5))
+    assert [event.kind for event in history] == [
         "initialize",
         "advance",
         "pause",
@@ -257,7 +258,8 @@ def test_clock_transition_history_is_append_only_across_generated_lifecycles(
             expected_tick = 0
 
     reading = coordinator.reading(snapshot, clock)
-    history = snapshot.time_management_contexts[clock]["history"]
+    assert snapshot.time_model_state is not None
+    history = snapshot.time_model_state.clocks[clock].history
     assert (reading.segment, reading.tick) == (expected_segment, expected_tick)
-    assert [event["sequence"] for event in history] == list(range(len(operations) + 1))
+    assert [event.sequence for event in history] == list(range(len(operations) + 1))
     assert len(history) == len(operations) + 1

@@ -6,6 +6,7 @@ from collections.abc import Callable, Iterable
 from copy import deepcopy
 
 from aces_contracts.addressing import require_compiled_address
+from aces_contracts.contracts.time_model import validate_time_runtime_transition
 from aces_contracts.diagnostics import Diagnostic
 from aces_contracts.planning import ProvisioningPlan
 from aces_contracts.runtime_state import ApplyResult, RealizationProvenanceEntry, RuntimeSnapshot
@@ -286,11 +287,24 @@ def _snapshot_carrier_addresses(snapshot: RuntimeSnapshot) -> set[str]:
         snapshot.joint_action_records,
         snapshot.time_management_contexts,
     )
-    return {str(address) for carrier in carriers for address in carrier}
+    addresses = {str(address) for carrier in carriers for address in carrier}
+    if snapshot.time_model_state is not None:
+        addresses.update(snapshot.time_model_state.clocks)
+    return addresses
 
 
 def _snapshot_transition_contract_diagnostics(
     previous_snapshot: RuntimeSnapshot,
     next_snapshot: RuntimeSnapshot,
 ) -> list[Diagnostic]:
-    return participant_runtime_history_transition_diagnostics(previous_snapshot, next_snapshot)
+    diagnostics = participant_runtime_history_transition_diagnostics(previous_snapshot, next_snapshot)
+    try:
+        validate_time_runtime_transition(previous_snapshot.time_model_state, next_snapshot.time_model_state)
+    except ValueError as exc:
+        diagnostics.append(
+            _backend_contract_invalid(
+                "runtime.snapshot.time-model-state",
+                str(exc),
+            )
+        )
+    return diagnostics

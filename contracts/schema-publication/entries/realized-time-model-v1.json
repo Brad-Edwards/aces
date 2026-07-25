@@ -1,0 +1,10 @@
+{
+  "contract_id": "realized-time-model-v1",
+  "schema_path": "contracts/schemas/time/realized-time-model-v1.json",
+  "stability": "draft",
+  "content_hash": "7b87524b4a23b981270b2501264c3911aaf1075280e3da136ab0b38393e895ed",
+  "last_change": {
+    "summary": "Published the EXP-734 run-scoped time realization and apparatus provenance contract.",
+    "content_hash": "7b87524b4a23b981270b2501264c3911aaf1075280e3da136ab0b38393e895ed"
+  }
+}

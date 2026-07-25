@@ -86,6 +86,7 @@ from .schema_invariants import (
     _attach_stateful_resource_invariants,
 )
 from .semantic_profiles import SemanticProfileModel
+from .time_model import RealizedTimeModelProvenanceModel, TimeModelDeclarationModel, TimeRuntimeStateModel
 from .trial_cleanup import SchedulerIsolationProofModel, TrialCleanupPlanModel, TrialCleanupReceiptModel
 from .vocabulary_sources import (
     AtlasTacticsSourceModel,
@@ -144,6 +145,9 @@ def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
         "trial-cleanup-plan-v1": TrialCleanupPlanModel.model_json_schema(),
         "trial-cleanup-receipt-v1": TrialCleanupReceiptModel.model_json_schema(),
         "scheduler-isolation-proof-v1": SchedulerIsolationProofModel.model_json_schema(),
+        "time-model-v1": TimeModelDeclarationModel.model_json_schema(),
+        "time-runtime-state-v1": TimeRuntimeStateModel.model_json_schema(),
+        "realized-time-model-v1": RealizedTimeModelProvenanceModel.model_json_schema(),
         "provisioning-plan-v1": ProvisioningPlanModel.model_json_schema(),
         "orchestration-plan-v1": OrchestrationPlanModel.model_json_schema(),
         "evaluation-plan-v1": EvaluationPlanModel.model_json_schema(),

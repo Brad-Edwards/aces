@@ -6,7 +6,15 @@ from dataclasses import dataclass
 from enum import Enum
 from fractions import Fraction
 
-from aces_contracts.runtime_state import RuntimeSnapshot
+from aces_contracts.contracts.time_model import (
+    ClockTransitionEventModel,
+    RuntimeClockStateModel,
+    TimeCoordinateModel,
+    TimeModelDeclarationModel,
+    TimeRuntimeStateModel,
+)
+from aces_contracts.runtime_state import ApplyResult, RuntimeSnapshot
+from aces_processor.compiler.time_model import compiled_time_model_from_contract, time_model_contract_model
 from aces_processor.models.time_model import (
     CompiledClock,
     CompiledTimeDomainMapping,
@@ -63,17 +71,29 @@ def _transition(
     kind: ClockTransitionKind,
     current: ClockReading,
     previous: ClockReading | None,
-) -> dict[str, object]:
-    return {
-        "sequence": sequence,
-        "kind": kind.value,
-        "segment": current.segment,
-        "tick": current.tick,
-        "microstep": current.microstep,
-        "previous_segment": previous.segment if previous else None,
-        "previous_tick": previous.tick if previous else None,
-        "previous_microstep": previous.microstep if previous else None,
-    }
+) -> ClockTransitionEventModel:
+    previous_coordinate = (
+        TimeCoordinateModel(
+            segment=previous.segment,
+            tick=previous.tick,
+            microstep=previous.microstep,
+        )
+        if previous is not None
+        else None
+    )
+    return ClockTransitionEventModel(
+        sequence=sequence,
+        kind=kind.value,
+        previous=previous_coordinate,
+        resulting=TimeCoordinateModel(
+            segment=current.segment,
+            tick=current.tick,
+            microstep=current.microstep,
+        ),
+        resulting_state=(
+            ClockLifecycleState.PAUSED.value if kind == ClockTransitionKind.PAUSE else ClockLifecycleState.RUNNING.value
+        ),
+    )
 
 
 class TimeCoordinator:
@@ -81,6 +101,9 @@ class TimeCoordinator:
 
     def __init__(self, time_model: CompiledTimeModel) -> None:
         self._time_model = time_model
+        self._declaration = time_model_contract_model(time_model)
+        if self._declaration is None:
+            raise ValueError("TimeCoordinator requires a non-empty compiled time model")
         self._clocks = _clock_by_address(time_model)
         self._policies = _policy_by_clock(time_model)
 
@@ -88,41 +111,41 @@ class TimeCoordinator:
         """Create exact initial clock state without replacing existing state."""
 
         current = snapshot or RuntimeSnapshot()
-        contexts = dict(current.time_management_contexts)
+        if current.time_model_state is not None:
+            raise ValueError("shared time model is already initialized")
+        contexts: dict[str, RuntimeClockStateModel] = {}
         for clock_address, clock in self._clocks.items():
-            if clock_address in contexts:
-                raise ValueError(f"clock '{clock_address}' is already initialized")
             policy = self._policies.get(clock_address)
-            contexts[clock_address] = {
-                "schema_version": "aces-time-context/v1",
-                "clock_address": clock_address,
-                "time_domain_address": clock.time_domain_address,
-                "progression_policy_address": policy.address if policy else None,
-                "authority_kind": clock.authority_kind,
-                "authority_ref": clock.authority_ref,
-                "segment": 0,
-                "tick": 0,
-                "microstep": 0,
-                "state": ClockLifecycleState.RUNNING.value,
-                "sequence": 0,
-                "history": [
-                    _transition(
-                        sequence=0,
-                        kind=ClockTransitionKind.INITIALIZE,
-                        current=ClockReading(clock_address, 0, 0),
-                        previous=None,
-                    )
-                ],
-            }
-        return current.with_entries(current.entries, time_management_contexts=contexts)
+            initial_transition = _transition(
+                sequence=0,
+                kind=ClockTransitionKind.INITIALIZE,
+                current=ClockReading(clock_address, 0, 0),
+                previous=None,
+            )
+            contexts[clock_address] = RuntimeClockStateModel(
+                clock_address=clock_address,
+                time_domain_address=clock.time_domain_address,
+                progression_policy_address=policy.address if policy else None,
+                authority_kind=clock.authority_kind,
+                authority_ref=clock.authority_ref,
+                state=ClockLifecycleState.RUNNING.value,
+                coordinate=initial_transition.resulting,
+                sequence=0,
+                history=[initial_transition],
+            )
+        state = TimeRuntimeStateModel(
+            declaration_digest=self._declaration.canonical_digest(),
+            clocks=contexts,
+        )
+        return current.with_entries(current.entries, time_model_state=state)
 
     def reading(self, snapshot: RuntimeSnapshot, clock_address: str) -> ClockReading:
         context = self._context(snapshot, clock_address)
         return ClockReading(
             clock_address=clock_address,
-            segment=int(context["segment"]),
-            tick=int(context["tick"]),
-            microstep=int(context["microstep"]),
+            segment=context.coordinate.segment,
+            tick=context.coordinate.tick,
+            microstep=context.coordinate.microstep,
         )
 
     def advance(
@@ -136,7 +159,7 @@ class TimeCoordinator:
         if ticks < 0 or microstep < 0:
             raise ValueError("clock advance must be non-negative")
         context = self._context(snapshot, clock_address)
-        if context["state"] != ClockLifecycleState.RUNNING.value:
+        if context.state != ClockLifecycleState.RUNNING.value:
             raise ValueError("a paused clock cannot advance")
         policy = self._policies.get(clock_address)
         if policy is None:
@@ -166,7 +189,7 @@ class TimeCoordinator:
         if not clock.supports_pause:
             raise ValueError("clock does not support pause")
         context = self._context(snapshot, clock_address)
-        if context["state"] != ClockLifecycleState.RUNNING.value:
+        if context.state != ClockLifecycleState.RUNNING.value:
             raise ValueError("only a running clock may be paused")
         reading = self.reading(snapshot, clock_address)
         return self._replace_context(
@@ -179,7 +202,7 @@ class TimeCoordinator:
 
     def resume(self, snapshot: RuntimeSnapshot, clock_address: str) -> RuntimeSnapshot:
         context = self._context(snapshot, clock_address)
-        if context["state"] != ClockLifecycleState.PAUSED.value:
+        if context.state != ClockLifecycleState.PAUSED.value:
             raise ValueError("only a paused clock may be resumed")
         reading = self.reading(snapshot, clock_address)
         return self._replace_context(
@@ -213,7 +236,7 @@ class TimeCoordinator:
                 tick=tick,
                 microstep=microstep,
             ),
-            state=ClockLifecycleState(str(context["state"])),
+            state=ClockLifecycleState(context.state),
         )
 
     def reset(
@@ -268,28 +291,30 @@ class TimeCoordinator:
                 return mapping
         raise KeyError(f"unknown compiled time-domain mapping '{address}'")
 
-    def _context(self, snapshot: RuntimeSnapshot, clock_address: str) -> dict[str, object]:
+    def _context(self, snapshot: RuntimeSnapshot, clock_address: str) -> RuntimeClockStateModel:
         self._clock(clock_address)
+        if snapshot.time_model_state is None:
+            raise KeyError(f"clock '{clock_address}' is not initialized")
         try:
-            context = snapshot.time_management_contexts[clock_address]
+            context = snapshot.time_model_state.clocks[clock_address]
         except KeyError as exc:
             raise KeyError(f"clock '{clock_address}' is not initialized") from exc
-        if context.get("clock_address") != clock_address:
+        if context.clock_address != clock_address:
             raise ValueError("runtime time context key disagrees with clock_address")
-        return dict(context)
+        return context
 
     def _replace_context(
         self,
         snapshot: RuntimeSnapshot,
-        context: dict[str, object],
+        context: RuntimeClockStateModel,
         *,
         kind: ClockTransitionKind,
         reading: ClockReading,
         state: ClockLifecycleState,
     ) -> RuntimeSnapshot:
         previous = self.reading(snapshot, reading.clock_address)
-        sequence = int(context["sequence"]) + 1
-        history = [*list(context.get("history", []))]
+        sequence = context.sequence + 1
+        history = [*context.history]
         history.append(
             _transition(
                 sequence=sequence,
@@ -298,19 +323,103 @@ class TimeCoordinator:
                 previous=previous,
             )
         )
-        context.update(
-            {
-                "segment": reading.segment,
-                "tick": reading.tick,
-                "microstep": reading.microstep,
-                "state": state.value,
-                "sequence": sequence,
-                "history": history,
-            }
+        next_clock = RuntimeClockStateModel(
+            clock_address=context.clock_address,
+            time_domain_address=context.time_domain_address,
+            progression_policy_address=context.progression_policy_address,
+            authority_kind=context.authority_kind,
+            authority_ref=context.authority_ref,
+            state=state.value,
+            coordinate=TimeCoordinateModel(
+                segment=reading.segment,
+                tick=reading.tick,
+                microstep=reading.microstep,
+            ),
+            sequence=sequence,
+            history=history,
         )
-        contexts = dict(snapshot.time_management_contexts)
-        contexts[reading.clock_address] = context
-        return snapshot.with_entries(snapshot.entries, time_management_contexts=contexts)
+        assert snapshot.time_model_state is not None
+        clocks = dict(snapshot.time_model_state.clocks)
+        clocks[reading.clock_address] = next_clock
+        next_state = TimeRuntimeStateModel(
+            declaration_digest=snapshot.time_model_state.declaration_digest,
+            clocks=clocks,
+        )
+        return snapshot.with_entries(snapshot.entries, time_model_state=next_state)
+
+
+class ReferenceTimeRuntime:
+    """Portable runtime-managed implementation of the backend time protocol."""
+
+    def __init__(self) -> None:
+        self._declaration: TimeModelDeclarationModel | None = None
+        self._coordinator: TimeCoordinator | None = None
+
+    def initialize(
+        self,
+        declaration: TimeModelDeclarationModel,
+        snapshot: RuntimeSnapshot,
+    ) -> ApplyResult:
+        self._declaration = declaration
+        self._coordinator = TimeCoordinator(compiled_time_model_from_contract(declaration))
+        next_snapshot = self._coordinator.initialize(snapshot)
+        return ApplyResult(
+            success=True,
+            snapshot=next_snapshot,
+            changed_addresses=sorted(declaration.clocks),
+        )
+
+    def advance(
+        self,
+        clock_address: str,
+        ticks: int,
+        microstep: int,
+        snapshot: RuntimeSnapshot,
+    ) -> ApplyResult:
+        coordinator = self._require_coordinator()
+        return self._result(
+            coordinator.advance(snapshot, clock_address, ticks=ticks, microstep=microstep), clock_address
+        )
+
+    def pause(self, clock_address: str, snapshot: RuntimeSnapshot) -> ApplyResult:
+        return self._result(self._require_coordinator().pause(snapshot, clock_address), clock_address)
+
+    def resume(self, clock_address: str, snapshot: RuntimeSnapshot) -> ApplyResult:
+        return self._result(self._require_coordinator().resume(snapshot, clock_address), clock_address)
+
+    def jump(
+        self,
+        clock_address: str,
+        tick: int,
+        microstep: int,
+        snapshot: RuntimeSnapshot,
+    ) -> ApplyResult:
+        coordinator = self._require_coordinator()
+        return self._result(coordinator.jump(snapshot, clock_address, tick=tick, microstep=microstep), clock_address)
+
+    def reset(
+        self,
+        clock_address: str,
+        replay: bool,
+        snapshot: RuntimeSnapshot,
+    ) -> ApplyResult:
+        coordinator = self._require_coordinator()
+        return self._result(coordinator.reset(snapshot, clock_address, replay=replay), clock_address)
+
+    def state(self, snapshot: RuntimeSnapshot) -> TimeRuntimeStateModel:
+        self._require_coordinator()
+        if snapshot.time_model_state is None:
+            raise ValueError("shared-time runtime state is not initialized")
+        return snapshot.time_model_state
+
+    def _require_coordinator(self) -> TimeCoordinator:
+        if self._coordinator is None or self._declaration is None:
+            raise ValueError("shared-time runtime is not initialized")
+        return self._coordinator
+
+    @staticmethod
+    def _result(snapshot: RuntimeSnapshot, clock_address: str) -> ApplyResult:
+        return ApplyResult(success=True, snapshot=snapshot, changed_addresses=[clock_address])
 
 
 __all__ = [
@@ -318,4 +427,5 @@ __all__ = [
     "ClockReading",
     "ClockTransitionKind",
     "TimeCoordinator",
+    "ReferenceTimeRuntime",
 ]
