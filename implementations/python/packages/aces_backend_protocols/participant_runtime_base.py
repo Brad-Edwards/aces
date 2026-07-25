@@ -10,7 +10,6 @@ from __future__ import annotations
 
 from dataclasses import replace
 from datetime import UTC, datetime
-from hashlib import sha256
 
 from aces_contracts.diagnostics import Diagnostic
 from aces_contracts.participant_binding import (
@@ -34,6 +33,11 @@ from aces_contracts.participant_episode import (
 )
 from aces_contracts.runtime_state import ApplyResult, RuntimeSnapshot
 
+from .participant_action_commit import (
+    as_participant_action_result,
+    participant_binding_post_state_digest,
+    reject_participant_action_outcome,
+)
 from .participant_reset import reset_many_atomically
 
 _EMPTY_ADDRESS_MSG = "participant_address must be non-empty"
@@ -48,18 +52,6 @@ _TERMINAL_EVENT_FOR_REASON: dict[ParticipantEpisodeTerminalReason, ParticipantEp
 
 def _now_iso() -> str:
     return datetime.now(UTC).isoformat().replace("+00:00", "Z")
-
-
-def _participant_binding_post_state_digest(request: ParticipantActionAdmissionRequest) -> str:
-    digest_input = "|".join(
-        (
-            request.participant_address,
-            request.action_contract_address,
-            request.observation_boundary_address,
-            request.action_instance_id,
-        )
-    )
-    return "sha256:" + sha256(digest_input.encode("utf-8")).hexdigest()
 
 
 class BaseParticipantRuntime:
@@ -268,67 +260,26 @@ class BaseParticipantRuntime:
         snapshot: RuntimeSnapshot,
     ) -> ParticipantActionApplyResult:
         address = request.participant_address
-        current_state = self._live_predecessor(
+        predecessor = self._live_predecessor(
             snapshot,
             address,
             "cannot admit participant action for {address!r}: no live episode",
         )
-        if isinstance(current_state, ApplyResult):
-            return self._as_action_result(current_state)
-        if current_state.status == ParticipantEpisodeStatus.TERMINATED:
-            return self._as_action_result(
-                self._reject(
-                    snapshot,
-                    f"cannot admit participant action for terminated participant {address!r}",
-                    address,
-                )
+        failure = self._action_precondition_failure(predecessor, snapshot, address)
+        native = None
+        if failure is None:
+            current_state = predecessor
+            native = self._model_action(request, snapshot, episode_id=current_state.episode_id)
+            failure = self._native_action_failure(
+                request,
+                native,
+                current_state,
+                snapshot,
             )
-        native = self._model_action(request, snapshot, episode_id=current_state.episode_id)
+        if failure is not None:
+            return failure
+        assert native is not None
         modeled = native.apply_result
-        if not modeled.success:
-            return ParticipantActionApplyResult(
-                success=False,
-                snapshot=modeled.snapshot,
-                diagnostics=list(modeled.diagnostics),
-                changed_addresses=list(modeled.changed_addresses),
-                details=dict(modeled.details),
-                action_result=native.action_result,
-            )
-        if native.action_result is not None and native.action_result.episode_id != current_state.episode_id:
-            return self._as_action_result(
-                self._reject(
-                    snapshot,
-                    "native action result episode_id must match the live participant episode",
-                    address,
-                )
-            )
-        if request.requires_terminal_outcome and native.action_result is None:
-            return self._reject_action_outcome(
-                snapshot,
-                modeled,
-                address,
-                "runtime.participant-autonomous-native-outcome-missing",
-                "Autonomous native execution did not publish a typed action outcome.",
-            )
-        if (
-            request.requires_terminal_outcome
-            and native.action_result is not None
-            and native.action_result.status
-            not in {
-                "succeeded",
-                "failed",
-                "partial_success",
-                "rejected",
-                "withheld",
-            }
-        ):
-            return self._reject_action_outcome(
-                snapshot,
-                modeled,
-                address,
-                "runtime.participant-autonomous-native-outcome-nonterminal",
-                "Autonomous native execution must publish a terminal typed action outcome.",
-            )
         try:
             request = replace(
                 request,
@@ -336,7 +287,7 @@ class BaseParticipantRuntime:
                 post_state_digest=native.post_state_digest or request.post_state_digest,
             )
         except (TypeError, ValueError) as exc:
-            return self._reject_action_outcome(
+            return reject_participant_action_outcome(
                 snapshot,
                 modeled,
                 address,
@@ -345,7 +296,7 @@ class BaseParticipantRuntime:
             )
         working_snapshot = modeled.snapshot
         now = _now_iso()
-        post_state_digest = request.post_state_digest or _participant_binding_post_state_digest(request)
+        post_state_digest = request.post_state_digest or participant_binding_post_state_digest(request)
         events = participant_action_binding_events(
             request,
             episode_id=current_state.episode_id,
@@ -370,36 +321,73 @@ class BaseParticipantRuntime:
             action_result=native.action_result,
         )
 
-    @staticmethod
-    def _as_action_result(result: ApplyResult) -> ParticipantActionApplyResult:
-        return ParticipantActionApplyResult(
-            success=result.success,
-            snapshot=result.snapshot,
-            diagnostics=list(result.diagnostics),
-            changed_addresses=list(result.changed_addresses),
-            details=dict(result.details),
-        )
-
-    @staticmethod
-    def _reject_action_outcome(
-        snapshot: RuntimeSnapshot,
-        modeled: ApplyResult,
-        address: str,
-        code: str,
-        message: str,
-    ) -> ParticipantActionApplyResult:
-        return ParticipantActionApplyResult(
-            success=False,
-            snapshot=snapshot,
-            diagnostics=[
-                *modeled.diagnostics,
-                Diagnostic(code=code, domain="participant", address=address, message=message),
-            ],
-            action_result=None,
-        )
-
-    def _model_action(
+    def _action_precondition_failure(
         self,
+        predecessor: ParticipantEpisodeExecutionState | ApplyResult,
+        snapshot: RuntimeSnapshot,
+        address: str,
+    ) -> ParticipantActionApplyResult | None:
+        if isinstance(predecessor, ApplyResult):
+            return as_participant_action_result(predecessor)
+        if predecessor.status == ParticipantEpisodeStatus.TERMINATED:
+            rejected = self._reject(
+                snapshot,
+                f"cannot admit participant action for terminated participant {address!r}",
+                address,
+            )
+            return as_participant_action_result(rejected)
+        return None
+
+    def _native_action_failure(
+        self,
+        request: ParticipantActionAdmissionRequest,
+        native: ParticipantNativeActionExecution,
+        current_state: ParticipantEpisodeExecutionState,
+        snapshot: RuntimeSnapshot,
+    ) -> ParticipantActionApplyResult | None:
+        modeled = native.apply_result
+        failure = None
+        if not modeled.success:
+            failure = ParticipantActionApplyResult(
+                success=False,
+                snapshot=modeled.snapshot,
+                diagnostics=list(modeled.diagnostics),
+                changed_addresses=list(modeled.changed_addresses),
+                details=dict(modeled.details),
+                action_result=native.action_result,
+            )
+        elif native.action_result is not None and native.action_result.episode_id != current_state.episode_id:
+            rejected = self._reject(
+                snapshot,
+                "native action result episode_id must match the live participant episode",
+                request.participant_address,
+            )
+            failure = as_participant_action_result(rejected)
+        elif request.requires_terminal_outcome and native.action_result is None:
+            failure = reject_participant_action_outcome(
+                snapshot,
+                modeled,
+                request.participant_address,
+                "runtime.participant-autonomous-native-outcome-missing",
+                "Autonomous native execution did not publish a typed action outcome.",
+            )
+        terminal_statuses = {"succeeded", "failed", "partial_success", "rejected", "withheld"}
+        if (
+            request.requires_terminal_outcome
+            and native.action_result is not None
+            and native.action_result.status not in terminal_statuses
+        ):
+            failure = reject_participant_action_outcome(
+                snapshot,
+                modeled,
+                request.participant_address,
+                "runtime.participant-autonomous-native-outcome-nonterminal",
+                "Autonomous native execution must publish a terminal typed action outcome.",
+            )
+        return failure
+
+    @staticmethod
+    def _model_action(
         request: ParticipantActionAdmissionRequest,
         snapshot: RuntimeSnapshot,
         *,

@@ -141,6 +141,13 @@ class ParticipantRuntimeCapabilities:
     def __post_init__(self) -> None:
         if not self.name.strip():
             raise ValueError("ParticipantRuntimeCapabilities.name must be non-empty")
+        self._validate_required_vocabularies()
+        feature_support = self._normalize_feature_support()
+        self._validate_feature_support(feature_support)
+        self._validate_autonomous_execution()
+        object.__setattr__(self, "feature_support", feature_support)
+
+    def _validate_required_vocabularies(self) -> None:
         for field_name, values in (
             ("supported_participant_roles", self.supported_participant_roles),
             ("supported_behavior_features", self.supported_behavior_features),
@@ -162,10 +169,14 @@ class ParticipantRuntimeCapabilities:
             PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE,
             self.supported_interaction_features,
         )
-        feature_support = tuple(
+
+    def _normalize_feature_support(self) -> tuple[ParticipantFeatureSupport, ...]:
+        return tuple(
             entry if isinstance(entry, ParticipantFeatureSupport) else ParticipantFeatureSupport(**entry)
             for entry in self.feature_support
         )
+
+    def _validate_feature_support(self, feature_support: tuple[ParticipantFeatureSupport, ...]) -> None:
         feature_names = tuple(entry.feature for entry in feature_support)
         _validate_unique_non_empty_strings("ParticipantRuntimeCapabilities.feature_support", feature_names)
         supported_features = self.supported_behavior_features | self.supported_interaction_features
@@ -177,52 +188,55 @@ class ParticipantRuntimeCapabilities:
                 raise ValueError(
                     "ParticipantRuntimeCapabilities.feature_support cannot declare a supported feature unsupported"
                 )
+
+    def _validate_autonomous_execution(self) -> None:
         declares_autonomous = "autonomous_execution" in self.supported_behavior_features
         if declares_autonomous != self.supports_autonomous_execution:
             raise ValueError("ParticipantRuntimeCapabilities autonomous_execution feature and support flag must agree")
         if self.supports_autonomous_execution:
-            if not self.supported_autonomous_selection_strategies:
-                raise ValueError("autonomous execution requires supported selection strategies")
-            unknown_strategies = sorted(self.supported_autonomous_selection_strategies - {"ordered_cycle"})
-            if unknown_strategies:
-                raise ValueError("unsupported autonomous selection strategies: " + ", ".join(unknown_strategies))
-            if not self.supported_autonomous_action_contracts:
-                raise ValueError("autonomous execution requires exact supported action contracts")
-            if not self.supported_autonomous_observation_boundaries:
-                raise ValueError("autonomous execution requires exact supported observation boundaries")
-            for field_name, addresses in (
-                ("supported_autonomous_action_contracts", self.supported_autonomous_action_contracts),
-                (
-                    "supported_autonomous_observation_boundaries",
-                    self.supported_autonomous_observation_boundaries,
-                ),
-                ("supported_autonomous_target_addresses", self.supported_autonomous_target_addresses),
-            ):
-                for address in addresses:
-                    require_compiled_address(address, field_name=field_name)
-            for label, value in (
-                ("max_autonomous_participants", self.max_autonomous_participants),
-                ("max_autonomous_action_attempts", self.max_autonomous_action_attempts),
-                ("max_autonomous_in_flight", self.max_autonomous_in_flight),
-            ):
-                if value is None or value < 1:
-                    raise ValueError(f"autonomous execution requires positive {label}")
-        elif (
+            self._validate_enabled_autonomous_execution()
+        elif self._has_autonomous_configuration():
+            raise ValueError("autonomous execution limits require autonomous execution support")
+
+    def _validate_enabled_autonomous_execution(self) -> None:
+        if not self.supported_autonomous_selection_strategies:
+            raise ValueError("autonomous execution requires supported selection strategies")
+        unknown_strategies = sorted(self.supported_autonomous_selection_strategies - {"ordered_cycle"})
+        if unknown_strategies:
+            raise ValueError("unsupported autonomous selection strategies: " + ", ".join(unknown_strategies))
+        if not self.supported_autonomous_action_contracts:
+            raise ValueError("autonomous execution requires exact supported action contracts")
+        if not self.supported_autonomous_observation_boundaries:
+            raise ValueError("autonomous execution requires exact supported observation boundaries")
+        self._validate_autonomous_addresses()
+        for label, value in self._autonomous_limits():
+            if value is None or value < 1:
+                raise ValueError(f"autonomous execution requires positive {label}")
+
+    def _validate_autonomous_addresses(self) -> None:
+        for field_name, addresses in (
+            ("supported_autonomous_action_contracts", self.supported_autonomous_action_contracts),
+            ("supported_autonomous_observation_boundaries", self.supported_autonomous_observation_boundaries),
+            ("supported_autonomous_target_addresses", self.supported_autonomous_target_addresses),
+        ):
+            for address in addresses:
+                require_compiled_address(address, field_name=field_name)
+
+    def _autonomous_limits(self) -> tuple[tuple[str, int | None], ...]:
+        return (
+            ("max_autonomous_participants", self.max_autonomous_participants),
+            ("max_autonomous_action_attempts", self.max_autonomous_action_attempts),
+            ("max_autonomous_in_flight", self.max_autonomous_in_flight),
+        )
+
+    def _has_autonomous_configuration(self) -> bool:
+        return bool(
             self.supported_autonomous_selection_strategies
             or self.supported_autonomous_action_contracts
             or self.supported_autonomous_observation_boundaries
             or self.supported_autonomous_target_addresses
-            or any(
-                value is not None
-                for value in (
-                    self.max_autonomous_participants,
-                    self.max_autonomous_action_attempts,
-                    self.max_autonomous_in_flight,
-                )
-            )
-        ):
-            raise ValueError("autonomous execution limits require autonomous execution support")
-        object.__setattr__(self, "feature_support", feature_support)
+            or any(value is not None for _, value in self._autonomous_limits())
+        )
 
 
 __all__ = [

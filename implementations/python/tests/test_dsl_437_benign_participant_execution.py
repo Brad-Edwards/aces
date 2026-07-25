@@ -507,8 +507,10 @@ def test_autonomous_execution_compiles_existing_participant_and_shared_time_refs
 
 
 def test_non_evaluated_autonomous_participant_must_be_green() -> None:
+    scenario_yaml = _scenario_yaml(role="red")
+
     with pytest.raises(SDLValidationError, match="must have the green role"):
-        parse_sdl(_scenario_yaml(role="red"))
+        parse_sdl(scenario_yaml)
 
 
 def test_non_evaluated_autonomous_participant_cannot_widen_evaluation_authority() -> None:
@@ -516,9 +518,10 @@ def test_non_evaluated_autonomous_participant_cannot_widen_evaluation_authority(
     payload["behavior_specifications"]["participant-behavior"]["authority_scope_refs"] = [
         "nodes.customer-portal.services.http"
     ]
+    scenario_yaml = yaml.safe_dump(payload, sort_keys=False)
 
     with pytest.raises(SDLValidationError, match="cannot carry outcome-interpretation or authority-scope refs"):
-        parse_sdl(yaml.safe_dump(payload, sort_keys=False))
+        parse_sdl(scenario_yaml)
 
 
 def test_autonomous_execution_requires_exactly_one_shared_clock_cadence() -> None:
@@ -530,9 +533,10 @@ def test_autonomous_execution_requires_exactly_one_shared_clock_cadence() -> Non
     payload["behavior_specifications"]["participant-behavior"]["autonomous_execution"][
         "temporal_constraint_refs"
     ].append("second-cadence")
+    scenario_yaml = yaml.safe_dump(payload, sort_keys=False)
 
     with pytest.raises(SDLValidationError, match="requires exactly one cadence constraint"):
-        parse_sdl(yaml.safe_dump(payload, sort_keys=False))
+        parse_sdl(scenario_yaml)
 
 
 def test_autonomous_participant_has_exactly_one_scheduler_owner() -> None:
@@ -540,9 +544,10 @@ def test_autonomous_participant_has_exactly_one_scheduler_owner() -> None:
     payload["behavior_specifications"]["second-participant-behavior"] = {
         **payload["behavior_specifications"]["participant-behavior"],
     }
+    scenario_yaml = yaml.safe_dump(payload, sort_keys=False)
 
     with pytest.raises(SDLValidationError, match="already controlled by behavior specification"):
-        parse_sdl(yaml.safe_dump(payload, sort_keys=False))
+        parse_sdl(scenario_yaml)
 
 
 def test_backend_admission_enforces_finite_autonomous_execution_limits() -> None:
@@ -746,22 +751,24 @@ def test_base_batch_reset_refuses_subclass_native_reset_without_atomic_override(
 
 def test_runtime_target_rejects_autonomous_claim_without_native_binding_method() -> None:
     runtime_model, _ = _compiled()
+    target = create_stub_target()
+    manifest = _autonomous_manifest(runtime_model)
 
     with pytest.raises(ValueError, match="bind_autonomous_action"):
-        replace(
-            create_stub_target(),
-            manifest=_autonomous_manifest(runtime_model),
-        )
+        replace(target, manifest=manifest)
 
 
 def test_runtime_target_rejects_coordinated_reset_claim_without_batch_reset_method() -> None:
     runtime_model, _ = _compiled()
+    target = create_stub_target()
+    manifest = _autonomous_manifest(runtime_model)
+    participant_runtime = _NoBatchResetParticipantRuntime()
 
     with pytest.raises(ValueError, match="reset_many"):
         replace(
-            create_stub_target(),
-            manifest=_autonomous_manifest(runtime_model),
-            participant_runtime=_NoBatchResetParticipantRuntime(),
+            target,
+            manifest=manifest,
+            participant_runtime=participant_runtime,
         )
 
 
@@ -1010,9 +1017,10 @@ def test_scheduler_fails_closed_for_nonconforming_direct_runtime(
 def test_semantics_rejects_unreachable_stepped_cadence() -> None:
     payload = yaml.safe_load(_scenario_yaml())
     payload["temporal_constraints"]["green-cadence"]["cadence_ticks"] = 5
+    scenario_yaml = yaml.safe_dump(payload, sort_keys=False)
 
     with pytest.raises(SDLValidationError, match="cadence points are unreachable"):
-        parse_sdl(yaml.safe_dump(payload, sort_keys=False))
+        parse_sdl(scenario_yaml)
 
 
 def test_semantics_rejects_externally_paced_autonomous_clock_without_driver() -> None:
@@ -1020,17 +1028,19 @@ def test_semantics_rejects_externally_paced_autonomous_clock_without_driver() ->
     progression = payload["time_progression_policies"]["scenario-progression"]
     progression["advancement_mode"] = "externally_paced"
     progression.pop("step_ticks")
+    scenario_yaml = yaml.safe_dump(payload, sort_keys=False)
 
     with pytest.raises(SDLValidationError, match="has no portable runtime transition driver"):
-        parse_sdl(yaml.safe_dump(payload, sort_keys=False))
+        parse_sdl(scenario_yaml)
 
 
 def test_semantics_rejects_negative_autonomous_cadence_start() -> None:
     payload = yaml.safe_load(_scenario_yaml())
     payload["temporal_constraints"]["green-cadence"]["start"]["tick"] = -10
+    scenario_yaml = yaml.safe_dump(payload, sort_keys=False)
 
     with pytest.raises(SDLValidationError, match="cadence points are unreachable"):
-        parse_sdl(yaml.safe_dump(payload, sort_keys=False))
+        parse_sdl(scenario_yaml)
 
 
 def test_semantics_rejects_backend_authority_for_wall_paced_autonomous_clock() -> None:
@@ -1040,9 +1050,10 @@ def test_semantics_rejects_backend_authority_for_wall_paced_autonomous_clock() -
     progression.pop("step_ticks")
     payload["clocks"]["scenario-clock"]["authority_kind"] = "backend"
     payload["clocks"]["scenario-clock"]["authority_ref"] = "backend.clock"
+    scenario_yaml = yaml.safe_dump(payload, sort_keys=False)
 
     with pytest.raises(SDLValidationError, match="must use runtime authority"):
-        parse_sdl(yaml.safe_dump(payload, sort_keys=False))
+        parse_sdl(scenario_yaml)
 
 
 def test_runtime_manager_automatically_drives_wall_paced_participant_clock() -> None:

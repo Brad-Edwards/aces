@@ -12,6 +12,8 @@ from aces_contracts.diagnostics import Diagnostic
 from aces_contracts.runtime_state import ApplyResult, RuntimeSnapshot
 from aces_processor.models import CompiledTimeModel, ParticipantAutonomousExecutionRuntime
 
+_UNEXPECTED_FAILURES = (Exception,)
+
 
 @dataclass(frozen=True)
 class _ClockRate:
@@ -101,79 +103,107 @@ class ParticipantClockDriver:
 
     def _run(self) -> None:
         try:
-            while not self._stop.is_set():
-                transition = self._next_transition()
-                if transition is None:
-                    self._stop.wait(0.05)
-                    continue
-                _clock_address, _ticks, delay = transition
-                if delay > 0:
-                    if self._stop.wait(delay):
-                        return
-                    # Lifecycle controls may have changed the clock during the wait.
-                    continue
-                with self._lock:
-                    current = self._next_transition()
-                    if current is None:
-                        continue
-                    clock_address, ticks, current_delay = current
-                    if current_delay > 0:
-                        continue
-                    result = self._service_due() if ticks == 0 else self._advance(clock_address, ticks)
-                if not result.success:
-                    self._failure = result
-                    return
-        except Exception as exc:  # noqa: BLE001 - failure must remain observable
-            self._failure = ApplyResult(
-                success=False,
-                snapshot=self._snapshot(),
-                diagnostics=[
-                    Diagnostic(
-                        code="runtime.participant-clock-driver-failed",
-                        domain="participant",
-                        address="runtime.participant-clock-driver",
-                        message=f"Participant clock driver terminated unexpectedly: {exc}",
-                    )
-                ],
-            )
+            keep_running = True
+            while keep_running and not self._stop.is_set():
+                keep_running = self._run_once()
+        except _UNEXPECTED_FAILURES as exc:
+            self._record_unexpected_failure(exc)
+
+    def _run_once(self) -> bool:
+        transition = self._next_transition()
+        keep_running = True
+        if transition is None:
+            self._stop.wait(0.05)
+        elif transition[2] > 0:
+            delay = transition[2]
+            self._stop.wait(delay)
+            keep_running = not self._stop.is_set()
+        else:
+            result = self._service_current_transition()
+            if result is not None and not result.success:
+                self._failure = result
+                keep_running = False
+        return keep_running
+
+    def _service_current_transition(self) -> ApplyResult | None:
+        with self._lock:
+            current = self._next_transition()
+            if current is None:
+                return None
+            clock_address, ticks, current_delay = current
+            if current_delay > 0:
+                return None
+            return self._service_due() if ticks == 0 else self._advance(clock_address, ticks)
+
+    def _record_unexpected_failure(self, exc: BaseException) -> None:
+        self._failure = ApplyResult(
+            success=False,
+            snapshot=self._snapshot(),
+            diagnostics=[
+                Diagnostic(
+                    code="runtime.participant-clock-driver-failed",
+                    domain="participant",
+                    address="runtime.participant-clock-driver",
+                    message=f"Participant clock driver terminated unexpectedly: {exc}",
+                )
+            ],
+        )
 
     def _next_transition(self) -> tuple[str, int, float] | None:
         with self._lock:
             snapshot = self._snapshot()
             if snapshot.time_model_state is None:
                 return None
-            candidates: list[tuple[float, str, int]] = []
-            now = time.monotonic()
-            active_keys: set[tuple[str, int, int, int]] = set()
-            for rate in self._rates:
-                clock = snapshot.time_model_state.clocks.get(rate.clock_address)
-                if clock is None or clock.state != "running":
-                    continue
-                next_ticks = []
-                for payload in snapshot.participant_autonomous_execution_states.values():
-                    if (
-                        payload.get("clock_address") == rate.clock_address
-                        and payload.get("lifecycle_state") == "running"
-                    ):
-                        next_ticks.append(int(payload["next_tick"]))
-                if not next_ticks:
-                    continue
-                next_tick = min(next_ticks)
-                current_tick = clock.coordinate.tick
-                if next_tick <= current_tick:
-                    return rate.clock_address, 0, 0.0
-                key = (rate.clock_address, clock.coordinate.segment, current_tick, next_tick)
+            return self._next_transition_for_snapshot(snapshot)
+
+    def _next_transition_for_snapshot(self, snapshot: RuntimeSnapshot) -> tuple[str, int, float] | None:
+        candidates: list[tuple[float, str, int]] = []
+        now = time.monotonic()
+        active_keys: set[tuple[str, int, int, int]] = set()
+        for rate in self._rates:
+            candidate, key = self._rate_transition(snapshot, rate, now)
+            if candidate is None:
+                continue
+            if candidate[0] == 0.0:
+                return candidate[1], candidate[2], candidate[0]
+            candidates.append(candidate)
+            if key is not None:
                 active_keys.add(key)
-                deadline = self._deadlines.setdefault(
-                    key,
-                    now + float(rate.seconds_per_tick * (next_tick - current_tick)),
-                )
-                candidates.append((max(0.0, deadline - now), rate.clock_address, next_tick - current_tick))
-            self._deadlines = {key: value for key, value in self._deadlines.items() if key in active_keys}
-            if not candidates:
-                return None
-            delay, clock_address, ticks = min(candidates)
-            return clock_address, ticks, delay
+        self._deadlines = {key: value for key, value in self._deadlines.items() if key in active_keys}
+        if not candidates:
+            return None
+        delay, clock_address, ticks = min(candidates)
+        return clock_address, ticks, delay
+
+    def _rate_transition(
+        self,
+        snapshot: RuntimeSnapshot,
+        rate: _ClockRate,
+        now: float,
+    ) -> tuple[tuple[float, str, int] | None, tuple[str, int, int, int] | None]:
+        assert snapshot.time_model_state is not None
+        clock = snapshot.time_model_state.clocks.get(rate.clock_address)
+        next_tick = self._next_participant_tick(snapshot, rate.clock_address)
+        if clock is None or clock.state != "running" or next_tick is None:
+            return None, None
+        current_tick = clock.coordinate.tick
+        if next_tick <= current_tick:
+            return (0.0, rate.clock_address, 0), None
+        key = (rate.clock_address, clock.coordinate.segment, current_tick, next_tick)
+        deadline = self._deadlines.setdefault(
+            key,
+            now + float(rate.seconds_per_tick * (next_tick - current_tick)),
+        )
+        return (max(0.0, deadline - now), rate.clock_address, next_tick - current_tick), key
+
+    @staticmethod
+    def _next_participant_tick(snapshot: RuntimeSnapshot, clock_address: str) -> int | None:
+        next_ticks = [
+            int(payload["next_tick"])
+            for payload in snapshot.participant_autonomous_execution_states.values()
+            if payload.get("clock_address") == clock_address and payload.get("lifecycle_state") == "running"
+        ]
+        return min(next_ticks) if next_ticks else None
 
 
 __all__ = ["ParticipantClockDriver"]

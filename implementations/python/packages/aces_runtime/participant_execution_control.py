@@ -151,32 +151,19 @@ class RuntimeParticipantExecutionMixin:
         clock_address: str,
     ) -> ApplyResult | None:
         if method_name == "reset":
-            if self._target.participant_runtime is None or self._participant_execution_time_model is None:
-                return None
-            result = self._participant_scheduler.reset_clock(
-                self._participant_execution_policies,
-                self._participant_execution_time_model,
-                self._target.participant_runtime,
-                self._snapshot,
-                clock_address,
-                reset_participants=False,
-            )
-            self._snapshot = result.snapshot
-            return result
+            return self._sync_participant_reset(clock_address)
         lifecycle = {"pause": "paused", "resume": "running"}.get(method_name)
-        lifecycle_result = None
-        if lifecycle is not None:
-            lifecycle_result = self._participant_scheduler.set_clock_lifecycle(
-                self._snapshot,
-                clock_address,
-                lifecycle,
-            )
-            self._snapshot = lifecycle_result.snapshot
-        if method_name not in {"advance", "jump", "resume"}:
-            return lifecycle_result
-        due_result = self.run_due_participant_actions()
-        if lifecycle_result is None:
-            return due_result
+        result = self._sync_participant_lifecycle(clock_address, lifecycle)
+        if method_name in {"advance", "jump", "resume"}:
+            due_result = self.run_due_participant_actions()
+            result = due_result if result is None else self._combined_clock_sync_result(result, due_result)
+        return result
+
+    @staticmethod
+    def _combined_clock_sync_result(
+        lifecycle_result: ApplyResult,
+        due_result: ApplyResult,
+    ) -> ApplyResult:
         return ApplyResult(
             success=due_result.success,
             snapshot=due_result.snapshot,
@@ -184,16 +171,42 @@ class RuntimeParticipantExecutionMixin:
             changed_addresses=list(dict.fromkeys([*lifecycle_result.changed_addresses, *due_result.changed_addresses])),
         )
 
+    def _sync_participant_reset(self, clock_address: str) -> ApplyResult | None:
+        if self._target.participant_runtime is None or self._participant_execution_time_model is None:
+            return None
+        result = self._participant_scheduler.reset_clock(
+            self._participant_execution_policies,
+            self._participant_execution_time_model,
+            self._target.participant_runtime,
+            self._snapshot,
+            clock_address,
+            reset_participants=False,
+        )
+        self._snapshot = result.snapshot
+        return result
+
+    def _sync_participant_lifecycle(
+        self,
+        clock_address: str,
+        lifecycle: str | None,
+    ) -> ApplyResult | None:
+        if lifecycle is None:
+            return None
+        result = self._participant_scheduler.set_clock_lifecycle(
+            self._snapshot,
+            clock_address,
+            lifecycle,
+        )
+        self._snapshot = result.snapshot
+        return result
+
     def _participant_execution_clock_reset_requests(
         self,
         clock_address: str,
     ) -> tuple[ParticipantEpisodeResetRequest, ...]:
-        if self._snapshot.time_model_state is None:
+        segment = self._next_clock_segment(clock_address)
+        if segment is None:
             return ()
-        clock = self._snapshot.time_model_state.clocks.get(clock_address)
-        if clock is None:
-            return ()
-        segment = clock.coordinate.segment + 1
         participant_addresses = {
             participant_address
             for policy in self._participant_execution_policies
@@ -209,11 +222,39 @@ class RuntimeParticipantExecutionMixin:
             for participant_address in sorted(participant_addresses)
         )
 
+    def _next_clock_segment(self, clock_address: str) -> int | None:
+        if self._snapshot.time_model_state is None:
+            return None
+        clock = self._snapshot.time_model_state.clocks.get(clock_address)
+        return None if clock is None else clock.coordinate.segment + 1
+
     def _participant_execution_clock_preflight(
         self,
         method_name: str,
         args: tuple[object, ...],
     ) -> ApplyResult | None:
+        transition = self._participant_clock_transition(method_name, args)
+        if transition is None:
+            return None
+        clock_address, current_tick, resulting_tick = transition
+        for state_address, payload in self._snapshot.participant_autonomous_execution_states.items():
+            state = ParticipantAutonomousExecutionStateModel.model_validate(payload)
+            failure = self._participant_cadence_skip_failure(
+                state_address,
+                state,
+                clock_address,
+                current_tick,
+                resulting_tick,
+            )
+            if failure is not None:
+                return failure
+        return None
+
+    def _participant_clock_transition(
+        self,
+        method_name: str,
+        args: tuple[object, ...],
+    ) -> tuple[str, int, int] | None:
         if method_name not in {"advance", "jump"} or self._snapshot.time_model_state is None:
             return None
         clock_address = str(args[0])
@@ -222,29 +263,35 @@ class RuntimeParticipantExecutionMixin:
             return None
         current_tick = clock.coordinate.tick
         resulting_tick = current_tick + int(args[1]) if method_name == "advance" else int(args[1])
-        if resulting_tick <= current_tick:
+        return (clock_address, current_tick, resulting_tick) if resulting_tick > current_tick else None
+
+    def _participant_cadence_skip_failure(
+        self,
+        state_address: str,
+        state: ParticipantAutonomousExecutionStateModel,
+        clock_address: str,
+        current_tick: int,
+        resulting_tick: int,
+    ) -> ApplyResult | None:
+        belongs_to_clock = state.clock_address == clock_address and state.lifecycle_state == "running"
+        skips_cadence = state.next_tick < current_tick or current_tick < state.next_tick < resulting_tick
+        if not belongs_to_clock or not skips_cadence:
             return None
-        for state_address, payload in self._snapshot.participant_autonomous_execution_states.items():
-            state = ParticipantAutonomousExecutionStateModel.model_validate(payload)
-            if state.clock_address != clock_address or state.lifecycle_state != "running":
-                continue
-            if state.next_tick < current_tick or current_tick < state.next_tick < resulting_tick:
-                return ApplyResult(
-                    success=False,
-                    snapshot=self._snapshot,
-                    diagnostics=[
-                        Diagnostic(
-                            code="runtime.participant-autonomous-cadence-skipped",
-                            domain="participant",
-                            address=state_address,
-                            message=(
-                                f"Clock transition to tick {resulting_tick} would skip governed participant "
-                                f"cadence tick {state.next_tick}; advance to the cadence boundary first."
-                            ),
-                        )
-                    ],
+        return ApplyResult(
+            success=False,
+            snapshot=self._snapshot,
+            diagnostics=[
+                Diagnostic(
+                    code="runtime.participant-autonomous-cadence-skipped",
+                    domain="participant",
+                    address=state_address,
+                    message=(
+                        f"Clock transition to tick {resulting_tick} would skip governed participant "
+                        f"cadence tick {state.next_tick}; advance to the cadence boundary first."
+                    ),
                 )
-        return None
+            ],
+        )
 
     def _initialize_participant_scheduler(self) -> None:
         self._participant_execution_lock = threading.RLock()

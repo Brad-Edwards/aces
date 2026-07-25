@@ -106,25 +106,25 @@ def _snapshot(state: dict[str, object] | None = None) -> RuntimeSnapshot:
 
 
 def test_runtime_snapshot_rejects_misaddressed_autonomous_state() -> None:
+    autonomous_states = {
+        f"{POLICY_ADDRESS}.state.participant.behavior.other": _state(),
+    }
+
     with pytest.raises(ValueError, match="map key must equal"):
-        RuntimeSnapshot(
-            participant_autonomous_execution_states={
-                f"{POLICY_ADDRESS}.state.participant.behavior.other": _state(),
-            }
-        )
+        RuntimeSnapshot(participant_autonomous_execution_states=autonomous_states)
 
 
 def test_runtime_snapshot_rejects_unaccounted_autonomous_attempts() -> None:
-    with pytest.raises(ValueError, match="attempted_actions must equal"):
-        RuntimeSnapshot(
-            participant_autonomous_execution_states={
-                STATE_ADDRESS: _state(
-                    lifecycle_state="completed",
-                    attempted_actions=2,
-                    succeeded_actions=1,
-                )
-            }
+    autonomous_states = {
+        STATE_ADDRESS: _state(
+            lifecycle_state="completed",
+            attempted_actions=2,
+            succeeded_actions=1,
         )
+    }
+
+    with pytest.raises(ValueError, match="attempted_actions must equal"):
+        RuntimeSnapshot(participant_autonomous_execution_states=autonomous_states)
 
 
 @pytest.mark.parametrize(
@@ -139,12 +139,10 @@ def test_runtime_snapshot_validates_policy_identity_and_time_segment(
     value: object,
     message: str,
 ) -> None:
+    autonomous_states = {STATE_ADDRESS: _state(**{field: value})}
+
     with pytest.raises(ValueError, match=message):
-        RuntimeSnapshot(
-            participant_autonomous_execution_states={
-                STATE_ADDRESS: _state(**{field: value}),
-            }
-        )
+        RuntimeSnapshot(participant_autonomous_execution_states=autonomous_states)
 
 
 def test_control_plane_store_round_trips_valid_autonomous_state(tmp_path: Path) -> None:
@@ -162,11 +160,13 @@ def test_control_plane_store_round_trips_valid_autonomous_state(tmp_path: Path) 
 def test_control_plane_stores_revalidate_mutated_autonomous_state(tmp_path: Path) -> None:
     snapshot = _snapshot()
     snapshot.participant_autonomous_execution_states[STATE_ADDRESS] = _state(attempted_actions=2)
+    memory_store = InMemoryControlPlaneStore()
+    local_store = LocalControlPlaneStore(tmp_path / "control-plane")
 
     with pytest.raises(ValueError, match="attempted_actions must equal"):
-        InMemoryControlPlaneStore().save_snapshot(snapshot)
+        memory_store.save_snapshot(snapshot)
     with pytest.raises(ValueError, match="attempted_actions must equal"):
-        LocalControlPlaneStore(tmp_path / "control-plane").save_snapshot(snapshot)
+        local_store.save_snapshot(snapshot)
 
 
 def test_local_control_plane_store_rejects_invalid_durable_state(tmp_path: Path) -> None:
@@ -221,14 +221,16 @@ def test_conformance_reports_inconsistent_terminal_autonomous_state() -> None:
 def test_durable_snapshot_rejects_clock_segment_mismatch() -> None:
     snapshot = _snapshot()
     snapshot.time_model_state = _time_state(segment=1)
+    store = InMemoryControlPlaneStore()
 
     with pytest.raises(ValueError, match="must match the bound shared clock segment"):
-        InMemoryControlPlaneStore().save_snapshot(snapshot)
+        store.save_snapshot(snapshot)
 
 
 def test_durable_snapshot_rejects_episode_mismatch() -> None:
     snapshot = _snapshot()
     snapshot.participant_episode_results[PARTICIPANT_ADDRESS]["episode_id"] = "wrong-episode"
+    store = InMemoryControlPlaneStore()
 
     with pytest.raises(ValueError, match="must match the live participant episode"):
-        InMemoryControlPlaneStore().save_snapshot(snapshot)
+        store.save_snapshot(snapshot)

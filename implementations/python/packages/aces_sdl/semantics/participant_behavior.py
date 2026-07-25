@@ -52,6 +52,8 @@ class _BehaviorSpecificationReferenceContext:
     observation_boundary_names: set[str]
     outcome_rule_names: set[str]
     agents_by_name: Mapping[str, object]
+    action_contracts: Mapping[str, object]
+    observation_boundaries: Mapping[str, object]
     clocks: Mapping[str, object]
     time_progression_policies: Mapping[str, object]
     temporal_constraints: Mapping[str, object]
@@ -411,6 +413,343 @@ def _behavior_specification_reference_issues(
     return issues
 
 
+@dataclass(frozen=True)
+class _AutonomousExecutionReferenceContext:
+    spec_name: str
+    behavior_spec: object
+    policy: object
+    references: _BehaviorSpecificationReferenceContext
+    participants: set[str]
+    is_unresolved: Callable[[object], bool]
+
+
+@dataclass(frozen=True)
+class _AutonomousTimeBindings:
+    clock: object | None
+    progression: object | None
+    cadence: object | None
+    cadence_count: int
+
+
+def _autonomous_issue(
+    context: _AutonomousExecutionReferenceContext,
+    code: str,
+    ref: object,
+    *,
+    participant_name: str = "",
+    message: str = "",
+) -> ParticipantBehaviorIssue:
+    return ParticipantBehaviorIssue(
+        code=code,
+        participant_name=participant_name,
+        spec_name=context.spec_name,
+        ref=str(ref),
+        message=message,
+    )
+
+
+def _autonomous_declaration_issues(
+    context: _AutonomousExecutionReferenceContext,
+) -> list[ParticipantBehaviorIssue]:
+    issues: list[ParticipantBehaviorIssue] = []
+    if not getattr(context.behavior_spec, "participant_refs", None):
+        issues.append(
+            _autonomous_issue(
+                context,
+                "participant.autonomous-explicit-participants-required",
+                context.spec_name,
+            )
+        )
+    required_features = {
+        "action_contracts",
+        "autonomous_execution",
+        "behavior_history",
+        "observation_boundaries",
+        "temporal_contracts",
+    }
+    declared_features = {str(ref) for ref in getattr(context.behavior_spec, "backend_feature_support_refs", []) or []}
+    for missing_feature in sorted(required_features - declared_features):
+        issues.append(
+            _autonomous_issue(
+                context,
+                "participant.autonomous-feature-requirement-missing",
+                missing_feature,
+            )
+        )
+    return issues
+
+
+def _autonomous_action_issues(
+    context: _AutonomousExecutionReferenceContext,
+) -> list[ParticipantBehaviorIssue]:
+    issues: list[ParticipantBehaviorIssue] = []
+    parent_actions = {str(ref) for ref in getattr(context.behavior_spec, "action_contract_refs", []) or []}
+    for action_ref in context.policy.action_order:
+        if context.is_unresolved(action_ref):
+            continue
+        if action_ref not in parent_actions:
+            issues.append(_autonomous_issue(context, "participant.autonomous-action-widens-parent", action_ref))
+        for participant_name in sorted(context.participants):
+            agent = context.references.agents_by_name[participant_name]
+            agent_actions = {str(ref) for ref in getattr(agent, "actions", []) or []}
+            if action_ref not in agent_actions:
+                issues.append(
+                    _autonomous_issue(
+                        context,
+                        "participant.autonomous-action-outside-participant",
+                        action_ref,
+                        participant_name=participant_name,
+                    )
+                )
+    return issues
+
+
+def _autonomous_boundary_issues(
+    context: _AutonomousExecutionReferenceContext,
+) -> list[ParticipantBehaviorIssue]:
+    boundary_ref = context.policy.observation_boundary_ref
+    if context.is_unresolved(boundary_ref):
+        return []
+    issues: list[ParticipantBehaviorIssue] = []
+    parent_boundaries = {str(ref) for ref in getattr(context.behavior_spec, "observation_boundary_refs", []) or []}
+    if boundary_ref not in parent_boundaries:
+        issues.append(_autonomous_issue(context, "participant.autonomous-boundary-widens-parent", boundary_ref))
+    for participant_name in sorted(context.participants):
+        agent = context.references.agents_by_name[participant_name]
+        agent_boundaries = {str(ref) for ref in getattr(agent, "observation_boundaries", []) or []}
+        if boundary_ref not in agent_boundaries:
+            issues.append(
+                _autonomous_issue(
+                    context,
+                    "participant.autonomous-boundary-outside-participant",
+                    boundary_ref,
+                    participant_name=participant_name,
+                )
+            )
+    return issues
+
+
+def _autonomous_clock_binding_issues(
+    context: _AutonomousExecutionReferenceContext,
+) -> tuple[list[ParticipantBehaviorIssue], object | None, object | None]:
+    policy = context.policy
+    clock = context.references.clocks.get(policy.clock_ref)
+    progression = context.references.time_progression_policies.get(policy.progression_policy_ref)
+    issues: list[ParticipantBehaviorIssue] = []
+    if clock is None and not context.is_unresolved(policy.clock_ref):
+        issues.append(_autonomous_issue(context, "participant.autonomous-clock-unbound", policy.clock_ref))
+    if progression is None and not context.is_unresolved(policy.progression_policy_ref):
+        issues.append(
+            _autonomous_issue(context, "participant.autonomous-progression-unbound", policy.progression_policy_ref)
+        )
+    elif progression is not None and getattr(progression, "clock_ref", None) != policy.clock_ref:
+        issues.append(
+            _autonomous_issue(
+                context,
+                "participant.autonomous-progression-clock-mismatch",
+                policy.progression_policy_ref,
+            )
+        )
+    return issues, clock, progression
+
+
+def _autonomous_constraint_issues(
+    context: _AutonomousExecutionReferenceContext,
+) -> tuple[list[ParticipantBehaviorIssue], object | None, int]:
+    issues: list[ParticipantBehaviorIssue] = []
+    cadence = None
+    cadence_count = 0
+    for constraint_ref in context.policy.temporal_constraint_refs:
+        if context.is_unresolved(constraint_ref):
+            continue
+        constraint = context.references.temporal_constraints.get(constraint_ref)
+        if constraint is None:
+            issues.append(_autonomous_issue(context, "participant.autonomous-constraint-unbound", constraint_ref))
+            continue
+        kind = getattr(getattr(constraint, "constraint_kind", None), "value", "")
+        cadence_count += int(kind == "cadence")
+        if kind == "cadence":
+            cadence = constraint
+        if getattr(constraint, "clock_ref", None) != context.policy.clock_ref:
+            issues.append(
+                _autonomous_issue(
+                    context,
+                    "participant.autonomous-constraint-clock-mismatch",
+                    constraint_ref,
+                )
+            )
+    if cadence_count != 1:
+        issues.append(_autonomous_issue(context, "participant.autonomous-cadence-missing", context.policy.clock_ref))
+    return issues, cadence, cadence_count
+
+
+def _autonomous_time_binding_issues(
+    context: _AutonomousExecutionReferenceContext,
+) -> tuple[list[ParticipantBehaviorIssue], _AutonomousTimeBindings]:
+    clock_issues, clock, progression = _autonomous_clock_binding_issues(context)
+    constraint_issues, cadence, cadence_count = _autonomous_constraint_issues(context)
+    bindings = _AutonomousTimeBindings(
+        clock=clock,
+        progression=progression,
+        cadence=cadence,
+        cadence_count=cadence_count,
+    )
+    return [*clock_issues, *constraint_issues], bindings
+
+
+def _autonomous_progression_issues(
+    context: _AutonomousExecutionReferenceContext,
+    bindings: _AutonomousTimeBindings,
+) -> list[ParticipantBehaviorIssue]:
+    policy = context.policy
+    progression_mode = getattr(getattr(bindings.progression, "advancement_mode", None), "value", "")
+    clock_authority = getattr(getattr(bindings.clock, "authority_kind", None), "value", "")
+    issues: list[ParticipantBehaviorIssue] = []
+    if progression_mode == "externally_paced":
+        issues.append(
+            _autonomous_issue(
+                context,
+                "participant.autonomous-progression-driver-unsupported",
+                policy.progression_policy_ref,
+            )
+        )
+    if progression_mode in {"real_time", "dilated"} and clock_authority != "runtime":
+        issues.append(
+            _autonomous_issue(context, "participant.autonomous-clock-authority-unsupported", policy.clock_ref)
+        )
+    if bindings.cadence_count == 1 and bindings.cadence is not None:
+        start = getattr(bindings.cadence, "start", None)
+        start_tick = getattr(start, "tick", 0) if start is not None else 0
+        if not isinstance(start_tick, int) or start_tick < 0:
+            issues.append(
+                _autonomous_issue(
+                    context,
+                    "participant.autonomous-cadence-unreachable",
+                    policy.progression_policy_ref,
+                )
+            )
+    issues.extend(_autonomous_stepped_cadence_issues(context, bindings, progression_mode))
+    return issues
+
+
+def _autonomous_stepped_cadence_issues(
+    context: _AutonomousExecutionReferenceContext,
+    bindings: _AutonomousTimeBindings,
+    progression_mode: str,
+) -> list[ParticipantBehaviorIssue]:
+    if progression_mode != "stepped" or bindings.cadence_count != 1 or bindings.cadence is None:
+        return []
+    step_ticks = getattr(bindings.progression, "step_ticks", None)
+    cadence_ticks = getattr(bindings.cadence, "cadence_ticks", None)
+    start = getattr(bindings.cadence, "start", None)
+    start_tick = getattr(start, "tick", 0) if start is not None else 0
+    reachable = (
+        isinstance(step_ticks, int)
+        and isinstance(cadence_ticks, int)
+        and start_tick >= 0
+        and not start_tick % step_ticks
+        and not cadence_ticks % step_ticks
+    )
+    if reachable:
+        return []
+    return [
+        _autonomous_issue(
+            context,
+            "participant.autonomous-cadence-unreachable",
+            context.policy.progression_policy_ref,
+        )
+    ]
+
+
+def _autonomous_non_evaluated_issues(
+    context: _AutonomousExecutionReferenceContext,
+) -> list[ParticipantBehaviorIssue]:
+    issues: list[ParticipantBehaviorIssue] = []
+    for participant_name in sorted(context.participants):
+        role = context.references.participant_roles_by_agent.get(participant_name, "")
+        if role != "green":
+            issues.append(
+                _autonomous_issue(
+                    context,
+                    "participant.autonomous-non-evaluated-role-not-green",
+                    role,
+                    participant_name=participant_name,
+                )
+            )
+        has_objective = any(
+            getattr(objective, "agent", None) == participant_name
+            for objective in context.references.objectives.values()
+        )
+        if has_objective:
+            issues.append(
+                _autonomous_issue(
+                    context,
+                    "participant.autonomous-non-evaluated-objective-authority",
+                    participant_name,
+                    participant_name=participant_name,
+                )
+            )
+    has_widened_authority = getattr(context.behavior_spec, "outcome_interpretation_rule_refs", None) or getattr(
+        context.behavior_spec, "authority_scope_refs", None
+    )
+    if has_widened_authority:
+        issues.append(
+            _autonomous_issue(
+                context,
+                "participant.autonomous-non-evaluated-authority-widening",
+                context.spec_name,
+            )
+        )
+    return issues
+
+
+def _autonomous_declared_authority_issues(
+    context: _AutonomousExecutionReferenceContext,
+) -> list[ParticipantBehaviorIssue]:
+    authority = context.policy.evaluation_authority
+    issues: list[ParticipantBehaviorIssue] = []
+    for objective_ref in authority.objective_refs:
+        if context.is_unresolved(objective_ref):
+            continue
+        objective_name = _resolve_section_ref(objective_ref, "objectives", context.references.objectives)
+        if objective_name is None:
+            issues.append(
+                _autonomous_issue(
+                    context,
+                    "participant.autonomous-evaluation-objective-unbound",
+                    objective_ref,
+                )
+            )
+    unsupported_authority_refs = (
+        ("proof_producer_refs", authority.proof_producer_refs),
+        ("score_authority_refs", authority.score_authority_refs),
+        ("receipt_authority_refs", authority.receipt_authority_refs),
+    )
+    for field_name, refs in unsupported_authority_refs:
+        for ref in refs:
+            if not context.is_unresolved(ref):
+                issues.append(
+                    _autonomous_issue(
+                        context,
+                        "participant.autonomous-evaluation-authority-namespace-unsupported",
+                        ref,
+                        message=field_name,
+                    )
+                )
+    return issues
+
+
+def _autonomous_evaluation_issues(
+    context: _AutonomousExecutionReferenceContext,
+) -> list[ParticipantBehaviorIssue]:
+    authority_mode = getattr(context.policy.evaluation_authority.mode, "value", "")
+    if authority_mode == "none":
+        return _autonomous_non_evaluated_issues(context)
+    if authority_mode == "declared":
+        return _autonomous_declared_authority_issues(context)
+    return []
+
+
 def _autonomous_execution_reference_issues(
     *,
     spec_name: str,
@@ -421,287 +760,23 @@ def _autonomous_execution_reference_issues(
     policy = getattr(behavior_spec, "autonomous_execution", None)
     if policy is None:
         return []
-    issues: list[ParticipantBehaviorIssue] = []
-    if not getattr(behavior_spec, "participant_refs", None):
-        issues.append(
-            ParticipantBehaviorIssue(
-                code="participant.autonomous-explicit-participants-required",
-                participant_name="",
-                spec_name=spec_name,
-                ref=spec_name,
-            )
-        )
-    required_features = {
-        "action_contracts",
-        "autonomous_execution",
-        "behavior_history",
-        "observation_boundaries",
-        "temporal_contracts",
-    }
-    declared_features = {str(ref) for ref in getattr(behavior_spec, "backend_feature_support_refs", []) or []}
-    for missing_feature in sorted(required_features - declared_features):
-        issues.append(
-            ParticipantBehaviorIssue(
-                code="participant.autonomous-feature-requirement-missing",
-                participant_name="",
-                spec_name=spec_name,
-                ref=missing_feature,
-            )
-        )
-    participants = _tool_affordance_participants(behavior_spec, reference_context)
-    parent_actions = {str(ref) for ref in getattr(behavior_spec, "action_contract_refs", []) or []}
-    parent_boundaries = {str(ref) for ref in getattr(behavior_spec, "observation_boundary_refs", []) or []}
-
-    for action_ref in policy.action_order:
-        if is_unresolved(action_ref):
-            continue
-        if action_ref not in parent_actions:
-            issues.append(
-                ParticipantBehaviorIssue(
-                    code="participant.autonomous-action-widens-parent",
-                    participant_name="",
-                    spec_name=spec_name,
-                    ref=action_ref,
-                )
-            )
-        for participant_name in sorted(participants):
-            agent_actions = {
-                str(ref) for ref in getattr(reference_context.agents_by_name[participant_name], "actions", []) or []
-            }
-            if action_ref not in agent_actions:
-                issues.append(
-                    ParticipantBehaviorIssue(
-                        code="participant.autonomous-action-outside-participant",
-                        participant_name=participant_name,
-                        spec_name=spec_name,
-                        ref=action_ref,
-                    )
-                )
-
-    boundary_ref = policy.observation_boundary_ref
-    if not is_unresolved(boundary_ref):
-        if boundary_ref not in parent_boundaries:
-            issues.append(
-                ParticipantBehaviorIssue(
-                    code="participant.autonomous-boundary-widens-parent",
-                    participant_name="",
-                    spec_name=spec_name,
-                    ref=boundary_ref,
-                )
-            )
-        for participant_name in sorted(participants):
-            agent_boundaries = {
-                str(ref)
-                for ref in getattr(
-                    reference_context.agents_by_name[participant_name],
-                    "observation_boundaries",
-                    [],
-                )
-                or []
-            }
-            if boundary_ref not in agent_boundaries:
-                issues.append(
-                    ParticipantBehaviorIssue(
-                        code="participant.autonomous-boundary-outside-participant",
-                        participant_name=participant_name,
-                        spec_name=spec_name,
-                        ref=boundary_ref,
-                    )
-                )
-
-    clock = reference_context.clocks.get(policy.clock_ref)
-    progression = reference_context.time_progression_policies.get(policy.progression_policy_ref)
-    if clock is None and not is_unresolved(policy.clock_ref):
-        issues.append(
-            ParticipantBehaviorIssue(
-                code="participant.autonomous-clock-unbound",
-                participant_name="",
-                spec_name=spec_name,
-                ref=policy.clock_ref,
-            )
-        )
-    if progression is None and not is_unresolved(policy.progression_policy_ref):
-        issues.append(
-            ParticipantBehaviorIssue(
-                code="participant.autonomous-progression-unbound",
-                participant_name="",
-                spec_name=spec_name,
-                ref=policy.progression_policy_ref,
-            )
-        )
-    elif progression is not None and getattr(progression, "clock_ref", None) != policy.clock_ref:
-        issues.append(
-            ParticipantBehaviorIssue(
-                code="participant.autonomous-progression-clock-mismatch",
-                participant_name="",
-                spec_name=spec_name,
-                ref=policy.progression_policy_ref,
-            )
-        )
-
-    cadence_count = 0
-    cadence = None
-    for constraint_ref in policy.temporal_constraint_refs:
-        if is_unresolved(constraint_ref):
-            continue
-        constraint = reference_context.temporal_constraints.get(constraint_ref)
-        if constraint is None:
-            issues.append(
-                ParticipantBehaviorIssue(
-                    code="participant.autonomous-constraint-unbound",
-                    participant_name="",
-                    spec_name=spec_name,
-                    ref=constraint_ref,
-                )
-            )
-            continue
-        kind = getattr(getattr(constraint, "constraint_kind", None), "value", "")
-        cadence_count += int(kind == "cadence")
-        if kind == "cadence":
-            cadence = constraint
-        if getattr(constraint, "clock_ref", None) != policy.clock_ref:
-            issues.append(
-                ParticipantBehaviorIssue(
-                    code="participant.autonomous-constraint-clock-mismatch",
-                    participant_name="",
-                    spec_name=spec_name,
-                    ref=constraint_ref,
-                )
-            )
-    if cadence_count != 1:
-        issues.append(
-            ParticipantBehaviorIssue(
-                code="participant.autonomous-cadence-missing",
-                participant_name="",
-                spec_name=spec_name,
-                ref=policy.clock_ref,
-            )
-        )
-    progression_mode = getattr(getattr(progression, "advancement_mode", None), "value", "")
-    clock_authority = getattr(getattr(clock, "authority_kind", None), "value", "")
-    if progression_mode == "externally_paced":
-        issues.append(
-            ParticipantBehaviorIssue(
-                code="participant.autonomous-progression-driver-unsupported",
-                participant_name="",
-                spec_name=spec_name,
-                ref=policy.progression_policy_ref,
-            )
-        )
-    if progression_mode in {"real_time", "dilated"} and clock_authority != "runtime":
-        issues.append(
-            ParticipantBehaviorIssue(
-                code="participant.autonomous-clock-authority-unsupported",
-                participant_name="",
-                spec_name=spec_name,
-                ref=policy.clock_ref,
-            )
-        )
-    if cadence_count == 1 and cadence is not None:
-        start = getattr(cadence, "start", None)
-        start_tick = getattr(start, "tick", 0) if start is not None else 0
-        if not isinstance(start_tick, int) or start_tick < 0:
-            issues.append(
-                ParticipantBehaviorIssue(
-                    code="participant.autonomous-cadence-unreachable",
-                    participant_name="",
-                    spec_name=spec_name,
-                    ref=policy.progression_policy_ref,
-                )
-            )
-    if progression_mode == "stepped" and cadence_count == 1 and cadence is not None:
-        step_ticks = getattr(progression, "step_ticks", None)
-        cadence_ticks = getattr(cadence, "cadence_ticks", None)
-        start = getattr(cadence, "start", None)
-        start_tick = getattr(start, "tick", 0) if start is not None else 0
-        if (
-            not isinstance(step_ticks, int)
-            or not isinstance(cadence_ticks, int)
-            or start_tick < 0
-            or start_tick % step_ticks
-            or cadence_ticks % step_ticks
-        ):
-            issues.append(
-                ParticipantBehaviorIssue(
-                    code="participant.autonomous-cadence-unreachable",
-                    participant_name="",
-                    spec_name=spec_name,
-                    ref=policy.progression_policy_ref,
-                )
-            )
-
-    authority_mode = getattr(policy.evaluation_authority.mode, "value", "")
-    if authority_mode == "none":
-        for participant_name in sorted(participants):
-            if reference_context.participant_roles_by_agent.get(participant_name) != "green":
-                issues.append(
-                    ParticipantBehaviorIssue(
-                        code="participant.autonomous-non-evaluated-role-not-green",
-                        participant_name=participant_name,
-                        spec_name=spec_name,
-                        ref=reference_context.participant_roles_by_agent.get(participant_name, ""),
-                    )
-                )
-            if any(
-                getattr(objective, "agent", None) == participant_name
-                for objective in reference_context.objectives.values()
-            ):
-                issues.append(
-                    ParticipantBehaviorIssue(
-                        code="participant.autonomous-non-evaluated-objective-authority",
-                        participant_name=participant_name,
-                        spec_name=spec_name,
-                        ref=participant_name,
-                    )
-                )
-        if getattr(behavior_spec, "outcome_interpretation_rule_refs", None) or getattr(
-            behavior_spec, "authority_scope_refs", None
-        ):
-            issues.append(
-                ParticipantBehaviorIssue(
-                    code="participant.autonomous-non-evaluated-authority-widening",
-                    participant_name="",
-                    spec_name=spec_name,
-                    ref=spec_name,
-                )
-            )
-    elif authority_mode == "declared":
-        for objective_ref in policy.evaluation_authority.objective_refs:
-            if is_unresolved(objective_ref):
-                continue
-            objective_name = _resolve_section_ref(
-                objective_ref,
-                "objectives",
-                reference_context.objectives,
-            )
-            if objective_name is None:
-                issues.append(
-                    ParticipantBehaviorIssue(
-                        code="participant.autonomous-evaluation-objective-unbound",
-                        participant_name="",
-                        spec_name=spec_name,
-                        ref=objective_ref,
-                    )
-                )
-        unsupported_authority_refs = (
-            ("proof_producer_refs", policy.evaluation_authority.proof_producer_refs),
-            ("score_authority_refs", policy.evaluation_authority.score_authority_refs),
-            ("receipt_authority_refs", policy.evaluation_authority.receipt_authority_refs),
-        )
-        for field_name, refs in unsupported_authority_refs:
-            for ref in refs:
-                if is_unresolved(ref):
-                    continue
-                issues.append(
-                    ParticipantBehaviorIssue(
-                        code="participant.autonomous-evaluation-authority-namespace-unsupported",
-                        participant_name="",
-                        spec_name=spec_name,
-                        ref=ref,
-                        message=field_name,
-                    )
-                )
-    return issues
+    context = _AutonomousExecutionReferenceContext(
+        spec_name=spec_name,
+        behavior_spec=behavior_spec,
+        policy=policy,
+        references=reference_context,
+        participants=_tool_affordance_participants(behavior_spec, reference_context),
+        is_unresolved=is_unresolved,
+    )
+    time_issues, bindings = _autonomous_time_binding_issues(context)
+    return [
+        *_autonomous_declaration_issues(context),
+        *_autonomous_action_issues(context),
+        *_autonomous_boundary_issues(context),
+        *time_issues,
+        *_autonomous_progression_issues(context, bindings),
+        *_autonomous_evaluation_issues(context),
+    ]
 
 
 def _resolve_section_ref(
@@ -1024,32 +1099,11 @@ def _behavior_specification_vocabulary_issues(
 
 
 def _behavior_specification_issues(
-    *,
     behavior_specifications: Mapping[str, object],
-    agents_by_name: Mapping[str, object],
-    participant_roles_by_agent: Mapping[str, str],
-    action_contracts: Mapping[str, object],
-    observation_boundaries: Mapping[str, object],
-    outcome_interpretation_rules: Mapping[str, object],
-    clocks: Mapping[str, object],
-    time_progression_policies: Mapping[str, object],
-    temporal_constraints: Mapping[str, object],
-    objectives: Mapping[str, object],
+    reference_context: _BehaviorSpecificationReferenceContext,
     is_unresolved: Callable[[object], bool],
 ) -> list[ParticipantBehaviorIssue]:
     issues: list[ParticipantBehaviorIssue] = []
-    reference_context = _BehaviorSpecificationReferenceContext(
-        participant_names={str(name) for name in agents_by_name},
-        participant_roles_by_agent=participant_roles_by_agent,
-        action_names={str(name) for name in action_contracts},
-        observation_boundary_names={str(name) for name in observation_boundaries},
-        outcome_rule_names={str(name) for name in outcome_interpretation_rules},
-        agents_by_name=agents_by_name,
-        clocks=clocks,
-        time_progression_policies=time_progression_policies,
-        temporal_constraints=temporal_constraints,
-        objectives=objectives,
-    )
     for spec_name, behavior_spec in behavior_specifications.items():
         normalized_spec_name = str(spec_name)
         issues.extend(
@@ -1079,8 +1133,8 @@ def _behavior_specification_issues(
             _tool_affordance_reference_issues(
                 spec_name=normalized_spec_name,
                 behavior_spec=behavior_spec,
-                agents_by_name=agents_by_name,
-                observation_boundaries=observation_boundaries,
+                agents_by_name=reference_context.agents_by_name,
+                observation_boundaries=reference_context.observation_boundaries,
                 reference_context=reference_context,
                 is_unresolved=is_unresolved,
             )
@@ -1108,19 +1162,77 @@ def _behavior_specification_issues(
     return issues
 
 
+@dataclass(frozen=True)
+class _ParticipantBehaviorSemanticRegistries:
+    participant_roles_by_agent: Mapping[str, str]
+    outcome_interpretation_rules: Mapping[str, object]
+    clocks: Mapping[str, object]
+    time_progression_policies: Mapping[str, object]
+    temporal_constraints: Mapping[str, object]
+    objectives: Mapping[str, object]
+
+    @classmethod
+    def from_keywords(
+        cls,
+        semantic_registries: Mapping[str, object],
+    ) -> _ParticipantBehaviorSemanticRegistries:
+        expected = {
+            "participant_roles_by_agent",
+            "outcome_interpretation_rules",
+            "clocks",
+            "time_progression_policies",
+            "temporal_constraints",
+            "objectives",
+        }
+        missing = expected - semantic_registries.keys()
+        unexpected = semantic_registries.keys() - expected
+        if missing or unexpected:
+            details = []
+            if missing:
+                details.append(f"missing {', '.join(sorted(missing))}")
+            if unexpected:
+                details.append(f"unexpected {', '.join(sorted(unexpected))}")
+            raise TypeError("invalid participant behavior semantic registries: " + "; ".join(details))
+        return cls(
+            participant_roles_by_agent=semantic_registries["participant_roles_by_agent"],
+            outcome_interpretation_rules=semantic_registries["outcome_interpretation_rules"],
+            clocks=semantic_registries["clocks"],
+            time_progression_policies=semantic_registries["time_progression_policies"],
+            temporal_constraints=semantic_registries["temporal_constraints"],
+            objectives=semantic_registries["objectives"],
+        )
+
+
+def _behavior_reference_context(
+    agents_by_name: Mapping[str, object],
+    action_contracts: Mapping[str, object],
+    observation_boundaries: Mapping[str, object],
+    registries: _ParticipantBehaviorSemanticRegistries,
+) -> _BehaviorSpecificationReferenceContext:
+    return _BehaviorSpecificationReferenceContext(
+        participant_names={str(name) for name in agents_by_name},
+        participant_roles_by_agent=registries.participant_roles_by_agent,
+        action_names={str(name) for name in action_contracts},
+        observation_boundary_names={str(name) for name in observation_boundaries},
+        outcome_rule_names={str(name) for name in registries.outcome_interpretation_rules},
+        agents_by_name=agents_by_name,
+        action_contracts=action_contracts,
+        observation_boundaries=observation_boundaries,
+        clocks=registries.clocks,
+        time_progression_policies=registries.time_progression_policies,
+        temporal_constraints=registries.temporal_constraints,
+        objectives=registries.objectives,
+    )
+
+
 def analyze_participant_behavior(
     *,
     agents_by_name: Mapping[str, object],
     action_contracts: Mapping[str, object],
     observation_boundaries: Mapping[str, object],
-    outcome_interpretation_rules: Mapping[str, object],
     behavior_specifications: Mapping[str, object],
-    participant_roles_by_agent: Mapping[str, str],
-    clocks: Mapping[str, object],
-    time_progression_policies: Mapping[str, object],
-    temporal_constraints: Mapping[str, object],
-    objectives: Mapping[str, object],
     is_unresolved: Callable[[object], bool],
+    **semantic_registries: object,
 ) -> ParticipantBehaviorAnalysis:
     """Validate and normalize participant action/observation references.
 
@@ -1133,6 +1245,13 @@ def analyze_participant_behavior(
 
     references: list[ParticipantBehaviorReference] = []
     issues: list[ParticipantBehaviorIssue] = []
+    registries = _ParticipantBehaviorSemanticRegistries.from_keywords(semantic_registries)
+    reference_context = _behavior_reference_context(
+        agents_by_name,
+        action_contracts,
+        observation_boundaries,
+        registries,
+    )
 
     for participant_name, agent in agents_by_name.items():
         action_references, action_issues = _action_references_for_agent(
@@ -1166,17 +1285,9 @@ def analyze_participant_behavior(
     )
     issues.extend(
         _behavior_specification_issues(
-            behavior_specifications=behavior_specifications,
-            agents_by_name=agents_by_name,
-            participant_roles_by_agent=participant_roles_by_agent,
-            action_contracts=action_contracts,
-            observation_boundaries=observation_boundaries,
-            outcome_interpretation_rules=outcome_interpretation_rules,
-            clocks=clocks,
-            time_progression_policies=time_progression_policies,
-            temporal_constraints=temporal_constraints,
-            objectives=objectives,
-            is_unresolved=is_unresolved,
+            behavior_specifications,
+            reference_context,
+            is_unresolved,
         )
     )
 

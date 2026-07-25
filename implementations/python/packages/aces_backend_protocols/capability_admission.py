@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from aces_contracts.contracts.trial_cleanup import TrialCleanupPlanModel
 
     from .backend_manifest import BackendManifest
-    from .capabilities import TimeCapabilities
+    from .capabilities import ParticipantRuntimeCapabilities, TimeCapabilities
 
 
 class AutonomousExecutionPolicy(Protocol):
@@ -56,19 +56,10 @@ def participant_runtime_capability_contract_gaps(manifest: BackendManifest) -> t
     return tuple(gaps)
 
 
-def participant_autonomous_execution_capability_gaps(
-    manifest: BackendManifest,
-    policies: Iterable[AutonomousExecutionPolicy],
-    time_model: object | None = None,
-) -> tuple[str, ...]:
-    """Return fail-closed backend gaps for compiled autonomous participants."""
-
-    policies = tuple(policies)
-    if not policies:
-        return ()
-    capability = manifest.participant_runtime
-    if capability is None or not capability.supports_autonomous_execution:
-        return ("backend does not declare autonomous participant execution",)
+def _autonomous_limit_gaps(
+    capability: ParticipantRuntimeCapabilities,
+    policies: tuple[AutonomousExecutionPolicy, ...],
+) -> list[str]:
     gaps: list[str] = []
     participant_count = len({participant for policy in policies for participant in policy.participant_addresses})
     limits = (
@@ -87,38 +78,86 @@ def participant_autonomous_execution_capability_gaps(
     for label, required, supported in limits:
         if supported is None or required > supported:
             gaps.append(f"autonomous {label} require {required}, backend limit is {supported}")
-    unsupported_strategies = sorted(
-        {policy.selection_strategy for policy in policies} - capability.supported_autonomous_selection_strategies
+    return gaps
+
+
+def _unsupported_autonomous_value_gaps(
+    capability: ParticipantRuntimeCapabilities,
+    policies: tuple[AutonomousExecutionPolicy, ...],
+) -> list[str]:
+    requirements = (
+        (
+            "selection strategies",
+            {policy.selection_strategy for policy in policies},
+            capability.supported_autonomous_selection_strategies,
+        ),
+        (
+            "action contracts",
+            {address for policy in policies for address in policy.action_contract_addresses},
+            capability.supported_autonomous_action_contracts,
+        ),
+        (
+            "observation boundaries",
+            {policy.observation_boundary_address for policy in policies},
+            capability.supported_autonomous_observation_boundaries,
+        ),
+        (
+            "target addresses",
+            {address for policy in policies for address in policy.target_addresses},
+            capability.supported_autonomous_target_addresses,
+        ),
     )
-    if unsupported_strategies:
-        gaps.append("unsupported autonomous selection strategies: " + ", ".join(unsupported_strategies))
-    required_actions = {address for policy in policies for address in policy.action_contract_addresses}
-    unsupported_actions = sorted(required_actions - capability.supported_autonomous_action_contracts)
-    if unsupported_actions:
-        gaps.append("unsupported autonomous action contracts: " + ", ".join(unsupported_actions))
-    required_boundaries = {policy.observation_boundary_address for policy in policies}
-    unsupported_boundaries = sorted(required_boundaries - capability.supported_autonomous_observation_boundaries)
-    if unsupported_boundaries:
-        gaps.append("unsupported autonomous observation boundaries: " + ", ".join(unsupported_boundaries))
-    required_targets = {address for policy in policies for address in policy.target_addresses}
-    unsupported_targets = sorted(required_targets - capability.supported_autonomous_target_addresses)
-    if unsupported_targets:
-        gaps.append("unsupported autonomous target addresses: " + ", ".join(unsupported_targets))
-    if time_model is not None:
-        progression_by_address = {
-            progression.address: progression for progression in getattr(time_model, "progression_policies", ())
-        }
-        requires_coordinated_reset = any(
-            progression_by_address[policy.progression_policy_address].reset_behavior != "unsupported"
-            or progression_by_address[policy.progression_policy_address].replay_behavior != "unsupported"
-            for policy in policies
-            if policy.progression_policy_address in progression_by_address
-        )
-        time_capability = manifest.time
-        if requires_coordinated_reset and (
-            time_capability is None or not time_capability.supports_coordinated_participant_reset
-        ):
-            gaps.append("autonomous clock reset requires coordinated participant reset support")
+    return [
+        f"unsupported autonomous {label}: {', '.join(unsupported)}"
+        for label, required, supported in requirements
+        if (unsupported := sorted(required - supported))
+    ]
+
+
+def _requires_coordinated_reset(
+    policies: tuple[AutonomousExecutionPolicy, ...],
+    time_model: object,
+) -> bool:
+    progression_by_address = {
+        progression.address: progression for progression in getattr(time_model, "progression_policies", ())
+    }
+    return any(
+        progression_by_address[policy.progression_policy_address].reset_behavior != "unsupported"
+        or progression_by_address[policy.progression_policy_address].replay_behavior != "unsupported"
+        for policy in policies
+        if policy.progression_policy_address in progression_by_address
+    )
+
+
+def _autonomous_reset_gaps(
+    manifest: BackendManifest,
+    policies: tuple[AutonomousExecutionPolicy, ...],
+    time_model: object | None,
+) -> list[str]:
+    if time_model is None or not _requires_coordinated_reset(policies, time_model):
+        return []
+    time_capability = manifest.time
+    if time_capability is not None and time_capability.supports_coordinated_participant_reset:
+        return []
+    return ["autonomous clock reset requires coordinated participant reset support"]
+
+
+def participant_autonomous_execution_capability_gaps(
+    manifest: BackendManifest,
+    policies: Iterable[AutonomousExecutionPolicy],
+    time_model: object | None = None,
+) -> tuple[str, ...]:
+    """Return fail-closed backend gaps for compiled autonomous participants."""
+
+    normalized_policies = tuple(policies)
+    gaps: list[str] = []
+    capability = manifest.participant_runtime
+    if normalized_policies and (capability is None or not capability.supports_autonomous_execution):
+        gaps.append("backend does not declare autonomous participant execution")
+    elif normalized_policies and capability is not None:
+        gaps.extend(_autonomous_limit_gaps(capability, normalized_policies))
+        gaps.extend(_unsupported_autonomous_value_gaps(capability, normalized_policies))
+        gaps.extend(_autonomous_reset_gaps(manifest, normalized_policies, time_model))
     return tuple(gaps)
 
 

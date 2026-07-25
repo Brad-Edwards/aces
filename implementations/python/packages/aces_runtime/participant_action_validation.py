@@ -4,6 +4,7 @@ from dataclasses import replace
 
 from aces_contracts.contracts import ParticipantBehaviorHistoryEventModel
 from aces_contracts.participant_binding import (
+    ParticipantActionAdmissionRequest,
     ParticipantActionApplyResult,
     participant_action_admission_request_violations,
     participant_implementation_actor_provenance,
@@ -14,7 +15,7 @@ _TERMINAL_ACTION_STATUSES = frozenset({"succeeded", "failed", "partial_success",
 
 
 def autonomous_action_result_violation(
-    request: object,
+    request: ParticipantActionAdmissionRequest,
     result: object,
     *,
     episode_id: str,
@@ -22,40 +23,86 @@ def autonomous_action_result_violation(
 ) -> str | None:
     """Return why a native result cannot be committed, or ``None``."""
 
-    if not isinstance(result, ParticipantActionApplyResult):
-        return "participant runtime did not return ParticipantActionApplyResult"
-    action_result = result.action_result
-    if action_result is None:
-        return "participant runtime did not return a typed action outcome"
-    if action_result.status not in _TERMINAL_ACTION_STATUSES:
-        return "participant runtime returned a non-terminal action outcome"
-    if action_result.episode_id != episode_id:
-        return "participant runtime action outcome does not match the live episode"
+    violation = _native_result_violation(result, episode_id)
+    if violation is None:
+        assert isinstance(result, ParticipantActionApplyResult)
+        action_result = result.action_result
+        assert action_result is not None
+        bound_request, violation = _bound_request_result(request, action_result)
+    if violation is None:
+        assert bound_request is not None
+        violation, appended = _history_structure_violation(bound_request, result, predecessor)
+    if violation is None:
+        violation = _history_context_violation(bound_request, appended, episode_id)
+    if violation is None:
+        violation = _terminal_observation_violation(bound_request, appended, action_result)
+    return violation
+
+
+def _bound_request_result(
+    request: ParticipantActionAdmissionRequest,
+    action_result: object,
+) -> tuple[ParticipantActionAdmissionRequest | None, str | None]:
     try:
         bound_request = replace(request, action_result=action_result)
     except (TypeError, ValueError) as exc:
-        return f"participant runtime action outcome contradicts its binding: {exc}"
+        return None, f"participant runtime action outcome contradicts its binding: {exc}"
     violations = participant_action_admission_request_violations(bound_request)
-    if violations:
-        return f"participant runtime action outcome contradicts its binding: {violations[0]}"
+    violation = f"participant runtime action outcome contradicts its binding: {violations[0]}" if violations else None
+    return bound_request, violation
+
+
+def _native_result_violation(result: object, episode_id: str) -> str | None:
+    action_result = result.action_result if isinstance(result, ParticipantActionApplyResult) else None
+    checks = (
+        (
+            not isinstance(result, ParticipantActionApplyResult),
+            "participant runtime did not return ParticipantActionApplyResult",
+        ),
+        (action_result is None, "participant runtime did not return a typed action outcome"),
+        (
+            action_result is not None and action_result.status not in _TERMINAL_ACTION_STATUSES,
+            "participant runtime returned a non-terminal action outcome",
+        ),
+        (
+            action_result is not None and action_result.episode_id != episode_id,
+            "participant runtime action outcome does not match the live episode",
+        ),
+    )
+    return next((message for invalid, message in checks if invalid), None)
+
+
+def _history_structure_violation(
+    bound_request: ParticipantActionAdmissionRequest,
+    result: ParticipantActionApplyResult,
+    predecessor: RuntimeSnapshot,
+) -> tuple[str | None, list[ParticipantBehaviorHistoryEventModel]]:
     prior_history = predecessor.participant_behavior_history.get(bound_request.participant_address, ())
     history = result.snapshot.participant_behavior_history.get(bound_request.participant_address, ())
-    if len(history) < len(prior_history) or list(history[: len(prior_history)]) != list(prior_history):
-        return "participant runtime rewrote predecessor behavior history"
-    appended_payloads = history[len(prior_history) :]
+    violation = None
     appended: list[ParticipantBehaviorHistoryEventModel] = []
-    for event in appended_payloads:
-        try:
-            appended.append(ParticipantBehaviorHistoryEventModel.model_validate(event))
-        except (TypeError, ValueError) as exc:
-            return f"participant runtime appended an invalid behavior history event: {exc}"
-    expected_types = (
-        "action_attempted",
-        "state_transition_recorded",
-        "observation_emitted",
-    )
-    if tuple(event.event_type for event in appended) != expected_types:
-        return "participant runtime did not append the required ordered action history"
+    if len(history) < len(prior_history) or list(history[: len(prior_history)]) != list(prior_history):
+        violation = "participant runtime rewrote predecessor behavior history"
+    else:
+        for event in history[len(prior_history) :]:
+            try:
+                appended.append(ParticipantBehaviorHistoryEventModel.model_validate(event))
+            except (TypeError, ValueError) as exc:
+                violation = f"participant runtime appended an invalid behavior history event: {exc}"
+                appended = []
+                break
+    expected_types = ("action_attempted", "state_transition_recorded", "observation_emitted")
+    if violation is None and tuple(event.event_type for event in appended) != expected_types:
+        violation = "participant runtime did not append the required ordered action history"
+        appended = []
+    return violation, appended
+
+
+def _history_context_violation(
+    bound_request: ParticipantActionAdmissionRequest,
+    appended: list[ParticipantBehaviorHistoryEventModel],
+    episode_id: str,
+) -> str | None:
     expected_actor = participant_implementation_actor_provenance(bound_request.implementation_selection)
     for event in appended:
         if (
@@ -68,6 +115,14 @@ def autonomous_action_result_violation(
             return "participant runtime appended behavior history outside the bound action context"
     if appended[0].actor_provenance != expected_actor:
         return "participant runtime action history contradicts selected implementation provenance"
+    return None
+
+
+def _terminal_observation_violation(
+    bound_request: ParticipantActionAdmissionRequest,
+    appended: list[ParticipantBehaviorHistoryEventModel],
+    action_result: object,
+) -> str | None:
     observation = appended[-1]
     if (
         observation.observation_boundary_address != bound_request.observation_boundary_address

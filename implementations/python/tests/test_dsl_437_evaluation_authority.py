@@ -48,11 +48,13 @@ def test_declared_objective_refs_compile_to_canonical_evaluator_addresses(
 
 
 def test_declared_objective_ref_must_resolve() -> None:
+    scenario_yaml = _declared_authority_yaml({"objective_refs": ["does-not-exist"]})
+
     with pytest.raises(
         SDLValidationError,
         match="evaluation-authority objective_ref 'does-not-exist' is not declared in objectives",
     ):
-        parse_sdl(_declared_authority_yaml({"objective_refs": ["does-not-exist"]}))
+        parse_sdl(scenario_yaml)
 
 
 @pytest.mark.parametrize(
@@ -67,8 +69,10 @@ def test_declared_authority_namespaces_without_sdl_registries_fail_closed(
     field_name: str,
     ref: str,
 ) -> None:
+    scenario_yaml = _declared_authority_yaml({field_name: [ref]})
+
     with pytest.raises(
         SDLValidationError,
         match=rf"evaluation-authority {field_name} ref '{ref}' cannot resolve",
     ):
-        parse_sdl(_declared_authority_yaml({field_name: [ref]}))
+        parse_sdl(scenario_yaml)
