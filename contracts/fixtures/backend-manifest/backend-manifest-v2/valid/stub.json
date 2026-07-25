@@ -126,7 +126,14 @@
     "participant_runtime": {
       "constraints": {},
       "feature_support": [],
+      "max_autonomous_action_attempts": null,
+      "max_autonomous_in_flight": null,
+      "max_autonomous_participants": null,
       "name": "stub-participant-runtime",
+      "supported_autonomous_action_contracts": [],
+      "supported_autonomous_observation_boundaries": [],
+      "supported_autonomous_selection_strategies": [],
+      "supported_autonomous_target_addresses": [],
       "supported_behavior_features": [
         "action_contracts",
         "attribution_support",
@@ -150,7 +157,8 @@
         "green",
         "red",
         "white"
-      ]
+      ],
+      "supports_autonomous_execution": false
     },
     "provisioner": {
       "constraints": {},
@@ -168,6 +176,7 @@
       "supported_domain_profiles": [
         "active_directory"
       ],
+      "supported_service_materialization_profiles": [],
       "supported_content_types": [
         "dataset",
         "directory",
@@ -215,6 +224,10 @@
     {
       "family": "identities",
       "scope": "capabilities.provisioner.supported_domain_profiles"
+    },
+    {
+      "family": "tools-and-artifacts",
+      "scope": "capabilities.provisioner.supported_service_materialization_profiles"
     },
     {
       "family": "actions-and-events",

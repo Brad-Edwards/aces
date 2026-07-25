@@ -9,6 +9,7 @@ from pydantic import Field, GetJsonSchemaHandler, model_validator
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema
 
+from ..addressing import require_compiled_address
 from ..manifest_authority import (
     PROCESSOR_SUPPORTED_CONTRACT_IDS,
     PROCESSOR_SUPPORTED_SDL_VERSION_IDS,
@@ -163,6 +164,26 @@ class ParticipantRuntimeCapabilitiesModel(ContractModel):
         json_schema_extra={"uniqueItems": True},
     )
     feature_support: list[ParticipantFeatureSupportModel] = Field(default_factory=list)
+    supports_autonomous_execution: bool = False
+    supported_autonomous_selection_strategies: list[Literal["ordered_cycle"]] = Field(
+        default_factory=list,
+        json_schema_extra={"uniqueItems": True},
+    )
+    supported_autonomous_action_contracts: list[NonEmptyString] = Field(
+        default_factory=list,
+        json_schema_extra={"uniqueItems": True},
+    )
+    supported_autonomous_observation_boundaries: list[NonEmptyString] = Field(
+        default_factory=list,
+        json_schema_extra={"uniqueItems": True},
+    )
+    supported_autonomous_target_addresses: list[NonEmptyString] = Field(
+        default_factory=list,
+        json_schema_extra={"uniqueItems": True},
+    )
+    max_autonomous_participants: int | None = Field(default=None, ge=1)
+    max_autonomous_action_attempts: int | None = Field(default=None, ge=1)
+    max_autonomous_in_flight: int | None = Field(default=None, ge=1)
     constraints: dict[str, str] = Field(default_factory=dict)
 
     @model_validator(mode="after")
@@ -187,6 +208,12 @@ class ParticipantRuntimeCapabilitiesModel(ContractModel):
     @model_validator(mode="after")
     def _validate_api_407_feature_support(self) -> ParticipantRuntimeCapabilitiesModel:
         _validate_unique_string_values("feature_support", [entry.feature for entry in self.feature_support])
+        self._validate_supported_feature_levels()
+        self._validate_autonomous_configuration()
+        self._validate_autonomous_addresses()
+        return self
+
+    def _validate_supported_feature_levels(self) -> None:
         supported_features = set(self.supported_behavior_features) | set(self.supported_interaction_features)
         for entry in self.feature_support:
             declared_unsupported = entry.support_level == ParticipantFeatureSupportLevel.UNSUPPORTED
@@ -195,7 +222,56 @@ class ParticipantRuntimeCapabilitiesModel(ContractModel):
                     f"feature_support entry '{entry.feature}' declares support_level 'unsupported' but the "
                     "feature is declared in supported_behavior_features or supported_interaction_features"
                 )
-        return self
+
+    def _validate_autonomous_configuration(self) -> None:
+        declares_autonomous = "autonomous_execution" in self.supported_behavior_features
+        if declares_autonomous != self.supports_autonomous_execution:
+            raise ValueError("autonomous_execution feature and support flag must agree")
+        if self.supports_autonomous_execution and not self._has_complete_autonomous_configuration():
+            raise ValueError(
+                "autonomous execution requires selection strategies, exact action and observation support, "
+                "and finite limits"
+            )
+        if not self.supports_autonomous_execution and self._has_any_autonomous_configuration():
+            raise ValueError("autonomous execution limits require autonomous execution support")
+
+    def _has_complete_autonomous_configuration(self) -> bool:
+        return bool(
+            self.supported_autonomous_selection_strategies
+            and self.supported_autonomous_action_contracts
+            and self.supported_autonomous_observation_boundaries
+            and all(value is not None for value in self._autonomous_limits())
+        )
+
+    def _has_any_autonomous_configuration(self) -> bool:
+        return bool(
+            self.supported_autonomous_selection_strategies
+            or self.supported_autonomous_action_contracts
+            or self.supported_autonomous_observation_boundaries
+            or self.supported_autonomous_target_addresses
+            or any(value is not None for value in self._autonomous_limits())
+        )
+
+    def _autonomous_limits(self) -> tuple[int | None, int | None, int | None]:
+        return (
+            self.max_autonomous_participants,
+            self.max_autonomous_action_attempts,
+            self.max_autonomous_in_flight,
+        )
+
+    def _validate_autonomous_addresses(self) -> None:
+        for field_name in (
+            "supported_autonomous_action_contracts",
+            "supported_autonomous_observation_boundaries",
+            "supported_autonomous_target_addresses",
+        ):
+            values = getattr(self, field_name)
+            _validate_unique_string_values(field_name, values)
+            for address in values:
+                try:
+                    require_compiled_address(address, field_name=field_name)
+                except (TypeError, ValueError) as exc:
+                    raise ValueError(str(exc)) from exc
 
 
 class ObservationCapabilitiesModel(ContractModel):
@@ -264,6 +340,72 @@ class CleanupCapabilitiesModel(ContractModel):
         return self
 
 
+_TIME_CAPABILITY_REQUIRED_CONTRACTS = {
+    "time-model-v1",
+    "time-runtime-state-v1",
+    "realized-time-model-v1",
+    "runtime-snapshot-v1",
+    "experiment-run-v1",
+}
+_TIME_CAPABILITY_TERMS = {
+    "supported_domain_kinds": {"wall_clock", "monotonic", "simulated", "logical", "external"},
+    "supported_authority_kinds": {"runtime", "backend", "system", "external"},
+    "supported_advancement_modes": {
+        "real_time",
+        "dilated",
+        "stepped",
+        "event_driven",
+        "externally_paced",
+    },
+    "supported_synchronization_modes": {"none", "authority", "barrier", "conservative"},
+    "supported_mapping_kinds": {"identity", "affine_rational"},
+    "supported_constraint_kinds": {"precedence", "duration", "window", "deadline", "cadence"},
+    "supported_reset_behaviors": {"unsupported", "new_segment_zero", "new_segment_preserve_value"},
+    "supported_replay_behaviors": {"unsupported", "restart_from_anchor", "restore_recorded_advances"},
+}
+
+
+class TimeCapabilitiesModel(ContractModel):
+    """Backend support for the API-421 portable shared-time contract family."""
+
+    name: NonEmptyString
+    supported_contract_versions: list[NonEmptyString] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
+    supported_domain_kinds: list[NonEmptyString] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
+    supported_authority_kinds: list[NonEmptyString] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
+    supported_advancement_modes: list[NonEmptyString] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
+    supported_synchronization_modes: list[NonEmptyString] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
+    supported_mapping_kinds: list[NonEmptyString] = Field(default_factory=list, json_schema_extra={"uniqueItems": True})
+    supported_constraint_kinds: list[NonEmptyString] = Field(
+        default_factory=list, json_schema_extra={"uniqueItems": True}
+    )
+    supported_reset_behaviors: list[NonEmptyString] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
+    supported_replay_behaviors: list[NonEmptyString] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
+    max_time_domains: int | None = Field(default=None, ge=1)
+    max_clocks: int | None = Field(default=None, ge=1)
+    supports_pause: bool = False
+    supports_jump: bool = False
+    supports_exact_rational_mappings: bool = False
+    supports_append_only_history: bool = False
+    supports_run_provenance: bool = False
+    supports_coordinated_participant_reset: bool = False
+    constraints: dict[str, str] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def _validate_time_capability(self) -> TimeCapabilitiesModel:
+        if set(self.supported_contract_versions) != _TIME_CAPABILITY_REQUIRED_CONTRACTS:
+            raise ValueError("time capabilities require the complete time contract family")
+        validate_backend_supported_contract_versions(self.supported_contract_versions)
+        for field_name, allowed in _TIME_CAPABILITY_TERMS.items():
+            values = getattr(self, field_name)
+            _validate_unique_string_values(f"time {field_name}", values)
+            unknown = sorted(set(values) - allowed)
+            if unknown:
+                raise ValueError(f"time {field_name} contains unknown values: {', '.join(unknown)}")
+        if self.supported_mapping_kinds and not self.supports_exact_rational_mappings:
+            raise ValueError("time mapping support requires exact rational mappings")
+        return self
+
+
 class BackendCapabilitiesV2Model(ContractModel):
     provisioner: ProvisionerCapabilitiesModel
     orchestrator: OrchestratorCapabilitiesModel | None = None
@@ -271,6 +413,7 @@ class BackendCapabilitiesV2Model(ContractModel):
     participant_runtime: ParticipantRuntimeCapabilitiesModel | None = None
     observation: ObservationCapabilitiesModel | None = None
     cleanup: CleanupCapabilitiesModel | None = None
+    time: TimeCapabilitiesModel | None = None
 
 
 class ProcessorManifestV2Model(ContractModel):

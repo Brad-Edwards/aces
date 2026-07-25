@@ -90,6 +90,11 @@ _SECTION_VALIDATOR = "[section validator](../../implementations/python/packages/
 _CONTENT_VALIDATOR = (
     "[content validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py)"
 )
+_SERVICE_MATERIALIZATION_VALIDATOR = (
+    "[service materialization validator]"
+    "(../../implementations/python/packages/aces_sdl/validator/_service_materialization.py)"
+)
+_CONTENT_COMPILER = "[content compiler](../../implementations/python/packages/aces_processor/compiler/placement.py)"
 _ACCOUNT_VALIDATOR = (
     "[account validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py)"
 )
@@ -155,6 +160,9 @@ _PROPOSITION_VALIDATOR = (
 _VARIATION_VALIDATOR = "[variation validator](../../implementations/python/packages/aces_sdl/validator/_variation.py)"
 _PARTICIPANT_TEMPORAL_MODEL = (
     "[temporal model](../../implementations/python/packages/aces_sdl/participant_temporal_semantics.py)"
+)
+_TIME_MODEL_VALIDATOR = (
+    "[time-model validator](../../implementations/python/packages/aces_sdl/validator/_time_model.py)"
 )
 _SEMANTIC = "semantic validation"
 _STRUCTURAL = "structural validation"
@@ -292,6 +300,42 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         _SEMANTIC,
         "fatal unless target is a vm node",
         _CONTENT_VALIDATOR,
+    ),
+    "content.*.service_materialization.target_service_ref": (
+        "derived:node_services",
+        _SEMANTIC,
+        "fatal unless the exact service exists on the content target vm",
+        _SERVICE_MATERIALIZATION_VALIDATOR,
+    ),
+    "content.*.service_materialization.shared_service_relationship_ref": (
+        "relationships",
+        _SEMANTIC,
+        "fatal unless a matching typed shared-service relationship owns cross-tenant mutable state/reset",
+        _SERVICE_MATERIALIZATION_VALIDATOR,
+    ),
+    "content.*.service_materialization.ordering_content_refs[]": (
+        "content",
+        "semantic validation and planner ordering",
+        "fatal dangling, self, or cyclic dependency",
+        _CONTENT_COMPILER,
+    ),
+    "content.*.service_materialization.readback_assertion_refs[]": (
+        "assertions",
+        _SEMANTIC,
+        "fatal unless each ref is an observed-state postcondition",
+        _SERVICE_MATERIALIZATION_VALIDATOR,
+    ),
+    "content.*.service_materialization.evidence_requirement_refs[]": (
+        "evidence_requirements",
+        _SEMANTIC,
+        "fatal unless each ref exists and every readback proposition requires it",
+        _SERVICE_MATERIALIZATION_VALIDATOR,
+    ),
+    "content.*.service_materialization.observation_boundary_refs[]": (
+        "observation_boundaries",
+        _SEMANTIC,
+        "fatal dangling ref",
+        _SERVICE_MATERIALIZATION_VALIDATOR,
     ),
     "generated_artifacts.*.consumers[].node": (
         "nodes",
@@ -797,6 +841,42 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         _SEMANTIC,
         _DANGLING,
         _EVIDENCE_VALIDATOR,
+    ),
+    "clocks.*.time_domain_ref": (
+        "time_domains",
+        _SEMANTIC,
+        "fatal dangling",
+        _TIME_MODEL_VALIDATOR,
+    ),
+    "time_domain_mappings.*.source_domain_ref": (
+        "time_domains",
+        _SEMANTIC,
+        "fatal dangling, duplicate, or cyclic mapping",
+        _TIME_MODEL_VALIDATOR,
+    ),
+    "time_domain_mappings.*.target_domain_ref": (
+        "time_domains",
+        _SEMANTIC,
+        "fatal dangling, duplicate, or cyclic mapping",
+        _TIME_MODEL_VALIDATOR,
+    ),
+    "time_progression_policies.*.clock_ref": (
+        "clocks",
+        _SEMANTIC,
+        "fatal dangling or incompatible reset/replay lifecycle",
+        _TIME_MODEL_VALIDATOR,
+    ),
+    "temporal_constraints.*.clock_ref": (
+        "clocks",
+        _SEMANTIC,
+        "fatal dangling",
+        _TIME_MODEL_VALIDATOR,
+    ),
+    "temporal_constraints.*.subject_refs[]": (
+        "targetable",
+        _SEMANTIC,
+        "fatal dangling or ambiguous",
+        _TIME_MODEL_VALIDATOR,
     ),
     "variation_points.*.target.variable": (
         "variables",

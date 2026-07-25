@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "36d02857981c15422b430715bdec8819bc64f8fd6370b6a564534a5ea785cd2d",
+  "content_hash": "3574119edf519a577191c8be691bf4dcf747906eefab50a6bb22ca31725a87a2",
   "last_change": {
-    "summary": "Carried enterprise tenancy and typed network namespace sharing through satisfiability evidence.",
-    "content_hash": "36d02857981c15422b430715bdec8819bc64f8fd6370b6a564534a5ea785cd2d"
+    "summary": "Carried enterprise tenancy, service materialization, shared time, and autonomous participant invariants into satisfiability evidence.",
+    "content_hash": "3574119edf519a577191c8be691bf4dcf747906eefab50a6bb22ca31725a87a2"
   }
 }

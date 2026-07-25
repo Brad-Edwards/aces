@@ -3,9 +3,16 @@
 from dataclasses import replace
 
 from aces_backend_protocols.capabilities import BackendManifest
+from aces_backend_protocols.capability_admission import (
+    participant_autonomous_execution_capability_gaps,
+    time_model_capability_gaps,
+)
 from aces_backend_protocols.domain_topology import domain_topology_plan_diagnostics
+from aces_backend_protocols.service_materialization import service_materialization_plan_diagnostics
+from aces_contracts.diagnostics import Diagnostic
 from aces_sdl.realization_envelope import member
 
+from ..compiler.time_model import time_model_contract_model
 from ..models import ExecutionPlan, RuntimeModel, RuntimeSnapshot
 from ..semantics.realization import (
     ApparatusRealizationDefaultResolver,
@@ -22,6 +29,59 @@ from .operations import (
 )
 from .ordering import _ordering_cycle_diagnostics
 from .resources import _collect_resources
+
+
+def _time_model_diagnostics(model: RuntimeModel, manifest: BackendManifest) -> list[Diagnostic]:
+    declaration = time_model_contract_model(model.time_model)
+    if declaration is None:
+        return []
+    return [
+        Diagnostic(
+            code="time.unsupported-capability",
+            domain="time",
+            address="time.model",
+            message=gap,
+        )
+        for gap in time_model_capability_gaps(manifest, declaration)
+    ]
+
+
+def _participant_execution_diagnostics(
+    model: RuntimeModel,
+    manifest: BackendManifest,
+) -> list[Diagnostic]:
+    specifications = tuple(
+        specification
+        for specification in model.behavior_specifications.values()
+        if specification.autonomous_execution is not None
+    )
+    policies = tuple(specification.autonomous_execution for specification in specifications)
+    diagnostics = [
+        Diagnostic(
+            code="participant.autonomous-execution-unsupported",
+            domain="participant",
+            address="participant.autonomous-execution",
+            message=gap,
+        )
+        for gap in participant_autonomous_execution_capability_gaps(manifest, policies, model.time_model)
+    ]
+    capability = manifest.participant_runtime
+    supported_features = (
+        capability.supported_behavior_features | capability.supported_interaction_features
+        if capability is not None
+        else frozenset()
+    )
+    for specification in specifications:
+        for feature in sorted(set(specification.backend_feature_support_refs) - supported_features):
+            diagnostics.append(
+                Diagnostic(
+                    code="participant.autonomous-feature-unsupported",
+                    domain="participant",
+                    address=specification.address,
+                    message=f"Backend does not support required participant feature '{feature}'.",
+                )
+            )
+    return diagnostics
 
 
 def plan(
@@ -50,6 +110,8 @@ def plan(
     diagnostics = [
         *effective_model.diagnostics,
         *_validate_manifest(effective_model, manifest),
+        *_time_model_diagnostics(effective_model, manifest),
+        *_participant_execution_diagnostics(effective_model, manifest),
         *realization_support_diagnostics(
             effective_requirements,
             manifest,
@@ -64,6 +126,13 @@ def plan(
     actions, deleted_entries = _build_operations(resources, snapshot)
 
     provisioning = _build_provisioning_plan(resources, actions, deleted_entries, manifest)
+    materialization_diagnostics = service_materialization_plan_diagnostics(
+        provisioning,
+        manifest.provisioner,
+        manifest.realization_envelope,
+    )
+    diagnostics.extend(materialization_diagnostics)
+    provisioning.diagnostics.extend(materialization_diagnostics)
     topology_diagnostics = domain_topology_plan_diagnostics(
         provisioning,
         snapshot=snapshot,

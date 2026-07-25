@@ -109,6 +109,26 @@ def _append_stateful_resource_requirements(
             )
 
 
+def _append_service_materialization_requirements(
+    requirements: list[CompiledRealizationRequirement],
+    scenario: InstantiatedScenario,
+) -> None:
+    for name, content in scenario.content.items():
+        if content.service_materialization is None:
+            continue
+        requirements.append(
+            CompiledRealizationRequirement(
+                field_path=f"content.{name}.service_materialization",
+                address=_content_address(name),
+                domain=REALIZATION_DOMAIN,
+                requirement_kind="service-content-materialization",
+                explicitness=ExplicitnessClass.EXACT,
+                provenance=ExplicitnessProvenance.AUTHOR_DECLARED,
+                governing_scope=f"#/content/{name}/service_materialization",
+            )
+        )
+
+
 def _compile_realization_requirements(
     scenario: InstantiatedScenario,
     domain_analysis: DomainTopologyAnalysis,
@@ -174,4 +194,5 @@ def _compile_realization_requirements(
         )
     _append_domain_topology_requirements(requirements, domain_analysis)
     _append_stateful_resource_requirements(requirements, scenario)
+    _append_service_materialization_requirements(requirements, scenario)
     return tuple(requirements)

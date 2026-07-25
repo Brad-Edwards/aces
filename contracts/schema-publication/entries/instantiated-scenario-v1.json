@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
   "stability": "draft",
-  "content_hash": "98bd41a187206b00834487489218daea6c81ba3d9c1cbe6af3dd2a74156480e0",
+  "content_hash": "2501d05645a48ed1d883e5467f6742d646975ae69cdb2f71a2f6f2066877d458",
   "last_change": {
-    "summary": "Published enterprise tenancy and typed network namespace sharing in instantiated scenarios.",
-    "content_hash": "98bd41a187206b00834487489218daea6c81ba3d9c1cbe6af3dd2a74156480e0"
+    "summary": "Published enterprise tenancy, service materialization, shared time, and autonomous participant execution in instantiated scenarios.",
+    "content_hash": "2501d05645a48ed1d883e5467f6742d646975ae69cdb2f71a2f6f2066877d458"
   }
 }

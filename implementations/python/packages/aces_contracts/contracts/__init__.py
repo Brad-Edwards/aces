@@ -157,6 +157,7 @@ from .experiment_run import (
     ExperimentResultSummaryModel,
     ExperimentRunModel,
     validate_experiment_run_against_task,
+    validate_experiment_run_time_model,
 )
 from .experiment_spec import (
     ExperimentEpisodeControlModel,
@@ -183,6 +184,7 @@ from .manifests import (
     ParticipantRuntimeCapabilitiesModel,
     ProcessorCapabilitiesV2Model,
     ProcessorManifestV2Model,
+    TimeCapabilitiesModel,
 )
 from .manifests import (
     CleanupCapabilitiesModel as CleanupCapabilitiesModel,
@@ -234,6 +236,7 @@ from .participant_runtime import (
     ParticipantAttributionEdgeModel,
     ParticipantAttributionEvidenceBasisModel,
     ParticipantAttributionOrderingBasisModel,
+    ParticipantAutonomousExecutionStateModel,
     ParticipantBehaviorHistoryEventModel,
     ParticipantEpisodeHistoryEventModel,
     ParticipantEpisodeStateModel,
@@ -432,7 +435,7 @@ __all__ = [
     "ParticipantActionPreconditionResultModel", "ParticipantActionResultModel",
     "ParticipantAttributionCandidateModel", "ParticipantAttributionEdgeModel",
     "ParticipantAttributionEvidenceBasisModel", "ParticipantAttributionOrderingBasisModel",
-    "ParticipantBehaviorHistoryEventModel", "ParticipantContextViewModel",
+    "ParticipantAutonomousExecutionStateModel", "ParticipantBehaviorHistoryEventModel", "ParticipantContextViewModel",
     "ParticipantDecisionSurfaceActionEntryModel", "ParticipantDecisionSurfaceCandidateSetFormModel",
     "ParticipantDecisionSurfaceConstrainedFormModel", "ParticipantDecisionSurfaceExposureBindingModel",
     "ParticipantDecisionSurfaceExposureRealizationModel", "ParticipantDecisionSurfaceModel",
@@ -489,5 +492,7 @@ __all__ = [
     "validate_experiment_apparatus_context_archival_datetimes", "validate_experiment_run_against_task",
     "validate_experiment_run_archival_datetimes", "validate_experiment_study_against_tasks_and_runs",
     "validate_experiment_study_archival_datetimes", "validate_experiment_task_archival_datetimes",
+    "validate_experiment_run_time_model",
+    "TimeCapabilitiesModel",
 ]
 # fmt: on

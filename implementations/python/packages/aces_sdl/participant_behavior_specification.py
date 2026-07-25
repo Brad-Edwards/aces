@@ -11,6 +11,7 @@ from typing_extensions import TypeAliasType
 
 from ._base import SDLModel
 from ._identifiers import PortableIdentifier
+from .participant_execution import ParticipantAutonomousExecutionPolicy
 
 
 class ParticipantBehaviorSpecificationLifecycle(str, Enum):
@@ -323,6 +324,7 @@ class ParticipantBehaviorSpecification(SDLModel):
     outcome_interpretation_rule_refs: list[str] = Field(default_factory=list)
     authority_scope_refs: list[str] = Field(default_factory=list)
     behavior_mode: str | None = None
+    autonomous_execution: ParticipantAutonomousExecutionPolicy | None = None
     mixed_control: MixedControlParticipantOperation | None = None
     ai_offensive_behavior_refs: list[str] = Field(default_factory=list)
     defensive_behavior_refs: list[str] = Field(default_factory=list)
@@ -402,6 +404,7 @@ class ParticipantBehaviorSpecification(SDLModel):
                 self.outcome_interpretation_rule_refs,
                 self.authority_scope_refs,
                 self.behavior_mode,
+                self.autonomous_execution,
                 self.mixed_control,
                 self.ai_offensive_behavior_refs,
                 self.defensive_behavior_refs,

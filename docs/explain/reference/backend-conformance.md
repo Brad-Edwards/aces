@@ -137,6 +137,25 @@ are not accepted as prose-only promises: target conformance checks that the
 manifest also declares the published participant episode or behavior-history
 contract surfaces that carry the evidence for those claims.
 
+DSL-437 autonomous execution is an additional fail-closed participant
+capability. A backend that includes `autonomous_execution` in
+`supported_behavior_features` must set `supports_autonomous_execution`, list
+its supported selection strategies, exact action contracts, observation
+boundaries, target addresses, and positive finite limits for participants,
+attempts, and in-flight actions. The planner also compares the parent behavior
+specification's required feature set with the runtime capability. Runtime
+target registration requires the autonomous native-binding method. This is
+admission evidence only: conformance also requires the backend participant
+runtime to invoke its native service adapter, return a typed terminal action
+outcome at the bound temporal coordinate distinct from control-operation
+success, and preserve episode, behavior-history, temporal-context, and typed
+scheduler readback in durable and conformance snapshots. Stepped cadence points
+must be reachable. The portable runtime drives real-time and dilated participant
+cadence; externally paced autonomous execution is not admissible until a
+portable transition-notification contract is governed. Durable readback must
+agree across scheduler policy identity, clock segment/lifecycle, and live
+participant episode.
+
 ## Gotchas And Anti-Patterns
 
 Avoid:

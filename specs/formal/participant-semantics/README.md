@@ -13,6 +13,7 @@ This document is the issue #71 formal design artifact for:
 - `SEM-220` - Participant Decision-Surface Semantics
 - `SEM-226` - Participant Exposure And Visibility-Boundary Semantics
 - `SEM-230` - Participant Information-Flow And Control Semantics
+- `DSL-437` - Benign Participant Autonomous Execution
 
 It is a design artifact, not an implementation artifact. It establishes the
 semantic model that later child implementation issues must realize in SDL
@@ -28,6 +29,13 @@ normative model is the focused sibling specification
 [`information-flow-control.md`](information-flow-control.md); this README's
 world, view, history, action, visibility, and ordering objects remain the
 incumbent carriers that model composes.
+
+Issue #861 and ADR-092 add deterministic autonomous execution for ordinary
+participants. The focused normative composition is
+[`autonomous-execution.md`](autonomous-execution.md): it binds existing
+participant actions and observations to the shared time model, participant
+implementation selection, backend-native execution, and typed runtime
+readback. It adds no parallel actor or private time semantics.
 
 ## Current Sufficiency Finding
 
@@ -1683,6 +1691,9 @@ Future implementation PRs should still include:
 - ADR-022: Participant Behavior and Interaction Semantics
 - ADR-083: Participant Tool, Decision-Surface, and Exposure Semantics
 - ADR-085: Participant Information-Flow And Control
+- ADR-090: Shared Time-Domain, Clock, And Progression Authority
+- ADR-091: Portable Time Capability, Control, And Provenance Contracts
+- ADR-092: Autonomous Benign Participants Under Shared Time
 - ADR-007: Lightweight Formal Methods Policy for Semantic Systems
 - ADR-013: Participant Episode Lifecycle Boundaries
 - ADR-016: Semantic Layer Scope and Coverage Model

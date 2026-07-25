@@ -845,6 +845,39 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   implementation reuses the revision-pinned SEM-230 lineage without changing
   its normative derivation or compatibility claims, the SDL lineage ledger
   and source audit remain unchanged.
+- DSL-437 composes the incumbent participant and time lineages rather than
+  introducing a live-activity ontology. CybORG and the Gymnasium, PettingZoo,
+  and OpenSpiel family remain precedents for agents, actions, observations,
+  episodes, and multi-agent interaction. ADR-090's reviewed ROS 2, FMI, HLA,
+  TENA, and OpenSCENARIO sources remain the precedent for shared clock
+  authority, progression, lifecycle, and scheduler coordination.
+  `ParticipantBehaviorSpecification.autonomous_execution` is ACES-native: it
+  binds ordinary participant/action/observation declarations to those existing
+  shared-time declarations and participant implementation provenance.
+- The exact DSL-437 authority is ADR-092 and
+  `specs/formal/participant-semantics/autonomous-execution.md`; implementation
+  evidence covers the SDL model, semantic validator, compiler, exact
+  fail-closed admission, RuntimeManager shared-clock execution, native binding
+  and scheduler-enforced terminal coordinate-bound action outcomes for every
+  protocol implementation, exclusive ownership and
+  resolved-time policy identity, runtime-owned real-time/dilated cadence
+  driving for runtime-authority clocks, manifest-admitted transactional
+  clock/participant reset, lifecycle reporting, and durable/API/conformance
+  clock/episode/scheduler consistency on both save and load. Externally paced
+  autonomous policies remain rejected until ACES governs a portable
+  backend-to-runtime transition driver. The
+  focused evidence is in `test_dsl_437_benign_participant_execution.py`,
+  `test_dsl_437_evaluation_authority.py`, and
+  `test_dsl_437_snapshot_durability_conformance.py`. The ledger records exact
+  semantic source boundaries for the participant-interface and shared-time
+  concerns. The coordinated reset method is an ACES backend transaction
+  obligation, not a claim that replacing a local snapshot reverses native
+  backend effects.
+  ACES does not claim CybORG, Gymnasium, PettingZoo, OpenSpiel, ROS, FMI, HLA,
+  TENA, or OpenSCENARIO compatibility and does not derive a source wire schema.
+  Historical files remain ordinary initial service state; injects remain
+  exercise orchestration; stochastic participant implementations remain
+  governed run apparatus.
 - Issues #810 through #813 own the opacity/supervisor-visibility,
   proof-bearing bisimulation, adversarial threat-model, and
   simulation/federation extensions. SEM-230 preserves their participant,
@@ -1086,3 +1119,24 @@ evidence/provenance. The participant-semantics design extends that separation:
 actions, observations, visibility, causality, temporal behavior, and outcomes
 must be portable across human, AI-agent, scripted, simulated, and hybrid
 participants without collapsing into any one backend or learning API.
+
+### Shared Time Authority
+
+The ACES shared time model has explicit external lineage but is not a translated
+copy of any one framework:
+
+- ROS 2 contributes the separation of system, steady/monotonic, and externally
+  controlled semantic time plus explicit pause/jump handling.
+- FMI contributes importer-controlled advancement, capability negotiation,
+  clock activation, and superdense event coordinates.
+- IEEE HLA contributes the separation of time regulation, constrained
+  advancement, and ordered delivery from timestamp values.
+- TENA contributes the separation between execution-time coordination and the
+  persistent range data archive.
+- OpenSCENARIO contributes the separation of lifecycle, triggers, actions, and
+  simulation-time predicates.
+
+ACES adds backend-neutral authored declarations, exact rational mappings,
+ordinary SDL subject references, canonical compilation, and segment-preserving
+runtime control. It does not claim ROS, FMI, HLA, TENA, or OpenSCENARIO
+conformance through those generic declarations.

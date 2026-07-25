@@ -20,6 +20,8 @@ formal artifacts are warranted.
 - **Participant Runtime** (`specs/formal/participant-runtime/`) -- Participant
   runtime state/history, observable action lifecycle, shared operational state,
   and concurrent execution semantics
+- **Shared Time Model** (`specs/formal/time-model/`) -- Exact time domains,
+  clocks, mappings, progression, temporal constraints, and lifecycle control
 - **Experiment Core** (`specs/formal/experiment-core/`) -- Task, run,
   apparatus-context, study/collection, capture specification, raw evidence,
   derived measure, backend observation capability, and archival provenance

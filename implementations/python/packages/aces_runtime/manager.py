@@ -2,24 +2,28 @@
 
 from dataclasses import dataclass
 
+from aces_contracts.contracts.time_model import TimeModelDeclarationModel
 from aces_contracts.diagnostics import Diagnostic
 from aces_contracts.planning import ChangeAction, ProvisioningPlan, ProvisionOp, RuntimeDomain
-from aces_contracts.runtime_state import ApplyResult, RuntimeSnapshot, SnapshotEntry
+from aces_contracts.runtime_state import ApplyResult, RuntimeSnapshot
 from aces_processor.compiler import compile_scenario_runtime_model
-from aces_processor.models import (
-    ExecutionPlan,
-)
+from aces_processor.models import ExecutionPlan
 from aces_processor.planner import plan, snapshot_delete_order
 
+from .apply_failure import maybe_synthesize_failure, rollback_services
 from .backend_calls import _call_backend_apply, _call_backend_diagnostics
 from .diagnostics import _failure_diagnostic, _has_error_diagnostic
+from .participant_execution_control import RuntimeParticipantExecutionMixin
 from .registry import RuntimeTarget, _validate_runtime_target_shape
+from .time_control import RuntimeTimeControlMixin
 
 _RUNTIME_APPLY_ADDRESS = "runtime.apply"
 _APPLY_EVALUATOR_ADDRESS = "runtime.apply.evaluator"
 _APPLY_ORCHESTRATOR_ADDRESS = "runtime.apply.orchestrator"
 _APPLY_PHASE_FAILED = "runtime.apply-phase-failed"
 _DESTROY_PHASE_FAILED = "runtime.destroy-phase-failed"
+_ROLLBACK_EVALUATOR_ADDRESS = "runtime.rollback.evaluator"
+_ROLLBACK_ORCHESTRATOR_ADDRESS = "runtime.rollback.orchestrator"
 
 
 @dataclass
@@ -29,10 +33,6 @@ class _RuntimeApplyState:
     changed_addresses: list[str]
     started_evaluator: bool = False
     failure: ApplyResult | None = None
-
-
-def _delete_order(entries: dict[str, SnapshotEntry]) -> list[str]:
-    return snapshot_delete_order(entries)
 
 
 def _provenance_diagnostics(
@@ -79,56 +79,7 @@ def _provenance_diagnostics(
     return diagnostics
 
 
-def _maybe_synthesize_failure(
-    diagnostics: list[Diagnostic],
-    *,
-    result: ApplyResult,
-    code: str,
-    address: str,
-    message: str,
-) -> None:
-    if not result.success and not _has_error_diagnostic(result.diagnostics):
-        diagnostics.append(_failure_diagnostic(code, address, message))
-
-
-def _rollback_services(
-    snapshot: RuntimeSnapshot,
-    services: list[tuple[str, object]],
-) -> ApplyResult:
-    working_snapshot = snapshot
-    diagnostics: list[Diagnostic] = []
-    changed_addresses: list[str] = []
-    success = True
-
-    for address, service in services:
-        stop_result = _call_backend_apply(
-            service.stop,
-            working_snapshot,
-            address=address,
-            snapshot=working_snapshot,
-        )
-        diagnostics.extend(stop_result.diagnostics)
-        changed_addresses.extend(stop_result.changed_addresses)
-        working_snapshot = stop_result.snapshot
-        if not stop_result.success:
-            success = False
-            _maybe_synthesize_failure(
-                diagnostics,
-                result=stop_result,
-                code="runtime.apply-rollback-failed",
-                address=address,
-                message=f"Rollback failed while stopping '{address}'.",
-            )
-
-    return ApplyResult(
-        success=success,
-        snapshot=working_snapshot,
-        diagnostics=diagnostics,
-        changed_addresses=changed_addresses,
-    )
-
-
-class RuntimeManager:
+class RuntimeManager(RuntimeParticipantExecutionMixin, RuntimeTimeControlMixin):
     """Plans and executes SDL runtime work against a target."""
 
     def __init__(
@@ -143,9 +94,12 @@ class RuntimeManager:
             orchestrator=target.orchestrator,
             evaluator=target.evaluator,
             participant_runtime=target.participant_runtime,
+            time_runtime=target.time_runtime,
         )
         self._target = target
         self._snapshot = initial_snapshot if initial_snapshot is not None else RuntimeSnapshot()
+        self._time_declaration: TimeModelDeclarationModel | None = None
+        self._initialize_participant_scheduler()
 
     @property
     def snapshot(self) -> RuntimeSnapshot:
@@ -169,7 +123,11 @@ class RuntimeManager:
         )
 
     def apply(self, execution_plan: ExecutionPlan) -> ApplyResult:
+        driver_precondition = self._participant_driver_apply_precondition()
+        if driver_precondition is not None:
+            return driver_precondition
         diagnostics: list[Diagnostic] = list(execution_plan.diagnostics)
+        self._time_declaration = None
 
         precondition_failure = self._apply_precondition_failure(execution_plan, diagnostics)
         if precondition_failure is not None:
@@ -180,20 +138,43 @@ class RuntimeManager:
             diagnostics=diagnostics,
             changed_addresses=[],
         )
+        self._run_apply_phases(execution_plan, state)
+        if state.failure is None:
+            self._finalize_participant_driver_apply(state)
+        return state.failure
+
+    def _run_apply_phases(
+        self,
+        execution_plan: ExecutionPlan,
+        state: _RuntimeApplyState,
+    ) -> None:
         self._apply_provisioning_phase(execution_plan, state)
+        if state.failure is None:
+            self._apply_time_phase(execution_plan, state)
+        if state.failure is None:
+            self._apply_participant_execution_phase(execution_plan, state)
         if state.failure is None:
             self._apply_evaluation_phase(execution_plan, state)
         if state.failure is None:
             self._apply_orchestration_phase(execution_plan, state)
         if state.failure is None:
-            self._snapshot = state.working_snapshot
-            state.failure = ApplyResult(
-                success=not _has_error_diagnostic(state.diagnostics),
-                snapshot=self._snapshot,
-                diagnostics=state.diagnostics,
-                changed_addresses=state.changed_addresses,
-            )
-        return state.failure
+            participant_started = self._start_participant_execution_phase(execution_plan, state)
+            if not participant_started:
+                self._rollback_failed_participant_start(execution_plan, state)
+
+    def _rollback_failed_participant_start(
+        self,
+        execution_plan: ExecutionPlan,
+        state: _RuntimeApplyState,
+    ) -> None:
+        services_to_rollback = []
+        if execution_plan.orchestration.actionable_operations and self._target.orchestrator is not None:
+            services_to_rollback.append((_ROLLBACK_ORCHESTRATOR_ADDRESS, self._target.orchestrator))
+        if state.started_evaluator and self._target.evaluator is not None:
+            services_to_rollback.append((_ROLLBACK_EVALUATOR_ADDRESS, self._target.evaluator))
+        rollback_result = rollback_services(state.working_snapshot, services_to_rollback)
+        self._record_phase_result(state, rollback_result)
+        self._fail_apply_state(state)
 
     def _apply_provisioning_phase(
         self,
@@ -211,7 +192,7 @@ class RuntimeManager:
         )
         self._record_phase_result(state, provision_result)
         if not provision_result.success:
-            _maybe_synthesize_failure(
+            maybe_synthesize_failure(
                 state.diagnostics,
                 result=provision_result,
                 code=_APPLY_PHASE_FAILED,
@@ -237,16 +218,16 @@ class RuntimeManager:
             if evaluation_result.success:
                 state.started_evaluator = True
             else:
-                _maybe_synthesize_failure(
+                maybe_synthesize_failure(
                     state.diagnostics,
                     result=evaluation_result,
                     code=_APPLY_PHASE_FAILED,
                     address=_APPLY_EVALUATOR_ADDRESS,
                     message="Evaluator failed to start.",
                 )
-                rollback_result = _rollback_services(
+                rollback_result = rollback_services(
                     state.working_snapshot,
-                    [("runtime.rollback.evaluator", self._target.evaluator)],
+                    [(_ROLLBACK_EVALUATOR_ADDRESS, self._target.evaluator)],
                 )
                 self._record_phase_result(state, rollback_result)
                 self._fail_apply_state(state)
@@ -266,19 +247,19 @@ class RuntimeManager:
             )
             self._record_phase_result(state, orchestration_result)
             if not orchestration_result.success:
-                _maybe_synthesize_failure(
+                maybe_synthesize_failure(
                     state.diagnostics,
                     result=orchestration_result,
                     code=_APPLY_PHASE_FAILED,
                     address=_APPLY_ORCHESTRATOR_ADDRESS,
                     message="Orchestrator failed to start.",
                 )
-                rollback_services = [
-                    ("runtime.rollback.orchestrator", self._target.orchestrator),
+                services_to_rollback = [
+                    (_ROLLBACK_ORCHESTRATOR_ADDRESS, self._target.orchestrator),
                 ]
                 if state.started_evaluator and self._target.evaluator is not None:
-                    rollback_services.append(("runtime.rollback.evaluator", self._target.evaluator))
-                rollback_result = _rollback_services(state.working_snapshot, rollback_services)
+                    services_to_rollback.append((_ROLLBACK_EVALUATOR_ADDRESS, self._target.evaluator))
+                rollback_result = rollback_services(state.working_snapshot, services_to_rollback)
                 self._record_phase_result(state, rollback_result)
                 self._fail_apply_state(state)
 
@@ -289,12 +270,13 @@ class RuntimeManager:
         state.working_snapshot = result.snapshot
 
     def _fail_apply_state(self, state: _RuntimeApplyState) -> None:
+        self._time_declaration = None
         self._snapshot = state.working_snapshot
         state.failure = ApplyResult(
             success=False,
             snapshot=self._snapshot,
             diagnostics=state.diagnostics,
-            changed_addresses=state.changed_addresses,
+            changed_addresses=list(dict.fromkeys(state.changed_addresses)),
         )
 
     def _apply_precondition_failure(
@@ -374,9 +356,26 @@ class RuntimeManager:
             info["evaluator"] = self._target.evaluator.status()
             info["evaluation_results"] = self._target.evaluator.results()
             info["evaluation_history"] = self._target.evaluator.history()
+        if self._target.time_runtime is not None and self._snapshot.time_model_state is not None:
+            info["time_model_state"] = self.read_time_state().model_dump(mode="json")
+        if self._participant_execution_policies:
+            info["participant_clock_driver"] = self.participant_clock_driver_status()
         return info
 
     def destroy(self) -> ApplyResult:
+        if not self._stop_participant_clock_driver():
+            return ApplyResult(
+                success=False,
+                snapshot=self._snapshot,
+                diagnostics=[
+                    Diagnostic(
+                        code="runtime.participant-clock-driver-stop-timeout",
+                        domain="participant",
+                        address="runtime.destroy",
+                        message="Destroy did not start because the participant clock driver is still active.",
+                    )
+                ],
+            )
         diagnostics: list[Diagnostic] = []
         changed_addresses: list[str] = []
         working_snapshot = self._snapshot
@@ -394,7 +393,7 @@ class RuntimeManager:
             working_snapshot = stop_result.snapshot
             if not stop_result.success:
                 phases_succeeded = False
-                _maybe_synthesize_failure(
+                maybe_synthesize_failure(
                     diagnostics,
                     result=stop_result,
                     code=_DESTROY_PHASE_FAILED,
@@ -414,7 +413,7 @@ class RuntimeManager:
             working_snapshot = stop_result.snapshot
             if not stop_result.success:
                 phases_succeeded = False
-                _maybe_synthesize_failure(
+                maybe_synthesize_failure(
                     diagnostics,
                     result=stop_result,
                     code=_DESTROY_PHASE_FAILED,
@@ -434,7 +433,7 @@ class RuntimeManager:
                     ordering_dependencies=(provisioning_entries[address].ordering_dependencies),
                     refresh_dependencies=(provisioning_entries[address].refresh_dependencies),
                 )
-                for address in _delete_order(provisioning_entries)
+                for address in snapshot_delete_order(provisioning_entries)
             ],
             realization_envelope=working_snapshot.realization_envelope,
         )
@@ -450,7 +449,7 @@ class RuntimeManager:
         working_snapshot = provision_result.snapshot
         if not provision_result.success:
             phases_succeeded = False
-            _maybe_synthesize_failure(
+            maybe_synthesize_failure(
                 diagnostics,
                 result=provision_result,
                 code=_DESTROY_PHASE_FAILED,

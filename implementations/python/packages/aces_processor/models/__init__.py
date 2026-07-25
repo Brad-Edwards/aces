@@ -111,6 +111,7 @@ from .behavior_resources import (
     MixedControlDispositionRulesRuntime,
     MixedControlTransitionRuntime,
     ObjectiveWindowReferenceRuntime,
+    ParticipantAutonomousExecutionRuntime,
     ParticipantBehaviorRuntime,
     ParticipantBehaviorSpecificationRuntime,
     ParticipantInteractiveAccessRuntime,
@@ -164,6 +165,7 @@ from .resources import (
     PropositionRuntime,
     ResolvedResource,
     RuntimeTemplate,
+    ServiceContentMaterializationBinding,
     map_backend_diagnostic_to_participant_failure,
     validate_participant_action_result_contract,
 )
@@ -179,6 +181,14 @@ from .temporal import (
     ParticipantTemporalStateTransition,
     iter_participant_temporal_state_machine_violations,
 )
+from .time_model import (
+    CompiledClock,
+    CompiledTemporalConstraint,
+    CompiledTimeDomain,
+    CompiledTimeDomainMapping,
+    CompiledTimeModel,
+    CompiledTimeProgressionPolicy,
+)
 
 __all__ = [
     "AccountPlacement",
@@ -186,9 +196,16 @@ __all__ = [
     "AssertionRuntime",
     "ChangeAction",
     "CompiledCapabilityConstraint",
+    "CompiledClock",
     "CompiledRealizationRequirement",
+    "CompiledTemporalConstraint",
+    "CompiledTimeDomain",
+    "CompiledTimeDomainMapping",
+    "CompiledTimeModel",
+    "CompiledTimeProgressionPolicy",
     "ConditionBinding",
     "ContentPlacement",
+    "ServiceContentMaterializationBinding",
     "DomainControllerPlacement",
     "GeneratedArtifactRuntime",
     "Diagnostic",
@@ -244,6 +261,7 @@ __all__ = [
     "ParticipantExposureResolvers",
     "ParticipantBehaviorRuntime",
     "ParticipantBehaviorSpecificationRuntime",
+    "ParticipantAutonomousExecutionRuntime",
     "ParticipantInteractiveAccessRuntime",
     "ParticipantEpisodeControlAction",
     "ParticipantEpisodeExecutionState",

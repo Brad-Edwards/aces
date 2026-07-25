@@ -24,10 +24,12 @@ from .participant_envelopes import (
     ParticipantTimeManagementContextModel,
 )
 from .participant_runtime import (
+    ParticipantAutonomousExecutionStateModel,
     ParticipantBehaviorHistoryEventModel,
     ParticipantEpisodeHistoryEventModel,
     ParticipantEpisodeStateModel,
 )
+from .time_model import TimeRuntimeStateModel
 
 
 class PlanOperationModel(ContractModel):
@@ -163,10 +165,14 @@ class RuntimeSnapshotEnvelopeModel(ContractModel):
     participant_episode_results: dict[str, ParticipantEpisodeStateModel] = Field(default_factory=dict)
     participant_episode_history: dict[str, list[ParticipantEpisodeHistoryEventModel]] = Field(default_factory=dict)
     participant_behavior_history: dict[str, list[ParticipantBehaviorHistoryEventModel]] = Field(default_factory=dict)
+    participant_autonomous_execution_states: dict[str, ParticipantAutonomousExecutionStateModel] = Field(
+        default_factory=dict
+    )
     shared_state_records: dict[str, ParticipantSharedStateRecordModel] = Field(default_factory=dict)
     shared_state_history: dict[str, list[ParticipantSharedStateRecordModel]] = Field(default_factory=dict)
     joint_action_records: dict[str, ParticipantJointActionRecordModel] = Field(default_factory=dict)
     time_management_contexts: dict[str, ParticipantTimeManagementContextModel] = Field(default_factory=dict)
+    time_model_state: TimeRuntimeStateModel | None = None
     realization_provenance: list[RealizationProvenanceEntryModel] = Field(default_factory=list)
     realization_envelope: RealizationEnvelopeIdentityModel | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
@@ -176,6 +182,12 @@ class RuntimeSnapshotEnvelopeModel(ContractModel):
         for map_key, entry in self.entries.items():
             if map_key != entry.address:
                 raise ValueError("Runtime snapshot entries map key must equal embedded address")
+        for map_key, state in self.participant_autonomous_execution_states.items():
+            expected = f"{state.policy_address}.state.{state.participant_address}"
+            if map_key != expected:
+                raise ValueError(
+                    "Autonomous participant state map key must equal the embedded policy and participant address"
+                )
         return self
 
 
