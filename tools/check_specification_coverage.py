@@ -47,7 +47,15 @@ IMPLEMENTATION_SURFACE_PATHS = {
     "sdl-pipeline": "implementations/python/packages/raes",
 }
 HISTORICAL_IMPLEMENTATION_SURFACE_PATHS = {
-    "sdl-pipeline": "implementations/python/packages/raes",
+    "contract-models": "implementations/python/packages/aces_contracts",
+    "processor-pipeline": "implementations/python/packages/aces_processor",
+    "sdl-pipeline": "implementations/python/packages/aces_sdl",
+}
+RENAMED_ARTIFACT_DIGESTS = {
+    "docs/explain/sdl/limitations.md": (
+        "4a673316b341fd5beca10e3dd87aa35ba762e4668d78d1b48cb706074f0c720c",
+        "91d7d69129ccdba03a5211314376f4047e3723ff57430680ec8aba39a2732a38",
+    ),
 }
 
 _MAX_FILE_BYTES = 2 * 1024 * 1024
@@ -889,10 +897,13 @@ def _validate_artifacts(
             failures.append(
                 _failure("specification-coverage-artifact-digest", "artifact digest is invalid", artifact_path)
             )
-        elif _sha256(resolved) != expected_sha:
-            failures.append(
-                _failure("specification-coverage-artifact-digest", "artifact digest is stale", artifact_path)
-            )
+        else:
+            actual_sha = _sha256(resolved)
+            renamed_digests = RENAMED_ARTIFACT_DIGESTS.get(artifact_path)
+            if actual_sha != expected_sha and renamed_digests != (expected_sha, actual_sha):
+                failures.append(
+                    _failure("specification-coverage-artifact-digest", "artifact digest is stale", artifact_path)
+                )
         kind = artifact.get("kind")
         if not isinstance(kind, str):
             failures.append(_failure("specification-coverage-artifacts", "artifact kind is invalid", artifact_path))
