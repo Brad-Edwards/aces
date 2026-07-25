@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "ec3d0f6b90b639780027d124d7f56a4a69b0179d7aaded897a1e05910a18a507",
+  "content_hash": "681124de58a3b4ff9ae37f948dea6946c0fc6322c793dd1077924357956a7ce2",
   "last_change": {
-    "summary": "Carried the shared time model through whole-scenario satisfiability evidence.",
-    "content_hash": "ec3d0f6b90b639780027d124d7f56a4a69b0179d7aaded897a1e05910a18a507"
+    "summary": "Carried enterprise tenancy, initial service-state materialization, and shared time invariants into scenario satisfiability evidence.",
+    "content_hash": "681124de58a3b4ff9ae37f948dea6946c0fc6322c793dd1077924357956a7ce2"
   }
 }

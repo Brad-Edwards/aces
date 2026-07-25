@@ -73,6 +73,7 @@ tests, rather than a prose rewrite. The catalogs are:
 | [`variation-points.md`](variation-points.md) | — | Closed scenario-family variation kinds, bounded domains, typed target slots, structural constraints, composition, and phase behavior. |
 | [`runtime-inventory.md`](runtime-inventory.md) | **4. Runtime-family index** | The node-scoped runtime-inventory index — family key, collection name, primary `<noun>_id`, child-ref collections, owning ADR — and the shared invariants stated once, delegating per-field semantics to the family ADRs. |
 | [`authored-domain-topology.md`](authored-domain-topology.md) | — | Authored identity domains, controller/member topology, account domain bindings, compiled ordering, provisioner capability, admission, and readback invariants. |
+| [`initial-service-state.md`](initial-service-state.md) | — | Service-target content materialization, tenant/reset ownership, exact backend admission, readback, and observational equivalence. |
 | [`observability-and-evidence.md`](observability-and-evidence.md) | **5. Observability and evidence planes** | Scenario-native observability, authored evidence requirements, processor/backend operational observability, captured evidence, derived analysis, and augmentation classification rules. |
 | [`scientific-scenario-completeness.md`](scientific-scenario-completeness.md) | — | REV1 intended-use profiles, atomic concern dispositions, separately revisioned delivery assessment, computed completeness, and explicit scientific non-claims. |
 | [`diagnostics.md`](diagnostics.md) | — | The parse / semantic-validation / instantiation stages, direct-artifact admission, and the normative error-vs-advisory classification criterion. |
@@ -100,6 +101,8 @@ An implementer can answer each structural question from the named file alone:
   [`runtime-inventory.md`](runtime-inventory.md).
 - *How is domain-backed realization authored without inferring topology from runtime inventory?* →
   [`authored-domain-topology.md`](authored-domain-topology.md).
+- *How is required service-owned initial state authored and controlled without a historical-data ontology?* →
+  [`initial-service-state.md`](initial-service-state.md).
 - *How are scenario-native observability systems and authored evidence
   requirements kept distinct?* →
   [`observability-and-evidence.md`](observability-and-evidence.md).

@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-snapshot-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "c38a623187aa48b270ac3fc405380d60742431cda90a488d43432acf2d8ae8bb",
+  "content_hash": "a522bbcb4f365b92095ef0b759a01955e6da10092dc201a68a50295d6b07d29b",
   "last_change": {
-    "summary": "Carried the shared time model into instantiated scenario snapshots.",
-    "content_hash": "c38a623187aa48b270ac3fc405380d60742431cda90a488d43432acf2d8ae8bb"
+    "summary": "Published enterprise tenancy, content-owned service materialization, and shared time semantics in immutable scenario snapshots.",
+    "content_hash": "a522bbcb4f365b92095ef0b759a01955e6da10092dc201a68a50295d6b07d29b"
   }
 }

@@ -757,6 +757,22 @@
         }
       }
     },
+    "provisioner-service-materialization-profiles": {
+      "title": "Provisioner Service Materialization Profiles",
+      "description": "Provisioner-supported provider-neutral service content materialization profiles.",
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "capabilities.provisioner.supported_service_materialization_profiles"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "service-content-v1": {
+          "title": "Service Content v1",
+          "description": "Exact reconciliation of authored content into a named service with controlled reset and participant-equivalent readback."
+        }
+      }
+    },
     "provisioner-account-features": {
       "title": "Provisioner Account Features",
       "description": "Provisioner-supported account feature vocabulary.",

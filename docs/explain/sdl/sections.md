@@ -1536,7 +1536,41 @@ content:
     format: sql
 ```
 
-`target` is required for every content entry and must reference a VM node, not a switch/network node. `file` content requires `path`; `dataset` content requires either `source` or non-empty `items`; `directory` content requires `destination`.
+`target` is required for every content entry. Normally it references a VM node,
+not a switch/network node. When ordinary node placement cannot establish
+required service-owned state, `service_materialization` binds that content to a
+named service on the same VM:
+
+```yaml
+content:
+  company-mail:
+    type: dataset
+    target: mail
+    source: company-mail-corpus
+    format: message-set-v1
+    service_materialization:
+      target_service_ref: nodes.mail.services.imap
+      interface_profile: service-content
+      profile_version: "1"
+      requirements:
+        operation: ensure-owned-items
+        conflict_policy: reject-unowned-collision
+        readback: canonical-content-digest
+      readback_assertion_refs: [company-mail-visible]
+      evidence_requirement_refs: [company-mail-readback]
+      observation_boundary_refs: [participant-mail-view]
+```
+
+The interface profile does not describe product APIs. It requires the backend
+to reconcile the ordinary content through the named service, reject
+unowned-item collisions, preserve declared tenant/reset ownership, and return
+independent digest readback that can satisfy the observed-state postcondition
+and participant projection. Backend profile support is separate from ordinary
+`file`/`dataset`/`directory` support. The normative contract is
+`specs/sdl/initial-service-state.md`.
+
+`file` content requires `path`; `dataset` content requires either `source` or
+non-empty `items`; `directory` content requires `destination`.
 
 ---
 

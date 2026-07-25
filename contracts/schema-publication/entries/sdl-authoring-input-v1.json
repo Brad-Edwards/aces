@@ -2,9 +2,9 @@
   "contract_id": "sdl-authoring-input-v1",
   "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
   "stability": "draft",
-  "content_hash": "4759325b74bf0927b30159bd3fe4a8d1be4d2c9a9da6d6636131781a14467142",
+  "content_hash": "4830cb0b8518e5548997d6ed4c514b638c99453be80a7066de47fdee06860cb3",
   "last_change": {
-    "summary": "Published shared time domains, clocks, exact mappings, progression policies, and temporal constraints for issue 117.",
-    "content_hash": "4759325b74bf0927b30159bd3fe4a8d1be4d2c9a9da6d6636131781a14467142"
+    "summary": "Published enterprise tenancy, content-owned service materialization, and shared time authoring semantics.",
+    "content_hash": "4830cb0b8518e5548997d6ed4c514b638c99453be80a7066de47fdee06860cb3"
   }
 }

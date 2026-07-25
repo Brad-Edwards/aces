@@ -13,6 +13,7 @@ from uuid import uuid4
 
 from aces_backend_protocols.backend_manifest import BackendManifest
 from aces_backend_protocols.domain_topology import domain_topology_plan_diagnostics
+from aces_backend_protocols.service_materialization import service_materialization_plan_diagnostics
 from aces_contracts.apparatus import (
     DECLARED_CAPABILITY_MATCH_REQUIREMENT_KIND,
     RUNTIME_REALIZATION_DOMAIN,
@@ -105,6 +106,14 @@ def _submitted_plan_diagnostics(
         if stateful_diagnostic is not None:
             diagnostics.append(stateful_diagnostic)
         else:
+            service_materialization_diagnostics = service_materialization_plan_diagnostics(
+                plan,
+                manifest.provisioner,
+                manifest.realization_envelope,
+            )
+            if service_materialization_diagnostics:
+                diagnostics.extend(service_materialization_diagnostics[:1])
+                return diagnostics
             diagnostics.extend(
                 domain_topology_plan_diagnostics(
                     plan,

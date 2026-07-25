@@ -117,6 +117,9 @@ def backend_manifest_v2_model(manifest: BackendManifest) -> BackendManifestV2Mod
                 "supported_content_types": sorted(manifest.provisioner.supported_content_types),
                 "supported_account_features": sorted(manifest.provisioner.supported_account_features),
                 "supported_domain_profiles": sorted(manifest.provisioner.supported_domain_profiles),
+                "supported_service_materialization_profiles": sorted(
+                    manifest.provisioner.supported_service_materialization_profiles
+                ),
                 "max_total_nodes": manifest.provisioner.max_total_nodes,
                 "supports_acls": manifest.provisioner.supports_acls,
                 "supports_accounts": manifest.provisioner.supports_accounts,
@@ -251,6 +254,7 @@ def _provisioner_from_model(model: ProvisionerCapabilitiesModel) -> ProvisionerC
         supported_content_types=frozenset(model.supported_content_types),
         supported_account_features=frozenset(model.supported_account_features),
         supported_domain_profiles=frozenset(model.supported_domain_profiles),
+        supported_service_materialization_profiles=frozenset(model.supported_service_materialization_profiles),
         max_total_nodes=model.max_total_nodes,
         supports_acls=model.supports_acls,
         supports_accounts=model.supports_accounts,
