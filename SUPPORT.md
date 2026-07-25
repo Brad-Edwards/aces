@@ -1,6 +1,6 @@
 # Support
 
-ACES SDL is community supported and maintained on a best-effort basis.
+RAES SDL is community supported and maintained on a best-effort basis.
 
 ## Where to Ask
 

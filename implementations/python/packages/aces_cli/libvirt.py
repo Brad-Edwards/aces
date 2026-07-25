@@ -43,7 +43,7 @@ def validate_live(
     scenario: Path = typer.Option(
         Path("examples/scenarios/techvault-operational.sdl.yaml"),
         "--scenario",
-        help="ACES SDL scenario to boot and validate.",
+        help="RAES SDL scenario to boot and validate.",
     ),
     project_dir: Path = typer.Option(
         Path("."),
@@ -69,7 +69,7 @@ def validate_live(
         help="libvirt connection URI.",
     ),
 ) -> None:
-    """Boot TechVault through native ACES/libvirt and run the live validation gate."""
+    """Boot TechVault through native RAES/libvirt and run the live validation gate."""
 
     if not yes:
         typer.echo(_LIVE_WARNING)
@@ -95,7 +95,7 @@ def guest_certify(
     scenario: Path = typer.Option(
         Path("examples/scenarios/techvault-guest-certified.sdl.yaml"),
         "--scenario",
-        help="ACES SDL scenario to boot and certify from inside the guest.",
+        help="RAES SDL scenario to boot and certify from inside the guest.",
     ),
     project_dir: Path = typer.Option(
         Path("."),
@@ -139,7 +139,7 @@ def validate_evidence(
     scenario: Path = typer.Option(
         Path("examples/scenarios/enterprise-participant-evidence-loop.sdl.yaml"),
         "--scenario",
-        help="Reference ACES SDL scenario to produce evaluator evidence for.",
+        help="Reference RAES SDL scenario to produce evaluator evidence for.",
     ),
     project_dir: Path = typer.Option(
         Path("."),

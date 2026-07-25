@@ -1,6 +1,6 @@
 """Installed-distribution acceptance tests for the bundled contract corpus (#537).
 
-These build the real ``aces-sdl`` wheel, install it into a throwaway virtualenv,
+These build the real ``raes-sdl`` wheel, install it into a throwaway virtualenv,
 and exercise conformance + SDL semantic validation **with no repository
 ``contracts/`` tree on the path** — so a source-checkout fallback cannot mask a
 missing wheel payload (the failure mode the issue exists to prevent). A passing
@@ -65,7 +65,7 @@ def built_wheel(tmp_path_factory: pytest.TempPathFactory) -> Path:
     out_dir = tmp_path_factory.mktemp("wheel")
     result = _run([_UV, "build", "--wheel", "--out-dir", str(out_dir)], cwd=PROJECT_ROOT)
     assert result.returncode == 0, f"wheel build failed:\n{result.stdout}\n{result.stderr}"
-    wheels = list(out_dir.glob("aces_sdl-*.whl"))
+    wheels = list(out_dir.glob("raes_sdl-*.whl"))
     assert len(wheels) == 1, f"expected exactly one wheel, found {wheels}"
     return wheels[0]
 
@@ -148,12 +148,12 @@ def test_corpus_discoverable_via_importlib_resources_from_installed_wheel(instal
 
 @requires_uv
 def test_conformance_backend_passes_from_installed_wheel(installed_python: Path, tmp_path: Path):
-    """Acceptance: ``aces conformance backend --profile provisioning-only`` exits
+    """Acceptance: ``raes conformance backend --profile provisioning-only`` exits
     0 from a fresh wheel install with no source tree present."""
 
-    aces = installed_python.parent / ("aces.exe" if sys.platform == "win32" else "aces")
+    raes = installed_python.parent / ("raes.exe" if sys.platform == "win32" else "raes")
     result = _run(
-        [str(aces), "conformance", "backend", "--profile", "provisioning-only"],
+        [str(raes), "conformance", "backend", "--profile", "provisioning-only"],
         cwd=tmp_path,
         env=_sanitized_runtime_env(tmp_path),
     )

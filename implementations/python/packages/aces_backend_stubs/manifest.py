@@ -77,7 +77,7 @@ _TIME_DEDICATED_CONTRACT_VERSIONS = frozenset({"time-model-v1", "time-runtime-st
 
 def _current_backend_version() -> str:
     try:
-        return distribution_version("aces-sdl")
+        return distribution_version("raes-sdl")
     except PackageNotFoundError:
         return "0.0.0+unknown"
 

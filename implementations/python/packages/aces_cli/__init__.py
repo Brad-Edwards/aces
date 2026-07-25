@@ -1,1 +1,1 @@
-"""ACES CLI package."""
+"""RAES CLI package."""

@@ -11,7 +11,7 @@ that would imply a compatibility guarantee the repository cannot honour.
 
 from __future__ import annotations
 
-from importlib.metadata import PackageNotFoundError, version
+from importlib.metadata import PackageNotFoundError, entry_points, version
 
 from typer.testing import CliRunner
 
@@ -22,7 +22,7 @@ DISHONEST_LITERAL = "0.1.0"
 def test_aces_namespace_version_derives_from_distribution() -> None:
     import aces
 
-    assert aces.__version__ == version("aces-sdl")
+    assert aces.__version__ == version("raes-sdl")
 
 
 def test_package_version_helper_uses_supplied_sentinel(monkeypatch) -> None:
@@ -32,7 +32,7 @@ def test_package_version_helper_uses_supplied_sentinel(monkeypatch) -> None:
         raise PackageNotFoundError
 
     monkeypatch.setattr(compat, "version", _raise)
-    assert compat.package_version("aces-sdl", default=NOT_INSTALLED_SENTINEL) == NOT_INSTALLED_SENTINEL
+    assert compat.package_version("raes-sdl", default=NOT_INSTALLED_SENTINEL) == NOT_INSTALLED_SENTINEL
 
 
 def test_cli_version_reports_installed_distribution() -> None:
@@ -41,7 +41,28 @@ def test_cli_version_reports_installed_distribution() -> None:
     result = CliRunner().invoke(app, ["--version"])
 
     assert result.exit_code == 0
-    assert version("aces-sdl") in result.stdout
+    assert result.stdout == f"raes {version('raes-sdl')}\n"
+
+
+def test_cli_help_uses_raes_project_identity() -> None:
+    from aces_cli.main import app
+
+    result = CliRunner().invoke(app, ["--help"])
+
+    assert result.exit_code == 0
+    assert "RAES" in result.stdout
+
+
+def test_console_scripts_hard_cut_to_raes_names() -> None:
+    scripts = {
+        entry_point.name
+        for entry_point in entry_points(group="console_scripts")
+        if entry_point.value in {"aces.cli.main:app", "aces_mcp.server:main"}
+    }
+
+    assert {"raes", "raes-mcp"} <= scripts
+    assert "aces" not in scripts
+    assert "aces-mcp" not in scripts
 
 
 def test_cli_version_fallback_is_honest_sentinel(monkeypatch) -> None:
@@ -61,7 +82,7 @@ def test_cli_version_fallback_is_honest_sentinel(monkeypatch) -> None:
 def test_control_plane_api_version_derives_from_distribution() -> None:
     from aces_runtime.control_plane_api import _control_plane_api_version
 
-    assert _control_plane_api_version() == version("aces-sdl")
+    assert _control_plane_api_version() == version("raes-sdl")
 
 
 def test_control_plane_api_version_fallback_is_honest_sentinel(monkeypatch) -> None:
@@ -83,4 +104,5 @@ def test_control_plane_app_openapi_version_matches_distribution() -> None:
 
     app = create_control_plane_app(RuntimeControlPlane(create_stub_target()))
 
-    assert app.version == version("aces-sdl")
+    assert app.title == "RAES Runtime Control Plane"
+    assert app.version == version("raes-sdl")

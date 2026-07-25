@@ -4,7 +4,7 @@
   "packages": {
     ".": {
       "release-type": "python",
-      "package-name": "aces-sdl",
+      "package-name": "raes-sdl",
       "changelog-path": "CHANGELOG.md",
       "extra-files": [
         {

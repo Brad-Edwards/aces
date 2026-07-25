@@ -424,3 +424,8 @@ adrs:
       - date: 2026-07-24
         ref: "#861"
         summary: "Required exact action provenance and capability-specific atomic participant batching."
+  - id: ADR-093
+    path: docs/decisions/adrs/adr-093-raes-rename-and-compatibility-boundaries.md
+    pin: ee41917ed26914693f44cc1f9a07d0720774862639843ddc12eb2a38ea7b63e5
+    amendments:
+      - ref: "#866"

@@ -3,16 +3,16 @@ from importlib.metadata import version as _distribution_version
 
 # -- Project information -------------------------------------------------------
 
-project = "ACES SDL"
+project = "RAES SDL"
 copyright = "2026, Brad Edwards"
 author = "Brad Edwards"
 
-# The docs build version derives from the installed `aces-sdl` distribution
+# The docs build version derives from the installed `raes-sdl` distribution
 # metadata (the release-please-owned source of truth), not a hand-maintained
 # literal (GOV-901). The honest PEP 440 sentinel `0.0.0+unknown` is used when
 # the distribution is not installed, so the docs never imply a false release.
 try:
-    release = _distribution_version("aces-sdl")
+    release = _distribution_version("raes-sdl")
 except PackageNotFoundError:
     release = "0.0.0+unknown"
 version = release.split("+", 1)[0]
@@ -44,7 +44,7 @@ myst_heading_anchors = 3
 # -- Options for HTML output ---------------------------------------------------
 
 html_theme = "furo"
-html_title = "ACES SDL"
+html_title = "RAES SDL"
 html_static_path = ["_static"]
 
 html_theme_options = {

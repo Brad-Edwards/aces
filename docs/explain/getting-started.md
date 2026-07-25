@@ -1,6 +1,6 @@
-# Getting Started With ACES
+# Getting Started With RAES
 
-ACES currently provides a Scenario Description Language (SDL), a Python
+RAES currently provides a Scenario Description Language (SDL), a Python
 reference implementation, contracts, examples, tests, and explanatory
 documentation. It is not a managed cyber range and does not include a
 production backend.
@@ -9,7 +9,7 @@ Use this page to choose the smallest useful entrypoint for your task.
 
 ## Current Boundary
 
-ACES can currently support:
+RAES can currently support:
 
 - reading and authoring SDL scenario documents
 - parsing and validating SDL through the Python implementation
@@ -19,7 +19,7 @@ ACES can currently support:
   for scenarios, workflows, participant behavior, tasks, runs, and studies
 - reviewing the specifications, ADRs, and examples that define current claims
 
-ACES does not currently provide:
+RAES does not currently provide:
 
 - production range deployment
 - hosted backend operation
@@ -38,10 +38,10 @@ fixtures or schema authority.
 | Read a complete scenario | `examples/README.md`, `examples/scenarios/*.sdl.yaml` | `pytest tests/test_scenarios.py` | The checked examples load through the current parser boundary. |
 | Start from a reusable template or pattern | `examples/library/catalog.yaml`, `examples/library/templates/`, `examples/library/patterns/` | `python tools/check_example_library.py` | The catalog covers scenario, workflow, participant behavior, task, run, and study surfaces with parser-validated template bodies. |
 | Author a small SDL file | [`docs/explain/sdl/index.md`](sdl/index.md), [`docs/explain/sdl/sections.md`](sdl/sections.md), [`docs/explain/sdl/validation.md`](sdl/validation.md) | `parse_sdl_file()` or `load_scenario()` | The file is accepted by the current SDL model and semantic validator. |
-| Use an agent-facing authoring surface | `aces-mcp`, then `aces_tool_surface`, `aces_agent_guidance`, `aces_intended_use_profiles`, and [`docs/explain/sdl/language-service.md`](sdl/language-service.md) | `aces_agent_guidance`, `aces_intended_use_profiles`, `sdl_completions`, `sdl_apply_edit`, `sdl_diagnostics`, `sdl_format`, `sdl_references`, `sdl_validate`, `sdl_design_assessment`, `sdl_plan`, `sdl_claims_assessment` | The agent can choose an intended-use scope, inspect current ACES blockers, and help author, edit, dry-run, and qualify claims without repository-local code access. |
-| Use variables or imports | [`docs/explain/sdl/parser.md`](sdl/parser.md), [`docs/explain/sdl/sections.md`](sdl/sections.md) | `aces sdl resolve`, `aces sdl verify-imports` | Imports and variable placeholders follow the current parser rules. |
+| Use an agent-facing authoring surface | `raes-mcp`, then `raes_tool_surface`, `raes_agent_guidance`, `raes_intended_use_profiles`, and [`docs/explain/sdl/language-service.md`](sdl/language-service.md) | `raes_agent_guidance`, `raes_intended_use_profiles`, `sdl_completions`, `sdl_apply_edit`, `sdl_diagnostics`, `sdl_format`, `sdl_references`, `sdl_validate`, `sdl_design_assessment`, `sdl_plan`, `sdl_claims_assessment` | The agent can choose an intended-use scope, inspect current RAES blockers, and help author, edit, dry-run, and qualify claims without repository-local code access. |
+| Use variables or imports | [`docs/explain/sdl/parser.md`](sdl/parser.md), [`docs/explain/sdl/sections.md`](sdl/sections.md) | `raes sdl resolve`, `raes sdl verify-imports` | Imports and variable placeholders follow the current parser rules. |
 | Inspect current limits | [`docs/explain/sdl/limitations.md`](sdl/limitations.md), [`docs/explain/sdl/testing.md`](sdl/testing.md) | Compare the use case to the listed materialized surfaces | Unsupported or partial surfaces are identified before authoring. |
-| Work on backend conformance | [`docs/explain/sdl/runtime-architecture.md`](sdl/runtime-architecture.md), `contracts/README.md`, [`docs/explain/reference/backend-conformance.md`](reference/backend-conformance.md) | `aces conformance --help` and the conformance tests | The backend work is aligned with published contracts and fixtures. |
+| Work on backend conformance | [`docs/explain/sdl/runtime-architecture.md`](sdl/runtime-architecture.md), `contracts/README.md`, [`docs/explain/reference/backend-conformance.md`](reference/backend-conformance.md) | `raes conformance --help` and the conformance tests | The backend work is aligned with published contracts and fixtures. |
 | Review semantics or authority | [`docs/specs/formal.md`](../specs/formal.md), [`docs/decisions/adrs/`](../decisions/adrs/README.md), [`docs/explain/reference/normative-artifact-authority.md`](reference/normative-artifact-authority.md) | Read the relevant spec, ADR, and tests together | The claim is grounded in the current authority surface. |
 
 ## Rigor Levels
@@ -50,7 +50,7 @@ Use the lowest level that answers the question.
 
 | Level | Use when | Current artifact | What it can show | What it cannot show |
 |-------|----------|------------------|------------------|---------------------|
-| Orientation | You need to know what ACES is and is not. | README, docs index, reference map | Current repository scope and entrypoints | SDL validity, backend behavior, or experiment adequacy |
+| Orientation | You need to know what RAES is and is not. | README, docs index, reference map | Current repository scope and entrypoints | SDL validity, backend behavior, or experiment adequacy |
 | SDL parse and validation | You have an SDL file and need current parser feedback. | `parse_sdl_file()`, `load_scenario()`, SDL parser/model/validator tests | Structural and semantic acceptance by the reference implementation | Deployment viability or general domain completeness |
 | Example-backed authoring | You need a worked scenario to study or adapt. | `examples/scenarios/*.sdl.yaml`, `test_scenarios.py` | The example loads from disk without advisories under current tests | Suitability for another range, backend, exercise, or research design |
 | Template and pattern authoring | You need a reusable starting shape for a scenario, workflow, participant behavior, task, run, or study. | `examples/library/catalog.yaml`, `tools/check_example_library.py` | The cataloged template body validates as current SDL and the pattern has stable metadata | New runtime semantics or first-class task, run, or study sections |
@@ -64,7 +64,7 @@ From the repository root:
 ```shell
 cd implementations/python
 uv sync --all-extras
-uv run aces --help
+uv run raes --help
 ```
 
 Parse and validate a scenario from Python:
@@ -93,15 +93,15 @@ Work with SDL module imports:
 
 ```shell
 cd implementations/python
-uv run aces sdl resolve ../../examples/scenarios/hospital-ransomware-surgery-day.sdl.yaml
-uv run aces sdl verify-imports ../../examples/scenarios/hospital-ransomware-surgery-day.sdl.yaml
+uv run raes sdl resolve ../../examples/scenarios/hospital-ransomware-surgery-day.sdl.yaml
+uv run raes sdl verify-imports ../../examples/scenarios/hospital-ransomware-surgery-day.sdl.yaml
 ```
 
 Inspect a compiled execution plan as JSON:
 
 ```shell
 cd implementations/python
-uv run aces processor plan ../../examples/scenarios/techvault-defensive-min.sdl.yaml --format json
+uv run raes processor plan ../../examples/scenarios/techvault-defensive-min.sdl.yaml --format json
 ```
 
 This is a read-only dry run: it parses, compiles, and plans the scenario against
@@ -114,13 +114,13 @@ Expose the agent-facing MCP tools:
 
 ```shell
 cd implementations/python
-uv run aces-mcp
+uv run raes-mcp
 ```
 
-Start with `aces_tool_surface`, then call `aces_agent_guidance` for
+Start with `raes_tool_surface`, then call `raes_agent_guidance` for
 machine-readable scope boundaries, invariants, review priorities, and
-safe-operating expectations. Call `aces_intended_use_profiles` to select an
-intended-use scope and inspect current ACES delivery blockers. Use
+safe-operating expectations. Call `raes_intended_use_profiles` to select an
+intended-use scope and inspect current RAES delivery blockers. Use
 `sdl_claims_assessment` before making research
 or range-readiness claims. These tools do not execute participant actions or
 start a live range.

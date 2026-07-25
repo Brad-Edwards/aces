@@ -19,7 +19,7 @@ import yaml
 from tools.policy.common import PolicyFailure, apply_exceptions, failures_to_json, load_exceptions
 
 AGENT_GUIDANCE_RELATIVE_PATH = "specs/agent-guidance/agent-guidance.yaml"
-POLICY_VALUE = "aces-agent-guidance"
+POLICY_VALUE = "raes-agent-guidance"
 REQUIREMENT_REF = "AUT-811"
 REQUIRED_CATEGORIES: tuple[str, ...] = (
     "scope_boundaries",
