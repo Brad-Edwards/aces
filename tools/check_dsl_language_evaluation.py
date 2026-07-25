@@ -25,8 +25,11 @@ from tools.policy.common import (  # noqa: E402
 )
 
 MANIFEST_PATH = "docs/research/dsl-language-evaluation/bundle-manifest.json"
-_HISTORICAL_PACKAGE_PREFIX = "implementations/python/packages/aces_sdl"
-_CURRENT_PACKAGE_PREFIX = "implementations/python/packages/raes"
+_HISTORICAL_PACKAGE_MOVES: tuple[tuple[str, str], ...] = (
+    ("implementations/python/packages/aces_sdl", "implementations/python/packages/raes"),
+    ("implementations/python/packages/aces_cli", "implementations/python/packages/raes_cli"),
+    ("implementations/python/packages/aces_mcp", "implementations/python/packages/raes_mcp"),
+)
 _MAX_FILE_BYTES = 2 * 1024 * 1024
 _MAX_CATALOG_ITEMS = 128
 _MAX_EXECUTION_RECORDS = 20_000
@@ -344,11 +347,13 @@ def _failure(rule_id: str, message: str, path: str | None = None) -> PolicyFailu
 
 
 def _resolve_repository_artifact(repo_root: Path, artifact_path: str) -> Path | None:
-    """Resolve an immutable evidence locator through the SDL package move."""
+    """Resolve an immutable evidence locator through the Python package moves."""
 
     resolved_path = artifact_path
-    if artifact_path == _HISTORICAL_PACKAGE_PREFIX or artifact_path.startswith(f"{_HISTORICAL_PACKAGE_PREFIX}/"):
-        resolved_path = f"{_CURRENT_PACKAGE_PREFIX}{artifact_path[len(_HISTORICAL_PACKAGE_PREFIX) :]}"
+    for historical_prefix, current_prefix in _HISTORICAL_PACKAGE_MOVES:
+        if artifact_path == historical_prefix or artifact_path.startswith(f"{historical_prefix}/"):
+            resolved_path = f"{current_prefix}{artifact_path[len(historical_prefix) :]}"
+            break
     return safe_repo_path(repo_root, resolved_path)
 
 
