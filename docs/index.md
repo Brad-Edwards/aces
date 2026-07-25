@@ -1,9 +1,9 @@
-# ACES SDL Documentation
+# RAES SDL Documentation
 
 **A backend-agnostic cyber range scenario description language and reference
 implementation.**
 
-`aces-sdl` currently provides a Python implementation for describing cyber
+`raes-sdl` provides the RAES Python implementation for describing cyber
 range scenarios and experiments, validating their authored meaning, compiling
 runtime models, and checking published backend contracts.
 
@@ -141,6 +141,7 @@ specs/formal
 
 lessons/README
 migration/README
+migration/raes-rename
 research/experiment-core/index
 research/realization-envelope/index
 research/scenario-variation-trial-realization/index
@@ -156,6 +157,8 @@ research/formal-semantic-validation/index
 research/participant-backend-contracts/index
 research/participant-io-control/index
 research/participant-interactive-access/index
+research/time-model/prior-art-and-design-criteria
+research/initial-service-state-precedents-2026-07-24
 ```
 
 ```{toctree}

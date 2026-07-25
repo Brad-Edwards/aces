@@ -318,6 +318,11 @@ def _hermetic_snapshot_payload(control_plane: RuntimeControlPlane) -> dict[str, 
         },
         "joint_action_records": dict(control_plane.snapshot.joint_action_records),
         "time_management_contexts": dict(control_plane.snapshot.time_management_contexts),
+        "time_model_state": (
+            control_plane.snapshot.time_model_state.model_dump(mode="json")
+            if control_plane.snapshot.time_model_state is not None
+            else None
+        ),
         "metadata": dict(control_plane.snapshot.metadata),
     }
 

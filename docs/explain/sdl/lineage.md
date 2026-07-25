@@ -149,6 +149,53 @@ and Swiler plus Oberkampf/Roy/Sargent on
 should state what it can preserve and compare rather than smuggle
 backend/vendor assumptions into an ambiguous field.
 
+## Enterprise Identity And Deployment-Tenancy Authoring
+
+The authored enterprise extension in
+[ADR-087](../../decisions/adrs/adr-087-enterprise-identity-and-deployment-tenancy-authoring.md)
+builds on the identity-authority boundary above without promoting observed
+directory inventory or provider deployment configuration into scenario
+authority.
+
+- **Forest and trust lineage:** Microsoft's
+  [Active Directory logical model](https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/plan/understanding-the-active-directory-logical-model)
+  distinguishes a forest from its member domains and keeps that logical model
+  independent of controller count and network topology. Its
+  [forest-root guidance](https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/plan/selecting-the-forest-root-domain)
+  also makes the root an explicit, durable member of the forest. These are the
+  product precedents for explicit forest membership, root identity, and typed
+  trust edges. ACES does not clone AD DS schemas, automatic intra-forest trust,
+  administrative groups, sites, or replication behavior.
+- **Federation lineage:** OpenID Connect, SAML, SCIM, and NIST SP 800-63C-4,
+  already cited for identity-authority semantics, motivate separating a
+  directory authority from the facade that exposes a federation protocol.
+  ACES preserves portable direction, mapping intent, and claim ownership while
+  leaving clients, credentials, provider mapper documents, and realized issuer
+  state to deployment and evidence surfaces.
+- **Placement lineage:** TOSCA's
+  [`HostedOn` relationship](https://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.1/TOSCA-Simple-Profile-YAML-v1.1.html)
+  is the direct topology precedent for preserving a logical node while
+  expressing placement on a distinct host. ACES narrows that idea to an
+  explicit carrier relation and kernel-boundary intent. It does not adopt
+  TOSCA lifecycle operations or imply container namespace sharing.
+- **Multi-tenancy lineage:** Kubernetes
+  [multi-tenancy guidance](https://kubernetes.io/docs/concepts/security/multi-tenancy/)
+  distinguishes tenant identity, control-plane and data-plane isolation,
+  default-deny network policy, node isolation, workload identity, persistent
+  storage boundaries, and deliberately shared services. ACES uses those
+  distinctions to keep cell membership, cross-tenant posture, authentication,
+  mutable-state ownership, and reset ownership separate. A deployment cell is
+  not a Kubernetes namespace, cluster, cloud project, subnet, quota boundary,
+  or proof that isolation was realized.
+
+The resulting forest, facade, tenant, cell, endpoint-persona, and shared-service
+vocabularies are ACES-native authoring contracts. The cited systems are
+intellectual and implementation precedents, not schema authorities or
+compatibility targets. Provider adapters still own allocation and
+materialization; realized-form disclosures and evidence still own claims that
+the declared identity, placement, isolation, authentication, state, and reset
+properties actually occurred.
+
 ## DNS Service Runtime Semantics
 
 The `runtime.dns_services` surface is issue #426's response to an observed
@@ -798,6 +845,39 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   implementation reuses the revision-pinned SEM-230 lineage without changing
   its normative derivation or compatibility claims, the SDL lineage ledger
   and source audit remain unchanged.
+- DSL-437 composes the incumbent participant and time lineages rather than
+  introducing a live-activity ontology. CybORG and the Gymnasium, PettingZoo,
+  and OpenSpiel family remain precedents for agents, actions, observations,
+  episodes, and multi-agent interaction. ADR-090's reviewed ROS 2, FMI, HLA,
+  TENA, and OpenSCENARIO sources remain the precedent for shared clock
+  authority, progression, lifecycle, and scheduler coordination.
+  `ParticipantBehaviorSpecification.autonomous_execution` is ACES-native: it
+  binds ordinary participant/action/observation declarations to those existing
+  shared-time declarations and participant implementation provenance.
+- The exact DSL-437 authority is ADR-092 and
+  `specs/formal/participant-semantics/autonomous-execution.md`; implementation
+  evidence covers the SDL model, semantic validator, compiler, exact
+  fail-closed admission, RuntimeManager shared-clock execution, native binding
+  and scheduler-enforced terminal coordinate-bound action outcomes for every
+  protocol implementation, exclusive ownership and
+  resolved-time policy identity, runtime-owned real-time/dilated cadence
+  driving for runtime-authority clocks, manifest-admitted transactional
+  clock/participant reset, lifecycle reporting, and durable/API/conformance
+  clock/episode/scheduler consistency on both save and load. Externally paced
+  autonomous policies remain rejected until ACES governs a portable
+  backend-to-runtime transition driver. The
+  focused evidence is in `test_dsl_437_benign_participant_execution.py`,
+  `test_dsl_437_evaluation_authority.py`, and
+  `test_dsl_437_snapshot_durability_conformance.py`. The ledger records exact
+  semantic source boundaries for the participant-interface and shared-time
+  concerns. The coordinated reset method is an ACES backend transaction
+  obligation, not a claim that replacing a local snapshot reverses native
+  backend effects.
+  ACES does not claim CybORG, Gymnasium, PettingZoo, OpenSpiel, ROS, FMI, HLA,
+  TENA, or OpenSCENARIO compatibility and does not derive a source wire schema.
+  Historical files remain ordinary initial service state; injects remain
+  exercise orchestration; stochastic participant implementations remain
+  governed run apparatus.
 - Issues #810 through #813 own the opacity/supervisor-visibility,
   proof-bearing bisimulation, adversarial threat-model, and
   simulation/federation extensions. SEM-230 preserves their participant,
@@ -1063,3 +1143,24 @@ evidence/provenance. The participant-semantics design extends that separation:
 actions, observations, visibility, causality, temporal behavior, and outcomes
 must be portable across human, AI-agent, scripted, simulated, and hybrid
 participants without collapsing into any one backend or learning API.
+
+### Shared Time Authority
+
+The ACES shared time model has explicit external lineage but is not a translated
+copy of any one framework:
+
+- ROS 2 contributes the separation of system, steady/monotonic, and externally
+  controlled semantic time plus explicit pause/jump handling.
+- FMI contributes importer-controlled advancement, capability negotiation,
+  clock activation, and superdense event coordinates.
+- IEEE HLA contributes the separation of time regulation, constrained
+  advancement, and ordered delivery from timestamp values.
+- TENA contributes the separation between execution-time coordination and the
+  persistent range data archive.
+- OpenSCENARIO contributes the separation of lifecycle, triggers, actions, and
+  simulation-time predicates.
+
+ACES adds backend-neutral authored declarations, exact rational mappings,
+ordinary SDL subject references, canonical compilation, and segment-preserving
+runtime control. It does not claim ROS, FMI, HLA, TENA, or OpenSCENARIO
+conformance through those generic declarations.

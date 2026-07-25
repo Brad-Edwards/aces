@@ -157,6 +157,7 @@ from .experiment_run import (
     ExperimentResultSummaryModel,
     ExperimentRunModel,
     validate_experiment_run_against_task,
+    validate_experiment_run_time_model,
 )
 from .experiment_spec import (
     ExperimentEpisodeControlModel,
@@ -183,15 +184,11 @@ from .manifests import (
     ParticipantRuntimeCapabilitiesModel,
     ProcessorCapabilitiesV2Model,
     ProcessorManifestV2Model,
+    TimeCapabilitiesModel,
 )
-from .manifests import (
-    CleanupCapabilitiesModel as CleanupCapabilitiesModel,
-)
+from .manifests import CleanupCapabilitiesModel as CleanupCapabilitiesModel
 from .participant_context import ParticipantContextViewModel
-from .participant_control import (
-    ParticipantControlDeclarationModel,
-    ParticipantControlOccurrenceModel,
-)
+from .participant_control import ParticipantControlDeclarationModel, ParticipantControlOccurrenceModel
 from .participant_control_validation import validate_participant_control_occurrence_context
 from .participant_decision_surface import (
     ParticipantDecisionSurfaceActionEntryModel,
@@ -239,6 +236,7 @@ from .participant_runtime import (
     ParticipantAttributionEdgeModel,
     ParticipantAttributionEvidenceBasisModel,
     ParticipantAttributionOrderingBasisModel,
+    ParticipantAutonomousExecutionStateModel,
     ParticipantBehaviorHistoryEventModel,
     ParticipantEpisodeHistoryEventModel,
     ParticipantEpisodeStateModel,
@@ -437,9 +435,9 @@ __all__ = [
     "ParticipantActionPreconditionResultModel", "ParticipantActionResultModel",
     "ParticipantAttributionCandidateModel", "ParticipantAttributionEdgeModel",
     "ParticipantAttributionEvidenceBasisModel", "ParticipantAttributionOrderingBasisModel",
-    "ParticipantBehaviorHistoryEventModel", "ParticipantContextViewModel",
-    "ParticipantControlDeclarationModel", "ParticipantControlOccurrenceModel",
-    "validate_participant_control_occurrence_context",
+    "ParticipantAutonomousExecutionStateModel", "ParticipantBehaviorHistoryEventModel",
+    "ParticipantContextViewModel", "ParticipantControlDeclarationModel",
+    "ParticipantControlOccurrenceModel", "validate_participant_control_occurrence_context",
     "ParticipantDecisionSurfaceActionEntryModel", "ParticipantDecisionSurfaceCandidateSetFormModel",
     "ParticipantDecisionSurfaceConstrainedFormModel", "ParticipantDecisionSurfaceExposureBindingModel",
     "ParticipantDecisionSurfaceExposureRealizationModel", "ParticipantDecisionSurfaceModel",
@@ -496,5 +494,7 @@ __all__ = [
     "validate_experiment_apparatus_context_archival_datetimes", "validate_experiment_run_against_task",
     "validate_experiment_run_archival_datetimes", "validate_experiment_study_against_tasks_and_runs",
     "validate_experiment_study_archival_datetimes", "validate_experiment_task_archival_datetimes",
+    "validate_experiment_run_time_model",
+    "TimeCapabilitiesModel",
 ]
 # fmt: on

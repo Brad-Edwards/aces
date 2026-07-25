@@ -90,6 +90,11 @@ _SECTION_VALIDATOR = "[section validator](../../implementations/python/packages/
 _CONTENT_VALIDATOR = (
     "[content validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py)"
 )
+_SERVICE_MATERIALIZATION_VALIDATOR = (
+    "[service materialization validator]"
+    "(../../implementations/python/packages/aces_sdl/validator/_service_materialization.py)"
+)
+_CONTENT_COMPILER = "[content compiler](../../implementations/python/packages/aces_processor/compiler/placement.py)"
 _ACCOUNT_VALIDATOR = (
     "[account validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py)"
 )
@@ -103,6 +108,12 @@ _RELATIONSHIP_PROXY_VALIDATOR = (
 _MAIL_VALIDATOR = "[mail validator](../../implementations/python/packages/aces_sdl/validator/_runtime_mail.py)"
 _DOMAIN_TOPOLOGY_SEMANTICS = (
     "[domain topology semantics](../../implementations/python/packages/aces_sdl/semantics/domain_topology.py)"
+)
+_ENTERPRISE_IDENTITY_SEMANTICS = (
+    "[enterprise identity semantics](../../implementations/python/packages/aces_sdl/semantics/enterprise_identity.py)"
+)
+_DEPLOYMENT_TENANCY_SEMANTICS = (
+    "[deployment tenancy semantics](../../implementations/python/packages/aces_sdl/semantics/deployment_tenancy.py)"
 )
 _PARTICIPANT_VALIDATOR = (
     "[participant validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py)"
@@ -149,6 +160,9 @@ _PROPOSITION_VALIDATOR = (
 _VARIATION_VALIDATOR = "[variation validator](../../implementations/python/packages/aces_sdl/validator/_variation.py)"
 _PARTICIPANT_TEMPORAL_MODEL = (
     "[temporal model](../../implementations/python/packages/aces_sdl/participant_temporal_semantics.py)"
+)
+_TIME_MODEL_VALIDATOR = (
+    "[time-model validator](../../implementations/python/packages/aces_sdl/validator/_time_model.py)"
 )
 _SEMANTIC = "semantic validation"
 _STRUCTURAL = "structural validation"
@@ -287,6 +301,42 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         "fatal unless target is a vm node",
         _CONTENT_VALIDATOR,
     ),
+    "content.*.service_materialization.target_service_ref": (
+        "derived:node_services",
+        _SEMANTIC,
+        "fatal unless the exact service exists on the content target vm",
+        _SERVICE_MATERIALIZATION_VALIDATOR,
+    ),
+    "content.*.service_materialization.shared_service_relationship_ref": (
+        "relationships",
+        _SEMANTIC,
+        "fatal unless a matching typed shared-service relationship owns cross-tenant mutable state/reset",
+        _SERVICE_MATERIALIZATION_VALIDATOR,
+    ),
+    "content.*.service_materialization.ordering_content_refs[]": (
+        "content",
+        "semantic validation and planner ordering",
+        "fatal dangling, self, or cyclic dependency",
+        _CONTENT_COMPILER,
+    ),
+    "content.*.service_materialization.readback_assertion_refs[]": (
+        "assertions",
+        _SEMANTIC,
+        "fatal unless each ref is an observed-state postcondition",
+        _SERVICE_MATERIALIZATION_VALIDATOR,
+    ),
+    "content.*.service_materialization.evidence_requirement_refs[]": (
+        "evidence_requirements",
+        _SEMANTIC,
+        "fatal unless each ref exists and every readback proposition requires it",
+        _SERVICE_MATERIALIZATION_VALIDATOR,
+    ),
+    "content.*.service_materialization.observation_boundary_refs[]": (
+        "observation_boundaries",
+        _SEMANTIC,
+        "fatal dangling ref",
+        _SERVICE_MATERIALIZATION_VALIDATOR,
+    ),
     "generated_artifacts.*.consumers[].node": (
         "nodes",
         "structural model validation",
@@ -334,6 +384,36 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         _SEMANTIC,
         "fatal dangling, ambiguous, or authority outside domain controllers",
         _DOMAIN_TOPOLOGY_SEMANTICS,
+    ),
+    "identity_forests.*.root_domain_ref": (
+        "identity_domains",
+        _SEMANTIC,
+        "fatal dangling or root outside declared membership",
+        _ENTERPRISE_IDENTITY_SEMANTICS,
+    ),
+    "identity_forests.*.domain_refs[]": (
+        "identity_domains",
+        _SEMANTIC,
+        "fatal dangling, duplicate, or domain in multiple forests",
+        _ENTERPRISE_IDENTITY_SEMANTICS,
+    ),
+    "identity_facades.*.service_ref": (
+        "targetable",
+        _SEMANTIC,
+        "fatal unless target is a named vm service",
+        _ENTERPRISE_IDENTITY_SEMANTICS,
+    ),
+    "deployment_cells.*.tenant_ref": (
+        "deployment_tenants",
+        _SEMANTIC,
+        _DANGLING,
+        _DEPLOYMENT_TENANCY_SEMANTICS,
+    ),
+    "deployment_cells.*.node_refs[]": (
+        "nodes",
+        _SEMANTIC,
+        "fatal dangling, duplicate, or node in multiple cells",
+        _DEPLOYMENT_TENANCY_SEMANTICS,
     ),
     "accounts.*.node": (
         "nodes",
@@ -424,6 +504,12 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         _SEMANTIC,
         "fatal dangling, ambiguous, or controller outside target domain",
         _DOMAIN_TOPOLOGY_SEMANTICS,
+    ),
+    "relationships.*.shared_service.mutable_state_refs[]": (
+        "persistent_volumes",
+        _SEMANTIC,
+        "fatal dangling or conflicting state ownership",
+        _DEPLOYMENT_TENANCY_SEMANTICS,
     ),
     "agents.*.entity": ("entities", _SEMANTIC, _DANGLING, _PARTICIPANT_VALIDATOR),
     "agents.*.actions[]": (
@@ -755,6 +841,42 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         _SEMANTIC,
         _DANGLING,
         _EVIDENCE_VALIDATOR,
+    ),
+    "clocks.*.time_domain_ref": (
+        "time_domains",
+        _SEMANTIC,
+        "fatal dangling",
+        _TIME_MODEL_VALIDATOR,
+    ),
+    "time_domain_mappings.*.source_domain_ref": (
+        "time_domains",
+        _SEMANTIC,
+        "fatal dangling, duplicate, or cyclic mapping",
+        _TIME_MODEL_VALIDATOR,
+    ),
+    "time_domain_mappings.*.target_domain_ref": (
+        "time_domains",
+        _SEMANTIC,
+        "fatal dangling, duplicate, or cyclic mapping",
+        _TIME_MODEL_VALIDATOR,
+    ),
+    "time_progression_policies.*.clock_ref": (
+        "clocks",
+        _SEMANTIC,
+        "fatal dangling or incompatible reset/replay lifecycle",
+        _TIME_MODEL_VALIDATOR,
+    ),
+    "temporal_constraints.*.clock_ref": (
+        "clocks",
+        _SEMANTIC,
+        "fatal dangling",
+        _TIME_MODEL_VALIDATOR,
+    ),
+    "temporal_constraints.*.subject_refs[]": (
+        "targetable",
+        _SEMANTIC,
+        "fatal dangling or ambiguous",
+        _TIME_MODEL_VALIDATOR,
     ),
     "variation_points.*.target.variable": (
         "variables",

@@ -59,7 +59,7 @@ nodes:
 """,
         encoding="utf-8",
     )
-    executable = Path(sys.executable).with_name("aces")
+    executable = Path(sys.executable).with_name("raes")
     argv = [
         str(executable),
         "processor",

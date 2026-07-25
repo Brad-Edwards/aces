@@ -2,9 +2,9 @@
   "contract_id": "sdl-authoring-input-v1",
   "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
   "stability": "draft",
-  "content_hash": "d7718b3dcf0bea4d281401b7f6ec5d02d18b670700f6c5e12c03ccc258594d02",
+  "content_hash": "c0456a4af6bbd5be7fac5932e7bcb0c77b3f1e0d0e31afcaf88fef79a4261ed5",
   "last_change": {
-    "summary": "Published typed node-to-node network namespace sharing for issue 849.",
-    "content_hash": "d7718b3dcf0bea4d281401b7f6ec5d02d18b670700f6c5e12c03ccc258594d02"
+    "summary": "Published enterprise tenancy, service materialization, shared time, and autonomous participant authoring semantics.",
+    "content_hash": "c0456a4af6bbd5be7fac5932e7bcb0c77b3f1e0d0e31afcaf88fef79a4261ed5"
   }
 }

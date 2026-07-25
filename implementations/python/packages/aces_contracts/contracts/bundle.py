@@ -83,9 +83,11 @@ from .schema_invariants import (
     _add_aces_invariant,
     _attach_aces_semantic_profile,
     _attach_experiment_datetime_invariants,
+    _attach_initial_service_state_invariants,
     _attach_stateful_resource_invariants,
 )
 from .semantic_profiles import SemanticProfileModel
+from .time_model import RealizedTimeModelProvenanceModel, TimeModelDeclarationModel, TimeRuntimeStateModel
 from .trial_cleanup import SchedulerIsolationProofModel, TrialCleanupPlanModel, TrialCleanupReceiptModel
 from .vocabulary_sources import (
     AtlasTacticsSourceModel,
@@ -144,6 +146,9 @@ def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
         "trial-cleanup-plan-v1": TrialCleanupPlanModel.model_json_schema(),
         "trial-cleanup-receipt-v1": TrialCleanupReceiptModel.model_json_schema(),
         "scheduler-isolation-proof-v1": SchedulerIsolationProofModel.model_json_schema(),
+        "time-model-v1": TimeModelDeclarationModel.model_json_schema(),
+        "time-runtime-state-v1": TimeRuntimeStateModel.model_json_schema(),
+        "realized-time-model-v1": RealizedTimeModelProvenanceModel.model_json_schema(),
         "provisioning-plan-v1": ProvisioningPlanModel.model_json_schema(),
         "orchestration-plan-v1": OrchestrationPlanModel.model_json_schema(),
         "evaluation-plan-v1": EvaluationPlanModel.model_json_schema(),
@@ -283,6 +288,7 @@ def _schema_bundle_template() -> dict[str, dict[str, Any]]:
         _attach_instantiation_invariants(contract_id, json_schema)
         _attach_experiment_datetime_invariants(contract_id, json_schema)
         _attach_stateful_resource_invariants(contract_id, json_schema)
+        _attach_initial_service_state_invariants(contract_id, json_schema)
         _attach_json_schema_metadata(contract_id, json_schema)
         _attach_compiled_address_map_constraints(contract_id, json_schema)
         _attach_plan_identity_constraints(contract_id, json_schema)

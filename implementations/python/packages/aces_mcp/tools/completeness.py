@@ -39,7 +39,7 @@ def _profile_summary(
         "title": profile.title,
         "intended_claim": profile.intended_claim,
         "disposition_counts": dict(sorted(disposition_counts.items())),
-        "aces_delivery": {
+        "raes_delivery": {
             "complete": outcome.complete,
             "blocking_concern_count": len(outcome.blocking_concerns),
             "blocking_concern_ids": list(outcome.blocking_concerns),
@@ -66,7 +66,7 @@ def intended_use_profiles(profile_id: str = "") -> dict[str, Any]:
 
     base: dict[str, Any] = {
         "status": "ok",
-        "scope": "aces-delivery-capability",
+        "scope": "raes-delivery-capability",
         "profile_family": taxonomy.profile_family,
         "taxonomy_revision": taxonomy.revision,
         "assessment_revision": assessment.assessment_revision,
@@ -75,7 +75,7 @@ def intended_use_profiles(profile_id: str = "") -> dict[str, Any]:
             "performed": False,
             "status": "not-assessed",
             "reason": (
-                "This tool reports whether ACES delivers the concerns required by an intended-use profile. "
+                "This tool reports whether RAES delivers the concerns required by an intended-use profile. "
                 "It does not inspect or certify an individual scenario, experiment, backend, or run."
             ),
         },
@@ -91,7 +91,7 @@ def intended_use_profiles(profile_id: str = "") -> dict[str, Any]:
             "status": "invalid",
             "diagnostics": [
                 {
-                    "code": "aces.intended_use_profile.unknown",
+                    "code": "raes.intended_use_profile.unknown",
                     "message": f"Unknown intended-use profile {selected_id!r}.",
                     "available_profile_ids": list(profiles),
                 }
@@ -122,16 +122,16 @@ def register(mcp: FastMCP) -> None:
     """Register intended-use profile discovery on the MCP server."""
 
     @mcp.tool(
-        name="aces_intended_use_profiles",
+        name="raes_intended_use_profiles",
         description=(
-            "List ACES scientific-scenario intended-use profiles or inspect one profile's "
-            "required concerns, current ACES delivery blockers, evidence, limitations, "
+            "List RAES scientific-scenario intended-use profiles or inspect one profile's "
+            "required concerns, current RAES delivery blockers, evidence, limitations, "
             "nonclaims, and recommended authoring tools. Call without profile_id to discover "
             "the catalog, then select a profile before authoring or making readiness claims. "
-            "This assesses ACES delivery capability, not an individual scenario or run."
+            "This assesses RAES delivery capability, not an individual scenario or run."
         ),
     )
-    def aces_intended_use_profiles(profile_id: str = "") -> str:
+    def raes_intended_use_profiles(profile_id: str = "") -> str:
         return json_response(intended_use_profiles(profile_id))
 
 

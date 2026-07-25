@@ -4,7 +4,7 @@
 # The profile is intentionally static data: MCP tools and docs may expose or
 # explain it, but this YAML is the source of truth for the rule ids.
 
-profile: aces-agent-guidance
+profile: raes-agent-guidance
 version: 1
 
 requirement_refs:
@@ -24,9 +24,9 @@ source_refs:
   - specs/sdl/scientific-scenario-completeness.md
 
 recommended_workflow:
-  - aces_tool_surface
-  - aces_agent_guidance
-  - aces_intended_use_profiles
+  - raes_tool_surface
+  - raes_agent_guidance
+  - raes_intended_use_profiles
   - sdl_overview
   - sdl_section_reference
   - sdl_completions
@@ -44,7 +44,7 @@ guidance:
       audience: [contributor, operator]
       surfaces: [mcp, sdl, processor]
       statement: >-
-        ACES authoring and MCP tools describe, validate, inspect, compile, and
+        RAES authoring and MCP tools describe, validate, inspect, compile, and
         dry-run SDL scenarios. They do not execute participant cyber actions or
         start a live range.
       source_refs:

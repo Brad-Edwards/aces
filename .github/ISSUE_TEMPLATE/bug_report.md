@@ -1,6 +1,6 @@
 ---
 name: Bug Report
-about: Report a bug in ACES SDL
+about: Report a bug in RAES SDL
 title: "[BUG] "
 labels: bug
 assignees: ''
@@ -26,7 +26,7 @@ assignees: ''
 
 ## Environment
 
-- ACES SDL version:
+- RAES SDL version:
 - Commit:
 - Python version:
 - OS:

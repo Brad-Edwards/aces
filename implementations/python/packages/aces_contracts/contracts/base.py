@@ -142,6 +142,7 @@ _BACKEND_CONCEPT_BINDING_SCOPES = frozenset(
         "capabilities.provisioner.supported_content_types",
         "capabilities.provisioner.supported_account_features",
         "capabilities.provisioner.supported_domain_profiles",
+        "capabilities.provisioner.supported_service_materialization_profiles",
         "capabilities.orchestrator.supported_sections",
         "capabilities.evaluator.supported_sections",
         "capabilities.observation.supported_capture_kinds",
@@ -150,6 +151,11 @@ _BACKEND_CONCEPT_BINDING_SCOPES = frozenset(
         "capabilities.participant_runtime.supported_participant_roles",
         "capabilities.participant_runtime.supported_behavior_features",
         "capabilities.participant_runtime.supported_interaction_features",
+        "capabilities.time.supported_domain_kinds",
+        "capabilities.time.supported_authority_kinds",
+        "capabilities.time.supported_advancement_modes",
+        "capabilities.time.supported_synchronization_modes",
+        "capabilities.time.supported_constraint_kinds",
     }
 )
 

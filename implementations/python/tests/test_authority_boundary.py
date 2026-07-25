@@ -263,7 +263,7 @@ def _seed_repo(
     guidance_path = tmp_path / "specs" / "agent-guidance" / "agent-guidance.yaml"
     guidance_path.parent.mkdir(parents=True, exist_ok=True)
     if not guidance_path.exists():
-        guidance_path.write_text("profile: aces-agent-guidance\n", encoding="utf-8")
+        guidance_path.write_text("profile: raes-agent-guidance\n", encoding="utf-8")
 
     # The canonical deprecation-records ledger (GOV-902) is likewise classified
     # in _GOOD_POLICY and must exist on disk for the positive case.

@@ -2,7 +2,19 @@
 
 from __future__ import annotations
 
-NON_TARGETABLE_REFERENCE_SECTIONS = frozenset({"variables", "evidence_requirements", "objectives", "workflows"})
+NON_TARGETABLE_REFERENCE_SECTIONS = frozenset(
+    {
+        "variables",
+        "evidence_requirements",
+        "time_domains",
+        "clocks",
+        "time_domain_mappings",
+        "time_progression_policies",
+        "temporal_constraints",
+        "objectives",
+        "workflows",
+    }
+)
 
 
 def is_targetable_section(section: str) -> bool:

@@ -1,7 +1,7 @@
 CLI Reference
 =============
 
-The ``aces`` command-line interface is built with `Typer <https://typer.tiangolo.com/>`_
+The ``raes`` command-line interface is built with `Typer <https://typer.tiangolo.com/>`_
 and lives in the canonical ``aces_cli`` package.
 
 .. currentmodule:: aces_cli

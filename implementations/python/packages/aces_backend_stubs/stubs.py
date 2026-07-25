@@ -7,7 +7,7 @@ from aces_backend_protocols.participant_runtime_base import BaseParticipantRunti
 from aces_contracts.diagnostics import Diagnostic
 from aces_contracts.planning import ChangeAction, EvaluationPlan, OrchestrationPlan, ProvisioningPlan, RuntimeDomain
 from aces_contracts.runtime_state import ApplyResult, RuntimeSnapshot, SnapshotEntry
-from aces_runtime.registry import RuntimeTarget, RuntimeTargetComponents
+from aces_runtime.registry import ReferenceTimeRuntime, RuntimeTarget, RuntimeTargetComponents
 
 from .evaluation_support import apply_evaluation_operation
 from .manifest import (
@@ -288,12 +288,14 @@ def create_stub_components(
         orchestrator=StubOrchestrator(),
         evaluator=StubEvaluator(),
         participant_runtime=StubParticipantRuntime() if manifest.has_participant_runtime else None,
+        time_runtime=ReferenceTimeRuntime() if manifest.has_time else None,
     )
 
 
 def create_stub_target(**config) -> RuntimeTarget:
     """Convenience helper returning the fully configured stub target."""
 
+    config.setdefault("with_time", True)
     manifest = create_stub_manifest(**config)
     components = create_stub_components(manifest=manifest, **config)
     return RuntimeTarget(
@@ -303,4 +305,5 @@ def create_stub_target(**config) -> RuntimeTarget:
         orchestrator=components.orchestrator,
         evaluator=components.evaluator,
         participant_runtime=components.participant_runtime,
+        time_runtime=components.time_runtime,
     )

@@ -135,6 +135,12 @@ probe implementations; propositions and assertions carry portable truth.
 | `nodes` | feature/condition/inject/vulnerability refs | `features` / `conditions` / `injects` / `vulnerabilities` |
 | `infrastructure` | node / link / dependency | `nodes` / switch-backed `infrastructure` |
 | `content` | target | `nodes` (VM) |
+| `content` | `service_materialization.target_service_ref` | a named service on the target VM |
+| `content` | `service_materialization.shared_service_relationship_ref` | `relationships` |
+| `content` | `service_materialization.ordering_content_refs[]` | `content` |
+| `content` | `service_materialization.readback_assertion_refs[]` | `assertions` |
+| `content` | `service_materialization.evidence_requirement_refs[]` | `evidence_requirements` |
+| `content` | `service_materialization.observation_boundary_refs[]` | `observation_boundaries` |
 | `generated_artifacts` | consumers[].node | `nodes` |
 | `generated_artifacts` | ordering/refresh dependencies | `generated_artifacts` / `persistent_volumes` (acyclic ordering) |
 | `persistent_volumes` | consumers[].node | `nodes` |
@@ -167,6 +173,16 @@ probe implementations; propositions and assertions carry portable truth.
 | `objectives` | depends_on | `objectives` (acyclic) |
 | `outcome_interpretation_rules` | source | `action_contracts`/`objectives`/`workflows` |
 | `outcome_interpretation_rules` | target | `objectives`/`workflows` |
+
+### Shared time model
+
+| Source | Field | Target |
+|--------|-------|--------|
+| `clocks` | time domain | `time_domains` |
+| `time_domain_mappings` | source / target domain | `time_domains` |
+| `time_progression_policies` | clock | `clocks` |
+| `temporal_constraints` | clock | `clocks` |
+| `temporal_constraints` | subjects | ordinary referenceable SDL declarations or workflow steps |
 
 ### Observability and evidence authoring
 
@@ -286,7 +302,13 @@ the source of the row's normative meaning.
 | `events.*.injects[]` | `injects` | semantic validation | fatal dangling or ambiguous | [reference rules](#5-cross-section-reference-edge-catalog) | [section validator](../../implementations/python/packages/aces_sdl/validator/_sections.py) |
 | `scripts.*.events[]` | `events` | semantic validation | fatal dangling or ambiguous | [reference rules](#5-cross-section-reference-edge-catalog) | [section validator](../../implementations/python/packages/aces_sdl/validator/_sections.py) |
 | `stories.*.scripts[]` | `scripts` | semantic validation | fatal dangling or ambiguous | [reference rules](#5-cross-section-reference-edge-catalog) | [section validator](../../implementations/python/packages/aces_sdl/validator/_sections.py) |
-| `content.*.target` | `nodes` | semantic validation | fatal unless target is a vm node | [reference rules](#5-cross-section-reference-edge-catalog) | [content validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py) |
+| `content.*.target` | `nodes` | semantic validation | fatal unless target is a VM node | [initial service state](initial-service-state.md) | [content validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py) |
+| `content.*.service_materialization.target_service_ref` | `derived:node_services` | semantic validation | fatal unless the exact service exists on the content target VM | [initial service state](initial-service-state.md) | [service materialization validator](../../implementations/python/packages/aces_sdl/validator/_service_materialization.py) |
+| `content.*.service_materialization.shared_service_relationship_ref` | `relationships` | semantic validation | fatal unless a matching typed shared-service relationship owns cross-tenant mutable state/reset | [initial service state](initial-service-state.md) | [service materialization validator](../../implementations/python/packages/aces_sdl/validator/_service_materialization.py) |
+| `content.*.service_materialization.ordering_content_refs[]` | `content` | semantic validation and planner ordering | fatal dangling, self, or cyclic dependency | [initial service state](initial-service-state.md) | [content compiler](../../implementations/python/packages/aces_processor/compiler/placement.py) |
+| `content.*.service_materialization.readback_assertion_refs[]` | `assertions` | semantic validation | fatal unless each ref is an observed-state postcondition | [initial service state](initial-service-state.md) | [service materialization validator](../../implementations/python/packages/aces_sdl/validator/_service_materialization.py) |
+| `content.*.service_materialization.evidence_requirement_refs[]` | `evidence_requirements` | semantic validation | fatal unless each ref exists and every readback proposition requires it | [initial service state](initial-service-state.md) | [service materialization validator](../../implementations/python/packages/aces_sdl/validator/_service_materialization.py) |
+| `content.*.service_materialization.observation_boundary_refs[]` | `observation_boundaries` | semantic validation | fatal dangling ref | [initial service state](initial-service-state.md) | [service materialization validator](../../implementations/python/packages/aces_sdl/validator/_service_materialization.py) |
 | `generated_artifacts.*.consumers[].node` | `nodes` | structural model validation | fatal dangling or ambiguous | [stateful resources](stateful-resources.md) | [scenario model](../../implementations/python/packages/aces_sdl/scenario.py) |
 | `generated_artifacts.*.ordering_dependencies[]` | `generated_artifacts,persistent_volumes` | structural model and planner graph validation | fatal dangling, ambiguous, or cyclic | [stateful resources](stateful-resources.md) | [scenario model](../../implementations/python/packages/aces_sdl/scenario.py) |
 | `generated_artifacts.*.refresh_dependencies[]` | `generated_artifacts,persistent_volumes` | structural model validation | fatal dangling or ambiguous | [stateful resources](stateful-resources.md) | [scenario model](../../implementations/python/packages/aces_sdl/scenario.py) |
@@ -295,6 +317,11 @@ the source of the row's normative meaning.
 | `persistent_volumes.*.refresh_dependencies[]` | `generated_artifacts,persistent_volumes` | structural model validation | fatal dangling or ambiguous | [stateful resources](stateful-resources.md) | [scenario model](../../implementations/python/packages/aces_sdl/scenario.py) |
 | `accounts.*.domain_ref` | `identity_domains` | semantic validation | fatal dangling, ambiguous, or inconsistent topology | [authored domain topology](authored-domain-topology.md) | [domain topology semantics](../../implementations/python/packages/aces_sdl/semantics/domain_topology.py) |
 | `identity_domains.*.authority_account_ref` | `accounts` | semantic validation | fatal dangling, ambiguous, or authority outside domain controllers | [authored domain topology](authored-domain-topology.md) | [domain topology semantics](../../implementations/python/packages/aces_sdl/semantics/domain_topology.py) |
+| `identity_forests.*.root_domain_ref` | `identity_domains` | semantic validation | fatal dangling or root outside declared membership | [enterprise identity and deployment tenancy](enterprise-deployment-tenancy.md) | [enterprise identity semantics](../../implementations/python/packages/aces_sdl/semantics/enterprise_identity.py) |
+| `identity_forests.*.domain_refs[]` | `identity_domains` | semantic validation | fatal dangling, duplicate, or domain in multiple forests | [enterprise identity and deployment tenancy](enterprise-deployment-tenancy.md) | [enterprise identity semantics](../../implementations/python/packages/aces_sdl/semantics/enterprise_identity.py) |
+| `identity_facades.*.service_ref` | `targetable` | semantic validation | fatal unless target is a named VM service | [enterprise identity and deployment tenancy](enterprise-deployment-tenancy.md) | [enterprise identity semantics](../../implementations/python/packages/aces_sdl/semantics/enterprise_identity.py) |
+| `deployment_cells.*.tenant_ref` | `deployment_tenants` | semantic validation | fatal dangling or ambiguous | [enterprise identity and deployment tenancy](enterprise-deployment-tenancy.md) | [deployment tenancy semantics](../../implementations/python/packages/aces_sdl/semantics/deployment_tenancy.py) |
+| `deployment_cells.*.node_refs[]` | `nodes` | semantic validation | fatal dangling, duplicate, or node in multiple cells | [enterprise identity and deployment tenancy](enterprise-deployment-tenancy.md) | [deployment tenancy semantics](../../implementations/python/packages/aces_sdl/semantics/deployment_tenancy.py) |
 | `accounts.*.node` | `nodes` | semantic validation | fatal unless target is a vm node | [reference rules](#5-cross-section-reference-edge-catalog) | [account validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py) |
 | `relationships.*.source` | `targetable` | semantic validation | fatal dangling or ambiguous; subtype may narrow domain | [ADR-052](../../docs/decisions/adrs/adr-052-typed-runtime-relationship-subtypes.md) | [relationship validator](../../implementations/python/packages/aces_sdl/validator/_relationships.py) |
 | `relationships.*.target` | `targetable` | semantic validation | fatal dangling or ambiguous; subtype may narrow domain | [ADR-052](../../docs/decisions/adrs/adr-052-typed-runtime-relationship-subtypes.md) | [relationship validator](../../implementations/python/packages/aces_sdl/validator/_relationships.py) |
@@ -310,6 +337,7 @@ the source of the row's normative meaning.
 | `relationships.*.proxy_upstream.upstream_node_ref` | `nodes` | semantic validation | fatal dangling or ambiguous | [ADR-052](../../docs/decisions/adrs/adr-052-typed-runtime-relationship-subtypes.md) | [proxy relationship validator](../../implementations/python/packages/aces_sdl/validator/_relationships_proxy.py) |
 | `relationships.*.proxy_upstream.upstream_service_ref` | `derived:upstream_node_services` | semantic validation | fatal without a resolvable upstream node and service | [ADR-052](../../docs/decisions/adrs/adr-052-typed-runtime-relationship-subtypes.md) | [proxy relationship validator](../../implementations/python/packages/aces_sdl/validator/_relationships_proxy.py) |
 | `relationships.*.domain_join.controller_refs[]` | `nodes` | semantic validation | fatal dangling, ambiguous, or controller outside target domain | [authored domain topology](authored-domain-topology.md) | [domain topology semantics](../../implementations/python/packages/aces_sdl/semantics/domain_topology.py) |
+| `relationships.*.shared_service.mutable_state_refs[]` | `persistent_volumes` | semantic validation | fatal dangling or conflicting state ownership | [enterprise identity and deployment tenancy](enterprise-deployment-tenancy.md) | [deployment tenancy semantics](../../implementations/python/packages/aces_sdl/semantics/deployment_tenancy.py) |
 | `agents.*.entity` | `entities` | semantic validation | fatal dangling or ambiguous | [participant semantics](../formal/participant-semantics/README.md) | [participant validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py) |
 | `agents.*.actions[]` | `action_contracts` | semantic validation | fatal dangling or ambiguous | [participant semantics](../formal/participant-semantics/README.md) | [participant semantics](../../implementations/python/packages/aces_sdl/semantics/participant_behavior.py) |
 | `agents.*.starting_accounts[]` | `accounts` | semantic validation | fatal dangling or ambiguous | [participant semantics](../formal/participant-semantics/README.md) | [participant validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py) |
@@ -348,6 +376,12 @@ the source of the row's normative meaning.
 | `behavior_specifications.*.mixed_control.participant_ref` | `agents` | semantic validation | fatal unless owned by the enclosing behavior specification | [behavior model](../formal/participant-behavior-model/README.md) | [behavior validator](../../implementations/python/packages/aces_sdl/validator/_mixed_control.py) |
 | `behavior_specifications.*.mixed_control.controller_states.*.controller_ref` | `agents-or-self` | semantic validation | fatal operator/role/identity impersonation or dangling agent | [behavior model](../formal/participant-behavior-model/README.md) | [behavior validator](../../implementations/python/packages/aces_sdl/validator/_mixed_control.py) |
 | `behavior_specifications.*.mixed_control.controller_states.*.authority_basis_refs[]` | `derived:controller_authority_anchors` | semantic validation | fatal dangling, ambiguous, or authority widening | [behavior model](../formal/participant-behavior-model/README.md) | [behavior validator](../../implementations/python/packages/aces_sdl/validator/_mixed_control.py) |
+| `clocks.*.time_domain_ref` | `time_domains` | semantic validation | fatal dangling | [shared time model](../formal/time-model/README.md) | [time-model validator](../../implementations/python/packages/aces_sdl/validator/_time_model.py) |
+| `time_domain_mappings.*.source_domain_ref` | `time_domains` | semantic validation | fatal dangling, duplicate, or cyclic mapping | [shared time model](../formal/time-model/README.md) | [time-model validator](../../implementations/python/packages/aces_sdl/validator/_time_model.py) |
+| `time_domain_mappings.*.target_domain_ref` | `time_domains` | semantic validation | fatal dangling, duplicate, or cyclic mapping | [shared time model](../formal/time-model/README.md) | [time-model validator](../../implementations/python/packages/aces_sdl/validator/_time_model.py) |
+| `time_progression_policies.*.clock_ref` | `clocks` | semantic validation | fatal dangling or incompatible reset/replay lifecycle | [shared time model](../formal/time-model/README.md) | [time-model validator](../../implementations/python/packages/aces_sdl/validator/_time_model.py) |
+| `temporal_constraints.*.clock_ref` | `clocks` | semantic validation | fatal dangling | [shared time model](../formal/time-model/README.md) | [time-model validator](../../implementations/python/packages/aces_sdl/validator/_time_model.py) |
+| `temporal_constraints.*.subject_refs[]` | `targetable` | semantic validation | fatal dangling or ambiguous | [shared time model](../formal/time-model/README.md) | [time-model validator](../../implementations/python/packages/aces_sdl/validator/_time_model.py) |
 | `behavior_specifications.*.mixed_control.controller_states.*.scope_refs[]` | `derived:behavior-and-controller-scope` | semantic validation | fatal dangling, ambiguous, or scope widening | [behavior model](../formal/participant-behavior-model/README.md) | [behavior validator](../../implementations/python/packages/aces_sdl/validator/_mixed_control.py) |
 | `behavior_specifications.*.mixed_control.controller_states.*.evidence_refs[]` | `declared` | semantic validation | fatal dangling or ambiguous | [behavior model](../formal/participant-behavior-model/README.md) | [behavior validator](../../implementations/python/packages/aces_sdl/validator/_mixed_control.py) |
 | `behavior_specifications.*.mixed_control.transitions.*.from_state_ref` | `derived:mixed_control_local_ids` | structural and semantic validation | fatal dangling, stale, reversed, or ambiguously ordered local ref | [behavior model](../formal/participant-behavior-model/README.md) | [behavior model](../../implementations/python/packages/aces_sdl/participant_behavior_specification.py) |

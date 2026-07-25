@@ -64,6 +64,9 @@ phases:
       - ASR-516
     blocked_until:
       - gov-concept-authority
+  - id: project-identity-migration
+    requirements:
+      - GOV-866
   - id: modularity-initiative
     requirements:
       - MOD-001
@@ -184,6 +187,25 @@ ownership:
     - implementations/python/packages/aces_mcp
     - implementations/python/tests/test_mcp_server.py
     - CHANGELOG.md
+  project-identity-migration:
+    - .github
+    - README.md
+    - CONTRIBUTING.md
+    - SECURITY.md
+    - SUPPORT.md
+    - docs
+    - examples/README.md
+    - implementations/README.md
+    - implementations/python/pyproject.toml
+    - implementations/python/packages/aces_cli
+    - implementations/python/packages/aces_mcp
+    - implementations/python/packages/aces_runtime/control_plane_api.py
+    - implementations/python/tests/test_mcp_server.py
+    - implementations/python/tests/test_version_classification.py
+    - specs/README.md
+    - specs/agent-guidance
+    - specs/sdl/README.md
+    - tools/policy/requirement_order.yaml
   modularity-initiative:
     - implementations/python/packages/aces_sdl
     - implementations/python/packages/aces_processor

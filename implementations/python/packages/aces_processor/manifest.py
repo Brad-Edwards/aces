@@ -37,7 +37,7 @@ REFERENCE_CONCEPT_BINDINGS = (
 
 def _current_processor_version() -> str:
     try:
-        return distribution_version("aces-sdl")
+        return distribution_version("raes-sdl")
     except PackageNotFoundError:
         return "0.0.0+unknown"
 
