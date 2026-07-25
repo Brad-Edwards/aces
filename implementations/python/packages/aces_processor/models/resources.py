@@ -129,12 +129,40 @@ class InjectRuntime(ResolvedResource):
 
 
 @dataclass(frozen=True)
+class ServiceContentMaterializationBinding:
+    """Closed compiled requirements for one service-owned content placement."""
+
+    target_service_address: str
+    interface_profile: str
+    profile_version: str
+    content_type: str
+    operation: str
+    conflict_policy: str
+    readback: str
+    canonical_content_digest: str
+    shared_service_relationship_ref: str = ""
+    consumer_tenant_ref: str = ""
+    mutable_state_owner: str = ""
+    reset_generation_owner: str = ""
+    readback_assertion_addresses: tuple[str, ...] = ()
+    evidence_requirement_refs: tuple[str, ...] = ()
+    observation_boundary_addresses: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        require_compiled_address(
+            self.target_service_address,
+            field_name="ServiceContentMaterializationBinding.target_service_address",
+        )
+
+
+@dataclass(frozen=True)
 class ContentPlacement(ResolvedResource):
-    """Content entry resolved to a concrete target node."""
+    """Content entry resolved to a concrete node or named service."""
 
     content_name: str = ""
     target_node: str = ""
     target_address: str = ""
+    service_materialization: ServiceContentMaterializationBinding | None = None
 
 
 @dataclass(frozen=True)

@@ -22,7 +22,8 @@
         "source",
         "resources",
         "os",
-        "services"
+        "services",
+        "endpoint_persona"
       ]
     },
     "scenario-account": {
@@ -73,6 +74,90 @@
         "authority_account_ref"
       ]
     },
+    "scenario-identity-forest": {
+      "title": "Scenario Identity Forest",
+      "description": "Shared reference model for explicit forest root and domain membership.",
+      "concept_family": "identities",
+      "authoritative_schema": {
+        "contract_id": "sdl-authoring-input-v1",
+        "schema_pointer": "#/$defs/IdentityForest",
+        "instance_path": "identity_forests.*"
+      },
+      "reused_schemas": [
+        {
+          "contract_id": "instantiated-scenario-v1",
+          "schema_pointer": "#/$defs/IdentityForest",
+          "instance_path": "identity_forests.*"
+        }
+      ],
+      "key_fields": [
+        "root_domain_ref",
+        "domain_refs"
+      ]
+    },
+    "scenario-identity-facade": {
+      "title": "Scenario Identity Facade",
+      "description": "Shared reference model for an authored IdP facade over an existing logical service.",
+      "concept_family": "identities",
+      "authoritative_schema": {
+        "contract_id": "sdl-authoring-input-v1",
+        "schema_pointer": "#/$defs/IdentityFacade",
+        "instance_path": "identity_facades.*"
+      },
+      "reused_schemas": [
+        {
+          "contract_id": "instantiated-scenario-v1",
+          "schema_pointer": "#/$defs/IdentityFacade",
+          "instance_path": "identity_facades.*"
+        }
+      ],
+      "key_fields": [
+        "service_ref",
+        "protocol"
+      ]
+    },
+    "scenario-deployment-tenant": {
+      "title": "Scenario Deployment Tenant",
+      "description": "Shared reference model for portable deployment-tenant identity.",
+      "concept_family": "scenarios",
+      "authoritative_schema": {
+        "contract_id": "sdl-authoring-input-v1",
+        "schema_pointer": "#/$defs/DeploymentTenant",
+        "instance_path": "deployment_tenants.*"
+      },
+      "reused_schemas": [
+        {
+          "contract_id": "instantiated-scenario-v1",
+          "schema_pointer": "#/$defs/DeploymentTenant",
+          "instance_path": "deployment_tenants.*"
+        }
+      ],
+      "key_fields": [
+        "description"
+      ]
+    },
+    "scenario-deployment-cell": {
+      "title": "Scenario Deployment Cell",
+      "description": "Shared reference model for tenant-owned node membership and isolation intent.",
+      "concept_family": "scenarios",
+      "authoritative_schema": {
+        "contract_id": "sdl-authoring-input-v1",
+        "schema_pointer": "#/$defs/DeploymentCell",
+        "instance_path": "deployment_cells.*"
+      },
+      "reused_schemas": [
+        {
+          "contract_id": "instantiated-scenario-v1",
+          "schema_pointer": "#/$defs/DeploymentCell",
+          "instance_path": "deployment_cells.*"
+        }
+      ],
+      "key_fields": [
+        "tenant_ref",
+        "node_refs",
+        "cross_tenant_isolation"
+      ]
+    },
     "scenario-relationship": {
       "title": "Scenario Relationship",
       "description": "Shared reference model for typed directed relationships between scenario elements.",
@@ -95,7 +180,11 @@
         "target",
         "properties",
         "domain_controller",
-        "domain_join"
+        "domain_join",
+        "forest_trust",
+        "identity_federation",
+        "carrier_placement",
+        "shared_service"
       ]
     },
     "scenario-condition": {
@@ -213,7 +302,8 @@
         "path",
         "destination",
         "source",
-        "items"
+        "items",
+        "service_materialization"
       ]
     },
     "scenario-node-runtime": {

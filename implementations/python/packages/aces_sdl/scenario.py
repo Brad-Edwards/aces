@@ -30,6 +30,8 @@ from .accounts import Account
 from .agents import Agent
 from .conditions import Condition
 from .content import Content
+from .deployment_tenancy import DeploymentCell, DeploymentTenant
+from .enterprise_identity import IdentityFacade, IdentityForest
 from .entities import Entity
 from .evidence_requirements import EvidenceRequirement
 from .explicitness import ExplicitnessRecord
@@ -266,6 +268,10 @@ class ScenarioContent(SDLModel):
     persistent_volumes: dict[str, PersistentVolume] = Field(default_factory=dict)
     accounts: dict[str, Account] = Field(default_factory=dict)
     identity_domains: dict[str, IdentityDomain] = Field(default_factory=dict)
+    identity_forests: dict[str, IdentityForest] = Field(default_factory=dict)
+    identity_facades: dict[str, IdentityFacade] = Field(default_factory=dict)
+    deployment_tenants: dict[str, DeploymentTenant] = Field(default_factory=dict)
+    deployment_cells: dict[str, DeploymentCell] = Field(default_factory=dict)
     relationships: dict[str, Relationship] = Field(default_factory=dict)
     forwarding_agents: list[RuntimeForwardingAgent] = Field(default_factory=list)
     agents: dict[str, Agent] = Field(default_factory=dict)

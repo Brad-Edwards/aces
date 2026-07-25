@@ -149,6 +149,53 @@ and Swiler plus Oberkampf/Roy/Sargent on
 should state what it can preserve and compare rather than smuggle
 backend/vendor assumptions into an ambiguous field.
 
+## Enterprise Identity And Deployment-Tenancy Authoring
+
+The authored enterprise extension in
+[ADR-087](../../decisions/adrs/adr-087-enterprise-identity-and-deployment-tenancy-authoring.md)
+builds on the identity-authority boundary above without promoting observed
+directory inventory or provider deployment configuration into scenario
+authority.
+
+- **Forest and trust lineage:** Microsoft's
+  [Active Directory logical model](https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/plan/understanding-the-active-directory-logical-model)
+  distinguishes a forest from its member domains and keeps that logical model
+  independent of controller count and network topology. Its
+  [forest-root guidance](https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/plan/selecting-the-forest-root-domain)
+  also makes the root an explicit, durable member of the forest. These are the
+  product precedents for explicit forest membership, root identity, and typed
+  trust edges. ACES does not clone AD DS schemas, automatic intra-forest trust,
+  administrative groups, sites, or replication behavior.
+- **Federation lineage:** OpenID Connect, SAML, SCIM, and NIST SP 800-63C-4,
+  already cited for identity-authority semantics, motivate separating a
+  directory authority from the facade that exposes a federation protocol.
+  ACES preserves portable direction, mapping intent, and claim ownership while
+  leaving clients, credentials, provider mapper documents, and realized issuer
+  state to deployment and evidence surfaces.
+- **Placement lineage:** TOSCA's
+  [`HostedOn` relationship](https://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.1/TOSCA-Simple-Profile-YAML-v1.1.html)
+  is the direct topology precedent for preserving a logical node while
+  expressing placement on a distinct host. ACES narrows that idea to an
+  explicit carrier relation and kernel-boundary intent. It does not adopt
+  TOSCA lifecycle operations or imply container namespace sharing.
+- **Multi-tenancy lineage:** Kubernetes
+  [multi-tenancy guidance](https://kubernetes.io/docs/concepts/security/multi-tenancy/)
+  distinguishes tenant identity, control-plane and data-plane isolation,
+  default-deny network policy, node isolation, workload identity, persistent
+  storage boundaries, and deliberately shared services. ACES uses those
+  distinctions to keep cell membership, cross-tenant posture, authentication,
+  mutable-state ownership, and reset ownership separate. A deployment cell is
+  not a Kubernetes namespace, cluster, cloud project, subnet, quota boundary,
+  or proof that isolation was realized.
+
+The resulting forest, facade, tenant, cell, endpoint-persona, and shared-service
+vocabularies are ACES-native authoring contracts. The cited systems are
+intellectual and implementation precedents, not schema authorities or
+compatibility targets. Provider adapters still own allocation and
+materialization; realized-form disclosures and evidence still own claims that
+the declared identity, placement, isolation, authentication, state, and reset
+properties actually occurred.
+
 ## DNS Service Runtime Semantics
 
 The `runtime.dns_services` surface is issue #426's response to an observed

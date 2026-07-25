@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
   "stability": "draft",
-  "content_hash": "7c32fc5ce9224b495b12ffdc683a56de5bd8ad049a6a6d08a953df84a0b4d726",
+  "content_hash": "8851945e6e07d29355f3272d2be06053d7458df109d3dc10db4d10f9b6a14363",
   "last_change": {
-    "summary": "Carried the shared time model into instantiated scenarios.",
-    "content_hash": "7c32fc5ce9224b495b12ffdc683a56de5bd8ad049a6a6d08a953df84a0b4d726"
+    "summary": "Published enterprise tenancy, service-target content materialization, and shared time semantics in instantiated scenarios.",
+    "content_hash": "8851945e6e07d29355f3272d2be06053d7458df109d3dc10db4d10f9b6a14363"
   }
 }

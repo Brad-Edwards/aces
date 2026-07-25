@@ -157,15 +157,7 @@ def test_compiler_emits_typed_secret_free_controller_placement() -> None:
         "role": "controller",
         "controller_addresses": ("provision.node.dc-0-0",),
     }
-
-    def nested_keys(value: object) -> set[str]:
-        if isinstance(value, dict):
-            return set(value).union(*(nested_keys(item) for item in value.values()))
-        if isinstance(value, (list, tuple)):
-            return set().union(*(nested_keys(item) for item in value))
-        return set()
-
-    assert not (nested_keys(payload) & {"argv", "command", "password", "secret", "keytab", "host_path"})
+    assert not (set(payload) & {"argv", "command", "password", "secret", "keytab", "host_path"})
 
 
 def test_controller_placement_rejects_untyped_extension_payload() -> None:

@@ -4,6 +4,7 @@ from dataclasses import replace
 
 from aces_backend_protocols.capabilities import BackendManifest
 from aces_backend_protocols.domain_topology import domain_topology_plan_diagnostics
+from aces_backend_protocols.service_materialization import service_materialization_plan_diagnostics
 from aces_sdl.realization_envelope import member
 
 from ..models import ExecutionPlan, RuntimeModel, RuntimeSnapshot
@@ -64,6 +65,13 @@ def plan(
     actions, deleted_entries = _build_operations(resources, snapshot)
 
     provisioning = _build_provisioning_plan(resources, actions, deleted_entries, manifest)
+    materialization_diagnostics = service_materialization_plan_diagnostics(
+        provisioning,
+        manifest.provisioner,
+        manifest.realization_envelope,
+    )
+    diagnostics.extend(materialization_diagnostics)
+    provisioning.diagnostics.extend(materialization_diagnostics)
     topology_diagnostics = domain_topology_plan_diagnostics(
         provisioning,
         snapshot=snapshot,

@@ -154,6 +154,10 @@
         "family": "tools-and-artifacts"
       },
       {
+        "scope": "capabilities.provisioner.supported_service_materialization_profiles",
+        "family": "tools-and-artifacts"
+      },
+      {
         "scope": "capabilities.provisioner.supported_account_features",
         "family": "identities"
       },
