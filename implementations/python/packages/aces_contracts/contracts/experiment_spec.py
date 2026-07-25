@@ -26,7 +26,8 @@ from .experiment_study import (
     ExperimentStudyFactorModel,
     ExperimentStudyMembershipModel,
 )
-from .schema_invariants import _add_aces_invariant
+from .schema_invariants import _add_aces_invariant, _add_carrier_validation_basis_disclosure_invariant
+from .validation_disclosure import ValidationBasisDisclosureModel, validate_carrier_validation_basis_disclosures
 
 _STUDY_AGAINST_TASKS_AND_RUNS_VALIDATOR = "aces_contracts.contracts.validate_experiment_study_against_tasks_and_runs"
 
@@ -52,6 +53,7 @@ class ExperimentStudyModel(ContractModel):
     validity_notes: list[ExperimentValidityNoteModel] = Field(default_factory=list)
     report_artifacts: list[ExperimentArtifactRefModel] = Field(default_factory=list)
     export_artifacts: list[ExperimentArtifactRefModel] = Field(default_factory=list)
+    validation_basis_disclosures: list[ValidationBasisDisclosureModel] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _validate_claim_bearing_study(self) -> ExperimentStudyModel:
@@ -68,6 +70,7 @@ class ExperimentStudyModel(ContractModel):
             self._validate_run_allocation_condition_assignments(self.run_allocation)
         if self.study_kind in {"study", "benchmark"}:
             self._validate_claim_bearing_study_requirements()
+        validate_carrier_validation_basis_disclosures(self, subject_kind="experiment_study")
         return self
 
     def _validate_run_allocation_blocking_factors(self, run_allocation: ExperimentRunAllocationPlanModel) -> None:
@@ -208,6 +211,9 @@ class ExperimentStudyModel(ContractModel):
                 {"contract_id": "experiment-task-v1", "instance_path": "#"},
                 {"contract_id": "experiment-run-v1", "instance_path": "#"},
             ],
+        )
+        _add_carrier_validation_basis_disclosure_invariant(
+            json_schema, contract_id="experiment-study-v1", subject_kind="experiment_study"
         )
         _add_aces_invariant(
             json_schema,

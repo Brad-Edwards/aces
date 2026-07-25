@@ -20,7 +20,7 @@ updates:
       github-actions:
         patterns: ["*"]
 
-  # Python package dependencies for the raes-sdl distribution.
+  # Python package dependencies for the raes distribution.
   - package-ecosystem: "pip"
     directory: "/implementations/python"
     target-branch: "dev"
@@ -31,3 +31,17 @@ updates:
       python-minor-patch:
         patterns: ["*"]
         update-types: ["minor", "patch"]
+    ignore:
+      # z3-solver is pinned by a governed contract, not by ordinary dependency
+      # policy: the aces-z3-finite-domain/v1 profile fixes package_version
+      # 4.16.0.0 / engine_version 4.16.0 in SolverConfigurationModel, in the
+      # published scenario-satisfiability-evidence-v1 schema, and in its
+      # fixtures, so satisfiability evidence stays reproducible.
+      #
+      # An automated bump rewrites pyproject away from that authority while
+      # `uv --frozen` keeps resolving the locked 4.16.0.0, so CI stays green and
+      # the contradiction is invisible until someone regenerates the lock and
+      # the formal semantic-validation gate breaks. That has happened twice
+      # (#856, #872). Re-pinning the governed profile is a deliberate change
+      # with evidence to regenerate; it is not Dependabot's call.
+      - dependency-name: "z3-solver"

@@ -30,6 +30,7 @@ from aces_contracts.contracts import (
     ProvisioningPlanModel,
     RuntimeFactBindingPlaneModel,
     RuntimeSnapshotEnvelopeModel,
+    ValidationBasisDisclosureDocumentModel,
     WorkflowExecutionStateModel,
     WorkflowHistoryEventModel,
 )
@@ -79,6 +80,7 @@ _STRUCTURAL_ONLY_VALIDATORS = {
     "scientific-completeness-assessment-v1": ScientificCompletenessAssessmentModel.model_validate,
     "scientific-completeness-taxonomy-v1": ScientificCompletenessTaxonomyModel.model_validate,
     "validation-profile-catalog-v1": ValidationProfileCatalogModel.model_validate,
+    "validation-basis-disclosure-v1": ValidationBasisDisclosureDocumentModel.model_validate,
 }
 
 

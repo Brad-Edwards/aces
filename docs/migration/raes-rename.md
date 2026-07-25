@@ -34,11 +34,11 @@ Keep ACES only when the identifier is one of these surfaces:
 | Project prose | Agentic Cyber Environment System (ACES), ACES SDL | Reproducible Agentic Environments System (RAES), RAES SDL | Repository docs | Migrated for current-state prose | Docs build and prose review |
 | Documentation links | `Brad-Edwards/aces` current README/docs links | `RAESystem/rae` | Current README and docs config | Migrated for current user-facing links | Docs build |
 | Documentation paths | `docs/aces/` | `docs/aces/` | Documentation tree | Retained path/reference area, not a command alias | Docs build and existing path tests |
-| Python distribution | `aces-sdl` | `raes-sdl` | `implementations/python/pyproject.toml` | Renamed for new PyPI publication | Version and corpus packaging tests |
+| Python distribution | `aces-sdl` | `raes` | `implementations/python/pyproject.toml` | Renamed for new PyPI publication | Version and corpus packaging tests |
 | Python import packages | `aces`, `aces_sdl`, `aces_mcp`, `aces_runtime`, `aces_contracts`, other `aces_*` packages | Retained source package names | Python package owners | Not renamed by issue #866 | Existing import, module-boundary, and package tests |
 | CLI command | `aces` | `raes` | `aces_cli` | Old console script removed | CLI version/help and installed-wheel tests |
 | MCP server command | `aces-mcp` | `raes-mcp` | `aces_mcp` | Old console script removed | Packaging and MCP construction tests |
-| MCP server id | `aces-sdl` | `raes-sdl` | `aces_mcp.server` | Migrated emitted server name | MCP server construction tests |
+| MCP server id | `aces-sdl` | `raes` | `aces_mcp.server` | Migrated emitted server name | MCP server construction tests |
 | MCP discovery tool | `aces_tool_surface` | `raes_tool_surface` | `aces_mcp.tools.operations` | Old tool removed | MCP tool-surface tests |
 | MCP guidance tool | `aces_agent_guidance` | `raes_agent_guidance` | `aces_mcp.tools.operations` | Old tool removed | MCP guidance tests |
 | MCP intended-use tool | `aces_intended_use_profiles` | `raes_intended_use_profiles` | `aces_mcp.tools.completeness` | Old tool removed | MCP intended-use tests |
@@ -61,7 +61,7 @@ New MCP clients should start with `raes_tool_surface`, then call
 `aces_tool_surface`, `aces_agent_guidance`, `aces_intended_use_profiles`, and
 `aces_reference_manifests`; those tools are no longer registered.
 
-Use `raes-sdl` for new PyPI publication and downstream package pins. The
+Use `raes` for new PyPI publication and downstream package pins. The
 source import packages remain `aces_*` in this issue's implementation, so Python
 examples keep imports such as `from aces_sdl import parse_sdl_file` until a
 separate module-namespace migration changes that API.

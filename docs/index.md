@@ -3,7 +3,7 @@
 **A backend-agnostic cyber range scenario description language and reference
 implementation.**
 
-`raes-sdl` provides the RAES Python implementation for describing cyber
+`raes` provides the RAES Python implementation for describing cyber
 range scenarios and experiments, validating their authored meaning, compiling
 runtime models, and checking published backend contracts.
 

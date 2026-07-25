@@ -2,9 +2,9 @@
   "contract_id": "experiment-task-v1",
   "schema_path": "contracts/schemas/experiment-core/experiment-task-v1.json",
   "stability": "draft",
-  "content_hash": "b82f084841720563089206f9a8dc94b93fde10035da9b3a64662b7660b30d823",
+  "content_hash": "fcb62854432fd0890f7d9e487f1ce1f2951f829acac81c372a270275cb73a99b",
   "last_change": {
-    "summary": "Extended shared experiment artifact roles and typed references for associated-artifact parents (ADR-077, issue #738).",
-    "content_hash": "b82f084841720563089206f9a8dc94b93fde10035da9b3a64662b7660b30d823"
+    "summary": "Tightened the embedded validation_basis_disclosures subject_ref binding (issue #259 CLASS finding): a task subject_ref now requires ref_version, so a disclosure can no longer carry the correct task_id while omitting ref_version to be replayed unchanged against a later task_version.",
+    "content_hash": "fcb62854432fd0890f7d9e487f1ce1f2951f829acac81c372a270275cb73a99b"
   }
 }

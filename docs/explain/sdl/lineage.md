@@ -59,7 +59,7 @@ semantics, examples, or code from that source.
   the SDL schema.
 
 The authored/defaulted/planned/realized/observed/derived distinction tested by
-[issue #160](https://github.com/Brad-Edwards/aces/issues/160) is a carrier
+[issue #160](https://github.com/RAESystem/rae/issues/160) is a carrier
 boundary, not a vocabulary tag. SDL and `model_fields_set` carry authored and
 defaulted meaning; compiler plans carry planned operations; realization
 provenance and realized-form disclosures carry admitted choices; evidence
@@ -988,6 +988,30 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   noninterference/bisimulation. The lineage ledger and source audit remain
   unchanged because the implementation changes no normative external
   derivation or compatibility claim.
+- API-409 adopts the existing participant-runtime, ACT-617 mixed-control, and
+  SEM-220 decision-surface authorities without introducing a generic external
+  message or policy language. ACES maps one proposal, approval, denial,
+  external direction, intervention, handoff, override, or cancellation fact
+  to the closed `participant-control-occurrence-v1` carrier; preserves the
+  unchanged `ParticipantRuntimeBaseEnvelopeModel`; and binds each occurrence
+  to its participant/episode, controller state, authority basis, controlled
+  scope, behavior specification, mixed-control policy revision, compiled
+  declaration, effective order, disposition, evidence, provenance, markings,
+  and limitations. `validate_participant_control_occurrence_context()` joins
+  those records to compiled ACT-617 declaration coordinates and fails closed
+  on unknown or mismatched declarations, authority or policy confusion, stale
+  proposal revisions, invalid order, conflicting identity replay, unresolved
+  targets, and transformed-proposal identity/provenance/marking violations.
+  Delivery is implemented for the Python model, hand-governed schema,
+  generated-bundle parity, valid/invalid fixtures, publication accounting,
+  and API-409 model/schema/semantic tests in
+  `implementations/python/tests/test_api_409_participant_control_occurrences.py`.
+  Approval and direction remain distinct from SEM-211 admission; admission,
+  execution, result, delivery, observation, audit, runtime mediation,
+  persistence, backend support, authentication, UI/transport behavior,
+  information-flow proof, and API-423 crossing-policy realization are explicit
+  nonclaims. The lineage ledger and source audit remain unchanged because this
+  delivery adds no normative external derivation or compatibility claim.
 - CALDERA adversary-emulation research informs the action semantics: cyber
   actions can change foothold, knowledge, observations, detection surface, and
   downstream outcomes under uncertainty.

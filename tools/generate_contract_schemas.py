@@ -62,7 +62,7 @@ def _schema_output_path(schemas_dir: Path, name: str) -> Path:
         return schemas_dir / "profiles" / f"{name}.json"
     if name.startswith("scientific-completeness-"):
         return schemas_dir / "profiles" / f"{name}.json"
-    if name.startswith("validation-profile-"):
+    if name.startswith("validation-profile-") or name.startswith("validation-basis-disclosure-"):
         return schemas_dir / "profiles" / f"{name}.json"
     if name in {
         "participant-lifecycle-event-v1",
@@ -70,6 +70,7 @@ def _schema_output_path(schemas_dir: Path, name: str) -> Path:
         "participant-shared-state-record-v1",
         "participant-joint-action-record-v1",
         "participant-time-management-context-v1",
+        "participant-control-occurrence-v1",
         "participant-outcome-report-v1",
         "runtime-fact-binding-plane-v1",
     }:

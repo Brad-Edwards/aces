@@ -54,7 +54,7 @@ _PARTICIPANT_INTERACTION_FEATURES = frozenset(
 
 def _current_backend_version() -> str:
     try:
-        return distribution_version("raes-sdl")
+        return distribution_version("raes")
     except PackageNotFoundError:
         return "0.0.0+unknown"
 

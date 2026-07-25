@@ -1233,7 +1233,7 @@ wheels = [
 ]
 
 [[package]]
-name = "raes-sdl"
+name = "raes"
 version = "0.23.1"
 source = { editable = "." }
 dependencies = [

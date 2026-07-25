@@ -1,6 +1,6 @@
 # Participant Information-Flow And Control Adoption
 
-Issue [#794](https://github.com/Brad-Edwards/aces/issues/794) assesses and
+Issue [#794](https://github.com/RAESystem/rae/issues/794) assesses and
 designs the participant-control model. It is a design/program artifact, not an
 implementation or proof claim.
 

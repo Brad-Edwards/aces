@@ -15,13 +15,7 @@ from ..versions import (
     PARTICIPANT_IMPLEMENTATION_MANIFEST_V1_SCHEMA_VERSION,
     PROCESSOR_MANIFEST_V2_SCHEMA_VERSION,
 )
-from .base import (
-    ContractModel,
-    NonEmptyString,
-    Rfc3339DateTimeString,
-    _canonical_digest,
-    _parse_rfc3339_datetime,
-)
+from .base import ContractModel, NonEmptyString, Rfc3339DateTimeString, _canonical_digest, _parse_rfc3339_datetime
 from .capabilities import ApparatusIdentityModel
 from .experiment_artifacts import (
     ExperimentApparatusCompatibilityReferenceModel,
@@ -47,7 +41,8 @@ from .experiment_references import (
 from .manifests import ProcessorManifestV2Model
 from .participant_manifests import BackendManifestV2Model
 from .random_stream import RandomStreamControlBindingModel
-from .schema_invariants import _add_aces_invariant
+from .schema_invariants import _add_aces_invariant, _add_carrier_validation_basis_disclosure_invariant
+from .validation_disclosure import ValidationBasisDisclosureModel, validate_carrier_validation_basis_disclosures
 
 _ManifestReferenceKey = tuple[
     str,
@@ -79,6 +74,21 @@ class ExperimentTaskModel(ContractModel):
     apparatus_constraints: ExperimentApparatusConstraintModel
     validity_notes: list[ExperimentValidityNoteModel] = Field(min_length=1)
     artifact_refs: list[ExperimentArtifactRefModel] = Field(min_length=1)
+    validation_basis_disclosures: list[ValidationBasisDisclosureModel] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _validate_task_validation_basis_disclosures(self) -> ExperimentTaskModel:
+        validate_carrier_validation_basis_disclosures(self, subject_kind="experiment_task")
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(cls, core_schema: CoreSchema, handler: GetJsonSchemaHandler) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        _add_carrier_validation_basis_disclosure_invariant(
+            json_schema, contract_id="experiment-task-v1", subject_kind="experiment_task"
+        )
+        return json_schema
 
 
 class ExperimentStochasticControlModel(ContractModel):
