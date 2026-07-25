@@ -1,6 +1,6 @@
 name: techvault
 description: >
-  Operational ACES projection for the TechVault range. This SDL is the public
+  Operational RAES projection for the TechVault range. This SDL is the public
   startup contract: it names the steady-state services and networks that the
   full live TechVault smoke realizes without carrying the deep per-asset
   inventory encoded in examples/scenarios/techvault.sdl.yaml.

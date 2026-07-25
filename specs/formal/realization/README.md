@@ -2,7 +2,7 @@
 
 This directory holds the normative semantic boundary for binding author
 declarations versus concerns left open to backend realization (`SEM-218`).
-In ACES the processor layer does not realize underspecified author
+In RAES the processor layer does not realize underspecified author
 concerns: it compiles the typed runtime requirement and plans against
 backend support. Realization happens at the backend layer, and only
 backend manifests carry `realization_support`.

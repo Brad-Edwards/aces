@@ -1,6 +1,6 @@
 # Scenario/Delivery Classification Drift Audit and Remediation
 
-Issue #400 audits and repairs ACES design surfaces for residue from the earlier
+Issue #400 audits and repairs RAES design surfaces for residue from the earlier
 scenario-vs-delivery classification error: treating a fact as outside SDL
 scope because it resembles Docker, Compose, SSH, seccomp, init, network, or
 process configuration vocabulary, instead of asking whether the fact exists on
@@ -23,7 +23,7 @@ harness, or an inspector exposed the evidence. Delivery mechanics remain the
 orchestrator, host kernel, container runtime, backend adapter, control plane,
 build executor, and host-local operator state.
 
-The external/source basis is the existing ACES lineage set rather than a new
+The external/source basis is the existing RAES lineage set rather than a new
 taxonomy:
 
 - [Open Cyber Range SDL](https://documentation.opencyberrange.ee/docs/sdl/reference/)
@@ -240,7 +240,7 @@ LDAP/AD/SCIM/OIDC/SAML/IAM authority facts, and provider identifiers can look
 like product-specific backend payloads.
 
 **Boundary analysis:** The current decisions keep vendor/provider identifiers
-as data and preserve neutral stable ACES ids. They separate runtime logical
+as data and preserve neutral stable RAES ids. They separate runtime logical
 state from top-level authored accounts, `Node.services`, local identity,
 application routes, raw catalog dumps, and downstream attack-graph or telemetry
 schemas.
@@ -336,7 +336,7 @@ owners.
 **Surface:** `docs/explain/sdl/precedents.md`, ADR-033, contracts, and specs.
 
 **Citation:** `docs/explain/sdl/precedents.md:243` keeps Docker Compose
-profiles in the backend implementation layer unless promoted to an ACES
+profiles in the backend implementation layer unless promoted to an RAES
 scenario/profile composition surface; `docs/decisions/adrs/adr-033-scenario-delivery-boundary-for-runtime-node-state.md:77`
 defines delivery machinery as orchestrators, host kernels, container runtimes,
 backend adapters, control planes, build executors, and host-local operator
@@ -349,7 +349,7 @@ selection, and backend execution plans look adjacent to scenario composition.
 **Boundary analysis:** No participant-interactable range-node state is lost by
 not importing Compose profile labels as SDL. The realized node set is already
 represented by SDL nodes and runtime observations; backend packaging and
-selection machinery remains delivery unless a future ACES composition surface
+selection machinery remains delivery unless a future RAES composition surface
 is explicitly designed.
 
 **Disposition:** principled-retention. No current drift found.
@@ -410,7 +410,7 @@ replicating the old Docker/Compose vocabulary error.
 **Surface:** `lineage.md`, `validation.md`, `limitations.md`, and
 `runtime-architecture.md`.
 
-**Citation:** `docs/explain/sdl/lineage.md:14` says ACES keeps the logical
+**Citation:** `docs/explain/sdl/lineage.md:14` says RAES keeps the logical
 scenario surface separate from backend realization, and
 `docs/explain/sdl/lineage.md:200` separates authored scenario meaning,
 processor/runtime contracts, backend realization, participant implementations,

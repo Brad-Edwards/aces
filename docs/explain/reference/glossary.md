@@ -191,10 +191,10 @@ published schemas, source code, and ADRs.
 
 **Backend conformance**
 : The contract and fixture discipline used to check that backend-facing
-  declarations and results satisfy published ACES contracts.
+  declarations and results satisfy published RAES contracts.
 
 **Surface**
-: A named, bounded, contract-bearing scope of an ACES artifact or apparatus to
+: A named, bounded, contract-bearing scope of an RAES artifact or apparatus to
   which governed vocabularies and concept bindings apply. The normative
   definition, including the one-surface-versus-two decision rule, lives in
   `specs/concept-authority/concept-authority.md`.

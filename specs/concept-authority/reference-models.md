@@ -3,7 +3,7 @@
 ## Scope
 
 This specification defines shared reference models for recurrent
-federation-relevant structures carried in ACES artifact surfaces.
+federation-relevant structures carried in RAES artifact surfaces.
 
 Shared reference models do not redefine concept authority and do not replace
 artifact-local schemas. They declare which published structure definitions are
@@ -63,7 +63,7 @@ Participant episodes are cataloged as the native `episodes` concept family
 rather than as an SDL reference model entry. The external lineage is the
 reinforcement-learning environment episode notion used by Gymnasium and
 OpenAI Gym: a bounded interaction sequence that starts after initialization or
-reset and ends at a terminal, timeout, or truncation boundary. ACES narrows
+reset and ends at a terminal, timeout, or truncation boundary. RAES narrows
 that lineage to participant-runtime contracts by requiring stable
 `participant_address`, per-episode `episode_id`, explicit lifecycle state, and
 append-only state/history surfaces.
@@ -104,7 +104,7 @@ The valid and invalid fixture corpus for reference models is published under:
 
 ## UCO Alignment Evidence
 
-Reference models bind recurrent ACES structures to ACES concept families; they
+Reference models bind recurrent RAES structures to RAES concept families; they
 do not inherit UCO class structure. The concept-authority relationship behind
 the adopted and adapted cyber-domain families those models reference is recorded
 separately as machine-checkable evidence in
@@ -117,7 +117,7 @@ divergences explicitly. See [ADR-012](../../docs/decisions/adrs/adr-012-shared-c
 
 - GOV-917: canonical concept authority
 - GOV-918: cross-artifact concept binding
-- GOV-919: disciplined ACES-native extensions
+- GOV-919: disciplined RAES-native extensions
 - GOV-920: shared semantic profiles
 - GOV-921: shared reference models
 - GOV-922: controlled vocabularies and enumerations

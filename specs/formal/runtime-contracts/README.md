@@ -30,7 +30,7 @@ The standard vocabulary is intentionally lineage-bound:
 
 - participant roles reuse the existing exercise-role surface (`white`,
   `green`, `red`, and `blue`) from declarative participant framing;
-- behavior features name the ACES participant-semantics surfaces established
+- behavior features name the RAES participant-semantics surfaces established
   by `lineage.md`, ADR-022, and `specs/formal/participant-semantics/`:
   action contracts, preconditions, effects, observation boundaries, behavior
   history, state transitions, failure classes, attribution support, temporal
@@ -48,7 +48,7 @@ of implying support from runtime presence alone.
 
 The controlled vocabulary extension policy is governed extension. Backend
 specific role or feature terms must use an `x-<owner>:<term>` identifier and
-remain bound through `concept_bindings`. ACES can verify the syntax and
+remain bound through `concept_bindings`. RAES can verify the syntax and
 authority binding for extension terms; backend-specific evidence obligations
 remain owned by the backend that defines the extension.
 

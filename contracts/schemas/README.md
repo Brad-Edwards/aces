@@ -1,7 +1,7 @@
 # Schemas
 
 `contracts/schemas/` publishes versioned JSON Schema documents for
-language-neutral ACES external contracts.
+language-neutral RAES external contracts.
 
 This directory is now the contract bucket in the repo layout. It is intended to
 be the home of the authoritative machine-readable artifacts, independent of any
@@ -87,12 +87,12 @@ stack, contract tests, and conformance profiles use `v2`.
 
 The `concept-families-v1` schema publishes the machine-readable shared concept
 authority catalog. Catalog entries distinguish adopted, adapted, and
-ACES-native concept families.
+RAES-native concept families.
 
 Adopted and adapted families must declare `authority` and
 `authority_reference`. Native families must not declare those authority fields;
 instead they must declare non-empty `extension_scope`, `relation_rules`, and
-`non_ambiguity_constraints`. This keeps ACES experiment, runtime, apparatus,
+`non_ambiguity_constraints`. This keeps RAES experiment, runtime, apparatus,
 provenance, and governance concepts explicit without letting them silently fork
 shared cyber-domain concepts.
 
@@ -244,12 +244,12 @@ Run traceability and realized-form disclosure invariants keep claims grounded
 in evidence/derived-measure refs and keep realized choices distinct from
 authored scenario meaning and result values.
 Cross-artifact or graph invariants that standard JSON Schema cannot express are
-published under the ACES semantic-invariant profile with `x-aces-invariants`
+published under the RAES semantic-invariant profile with `x-aces-invariants`
 entries that name the validator and input contract paths. The generated schemas
 declare draft 2020-12 identity, and the annotation profile shape is published as
 `aces-semantic-invariants-v1` and checked during generation. Generic JSON Schema
 validation remains structural; consumers of experiment-core records must apply
-the named semantic validators before accepting records as ACES-conformant.
+the named semantic validators before accepting records as RAES-conformant.
 
 The optional backend-manifest `capabilities.observation` block declares EXP-715
 observation/evidence collection support. Backends that declare it must also

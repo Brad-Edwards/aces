@@ -1,4 +1,4 @@
-# ACES Shared Time Model
+# RAES Shared Time Model
 
 This specification defines the semantic authority implemented for SEM-227,
 SEM-228, SEM-229, DSL-126, DSL-127, DSL-128, RUN-317, and RUN-318.
@@ -73,7 +73,7 @@ ordering or causality.
 
 The first closed constraint family is:
 
-- precedence over exactly two ordinary ACES subjects;
+- precedence over exactly two ordinary RAES subjects;
 - duration;
 - window;
 - deadline; and

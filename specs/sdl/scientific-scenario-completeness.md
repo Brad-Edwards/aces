@@ -5,7 +5,7 @@ Status: **normative**.
 This specification defines the REV1 intended-use scope contract required by
 GOV-942. It answers which semantic concerns are required, may remain
 underspecified, or are excluded for a stated scenario-use claim, and joins that
-stable taxonomy to a separately versioned assessment of what ACES delivers.
+stable taxonomy to a separately versioned assessment of what RAES delivers.
 
 It does not change ordinary SDL validity. A document containing only `name` may
 be a valid SDL fragment while being unsuitable for deployment, participant

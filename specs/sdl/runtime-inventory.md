@@ -91,7 +91,7 @@ not contradict these.
    element carries a stable `<noun>_id`. The id **MUST** be unique within its
    collection and use the portable local-identifier grammar
    ([document-model.md §6](document-model.md)). Runtime/native/provider ids that
-   are not ACES-local declaration identities retain their owning contracts.
+   are not RAES-local declaration identities retain their owning contracts.
    References address elements by these ids ([references.md](references.md)).
 2. **Enum sentinels.** An open enum carries a closed core of well-defined values
    plus the sentinels `unknown` and `other`, so an authored value can record

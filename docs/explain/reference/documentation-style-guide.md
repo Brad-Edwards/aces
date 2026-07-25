@@ -15,7 +15,7 @@ repository state. It is not a product page, roadmap, or funding document.
 - Use present tense for current behavior.
 - Use normative language only for repository rules, specifications, contracts,
   and policies.
-- Treat prior art as evidence or lineage, not as authority for ACES semantics.
+- Treat prior art as evidence or lineage, not as authority for RAES semantics.
 
 ## Prohibited Content
 
@@ -86,11 +86,11 @@ when a document cites several sources.
 
 ## Terminology
 
-- Define terms at first use when they are ACES-specific or overloaded in the
+- Define terms at first use when they are RAES-specific or overloaded in the
   literature.
-- Use ACES terms consistently with the current specs, contracts, and code.
+- Use RAES terms consistently with the current specs, contracts, and code.
 - Do not rename an external concept when citing a source.
-- Do not import semantics from cited systems unless the ACES document states
+- Do not import semantics from cited systems unless the RAES document states
   the adopted subset or difference.
 - Distinguish authored scenario meaning, processor behavior, backend behavior,
   runtime state, and evidence artifacts.
@@ -110,5 +110,5 @@ when a document cites several sources.
 - Does the document describe current repository behavior?
 - Are external claims cited to primary sources?
 - Are limits and exclusions explicit?
-- Are ACES terms used consistently with the specs, contracts, and code?
+- Are RAES terms used consistently with the specs, contracts, and code?
 - Is all promotional or forward-looking language removed?

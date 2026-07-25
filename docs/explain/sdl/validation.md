@@ -18,7 +18,7 @@ becoming a validator-only interpretation of the SDL.
 These checks have translated algorithmic ancestry in OCR v0.21.2
 `Scenario::formalize()` at revision
 `fe83e8281fc4b954967fbaa5a0d099007ddcb06c`; current behavior is governed by
-ACES validators and is not claimed compatible with the OCR implementation.
+RAES validators and is not claimed compatible with the OCR implementation.
 
 | Pass | What It Checks |
 |------|----------------|
@@ -265,7 +265,7 @@ roles, node-endpoint roles, persistence eviction policies, replication
 strategies, transport-security modes, and setting scope/provenance/classification
 are normalized from bounded enums while allowing full-value variables. Native
 cluster/index UUIDs are observed datastore facts, not SDL reference identities;
-references continue to target the stable ACES ids. Count and byte fields on
+references continue to target the stable RAES ids. Count and byte fields on
 clusters and partitions accept only non-negative integers or full-value
 variables, keeping document cardinality and byte-normalized store size distinct
 from `datatype_census`. Node engine provenance is observed inventory: heap byte

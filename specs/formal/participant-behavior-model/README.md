@@ -121,7 +121,7 @@ Rules:
 
 ### ACT-603 Implementation Preflight Guardrails
 
-Executable ACT-603 work must be a binding over existing ACES surfaces, not a
+Executable ACT-603 work must be a binding over existing RAES surfaces, not a
 new participant stack. The canonical incumbents are:
 
 - SDL authored semantics: `agents.*`, `action_contracts`,
@@ -196,7 +196,7 @@ Anti-patterns for ACT-603 implementations:
 
 ## ACT-602 - Executable Participant Behavior Model
 
-Executable behavior means the model is machine-checkable through ACES gates.
+Executable behavior means the model is machine-checkable through RAES gates.
 The executable chain is:
 
 ```text
@@ -428,7 +428,7 @@ adoption of MITRE ATT&CK Enterprise tactics v19.1. The pinned source artifact is
 `contracts/concept-authority/attack-enterprise-tactics-source-v1.json`; it
 records the upstream STIX bundle URL, ATT&CK version, retrieval date, SHA-256
 digest, MITRE terms URL, and citation URLs. The source artifact was extracted
-from the ATT&CK Enterprise matrix order, not hand-curated by ACES.
+from the ATT&CK Enterprise matrix order, not hand-curated by RAES.
 
 The base terms in `participant-ai-offensive-behavior-activities` are a separate
 direct adoption of MITRE ATLAS tactics release v2026.06 (`collection.version`
@@ -437,7 +437,7 @@ direct adoption of MITRE ATLAS tactics release v2026.06 (`collection.version`
 upstream YAML release asset URL, ATLAS content and format versions, retrieval
 date, SHA-256 digest, MITRE ATLAS project and license citations, matrix id, and
 term lineage fields. The source artifact was extracted from the ATLAS
-`ATLAS-matrix` sequence order, not hand-curated by ACES.
+`ATLAS-matrix` sequence order, not hand-curated by RAES.
 
 Rules:
 
@@ -461,7 +461,7 @@ Rules:
   overlapping labels as interchangeable without an explicit mapping surface.
 - External technique, tool, CVE, or command identifiers require explicit
   mapping or loss metadata on the owning surface; they are not accepted as raw
-  portable ACES semantics by this field.
+  portable RAES semantics by this field.
 - Future ATT&CK or ATLAS release updates must update the matching pinned source
   artifact, catalog terms, fixture, docs, schema metadata as needed, and
   checker validation evidence in one reviewable change.
@@ -517,7 +517,7 @@ domains on the existing behavior-specification aggregate. Values resolve
 through `participant-defensive-behavior-activities`, independently from the
 ATT&CK and ATLAS offensive scopes.
 
-The eight base terms are ACES adaptations of the active NIST CSF 2.0 Detect,
+The eight base terms are RAES adaptations of the active NIST CSF 2.0 Detect,
 Respond, and Recover categories. The pinned source artifact is
 `contracts/concept-authority/nist-csf-defensive-categories-source-v1.json`.
 It preserves the official category identifiers, titles, function membership,
@@ -525,7 +525,7 @@ and category descriptions extracted from the NIST CSF 2.0 Core export. Its
 digest covers the canonical category snapshot rather than generated XLSX bytes,
 whose ZIP metadata changes between downloads.
 
-| NIST CSF ID | ACES term | Function |
+| NIST CSF ID | RAES term | Function |
 | --- | --- | --- |
 | DE.CM | `continuous-monitoring` | Detect |
 | DE.AE | `adverse-event-analysis` | Detect |

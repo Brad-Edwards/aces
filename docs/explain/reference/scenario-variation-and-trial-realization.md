@@ -1,6 +1,6 @@
 # Scenario Variation And Deterministic Trial Realization
 
-This reference defines the cohesive ACES path from an authored scenario family
+This reference defines the cohesive RAES path from an authored scenario family
 to archival experiment provenance. It applies ADR-084 to the package and
 artifact boundaries already established by ADR-036, ADR-053, ADR-055, ADR-065,
 ADR-068, ADR-074, and ADR-078.

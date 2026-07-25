@@ -6,7 +6,7 @@ It states the rules that distinguish *binding* author declarations from
 concerns *left open* to backend realization, names when realization is
 permitted, names when an explicit declaration must be honored, and names
 when an unsupported exact requirement must be rejected rather than
-silently approximated. In ACES the processor layer does not realize
+silently approximated. In RAES the processor layer does not realize
 underspecified author concerns: it compiles the typed runtime
 requirement and plans against backend support. Realization is a backend
 responsibility; this spec scopes the realization surface accordingly.
@@ -217,7 +217,7 @@ per-domain `RealizationSupportDeclaration` entries that name (i) the
 support mode (`EXACT_ONLY`, `CONSTRAINED`, or `OPEN_REALIZATION`), (ii)
 the supported exact-requirement-kinds, (iii) the supported
 constraint-kinds, and (iv) the disclosure kinds the apparatus will emit.
-Processor manifests MUST NOT carry `realization_support`: in ACES the
+Processor manifests MUST NOT carry `realization_support`: in RAES the
 processor layer does not realize underspecified author concerns — its
 manifest discloses processing features (compilation, planning,
 orchestration coordination, evaluation coordination, and related
@@ -587,7 +587,7 @@ precedents:
 - **CACAO playbook-extensions, OpenC2 actuator profiles, and Sigma
   backend profiles** all share the same general shape with the
   `RealizationSupportDeclaration` per-domain mode used here. SEM-218
-  adopts the shape and makes its semantics normative for ACES.
+  adopts the shape and makes its semantics normative for RAES.
 - **Pham et al 2016 *CyRIS***
   (`research/research/primary/literature/dsl-and-standards/pham2016_cyris.pdf`),
   **Vykopal et al 2017 *KYPO***

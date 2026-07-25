@@ -91,7 +91,7 @@ action, observation, reward, and episode concepts explicit.
 [PettingZoo](https://papers.nips.cc/paper/2021/hash/7ed2d3454c5eea71148b11d0c25104ff-Abstract.html)
 extends this ecosystem to multi-agent environments through the Agent Environment
 Cycle model. It is a useful precedent for explicit per-agent turns and
-multi-agent API consistency, but ACES cannot adopt a turn-only worldview because
+multi-agent API consistency, but RAES cannot adopt a turn-only worldview because
 real cyber ranges also need concurrent, asynchronous, and backend-realized
 action ordering.
 
@@ -104,7 +104,7 @@ details.
 ### Partial Observability And Multi-Agent Control
 
 Kaelbling, Littman, and Cassandra's POMDP treatment frames sequential action
-under incomplete observation; the core lesson for ACES is that a participant's
+under incomplete observation; the core lesson for RAES is that a participant's
 observation stream is not the environment state. Local history and belief matter
 when interpreting behavior.
 
@@ -113,14 +113,14 @@ multi-agent interaction. Bernstein, Givan, Immerman, and Zilberstein
 (Mathematics of Operations Research, 2002) show that decentralized control
 under partial observability is fundamentally harder than centralized MDP/POMDP
 control. Oliehoek and Amato's Dec-POMDP monograph fixes the standard vocabulary
-ACES reuses for joint policies, action-observation histories, and information
-states. ACES should not pretend that one global state and one global
+RAES reuses for joint policies, action-observation histories, and information
+states. RAES should not pretend that one global state and one global
 observation stream are enough for multi-participant experiments.
 
 Mean-field game theory — Huang, Caines, and Malhamé (2006) and Lasry and Lions
 (2007), brought to MARL by Yang et al. (2018) — covers the population-limit
 regime where individual interaction is replaced by interaction with a
-population distribution. ACES's runtime layer records mean-field updates as
+population distribution. RAES's runtime layer records mean-field updates as
 environment state over a population scope, not as hidden participant actions;
 this lineage is why population-distribution disclosure is a first-class runtime
 record in `specs/formal/participant-runtime/`.
@@ -130,7 +130,7 @@ record in `specs/formal/participant-runtime/`.
 Fagin, Halpern, Moses, and Vardi's interpreted-systems framework gives the
 formal basis for participant-relative information: an agent's knowledge at a
 point is determined by indistinguishability over its local state across global
-runs. ACES's view relation `V_p,t`, local history `H_p,t`, and the
+runs. RAES's view relation `V_p,t`, local history `H_p,t`, and the
 visible-history indistinguishability relation in
 `specs/formal/participant-runtime/` are interpreted-systems constructions, not
 ad hoc bookkeeping.
@@ -153,7 +153,7 @@ Goguen and Meseguer's noninterference (1982) gives the information-flow reading
 of the hidden-truth boundary (I2): hidden world state and adjudication assets
 must be noninterfering with participant-visible projections in the absence of
 an explicit disclosure rule. Sabelfeld and Sands' declassification dimensions
-(2009) frame ACES disclosure rules as governed declassification policies: every
+(2009) frame RAES disclosure rules as governed declassification policies: every
 permitted release of hidden information declares what is released, where in the
 view relation, when (the transition anchor), and by whose authority.
 
@@ -165,15 +165,15 @@ precondition/add/delete action model; PDDL standardized typed action schemata
 with explicit preconditions and effects (Haslum et al.'s language introduction
 is the consolidated reference); PDDL2.1 (Fox and Long, 2003) added durative
 actions, temporal preconditions/effects, and numeric resources — the direct
-ancestors of ACES temporal preconditions and resource preconditions; PPDDL
+ancestors of RAES temporal preconditions and resource preconditions; PPDDL
 (Younes et al., 2005) and RDDL (Sanner, 2010) added probabilistic effects and
-stochastic transition models, the lineage for ACES's non-deterministic effect
+stochastic transition models, the lineage for RAES's non-deterministic effect
 and `unknown_effect` classes.
 
-ACES action contracts deliberately exceed this lineage: planning formalisms do
+RAES action contracts deliberately exceed this lineage: planning formalisms do
 not carry visibility effects, evidence expectations, realization profiles,
 fidelity claims, or mapping-loss labels, and they assume a closed-world effect
-axiomatization that a cyber range cannot honestly claim. ACES therefore fails
+axiomatization that a cyber range cannot honestly claim. RAES therefore fails
 closed on unresolved preconditions instead of assuming closed-world frame
 axioms, and treats declared effect classes as disclosure obligations rather
 than complete world models.
@@ -185,7 +185,7 @@ It defines scenarios with agents, action spaces, observations, rewards, and
 reset; it also supports simulation and emulation. The sim-to-emulation transfer
 failures reported in the results discussion of Standen et al. (2021) are
 directly relevant: an agent can overfit to an observation artifact that does
-not exist in the emulator. ACES must therefore record observation provenance
+not exist in the emulator. RAES must therefore record observation provenance
 and realized backend disclosure, not just action results.
 
 [CyberBattleSim](https://www.microsoft.com/en-us/research/project/cyberbattlesim/)
@@ -198,13 +198,13 @@ than assuming simulation results transfer to operational environments.
 [unified emulation-simulation training environment](https://arxiv.org/abs/2304.01244)
 are relevant because the unified design derives simulation transitions from
 emulated traces, preserving the same action space across the sim-to-real loop.
-They motivate ACES's requirement that action and observation contracts survive
+They motivate RAES's requirement that action and observation contracts survive
 across backend fidelity modes.
 
 CyGIL also exposes a negative design lesson: an abstract action such as
 "network discovery" is too coarse to transfer honestly to a real or emulated
 network when concrete tools, parameters, network configuration, and observation
-effects differ. ACES action contracts therefore need declared behavioral
+effects differ. RAES action contracts therefore need declared behavioral
 granularity, procedure basis, and realization profile, not only a tactic or
 technique label.
 
@@ -227,14 +227,14 @@ instrumentation.
 [CAIBench](https://arxiv.org/abs/2510.24317) argues that isolated offensive,
 defensive, static-knowledge, and execution-only benchmarks miss integrated
 cybersecurity performance. Its Attack-and-Defense and privacy categories
-reinforce ACES's role-neutral multi-participant model and the need to record
+reinforce RAES's role-neutral multi-participant model and the need to record
 privacy/redaction semantics in observation and evidence surfaces.
 
 [AI Agents That Matter](https://arxiv.org/abs/2407.01502) and the
 [LLM offensive-security benchmarking-practices study](https://arxiv.org/abs/2504.10112)
 are broader benchmark-methodology critiques. They motivate explicit holdout
 discipline, anti-contamination controls, scaffold and cost/resource
-provenance, baseline disclosure, and standardized run records. ACES does not
+provenance, baseline disclosure, and standardized run records. RAES does not
 turn these papers into benchmark policy here, but participant semantics must
 not make those controls impossible.
 
@@ -251,7 +251,7 @@ is infrastructure constraints, not participant observations, causal
 attribution, or multi-agent behavior.
 
 CRACK's Datalog verification is similar prior art for executable cyber range
-feasibility. It supports ACES's policy of making semantic claims checkable, but
+feasibility. It supports RAES's policy of making semantic claims checkable, but
 does not remove the need for participant-specific semantics.
 
 [CyRIS](https://www.jaist.ac.jp/~razvan/publications/cyris_facilitating_training.pdf)
@@ -264,7 +264,7 @@ semantics.
 
 Ear, Remy, and Xu's automated cyber-range design framework
 ([arXiv:2307.04416](https://arxiv.org/abs/2307.04416)) treats range
-architecture selection as an explicit requirements-matching problem. For ACES,
+architecture selection as an explicit requirements-matching problem. For RAES,
 the lesson is that architecture, teaming model, fidelity, observability,
 concurrency, resetability, and updateability are experiment requirements that
 must be surfaced instead of disappearing into backend choice.
@@ -273,12 +273,12 @@ must be surfaced instead of disappearing into backend choice.
 
 The CALDERA planning-and-acting work argues that automated adversary emulation
 is not only planning: adversaries interleave acting and sensing under open-ended
-uncertainty. This motivates ACES's explicit distinction between actions that
+uncertainty. This motivates RAES's explicit distinction between actions that
 change foothold, actions that change knowledge, and actions that do both.
 
 [MITRE ATT&CK](https://www.mitre.org/news-insights/publication/mitre-attck-design-and-philosophy)
 is an empirically grounded behavior vocabulary. It can classify participant
-actions, but ATT&CK technique labels are not ACES action contracts.
+actions, but ATT&CK technique labels are not RAES action contracts.
 
 [OCSF](https://ocsf.io/) provides vendor-neutral security event structure and
 normalization. It is appropriate for observations, detections, findings, and
@@ -287,7 +287,7 @@ evidence references, but it is not a participant-visible-state model by itself.
 [CACAO v2.0](https://docs.oasis-open.org/cacao/security-playbooks/v2.0/security-playbooks-v2.0.pdf)
 separates workflows, commands, agents, targets, variables, and authentication
 information. It is useful lineage for agent/target and action-step boundaries,
-but ACES participant semantics must also handle observation, discovery,
+but RAES participant semantics must also handle observation, discovery,
 concealment, and evaluation across heterogeneous participant implementations.
 
 ### Time, Ordering, And Causality
@@ -300,16 +300,16 @@ Lamport's scalar clocks only respect causality in one direction; they cannot
 prove that two events are causally unrelated. Fidge (1988) and Mattern (1989)
 introduced vector time, which characterizes the causal partial order exactly,
 and Schwarz and Mattern (1994) survey what causal claims each clock mechanism
-can and cannot support. This distinction is load-bearing for ACES: any
+can and cannot support. This distinction is load-bearing for RAES: any
 `VectorClock` ordering basis in the runtime layer claims the stronger
 characterization and therefore needs the Fidge/Mattern lineage, not just
 Lamport's.
 
 Winskel's event structures and Mazurkiewicz's trace theory provide the
-true-concurrency semantics behind ACES's realized-order model: a record of
+true-concurrency semantics behind RAES's realized-order model: a record of
 "what happened" in a concurrent run is a labelled partial order with explicit
 simultaneity/independence structure, not a single forced interleaving. This is
-why ACES joint-action records carry partial orders and simultaneity groups
+why RAES joint-action records carry partial orders and simultaneity groups
 instead of a backend-chosen total order presented as ground truth.
 
 Formal temporal contracts also have direct precedent: Allen's interval algebra
@@ -327,7 +327,7 @@ semantic concerns.
 [SISO Cyber DEM](https://cdn.ymaws.com/www.sisostandards.org/resource/resmgr/standards_products/siso-std-025-2023_cyberdem.pdf)
 provides cyber objects and events for simulation interoperability. It supports
 the idea that cyber events and effects need exchangeable representations across
-simulation and range systems, but ACES still needs its own scenario/participant
+simulation and range systems, but RAES still needs its own scenario/participant
 semantics around those events.
 
 Halpern and Pearl's structural-model causality motivates the attribution rule
@@ -345,7 +345,7 @@ The software-language engineering evaluation literature warns that domain
 familiarity is not enough to validate a DSL. Gabriel, Goulão, and Amaral's
 [DSL evaluation review](https://arxiv.org/abs/1109.6794) specifically calls out
 expressiveness, usability, effectiveness, maintainability, and domain-expert
-productivity as concerns that can be skipped or relaxed. ACES's participant
+productivity as concerns that can be skipped or relaxed. RAES's participant
 semantics are therefore not academically complete if they only define a rich
 semantic model; future child issues must also include authoring profiles,
 examples, negative fixtures, and evidence that the notation can be used without
@@ -355,7 +355,7 @@ creating ambiguous or unreviewable experiments.
 
 The design above is necessary but not by itself sufficient. A critical reading
 of existing SDLs, cyber-agent environments, and agent benchmarks identifies the
-following failure modes that ACES must explicitly avoid.
+following failure modes that RAES must explicitly avoid.
 
 | Failure mode | Direct evidence | Design correction |
 | ------------ | --------------- | ----------------- |
@@ -371,7 +371,7 @@ following failure modes that ACES must explicitly avoid.
 ## Cross-Issue Coverage And Deferrals
 
 The participant-semantics design intentionally remains partial for holistic
-concerns that belong to other ACES design or evidence gates.
+concerns that belong to other RAES design or evidence gates.
 
 | Concern from the critique | Coverage after #71 | Owning issue(s) | Participant-semantics duty |
 | ------------------------- | ------------------ | --------------- | -------------------------- |
@@ -493,7 +493,7 @@ the evidence for the procedure, such as an ATT&CK technique, CVE, exploit
 module, CACAO command, OpenC2 command, human runbook step, emulated trace, or
 experiment-specific procedure. `external_mappings` are typed references with a
 declared loss label; a mapping to ATT&CK, OCSF, CACAO, STIX, OpenC2, Cyber DEM,
-Metasploit, or a benchmark milestone is not itself the ACES action semantics.
+Metasploit, or a benchmark milestone is not itself the RAES action semantics.
 `fidelity_claims` and `realization_profile` distinguish portable intent from
 simulation, emulation, live, human-mediated, or stubbed realization.
 
@@ -800,7 +800,7 @@ and joint behavior as first-class data, while Lamport ordering motivates
 recording realized order as provenance rather than treating timestamp adjacency
 as causality. Cyber-agent systems motivate explicit action targets and
 shared-state effects, but technique/tool labels remain external mappings, not
-the ACES interaction semantics themselves.
+the RAES interaction semantics themselves.
 
 ## SEM-210 - Visibility And Information-Boundary Semantics
 
@@ -1011,7 +1011,7 @@ Design commitments:
 
 Minimum future implementation artifacts:
 
-- temporal participant contract fields aligned with the broader ACES time-model
+- temporal participant contract fields aligned with the broader RAES time-model
   work;
 - abstract state-machine model for deadlines, dwell, and timeout interaction;
 - tests for ordering, delayed observation, and deadline/cadence edge cases.
@@ -1043,7 +1043,7 @@ Current implementation artifacts for the first `SEM-213` slice:
   / timeout state-machine transitions.
 
 This slice implements participant-local temporal contracts and conformance
-checks. It does not claim the broader ACES clock/time-model work owned by
+checks. It does not claim the broader RAES clock/time-model work owned by
 `SEM-227`, `SEM-228`, and `SEM-229`.
 
 ## SEM-214 - Portable Semantics For Derived Context Views
@@ -1186,7 +1186,7 @@ The required-ref clauses of B1/B2 (and B4) are enforced both by the closed-world
 model and by the published JSON Schema `allOf`, so schema-only consumers reject
 them. The relational clauses that standard JSON Schema cannot express - archival
 source mediation and `payload_ref` non-aliasing - are enforced by the model and
-published as `x-aces-invariants` on `participant-context-view-v1` (the ACES
+published as `x-aces-invariants` on `participant-context-view-v1` (the RAES
 semantic-invariant profile, per ADR-009 §7 and the experiment-core convention),
 so the portable contract advertises every obligation and names its validator.
 - **B3** - derived analysis is never captured evidence. An
@@ -1243,18 +1243,18 @@ Current implementation artifacts for the `SEM-216` slice:
 
 `SEM-217` requires explicit semantics for external knowledge bindings so a
 reference to UCO, another ontology, a vocabulary, or an interoperability
-profile cannot silently rewrite ACES-native meaning.
+profile cannot silently rewrite RAES-native meaning.
 
 An external knowledge binding has exactly the effect declared by the governed
-ACES surface that carries it:
+RAES surface that carries it:
 
 - **annotates** - an external reference, reviewed class, evidence source, or
-  citation adds context for a native ACES concept without changing validation,
+  citation adds context for a native RAES concept without changing validation,
   planning, runtime, or conformance semantics by itself.
 - **aligns** - a reviewed external authority has equivalent meaning for the
-  native ACES family. In the current concept-authority slice, adopted UCO
+  native RAES family. In the current concept-authority slice, adopted UCO
   concept families align with UCO meaning and carry no divergence list.
-- **refines** - a reviewed external authority is used with ACES-specific
+- **refines** - a reviewed external authority is used with RAES-specific
   narrowing, loss, or divergence. In the current slice, adapted UCO concept
   families refine rather than align and must enumerate the divergence.
 - **constrains** - a governed surface must bind a vocabulary, capability, or
@@ -1263,11 +1263,11 @@ ACES surface that carries it:
 
 Design commitments:
 
-- native ACES contracts, concept families, reference models, semantic profiles,
-  and validators remain the authority for ACES behavior;
+- native RAES contracts, concept families, reference models, semantic profiles,
+  and validators remain the authority for RAES behavior;
 - external authority references are versioned, review-scoped evidence rather
   than live network dependencies;
-- annotation never implies constraint, refinement never weakens existing ACES
+- annotation never implies constraint, refinement never weakens existing RAES
   invariants, and alignment never means schema inheritance;
 - artifact-local labels do not define portable semantics unless they bind to a
   governed concept family or controlled vocabulary surface.
@@ -1666,9 +1666,9 @@ Future implementation PRs should still include:
 
 ## Deliberate Non-Adoptions
 
-- Do not adopt Gym/PettingZoo as the ACES runtime protocol. Use their concepts,
+- Do not adopt Gym/PettingZoo as the RAES runtime protocol. Use their concepts,
   not their API shape, as lineage.
-- Do not treat CybORG action YAML as the ACES action contract. It is precedent
+- Do not treat CybORG action YAML as the RAES action contract. It is precedent
   for action/observation discipline and sim-to-emulation disclosure.
 - Do not treat ATT&CK technique IDs as action semantics. They are behavior
   labels, not precondition/effect/failure contracts.
@@ -1676,7 +1676,7 @@ Future implementation PRs should still include:
   relation.
 - Do not treat CACAO agents/targets as participant semantics. They are useful
   workflow and command-lineage objects.
-- Do not treat Cyber DEM as the ACES scenario model. It is an exchange model for
+- Do not treat Cyber DEM as the RAES scenario model. It is an exchange model for
   cyber simulation objects/events.
 - Do not treat timestamp order as causal attribution.
 - Do not treat CTF flag capture, subtask completion, or benchmark milestone
@@ -1684,7 +1684,7 @@ Future implementation PRs should still include:
 - Do not treat Docker/container reproducibility as run or study reproducibility
   without reset, seed, version, backend, scaffold, and hidden-asset provenance.
 - Do not treat external CTI, CVE, exploit-module, or command names as portable
-  behavior without an ACES action contract and loss-labeled mappings.
+  behavior without an RAES action contract and loss-labeled mappings.
 
 ## References
 

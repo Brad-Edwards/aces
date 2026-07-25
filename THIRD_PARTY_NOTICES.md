@@ -2,7 +2,7 @@
 
 ## Z3 Theorem Prover
 
-ACES uses the `z3-solver` Python package, version 4.16.0.0, for the governed
+RAES uses the `z3-solver` Python package, version 4.16.0.0, for the governed
 finite-domain scenario satisfiability profile. Z3 is distributed under the MIT
 License.
 
@@ -28,7 +28,7 @@ SOFTWARE.
 
 ## Open Cyber Range SDL Parser
 
-Portions of the ACES SDL model structure were translated and adapted from Open
+Portions of the RAES SDL model structure were translated and adapted from Open
 Cyber Range SDL Parser v0.21.2, revision
 `fe83e8281fc4b954967fbaa5a0d099007ddcb06c`.
 

@@ -1,7 +1,7 @@
 # Supply Chain Specs
 
 Normative prose for the **Packaging & Supply Chain** wave, under the
-[ACES SDL authority boundary](../authority/authority-boundary.yaml). Documents
+[RAES SDL authority boundary](../authority/authority-boundary.yaml). Documents
 here are authoritative independent of any reference implementation.
 
 ## Contents
