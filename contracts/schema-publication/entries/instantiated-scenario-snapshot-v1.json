@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-snapshot-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "34102d78aa50c1a2b5e4427b92b6f08d226cb8aff2ad485e8f414a4be3e6e96c",
+  "content_hash": "02ffc6e11ecc9cb171208df98faeb059f6fbb61b52848f1e7635ce06272b4df8",
   "last_change": {
-    "summary": "Carried DSL-437 autonomous participant execution into instantiated snapshots.",
-    "content_hash": "34102d78aa50c1a2b5e4427b92b6f08d226cb8aff2ad485e8f414a4be3e6e96c"
+    "summary": "Published enterprise tenancy, service materialization, shared time, and autonomous participant execution in immutable snapshots.",
+    "content_hash": "02ffc6e11ecc9cb171208df98faeb059f6fbb61b52848f1e7635ce06272b4df8"
   }
 }

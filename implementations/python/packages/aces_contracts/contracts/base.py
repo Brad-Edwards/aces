@@ -142,6 +142,7 @@ _BACKEND_CONCEPT_BINDING_SCOPES = frozenset(
         "capabilities.provisioner.supported_content_types",
         "capabilities.provisioner.supported_account_features",
         "capabilities.provisioner.supported_domain_profiles",
+        "capabilities.provisioner.supported_service_materialization_profiles",
         "capabilities.orchestrator.supported_sections",
         "capabilities.evaluator.supported_sections",
         "capabilities.observation.supported_capture_kinds",

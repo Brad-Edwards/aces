@@ -257,6 +257,8 @@ class _ContentObjectivesMixin:
                 self._err(f"Content '{name}' targets undefined node '{item.target}'")
             elif item.target and not self._is_unresolved_var(item.target) and not self._is_vm_node(item.target):
                 self._err(f"Content '{name}' target '{item.target}' must be a VM node")
+            if item.service_materialization is not None:
+                self._verify_service_materialization(name, item)
 
     def _verify_accounts(self) -> None:
         for name, acct in self._s.accounts.items():

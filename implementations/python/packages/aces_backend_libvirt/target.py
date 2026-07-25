@@ -120,6 +120,7 @@ def _validate_manifest_mode(manifest: BackendManifest, mode: LibvirtDriverMode) 
         "supported_content_types": frozenset(configuration.supported_content_types),
         "supported_account_features": frozenset(configuration.supported_account_features),
         "supported_domain_profiles": frozenset(configuration.supported_domain_profiles),
+        "supported_service_materialization_profiles": frozenset(),
         "supports_accounts": bool(configuration.supported_account_features),
         "supports_acls": configuration.supports_acls,
     }

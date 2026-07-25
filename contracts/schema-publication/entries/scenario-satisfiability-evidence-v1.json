@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "9646bac227ef2466b1a1e0a7a8159b5597498df7ac8613356109b7c2614549d9",
+  "content_hash": "3574119edf519a577191c8be691bf4dcf747906eefab50a6bb22ca31725a87a2",
   "last_change": {
-    "summary": "Carried DSL-437 autonomous participant execution through satisfiability evidence.",
-    "content_hash": "9646bac227ef2466b1a1e0a7a8159b5597498df7ac8613356109b7c2614549d9"
+    "summary": "Carried enterprise tenancy, service materialization, shared time, and autonomous participant invariants into satisfiability evidence.",
+    "content_hash": "3574119edf519a577191c8be691bf4dcf747906eefab50a6bb22ca31725a87a2"
   }
 }

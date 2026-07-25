@@ -868,6 +868,14 @@
           "title": "Supported Os Families",
           "type": "array"
         },
+        "supported_service_materialization_profiles": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Supported Service Materialization Profiles",
+          "type": "array"
+        },
         "supports_accounts": {
           "default": false,
           "title": "Supports Accounts",

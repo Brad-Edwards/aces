@@ -1036,6 +1036,17 @@
           "default": false,
           "title": "Sensitive"
         },
+        "service_materialization": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ServiceMaterialization"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "source": {
           "anyOf": [
             {
@@ -1152,6 +1163,14 @@
         "directory"
       ],
       "title": "ContentType",
+      "type": "string"
+    },
+    "CrossTenantIsolation": {
+      "description": "Default cell posture for access from another tenant.",
+      "enum": [
+        "default_deny"
+      ],
+      "title": "CrossTenantIsolation",
       "type": "string"
     },
     "Database": {
@@ -1673,6 +1692,58 @@
         "name"
       ],
       "title": "DatabaseTable",
+      "type": "object"
+    },
+    "DeploymentCell": {
+      "additionalProperties": false,
+      "description": "One tenant-owned failure/isolation cell with explicit node membership.",
+      "properties": {
+        "cross_tenant_isolation": {
+          "$ref": "#/$defs/CrossTenantIsolation",
+          "title": "Cross Tenant Isolation"
+        },
+        "node_refs": {
+          "items": {
+            "not": {
+              "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+            },
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Node Refs",
+          "type": "array"
+        },
+        "tenant_ref": {
+          "minLength": 1,
+          "not": {
+            "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Tenant Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tenant_ref",
+        "node_refs",
+        "cross_tenant_isolation"
+      ],
+      "title": "DeploymentCell",
+      "type": "object"
+    },
+    "DeploymentTenant": {
+      "additionalProperties": false,
+      "description": "Stable portable deployment-tenant identity.",
+      "properties": {
+        "description": {
+          "default": "",
+          "not": {
+            "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Description",
+          "type": "string"
+        }
+      },
+      "title": "DeploymentTenant",
       "type": "object"
     },
     "DnsDynamicUpdatePolicy": {
@@ -2847,6 +2918,19 @@
       "title": "DockerfileInstructionKind",
       "type": "string"
     },
+    "EndpointPersona": {
+      "description": "Scenario function of a VM endpoint, separate from login/participant roles.",
+      "enum": [
+        "workforce",
+        "engineering",
+        "privileged_admin",
+        "participant",
+        "service",
+        "carrier"
+      ],
+      "title": "EndpointPersona",
+      "type": "string"
+    },
     "Entity": {
       "additionalProperties": false,
       "description": "An organizational unit, team, or person in the exercise.\n\nEntities can nest recursively. Flattened names use dot-notation:\n``blue-team.bob`` refers to the ``bob`` entity nested inside\n``blue-team``.",
@@ -3578,6 +3662,49 @@
       "title": "FeatureType",
       "type": "string"
     },
+    "FederationDirection": {
+      "description": "Portable direction for workforce authority federation.",
+      "enum": [
+        "authority_to_facade"
+      ],
+      "title": "FederationDirection",
+      "type": "string"
+    },
+    "FederationMappingIntent": {
+      "description": "Portable outcome of identity mapping without provider mapper syntax.",
+      "enum": [
+        "groups_to_roles"
+      ],
+      "title": "FederationMappingIntent",
+      "type": "string"
+    },
+    "FederationProtocol": {
+      "description": "Portable directory-to-facade synchronization protocols.",
+      "enum": [
+        "ldap_tls",
+        "scim"
+      ],
+      "title": "FederationProtocol",
+      "type": "string"
+    },
+    "ForestTrustDirection": {
+      "description": "Authority direction for one forest trust edge.",
+      "enum": [
+        "one_way_outbound",
+        "one_way_inbound",
+        "bidirectional"
+      ],
+      "title": "ForestTrustDirection",
+      "type": "string"
+    },
+    "ForestTrustType": {
+      "description": "Closed forest-to-forest trust profiles.",
+      "enum": [
+        "forest"
+      ],
+      "title": "ForestTrustType",
+      "type": "string"
+    },
     "GeneratedArtifact": {
       "additionalProperties": false,
       "description": "Desired generated configuration or certificate/key material.",
@@ -3752,6 +3879,69 @@
       ],
       "title": "IdentityDomainProfile",
       "type": "string"
+    },
+    "IdentityFacade": {
+      "additionalProperties": false,
+      "description": "Authored IdP facade identified through an existing logical service.",
+      "properties": {
+        "protocol": {
+          "$ref": "#/$defs/IdentityFacadeProtocol",
+          "title": "Protocol"
+        },
+        "service_ref": {
+          "minLength": 1,
+          "not": {
+            "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Service Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "service_ref",
+        "protocol"
+      ],
+      "title": "IdentityFacade",
+      "type": "object"
+    },
+    "IdentityFacadeProtocol": {
+      "description": "Challenge-facing identity protocol exposed by an authored facade.",
+      "enum": [
+        "oidc"
+      ],
+      "title": "IdentityFacadeProtocol",
+      "type": "string"
+    },
+    "IdentityForest": {
+      "additionalProperties": false,
+      "description": "A forest with explicit root and complete authored domain membership.",
+      "properties": {
+        "domain_refs": {
+          "items": {
+            "not": {
+              "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+            },
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Domain Refs",
+          "type": "array"
+        },
+        "root_domain_ref": {
+          "minLength": 1,
+          "not": {
+            "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Root Domain Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "root_domain_ref",
+        "domain_refs"
+      ],
+      "title": "IdentityForest",
+      "type": "object"
     },
     "ImageAttestation": {
       "additionalProperties": false,
@@ -4527,6 +4717,38 @@
           "title": "Content",
           "type": "object"
         },
+        "deployment_cells": {
+          "additionalProperties": {
+            "$ref": "#/$defs/DeploymentCell"
+          },
+          "propertyNames": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_.-]"
+            },
+            "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Deployment Cells",
+          "type": "object"
+        },
+        "deployment_tenants": {
+          "additionalProperties": {
+            "$ref": "#/$defs/DeploymentTenant"
+          },
+          "propertyNames": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_.-]"
+            },
+            "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Deployment Tenants",
+          "type": "object"
+        },
         "description": {
           "default": "",
           "not": {
@@ -4661,6 +4883,38 @@
             "type": "string"
           },
           "title": "Identity Domains",
+          "type": "object"
+        },
+        "identity_facades": {
+          "additionalProperties": {
+            "$ref": "#/$defs/IdentityFacade"
+          },
+          "propertyNames": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_.-]"
+            },
+            "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Identity Facades",
+          "type": "object"
+        },
+        "identity_forests": {
+          "additionalProperties": {
+            "$ref": "#/$defs/IdentityForest"
+          },
+          "propertyNames": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_.-]"
+            },
+            "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Identity Forests",
           "type": "object"
         },
         "infrastructure": {
@@ -5043,6 +5297,15 @@
       ],
       "title": "InstantiationProvenance",
       "type": "object"
+    },
+    "KernelBoundary": {
+      "description": "Kernel/trust boundary requested between logical node and carrier.",
+      "enum": [
+        "shared_kernel",
+        "separate_kernel"
+      ],
+      "title": "KernelBoundary",
+      "type": "string"
     },
     "MixedControlAuthorityStatus": {
       "description": "Authored authority state for one controller binding.",
@@ -5474,6 +5737,24 @@
           },
           "title": "Description",
           "type": "string"
+        },
+        "endpoint_persona": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EndpointPersona"
+            },
+            {
+              "not": {
+                "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+              },
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Endpoint Persona"
         },
         "features": {
           "additionalProperties": {
@@ -8076,6 +8357,17 @@
       "additionalProperties": false,
       "description": "A typed directed edge between two named scenario elements.\n\nSource and target can reference any named element in the scenario:\nnodes, features, accounts, entities, or infrastructure entries.\nThe validator checks that both endpoints resolve.\n\nThe ``properties`` dict carries type-specific metadata (e.g.,\n``trust_type: parent-child`` for AD trusts, ``protocol: SAML``\nfor federation). It's a flat dict rather than typed sub-models\nbecause relationship properties vary widely and we don't want\nto gate expressiveness on pre-modeling every variant.\n\n``database_access`` and ``mail_access`` are typed exceptions where\nprotocol/auth details need structural validation rather than prose.\n``forwarding_edge``, ``service_integration``, and ``proxy_upstream`` are\nthe same kind of typed exception for, respectively, a forwarding /\nintel-sync agent's inter-node trust edge (SCN-010 \u00a75.7), a platform\nconsumer-to-engine service integration, and a reverse-proxy/gateway\nroute-to-origin upstream hop. Each keeps protocol/auth/topology facts\nstructurally validated and cross-referable rather than buried in prose.",
       "properties": {
+        "carrier_placement": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RelationshipCarrierPlacement"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "database_access": {
           "anyOf": [
             {
@@ -8117,10 +8409,32 @@
           ],
           "default": null
         },
+        "forest_trust": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RelationshipForestTrust"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "forwarding_edge": {
           "anyOf": [
             {
               "$ref": "#/$defs/RelationshipForwardingEdge"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "identity_federation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RelationshipIdentityFederation"
             },
             {
               "type": "null"
@@ -8171,6 +8485,17 @@
           ],
           "default": null
         },
+        "shared_service": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RelationshipSharedService"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "source": {
           "not": {
             "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
@@ -8195,6 +8520,21 @@
         "target"
       ],
       "title": "Relationship",
+      "type": "object"
+    },
+    "RelationshipCarrierPlacement": {
+      "additionalProperties": false,
+      "description": "Typed logical-node-to-carrier placement intent.",
+      "properties": {
+        "kernel_boundary": {
+          "$ref": "#/$defs/KernelBoundary",
+          "title": "Kernel Boundary"
+        }
+      },
+      "required": [
+        "kernel_boundary"
+      ],
+      "title": "RelationshipCarrierPlacement",
       "type": "object"
     },
     "RelationshipDatabaseAccess": {
@@ -8263,6 +8603,26 @@
         "controller_refs"
       ],
       "title": "RelationshipDomainJoin",
+      "type": "object"
+    },
+    "RelationshipForestTrust": {
+      "additionalProperties": false,
+      "description": "Typed forest trust detail; relationship endpoints own forest identity.",
+      "properties": {
+        "direction": {
+          "$ref": "#/$defs/ForestTrustDirection",
+          "title": "Direction"
+        },
+        "trust_type": {
+          "$ref": "#/$defs/ForestTrustType",
+          "title": "Trust Type"
+        }
+      },
+      "required": [
+        "trust_type",
+        "direction"
+      ],
+      "title": "RelationshipForestTrust",
       "type": "object"
     },
     "RelationshipForwardingEdge": {
@@ -8358,6 +8718,45 @@
         "forwarder_ref"
       ],
       "title": "RelationshipForwardingEdge",
+      "type": "object"
+    },
+    "RelationshipIdentityFederation": {
+      "additionalProperties": false,
+      "description": "Typed human-authority-to-IdP-facade federation intent.",
+      "properties": {
+        "direction": {
+          "$ref": "#/$defs/FederationDirection",
+          "title": "Direction"
+        },
+        "mapping_intent": {
+          "$ref": "#/$defs/FederationMappingIntent",
+          "title": "Mapping Intent"
+        },
+        "protocol": {
+          "$ref": "#/$defs/FederationProtocol",
+          "title": "Protocol"
+        },
+        "tenant_claim_name": {
+          "minLength": 1,
+          "not": {
+            "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Tenant Claim Name",
+          "type": "string"
+        },
+        "tenant_claim_owner": {
+          "$ref": "#/$defs/TenantClaimOwner",
+          "title": "Tenant Claim Owner"
+        }
+      },
+      "required": [
+        "direction",
+        "protocol",
+        "mapping_intent",
+        "tenant_claim_name",
+        "tenant_claim_owner"
+      ],
+      "title": "RelationshipIdentityFederation",
       "type": "object"
     },
     "RelationshipMailAccess": {
@@ -8643,6 +9042,46 @@
       "title": "RelationshipServiceIntegrationKind",
       "type": "string"
     },
+    "RelationshipSharedService": {
+      "additionalProperties": false,
+      "description": "Typed tenant-to-existing-service policy binding.",
+      "properties": {
+        "mutable_state_owner": {
+          "$ref": "#/$defs/StateOwner",
+          "title": "Mutable State Owner"
+        },
+        "mutable_state_refs": {
+          "items": {
+            "not": {
+              "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+            },
+            "type": "string"
+          },
+          "title": "Mutable State Refs",
+          "type": "array"
+        },
+        "reset_generation_owner": {
+          "$ref": "#/$defs/StateOwner",
+          "title": "Reset Generation Owner"
+        },
+        "tenant_isolation": {
+          "$ref": "#/$defs/TenantIsolationMode",
+          "title": "Tenant Isolation"
+        },
+        "workload_authentication": {
+          "$ref": "#/$defs/WorkloadAuthenticationMode",
+          "title": "Workload Authentication"
+        }
+      },
+      "required": [
+        "tenant_isolation",
+        "workload_authentication",
+        "mutable_state_owner",
+        "reset_generation_owner"
+      ],
+      "title": "RelationshipSharedService",
+      "type": "object"
+    },
     "RelationshipType": {
       "description": "How two scenario elements relate to each other.",
       "enum": [
@@ -8654,7 +9093,11 @@
         "manages",
         "replicates_to",
         "domain_controller_for",
-        "joins_domain"
+        "joins_domain",
+        "forest_trusts",
+        "directory_federates_to",
+        "placed_on_carrier",
+        "uses_shared_service"
       ],
       "title": "RelationshipType",
       "type": "string"
@@ -22955,6 +23398,121 @@
       "title": "ServiceManagerUnit",
       "type": "object"
     },
+    "ServiceMaterialization": {
+      "additionalProperties": false,
+      "description": "Portable control contract for placing content through a named service.",
+      "properties": {
+        "evidence_requirement_refs": {
+          "items": {
+            "not": {
+              "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+            },
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Requirement Refs",
+          "type": "array"
+        },
+        "interface_profile": {
+          "const": "service-content",
+          "default": "service-content",
+          "title": "Interface Profile",
+          "type": "string"
+        },
+        "observation_boundary_refs": {
+          "items": {
+            "not": {
+              "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+            },
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Observation Boundary Refs",
+          "type": "array"
+        },
+        "ordering_content_refs": {
+          "items": {
+            "not": {
+              "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+            },
+            "type": "string"
+          },
+          "title": "Ordering Content Refs",
+          "type": "array"
+        },
+        "profile_version": {
+          "const": "1",
+          "default": "1",
+          "title": "Profile Version",
+          "type": "string"
+        },
+        "readback_assertion_refs": {
+          "items": {
+            "not": {
+              "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+            },
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Readback Assertion Refs",
+          "type": "array"
+        },
+        "requirements": {
+          "$ref": "#/$defs/ServiceMaterializationRequirements"
+        },
+        "shared_service_relationship_ref": {
+          "default": "",
+          "not": {
+            "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Shared Service Relationship Ref",
+          "type": "string"
+        },
+        "target_service_ref": {
+          "minLength": 1,
+          "not": {
+            "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Target Service Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "target_service_ref",
+        "requirements",
+        "readback_assertion_refs",
+        "evidence_requirement_refs",
+        "observation_boundary_refs"
+      ],
+      "title": "ServiceMaterialization",
+      "type": "object"
+    },
+    "ServiceMaterializationRequirements": {
+      "additionalProperties": false,
+      "description": "Exact portable operation, ownership, and readback requirements.",
+      "properties": {
+        "conflict_policy": {
+          "const": "reject-unowned-collision",
+          "default": "reject-unowned-collision",
+          "title": "Conflict Policy",
+          "type": "string"
+        },
+        "operation": {
+          "const": "ensure-owned-items",
+          "default": "ensure-owned-items",
+          "title": "Operation",
+          "type": "string"
+        },
+        "readback": {
+          "const": "canonical-content-digest",
+          "default": "canonical-content-digest",
+          "title": "Readback",
+          "type": "string"
+        }
+      },
+      "title": "ServiceMaterializationRequirements",
+      "type": "object"
+    },
     "ServicePort": {
       "additionalProperties": false,
       "description": "Authored identity of a node-local transport binding.\n\nA service declaration does not authorize traffic, prove a live listener,\npublish a host port, or classify an internal/external audience. Traffic\nauthorization belongs to infrastructure ACLs; observed bind state and host\npublication belong to their dedicated runtime surfaces.",
@@ -23545,6 +24103,16 @@
       "title": "SshMatchRule",
       "type": "object"
     },
+    "StateOwner": {
+      "description": "Owner of mutable state or reset generation.",
+      "enum": [
+        "none",
+        "consumer_tenant",
+        "shared_service"
+      ],
+      "title": "StateOwner",
+      "type": "string"
+    },
     "StatefulResourceConsumer": {
       "additionalProperties": false,
       "description": "A node that consumes a generated artifact or persistent volume.",
@@ -23808,6 +24376,24 @@
         "cadence"
       ],
       "title": "TemporalConstraintKind",
+      "type": "string"
+    },
+    "TenantClaimOwner": {
+      "description": "Authority allowed to issue the server-controlled tenant claim.",
+      "enum": [
+        "facade"
+      ],
+      "title": "TenantClaimOwner",
+      "type": "string"
+    },
+    "TenantIsolationMode": {
+      "description": "Shared-service tenant isolation posture.",
+      "enum": [
+        "none",
+        "stateless",
+        "tenant_partitioned"
+      ],
+      "title": "TenantIsolationMode",
       "type": "string"
     },
     "TimeAdvancementMode": {
@@ -24656,6 +25242,17 @@
       ],
       "title": "WorkflowTimeoutPolicy",
       "type": "object"
+    },
+    "WorkloadAuthenticationMode": {
+      "description": "Workload authentication posture at a shared-service boundary.",
+      "enum": [
+        "none",
+        "shared_credential",
+        "workload_identity",
+        "tenant_scoped_workload_identity"
+      ],
+      "title": "WorkloadAuthenticationMode",
+      "type": "string"
     }
   },
   "$id": "https://aces.dev/schemas/instantiated-scenario-snapshot-v1.json",
@@ -24715,6 +25312,18 @@
       ],
       "level": "error",
       "validator": "aces_sdl._stateful_resource_references.stateful_resource_reference_errors"
+    },
+    {
+      "description": "Service-target content must resolve to one named service, retain exact tenant/reset ownership and content ordering, and bind observed-state postconditions to participant observation boundaries.",
+      "id": "initial-service-state-semantics",
+      "inputs": [
+        {
+          "contract_id": "instantiated-scenario-snapshot-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_sdl.validator.SemanticValidator._verify_service_materialization"
     }
   ],
   "x-aces-semantic-profile": {

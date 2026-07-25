@@ -11,12 +11,14 @@ directories, CTF flag files.
 """
 
 from enum import Enum
+from typing import Literal
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, ValidationInfo, field_validator, model_validator
 
 from ._base import SDLModel, normalize_enum_value, parse_bool_or_var
 from ._identifiers import PortableIdentifier
 from ._source import Source
+from .runtime_values import reject_duplicates
 
 
 class ContentType(str, Enum):
@@ -34,6 +36,46 @@ class ContentItem(SDLModel):
     display_name: str = ""
     tags: list[str] = Field(default_factory=list)
     description: str = ""
+
+
+class ServiceMaterializationRequirements(SDLModel):
+    """Exact portable operation, ownership, and readback requirements."""
+
+    operation: Literal["ensure-owned-items"] = "ensure-owned-items"
+    conflict_policy: Literal["reject-unowned-collision"] = "reject-unowned-collision"
+    readback: Literal["canonical-content-digest"] = "canonical-content-digest"
+
+
+class ServiceMaterialization(SDLModel):
+    """Portable control contract for placing content through a named service."""
+
+    target_service_ref: str = Field(min_length=1)
+    interface_profile: Literal["service-content"] = "service-content"
+    profile_version: Literal["1"] = "1"
+    requirements: ServiceMaterializationRequirements
+    shared_service_relationship_ref: str = ""
+    ordering_content_refs: list[str] = Field(default_factory=list)
+    readback_assertion_refs: list[str] = Field(min_length=1)
+    evidence_requirement_refs: list[str] = Field(min_length=1)
+    observation_boundary_refs: list[str] = Field(min_length=1)
+
+    @field_validator(
+        "ordering_content_refs",
+        "readback_assertion_refs",
+        "evidence_requirement_refs",
+        "observation_boundary_refs",
+    )
+    @classmethod
+    def validate_references(cls, values: list[str], info: ValidationInfo) -> list[str]:
+        if any(not value.strip() for value in values):
+            raise ValueError(f"{info.field_name} entries must be non-empty")
+        reject_duplicates(
+            values,
+            label=info.field_name,
+            container_label=info.field_name,
+            skip_empty=False,
+        )
+        return values
 
 
 class Content(SDLModel):
@@ -58,6 +100,7 @@ class Content(SDLModel):
     items: list[ContentItem] = Field(default_factory=list)
     sensitive: bool | str = False
     tags: list[str] = Field(default_factory=list)
+    service_materialization: ServiceMaterialization | None = None
 
     @field_validator("type", mode="before")
     @classmethod

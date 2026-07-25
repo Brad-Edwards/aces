@@ -15,6 +15,8 @@ from enum import Enum
 from pydantic import Field, field_validator
 
 from ._base import SDLModel, normalize_enum_value
+from .deployment_tenancy import RelationshipCarrierPlacement, RelationshipSharedService
+from .enterprise_identity import RelationshipForestTrust, RelationshipIdentityFederation
 from .identity_domains import RelationshipDomainController, RelationshipDomainJoin
 from .runtime_application import RelationshipProxyUpstream
 from .runtime_database import RelationshipDatabaseAccess
@@ -35,6 +37,10 @@ class RelationshipType(str, Enum):
     REPLICATES_TO = "replicates_to"
     DOMAIN_CONTROLLER_FOR = "domain_controller_for"
     JOINS_DOMAIN = "joins_domain"
+    FOREST_TRUSTS = "forest_trusts"
+    DIRECTORY_FEDERATES_TO = "directory_federates_to"
+    PLACED_ON_CARRIER = "placed_on_carrier"
+    USES_SHARED_SERVICE = "uses_shared_service"
 
 
 class Relationship(SDLModel):
@@ -72,6 +78,10 @@ class Relationship(SDLModel):
     proxy_upstream: RelationshipProxyUpstream | None = None
     domain_controller: RelationshipDomainController | None = None
     domain_join: RelationshipDomainJoin | None = None
+    forest_trust: RelationshipForestTrust | None = None
+    identity_federation: RelationshipIdentityFederation | None = None
+    carrier_placement: RelationshipCarrierPlacement | None = None
+    shared_service: RelationshipSharedService | None = None
 
     @field_validator("type", mode="before")
     @classmethod

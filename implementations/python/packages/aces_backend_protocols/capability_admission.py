@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from aces_contracts.contracts.trial_cleanup import TrialCleanupPlanModel
 
     from .backend_manifest import BackendManifest
+    from .capabilities import TimeCapabilities
 
 
 class AutonomousExecutionPolicy(Protocol):
@@ -156,6 +157,38 @@ def _unsupported_time_terms(
     return [] if not missing else [f"unsupported time {label}: {', '.join(missing)}"]
 
 
+def _time_capacity_gaps(
+    capability: TimeCapabilities,
+    declaration: TimeModelDeclarationModel,
+) -> list[str]:
+    gaps: list[str] = []
+    if capability.max_time_domains is not None and len(declaration.domains) > capability.max_time_domains:
+        gaps.append(
+            f"time model requires {len(declaration.domains)} domains; backend limit is {capability.max_time_domains}"
+        )
+    if capability.max_clocks is not None and len(declaration.clocks) > capability.max_clocks:
+        gaps.append(f"time model requires {len(declaration.clocks)} clocks; backend limit is {capability.max_clocks}")
+    return gaps
+
+
+def _time_control_gaps(
+    capability: TimeCapabilities,
+    declaration: TimeModelDeclarationModel,
+) -> list[str]:
+    requirements = (
+        (
+            any(clock.supports_pause for clock in declaration.clocks.values()),
+            capability.supports_pause,
+            "pause control",
+        ),
+        (any(clock.supports_jump for clock in declaration.clocks.values()), capability.supports_jump, "jump control"),
+        (bool(declaration.mappings), capability.supports_exact_rational_mappings, "exact rational mappings"),
+        (True, capability.supports_append_only_history, "append-only clock transition history"),
+        (True, capability.supports_run_provenance, "realized run provenance"),
+    )
+    return [f"time model requires {label}" for required, supported, label in requirements if required and not supported]
+
+
 def time_model_capability_gaps(
     manifest: BackendManifest,
     declaration: TimeModelDeclarationModel,
@@ -204,22 +237,8 @@ def time_model_capability_gaps(
     )
     for label, values, attribute, supported in term_sources:
         gaps.extend(_unsupported_time_terms(label, {getattr(value, attribute) for value in values}, supported))
-    if capability.max_time_domains is not None and len(declaration.domains) > capability.max_time_domains:
-        gaps.append(
-            f"time model requires {len(declaration.domains)} domains; backend limit is {capability.max_time_domains}"
-        )
-    if capability.max_clocks is not None and len(declaration.clocks) > capability.max_clocks:
-        gaps.append(f"time model requires {len(declaration.clocks)} clocks; backend limit is {capability.max_clocks}")
-    if any(clock.supports_pause for clock in declaration.clocks.values()) and not capability.supports_pause:
-        gaps.append("time model requires pause control")
-    if any(clock.supports_jump for clock in declaration.clocks.values()) and not capability.supports_jump:
-        gaps.append("time model requires jump control")
-    if declaration.mappings and not capability.supports_exact_rational_mappings:
-        gaps.append("time model requires exact rational mappings")
-    if not capability.supports_append_only_history:
-        gaps.append("time model requires append-only clock transition history")
-    if not capability.supports_run_provenance:
-        gaps.append("time model requires realized run provenance")
+    gaps.extend(_time_capacity_gaps(capability, declaration))
+    gaps.extend(_time_control_gaps(capability, declaration))
     return tuple(gaps)
 
 

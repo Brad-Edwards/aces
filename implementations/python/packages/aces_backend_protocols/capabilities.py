@@ -7,6 +7,7 @@ from aces_contracts.manifest_authority import validate_backend_supported_contrac
 from aces_contracts.vocabulary import WorkflowFeature, WorkflowStatePredicateFeature
 
 from . import participant_capabilities as _participant_capabilities
+from . import provisioner_capabilities as _provisioner_capabilities
 from . import time_capabilities as _time_capabilities
 
 PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE = _participant_capabilities.PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE
@@ -17,14 +18,14 @@ PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE = _participant_capabilities.PARTIC
 PARTICIPANT_RUNTIME_ROLE_SCOPE = _participant_capabilities.PARTICIPANT_RUNTIME_ROLE_SCOPE
 ParticipantFeatureSupport = _participant_capabilities.ParticipantFeatureSupport
 ParticipantRuntimeCapabilities = _participant_capabilities.ParticipantRuntimeCapabilities
+PROVISIONER_DOMAIN_PROFILE_SCOPE = _provisioner_capabilities.PROVISIONER_DOMAIN_PROFILE_SCOPE
+ProvisionerCapabilities = _provisioner_capabilities.ProvisionerCapabilities
 TIME_CAPABILITY_REQUIRED_CONTRACTS = _time_capabilities.TIME_CAPABILITY_REQUIRED_CONTRACTS
 TimeCapabilities = _time_capabilities.TimeCapabilities
 
 OBSERVATION_CAPABILITY_CAPTURE_KIND_SCOPE = "capabilities.observation.supported_capture_kinds"
 OBSERVATION_CAPABILITY_CHANNEL_KIND_SCOPE = "capabilities.observation.supported_channel_kinds"
 OBSERVATION_CAPABILITY_SEALING_MODE_SCOPE = "capabilities.observation.supported_sealing_modes"
-PROVISIONER_DOMAIN_PROFILE_SCOPE = "capabilities.provisioner.supported_domain_profiles"
-
 OBSERVATION_CAPABILITY_REQUIRED_CONTRACTS = frozenset(
     {
         "experiment-capture-spec-v1",
@@ -36,66 +37,6 @@ OBSERVATION_CAPABILITY_REQUIRED_CONTRACTS = frozenset(
 
 CLEANUP_CAPABILITY_REQUIRED_CONTRACTS = frozenset({"trial-cleanup-plan-v1", "trial-cleanup-receipt-v1"})
 _CLEANUP_ACTION_KINDS = frozenset({"destroy", "reset", "restore", "compensate", "verify", "custom"})
-
-
-@dataclass(frozen=True)
-class ProvisionerCapabilities:
-    name: str
-    supported_node_types: frozenset[str] = frozenset()
-    supported_os_families: frozenset[str] = frozenset()
-    supported_content_types: frozenset[str] = frozenset()
-    supported_account_features: frozenset[str] = frozenset()
-    supported_domain_profiles: frozenset[str] = frozenset()
-    max_total_nodes: int | None = None
-    supports_acls: bool = False
-    supports_accounts: bool = False
-    supports_generated_artifacts: bool = False
-    supports_persistent_volumes: bool = False
-    constraints: dict[str, str] = field(default_factory=dict)
-
-    def __post_init__(self) -> None:
-        if not self.name.strip():
-            raise ValueError("ProvisionerCapabilities.name must be non-empty")
-        if not self.supported_node_types:
-            raise ValueError("ProvisionerCapabilities.supported_node_types must not be empty")
-        if any(not node_type.strip() for node_type in self.supported_node_types):
-            raise ValueError("ProvisionerCapabilities.supported_node_types must not contain empty strings")
-        if not self.supported_os_families:
-            raise ValueError("ProvisionerCapabilities.supported_os_families must not be empty")
-        if any(not os_family.strip() for os_family in self.supported_os_families):
-            raise ValueError("ProvisionerCapabilities.supported_os_families must not contain empty strings")
-        if any(not content_type.strip() for content_type in self.supported_content_types):
-            raise ValueError("ProvisionerCapabilities.supported_content_types must not contain empty strings")
-        if any(not feature.strip() for feature in self.supported_account_features):
-            raise ValueError("ProvisionerCapabilities.supported_account_features must not contain empty strings")
-        if any(not profile.strip() for profile in self.supported_domain_profiles):
-            raise ValueError("ProvisionerCapabilities.supported_domain_profiles must not contain empty strings")
-        validate_controlled_vocabulary_scope_values(
-            "capabilities.provisioner.supported_node_types",
-            self.supported_node_types,
-        )
-        validate_controlled_vocabulary_scope_values(
-            "capabilities.provisioner.supported_os_families",
-            self.supported_os_families,
-        )
-        validate_controlled_vocabulary_scope_values(
-            "capabilities.provisioner.supported_content_types",
-            self.supported_content_types,
-        )
-        validate_controlled_vocabulary_scope_values(
-            "capabilities.provisioner.supported_account_features",
-            self.supported_account_features,
-        )
-        validate_controlled_vocabulary_scope_values(
-            PROVISIONER_DOMAIN_PROFILE_SCOPE,
-            self.supported_domain_profiles,
-        )
-        if self.max_total_nodes is not None and self.max_total_nodes < 1:
-            raise ValueError("ProvisionerCapabilities.max_total_nodes must be positive when provided")
-        if self.supports_accounts and not self.supported_account_features:
-            raise ValueError("ProvisionerCapabilities that support accounts must declare supported_account_features")
-        if not self.supports_accounts and self.supported_account_features:
-            raise ValueError("supported_account_features require supports_accounts=True")
 
 
 @dataclass(frozen=True)

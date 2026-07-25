@@ -4,7 +4,9 @@ validator.py). Public API is unchanged: import ``SemanticValidator``.
 
 from ._content_objectives import _ContentObjectivesMixin
 from ._core import _ValidatorCore
+from ._deployment_tenancy import _DeploymentTenancyMixin
 from ._domain_topology import _DomainTopologyMixin
+from ._enterprise_identity import _EnterpriseIdentityMixin
 from ._evidence_requirements import _EvidenceRequirementsMixin
 from ._mixed_control import _MixedControlMixin
 from ._nodes_infra_network import _NodesInfraNetworkMixin
@@ -18,6 +20,7 @@ from ._runtime_orchestration import _RuntimeOrchestrationMixin
 from ._runtime_platform import _RuntimePlatformMixin
 from ._runtime_services import _RuntimeServicesMixin
 from ._sections import _SectionsMixin
+from ._service_materialization import _ServiceMaterializationMixin
 from ._time_model import _TimeModelMixin
 from ._variation import _VariationMixin
 from ._workflows_analysis import _WorkflowAnalysisMixin
@@ -34,10 +37,13 @@ class SemanticValidator(
     _RuntimeOrchestrationMixin,
     _RuntimeMailMixin,
     _DomainTopologyMixin,
+    _EnterpriseIdentityMixin,
+    _DeploymentTenancyMixin,
     _RelationshipsMixin,
     _RelationshipsProxyMixin,
     _MixedControlMixin,
     _ParticipantToolAffordancesMixin,
+    _ServiceMaterializationMixin,
     _ContentObjectivesMixin,
     _PropositionsMixin,
     _EvidenceRequirementsMixin,

@@ -176,6 +176,7 @@
       "supported_domain_profiles": [
         "active_directory"
       ],
+      "supported_service_materialization_profiles": [],
       "supported_content_types": [
         "dataset",
         "directory",
@@ -223,6 +224,10 @@
     {
       "family": "identities",
       "scope": "capabilities.provisioner.supported_domain_profiles"
+    },
+    {
+      "family": "tools-and-artifacts",
+      "scope": "capabilities.provisioner.supported_service_materialization_profiles"
     },
     {
       "family": "actions-and-events",

@@ -8,6 +8,7 @@ from aces_backend_protocols.capability_admission import (
     time_model_capability_gaps,
 )
 from aces_backend_protocols.domain_topology import domain_topology_plan_diagnostics
+from aces_backend_protocols.service_materialization import service_materialization_plan_diagnostics
 from aces_contracts.diagnostics import Diagnostic
 from aces_sdl.realization_envelope import member
 
@@ -125,6 +126,13 @@ def plan(
     actions, deleted_entries = _build_operations(resources, snapshot)
 
     provisioning = _build_provisioning_plan(resources, actions, deleted_entries, manifest)
+    materialization_diagnostics = service_materialization_plan_diagnostics(
+        provisioning,
+        manifest.provisioner,
+        manifest.realization_envelope,
+    )
+    diagnostics.extend(materialization_diagnostics)
+    provisioning.diagnostics.extend(materialization_diagnostics)
     topology_diagnostics = domain_topology_plan_diagnostics(
         provisioning,
         snapshot=snapshot,

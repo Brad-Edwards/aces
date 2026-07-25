@@ -2,9 +2,9 @@
   "contract_id": "backend-manifest-v2",
   "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
   "stability": "draft",
-  "content_hash": "604766ff1dc5ef54066310d2037b122ff2107237c2eb11b7394875a6457d232b",
+  "content_hash": "178db9d22d522e069bcad2bc91cfb985e58a22e01ee5dc2b8de506373c1952f0",
   "last_change": {
-    "summary": "Added autonomous participant limits and coordinated participant-time reset support.",
-    "content_hash": "604766ff1dc5ef54066310d2037b122ff2107237c2eb11b7394875a6457d232b"
+    "summary": "Published service materialization, portable shared-time, and autonomous participant capability controls.",
+    "content_hash": "178db9d22d522e069bcad2bc91cfb985e58a22e01ee5dc2b8de506373c1952f0"
   }
 }
