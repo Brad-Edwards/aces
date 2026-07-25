@@ -1,0 +1,2218 @@
+{
+  "$defs": {
+    "EventClassificationModel": {
+      "additionalProperties": false,
+      "description": "ACES-native normalized event classification tuple (ADR-054).",
+      "properties": {
+        "activity_id": {
+          "title": "Activity Id",
+          "type": "integer"
+        },
+        "activity_name": {
+          "minLength": 1,
+          "title": "Activity Name",
+          "type": "string"
+        },
+        "category_name": {
+          "minLength": 1,
+          "title": "Category Name",
+          "type": "string"
+        },
+        "category_uid": {
+          "title": "Category Uid",
+          "type": "integer"
+        },
+        "class_name": {
+          "minLength": 1,
+          "title": "Class Name",
+          "type": "string"
+        },
+        "class_uid": {
+          "title": "Class Uid",
+          "type": "integer"
+        },
+        "severity": {
+          "minLength": 1,
+          "title": "Severity",
+          "type": "string"
+        },
+        "severity_id": {
+          "title": "Severity Id",
+          "type": "integer"
+        },
+        "type_name": {
+          "minLength": 1,
+          "title": "Type Name",
+          "type": "string"
+        },
+        "type_uid": {
+          "title": "Type Uid",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "category_uid",
+        "category_name",
+        "class_uid",
+        "class_name",
+        "activity_id",
+        "activity_name",
+        "type_uid",
+        "type_name",
+        "severity_id",
+        "severity"
+      ],
+      "title": "EventClassificationModel",
+      "type": "object"
+    },
+    "ParticipantApprovalOccurrenceModel": {
+      "additionalProperties": false,
+      "description": "Approval of exactly one proposal revision, before action admission.",
+      "properties": {
+        "authority_basis_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Authority Basis Refs",
+          "type": "array"
+        },
+        "behavior_specification_ref": {
+          "minLength": 1,
+          "title": "Behavior Specification Ref",
+          "type": "string"
+        },
+        "controlled_scope_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Controlled Scope Refs",
+          "type": "array"
+        },
+        "controller_ref": {
+          "minLength": 1,
+          "title": "Controller Ref",
+          "type": "string"
+        },
+        "controller_state_ref": {
+          "minLength": 1,
+          "title": "Controller State Ref",
+          "type": "string"
+        },
+        "decision_ref": {
+          "minLength": 1,
+          "title": "Decision Ref",
+          "type": "string"
+        },
+        "decision_revision": {
+          "minimum": 1,
+          "title": "Decision Revision",
+          "type": "integer"
+        },
+        "declaration_ref": {
+          "minLength": 1,
+          "title": "Declaration Ref",
+          "type": "string"
+        },
+        "disposition": {
+          "$ref": "#/$defs/ParticipantControlDisposition"
+        },
+        "effective_order": {
+          "minimum": 0,
+          "title": "Effective Order",
+          "type": "integer"
+        },
+        "expected_state_revision": {
+          "minimum": 0,
+          "title": "Expected State Revision",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "approval",
+          "title": "Kind",
+          "type": "string"
+        },
+        "limitation_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Limitation Refs",
+          "type": "array"
+        },
+        "mixed_control_policy_ref": {
+          "minLength": 1,
+          "title": "Mixed Control Policy Ref",
+          "type": "string"
+        },
+        "occurrence_revision": {
+          "minimum": 1,
+          "title": "Occurrence Revision",
+          "type": "integer"
+        },
+        "policy_revision": {
+          "minLength": 1,
+          "title": "Policy Revision",
+          "type": "string"
+        },
+        "proposal_ref": {
+          "minLength": 1,
+          "title": "Proposal Ref",
+          "type": "string"
+        },
+        "proposal_revision": {
+          "minimum": 1,
+          "title": "Proposal Revision",
+          "type": "integer"
+        },
+        "reason_code": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason Code"
+        },
+        "reason_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason Ref"
+        },
+        "valid_from_order": {
+          "minimum": 0,
+          "title": "Valid From Order",
+          "type": "integer"
+        },
+        "valid_until_order": {
+          "minimum": 0,
+          "title": "Valid Until Order",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "declaration_ref",
+        "controller_ref",
+        "controller_state_ref",
+        "authority_basis_refs",
+        "controlled_scope_refs",
+        "behavior_specification_ref",
+        "mixed_control_policy_ref",
+        "policy_revision",
+        "expected_state_revision",
+        "effective_order",
+        "valid_from_order",
+        "valid_until_order",
+        "occurrence_revision",
+        "disposition",
+        "limitation_refs",
+        "kind",
+        "proposal_ref",
+        "proposal_revision",
+        "decision_ref",
+        "decision_revision"
+      ],
+      "title": "ParticipantApprovalOccurrenceModel",
+      "type": "object"
+    },
+    "ParticipantCancellationEffect": {
+      "description": "What remained cancellable when the occurrence was recorded.",
+      "enum": [
+        "prevented",
+        "partial-limitation",
+        "too-late"
+      ],
+      "title": "ParticipantCancellationEffect",
+      "type": "string"
+    },
+    "ParticipantCancellationOccurrenceModel": {
+      "additionalProperties": false,
+      "description": "A cancellation with an explicit non-retroactive effect.",
+      "properties": {
+        "authority_basis_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Authority Basis Refs",
+          "type": "array"
+        },
+        "behavior_specification_ref": {
+          "minLength": 1,
+          "title": "Behavior Specification Ref",
+          "type": "string"
+        },
+        "cancellation_effect": {
+          "$ref": "#/$defs/ParticipantCancellationEffect"
+        },
+        "controlled_scope_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Controlled Scope Refs",
+          "type": "array"
+        },
+        "controller_ref": {
+          "minLength": 1,
+          "title": "Controller Ref",
+          "type": "string"
+        },
+        "controller_state_ref": {
+          "minLength": 1,
+          "title": "Controller State Ref",
+          "type": "string"
+        },
+        "declaration_ref": {
+          "minLength": 1,
+          "title": "Declaration Ref",
+          "type": "string"
+        },
+        "disposition": {
+          "$ref": "#/$defs/ParticipantControlDisposition"
+        },
+        "effective_order": {
+          "minimum": 0,
+          "title": "Effective Order",
+          "type": "integer"
+        },
+        "expected_state_revision": {
+          "minimum": 0,
+          "title": "Expected State Revision",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "cancellation",
+          "title": "Kind",
+          "type": "string"
+        },
+        "limitation_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Limitation Refs",
+          "type": "array"
+        },
+        "mixed_control_policy_ref": {
+          "minLength": 1,
+          "title": "Mixed Control Policy Ref",
+          "type": "string"
+        },
+        "occurrence_revision": {
+          "minimum": 1,
+          "title": "Occurrence Revision",
+          "type": "integer"
+        },
+        "policy_revision": {
+          "minLength": 1,
+          "title": "Policy Revision",
+          "type": "string"
+        },
+        "reason_code": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason Code"
+        },
+        "reason_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason Ref"
+        },
+        "target_kind": {
+          "enum": [
+            "proposal",
+            "decision",
+            "admitted-action",
+            "attempt"
+          ],
+          "title": "Target Kind",
+          "type": "string"
+        },
+        "target_ref": {
+          "minLength": 1,
+          "title": "Target Ref",
+          "type": "string"
+        },
+        "target_revision": {
+          "minimum": 1,
+          "title": "Target Revision",
+          "type": "integer"
+        },
+        "valid_from_order": {
+          "minimum": 0,
+          "title": "Valid From Order",
+          "type": "integer"
+        },
+        "valid_until_order": {
+          "minimum": 0,
+          "title": "Valid Until Order",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "declaration_ref",
+        "controller_ref",
+        "controller_state_ref",
+        "authority_basis_refs",
+        "controlled_scope_refs",
+        "behavior_specification_ref",
+        "mixed_control_policy_ref",
+        "policy_revision",
+        "expected_state_revision",
+        "effective_order",
+        "valid_from_order",
+        "valid_until_order",
+        "occurrence_revision",
+        "disposition",
+        "limitation_refs",
+        "kind",
+        "target_kind",
+        "target_ref",
+        "target_revision",
+        "cancellation_effect"
+      ],
+      "title": "ParticipantCancellationOccurrenceModel",
+      "type": "object"
+    },
+    "ParticipantControlDisposition": {
+      "description": "Realized disposition of one portable control occurrence.",
+      "enum": [
+        "recorded",
+        "accepted",
+        "rejected",
+        "limited",
+        "superseded",
+        "cancelled"
+      ],
+      "title": "ParticipantControlDisposition",
+      "type": "string"
+    },
+    "ParticipantDenialOccurrenceModel": {
+      "additionalProperties": false,
+      "description": "Denial of exactly one proposal revision.",
+      "properties": {
+        "authority_basis_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Authority Basis Refs",
+          "type": "array"
+        },
+        "behavior_specification_ref": {
+          "minLength": 1,
+          "title": "Behavior Specification Ref",
+          "type": "string"
+        },
+        "controlled_scope_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Controlled Scope Refs",
+          "type": "array"
+        },
+        "controller_ref": {
+          "minLength": 1,
+          "title": "Controller Ref",
+          "type": "string"
+        },
+        "controller_state_ref": {
+          "minLength": 1,
+          "title": "Controller State Ref",
+          "type": "string"
+        },
+        "decision_ref": {
+          "minLength": 1,
+          "title": "Decision Ref",
+          "type": "string"
+        },
+        "decision_revision": {
+          "minimum": 1,
+          "title": "Decision Revision",
+          "type": "integer"
+        },
+        "declaration_ref": {
+          "minLength": 1,
+          "title": "Declaration Ref",
+          "type": "string"
+        },
+        "disposition": {
+          "$ref": "#/$defs/ParticipantControlDisposition"
+        },
+        "effective_order": {
+          "minimum": 0,
+          "title": "Effective Order",
+          "type": "integer"
+        },
+        "expected_state_revision": {
+          "minimum": 0,
+          "title": "Expected State Revision",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "denial",
+          "title": "Kind",
+          "type": "string"
+        },
+        "limitation_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Limitation Refs",
+          "type": "array"
+        },
+        "mixed_control_policy_ref": {
+          "minLength": 1,
+          "title": "Mixed Control Policy Ref",
+          "type": "string"
+        },
+        "occurrence_revision": {
+          "minimum": 1,
+          "title": "Occurrence Revision",
+          "type": "integer"
+        },
+        "policy_revision": {
+          "minLength": 1,
+          "title": "Policy Revision",
+          "type": "string"
+        },
+        "proposal_ref": {
+          "minLength": 1,
+          "title": "Proposal Ref",
+          "type": "string"
+        },
+        "proposal_revision": {
+          "minimum": 1,
+          "title": "Proposal Revision",
+          "type": "integer"
+        },
+        "reason_code": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason Code"
+        },
+        "reason_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason Ref"
+        },
+        "valid_from_order": {
+          "minimum": 0,
+          "title": "Valid From Order",
+          "type": "integer"
+        },
+        "valid_until_order": {
+          "minimum": 0,
+          "title": "Valid Until Order",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "declaration_ref",
+        "controller_ref",
+        "controller_state_ref",
+        "authority_basis_refs",
+        "controlled_scope_refs",
+        "behavior_specification_ref",
+        "mixed_control_policy_ref",
+        "policy_revision",
+        "expected_state_revision",
+        "effective_order",
+        "valid_from_order",
+        "valid_until_order",
+        "occurrence_revision",
+        "disposition",
+        "limitation_refs",
+        "kind",
+        "proposal_ref",
+        "proposal_revision",
+        "decision_ref",
+        "decision_revision"
+      ],
+      "title": "ParticipantDenialOccurrenceModel",
+      "type": "object"
+    },
+    "ParticipantExternalDirectionOccurrenceModel": {
+      "additionalProperties": false,
+      "description": "A scoped direction that does not bypass proposal validation or admission.",
+      "properties": {
+        "authority_basis_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Authority Basis Refs",
+          "type": "array"
+        },
+        "behavior_specification_ref": {
+          "minLength": 1,
+          "title": "Behavior Specification Ref",
+          "type": "string"
+        },
+        "controlled_scope_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Controlled Scope Refs",
+          "type": "array"
+        },
+        "controller_ref": {
+          "minLength": 1,
+          "title": "Controller Ref",
+          "type": "string"
+        },
+        "controller_state_ref": {
+          "minLength": 1,
+          "title": "Controller State Ref",
+          "type": "string"
+        },
+        "declaration_ref": {
+          "minLength": 1,
+          "title": "Declaration Ref",
+          "type": "string"
+        },
+        "disposition": {
+          "$ref": "#/$defs/ParticipantControlDisposition"
+        },
+        "effective_order": {
+          "minimum": 0,
+          "title": "Effective Order",
+          "type": "integer"
+        },
+        "expected_state_revision": {
+          "minimum": 0,
+          "title": "Expected State Revision",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "external-direction",
+          "title": "Kind",
+          "type": "string"
+        },
+        "limitation_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Limitation Refs",
+          "type": "array"
+        },
+        "mixed_control_policy_ref": {
+          "minLength": 1,
+          "title": "Mixed Control Policy Ref",
+          "type": "string"
+        },
+        "occurrence_revision": {
+          "minimum": 1,
+          "title": "Occurrence Revision",
+          "type": "integer"
+        },
+        "policy_revision": {
+          "minLength": 1,
+          "title": "Policy Revision",
+          "type": "string"
+        },
+        "reason_code": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason Code"
+        },
+        "reason_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason Ref"
+        },
+        "target_kind": {
+          "enum": [
+            "proposal",
+            "action",
+            "control"
+          ],
+          "title": "Target Kind",
+          "type": "string"
+        },
+        "target_ref": {
+          "minLength": 1,
+          "title": "Target Ref",
+          "type": "string"
+        },
+        "target_revision": {
+          "minimum": 1,
+          "title": "Target Revision",
+          "type": "integer"
+        },
+        "valid_from_order": {
+          "minimum": 0,
+          "title": "Valid From Order",
+          "type": "integer"
+        },
+        "valid_until_order": {
+          "minimum": 0,
+          "title": "Valid Until Order",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "declaration_ref",
+        "controller_ref",
+        "controller_state_ref",
+        "authority_basis_refs",
+        "controlled_scope_refs",
+        "behavior_specification_ref",
+        "mixed_control_policy_ref",
+        "policy_revision",
+        "expected_state_revision",
+        "effective_order",
+        "valid_from_order",
+        "valid_until_order",
+        "occurrence_revision",
+        "disposition",
+        "limitation_refs",
+        "kind",
+        "target_kind",
+        "target_ref",
+        "target_revision"
+      ],
+      "title": "ParticipantExternalDirectionOccurrenceModel",
+      "type": "object"
+    },
+    "ParticipantHandoffOccurrenceModel": {
+      "additionalProperties": false,
+      "description": "A controller-state handoff that preserves participant identity.",
+      "properties": {
+        "authority_basis_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Authority Basis Refs",
+          "type": "array"
+        },
+        "behavior_specification_ref": {
+          "minLength": 1,
+          "title": "Behavior Specification Ref",
+          "type": "string"
+        },
+        "completion_evidence_ref": {
+          "minLength": 1,
+          "title": "Completion Evidence Ref",
+          "type": "string"
+        },
+        "controlled_scope_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Controlled Scope Refs",
+          "type": "array"
+        },
+        "controller_ref": {
+          "minLength": 1,
+          "title": "Controller Ref",
+          "type": "string"
+        },
+        "controller_state_ref": {
+          "minLength": 1,
+          "title": "Controller State Ref",
+          "type": "string"
+        },
+        "declaration_ref": {
+          "minLength": 1,
+          "title": "Declaration Ref",
+          "type": "string"
+        },
+        "disposition": {
+          "$ref": "#/$defs/ParticipantControlDisposition"
+        },
+        "effective_order": {
+          "minimum": 0,
+          "title": "Effective Order",
+          "type": "integer"
+        },
+        "expected_state_revision": {
+          "minimum": 0,
+          "title": "Expected State Revision",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "handoff",
+          "title": "Kind",
+          "type": "string"
+        },
+        "limitation_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Limitation Refs",
+          "type": "array"
+        },
+        "mixed_control_policy_ref": {
+          "minLength": 1,
+          "title": "Mixed Control Policy Ref",
+          "type": "string"
+        },
+        "occurrence_revision": {
+          "minimum": 1,
+          "title": "Occurrence Revision",
+          "type": "integer"
+        },
+        "policy_revision": {
+          "minLength": 1,
+          "title": "Policy Revision",
+          "type": "string"
+        },
+        "prior_controller_state_ref": {
+          "minLength": 1,
+          "title": "Prior Controller State Ref",
+          "type": "string"
+        },
+        "reason_code": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason Code"
+        },
+        "reason_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason Ref"
+        },
+        "resulting_controller_state_ref": {
+          "minLength": 1,
+          "title": "Resulting Controller State Ref",
+          "type": "string"
+        },
+        "resulting_state_revision": {
+          "minimum": 1,
+          "title": "Resulting State Revision",
+          "type": "integer"
+        },
+        "valid_from_order": {
+          "minimum": 0,
+          "title": "Valid From Order",
+          "type": "integer"
+        },
+        "valid_until_order": {
+          "minimum": 0,
+          "title": "Valid Until Order",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "declaration_ref",
+        "controller_ref",
+        "controller_state_ref",
+        "authority_basis_refs",
+        "controlled_scope_refs",
+        "behavior_specification_ref",
+        "mixed_control_policy_ref",
+        "policy_revision",
+        "expected_state_revision",
+        "effective_order",
+        "valid_from_order",
+        "valid_until_order",
+        "occurrence_revision",
+        "disposition",
+        "limitation_refs",
+        "kind",
+        "prior_controller_state_ref",
+        "resulting_controller_state_ref",
+        "resulting_state_revision",
+        "completion_evidence_ref"
+      ],
+      "title": "ParticipantHandoffOccurrenceModel",
+      "type": "object"
+    },
+    "ParticipantInterventionOccurrenceModel": {
+      "additionalProperties": false,
+      "description": "An intervention against an existing control or action occurrence.",
+      "properties": {
+        "affected_occurrence_ref": {
+          "minLength": 1,
+          "title": "Affected Occurrence Ref",
+          "type": "string"
+        },
+        "affected_revision": {
+          "minimum": 1,
+          "title": "Affected Revision",
+          "type": "integer"
+        },
+        "affected_target_kind": {
+          "enum": [
+            "action",
+            "control",
+            "attempt"
+          ],
+          "title": "Affected Target Kind",
+          "type": "string"
+        },
+        "authority_basis_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Authority Basis Refs",
+          "type": "array"
+        },
+        "behavior_specification_ref": {
+          "minLength": 1,
+          "title": "Behavior Specification Ref",
+          "type": "string"
+        },
+        "controlled_scope_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Controlled Scope Refs",
+          "type": "array"
+        },
+        "controller_ref": {
+          "minLength": 1,
+          "title": "Controller Ref",
+          "type": "string"
+        },
+        "controller_state_ref": {
+          "minLength": 1,
+          "title": "Controller State Ref",
+          "type": "string"
+        },
+        "declaration_ref": {
+          "minLength": 1,
+          "title": "Declaration Ref",
+          "type": "string"
+        },
+        "disposition": {
+          "$ref": "#/$defs/ParticipantControlDisposition"
+        },
+        "effective_order": {
+          "minimum": 0,
+          "title": "Effective Order",
+          "type": "integer"
+        },
+        "expected_state_revision": {
+          "minimum": 0,
+          "title": "Expected State Revision",
+          "type": "integer"
+        },
+        "intervention_ref": {
+          "minLength": 1,
+          "title": "Intervention Ref",
+          "type": "string"
+        },
+        "kind": {
+          "const": "intervention",
+          "title": "Kind",
+          "type": "string"
+        },
+        "limitation_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Limitation Refs",
+          "type": "array"
+        },
+        "mixed_control_policy_ref": {
+          "minLength": 1,
+          "title": "Mixed Control Policy Ref",
+          "type": "string"
+        },
+        "occurrence_revision": {
+          "minimum": 1,
+          "title": "Occurrence Revision",
+          "type": "integer"
+        },
+        "policy_revision": {
+          "minLength": 1,
+          "title": "Policy Revision",
+          "type": "string"
+        },
+        "reason_code": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason Code"
+        },
+        "reason_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason Ref"
+        },
+        "valid_from_order": {
+          "minimum": 0,
+          "title": "Valid From Order",
+          "type": "integer"
+        },
+        "valid_until_order": {
+          "minimum": 0,
+          "title": "Valid Until Order",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "declaration_ref",
+        "controller_ref",
+        "controller_state_ref",
+        "authority_basis_refs",
+        "controlled_scope_refs",
+        "behavior_specification_ref",
+        "mixed_control_policy_ref",
+        "policy_revision",
+        "expected_state_revision",
+        "effective_order",
+        "valid_from_order",
+        "valid_until_order",
+        "occurrence_revision",
+        "disposition",
+        "limitation_refs",
+        "kind",
+        "affected_target_kind",
+        "affected_occurrence_ref",
+        "affected_revision",
+        "intervention_ref"
+      ],
+      "title": "ParticipantInterventionOccurrenceModel",
+      "type": "object"
+    },
+    "ParticipantOverrideOccurrenceModel": {
+      "additionalProperties": false,
+      "description": "An override that supersedes rather than rewrites an earlier occurrence.",
+      "properties": {
+        "authority_basis_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Authority Basis Refs",
+          "type": "array"
+        },
+        "behavior_specification_ref": {
+          "minLength": 1,
+          "title": "Behavior Specification Ref",
+          "type": "string"
+        },
+        "controlled_scope_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Controlled Scope Refs",
+          "type": "array"
+        },
+        "controller_ref": {
+          "minLength": 1,
+          "title": "Controller Ref",
+          "type": "string"
+        },
+        "controller_state_ref": {
+          "minLength": 1,
+          "title": "Controller State Ref",
+          "type": "string"
+        },
+        "declaration_ref": {
+          "minLength": 1,
+          "title": "Declaration Ref",
+          "type": "string"
+        },
+        "disposition": {
+          "$ref": "#/$defs/ParticipantControlDisposition"
+        },
+        "effective_order": {
+          "minimum": 0,
+          "title": "Effective Order",
+          "type": "integer"
+        },
+        "expected_state_revision": {
+          "minimum": 0,
+          "title": "Expected State Revision",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "override",
+          "title": "Kind",
+          "type": "string"
+        },
+        "limitation_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Limitation Refs",
+          "type": "array"
+        },
+        "mixed_control_policy_ref": {
+          "minLength": 1,
+          "title": "Mixed Control Policy Ref",
+          "type": "string"
+        },
+        "occurrence_revision": {
+          "minimum": 1,
+          "title": "Occurrence Revision",
+          "type": "integer"
+        },
+        "policy_revision": {
+          "minLength": 1,
+          "title": "Policy Revision",
+          "type": "string"
+        },
+        "reason_code": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason Code"
+        },
+        "reason_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason Ref"
+        },
+        "replacement_ref": {
+          "minLength": 1,
+          "title": "Replacement Ref",
+          "type": "string"
+        },
+        "superseded_occurrence_ref": {
+          "minLength": 1,
+          "title": "Superseded Occurrence Ref",
+          "type": "string"
+        },
+        "superseded_revision": {
+          "minimum": 1,
+          "title": "Superseded Revision",
+          "type": "integer"
+        },
+        "superseded_target_kind": {
+          "enum": [
+            "control",
+            "decision"
+          ],
+          "title": "Superseded Target Kind",
+          "type": "string"
+        },
+        "valid_from_order": {
+          "minimum": 0,
+          "title": "Valid From Order",
+          "type": "integer"
+        },
+        "valid_until_order": {
+          "minimum": 0,
+          "title": "Valid Until Order",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "declaration_ref",
+        "controller_ref",
+        "controller_state_ref",
+        "authority_basis_refs",
+        "controlled_scope_refs",
+        "behavior_specification_ref",
+        "mixed_control_policy_ref",
+        "policy_revision",
+        "expected_state_revision",
+        "effective_order",
+        "valid_from_order",
+        "valid_until_order",
+        "occurrence_revision",
+        "disposition",
+        "limitation_refs",
+        "kind",
+        "superseded_target_kind",
+        "superseded_occurrence_ref",
+        "superseded_revision",
+        "replacement_ref"
+      ],
+      "title": "ParticipantOverrideOccurrenceModel",
+      "type": "object"
+    },
+    "ParticipantProposalOccurrenceModel": {
+      "additionalProperties": false,
+      "description": "A proposal fact that is neither a decision, admission, nor execution.",
+      "properties": {
+        "action_contract_ref": {
+          "minLength": 1,
+          "title": "Action Contract Ref",
+          "type": "string"
+        },
+        "admission_status": {
+          "const": "not-admitted",
+          "title": "Admission Status",
+          "type": "string"
+        },
+        "authority_basis_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Authority Basis Refs",
+          "type": "array"
+        },
+        "behavior_specification_ref": {
+          "minLength": 1,
+          "title": "Behavior Specification Ref",
+          "type": "string"
+        },
+        "controlled_scope_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Controlled Scope Refs",
+          "type": "array"
+        },
+        "controller_ref": {
+          "minLength": 1,
+          "title": "Controller Ref",
+          "type": "string"
+        },
+        "controller_state_ref": {
+          "minLength": 1,
+          "title": "Controller State Ref",
+          "type": "string"
+        },
+        "decision_surface_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Decision Surface Ref"
+        },
+        "declaration_ref": {
+          "minLength": 1,
+          "title": "Declaration Ref",
+          "type": "string"
+        },
+        "disposition": {
+          "$ref": "#/$defs/ParticipantControlDisposition"
+        },
+        "effective_order": {
+          "minimum": 0,
+          "title": "Effective Order",
+          "type": "integer"
+        },
+        "expected_state_revision": {
+          "minimum": 0,
+          "title": "Expected State Revision",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "proposal",
+          "title": "Kind",
+          "type": "string"
+        },
+        "limitation_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Limitation Refs",
+          "type": "array"
+        },
+        "mixed_control_policy_ref": {
+          "minLength": 1,
+          "title": "Mixed Control Policy Ref",
+          "type": "string"
+        },
+        "occurrence_revision": {
+          "minimum": 1,
+          "title": "Occurrence Revision",
+          "type": "integer"
+        },
+        "payload_digest": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Payload Digest"
+        },
+        "payload_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Payload Ref"
+        },
+        "policy_revision": {
+          "minLength": 1,
+          "title": "Policy Revision",
+          "type": "string"
+        },
+        "proposal_binding_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Proposal Binding Ref"
+        },
+        "proposal_id": {
+          "minLength": 1,
+          "title": "Proposal Id",
+          "type": "string"
+        },
+        "proposal_revision": {
+          "minimum": 1,
+          "title": "Proposal Revision",
+          "type": "integer"
+        },
+        "reason_code": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason Code"
+        },
+        "reason_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason Ref"
+        },
+        "source_proposal_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Proposal Ref"
+        },
+        "source_proposal_revision": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Proposal Revision"
+        },
+        "transformation_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Transformation Ref"
+        },
+        "valid_from_order": {
+          "minimum": 0,
+          "title": "Valid From Order",
+          "type": "integer"
+        },
+        "valid_until_order": {
+          "minimum": 0,
+          "title": "Valid Until Order",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "declaration_ref",
+        "controller_ref",
+        "controller_state_ref",
+        "authority_basis_refs",
+        "controlled_scope_refs",
+        "behavior_specification_ref",
+        "mixed_control_policy_ref",
+        "policy_revision",
+        "expected_state_revision",
+        "effective_order",
+        "valid_from_order",
+        "valid_until_order",
+        "occurrence_revision",
+        "disposition",
+        "limitation_refs",
+        "kind",
+        "proposal_id",
+        "proposal_revision",
+        "admission_status",
+        "action_contract_ref"
+      ],
+      "title": "ParticipantProposalOccurrenceModel",
+      "type": "object"
+    },
+    "RawDataIntegrityModel": {
+      "additionalProperties": false,
+      "description": "Hash, size, and truncation facts for raw data behind a runtime claim.",
+      "properties": {
+        "raw_data_hash": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Raw Data Hash"
+        },
+        "raw_data_hash_algorithm": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Raw Data Hash Algorithm"
+        },
+        "raw_data_is_truncated": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Raw Data Is Truncated"
+        },
+        "raw_data_size": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Raw Data Size"
+        },
+        "raw_data_untruncated_size": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Raw Data Untruncated Size"
+        }
+      },
+      "title": "RawDataIntegrityModel",
+      "type": "object"
+    },
+    "SourcePipelineModel": {
+      "additionalProperties": false,
+      "description": "Source product, identity, and pipeline-time facts for a mapped record.",
+      "properties": {
+        "correlation_uid": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correlation Uid"
+        },
+        "log_name": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Log Name"
+        },
+        "log_provider": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Log Provider"
+        },
+        "log_source": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Log Source"
+        },
+        "logged_time": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "minLength": 1,
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Logged Time"
+        },
+        "original_event_uid": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Original Event Uid"
+        },
+        "original_time": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "minLength": 1,
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Original Time"
+        },
+        "processed_time": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "minLength": 1,
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Processed Time"
+        },
+        "product_ref": {
+          "minLength": 1,
+          "title": "Product Ref",
+          "type": "string"
+        },
+        "product_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Product Version"
+        },
+        "sequence": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sequence"
+        },
+        "transmit_time": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "minLength": 1,
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Transmit Time"
+        }
+      },
+      "required": [
+        "product_ref"
+      ],
+      "title": "SourcePipelineModel",
+      "type": "object"
+    },
+    "SourceStatusModel": {
+      "additionalProperties": false,
+      "description": "Normalized source status claim for one participant runtime record.",
+      "properties": {
+        "source_status_label": {
+          "minLength": 1,
+          "title": "Source Status Label",
+          "type": "string"
+        },
+        "source_status_mapping": {
+          "minLength": 1,
+          "title": "Source Status Mapping",
+          "type": "string"
+        },
+        "status": {
+          "minLength": 1,
+          "title": "Status",
+          "type": "string"
+        },
+        "status_code": {
+          "minLength": 1,
+          "title": "Status Code",
+          "type": "string"
+        },
+        "status_detail": {
+          "minLength": 1,
+          "title": "Status Detail",
+          "type": "string"
+        },
+        "status_id": {
+          "title": "Status Id",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "status_id",
+        "status",
+        "status_code",
+        "status_detail",
+        "source_status_label",
+        "source_status_mapping"
+      ],
+      "title": "SourceStatusModel",
+      "type": "object"
+    }
+  },
+  "$id": "https://aces.dev/schemas/participant-control-occurrence-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Closed participant-runtime carrier for one API-409 control fact.",
+  "properties": {
+    "actor_ref": {
+      "minLength": 1,
+      "title": "Actor Ref",
+      "type": "string"
+    },
+    "authorization_scope": {
+      "minLength": 1,
+      "title": "Authorization Scope",
+      "type": "string"
+    },
+    "clock_authority": {
+      "minLength": 1,
+      "title": "Clock Authority",
+      "type": "string"
+    },
+    "confidence": {
+      "anyOf": [
+        {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Confidence"
+    },
+    "episode_id": {
+      "minLength": 1,
+      "title": "Episode Id",
+      "type": "string"
+    },
+    "event_classification": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/EventClassificationModel"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "event_id": {
+      "minLength": 1,
+      "title": "Event Id",
+      "type": "string"
+    },
+    "event_type": {
+      "const": "participant-control-occurrence",
+      "title": "Event Type",
+      "type": "string"
+    },
+    "evidence_refs": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Evidence Refs",
+      "type": "array"
+    },
+    "extension_policy": {
+      "const": "closed",
+      "title": "Extension Policy",
+      "type": "string"
+    },
+    "granular_markings": {
+      "additionalProperties": {
+        "items": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "propertyNames": {
+        "minLength": 1
+      },
+      "title": "Granular Markings",
+      "type": "object"
+    },
+    "ingested_at": {
+      "format": "date-time",
+      "minLength": 1,
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+      "title": "Ingested At",
+      "type": "string"
+    },
+    "logical_order_ref": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Logical Order Ref"
+    },
+    "marking_definition_refs": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Marking Definition Refs",
+      "type": "array"
+    },
+    "markings": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Markings",
+      "type": "array"
+    },
+    "object_marking_refs": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Object Marking Refs",
+      "type": "array"
+    },
+    "occurred_at": {
+      "format": "date-time",
+      "minLength": 1,
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+      "title": "Occurred At",
+      "type": "string"
+    },
+    "occurrence": {
+      "discriminator": {
+        "mapping": {
+          "approval": "#/$defs/ParticipantApprovalOccurrenceModel",
+          "cancellation": "#/$defs/ParticipantCancellationOccurrenceModel",
+          "denial": "#/$defs/ParticipantDenialOccurrenceModel",
+          "external-direction": "#/$defs/ParticipantExternalDirectionOccurrenceModel",
+          "handoff": "#/$defs/ParticipantHandoffOccurrenceModel",
+          "intervention": "#/$defs/ParticipantInterventionOccurrenceModel",
+          "override": "#/$defs/ParticipantOverrideOccurrenceModel",
+          "proposal": "#/$defs/ParticipantProposalOccurrenceModel"
+        },
+        "propertyName": "kind"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/ParticipantProposalOccurrenceModel"
+        },
+        {
+          "$ref": "#/$defs/ParticipantApprovalOccurrenceModel"
+        },
+        {
+          "$ref": "#/$defs/ParticipantDenialOccurrenceModel"
+        },
+        {
+          "$ref": "#/$defs/ParticipantExternalDirectionOccurrenceModel"
+        },
+        {
+          "$ref": "#/$defs/ParticipantInterventionOccurrenceModel"
+        },
+        {
+          "$ref": "#/$defs/ParticipantHandoffOccurrenceModel"
+        },
+        {
+          "$ref": "#/$defs/ParticipantOverrideOccurrenceModel"
+        },
+        {
+          "$ref": "#/$defs/ParticipantCancellationOccurrenceModel"
+        }
+      ],
+      "title": "Occurrence"
+    },
+    "ordering_basis": {
+      "enum": [
+        "total_order",
+        "partial_order",
+        "simultaneous",
+        "serialized_backend_order",
+        "simulation_tick",
+        "control_plane_order",
+        "logical_clock",
+        "vector_clock",
+        "wall_clock_only",
+        "unknown",
+        "unsupported"
+      ],
+      "title": "Ordering Basis",
+      "type": "string"
+    },
+    "participant_address": {
+      "minLength": 1,
+      "title": "Participant Address",
+      "type": "string"
+    },
+    "predecessor_event_refs": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Predecessor Event Refs",
+      "type": "array"
+    },
+    "producer_ref": {
+      "minLength": 1,
+      "title": "Producer Ref",
+      "type": "string"
+    },
+    "provenance_refs": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Provenance Refs",
+      "type": "array"
+    },
+    "raw_data_integrity": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RawDataIntegrityModel"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "recorded_at": {
+      "format": "date-time",
+      "minLength": 1,
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+      "title": "Recorded At",
+      "type": "string"
+    },
+    "redaction_policy_ref": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Redaction Policy Ref"
+    },
+    "schema_name": {
+      "const": "participant-control-occurrence",
+      "title": "Schema Name",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "sequence_number": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Sequence Number"
+    },
+    "source_pipeline": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SourcePipelineModel"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "source_raw_ref": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source Raw Ref"
+    },
+    "source_record_ref": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source Record Ref"
+    },
+    "source_status": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SourceStatusModel"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "source_system_ref": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source System Ref"
+    },
+    "temporal_context": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Temporal Context"
+    }
+  },
+  "required": [
+    "event_id",
+    "schema_name",
+    "schema_version",
+    "event_type",
+    "extension_policy",
+    "participant_address",
+    "episode_id",
+    "occurred_at",
+    "recorded_at",
+    "ingested_at",
+    "clock_authority",
+    "ordering_basis",
+    "actor_ref",
+    "producer_ref",
+    "provenance_refs",
+    "evidence_refs",
+    "object_marking_refs",
+    "authorization_scope",
+    "occurrence"
+  ],
+  "title": "ParticipantControlOccurrenceModel",
+  "type": "object",
+  "x-aces-invariants": [
+    {
+      "description": "Every occurrence must resolve one matching compiled ACT-617 declaration and preserve participant, episode, controller, authority, policy revision, order, proposal, target, and semantic identity joins.",
+      "id": "participant-control-occurrence-context-agreement",
+      "inputs": [
+        {
+          "contract_id": "participant-control-occurrence-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_contracts.contracts.validate_participant_control_occurrence_context"
+    },
+    {
+      "description": "Proposal, approval, denial, direction, intervention, handoff, override, and cancellation remain distinct from action admission, execution, delivery, observation, and audit evidence.",
+      "id": "participant-control-occurrence-not-lifecycle-evidence",
+      "inputs": [
+        {
+          "contract_id": "participant-control-occurrence-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_contracts.contracts.ParticipantControlOccurrenceModel"
+    }
+  ],
+  "x-aces-semantic-profile": {
+    "contract_id": "participant-control-occurrence-v1",
+    "entry_schema_contract_id": "aces-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
+    "id": "aces-semantic-invariants-v1",
+    "keyword": "x-aces-invariants",
+    "required": true,
+    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+  }
+}
