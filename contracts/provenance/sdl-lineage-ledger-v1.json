@@ -352,6 +352,134 @@
       ]
     },
     {
+      "subject_id": "sdl-field:identity_forests",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/identity_forests",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/identity_forests"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/enterprise-deployment-tenancy.md",
+            "docs/decisions/adrs/adr-087-enterprise-identity-and-deployment-tenancy-authoring.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "sdl-field:identity_facades",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/identity_facades",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/identity_facades"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/enterprise-deployment-tenancy.md",
+            "docs/decisions/adrs/adr-087-enterprise-identity-and-deployment-tenancy-authoring.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "sdl-field:deployment_tenants",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/deployment_tenants",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/deployment_tenants"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/enterprise-deployment-tenancy.md",
+            "docs/decisions/adrs/adr-087-enterprise-identity-and-deployment-tenancy-authoring.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "sdl-field:deployment_cells",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/deployment_cells",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/deployment_cells"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/enterprise-deployment-tenancy.md",
+            "docs/decisions/adrs/adr-087-enterprise-identity-and-deployment-tenancy-authoring.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
       "subject_id": "sdl-field:action_contracts",
       "subject_kind": "top_level_field",
       "disposition": "current",
@@ -2981,6 +3109,126 @@
           "citation_refs": [],
           "internal_authority_refs": [
             "specs/sdl/authored-domain-topology.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "reference-model:scenario-identity-forest",
+      "subject_kind": "reference_model",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/concept-authority/reference-models-v1.json",
+        "pointer": "#/models/scenario-identity-forest"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/concept-authority/reference-models-v1.json",
+              "symbol_or_pointer": "#/models/scenario-identity-forest"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/enterprise-deployment-tenancy.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "reference-model:scenario-identity-facade",
+      "subject_kind": "reference_model",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/concept-authority/reference-models-v1.json",
+        "pointer": "#/models/scenario-identity-facade"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/concept-authority/reference-models-v1.json",
+              "symbol_or_pointer": "#/models/scenario-identity-facade"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/enterprise-deployment-tenancy.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "reference-model:scenario-deployment-tenant",
+      "subject_kind": "reference_model",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/concept-authority/reference-models-v1.json",
+        "pointer": "#/models/scenario-deployment-tenant"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/concept-authority/reference-models-v1.json",
+              "symbol_or_pointer": "#/models/scenario-deployment-tenant"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/enterprise-deployment-tenancy.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "reference-model:scenario-deployment-cell",
+      "subject_kind": "reference_model",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/concept-authority/reference-models-v1.json",
+        "pointer": "#/models/scenario-deployment-cell"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/concept-authority/reference-models-v1.json",
+              "symbol_or_pointer": "#/models/scenario-deployment-cell"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/enterprise-deployment-tenancy.md"
           ],
           "compatibility_direction": "not_applicable"
         }

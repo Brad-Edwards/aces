@@ -11,7 +11,7 @@ clarification for public command, MCP, distribution, and guidance surfaces.
 
 ## Binding Sources
 
-- ADR-087 records the RAES rename decision, workshop context, project
+- ADR-088 records the RAES rename decision, workshop context, project
   provenance, and hard-cutover boundary.
 - ADR-009, ADR-019, and `specs/authority/authority-boundary.yaml` define
   normative authority roots. Rename source-of-truth files first; regenerate or
