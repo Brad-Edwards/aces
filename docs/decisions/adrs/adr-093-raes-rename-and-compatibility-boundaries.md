@@ -75,7 +75,7 @@ owning surface is migrated.
 Public command and MCP surfaces make a hard cut to RAES. The `aces` and
 `aces-mcp` console scripts and the `aces_*` MCP tool aliases are removed instead
 of retained as compatibility aliases. The Python distribution surface moves to
-`raes-sdl` for new PyPI publication.
+`raes` for new PyPI publication.
 
 Legacy `aces.*` and `aces_*` Python import packages remain source/API names for
 this issue because changing module namespaces is a separate package-boundary
@@ -144,3 +144,4 @@ land under its own owning ADR/spec/contract process.
 | Date | Commit/PR | Summary |
 |---|---|---|
 | 2026-07-24 | #866 | Revised the decision from compatibility-preserving rename boundaries to a hard cutover for public command, MCP, guidance, and Python distribution surfaces after implementation clarification. |
+| 2026-07-25 | #866-pypi-name-correction | Corrected the RAES PyPI distribution target to the `raes` project name and removed the erroneous suffix-bearing slug from current emitted surfaces. |

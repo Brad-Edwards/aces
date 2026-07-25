@@ -73,7 +73,7 @@ jobs:
           import sys
           import zipfile
 
-          wheels = glob.glob("dist/raes_sdl-*.whl")
+          wheels = glob.glob("dist/raes-*.whl")
           if len(wheels) != 1:
               sys.exit(f"expected exactly one wheel, found {wheels}")
           names = zipfile.ZipFile(wheels[0]).namelist()

@@ -673,7 +673,7 @@ infrastructure:
 class TestOperationTools:
     def test_tool_surface_self_describes_boundaries(self, server):
         payload = _json_call(server, "raes_tool_surface")
-        assert payload["surface"] == "raes-sdl"
+        assert payload["surface"] == "raes"
         assert "legacy_surfaces" not in payload
         assert "raes_agent_guidance" in payload["recommended_workflow"]
         assert "raes_intended_use_profiles" in payload["recommended_workflow"]

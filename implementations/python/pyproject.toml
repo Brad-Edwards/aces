@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "raes-sdl"
+name = "raes"
 version = "0.23.1"
 description = "Backend-agnostic cyber range scenario description language and runtime."
 dynamic = ["readme"]
