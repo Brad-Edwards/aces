@@ -164,6 +164,7 @@ from .resources import (
     PropositionRuntime,
     ResolvedResource,
     RuntimeTemplate,
+    ServiceContentMaterializationBinding,
     map_backend_diagnostic_to_participant_failure,
     validate_participant_action_result_contract,
 )
@@ -189,6 +190,7 @@ __all__ = [
     "CompiledRealizationRequirement",
     "ConditionBinding",
     "ContentPlacement",
+    "ServiceContentMaterializationBinding",
     "DomainControllerPlacement",
     "GeneratedArtifactRuntime",
     "Diagnostic",

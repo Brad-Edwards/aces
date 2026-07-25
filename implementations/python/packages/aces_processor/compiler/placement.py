@@ -1,5 +1,9 @@
 """Content and account placement compilation."""
 
+import hashlib
+import json
+
+from aces_sdl.content import Content
 from aces_sdl.nodes import NodeType
 from aces_sdl.scenario import InstantiatedScenario
 from aces_sdl.semantics.domain_topology import (
@@ -12,13 +16,19 @@ from ..models import (
     ContentPlacement,
     Diagnostic,
     DomainControllerPlacement,
+    ServiceContentMaterializationBinding,
 )
 from .addresses import (
     _account_address,
+    _assertion_address,
     _compiled_domain_binding,
     _content_address,
     _domain_controller_address,
     _node_address,
+    _observation_boundary_address,
+    _resolve_node_service_ref,
+    _section_ref_name,
+    _service_address,
 )
 from .ref_resolution import _resolve_node_ref
 from .support import _dedupe, _dump
@@ -43,17 +53,95 @@ def _compile_content_placements(
         diagnostics.extend(target_diagnostics)
         if target_address is None:
             continue
+        compiled = _compile_service_materialization(scenario, content, address, diagnostics)
+        if compiled is None:
+            continue
+        service_materialization, content_dependencies = compiled
+        ordering_dependencies = [target_address, *content_dependencies]
+        dependencies = _dedupe(ordering_dependencies)
         content_placements[address] = ContentPlacement(
             address=address,
             name=name,
             content_name=name,
             target_node=content.target,
             target_address=target_address,
-            ordering_dependencies=(target_address,),
-            refresh_dependencies=(target_address,),
+            service_materialization=service_materialization,
+            ordering_dependencies=dependencies,
+            refresh_dependencies=dependencies,
             spec=_dump(content),
         )
     return content_placements
+
+
+def _compile_service_materialization(
+    scenario: InstantiatedScenario,
+    content: Content,
+    address: str,
+    diagnostics: list[Diagnostic],
+) -> tuple[ServiceContentMaterializationBinding | None, list[str]] | None:
+    binding = content.service_materialization
+    if binding is None:
+        return None, []
+    split = _resolve_node_service_ref(scenario, binding.target_service_ref)
+    if split is None or split[0] != content.target:
+        diagnostics.append(
+            Diagnostic(
+                code="provisioning.content-service-target-ref-unbound",
+                domain="provisioning",
+                address=address,
+                message="Service materialization target does not resolve on the content target node.",
+            )
+        )
+        return None
+    node_name, service_name = split
+    consumer_tenant_ref, mutable_state_owner, reset_generation_owner = _service_state_ownership(scenario, binding)
+    requirements = binding.requirements
+    compiled = ServiceContentMaterializationBinding(
+        target_service_address=_service_address(node_name, service_name),
+        interface_profile=binding.interface_profile,
+        profile_version=binding.profile_version,
+        content_type=content.type.value,
+        operation=requirements.operation,
+        conflict_policy=requirements.conflict_policy,
+        readback=requirements.readback,
+        canonical_content_digest=_canonical_content_digest(content),
+        shared_service_relationship_ref=binding.shared_service_relationship_ref,
+        consumer_tenant_ref=consumer_tenant_ref,
+        mutable_state_owner=mutable_state_owner,
+        reset_generation_owner=reset_generation_owner,
+        readback_assertion_addresses=tuple(_assertion_address(ref) for ref in binding.readback_assertion_refs),
+        evidence_requirement_refs=tuple(binding.evidence_requirement_refs),
+        observation_boundary_addresses=tuple(
+            _observation_boundary_address(ref) for ref in binding.observation_boundary_refs
+        ),
+    )
+    dependencies = [_content_address(ref) for ref in binding.ordering_content_refs]
+    return compiled, dependencies
+
+
+def _service_state_ownership(scenario: InstantiatedScenario, binding: object) -> tuple[str, str, str]:
+    if not binding.shared_service_relationship_ref:
+        return "", "", ""
+    relationship_name = _section_ref_name(
+        binding.shared_service_relationship_ref,
+        "relationships",
+        scenario.relationships,
+    )
+    relationship = scenario.relationships[relationship_name]
+    detail = relationship.shared_service
+    if detail is None:
+        return "", "", ""
+    consumer_tenant_ref = relationship.source.removeprefix("deployment_tenants.")
+    mutable_state_owner = getattr(detail.mutable_state_owner, "value", str(detail.mutable_state_owner))
+    reset_generation_owner = getattr(detail.reset_generation_owner, "value", str(detail.reset_generation_owner))
+    return consumer_tenant_ref, mutable_state_owner, reset_generation_owner
+
+
+def _canonical_content_digest(content: object) -> str:
+    payload = _dump(content)
+    payload.pop("service_materialization", None)
+    encoded = json.dumps(payload, ensure_ascii=True, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    return "sha256:" + hashlib.sha256(encoded).hexdigest()
 
 
 def _compile_account_placements(

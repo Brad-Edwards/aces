@@ -92,6 +92,18 @@ def _rewrite_section_ref(name: str, section: str, name_map: Mapping[str, str]) -
     return name_map.get(name, name)
 
 
+def _rewrite_node_or_service_ref(name: str, node_map: Mapping[str, str]) -> str:
+    """Rewrite a node ref while preserving an optional named-service suffix."""
+
+    if not name or is_variable_ref(name):
+        return name
+    for local_name, qualified_name in sorted(node_map.items(), key=lambda item: len(item[0]), reverse=True):
+        service_prefix = f"nodes.{local_name}.services."
+        if name.startswith(service_prefix):
+            return f"nodes.{qualified_name}.services.{name.removeprefix(service_prefix)}"
+    return _rewrite_section_ref(name, "nodes", node_map)
+
+
 def _rewrite_stateful_dependency_ref(
     reference: str,
     symbols: dict[str, dict[str, str] | set[str]],
@@ -487,7 +499,10 @@ def _namespace_payload(
         if not isinstance(boundary, dict):
             continue
         for field_name in ("observable_refs", "hidden_refs", "evidence_refs"):
-            boundary[field_name] = [tool_affordance_ref_map.get(ref, ref) for ref in boundary.get(field_name, [])]
+            boundary[field_name] = [
+                tool_affordance_ref_map.get(ref, _maybe_rename(ref, symbols["named"]))
+                for ref in boundary.get(field_name, [])
+            ]
         for field_name in ("view_rules", "view_transitions"):
             for item in boundary.get(field_name, []):
                 if not isinstance(item, dict):
@@ -496,11 +511,43 @@ def _namespace_payload(
                 if isinstance(information_ref, str):
                     item["information_ref"] = tool_affordance_ref_map.get(
                         information_ref,
-                        information_ref,
+                        _maybe_rename(information_ref, symbols["named"]),
                     )
     for content in namespaced.get("content", {}).values():
-        if isinstance(content, dict) and content.get("target"):
-            content["target"] = _maybe_rename(str(content["target"]), symbols["nodes"])
+        if not isinstance(content, dict):
+            continue
+        if content.get("target"):
+            content["target"] = _rewrite_section_ref(str(content["target"]), "nodes", symbols["nodes"])
+        materialization = content.get("service_materialization")
+        if not isinstance(materialization, dict):
+            continue
+        if materialization.get("target_service_ref"):
+            materialization["target_service_ref"] = _rewrite_node_or_service_ref(
+                str(materialization["target_service_ref"]),
+                symbols["nodes"],
+            )
+        if materialization.get("shared_service_relationship_ref"):
+            materialization["shared_service_relationship_ref"] = _rewrite_section_ref(
+                str(materialization["shared_service_relationship_ref"]),
+                "relationships",
+                symbols["relationships"],
+            )
+        materialization["ordering_content_refs"] = [
+            _rewrite_section_ref(ref, "content", symbols["content"])
+            for ref in materialization.get("ordering_content_refs", [])
+        ]
+        materialization["readback_assertion_refs"] = [
+            _rewrite_section_ref(ref, "assertions", symbols["assertions"])
+            for ref in materialization.get("readback_assertion_refs", [])
+        ]
+        materialization["evidence_requirement_refs"] = [
+            _rewrite_section_ref(ref, "evidence_requirements", symbols["evidence_requirements"])
+            for ref in materialization.get("evidence_requirement_refs", [])
+        ]
+        materialization["observation_boundary_refs"] = [
+            _rewrite_section_ref(ref, "observation_boundaries", symbols["observation_boundaries"])
+            for ref in materialization.get("observation_boundary_refs", [])
+        ]
     for section_name in ("generated_artifacts", "persistent_volumes"):
         for resource_name, resource in namespaced.get(section_name, {}).items():
             if not isinstance(resource, dict):

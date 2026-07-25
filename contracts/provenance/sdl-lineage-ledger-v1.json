@@ -1,6 +1,6 @@
 {
   "schema_version": "sdl-lineage-ledger/v1",
-  "reviewed_on": "2026-07-19",
+  "reviewed_on": "2026-07-24",
   "citations": [
     {
       "citation_id": "ocr-sdl-v0.21.2",
@@ -746,6 +746,27 @@
           ],
           "internal_authority_refs": [],
           "compatibility_direction": "aces_relative_to_source"
+        },
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/$defs/ServiceMaterialization"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "ACES extends its existing content authority with a closed provider-neutral service-target control and readback contract. External simulation standards are design precedents, not semantic authorities for this binding.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/initial-service-state.md",
+            "docs/decisions/adrs/adr-088-initial-service-state-and-native-materialization.md",
+            "docs/research/initial-service-state-precedents-2026-07-24.md"
+          ],
+          "compatibility_direction": "not_applicable"
         }
       ]
     },
@@ -3361,6 +3382,27 @@
           ],
           "internal_authority_refs": [],
           "compatibility_direction": "aces_relative_to_source"
+        },
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/concept-authority/reference-models-v1.json",
+              "symbol_or_pointer": "#/models/scenario-content/key_fields/service_materialization"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "The service-materialization key field is an ACES-native extension to ordinary scenario content. Mature initialization standards informed the separation of initial state from runtime activity but do not define this reference model.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/initial-service-state.md",
+            "docs/decisions/adrs/adr-088-initial-service-state-and-native-materialization.md",
+            "docs/research/initial-service-state-precedents-2026-07-24.md"
+          ],
+          "compatibility_direction": "not_applicable"
         }
       ]
     },

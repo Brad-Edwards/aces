@@ -302,7 +302,8 @@
         "path",
         "destination",
         "source",
-        "items"
+        "items",
+        "service_materialization"
       ]
     },
     "scenario-node-runtime": {

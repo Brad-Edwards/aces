@@ -397,3 +397,13 @@ adrs:
   - id: ADR-087
     path: docs/decisions/adrs/adr-087-enterprise-identity-and-deployment-tenancy-authoring.md
     pin: 9654e999d520fb642e1dbeee0ec582902755bff4d5f7d9c0011c3a7a5efa478c
+  - id: ADR-088
+    path: docs/decisions/adrs/adr-088-initial-service-state-and-native-materialization.md
+    pin: f59495005714ffdac938e73193b3d0c800016ede1e68c1a47f7c702bd8720223
+    amendments:
+      - date: 2026-07-24
+        ref: "#859"
+        summary: "Separated range-level baseline reset authority from per-binding native reset ownership so one causal baseline can span multiple real product services while every binding remains tenant-bound to its exact target."
+      - date: 2026-07-24
+        ref: "#862"
+        summary: "Replaced the historical-baseline ontology with the smallest content-owned, evidence-gated service-materialization extension required by the redesigned issue boundary."

@@ -90,6 +90,11 @@ _SECTION_VALIDATOR = "[section validator](../../implementations/python/packages/
 _CONTENT_VALIDATOR = (
     "[content validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py)"
 )
+_SERVICE_MATERIALIZATION_VALIDATOR = (
+    "[service materialization validator]"
+    "(../../implementations/python/packages/aces_sdl/validator/_service_materialization.py)"
+)
+_CONTENT_COMPILER = "[content compiler](../../implementations/python/packages/aces_processor/compiler/placement.py)"
 _ACCOUNT_VALIDATOR = (
     "[account validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py)"
 )
@@ -292,6 +297,42 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         _SEMANTIC,
         "fatal unless target is a vm node",
         _CONTENT_VALIDATOR,
+    ),
+    "content.*.service_materialization.target_service_ref": (
+        "derived:node_services",
+        _SEMANTIC,
+        "fatal unless the exact service exists on the content target vm",
+        _SERVICE_MATERIALIZATION_VALIDATOR,
+    ),
+    "content.*.service_materialization.shared_service_relationship_ref": (
+        "relationships",
+        _SEMANTIC,
+        "fatal unless a matching typed shared-service relationship owns cross-tenant mutable state/reset",
+        _SERVICE_MATERIALIZATION_VALIDATOR,
+    ),
+    "content.*.service_materialization.ordering_content_refs[]": (
+        "content",
+        "semantic validation and planner ordering",
+        "fatal dangling, self, or cyclic dependency",
+        _CONTENT_COMPILER,
+    ),
+    "content.*.service_materialization.readback_assertion_refs[]": (
+        "assertions",
+        _SEMANTIC,
+        "fatal unless each ref is an observed-state postcondition",
+        _SERVICE_MATERIALIZATION_VALIDATOR,
+    ),
+    "content.*.service_materialization.evidence_requirement_refs[]": (
+        "evidence_requirements",
+        _SEMANTIC,
+        "fatal unless each ref exists and every readback proposition requires it",
+        _SERVICE_MATERIALIZATION_VALIDATOR,
+    ),
+    "content.*.service_materialization.observation_boundary_refs[]": (
+        "observation_boundaries",
+        _SEMANTIC,
+        "fatal dangling ref",
+        _SERVICE_MATERIALIZATION_VALIDATOR,
     ),
     "generated_artifacts.*.consumers[].node": (
         "nodes",
