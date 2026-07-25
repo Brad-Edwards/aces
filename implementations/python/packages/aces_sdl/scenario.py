@@ -58,6 +58,13 @@ from .realization_designation import RealizationDesignation
 from .relationships import Relationship
 from .runtime_forwarding_agent import RuntimeForwardingAgent
 from .stateful_resources import GeneratedArtifact, PersistentVolume
+from .time_model import (
+    Clock,
+    TemporalConstraint,
+    TimeDomain,
+    TimeDomainMapping,
+    TimeProgressionPolicy,
+)
 from .variables import Variable
 from .variation import VariationPoint
 from .vulnerabilities import Vulnerability
@@ -273,6 +280,11 @@ class ScenarioContent(SDLModel):
     outcome_interpretation_rules: dict[str, OutcomeInterpretationRule] = Field(default_factory=dict)
     behavior_specifications: dict[str, ParticipantBehaviorSpecification] = Field(default_factory=dict)
     evidence_requirements: dict[str, EvidenceRequirement] = Field(default_factory=dict)
+    time_domains: dict[str, TimeDomain] = Field(default_factory=dict)
+    clocks: dict[str, Clock] = Field(default_factory=dict)
+    time_domain_mappings: dict[str, TimeDomainMapping] = Field(default_factory=dict)
+    time_progression_policies: dict[str, TimeProgressionPolicy] = Field(default_factory=dict)
+    temporal_constraints: dict[str, TemporalConstraint] = Field(default_factory=dict)
     objectives: dict[str, Objective] = Field(default_factory=dict)
     workflows: dict[str, Workflow] = Field(default_factory=dict)
     _advisories: list[str] = PrivateAttr(default_factory=list)

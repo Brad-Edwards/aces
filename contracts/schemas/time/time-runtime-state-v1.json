@@ -1,0 +1,218 @@
+{
+  "$defs": {
+    "ClockTransitionEventModel": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "initialize",
+            "advance",
+            "pause",
+            "resume",
+            "jump",
+            "reset",
+            "replay"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "previous": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TimeCoordinateModel"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "resulting": {
+          "$ref": "#/$defs/TimeCoordinateModel"
+        },
+        "resulting_state": {
+          "enum": [
+            "running",
+            "paused"
+          ],
+          "title": "Resulting State",
+          "type": "string"
+        },
+        "sequence": {
+          "minimum": 0,
+          "title": "Sequence",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "sequence",
+        "kind",
+        "previous",
+        "resulting",
+        "resulting_state"
+      ],
+      "title": "ClockTransitionEventModel",
+      "type": "object"
+    },
+    "RuntimeClockStateModel": {
+      "additionalProperties": false,
+      "properties": {
+        "authority_kind": {
+          "enum": [
+            "runtime",
+            "backend",
+            "system",
+            "external"
+          ],
+          "title": "Authority Kind",
+          "type": "string"
+        },
+        "authority_ref": {
+          "minLength": 1,
+          "title": "Authority Ref",
+          "type": "string"
+        },
+        "clock_address": {
+          "maxLength": 2048,
+          "minLength": 3,
+          "not": {
+            "pattern": "[^a-z0-9_.-]"
+          },
+          "pattern": "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$",
+          "title": "Clock Address",
+          "type": "string"
+        },
+        "coordinate": {
+          "$ref": "#/$defs/TimeCoordinateModel"
+        },
+        "history": {
+          "items": {
+            "$ref": "#/$defs/ClockTransitionEventModel"
+          },
+          "minItems": 1,
+          "title": "History",
+          "type": "array"
+        },
+        "progression_policy_address": {
+          "anyOf": [
+            {
+              "maxLength": 2048,
+              "minLength": 3,
+              "not": {
+                "pattern": "[^a-z0-9_.-]"
+              },
+              "pattern": "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Progression Policy Address"
+        },
+        "sequence": {
+          "minimum": 0,
+          "title": "Sequence",
+          "type": "integer"
+        },
+        "state": {
+          "enum": [
+            "running",
+            "paused"
+          ],
+          "title": "State",
+          "type": "string"
+        },
+        "time_domain_address": {
+          "maxLength": 2048,
+          "minLength": 3,
+          "not": {
+            "pattern": "[^a-z0-9_.-]"
+          },
+          "pattern": "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$",
+          "title": "Time Domain Address",
+          "type": "string"
+        }
+      },
+      "required": [
+        "clock_address",
+        "time_domain_address",
+        "authority_kind",
+        "authority_ref",
+        "state",
+        "coordinate",
+        "sequence",
+        "history"
+      ],
+      "title": "RuntimeClockStateModel",
+      "type": "object"
+    },
+    "TimeCoordinateModel": {
+      "additionalProperties": false,
+      "description": "Exact superdense coordinate within one discontinuity segment.",
+      "properties": {
+        "microstep": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Microstep",
+          "type": "integer"
+        },
+        "segment": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Segment",
+          "type": "integer"
+        },
+        "tick": {
+          "title": "Tick",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "tick"
+      ],
+      "title": "TimeCoordinateModel",
+      "type": "object"
+    }
+  },
+  "$id": "https://aces.dev/schemas/time-runtime-state-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Typed observable state for all clocks governed by one declaration.",
+  "properties": {
+    "clocks": {
+      "minProperties": 1,
+      "patternProperties": {
+        "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$": {
+          "$ref": "#/$defs/RuntimeClockStateModel"
+        }
+      },
+      "propertyNames": {
+        "maxLength": 2048,
+        "minLength": 3,
+        "not": {
+          "pattern": "[^a-z0-9_.-]"
+        }
+      },
+      "title": "Clocks",
+      "type": "object"
+    },
+    "declaration_digest": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Declaration Digest",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "time-runtime-state/v1",
+      "default": "time-runtime-state/v1",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "declaration_digest",
+    "clocks"
+  ],
+  "title": "TimeRuntimeStateModel",
+  "type": "object"
+}

@@ -232,6 +232,32 @@ class ParticipantBehaviorHistoryEventModel(ContractModel):
         return self
 
 
+class ParticipantAutonomousExecutionStateModel(ContractModel):
+    """Typed scheduler readback for one participant execution policy."""
+
+    policy_address: NonEmptyString
+    policy_digest: NonEmptyString
+    participant_address: NonEmptyString
+    episode_id: NonEmptyString
+    participant_implementation_ref: NonEmptyString
+    clock_address: NonEmptyString
+    time_segment: StrictInt = Field(ge=0)
+    lifecycle_state: Literal["running", "paused", "completed", "failed"]
+    next_tick: StrictInt = Field(ge=0)
+    next_action_index: StrictInt = Field(ge=0)
+    attempted_actions: StrictInt = Field(ge=0)
+    succeeded_actions: StrictInt = Field(ge=0)
+    failed_actions: StrictInt = Field(ge=0)
+    in_flight: StrictInt = Field(default=0, ge=0)
+    last_action_instance_id: str | None = None
+
+    @model_validator(mode="after")
+    def _validate_counters(self) -> ParticipantAutonomousExecutionStateModel:
+        if self.succeeded_actions + self.failed_actions > self.attempted_actions:
+            raise ValueError("terminal autonomous action counts cannot exceed attempted actions")
+        return self
+
+
 ParticipantRuntimeOrderingBasis = Literal[
     "total_order",
     "partial_order",

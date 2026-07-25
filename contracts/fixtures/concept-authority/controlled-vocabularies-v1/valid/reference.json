@@ -931,6 +931,10 @@
           "title": "Action Contracts",
           "description": "Backend supports governed participant action contracts."
         },
+        "autonomous_execution": {
+          "title": "Autonomous Execution",
+          "description": "Backend supports ACES-clock-governed autonomous execution of ordinary participant actions."
+        },
         "attribution_support": {
           "title": "Attribution Support",
           "description": "Backend supports evidence-labeled participant attribution claims."

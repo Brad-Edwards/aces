@@ -1,0 +1,582 @@
+{
+  "$defs": {
+    "ClockDeclarationModel": {
+      "additionalProperties": false,
+      "properties": {
+        "address": {
+          "maxLength": 2048,
+          "minLength": 3,
+          "not": {
+            "pattern": "[^a-z0-9_.-]"
+          },
+          "pattern": "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$",
+          "title": "Address",
+          "type": "string"
+        },
+        "authority_kind": {
+          "enum": [
+            "runtime",
+            "backend",
+            "system",
+            "external"
+          ],
+          "title": "Authority Kind",
+          "type": "string"
+        },
+        "authority_ref": {
+          "minLength": 1,
+          "title": "Authority Ref",
+          "type": "string"
+        },
+        "description": {
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "monotonicity": {
+          "enum": [
+            "strict",
+            "non_decreasing",
+            "may_jump"
+          ],
+          "title": "Monotonicity",
+          "type": "string"
+        },
+        "supports_jump": {
+          "default": false,
+          "title": "Supports Jump",
+          "type": "boolean"
+        },
+        "supports_pause": {
+          "default": false,
+          "title": "Supports Pause",
+          "type": "boolean"
+        },
+        "supports_reset": {
+          "default": false,
+          "title": "Supports Reset",
+          "type": "boolean"
+        },
+        "time_domain_address": {
+          "maxLength": 2048,
+          "minLength": 3,
+          "not": {
+            "pattern": "[^a-z0-9_.-]"
+          },
+          "pattern": "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$",
+          "title": "Time Domain Address",
+          "type": "string"
+        }
+      },
+      "required": [
+        "address",
+        "time_domain_address",
+        "authority_kind",
+        "authority_ref",
+        "monotonicity",
+        "description"
+      ],
+      "title": "ClockDeclarationModel",
+      "type": "object"
+    },
+    "ExactRatioModel": {
+      "additionalProperties": false,
+      "description": "Reduced positive rational value.",
+      "properties": {
+        "denominator": {
+          "exclusiveMinimum": 0,
+          "title": "Denominator",
+          "type": "integer"
+        },
+        "numerator": {
+          "exclusiveMinimum": 0,
+          "title": "Numerator",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "numerator",
+        "denominator"
+      ],
+      "title": "ExactRatioModel",
+      "type": "object"
+    },
+    "TemporalConstraintDeclarationModel": {
+      "additionalProperties": false,
+      "properties": {
+        "address": {
+          "maxLength": 2048,
+          "minLength": 3,
+          "not": {
+            "pattern": "[^a-z0-9_.-]"
+          },
+          "pattern": "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$",
+          "title": "Address",
+          "type": "string"
+        },
+        "cadence_ticks": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cadence Ticks"
+        },
+        "clock_address": {
+          "maxLength": 2048,
+          "minLength": 3,
+          "not": {
+            "pattern": "[^a-z0-9_.-]"
+          },
+          "pattern": "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$",
+          "title": "Clock Address",
+          "type": "string"
+        },
+        "description": {
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "duration_ticks": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration Ticks"
+        },
+        "end": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TimeCoordinateModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "kind": {
+          "enum": [
+            "precedence",
+            "duration",
+            "window",
+            "deadline",
+            "cadence"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "start": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TimeCoordinateModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "subject_addresses": {
+          "items": {
+            "maxLength": 2048,
+            "minLength": 3,
+            "not": {
+              "pattern": "[^a-z0-9_.-]"
+            },
+            "pattern": "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Subject Addresses",
+          "type": "array"
+        }
+      },
+      "required": [
+        "address",
+        "kind",
+        "clock_address",
+        "subject_addresses",
+        "description"
+      ],
+      "title": "TemporalConstraintDeclarationModel",
+      "type": "object"
+    },
+    "TimeCoordinateModel": {
+      "additionalProperties": false,
+      "description": "Exact superdense coordinate within one discontinuity segment.",
+      "properties": {
+        "microstep": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Microstep",
+          "type": "integer"
+        },
+        "segment": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Segment",
+          "type": "integer"
+        },
+        "tick": {
+          "title": "Tick",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "tick"
+      ],
+      "title": "TimeCoordinateModel",
+      "type": "object"
+    },
+    "TimeDomainDeclarationModel": {
+      "additionalProperties": false,
+      "properties": {
+        "address": {
+          "maxLength": 2048,
+          "minLength": 3,
+          "not": {
+            "pattern": "[^a-z0-9_.-]"
+          },
+          "pattern": "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$",
+          "title": "Address",
+          "type": "string"
+        },
+        "description": {
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "epoch": {
+          "enum": [
+            "unix",
+            "scenario_start",
+            "run_start",
+            "unanchored",
+            "external"
+          ],
+          "title": "Epoch",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "wall_clock",
+            "monotonic",
+            "simulated",
+            "logical",
+            "external"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "tick_period_seconds": {
+          "$ref": "#/$defs/ExactRatioModel"
+        },
+        "visibility": {
+          "enum": [
+            "runtime_only",
+            "participant_visible",
+            "evidence_only"
+          ],
+          "title": "Visibility",
+          "type": "string"
+        }
+      },
+      "required": [
+        "address",
+        "kind",
+        "tick_period_seconds",
+        "epoch",
+        "visibility",
+        "description"
+      ],
+      "title": "TimeDomainDeclarationModel",
+      "type": "object"
+    },
+    "TimeDomainMappingDeclarationModel": {
+      "additionalProperties": false,
+      "properties": {
+        "address": {
+          "maxLength": 2048,
+          "minLength": 3,
+          "not": {
+            "pattern": "[^a-z0-9_.-]"
+          },
+          "pattern": "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$",
+          "title": "Address",
+          "type": "string"
+        },
+        "description": {
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "mapping_kind": {
+          "enum": [
+            "identity",
+            "affine_rational"
+          ],
+          "title": "Mapping Kind",
+          "type": "string"
+        },
+        "offset_ticks": {
+          "default": 0,
+          "title": "Offset Ticks",
+          "type": "integer"
+        },
+        "scale": {
+          "$ref": "#/$defs/ExactRatioModel"
+        },
+        "source_domain_address": {
+          "maxLength": 2048,
+          "minLength": 3,
+          "not": {
+            "pattern": "[^a-z0-9_.-]"
+          },
+          "pattern": "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$",
+          "title": "Source Domain Address",
+          "type": "string"
+        },
+        "target_domain_address": {
+          "maxLength": 2048,
+          "minLength": 3,
+          "not": {
+            "pattern": "[^a-z0-9_.-]"
+          },
+          "pattern": "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$",
+          "title": "Target Domain Address",
+          "type": "string"
+        }
+      },
+      "required": [
+        "address",
+        "source_domain_address",
+        "target_domain_address",
+        "mapping_kind",
+        "description"
+      ],
+      "title": "TimeDomainMappingDeclarationModel",
+      "type": "object"
+    },
+    "TimeProgressionPolicyDeclarationModel": {
+      "additionalProperties": false,
+      "properties": {
+        "address": {
+          "maxLength": 2048,
+          "minLength": 3,
+          "not": {
+            "pattern": "[^a-z0-9_.-]"
+          },
+          "pattern": "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$",
+          "title": "Address",
+          "type": "string"
+        },
+        "advancement_mode": {
+          "enum": [
+            "real_time",
+            "dilated",
+            "stepped",
+            "event_driven",
+            "externally_paced"
+          ],
+          "title": "Advancement Mode",
+          "type": "string"
+        },
+        "clock_address": {
+          "maxLength": 2048,
+          "minLength": 3,
+          "not": {
+            "pattern": "[^a-z0-9_.-]"
+          },
+          "pattern": "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$",
+          "title": "Clock Address",
+          "type": "string"
+        },
+        "description": {
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "drift_bound_ticks": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Drift Bound Ticks"
+        },
+        "pacing_ratio": {
+          "$ref": "#/$defs/ExactRatioModel"
+        },
+        "replay_behavior": {
+          "enum": [
+            "unsupported",
+            "restart_from_anchor",
+            "restore_recorded_advances"
+          ],
+          "title": "Replay Behavior",
+          "type": "string"
+        },
+        "reset_behavior": {
+          "enum": [
+            "unsupported",
+            "new_segment_zero",
+            "new_segment_preserve_value"
+          ],
+          "title": "Reset Behavior",
+          "type": "string"
+        },
+        "step_ticks": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Step Ticks"
+        },
+        "synchronization_mode": {
+          "enum": [
+            "none",
+            "authority",
+            "barrier",
+            "conservative"
+          ],
+          "title": "Synchronization Mode",
+          "type": "string"
+        }
+      },
+      "required": [
+        "address",
+        "clock_address",
+        "advancement_mode",
+        "synchronization_mode",
+        "reset_behavior",
+        "replay_behavior",
+        "description"
+      ],
+      "title": "TimeProgressionPolicyDeclarationModel",
+      "type": "object"
+    }
+  },
+  "$id": "https://aces.dev/schemas/time-model-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Canonical backend-neutral declaration compiled from authored SDL.",
+  "properties": {
+    "clocks": {
+      "minProperties": 1,
+      "patternProperties": {
+        "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$": {
+          "$ref": "#/$defs/ClockDeclarationModel"
+        }
+      },
+      "propertyNames": {
+        "maxLength": 2048,
+        "minLength": 3,
+        "not": {
+          "pattern": "[^a-z0-9_.-]"
+        }
+      },
+      "title": "Clocks",
+      "type": "object"
+    },
+    "domains": {
+      "minProperties": 1,
+      "patternProperties": {
+        "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$": {
+          "$ref": "#/$defs/TimeDomainDeclarationModel"
+        }
+      },
+      "propertyNames": {
+        "maxLength": 2048,
+        "minLength": 3,
+        "not": {
+          "pattern": "[^a-z0-9_.-]"
+        }
+      },
+      "title": "Domains",
+      "type": "object"
+    },
+    "mappings": {
+      "patternProperties": {
+        "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$": {
+          "$ref": "#/$defs/TimeDomainMappingDeclarationModel"
+        }
+      },
+      "propertyNames": {
+        "maxLength": 2048,
+        "minLength": 3,
+        "not": {
+          "pattern": "[^a-z0-9_.-]"
+        }
+      },
+      "title": "Mappings",
+      "type": "object"
+    },
+    "progression_policies": {
+      "patternProperties": {
+        "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$": {
+          "$ref": "#/$defs/TimeProgressionPolicyDeclarationModel"
+        }
+      },
+      "propertyNames": {
+        "maxLength": 2048,
+        "minLength": 3,
+        "not": {
+          "pattern": "[^a-z0-9_.-]"
+        }
+      },
+      "title": "Progression Policies",
+      "type": "object"
+    },
+    "schema_version": {
+      "const": "time-model/v1",
+      "default": "time-model/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "temporal_constraints": {
+      "patternProperties": {
+        "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$": {
+          "$ref": "#/$defs/TemporalConstraintDeclarationModel"
+        }
+      },
+      "propertyNames": {
+        "maxLength": 2048,
+        "minLength": 3,
+        "not": {
+          "pattern": "[^a-z0-9_.-]"
+        }
+      },
+      "title": "Temporal Constraints",
+      "type": "object"
+    }
+  },
+  "required": [
+    "domains",
+    "clocks"
+  ],
+  "title": "TimeModelDeclarationModel",
+  "type": "object"
+}

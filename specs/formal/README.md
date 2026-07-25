@@ -13,6 +13,7 @@ Examples:
 - `specs/formal/participant-semantics/`
 - `specs/formal/participant-behavior-model/`
 - `specs/formal/participant-runtime/`
+- `specs/formal/time-model/`
 - `specs/formal/experiment-core/`
 - `specs/formal/scenario-variation-trial-realization/`
 - `specs/formal/scenario-satisfiability/`

@@ -18,6 +18,7 @@ from .contracts import (
     ParticipantImplementationManifestModel,
     ParticipantImplementationSelectionModel,
     ParticipantObservationDetailsModel,
+    ParticipantTemporalRuntimeContextModel,
 )
 from .participant_behavior import (
     ParticipantAdmissionDisposition,
@@ -26,6 +27,7 @@ from .participant_behavior import (
     ParticipantPhaseRealization,
     ParticipantRuntimeLifecyclePhase,
 )
+from .runtime_state import ApplyResult
 
 _ACTION_CONTRACT_PREFIX = "participant.action-contract."
 _OBSERVATION_BOUNDARY_PREFIX = "participant.observation-boundary."
@@ -76,9 +78,11 @@ class ParticipantActionAdmissionRequest:
     visible_refs: tuple[str, ...] = ()
     disclosed_refs: tuple[str, ...] = ()
     observation_boundary_evidence_refs: tuple[str, ...] = ()
+    temporal_contexts: tuple[ParticipantTemporalRuntimeContextModel, ...] = ()
     action_result: ParticipantActionResultModel | None = None
     state_transition_kind: str = "participant_action_admitted"
     post_state_digest: str | None = None
+    requires_terminal_outcome: bool = False
 
     def __post_init__(self) -> None:
         _require_non_empty(self.participant_address, "participant_address")
@@ -102,6 +106,12 @@ class ParticipantActionAdmissionRequest:
             raise TypeError("implementation_selection must be a ParticipantImplementationSelectionModel")
         if self.action_result is not None and not isinstance(self.action_result, ParticipantActionResultModel):
             raise TypeError("action_result must be a ParticipantActionResultModel or None")
+        if not isinstance(self.requires_terminal_outcome, bool):
+            raise TypeError("requires_terminal_outcome must be a bool")
+        if any(not isinstance(item, ParticipantTemporalRuntimeContextModel) for item in self.temporal_contexts):
+            raise TypeError("temporal_contexts entries must be ParticipantTemporalRuntimeContextModel")
+        if len({item.temporal_contract_id for item in self.temporal_contexts}) != len(self.temporal_contexts):
+            raise ValueError("temporal_contexts temporal_contract_id values must be unique")
         object.__setattr__(self, "evidence_refs", _string_tuple(self.evidence_refs, "evidence_refs"))
         object.__setattr__(self, "visible_refs", _string_tuple(self.visible_refs, "visible_refs"))
         object.__setattr__(self, "disclosed_refs", _string_tuple(self.disclosed_refs, "disclosed_refs"))
@@ -113,6 +123,30 @@ class ParticipantActionAdmissionRequest:
         violations = participant_action_admission_request_violations(self)
         if violations:
             raise ValueError(violations[0])
+
+
+@dataclass
+class ParticipantActionApplyResult(ApplyResult):
+    """Control-plane result plus the independently reported native action outcome."""
+
+    action_result: ParticipantActionResultModel | None = None
+
+
+@dataclass(frozen=True)
+class ParticipantNativeActionExecution:
+    """Backend-native execution output used to commit portable action history."""
+
+    apply_result: ApplyResult
+    action_result: ParticipantActionResultModel | None = None
+    post_state_digest: str | None = None
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.apply_result, ApplyResult):
+            raise TypeError("apply_result must be an ApplyResult")
+        if self.action_result is not None and not isinstance(self.action_result, ParticipantActionResultModel):
+            raise TypeError("action_result must be a ParticipantActionResultModel or None")
+        if self.post_state_digest is not None:
+            _require_non_empty(self.post_state_digest, "post_state_digest")
 
 
 def participant_implementation_actor_provenance(selection: ParticipantImplementationSelectionModel) -> str:
@@ -339,6 +373,9 @@ def _action_result_violations(request: ParticipantActionAdmissionRequest) -> tup
         violations.append("action_result action_instance_id must match the binding action_instance_id")
     if action_result.action_contract_address != request.action_contract_address:
         violations.append("action_result action_contract_address must match the binding action_contract_address")
+    observation_points = {context.observation_point for context in request.temporal_contexts}
+    if observation_points and action_result.observation_point not in observation_points:
+        violations.append("action_result observation_point must match a bound temporal runtime context")
     return tuple(violations)
 
 
@@ -375,6 +412,7 @@ def participant_action_binding_events(
             lifecycle_phase=ParticipantRuntimeLifecyclePhase.SELECTION_OR_ADMISSION,
             phase_realization=ParticipantPhaseRealization.RUNTIME_MEDIATED,
             admission_disposition=ParticipantAdmissionDisposition.ADMITTED,
+            temporal_contexts=list(request.temporal_contexts),
         ),
         ParticipantBehaviorHistoryEventModel(
             event_type=ParticipantBehaviorHistoryEventType.STATE_TRANSITION_RECORDED,
@@ -387,6 +425,7 @@ def participant_action_binding_events(
             phase_realization=ParticipantPhaseRealization.RUNTIME_MEDIATED,
             state_transition_kind=request.state_transition_kind,
             post_state_digest=post_state_digest,
+            temporal_contexts=list(request.temporal_contexts),
         ),
         ParticipantBehaviorHistoryEventModel(
             event_type=ParticipantBehaviorHistoryEventType.OBSERVATION_EMITTED,
@@ -401,6 +440,7 @@ def participant_action_binding_events(
             phase_realization=ParticipantPhaseRealization.RUNTIME_MEDIATED,
             post_state_digest=post_state_digest,
             action_result=request.action_result,
+            temporal_contexts=list(request.temporal_contexts),
             details=ParticipantObservationDetailsModel(
                 visible_refs=list(request.visible_refs),
                 disclosed_refs=list(request.disclosed_refs),
@@ -440,8 +480,10 @@ def _string_tuple(value: Iterable[str], field_name: str) -> tuple[str, ...]:
 
 __all__ = (
     "ParticipantActionAdmissionRequest",
+    "ParticipantActionApplyResult",
     "ParticipantDecisionSurfaceArgumentShapeResolver",
     "ParticipantDecisionSurfaceBindingResolvers",
+    "ParticipantNativeActionExecution",
     "bind_participant_decision_surface_selection",
     "participant_action_admission_request_violations",
     "participant_action_binding_events",

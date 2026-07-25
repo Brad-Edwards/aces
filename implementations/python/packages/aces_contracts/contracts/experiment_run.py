@@ -55,6 +55,11 @@ from .schema_invariants import (
     _extend_reported_value_status_schema,
     _validate_reported_value_status,
 )
+from .time_model import (
+    RealizedTimeModelProvenanceModel,
+    TimeModelDeclarationModel,
+    validate_realized_time_model,
+)
 from .validation_disclosure import ValidationBasisDisclosureModel, validate_carrier_validation_basis_disclosures
 from .validators import _validate_unique_string_values
 
@@ -122,6 +127,7 @@ class ExperimentRunModel(ContractModel):
     started_at: Rfc3339DateTimeString
     ended_at: Rfc3339DateTimeString
     clock_context: ExperimentClockContextModel
+    realized_time_model: RealizedTimeModelProvenanceModel | None = None
     run_status: Literal["sealed", "completed", "failed", "aborted", "invalidated", "superseded"]
     outcome_status: Literal["succeeded", "failed", "partial", "inconclusive", "not-evaluated"]
     traceability: ExperimentRunTraceabilityModel
@@ -147,6 +153,12 @@ class ExperimentRunModel(ContractModel):
         _validate_run_realized_form_disclosures(self)
         _validate_run_augmentation_disclosures(self)
         validate_carrier_validation_basis_disclosures(self, subject_kind="experiment_run")
+        if self.realized_time_model is not None:
+            validate_realized_time_model(
+                self.realized_time_model.declared_model,
+                self.realized_time_model,
+                run_id=self.run_id,
+            )
         return self
 
     @classmethod
@@ -216,6 +228,13 @@ class ExperimentRunModel(ContractModel):
             "transform_version must match that binding's namespace and admitted profile transforms.",
             validator="aces_contracts.contracts.validate_experiment_run_against_task",
             inputs=[{"contract_id": "experiment-run-v1", "instance_path": "#/stochastic_draws"}],
+        )
+        _add_aces_invariant(
+            json_schema,
+            "realized-time-model-bound-to-run",
+            "When present, realized-time provenance must match the run id and its declared model digest.",
+            validator=_ARCHIVAL_RUN_VALIDATOR,
+            inputs=[{"contract_id": "experiment-run-v1", "instance_path": "#/realized_time_model"}],
         )
         _add_aces_invariant(
             json_schema,
@@ -447,3 +466,23 @@ def validate_experiment_run_against_task(task: ExperimentTaskModel, run: Experim
     _validate_run_observation_requirements(task, run)
     _validate_run_metric_evidence(task, run)
     _validate_run_stochastic_draw_control_refs(run)
+
+
+def validate_experiment_run_time_model(
+    run: ExperimentRunModel,
+    declaration: TimeModelDeclarationModel,
+) -> None:
+    """Require EXP-734 provenance for a run of a governed time-model scenario."""
+
+    if run.realized_time_model is None:
+        raise ValueError("experiment run requires realized_time_model for the governed scenario time model")
+    validate_realized_time_model(declaration, run.realized_time_model, run_id=run.run_id)
+    clock = declaration.clocks.get(run.clock_context.clock_id)
+    if clock is None:
+        raise ValueError("experiment run clock_context.clock_id must resolve in the governed time model")
+    domain = declaration.domains[clock.time_domain_address]
+    rendered_domain = "other" if domain.kind == "external" else domain.kind.replace("_", "-")
+    if run.clock_context.time_domain != rendered_domain:
+        raise ValueError("experiment run clock_context.time_domain must match the governed clock domain")
+    if run.clock_context.authority != clock.authority_ref:
+        raise ValueError("experiment run clock_context.authority must match the governed clock authority")

@@ -2,9 +2,9 @@
   "contract_id": "sdl-authoring-input-v1",
   "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
   "stability": "draft",
-  "content_hash": "cab83c53dcdad0be7ff77b42485900a32272e782c1d6cebc35afe9bce71473b0",
+  "content_hash": "c0456a4af6bbd5be7fac5932e7bcb0c77b3f1e0d0e31afcaf88fef79a4261ed5",
   "last_change": {
-    "summary": "Published enterprise tenancy, typed network namespace sharing, and content-owned service-target materialization authoring semantics.",
-    "content_hash": "cab83c53dcdad0be7ff77b42485900a32272e782c1d6cebc35afe9bce71473b0"
+    "summary": "Published enterprise tenancy, service materialization, shared time, and autonomous participant authoring semantics.",
+    "content_hash": "c0456a4af6bbd5be7fac5932e7bcb0c77b3f1e0d0e31afcaf88fef79a4261ed5"
   }
 }

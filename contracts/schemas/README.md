@@ -255,3 +255,18 @@ The optional backend-manifest `capabilities.observation` block declares EXP-715
 observation/evidence collection support. Backends that declare it must also
 declare the published capture-spec, evidence-record, and derived-measure
 contracts that make the claim inspectable.
+
+## Shared Time
+
+The `time` schema family publishes:
+
+- `time-model-v1`, the canonical backend-neutral compiled declaration;
+- `time-runtime-state-v1`, typed clock readback with append-only transitions;
+  and
+- `realized-time-model-v1`, run-scoped apparatus and realization provenance.
+
+`backend-manifest-v2` declares support through a closed
+`capabilities.time` block. Admission compares every required semantic term and
+limit against that declaration. `runtime-snapshot-v1` carries the typed state,
+and `experiment-run-v1` carries the realized model. ADR-090 defines the shared
+time semantics; ADR-091 defines this portable contract and conformance boundary.

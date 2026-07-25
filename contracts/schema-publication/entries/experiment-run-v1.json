@@ -2,9 +2,9 @@
   "contract_id": "experiment-run-v1",
   "schema_path": "contracts/schemas/experiment-core/experiment-run-v1.json",
   "stability": "draft",
-  "content_hash": "43e2120d8d074e09e84fef3f7d0507b411b572171ebc6aba6a77912e541405aa",
+  "content_hash": "5bd34cc92eddcf59d76af349a3079a41914399dfca90fea1eb076af8fd7f4c3e",
   "last_change": {
-    "summary": "Tightened the embedded validation_basis_disclosures subject_ref binding (issue #259 CLASS finding): a run subject_ref now requires ref_version, so a disclosure can no longer carry the correct run_id while omitting ref_version to be replayed unchanged against a later run_version.",
-    "content_hash": "43e2120d8d074e09e84fef3f7d0507b411b572171ebc6aba6a77912e541405aa"
+    "summary": "Added EXP-734 run-scoped realized-time-model provenance, and tightened the embedded validation_basis_disclosures subject_ref binding (issue #259 CLASS finding): a run subject_ref now requires ref_version, so a disclosure can no longer carry the correct run_id while omitting ref_version to be replayed unchanged against a later run_version.",
+    "content_hash": "5bd34cc92eddcf59d76af349a3079a41914399dfca90fea1eb076af8fd7f4c3e"
   }
 }
