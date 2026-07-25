@@ -2,14 +2,14 @@ name: Release Please
 
 # release-please (#684) owns versioning + CHANGELOG.md. On each push to `main`
 # it maintains a release PR ("chore(main): release X.Y.Z") that bumps the version
-# (in implementations/python/pyproject.toml via extra-files) and updates the
+# (in implementations/python/packages/raes/_version.py via extra-files) and updates the
 # repo-root CHANGELOG.md from the Conventional Commits since the last release.
 # Merging that PR tags `vX.Y.Z` and cuts the GitHub Release; the publish job then
 # builds the corpus-bundled wheel/sdist (#537) and publishes to PyPI over OIDC
 # trusted publishing.
 #
 # Feature PRs never touch CHANGELOG.md (release-please owns it) — no fragment
-# collisions. The version literal is `[project] version` in the subdir pyproject;
+# collisions. The version literal is in the dedicated RAES package version file;
 # `aces.__version__` derives from the installed distribution metadata.
 #
 # Caveat: the release PR is opened by GITHUB_TOKEN, so required CI checks do not

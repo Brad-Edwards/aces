@@ -494,7 +494,6 @@ for advisory in scenario.advisories:
 - `SDLValidationError` — semantic issues (has `.errors` list with ALL issues)
 - `SDLInstantiationError` — variable binding failures
 
-Use `sdl_section_reference` to learn about any specific section in detail.
-Use `sdl_get_example` to see complete real-world scenarios.
-Use `sdl_validate` to check your SDL YAML.
+Use `sdl_section_reference` for details, `sdl_get_example` for scenarios, and
+`sdl_validate` to validate SDL YAML.
 """

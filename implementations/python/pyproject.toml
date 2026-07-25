@@ -4,9 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "raes"
-version = "0.25.0"
 description = "Contracts and reference tooling for reproducible agentic environments."
-dynamic = ["readme"]
+dynamic = ["readme", "version"]
 requires-python = ">=3.11"
 dependencies = [
     "typer>=0.12.0",
@@ -54,13 +53,16 @@ docs = [
 raes = "aces.cli.main:app"
 raes-mcp = "aces_mcp.server:main"
 
-# Version is the static `[project] version` above (#684) — the single source of
-# truth, rewritten by release-please on each release. Hatchling reads it directly;
+# Version is sourced from the dedicated RAES package file below. Release Please
+# rewrites that file, keeping routine release bumps out of this package metadata;
 # `aces.__version__` derives from the installed distribution metadata.
+
+[tool.hatch.version]
+path = "packages/raes/_version.py"
 
 # The PyPI long description (`readme`) is injected from the repo-root README.md by
 # a custom metadata hook (hatch_build.py), so there is a single README source and
-# no duplicate copy under implementations/python. `[project] dynamic = ["readme"]`.
+# no duplicate copy under implementations/python.
 [tool.hatch.metadata.hooks.custom]
 path = "hatch_build.py"
 
