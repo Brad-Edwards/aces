@@ -23,13 +23,21 @@ from .orchestration import (
     _compile_scripts,
     _compile_stories,
 )
-from .participant_behaviors import _compile_behavior_specifications, _compile_participant_behaviors
+from .participant_behaviors import (
+    _compile_behavior_specifications,
+    _compile_participant_behaviors,
+    _compile_tool_affordances,
+)
 from .participant_contracts import (
     _compile_action_contracts,
     _compile_observation_boundaries,
     _compile_outcome_interpretation_rules,
 )
-from .placement import _compile_account_placements, _compile_content_placements
+from .placement import (
+    _compile_account_placements,
+    _compile_content_placements,
+    _compile_domain_controller_placements,
+)
 from .provisioning import (
     _compile_capability_constraints,
     _compile_feature_bindings,
@@ -39,6 +47,7 @@ from .provisioning import (
 )
 from .realization_requirements import _compile_realization_requirements
 from .stateful_resources import _compile_generated_artifacts, _compile_persistent_volumes
+from .time_model import compile_time_model
 from .workflows import _compile_workflows
 
 
@@ -83,6 +92,7 @@ def compile_runtime_model(scenario: Scenario | ExpandedScenario | InstantiatedSc
         vulnerability_templates,
     ) = _compile_templates(scenario)
     entity_specs, agent_specs, relationship_specs = _metadata_specs(scenario)
+    time_model = compile_time_model(scenario)
 
     networks, node_deployments = _compile_node_runtimes(scenario, diagnostics, domain_analysis)
     feature_bindings = _compile_feature_bindings(scenario, feature_templates, diagnostics)
@@ -97,7 +107,13 @@ def compile_runtime_model(scenario: Scenario | ExpandedScenario | InstantiatedSc
     injects = _compile_inject_runtimes(inject_templates)
     inject_bindings = _compile_inject_bindings(scenario, inject_templates, diagnostics)
     content_placements = _compile_content_placements(scenario, diagnostics)
-    account_placements = _compile_account_placements(scenario, diagnostics, domain_analysis)
+    domain_controller_placements = _compile_domain_controller_placements(scenario, domain_analysis)
+    account_placements = _compile_account_placements(
+        scenario,
+        diagnostics,
+        domain_analysis,
+        domain_controller_placements,
+    )
     generated_artifacts = _compile_generated_artifacts(scenario)
     persistent_volumes = _compile_persistent_volumes(scenario)
     action_contracts = _compile_action_contracts(scenario)
@@ -105,6 +121,7 @@ def compile_runtime_model(scenario: Scenario | ExpandedScenario | InstantiatedSc
     outcome_interpretation_rules = _compile_outcome_interpretation_rules(scenario)
     participant_behaviors = _compile_participant_behaviors(scenario, diagnostics)
     behavior_specifications = _compile_behavior_specifications(scenario, diagnostics)
+    tool_affordances = _compile_tool_affordances(scenario, diagnostics)
     events = _compile_events(scenario, assertions, injects, inject_bindings, diagnostics)
     scripts = _compile_scripts(scenario, diagnostics)
     stories = _compile_stories(scenario, diagnostics)
@@ -120,6 +137,7 @@ def compile_runtime_model(scenario: Scenario | ExpandedScenario | InstantiatedSc
         entity_specs=entity_specs,
         agent_specs=agent_specs,
         relationship_specs=relationship_specs,
+        time_model=time_model,
         capability_constraints=_compile_capability_constraints(scenario),
         networks=networks,
         node_deployments=node_deployments,
@@ -130,6 +148,7 @@ def compile_runtime_model(scenario: Scenario | ExpandedScenario | InstantiatedSc
         injects=injects,
         inject_bindings=inject_bindings,
         content_placements=content_placements,
+        domain_controller_placements=domain_controller_placements,
         account_placements=account_placements,
         generated_artifacts=generated_artifacts,
         persistent_volumes=persistent_volumes,
@@ -138,6 +157,7 @@ def compile_runtime_model(scenario: Scenario | ExpandedScenario | InstantiatedSc
         outcome_interpretation_rules=outcome_interpretation_rules,
         participant_behaviors=participant_behaviors,
         behavior_specifications=behavior_specifications,
+        tool_affordances=tool_affordances,
         events=events,
         scripts=scripts,
         stories=stories,

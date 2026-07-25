@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
+from aces_contracts.contracts import ParticipantTemporalRuntimeContextModel
 from aces_contracts.diagnostics import Diagnostic
-from aces_contracts.participant_binding import ParticipantActionAdmissionRequest
+from aces_contracts.participant_binding import ParticipantActionAdmissionRequest, ParticipantActionApplyResult
 from aces_contracts.participant_episode import (
     ParticipantEpisodeInitializeRequest,
     ParticipantEpisodeResetRequest,
@@ -14,6 +15,9 @@ from aces_contracts.participant_episode import (
 )
 from aces_contracts.planning import EvaluationPlan, OrchestrationPlan, ProvisioningPlan
 from aces_contracts.runtime_state import ApplyResult, RuntimeSnapshot
+
+if TYPE_CHECKING:
+    from aces_contracts.contracts.time_model import TimeModelDeclarationModel, TimeRuntimeStateModel
 
 
 class Provisioner(Protocol):
@@ -161,4 +165,115 @@ class ParticipantRuntime(Protocol):
 
     def history(self) -> dict[str, list[dict[str, object]]]:
         """Return participant episode history events."""
+        ...
+
+
+class AutonomousParticipantRuntime(ParticipantRuntime, Protocol):
+    """Participant runtime that can bind and execute autonomous policy actions."""
+
+    def admit_action(
+        self,
+        request: ParticipantActionAdmissionRequest,
+        snapshot: RuntimeSnapshot,
+    ) -> ParticipantActionApplyResult:
+        """Execute one autonomous action and commit its typed terminal observation."""
+        ...
+
+    def bind_autonomous_action(
+        self,
+        participant_address: str,
+        action_contract_address: str,
+        observation_boundary_address: str,
+        participant_implementation_ref: str,
+        action_instance_id: str,
+        temporal_contexts: tuple[ParticipantTemporalRuntimeContextModel, ...],
+        snapshot: RuntimeSnapshot,
+    ) -> ParticipantActionAdmissionRequest:
+        """Resolve run-selected apparatus and native target binding for one due action."""
+        ...
+
+
+class TimeRuntime(Protocol):
+    """Materializes and controls one admitted portable shared-time model."""
+
+    def initialize(
+        self,
+        declaration: TimeModelDeclarationModel,
+        snapshot: RuntimeSnapshot,
+    ) -> ApplyResult:
+        """Materialize clock authorities and publish typed initial readback."""
+        ...
+
+    def advance(
+        self,
+        clock_address: str,
+        ticks: int,
+        microstep: int,
+        snapshot: RuntimeSnapshot,
+    ) -> ApplyResult:
+        """Advance one admitted clock exactly."""
+        ...
+
+    def pause(self, clock_address: str, snapshot: RuntimeSnapshot) -> ApplyResult:
+        """Pause one admitted clock."""
+        ...
+
+    def resume(self, clock_address: str, snapshot: RuntimeSnapshot) -> ApplyResult:
+        """Resume one admitted clock."""
+        ...
+
+    def jump(
+        self,
+        clock_address: str,
+        tick: int,
+        microstep: int,
+        snapshot: RuntimeSnapshot,
+    ) -> ApplyResult:
+        """Apply one declared discontinuity."""
+        ...
+
+    def reset(
+        self,
+        clock_address: str,
+        replay: bool,
+        snapshot: RuntimeSnapshot,
+    ) -> ApplyResult:
+        """Apply declared reset or replay semantics."""
+        ...
+
+    def state(self, snapshot: RuntimeSnapshot) -> TimeRuntimeStateModel:
+        """Return typed clock state bound to the admitted declaration digest."""
+        ...
+
+
+class CoordinatedParticipantResetRuntime(ParticipantRuntime, Protocol):
+    """Participant runtime capable of one atomic multi-participant reset."""
+
+    def reset_many(
+        self,
+        requests: tuple[ParticipantEpisodeResetRequest, ...],
+        snapshot: RuntimeSnapshot,
+    ) -> ApplyResult:
+        """Reset every requested participant or leave all native state unchanged."""
+        ...
+
+
+class CoordinatedParticipantTimeRuntime(TimeRuntime, Protocol):
+    """Shared-time runtime capable of an atomic participant/time reset."""
+
+    def reset_with_participants(
+        self,
+        clock_address: str,
+        replay: bool,
+        participant_runtime: CoordinatedParticipantResetRuntime,
+        participant_requests: tuple[ParticipantEpisodeResetRequest, ...],
+        snapshot: RuntimeSnapshot,
+    ) -> ApplyResult:
+        """Atomically reset shared time and the bound participant episodes.
+
+        Implementations must prepare all native changes before commit. A
+        failed result must leave both the shared clock and every participant
+        backend at the predecessor state; a successful result must expose all
+        changes in one coherent snapshot.
+        """
         ...

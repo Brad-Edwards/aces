@@ -23,7 +23,7 @@ def _find_repo_root(start: Path) -> Path:
     for candidate in (start, *start.parents):
         if (candidate / ".git").exists() or (candidate / ".ground-control.yaml").exists():
             return candidate
-    raise RuntimeError(f"could not locate aces-sdl repo root from {start}")
+    raise RuntimeError(f"could not locate RAES repo root from {start}")
 
 
 _REPO_ROOT = _find_repo_root(Path(__file__).resolve().parent)
@@ -116,7 +116,7 @@ def register(mcp: FastMCP) -> None:
     @mcp.tool(
         name="sdl_overview",
         description=(
-            "Get a comprehensive overview of the ACES Scenario Description "
+            "Get a comprehensive overview of the RAES Scenario Description "
             "Language (SDL). Returns what the SDL is, its authoring sections, how "
             "parsing/validation works, the variable system, and a complete "
             "minimal example. Start here if you have never seen the SDL before."
@@ -338,17 +338,17 @@ variables:
 """
 
 _OVERVIEW_TEXT = """\
-# ACES Scenario Description Language (SDL) Overview
+# RAES Scenario Description Language (SDL) Overview
 
 ## What is the SDL?
 
-The ACES SDL is a **YAML-based, backend-agnostic specification language** for \
+RAES SDL is a **YAML-based, backend-agnostic specification language** for \
 describing cyber range scenarios and experiments. It defines *what a scenario \
 means* — not how to deploy it. Backend implementations realize SDL \
 specifications through runtime contracts.
 
 Its topology and exercise-narrative core descends from the Open Cyber Range
-(OCR) SDL. ACES adds composition, participant, evidence, objective, workflow,
+(OCR) SDL. RAES adds composition, participant, evidence, objective, workflow,
 and runtime-inventory semantics; the exact live surface is governed by the
 normative section catalog rather than a historical count.
 

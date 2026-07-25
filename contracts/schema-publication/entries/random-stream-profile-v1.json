@@ -1,0 +1,10 @@
+{
+  "contract_id": "random-stream-profile-v1",
+  "schema_path": "contracts/schemas/profiles/random-stream-profile-v1.json",
+  "stability": "draft",
+  "content_hash": "86f94c7a6b8de22181e31861f00fa360897e62620594e69120ca8fb481f06ad4",
+  "last_change": {
+    "summary": "Initial publication of the EXP-718 random-stream profile: one closed, immutable compatibility unit fixing generator family/version, root-entropy encoding, address canonicalization, key derivation, block encoding, and the admitted transform set.",
+    "content_hash": "86f94c7a6b8de22181e31861f00fa360897e62620594e69120ca8fb481f06ad4"
+  }
+}

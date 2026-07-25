@@ -36,13 +36,16 @@ def canonical_sdl_bytes(scenario: Scenario | ExpandedScenario) -> bytes:
     if not scenario.semantic_validated:
         raise SDLParseError("Canonical SDL semantic identity requires successful semantic validation")
 
+    excluded_fields = {"expansion_provenance"}
+    if not scenario.variation_points:
+        excluded_fields.add("variation_points")
     payload = {
         "profile": SDL_CANONICAL_PROFILE,
         "scenario": scenario.model_dump(
             mode="json",
             by_alias=True,
             exclude_unset=True,
-            exclude={"expansion_provenance"},
+            exclude=excluded_fields,
         ),
         "module_variable_specs": scenario.module_variable_specs,
         "module_node_variable_refs": scenario.module_node_variable_refs,

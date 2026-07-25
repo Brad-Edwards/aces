@@ -31,6 +31,10 @@ HASHMAP_SECTIONS = frozenset(
         "persistent_volumes",
         "accounts",
         "identity_domains",
+        "identity_forests",
+        "identity_facades",
+        "deployment_tenants",
+        "deployment_cells",
         "relationships",
         "agents",
         "action_contracts",
@@ -38,9 +42,15 @@ HASHMAP_SECTIONS = frozenset(
         "outcome_interpretation_rules",
         "behavior_specifications",
         "evidence_requirements",
+        "time_domains",
+        "clocks",
+        "time_domain_mappings",
+        "time_progression_policies",
+        "temporal_constraints",
         "objectives",
         "workflows",
         "variables",
+        "variation_points",
     }
 )
 
@@ -60,6 +70,12 @@ NESTED_HASHMAP_FIELDS = frozenset(
         "steps",
         "extensions",
         "interactive_access",
+        "controller_states",
+        "transitions",
+        "alternatives",
+        "members",
+        "fixed_positions",
+        "tool_affordances",
     }
 )
 

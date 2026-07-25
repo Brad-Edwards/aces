@@ -267,6 +267,48 @@
       "title": "Agent",
       "type": "object"
     },
+    "AlternativeVariationPoint": {
+      "additionalProperties": false,
+      "properties": {
+        "alternatives": {
+          "minProperties": 1,
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/VariationMember"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Alternatives",
+          "type": "object"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "kind": {
+          "const": "alternative",
+          "default": "alternative",
+          "title": "Kind",
+          "type": "string"
+        },
+        "target": {
+          "$ref": "#/$defs/ReferenceTarget"
+        }
+      },
+      "required": [
+        "target",
+        "alternatives"
+      ],
+      "title": "AlternativeVariationPoint",
+      "type": "object"
+    },
     "Assertion": {
       "additionalProperties": false,
       "description": "A typed use of one proposition at a governed semantic boundary.",
@@ -411,6 +453,32 @@
         }
       ]
     },
+    "BooleanDomain": {
+      "additionalProperties": false,
+      "description": "Booleans: both ``true``/``false``, or an exact boolean when ``value`` set.",
+      "properties": {
+        "kind": {
+          "const": "boolean",
+          "default": "boolean",
+          "title": "Kind",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        }
+      },
+      "title": "BooleanDomain",
+      "type": "object"
+    },
     "BooleanPredicate": {
       "additionalProperties": false,
       "description": "Compare a governed Boolean property with an expected Boolean.",
@@ -456,6 +524,119 @@
       ],
       "title": "BooleanPredicate",
       "type": "object"
+    },
+    "Clock": {
+      "additionalProperties": false,
+      "description": "Authored clock authority over one time domain.",
+      "properties": {
+        "authority_kind": {
+          "$ref": "#/$defs/ClockAuthorityKind"
+        },
+        "authority_ref": {
+          "title": "Authority Ref",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "monotonicity": {
+          "$ref": "#/$defs/ClockMonotonicity"
+        },
+        "supports_jump": {
+          "default": false,
+          "title": "Supports Jump",
+          "type": "boolean"
+        },
+        "supports_pause": {
+          "default": false,
+          "title": "Supports Pause",
+          "type": "boolean"
+        },
+        "supports_reset": {
+          "default": false,
+          "title": "Supports Reset",
+          "type": "boolean"
+        },
+        "time_domain_ref": {
+          "title": "Time Domain Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "time_domain_ref",
+        "authority_kind",
+        "authority_ref",
+        "monotonicity",
+        "description"
+      ],
+      "title": "Clock",
+      "type": "object"
+    },
+    "ClockAuthorityKind": {
+      "description": "Plane that owns authoritative clock values.",
+      "enum": [
+        "runtime",
+        "backend",
+        "system",
+        "external"
+      ],
+      "title": "ClockAuthorityKind",
+      "type": "string"
+    },
+    "ClockMonotonicity": {
+      "description": "Allowed direction of authoritative clock movement.",
+      "enum": [
+        "strict",
+        "non_decreasing",
+        "may_jump"
+      ],
+      "title": "ClockMonotonicity",
+      "type": "string"
+    },
+    "CollectionTarget": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "collection",
+          "default": "collection",
+          "title": "Kind",
+          "type": "string"
+        },
+        "owner": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Owner",
+          "type": "string"
+        },
+        "slot": {
+          "$ref": "#/$defs/CollectionTargetSlot"
+        }
+      },
+      "required": [
+        "owner",
+        "slot"
+      ],
+      "title": "CollectionTarget",
+      "type": "object"
+    },
+    "CollectionTargetSlot": {
+      "description": "Closed finite collection slots whose owning model permits selection.",
+      "enum": [
+        "nodes.features",
+        "nodes.conditions",
+        "nodes.injects",
+        "nodes.vulnerabilities",
+        "events.assertions",
+        "events.injects",
+        "stories.scripts",
+        "agents.starting_accounts",
+        "agents.starting_assertions",
+        "objectives.targets",
+        "objectives.depends_on"
+      ],
+      "title": "CollectionTargetSlot",
+      "type": "string"
     },
     "Condition": {
       "additionalProperties": false,
@@ -706,6 +887,17 @@
           "default": false,
           "title": "Sensitive"
         },
+        "service_materialization": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ServiceMaterialization"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "source": {
           "anyOf": [
             {
@@ -797,6 +989,14 @@
         "directory"
       ],
       "title": "ContentType",
+      "type": "string"
+    },
+    "CrossTenantIsolation": {
+      "description": "Default cell posture for access from another tenant.",
+      "enum": [
+        "default_deny"
+      ],
+      "title": "CrossTenantIsolation",
       "type": "string"
     },
     "Database": {
@@ -1221,6 +1421,61 @@
         "name"
       ],
       "title": "DatabaseTable",
+      "type": "object"
+    },
+    "DeploymentCell": {
+      "additionalProperties": false,
+      "description": "One tenant-owned failure/isolation cell with explicit node membership.",
+      "properties": {
+        "cross_tenant_isolation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CrossTenantIsolation"
+            },
+            {
+              "not": {
+                "pattern": "[\\r\\n]"
+              },
+              "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
+              "type": "string",
+              "x-aces-variable-reference": true
+            }
+          ],
+          "title": "Cross Tenant Isolation"
+        },
+        "node_refs": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Node Refs",
+          "type": "array"
+        },
+        "tenant_ref": {
+          "minLength": 1,
+          "title": "Tenant Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tenant_ref",
+        "node_refs",
+        "cross_tenant_isolation"
+      ],
+      "title": "DeploymentCell",
+      "type": "object"
+    },
+    "DeploymentTenant": {
+      "additionalProperties": false,
+      "description": "Stable portable deployment-tenant identity.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        }
+      },
+      "title": "DeploymentTenant",
       "type": "object"
     },
     "DnsDynamicUpdatePolicy": {
@@ -2192,6 +2447,19 @@
       "title": "DockerfileInstructionKind",
       "type": "string"
     },
+    "EndpointPersona": {
+      "description": "Scenario function of a VM endpoint, separate from login/participant roles.",
+      "enum": [
+        "workforce",
+        "engineering",
+        "privileged_admin",
+        "participant",
+        "service",
+        "carrier"
+      ],
+      "title": "EndpointPersona",
+      "type": "string"
+    },
     "Entity": {
       "additionalProperties": false,
       "description": "An organizational unit, team, or person in the exercise.\n\nEntities can nest recursively. Flattened names use dot-notation:\n``blue-team.bob`` refers to the ``bob`` entity nested inside\n``blue-team``.",
@@ -2272,6 +2540,44 @@
         }
       },
       "title": "Entity",
+      "type": "object"
+    },
+    "EnumDomain": {
+      "additionalProperties": false,
+      "description": "A finite value set: values equal to one listed member.",
+      "properties": {
+        "kind": {
+          "const": "enum",
+          "default": "enum",
+          "title": "Kind",
+          "type": "string"
+        },
+        "values": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "minItems": 1,
+          "title": "Values",
+          "type": "array"
+        }
+      },
+      "required": [
+        "values"
+      ],
+      "title": "EnumDomain",
       "type": "object"
     },
     "Event": {
@@ -2579,6 +2885,62 @@
       "title": "EvidenceRetentionExpectation",
       "type": "string"
     },
+    "ExactDomain": {
+      "additionalProperties": false,
+      "description": "A singleton value set: values equal to ``value``.",
+      "properties": {
+        "kind": {
+          "const": "exact",
+          "default": "exact",
+          "title": "Kind",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "value"
+      ],
+      "title": "ExactDomain",
+      "type": "object"
+    },
+    "ExactRatio": {
+      "additionalProperties": false,
+      "description": "Reduced positive rational value.",
+      "properties": {
+        "denominator": {
+          "exclusiveMinimum": 0,
+          "title": "Denominator",
+          "type": "integer"
+        },
+        "numerator": {
+          "exclusiveMinimum": 0,
+          "title": "Numerator",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "numerator",
+        "denominator"
+      ],
+      "title": "ExactRatio",
+      "type": "object"
+    },
     "ExerciseRole": {
       "description": "Role in the exercise.",
       "enum": [
@@ -2691,6 +3053,49 @@
       "title": "FeatureType",
       "type": "string"
     },
+    "FederationDirection": {
+      "description": "Portable direction for workforce authority federation.",
+      "enum": [
+        "authority_to_facade"
+      ],
+      "title": "FederationDirection",
+      "type": "string"
+    },
+    "FederationMappingIntent": {
+      "description": "Portable outcome of identity mapping without provider mapper syntax.",
+      "enum": [
+        "groups_to_roles"
+      ],
+      "title": "FederationMappingIntent",
+      "type": "string"
+    },
+    "FederationProtocol": {
+      "description": "Portable directory-to-facade synchronization protocols.",
+      "enum": [
+        "ldap_tls",
+        "scim"
+      ],
+      "title": "FederationProtocol",
+      "type": "string"
+    },
+    "ForestTrustDirection": {
+      "description": "Authority direction for one forest trust edge.",
+      "enum": [
+        "one_way_outbound",
+        "one_way_inbound",
+        "bidirectional"
+      ],
+      "title": "ForestTrustDirection",
+      "type": "string"
+    },
+    "ForestTrustType": {
+      "description": "Closed forest-to-forest trust profiles.",
+      "enum": [
+        "forest"
+      ],
+      "title": "ForestTrustType",
+      "type": "string"
+    },
     "GeneratedArtifact": {
       "additionalProperties": false,
       "description": "Desired generated configuration or certificate/key material.",
@@ -2797,6 +3202,66 @@
       "title": "GeneratedArtifactOutput",
       "type": "object"
     },
+    "GovernedReferenceDomain": {
+      "additionalProperties": false,
+      "description": "References in a finite governed set under a named authority.",
+      "properties": {
+        "allowed_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Allowed Refs",
+          "type": "array"
+        },
+        "authority": {
+          "minLength": 1,
+          "title": "Authority",
+          "type": "string"
+        },
+        "kind": {
+          "const": "governed-reference",
+          "default": "governed-reference",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "authority",
+        "allowed_refs"
+      ],
+      "title": "GovernedReferenceDomain",
+      "type": "object"
+    },
+    "GovernedReferenceVariationPoint": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "domain": {
+          "$ref": "#/$defs/GovernedReferenceDomain"
+        },
+        "kind": {
+          "const": "governed-reference",
+          "default": "governed-reference",
+          "title": "Kind",
+          "type": "string"
+        },
+        "target": {
+          "$ref": "#/$defs/ReferenceTarget"
+        }
+      },
+      "required": [
+        "target",
+        "domain"
+      ],
+      "title": "GovernedReferenceVariationPoint",
+      "type": "object"
+    },
     "IdentityDomain": {
       "additionalProperties": false,
       "description": "Scenario-scoped authored identity domain.",
@@ -2825,7 +3290,7 @@
               "not": {
                 "pattern": "[\\r\\n]"
               },
-              "pattern": "^\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}$",
+              "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
               "x-aces-variable-reference": true
             }
@@ -2849,6 +3314,72 @@
       ],
       "title": "IdentityDomainProfile",
       "type": "string"
+    },
+    "IdentityFacade": {
+      "additionalProperties": false,
+      "description": "Authored IdP facade identified through an existing logical service.",
+      "properties": {
+        "protocol": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/IdentityFacadeProtocol"
+            },
+            {
+              "not": {
+                "pattern": "[\\r\\n]"
+              },
+              "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
+              "type": "string",
+              "x-aces-variable-reference": true
+            }
+          ],
+          "title": "Protocol"
+        },
+        "service_ref": {
+          "minLength": 1,
+          "title": "Service Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "service_ref",
+        "protocol"
+      ],
+      "title": "IdentityFacade",
+      "type": "object"
+    },
+    "IdentityFacadeProtocol": {
+      "description": "Challenge-facing identity protocol exposed by an authored facade.",
+      "enum": [
+        "oidc"
+      ],
+      "title": "IdentityFacadeProtocol",
+      "type": "string"
+    },
+    "IdentityForest": {
+      "additionalProperties": false,
+      "description": "A forest with explicit root and complete authored domain membership.",
+      "properties": {
+        "domain_refs": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Domain Refs",
+          "type": "array"
+        },
+        "root_domain_ref": {
+          "minLength": 1,
+          "title": "Root Domain Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "root_domain_ref",
+        "domain_refs"
+      ],
+      "title": "IdentityForest",
+      "type": "object"
     },
     "ImageAttestation": {
       "additionalProperties": false,
@@ -3392,6 +3923,445 @@
       "title": "Inject",
       "type": "object"
     },
+    "KernelBoundary": {
+      "description": "Kernel/trust boundary requested between logical node and carrier.",
+      "enum": [
+        "shared_kernel",
+        "separate_kernel"
+      ],
+      "title": "KernelBoundary",
+      "type": "string"
+    },
+    "LogicalTimingTarget": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "logical-timing",
+          "default": "logical-timing",
+          "title": "Kind",
+          "type": "string"
+        },
+        "owner": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Owner",
+          "type": "string"
+        },
+        "slot": {
+          "$ref": "#/$defs/TimingTargetSlot"
+        }
+      },
+      "required": [
+        "owner",
+        "slot"
+      ],
+      "title": "LogicalTimingTarget",
+      "type": "object"
+    },
+    "LogicalTimingUnit": {
+      "enum": [
+        "seconds",
+        "logical-ticks",
+        "multiplier"
+      ],
+      "title": "LogicalTimingUnit",
+      "type": "string"
+    },
+    "LogicalTimingVariationPoint": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "domain": {
+          "discriminator": {
+            "mapping": {
+              "boolean": "#/$defs/BooleanDomain",
+              "enum": "#/$defs/EnumDomain",
+              "exact": "#/$defs/ExactDomain",
+              "numeric-interval": "#/$defs/NumericIntervalDomain"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ExactDomain"
+            },
+            {
+              "$ref": "#/$defs/EnumDomain"
+            },
+            {
+              "$ref": "#/$defs/BooleanDomain"
+            },
+            {
+              "$ref": "#/$defs/NumericIntervalDomain"
+            }
+          ],
+          "title": "Domain"
+        },
+        "kind": {
+          "const": "logical-timing",
+          "default": "logical-timing",
+          "title": "Kind",
+          "type": "string"
+        },
+        "target": {
+          "$ref": "#/$defs/LogicalTimingTarget"
+        },
+        "unit": {
+          "$ref": "#/$defs/LogicalTimingUnit"
+        }
+      },
+      "required": [
+        "target",
+        "domain",
+        "unit"
+      ],
+      "title": "LogicalTimingVariationPoint",
+      "type": "object"
+    },
+    "MixedControlAuthorityStatus": {
+      "description": "Authored authority state for one controller binding.",
+      "enum": [
+        "active",
+        "revoked"
+      ],
+      "title": "MixedControlAuthorityStatus",
+      "type": "string"
+    },
+    "MixedControlConcurrentDisposition": {
+      "description": "Disposition for decisions that share a control-state revision.",
+      "enum": [
+        "order-then-revalidate"
+      ],
+      "title": "MixedControlConcurrentDisposition",
+      "type": "string"
+    },
+    "MixedControlControllerState": {
+      "additionalProperties": false,
+      "description": "One authored controller, authority, scope, and validity binding.",
+      "properties": {
+        "authority_basis_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Authority Basis Refs",
+          "type": "array"
+        },
+        "authority_status": {
+          "$ref": "#/$defs/MixedControlAuthorityStatus"
+        },
+        "controller_ref": {
+          "title": "Controller Ref",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "policy_revision": {
+          "title": "Policy Revision",
+          "type": "string"
+        },
+        "scope_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Scope Refs",
+          "type": "array"
+        },
+        "valid_from_order": {
+          "minimum": 0,
+          "title": "Valid From Order",
+          "type": "integer"
+        },
+        "valid_until_order": {
+          "minimum": 0,
+          "title": "Valid Until Order",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "controller_ref",
+        "authority_basis_refs",
+        "scope_refs",
+        "policy_revision",
+        "valid_from_order",
+        "valid_until_order",
+        "authority_status",
+        "evidence_refs"
+      ],
+      "title": "MixedControlControllerState",
+      "type": "object"
+    },
+    "MixedControlDispositionRules": {
+      "additionalProperties": false,
+      "description": "Explicit deterministic rules for invalid or competing decisions.",
+      "properties": {
+        "concurrent": {
+          "$ref": "#/$defs/MixedControlConcurrentDisposition"
+        },
+        "conflict": {
+          "$ref": "#/$defs/MixedControlRejectDisposition"
+        },
+        "duplicate": {
+          "$ref": "#/$defs/MixedControlDuplicateDisposition"
+        },
+        "late": {
+          "$ref": "#/$defs/MixedControlRejectDisposition"
+        },
+        "revoked": {
+          "$ref": "#/$defs/MixedControlRejectDisposition"
+        },
+        "stale": {
+          "$ref": "#/$defs/MixedControlRejectDisposition"
+        }
+      },
+      "required": [
+        "duplicate",
+        "stale",
+        "revoked",
+        "late",
+        "concurrent",
+        "conflict"
+      ],
+      "title": "MixedControlDispositionRules",
+      "type": "object"
+    },
+    "MixedControlDuplicateDisposition": {
+      "description": "Disposition for a repeated decision identity.",
+      "enum": [
+        "idempotent-if-equivalent"
+      ],
+      "title": "MixedControlDuplicateDisposition",
+      "type": "string"
+    },
+    "MixedControlOrderStrategy": {
+      "description": "Portable ordering strategies for authored control decisions.",
+      "enum": [
+        "total-effective-order"
+      ],
+      "title": "MixedControlOrderStrategy",
+      "type": "string"
+    },
+    "MixedControlParticipantOperation": {
+      "additionalProperties": false,
+      "description": "Closed authored mixed-control policy for exactly one participant.",
+      "properties": {
+        "controller_states": {
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/MixedControlControllerState"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Controller States",
+          "type": "object"
+        },
+        "dispositions": {
+          "$ref": "#/$defs/MixedControlDispositionRules"
+        },
+        "initial_state_ref": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Initial State Ref",
+          "type": "string"
+        },
+        "order_strategy": {
+          "$ref": "#/$defs/MixedControlOrderStrategy"
+        },
+        "participant_ref": {
+          "title": "Participant Ref",
+          "type": "string"
+        },
+        "policy_revision": {
+          "title": "Policy Revision",
+          "type": "string"
+        },
+        "transitions": {
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/MixedControlTransition"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Transitions",
+          "type": "object"
+        }
+      },
+      "required": [
+        "participant_ref",
+        "policy_revision",
+        "order_strategy",
+        "initial_state_ref",
+        "dispositions",
+        "controller_states",
+        "transitions"
+      ],
+      "title": "MixedControlParticipantOperation",
+      "type": "object"
+    },
+    "MixedControlRejectDisposition": {
+      "description": "Fail-closed disposition that preserves the current state.",
+      "enum": [
+        "reject-no-state-change"
+      ],
+      "title": "MixedControlRejectDisposition",
+      "type": "string"
+    },
+    "MixedControlTransition": {
+      "additionalProperties": false,
+      "description": "One authored, revision-checked mixed-control transition declaration.",
+      "properties": {
+        "completion_evidence_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Completion Evidence Refs",
+          "type": "array"
+        },
+        "effective_order": {
+          "minimum": 0,
+          "title": "Effective Order",
+          "type": "integer"
+        },
+        "evidence_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "expected_state_revision": {
+          "minimum": 0,
+          "title": "Expected State Revision",
+          "type": "integer"
+        },
+        "from_state_ref": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "From State Ref",
+          "type": "string"
+        },
+        "policy_revision": {
+          "title": "Policy Revision",
+          "type": "string"
+        },
+        "proposal_ref": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "minLength": 1,
+              "not": {
+                "pattern": "[^a-z0-9_-]"
+              },
+              "pattern": "^[a-z0-9]",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Proposal Ref"
+        },
+        "proposal_revision": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Proposal Revision"
+        },
+        "resulting_state_revision": {
+          "minimum": 1,
+          "title": "Resulting State Revision",
+          "type": "integer"
+        },
+        "to_state_ref": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "To State Ref",
+          "type": "string"
+        },
+        "transition_kind": {
+          "$ref": "#/$defs/MixedControlTransitionKind"
+        },
+        "valid_from_order": {
+          "minimum": 0,
+          "title": "Valid From Order",
+          "type": "integer"
+        },
+        "valid_until_order": {
+          "minimum": 0,
+          "title": "Valid Until Order",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "transition_kind",
+        "from_state_ref",
+        "to_state_ref",
+        "policy_revision",
+        "expected_state_revision",
+        "resulting_state_revision",
+        "effective_order",
+        "valid_from_order",
+        "valid_until_order",
+        "evidence_refs"
+      ],
+      "title": "MixedControlTransition",
+      "type": "object"
+    },
+    "MixedControlTransitionKind": {
+      "description": "Control-owned facts kept distinct from admission and execution.",
+      "enum": [
+        "proposal",
+        "approval",
+        "denial",
+        "external-direction",
+        "intervention",
+        "handoff",
+        "override",
+        "cancellation"
+      ],
+      "title": "MixedControlTransitionKind",
+      "type": "string"
+    },
     "ModuleDescriptor": {
       "additionalProperties": false,
       "description": "Published module metadata for SDL composition.",
@@ -3466,6 +4436,21 @@
           "default": "",
           "title": "Description",
           "type": "string"
+        },
+        "endpoint_persona": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EndpointPersona"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Endpoint Persona"
         },
         "features": {
           "additionalProperties": {
@@ -3583,6 +4568,46 @@
       "title": "NodeType",
       "type": "string"
     },
+    "NumericIntervalDomain": {
+      "additionalProperties": false,
+      "description": "Numbers of ``numeric_type`` inside a bounded interval.\n\nBoth endpoints are required (the fragment admits only *bounded* intervals,\n``envelope-semantics.md`` R3). An integer interval requires integral\nendpoints. Empty intervals are rejected at construction.",
+      "properties": {
+        "kind": {
+          "const": "numeric-interval",
+          "default": "numeric-interval",
+          "title": "Kind",
+          "type": "string"
+        },
+        "lower": {
+          "title": "Lower",
+          "type": "number"
+        },
+        "lower_closed": {
+          "default": true,
+          "title": "Lower Closed",
+          "type": "boolean"
+        },
+        "numeric_type": {
+          "$ref": "#/$defs/NumericType"
+        },
+        "upper": {
+          "title": "Upper",
+          "type": "number"
+        },
+        "upper_closed": {
+          "default": true,
+          "title": "Upper Closed",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "numeric_type",
+        "lower",
+        "upper"
+      ],
+      "title": "NumericIntervalDomain",
+      "type": "object"
+    },
     "NumericPredicate": {
       "additionalProperties": false,
       "description": "Compare a governed numeric property using an explicit unit.",
@@ -3655,6 +4680,15 @@
       ],
       "title": "NumericPredicate",
       "type": "object"
+    },
+    "NumericType": {
+      "description": "Declared numeric type for a numeric-interval domain.",
+      "enum": [
+        "integer",
+        "number"
+      ],
+      "title": "NumericType",
+      "type": "string"
     },
     "OSFamily": {
       "description": "Operating system family. Vocabulary from OCSF Device.os.",
@@ -3815,6 +4849,102 @@
         }
       },
       "title": "ObjectiveWindow",
+      "type": "object"
+    },
+    "OrderPrecedence": {
+      "additionalProperties": false,
+      "properties": {
+        "after": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "After",
+          "type": "string"
+        },
+        "before": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Before",
+          "type": "string"
+        }
+      },
+      "required": [
+        "before",
+        "after"
+      ],
+      "title": "OrderPrecedence",
+      "type": "object"
+    },
+    "OrderVariationPoint": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "fixed_positions": {
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "type": "integer"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Fixed Positions",
+          "type": "object"
+        },
+        "kind": {
+          "const": "order",
+          "default": "order",
+          "title": "Kind",
+          "type": "string"
+        },
+        "members": {
+          "minProperties": 1,
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/VariationMember"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Members",
+          "type": "object"
+        },
+        "precedence": {
+          "items": {
+            "$ref": "#/$defs/OrderPrecedence"
+          },
+          "title": "Precedence",
+          "type": "array"
+        },
+        "target": {
+          "$ref": "#/$defs/CollectionTarget"
+        }
+      },
+      "required": [
+        "target",
+        "members"
+      ],
+      "title": "OrderVariationPoint",
       "type": "object"
     },
     "OutcomeInterpretationParticipantScope": {
@@ -4045,6 +5175,57 @@
       "title": "OutcomeInterpretationTargetLayer",
       "type": "string"
     },
+    "ParameterVariationPoint": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "domain": {
+          "discriminator": {
+            "mapping": {
+              "boolean": "#/$defs/BooleanDomain",
+              "enum": "#/$defs/EnumDomain",
+              "exact": "#/$defs/ExactDomain",
+              "numeric-interval": "#/$defs/NumericIntervalDomain"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ExactDomain"
+            },
+            {
+              "$ref": "#/$defs/EnumDomain"
+            },
+            {
+              "$ref": "#/$defs/BooleanDomain"
+            },
+            {
+              "$ref": "#/$defs/NumericIntervalDomain"
+            }
+          ],
+          "title": "Domain"
+        },
+        "kind": {
+          "const": "parameter",
+          "default": "parameter",
+          "title": "Kind",
+          "type": "string"
+        },
+        "target": {
+          "$ref": "#/$defs/VariableTarget"
+        }
+      },
+      "required": [
+        "target",
+        "domain"
+      ],
+      "title": "ParameterVariationPoint",
+      "type": "object"
+    },
     "ParticipantActionContract": {
       "additionalProperties": false,
       "description": "Governed semantic contract for one participant action name.",
@@ -4256,6 +5437,92 @@
       "title": "ParticipantActionPrecondition",
       "type": "object"
     },
+    "ParticipantAutonomousExecutionPolicy": {
+      "additionalProperties": false,
+      "description": "Deterministic scheduler binding over existing participant semantics.",
+      "properties": {
+        "action_order": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Action Order",
+          "type": "array"
+        },
+        "clock_ref": {
+          "minLength": 1,
+          "title": "Clock Ref",
+          "type": "string"
+        },
+        "evaluation_authority": {
+          "$ref": "#/$defs/ParticipantEvaluationAuthority"
+        },
+        "failure_policy": {
+          "$ref": "#/$defs/ParticipantExecutionFailurePolicy",
+          "default": "stop"
+        },
+        "max_action_attempts": {
+          "maximum": 1000000,
+          "minimum": 1,
+          "title": "Max Action Attempts",
+          "type": "integer"
+        },
+        "max_in_flight": {
+          "default": 1,
+          "maximum": 1024,
+          "minimum": 1,
+          "title": "Max In Flight",
+          "type": "integer"
+        },
+        "observation_boundary_ref": {
+          "minLength": 1,
+          "title": "Observation Boundary Ref",
+          "type": "string"
+        },
+        "participant_implementation_ref": {
+          "minLength": 1,
+          "title": "Participant Implementation Ref",
+          "type": "string"
+        },
+        "profile": {
+          "const": "participant-autonomous-execution/v1",
+          "default": "participant-autonomous-execution/v1",
+          "title": "Profile",
+          "type": "string"
+        },
+        "progression_policy_ref": {
+          "minLength": 1,
+          "title": "Progression Policy Ref",
+          "type": "string"
+        },
+        "selection_strategy": {
+          "const": "ordered_cycle",
+          "default": "ordered_cycle",
+          "title": "Selection Strategy",
+          "type": "string"
+        },
+        "temporal_constraint_refs": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Temporal Constraint Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "participant_implementation_ref",
+        "clock_ref",
+        "progression_policy_ref",
+        "temporal_constraint_refs",
+        "action_order",
+        "observation_boundary_ref",
+        "max_action_attempts",
+        "evaluation_authority"
+      ],
+      "title": "ParticipantAutonomousExecutionPolicy",
+      "type": "object"
+    },
     "ParticipantBackendFailureMapping": {
       "additionalProperties": false,
       "description": "Mapping from a backend diagnostic code to a portable SEM-211 failure.",
@@ -4361,6 +5628,17 @@
           "title": "Authority Scope Refs",
           "type": "array"
         },
+        "autonomous_execution": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ParticipantAutonomousExecutionPolicy"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "backend_feature_support_refs": {
           "items": {
             "type": "string"
@@ -4379,6 +5657,13 @@
           ],
           "default": null,
           "title": "Behavior Mode"
+        },
+        "defensive_behavior_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Defensive Behavior Refs",
+          "type": "array"
         },
         "evidence_contract_refs": {
           "items": {
@@ -4402,6 +5687,17 @@
         "lifecycle_state": {
           "$ref": "#/$defs/ParticipantBehaviorSpecificationLifecycle",
           "default": "active"
+        },
+        "mixed_control": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MixedControlParticipantOperation"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "observation_boundary_refs": {
           "items": {
@@ -4453,6 +5749,23 @@
         "semantic_version": {
           "title": "Semantic Version",
           "type": "string"
+        },
+        "tool_affordances": {
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/ParticipantToolAffordance"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Tool Affordances",
+          "type": "object"
         }
       },
       "required": [
@@ -4484,6 +5797,66 @@
         "unknown_effect"
       ],
       "title": "ParticipantEffectClass",
+      "type": "string"
+    },
+    "ParticipantEvaluationAuthority": {
+      "additionalProperties": false,
+      "description": "Explicit evaluator-plane authority kept separate from participant actions.",
+      "properties": {
+        "mode": {
+          "$ref": "#/$defs/ParticipantEvaluationAuthorityMode"
+        },
+        "objective_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Objective Refs",
+          "type": "array"
+        },
+        "proof_producer_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Proof Producer Refs",
+          "type": "array"
+        },
+        "receipt_authority_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Receipt Authority Refs",
+          "type": "array"
+        },
+        "score_authority_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Score Authority Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "mode"
+      ],
+      "title": "ParticipantEvaluationAuthority",
+      "type": "object"
+    },
+    "ParticipantEvaluationAuthorityMode": {
+      "description": "Whether a participant may contribute to evaluator-plane authority.",
+      "enum": [
+        "none",
+        "declared"
+      ],
+      "title": "ParticipantEvaluationAuthorityMode",
+      "type": "string"
+    },
+    "ParticipantExecutionFailurePolicy": {
+      "description": "Disposition after a native participant action fails.",
+      "enum": [
+        "continue",
+        "stop"
+      ],
+      "title": "ParticipantExecutionFailurePolicy",
       "type": "string"
     },
     "ParticipantFailureClass": {
@@ -4601,7 +5974,7 @@
               "not": {
                 "pattern": "[\\r\\n]"
               },
-              "pattern": "^\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}$",
+              "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
               "x-aces-variable-reference": true
             }
@@ -4892,6 +6265,53 @@
       ],
       "title": "ParticipantTimeDomain",
       "type": "string"
+    },
+    "ParticipantToolAffordance": {
+      "additionalProperties": false,
+      "description": "Authored participant-local binding from tool identity to governed behavior.",
+      "properties": {
+        "action_contract_refs": {
+          "items": {
+            "minLength": 1,
+            "pattern": "\\S",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Action Contract Refs",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "observation_boundary_refs": {
+          "items": {
+            "minLength": 1,
+            "pattern": "\\S",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Observation Boundary Refs",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "tool_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tool Ref"
+        }
+      },
+      "required": [
+        "action_contract_refs",
+        "observation_boundary_refs"
+      ],
+      "title": "ParticipantToolAffordance",
+      "type": "object"
     },
     "ParticipantViewDisposition": {
       "description": "SEM-210 visibility disposition for one information object.",
@@ -5370,10 +6790,61 @@
       "title": "RealizationScopeDesignation",
       "type": "object"
     },
+    "ReferenceTarget": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "reference",
+          "default": "reference",
+          "title": "Kind",
+          "type": "string"
+        },
+        "owner": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Owner",
+          "type": "string"
+        },
+        "slot": {
+          "$ref": "#/$defs/ReferenceTargetSlot"
+        }
+      },
+      "required": [
+        "owner",
+        "slot"
+      ],
+      "title": "ReferenceTarget",
+      "type": "object"
+    },
+    "ReferenceTargetSlot": {
+      "description": "Closed scalar-reference slots whose owners authorize replacement.",
+      "enum": [
+        "conditions.proposition",
+        "content.target",
+        "accounts.node",
+        "accounts.domain_ref",
+        "identity_domains.authority_account_ref",
+        "objectives.agent",
+        "objectives.entity"
+      ],
+      "title": "ReferenceTargetSlot",
+      "type": "string"
+    },
     "Relationship": {
       "additionalProperties": false,
       "description": "A typed directed edge between two named scenario elements.\n\nSource and target can reference any named element in the scenario:\nnodes, features, accounts, entities, or infrastructure entries.\nThe validator checks that both endpoints resolve.\n\nThe ``properties`` dict carries type-specific metadata (e.g.,\n``trust_type: parent-child`` for AD trusts, ``protocol: SAML``\nfor federation). It's a flat dict rather than typed sub-models\nbecause relationship properties vary widely and we don't want\nto gate expressiveness on pre-modeling every variant.\n\n``database_access`` and ``mail_access`` are typed exceptions where\nprotocol/auth details need structural validation rather than prose.\n``forwarding_edge``, ``service_integration``, and ``proxy_upstream`` are\nthe same kind of typed exception for, respectively, a forwarding /\nintel-sync agent's inter-node trust edge (SCN-010 \u00a75.7), a platform\nconsumer-to-engine service integration, and a reverse-proxy/gateway\nroute-to-origin upstream hop. Each keeps protocol/auth/topology facts\nstructurally validated and cross-referable rather than buried in prose.",
       "properties": {
+        "carrier_placement": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RelationshipCarrierPlacement"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "database_access": {
           "anyOf": [
             {
@@ -5412,10 +6883,32 @@
           ],
           "default": null
         },
+        "forest_trust": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RelationshipForestTrust"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "forwarding_edge": {
           "anyOf": [
             {
               "$ref": "#/$defs/RelationshipForwardingEdge"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "identity_federation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RelationshipIdentityFederation"
             },
             {
               "type": "null"
@@ -5463,6 +6956,17 @@
           ],
           "default": null
         },
+        "shared_service": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RelationshipSharedService"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "source": {
           "title": "Source",
           "type": "string"
@@ -5481,6 +6985,33 @@
         "target"
       ],
       "title": "Relationship",
+      "type": "object"
+    },
+    "RelationshipCarrierPlacement": {
+      "additionalProperties": false,
+      "description": "Typed logical-node-to-carrier placement intent.",
+      "properties": {
+        "kernel_boundary": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/KernelBoundary"
+            },
+            {
+              "not": {
+                "pattern": "[\\r\\n]"
+              },
+              "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
+              "type": "string",
+              "x-aces-variable-reference": true
+            }
+          ],
+          "title": "Kernel Boundary"
+        }
+      },
+      "required": [
+        "kernel_boundary"
+      ],
+      "title": "RelationshipCarrierPlacement",
       "type": "object"
     },
     "RelationshipDatabaseAccess": {
@@ -5537,6 +7068,50 @@
         "controller_refs"
       ],
       "title": "RelationshipDomainJoin",
+      "type": "object"
+    },
+    "RelationshipForestTrust": {
+      "additionalProperties": false,
+      "description": "Typed forest trust detail; relationship endpoints own forest identity.",
+      "properties": {
+        "direction": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ForestTrustDirection"
+            },
+            {
+              "not": {
+                "pattern": "[\\r\\n]"
+              },
+              "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
+              "type": "string",
+              "x-aces-variable-reference": true
+            }
+          ],
+          "title": "Direction"
+        },
+        "trust_type": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ForestTrustType"
+            },
+            {
+              "not": {
+                "pattern": "[\\r\\n]"
+              },
+              "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
+              "type": "string",
+              "x-aces-variable-reference": true
+            }
+          ],
+          "title": "Trust Type"
+        }
+      },
+      "required": [
+        "trust_type",
+        "direction"
+      ],
+      "title": "RelationshipForestTrust",
       "type": "object"
     },
     "RelationshipForwardingEdge": {
@@ -5608,6 +7183,90 @@
         "forwarder_ref"
       ],
       "title": "RelationshipForwardingEdge",
+      "type": "object"
+    },
+    "RelationshipIdentityFederation": {
+      "additionalProperties": false,
+      "description": "Typed human-authority-to-IdP-facade federation intent.",
+      "properties": {
+        "direction": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FederationDirection"
+            },
+            {
+              "not": {
+                "pattern": "[\\r\\n]"
+              },
+              "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
+              "type": "string",
+              "x-aces-variable-reference": true
+            }
+          ],
+          "title": "Direction"
+        },
+        "mapping_intent": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FederationMappingIntent"
+            },
+            {
+              "not": {
+                "pattern": "[\\r\\n]"
+              },
+              "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
+              "type": "string",
+              "x-aces-variable-reference": true
+            }
+          ],
+          "title": "Mapping Intent"
+        },
+        "protocol": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FederationProtocol"
+            },
+            {
+              "not": {
+                "pattern": "[\\r\\n]"
+              },
+              "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
+              "type": "string",
+              "x-aces-variable-reference": true
+            }
+          ],
+          "title": "Protocol"
+        },
+        "tenant_claim_name": {
+          "minLength": 1,
+          "title": "Tenant Claim Name",
+          "type": "string"
+        },
+        "tenant_claim_owner": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TenantClaimOwner"
+            },
+            {
+              "not": {
+                "pattern": "[\\r\\n]"
+              },
+              "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
+              "type": "string",
+              "x-aces-variable-reference": true
+            }
+          ],
+          "title": "Tenant Claim Owner"
+        }
+      },
+      "required": [
+        "direction",
+        "protocol",
+        "mapping_intent",
+        "tenant_claim_name",
+        "tenant_claim_owner"
+      ],
+      "title": "RelationshipIdentityFederation",
       "type": "object"
     },
     "RelationshipMailAccess": {
@@ -5830,6 +7489,91 @@
       "title": "RelationshipServiceIntegrationKind",
       "type": "string"
     },
+    "RelationshipSharedService": {
+      "additionalProperties": false,
+      "description": "Typed tenant-to-existing-service policy binding.",
+      "properties": {
+        "mutable_state_owner": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StateOwner"
+            },
+            {
+              "not": {
+                "pattern": "[\\r\\n]"
+              },
+              "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
+              "type": "string",
+              "x-aces-variable-reference": true
+            }
+          ],
+          "title": "Mutable State Owner"
+        },
+        "mutable_state_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Mutable State Refs",
+          "type": "array"
+        },
+        "reset_generation_owner": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StateOwner"
+            },
+            {
+              "not": {
+                "pattern": "[\\r\\n]"
+              },
+              "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
+              "type": "string",
+              "x-aces-variable-reference": true
+            }
+          ],
+          "title": "Reset Generation Owner"
+        },
+        "tenant_isolation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TenantIsolationMode"
+            },
+            {
+              "not": {
+                "pattern": "[\\r\\n]"
+              },
+              "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
+              "type": "string",
+              "x-aces-variable-reference": true
+            }
+          ],
+          "title": "Tenant Isolation"
+        },
+        "workload_authentication": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WorkloadAuthenticationMode"
+            },
+            {
+              "not": {
+                "pattern": "[\\r\\n]"
+              },
+              "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
+              "type": "string",
+              "x-aces-variable-reference": true
+            }
+          ],
+          "title": "Workload Authentication"
+        }
+      },
+      "required": [
+        "tenant_isolation",
+        "workload_authentication",
+        "mutable_state_owner",
+        "reset_generation_owner"
+      ],
+      "title": "RelationshipSharedService",
+      "type": "object"
+    },
     "RelationshipType": {
       "description": "How two scenario elements relate to each other.",
       "enum": [
@@ -5841,7 +7585,11 @@
         "manages",
         "replicates_to",
         "domain_controller_for",
-        "joins_domain"
+        "joins_domain",
+        "forest_trusts",
+        "directory_federates_to",
+        "placed_on_carrier",
+        "uses_shared_service"
       ],
       "title": "RelationshipType",
       "type": "string"
@@ -12626,6 +14374,17 @@
           "title": "Ipc",
           "type": "string"
         },
+        "network": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeNetworkNamespace"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "pid": {
           "default": "",
           "title": "Pid",
@@ -13383,6 +15142,21 @@
         "network"
       ],
       "title": "RuntimeNetworkEndpoint",
+      "type": "object"
+    },
+    "RuntimeNetworkNamespace": {
+      "additionalProperties": false,
+      "description": "A request to use the exact network namespace owned by another node.",
+      "properties": {
+        "target_node_ref": {
+          "title": "Target Node Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "target_node_ref"
+      ],
+      "title": "RuntimeNetworkNamespace",
       "type": "object"
     },
     "RuntimeNetworkRealization": {
@@ -16861,6 +18635,38 @@
       "title": "Script",
       "type": "object"
     },
+    "SelectionRelation": {
+      "additionalProperties": false,
+      "description": "A finite cross-point member requirement or exclusion.",
+      "properties": {
+        "members": {
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            },
+            "pattern": "^[a-z0-9]",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Members",
+          "type": "array"
+        },
+        "point": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Point",
+          "type": "string"
+        }
+      },
+      "required": [
+        "point",
+        "members"
+      ],
+      "title": "SelectionRelation",
+      "type": "object"
+    },
     "ServiceManagerKind": {
       "description": "Kind of service manager whose unit inventory is being recorded.\n\nInitially scoped to ``systemd``; ``other`` is the escape hatch for managers\nthat have not yet been promoted to their own typed enum value (per\nADR-035 \u00a7 5).",
       "enum": [
@@ -17027,6 +18833,103 @@
         "unit_name"
       ],
       "title": "ServiceManagerUnit",
+      "type": "object"
+    },
+    "ServiceMaterialization": {
+      "additionalProperties": false,
+      "description": "Portable control contract for placing content through a named service.",
+      "properties": {
+        "evidence_requirement_refs": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Requirement Refs",
+          "type": "array"
+        },
+        "interface_profile": {
+          "const": "service-content",
+          "default": "service-content",
+          "title": "Interface Profile",
+          "type": "string"
+        },
+        "observation_boundary_refs": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Observation Boundary Refs",
+          "type": "array"
+        },
+        "ordering_content_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Ordering Content Refs",
+          "type": "array"
+        },
+        "profile_version": {
+          "const": "1",
+          "default": "1",
+          "title": "Profile Version",
+          "type": "string"
+        },
+        "readback_assertion_refs": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Readback Assertion Refs",
+          "type": "array"
+        },
+        "requirements": {
+          "$ref": "#/$defs/ServiceMaterializationRequirements"
+        },
+        "shared_service_relationship_ref": {
+          "default": "",
+          "title": "Shared Service Relationship Ref",
+          "type": "string"
+        },
+        "target_service_ref": {
+          "minLength": 1,
+          "title": "Target Service Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "target_service_ref",
+        "requirements",
+        "readback_assertion_refs",
+        "evidence_requirement_refs",
+        "observation_boundary_refs"
+      ],
+      "title": "ServiceMaterialization",
+      "type": "object"
+    },
+    "ServiceMaterializationRequirements": {
+      "additionalProperties": false,
+      "description": "Exact portable operation, ownership, and readback requirements.",
+      "properties": {
+        "conflict_policy": {
+          "const": "reject-unowned-collision",
+          "default": "reject-unowned-collision",
+          "title": "Conflict Policy",
+          "type": "string"
+        },
+        "operation": {
+          "const": "ensure-owned-items",
+          "default": "ensure-owned-items",
+          "title": "Operation",
+          "type": "string"
+        },
+        "readback": {
+          "const": "canonical-content-digest",
+          "default": "canonical-content-digest",
+          "title": "Readback",
+          "type": "string"
+        }
+      },
+      "title": "ServiceMaterializationRequirements",
       "type": "object"
     },
     "ServicePort": {
@@ -17515,6 +19418,16 @@
       "title": "SshMatchRule",
       "type": "object"
     },
+    "StateOwner": {
+      "description": "Owner of mutable state or reset generation.",
+      "enum": [
+        "none",
+        "consumer_tenant",
+        "shared_service"
+      ],
+      "title": "StateOwner",
+      "type": "string"
+    },
     "StatefulResourceConsumer": {
       "additionalProperties": false,
       "description": "A node that consumes a generated artifact or persistent volume.",
@@ -17648,6 +19561,430 @@
       "title": "SubjectQuantifier",
       "type": "string"
     },
+    "SubsetVariationPoint": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "kind": {
+          "const": "subset",
+          "default": "subset",
+          "title": "Kind",
+          "type": "string"
+        },
+        "maximum": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Maximum"
+        },
+        "members": {
+          "minProperties": 1,
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/VariationMember"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Members",
+          "type": "object"
+        },
+        "minimum": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Minimum",
+          "type": "integer"
+        },
+        "target": {
+          "$ref": "#/$defs/CollectionTarget"
+        }
+      },
+      "required": [
+        "target",
+        "members"
+      ],
+      "title": "SubsetVariationPoint",
+      "type": "object"
+    },
+    "TemporalConstraint": {
+      "additionalProperties": false,
+      "description": "One typed temporal predicate over ordinary ACES subjects.",
+      "properties": {
+        "cadence_ticks": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cadence Ticks"
+        },
+        "clock_ref": {
+          "title": "Clock Ref",
+          "type": "string"
+        },
+        "constraint_kind": {
+          "$ref": "#/$defs/TemporalConstraintKind"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "duration_ticks": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration Ticks"
+        },
+        "end": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TimeCoordinate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "start": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TimeCoordinate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "subject_refs": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Subject Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "constraint_kind",
+        "clock_ref",
+        "subject_refs",
+        "description"
+      ],
+      "title": "TemporalConstraint",
+      "type": "object"
+    },
+    "TemporalConstraintKind": {
+      "description": "Backend-independent temporal predicate families.",
+      "enum": [
+        "precedence",
+        "duration",
+        "window",
+        "deadline",
+        "cadence"
+      ],
+      "title": "TemporalConstraintKind",
+      "type": "string"
+    },
+    "TenantClaimOwner": {
+      "description": "Authority allowed to issue the server-controlled tenant claim.",
+      "enum": [
+        "facade"
+      ],
+      "title": "TenantClaimOwner",
+      "type": "string"
+    },
+    "TenantIsolationMode": {
+      "description": "Shared-service tenant isolation posture.",
+      "enum": [
+        "none",
+        "stateless",
+        "tenant_partitioned"
+      ],
+      "title": "TenantIsolationMode",
+      "type": "string"
+    },
+    "TimeAdvancementMode": {
+      "description": "How a clock may advance.",
+      "enum": [
+        "real_time",
+        "dilated",
+        "stepped",
+        "event_driven",
+        "externally_paced"
+      ],
+      "title": "TimeAdvancementMode",
+      "type": "string"
+    },
+    "TimeCoordinate": {
+      "additionalProperties": false,
+      "description": "One superdense point on a declared clock.",
+      "properties": {
+        "microstep": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Microstep",
+          "type": "integer"
+        },
+        "tick": {
+          "title": "Tick",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "tick"
+      ],
+      "title": "TimeCoordinate",
+      "type": "object"
+    },
+    "TimeDomain": {
+      "additionalProperties": false,
+      "description": "Authored meaning and resolution of one time domain.",
+      "properties": {
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "epoch": {
+          "$ref": "#/$defs/TimeEpochKind"
+        },
+        "kind": {
+          "$ref": "#/$defs/TimeDomainKind"
+        },
+        "tick_period_seconds": {
+          "$ref": "#/$defs/ExactRatio"
+        },
+        "visibility": {
+          "$ref": "#/$defs/TimeDomainVisibility",
+          "default": "runtime_only"
+        }
+      },
+      "required": [
+        "kind",
+        "tick_period_seconds",
+        "epoch",
+        "description"
+      ],
+      "title": "TimeDomain",
+      "type": "object"
+    },
+    "TimeDomainKind": {
+      "description": "Meaning of values carried by a time domain.",
+      "enum": [
+        "wall_clock",
+        "monotonic",
+        "simulated",
+        "logical",
+        "external"
+      ],
+      "title": "TimeDomainKind",
+      "type": "string"
+    },
+    "TimeDomainMapping": {
+      "additionalProperties": false,
+      "description": "Explicit exact conversion between otherwise incomparable domains.",
+      "properties": {
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "mapping_kind": {
+          "$ref": "#/$defs/TimeMappingKind"
+        },
+        "offset_ticks": {
+          "default": 0,
+          "title": "Offset Ticks",
+          "type": "integer"
+        },
+        "scale": {
+          "$ref": "#/$defs/ExactRatio"
+        },
+        "source_domain_ref": {
+          "title": "Source Domain Ref",
+          "type": "string"
+        },
+        "target_domain_ref": {
+          "title": "Target Domain Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_domain_ref",
+        "target_domain_ref",
+        "mapping_kind",
+        "description"
+      ],
+      "title": "TimeDomainMapping",
+      "type": "object"
+    },
+    "TimeDomainVisibility": {
+      "description": "Who may observe a time domain.",
+      "enum": [
+        "runtime_only",
+        "participant_visible",
+        "evidence_only"
+      ],
+      "title": "TimeDomainVisibility",
+      "type": "string"
+    },
+    "TimeEpochKind": {
+      "description": "Interpretation of tick zero.",
+      "enum": [
+        "unix",
+        "scenario_start",
+        "run_start",
+        "unanchored",
+        "external"
+      ],
+      "title": "TimeEpochKind",
+      "type": "string"
+    },
+    "TimeMappingKind": {
+      "description": "Supported exact conversion families.",
+      "enum": [
+        "identity",
+        "affine_rational"
+      ],
+      "title": "TimeMappingKind",
+      "type": "string"
+    },
+    "TimeProgressionPolicy": {
+      "additionalProperties": false,
+      "description": "Authored advancement, pacing, synchronization, and lifecycle policy.",
+      "properties": {
+        "advancement_mode": {
+          "$ref": "#/$defs/TimeAdvancementMode"
+        },
+        "clock_ref": {
+          "title": "Clock Ref",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "drift_bound_ticks": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Drift Bound Ticks"
+        },
+        "pacing_ratio": {
+          "$ref": "#/$defs/ExactRatio"
+        },
+        "replay_behavior": {
+          "$ref": "#/$defs/TimeReplayBehavior"
+        },
+        "reset_behavior": {
+          "$ref": "#/$defs/TimeResetBehavior"
+        },
+        "step_ticks": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Step Ticks"
+        },
+        "synchronization_mode": {
+          "$ref": "#/$defs/TimeSynchronizationMode"
+        }
+      },
+      "required": [
+        "clock_ref",
+        "advancement_mode",
+        "synchronization_mode",
+        "reset_behavior",
+        "replay_behavior",
+        "description"
+      ],
+      "title": "TimeProgressionPolicy",
+      "type": "object"
+    },
+    "TimeReplayBehavior": {
+      "description": "Clock behavior when a run is replayed.",
+      "enum": [
+        "restart_from_anchor",
+        "restore_recorded_advances",
+        "unsupported"
+      ],
+      "title": "TimeReplayBehavior",
+      "type": "string"
+    },
+    "TimeResetBehavior": {
+      "description": "Clock behavior at a reset boundary.",
+      "enum": [
+        "new_segment_zero",
+        "new_segment_preserve_value",
+        "unsupported"
+      ],
+      "title": "TimeResetBehavior",
+      "type": "string"
+    },
+    "TimeSynchronizationMode": {
+      "description": "How multiple time consumers coordinate progress.",
+      "enum": [
+        "none",
+        "authority",
+        "barrier",
+        "conservative"
+      ],
+      "title": "TimeSynchronizationMode",
+      "type": "string"
+    },
+    "TimingTargetSlot": {
+      "description": "Closed logical-time fields; none denotes host or scheduler time.",
+      "enum": [
+        "conditions.interval",
+        "scripts.start_time",
+        "scripts.end_time",
+        "scripts.speed",
+        "stories.speed"
+      ],
+      "title": "TimingTargetSlot",
+      "type": "string"
+    },
     "TruthCompositionMode": {
       "description": "Portable composition over assertion outcomes.",
       "enum": [
@@ -17723,6 +20060,28 @@
       "title": "Variable",
       "type": "object"
     },
+    "VariableTarget": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "variable",
+          "default": "variable",
+          "title": "Kind",
+          "type": "string"
+        },
+        "variable": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Variable",
+          "type": "string"
+        }
+      },
+      "required": [
+        "variable"
+      ],
+      "title": "VariableTarget",
+      "type": "object"
+    },
     "VariableType": {
       "description": "Data type of a variable.",
       "enum": [
@@ -17733,6 +20092,42 @@
       ],
       "title": "VariableType",
       "type": "string"
+    },
+    "VariationMember": {
+      "additionalProperties": false,
+      "description": "One named semantic object referenced by a structural point.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "excludes": {
+          "items": {
+            "$ref": "#/$defs/SelectionRelation"
+          },
+          "title": "Excludes",
+          "type": "array"
+        },
+        "reference": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Reference",
+          "type": "string"
+        },
+        "requires": {
+          "items": {
+            "$ref": "#/$defs/SelectionRelation"
+          },
+          "title": "Requires",
+          "type": "array"
+        }
+      },
+      "required": [
+        "reference"
+      ],
+      "title": "VariationMember",
+      "type": "object"
     },
     "VolumeAccessMode": {
       "enum": [
@@ -17937,11 +20332,25 @@
       "additionalProperties": false,
       "description": "A named workflow step with explicit portable control semantics.",
       "properties": {
+        "allowed_action_families": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Allowed Action Families",
+          "type": "array"
+        },
         "branches": {
           "items": {
             "type": "string"
           },
           "title": "Branches",
+          "type": "array"
+        },
+        "capability_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Capability Refs",
           "type": "array"
         },
         "cases": {
@@ -17970,6 +20379,17 @@
           "default": "",
           "title": "Else",
           "type": "string"
+        },
+        "execution_mode": {
+          "$ref": "#/$defs/WorkflowStepExecutionMode",
+          "default": "scripted"
+        },
+        "fact_binding_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Fact Binding Refs",
+          "type": "array"
         },
         "join": {
           "default": "",
@@ -18016,10 +20436,29 @@
           "title": "On Success",
           "type": "string"
         },
+        "procedure_ref": {
+          "default": "",
+          "title": "Procedure Ref",
+          "type": "string"
+        },
+        "scaffold_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Scaffold Refs",
+          "type": "array"
+        },
         "then": {
           "default": "",
           "title": "Then",
           "type": "string"
+        },
+        "tool_affordance_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Tool Affordance Refs",
+          "type": "array"
         },
         "type": {
           "$ref": "#/$defs/WorkflowStepType"
@@ -18046,6 +20485,16 @@
       ],
       "title": "WorkflowStep",
       "type": "object"
+    },
+    "WorkflowStepExecutionMode": {
+      "description": "Authored realization boundary for an executable workflow step.",
+      "enum": [
+        "scripted",
+        "objective",
+        "scaffolded"
+      ],
+      "title": "WorkflowStepExecutionMode",
+      "type": "string"
     },
     "WorkflowStepOutcome": {
       "description": "Portable workflow-visible outcomes emitted by executable steps.",
@@ -18156,6 +20605,17 @@
       ],
       "title": "WorkflowTimeoutPolicy",
       "type": "object"
+    },
+    "WorkloadAuthenticationMode": {
+      "description": "Workload authentication posture at a shared-service boundary.",
+      "enum": [
+        "none",
+        "shared_credential",
+        "workload_identity",
+        "tenant_scoped_workload_identity"
+      ],
+      "title": "WorkloadAuthenticationMode",
+      "type": "string"
     }
   },
   "$id": "https://aces.dev/schemas/sdl-authoring-input-v1.json",
@@ -18243,6 +20703,22 @@
       "title": "Behavior Specifications",
       "type": "object"
     },
+    "clocks": {
+      "additionalProperties": {
+        "$ref": "#/$defs/Clock"
+      },
+      "propertyNames": {
+        "maxLength": 64,
+        "minLength": 1,
+        "not": {
+          "pattern": "[^a-z0-9_-]"
+        },
+        "pattern": "^[a-z0-9]",
+        "type": "string"
+      },
+      "title": "Clocks",
+      "type": "object"
+    },
     "conditions": {
       "additionalProperties": {
         "$ref": "#/$defs/Condition"
@@ -18273,6 +20749,38 @@
         "type": "string"
       },
       "title": "Content",
+      "type": "object"
+    },
+    "deployment_cells": {
+      "additionalProperties": {
+        "$ref": "#/$defs/DeploymentCell"
+      },
+      "propertyNames": {
+        "maxLength": 64,
+        "minLength": 1,
+        "not": {
+          "pattern": "[^a-z0-9_-]"
+        },
+        "pattern": "^[a-z0-9]",
+        "type": "string"
+      },
+      "title": "Deployment Cells",
+      "type": "object"
+    },
+    "deployment_tenants": {
+      "additionalProperties": {
+        "$ref": "#/$defs/DeploymentTenant"
+      },
+      "propertyNames": {
+        "maxLength": 64,
+        "minLength": 1,
+        "not": {
+          "pattern": "[^a-z0-9_-]"
+        },
+        "pattern": "^[a-z0-9]",
+        "type": "string"
+      },
+      "title": "Deployment Tenants",
       "type": "object"
     },
     "description": {
@@ -18399,6 +20907,38 @@
         "type": "string"
       },
       "title": "Identity Domains",
+      "type": "object"
+    },
+    "identity_facades": {
+      "additionalProperties": {
+        "$ref": "#/$defs/IdentityFacade"
+      },
+      "propertyNames": {
+        "maxLength": 64,
+        "minLength": 1,
+        "not": {
+          "pattern": "[^a-z0-9_-]"
+        },
+        "pattern": "^[a-z0-9]",
+        "type": "string"
+      },
+      "title": "Identity Facades",
+      "type": "object"
+    },
+    "identity_forests": {
+      "additionalProperties": {
+        "$ref": "#/$defs/IdentityForest"
+      },
+      "propertyNames": {
+        "maxLength": 64,
+        "minLength": 1,
+        "not": {
+          "pattern": "[^a-z0-9_-]"
+        },
+        "pattern": "^[a-z0-9]",
+        "type": "string"
+      },
+      "title": "Identity Forests",
       "type": "object"
     },
     "imports": {
@@ -18617,6 +21157,70 @@
       "title": "Stories",
       "type": "object"
     },
+    "temporal_constraints": {
+      "additionalProperties": {
+        "$ref": "#/$defs/TemporalConstraint"
+      },
+      "propertyNames": {
+        "maxLength": 64,
+        "minLength": 1,
+        "not": {
+          "pattern": "[^a-z0-9_-]"
+        },
+        "pattern": "^[a-z0-9]",
+        "type": "string"
+      },
+      "title": "Temporal Constraints",
+      "type": "object"
+    },
+    "time_domain_mappings": {
+      "additionalProperties": {
+        "$ref": "#/$defs/TimeDomainMapping"
+      },
+      "propertyNames": {
+        "maxLength": 64,
+        "minLength": 1,
+        "not": {
+          "pattern": "[^a-z0-9_-]"
+        },
+        "pattern": "^[a-z0-9]",
+        "type": "string"
+      },
+      "title": "Time Domain Mappings",
+      "type": "object"
+    },
+    "time_domains": {
+      "additionalProperties": {
+        "$ref": "#/$defs/TimeDomain"
+      },
+      "propertyNames": {
+        "maxLength": 64,
+        "minLength": 1,
+        "not": {
+          "pattern": "[^a-z0-9_-]"
+        },
+        "pattern": "^[a-z0-9]",
+        "type": "string"
+      },
+      "title": "Time Domains",
+      "type": "object"
+    },
+    "time_progression_policies": {
+      "additionalProperties": {
+        "$ref": "#/$defs/TimeProgressionPolicy"
+      },
+      "propertyNames": {
+        "maxLength": 64,
+        "minLength": 1,
+        "not": {
+          "pattern": "[^a-z0-9_-]"
+        },
+        "pattern": "^[a-z0-9]",
+        "type": "string"
+      },
+      "title": "Time Progression Policies",
+      "type": "object"
+    },
     "variables": {
       "additionalProperties": false,
       "patternProperties": {
@@ -18634,6 +21238,52 @@
         "type": "string"
       },
       "title": "Variables",
+      "type": "object"
+    },
+    "variation_points": {
+      "additionalProperties": {
+        "discriminator": {
+          "mapping": {
+            "alternative": "#/$defs/AlternativeVariationPoint",
+            "governed-reference": "#/$defs/GovernedReferenceVariationPoint",
+            "logical-timing": "#/$defs/LogicalTimingVariationPoint",
+            "order": "#/$defs/OrderVariationPoint",
+            "parameter": "#/$defs/ParameterVariationPoint",
+            "subset": "#/$defs/SubsetVariationPoint"
+          },
+          "propertyName": "kind"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/$defs/ParameterVariationPoint"
+          },
+          {
+            "$ref": "#/$defs/GovernedReferenceVariationPoint"
+          },
+          {
+            "$ref": "#/$defs/AlternativeVariationPoint"
+          },
+          {
+            "$ref": "#/$defs/SubsetVariationPoint"
+          },
+          {
+            "$ref": "#/$defs/OrderVariationPoint"
+          },
+          {
+            "$ref": "#/$defs/LogicalTimingVariationPoint"
+          }
+        ]
+      },
+      "propertyNames": {
+        "maxLength": 64,
+        "minLength": 1,
+        "not": {
+          "pattern": "[^a-z0-9_-]"
+        },
+        "pattern": "^[a-z0-9]",
+        "type": "string"
+      },
+      "title": "Variation Points",
       "type": "object"
     },
     "version": {
@@ -18716,6 +21366,18 @@
       ],
       "level": "error",
       "validator": "aces_sdl._stateful_resource_references.stateful_resource_reference_errors"
+    },
+    {
+      "description": "Service-target content must resolve to one named service, retain exact tenant/reset ownership and content ordering, and bind observed-state postconditions to participant observation boundaries.",
+      "id": "initial-service-state-semantics",
+      "inputs": [
+        {
+          "contract_id": "sdl-authoring-input-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_sdl.validator.SemanticValidator._verify_service_materialization"
     }
   ],
   "x-aces-semantic-profile": {

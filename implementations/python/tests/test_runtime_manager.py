@@ -1400,6 +1400,7 @@ class TestRuntimeManager:
             provisioner=altered_manifest.provisioner,
             orchestrator=altered_manifest.orchestrator,
             evaluator=altered_manifest.evaluator,
+            cleanup=altered_manifest.cleanup,
         )
         manager_target = RuntimeTarget(
             name="recording",

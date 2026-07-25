@@ -224,3 +224,36 @@ issues:
 
 - #258: ASR-511 profile taxonomy implementation.
 - #259: ASR-515 validation-basis disclosure implementation.
+
+### Governed scenario satisfiability
+
+ADR-086 adds `aces-finite-domain-satisfiability-v1` as a concrete
+falsification-backed analysis boundary for its explicitly bounded SDL fragment.
+Its `scenario-satisfiability-evidence/v1` envelope records the exact source,
+normalized constraint model, pinned solver configuration, completed outcome,
+and witness/core/unsupported payload. The profile's detailed theory,
+translation coverage, replay rules, and nonclaims are normative in
+[`specs/formal/scenario-satisfiability/`](../scenario-satisfiability/README.md).
+
+This profile does not upgrade the general validation strength of every
+scenario. Unsupported occurrences remain an explicit unsupported gate, and
+backend realization and runtime behavior remain separate gates.
+
+### Typed exploit-path analysis
+
+Issue #827 adds `aces-exploit-path-analysis-v1` as a concrete typed
+attack-transition graph/query boundary for an admitted instantiated scenario
+snapshot. Its `exploit-path-analysis-evidence/v1` envelope records the exact
+input source, authored digest, snapshot digest, normalized attack graph, query,
+search configuration, completed outcome, and one of witness, invalid-path
+failure evidence, or unsupported disclosure. The profile's transition,
+binding, query, replay, diagnostics, and nonclaims are normative in
+[`specs/formal/exploit-path-analysis/`](../exploit-path-analysis/README.md).
+
+This profile does not upgrade weaker evidence into exploit-path proof. Network
+reachability, topology connectivity, service/listener presence, vulnerability
+or ATT&CK labels, workflow reachability, scenario satisfiability, objective
+success, participant-local action success, backend realization, deployment
+success, scanner output, and runtime observation remain separate gates unless
+the exploit-path graph contains governed bindings and transitions that state
+exactly how those facts participate in the v1 path semantics.

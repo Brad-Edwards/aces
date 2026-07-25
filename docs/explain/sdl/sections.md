@@ -58,6 +58,7 @@ plane (ADR-055/064/069). Declarative `conditions` remain.
 | `objectives` | `dict[str, Objective]` | Scenario-local objectives binding actors, targets, windows, and success (against observable `conditions`); not EXP task records | CACAO action/target/agent |
 | `workflows` | `dict[str, Workflow]` | Branching and parallel control graphs over declared objectives | CACAO workflow graph patterns; semantics tightened using Step Functions / Argo / SCXML style control-flow rules |
 | `variables` | `dict[str, Variable]` | Parameterization (types, defaults, substitution) | CACAO playbook_variables |
+| `variation_points` | `dict[str, VariationPoint]` | Named bounded scenario-family domains and typed targets | ACES ADR-084 |
 
 ---
 
@@ -1535,7 +1536,41 @@ content:
     format: sql
 ```
 
-`target` is required for every content entry and must reference a VM node, not a switch/network node. `file` content requires `path`; `dataset` content requires either `source` or non-empty `items`; `directory` content requires `destination`.
+`target` is required for every content entry. Normally it references a VM node,
+not a switch/network node. When ordinary node placement cannot establish
+required service-owned state, `service_materialization` binds that content to a
+named service on the same VM:
+
+```yaml
+content:
+  company-mail:
+    type: dataset
+    target: mail
+    source: company-mail-corpus
+    format: message-set-v1
+    service_materialization:
+      target_service_ref: nodes.mail.services.imap
+      interface_profile: service-content
+      profile_version: "1"
+      requirements:
+        operation: ensure-owned-items
+        conflict_policy: reject-unowned-collision
+        readback: canonical-content-digest
+      readback_assertion_refs: [company-mail-visible]
+      evidence_requirement_refs: [company-mail-readback]
+      observation_boundary_refs: [participant-mail-view]
+```
+
+The interface profile does not describe product APIs. It requires the backend
+to reconcile the ordinary content through the named service, reject
+unowned-item collisions, preserve declared tenant/reset ownership, and return
+independent digest readback that can satisfy the observed-state postcondition
+and participant projection. Backend profile support is separate from ordinary
+`file`/`dataset`/`directory` support. The normative contract is
+`specs/sdl/initial-service-state.md`.
+
+`file` content requires `path`; `dataset` content requires either `source` or
+non-empty `items`; `directory` content requires `destination`.
 
 ---
 
@@ -1867,10 +1902,16 @@ behavior_specifications:
       - nodes.web-server.services.https
     behavior_mode: policy-directed
     ai_offensive_behavior_refs: [ai-model-access, defense-evasion]
+    defensive_behavior_refs: [continuous-monitoring, incident-analysis]
     offensive_behavior_refs: [reconnaissance, exfiltration]
     realization_profile_ref: participant-implementation-manifest:red-agent
     backend_feature_support_refs: [behavior_history]
     evidence_contract_refs: [participant-behavior-history-event-stream-v1]
+    tool_affordances:
+      scanner:
+        tool_ref: scanner-package
+        action_contract_refs: [scan]
+        observation_boundary_refs: [red-view]
     extension_policy: governed-extension
     extensions:
       x-acme:review-note:
@@ -1896,13 +1937,93 @@ direct adoption of MITRE ATLAS tactics release v2026.06, pinned by
 `tools/check_atlas_tactic_vocabulary.py`. These refs classify authored
 attack-oriented participant tasks, goals, or activities without replacing
 action contracts, experiment tasks, workflow steps, or runtime
-history. Extensions are only allowed when `extension_policy` permits them, and
+history. `defensive_behavior_refs` is validated against the independent
+`participant-defensive-behavior-activities` vocabulary. Its base values adapt
+the active NIST CSF 2.0 Detect, Respond, and Recover categories pinned by
+`contracts/concept-authority/nist-csf-defensive-categories-source-v1.json` and
+checked by `tools/check_nist_csf_defensive_vocabulary.py`. A defensive ref
+classifies authored intent or outcome domain; it does not prove an incident,
+detection quality, response effectiveness, recovery completion, or NIST CSF
+conformance. Extensions are only allowed when `extension_policy` permits them, and
 extension keys must use `x-<owner>:<term>`.
+
+`tool_affordances` is a closed, participant-local mapping. Its keys identify
+authored affordance bindings; each value may name one governed scenario
+`content` identity and must name non-empty action-contract and observation-
+boundary sets. The binding reference
+`behavior_specifications.<spec>.tool_affordances.<id>` must be explicitly
+classified by each referenced observation boundary. Presence means authored
+availability only: visibility, apparatus support, eligibility, admission,
+realization, effects, constraints, and evidence remain on their existing
+contracts and do not follow from the binding.
 
 Compiled behavior specifications use stable
 `participant.behavior-specification.<name>` addresses and preserve dependency
 links to the participant behavior, action contract, observation boundary, and
-outcome-rule runtime addresses.
+outcome-rule runtime addresses. Each nested affordance compiles independently
+at `participant.behavior-specification.<name>.tool-affordance.<id>` with raw
+refs and resolved content/action/observation addresses.
+
+For `behavior_mode: mixed-control`, authors must also provide a closed
+`mixed_control` declaration. It binds one controlled participant, explicit
+controller states, fail-closed disposition rules, and ordered control facts.
+Controller-state and transition mapping keys are portable local identifiers;
+external participant, authority, scope, and evidence refs are rewritten by
+module composition while local state/transition refs remain local.
+
+```yaml
+mixed_control:
+  participant_ref: red-agent
+  policy_revision: 1.0.0
+  order_strategy: total-effective-order
+  initial_state_ref: autonomous
+  dispositions:
+    duplicate: idempotent-if-equivalent
+    stale: reject-no-state-change
+    revoked: reject-no-state-change
+    late: reject-no-state-change
+    concurrent: order-then-revalidate
+    conflict: reject-no-state-change
+  controller_states:
+    autonomous:
+      controller_ref: self
+      authority_basis_refs: [entities.red-team]
+      scope_refs: [nodes.web]
+      policy_revision: 1.0.0
+      valid_from_order: 0
+      valid_until_order: 10
+      authority_status: active
+      evidence_refs: [entities.red-team]
+    pending:
+      controller_ref: self
+      authority_basis_refs: [entities.red-team]
+      scope_refs: [nodes.web]
+      policy_revision: 1.0.0
+      valid_from_order: 10
+      valid_until_order: 10
+      authority_status: active
+      evidence_refs: [entities.red-team]
+  transitions:
+    propose_supervision:
+      transition_kind: proposal
+      from_state_ref: autonomous
+      to_state_ref: pending
+      policy_revision: 1.0.0
+      expected_state_revision: 0
+      resulting_state_revision: 1
+      effective_order: 10
+      valid_from_order: 0
+      valid_until_order: 10
+      evidence_refs: [entities.red-team]
+```
+
+The full fixture at
+`contracts/fixtures/sdl/mixed-control-v1/valid/mixed-control-participant.yaml`
+shows proposal/approval flow across autonomous, pending, and supervised
+states. Proposal, approval/denial, direction, intervention, handoff, override,
+and cancellation remain distinct control facts. Admission, execution,
+observation, wire contracts, and live histories belong to downstream runtime
+surfaces.
 
 ---
 

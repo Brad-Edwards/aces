@@ -1,0 +1,10 @@
+name: satisfiable-control
+variables:
+  platform:
+    type: string
+    allowed_values: [windows, linux]
+    required: true
+nodes:
+  target:
+    type: vm
+    os: ${platform}

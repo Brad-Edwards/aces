@@ -61,6 +61,15 @@ _EXCLUDED_PREFIXES = (
 
 _CLAIM_PATTERNS: tuple[tuple[re.Pattern[str], frozenset[str]], ...] = (
     (
+        re.compile(
+            r"\b(?:are|is|was|were|remain|remains|establish|establishes|prove|proves|"
+            r"guarantee|guarantees|claim|claims|satisfy|satisfies)\b"
+            r"(?:\s+[a-z-]+){0,5}\s+(?:universal\s+)?(?:policy[- ]?)?noninterference\b",
+            re.IGNORECASE,
+        ),
+        frozenset({"policy-noninterference"}),
+    ),
+    (
         re.compile(r"\bbehavior(?:al(?:ly)?)?[- ]history[- ]equivalent\b", re.IGNORECASE),
         frozenset({"participant-projected-history-equivalence"}),
     ),

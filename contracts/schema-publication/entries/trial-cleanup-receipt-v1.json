@@ -1,0 +1,10 @@
+{
+  "contract_id": "trial-cleanup-receipt-v1",
+  "schema_path": "contracts/schemas/control-plane/trial-cleanup-receipt-v1.json",
+  "stability": "draft",
+  "content_hash": "2e5087fd4b9e442f282aa2533a425275f91e1c5ad51f8f872502ffb8e96e6fc5",
+  "last_change": {
+    "summary": "Initial publication of the SCE-007 attempt-scoped cleanup receipt, residual-state disclosure, and clean-state claim contract.",
+    "content_hash": "2e5087fd4b9e442f282aa2533a425275f91e1c5ad51f8f872502ffb8e96e6fc5"
+  }
+}

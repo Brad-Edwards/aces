@@ -1,0 +1,7 @@
+name: workflow-unreachable-step
+workflows:
+  flow:
+    start: finish
+    steps:
+      finish: {type: end}
+      orphan: {type: end}

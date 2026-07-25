@@ -130,6 +130,13 @@ adr-082-authored-identity-domain-topology
 adr-083-participant-tool-decision-surface-and-exposure-semantics
 adr-084-scenario-variation-and-deterministic-trial-realization
 adr-085-participant-information-flow-and-control
+adr-086-governed-whole-scenario-satisfiability
+adr-087-enterprise-identity-and-deployment-tenancy-authoring
+adr-088-initial-service-state-and-native-materialization
+adr-090-shared-time-domain-clock-and-progression-authority
+adr-091-portable-time-capability-control-and-provenance-contracts
+adr-092-autonomous-benign-participants-under-shared-time
+adr-093-raes-rename-and-compatibility-boundaries
 ```
 
 | ADR | Title | Status | Date |
@@ -219,4 +226,11 @@ adr-085-participant-information-flow-and-control
 | [082](adr-082-authored-identity-domain-topology.md) | Authored Identity-Domain Topology | accepted | 2026-07-13 |
 | [083](adr-083-participant-tool-decision-surface-and-exposure-semantics.md) | Participant Tool, Decision-Surface, and Exposure Semantics | proposed | 2026-07-14 |
 | [084](adr-084-scenario-variation-and-deterministic-trial-realization.md) | Scenario Variation And Deterministic Trial Realization | accepted | 2026-07-15 |
-| [085](adr-085-participant-information-flow-and-control.md) | Participant Information-Flow And Control | proposed | 2026-07-15 |
+| [085](adr-085-participant-information-flow-and-control.md) | Participant Information-Flow And Control | accepted | 2026-07-15 |
+| [086](adr-086-governed-whole-scenario-satisfiability.md) | Governed Whole-Scenario Satisfiability | accepted | 2026-07-19 |
+| [087](adr-087-enterprise-identity-and-deployment-tenancy-authoring.md) | Enterprise Identity and Deployment-Tenancy Authoring | accepted | 2026-07-24 |
+| [088](adr-088-initial-service-state-and-native-materialization.md) | Initial Service State and Native Materialization | accepted | 2026-07-24 |
+| [090](adr-090-shared-time-domain-clock-and-progression-authority.md) | Shared Time-Domain, Clock, And Progression Authority | accepted | 2026-07-24 |
+| [091](adr-091-portable-time-capability-control-and-provenance-contracts.md) | Portable Time Capability, Control, And Provenance Contracts | accepted | 2026-07-24 |
+| [092](adr-092-autonomous-benign-participants-under-shared-time.md) | Autonomous Benign Participants Under Shared Time | accepted | 2026-07-24 |
+| [093](adr-093-raes-rename-and-compatibility-boundaries.md) | RAES Rename and Compatibility Boundaries | accepted | 2026-07-23 |

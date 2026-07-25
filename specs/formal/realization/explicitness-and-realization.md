@@ -97,7 +97,7 @@ extend these rather than introduce parallel registries:
   `implementations/python/packages/aces_contracts/apparatus.py`
   (`RealizationSupportDeclaration`)
 - contract-model gates and generated JSON schema:
-  `implementations/python/packages/aces_contracts/contracts.py`
+  `implementations/python/packages/aces_contracts/contracts/`
   (`RealizationSupportDeclarationModel`)
 - processor and backend manifest payloads:
   `implementations/python/packages/aces_processor/manifest.py`,
@@ -378,7 +378,7 @@ The governance of the surface is **staged**:
   validated only as non-empty strings (the `__post_init__` invariants
   and `RealizationSupportDeclarationModel` enforce shape, not value
   membership). The contract model at
-  `implementations/python/packages/aces_contracts/contracts.py`
+  `implementations/python/packages/aces_contracts/contracts/`
   declares each as `list[NonEmptyString]`; the controlled-vocabulary
   authority does not yet bind those slots.
 - Adding governed vocabularies for those four fields is normative
@@ -428,12 +428,12 @@ invariant I1–I5 is enforced by named code.
   (`RealizationSupportDeclaration.__post_init__` rejects empty kinds and
   forbids `EXACT_ONLY` with `supported_constraint_kinds`).
 - I4 JSON-schema gate (backend manifests) —
-  `implementations/python/packages/aces_contracts/contracts.py`
+  `implementations/python/packages/aces_contracts/contracts/`
   (`RealizationSupportDeclarationModel._validate_realization_support`
   and the `__get_pydantic_json_schema__` conditional schema, exercised
   by published `contracts/schemas/`).
 - I4 processor-vs-backend asymmetry — `ProcessorManifestV2Model` in
-  `implementations/python/packages/aces_contracts/contracts.py` rejects
+  `implementations/python/packages/aces_contracts/contracts/` rejects
   any `realization_support` section; the generated processor schema has
   no `realization_support` property.
 - I4 backend-manifest payload boundary —

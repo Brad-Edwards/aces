@@ -20,6 +20,7 @@ from .behavior_resources import (
     ParticipantBehaviorSpecificationRuntime,
     ParticipantObservationBoundaryRuntime,
     ParticipantOutcomeInterpretationRuleRuntime,
+    ParticipantToolAffordanceRuntime,
     ScriptRuntime,
     StoryRuntime,
     WorkflowRuntime,
@@ -29,6 +30,7 @@ from .resources import (
     AssertionRuntime,
     ConditionBinding,
     ContentPlacement,
+    DomainControllerPlacement,
     FeatureBinding,
     GeneratedArtifactRuntime,
     InjectBinding,
@@ -41,6 +43,7 @@ from .resources import (
     ResolvedResource,
     RuntimeTemplate,
 )
+from .time_model import CompiledTimeModel
 
 
 @dataclass(frozen=True)
@@ -101,6 +104,7 @@ class RuntimeModel:
     entity_specs: dict[str, dict[str, Any]] = field(default_factory=dict)
     agent_specs: dict[str, dict[str, Any]] = field(default_factory=dict)
     relationship_specs: dict[str, dict[str, Any]] = field(default_factory=dict)
+    time_model: CompiledTimeModel = field(default_factory=CompiledTimeModel)
     # Typed compiler metadata for finite pre-instantiation domains. It is
     # consumed by planner capability checks and never enters backend resource
     # payloads.
@@ -114,6 +118,7 @@ class RuntimeModel:
     injects: dict[str, InjectRuntime] = field(default_factory=dict)
     inject_bindings: dict[str, InjectBinding] = field(default_factory=dict)
     content_placements: dict[str, ContentPlacement] = field(default_factory=dict)
+    domain_controller_placements: dict[str, DomainControllerPlacement] = field(default_factory=dict)
     account_placements: dict[str, AccountPlacement] = field(default_factory=dict)
     generated_artifacts: dict[str, GeneratedArtifactRuntime] = field(default_factory=dict)
     persistent_volumes: dict[str, PersistentVolumeRuntime] = field(default_factory=dict)
@@ -122,6 +127,7 @@ class RuntimeModel:
     outcome_interpretation_rules: dict[str, ParticipantOutcomeInterpretationRuleRuntime] = field(default_factory=dict)
     participant_behaviors: dict[str, ParticipantBehaviorRuntime] = field(default_factory=dict)
     behavior_specifications: dict[str, ParticipantBehaviorSpecificationRuntime] = field(default_factory=dict)
+    tool_affordances: dict[str, ParticipantToolAffordanceRuntime] = field(default_factory=dict)
     events: dict[str, EventRuntime] = field(default_factory=dict)
     scripts: dict[str, ScriptRuntime] = field(default_factory=dict)
     stories: dict[str, StoryRuntime] = field(default_factory=dict)
@@ -146,6 +152,7 @@ class RuntimeModel:
             "injects",
             "inject_bindings",
             "content_placements",
+            "domain_controller_placements",
             "account_placements",
             "generated_artifacts",
             "persistent_volumes",
@@ -154,6 +161,7 @@ class RuntimeModel:
             "outcome_interpretation_rules",
             "participant_behaviors",
             "behavior_specifications",
+            "tool_affordances",
             "events",
             "scripts",
             "stories",

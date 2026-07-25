@@ -67,7 +67,7 @@ def test_top_level_catalog_drift_is_flagged(tmp_path: Path, old: str, new: str, 
 
 def test_checked_summary_drift_is_flagged(tmp_path: Path) -> None:
     repo = _seed_repo(tmp_path)
-    _replace(repo, "specs/sdl/sections.md", "sections=28", "sections=27")
+    _replace(repo, "specs/sdl/sections.md", "sections=38", "sections=37")
     assert "sdl-catalog-summary" in _rule_ids(repo)
 
 
@@ -184,6 +184,9 @@ def test_reference_catalog_uses_live_nested_model_paths() -> None:
         "action_contracts.*.temporal_contracts.*.backend_disclosure_refs[]",
         "action_contracts.*.backend_timing_disclosures.*.affected_temporal_ids[]",
         "action_contracts.*.interactions.*.related_actions[]",
+        "behavior_specifications.*.tool_affordances.*.tool_ref",
+        "behavior_specifications.*.tool_affordances.*.action_contract_refs[]",
+        "behavior_specifications.*.tool_affordances.*.observation_boundary_refs[]",
         "outcome_interpretation_rules.*.source_bindings.*.ref",
         "outcome_interpretation_rules.*.target_bindings.*.ref",
     } <= paths
@@ -266,7 +269,7 @@ def test_catalog_parser_rejects_oversized_input() -> None:
 
 def test_cli_reports_json_failure(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     repo = _seed_repo(tmp_path)
-    _replace(repo, "specs/sdl/sections.md", "sections=28", "sections=27")
+    _replace(repo, "specs/sdl/sections.md", "sections=38", "sections=37")
     assert main(["--repo-root", str(repo), "--json"]) == 1
     assert '"rule_id": "sdl-catalog-summary"' in capsys.readouterr().out
 

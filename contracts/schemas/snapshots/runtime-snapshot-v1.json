@@ -1,5 +1,58 @@
 {
   "$defs": {
+    "ClockTransitionEventModel": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "initialize",
+            "advance",
+            "pause",
+            "resume",
+            "jump",
+            "reset",
+            "replay"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "previous": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TimeCoordinateModel"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "resulting": {
+          "$ref": "#/$defs/TimeCoordinateModel"
+        },
+        "resulting_state": {
+          "enum": [
+            "running",
+            "paused"
+          ],
+          "title": "Resulting State",
+          "type": "string"
+        },
+        "sequence": {
+          "minimum": 0,
+          "title": "Sequence",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "sequence",
+        "kind",
+        "previous",
+        "resulting",
+        "resulting_state"
+      ],
+      "title": "ClockTransitionEventModel",
+      "type": "object"
+    },
     "EvaluationHistoryEventModel": {
       "additionalProperties": false,
       "properties": {
@@ -791,6 +844,117 @@
       ],
       "title": "ParticipantAttributionSupportClass",
       "type": "string"
+    },
+    "ParticipantAutonomousExecutionStateModel": {
+      "additionalProperties": false,
+      "description": "Typed scheduler readback for one participant execution policy.",
+      "properties": {
+        "attempted_actions": {
+          "minimum": 0,
+          "title": "Attempted Actions",
+          "type": "integer"
+        },
+        "clock_address": {
+          "minLength": 1,
+          "title": "Clock Address",
+          "type": "string"
+        },
+        "episode_id": {
+          "minLength": 1,
+          "title": "Episode Id",
+          "type": "string"
+        },
+        "failed_actions": {
+          "minimum": 0,
+          "title": "Failed Actions",
+          "type": "integer"
+        },
+        "in_flight": {
+          "default": 0,
+          "minimum": 0,
+          "title": "In Flight",
+          "type": "integer"
+        },
+        "last_action_instance_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Action Instance Id"
+        },
+        "lifecycle_state": {
+          "enum": [
+            "running",
+            "paused",
+            "completed",
+            "failed"
+          ],
+          "title": "Lifecycle State",
+          "type": "string"
+        },
+        "next_action_index": {
+          "minimum": 0,
+          "title": "Next Action Index",
+          "type": "integer"
+        },
+        "next_tick": {
+          "minimum": 0,
+          "title": "Next Tick",
+          "type": "integer"
+        },
+        "participant_address": {
+          "minLength": 1,
+          "title": "Participant Address",
+          "type": "string"
+        },
+        "participant_implementation_ref": {
+          "minLength": 1,
+          "title": "Participant Implementation Ref",
+          "type": "string"
+        },
+        "policy_address": {
+          "minLength": 1,
+          "title": "Policy Address",
+          "type": "string"
+        },
+        "policy_digest": {
+          "minLength": 1,
+          "title": "Policy Digest",
+          "type": "string"
+        },
+        "succeeded_actions": {
+          "minimum": 0,
+          "title": "Succeeded Actions",
+          "type": "integer"
+        },
+        "time_segment": {
+          "minimum": 0,
+          "title": "Time Segment",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "policy_address",
+        "policy_digest",
+        "participant_address",
+        "episode_id",
+        "participant_implementation_ref",
+        "clock_address",
+        "time_segment",
+        "lifecycle_state",
+        "next_tick",
+        "next_action_index",
+        "attempted_actions",
+        "succeeded_actions",
+        "failed_actions"
+      ],
+      "title": "ParticipantAutonomousExecutionStateModel",
+      "type": "object"
     },
     "ParticipantBehaviorHistoryEventModel": {
       "additionalProperties": false,
@@ -3936,6 +4100,100 @@
       "title": "RealizationProvenanceEntryModel",
       "type": "object"
     },
+    "RuntimeClockStateModel": {
+      "additionalProperties": false,
+      "properties": {
+        "authority_kind": {
+          "enum": [
+            "runtime",
+            "backend",
+            "system",
+            "external"
+          ],
+          "title": "Authority Kind",
+          "type": "string"
+        },
+        "authority_ref": {
+          "minLength": 1,
+          "title": "Authority Ref",
+          "type": "string"
+        },
+        "clock_address": {
+          "maxLength": 2048,
+          "minLength": 3,
+          "not": {
+            "pattern": "[^a-z0-9_.-]"
+          },
+          "pattern": "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$",
+          "title": "Clock Address",
+          "type": "string"
+        },
+        "coordinate": {
+          "$ref": "#/$defs/TimeCoordinateModel"
+        },
+        "history": {
+          "items": {
+            "$ref": "#/$defs/ClockTransitionEventModel"
+          },
+          "minItems": 1,
+          "title": "History",
+          "type": "array"
+        },
+        "progression_policy_address": {
+          "anyOf": [
+            {
+              "maxLength": 2048,
+              "minLength": 3,
+              "not": {
+                "pattern": "[^a-z0-9_.-]"
+              },
+              "pattern": "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Progression Policy Address"
+        },
+        "sequence": {
+          "minimum": 0,
+          "title": "Sequence",
+          "type": "integer"
+        },
+        "state": {
+          "enum": [
+            "running",
+            "paused"
+          ],
+          "title": "State",
+          "type": "string"
+        },
+        "time_domain_address": {
+          "maxLength": 2048,
+          "minLength": 3,
+          "not": {
+            "pattern": "[^a-z0-9_.-]"
+          },
+          "pattern": "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$",
+          "title": "Time Domain Address",
+          "type": "string"
+        }
+      },
+      "required": [
+        "clock_address",
+        "time_domain_address",
+        "authority_kind",
+        "authority_ref",
+        "state",
+        "coordinate",
+        "sequence",
+        "history"
+      ],
+      "title": "RuntimeClockStateModel",
+      "type": "object"
+    },
     "SnapshotEntryModel": {
       "additionalProperties": false,
       "properties": {
@@ -4214,6 +4472,73 @@
       "title": "SourceStatusModel",
       "type": "object"
     },
+    "TimeCoordinateModel": {
+      "additionalProperties": false,
+      "description": "Exact superdense coordinate within one discontinuity segment.",
+      "properties": {
+        "microstep": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Microstep",
+          "type": "integer"
+        },
+        "segment": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Segment",
+          "type": "integer"
+        },
+        "tick": {
+          "title": "Tick",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "tick"
+      ],
+      "title": "TimeCoordinateModel",
+      "type": "object"
+    },
+    "TimeRuntimeStateModel": {
+      "additionalProperties": false,
+      "description": "Typed observable state for all clocks governed by one declaration.",
+      "properties": {
+        "clocks": {
+          "minProperties": 1,
+          "patternProperties": {
+            "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$": {
+              "$ref": "#/$defs/RuntimeClockStateModel"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 2048,
+            "minLength": 3,
+            "not": {
+              "pattern": "[^a-z0-9_.-]"
+            }
+          },
+          "title": "Clocks",
+          "type": "object"
+        },
+        "declaration_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Declaration Digest",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "time-runtime-state/v1",
+          "default": "time-runtime-state/v1",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "declaration_digest",
+        "clocks"
+      ],
+      "title": "TimeRuntimeStateModel",
+      "type": "object"
+    },
     "WorkflowExecutionStateModel": {
       "additionalProperties": false,
       "properties": {
@@ -4377,9 +4702,128 @@
       "title": "WorkflowHistoryEventModel",
       "type": "object"
     },
+    "WorkflowStepAttemptProvenanceModel": {
+      "additionalProperties": false,
+      "properties": {
+        "allowed_action_families": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Allowed Action Families",
+          "type": "array"
+        },
+        "assertion_truth_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Assertion Truth Refs",
+          "type": "array"
+        },
+        "attempt_id": {
+          "minLength": 1,
+          "title": "Attempt Id",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "execution_mode": {
+          "enum": [
+            "scripted",
+            "objective",
+            "scaffolded"
+          ],
+          "title": "Execution Mode",
+          "type": "string"
+        },
+        "exposed_scaffold_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Exposed Scaffold Refs",
+          "type": "array"
+        },
+        "fact_versions": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Fact Versions",
+          "type": "array"
+        },
+        "objective_address": {
+          "default": "",
+          "title": "Objective Address",
+          "type": "string"
+        },
+        "outcome": {
+          "default": "",
+          "enum": [
+            "",
+            "succeeded",
+            "failed",
+            "exhausted"
+          ],
+          "title": "Outcome",
+          "type": "string"
+        },
+        "participant_report": {
+          "default": "",
+          "title": "Participant Report",
+          "type": "string"
+        },
+        "procedure_ref": {
+          "default": "",
+          "title": "Procedure Ref",
+          "type": "string"
+        },
+        "selected_action_family": {
+          "default": "",
+          "title": "Selected Action Family",
+          "type": "string"
+        },
+        "selected_affordance_ref": {
+          "default": "",
+          "title": "Selected Affordance Ref",
+          "type": "string"
+        },
+        "selected_tool_ref": {
+          "default": "",
+          "title": "Selected Tool Ref",
+          "type": "string"
+        },
+        "step_name": {
+          "minLength": 1,
+          "title": "Step Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "step_name",
+        "execution_mode",
+        "attempt_id"
+      ],
+      "title": "WorkflowStepAttemptProvenanceModel",
+      "type": "object"
+    },
     "WorkflowStepStateModel": {
       "additionalProperties": false,
       "properties": {
+        "attempt_provenance": {
+          "items": {
+            "$ref": "#/$defs/WorkflowStepAttemptProvenanceModel"
+          },
+          "title": "Attempt Provenance",
+          "type": "array"
+        },
         "attempts": {
           "title": "Attempts",
           "type": "integer"
@@ -4479,6 +4923,13 @@
       "title": "Orchestration Results",
       "type": "object"
     },
+    "participant_autonomous_execution_states": {
+      "additionalProperties": {
+        "$ref": "#/$defs/ParticipantAutonomousExecutionStateModel"
+      },
+      "title": "Participant Autonomous Execution States",
+      "type": "object"
+    },
     "participant_behavior_history": {
       "additionalProperties": {
         "items": {
@@ -4560,6 +5011,17 @@
       },
       "title": "Time Management Contexts",
       "type": "object"
+    },
+    "time_model_state": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TimeRuntimeStateModel"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     }
   },
   "title": "RuntimeSnapshotEnvelopeModel",

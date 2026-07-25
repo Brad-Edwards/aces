@@ -1,0 +1,10 @@
+{
+  "contract_id": "experiment-authoring-input-v1",
+  "schema_path": "contracts/schemas/experiment-core/experiment-authoring-input-v1.json",
+  "stability": "draft",
+  "content_hash": "1247c1ccd945663d878ee9ba2d36ff30d85a4b35971029a70702d82594e30c6a",
+  "last_change": {
+    "summary": "Added an optional executable_binding field to ExperimentStochasticControlModel for EXP-718 versioned random-stream profile/namespace/root-entropy binding (issue #274).",
+    "content_hash": "1247c1ccd945663d878ee9ba2d36ff30d85a4b35971029a70702d82594e30c6a"
+  }
+}

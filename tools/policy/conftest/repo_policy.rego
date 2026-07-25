@@ -20,7 +20,7 @@ deny contains result if {
   endswith(path, ".json")
   not manifest_touched
   result := {
-    "msg": "published schemas under contracts/schemas/ are hand-governed normative authority (ADR-009 section 7); a schema change must update contracts/schema-publication-manifest.json with a contract-facing change-ledger entry",
+    "msg": "published schemas under contracts/schemas/ are hand-governed normative authority (ADR-009 section 7); a schema change must update its contracts/schema-publication record with a contract-facing change-ledger entry",
     "rule_id": "schema-change-missing-manifest",
     "path": path,
   }
@@ -41,6 +41,12 @@ deny contains result if {
 
 manifest_touched if {
   input.policy.generated_contracts.manifest_path in input.changed
+}
+
+
+manifest_touched if {
+  some path in input.changed
+  path_matches_prefix(path, input.policy.generated_contracts.manifest_records_root)
 }
 
 

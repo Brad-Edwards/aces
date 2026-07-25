@@ -1,7 +1,7 @@
 {
   "schema_version": "behavioral-relations/v1",
   "taxonomy_id": "aces-behavioral-relations",
-  "taxonomy_revision": "rev1",
+  "taxonomy_revision": "rev2",
   "bibliography": [
     {
       "source_id": "park-1981",
@@ -90,6 +90,36 @@
       "immutable_locator": {
         "kind": "isbn",
         "value": "9780262061629"
+      }
+    },
+    {
+      "source_id": "goguen-meseguer-1982",
+      "title": "Security Policies and Security Models",
+      "authors": [
+        "Joseph A. Goguen",
+        "José Meseguer"
+      ],
+      "publication_year": 1982,
+      "publication_venue": "1982 IEEE Symposium on Security and Privacy",
+      "edition_or_version": "version of record",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.1109/SP.1982.10014"
+      }
+    },
+    {
+      "source_id": "sabelfeld-sands-2009",
+      "title": "Declassification: Dimensions and Principles",
+      "authors": [
+        "Andrei Sabelfeld",
+        "David Sands"
+      ],
+      "publication_year": 2009,
+      "publication_venue": "Journal of Computer Security 17(5)",
+      "edition_or_version": "version of record",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.3233/JCS-2009-0352"
       }
     },
     {
@@ -1513,6 +1543,99 @@
         "milner-1980"
       ]
     },
+    "policy-noninterference": {
+      "relation_id": "policy-noninterference",
+      "display_name": "Participant-policy noninterference",
+      "relation_class": "behavioral",
+      "definition": "For a fixed participant, episode scope, model, environment class, scheduler class, order model, policy-revision sequence, and permitted declassification schedule, low-equivalent initial states and input histories with equal admitted low inputs and equal participant-policy purge results produce equal support sets of projected participant-visible histories despite variation in unauthorized high inputs.",
+      "left_carrier": "The support set of valid labelled participant-policy runs from one low-equivalent initial state and input history.",
+      "right_carrier": "The support set of valid labelled participant-policy runs from another low-equivalent initial state and input history.",
+      "initial_states": "Initial world, participant-view, participant-history, archival-evidence, controller, authority, marking, and policy states related by the SEM-230 low-equivalence relation at the declared initial policy/order point.",
+      "transition_signature": {
+        "applicability": "applicable",
+        "labels": "The closed SEM-230 alphabet for proposal, approval or denial, direction, intervention, handoff, override or cancellation, admission or rejection, attempt or result, disclosure or withholding, concealment, revocation, transformation, delivery, observation, policy change, evidence, and audit actions.",
+        "transition_relation": "The SEM-230 participant-policy crossing relation over existing world, view, local-history, archival-evidence, action, lifecycle, ordering, marking, controller, authority, policy, and provenance state.",
+        "observable_actions": "Labels retained for the named participant and audience by the effective policy revision, marking/declassification intersection, and declared order-point projection.",
+        "hidden_actions": "Only labels mapped to tau by the named participant-, audience-, policy-revision-, and order-relative projection; backend-internal actions are not intrinsically hidden.",
+        "stuttering_actions": "Finite hidden stuttering is removed by the declared tau closure; the baseline is termination- and progress-insensitive and does not claim divergence-sensitive preservation."
+      },
+      "observation_projection": {
+        "applicability": "required",
+        "subject": "Named participant and audience within one episode scope",
+        "policy_ref": "SEM-230 participant-information-flow policy",
+        "policy_revision": "The complete declared policy-revision sequence and effective order points",
+        "redaction_scope": "Projection, masking, redaction, declassification, transformation, marking, loss, and weakening remain distinct and are evaluated deny-first.",
+        "order_treatment": "Compare occurrence-preserving visible histories under the same declared total, partial, causal, simultaneous, or backend-serialized order model; one convenient linearization is insufficient for a partial-order claim.",
+        "simultaneity_treatment": "Preserve declared simultaneity groups and visible order relations; timestamp equality does not establish simultaneity."
+      },
+      "projection_required": true,
+      "direction": "symmetric",
+      "quantification": {
+        "states": "For every pair of initial and reachable states related by low equivalence at the applicable participant-policy/order point.",
+        "traces": "For all valid run support sets generated from equal admitted low inputs, equal dynamic-purge results, and equal permitted declassification schedules.",
+        "schedulers": "For the fixed declared scheduler class; scheduler-sensitive variants must select and evidence a stronger relation.",
+        "strategies": "No strategic or coalitional quantification; alternating-strategic equivalence is a separate relation.",
+        "environments": "For the fixed declared environment class and equal low environment inputs, allowing only the unauthorized high variation under examination.",
+        "observations": "Equality of support sets of occurrence-preserving histories projected for the named participant, audience, policy sequence, markings, declassification schedule, and order model."
+      },
+      "dimensions": {
+        "nondeterminism": {
+          "status": "supported",
+          "treatment": "The baseline compares complete declared support sets of projected histories; equality of sampled or single histories is only bounded falsification evidence."
+        },
+        "concurrency": {
+          "status": "parameterized",
+          "treatment": "The selected sequential, total, partial, causal, simultaneous, or backend-serialized transition and visible-order model is fixed for the comparison."
+        },
+        "probability": {
+          "status": "outside-scope",
+          "treatment": "The baseline compares support sets, not measures; probabilistic noninterference requires a separately governed probabilistic relation, kernel, bound, and evidence."
+        },
+        "time": {
+          "status": "abstracted",
+          "treatment": "The baseline is termination- and progress-insensitive and excludes wall-clock timing; timed security requires a separately governed relation."
+        },
+        "partial_order": {
+          "status": "parameterized",
+          "treatment": "When partial order is selected, the declared visible order relation and simultaneity groups are compared rather than one linear extension."
+        }
+      },
+      "preservation": {
+        "property": "Unauthorized high-input variation does not change the support set of participant-visible histories after dynamic purge, except at equal explicitly governed declassification events.",
+        "proof_obligation": "Prove support-set equality for every quantified low-equivalent pair under the fixed participant, policy sequence, declassification schedule, model, scheduler, environment, and order assumptions, or report only the bounded counterexamples actually checked."
+      },
+      "bounded_evidence": [
+        "implementations/python/tests/test_sem_230_information_flow_control.py checks finite unauthorized-high, declassification-order, policy-revision, participant-relative hiding, deny-first, append-only-history, transformation-admission, and support-set counterexamples."
+      ],
+      "explicit_non_claims": [
+        "The finite SEM-230 executable cases do not establish universal noninterference.",
+        "Projected-history equality does not establish policy noninterference without the stated low-equivalence, purge, declassification, scheduler, environment, and quantifier obligations.",
+        "No trace equivalence, simulation, refinement, strong or weak bisimulation, epistemic indistinguishability, timing security, probabilistic security, or backend realization is claimed."
+      ],
+      "incompatible_claim_surfaces": [
+        "Unrevisioned participant projection",
+        "Single-history or sampled-history equality",
+        "Undeclared scheduler, environment, timing, probability, or partial-order assumptions",
+        "Runtime or backend realization inferred from the definition"
+      ],
+      "assurance": {
+        "definition_status": "defined",
+        "implementation_status": "not-implemented",
+        "test_status": "bounded",
+        "proof_status": "deliberately-unproved",
+        "evidence_refs": [
+          "specs/formal/participant-semantics/information-flow-control.md",
+          "implementations/python/tests/test_sem_230_information_flow_control.py"
+        ]
+      },
+      "source_refs": [
+        "fagin-halpern-moses-vardi-1995",
+        "goguen-meseguer-1982",
+        "milner-1980",
+        "sabelfeld-sands-2009",
+        "van-glabbeek-1990"
+      ]
+    },
     "epistemic-indistinguishability": {
       "relation_id": "epistemic-indistinguishability",
       "display_name": "Epistemic indistinguishability",
@@ -2074,6 +2197,27 @@
       ],
       "explicit_non_claims": [
         "Equal projected histories do not expose hidden global state or prove future knowledge or strategy equivalence."
+      ]
+    },
+    {
+      "surface_id": "participant-information-flow-policy",
+      "intended_relation_ids": [
+        "policy-noninterference"
+      ],
+      "evidence_boundary": "The SEM-230 relation is defined over named participant, audience, policy-revision sequence, low-equivalence, dynamic purge, permitted declassification schedule, scheduler/environment classes, order model, and support-set semantics. Current executable evidence is limited to the finite test-local model.",
+      "prohibited_relation_ids": [
+        "participant-projected-history-equivalence",
+        "trace-equivalence",
+        "forward-simulation",
+        "backward-simulation",
+        "data-refinement",
+        "strong-bisimulation",
+        "weak-bisimulation",
+        "epistemic-indistinguishability",
+        "probabilistic-bisimulation"
+      ],
+      "explicit_non_claims": [
+        "Definition, catalog validation, claim-policy checks, and finite counterexamples do not prove universal noninterference or runtime/backend realization."
       ]
     },
     {

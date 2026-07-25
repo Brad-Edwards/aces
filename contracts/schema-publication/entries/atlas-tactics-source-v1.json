@@ -1,0 +1,10 @@
+{
+  "contract_id": "atlas-tactics-source-v1",
+  "schema_path": "contracts/schemas/concept-authority/atlas-tactics-source-v1.json",
+  "stability": "draft",
+  "content_hash": "17e144abf9c8de10fa7342ab8662306ad0d4170a2df1c67829ac641a686bd562",
+  "last_change": {
+    "summary": "Initial publication of the pinned MITRE ATLAS tactics v2026.06 source schema for the ACT-609 adopted AI offensive behavior vocabulary.",
+    "content_hash": "17e144abf9c8de10fa7342ab8662306ad0d4170a2df1c67829ac641a686bd562"
+  }
+}

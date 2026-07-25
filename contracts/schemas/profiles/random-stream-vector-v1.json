@@ -1,0 +1,379 @@
+{
+  "$defs": {
+    "GovernedRandomOutcomeRefModel": {
+      "additionalProperties": false,
+      "description": "Governed reference to a sensitive drawn outcome; never carries the raw value.",
+      "properties": {
+        "kind": {
+          "const": "governed-reference",
+          "title": "Kind",
+          "type": "string"
+        },
+        "reference_id": {
+          "minLength": 1,
+          "title": "Reference Id",
+          "type": "string"
+        },
+        "reference_version": {
+          "minLength": 1,
+          "title": "Reference Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "reference_id",
+        "reference_version"
+      ],
+      "title": "GovernedRandomOutcomeRefModel",
+      "type": "object"
+    },
+    "PublicRandomOutcomeModel": {
+      "additionalProperties": false,
+      "description": "Public drawn value, recorded as canonical text.",
+      "properties": {
+        "kind": {
+          "const": "public-value",
+          "title": "Kind",
+          "type": "string"
+        },
+        "value": {
+          "minLength": 1,
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "value"
+      ],
+      "title": "PublicRandomOutcomeModel",
+      "type": "object"
+    },
+    "PublicSeedModel": {
+      "additionalProperties": false,
+      "description": "Inline public root-entropy seed: fixed-width canonical hex bytes.\n\nFixed-width lowercase hex removes leading-zero, integer-width, sign, and\nUnicode ambiguity from the executable entropy encoding (per the EXP-718\npreflight's \"Canonical Inputs\" section).",
+      "properties": {
+        "encoding": {
+          "const": "hex-fixed-width",
+          "title": "Encoding",
+          "type": "string"
+        },
+        "kind": {
+          "const": "public-seed",
+          "title": "Kind",
+          "type": "string"
+        },
+        "value": {
+          "minLength": 1,
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "encoding",
+        "value"
+      ],
+      "title": "PublicSeedModel",
+      "type": "object"
+    },
+    "RandomStreamBoundedIntegerVectorCaseModel": {
+      "additionalProperties": false,
+      "description": "One bounded-integer transform vector case nested inside a vector file.",
+      "properties": {
+        "expected_rejection_attempts": {
+          "minimum": 0,
+          "title": "Expected Rejection Attempts",
+          "type": "integer"
+        },
+        "expected_rejection_exhausted": {
+          "title": "Expected Rejection Exhausted",
+          "type": "boolean"
+        },
+        "max_rejection_attempts": {
+          "minimum": 1,
+          "title": "Max Rejection Attempts",
+          "type": "integer"
+        },
+        "maximum": {
+          "title": "Maximum",
+          "type": "integer"
+        },
+        "minimum": {
+          "title": "Minimum",
+          "type": "integer"
+        },
+        "outcome": {
+          "anyOf": [
+            {
+              "discriminator": {
+                "mapping": {
+                  "governed-reference": "#/$defs/GovernedRandomOutcomeRefModel",
+                  "public-value": "#/$defs/PublicRandomOutcomeModel"
+                },
+                "propertyName": "kind"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/PublicRandomOutcomeModel"
+                },
+                {
+                  "$ref": "#/$defs/GovernedRandomOutcomeRefModel"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Outcome"
+        },
+        "transform_id": {
+          "minLength": 1,
+          "title": "Transform Id",
+          "type": "string"
+        },
+        "transform_version": {
+          "minLength": 1,
+          "title": "Transform Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "transform_id",
+        "transform_version",
+        "minimum",
+        "maximum",
+        "max_rejection_attempts",
+        "expected_rejection_attempts",
+        "expected_rejection_exhausted"
+      ],
+      "title": "RandomStreamBoundedIntegerVectorCaseModel",
+      "type": "object"
+    },
+    "StreamAddressModel": {
+      "additionalProperties": false,
+      "description": "Closed semantic random-draw address (SVR-013).\n\nA pure canonical function of the randomness namespace, logical trial\ncoordinate, selection-policy id, variation-point id, draw purpose, and a\nstable local draw coordinate. It is not a concatenated string, arbitrary\nmapping, JSON Pointer, or scheduler/compiled-runtime address, and it\nadmits no worker/process/thread/host, wall-time, retry, or aggregate\nexperiment-digest field (``extra=\"forbid\"`` closes the shape).",
+      "properties": {
+        "draw_purpose": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Draw Purpose",
+          "type": "string"
+        },
+        "local_coordinate": {
+          "minimum": 0,
+          "title": "Local Coordinate",
+          "type": "integer"
+        },
+        "namespace": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Namespace",
+          "type": "string"
+        },
+        "selection_policy_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Selection Policy Id",
+          "type": "string"
+        },
+        "trial_coordinate": {
+          "$ref": "#/$defs/TrialCoordinateModel"
+        },
+        "variation_point_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Variation Point Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "namespace",
+        "trial_coordinate",
+        "selection_policy_id",
+        "variation_point_id",
+        "draw_purpose",
+        "local_coordinate"
+      ],
+      "title": "StreamAddressModel",
+      "type": "object",
+      "x-aces-invariants": [
+        {
+          "description": "draw_purpose must be a term from the random_streams.draw_purpose controlled vocabulary.",
+          "id": "random-stream-address-draw-purpose-governed",
+          "inputs": [
+            {
+              "contract_id": "controlled-vocabularies-v1",
+              "instance_path": "#"
+            }
+          ],
+          "level": "error",
+          "validator": "aces_contracts.contracts.random_stream.StreamAddressModel._validate_draw_purpose"
+        }
+      ]
+    },
+    "TrialCoordinateModel": {
+      "additionalProperties": false,
+      "description": "Logical trial coordinate dimensions usable in a random-stream address.\n\nEvery field is an optional portable identifier: an experiment declares\nonly the dimensions it actually varies (SVR-013's \"logical trial\ncoordinate\").",
+      "properties": {
+        "block_id": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "minLength": 1,
+              "not": {
+                "pattern": "[^a-z0-9_-]"
+              },
+              "pattern": "^[a-z0-9]",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Block Id"
+        },
+        "condition_id": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "minLength": 1,
+              "not": {
+                "pattern": "[^a-z0-9_-]"
+              },
+              "pattern": "^[a-z0-9]",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Condition Id"
+        },
+        "replicate_id": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "minLength": 1,
+              "not": {
+                "pattern": "[^a-z0-9_-]"
+              },
+              "pattern": "^[a-z0-9]",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Replicate Id"
+        }
+      },
+      "title": "TrialCoordinateModel",
+      "type": "object"
+    }
+  },
+  "$id": "https://aces.dev/schemas/random-stream-vector-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "One canonical cross-language conformance vector case.\n\nComputed independently of the reference engine (a throwaway script that\ncalls the ``blake3`` library directly), so the vector tests do not just\ntest the engine against itself.",
+  "properties": {
+    "address": {
+      "$ref": "#/$defs/StreamAddressModel"
+    },
+    "address_canonical_bytes_hex": {
+      "minLength": 1,
+      "title": "Address Canonical Bytes Hex",
+      "type": "string"
+    },
+    "description": {
+      "minLength": 1,
+      "title": "Description",
+      "type": "string"
+    },
+    "profile_id": {
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*-v[0-9]+$",
+      "title": "Profile Id",
+      "type": "string"
+    },
+    "raw_block_hex": {
+      "minLength": 1,
+      "title": "Raw Block Hex",
+      "type": "string"
+    },
+    "root_entropy": {
+      "$ref": "#/$defs/PublicSeedModel"
+    },
+    "schema_version": {
+      "const": "random-stream-vector/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "stream_key_hex": {
+      "minLength": 1,
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Stream Key Hex",
+      "type": "string"
+    },
+    "transform": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RandomStreamBoundedIntegerVectorCaseModel"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "vector_id": {
+      "minLength": 1,
+      "title": "Vector Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "vector_id",
+    "description",
+    "profile_id",
+    "root_entropy",
+    "stream_key_hex",
+    "address",
+    "address_canonical_bytes_hex",
+    "raw_block_hex"
+  ],
+  "title": "RandomStreamVectorModel",
+  "type": "object",
+  "x-aces-semantic-profile": {
+    "contract_id": "random-stream-vector-v1",
+    "entry_schema_contract_id": "aces-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
+    "id": "aces-semantic-invariants-v1",
+    "keyword": "x-aces-invariants",
+    "required": true,
+    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+  }
+}

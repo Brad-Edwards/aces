@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from aces_backend_protocols.domain_topology import DomainTopologyBinding
+from aces_contracts.addressing import require_compiled_address
 from aces_contracts.diagnostics import Diagnostic
 from aces_contracts.evaluation import EvaluationExecutionContract, EvaluationResultContract
 from aces_contracts.participant_episode import PARTICIPANT_EPISODE_CONTROL_EVENTS, PARTICIPANT_EPISODE_TERMINAL_EVENTS
@@ -59,6 +60,7 @@ class NodeRuntime(ResolvedResource):
     node_type: str = ""
     os_family: str = ""
     count: int | str | None = None
+    network_namespace_target: str = ""
     domain_topology: DomainTopologyBinding | None = None
 
 
@@ -127,12 +129,40 @@ class InjectRuntime(ResolvedResource):
 
 
 @dataclass(frozen=True)
+class ServiceContentMaterializationBinding:
+    """Closed compiled requirements for one service-owned content placement."""
+
+    target_service_address: str
+    interface_profile: str
+    profile_version: str
+    content_type: str
+    operation: str
+    conflict_policy: str
+    readback: str
+    canonical_content_digest: str
+    shared_service_relationship_ref: str = ""
+    consumer_tenant_ref: str = ""
+    mutable_state_owner: str = ""
+    reset_generation_owner: str = ""
+    readback_assertion_addresses: tuple[str, ...] = ()
+    evidence_requirement_refs: tuple[str, ...] = ()
+    observation_boundary_addresses: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        require_compiled_address(
+            self.target_service_address,
+            field_name="ServiceContentMaterializationBinding.target_service_address",
+        )
+
+
+@dataclass(frozen=True)
 class ContentPlacement(ResolvedResource):
-    """Content entry resolved to a concrete target node."""
+    """Content entry resolved to a concrete node or named service."""
 
     content_name: str = ""
     target_node: str = ""
     target_address: str = ""
+    service_materialization: ServiceContentMaterializationBinding | None = None
 
 
 @dataclass(frozen=True)
@@ -143,6 +173,28 @@ class AccountPlacement(ResolvedResource):
     node_name: str = ""
     target_address: str = ""
     domain_topology: DomainTopologyBinding | None = None
+
+
+@dataclass(frozen=True, kw_only=True)
+class DomainControllerPlacement(ResolvedResource):
+    """Identity domain bootstrap intent bound to one controller node."""
+
+    target_address: str
+    domain_topology: DomainTopologyBinding
+
+    def __post_init__(self) -> None:
+        require_compiled_address(
+            self.target_address,
+            field_name="DomainControllerPlacement.target_address",
+        )
+        if self.spec:
+            raise ValueError(
+                "DomainControllerPlacement.spec must be empty; the payload is restricted to typed non-secret fields"
+            )
+        if self.domain_topology.role != "controller":
+            raise ValueError("DomainControllerPlacement.domain_topology must carry the controller role")
+        if self.target_address not in self.domain_topology.controller_addresses:
+            raise ValueError("DomainControllerPlacement target must be one of the domain controller addresses")
 
 
 @dataclass(frozen=True)

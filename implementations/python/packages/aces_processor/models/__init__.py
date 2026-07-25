@@ -107,12 +107,17 @@ from .behavior_history_violations import (
 )
 from .behavior_resources import (
     EventRuntime,
+    MixedControlControllerStateRuntime,
+    MixedControlDispositionRulesRuntime,
+    MixedControlTransitionRuntime,
     ObjectiveWindowReferenceRuntime,
+    ParticipantAutonomousExecutionRuntime,
     ParticipantBehaviorRuntime,
     ParticipantBehaviorSpecificationRuntime,
     ParticipantInteractiveAccessRuntime,
     ParticipantObservationBoundaryRuntime,
     ParticipantOutcomeInterpretationRuleRuntime,
+    ParticipantToolAffordanceRuntime,
     ScriptRuntime,
     StoryRuntime,
     WorkflowPredicateRuntime,
@@ -120,6 +125,11 @@ from .behavior_resources import (
     WorkflowStepRuntime,
     WorkflowStepStatePredicateRuntime,
     WorkflowSwitchCaseRuntime,
+)
+from .decision_surface import (
+    ParticipantDecisionSurfaceActionAssessment,
+    ParticipantDecisionSurfaceProjectionInput,
+    project_participant_decision_surface,
 )
 from .history_event import (
     ParticipantBehaviorHistoryEvent,
@@ -130,11 +140,20 @@ from .outcome import (
     ParticipantOutcomeTargetRecord,
 )
 from .outcome_interpretation_validation import validate_participant_outcome_interpretation_record
+from .participant_exposure_authority import (
+    ParticipantExposureAssessment,
+    ParticipantExposureAuthorizationRecord,
+    ParticipantExposureOccurrenceRecord,
+    ParticipantExposurePolicyRevision,
+    ParticipantExposureRealizationAssessment,
+    ParticipantExposureResolvers,
+)
 from .resources import (
     AccountPlacement,
     AssertionRuntime,
     ConditionBinding,
     ContentPlacement,
+    DomainControllerPlacement,
     FeatureBinding,
     GeneratedArtifactRuntime,
     InjectBinding,
@@ -146,6 +165,7 @@ from .resources import (
     PropositionRuntime,
     ResolvedResource,
     RuntimeTemplate,
+    ServiceContentMaterializationBinding,
     map_backend_diagnostic_to_participant_failure,
     validate_participant_action_result_contract,
 )
@@ -161,6 +181,14 @@ from .temporal import (
     ParticipantTemporalStateTransition,
     iter_participant_temporal_state_machine_violations,
 )
+from .time_model import (
+    CompiledClock,
+    CompiledTemporalConstraint,
+    CompiledTimeDomain,
+    CompiledTimeDomainMapping,
+    CompiledTimeModel,
+    CompiledTimeProgressionPolicy,
+)
 
 __all__ = [
     "AccountPlacement",
@@ -168,9 +196,17 @@ __all__ = [
     "AssertionRuntime",
     "ChangeAction",
     "CompiledCapabilityConstraint",
+    "CompiledClock",
     "CompiledRealizationRequirement",
+    "CompiledTemporalConstraint",
+    "CompiledTimeDomain",
+    "CompiledTimeDomainMapping",
+    "CompiledTimeModel",
+    "CompiledTimeProgressionPolicy",
     "ConditionBinding",
     "ContentPlacement",
+    "ServiceContentMaterializationBinding",
+    "DomainControllerPlacement",
     "GeneratedArtifactRuntime",
     "Diagnostic",
     "EVALUATION_STATE_SCHEMA_VERSION",
@@ -192,6 +228,9 @@ __all__ = [
     "OPERATION_SCHEMA_VERSION",
     "ObjectiveRuntime",
     "ObjectiveWindowReferenceRuntime",
+    "MixedControlControllerStateRuntime",
+    "MixedControlDispositionRulesRuntime",
+    "MixedControlTransitionRuntime",
     "OperationReceipt",
     "OperationState",
     "OperationStatus",
@@ -212,8 +251,17 @@ __all__ = [
     "ParticipantAttributionOrderingBasis",
     "ParticipantBehaviorHistoryEvent",
     "ParticipantBehaviorHistoryEventType",
+    "ParticipantDecisionSurfaceActionAssessment",
+    "ParticipantDecisionSurfaceProjectionInput",
+    "ParticipantExposureAssessment",
+    "ParticipantExposureAuthorizationRecord",
+    "ParticipantExposureOccurrenceRecord",
+    "ParticipantExposurePolicyRevision",
+    "ParticipantExposureRealizationAssessment",
+    "ParticipantExposureResolvers",
     "ParticipantBehaviorRuntime",
     "ParticipantBehaviorSpecificationRuntime",
+    "ParticipantAutonomousExecutionRuntime",
     "ParticipantInteractiveAccessRuntime",
     "ParticipantEpisodeControlAction",
     "ParticipantEpisodeExecutionState",
@@ -228,6 +276,7 @@ __all__ = [
     "ParticipantHistoryAddressScope",
     "ParticipantLifecycleOperationState",
     "ParticipantObservationBoundaryRuntime",
+    "ParticipantToolAffordanceRuntime",
     "ParticipantObservationStatus",
     "ParticipantOutcomeInterpretationRecord",
     "ParticipantOutcomeInterpretationRuleRuntime",
@@ -235,6 +284,7 @@ __all__ = [
     "ParticipantOutcomeTargetRecord",
     "ParticipantPhaseRealization",
     "ParticipantRuntimeLifecyclePhase",
+    "project_participant_decision_surface",
     "ParticipantTemporalRuntimeContext",
     "ParticipantTemporalState",
     "ParticipantTemporalStateTransition",

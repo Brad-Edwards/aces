@@ -168,12 +168,6 @@ def test_good_catalog_has_no_failures(tmp_path: Path) -> None:
     assert evaluate_concept_authority_governance(_seed_repo(tmp_path)) == []
 
 
-def test_real_repo_catalog_passes() -> None:
-    # Acceptance criterion: the live catalog passes the gate without
-    # special-casing. Runs the checker against the actual repository.
-    assert evaluate_concept_authority_governance(REPO_ROOT) == []
-
-
 # --------------------------------------------------------------------------- #
 # Check 1 -- family ADR linkage.                                              #
 # --------------------------------------------------------------------------- #

@@ -21,6 +21,107 @@
       "title": "ApparatusIdentityModel",
       "type": "object"
     },
+    "ClockDeclarationModel": {
+      "additionalProperties": false,
+      "properties": {
+        "address": {
+          "maxLength": 2048,
+          "minLength": 3,
+          "not": {
+            "pattern": "[^a-z0-9_.-]"
+          },
+          "pattern": "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$",
+          "title": "Address",
+          "type": "string"
+        },
+        "authority_kind": {
+          "enum": [
+            "runtime",
+            "backend",
+            "system",
+            "external"
+          ],
+          "title": "Authority Kind",
+          "type": "string"
+        },
+        "authority_ref": {
+          "minLength": 1,
+          "title": "Authority Ref",
+          "type": "string"
+        },
+        "description": {
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "monotonicity": {
+          "enum": [
+            "strict",
+            "non_decreasing",
+            "may_jump"
+          ],
+          "title": "Monotonicity",
+          "type": "string"
+        },
+        "supports_jump": {
+          "default": false,
+          "title": "Supports Jump",
+          "type": "boolean"
+        },
+        "supports_pause": {
+          "default": false,
+          "title": "Supports Pause",
+          "type": "boolean"
+        },
+        "supports_reset": {
+          "default": false,
+          "title": "Supports Reset",
+          "type": "boolean"
+        },
+        "time_domain_address": {
+          "maxLength": 2048,
+          "minLength": 3,
+          "not": {
+            "pattern": "[^a-z0-9_.-]"
+          },
+          "pattern": "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$",
+          "title": "Time Domain Address",
+          "type": "string"
+        }
+      },
+      "required": [
+        "address",
+        "time_domain_address",
+        "authority_kind",
+        "authority_ref",
+        "monotonicity",
+        "description"
+      ],
+      "title": "ClockDeclarationModel",
+      "type": "object"
+    },
+    "ExactRatioModel": {
+      "additionalProperties": false,
+      "description": "Reduced positive rational value.",
+      "properties": {
+        "denominator": {
+          "exclusiveMinimum": 0,
+          "title": "Denominator",
+          "type": "integer"
+        },
+        "numerator": {
+          "exclusiveMinimum": 0,
+          "title": "Numerator",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "numerator",
+        "denominator"
+      ],
+      "title": "ExactRatioModel",
+      "type": "object"
+    },
     "ExperimentApparatusCompatibilityReferenceModel": {
       "additionalProperties": false,
       "description": "Profile or capability reference declared by apparatus compatibility metadata.",
@@ -1994,6 +2095,17 @@
           "default": null,
           "title": "Description"
         },
+        "executable_binding": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RandomStreamControlBindingModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "role": {
           "enum": [
             "seed",
@@ -2107,6 +2219,62 @@
         "note"
       ],
       "title": "ExperimentValidityNoteModel",
+      "type": "object"
+    },
+    "GovernedEntropyRefModel": {
+      "additionalProperties": false,
+      "description": "Governed reference to sensitive root entropy; never carries raw bytes.\n\nRaw entropy is resolved only at an authorized in-process boundary (out of\nscope here) and is never serialized back into this model, a diagnostic, a\nfixture, argv, or telemetry (SVR-028).",
+      "properties": {
+        "kind": {
+          "const": "governed-reference",
+          "title": "Kind",
+          "type": "string"
+        },
+        "reference_id": {
+          "minLength": 1,
+          "title": "Reference Id",
+          "type": "string"
+        },
+        "reference_version": {
+          "minLength": 1,
+          "title": "Reference Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "reference_id",
+        "reference_version"
+      ],
+      "title": "GovernedEntropyRefModel",
+      "type": "object"
+    },
+    "GovernedRandomOutcomeRefModel": {
+      "additionalProperties": false,
+      "description": "Governed reference to a sensitive drawn outcome; never carries the raw value.",
+      "properties": {
+        "kind": {
+          "const": "governed-reference",
+          "title": "Kind",
+          "type": "string"
+        },
+        "reference_id": {
+          "minLength": 1,
+          "title": "Reference Id",
+          "type": "string"
+        },
+        "reference_version": {
+          "minLength": 1,
+          "title": "Reference Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "reference_id",
+        "reference_version"
+      ],
+      "title": "GovernedRandomOutcomeRefModel",
       "type": "object"
     },
     "ParticipantExposurePolicyModel": {
@@ -2338,6 +2506,1084 @@
       ],
       "title": "ParticipantImplementationSelectionModel",
       "type": "object"
+    },
+    "PublicRandomOutcomeModel": {
+      "additionalProperties": false,
+      "description": "Public drawn value, recorded as canonical text.",
+      "properties": {
+        "kind": {
+          "const": "public-value",
+          "title": "Kind",
+          "type": "string"
+        },
+        "value": {
+          "minLength": 1,
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "value"
+      ],
+      "title": "PublicRandomOutcomeModel",
+      "type": "object"
+    },
+    "PublicSeedModel": {
+      "additionalProperties": false,
+      "description": "Inline public root-entropy seed: fixed-width canonical hex bytes.\n\nFixed-width lowercase hex removes leading-zero, integer-width, sign, and\nUnicode ambiguity from the executable entropy encoding (per the EXP-718\npreflight's \"Canonical Inputs\" section).",
+      "properties": {
+        "encoding": {
+          "const": "hex-fixed-width",
+          "title": "Encoding",
+          "type": "string"
+        },
+        "kind": {
+          "const": "public-seed",
+          "title": "Kind",
+          "type": "string"
+        },
+        "value": {
+          "minLength": 1,
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "encoding",
+        "value"
+      ],
+      "title": "PublicSeedModel",
+      "type": "object"
+    },
+    "RandomStreamControlBindingModel": {
+      "additionalProperties": false,
+      "description": "Executable binding: profile identity, namespace, and root entropy.\n\nA seed alone, without generator/derivation/transform identity, is not a\nreproducibility claim (SVR-012). ``profile_ref`` is required and\nstructurally constrained to ``ref_kind=\"profile\"``.",
+      "properties": {
+        "namespace": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Namespace",
+          "type": "string"
+        },
+        "profile_ref": {
+          "$ref": "#/$defs/RandomStreamProfileReferenceModel"
+        },
+        "root_entropy": {
+          "discriminator": {
+            "mapping": {
+              "governed-reference": "#/$defs/GovernedEntropyRefModel",
+              "public-seed": "#/$defs/PublicSeedModel"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/PublicSeedModel"
+            },
+            {
+              "$ref": "#/$defs/GovernedEntropyRefModel"
+            }
+          ],
+          "title": "Root Entropy"
+        }
+      },
+      "required": [
+        "profile_ref",
+        "namespace",
+        "root_entropy"
+      ],
+      "title": "RandomStreamControlBindingModel",
+      "type": "object"
+    },
+    "RandomStreamDrawRecordModel": {
+      "additionalProperties": false,
+      "description": "Archival draw provenance: address, transform identity, outcome, and rejection facts.\n\nReferences its control rather than duplicating the root seed for every\ndraw, and never exposes raw generator blocks outside the conformance\nvector corpus.",
+      "properties": {
+        "address": {
+          "$ref": "#/$defs/StreamAddressModel"
+        },
+        "control_id": {
+          "minLength": 1,
+          "title": "Control Id",
+          "type": "string"
+        },
+        "local_coordinate": {
+          "minimum": 0,
+          "title": "Local Coordinate",
+          "type": "integer"
+        },
+        "outcome": {
+          "anyOf": [
+            {
+              "discriminator": {
+                "mapping": {
+                  "governed-reference": "#/$defs/GovernedRandomOutcomeRefModel",
+                  "public-value": "#/$defs/PublicRandomOutcomeModel"
+                },
+                "propertyName": "kind"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/PublicRandomOutcomeModel"
+                },
+                {
+                  "$ref": "#/$defs/GovernedRandomOutcomeRefModel"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Outcome"
+        },
+        "rejection_attempts": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Rejection Attempts",
+          "type": "integer"
+        },
+        "rejection_exhausted": {
+          "default": false,
+          "title": "Rejection Exhausted",
+          "type": "boolean"
+        },
+        "transform_id": {
+          "minLength": 1,
+          "title": "Transform Id",
+          "type": "string"
+        },
+        "transform_version": {
+          "minLength": 1,
+          "title": "Transform Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "control_id",
+        "address",
+        "transform_id",
+        "transform_version",
+        "local_coordinate"
+      ],
+      "title": "RandomStreamDrawRecordModel",
+      "type": "object",
+      "x-aces-invariants": [
+        {
+          "description": "local_coordinate must match address.local_coordinate.",
+          "id": "random-stream-draw-record-local-coordinate-matches-address",
+          "inputs": [
+            {
+              "contract_id": "experiment-run-v1",
+              "instance_path": "#/stochastic_draws"
+            }
+          ],
+          "level": "error",
+          "validator": "aces_contracts.contracts.random_stream.RandomStreamDrawRecordModel._validate_local_coordinate_matches_address"
+        },
+        {
+          "description": "outcome must be present exactly when rejection_exhausted is false, and absent when true.",
+          "id": "random-stream-draw-record-outcome-matches-exhaustion",
+          "inputs": [
+            {
+              "contract_id": "experiment-run-v1",
+              "instance_path": "#/stochastic_draws"
+            }
+          ],
+          "level": "error",
+          "validator": "aces_contracts.contracts.random_stream.RandomStreamDrawRecordModel._validate_outcome_matches_exhaustion"
+        }
+      ]
+    },
+    "RandomStreamProfileReferenceModel": {
+      "additionalProperties": false,
+      "description": "Reference constrained to an accepted random-stream profile.",
+      "properties": {
+        "ref_digest": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Digest"
+        },
+        "ref_id": {
+          "minLength": 1,
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "ref_kind": {
+          "const": "profile",
+          "title": "Ref Kind",
+          "type": "string"
+        },
+        "ref_path": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Path"
+        },
+        "ref_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Version"
+        }
+      },
+      "required": [
+        "ref_kind",
+        "ref_id"
+      ],
+      "title": "RandomStreamProfileReferenceModel",
+      "type": "object"
+    },
+    "RealizedTimeModelProvenanceModel": {
+      "additionalProperties": false,
+      "description": "Run-scoped declaration/realization comparison and apparatus evidence.",
+      "properties": {
+        "apparatus_bindings": {
+          "minProperties": 1,
+          "patternProperties": {
+            "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$": {
+              "$ref": "#/$defs/TimeApparatusBindingModel"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 2048,
+            "minLength": 3,
+            "not": {
+              "pattern": "[^a-z0-9_.-]"
+            }
+          },
+          "title": "Apparatus Bindings",
+          "type": "object"
+        },
+        "declaration_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Declaration Digest",
+          "type": "string"
+        },
+        "declared_model": {
+          "$ref": "#/$defs/TimeModelDeclarationModel"
+        },
+        "deviations": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Deviations",
+          "type": "array"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "realized_model": {
+          "$ref": "#/$defs/TimeModelDeclarationModel"
+        },
+        "run_id": {
+          "minLength": 1,
+          "title": "Run Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "realized-time-model/v1",
+          "default": "realized-time-model/v1",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "synchronization_assumptions": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Synchronization Assumptions",
+          "type": "array"
+        },
+        "timing_limits": {
+          "items": {
+            "$ref": "#/$defs/TimingLimitModel"
+          },
+          "title": "Timing Limits",
+          "type": "array"
+        }
+      },
+      "required": [
+        "run_id",
+        "declaration_digest",
+        "declared_model",
+        "realized_model",
+        "apparatus_bindings",
+        "synchronization_assumptions",
+        "evidence_refs"
+      ],
+      "title": "RealizedTimeModelProvenanceModel",
+      "type": "object"
+    },
+    "StreamAddressModel": {
+      "additionalProperties": false,
+      "description": "Closed semantic random-draw address (SVR-013).\n\nA pure canonical function of the randomness namespace, logical trial\ncoordinate, selection-policy id, variation-point id, draw purpose, and a\nstable local draw coordinate. It is not a concatenated string, arbitrary\nmapping, JSON Pointer, or scheduler/compiled-runtime address, and it\nadmits no worker/process/thread/host, wall-time, retry, or aggregate\nexperiment-digest field (``extra=\"forbid\"`` closes the shape).",
+      "properties": {
+        "draw_purpose": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Draw Purpose",
+          "type": "string"
+        },
+        "local_coordinate": {
+          "minimum": 0,
+          "title": "Local Coordinate",
+          "type": "integer"
+        },
+        "namespace": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Namespace",
+          "type": "string"
+        },
+        "selection_policy_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Selection Policy Id",
+          "type": "string"
+        },
+        "trial_coordinate": {
+          "$ref": "#/$defs/TrialCoordinateModel"
+        },
+        "variation_point_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Variation Point Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "namespace",
+        "trial_coordinate",
+        "selection_policy_id",
+        "variation_point_id",
+        "draw_purpose",
+        "local_coordinate"
+      ],
+      "title": "StreamAddressModel",
+      "type": "object",
+      "x-aces-invariants": [
+        {
+          "description": "draw_purpose must be a term from the random_streams.draw_purpose controlled vocabulary.",
+          "id": "random-stream-address-draw-purpose-governed",
+          "inputs": [
+            {
+              "contract_id": "controlled-vocabularies-v1",
+              "instance_path": "#"
+            }
+          ],
+          "level": "error",
+          "validator": "aces_contracts.contracts.random_stream.StreamAddressModel._validate_draw_purpose"
+        }
+      ]
+    },
+    "TemporalConstraintDeclarationModel": {
+      "additionalProperties": false,
+      "properties": {
+        "address": {
+          "maxLength": 2048,
+          "minLength": 3,
+          "not": {
+            "pattern": "[^a-z0-9_.-]"
+          },
+          "pattern": "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$",
+          "title": "Address",
+          "type": "string"
+        },
+        "cadence_ticks": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cadence Ticks"
+        },
+        "clock_address": {
+          "maxLength": 2048,
+          "minLength": 3,
+          "not": {
+            "pattern": "[^a-z0-9_.-]"
+          },
+          "pattern": "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$",
+          "title": "Clock Address",
+          "type": "string"
+        },
+        "description": {
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "duration_ticks": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration Ticks"
+        },
+        "end": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TimeCoordinateModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "kind": {
+          "enum": [
+            "precedence",
+            "duration",
+            "window",
+            "deadline",
+            "cadence"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "start": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TimeCoordinateModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "subject_addresses": {
+          "items": {
+            "maxLength": 2048,
+            "minLength": 3,
+            "not": {
+              "pattern": "[^a-z0-9_.-]"
+            },
+            "pattern": "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Subject Addresses",
+          "type": "array"
+        }
+      },
+      "required": [
+        "address",
+        "kind",
+        "clock_address",
+        "subject_addresses",
+        "description"
+      ],
+      "title": "TemporalConstraintDeclarationModel",
+      "type": "object"
+    },
+    "TimeApparatusBindingModel": {
+      "additionalProperties": false,
+      "properties": {
+        "address": {
+          "maxLength": 2048,
+          "minLength": 3,
+          "not": {
+            "pattern": "[^a-z0-9_.-]"
+          },
+          "pattern": "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$",
+          "title": "Address",
+          "type": "string"
+        },
+        "component_ref": {
+          "minLength": 1,
+          "title": "Component Ref",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "limitations": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "realization_kind": {
+          "enum": [
+            "runtime_managed",
+            "backend_native",
+            "system",
+            "external"
+          ],
+          "title": "Realization Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "address",
+        "component_ref",
+        "realization_kind",
+        "evidence_refs"
+      ],
+      "title": "TimeApparatusBindingModel",
+      "type": "object"
+    },
+    "TimeCoordinateModel": {
+      "additionalProperties": false,
+      "description": "Exact superdense coordinate within one discontinuity segment.",
+      "properties": {
+        "microstep": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Microstep",
+          "type": "integer"
+        },
+        "segment": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Segment",
+          "type": "integer"
+        },
+        "tick": {
+          "title": "Tick",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "tick"
+      ],
+      "title": "TimeCoordinateModel",
+      "type": "object"
+    },
+    "TimeDomainDeclarationModel": {
+      "additionalProperties": false,
+      "properties": {
+        "address": {
+          "maxLength": 2048,
+          "minLength": 3,
+          "not": {
+            "pattern": "[^a-z0-9_.-]"
+          },
+          "pattern": "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$",
+          "title": "Address",
+          "type": "string"
+        },
+        "description": {
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "epoch": {
+          "enum": [
+            "unix",
+            "scenario_start",
+            "run_start",
+            "unanchored",
+            "external"
+          ],
+          "title": "Epoch",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "wall_clock",
+            "monotonic",
+            "simulated",
+            "logical",
+            "external"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "tick_period_seconds": {
+          "$ref": "#/$defs/ExactRatioModel"
+        },
+        "visibility": {
+          "enum": [
+            "runtime_only",
+            "participant_visible",
+            "evidence_only"
+          ],
+          "title": "Visibility",
+          "type": "string"
+        }
+      },
+      "required": [
+        "address",
+        "kind",
+        "tick_period_seconds",
+        "epoch",
+        "visibility",
+        "description"
+      ],
+      "title": "TimeDomainDeclarationModel",
+      "type": "object"
+    },
+    "TimeDomainMappingDeclarationModel": {
+      "additionalProperties": false,
+      "properties": {
+        "address": {
+          "maxLength": 2048,
+          "minLength": 3,
+          "not": {
+            "pattern": "[^a-z0-9_.-]"
+          },
+          "pattern": "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$",
+          "title": "Address",
+          "type": "string"
+        },
+        "description": {
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "mapping_kind": {
+          "enum": [
+            "identity",
+            "affine_rational"
+          ],
+          "title": "Mapping Kind",
+          "type": "string"
+        },
+        "offset_ticks": {
+          "default": 0,
+          "title": "Offset Ticks",
+          "type": "integer"
+        },
+        "scale": {
+          "$ref": "#/$defs/ExactRatioModel"
+        },
+        "source_domain_address": {
+          "maxLength": 2048,
+          "minLength": 3,
+          "not": {
+            "pattern": "[^a-z0-9_.-]"
+          },
+          "pattern": "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$",
+          "title": "Source Domain Address",
+          "type": "string"
+        },
+        "target_domain_address": {
+          "maxLength": 2048,
+          "minLength": 3,
+          "not": {
+            "pattern": "[^a-z0-9_.-]"
+          },
+          "pattern": "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$",
+          "title": "Target Domain Address",
+          "type": "string"
+        }
+      },
+      "required": [
+        "address",
+        "source_domain_address",
+        "target_domain_address",
+        "mapping_kind",
+        "description"
+      ],
+      "title": "TimeDomainMappingDeclarationModel",
+      "type": "object"
+    },
+    "TimeModelDeclarationModel": {
+      "additionalProperties": false,
+      "description": "Canonical backend-neutral declaration compiled from authored SDL.",
+      "properties": {
+        "clocks": {
+          "minProperties": 1,
+          "patternProperties": {
+            "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$": {
+              "$ref": "#/$defs/ClockDeclarationModel"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 2048,
+            "minLength": 3,
+            "not": {
+              "pattern": "[^a-z0-9_.-]"
+            }
+          },
+          "title": "Clocks",
+          "type": "object"
+        },
+        "domains": {
+          "minProperties": 1,
+          "patternProperties": {
+            "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$": {
+              "$ref": "#/$defs/TimeDomainDeclarationModel"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 2048,
+            "minLength": 3,
+            "not": {
+              "pattern": "[^a-z0-9_.-]"
+            }
+          },
+          "title": "Domains",
+          "type": "object"
+        },
+        "mappings": {
+          "patternProperties": {
+            "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$": {
+              "$ref": "#/$defs/TimeDomainMappingDeclarationModel"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 2048,
+            "minLength": 3,
+            "not": {
+              "pattern": "[^a-z0-9_.-]"
+            }
+          },
+          "title": "Mappings",
+          "type": "object"
+        },
+        "progression_policies": {
+          "patternProperties": {
+            "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$": {
+              "$ref": "#/$defs/TimeProgressionPolicyDeclarationModel"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 2048,
+            "minLength": 3,
+            "not": {
+              "pattern": "[^a-z0-9_.-]"
+            }
+          },
+          "title": "Progression Policies",
+          "type": "object"
+        },
+        "schema_version": {
+          "const": "time-model/v1",
+          "default": "time-model/v1",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "temporal_constraints": {
+          "patternProperties": {
+            "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$": {
+              "$ref": "#/$defs/TemporalConstraintDeclarationModel"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 2048,
+            "minLength": 3,
+            "not": {
+              "pattern": "[^a-z0-9_.-]"
+            }
+          },
+          "title": "Temporal Constraints",
+          "type": "object"
+        }
+      },
+      "required": [
+        "domains",
+        "clocks"
+      ],
+      "title": "TimeModelDeclarationModel",
+      "type": "object"
+    },
+    "TimeProgressionPolicyDeclarationModel": {
+      "additionalProperties": false,
+      "properties": {
+        "address": {
+          "maxLength": 2048,
+          "minLength": 3,
+          "not": {
+            "pattern": "[^a-z0-9_.-]"
+          },
+          "pattern": "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$",
+          "title": "Address",
+          "type": "string"
+        },
+        "advancement_mode": {
+          "enum": [
+            "real_time",
+            "dilated",
+            "stepped",
+            "event_driven",
+            "externally_paced"
+          ],
+          "title": "Advancement Mode",
+          "type": "string"
+        },
+        "clock_address": {
+          "maxLength": 2048,
+          "minLength": 3,
+          "not": {
+            "pattern": "[^a-z0-9_.-]"
+          },
+          "pattern": "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$",
+          "title": "Clock Address",
+          "type": "string"
+        },
+        "description": {
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "drift_bound_ticks": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Drift Bound Ticks"
+        },
+        "pacing_ratio": {
+          "$ref": "#/$defs/ExactRatioModel"
+        },
+        "replay_behavior": {
+          "enum": [
+            "unsupported",
+            "restart_from_anchor",
+            "restore_recorded_advances"
+          ],
+          "title": "Replay Behavior",
+          "type": "string"
+        },
+        "reset_behavior": {
+          "enum": [
+            "unsupported",
+            "new_segment_zero",
+            "new_segment_preserve_value"
+          ],
+          "title": "Reset Behavior",
+          "type": "string"
+        },
+        "step_ticks": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Step Ticks"
+        },
+        "synchronization_mode": {
+          "enum": [
+            "none",
+            "authority",
+            "barrier",
+            "conservative"
+          ],
+          "title": "Synchronization Mode",
+          "type": "string"
+        }
+      },
+      "required": [
+        "address",
+        "clock_address",
+        "advancement_mode",
+        "synchronization_mode",
+        "reset_behavior",
+        "replay_behavior",
+        "description"
+      ],
+      "title": "TimeProgressionPolicyDeclarationModel",
+      "type": "object"
+    },
+    "TimingLimitModel": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "kind": {
+          "enum": [
+            "resolution",
+            "drift",
+            "jitter",
+            "latency",
+            "lookahead",
+            "other"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "limit_id": {
+          "minLength": 1,
+          "title": "Limit Id",
+          "type": "string"
+        },
+        "subject_address": {
+          "maxLength": 2048,
+          "minLength": 3,
+          "not": {
+            "pattern": "[^a-z0-9_.-]"
+          },
+          "pattern": "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$",
+          "title": "Subject Address",
+          "type": "string"
+        },
+        "unit": {
+          "minLength": 1,
+          "title": "Unit",
+          "type": "string"
+        },
+        "value": {
+          "$ref": "#/$defs/ExactRatioModel"
+        }
+      },
+      "required": [
+        "limit_id",
+        "subject_address",
+        "kind",
+        "value",
+        "unit",
+        "evidence_refs"
+      ],
+      "title": "TimingLimitModel",
+      "type": "object"
+    },
+    "TrialCoordinateModel": {
+      "additionalProperties": false,
+      "description": "Logical trial coordinate dimensions usable in a random-stream address.\n\nEvery field is an optional portable identifier: an experiment declares\nonly the dimensions it actually varies (SVR-013's \"logical trial\ncoordinate\").",
+      "properties": {
+        "block_id": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "minLength": 1,
+              "not": {
+                "pattern": "[^a-z0-9_-]"
+              },
+              "pattern": "^[a-z0-9]",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Block Id"
+        },
+        "condition_id": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "minLength": 1,
+              "not": {
+                "pattern": "[^a-z0-9_-]"
+              },
+              "pattern": "^[a-z0-9]",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Condition Id"
+        },
+        "replicate_id": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "minLength": 1,
+              "not": {
+                "pattern": "[^a-z0-9_-]"
+              },
+              "pattern": "^[a-z0-9]",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Replicate Id"
+        }
+      },
+      "title": "TrialCoordinateModel",
+      "type": "object"
     }
   },
   "$id": "https://aces.dev/schemas/experiment-run-v1.json",
@@ -2467,6 +3713,17 @@
       "title": "Realized Form Disclosures",
       "type": "array"
     },
+    "realized_time_model": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RealizedTimeModelProvenanceModel"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
     "result_summaries": {
       "additionalProperties": {
         "$ref": "#/$defs/ExperimentResultSummaryModel"
@@ -2521,6 +3778,13 @@
       },
       "minItems": 1,
       "title": "Stochastic Controls",
+      "type": "array"
+    },
+    "stochastic_draws": {
+      "items": {
+        "$ref": "#/$defs/RandomStreamDrawRecordModel"
+      },
+      "title": "Stochastic Draws",
       "type": "array"
     },
     "task_ref": {
@@ -2613,6 +3877,30 @@
         {
           "contract_id": "experiment-run-v1",
           "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_contracts.contracts.ExperimentRunModel._validate_archival_run"
+    },
+    {
+      "description": "Every stochastic_draws control_id must resolve to a stochastic_controls control_id with an executable_binding on the same run, and each draw's address.namespace and transform_id/transform_version must match that binding's namespace and admitted profile transforms.",
+      "id": "stochastic-draws-control-ref-resolves",
+      "inputs": [
+        {
+          "contract_id": "experiment-run-v1",
+          "instance_path": "#/stochastic_draws"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_contracts.contracts.validate_experiment_run_against_task"
+    },
+    {
+      "description": "When present, realized-time provenance must match the run id and its declared model digest.",
+      "id": "realized-time-model-bound-to-run",
+      "inputs": [
+        {
+          "contract_id": "experiment-run-v1",
+          "instance_path": "#/realized_time_model"
         }
       ],
       "level": "error",

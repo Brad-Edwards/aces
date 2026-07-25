@@ -104,6 +104,111 @@ copy of the CybORG API or scenario schema.
   simulator session types, usernames, or the scenario syntax. No code or
   syntax was copied.
 
+## Participant Information-Flow Sources
+
+On 2026-07-17, the two publication identities adopted by SEM-230 were checked
+as bounded DOI records:
+
+- Joseph A. Goguen and José Meseguer, *Security Policies and Security Models*,
+  1982 IEEE Symposium on Security and Privacy,
+  <https://doi.org/10.1109/SP.1982.10014>.
+- Andrei Sabelfeld and David Sands, *Declassification: Dimensions and
+  Principles*, Journal of Computer Security 17(5), 2009,
+  <https://doi.org/10.3233/JCS-2009-0352>.
+
+The SEM-230 derivation also reuses formal identities already adopted by the
+participant and behavioral-relation authorities: Fagin, Halpern, Moses, and
+Vardi's *Reasoning About Knowledge* (ISBN `9780262061629`), Milner's
+*A Calculus of Communicating Systems* (DOI `10.1007/3-540-10235-3`), and van
+Glabbeek's *The Linear Time-Branching Time Spectrum* (DOI
+`10.1007/BFb0039066`). The existing ADR-054 order model supplies the indirect
+Lamport happened-before, Winskel event-structure, and Mazurkiewicz trace-theory
+lineage. SEM-230 references that governed model rather than creating another
+clock, event-structure, or trace definition.
+
+ACES adapts the noninterference policy obligation and explicit
+declassification dimensions, interpreted-system local state, and labelled
+transition/hiding discipline into the ACES-native `policy-noninterference`
+relation. The governed mapping is participant-, audience-, policy-revision-,
+scheduler/environment-, and order-relative and composes existing ACES world,
+view, local-history, archival-evidence, control, authority, marking, and
+provenance objects. The new content is limited to coordinates needed to bind
+those prior definitions to existing ACES carriers. It does not copy publication
+syntax or code and does not claim wire compatibility, universal proof,
+production enforcement, or backend realization. No copied-code notice or
+third-party distribution obligation is introduced by these publication
+citations.
+
+## DSL-437 Participant And Simulation Sources
+
+This addendum was reviewed on 2026-07-24 for DSL-437. It records semantic
+precedents only. ACES does not copy source code or syntax and does not claim
+compatibility with any source named below.
+
+### DSL-437 participant-interface sources
+
+- CybORG remains pinned to v3.0 commit
+  `a2d03f99e587af153ae0ac50fb94ba6272e4fff2`. The additional reviewed
+  boundaries are `CybORG/Agents/SimpleAgents/GreenAgent.py`, where a benign
+  agent selects from an action set using an observation-facing agent method,
+  and `CybORG/Shared/AgentInterface.py`, where action selection, observation
+  update, reset, and episode termination are separated. These are evidence for
+  treating benign activity as participant behavior, not a source scheduler or
+  ACES runtime protocol.
+- Towers et al., *Gymnasium: A Standard Interface for Reinforcement Learning
+  Environments*, arXiv:2407.17032 (2024),
+  <https://arxiv.org/abs/2407.17032>, supplies the reset/step boundary and the
+  separation of observation, reward, termination, truncation, and auxiliary
+  information.
+- Terry et al., *PettingZoo: Gym for Multi-Agent Reinforcement Learning*,
+  NeurIPS 2021, <https://arxiv.org/abs/2009.14471>, supplies the Agent
+  Environment Cycle and explicit per-agent ordering concern.
+- Lanctot et al., *OpenSpiel: A Framework for Reinforcement Learning in Games*,
+  arXiv:1908.09453 (2019), <https://arxiv.org/abs/1908.09453>, supplies the
+  explicit current-player, legal-action, information-state, chance, and
+  simultaneous-move distinctions.
+
+ACES adapts only the participant/environment boundary, episode lifecycle, and
+multi-participant ordering concerns. It does not adopt Gymnasium tuples,
+PettingZoo AEC or parallel APIs, OpenSpiel state APIs, CybORG action ids, reward
+arrays, observations, or agent implementation.
+
+### DSL-437 simulation-time sources
+
+- Foote, *Clock and Time*, ROS 2 Design (2018),
+  <https://design.ros2.org/articles/clock_and_time.html>, supplies the
+  separation of system, steady, and externally controlled time plus explicit
+  pause and time-jump handling.
+- Modelica Association Project FMI, *Functional Mock-up Interface
+  Specification* 3.0.2 (2024), <https://fmi-standard.org/docs/3.0.2/>, supplies
+  importer-controlled advancement, clocks, capability flags, Co-Simulation,
+  and Scheduled Execution boundaries.
+- IEEE Std 1516.1-2010, *High Level Architecture Federate Interface
+  Specification* (2010), DOI
+  [10.1109/IEEESTD.2010.5954120](https://doi.org/10.1109/IEEESTD.2010.5954120),
+  supplies the time-regulation, time-constrained advancement, and
+  timestamp-order delivery service boundary.
+- TENA Software Development Activity, *TENA Is Establishing the Foundation for
+  DoD Range Interoperability* (2024),
+  <https://www.tena-sda.org/attachments/TENA-Overview-FS-2024-02-29-DistA.pdf>,
+  supplies the separation among execution middleware, object models,
+  repository content, and the Logical Range Data Archive.
+- ASAM e.V., *ASAM OpenSCENARIO XML 1.3.0* (2024),
+  <https://publications.pages.asam.net/standards/ASAM_OpenSCENARIO/ASAM_OpenSCENARIO_XML/v1.3.0/>,
+  supplies the separation among entities, storyboard lifecycle, triggers,
+  actions, and simulation-time conditions, especially sections 7.2 and 8.4.
+
+ACES composes those concerns through its own shared-time and participant
+contracts. It does not adopt ROS topics or `/clock`, an FMI importer/FMU API,
+an HLA federation or RTI, TENA middleware/object models, or the OpenSCENARIO
+automotive hierarchy and XML format. DSL-437 uses an ACES-owned wall-paced
+driver only for runtime-authority real-time and dilated participant cadence,
+requires non-negative reachable cadence points, and rejects externally paced
+autonomous policies until an ACES portable transition-notification contract
+exists. Coordinated clock/participant reset is an ACES backend transaction
+obligation, not a derivation from any source rollback API. No source callback,
+transaction protocol, or wire protocol is implied.
+
 ## CRACK Publications
 
 Two related works by Russo, Costa, and Armando are distinct and must not share

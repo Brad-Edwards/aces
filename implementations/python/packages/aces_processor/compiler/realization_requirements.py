@@ -17,6 +17,7 @@ from ..semantics.realization import (
 from .addresses import (
     _account_address,
     _content_address,
+    _domain_controller_address,
     _generated_artifact_address,
     _network_address,
     _node_address,
@@ -54,6 +55,11 @@ def _append_domain_topology_requirements(
         *(
             (_account_address(account_name), binding.domain_name)
             for account_name, binding in domain_analysis.account_bindings.items()
+        ),
+        *(
+            (_domain_controller_address(node_name, binding.domain_name), binding.domain_name)
+            for node_name, binding in domain_analysis.node_bindings.items()
+            if binding.role.value == "controller"
         ),
     ]
     for address, domain_name in domain_carriers:
@@ -101,6 +107,26 @@ def _append_stateful_resource_requirements(
                     governing_scope=f"#/{section_name}/{name}",
                 )
             )
+
+
+def _append_service_materialization_requirements(
+    requirements: list[CompiledRealizationRequirement],
+    scenario: InstantiatedScenario,
+) -> None:
+    for name, content in scenario.content.items():
+        if content.service_materialization is None:
+            continue
+        requirements.append(
+            CompiledRealizationRequirement(
+                field_path=f"content.{name}.service_materialization",
+                address=_content_address(name),
+                domain=REALIZATION_DOMAIN,
+                requirement_kind="service-content-materialization",
+                explicitness=ExplicitnessClass.EXACT,
+                provenance=ExplicitnessProvenance.AUTHOR_DECLARED,
+                governing_scope=f"#/content/{name}/service_materialization",
+            )
+        )
 
 
 def _compile_realization_requirements(
@@ -168,4 +194,5 @@ def _compile_realization_requirements(
         )
     _append_domain_topology_requirements(requirements, domain_analysis)
     _append_stateful_resource_requirements(requirements, scenario)
+    _append_service_materialization_requirements(requirements, scenario)
     return tuple(requirements)

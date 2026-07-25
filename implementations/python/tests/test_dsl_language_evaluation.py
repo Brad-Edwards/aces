@@ -5,10 +5,10 @@ from __future__ import annotations
 from copy import deepcopy
 from pathlib import Path
 
+import tools.check_dsl_language_evaluation as evaluation_gate
 from tools.check_dsl_language_evaluation import (
     REQUIRED_DIMENSION_IDS,
     REQUIRED_PERSONA_IDS,
-    evaluate,
     load_bundle,
     recompute_dimension_results,
     recompute_measure_results,
@@ -33,13 +33,28 @@ def _bundle() -> tuple[dict, dict, dict, dict]:
     )
 
 
+def _full_claim_scope(protocol: dict) -> dict[str, list[str]]:
+    return {
+        "persona_ids": [item["persona_id"] for item in protocol["personas"]],
+        "task_ids": [item["task_id"] for item in protocol["tasks"]],
+        "tooling_condition_ids": [item["condition_id"] for item in protocol["tooling_conditions"]],
+        "variant_ids": [item["variant_id"] for item in protocol["variants"]],
+        "artifact_stage_ids": [item["stage_id"] for item in protocol["artifact_stages"]],
+        "dimension_ids": [item["dimension_id"] for item in protocol["dimensions"]],
+        "measure_ids": [item["measure_id"] for item in protocol["measures"]],
+    }
+
+
 def _refresh_analysis(
     protocol: dict,
     snapshot: dict,
     analysis: dict,
     evidence_status: str,
+    *,
+    claim_binding: dict | None = None,
 ) -> None:
-    measure_results = recompute_measure_results(protocol, snapshot)
+    scope = analysis["claim"]["scope"]
+    measure_results = recompute_measure_results(protocol, snapshot, scope=scope)
     analysis["measure_results"] = [
         {
             "measure_id": measure_id,
@@ -56,8 +71,25 @@ def _refresh_analysis(
     ]
     analysis["dimension_results"] = [
         {"dimension_id": dimension_id, **result}
-        for dimension_id, result in recompute_dimension_results(protocol, measure_results).items()
+        for dimension_id, result in recompute_dimension_results(
+            protocol,
+            measure_results,
+            dimension_ids=scope["dimension_ids"],
+        ).items()
     ]
+    claim_id = analysis["claim"]["claim_id"]
+    if claim_binding is None:
+        claim_binding = next(
+            entry[0]["claim_binding"]
+            for entry in evaluation_gate.load_bundles(REPO_ROOT)
+            if entry[0]["claim_binding"]["claim_id"] == claim_id
+        )
+    strata = evaluation_gate.resolve_claim_strata(protocol, analysis, claim_binding)
+    analysis["stratum_results"] = (
+        []
+        if snapshot["execution_status"] == "not_started"
+        else evaluation_gate.recompute_stratum_results(protocol, snapshot, strata)
+    )
     analysis["execution_status"] = snapshot["execution_status"]
     analysis["evidence_status"] = evidence_status
 
@@ -79,7 +111,7 @@ def _executed_bundle(*, failing: bool = False) -> tuple[dict, dict, dict]:
             subject = {
                 "subject_id": f"subject-{persona_id}-{index}",
                 "persona_id": persona_id,
-                "experience_band": "qualified",
+                "experience_band": protocol["sampling_plan"]["experience_bands"][0],
                 "consent_status": "consented",
             }
             subjects_by_persona[persona_id].append(subject)
@@ -226,15 +258,366 @@ def _append_valid_disagreement(protocol: dict, snapshot: dict) -> dict:
     return disagreement
 
 
-def test_current_bundle_passes_with_required_catalogs_and_an_honest_status() -> None:
-    assert evaluate(REPO_ROOT) == []
-
+def test_current_bundle_declares_required_catalogs_and_an_honest_status() -> None:
     _, protocol, snapshot, analysis = _bundle()
     assert {item["dimension_id"] for item in protocol["dimensions"]} == REQUIRED_DIMENSION_IDS
     assert {item["persona_id"] for item in protocol["personas"]} == REQUIRED_PERSONA_IDS
     assert snapshot["execution_status"] == "not_started"
     assert snapshot["aces_revision"] == "38ba081714b12a4dcc7a5c527e2f1250d80a4d1b"
     assert analysis["evidence_status"] == "untested"
+
+
+def test_manifest_loads_primary_and_accessibility_bundles() -> None:
+    bundles = evaluation_gate.load_bundles(REPO_ROOT)
+
+    assert [entry[0]["bundle_id"] for entry in bundles] == [
+        "aces-dsl-language-evaluation",
+        "aces-researcher-accessibility-evaluation",
+    ]
+    assert all(validate_bundle(REPO_ROOT, *entry[1:]) == [] for entry in bundles)
+    _, accessibility_protocol, accessibility_snapshot, accessibility_analysis = bundles[1]
+    assert accessibility_protocol["revision"] == "2.0.0"
+    assert accessibility_snapshot["execution_status"] == "not_started"
+    assert accessibility_analysis["evidence_status"] == "untested"
+    assert accessibility_analysis["claim"]["scope"]["persona_ids"] == [
+        "security-researcher",
+        "benchmark-designer",
+        "backend-implementer",
+        "evaluator-reviewer",
+    ]
+
+
+def test_manifest_rejects_malformed_supplemental_bundle_entries(tmp_path: Path) -> None:
+    manifest_path = tmp_path / evaluation_gate.MANIFEST_PATH
+    manifest_path.parent.mkdir(parents=True)
+    manifest_path.write_text(
+        """{
+          "bundle_id": "primary-bundle",
+          "revision": "1.0.0",
+              "protocol_path": "protocol.json",
+              "snapshot_path": "snapshot.json",
+              "analysis_path": "analysis.json",
+              "claim_binding": {},
+              "supplemental_bundles": ["not-an-object"]
+        }\n""",
+        encoding="utf-8",
+    )
+
+    try:
+        evaluation_gate.load_bundles(tmp_path)
+    except ValueError as exc:
+        assert "supplemental_bundles[0] must be an object" in str(exc)
+    else:
+        raise AssertionError("malformed supplemental bundle entries must fail closed")
+
+
+def test_claim_scope_rejects_unknown_catalog_ids() -> None:
+    _, protocol, snapshot, analysis = _bundle()
+    analysis["claim"]["scope"] = _full_claim_scope(protocol)
+    analysis["claim"]["scope"]["task_ids"].append("missing-task")
+
+    failures = validate_bundle(REPO_ROOT, protocol, snapshot, analysis)
+
+    assert "dsl-evaluation-claim-scope" in _rule_ids(failures)
+
+
+def test_bundle_validation_reports_the_selected_analysis_path() -> None:
+    _, protocol, snapshot, analysis = _bundle()
+    analysis["claim"]["scope"]["task_ids"].append("missing-task")
+
+    failures = validate_bundle(
+        REPO_ROOT,
+        protocol,
+        snapshot,
+        analysis,
+        artifact_paths={"analysis_path": "docs/research/dsl-language-evaluation/custom-analysis.json"},
+    )
+
+    scope_failure = next(failure for failure in failures if failure.rule_id == "dsl-evaluation-claim-scope")
+    assert scope_failure.path == "docs/research/dsl-language-evaluation/custom-analysis.json"
+
+
+def test_claim_scope_ignores_frozen_records_from_another_persona() -> None:
+    protocol, snapshot, analysis = _executed_bundle()
+    scope = _full_claim_scope(protocol)
+    scope["persona_ids"].remove("assurance-auditor")
+    next(item for item in protocol["personas"] if item["persona_id"] == "assurance-auditor")[
+        "minimum_completed_subjects"
+    ] = 0
+    protocol["sampling_plan"]["target_total"] = 25
+    analysis["claim"]["claim_id"] = "aces-language-adequacy-without-assurance-auditor"
+    analysis["claim"]["scope"] = scope
+    measure_results = recompute_measure_results(protocol, snapshot, scope=scope)
+    analysis["measure_results"] = [
+        {
+            "measure_id": measure_id,
+            "status": "evaluated",
+            **result,
+        }
+        for measure_id, result in measure_results.items()
+    ]
+    analysis["dimension_results"] = [
+        {"dimension_id": dimension_id, **result}
+        for dimension_id, result in recompute_dimension_results(protocol, measure_results).items()
+        if dimension_id in scope["dimension_ids"]
+    ]
+    claim_binding = deepcopy(load_bundle(REPO_ROOT)[0]["claim_binding"])
+    claim_binding["claim_id"] = analysis["claim"]["claim_id"]
+    claim_binding["scope"] = deepcopy(scope)
+    claim_binding["strata"][0]["persona_ids"].remove("assurance-auditor")
+    strata = evaluation_gate.resolve_claim_strata(protocol, analysis, claim_binding)
+    analysis["stratum_results"] = evaluation_gate.recompute_stratum_results(protocol, snapshot, strata)
+
+    assert (
+        validate_bundle(
+            REPO_ROOT,
+            protocol,
+            snapshot,
+            analysis,
+            artifact_paths={"claim_binding": claim_binding},
+        )
+        == []
+    )
+
+
+def test_analysis_cannot_narrow_the_manifest_bound_claim_scope() -> None:
+    protocol, snapshot, analysis = _executed_bundle(failing=True)
+    scope = _full_claim_scope(protocol)
+    scope["persona_ids"] = ["evaluator-reviewer"]
+    scope["task_ids"] = [
+        "classify-underspecified-realization",
+        "round-trip-format-equivalence",
+    ]
+    scope["variant_ids"] = [
+        "profile-dependent-realization",
+        "format-only-equivalent",
+    ]
+    public_tools_attempt = next(
+        attempt
+        for attempt in snapshot["attempts"]
+        if attempt["task_id"] == "classify-underspecified-realization"
+        and attempt["tooling_condition_id"] == "public-tools"
+    )
+    evaluator = next(subject for subject in snapshot["subjects"] if subject["persona_id"] == "evaluator-reviewer")
+    public_tools_attempt["persona_id"] = "evaluator-reviewer"
+    public_tools_attempt["subject_id"] = evaluator["subject_id"]
+    for observation in snapshot["observations"]:
+        if observation["attempt_id"] == public_tools_attempt["attempt_id"]:
+            observation["persona_id"] = "evaluator-reviewer"
+            observation["subject_id"] = evaluator["subject_id"]
+    scope["dimension_ids"] = ["ambiguity"]
+    scope["measure_ids"] = ["relation-classification-accuracy", "critical-silent-ambiguities"]
+    for persona in protocol["personas"]:
+        persona["minimum_completed_subjects"] = 5 if persona["persona_id"] == "evaluator-reviewer" else 0
+    protocol["sampling_plan"]["target_total"] = 5
+    analysis["claim"]["scope"] = scope
+    measure_results = recompute_measure_results(protocol, snapshot, scope=scope)
+    analysis["measure_results"] = [
+        {"measure_id": measure_id, "status": "evaluated", **result} for measure_id, result in measure_results.items()
+    ]
+    analysis["dimension_results"] = [
+        {"dimension_id": dimension_id, **result}
+        for dimension_id, result in recompute_dimension_results(
+            protocol,
+            measure_results,
+            dimension_ids=scope["dimension_ids"],
+        ).items()
+    ]
+    analysis["evidence_status"] = "demonstrated"
+
+    failures = validate_bundle(REPO_ROOT, protocol, snapshot, analysis)
+
+    assert "dsl-evaluation-claim-binding" in _rule_ids(failures)
+
+
+def test_gating_persona_failure_cannot_be_masked_by_pooled_success() -> None:
+    protocol, snapshot, analysis = _executed_bundle()
+    subject_ids = {
+        item["subject_id"]
+        for item in snapshot["subjects"]
+        if item["persona_id"] == "benchmark-designer"
+        and (item["subject_id"].endswith("-1") or item["subject_id"].endswith("-2"))
+    }
+    failed_attempt_ids = {
+        observation["attempt_id"]
+        for observation in snapshot["observations"]
+        if observation["subject_id"] in subject_ids and observation["measure_id"] == "task-completion"
+    }
+    for attempt in snapshot["attempts"]:
+        if attempt["attempt_id"] in failed_attempt_ids:
+            attempt["outcome"] = "failed"
+    for observation in snapshot["observations"]:
+        if observation["attempt_id"] in failed_attempt_ids:
+            observation["outcome"] = "failed"
+            if observation["measure_id"] == "task-completion":
+                observation["value"] = 0
+
+    claim_binding = deepcopy(load_bundle(REPO_ROOT)[0]["claim_binding"])
+    analysis["claim"]["claim_id"] = "aces-language-adequacy-persona-gated"
+    claim_binding["claim_id"] = analysis["claim"]["claim_id"]
+    claim_binding["strata"][0]["group_id"] = "persona-gates"
+    claim_binding["strata"][0]["partition_by"] = ["persona_id"]
+    _refresh_analysis(
+        protocol,
+        snapshot,
+        analysis,
+        "demonstrated",
+        claim_binding=claim_binding,
+    )
+
+    assert all(result["threshold_result"] == "pass" for result in analysis["dimension_results"])
+    benchmark_result = next(
+        item for item in analysis["stratum_results"] if item["stratum_id"].endswith("benchmark-designer")
+    )
+    assert any(result["threshold_result"] == "fail" for result in benchmark_result["dimension_results"])
+
+    failures = validate_bundle(
+        REPO_ROOT,
+        protocol,
+        snapshot,
+        analysis,
+        artifact_paths={"claim_binding": claim_binding},
+    )
+
+    assert "dsl-evaluation-evidence-status" in _rule_ids(failures)
+
+
+def test_comparison_persona_is_persisted_but_cannot_decide_promotion() -> None:
+    protocol, snapshot, analysis = _executed_bundle()
+    failed_attempt_ids = {
+        observation["attempt_id"]
+        for observation in snapshot["observations"]
+        if observation["persona_id"] == "backend-implementer" and observation["measure_id"] == "task-completion"
+    }
+    for attempt in snapshot["attempts"]:
+        if attempt["attempt_id"] in failed_attempt_ids:
+            attempt["outcome"] = "failed"
+    for observation in snapshot["observations"]:
+        if observation["attempt_id"] in failed_attempt_ids:
+            observation["outcome"] = "failed"
+            if observation["measure_id"] == "task-completion":
+                observation["value"] = 0
+
+    claim_binding = deepcopy(load_bundle(REPO_ROOT)[0]["claim_binding"])
+    analysis["claim"]["claim_id"] = "aces-language-adequacy-with-backend-comparison"
+    claim_binding["claim_id"] = analysis["claim"]["claim_id"]
+    base_group = claim_binding["strata"][0]
+    claim_binding["strata"] = [
+        {
+            **deepcopy(base_group),
+            "group_id": "target-population",
+            "persona_ids": [
+                persona_id for persona_id in base_group["persona_ids"] if persona_id != "backend-implementer"
+            ],
+        },
+        {
+            **deepcopy(base_group),
+            "group_id": "backend-comparison",
+            "role": "comparison",
+            "persona_ids": ["backend-implementer"],
+        },
+    ]
+    _refresh_analysis(
+        protocol,
+        snapshot,
+        analysis,
+        "demonstrated",
+        claim_binding=claim_binding,
+    )
+
+    comparison = next(item for item in analysis["stratum_results"] if item["role"] == "comparison")
+    assert any(result["threshold_result"] == "fail" for result in comparison["dimension_results"])
+    assert (
+        validate_bundle(
+            REPO_ROOT,
+            protocol,
+            snapshot,
+            analysis,
+            artifact_paths={"claim_binding": claim_binding},
+        )
+        == []
+    )
+
+
+def test_claim_binding_rejects_an_invalid_stratum_role() -> None:
+    protocol, snapshot, analysis = _executed_bundle()
+    claim_binding = deepcopy(load_bundle(REPO_ROOT)[0]["claim_binding"])
+    claim_binding["strata"][0]["role"] = "observer"
+
+    failures = validate_bundle(
+        REPO_ROOT,
+        protocol,
+        snapshot,
+        analysis,
+        artifact_paths={"claim_binding": claim_binding},
+    )
+
+    assert "dsl-evaluation-claim-strata" in _rule_ids(failures)
+
+
+def test_gate_rejects_stale_stratum_results() -> None:
+    protocol, snapshot, analysis = _executed_bundle()
+    analysis["stratum_results"][0]["measure_results"][0]["denominator"] += 1
+
+    failures = validate_bundle(REPO_ROOT, protocol, snapshot, analysis)
+
+    assert "dsl-evaluation-stratum-drift" in _rule_ids(failures)
+
+
+def test_gate_rejects_missing_stratum_results() -> None:
+    protocol, snapshot, analysis = _executed_bundle()
+    analysis["stratum_results"].clear()
+
+    failures = validate_bundle(REPO_ROOT, protocol, snapshot, analysis)
+
+    assert "dsl-evaluation-stratum-coverage" in _rule_ids(failures)
+
+
+def test_scope_completion_requires_each_subjects_in_scope_condition() -> None:
+    protocol, snapshot, analysis = _executed_bundle()
+    scope = _full_claim_scope(protocol)
+    scope["persona_ids"] = ["benchmark-designer"]
+    scope["task_ids"] = ["author-multihost-experiment", "independent-review-change"]
+    scope["tooling_condition_ids"] = ["public-docs-only"]
+    scope["variant_ids"] = ["multihost-reference", "review-hidden-assumption-change"]
+    scope["dimension_ids"] = ["usability-comprehension", "reviewability"]
+    scope["measure_ids"] = [
+        "task-completion",
+        "critical-semantic-errors",
+        "critical-review-items",
+        "majority-missed-critical-items",
+    ]
+    benchmark_subjects = [subject for subject in snapshot["subjects"] if subject["persona_id"] == "benchmark-designer"]
+    for persona in protocol["personas"]:
+        persona["minimum_completed_subjects"] = 5 if persona["persona_id"] == "benchmark-designer" else 0
+    protocol["sampling_plan"]["target_total"] = 5
+    for attempt in snapshot["attempts"]:
+        if (
+            attempt["subject_id"] in {subject["subject_id"] for subject in benchmark_subjects[1:]}
+            and attempt["task_id"] == "author-multihost-experiment"
+            and attempt["tooling_condition_id"] == "public-docs-only"
+        ):
+            attempt["tooling_condition_id"] = "public-tools"
+            for observation in snapshot["observations"]:
+                if observation["attempt_id"] == attempt["attempt_id"]:
+                    observation["tooling_condition_id"] = "public-tools"
+    analysis["claim"]["scope"] = scope
+    measure_results = recompute_measure_results(protocol, snapshot, scope=scope)
+    analysis["measure_results"] = [
+        {"measure_id": measure_id, "status": "evaluated", **result} for measure_id, result in measure_results.items()
+    ]
+    analysis["dimension_results"] = [
+        {"dimension_id": dimension_id, **result}
+        for dimension_id, result in recompute_dimension_results(
+            protocol,
+            measure_results,
+            dimension_ids=scope["dimension_ids"],
+        ).items()
+    ]
+
+    failures = validate_bundle(REPO_ROOT, protocol, snapshot, analysis)
+
+    assert "dsl-evaluation-subject-workload" in _rule_ids(failures)
 
 
 def test_not_started_bundle_cannot_claim_observations_or_demonstration() -> None:

@@ -84,6 +84,83 @@ class ParticipantBehaviorRuntime(ResolvedResource):
 
 
 @dataclass(frozen=True)
+class ParticipantAutonomousExecutionRuntime(ResolvedResource):
+    """Compiled deterministic execution policy for ordinary participants."""
+
+    behavior_specification_address: str = ""
+    participant_addresses: tuple[str, ...] = ()
+    participant_implementation_ref: str = ""
+    clock_address: str = ""
+    progression_policy_address: str = ""
+    temporal_constraint_addresses: tuple[str, ...] = ()
+    action_contract_addresses: tuple[str, ...] = ()
+    target_addresses: tuple[str, ...] = ()
+    observation_boundary_address: str = ""
+    selection_strategy: str = ""
+    max_action_attempts: int = 0
+    max_in_flight: int = 0
+    failure_policy: str = ""
+    evaluation_authority_mode: str = ""
+    objective_refs: tuple[str, ...] = ()
+    proof_producer_refs: tuple[str, ...] = ()
+    score_authority_refs: tuple[str, ...] = ()
+    receipt_authority_refs: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class MixedControlDispositionRulesRuntime:
+    """Compiled fail-closed decision disposition rules."""
+
+    duplicate: str
+    stale: str
+    revoked: str
+    late: str
+    concurrent: str
+    conflict: str
+
+
+@dataclass(frozen=True)
+class MixedControlControllerStateRuntime(ResolvedResource):
+    """Compiled controller binding nested under one behavior specification."""
+
+    state_id: str = ""
+    controller_ref: str = ""
+    controller_address: str = ""
+    authority_basis_refs: tuple[str, ...] = ()
+    authority_basis_addresses: tuple[str, ...] = ()
+    scope_refs: tuple[str, ...] = ()
+    scope_addresses: tuple[str, ...] = ()
+    policy_revision: str = ""
+    valid_from_order: int = 0
+    valid_until_order: int = 0
+    authority_status: str = ""
+    evidence_refs: tuple[str, ...] = ()
+    evidence_addresses: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class MixedControlTransitionRuntime(ResolvedResource):
+    """Compiled ordered control transition nested under one behavior specification."""
+
+    transition_id: str = ""
+    transition_kind: str = ""
+    from_state_address: str = ""
+    to_state_address: str = ""
+    policy_revision: str = ""
+    expected_state_revision: int = 0
+    resulting_state_revision: int = 0
+    effective_order: int = 0
+    valid_from_order: int = 0
+    valid_until_order: int = 0
+    proposal_address: str = ""
+    proposal_revision: int | None = None
+    evidence_refs: tuple[str, ...] = ()
+    evidence_addresses: tuple[str, ...] = ()
+    completion_evidence_refs: tuple[str, ...] = ()
+    completion_evidence_addresses: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class ParticipantBehaviorSpecificationRuntime(ResolvedResource):
     """Compiled first-class participant behavior specification aggregate."""
 
@@ -98,13 +175,37 @@ class ParticipantBehaviorSpecificationRuntime(ResolvedResource):
     authority_scope_refs: tuple[str, ...] = ()
     authority_scope_addresses: tuple[str, ...] = ()
     behavior_mode: str = ""
+    autonomous_execution: ParticipantAutonomousExecutionRuntime | None = None
+    mixed_control_participant_address: str = ""
+    mixed_control_policy_revision: str = ""
+    mixed_control_order_strategy: str = ""
+    mixed_control_initial_state_address: str = ""
+    mixed_control_dispositions: MixedControlDispositionRulesRuntime | None = None
+    controller_states: tuple[MixedControlControllerStateRuntime, ...] = ()
+    control_transitions: tuple[MixedControlTransitionRuntime, ...] = ()
     ai_offensive_behavior_refs: tuple[str, ...] = ()
+    defensive_behavior_refs: tuple[str, ...] = ()
     offensive_behavior_refs: tuple[str, ...] = ()
     realization_profile_ref: str = ""
     backend_feature_support_refs: tuple[str, ...] = ()
     evidence_contract_refs: tuple[str, ...] = ()
+    tool_affordance_addresses: tuple[str, ...] = ()
     extension_policy: str = ""
     extension_keys: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class ParticipantToolAffordanceRuntime(ResolvedResource):
+    """Compiled semantic IR for one authored participant tool-affordance binding."""
+
+    affordance_id: str = ""
+    behavior_specification_address: str = ""
+    tool_ref: str = ""
+    tool_address: str = ""
+    action_contract_refs: tuple[str, ...] = ()
+    action_contract_addresses: tuple[str, ...] = ()
+    observation_boundary_refs: tuple[str, ...] = ()
+    observation_boundary_addresses: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -191,7 +292,14 @@ class WorkflowStepRuntime:
 
     name: str
     step_type: str
+    execution_mode: str = "scripted"
     objective_address: str = ""
+    procedure_ref: str = ""
+    scaffold_refs: tuple[str, ...] = ()
+    allowed_action_families: tuple[str, ...] = ()
+    tool_affordance_refs: tuple[str, ...] = ()
+    capability_refs: tuple[str, ...] = ()
+    fact_binding_refs: tuple[str, ...] = ()
     predicate: WorkflowPredicateRuntime | None = None
     next_step: str = ""
     on_success: str = ""

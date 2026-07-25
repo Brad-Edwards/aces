@@ -72,6 +72,7 @@ def _runtime_surface_summary(snapshot: RuntimeSnapshot) -> dict[str, int]:
         "shared_state_history": _history_count(snapshot.shared_state_history),
         "joint_action_records": len(snapshot.joint_action_records),
         "time_management_contexts": len(snapshot.time_management_contexts),
+        "time_model_clocks": len(snapshot.time_model_state.clocks) if snapshot.time_model_state is not None else 0,
         "realization_provenance": len(snapshot.realization_provenance),
     }
 

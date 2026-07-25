@@ -23,11 +23,6 @@ PLAN_ADDRESS_ROOT_BY_DOMAIN = {
     "orchestration": "orchestration",
     "evaluation": "evaluation",
 }
-PLAN_RESOURCE_TYPES_BY_DOMAIN = {
-    "provisioning": frozenset({"network", "node", "feature-binding", "content-placement", "account-placement"}),
-    "orchestration": frozenset({"inject-binding", "inject", "event", "script", "story", "workflow"}),
-    "evaluation": frozenset({"condition-binding", "objective"}),
-}
 
 
 def require_compiled_address(value: object, *, field_name: str = "address") -> str:

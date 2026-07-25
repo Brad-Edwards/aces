@@ -1,0 +1,6 @@
+{
+  "contract_id": "participant-implementation-manifest-v1",
+  "schema_path": "contracts/schemas/participant-implementation-manifest/participant-implementation-manifest-v1.json",
+  "stability": "draft",
+  "content_hash": "93e30291adbc08b1969adb9b938f888b004d317ac864e90151d0f43a395948e4"
+}

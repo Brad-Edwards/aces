@@ -1,0 +1,10 @@
+{
+  "contract_id": "participant-observation-envelope-v1",
+  "schema_path": "contracts/schemas/participant-runtime/participant-observation-envelope-v1.json",
+  "stability": "draft",
+  "content_hash": "57c7ca12df146ce59b164551a5a87a2e72dd1f9b6644e3b0975b7da1a71e8d40",
+  "last_change": {
+    "summary": "Initial publication of the participant observation-envelope runtime contract: the participant observation payload envelope in the backend-facing contract family (ADR-060, issue #76).",
+    "content_hash": "57c7ca12df146ce59b164551a5a87a2e72dd1f9b6644e3b0975b7da1a71e8d40"
+  }
+}

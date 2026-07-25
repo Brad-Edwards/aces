@@ -1,6 +1,6 @@
 # Scenario Description Language (SDL) Reference
 
-The ACES SDL is a YAML-based specification language for describing cyber range scenarios and experiments. It starts from the [Open Cyber Range SDL](https://github.com/Open-Cyber-Range/SDL-parser) surface, preserves coverage across the OCR-derived sections, and extends that base with additional scenario concepts such as content, accounts, relationships, agents, objectives, workflows, and variables. It is intentionally its own SDL rather than a clone-level derivative.
+RAES SDL is a YAML-based specification language for describing cyber range scenarios and experiments. It starts from the [Open Cyber Range SDL](https://github.com/Open-Cyber-Range/SDL-parser) surface, preserves coverage across the OCR-derived sections, and extends that base with additional scenario concepts such as content, accounts, relationships, agents, objectives, workflows, and variables. It is intentionally its own SDL rather than a clone-level derivative.
 
 The SDL describes *what the scenario and experiment mean*; it is not a direct
 deployment recipe. Backend implementations realize SDL specifications through
@@ -138,6 +138,7 @@ accounts:
 
 - [SDL Sections Reference](sections.md) — Explanatory reference for the complete live authoring-section catalog
 - [Parser Behavior](parser.md) — `sdl-yaml/v1`, explicit migration, typed normalization, and canonical identity
+- [Scenario-Family Variation Points](variation-points.md) — Bounded domains, typed targets, constraints, and composition behavior
 - [Language-Service Tools](language-service.md) — Agent-facing completions, references, formatting, diagnostics, and structured edits
 - [Agent Guidance Profile](agent-guidance.md) — Machine-readable scope boundaries, invariants, review priorities, and safe-operating expectations
 - [Semantic Validation](validation.md) — Cross-reference checks and what the validator enforces

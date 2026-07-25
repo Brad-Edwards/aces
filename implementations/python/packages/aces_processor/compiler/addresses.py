@@ -48,6 +48,10 @@ def _account_address(name: str) -> str:
     return _address("provision", "account", name)
 
 
+def _domain_controller_address(controller_node_name: str, domain_name: str) -> str:
+    return _address("provision", "domain-controller", domain_name, controller_node_name)
+
+
 def _section_ref_name(ref: str, section: str, declarations: Mapping[str, object]) -> str:
     """Return the declaration key denoted by a bare or section-qualified ref."""
 
@@ -117,6 +121,24 @@ def _participant_behavior_address(name: str) -> str:
 
 def _behavior_specification_address(name: str) -> str:
     return _address("participant", "behavior-specification", name)
+
+
+def _mixed_control_state_address(spec_name: str, state_id: str) -> str:
+    return _address("participant", "behavior-specification", spec_name, "controller-state", state_id)
+
+
+def _mixed_control_transition_address(spec_name: str, transition_id: str) -> str:
+    return _address("participant", "behavior-specification", spec_name, "control-transition", transition_id)
+
+
+def _tool_affordance_address(spec_name: str, affordance_id: str) -> str:
+    return _address(
+        "participant",
+        "behavior-specification",
+        spec_name,
+        "tool-affordance",
+        affordance_id,
+    )
 
 
 def _condition_binding_address(node_name: str, condition_name: str) -> str:

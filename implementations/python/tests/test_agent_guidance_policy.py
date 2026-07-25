@@ -15,11 +15,11 @@ from tools.check_agent_guidance import (  # noqa: E402
     evaluate_agent_guidance,
 )
 
-_GOOD_GUIDANCE = """profile: aces-agent-guidance
+_GOOD_GUIDANCE = """profile: raes-agent-guidance
 version: 1
 requirement_refs: [AUT-811]
 source_refs: [AGENTS.md]
-recommended_workflow: [aces_tool_surface, aces_agent_guidance]
+recommended_workflow: [raes_tool_surface, raes_agent_guidance]
 guidance:
   scope_boundaries:
     - id: scope

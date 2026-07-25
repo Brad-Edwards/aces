@@ -24,6 +24,17 @@
     "BackendCapabilitiesV2Model": {
       "additionalProperties": false,
       "properties": {
+        "cleanup": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CleanupCapabilitiesModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "evaluator": {
           "anyOf": [
             {
@@ -70,6 +81,17 @@
         },
         "provisioner": {
           "$ref": "#/$defs/ProvisionerCapabilitiesModel"
+        },
+        "time": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TimeCapabilitiesModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -95,6 +117,72 @@
         "processors"
       ],
       "title": "BackendCompatibilityModel",
+      "type": "object"
+    },
+    "CleanupCapabilitiesModel": {
+      "additionalProperties": false,
+      "description": "Backend support for the portable SCE-007 cleanup contract family.",
+      "properties": {
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "supported_action_kinds": {
+          "items": {
+            "enum": [
+              "destroy",
+              "reset",
+              "restore",
+              "compensate",
+              "verify",
+              "custom"
+            ],
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Action Kinds",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supported_contract_versions": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Contract Versions",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supported_verification_methods": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Verification Methods",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supports_residual_state_disclosure": {
+          "default": false,
+          "title": "Supports Residual State Disclosure",
+          "type": "boolean"
+        },
+        "supports_reusable_state": {
+          "default": false,
+          "title": "Supports Reusable State",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "supported_contract_versions",
+        "supported_action_kinds",
+        "supported_verification_methods"
+      ],
+      "title": "CleanupCapabilitiesModel",
       "type": "object"
     },
     "ConceptBindingEntryModel": {
@@ -542,10 +630,85 @@
           "title": "Feature Support",
           "type": "array"
         },
+        "max_autonomous_action_attempts": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Autonomous Action Attempts"
+        },
+        "max_autonomous_in_flight": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Autonomous In Flight"
+        },
+        "max_autonomous_participants": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Autonomous Participants"
+        },
         "name": {
           "minLength": 1,
           "title": "Name",
           "type": "string"
+        },
+        "supported_autonomous_action_contracts": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Supported Autonomous Action Contracts",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supported_autonomous_observation_boundaries": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Supported Autonomous Observation Boundaries",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supported_autonomous_selection_strategies": {
+          "items": {
+            "const": "ordered_cycle",
+            "type": "string"
+          },
+          "title": "Supported Autonomous Selection Strategies",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supported_autonomous_target_addresses": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Supported Autonomous Target Addresses",
+          "type": "array",
+          "uniqueItems": true
         },
         "supported_behavior_features": {
           "items": {
@@ -576,6 +739,11 @@
           "title": "Supported Participant Roles",
           "type": "array",
           "uniqueItems": true
+        },
+        "supports_autonomous_execution": {
+          "default": false,
+          "title": "Supports Autonomous Execution",
+          "type": "boolean"
         }
       },
       "required": [
@@ -698,6 +866,14 @@
           },
           "minItems": 1,
           "title": "Supported Os Families",
+          "type": "array"
+        },
+        "supported_service_materialization_profiles": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Supported Service Materialization Profiles",
           "type": "array"
         },
         "supports_accounts": {
@@ -882,6 +1058,180 @@
       "title": "RealizationSupportMode",
       "type": "string"
     },
+    "TimeCapabilitiesModel": {
+      "additionalProperties": false,
+      "description": "Backend support for the API-421 portable shared-time contract family.",
+      "properties": {
+        "constraints": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Constraints",
+          "type": "object"
+        },
+        "max_clocks": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Clocks"
+        },
+        "max_time_domains": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Time Domains"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "supported_advancement_modes": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Advancement Modes",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supported_authority_kinds": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Authority Kinds",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supported_constraint_kinds": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Supported Constraint Kinds",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supported_contract_versions": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Contract Versions",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supported_domain_kinds": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Domain Kinds",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supported_mapping_kinds": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Supported Mapping Kinds",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supported_replay_behaviors": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Replay Behaviors",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supported_reset_behaviors": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Reset Behaviors",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supported_synchronization_modes": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Synchronization Modes",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supports_append_only_history": {
+          "default": false,
+          "title": "Supports Append Only History",
+          "type": "boolean"
+        },
+        "supports_coordinated_participant_reset": {
+          "default": false,
+          "title": "Supports Coordinated Participant Reset",
+          "type": "boolean"
+        },
+        "supports_exact_rational_mappings": {
+          "default": false,
+          "title": "Supports Exact Rational Mappings",
+          "type": "boolean"
+        },
+        "supports_jump": {
+          "default": false,
+          "title": "Supports Jump",
+          "type": "boolean"
+        },
+        "supports_pause": {
+          "default": false,
+          "title": "Supports Pause",
+          "type": "boolean"
+        },
+        "supports_run_provenance": {
+          "default": false,
+          "title": "Supports Run Provenance",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "supported_contract_versions",
+        "supported_domain_kinds",
+        "supported_authority_kinds",
+        "supported_advancement_modes",
+        "supported_synchronization_modes",
+        "supported_reset_behaviors",
+        "supported_replay_behaviors"
+      ],
+      "title": "TimeCapabilitiesModel",
+      "type": "object"
+    },
     "WorkflowFeature": {
       "description": "Portable workflow control features that an orchestrator may support.",
       "enum": [
@@ -893,7 +1243,9 @@
         "failure-transitions",
         "cancellation",
         "timeouts",
-        "compensation"
+        "compensation",
+        "objective-steps",
+        "scaffolded-steps"
       ],
       "title": "WorkflowFeature",
       "type": "string"
@@ -959,6 +1311,52 @@
         "required": [
           "realization_envelope"
         ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "supported_contract_versions": {
+            "contains": {
+              "const": "trial-cleanup-plan-v1"
+            }
+          }
+        },
+        "required": [
+          "supported_contract_versions"
+        ]
+      },
+      "then": {
+        "properties": {
+          "capabilities": {
+            "required": [
+              "cleanup"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "supported_contract_versions": {
+            "contains": {
+              "const": "time-model-v1"
+            }
+          }
+        },
+        "required": [
+          "supported_contract_versions"
+        ]
+      },
+      "then": {
+        "properties": {
+          "capabilities": {
+            "required": [
+              "time"
+            ]
+          }
+        }
       }
     }
   ],
@@ -1040,7 +1438,12 @@
           "experiment-capture-spec-v1",
           "experiment-evidence-record-v1",
           "experiment-derived-measure-v1",
-          "experiment-run-v1"
+          "experiment-run-v1",
+          "trial-cleanup-plan-v1",
+          "trial-cleanup-receipt-v1",
+          "time-model-v1",
+          "time-runtime-state-v1",
+          "realized-time-model-v1"
         ],
         "minLength": 1,
         "type": "string"

@@ -31,6 +31,8 @@ class WorkflowFeature(str, Enum):
     CANCELLATION = "cancellation"
     TIMEOUTS = "timeouts"
     COMPENSATION = "compensation"
+    OBJECTIVE_STEPS = "objective-steps"
+    SCAFFOLDED_STEPS = "scaffolded-steps"
 
 
 class WorkflowStatePredicateFeature(str, Enum):

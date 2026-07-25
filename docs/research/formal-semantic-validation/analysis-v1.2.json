@@ -1,0 +1,133 @@
+{
+  "analysis_id": "aces-formal-semantic-validation-analysis-v3",
+  "protocol_revision": "1.0.0",
+  "corpus_revision": "1.0.0",
+  "execution_id": "issue-653-execution-v3",
+  "generated_at": "2026-07-21",
+  "claim_results": [
+    {
+      "claim_class_id": "schema-validity",
+      "evidence_status": "demonstrated",
+      "case_count": 2,
+      "matching_case_count": 2,
+      "replayable_case_count": 2,
+      "unsupported_case_count": 0,
+      "participant_obligation_count": 0,
+      "limitations": [
+        "Demonstrated only for the pinned structural cases and production parser/model boundary."
+      ]
+    },
+    {
+      "claim_class_id": "semantic-consistency",
+      "evidence_status": "partial",
+      "case_count": 4,
+      "matching_case_count": 4,
+      "replayable_case_count": 4,
+      "unsupported_case_count": 0,
+      "participant_obligation_count": 7,
+      "limitations": [
+        "Named SDL and participant invariants pass, but the corpus is not complete over every semantic rule or backend."
+      ]
+    },
+    {
+      "claim_class_id": "graph-reachability",
+      "evidence_status": "partial",
+      "case_count": 2,
+      "matching_case_count": 2,
+      "replayable_case_count": 2,
+      "unsupported_case_count": 0,
+      "participant_obligation_count": 0,
+      "limitations": [
+        "The executable evidence is workflow control-flow reachability, not network, service, participant, or exploit reachability."
+      ]
+    },
+    {
+      "claim_class_id": "constraint-satisfiability",
+      "evidence_status": "untested",
+      "case_count": 2,
+      "matching_case_count": 2,
+      "replayable_case_count": 0,
+      "unsupported_case_count": 2,
+      "participant_obligation_count": 0,
+      "limitations": [
+        "No governed whole-scenario constraint theory, solver, model witness, or unsat certificate exists."
+      ]
+    },
+    {
+      "claim_class_id": "exploit-path-validity",
+      "evidence_status": "untested",
+      "case_count": 2,
+      "matching_case_count": 2,
+      "replayable_case_count": 0,
+      "unsupported_case_count": 2,
+      "participant_obligation_count": 0,
+      "limitations": [
+        "No canonical typed attack-transition graph or executable path analyzer exists."
+      ]
+    },
+    {
+      "claim_class_id": "determinism-stability",
+      "evidence_status": "partial",
+      "case_count": 2,
+      "matching_case_count": 2,
+      "replayable_case_count": 2,
+      "unsupported_case_count": 0,
+      "participant_obligation_count": 0,
+      "limitations": [
+        "The evidence ends at parse, instantiate, and compile; runtime, backend, replay, and study stability remain outside the claim."
+      ]
+    },
+    {
+      "claim_class_id": "counterfactual-necessity",
+      "evidence_status": "untested",
+      "case_count": 2,
+      "matching_case_count": 2,
+      "replayable_case_count": 0,
+      "unsupported_case_count": 2,
+      "participant_obligation_count": 0,
+      "limitations": [
+        "No governed causal model, intervention, ablation, or necessity criterion exists under issue #98."
+      ]
+    }
+  ],
+  "evidence_status": "partial",
+  "claim": {
+    "claim_id": "aces-formal-semantic-validation-reachability",
+    "statement": "At the pinned ACES revision, the named corpus demonstrates structural schema rejection, partially demonstrates selected fail-closed semantic, participant, workflow-reachability, and parse-to-compile determinism claims, and does not demonstrate whole-scenario satisfiability, exploit-path validity, or counterfactual necessity.",
+    "threats_to_validity": [
+      "The issue-specific corpus is intentionally small and does not enumerate every validator invariant.",
+      "The participant fixtures exercise reference production contracts and tests, not every independent backend realization.",
+      "The replay gate runs on one Python reference configuration and one pinned ACES revision.",
+      "Unsupported solver-level classes have protocol cases but no executable observations."
+    ],
+    "falsification_protocol": "docs/research/formal-semantic-validation/protocol-v1.json",
+    "objective_pass_criteria": "Every claim class has positive and negative cases, all supported cases reproduce the frozen outcome, every participant obligation has passing positive and negative fixtures, and unsupported classes remain untested.",
+    "objective_fail_criteria": "A supported negative passes, a positive fails, an observation drifts, a required participant case is missing, or weaker evidence is promoted to solver, exploit-path, runtime-stability, or counterfactual assurance.",
+    "allowed_evidence": [
+      "production parser and semantic-validator results",
+      "canonical compiled digests",
+      "participant contract regression tests",
+      "pinned protocol, corpus, and execution snapshot"
+    ],
+    "disallowed_evidence": [
+      "schema success as semantic proof",
+      "workflow reachability as network or exploit reachability",
+      "FM labels as gate outcomes",
+      "attribution as counterfactual proof",
+      "formal prose or maintainer confidence alone"
+    ],
+    "evidence_artifacts": [
+      "docs/research/formal-semantic-validation/bundle-manifest.json",
+      "docs/research/formal-semantic-validation/protocol-v1.json",
+      "docs/research/formal-semantic-validation/corpus/manifest-v1.json",
+      "docs/research/formal-semantic-validation/execution-snapshot-v1.2.json",
+      "docs/research/formal-semantic-validation/analysis-v1.2.json"
+    ]
+  },
+  "plain_language_outcome": "ACES rejects the named malformed SDL and participant cases, detects unreachable workflow steps, and reproduces the named parse-to-compile outputs. Those results do not amount to a whole-scenario solver, an exploit-path analyzer, full runtime stability, or a counterfactual necessity proof.",
+  "limitations": [
+    "The result is bounded to the frozen cases, entrypoints, configuration, and ACES revision.",
+    "A failed future replay must create a new snapshot or a separately reviewed product correction; this record must not be overwritten.",
+    "Constraint, exploit-path, and counterfactual classes remain explicitly untested."
+  ]
+}

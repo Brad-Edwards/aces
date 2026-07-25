@@ -1,0 +1,6 @@
+name: workflow-reachable-control
+workflows:
+  flow:
+    start: finish
+    steps:
+      finish: {type: end}

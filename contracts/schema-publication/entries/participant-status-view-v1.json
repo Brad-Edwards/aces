@@ -1,0 +1,10 @@
+{
+  "contract_id": "participant-status-view-v1",
+  "schema_path": "contracts/schemas/control-plane/participant-status-view-v1.json",
+  "stability": "draft",
+  "content_hash": "aef73b7d52c99de2a51cb2a58de0e30c37fc7fb2af5627cd6241a6aad288d07c",
+  "last_change": {
+    "summary": "Initial publication of the participant status-view control-plane contract: the participant status/lifecycle projection in the backend-facing contract family (ADR-060, issue #76).",
+    "content_hash": "aef73b7d52c99de2a51cb2a58de0e30c37fc7fb2af5627cd6241a6aad288d07c"
+  }
+}

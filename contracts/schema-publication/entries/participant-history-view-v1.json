@@ -1,0 +1,10 @@
+{
+  "contract_id": "participant-history-view-v1",
+  "schema_path": "contracts/schemas/control-plane/participant-history-view-v1.json",
+  "stability": "draft",
+  "content_hash": "380257f288c098c0b94e343dbeb6d51c5216c6b14d91543cc2c147dd06633435",
+  "last_change": {
+    "summary": "Initial publication of the participant history-view control-plane contract: the participant-local interaction-history projection in the backend-facing contract family (ADR-060, issue #76).",
+    "content_hash": "380257f288c098c0b94e343dbeb6d51c5216c6b14d91543cc2c147dd06633435"
+  }
+}

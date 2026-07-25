@@ -65,8 +65,10 @@ material. It is an index, not a replacement for the linked artifacts.
 | Runtime contracts | `specs/formal/runtime-contracts/` |
 | Assessment semantics | `specs/formal/assessment/`, [`assessment-semantics.md`](assessment-semantics.md) |
 | Participant semantics | `specs/formal/participant-semantics/README.md` |
+| Shared time model | `specs/formal/time-model/README.md`, ADR-090 |
 | Realization semantics | `specs/formal/realization/`, [`explicitness-realization-semantics.md`](explicitness-realization-semantics.md) |
 | Scenario variation and trial realization invariants | `specs/formal/scenario-variation-trial-realization/` |
+| Whole-scenario finite-domain satisfiability | `specs/formal/scenario-satisfiability/`, ADR-086 |
 | Planner semantics | `specs/formal/planner/` |
 
 ## Current Materialization Notes

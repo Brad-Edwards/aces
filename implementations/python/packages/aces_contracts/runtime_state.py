@@ -11,11 +11,13 @@ from aces_sdl.explicitness import ExplicitnessClass, ExplicitnessProvenance
 
 from aces_contracts.addressing import require_compiled_address
 from aces_contracts.diagnostics import Diagnostic
+from aces_contracts.participant_autonomous_state import require_participant_autonomous_state_snapshot
 from aces_contracts.planning import RuntimeDomain
 from aces_contracts.versions import OPERATION_SCHEMA_VERSION, RUNTIME_SNAPSHOT_SCHEMA_VERSION
 
 if TYPE_CHECKING:
     from aces_contracts.contracts import RealizationEnvelopeIdentityModel
+    from aces_contracts.contracts.time_model import TimeRuntimeStateModel
 
 
 class OperationState(str, Enum):
@@ -82,10 +84,12 @@ class RuntimeSnapshot:
     participant_episode_results: dict[str, dict[str, Any]] = field(default_factory=dict)
     participant_episode_history: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
     participant_behavior_history: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
+    participant_autonomous_execution_states: dict[str, dict[str, Any]] = field(default_factory=dict)
     shared_state_records: dict[str, dict[str, Any]] = field(default_factory=dict)
     shared_state_history: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
     joint_action_records: dict[str, dict[str, Any]] = field(default_factory=dict)
     time_management_contexts: dict[str, dict[str, Any]] = field(default_factory=dict)
+    time_model_state: TimeRuntimeStateModel | None = None
     # SEM-218 invariant I5: per-concern provenance for realized realization
     # concerns recorded across this snapshot's result / history surfaces.
     realization_provenance: tuple[RealizationProvenanceEntry, ...] = ()
@@ -97,6 +101,7 @@ class RuntimeSnapshot:
             require_compiled_address(map_key, field_name="snapshot map key")
             if map_key != entry.address:
                 raise ValueError("RuntimeSnapshot entries map key must equal embedded address")
+        require_participant_autonomous_state_snapshot(self.participant_autonomous_execution_states)
 
     def get(self, address: str) -> SnapshotEntry | None:
         return self.entries.get(address)
@@ -144,6 +149,11 @@ class RuntimeSnapshot:
                 "participant_behavior_history",
                 self.participant_behavior_history,
             ),
+            participant_autonomous_execution_states=_mapping_update(
+                updates,
+                "participant_autonomous_execution_states",
+                self.participant_autonomous_execution_states,
+            ),
             shared_state_records=_mapping_update(
                 updates,
                 "shared_state_records",
@@ -163,6 +173,11 @@ class RuntimeSnapshot:
                 updates,
                 "time_management_contexts",
                 self.time_management_contexts,
+            ),
+            time_model_state=_time_model_state_update(
+                updates,
+                "time_model_state",
+                self.time_model_state,
             ),
             realization_provenance=_provenance_update(
                 updates,
@@ -187,10 +202,12 @@ _SNAPSHOT_UPDATE_KEYS = {
     "participant_episode_results",
     "participant_episode_history",
     "participant_behavior_history",
+    "participant_autonomous_execution_states",
     "shared_state_records",
     "shared_state_history",
     "joint_action_records",
     "time_management_contexts",
+    "time_model_state",
     "realization_provenance",
     "realization_envelope",
     "metadata",
@@ -254,6 +271,23 @@ def _identity_update(
         return current
     if not isinstance(raw, RealizationEnvelopeIdentityModel):
         raise TypeError(f"{key} must be a RealizationEnvelopeIdentityModel")
+    return raw
+
+
+def _time_model_state_update(
+    updates: Mapping[str, object],
+    key: str,
+    current: TimeRuntimeStateModel | None,
+) -> TimeRuntimeStateModel | None:
+    from aces_contracts.contracts.time_model import TimeRuntimeStateModel
+
+    if key not in updates:
+        return current
+    raw = updates[key]
+    if raw is None:
+        return None
+    if not isinstance(raw, TimeRuntimeStateModel):
+        raise TypeError(f"{key} must be a TimeRuntimeStateModel")
     return raw
 
 

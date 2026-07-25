@@ -18,6 +18,7 @@ from ._base import (
 from ._identifiers import OptionalPortableIdentifier, PortableIdentifier
 from ._runtime_service_families import install_runtime_service_family_exports
 from ._source import Source
+from .deployment_tenancy import EndpointPersona
 from .image_provenance import (
     ContainerImageBuildProvenance,
     DockerfileInstruction,
@@ -62,6 +63,7 @@ from .runtime_configuration import (
     RuntimeNetworkBackendDetail,
     RuntimeNetworkDriver,
     RuntimeNetworkEndpoint,
+    RuntimeNetworkNamespace,
     RuntimeNetworkRealization,
     RuntimeOperationalPolicy,
     RuntimePackage,
@@ -132,6 +134,7 @@ __all__ = [
     "RuntimeMountPropagation",
     "RuntimeMountSourceKind",
     "RuntimeNamespaceConfiguration",
+    "RuntimeNetworkNamespace",
     "RuntimeNetworkBackendDetail",
     "RuntimeNetworkDriver",
     "RuntimeNetworkEndpoint",
@@ -284,12 +287,18 @@ class Node(SDLModel):
     roles: dict[PortableIdentifier, Role] = Field(default_factory=dict)
     services: list[ServicePort] = Field(default_factory=list)
     asset_value: AssetValue | None = None
+    endpoint_persona: EndpointPersona | str | None = None
     runtime: RuntimeConfiguration | None = None
 
     @field_validator("os", mode="before")
     @classmethod
     def normalize_os(cls, v):
         return parse_enum_or_var(v, OSFamily, field_name="os") if v is not None else v
+
+    @field_validator("endpoint_persona", mode="before")
+    @classmethod
+    def normalize_endpoint_persona(cls, v: object) -> object:
+        return parse_enum_or_var(v, EndpointPersona, field_name="endpoint_persona") if v is not None else v
 
     @model_validator(mode="after")
     def validate_type_constraints(self) -> "Node":
@@ -315,6 +324,7 @@ class Node(SDLModel):
             "roles": bool(self.roles),
             "services": bool(self.services),
             "asset_value": self.asset_value is not None,
+            "endpoint_persona": self.endpoint_persona is not None,
             "runtime": self.runtime is not None,
         }
         return [field_name for field_name, is_populated in fields.items() if is_populated]

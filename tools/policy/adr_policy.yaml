@@ -17,6 +17,7 @@ generated_contracts:
   generated_roots:
     - contracts/schemas
   manifest_path: contracts/schema-publication-manifest.json
+  manifest_records_root: contracts/schema-publication
 
 compatibility_layer:
   root: implementations/python/src/aces
@@ -33,6 +34,7 @@ concept_authority:
     - contracts/concept-authority
     - contracts/schemas/concept-authority
     - contracts/fixtures/concept-authority
+    - contracts/schema-publication
     - docs/explain/reference/shared-concept-model.md
     - docs/decisions/adrs/adr-012-shared-concept-authority-and-aces-extension-discipline.md
     - docs/decisions/adrs/adr-062-concept-authority-catalog-governance-gate.md
@@ -200,6 +202,8 @@ module_boundaries:
     - id: aces_cli
       root: implementations/python/packages/aces_cli
       allowed_top_level_imports:
+        - aces_backend_protocols
+        - aces_backend_stubs
         - aces_contracts
         - aces_conformance
         - aces_operations
@@ -208,13 +212,23 @@ module_boundaries:
       forbidden_import_prefixes:
         - aces_runtime
       public_import_prefixes:
+        # Plan-inspection CLI (issue #609): the backend-manifest-v2 adapter and
+        # the pure stub-manifest declaration seam only -- never the stub runtime
+        # components (aces_backend_stubs.stubs pulls aces_runtime).
+        aces_backend_protocols:
+          - aces_backend_protocols.manifest
+        aces_backend_stubs:
+          - aces_backend_stubs.manifest
         aces_operations:
           - aces_operations.libvirt_evidence_run
           - aces_operations.cross_backend_corpus
           - aces_operations.techvault_live
         aces_processor:
+          - aces_processor.exploit_path
           - aces_processor.manifest
           - aces_processor.models
+          - aces_processor.reference
+          - aces_processor.satisfiability
     - id: aces_mcp
       root: implementations/python/packages/aces_mcp
       allowed_top_level_imports:

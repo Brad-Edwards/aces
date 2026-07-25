@@ -1,0 +1,351 @@
+{
+  "analysis_id": "aces-researcher-accessibility-analysis-v1",
+  "protocol_revision": "2.0.0",
+  "snapshot_id": "aces-researcher-accessibility-not-started-v1",
+  "generated_at": "2026-07-17",
+  "execution_status": "not_started",
+  "measure_results": [
+    {
+      "measure_id": "semantic-elements-correct",
+      "status": "not_evaluated",
+      "statistic": "proportion",
+      "numerator": null,
+      "denominator": 0,
+      "opportunity_count": 0,
+      "observed_count": 0,
+      "missing_count": 0,
+      "abandoned_count": 0,
+      "tool_failed_count": 0,
+      "withdrawn_count": 0,
+      "value": null,
+      "supporting_observation_ids": []
+    },
+    {
+      "measure_id": "task-completion",
+      "status": "not_evaluated",
+      "statistic": "proportion",
+      "numerator": null,
+      "denominator": 0,
+      "opportunity_count": 0,
+      "observed_count": 0,
+      "missing_count": 0,
+      "abandoned_count": 0,
+      "tool_failed_count": 0,
+      "withdrawn_count": 0,
+      "value": null,
+      "supporting_observation_ids": []
+    },
+    {
+      "measure_id": "critical-semantic-errors",
+      "status": "not_evaluated",
+      "statistic": "proportion",
+      "numerator": null,
+      "denominator": 0,
+      "opportunity_count": 0,
+      "observed_count": 0,
+      "missing_count": 0,
+      "abandoned_count": 0,
+      "tool_failed_count": 0,
+      "withdrawn_count": 0,
+      "value": null,
+      "supporting_observation_ids": []
+    },
+    {
+      "measure_id": "semantic-rework-cycles",
+      "status": "not_evaluated",
+      "statistic": "median",
+      "numerator": null,
+      "denominator": 0,
+      "opportunity_count": 0,
+      "observed_count": 0,
+      "missing_count": 0,
+      "abandoned_count": 0,
+      "tool_failed_count": 0,
+      "withdrawn_count": 0,
+      "value": null,
+      "supporting_observation_ids": []
+    },
+    {
+      "measure_id": "relation-classification-accuracy",
+      "status": "not_evaluated",
+      "statistic": "proportion",
+      "numerator": null,
+      "denominator": 0,
+      "opportunity_count": 0,
+      "observed_count": 0,
+      "missing_count": 0,
+      "abandoned_count": 0,
+      "tool_failed_count": 0,
+      "withdrawn_count": 0,
+      "value": null,
+      "supporting_observation_ids": []
+    },
+    {
+      "measure_id": "diagnostic-localization",
+      "status": "not_evaluated",
+      "statistic": "proportion",
+      "numerator": null,
+      "denominator": 0,
+      "opportunity_count": 0,
+      "observed_count": 0,
+      "missing_count": 0,
+      "abandoned_count": 0,
+      "tool_failed_count": 0,
+      "withdrawn_count": 0,
+      "value": null,
+      "supporting_observation_ids": []
+    },
+    {
+      "measure_id": "diagnostic-repair",
+      "status": "not_evaluated",
+      "statistic": "proportion",
+      "numerator": null,
+      "denominator": 0,
+      "opportunity_count": 0,
+      "observed_count": 0,
+      "missing_count": 0,
+      "abandoned_count": 0,
+      "tool_failed_count": 0,
+      "withdrawn_count": 0,
+      "value": null,
+      "supporting_observation_ids": []
+    },
+    {
+      "measure_id": "critical-review-items",
+      "status": "not_evaluated",
+      "statistic": "proportion",
+      "numerator": null,
+      "denominator": 0,
+      "opportunity_count": 0,
+      "observed_count": 0,
+      "missing_count": 0,
+      "abandoned_count": 0,
+      "tool_failed_count": 0,
+      "withdrawn_count": 0,
+      "value": null,
+      "supporting_observation_ids": []
+    },
+    {
+      "measure_id": "critical-silent-omissions",
+      "status": "not_evaluated",
+      "statistic": "count",
+      "numerator": null,
+      "denominator": 0,
+      "opportunity_count": 0,
+      "observed_count": 0,
+      "missing_count": 0,
+      "abandoned_count": 0,
+      "tool_failed_count": 0,
+      "withdrawn_count": 0,
+      "value": null,
+      "supporting_observation_ids": []
+    },
+    {
+      "measure_id": "majority-missed-critical-items",
+      "status": "not_evaluated",
+      "statistic": "count",
+      "numerator": null,
+      "denominator": 0,
+      "opportunity_count": 0,
+      "observed_count": 0,
+      "missing_count": 0,
+      "abandoned_count": 0,
+      "tool_failed_count": 0,
+      "withdrawn_count": 0,
+      "value": null,
+      "supporting_observation_ids": []
+    },
+    {
+      "measure_id": "untraced-critical-changes",
+      "status": "not_evaluated",
+      "statistic": "count",
+      "numerator": null,
+      "denominator": 0,
+      "opportunity_count": 0,
+      "observed_count": 0,
+      "missing_count": 0,
+      "abandoned_count": 0,
+      "tool_failed_count": 0,
+      "withdrawn_count": 0,
+      "value": null,
+      "supporting_observation_ids": []
+    },
+    {
+      "measure_id": "prohibited-infrastructure-assistance",
+      "status": "not_evaluated",
+      "statistic": "count",
+      "numerator": null,
+      "denominator": 0,
+      "opportunity_count": 0,
+      "observed_count": 0,
+      "missing_count": 0,
+      "abandoned_count": 0,
+      "tool_failed_count": 0,
+      "withdrawn_count": 0,
+      "value": null,
+      "supporting_observation_ids": []
+    },
+    {
+      "measure_id": "nontrivial-example-support",
+      "status": "not_evaluated",
+      "statistic": "proportion",
+      "numerator": null,
+      "denominator": 0,
+      "opportunity_count": 0,
+      "observed_count": 0,
+      "missing_count": 0,
+      "abandoned_count": 0,
+      "tool_failed_count": 0,
+      "withdrawn_count": 0,
+      "value": null,
+      "supporting_observation_ids": []
+    }
+  ],
+  "dimension_results": [
+    {
+      "dimension_id": "expressiveness",
+      "status": "not_evaluated",
+      "threshold_result": "not_evaluated",
+      "condition_results": [],
+      "supporting_observation_ids": []
+    },
+    {
+      "dimension_id": "usability-comprehension",
+      "status": "not_evaluated",
+      "threshold_result": "not_evaluated",
+      "condition_results": [],
+      "supporting_observation_ids": []
+    },
+    {
+      "dimension_id": "effectiveness-productivity",
+      "status": "not_evaluated",
+      "threshold_result": "not_evaluated",
+      "condition_results": [],
+      "supporting_observation_ids": []
+    },
+    {
+      "dimension_id": "diagnostic-quality",
+      "status": "not_evaluated",
+      "threshold_result": "not_evaluated",
+      "condition_results": [],
+      "supporting_observation_ids": []
+    },
+    {
+      "dimension_id": "reviewability",
+      "status": "not_evaluated",
+      "threshold_result": "not_evaluated",
+      "condition_results": [],
+      "supporting_observation_ids": []
+    },
+    {
+      "dimension_id": "semantic-traceability",
+      "status": "not_evaluated",
+      "threshold_result": "not_evaluated",
+      "condition_results": [],
+      "supporting_observation_ids": []
+    }
+  ],
+  "stratum_results": [],
+  "evidence_status": "untested",
+  "claim": {
+    "claim_id": "aces-researcher-accessibility",
+    "statement": "Target security researchers and benchmark designers can author and validate representative ACES benchmark scenarios, and evaluator-reviewers can review them, through pinned public documentation and tools without cloud, Terraform, OpenStack, Docker, backend implementation source, or undocumented backend conventions; backend implementers are reported only as a comparison persona.",
+    "threats_to_validity": [
+      "No qualifying human-subject or independent-review observations have been collected.",
+      "The preregistered sample, experience bands, tasks, and adapters support only bounded conclusions.",
+      "Backend-implementer results cannot substitute for non-infrastructure-expert researcher results.",
+      "Results apply only to the pinned ACES revision, public surfaces, modes, parameters, and assistance policies."
+    ],
+    "falsification_protocol": "docs/research/dsl-language-evaluation/protocol-v2.json",
+    "objective_pass_criteria": "Every dimension in every manifest-bound target infrastructure-novice persona and tooling-condition stratum passes: representative non-trivial scenarios are authored and validated without prohibited infrastructure/source assistance; diagnostics localize defects and support correction; examples/templates support the sealed benchmark meaning; unsupported or profile-dependent requests are classified and explained at the owning public boundary; and independent reviewers recover critical meaning before intent reveal. Pooled or comparison-stratum success cannot substitute for a target-stratum pass.",
+    "objective_fail_criteria": "Any manifest-bound gating stratum falls below its completion or semantic-fidelity threshold, any critical meaning is silently lost, public examples support only a trivial substitute, diagnostics or unsupported-boundary explanations require source/backend inspection, prohibited infrastructure expertise is used, or reviewers cannot recover critical meaning from the assigned public condition.",
+    "allowed_evidence": [
+      "sanitized consented attempt observations",
+      "exact production public-tool outputs",
+      "blinded reviewer judgments",
+      "pinned public documentation and examples",
+      "preregistered setup-friction and assistance records",
+      "independently recomputed manifest-bound stratum measures"
+    ],
+    "disallowed_evidence": [
+      "schema or parser success alone",
+      "maintainer confidence or walkthroughs",
+      "agent or simulated-persona results as generalized human evidence",
+      "backend-private interpretation",
+      "implementation-source inspection",
+      "cloud or container deployment success",
+      "private prompts",
+      "post-hoc thresholds, exclusions, or diagnostic enrichment"
+    ],
+    "scope": {
+      "persona_ids": [
+        "security-researcher",
+        "benchmark-designer",
+        "backend-implementer",
+        "evaluator-reviewer"
+      ],
+      "task_ids": [
+        "accessibility-author-benchmark-scenario",
+        "accessibility-repair-invalid-scenario",
+        "accessibility-classify-unsupported-request",
+        "accessibility-review-nontrivial-scenario"
+      ],
+      "tooling_condition_ids": [
+        "public-docs-only",
+        "mcp-tools",
+        "cli-tools",
+        "direct-library"
+      ],
+      "variant_ids": [
+        "accessibility-nontrivial-benchmark",
+        "accessibility-single-dangling-reference",
+        "accessibility-unsupported-live-realization",
+        "accessibility-hidden-boundary-error"
+      ],
+      "artifact_stage_ids": [
+        "authored",
+        "validated",
+        "instantiated",
+        "compiled",
+        "planned",
+        "review-judgment"
+      ],
+      "dimension_ids": [
+        "expressiveness",
+        "usability-comprehension",
+        "effectiveness-productivity",
+        "diagnostic-quality",
+        "reviewability",
+        "semantic-traceability"
+      ],
+      "measure_ids": [
+        "semantic-elements-correct",
+        "task-completion",
+        "critical-semantic-errors",
+        "semantic-rework-cycles",
+        "relation-classification-accuracy",
+        "diagnostic-localization",
+        "diagnostic-repair",
+        "critical-review-items",
+        "critical-silent-omissions",
+        "majority-missed-critical-items",
+        "untraced-critical-changes",
+        "prohibited-infrastructure-assistance",
+        "nontrivial-example-support"
+      ]
+    },
+    "evidence_artifacts": [
+      "docs/research/dsl-language-evaluation/protocol-v2.json",
+      "docs/research/dsl-language-evaluation/execution-snapshot-accessibility-v1.json",
+      "docs/research/dsl-language-evaluation/analysis-accessibility-v1.json"
+    ]
+  },
+  "plain_language_outcome": "The accessibility study is preregistered and pinned, but it has not started. ACES researcher accessibility therefore remains untested; the protocol and structural gate are evidence infrastructure, not positive accessibility evidence.",
+  "limitations": [
+    "This record validates the falsification protocol and claim boundary, not researcher accessibility.",
+    "The snapshot intentionally contains no subjects, attempts, observations, reviews, deviations, withdrawals, or disagreements.",
+    "Human recruitment and raw-data collection require the applicable ethics, consent, privacy, and data-protection review.",
+    "Maintainer, agent, or simulated-persona walkthroughs remain exploratory and cannot promote the generalized human claim.",
+    "A later product correction must preserve this frozen snapshot and be evaluated in a new snapshot rather than rewriting failed evidence."
+  ]
+}

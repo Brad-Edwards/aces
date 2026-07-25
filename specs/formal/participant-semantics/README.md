@@ -12,6 +12,8 @@ This document is the issue #71 formal design artifact for:
 - `SEM-219` - Participant Tool And Affordance Semantics
 - `SEM-220` - Participant Decision-Surface Semantics
 - `SEM-226` - Participant Exposure And Visibility-Boundary Semantics
+- `SEM-230` - Participant Information-Flow And Control Semantics
+- `DSL-437` - Benign Participant Autonomous Execution
 
 It is a design artifact, not an implementation artifact. It establishes the
 semantic model that later child implementation issues must realize in SDL
@@ -21,6 +23,19 @@ contracts, and tests.
 Issue #119 and ADR-083 extend the original issue #71 design with the joint
 `SEM-219`, `SEM-220`, and `SEM-226` decision-surface model. Their executable
 implementation remains owned by issues #294, #295, and #296.
+
+Issue #796 and ADR-085 add the revisioned SEM-230 composition boundary. Its
+normative model is the focused sibling specification
+[`information-flow-control.md`](information-flow-control.md); this README's
+world, view, history, action, visibility, and ordering objects remain the
+incumbent carriers that model composes.
+
+Issue #861 and ADR-092 add deterministic autonomous execution for ordinary
+participants. The focused normative composition is
+[`autonomous-execution.md`](autonomous-execution.md): it binds existing
+participant actions and observations to the shared time model, participant
+implementation selection, backend-native execution, and typed runtime
+readback. It adds no parallel actor or private time semantics.
 
 ## Current Sufficiency Finding
 
@@ -923,7 +938,7 @@ Current implementation artifacts for the `SEM-211` slice:
   history action-result embedding, compiled-contract validation for declared
   effects and failure classes, and backend diagnostic mapping to portable
   failure classes;
-- `implementations/python/packages/aces_contracts/contracts.py` publishes the
+- `implementations/python/packages/aces_contracts/contracts/` publishes the
   action-result payload shape in the participant behavior-history and runtime
   snapshot schemas;
 - `implementations/python/tests/test_sem_211_participant_action_semantics.py`
@@ -966,7 +981,7 @@ Current implementation artifacts for the first `SEM-212` slice:
   bases, outcome interpretation-rule refs, timestamp-adjacency limits for
   strong causal support, effect grounding in actual observations/action
   results, and participant-boundary authorization for attribution evidence;
-- `implementations/python/packages/aces_contracts/contracts.py` publishes the
+- `implementations/python/packages/aces_contracts/contracts/` publishes the
   attribution-edge payload under participant behavior-history event contracts;
 - `implementations/python/tests/test_sem_212_participant_attribution_semantics.py`
   covers positive attribution, missing bases, timestamp-only strong-causality
@@ -1018,7 +1033,7 @@ Current implementation artifacts for the first `SEM-213` slice:
   temporal context on participant behavior-history events, validates it
   against the compiled action contract, and exposes an abstract state-machine
   checker for cadence, deadline, dwell, timeout, reset, and replay interactions;
-- `implementations/python/packages/aces_contracts/contracts.py` publishes the
+- `implementations/python/packages/aces_contracts/contracts/` publishes the
   runtime temporal-context payload in participant behavior-history and runtime
   snapshot schemas;
 - `implementations/python/tests/test_sem_213_temporal_participant_semantics.py`
@@ -1057,7 +1072,7 @@ Implementation artifacts:
 
 - `participant-context-view-v1` carries the SEM-214 envelope in the existing
   API-408 control-plane carrier;
-- `implementations/python/packages/aces_contracts/contracts.py` defines the
+- `implementations/python/packages/aces_contracts/contracts/` defines the
   closed-world Pydantic model and JSON Schema reference output;
 - `contracts/fixtures/control-plane/participant-context-view-v1/` contains
   positive and negative fixtures for source-layer, temporal, audience-scope,
@@ -1203,7 +1218,7 @@ invariant oracle is unchanged.
 
 Current implementation artifacts for the `SEM-216` slice:
 
-- `implementations/python/packages/aces_contracts/contracts.py` adds
+- `implementations/python/packages/aces_contracts/contracts/` adds
   `ParticipantContextViewModel._validate_sem216_audience_boundary` with its
   published `allOf` (required view rule + redaction policy) and
   `x-aces-invariants` (archival source mediation, `payload_ref` non-aliasing)
@@ -1542,25 +1557,25 @@ must preserve or strengthen its rows.
 
 | Source / clause | Typed carrier or canonical helper | Lifecycle enforcement point | Positive case | Adversarial negative case | Existing invariant / implementation owner |
 | --- | --- | --- | --- | --- | --- |
-| SEM-219 A: tool identity is distinct from affordance meaning | governed concept/reference identity plus participant action-contract ref | SDL semantic reference resolution and compiled canonical addresses | one tool identity exposes two separately governed action affordances | tool label or ATT&CK id accepted as the action contract | I14, I16 / #294 |
-| SEM-219 B: authored availability is participant-local | `agents.*`, behavior-specification refs, action contracts, authority/scope refs | `SemanticValidator`, behavior analysis, full post-instantiation validation | affordance bound to one participant and its behavior spec | globally declared tool silently becomes available to every participant | I1, I4 / #294 |
-| SEM-219 C: visibility is independent of availability | `ParticipantViewRule`, `ParticipantViewTransition`, observation boundary, `V_p,o` | compiler timeline plus observation/retrieval validation at the event order | authored affordance becomes visible after its disclosure transition | globally available affordance appears while hidden from this participant | I2, I3 / #294 |
-| SEM-219 D: invocation is independently admitted | action contract plus `ParticipantActionAdmissionRequest` and `participant_action_admission_request_violations()` | runtime `admit_action()` before execution | visible, supported action passes authority and target admission | visible action invokes outside participant authority | I4 / #294 |
-| SEM-219 E: constraints fail closed | SEM-211 typed preconditions and portable failure classes | semantic validation, planner applicability, runtime admission, result validation | satisfied resource/temporal constraint admits the attempt | exhausted constraint is ignored or mapped to an untyped backend error | I4, I7 / #294 |
-| SEM-219 F: support is apparatus metadata | `ParticipantImplementationManifestModel`, selection model, backend feature-support disclosure | apparatus-context validation before execution | selected implementation explicitly supports the bound affordance | backend-supported tool is treated as semantically available without a grant | I11, I12 / #294 |
-| SEM-219 G: side effects and observations are explicit | action-contract effects, behavior history, action result, observation envelope, evidence refs | result/snapshot/conformance validation | invocation records declared visibility and telemetry effects | tool output leaks hidden truth without a view rule or evidence anchor | I5, I13 / #294 |
+| SEM-219 A: tool identity is distinct from affordance meaning | `ParticipantToolAffordance.tool_ref` plus `action_contract_refs` | scenario-content concept/reference validation and `ParticipantToolAffordanceRuntime` canonical addresses | one content identity exposes separately keyed action affordances | raw tool label or cross-family declaration accepted as identity/action meaning | I14, I16 / #294 |
+| SEM-219 B: authored availability is participant-local | `ParticipantBehaviorSpecification.tool_affordances`, `agents.*`, authority/scope refs | `SemanticValidator`, role/participant subset checks, full post-instantiation validation | affordance remains within one behavior spec and every resolved participant | globally declared content or apparatus support synthesizes participant availability | I1, I4 / #294 |
+| SEM-219 C: visibility is independent of availability | stable authored affordance ref, `ParticipantViewRule`, transition, observation boundary, `V_p,o` | explicit boundary classification plus compiled view timeline | authored affordance is independently observable or hidden | authored/global affordance appears without participant-local classification | I2, I3 / #294 |
+| SEM-219 D: invocation is independently admitted | compiled affordance action addresses plus `ParticipantActionAdmissionRequest` | authoring locality gate followed by the existing runtime admission path | visible action remains a reference requiring independent admission | binding widens participant actions or visibility is treated as invocation | I4 / #294 |
+| SEM-219 E: constraints fail closed | affordance action refs plus unchanged SEM-211 preconditions/failure classes | semantic validation and existing planner/admission/result gates | complete action constraints remain reachable through the compiled action address | binding copies, drops, or overrides exhausted/unknown constraints | I4, I7 / #294 |
+| SEM-219 F: support is apparatus metadata | authored affordance IR remains separate from manifest/selection support | absence-preserving compilation plus existing apparatus validation | support can be joined later without changing authored meaning | installed content or backend support creates an affordance grant | I11, I12 / #294 |
+| SEM-219 G: side effects and observations are explicit | affordance observation addresses plus action effects/evidence expectations | boundary classification, compiler IR, existing result/snapshot/conformance gates | tool output remains governed by referenced observation/effect contracts | tool output lacks a view rule or leaks hidden truth | I5, I13 / #294 |
 | SEM-220 A: surface has participant/episode/order identity | `ParticipantContextViewModel` envelope plus typed `D(p,e,o)` payload/ref | retrieval and context-view validation | surface resolves to one participant, episode, and observation point | cumulative/global context substitutes for participant-local state | I1, I3, I15 / #295 |
 | SEM-220 B: candidate membership is not eligibility | action-entry contract ref plus explicit SEM-211 eligibility state/reason refs | surface derivation followed by independent admission | visible candidate is marked ineligible with a typed reason | every presented candidate is implicitly executable | I4 / #295 |
 | SEM-220 C: open-ended proposals bind before admission | action-contract registry and SEM-211 admission helper | proposal resolution, argument validation, then runtime admission | generated proposal resolves and validates before an attempt | free-form generation bypasses applicability or invents backend-local meaning | I4, I11 / #295 |
 | SEM-220 D: constrained forms preserve mapping meaning | governed parameter schema plus explicit default/normalization/loss disclosure | authoring validation, compiler mapping, conformance comparison | form values map deterministically to validated action arguments | omitted/defaulted field changes meaning without disclosure | I12, I14, I16 / #295 |
 | SEM-220 E: selection is separate from attempt and outcome | decision record, behavior-history attempt, action result, outcome interpretation | execution history and result/outcome validators | chosen candidate links to one admitted attempt and later result | surface appearance is recorded as selection or success | I10 / #295 |
 | SEM-220 F: implementation kind does not change semantics | participant implementation manifest/selection and stable surface refs | apparatus validation and cross-run conformance | human proxy and autonomous implementation realize equivalent refs with disclosed differences | implementation type silently changes action or selection meaning | I1, I11, I12, I15 / #295 |
-| SEM-226 A: exposure is scoped by `V_p,o` | compiled view-relation timeline and observation boundary | observation/retrieval validation at or before the event order | disclosed item appears only from its effective order | stale or future-visible state enters an earlier surface | I2, I3 / #296 |
-| SEM-226 B: source strata remain distinct | `ParticipantContextViewModel.source_layers`, transformation and payload refs | SEM-214 source binding and SEM-216 audience-boundary validator | archival evidence is mediated through a participant-facing transformation | truth/adjudication/evidence payload aliases the visible context payload | I2, I3, I13 / #296 |
-| SEM-226 C: role/audience scope is explicit | context-view audience fields, view rule, participant address, markings | `_validate_sem216_audience_boundary` and retrieval authorization | role-scoped context reaches only the intended participant audience | private or role-specific context appears on another participant's surface | I2, I17 / #296 |
-| SEM-226 D: augmentation is governed exposure | source layer, transformation, visibility basis, evidence/provenance, limitations | context-view validation and conformance | augmentation records source, transformation, disclosure basis, and limits | scaffold guidance or augmentation metadata enters a generic context bag | I3, I13, I17 / #296 |
-| SEM-226 E: exposure changes are anchored | `ParticipantViewTransition`, behavior-history/episode-close anchor, evidence refs | compiler ordering plus runtime/conformance anchor resolution | disclosure transition changes later surfaces with evidence | exposure changes without a history event, order, or evidence anchor | I2, I8, I9 / #296 |
-| SEM-226 F: realized exposure is not inferred from policy | exposure-policy ref plus observation/history/evidence records | apparatus validation followed by runtime and conformance checks | selected policy and realized observation agree, with limitations | policy/manifest claim is treated as proof of delivery | I11, I13, I15 / #296 |
+| SEM-226 A: exposure is scoped by `V_p,o` | compiled view-relation timeline, observation boundary, resolved policy history, and `ParticipantDecisionSurfaceExposureBindingModel` | `project_participant_decision_surface()` resolves the effective revision and evaluates the compiled relation at the exact history order | disclosed item appears only from its effective order | caller-supplied, stale, or future policy/visibility state enters an earlier surface | I2, I3 / #296 |
+| SEM-226 B: source strata remain distinct | `ParticipantContextViewModel.source_layers` plus resolved authorization-record source/result, transformation, marking, and provenance refs | trusted item-authorization resolution followed by the deny-first exposure selector | archival evidence is mediated through an authorized participant-facing transformation with inherited markings and provenance | truth/adjudication/evidence payload or a self-attested transform aliases the visible context payload | I2, I3, I13 / #296 |
+| SEM-226 C: role/audience scope is explicit | context-view audience fields plus resolved authorization participant, episode, audience, order, apparatus, and policy coordinates | exact authorization/surface agreement and separately resolved implementation-selection checks before serialization | role-scoped context reaches only the intended participant audience | private or role-specific context appears through a synthetic selection or another participant's authorization | I2, I17 / #296 |
+| SEM-226 D: augmentation is governed exposure | resolved authorization source layer, transformation, visibility basis, backend-support ref, evidence/provenance, and limitations | authorization resolver, deny-first item exposure selector, and context-view validation | augmentation records source, authorized transformation, disclosure basis, and limits | scaffold guidance or augmentation metadata enters through caller-owned gate booleans | I3, I13, I17 / #296 |
+| SEM-226 E: exposure changes are anchored | `ParticipantViewTransition`, resolved policy-revision effective order, immutable exposure-policy version/digest, behavior-history anchor, and authorization evidence refs | compiler ordering plus authoritative policy and exact observation-occurrence resolution at both surface and delivery order | disclosure transition changes later surfaces with evidence while revocation leaves prior surfaces intact | a stale authorization is replayed under a replaced same-id policy or exposure changes without a history event, order, or evidence anchor | I2, I8, I9 / #296 |
+| SEM-226 F: realized exposure is not inferred from policy | resolved exposure-policy coordinates plus optional `ParticipantDecisionSurfaceExposureRealizationModel` item, authorization-record, and occurrence binding | semantic occurrence-identity resolution, independent of sequence position, followed by exact item/authorization and participant/episode/action/boundary/order/evidence/provenance agreement with observation history and delivery-time authority | selected policy and the exact authorized item occurrence agree, with limitations | an unrelated observation, positional list entry, or later authorization is attached to another item's realization | I11, I13, I15 / #296 |
 
 ### Adversarial counterexamples
 
@@ -1594,6 +1609,20 @@ The obligations above refine existing I1-I17 invariants. They add no new
 `### I*` heading and therefore do not expand the abstract invariant oracle in
 this design issue. Issues #294-#296 own concrete typed bindings and negative
 fixtures that specialize the existing oracle.
+
+## SEM-230 - Participant Information-Flow And Control Semantics
+
+SEM-230 is defined in
+[`information-flow-control.md`](information-flow-control.md). The focused
+authority defines the revisioned crossing relation, participant/audience/policy
+and order-relative label projection, independent control and information-flow
+operations, dynamic purge and declassification semantics, and the exact
+baseline `policy-noninterference` obligation.
+
+The relation is bound through taxonomy revision `rev2` rather than a local
+registry. Its current assurance is definition-complete and bounded-tested but
+deliberately unproved. The test-local model can falsify finite cases; it is not
+runtime mediation, backend realization, or a universal information-flow proof.
 
 ## Required Future Verification
 
@@ -1661,6 +1690,10 @@ Future implementation PRs should still include:
 
 - ADR-022: Participant Behavior and Interaction Semantics
 - ADR-083: Participant Tool, Decision-Surface, and Exposure Semantics
+- ADR-085: Participant Information-Flow And Control
+- ADR-090: Shared Time-Domain, Clock, And Progression Authority
+- ADR-091: Portable Time Capability, Control, And Provenance Contracts
+- ADR-092: Autonomous Benign Participants Under Shared Time
 - ADR-007: Lightweight Formal Methods Policy for Semantic Systems
 - ADR-013: Participant Episode Lifecycle Boundaries
 - ADR-016: Semantic Layer Scope and Coverage Model
@@ -1673,6 +1706,8 @@ Future implementation PRs should still include:
 - [Bernstein, Givan, Immerman, Zilberstein — The Complexity of Decentralized Control of Markov Decision Processes (Mathematics of Operations Research 27(4), 2002)](https://doi.org/10.1287/moor.27.4.819.297)
 - [Oliehoek and Amato — A Concise Introduction to Decentralized POMDPs (Springer, 2016)](https://doi.org/10.1007/978-3-319-28929-8)
 - [Kuhn — Extensive Games and the Problem of Information (Contributions to the Theory of Games II, 1953)](https://doi.org/10.1515/9781400881970-012)
+- [Goguen and Meseguer — Security Policies and Security Models (1982)](https://doi.org/10.1109/SP.1982.10014)
+- [Sabelfeld and Sands — Declassification: Dimensions and Principles (2009)](https://doi.org/10.3233/JCS-2009-0352)
 - [Fagin, Halpern, Moses, Vardi — Reasoning About Knowledge (MIT Press, 1995)](https://mitpress.mit.edu/9780262562003/reasoning-about-knowledge/)
 - [van Ditmarsch, van der Hoek, Kooi — Dynamic Epistemic Logic (Springer, 2007)](https://doi.org/10.1007/978-1-4020-5839-4)
 - [Goguen and Meseguer — Security Policies and Security Models (IEEE S&P, 1982)](https://doi.org/10.1109/SP.1982.10014)

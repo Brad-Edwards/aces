@@ -65,19 +65,28 @@ configuration.
 5. Compilation emits a `DomainTopologyBinding` on each participating node and
    domain-bound account. It contains the normalized domain identity, profile,
    authority account address, node role, and canonical controller addresses.
-   Member nodes order after every selected controller. Account placements order
-   after their target node.
-6. Provisioner capability truth uses the governed
+   Those bindings are topology context and exact readback carriers; they are
+   not executable controller-bootstrap instructions.
+6. Each `domain_controller_for` node/domain fact additionally compiles to one
+   `domain-controller-placement` provisioning resource. The placement targets
+   the controller node and reuses that node's `DomainTopologyBinding`; it does
+   not introduce a second domain payload. The placement is the sole portable
+   instruction to establish that controller role. It orders after its target
+   node, while member-node realization and every account placement bound to the
+   same domain order after the domain's controller placements. The logical
+   authority-account address never becomes a bootstrap dependency.
+7. Provisioner capability truth uses the governed
    `supported_domain_profiles` dimension. Account creation and SPN support do
    not imply controller or join realization support.
-7. A shared plan analyzer checks resources, non-delete operations, and admitted
+8. A shared plan analyzer checks resources, non-delete operations, and admitted
    snapshot state. It runs in normal planning and at direct control-plane
    admission before backend validation. Backends may add stricter checks but
    cannot weaken this graph contract.
-8. Each compiled topology carrier is an exact SEM-218 `domain-topology`
+9. Each compiled topology carrier, including the controller placement, is an
+   exact SEM-218 `domain-topology`
    realization requirement. Runtime snapshot readback must preserve the whole
    normalized binding; omission or approximation is a backend-contract error.
-9. This decision does not define directory installation, DNS service setup,
+10. This decision does not define directory installation, DNS service setup,
    credential distribution, trust forests, group policy, or a provider-specific
    domain API. Those require separate profiles and capability declarations.
 
@@ -108,6 +117,8 @@ creating a domain controller or joining a machine to a domain.
 ### Positive
 
 - Domain-backed realization is explicit, portable, and deterministic.
+- Controller topology becomes actionable without treating node existence or an
+  account placement as controller bootstrap.
 - Semantic validation, compilation, planning, direct admission, and readback
   share one normalized graph contract.
 - Backends fail closed when they do not claim the requested domain profile.
@@ -127,3 +138,9 @@ The topology proves declared intent and carrier consistency; it does not prove
 that a guest successfully promoted a controller or completed a domain join.
 That operational claim requires backend or guest evidence under a separately
 defined realization mechanism.
+
+## Amendments
+
+| Date | Commit/PR | Summary |
+|------|-----------|---------|
+| 2026-07-24 | #845 | Distinguished topology/readback bindings from an actionable domain-controller placement and fixed controller-before-member/account lifecycle ordering. |

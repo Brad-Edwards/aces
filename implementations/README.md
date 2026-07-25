@@ -1,6 +1,6 @@
 # Implementations
 
-`implementations/` contains reference implementations of the ACES ecosystem.
+`implementations/` contains reference implementations of the RAES ecosystem.
 
 These implementations are non-normative. They are expected to consume the
 artifacts under `specs/` and `contracts/`, not define them.

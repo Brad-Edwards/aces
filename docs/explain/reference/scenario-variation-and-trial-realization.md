@@ -25,8 +25,11 @@ The design covers:
 - linkage to the existing experiment run, study, apparatus, evidence, and
   lineage records.
 
-It does not implement a generator, sampler, compiler, scheduler, runtime fact
-service, schema, persistence service, API, scenario pack, or adaptive policy.
+The reference does not add a generator, sampler, trial compiler, scheduler,
+persistence service, API, scenario pack, or adaptive policy. Follow-on issue
+#791 implements the typed run-local fact contract and in-process binding plane
+described below; the remaining conceptual sketches retain their issue-owned
+implementation boundaries.
 It does not guarantee identical backend behavior, artifact availability,
 reconstruction of hidden state, or exact replay from a seed alone.
 
@@ -214,6 +217,28 @@ primitives introduced with ADR-070. They do not reuse
 `RealizationEnvelopeModel`, `EnvelopeBinding`, `WitnessPolicy`, backend posture,
 or witness generation as experiment selection. ADR-070 is accepted and owns
 only the realizability relation; its witness seed is not experiment randomness.
+
+The reusable domain algebra belongs in a dependency-neutral `aces_contracts`
+leaf that does not import SDL models or schema-bundle machinery. Realization
+envelopes and scenario-family declarations consume (and may re-export) those
+same closed domain types and membership helpers. They must not copy the
+discriminated union, fork its validation, or make an SDL variation model depend
+on `RealizationEnvelopeModel`; those choices would create competing schemas and
+an SDL/contracts import cycle.
+
+Variation declarations use the existing SDL phase and admission spine. They are
+authoring/expanded declarations, participate in the existing parser mapping
+scopes, declaration index, composition symbol table, namespace rewriting,
+canonical family digest, language tooling, and published authoring schema, and
+are absent from `InstantiatedScenario`. Selection evidence extends the existing
+`InstantiationProvenance`; it does not create a parallel provenance record,
+resolver, binder, semantic validator, or SDL exception hierarchy. Credential
+selection is authorized by an explicit governed-reference or late-bound target
+kind. The runtime secret-name classifier remains advisory under ADR-057 and is
+not a substitute for that typed boundary. Until the recorded-selection
+integration lands, the public instantiation path must fail closed on a
+non-empty variation registry rather than silently discard it; absent or empty
+registries retain the existing singleton-family behavior.
 
 ### Structural validity and combination constraints
 
@@ -517,6 +542,49 @@ redaction/loss disclosures, not secret material. Missing, stale, wrong-scope,
 wrong-type, or unauthorized facts produce an explicit runtime disposition; no
 fallback value or scenario resampling is permitted.
 
+### Executable fact-binding surface
+
+The reference implementation exposes this boundary through the closed
+`runtime-fact-binding-plane-v1` contract and
+`aces_runtime.runtime_fact_bindings.RuntimeFactBindingPlane`.
+
+- `RuntimeFactDeclarationModel` fixes portable type, source, sensitivity,
+  visibility, and authority semantics before values arrive.
+- `RuntimeFactVersionModel` is append-only and run-scoped. Version ids cannot be
+  replaced and per-fact sequence numbers are contiguous.
+- `RuntimeFactSinkModel` targets only an `input.*` field on a compiled
+  `participant.action-contract.*` address. It records allowed sources, scopes,
+  sensitivities, freshness, authority, audience, and absence behavior.
+- `RuntimeFactBindingAdmission` supplies the compiled sinks, candidate facts,
+  authority references, and request time from trusted control-plane state for
+  one exact action instance. The caller-facing request cannot supply or replace
+  those decisions.
+- `bind_action_inputs()` resolves one visible current candidate per admitted
+  sink as of the trusted admission time; later observations cannot flow
+  backward into an earlier action. It records a value-free binding event tied
+  to the action instance, fact version, evidence, and provenance. Its result
+  never returns action values.
+- Participant and workflow projections are explicit visibility-filtered views.
+  Secret-backed projections contain neither the secret reference nor its value;
+  protected secret resolution and sink-type validation occur synchronously
+  inside the injected trusted dispatcher, which sends values directly to the
+  action adapter without returning an unwrap-capable carrier.
+
+Binding is deny-first. Unadmitted requests return no fact metadata, and
+out-of-scope candidates are filtered before absence or ambiguity is reported.
+Missing, stale, ambiguous, unauthorized, unsupported, wrong-type, wrong-scope,
+unavailable-secret, and dispatch-failed outcomes are distinct. A
+missing fact additionally honors the compiled sink's `block`, `fail`, or
+`inapplicable` action disposition. Once an action instance has binding history,
+it cannot be rebound under the same run, participant, and episode identity.
+
+The published conformance corpus under
+`contracts/fixtures/participant-runtime/runtime-fact-binding-plane-v1/`
+covers positive, failure, secret, cross-participant, and cross-backend portable
+cases. Aggregate validation also requires events and projections to reproduce
+the referenced immutable version's sensitivity, scope where applicable,
+evidence, provenance, value/redaction posture, and compiled sink policy.
+
 ## Backend Realization And Scheduling
 
 ### Realization is proof against a selected envelope
@@ -551,6 +619,13 @@ It may not compose SDL, resolve imports, select variation points, call the
 randomizer, instantiate a different scenario, create run ids, decide factors,
 evaluate scientific results, or implement a private comparison/scoring engine.
 APTL and any other scheduler use this same handoff.
+
+The portable handoff for clean-state requirements, cleanup obligations,
+execution-attempt receipts, backend capability, and serial-by-default isolation
+proof is specified in
+{download}`cleanup-contracts.md <../../../specs/formal/scenario-variation-trial-realization/cleanup-contracts.md>`.
+Those contracts describe admitted intent and evidence; they do not introduce a
+scheduler queue or a second scenario lifecycle.
 
 ## Conceptual Contract Sketches
 

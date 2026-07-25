@@ -1,6 +1,6 @@
-# Contributing to ACES SDL
+# Contributing to RAES SDL
 
-ACES SDL is a research-oriented engineering project. Contributions are useful
+RAES SDL is a research-oriented engineering project. Contributions are useful
 when they make the language, reference implementation, contracts, examples, or
 documentation more precise and easier to validate.
 
@@ -54,6 +54,17 @@ The full repository gate is:
 ```shell
 uvx nox -s verify
 ```
+
+Run the change-aware local gate while iterating:
+
+```shell
+uvx nox -s verify-changed
+```
+
+It selects from status-aware changes against the branch's upstream ref and
+fails closed to the full local gate when classification is uncertain. The
+pre-push hook uses this lane. It does not weaken `verify`, which remains the
+unconditional pull-request gate.
 
 Useful narrower sessions:
 

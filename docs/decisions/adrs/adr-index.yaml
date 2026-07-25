@@ -378,7 +378,54 @@ adrs:
     pin: c8e096b85edb7ca97217a8bb0ac74b8817f966b9cf42b66f114dc3a45ed83a90
   - id: ADR-082
     path: docs/decisions/adrs/adr-082-authored-identity-domain-topology.md
-    pin: 0d5d4997bb2e3abf2ddf2bf9d6d345429a99deef5f343c6ca1aba4b8ebc3a95c
+    pin: 28dc83ea6bef2a9d0dd8eeaee2d7f745e90c6c360dcda7b22b8bd321e24686fc
+    amendments:
+      - date: 2026-07-24
+        ref: "#845"
+        summary: "Distinguished topology/readback bindings from an actionable domain-controller placement and fixed controller-before-member/account lifecycle ordering."
   - id: ADR-084
     path: docs/decisions/adrs/adr-084-scenario-variation-and-deterministic-trial-realization.md
     pin: e4be391affc09e1f0db3c5004fb2dfa0c4138c5c2f98086b3a6b8d341b4fd9d8
+  - id: ADR-085
+    path: docs/decisions/adrs/adr-085-participant-information-flow-and-control.md
+    pin: 75143315eba5f4e71d5f8c4bfa3468e46060e4ad95a593c21e8d100387500245
+    amendments:
+      - ref: "#831"
+  - id: ADR-086
+    path: docs/decisions/adrs/adr-086-governed-whole-scenario-satisfiability.md
+    pin: c34101fb3b5ddeba1e11f02666fb7747a38f52784087514ec76867df152aefa0
+  - id: ADR-087
+    path: docs/decisions/adrs/adr-087-enterprise-identity-and-deployment-tenancy-authoring.md
+    pin: 9654e999d520fb642e1dbeee0ec582902755bff4d5f7d9c0011c3a7a5efa478c
+  - id: ADR-088
+    path: docs/decisions/adrs/adr-088-initial-service-state-and-native-materialization.md
+    pin: f59495005714ffdac938e73193b3d0c800016ede1e68c1a47f7c702bd8720223
+    amendments:
+      - date: 2026-07-24
+        ref: "#859"
+        summary: "Separated range-level baseline reset authority from per-binding native reset ownership so one causal baseline can span multiple real product services while every binding remains tenant-bound to its exact target."
+      - date: 2026-07-24
+        ref: "#862"
+        summary: "Replaced the historical-baseline ontology with the smallest content-owned, evidence-gated service-materialization extension required by the redesigned issue boundary."
+  - id: ADR-090
+    path: docs/decisions/adrs/adr-090-shared-time-domain-clock-and-progression-authority.md
+    pin: 5b8fa008e2e8c8893e8a0c0376c947ef6f840d1e09fd75d579d36d477219d1e2
+    amendments:
+      - date: 2026-07-24
+        ref: "#117"
+        summary: "Replaced a documentation link that the strict Sphinx build could not resolve with its repository-relative path."
+  - id: ADR-091
+    path: docs/decisions/adrs/adr-091-portable-time-capability-control-and-provenance-contracts.md
+    pin: c2a0e6ac9fb87aa10fbb571b0f70efe0b99520b806f6ffe706f1556b0ec7e84b
+  - id: ADR-092
+    path: docs/decisions/adrs/adr-092-autonomous-benign-participants-under-shared-time.md
+    pin: f813aebad329c94ad78bd97f945c683ec1426e781666b7136a5dd2904476acd5
+    amendments:
+      - date: 2026-07-24
+        ref: "#861"
+        summary: "Required exact action provenance and capability-specific atomic participant batching."
+  - id: ADR-093
+    path: docs/decisions/adrs/adr-093-raes-rename-and-compatibility-boundaries.md
+    pin: ee41917ed26914693f44cc1f9a07d0720774862639843ddc12eb2a38ea7b63e5
+    amendments:
+      - ref: "#866"

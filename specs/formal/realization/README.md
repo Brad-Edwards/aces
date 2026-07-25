@@ -64,10 +64,10 @@ work the SEM-218 row tracks.
   `implementations/python/packages/aces_contracts/apparatus.py`
   (`RealizationSupportDeclaration`, `ConceptBinding`, `ApparatusIdentity`)
 - contract-model gates and JSON schema (backend manifest):
-  `implementations/python/packages/aces_contracts/contracts.py`
+  `implementations/python/packages/aces_contracts/contracts/`
   (`RealizationSupportDeclarationModel`)
 - processor-vs-backend asymmetry:
-  `implementations/python/packages/aces_contracts/contracts.py`
+  `implementations/python/packages/aces_contracts/contracts/`
   (`ProcessorManifestV2Model` rejects `realization_support`)
 - backend-manifest payload encoding:
   `implementations/python/packages/aces_backend_protocols/manifest.py`

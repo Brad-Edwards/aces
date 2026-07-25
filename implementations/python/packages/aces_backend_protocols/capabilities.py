@@ -1,81 +1,31 @@
 """Domain-specific runtime capability declarations."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
 
 from aces_contracts.controlled_vocabularies import validate_controlled_vocabulary_scope_values
 from aces_contracts.manifest_authority import validate_backend_supported_contract_versions
-from aces_contracts.vocabulary import ParticipantFeatureSupportLevel, WorkflowFeature, WorkflowStatePredicateFeature
+from aces_contracts.vocabulary import WorkflowFeature, WorkflowStatePredicateFeature
 
-if TYPE_CHECKING:
-    from .backend_manifest import BackendManifest
+from . import participant_capabilities as _participant_capabilities
+from . import provisioner_capabilities as _provisioner_capabilities
+from . import time_capabilities as _time_capabilities
 
-PARTICIPANT_RUNTIME_ROLE_SCOPE = "capabilities.participant_runtime.supported_participant_roles"
-PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE = "capabilities.participant_runtime.supported_behavior_features"
-PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE = "capabilities.participant_runtime.supported_interaction_features"
+PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE = _participant_capabilities.PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE
+PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS = (
+    _participant_capabilities.PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS
+)
+PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE = _participant_capabilities.PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE
+PARTICIPANT_RUNTIME_ROLE_SCOPE = _participant_capabilities.PARTICIPANT_RUNTIME_ROLE_SCOPE
+ParticipantFeatureSupport = _participant_capabilities.ParticipantFeatureSupport
+ParticipantRuntimeCapabilities = _participant_capabilities.ParticipantRuntimeCapabilities
+PROVISIONER_DOMAIN_PROFILE_SCOPE = _provisioner_capabilities.PROVISIONER_DOMAIN_PROFILE_SCOPE
+ProvisionerCapabilities = _provisioner_capabilities.ProvisionerCapabilities
+TIME_CAPABILITY_REQUIRED_CONTRACTS = _time_capabilities.TIME_CAPABILITY_REQUIRED_CONTRACTS
+TimeCapabilities = _time_capabilities.TimeCapabilities
+
 OBSERVATION_CAPABILITY_CAPTURE_KIND_SCOPE = "capabilities.observation.supported_capture_kinds"
 OBSERVATION_CAPABILITY_CHANNEL_KIND_SCOPE = "capabilities.observation.supported_channel_kinds"
 OBSERVATION_CAPABILITY_SEALING_MODE_SCOPE = "capabilities.observation.supported_sealing_modes"
-PROVISIONER_DOMAIN_PROFILE_SCOPE = "capabilities.provisioner.supported_domain_profiles"
-
-_PARTICIPANT_EPISODE_CONTRACTS = frozenset(
-    {
-        "participant-episode-state-envelope-v1",
-        "participant-episode-history-event-stream-v1",
-        "runtime-snapshot-v1",
-    }
-)
-_PARTICIPANT_BEHAVIOR_CONTRACTS = frozenset(
-    {
-        "participant-behavior-history-event-stream-v1",
-        "runtime-snapshot-v1",
-    }
-)
-_PARTICIPANT_INTERACTION_CONTRACTS = frozenset(
-    {
-        "participant-behavior-history-event-stream-v1",
-        "participant-shared-state-record-v1",
-        "participant-joint-action-record-v1",
-        "participant-time-management-context-v1",
-        "runtime-snapshot-v1",
-    }
-)
-
-PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS = {
-    PARTICIPANT_RUNTIME_ROLE_SCOPE: {
-        "blue": _PARTICIPANT_EPISODE_CONTRACTS,
-        "green": _PARTICIPANT_EPISODE_CONTRACTS,
-        "red": _PARTICIPANT_EPISODE_CONTRACTS,
-        "white": _PARTICIPANT_EPISODE_CONTRACTS,
-    },
-    PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE: {
-        "action_contracts": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-        "attribution_support": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-        "behavior_history": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-        "effects": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-        "failure_classes": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-        "observation_boundaries": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-        "outcome_interpretation": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-        "preconditions": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-        "state_transitions": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-        "temporal_contracts": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-    },
-    PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE: {
-        "contention": _PARTICIPANT_INTERACTION_CONTRACTS,
-        "coordination": _PARTICIPANT_INTERACTION_CONTRACTS,
-        "interference": _PARTICIPANT_INTERACTION_CONTRACTS,
-        "shared_state_change": _PARTICIPANT_INTERACTION_CONTRACTS,
-    },
-}
-"""Minimum published contract surfaces needed to make API-405 claims checkable.
-
-The table is intentionally conservative. It gives the conformance runner a
-falsifiable floor for standard terms, so a manifest cannot claim ACES participant support
-while omitting the contracts that carry the corresponding runtime evidence.
-"""
-
 OBSERVATION_CAPABILITY_REQUIRED_CONTRACTS = frozenset(
     {
         "experiment-capture-spec-v1",
@@ -85,65 +35,8 @@ OBSERVATION_CAPABILITY_REQUIRED_CONTRACTS = frozenset(
     }
 )
 
-
-@dataclass(frozen=True)
-class ProvisionerCapabilities:
-    name: str
-    supported_node_types: frozenset[str] = frozenset()
-    supported_os_families: frozenset[str] = frozenset()
-    supported_content_types: frozenset[str] = frozenset()
-    supported_account_features: frozenset[str] = frozenset()
-    supported_domain_profiles: frozenset[str] = frozenset()
-    max_total_nodes: int | None = None
-    supports_acls: bool = False
-    supports_accounts: bool = False
-    supports_generated_artifacts: bool = False
-    supports_persistent_volumes: bool = False
-    constraints: dict[str, str] = field(default_factory=dict)
-
-    def __post_init__(self) -> None:
-        if not self.name.strip():
-            raise ValueError("ProvisionerCapabilities.name must be non-empty")
-        if not self.supported_node_types:
-            raise ValueError("ProvisionerCapabilities.supported_node_types must not be empty")
-        if any(not node_type.strip() for node_type in self.supported_node_types):
-            raise ValueError("ProvisionerCapabilities.supported_node_types must not contain empty strings")
-        if not self.supported_os_families:
-            raise ValueError("ProvisionerCapabilities.supported_os_families must not be empty")
-        if any(not os_family.strip() for os_family in self.supported_os_families):
-            raise ValueError("ProvisionerCapabilities.supported_os_families must not contain empty strings")
-        if any(not content_type.strip() for content_type in self.supported_content_types):
-            raise ValueError("ProvisionerCapabilities.supported_content_types must not contain empty strings")
-        if any(not feature.strip() for feature in self.supported_account_features):
-            raise ValueError("ProvisionerCapabilities.supported_account_features must not contain empty strings")
-        if any(not profile.strip() for profile in self.supported_domain_profiles):
-            raise ValueError("ProvisionerCapabilities.supported_domain_profiles must not contain empty strings")
-        validate_controlled_vocabulary_scope_values(
-            "capabilities.provisioner.supported_node_types",
-            self.supported_node_types,
-        )
-        validate_controlled_vocabulary_scope_values(
-            "capabilities.provisioner.supported_os_families",
-            self.supported_os_families,
-        )
-        validate_controlled_vocabulary_scope_values(
-            "capabilities.provisioner.supported_content_types",
-            self.supported_content_types,
-        )
-        validate_controlled_vocabulary_scope_values(
-            "capabilities.provisioner.supported_account_features",
-            self.supported_account_features,
-        )
-        validate_controlled_vocabulary_scope_values(
-            PROVISIONER_DOMAIN_PROFILE_SCOPE,
-            self.supported_domain_profiles,
-        )
-        if self.max_total_nodes is not None and self.max_total_nodes < 1:
-            raise ValueError("ProvisionerCapabilities.max_total_nodes must be positive when provided")
-        if self.supports_accounts and not self.supported_account_features:
-            raise ValueError("ProvisionerCapabilities that support accounts must declare supported_account_features")
-        if not self.supports_accounts and self.supported_account_features:
-            raise ValueError("supported_account_features require supports_accounts=True")
+CLEANUP_CAPABILITY_REQUIRED_CONTRACTS = frozenset({"trial-cleanup-plan-v1", "trial-cleanup-receipt-v1"})
+_CLEANUP_ACTION_KINDS = frozenset({"destroy", "reset", "restore", "compensate", "verify", "custom"})
 
 
 @dataclass(frozen=True)
@@ -243,135 +136,6 @@ def _validate_unique_non_empty_strings(field_name: str, values: tuple[str, ...])
         raise ValueError(f"{field_name} must not contain duplicate values")
 
 
-def _validate_participant_feature_support_term(feature: str) -> None:
-    errors: list[str] = []
-    for scope in (PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE, PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE):
-        try:
-            validate_controlled_vocabulary_scope_values(scope, (feature,))
-        except ValueError as exc:
-            errors.append(str(exc))
-            continue
-        return
-    raise ValueError(
-        "ParticipantFeatureSupport.feature must be a governed participant behavior or interaction feature "
-        f"term, or match the governed extension pattern; got {feature!r}; "
-        f"validation details: {'; '.join(errors)}"
-    )
-
-
-@dataclass(frozen=True)
-class ParticipantFeatureSupport:
-    """API-407 per-feature participant runtime support declaration."""
-
-    feature: str
-    support_level: ParticipantFeatureSupportLevel | str
-    constraint_refs: tuple[str, ...] = ()
-    disclosure_refs: tuple[str, ...] = ()
-
-    def __post_init__(self) -> None:
-        if not self.feature.strip():
-            raise ValueError("ParticipantFeatureSupport.feature must be non-empty")
-        _validate_participant_feature_support_term(self.feature)
-
-        try:
-            support_level = (
-                self.support_level
-                if isinstance(self.support_level, ParticipantFeatureSupportLevel)
-                else ParticipantFeatureSupportLevel(str(self.support_level))
-            )
-        except ValueError as exc:
-            raise ValueError("ParticipantFeatureSupport.support_level must be a valid support level") from exc
-
-        constraint_refs = tuple(self.constraint_refs)
-        disclosure_refs = tuple(self.disclosure_refs)
-        _validate_unique_non_empty_strings("ParticipantFeatureSupport.constraint_refs", constraint_refs)
-        _validate_unique_non_empty_strings("ParticipantFeatureSupport.disclosure_refs", disclosure_refs)
-        if support_level != ParticipantFeatureSupportLevel.EXACT and not disclosure_refs:
-            raise ValueError(
-                "ParticipantFeatureSupport disclosure_refs must be non-empty when support_level is below exact"
-            )
-
-        object.__setattr__(self, "support_level", support_level)
-        object.__setattr__(self, "constraint_refs", constraint_refs)
-        object.__setattr__(self, "disclosure_refs", disclosure_refs)
-
-
-@dataclass(frozen=True)
-class ParticipantRuntimeCapabilities:
-    """Participant-episode lifecycle support declaration.
-
-    Declaring this capability means the backend exposes the full
-    participant episode control surface defined in RUN-311:
-    ``initialize``, ``reset``, ``restart``, and ``terminate`` on the
-    ``ParticipantRuntime`` protocol, plus the ``status``/``results``/
-    ``history`` observation methods. A backend that advertises this
-    capability MUST populate ``RuntimeSnapshot.participant_episode_results``
-    and ``participant_episode_history`` so downstream consumers see the
-    state machine transitions.
-
-    API-405 support dimensions live here because they are backend apparatus
-    claims: which participant roles, behavior features, and interaction
-    features this participant runtime can actually realize.
-    """
-
-    name: str
-    supported_participant_roles: frozenset[str] = frozenset()
-    supported_behavior_features: frozenset[str] = frozenset()
-    supported_interaction_features: frozenset[str] = frozenset()
-    feature_support: tuple[ParticipantFeatureSupport, ...] = ()
-    constraints: dict[str, str] = field(default_factory=dict)
-
-    def __post_init__(self) -> None:
-        if not self.name.strip():
-            raise ValueError("ParticipantRuntimeCapabilities.name must be non-empty")
-        if not self.supported_participant_roles:
-            raise ValueError("ParticipantRuntimeCapabilities.supported_participant_roles must not be empty")
-        if not self.supported_behavior_features:
-            raise ValueError("ParticipantRuntimeCapabilities.supported_behavior_features must not be empty")
-        if not self.supported_interaction_features:
-            raise ValueError("ParticipantRuntimeCapabilities.supported_interaction_features must not be empty")
-        if any(not role.strip() for role in self.supported_participant_roles):
-            raise ValueError(
-                "ParticipantRuntimeCapabilities.supported_participant_roles must not contain empty strings"
-            )
-        if any(not feature.strip() for feature in self.supported_behavior_features):
-            raise ValueError(
-                "ParticipantRuntimeCapabilities.supported_behavior_features must not contain empty strings"
-            )
-        if any(not feature.strip() for feature in self.supported_interaction_features):
-            raise ValueError(
-                "ParticipantRuntimeCapabilities.supported_interaction_features must not contain empty strings"
-            )
-        validate_controlled_vocabulary_scope_values(
-            PARTICIPANT_RUNTIME_ROLE_SCOPE,
-            self.supported_participant_roles,
-        )
-        validate_controlled_vocabulary_scope_values(
-            PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE,
-            self.supported_behavior_features,
-        )
-        validate_controlled_vocabulary_scope_values(
-            PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE,
-            self.supported_interaction_features,
-        )
-        feature_support = tuple(
-            entry if isinstance(entry, ParticipantFeatureSupport) else ParticipantFeatureSupport(**entry)
-            for entry in self.feature_support
-        )
-        feature_names = tuple(entry.feature for entry in feature_support)
-        _validate_unique_non_empty_strings("ParticipantRuntimeCapabilities.feature_support", feature_names)
-        supported_features = self.supported_behavior_features | self.supported_interaction_features
-        for entry in feature_support:
-            if (
-                entry.support_level == ParticipantFeatureSupportLevel.UNSUPPORTED
-                and entry.feature in supported_features
-            ):
-                raise ValueError(
-                    "ParticipantRuntimeCapabilities.feature_support cannot declare a supported feature unsupported"
-                )
-        object.__setattr__(self, "feature_support", feature_support)
-
-
 @dataclass(frozen=True)
 class ObservationCapabilities:
     """Backend observation and evidence-collection support declaration (EXP-715)."""
@@ -433,6 +197,46 @@ class ObservationCapabilities:
 
 
 @dataclass(frozen=True)
+class CleanupCapabilities:
+    """Backend support for portable cleanup intent, receipts, and verification."""
+
+    name: str
+    supported_contract_versions: frozenset[str] = frozenset()
+    supported_action_kinds: frozenset[str] = frozenset()
+    supported_verification_methods: frozenset[str] = frozenset()
+    supports_reusable_state: bool = False
+    supports_residual_state_disclosure: bool = False
+
+    def __post_init__(self) -> None:
+        if not self.name.strip():
+            raise ValueError("CleanupCapabilities.name must be non-empty")
+        _validate_unique_non_empty_strings(
+            "CleanupCapabilities.supported_contract_versions", self.supported_contract_versions
+        )
+        _validate_unique_non_empty_strings("CleanupCapabilities.supported_action_kinds", self.supported_action_kinds)
+        _validate_unique_non_empty_strings(
+            "CleanupCapabilities.supported_verification_methods", self.supported_verification_methods
+        )
+        if self.supported_contract_versions != CLEANUP_CAPABILITY_REQUIRED_CONTRACTS:
+            raise ValueError(
+                "CleanupCapabilities.supported_contract_versions must contain trial-cleanup-plan-v1 "
+                "and trial-cleanup-receipt-v1"
+            )
+        validate_backend_supported_contract_versions(self.supported_contract_versions)
+        unknown_actions = sorted(self.supported_action_kinds - _CLEANUP_ACTION_KINDS)
+        if unknown_actions:
+            raise ValueError(
+                f"CleanupCapabilities.supported_action_kinds contains unknown values: {', '.join(unknown_actions)}"
+            )
+        if not self.supported_action_kinds:
+            raise ValueError("CleanupCapabilities.supported_action_kinds must not be empty")
+        if not self.supported_verification_methods:
+            raise ValueError("CleanupCapabilities.supported_verification_methods must not be empty")
+        if self.supports_reusable_state and not self.supports_residual_state_disclosure:
+            raise ValueError("CleanupCapabilities reusable-state support requires residual-state disclosure")
+
+
+@dataclass(frozen=True)
 class BackendCapabilitySet:
     """Backend-specific nested capability blocks."""
 
@@ -441,52 +245,8 @@ class BackendCapabilitySet:
     evaluator: EvaluatorCapabilities | None = None
     participant_runtime: ParticipantRuntimeCapabilities | None = None
     observation: ObservationCapabilities | None = None
-
-
-def participant_runtime_capability_contract_gaps(manifest: BackendManifest) -> tuple[str, ...]:
-    """Return missing contract surfaces for declared standard API-405 claims.
-
-    Governed extension terms remain valid vocabulary values, but ACES cannot
-    know their backend-specific evidence obligations. Standard terms are tied to
-    the published contract families that make the claim falsifiable in
-    conformance and downstream review.
-    """
-
-    participant_runtime = manifest.participant_runtime
-    if participant_runtime is None:
-        return ()
-
-    declared_terms = {
-        PARTICIPANT_RUNTIME_ROLE_SCOPE: participant_runtime.supported_participant_roles,
-        PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE: participant_runtime.supported_behavior_features,
-        PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE: participant_runtime.supported_interaction_features,
-    }
-    gaps: list[str] = []
-    for scope, terms in declared_terms.items():
-        required_by_term = PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[scope]
-        for term in sorted(terms):
-            required_contracts = required_by_term.get(term)
-            if required_contracts is None:
-                continue
-            missing = sorted(required_contracts - manifest.supported_contract_versions)
-            if missing:
-                gaps.append(f"{scope}.{term} missing required contracts: {', '.join(missing)}")
-    return tuple(gaps)
-
-
-def observation_capability_contract_gaps(manifest: BackendManifest) -> tuple[str, ...]:
-    """Return missing contract surfaces for declared EXP-715 observation claims."""
-
-    observation = manifest.observation
-    if observation is None:
-        return ()
-
-    required_contracts = set(observation.supported_evidence_contracts) | set(OBSERVATION_CAPABILITY_REQUIRED_CONTRACTS)
-    missing = sorted(required_contracts - manifest.supported_contract_versions)
-    gaps: list[str] = []
-    if missing:
-        gaps.append(f"capabilities.observation missing required contracts: {', '.join(missing)}")
-    return tuple(gaps)
+    cleanup: CleanupCapabilities | None = None
+    time: TimeCapabilities | None = None
 
 
 def __getattr__(name: str) -> object:
@@ -496,4 +256,16 @@ def __getattr__(name: str) -> object:
         from . import backend_manifest
 
         return getattr(backend_manifest, name)
+    if name in {
+        "observation_capability_contract_gaps",
+        "participant_autonomous_execution_capability_gaps",
+        "participant_runtime_capability_contract_gaps",
+        "require_cleanup_plan_capability",
+        "require_time_model_capability",
+        "time_capability_contract_gaps",
+        "time_model_capability_gaps",
+    }:
+        from . import capability_admission
+
+        return getattr(capability_admission, name)
     raise AttributeError(name)

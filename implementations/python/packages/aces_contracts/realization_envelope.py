@@ -24,10 +24,23 @@ from __future__ import annotations
 import re
 from collections.abc import Callable
 from enum import Enum
-from typing import Annotated, Literal
+from typing import Literal
 
 from pydantic import Field, model_validator
 
+from aces_contracts.bounded_domains import (
+    BooleanDomain,
+    DomainDescriptor,
+    DomainScalar,
+    EnumDomain,
+    ExactDomain,
+    GovernedReferenceDomain,
+    NumericIntervalDomain,
+    NumericType,
+    RecordDomain,
+    scalar_in_domain,
+    scalar_matches_numeric_type,
+)
 from aces_contracts.contracts import ContractModel, NonEmptyString, RealizationEnvelopeIdentityModel
 from aces_contracts.versions import REALIZATION_ENVELOPE_SCHEMA_VERSION
 from aces_contracts.vocabulary import Closure
@@ -66,10 +79,6 @@ __all__ = [
     "validate_backend_realization_envelope",
 ]
 
-# Portable envelope values are JSON scalars. ``bool`` is intentionally distinct
-# from ``int`` here (see ``scalar_matches_numeric_type``); Pydantic preserves the
-# authored Python type on a closed model, so ``True`` never collapses to ``1``.
-DomainScalar = bool | int | float | str
 _ENVELOPE_PATH_RE = re.compile(r"^[^.\[\]]+(?:\.[^.\[\]]+|\[\d+\])*$")
 
 
@@ -111,108 +120,6 @@ class Posture(str, Enum):
     OPEN = "open"
     CONSTRAINED = "constrained"
     EXACT = "exact"
-
-
-class NumericType(str, Enum):
-    """Declared numeric type for a numeric-interval domain."""
-
-    INTEGER = "integer"
-    NUMBER = "number"
-
-
-class ExactDomain(ContractModel):
-    """A singleton value set: values equal to ``value``."""
-
-    kind: Literal["exact"] = "exact"
-    value: DomainScalar
-
-
-class EnumDomain(ContractModel):
-    """A finite value set: values equal to one listed member."""
-
-    kind: Literal["enum"] = "enum"
-    values: list[DomainScalar] = Field(min_length=1)
-
-    @model_validator(mode="after")
-    def _validate_unique(self) -> EnumDomain:
-        # ``list`` (not ``set``) preserves authored order and the bool/int
-        # distinction; dedupe on a type-tagged key so ``True`` and ``1`` stay
-        # separate members.
-        seen: set[tuple[str, object]] = set()
-        for member in self.values:
-            key = (type(member).__name__, member)
-            if key in seen:
-                raise ValueError("enum domain values must be unique")
-            seen.add(key)
-        return self
-
-
-class BooleanDomain(ContractModel):
-    """Booleans: both ``true``/``false``, or an exact boolean when ``value`` set."""
-
-    kind: Literal["boolean"] = "boolean"
-    value: bool | None = None
-
-
-class NumericIntervalDomain(ContractModel):
-    """Numbers of ``numeric_type`` inside a bounded interval.
-
-    Both endpoints are required (the fragment admits only *bounded* intervals,
-    ``envelope-semantics.md`` R3). An integer interval requires integral
-    endpoints. Empty intervals are rejected at construction.
-    """
-
-    kind: Literal["numeric-interval"] = "numeric-interval"
-    numeric_type: NumericType
-    lower: float
-    upper: float
-    lower_closed: bool = True
-    upper_closed: bool = True
-
-    @model_validator(mode="after")
-    def _validate_interval(self) -> NumericIntervalDomain:
-        if self.numeric_type is NumericType.INTEGER:
-            if self.lower != int(self.lower) or self.upper != int(self.upper):
-                raise ValueError("integer numeric-interval endpoints must be integral")
-        if self.lower > self.upper:
-            raise ValueError("numeric-interval lower endpoint must not exceed upper")
-        if self.lower == self.upper and not (self.lower_closed and self.upper_closed):
-            raise ValueError("degenerate numeric-interval must be closed on both endpoints")
-        return self
-
-
-class GovernedReferenceDomain(ContractModel):
-    """References in a finite governed set under a named authority."""
-
-    kind: Literal["governed-reference"] = "governed-reference"
-    authority: NonEmptyString
-    allowed_refs: list[NonEmptyString] = Field(min_length=1)
-
-    @model_validator(mode="after")
-    def _validate_unique(self) -> GovernedReferenceDomain:
-        if len(self.allowed_refs) != len(set(self.allowed_refs)):
-            raise ValueError("governed-reference allowed_refs must be unique")
-        return self
-
-
-class RecordDomain(ContractModel):
-    """Product structure: each declared field references another named domain.
-
-    ``extra`` controls undeclared fields: ``False`` (closed) rejects any field not
-    named in ``fields``; ``True`` (open) admits them. Field values reference domain
-    names resolved against the envelope's ``domains`` map, keeping the structure
-    acyclic and free of inline recursion.
-    """
-
-    kind: Literal["record"] = "record"
-    fields: dict[NonEmptyString, NonEmptyString] = Field(min_length=1)
-    extra: bool = False
-
-
-DomainDescriptor = Annotated[
-    ExactDomain | EnumDomain | BooleanDomain | NumericIntervalDomain | GovernedReferenceDomain | RecordDomain,
-    Field(discriminator="kind"),
-]
 
 
 class EnvelopeBinding(ContractModel):
@@ -389,71 +296,6 @@ _SINGLETON_DOMAIN_CHECKS: dict[type, Callable[..., bool]] = {
 def _is_singleton_domain(descriptor: DomainDescriptor) -> bool:
     check = _SINGLETON_DOMAIN_CHECKS.get(type(descriptor))
     return bool(check(descriptor)) if check is not None else False
-
-
-def scalar_matches_numeric_type(value: object, numeric_type: NumericType) -> bool:
-    """Return whether ``value`` is a number of the declared numeric type.
-
-    ``bool`` is never a number here (it is its own domain kind).
-    """
-    if isinstance(value, bool):
-        return False
-    if numeric_type is NumericType.INTEGER:
-        return isinstance(value, int)
-    return isinstance(value, (int, float))
-
-
-def _scalar_eq(value: object, member: DomainScalar) -> bool:
-    """Type-strict scalar equality so ``True`` never equals ``1``."""
-    return type(value) is type(member) and value == member
-
-
-def _exact_member(value: object, descriptor: ExactDomain) -> bool:
-    return _scalar_eq(value, descriptor.value)
-
-
-def _enum_member(value: object, descriptor: EnumDomain) -> bool:
-    return any(_scalar_eq(value, member) for member in descriptor.values)
-
-
-def _boolean_member(value: object, descriptor: BooleanDomain) -> bool:
-    return isinstance(value, bool) and (descriptor.value is None or value == descriptor.value)
-
-
-def _interval_member(value: object, descriptor: NumericIntervalDomain) -> bool:
-    if not scalar_matches_numeric_type(value, descriptor.numeric_type):
-        return False
-    # narrowed to a number by scalar_matches_numeric_type above
-    numeric = float(value)
-    lower_ok = numeric >= descriptor.lower if descriptor.lower_closed else numeric > descriptor.lower
-    upper_ok = numeric <= descriptor.upper if descriptor.upper_closed else numeric < descriptor.upper
-    return lower_ok and upper_ok
-
-
-def _governed_member(value: object, descriptor: GovernedReferenceDomain) -> bool:
-    return isinstance(value, str) and value in descriptor.allowed_refs
-
-
-_SCALAR_MEMBER_CHECKS: dict[type, Callable[..., bool]] = {
-    ExactDomain: _exact_member,
-    EnumDomain: _enum_member,
-    BooleanDomain: _boolean_member,
-    NumericIntervalDomain: _interval_member,
-    GovernedReferenceDomain: _governed_member,
-}
-
-
-def scalar_in_domain(value: object, descriptor: DomainDescriptor) -> bool:
-    """Structural membership for the scalar domain kinds.
-
-    The single scalar-membership engine, hosted in the contract layer so both the
-    contract's own ``witness_policy`` validation and the relation in
-    ``aces_sdl.realization_envelope`` (which cannot import this module without a
-    dependency cycle) share one definition. Record domains are product structures,
-    not scalars, and are handled by the relation engine.
-    """
-    check = _SCALAR_MEMBER_CHECKS.get(type(descriptor))
-    return check(value, descriptor) if check is not None else False
 
 
 # Import after the expression types are defined: the carrier embeds

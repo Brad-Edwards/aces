@@ -1,0 +1,6 @@
+{
+  "contract_id": "evaluation-history-event-stream-v1",
+  "schema_path": "contracts/schemas/control-plane/evaluation-history-event-stream-v1.json",
+  "stability": "draft",
+  "content_hash": "f34f5e940e267a2f5cc449fafcc79b8d8da9f537fd0ec4fd296c7843278ed7f4"
+}

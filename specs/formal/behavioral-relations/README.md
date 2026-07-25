@@ -12,10 +12,15 @@ weaker observation from being reported as a stronger behavioral result.
 The machine-readable authority is
 `contracts/concept-authority/behavioral-relations-v1.json`, contract
 `behavioral-relations/v1`, taxonomy `aces-behavioral-relations`, revision
-`rev1`. Relation identifiers, formal dimensions, claim-surface defaults,
+`rev2`. Relation identifiers, formal dimensions, claim-surface defaults,
 bibliography coordinates, assurance status, and worked transition systems are
 normative there. ADR-081 governs the architecture. This document is the
 normative reader-facing formalization of that catalog.
+
+Revision `rev2` adds the SEM-230 `policy-noninterference` relation and its
+dedicated participant-information-flow claim surface. The JSON contract remains
+`behavioral-relations/v1` because its closed shape is unchanged. Revision `rev1`
+is historical taxonomy identity; current in-repository producers bind `rev2`.
 
 The taxonomy defines claim vocabulary and proof obligations. It does not add a
 model checker, theorem prover, stochastic simulator, game solver, scheduler,
@@ -75,6 +80,7 @@ identifier rather than an artifact-local synonym.
 | `strong-bisimulation` | behavioral | Every labelled step is matched in both directions without hiding actions. |
 | `weak-bisimulation` | behavioral | Both directions match visible steps while admitting governed hidden-action closure. |
 | `participant-projected-history-equivalence` | behavioral | Two histories are equal after the same named participant projection. |
+| `policy-noninterference` | behavioral | Unauthorized high-input variation preserves the support set of participant-visible histories under fixed low-equivalence, dynamic purge, declassification, policy, scheduler/environment, and order assumptions. |
 | `epistemic-indistinguishability` | epistemic | Two worlds are indistinguishable to a named participant under an information model. |
 | `alternating-strategic-equivalence` | strategic | Named coalitions preserve abilities against quantified opponent choices. |
 | `probabilistic-bisimulation` | behavioral | Related states assign equal probability mass to related equivalence classes. |
@@ -89,7 +95,10 @@ None of these rows is an implication ladder. For example:
 - `trace-equivalence` does not preserve branching structure and does not
   establish `strong-bisimulation`;
 - `participant-projected-history-equivalence` does not establish
-  `epistemic-indistinguishability` or `alternating-strategic-equivalence`;
+  `policy-noninterference`, `epistemic-indistinguishability`, or
+  `alternating-strategic-equivalence`;
+- finite leakage cases or equal sampled projections do not establish
+  `policy-noninterference`;
 - `statistical-equivalence` does not establish any behavioral equivalence;
 - `profile-satisfaction` does not establish `empirical-adequacy`.
 
@@ -160,7 +169,7 @@ property tests. They do not establish `data-refinement`, simulation,
 
 Envelope admission establishes `realization-envelope-membership`. The intended
 universal runtime obligation is projection-bound `trace-inclusion`, but it is
-deliberately unproved in revision `rev1`. Current conformance reports establish
+deliberately unproved in revision `rev2`. Current conformance reports establish
 only `bounded-probe-success` for their named fixture and target-probe cases.
 Provisioning success, snapshots, witnesses, and negative probes do not establish
 reverse inclusion, equivalence, simulation, or bisimulation.
@@ -182,6 +191,21 @@ the compared histories, redaction policy, order policy, simultaneity policy,
 and run context. A single projected history is a record, not an equivalence
 comparison.
 
+### Participant information-flow policy
+
+The SEM-230 claim surface uses `policy-noninterference` only when participant,
+episode scope, audience, policy-revision sequence, low-equivalence relation,
+dynamic purge, permitted declassification schedule, scheduler/environment
+classes, order model, and observation projection are fixed. The baseline is
+termination- and progress-insensitive, untimed, and set-based under
+nondeterminism. Partial-order claims compare the declared visible order
+relation, not one linearization. Probability measures are outside the baseline.
+
+The executable SEM-230 cases are bounded falsification evidence. They do not
+establish the universal hyperproperty, runtime enforcement, backend
+realization, projected trace equivalence, simulation, refinement, bisimulation,
+or epistemic indistinguishability.
+
 ### Multi-agent interaction
 
 Current joint-action, simultaneous-move, chance, and mean-field contracts
@@ -190,7 +214,7 @@ provide structural and finite evidence only. A future strategic claim MUST use
 availability, opponent quantification, information sets, schedulers, objectives,
 and preserved abilities. A probabilistic claim MUST use
 `probabilistic-bisimulation` and supply the probability kernel and equivalence
-classes. Neither relation is implemented or proved in revision `rev1`.
+classes. Neither relation is implemented or proved in revision `rev2`.
 
 ### Independent adequacy studies
 
@@ -224,7 +248,7 @@ state-relation obligation; matching one visible trace does not prove it.
 The executable versions of both examples are embedded in the revisioned
 catalog and checked by `implementations/python/tests/test_behavioral_relations.py`.
 
-## Assurance Boundary For Revision 1
+## Assurance Boundary For Revision 2
 
 Implemented and tested now:
 
@@ -233,13 +257,18 @@ Implemented and tested now:
 - bounded conformance probes;
 - canonical artifact identity;
 - realization-envelope membership and subsumption; and
-- participant projection machinery and bounded projected-history comparisons.
+- participant projection machinery and bounded projected-history comparisons;
+  and
+- the SEM-230 relation definition, catalog/claim-policy validation, and bounded
+  test-local counterexamples.
 
 Defined but deliberately unproved or only partially implemented:
 
 - universal `trace-inclusion` for backend realization;
 - `trace-equivalence`, forward/backward simulation, and data refinement;
-- strong and weak bisimulation.
+- strong and weak bisimulation; and
+- universal `policy-noninterference`, production policy enforcement, and
+  backend realization of the SEM-230 relation.
 
 Defined for future governed work and inappropriate to claim from current
 artifacts:
@@ -254,7 +283,7 @@ artifacts:
 ## Primary Sources
 
 The catalog records the complete title, authors, publication year and venue,
-edition/version, and immutable DOI or ISBN for each source. Revision `rev1`
+edition/version, and immutable DOI or ISBN for each source. Revision `rev2`
 uses, among others:
 
 - Milner, *A Calculus of Communicating Systems* (1980),
@@ -276,7 +305,11 @@ uses, among others:
 - Larsen and Skou, “Bisimulation Through Probabilistic Testing” (1991),
   DOI `10.1016/0890-5401(91)90030-6`; and
 - Wellek, *Testing Statistical Hypotheses of Equivalence and Noninferiority*,
-  second edition (2010), ISBN `9781439808184`.
+  second edition (2010), ISBN `9781439808184`;
+- Goguen and Meseguer, “Security Policies and Security Models” (1982), DOI
+  `10.1109/SP.1982.10014`; and
+- Sabelfeld and Sands, “Declassification: Dimensions and Principles” (2009),
+  DOI `10.3233/JCS-2009-0352`.
 
 Bibliographic prose here is an aid. The machine-readable catalog is the
 revision-pinned identity surface.

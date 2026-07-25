@@ -149,6 +149,53 @@ and Swiler plus Oberkampf/Roy/Sargent on
 should state what it can preserve and compare rather than smuggle
 backend/vendor assumptions into an ambiguous field.
 
+## Enterprise Identity And Deployment-Tenancy Authoring
+
+The authored enterprise extension in
+[ADR-087](../../decisions/adrs/adr-087-enterprise-identity-and-deployment-tenancy-authoring.md)
+builds on the identity-authority boundary above without promoting observed
+directory inventory or provider deployment configuration into scenario
+authority.
+
+- **Forest and trust lineage:** Microsoft's
+  [Active Directory logical model](https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/plan/understanding-the-active-directory-logical-model)
+  distinguishes a forest from its member domains and keeps that logical model
+  independent of controller count and network topology. Its
+  [forest-root guidance](https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/plan/selecting-the-forest-root-domain)
+  also makes the root an explicit, durable member of the forest. These are the
+  product precedents for explicit forest membership, root identity, and typed
+  trust edges. ACES does not clone AD DS schemas, automatic intra-forest trust,
+  administrative groups, sites, or replication behavior.
+- **Federation lineage:** OpenID Connect, SAML, SCIM, and NIST SP 800-63C-4,
+  already cited for identity-authority semantics, motivate separating a
+  directory authority from the facade that exposes a federation protocol.
+  ACES preserves portable direction, mapping intent, and claim ownership while
+  leaving clients, credentials, provider mapper documents, and realized issuer
+  state to deployment and evidence surfaces.
+- **Placement lineage:** TOSCA's
+  [`HostedOn` relationship](https://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.1/TOSCA-Simple-Profile-YAML-v1.1.html)
+  is the direct topology precedent for preserving a logical node while
+  expressing placement on a distinct host. ACES narrows that idea to an
+  explicit carrier relation and kernel-boundary intent. It does not adopt
+  TOSCA lifecycle operations or imply container namespace sharing.
+- **Multi-tenancy lineage:** Kubernetes
+  [multi-tenancy guidance](https://kubernetes.io/docs/concepts/security/multi-tenancy/)
+  distinguishes tenant identity, control-plane and data-plane isolation,
+  default-deny network policy, node isolation, workload identity, persistent
+  storage boundaries, and deliberately shared services. ACES uses those
+  distinctions to keep cell membership, cross-tenant posture, authentication,
+  mutable-state ownership, and reset ownership separate. A deployment cell is
+  not a Kubernetes namespace, cluster, cloud project, subnet, quota boundary,
+  or proof that isolation was realized.
+
+The resulting forest, facade, tenant, cell, endpoint-persona, and shared-service
+vocabularies are ACES-native authoring contracts. The cited systems are
+intellectual and implementation precedents, not schema authorities or
+compatibility targets. Provider adapters still own allocation and
+materialization; realized-form disclosures and evidence still own claims that
+the declared identity, placement, isolation, authentication, state, and reset
+properties actually occurred.
+
 ## DNS Service Runtime Semantics
 
 The `runtime.dns_services` surface is issue #426's response to an observed
@@ -743,6 +790,100 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   [Goguen-Meseguer noninterference](https://doi.org/10.1109/SP.1982.10014) and
   [Sabelfeld-Sands declassification](https://doi.org/10.3233/JCS-2009-0352)
   ground the hidden-truth boundary and disclosure-rule semantics.
+- SEM-230 adopts that lineage through ACES-native artifacts rather than source
+  syntax or wire compatibility. The normative participant-policy model is
+  `specs/formal/participant-semantics/information-flow-control.md`; the
+  machine-readable relation is `policy-noninterference` in behavioral taxonomy
+  revision `rev2`; and the claim surface is
+  `participant-information-flow-policy`. Existing `W`, `V`, qualified `H`,
+  `X`, participant action/admission, visibility transition, ordering, marking,
+  controller, authority, evidence, and provenance objects remain the mapped
+  ACES carriers. No generic participant-message or policy payload is derived
+  from either publication.
+- The derivation is deliberately compositional. Fagin, Halpern, Moses, and
+  Vardi supply participant-local information-state/indistinguishability
+  semantics; Goguen and Meseguer supply noninterference and purge; Sabelfeld
+  and Sands supply the declassification dimensions; Milner and van Glabbeek
+  supply labelled-transition, hidden-action, and relation-separation
+  discipline. Lamport happened-before, Winskel event structures, and
+  Mazurkiewicz trace theory enter indirectly through the already governed
+  ADR-054 visible-order model. ACES extends those sources only with the
+  participant/audience, policy-revision/effective-order, controller/authority,
+  marking, and evidence/provenance coordinates needed to bind existing ACES
+  carriers. It does not fork their settled definitions.
+- Delivery status is definition-complete, catalogued, policy-checked, and
+  bounded-tested. Evidence is the SEM-230 formal specification,
+  `contracts/concept-authority/behavioral-relations-v1.json`,
+  `tools/check_behavioral_relation_claims.py`, and
+  `implementations/python/tests/test_sem_230_information_flow_control.py`.
+  Production enforcement, backend realization, and universal proof remain
+  undelivered. In particular, equal projected histories and finite leakage
+  cases do not establish universal noninterference, trace equivalence,
+  simulation, refinement, bisimulation, epistemic indistinguishability, timed
+  security, or probabilistic security.
+- ACT-617 applies the already adopted SEM-230/ADR-085 control and ordering
+  lineage to authored mixed-control behavior without introducing another
+  external derivation. The exact ACES mapping is
+  `ParticipantBehaviorSpecification.mixed_control` for the revisioned policy,
+  keyed typed controller states for participant/controller, authority, scope,
+  validity, revocation, and evidence coordinates, keyed typed control
+  transitions for proposal, approval/denial, direction, intervention,
+  handoff, override, and cancellation, and nested
+  `ParticipantBehaviorSpecificationRuntime.controller_states` /
+  `control_transitions` for deterministic compiled addresses and
+  dependencies. `SemanticValidator` owns fail-closed identity, authority,
+  scope, revision, validity, order, proposal, revocation, and handoff checks;
+  module composition rewrites external refs while preserving local state and
+  transition identities.
+- ACT-617 delivery evidence is the governed SDL schemas and publication
+  manifest, the valid/invalid mixed-control fixtures, and
+  `implementations/python/tests/test_act_617_mixed_control.py`. This delivers
+  authored and compiled policy semantics only. It does not claim portable
+  occurrence/wire contracts, action admission, execution, observation,
+  runtime mediation or persistence, backend enforcement, distributed/partial
+  ordering, policy noninterference, or universal correctness. Because the
+  implementation reuses the revision-pinned SEM-230 lineage without changing
+  its normative derivation or compatibility claims, the SDL lineage ledger
+  and source audit remain unchanged.
+- DSL-437 composes the incumbent participant and time lineages rather than
+  introducing a live-activity ontology. CybORG and the Gymnasium, PettingZoo,
+  and OpenSpiel family remain precedents for agents, actions, observations,
+  episodes, and multi-agent interaction. ADR-090's reviewed ROS 2, FMI, HLA,
+  TENA, and OpenSCENARIO sources remain the precedent for shared clock
+  authority, progression, lifecycle, and scheduler coordination.
+  `ParticipantBehaviorSpecification.autonomous_execution` is ACES-native: it
+  binds ordinary participant/action/observation declarations to those existing
+  shared-time declarations and participant implementation provenance.
+- The exact DSL-437 authority is ADR-092 and
+  `specs/formal/participant-semantics/autonomous-execution.md`; implementation
+  evidence covers the SDL model, semantic validator, compiler, exact
+  fail-closed admission, RuntimeManager shared-clock execution, native binding
+  and scheduler-enforced terminal coordinate-bound action outcomes for every
+  protocol implementation, exclusive ownership and
+  resolved-time policy identity, runtime-owned real-time/dilated cadence
+  driving for runtime-authority clocks, manifest-admitted transactional
+  clock/participant reset, lifecycle reporting, and durable/API/conformance
+  clock/episode/scheduler consistency on both save and load. Externally paced
+  autonomous policies remain rejected until ACES governs a portable
+  backend-to-runtime transition driver. The
+  focused evidence is in `test_dsl_437_benign_participant_execution.py`,
+  `test_dsl_437_evaluation_authority.py`, and
+  `test_dsl_437_snapshot_durability_conformance.py`. The ledger records exact
+  semantic source boundaries for the participant-interface and shared-time
+  concerns. The coordinated reset method is an ACES backend transaction
+  obligation, not a claim that replacing a local snapshot reverses native
+  backend effects.
+  ACES does not claim CybORG, Gymnasium, PettingZoo, OpenSpiel, ROS, FMI, HLA,
+  TENA, or OpenSCENARIO compatibility and does not derive a source wire schema.
+  Historical files remain ordinary initial service state; injects remain
+  exercise orchestration; stochastic participant implementations remain
+  governed run apparatus.
+- Issues #810 through #813 own the opacity/supervisor-visibility,
+  proof-bearing bisimulation, adversarial threat-model, and
+  simulation/federation extensions. SEM-230 preserves their participant,
+  audience, policy revision, declassification, controller/authority,
+  scheduler/environment, timing/probability, order, and evidence coordinates;
+  that extension seam is not evidence those properties are already delivered.
 - [STRIPS](https://doi.org/10.1016/0004-3702(71)90010-5),
   [PDDL](https://doi.org/10.2200/S00900ED2V01Y201902AIM042),
   [PDDL2.1](https://doi.org/10.1613/jair.1129), and the probabilistic planning
@@ -765,6 +906,88 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   state, locators, ports, and raw credentials. Exact source boundaries and
   divergences are recorded in the lineage ledger and participant
   interactive-access research note.
+- SEM-219's executable tool-affordance binding adopts no new external syntax.
+  It maps the existing ACES `scenario-content` reference model
+  (`tools-and-artifacts`) to optional tool identity, existing participant
+  action contracts to affordance meaning and complete SEM-211 constraints,
+  `agents.*` plus behavior-specification refs to participant-local authored
+  availability, and observation-boundary/view-rule refs to explicit visibility
+  classification. Delivery is implemented for authoring, module composition,
+  fail-closed semantic validation, post-instantiation revalidation, canonical
+  compiler IR, and the three published SDL schemas. Evidence is
+  `ParticipantToolAffordance`, `ParticipantToolAffordanceRuntime`, the SDL
+  reference catalog, and the SEM-219 cases in
+  `implementations/python/tests/test_sem_208_participant_behavior.py`.
+  This mapping does not claim apparatus support, current eligibility,
+  invocation admission, realized exposure, runtime execution, persistence,
+  or evidence merely from authored presence. The lineage ledger and source
+  audit remain unchanged because this implementation adds no normative
+  external derivation or compatibility claim.
+- SEM-220's executable participant decision surface adopts the existing
+  action/observation-interface lineage above without importing a UI, prompt,
+  command, or backend-native parameter language. ACES maps one participant,
+  episode, and behavior-history order point to
+  `ParticipantDecisionSurfaceModel`; maps the three portable selection forms
+  to its discriminated open-ended, constrained-form, and candidate-set
+  payloads; maps governed action meaning to compiled
+  `ParticipantActionContractRuntime` addresses; maps participant-local
+  presentation to the shared observation-boundary effective-view selector;
+  maps candidate applicability to explicit SEM-211 eligibility state and
+  reason refs; maps apparatus variation to implementation-selection, support,
+  and realization refs; and maps a chosen proposal through governed
+  argument-shape resolution before the existing
+  `ParticipantActionAdmissionRequest` path. Delivery is implemented for the
+  published closed contract and fixtures, compiled-runtime projection,
+  context-envelope agreement, proposal binding, runtime admission routing,
+  schema publication, and adversarial ordering/bypass checks. Evidence is
+  `participant-decision-surface-v1`, `project_participant_decision_surface()`,
+  `bind_participant_decision_surface_selection()`, and
+  `implementations/python/tests/test_sem_220_participant_decision_surface.py`.
+  Human proxy, script, LLM-agent, and RL-agent fixtures retain identical stable
+  action and selection-meaning refs while disclosing apparatus differences.
+  This mapping does not claim that presentation proves eligibility, selection,
+  admission, execution, result, outcome, historical exposure from a final
+  snapshot, backend support, UI behavior, prompt semantics, or complete
+  SEM-211 precondition evaluation. The lineage ledger and source audit remain
+  unchanged because the implementation adds no normative external derivation
+  or compatibility claim.
+- SEM-226 specializes that delivered decision-surface projection without
+  adopting another visibility taxonomy, policy language, or participant I/O
+  envelope. ACES maps the participant/episode/audience/order coordinates to
+  `ParticipantDecisionSurfaceExposureBindingModel`; maps `V_p,o` to the
+  existing `participant_observation_effective_relation()` selector; maps the
+  revisioned SEM-230 `Effective(rho,o)` coordinate to an authoritative
+  `ParticipantExposurePolicyRevision` resolver; maps selected apparatus intent
+  to a separately resolved `ParticipantExposurePolicyModel` identity, version,
+  digest, disclosed and withheld refs; maps item authorization to stable
+  `ParticipantExposureAuthorizationRecord` refs, immutable exposure-policy
+  version/digest, and effective intervals instead of projection-owned gate
+  booleans; and maps source/result identity,
+  markings, transformation, redaction, declassification, evidence,
+  provenance, and limitations to one closed binding per serialized context,
+  action, and affordance ref. Realized delivery remains an optional
+  `ParticipantDecisionSurfaceExposureRealizationModel` occurrence binding
+  whose stable ref resolves independently and binds the exact delivered item
+  and delivery-time authorization record. That record and the occurrence must
+  agree with the policy effective at delivery order and with the participant,
+  episode, action instance, observation boundary, history order, observation
+  identity, evidence, and provenance. Observation lookup uses that semantic
+  identity rather than treating delivery order as a sequence index. It carries
+  its own delivery basis and limitations. Delivery is
+  implemented in `project_participant_decision_surface()` with deny-first
+  item selection, effective-order policy checks, exact item coverage,
+  participant/audience isolation, marking and provenance inheritance, and
+  non-retroactive concealment/revocation behavior. Evidence is the strengthened
+  `participant-decision-surface-v1` schema and fixtures,
+  `implementations/python/tests/test_sem_226_participant_exposure.py`, and
+  the retained SEM-220 projection tests. This mapping does not claim that a
+  selected policy, manifest capability, surface entry, disclosure decision,
+  HTTP response, log, or audit record proves delivery; does not make API-408
+  retrieval participant-safe; and does not claim erasure, a general crossing
+  API, runtime persistence, backend enforcement, or universal
+  noninterference/bisimulation. The lineage ledger and source audit remain
+  unchanged because the implementation changes no normative external
+  derivation or compatibility claim.
 - CALDERA adversary-emulation research informs the action semantics: cyber
   actions can change foothold, knowledge, observations, detection surface, and
   downstream outcomes under uncertainty.
@@ -896,3 +1119,24 @@ evidence/provenance. The participant-semantics design extends that separation:
 actions, observations, visibility, causality, temporal behavior, and outcomes
 must be portable across human, AI-agent, scripted, simulated, and hybrid
 participants without collapsing into any one backend or learning API.
+
+### Shared Time Authority
+
+The ACES shared time model has explicit external lineage but is not a translated
+copy of any one framework:
+
+- ROS 2 contributes the separation of system, steady/monotonic, and externally
+  controlled semantic time plus explicit pause/jump handling.
+- FMI contributes importer-controlled advancement, capability negotiation,
+  clock activation, and superdense event coordinates.
+- IEEE HLA contributes the separation of time regulation, constrained
+  advancement, and ordered delivery from timestamp values.
+- TENA contributes the separation between execution-time coordination and the
+  persistent range data archive.
+- OpenSCENARIO contributes the separation of lifecycle, triggers, actions, and
+  simulation-time predicates.
+
+ACES adds backend-neutral authored declarations, exact rational mappings,
+ordinary SDL subject references, canonical compilation, and segment-preserving
+runtime control. It does not claim ROS, FMI, HLA, TENA, or OpenSCENARIO
+conformance through those generic declarations.

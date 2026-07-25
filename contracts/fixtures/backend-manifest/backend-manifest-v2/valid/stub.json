@@ -1,5 +1,25 @@
 {
   "capabilities": {
+    "cleanup": {
+      "name": "stub-cleanup",
+      "supported_action_kinds": [
+        "compensate",
+        "destroy",
+        "reset",
+        "restore",
+        "verify"
+      ],
+      "supported_contract_versions": [
+        "trial-cleanup-plan-v1",
+        "trial-cleanup-receipt-v1"
+      ],
+      "supported_verification_methods": [
+        "probe",
+        "receipt"
+      ],
+      "supports_residual_state_disclosure": true,
+      "supports_reusable_state": true
+    },
     "evaluator": {
       "constraints": {},
       "name": "stub-evaluator",
@@ -106,7 +126,14 @@
     "participant_runtime": {
       "constraints": {},
       "feature_support": [],
+      "max_autonomous_action_attempts": null,
+      "max_autonomous_in_flight": null,
+      "max_autonomous_participants": null,
       "name": "stub-participant-runtime",
+      "supported_autonomous_action_contracts": [],
+      "supported_autonomous_observation_boundaries": [],
+      "supported_autonomous_selection_strategies": [],
+      "supported_autonomous_target_addresses": [],
       "supported_behavior_features": [
         "action_contracts",
         "attribution_support",
@@ -130,7 +157,8 @@
         "green",
         "red",
         "white"
-      ]
+      ],
+      "supports_autonomous_execution": false
     },
     "provisioner": {
       "constraints": {},
@@ -148,6 +176,7 @@
       "supported_domain_profiles": [
         "active_directory"
       ],
+      "supported_service_materialization_profiles": [],
       "supported_content_types": [
         "dataset",
         "directory",
@@ -195,6 +224,10 @@
     {
       "family": "identities",
       "scope": "capabilities.provisioner.supported_domain_profiles"
+    },
+    {
+      "family": "tools-and-artifacts",
+      "scope": "capabilities.provisioner.supported_service_materialization_profiles"
     },
     {
       "family": "actions-and-events",
@@ -283,6 +316,8 @@
     "experiment-capture-spec-v1",
     "experiment-evidence-record-v1",
     "experiment-derived-measure-v1",
-    "experiment-run-v1"
+    "experiment-run-v1",
+    "trial-cleanup-plan-v1",
+    "trial-cleanup-receipt-v1"
   ]
 }

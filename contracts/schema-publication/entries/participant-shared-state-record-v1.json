@@ -1,0 +1,10 @@
+{
+  "contract_id": "participant-shared-state-record-v1",
+  "schema_path": "contracts/schemas/participant-runtime/participant-shared-state-record-v1.json",
+  "stability": "draft",
+  "content_hash": "8de5075b682a2ef7f7bf9d18f9dcb51667f2efeb496f283d0bb54b9bb0ffd38b",
+  "last_change": {
+    "summary": "Require participant shared-state records and accesses to carry revision or digest markers for RUN-307 version discipline.",
+    "content_hash": "8de5075b682a2ef7f7bf9d18f9dcb51667f2efeb496f283d0bb54b9bb0ffd38b"
+  }
+}

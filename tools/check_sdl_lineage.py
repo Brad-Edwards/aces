@@ -18,6 +18,7 @@ from aces_contracts.provenance import LineageDisposition, SDLLineageLedgerModel
 from aces_sdl._runtime_service_families import RUNTIME_SERVICE_FAMILIES
 from pydantic import ValidationError
 
+from tools.check_schema_publication import load_schema_publication_catalog
 from tools.policy.common import PolicyFailure, safe_repo_path
 
 LEDGER_PATH = "contracts/provenance/sdl-lineage-ledger-v1.json"
@@ -87,7 +88,10 @@ def _resolve_json_pointer(document: object, pointer: str) -> bool:
 def _validate_authorities(repo_root: Path, ledger: SDLLineageLedgerModel) -> list[PolicyFailure]:
     failures: list[PolicyFailure] = []
     cache: dict[str, object] = {}
-    manifest = _load_json(repo_root, SCHEMA_PUBLICATION_MANIFEST_PATH)
+    try:
+        manifest = load_schema_publication_catalog(repo_root)
+    except ValueError:
+        manifest = None
     if not isinstance(manifest, dict) or not isinstance(manifest.get("schemas"), list):
         return [
             _failure(

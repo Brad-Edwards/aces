@@ -1,0 +1,10 @@
+{
+  "contract_id": "processor-manifest-v2",
+  "schema_path": "contracts/schemas/processor-manifest/processor-manifest-v2.json",
+  "stability": "draft",
+  "content_hash": "504f5dee2028bbcd49c023c1c57c8ad664f6ea57f51e8c2431e8a185ae275e87",
+  "last_change": {
+    "summary": "Added API-421 time-model-v1 to the processor contract surface.",
+    "content_hash": "504f5dee2028bbcd49c023c1c57c8ad664f6ea57f51e8c2431e8a185ae275e87"
+  }
+}

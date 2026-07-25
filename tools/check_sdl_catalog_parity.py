@@ -18,7 +18,7 @@ import types
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Union, get_args, get_origin
+from typing import Annotated, Any, Union, get_args, get_origin
 
 from pydantic import BaseModel
 
@@ -90,6 +90,11 @@ _SECTION_VALIDATOR = "[section validator](../../implementations/python/packages/
 _CONTENT_VALIDATOR = (
     "[content validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py)"
 )
+_SERVICE_MATERIALIZATION_VALIDATOR = (
+    "[service materialization validator]"
+    "(../../implementations/python/packages/aces_sdl/validator/_service_materialization.py)"
+)
+_CONTENT_COMPILER = "[content compiler](../../implementations/python/packages/aces_processor/compiler/placement.py)"
 _ACCOUNT_VALIDATOR = (
     "[account validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py)"
 )
@@ -103,6 +108,12 @@ _RELATIONSHIP_PROXY_VALIDATOR = (
 _MAIL_VALIDATOR = "[mail validator](../../implementations/python/packages/aces_sdl/validator/_runtime_mail.py)"
 _DOMAIN_TOPOLOGY_SEMANTICS = (
     "[domain topology semantics](../../implementations/python/packages/aces_sdl/semantics/domain_topology.py)"
+)
+_ENTERPRISE_IDENTITY_SEMANTICS = (
+    "[enterprise identity semantics](../../implementations/python/packages/aces_sdl/semantics/enterprise_identity.py)"
+)
+_DEPLOYMENT_TENANCY_SEMANTICS = (
+    "[deployment tenancy semantics](../../implementations/python/packages/aces_sdl/semantics/deployment_tenancy.py)"
 )
 _PARTICIPANT_VALIDATOR = (
     "[participant validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py)"
@@ -123,7 +134,17 @@ _BEHAVIOR_SEMANTICS = (
 _BEHAVIOR_VALIDATOR = (
     "[behavior validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py)"
 )
+_MIXED_CONTROL_VALIDATOR = (
+    "[behavior validator](../../implementations/python/packages/aces_sdl/validator/_mixed_control.py)"
+)
+_TOOL_AFFORDANCE_VALIDATOR = (
+    "[tool-affordance validator]"
+    "(../../implementations/python/packages/aces_sdl/validator/_participant_tool_affordances.py)"
+)
 _BEHAVIOR_MODEL = "[behavior model](../../implementations/python/packages/aces_sdl/participant_behavior.py)"
+_MIXED_CONTROL_MODEL = (
+    "[behavior model](../../implementations/python/packages/aces_sdl/participant_behavior_specification.py)"
+)
 _EVIDENCE_VALIDATOR = (
     "[evidence validator](../../implementations/python/packages/aces_sdl/validator/_evidence_requirements.py)"
 )
@@ -136,8 +157,12 @@ _WORKFLOW_SEMANTICS = (
 _PROPOSITION_VALIDATOR = (
     "[proposition validator](../../implementations/python/packages/aces_sdl/validator/_propositions.py)"
 )
+_VARIATION_VALIDATOR = "[variation validator](../../implementations/python/packages/aces_sdl/validator/_variation.py)"
 _PARTICIPANT_TEMPORAL_MODEL = (
     "[temporal model](../../implementations/python/packages/aces_sdl/participant_temporal_semantics.py)"
+)
+_TIME_MODEL_VALIDATOR = (
+    "[time-model validator](../../implementations/python/packages/aces_sdl/validator/_time_model.py)"
 )
 _SEMANTIC = "semantic validation"
 _STRUCTURAL = "structural validation"
@@ -276,6 +301,42 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         "fatal unless target is a vm node",
         _CONTENT_VALIDATOR,
     ),
+    "content.*.service_materialization.target_service_ref": (
+        "derived:node_services",
+        _SEMANTIC,
+        "fatal unless the exact service exists on the content target vm",
+        _SERVICE_MATERIALIZATION_VALIDATOR,
+    ),
+    "content.*.service_materialization.shared_service_relationship_ref": (
+        "relationships",
+        _SEMANTIC,
+        "fatal unless a matching typed shared-service relationship owns cross-tenant mutable state/reset",
+        _SERVICE_MATERIALIZATION_VALIDATOR,
+    ),
+    "content.*.service_materialization.ordering_content_refs[]": (
+        "content",
+        "semantic validation and planner ordering",
+        "fatal dangling, self, or cyclic dependency",
+        _CONTENT_COMPILER,
+    ),
+    "content.*.service_materialization.readback_assertion_refs[]": (
+        "assertions",
+        _SEMANTIC,
+        "fatal unless each ref is an observed-state postcondition",
+        _SERVICE_MATERIALIZATION_VALIDATOR,
+    ),
+    "content.*.service_materialization.evidence_requirement_refs[]": (
+        "evidence_requirements",
+        _SEMANTIC,
+        "fatal unless each ref exists and every readback proposition requires it",
+        _SERVICE_MATERIALIZATION_VALIDATOR,
+    ),
+    "content.*.service_materialization.observation_boundary_refs[]": (
+        "observation_boundaries",
+        _SEMANTIC,
+        "fatal dangling ref",
+        _SERVICE_MATERIALIZATION_VALIDATOR,
+    ),
     "generated_artifacts.*.consumers[].node": (
         "nodes",
         "structural model validation",
@@ -323,6 +384,36 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         _SEMANTIC,
         "fatal dangling, ambiguous, or authority outside domain controllers",
         _DOMAIN_TOPOLOGY_SEMANTICS,
+    ),
+    "identity_forests.*.root_domain_ref": (
+        "identity_domains",
+        _SEMANTIC,
+        "fatal dangling or root outside declared membership",
+        _ENTERPRISE_IDENTITY_SEMANTICS,
+    ),
+    "identity_forests.*.domain_refs[]": (
+        "identity_domains",
+        _SEMANTIC,
+        "fatal dangling, duplicate, or domain in multiple forests",
+        _ENTERPRISE_IDENTITY_SEMANTICS,
+    ),
+    "identity_facades.*.service_ref": (
+        "targetable",
+        _SEMANTIC,
+        "fatal unless target is a named vm service",
+        _ENTERPRISE_IDENTITY_SEMANTICS,
+    ),
+    "deployment_cells.*.tenant_ref": (
+        "deployment_tenants",
+        _SEMANTIC,
+        _DANGLING,
+        _DEPLOYMENT_TENANCY_SEMANTICS,
+    ),
+    "deployment_cells.*.node_refs[]": (
+        "nodes",
+        _SEMANTIC,
+        "fatal dangling, duplicate, or node in multiple cells",
+        _DEPLOYMENT_TENANCY_SEMANTICS,
     ),
     "accounts.*.node": (
         "nodes",
@@ -413,6 +504,12 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         _SEMANTIC,
         "fatal dangling, ambiguous, or controller outside target domain",
         _DOMAIN_TOPOLOGY_SEMANTICS,
+    ),
+    "relationships.*.shared_service.mutable_state_refs[]": (
+        "persistent_volumes",
+        _SEMANTIC,
+        "fatal dangling or conflicting state ownership",
+        _DEPLOYMENT_TENANCY_SEMANTICS,
     ),
     "agents.*.entity": ("entities", _SEMANTIC, _DANGLING, _PARTICIPANT_VALIDATOR),
     "agents.*.actions[]": (
@@ -595,14 +692,98 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         _DANGLING,
         _BEHAVIOR_VALIDATOR,
     ),
+    "behavior_specifications.*.tool_affordances.*.tool_ref": (
+        "content",
+        _SEMANTIC,
+        "fatal dangling, ambiguous, or outside the `scenario-content` tools-and-artifacts reference model",
+        _TOOL_AFFORDANCE_VALIDATOR,
+    ),
+    "behavior_specifications.*.tool_affordances.*.action_contract_refs[]": (
+        "action_contracts",
+        _SEMANTIC,
+        "fatal dangling, outside the owning behavior specification, or outside a resolved participant",
+        _BEHAVIOR_SEMANTICS,
+    ),
+    "behavior_specifications.*.tool_affordances.*.observation_boundary_refs[]": (
+        "observation_boundaries",
+        _SEMANTIC,
+        "fatal dangling, outside the owner/participant, or without explicit view classification",
+        _BEHAVIOR_SEMANTICS,
+    ),
     "behavior_specifications.*.behavior_mode": (
         "vocabulary:behavior_mode",
         _STRUCTURAL,
         "fatal invalid vocabulary value",
         _BEHAVIOR_MODEL,
     ),
+    "behavior_specifications.*.mixed_control.participant_ref": (
+        "agents",
+        _SEMANTIC,
+        "fatal unless owned by the enclosing behavior specification",
+        _MIXED_CONTROL_VALIDATOR,
+    ),
+    "behavior_specifications.*.mixed_control.controller_states.*.controller_ref": (
+        "agents-or-self",
+        _SEMANTIC,
+        "fatal operator/role/identity impersonation or dangling agent",
+        _MIXED_CONTROL_VALIDATOR,
+    ),
+    "behavior_specifications.*.mixed_control.controller_states.*.authority_basis_refs[]": (
+        "derived:controller_authority_anchors",
+        _SEMANTIC,
+        "fatal dangling, ambiguous, or authority widening",
+        _MIXED_CONTROL_VALIDATOR,
+    ),
+    "behavior_specifications.*.mixed_control.controller_states.*.scope_refs[]": (
+        "derived:behavior-and-controller-scope",
+        _SEMANTIC,
+        "fatal dangling, ambiguous, or scope widening",
+        _MIXED_CONTROL_VALIDATOR,
+    ),
+    "behavior_specifications.*.mixed_control.controller_states.*.evidence_refs[]": (
+        "declared",
+        _SEMANTIC,
+        _DANGLING,
+        _MIXED_CONTROL_VALIDATOR,
+    ),
+    "behavior_specifications.*.mixed_control.transitions.*.from_state_ref": (
+        "derived:mixed_control_local_ids",
+        "structural and semantic validation",
+        "fatal dangling, stale, reversed, or ambiguously ordered local ref",
+        _MIXED_CONTROL_MODEL,
+    ),
+    "behavior_specifications.*.mixed_control.transitions.*.to_state_ref": (
+        "derived:mixed_control_local_ids",
+        "structural and semantic validation",
+        "fatal dangling, stale, reversed, or ambiguously ordered local ref",
+        _MIXED_CONTROL_MODEL,
+    ),
+    "behavior_specifications.*.mixed_control.transitions.*.proposal_ref": (
+        "derived:mixed_control_local_ids",
+        "structural and semantic validation",
+        "fatal dangling, stale, reversed, or ambiguously ordered local ref",
+        _MIXED_CONTROL_MODEL,
+    ),
+    "behavior_specifications.*.mixed_control.transitions.*.evidence_refs[]": (
+        "declared",
+        _SEMANTIC,
+        "fatal dangling, ambiguous, or silent handoff",
+        _MIXED_CONTROL_VALIDATOR,
+    ),
+    "behavior_specifications.*.mixed_control.transitions.*.completion_evidence_refs[]": (
+        "declared",
+        _SEMANTIC,
+        "fatal dangling, ambiguous, or silent handoff",
+        _MIXED_CONTROL_VALIDATOR,
+    ),
     "behavior_specifications.*.ai_offensive_behavior_refs[]": (
         "vocabulary:ai_offensive_behavior",
+        _SEMANTIC,
+        "fatal unknown vocabulary identifier",
+        _BEHAVIOR_MODEL,
+    ),
+    "behavior_specifications.*.defensive_behavior_refs[]": (
+        "vocabulary:defensive_behavior",
         _SEMANTIC,
         "fatal unknown vocabulary identifier",
         _BEHAVIOR_MODEL,
@@ -660,6 +841,138 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         _SEMANTIC,
         _DANGLING,
         _EVIDENCE_VALIDATOR,
+    ),
+    "clocks.*.time_domain_ref": (
+        "time_domains",
+        _SEMANTIC,
+        "fatal dangling",
+        _TIME_MODEL_VALIDATOR,
+    ),
+    "time_domain_mappings.*.source_domain_ref": (
+        "time_domains",
+        _SEMANTIC,
+        "fatal dangling, duplicate, or cyclic mapping",
+        _TIME_MODEL_VALIDATOR,
+    ),
+    "time_domain_mappings.*.target_domain_ref": (
+        "time_domains",
+        _SEMANTIC,
+        "fatal dangling, duplicate, or cyclic mapping",
+        _TIME_MODEL_VALIDATOR,
+    ),
+    "time_progression_policies.*.clock_ref": (
+        "clocks",
+        _SEMANTIC,
+        "fatal dangling or incompatible reset/replay lifecycle",
+        _TIME_MODEL_VALIDATOR,
+    ),
+    "temporal_constraints.*.clock_ref": (
+        "clocks",
+        _SEMANTIC,
+        "fatal dangling",
+        _TIME_MODEL_VALIDATOR,
+    ),
+    "temporal_constraints.*.subject_refs[]": (
+        "targetable",
+        _SEMANTIC,
+        "fatal dangling or ambiguous",
+        _TIME_MODEL_VALIDATOR,
+    ),
+    "variation_points.*.target.variable": (
+        "variables",
+        _SEMANTIC,
+        "fatal dangling or wrong variable type",
+        _VARIATION_VALIDATOR,
+    ),
+    "variation_points.*.target.owner": (
+        "targetable",
+        _SEMANTIC,
+        "fatal dangling or wrong slot owner type",
+        _VARIATION_VALIDATOR,
+    ),
+    "variation_points.*.domain.allowed_refs[]": (
+        "targetable",
+        _SEMANTIC,
+        "fatal dangling or wrong slot candidate type",
+        _VARIATION_VALIDATOR,
+    ),
+    "variation_points.*.alternatives.*.reference": (
+        "targetable",
+        _SEMANTIC,
+        "fatal dangling or wrong slot candidate type",
+        _VARIATION_VALIDATOR,
+    ),
+    "variation_points.*.members.*.reference": (
+        "targetable",
+        _SEMANTIC,
+        "fatal dangling or wrong slot candidate type",
+        _VARIATION_VALIDATOR,
+    ),
+    "variation_points.*.alternatives.*.requires[].point": (
+        "variation_points",
+        _SEMANTIC,
+        _DANGLING,
+        _VARIATION_VALIDATOR,
+    ),
+    "variation_points.*.alternatives.*.requires[].members[]": (
+        "derived:variation_members",
+        _SEMANTIC,
+        "fatal outside the resolved variation point",
+        _VARIATION_VALIDATOR,
+    ),
+    "variation_points.*.alternatives.*.excludes[].point": (
+        "variation_points",
+        _SEMANTIC,
+        _DANGLING,
+        _VARIATION_VALIDATOR,
+    ),
+    "variation_points.*.alternatives.*.excludes[].members[]": (
+        "derived:variation_members",
+        _SEMANTIC,
+        "fatal outside the resolved variation point",
+        _VARIATION_VALIDATOR,
+    ),
+    "variation_points.*.members.*.requires[].point": (
+        "variation_points",
+        _SEMANTIC,
+        _DANGLING,
+        _VARIATION_VALIDATOR,
+    ),
+    "variation_points.*.members.*.requires[].members[]": (
+        "derived:variation_members",
+        _SEMANTIC,
+        "fatal outside the resolved variation point",
+        _VARIATION_VALIDATOR,
+    ),
+    "variation_points.*.members.*.excludes[].point": (
+        "variation_points",
+        _SEMANTIC,
+        _DANGLING,
+        _VARIATION_VALIDATOR,
+    ),
+    "variation_points.*.members.*.excludes[].members[]": (
+        "derived:variation_members",
+        _SEMANTIC,
+        "fatal outside the resolved variation point",
+        _VARIATION_VALIDATOR,
+    ),
+    "variation_points.*.precedence[].before": (
+        "derived:variation_members",
+        _STRUCTURAL,
+        "fatal outside the owning order point",
+        _VARIATION_VALIDATOR,
+    ),
+    "variation_points.*.precedence[].after": (
+        "derived:variation_members",
+        _STRUCTURAL,
+        "fatal outside the owning order point",
+        _VARIATION_VALIDATOR,
+    ),
+    "variation_points.*.fixed_positions.*.$key": (
+        "derived:variation_members",
+        _STRUCTURAL,
+        "fatal outside the owning order point",
+        _VARIATION_VALIDATOR,
     ),
     "objectives.*.agent": ("agents", _SEMANTIC, _DANGLING, _OBJECTIVE_SEMANTICS),
     "objectives.*.entity": ("entities", _SEMANTIC, _DANGLING, _OBJECTIVE_SEMANTICS),
@@ -763,6 +1076,24 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         "objectives",
         _SEMANTIC,
         _DANGLING,
+        _WORKFLOW_SEMANTICS,
+    ),
+    "workflows.*.steps.*.procedure_ref": (
+        "action_contracts",
+        _SEMANTIC,
+        "fatal dangling or non-procedure granularity",
+        _WORKFLOW_SEMANTICS,
+    ),
+    "workflows.*.steps.*.scaffold_refs[]": (
+        "observation_boundaries",
+        _SEMANTIC,
+        "fatal dangling or scaffold-incompatible boundary",
+        _WORKFLOW_SEMANTICS,
+    ),
+    "workflows.*.steps.*.allowed_action_families[]": (
+        "action_contracts",
+        _SEMANTIC,
+        "fatal dangling or non-aggregate granularity",
         _WORKFLOW_SEMANTICS,
     ),
     "workflows.*.steps.*.next": (
@@ -1306,6 +1637,8 @@ def _check_references(text: str, top_rows: list[TopLevelRow], repo_root: Path) -
 
 
 def _annotation_members(annotation: Any) -> tuple[Any, ...]:
+    if get_origin(annotation) is Annotated:
+        return _annotation_members(get_args(annotation)[0])
     if get_origin(annotation) in (Union, types.UnionType):
         return tuple(member for option in get_args(annotation) for member in _annotation_members(option))
     return (annotation,)

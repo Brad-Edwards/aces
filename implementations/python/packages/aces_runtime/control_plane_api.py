@@ -151,14 +151,14 @@ def _control_plane_api_version() -> str:
     """OpenAPI description version for the control-plane adapter.
 
     Classified (GOV-901; specs/evolution/versioning-deprecation-and-migration.md)
-    as the API-description version of the same bundled ``aces-sdl`` distribution.
+    as the API-description version of the same bundled ``raes-sdl`` distribution.
     It derives from installed distribution metadata rather than a hard-coded
     literal, with the honest PEP 440 ``0.0.0+unknown`` sentinel when the
     distribution is not installed.
     """
 
     try:
-        return distribution_version("aces-sdl")
+        return distribution_version("raes-sdl")
     except PackageNotFoundError:
         return "0.0.0+unknown"
 
@@ -172,7 +172,7 @@ def create_control_plane_app(
 
     security = security or ControlPlaneSecurityConfig.strict_defaults()
     app = FastAPI(
-        title="ACES Runtime Control Plane",
+        title="RAES Runtime Control Plane",
         version=_control_plane_api_version(),
         description="Reference HTTP/JSON adapter over the repo-owned runtime control plane.",
     )

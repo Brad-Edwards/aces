@@ -4,13 +4,21 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import dataclass
+from typing import Protocol
 
 from .contracts import (
     ParticipantActionResultModel,
     ParticipantBehaviorHistoryEventModel,
+    ParticipantDecisionSurfaceActionEntryModel,
+    ParticipantDecisionSurfaceCandidateSetFormModel,
+    ParticipantDecisionSurfaceConstrainedFormModel,
+    ParticipantDecisionSurfaceModel,
+    ParticipantDecisionSurfaceOpenEndedFormModel,
+    ParticipantDecisionSurfaceSelectionModel,
     ParticipantImplementationManifestModel,
     ParticipantImplementationSelectionModel,
     ParticipantObservationDetailsModel,
+    ParticipantTemporalRuntimeContextModel,
 )
 from .participant_behavior import (
     ParticipantAdmissionDisposition,
@@ -19,9 +27,41 @@ from .participant_behavior import (
     ParticipantPhaseRealization,
     ParticipantRuntimeLifecyclePhase,
 )
+from .runtime_state import ApplyResult
 
 _ACTION_CONTRACT_PREFIX = "participant.action-contract."
 _OBSERVATION_BOUNDARY_PREFIX = "participant.observation-boundary."
+
+
+class ParticipantDecisionSurfaceArgumentShapeResolver(Protocol):
+    """Resolve a governed argument shape and validate one referenced proposal."""
+
+    def __call__(
+        self,
+        *,
+        action_contract_address: str,
+        argument_shape_ref: str,
+        proposal_ref: str,
+    ) -> bool: ...
+
+
+class ParticipantDecisionSurfaceApparatusResolver(Protocol):
+    """Resolve the run selection and exposure policy referenced by one surface."""
+
+    def __call__(
+        self,
+        *,
+        implementation_selection_ref: str,
+        exposure_policy_ref: str,
+    ) -> ParticipantImplementationSelectionModel | None: ...
+
+
+@dataclass(frozen=True)
+class ParticipantDecisionSurfaceBindingResolvers:
+    """Governed dependencies used to validate one decision-surface selection."""
+
+    argument_shape: ParticipantDecisionSurfaceArgumentShapeResolver
+    apparatus: ParticipantDecisionSurfaceApparatusResolver
 
 
 @dataclass(frozen=True)
@@ -38,9 +78,11 @@ class ParticipantActionAdmissionRequest:
     visible_refs: tuple[str, ...] = ()
     disclosed_refs: tuple[str, ...] = ()
     observation_boundary_evidence_refs: tuple[str, ...] = ()
+    temporal_contexts: tuple[ParticipantTemporalRuntimeContextModel, ...] = ()
     action_result: ParticipantActionResultModel | None = None
     state_transition_kind: str = "participant_action_admitted"
     post_state_digest: str | None = None
+    requires_terminal_outcome: bool = False
 
     def __post_init__(self) -> None:
         _require_non_empty(self.participant_address, "participant_address")
@@ -64,6 +106,12 @@ class ParticipantActionAdmissionRequest:
             raise TypeError("implementation_selection must be a ParticipantImplementationSelectionModel")
         if self.action_result is not None and not isinstance(self.action_result, ParticipantActionResultModel):
             raise TypeError("action_result must be a ParticipantActionResultModel or None")
+        if not isinstance(self.requires_terminal_outcome, bool):
+            raise TypeError("requires_terminal_outcome must be a bool")
+        if any(not isinstance(item, ParticipantTemporalRuntimeContextModel) for item in self.temporal_contexts):
+            raise TypeError("temporal_contexts entries must be ParticipantTemporalRuntimeContextModel")
+        if len({item.temporal_contract_id for item in self.temporal_contexts}) != len(self.temporal_contexts):
+            raise ValueError("temporal_contexts temporal_contract_id values must be unique")
         object.__setattr__(self, "evidence_refs", _string_tuple(self.evidence_refs, "evidence_refs"))
         object.__setattr__(self, "visible_refs", _string_tuple(self.visible_refs, "visible_refs"))
         object.__setattr__(self, "disclosed_refs", _string_tuple(self.disclosed_refs, "disclosed_refs"))
@@ -75,6 +123,30 @@ class ParticipantActionAdmissionRequest:
         violations = participant_action_admission_request_violations(self)
         if violations:
             raise ValueError(violations[0])
+
+
+@dataclass
+class ParticipantActionApplyResult(ApplyResult):
+    """Control-plane result plus the independently reported native action outcome."""
+
+    action_result: ParticipantActionResultModel | None = None
+
+
+@dataclass(frozen=True)
+class ParticipantNativeActionExecution:
+    """Backend-native execution output used to commit portable action history."""
+
+    apply_result: ApplyResult
+    action_result: ParticipantActionResultModel | None = None
+    post_state_digest: str | None = None
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.apply_result, ApplyResult):
+            raise TypeError("apply_result must be an ApplyResult")
+        if self.action_result is not None and not isinstance(self.action_result, ParticipantActionResultModel):
+            raise TypeError("action_result must be a ParticipantActionResultModel or None")
+        if self.post_state_digest is not None:
+            _require_non_empty(self.post_state_digest, "post_state_digest")
 
 
 def participant_implementation_actor_provenance(selection: ParticipantImplementationSelectionModel) -> str:
@@ -94,6 +166,137 @@ def participant_action_admission_request_violations(
         *_exposure_policy_violations(request),
         *_action_result_violations(request),
     )
+
+
+def bind_participant_decision_surface_selection(
+    *,
+    surface: ParticipantDecisionSurfaceModel,
+    selection: ParticipantDecisionSurfaceSelectionModel,
+    admission_request: ParticipantActionAdmissionRequest,
+    argument_shape_resolver: ParticipantDecisionSurfaceArgumentShapeResolver,
+    apparatus_resolver: ParticipantDecisionSurfaceApparatusResolver,
+) -> ParticipantActionAdmissionRequest:
+    """Validate SEM-220 selection meaning before the existing admission path."""
+
+    _validate_selection_surface_identity(surface, selection)
+    entry = _selected_surface_entry(surface, selection)
+    _validate_selected_entry(entry, selection)
+    _validate_surface_form_selection(surface.form, entry, selection)
+    _validate_admission_surface_agreement(surface, selection, admission_request)
+    _validate_surface_apparatus(surface, admission_request, apparatus_resolver)
+    _validate_proposal_arguments(selection, argument_shape_resolver)
+    _validate_bound_admission_request(admission_request)
+    return admission_request
+
+
+def _validate_selection_surface_identity(
+    surface: ParticipantDecisionSurfaceModel,
+    selection: ParticipantDecisionSurfaceSelectionModel,
+) -> None:
+    if selection.surface_id != surface.surface_id:
+        raise ValueError("selection surface_id must match the participant decision surface")
+    if selection.observation_order != surface.observation_order:
+        raise ValueError("selection observation_order must match the participant decision surface")
+
+
+def _selected_surface_entry(
+    surface: ParticipantDecisionSurfaceModel,
+    selection: ParticipantDecisionSurfaceSelectionModel,
+) -> ParticipantDecisionSurfaceActionEntryModel:
+    entries = {entry.action_contract_address: entry for entry in surface.action_entries}
+    entry = entries.get(selection.action_contract_address)
+    if entry is None:
+        raise ValueError("selection action_contract_address is not carried by the participant decision surface")
+    return entry
+
+
+def _validate_selected_entry(
+    entry: ParticipantDecisionSurfaceActionEntryModel,
+    selection: ParticipantDecisionSurfaceSelectionModel,
+) -> None:
+    if entry.eligibility != "eligible":
+        raise ValueError("participant decision surface selection is not eligible")
+    if entry.support != "supported":
+        raise ValueError("participant decision surface selection is not supported")
+    if entry.selection_shape_ref != selection.argument_shape_ref:
+        raise ValueError("selection argument_shape_ref must match the participant decision surface action entry")
+
+
+def _validate_surface_form_selection(
+    form: ParticipantDecisionSurfaceCandidateSetFormModel
+    | ParticipantDecisionSurfaceConstrainedFormModel
+    | ParticipantDecisionSurfaceOpenEndedFormModel,
+    entry: ParticipantDecisionSurfaceActionEntryModel,
+    selection: ParticipantDecisionSurfaceSelectionModel,
+) -> None:
+    if isinstance(form, ParticipantDecisionSurfaceCandidateSetFormModel):
+        if entry.entry_id not in form.candidate_entry_ids:
+            raise ValueError("selection action is not a member of the participant candidate-action set")
+    elif isinstance(form, ParticipantDecisionSurfaceConstrainedFormModel):
+        if entry.entry_id != form.action_entry_id or selection.argument_shape_ref != form.argument_shape_ref:
+            raise ValueError("selection does not match the constrained-form action and argument shape")
+    else:
+        if selection.action_contract_address not in form.allowed_action_contract_addresses:
+            raise ValueError("open-ended proposal does not bind to an allowed governed action contract")
+        if selection.argument_shape_ref != form.argument_shape_ref:
+            raise ValueError("open-ended proposal does not bind to the governed argument shape")
+
+
+def _validate_admission_surface_agreement(
+    surface: ParticipantDecisionSurfaceModel,
+    selection: ParticipantDecisionSurfaceSelectionModel,
+    admission_request: ParticipantActionAdmissionRequest,
+) -> None:
+    if admission_request.participant_address != surface.participant_address:
+        raise ValueError("admission request participant_address must match the participant decision surface")
+    if admission_request.action_contract_address != selection.action_contract_address:
+        raise ValueError("admission request action_contract_address must match the validated selection")
+    if admission_request.observation_boundary_address != surface.observation_boundary_address:
+        raise ValueError("admission request observation_boundary_address must match the participant decision surface")
+    if admission_request.implementation_selection.selected_decision_surface_mode != surface.decision_control_mode:
+        raise ValueError("admission request decision-control mode must match the participant decision surface")
+
+
+def _validate_surface_apparatus(
+    surface: ParticipantDecisionSurfaceModel,
+    admission_request: ParticipantActionAdmissionRequest,
+    apparatus_resolver: ParticipantDecisionSurfaceApparatusResolver,
+) -> None:
+    try:
+        surface_implementation_selection = apparatus_resolver(
+            implementation_selection_ref=surface.implementation_selection_ref,
+            exposure_policy_ref=surface.exposure_policy_ref,
+        )
+    except Exception as exc:
+        raise ValueError("participant decision surface apparatus resolution failed") from exc
+    if surface_implementation_selection is None:
+        raise ValueError("participant decision surface apparatus refs did not resolve")
+    if surface_implementation_selection.model_dump(
+        mode="json"
+    ) != admission_request.implementation_selection.model_dump(mode="json"):
+        raise ValueError("admission request implementation selection and exposure policy must match the surface refs")
+
+
+def _validate_proposal_arguments(
+    selection: ParticipantDecisionSurfaceSelectionModel,
+    argument_shape_resolver: ParticipantDecisionSurfaceArgumentShapeResolver,
+) -> None:
+    try:
+        valid_arguments = argument_shape_resolver(
+            action_contract_address=selection.action_contract_address,
+            argument_shape_ref=selection.argument_shape_ref,
+            proposal_ref=selection.proposal_ref,
+        )
+    except Exception as exc:
+        raise ValueError("participant decision surface argument-shape resolution failed") from exc
+    if valid_arguments is not True:
+        raise ValueError("participant decision surface proposal failed governed argument-shape validation")
+
+
+def _validate_bound_admission_request(admission_request: ParticipantActionAdmissionRequest) -> None:
+    violations = participant_action_admission_request_violations(admission_request)
+    if violations:
+        raise ValueError(violations[0])
 
 
 def _implementation_selection_violations(request: ParticipantActionAdmissionRequest) -> tuple[str, ...]:
@@ -170,6 +373,9 @@ def _action_result_violations(request: ParticipantActionAdmissionRequest) -> tup
         violations.append("action_result action_instance_id must match the binding action_instance_id")
     if action_result.action_contract_address != request.action_contract_address:
         violations.append("action_result action_contract_address must match the binding action_contract_address")
+    observation_points = {context.observation_point for context in request.temporal_contexts}
+    if observation_points and action_result.observation_point not in observation_points:
+        violations.append("action_result observation_point must match a bound temporal runtime context")
     return tuple(violations)
 
 
@@ -206,6 +412,7 @@ def participant_action_binding_events(
             lifecycle_phase=ParticipantRuntimeLifecyclePhase.SELECTION_OR_ADMISSION,
             phase_realization=ParticipantPhaseRealization.RUNTIME_MEDIATED,
             admission_disposition=ParticipantAdmissionDisposition.ADMITTED,
+            temporal_contexts=list(request.temporal_contexts),
         ),
         ParticipantBehaviorHistoryEventModel(
             event_type=ParticipantBehaviorHistoryEventType.STATE_TRANSITION_RECORDED,
@@ -218,6 +425,7 @@ def participant_action_binding_events(
             phase_realization=ParticipantPhaseRealization.RUNTIME_MEDIATED,
             state_transition_kind=request.state_transition_kind,
             post_state_digest=post_state_digest,
+            temporal_contexts=list(request.temporal_contexts),
         ),
         ParticipantBehaviorHistoryEventModel(
             event_type=ParticipantBehaviorHistoryEventType.OBSERVATION_EMITTED,
@@ -232,6 +440,7 @@ def participant_action_binding_events(
             phase_realization=ParticipantPhaseRealization.RUNTIME_MEDIATED,
             post_state_digest=post_state_digest,
             action_result=request.action_result,
+            temporal_contexts=list(request.temporal_contexts),
             details=ParticipantObservationDetailsModel(
                 visible_refs=list(request.visible_refs),
                 disclosed_refs=list(request.disclosed_refs),
@@ -271,6 +480,11 @@ def _string_tuple(value: Iterable[str], field_name: str) -> tuple[str, ...]:
 
 __all__ = (
     "ParticipantActionAdmissionRequest",
+    "ParticipantActionApplyResult",
+    "ParticipantDecisionSurfaceArgumentShapeResolver",
+    "ParticipantDecisionSurfaceBindingResolvers",
+    "ParticipantNativeActionExecution",
+    "bind_participant_decision_surface_selection",
     "participant_action_admission_request_violations",
     "participant_action_binding_events",
     "participant_behavior_event_payload",

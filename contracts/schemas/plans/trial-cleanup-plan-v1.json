@@ -1,0 +1,355 @@
+{
+  "$defs": {
+    "CleanStateRequirementModel": {
+      "additionalProperties": false,
+      "description": "Pre-execution state requirement without claiming universal reversal.",
+      "properties": {
+        "boundary_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Boundary Refs",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "mode": {
+          "enum": [
+            "fresh",
+            "verified-reset",
+            "declared-reusable",
+            "fresh-range-required"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "reusable_state_claim_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reusable State Claim Ref"
+        },
+        "verification_probe_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Verification Probe Refs",
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "mode",
+        "boundary_refs"
+      ],
+      "title": "CleanStateRequirementModel",
+      "type": "object"
+    },
+    "CleanupObligationModel": {
+      "additionalProperties": false,
+      "description": "One portable cleanup action and the conditions under which it is owed.",
+      "properties": {
+        "action_kind": {
+          "enum": [
+            "destroy",
+            "reset",
+            "restore",
+            "compensate",
+            "verify",
+            "custom"
+          ],
+          "title": "Action Kind",
+          "type": "string"
+        },
+        "action_profile_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Action Profile Ref"
+        },
+        "boundary_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Boundary Refs",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "compensation_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Compensation Refs",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "depends_on": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Depends On",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "idempotency": {
+          "enum": [
+            "idempotent",
+            "requires-reset",
+            "requires-compensation",
+            "not-repeatable"
+          ],
+          "title": "Idempotency",
+          "type": "string"
+        },
+        "obligation_id": {
+          "minLength": 1,
+          "title": "Obligation Id",
+          "type": "string"
+        },
+        "requirement": {
+          "enum": [
+            "required",
+            "best-effort"
+          ],
+          "title": "Requirement",
+          "type": "string"
+        },
+        "timeout_seconds": {
+          "minimum": 1,
+          "title": "Timeout Seconds",
+          "type": "integer"
+        },
+        "triggers": {
+          "items": {
+            "enum": [
+              "success",
+              "failure",
+              "cancellation",
+              "timeout",
+              "retry",
+              "abort"
+            ],
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Triggers",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "verification_probe_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Verification Probe Refs",
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "obligation_id",
+        "boundary_refs",
+        "action_kind",
+        "triggers",
+        "requirement",
+        "idempotency",
+        "timeout_seconds"
+      ],
+      "title": "CleanupObligationModel",
+      "type": "object"
+    },
+    "CleanupResourceBoundaryModel": {
+      "additionalProperties": false,
+      "description": "Owned resource scope to which cleanup and restoration claims are bounded.",
+      "properties": {
+        "boundary_id": {
+          "minLength": 1,
+          "title": "Boundary Id",
+          "type": "string"
+        },
+        "owner_ref": {
+          "minLength": 1,
+          "title": "Owner Ref",
+          "type": "string"
+        },
+        "resource_kind": {
+          "minLength": 1,
+          "title": "Resource Kind",
+          "type": "string"
+        },
+        "resource_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Resource Refs",
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "boundary_id",
+        "resource_kind",
+        "owner_ref",
+        "resource_refs"
+      ],
+      "title": "CleanupResourceBoundaryModel",
+      "type": "object"
+    },
+    "ExecutionRetryPolicyModel": {
+      "additionalProperties": false,
+      "description": "Retry posture after an execution attempt may have produced effects.",
+      "properties": {
+        "after_effect_policy": {
+          "enum": [
+            "disallow",
+            "idempotent",
+            "reset",
+            "compensate"
+          ],
+          "title": "After Effect Policy",
+          "type": "string"
+        },
+        "compensation_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Compensation Refs",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "max_attempts": {
+          "minimum": 1,
+          "title": "Max Attempts",
+          "type": "integer"
+        },
+        "reset_obligation_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Reset Obligation Refs",
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "max_attempts",
+        "after_effect_policy"
+      ],
+      "title": "ExecutionRetryPolicyModel",
+      "type": "object"
+    }
+  },
+  "$id": "https://aces.dev/schemas/trial-cleanup-plan-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Schedule-independent cleanup intent carried by one admitted trial entry.",
+  "properties": {
+    "clean_state": {
+      "$ref": "#/$defs/CleanStateRequirementModel"
+    },
+    "cleanup_obligations": {
+      "additionalProperties": {
+        "$ref": "#/$defs/CleanupObligationModel"
+      },
+      "minProperties": 1,
+      "propertyNames": {
+        "minLength": 1
+      },
+      "title": "Cleanup Obligations",
+      "type": "object"
+    },
+    "plan_entry_id": {
+      "minLength": 1,
+      "title": "Plan Entry Id",
+      "type": "string"
+    },
+    "plan_id": {
+      "minLength": 1,
+      "title": "Plan Id",
+      "type": "string"
+    },
+    "resource_boundaries": {
+      "additionalProperties": {
+        "$ref": "#/$defs/CleanupResourceBoundaryModel"
+      },
+      "minProperties": 1,
+      "propertyNames": {
+        "minLength": 1
+      },
+      "title": "Resource Boundaries",
+      "type": "object"
+    },
+    "retry_policy": {
+      "$ref": "#/$defs/ExecutionRetryPolicyModel"
+    },
+    "run_id": {
+      "minLength": 1,
+      "title": "Run Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "trial-cleanup-plan/v1",
+      "default": "trial-cleanup-plan/v1",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "plan_id",
+    "plan_entry_id",
+    "run_id",
+    "clean_state",
+    "resource_boundaries",
+    "cleanup_obligations",
+    "retry_policy"
+  ],
+  "title": "TrialCleanupPlanModel",
+  "type": "object",
+  "x-aces-invariants": [
+    {
+      "description": "Cleanup boundary and dependency references resolve, ordering is acyclic, required cleanup is verifiable, and retries after non-idempotent effects declare required retry-triggered reset obligations covering the affected boundaries or compensation.",
+      "id": "trial-cleanup-plan-references-and-retry-safe",
+      "inputs": [
+        {
+          "contract_id": "trial-cleanup-plan-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_contracts.contracts.TrialCleanupPlanModel._validate_plan"
+    }
+  ],
+  "x-aces-semantic-profile": {
+    "contract_id": "trial-cleanup-plan-v1",
+    "entry_schema_contract_id": "aces-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
+    "id": "aces-semantic-invariants-v1",
+    "keyword": "x-aces-invariants",
+    "required": true,
+    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+  }
+}

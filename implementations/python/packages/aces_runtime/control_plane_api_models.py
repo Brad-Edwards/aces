@@ -156,10 +156,14 @@ def _snapshot_model(envelope: RuntimeSnapshotEnvelope) -> RuntimeSnapshotEnvelop
             "participant_episode_results": dict(snapshot.participant_episode_results),
             "participant_episode_history": dict(snapshot.participant_episode_history),
             "participant_behavior_history": dict(snapshot.participant_behavior_history),
+            "participant_autonomous_execution_states": dict(snapshot.participant_autonomous_execution_states),
             "shared_state_records": dict(snapshot.shared_state_records),
             "shared_state_history": dict(snapshot.shared_state_history),
             "joint_action_records": dict(snapshot.joint_action_records),
             "time_management_contexts": dict(snapshot.time_management_contexts),
+            "time_model_state": (
+                snapshot.time_model_state.model_dump(mode="json") if snapshot.time_model_state is not None else None
+            ),
             "realization_provenance": [
                 {
                     "address": entry.address,

@@ -37,6 +37,7 @@ def _provisioner_capabilities(mode: LibvirtDriverMode) -> ProvisionerCapabilitie
         supported_content_types=frozenset(configuration.supported_content_types),
         supported_account_features=account_features,
         supported_domain_profiles=frozenset(configuration.supported_domain_profiles),
+        supported_service_materialization_profiles=frozenset(),
         max_total_nodes=None,
         supports_acls=configuration.supports_acls,
         supports_accounts=bool(account_features),
@@ -78,7 +79,7 @@ _LIBVIRT_PARTICIPANT_RUNTIME_DISCLOSURE_REF = "docs/decisions/issue-614-libvirt-
 
 def _current_backend_version() -> str:
     try:
-        return distribution_version("aces-sdl")
+        return distribution_version("raes-sdl")
     except PackageNotFoundError:
         return "0.0.0+unknown"
 
@@ -168,6 +169,10 @@ def create_libvirt_manifest(**config: object) -> BackendManifest:
             ConceptBinding(scope="capabilities.provisioner.supported_content_types", family="tools-and-artifacts"),
             ConceptBinding(scope="capabilities.provisioner.supported_account_features", family="identities"),
             ConceptBinding(scope="capabilities.provisioner.supported_domain_profiles", family="identities"),
+            ConceptBinding(
+                scope="capabilities.provisioner.supported_service_materialization_profiles",
+                family="tools-and-artifacts",
+            ),
         ),
         realization_support=(
             RealizationSupportDeclaration(

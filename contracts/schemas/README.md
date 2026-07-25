@@ -133,6 +133,14 @@ phases.
 
 The initial profile lives at `contracts/profiles/semantic/reference-stack-v1.json`.
 
+The `validation-profile-catalog-v1` schema publishes the ASR-511 authority for
+ordered validation strengths, subject kinds, gate kinds, limitation
+categories, and versioned validation profiles. Its single canonical artifact
+lives at
+`contracts/profiles/validation/validation-profile-catalog-v1.json`. Profile
+selection uses the exact profile id/version plus a declared subject kind; the
+catalog does not execute gates or carry per-subject results.
+
 The `scientific-completeness-taxonomy-v1` and
 `scientific-completeness-assessment-v1` schemas keep stable intended-use
 profiles separate from time-varying delivery evidence. Their normative
@@ -237,3 +245,18 @@ The optional backend-manifest `capabilities.observation` block declares EXP-715
 observation/evidence collection support. Backends that declare it must also
 declare the published capture-spec, evidence-record, and derived-measure
 contracts that make the claim inspectable.
+
+## Shared Time
+
+The `time` schema family publishes:
+
+- `time-model-v1`, the canonical backend-neutral compiled declaration;
+- `time-runtime-state-v1`, typed clock readback with append-only transitions;
+  and
+- `realized-time-model-v1`, run-scoped apparatus and realization provenance.
+
+`backend-manifest-v2` declares support through a closed
+`capabilities.time` block. Admission compares every required semantic term and
+limit against that declaration. `runtime-snapshot-v1` carries the typed state,
+and `experiment-run-v1` carries the realized model. ADR-090 defines the shared
+time semantics; ADR-091 defines this portable contract and conformance boundary.

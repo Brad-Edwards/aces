@@ -18,6 +18,10 @@ def _schema_output_path(schemas_dir: Path, name: str) -> Path:
         "scenario-instantiation-request-v1",
     }:
         return schemas_dir / "sdl" / f"{name}.json"
+    if name.startswith("scenario-satisfiability-evidence-v"):
+        return schemas_dir / "satisfiability" / f"{name}.json"
+    if name.startswith("exploit-path-analysis-evidence-v"):
+        return schemas_dir / "exploit-path-analysis" / f"{name}.json"
     if name.startswith("backend-manifest-v"):
         return schemas_dir / "backend-manifest" / f"{name}.json"
     if name.startswith("realization-envelope-v"):
@@ -36,7 +40,11 @@ def _schema_output_path(schemas_dir: Path, name: str) -> Path:
         return schemas_dir / "concept-authority" / f"{name}.json"
     if name == "controlled-vocabularies-v1":
         return schemas_dir / "concept-authority" / f"{name}.json"
-    if name in {"attack-enterprise-tactics-source-v1", "atlas-tactics-source-v1"}:
+    if name in {
+        "attack-enterprise-tactics-source-v1",
+        "atlas-tactics-source-v1",
+        "nist-csf-defensive-categories-source-v1",
+    }:
         return schemas_dir / "concept-authority" / f"{name}.json"
     if name == "reusable-asset-trust-policy-v1":
         return schemas_dir / "asset-trust" / f"{name}.json"
@@ -48,7 +56,13 @@ def _schema_output_path(schemas_dir: Path, name: str) -> Path:
         return schemas_dir / "profiles" / f"{name}.json"
     if name.startswith("backend-profile-v"):
         return schemas_dir / "profiles" / f"{name}.json"
+    if name.startswith("random-stream-profile-v"):
+        return schemas_dir / "profiles" / f"{name}.json"
+    if name.startswith("random-stream-vector-v"):
+        return schemas_dir / "profiles" / f"{name}.json"
     if name.startswith("scientific-completeness-"):
+        return schemas_dir / "profiles" / f"{name}.json"
+    if name.startswith("validation-profile-"):
         return schemas_dir / "profiles" / f"{name}.json"
     if name in {
         "participant-lifecycle-event-v1",
@@ -57,6 +71,7 @@ def _schema_output_path(schemas_dir: Path, name: str) -> Path:
         "participant-joint-action-record-v1",
         "participant-time-management-context-v1",
         "participant-outcome-report-v1",
+        "runtime-fact-binding-plane-v1",
     }:
         return schemas_dir / "participant-runtime" / f"{name}.json"
     if name in {
@@ -67,6 +82,8 @@ def _schema_output_path(schemas_dir: Path, name: str) -> Path:
         return schemas_dir / "control-plane" / f"{name}.json"
     if name.startswith("experiment-"):
         return schemas_dir / "experiment-core" / f"{name}.json"
+    if name in {"time-model-v1", "time-runtime-state-v1", "realized-time-model-v1"}:
+        return schemas_dir / "time" / f"{name}.json"
     if name.endswith("-plan-v1"):
         return schemas_dir / "plans" / f"{name}.json"
     if name == "runtime-snapshot-v1":

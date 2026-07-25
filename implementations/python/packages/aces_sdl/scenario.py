@@ -30,6 +30,8 @@ from .accounts import Account
 from .agents import Agent
 from .conditions import Condition
 from .content import Content
+from .deployment_tenancy import DeploymentCell, DeploymentTenant
+from .enterprise_identity import IdentityFacade, IdentityForest
 from .entities import Entity
 from .evidence_requirements import EvidenceRequirement
 from .explicitness import ExplicitnessRecord
@@ -56,7 +58,15 @@ from .realization_designation import RealizationDesignation
 from .relationships import Relationship
 from .runtime_forwarding_agent import RuntimeForwardingAgent
 from .stateful_resources import GeneratedArtifact, PersistentVolume
+from .time_model import (
+    Clock,
+    TemporalConstraint,
+    TimeDomain,
+    TimeDomainMapping,
+    TimeProgressionPolicy,
+)
 from .variables import Variable
+from .variation import VariationPoint
 from .vulnerabilities import Vulnerability
 
 VariableName = PortableIdentifier
@@ -258,6 +268,10 @@ class ScenarioContent(SDLModel):
     persistent_volumes: dict[str, PersistentVolume] = Field(default_factory=dict)
     accounts: dict[str, Account] = Field(default_factory=dict)
     identity_domains: dict[str, IdentityDomain] = Field(default_factory=dict)
+    identity_forests: dict[str, IdentityForest] = Field(default_factory=dict)
+    identity_facades: dict[str, IdentityFacade] = Field(default_factory=dict)
+    deployment_tenants: dict[str, DeploymentTenant] = Field(default_factory=dict)
+    deployment_cells: dict[str, DeploymentCell] = Field(default_factory=dict)
     relationships: dict[str, Relationship] = Field(default_factory=dict)
     forwarding_agents: list[RuntimeForwardingAgent] = Field(default_factory=list)
     agents: dict[str, Agent] = Field(default_factory=dict)
@@ -266,6 +280,11 @@ class ScenarioContent(SDLModel):
     outcome_interpretation_rules: dict[str, OutcomeInterpretationRule] = Field(default_factory=dict)
     behavior_specifications: dict[str, ParticipantBehaviorSpecification] = Field(default_factory=dict)
     evidence_requirements: dict[str, EvidenceRequirement] = Field(default_factory=dict)
+    time_domains: dict[str, TimeDomain] = Field(default_factory=dict)
+    clocks: dict[str, Clock] = Field(default_factory=dict)
+    time_domain_mappings: dict[str, TimeDomainMapping] = Field(default_factory=dict)
+    time_progression_policies: dict[str, TimeProgressionPolicy] = Field(default_factory=dict)
+    temporal_constraints: dict[str, TemporalConstraint] = Field(default_factory=dict)
     objectives: dict[str, Objective] = Field(default_factory=dict)
     workflows: dict[str, Workflow] = Field(default_factory=dict)
     _advisories: list[str] = PrivateAttr(default_factory=list)
@@ -349,6 +368,7 @@ class Scenario(ScenarioContent):
         default_factory=dict,
         json_schema_extra={"additionalProperties": False},
     )
+    variation_points: dict[str, VariationPoint] = Field(default_factory=dict)
 
     @property
     def module_variable_specs(self) -> dict[str, dict[str, object]]:
@@ -369,10 +389,11 @@ class ExpandedScenario(ScenarioContent):
         json_schema_extra={"x-aces-document-phase": "expanded-authoring-object"},
     )
 
-    variables: VariableDefinitions = Field(
+    variables: dict[str, Variable] = Field(
         default_factory=dict,
         json_schema_extra={"additionalProperties": False},
     )
+    variation_points: dict[str, VariationPoint] = Field(default_factory=dict)
     expansion_provenance: ExpansionProvenance = Field(default_factory=ExpansionProvenance)
 
     @property

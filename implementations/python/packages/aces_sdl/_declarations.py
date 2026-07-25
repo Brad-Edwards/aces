@@ -12,6 +12,7 @@ from ._identifiers import QualifiedName
 from ._module_symbols import HASHMAP_SECTIONS
 from ._reference_targetability import is_targetable_section
 from ._runtime_service_families import RUNTIME_SERVICE_FAMILIES, RuntimeReferenceChild
+from .variation import AlternativeVariationPoint, structural_members
 
 if TYPE_CHECKING:
     from .entities import Entity
@@ -278,13 +279,23 @@ _REFERENCEABLE_SECTIONS = frozenset(
         "persistent_volumes",
         "accounts",
         "identity_domains",
+        "identity_forests",
+        "identity_facades",
+        "deployment_tenants",
+        "deployment_cells",
         "relationships",
         "agents",
         "action_contracts",
         "observation_boundaries",
         "behavior_specifications",
         "evidence_requirements",
+        "time_domains",
+        "clocks",
+        "time_domain_mappings",
+        "time_progression_policies",
+        "temporal_constraints",
         "objectives",
+        "variation_points",
     }
 )
 _SPECIAL_SECTIONS = frozenset({"nodes", "infrastructure", "entities", "content", "workflows"})
@@ -292,9 +303,9 @@ _SPECIAL_SECTIONS = frozenset({"nodes", "infrastructure", "entities", "content",
 
 def _add_section_declarations(index: DeclarationIndex, scenario: ScenarioContent) -> None:
     for section_name in HASHMAP_SECTIONS:
-        if section_name in _SPECIAL_SECTIONS:
+        if section_name in _SPECIAL_SECTIONS or section_name == "variables":
             continue
-        for name in getattr(scenario, section_name):
+        for name in getattr(scenario, section_name, {}):
             referenceable = section_name in _REFERENCEABLE_SECTIONS
             _add(
                 index,
@@ -304,6 +315,24 @@ def _add_section_declarations(index: DeclarationIndex, scenario: ScenarioContent
                 aliases=(name,),
                 referenceable=referenceable,
                 targetable=referenceable and is_targetable_section(section_name),
+            )
+
+
+def _add_tool_affordance_declarations(index: DeclarationIndex, scenario: ScenarioContent) -> None:
+    for spec_name, behavior_spec in scenario.behavior_specifications.items():
+        spec_parts = _qualified_parts(spec_name)
+        for affordance_id in behavior_spec.tool_affordances:
+            _add(
+                index,
+                kind="tool-affordance",
+                address_parts=(
+                    "behavior_specifications",
+                    *spec_parts,
+                    "tool_affordances",
+                    affordance_id,
+                ),
+                model_path=(f"behavior_specifications.{spec_name}.tool_affordances.{affordance_id}"),
+                referenceable=True,
             )
 
 
@@ -397,6 +426,20 @@ def _add_forwarding_agent_declarations(index: DeclarationIndex, scenario: Scenar
         )
 
 
+def _add_variation_member_declarations(index: DeclarationIndex, scenario: ScenarioContent) -> None:
+    for point_name, point in getattr(scenario, "variation_points", {}).items():
+        container = "alternatives" if isinstance(point, AlternativeVariationPoint) else "members"
+        for member_name in structural_members(point):
+            _add(
+                index,
+                kind=f"variation-{container[:-1]}",
+                address_parts=("variation_points", *_qualified_parts(point_name), container, member_name),
+                model_path=f"variation_points.{point_name}.{container}.{member_name}",
+                aliases=(f"{point_name}.{member_name}",),
+                referenceable=True,
+            )
+
+
 def build_declaration_index(
     scenario: ScenarioContent,
     *,
@@ -413,6 +456,7 @@ def build_declaration_index(
     )
 
     _add_section_declarations(index, scenario)
+    _add_tool_affordance_declarations(index, scenario)
     _add_variable_declarations(index, scenario)
     _add_node_declarations(index, scenario)
     _add_infrastructure_declarations(index, scenario)
@@ -420,6 +464,7 @@ def build_declaration_index(
     _add_content_declarations(index, scenario)
     _add_workflow_declarations(index, scenario)
     _add_forwarding_agent_declarations(index, scenario)
+    _add_variation_member_declarations(index, scenario)
 
     if raise_on_collision:
         index.raise_for_collisions()

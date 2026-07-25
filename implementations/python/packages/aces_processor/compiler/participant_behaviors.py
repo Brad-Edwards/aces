@@ -6,17 +6,24 @@ from aces_sdl.scenario import InstantiatedScenario
 
 from ..models import (
     Diagnostic,
+    ParticipantAutonomousExecutionRuntime,
     ParticipantBehaviorRuntime,
     ParticipantBehaviorSpecificationRuntime,
     ParticipantInteractiveAccessRuntime,
+    ParticipantToolAffordanceRuntime,
 )
+from ._mixed_control import _compile_mixed_control
 from .addresses import (
     _action_contract_address,
     _assertion_address,
     _behavior_specification_address,
+    _content_address,
+    _objective_address,
     _observation_boundary_address,
     _outcome_interpretation_rule_address,
     _participant_behavior_address,
+    _section_ref_name,
+    _tool_affordance_address,
 )
 from .alias_index import (
     _account_addresses_for_refs,
@@ -24,7 +31,104 @@ from .alias_index import (
     _runtime_addressable_ref_index,
     _runtime_addresses_for_refs,
 )
-from .support import _dedupe, _dump
+from .support import _address, _dedupe, _dump
+
+
+def _compile_autonomous_execution(
+    *,
+    scenario: InstantiatedScenario,
+    spec_name: str,
+    participant_addresses: tuple[str, ...],
+    behavior_spec: object,
+) -> ParticipantAutonomousExecutionRuntime | None:
+    policy = behavior_spec.autonomous_execution
+    if policy is None:
+        return None
+    address = _address("participant", "autonomous-execution", spec_name)
+    authority = policy.evaluation_authority
+    addressable_ref_index = _runtime_addressable_ref_index(scenario)
+    target_refs = [
+        str(ref)
+        for action_ref in policy.action_order
+        for effect in scenario.action_contracts[
+            _section_ref_name(action_ref, "action_contracts", scenario.action_contracts)
+        ].effects
+        for ref in effect.target_refs
+    ]
+    target_refs.extend(
+        str(ref)
+        for action_ref in policy.action_order
+        for precondition in scenario.action_contracts[
+            _section_ref_name(action_ref, "action_contracts", scenario.action_contracts)
+        ].preconditions
+        for ref in precondition.support_refs
+    )
+    target_addresses = _runtime_addresses_for_refs(
+        list(dict.fromkeys(target_refs)),
+        addressable_ref_index=addressable_ref_index,
+    )
+    return ParticipantAutonomousExecutionRuntime(
+        address=address,
+        name=spec_name,
+        behavior_specification_address=_behavior_specification_address(spec_name),
+        participant_addresses=participant_addresses,
+        participant_implementation_ref=policy.participant_implementation_ref,
+        clock_address=_address("time", "clock", _section_ref_name(policy.clock_ref, "clocks", scenario.clocks)),
+        progression_policy_address=_address(
+            "time",
+            "policy",
+            _section_ref_name(
+                policy.progression_policy_ref,
+                "time_progression_policies",
+                scenario.time_progression_policies,
+            ),
+        ),
+        temporal_constraint_addresses=tuple(
+            _address(
+                "time",
+                "constraint",
+                _section_ref_name(ref, "temporal_constraints", scenario.temporal_constraints),
+            )
+            for ref in policy.temporal_constraint_refs
+        ),
+        action_contract_addresses=tuple(
+            _action_contract_address(_section_ref_name(ref, "action_contracts", scenario.action_contracts))
+            for ref in policy.action_order
+        ),
+        target_addresses=target_addresses,
+        observation_boundary_address=_observation_boundary_address(
+            _section_ref_name(
+                policy.observation_boundary_ref,
+                "observation_boundaries",
+                scenario.observation_boundaries,
+            )
+        ),
+        selection_strategy=policy.selection_strategy,
+        max_action_attempts=policy.max_action_attempts,
+        max_in_flight=policy.max_in_flight,
+        failure_policy=policy.failure_policy.value,
+        evaluation_authority_mode=authority.mode.value,
+        objective_refs=tuple(
+            _objective_address(_section_ref_name(ref, "objectives", scenario.objectives))
+            for ref in authority.objective_refs
+        ),
+        proof_producer_refs=tuple(authority.proof_producer_refs),
+        score_authority_refs=tuple(authority.score_authority_refs),
+        receipt_authority_refs=tuple(authority.receipt_authority_refs),
+        refresh_dependencies=(
+            *participant_addresses,
+            *tuple(
+                _action_contract_address(_section_ref_name(ref, "action_contracts", scenario.action_contracts))
+                for ref in policy.action_order
+            ),
+            *tuple(
+                _objective_address(_section_ref_name(ref, "objectives", scenario.objectives))
+                for ref in authority.objective_refs
+            ),
+            *target_addresses,
+        ),
+        spec=_dump(policy),
+    )
 
 
 def _participant_action_addresses(
@@ -253,6 +357,20 @@ def _compile_behavior_specifications(
             list(behavior_spec.authority_scope_refs),
             addressable_ref_index=addressable_ref_index,
         )
+        (
+            mixed_control_participant_address,
+            mixed_control_policy_revision,
+            mixed_control_order_strategy,
+            mixed_control_initial_state_address,
+            mixed_control_dispositions,
+            controller_states,
+            control_transitions,
+            mixed_control_dependencies,
+        ) = _compile_mixed_control(
+            spec_name=name,
+            behavior_spec=behavior_spec,
+            addressable_ref_index=addressable_ref_index,
+        )
         dependencies = _dedupe(
             [
                 *participant_addresses,
@@ -260,7 +378,17 @@ def _compile_behavior_specifications(
                 *observation_addresses,
                 *outcome_rule_addresses,
                 *authority_scope_addresses,
+                *mixed_control_dependencies,
             ]
+        )
+        tool_affordance_addresses = tuple(
+            _tool_affordance_address(name, affordance_id) for affordance_id in sorted(behavior_spec.tool_affordances)
+        )
+        autonomous_execution = _compile_autonomous_execution(
+            scenario=scenario,
+            spec_name=name,
+            participant_addresses=participant_addresses,
+            behavior_spec=behavior_spec,
         )
         behavior_specifications[address] = ParticipantBehaviorSpecificationRuntime(
             address=address,
@@ -276,14 +404,80 @@ def _compile_behavior_specifications(
             authority_scope_refs=tuple(behavior_spec.authority_scope_refs),
             authority_scope_addresses=authority_scope_addresses,
             behavior_mode=str(behavior_spec.behavior_mode or ""),
+            autonomous_execution=autonomous_execution,
+            mixed_control_participant_address=mixed_control_participant_address,
+            mixed_control_policy_revision=mixed_control_policy_revision,
+            mixed_control_order_strategy=mixed_control_order_strategy,
+            mixed_control_initial_state_address=mixed_control_initial_state_address,
+            mixed_control_dispositions=mixed_control_dispositions,
+            controller_states=controller_states,
+            control_transitions=control_transitions,
             ai_offensive_behavior_refs=tuple(behavior_spec.ai_offensive_behavior_refs),
+            defensive_behavior_refs=tuple(behavior_spec.defensive_behavior_refs),
             offensive_behavior_refs=tuple(behavior_spec.offensive_behavior_refs),
             realization_profile_ref=str(behavior_spec.realization_profile_ref or ""),
             backend_feature_support_refs=tuple(behavior_spec.backend_feature_support_refs),
             evidence_contract_refs=tuple(behavior_spec.evidence_contract_refs),
+            tool_affordance_addresses=tool_affordance_addresses,
             extension_policy=str(behavior_spec.extension_policy),
             extension_keys=tuple(sorted(behavior_spec.extensions)),
             refresh_dependencies=dependencies,
             spec=spec,
         )
     return behavior_specifications
+
+
+def _compile_tool_affordances(
+    scenario: InstantiatedScenario,
+    diagnostics: list[Diagnostic],
+) -> dict[str, ParticipantToolAffordanceRuntime]:
+    tool_affordances: dict[str, ParticipantToolAffordanceRuntime] = {}
+    for spec_name, behavior_spec in scenario.behavior_specifications.items():
+        owner_address = _behavior_specification_address(spec_name)
+        for affordance_id, binding in sorted(behavior_spec.tool_affordances.items()):
+            address = _tool_affordance_address(spec_name, affordance_id)
+            action_addresses = _resolve_behavior_spec_refs(
+                refs=list(binding.action_contract_refs),
+                declared=scenario.action_contracts,
+                address_for_ref=_action_contract_address,
+                owner_address=address,
+                diagnostic_code="participant.tool-affordance-action-contract-ref-unbound",
+                diagnostic_label="participant action contract",
+                diagnostics=diagnostics,
+            )
+            observation_addresses = _resolve_behavior_spec_refs(
+                refs=list(binding.observation_boundary_refs),
+                declared=scenario.observation_boundaries,
+                address_for_ref=_observation_boundary_address,
+                owner_address=address,
+                diagnostic_code="participant.tool-affordance-observation-boundary-ref-unbound",
+                diagnostic_label="participant observation boundary",
+                diagnostics=diagnostics,
+            )
+            tool_address = ""
+            if binding.tool_ref:
+                tool_name = _section_ref_name(binding.tool_ref, "content", scenario.content)
+                tool_address = _content_address(tool_name)
+            dependencies = _dedupe(
+                [
+                    owner_address,
+                    *([tool_address] if tool_address else []),
+                    *action_addresses,
+                    *observation_addresses,
+                ]
+            )
+            tool_affordances[address] = ParticipantToolAffordanceRuntime(
+                address=address,
+                name=affordance_id,
+                affordance_id=affordance_id,
+                behavior_specification_address=owner_address,
+                tool_ref=str(binding.tool_ref or ""),
+                tool_address=tool_address,
+                action_contract_refs=tuple(binding.action_contract_refs),
+                action_contract_addresses=action_addresses,
+                observation_boundary_refs=tuple(binding.observation_boundary_refs),
+                observation_boundary_addresses=observation_addresses,
+                refresh_dependencies=dependencies,
+                spec=_dump(binding),
+            )
+    return tool_affordances

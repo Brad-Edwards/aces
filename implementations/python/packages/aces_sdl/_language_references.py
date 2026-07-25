@@ -60,6 +60,8 @@ def _reference_result(
         if declaration_index is not None
         else frozenset({symbol, _bare_symbol(symbol)})
     )
+    if declaration_index is not None and _is_variation_member_symbol(symbol):
+        spellings = frozenset({*spellings, _bare_symbol(symbol)})
     _collect_occurrences(
         root,
         spellings,
@@ -94,6 +96,26 @@ def _collect_definitions(root: Node, section_fields: Collection[str]) -> list[di
     return definitions
 
 
+def _nested_definition_scopes(
+    section: str,
+    value_node: Node,
+    definition_path: list[str],
+    prefix: str,
+    name: str,
+) -> list[tuple[MappingNode, list[str], str]]:
+    scopes: list[tuple[MappingNode, list[str], str]] = []
+    if isinstance(value_node, MappingNode) and section == "entities":
+        nested = _mapping_child(value_node, "entities")
+        if isinstance(nested, MappingNode):
+            scopes.append((nested, [*definition_path, "entities"], f"{prefix}{name}."))
+    elif isinstance(value_node, MappingNode) and section == "variation_points":
+        for container in ("alternatives", "members"):
+            nested = _mapping_child(value_node, container)
+            if isinstance(nested, MappingNode):
+                scopes.append((nested, [*definition_path, container], f"{prefix}{name}.{container}."))
+    return scopes
+
+
 def _collect_section_definitions(
     section: str,
     node: MappingNode,
@@ -117,16 +139,20 @@ def _collect_section_definitions(
                 "range": _range_from_node(key_node),
             }
         )
-        if section == "entities" and isinstance(value_node, MappingNode):
-            nested = _mapping_child(value_node, "entities")
-            if isinstance(nested, MappingNode):
-                _collect_section_definitions(
-                    section,
-                    nested,
-                    [*definition_path, "entities"],
-                    definitions,
-                    prefix=f"{prefix}{name}.",
-                )
+        for nested, nested_path, nested_prefix in _nested_definition_scopes(
+            section,
+            value_node,
+            definition_path,
+            prefix,
+            name,
+        ):
+            _collect_section_definitions(
+                section,
+                nested,
+                nested_path,
+                definitions,
+                prefix=nested_prefix,
+            )
 
 
 def _collect_occurrences(
@@ -309,6 +335,14 @@ def _qualified_symbol_section(symbol: str) -> str | None:
     return parts[0] if len(parts) > 1 else None
 
 
+def _is_variation_member_symbol(symbol: str) -> bool:
+    try:
+        parts = QualifiedName.parse(symbol).parts
+    except (TypeError, ValueError):
+        return False
+    return len(parts) >= 4 and parts[0] == "variation_points" and parts[-2] in {"alternatives", "members"}
+
+
 def _include_occurrence(
     path: list[str],
     *,
@@ -330,6 +364,8 @@ def _reference_target_for_path(path: list[str], *, mapping_key: bool) -> str | N
     target = REFERENCE_COMPLETION_TARGETS.get((path[0], field))
     if target is not None:
         return target
+    if path[0] == "variation_points" and field == "members":
+        return "variation_points"
     if len(path) >= 4 and path[-2] == "success":
         return field if field in _SUCCESS_REFERENCE_TARGETS else None
     return None

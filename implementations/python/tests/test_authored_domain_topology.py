@@ -372,8 +372,8 @@ def test_compiler_projects_normalized_domain_topology_and_ordering() -> None:
     assert member_binding.domain_id == "corp"
     assert member_binding.role == "member"
     assert member_binding.controller_addresses == ("provision.node.dc",)
-    assert member.ordering_dependencies == ("provision.node.dc",)
-    assert member.refresh_dependencies == ("provision.node.dc",)
+    assert member.ordering_dependencies == ("provision.domain-controller.corp.dc",)
+    assert member.refresh_dependencies == ("provision.domain-controller.corp.dc",)
 
     payload = resource_payload(member)
     assert payload["domain_topology"]["domain_id"] == "corp"
@@ -390,8 +390,14 @@ def test_compiler_projects_domain_binding_to_subject_and_authority_accounts() ->
     assert authority.domain_topology.domain_id == "corp"
     assert subject.domain_topology.role == "member"
     assert subject.domain_topology.domain_id == "corp"
-    assert authority.ordering_dependencies == ("provision.node.dc",)
-    assert subject.ordering_dependencies == ("provision.node.workstation",)
+    assert authority.ordering_dependencies == (
+        "provision.node.dc",
+        "provision.domain-controller.corp.dc",
+    )
+    assert subject.ordering_dependencies == (
+        "provision.node.workstation",
+        "provision.domain-controller.corp.dc",
+    )
 
 
 def test_domain_topology_variables_are_instantiated_before_compilation() -> None:
@@ -544,6 +550,11 @@ def test_libvirt_capability_envelope_rejects_domain_profile_independently() -> N
         and diagnostic.address == "provision.node.dc"
         for diagnostic in diagnostics
     )
+    assert any(
+        diagnostic.code == "libvirt-backend.realization.unsupported-domain-profile"
+        and diagnostic.address == "provision.domain-controller.corp.dc"
+        for diagnostic in diagnostics
+    )
 
 
 def test_libvirt_capability_envelope_ignores_resources_without_domain_topology() -> None:
@@ -583,6 +594,7 @@ def test_shared_plan_analysis_resolves_controller_from_snapshot_for_incremental_
     operations = {operation.address: operation for operation in provisioning.operations}
     snapshot_addresses = (
         "provision.node.dc",
+        "provision.domain-controller.corp.dc",
         "provision.account.domain-admin",
     )
     snapshot = RuntimeSnapshot(
@@ -614,6 +626,7 @@ def test_shared_plan_analysis_operation_overrides_stale_snapshot_entry() -> None
         address: _snapshot_entry_from_operation(operations[address])
         for address in (
             "provision.node.dc",
+            "provision.domain-controller.corp.dc",
             "provision.account.domain-admin",
         )
     }
@@ -706,6 +719,7 @@ def test_domain_topology_is_an_exact_realization_requirement_for_every_carrier()
         "provision.node.workstation",
         "provision.account.domain-admin",
         "provision.account.web-service",
+        "provision.domain-controller.corp.dc",
     }
     assert all(requirement.explicitness.value == "exact" for requirement in requirements)
     assert all(requirement.provenance.value == "processor-derived" for requirement in requirements)

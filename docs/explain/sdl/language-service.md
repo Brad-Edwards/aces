@@ -1,6 +1,6 @@
 # SDL Language-Service Tools
 
-ACES exposes SDL-aware language-service helpers for agents and editor-like
+RAES exposes SDL-aware language-service helpers for agents and editor-like
 authoring surfaces. These helpers sit above raw YAML editing: they reuse the
 same parser, normalizer, semantic validator, and SDL symbol model as the rest
 of the repository.
@@ -30,7 +30,7 @@ gives the agent safer primitives for authoring and repairing SDL documents.
 ## MCP Tools
 
 The MCP server exposes these operations as the `language_service` tool family.
-Start with `aces_tool_surface` to discover the full server workflow, then use
+Start with `raes_tool_surface` to discover the full server workflow, then use
 these tools while authoring:
 
 | Tool | Use it for |

@@ -1,0 +1,14 @@
+name: unsatisfiable-control
+variables:
+  platform:
+    type: string
+    allowed_values: [linux, allow]
+    required: true
+nodes:
+  target:
+    type: vm
+    os: ${platform}
+infrastructure:
+  target:
+    acls:
+      - action: ${platform}

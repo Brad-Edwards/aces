@@ -1,0 +1,10 @@
+{
+  "contract_id": "runtime-fact-binding-plane-v1",
+  "schema_path": "contracts/schemas/participant-runtime/runtime-fact-binding-plane-v1.json",
+  "stability": "draft",
+  "content_hash": "5ae5c93e3e4d6823bf7296a12ade3d484bae7dad561e082582526d2bfe8d0de7",
+  "last_change": {
+    "summary": "Initial publication of the typed run-local fact declaration, immutable version, late-bound action sink, binding and dispatch dispositions, version-faithful provenance and projection invariants, and redacted projection contract for issue #791.",
+    "content_hash": "5ae5c93e3e4d6823bf7296a12ade3d484bae7dad561e082582526d2bfe8d0de7"
+  }
+}

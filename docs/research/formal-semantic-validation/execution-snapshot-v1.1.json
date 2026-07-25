@@ -1,0 +1,383 @@
+{
+  "execution_id": "issue-168-execution-v2",
+  "protocol_revision": "1.0.0",
+  "corpus_revision": "1.0.0",
+  "captured_at": "2026-07-19",
+  "execution_status": "complete",
+  "aces_revision": "9347f64b26e3bb71d5459759c3d4bd473c76b446",
+  "configuration_id": "aces-python-reference-offline-v1",
+  "commands": [
+    {
+      "command_id": "bundle-replay",
+      "argv": [
+        "implementations/python/.venv/bin/python",
+        "tools/check_formal_semantic_validation.py"
+      ],
+      "network": "disabled"
+    },
+    {
+      "command_id": "participant-fixtures",
+      "argv": [
+        "implementations/python/.venv/bin/pytest",
+        "-q",
+        "implementations/python/tests/test_sem_208_participant_behavior.py::test_hidden_truth_disclosure_is_separate_from_observable_projection",
+        "implementations/python/tests/test_sem_208_participant_behavior.py::test_hidden_truth_cannot_be_observed_without_explicit_disclosure_rule",
+        "implementations/python/tests/test_sem_211_participant_action_semantics.py::test_action_contract_declares_sem_211_classes_and_compiles_them",
+        "implementations/python/tests/test_sem_211_participant_action_semantics.py::test_action_result_rejects_success_when_preconditions_are_unresolved",
+        "implementations/python/tests/test_run_308_concurrent_participant_execution.py::test_runtime_snapshot_publishes_joint_action_and_time_context_records",
+        "implementations/python/tests/test_run_308_concurrent_participant_execution.py::test_joint_action_record_contract_rejects_unordered_conflicting_writes",
+        "implementations/python/tests/test_participant_runtime_invariants.py::test_order_discipline_accepts_supported_order_claim_strengths",
+        "implementations/python/tests/test_participant_runtime_invariants.py::test_order_discipline_rejects_wall_clock_causality",
+        "implementations/python/tests/test_sem_212_participant_attribution_semantics.py::test_attribution_edge_round_trips_on_terminal_observation",
+        "implementations/python/tests/test_sem_212_participant_attribution_semantics.py::test_timestamp_adjacency_cannot_be_reported_as_strong_causality",
+        "implementations/python/tests/test_sem_215_participant_outcome_interpretation.py::test_outcome_interpretation_rule_parses_and_compiles_explicit_layers",
+        "implementations/python/tests/test_sem_215_participant_outcome_interpretation.py::test_local_action_success_does_not_imply_objective_success_without_rule_record",
+        "implementations/python/tests/test_realization_honesty_conformance.py::test_constructive_envelope_runs_positive_and_negative_honesty_probes",
+        "implementations/python/tests/test_realization_honesty_conformance.py::test_only_native_live_can_support_native_conformance"
+      ],
+      "network": "disabled"
+    }
+  ],
+  "observations": [
+    {
+      "case_id": "schema-valid-control",
+      "execution_id": "issue-168-execution-v2",
+      "configuration_id": "aces-python-reference-offline-v1",
+      "replayable": true,
+      "actual_outcome": "accepted",
+      "diagnostic_kind": null,
+      "result_digest": "83e13fb83080bef0aaf6c5d40f196a23d021717d206d601f54e848fbc51cf035",
+      "evidence_refs": [
+        "docs/research/formal-semantic-validation/corpus/schema-valid.sdl.yaml"
+      ],
+      "limitations": [
+        "A passing minimal source does not establish semantic correctness."
+      ]
+    },
+    {
+      "case_id": "schema-unknown-field",
+      "execution_id": "issue-168-execution-v2",
+      "configuration_id": "aces-python-reference-offline-v1",
+      "replayable": true,
+      "actual_outcome": "rejected",
+      "diagnostic_kind": "SDLParseError",
+      "result_digest": "f55d834b458f8e069e1c69061b4cc0a6d61e0e052bf90c670f2e6a5ad8b5bd98",
+      "evidence_refs": [
+        "docs/research/formal-semantic-validation/corpus/schema-invalid-unknown-field.sdl.yaml"
+      ],
+      "limitations": [
+        "The observation covers one unknown-field defect only."
+      ]
+    },
+    {
+      "case_id": "semantic-resolved-objective",
+      "execution_id": "issue-168-execution-v2",
+      "configuration_id": "aces-python-reference-offline-v1",
+      "replayable": true,
+      "actual_outcome": "accepted",
+      "diagnostic_kind": null,
+      "result_digest": "ee2eb992e729a7de12f1f3a35b8a5a712231dc7567dcfd8e7578a9192bb19660",
+      "evidence_refs": [
+        "docs/research/formal-semantic-validation/corpus/semantic-valid.sdl.yaml"
+      ],
+      "limitations": [
+        "This is a positive control for one objective-reference slice."
+      ]
+    },
+    {
+      "case_id": "semantic-dangling-assertion",
+      "execution_id": "issue-168-execution-v2",
+      "configuration_id": "aces-python-reference-offline-v1",
+      "replayable": true,
+      "actual_outcome": "rejected",
+      "diagnostic_kind": "SDLValidationError",
+      "result_digest": "0207cf616b56708ca9b8c4499d3301abe22dbe52162cf8d58d3bec429d9db024",
+      "evidence_refs": [
+        "docs/research/formal-semantic-validation/corpus/semantic-invalid-dangling-ref.sdl.yaml"
+      ],
+      "limitations": [
+        "A single dangling reference does not prove complete semantic coverage."
+      ]
+    },
+    {
+      "case_id": "semantic-ambiguous-reference",
+      "execution_id": "issue-168-execution-v2",
+      "configuration_id": "aces-python-reference-offline-v1",
+      "replayable": true,
+      "actual_outcome": "rejected",
+      "diagnostic_kind": "SDLValidationError",
+      "result_digest": "9da4a87797d228e0012ab6b30459f4892e41aa6f224a9840be035fee4a2eea73",
+      "evidence_refs": [
+        "docs/research/formal-semantic-validation/corpus/semantic-invalid-ambiguous-ref.sdl.yaml"
+      ],
+      "limitations": [
+        "One namespace collision does not enumerate every ambiguity surface."
+      ]
+    },
+    {
+      "case_id": "semantic-feature-cycle",
+      "execution_id": "issue-168-execution-v2",
+      "configuration_id": "aces-python-reference-offline-v1",
+      "replayable": true,
+      "actual_outcome": "rejected",
+      "diagnostic_kind": "SDLValidationError",
+      "result_digest": "d15dbcd99fb4f20b965d7031b07dd6534576302270399c3fa656d29e7de02b83",
+      "evidence_refs": [
+        "docs/research/formal-semantic-validation/corpus/semantic-invalid-feature-cycle.sdl.yaml"
+      ],
+      "limitations": [
+        "One static dependency cycle does not establish general constraint satisfiability."
+      ]
+    },
+    {
+      "case_id": "workflow-reachable-control",
+      "execution_id": "issue-168-execution-v2",
+      "configuration_id": "aces-python-reference-offline-v1",
+      "replayable": true,
+      "actual_outcome": "accepted",
+      "diagnostic_kind": null,
+      "result_digest": "38a60a27ef853cd2a3cebd2db32b911973800407be50d58646cf377f783fe3f9",
+      "evidence_refs": [
+        "docs/research/formal-semantic-validation/corpus/workflow-reachable.sdl.yaml",
+        "implementations/python/tests/test_semantics_planner.py",
+        "specs/formal/workflows/state-machine.md"
+      ],
+      "limitations": [
+        "The graph is workflow control flow only."
+      ]
+    },
+    {
+      "case_id": "workflow-unreachable-step",
+      "execution_id": "issue-168-execution-v2",
+      "configuration_id": "aces-python-reference-offline-v1",
+      "replayable": true,
+      "actual_outcome": "rejected",
+      "diagnostic_kind": "SDLValidationError",
+      "result_digest": "bb931d19346ef9193408ae6c85deb4079704378fc5f00dc5f47a2817cff21943",
+      "evidence_refs": [
+        "docs/research/formal-semantic-validation/corpus/workflow-unreachable.sdl.yaml",
+        "implementations/python/tests/test_semantics_planner.py",
+        "specs/formal/workflows/state-machine.md"
+      ],
+      "limitations": [
+        "The result does not establish network, service, participant, or exploit reachability."
+      ]
+    },
+    {
+      "case_id": "whole-scenario-satisfiable-request",
+      "execution_id": "issue-168-execution-v2",
+      "configuration_id": "aces-python-reference-offline-v1",
+      "replayable": false,
+      "actual_outcome": "unsupported",
+      "diagnostic_kind": null,
+      "result_digest": null,
+      "evidence_refs": [
+        "docs/decisions/issue-168-formal-semantic-validation-reachability-preflight.md"
+      ],
+      "limitations": [
+        "No governed whole-scenario constraint theory or solver exists."
+      ]
+    },
+    {
+      "case_id": "whole-scenario-unsatisfiable-request",
+      "execution_id": "issue-168-execution-v2",
+      "configuration_id": "aces-python-reference-offline-v1",
+      "replayable": false,
+      "actual_outcome": "unsupported",
+      "diagnostic_kind": null,
+      "result_digest": null,
+      "evidence_refs": [
+        "docs/decisions/issue-168-formal-semantic-validation-reachability-preflight.md"
+      ],
+      "limitations": [
+        "Local checks cannot produce a whole-scenario unsat certificate."
+      ]
+    },
+    {
+      "case_id": "valid-exploit-path-request",
+      "execution_id": "issue-168-execution-v2",
+      "configuration_id": "aces-python-reference-offline-v1",
+      "replayable": false,
+      "actual_outcome": "unsupported",
+      "diagnostic_kind": null,
+      "result_digest": null,
+      "evidence_refs": [
+        "docs/decisions/issue-168-formal-semantic-validation-reachability-preflight.md"
+      ],
+      "limitations": [
+        "ACES has no canonical typed attack graph or path-query entrypoint."
+      ]
+    },
+    {
+      "case_id": "invalid-exploit-path-request",
+      "execution_id": "issue-168-execution-v2",
+      "configuration_id": "aces-python-reference-offline-v1",
+      "replayable": false,
+      "actual_outcome": "unsupported",
+      "diagnostic_kind": null,
+      "result_digest": null,
+      "evidence_refs": [
+        "docs/decisions/issue-168-formal-semantic-validation-reachability-preflight.md"
+      ],
+      "limitations": [
+        "Vulnerability and topology declarations are not an invalid-path proof."
+      ]
+    },
+    {
+      "case_id": "compile-repeatability-control",
+      "execution_id": "issue-168-execution-v2",
+      "configuration_id": "aces-python-reference-offline-v1",
+      "replayable": true,
+      "actual_outcome": "stable",
+      "diagnostic_kind": null,
+      "result_digest": "926c972d470604dc4fa3ce94389ee1b0ab5c1bbba5adac9e987d50838d989bcc",
+      "evidence_refs": [
+        "docs/research/formal-semantic-validation/corpus/determinism-a.sdl.yaml",
+        "implementations/python/tests/test_pipeline_determinism.py"
+      ],
+      "limitations": [
+        "The witness ends at compiled output."
+      ]
+    },
+    {
+      "case_id": "compile-non-vacuity-control",
+      "execution_id": "issue-168-execution-v2",
+      "configuration_id": "aces-python-reference-offline-v1",
+      "replayable": true,
+      "actual_outcome": "distinguishable",
+      "diagnostic_kind": null,
+      "result_digest": "54f6b9b5f553f63ce34d83a2d63e36cc2115c690c48949d665a20f33cf15ab27",
+      "evidence_refs": [
+        "docs/research/formal-semantic-validation/corpus/determinism-a.sdl.yaml",
+        "docs/research/formal-semantic-validation/corpus/determinism-b.sdl.yaml"
+      ],
+      "limitations": [
+        "Distinct digests are a non-vacuity control, not semantic non-equivalence proof."
+      ]
+    },
+    {
+      "case_id": "necessity-witness-request",
+      "execution_id": "issue-168-execution-v2",
+      "configuration_id": "aces-python-reference-offline-v1",
+      "replayable": false,
+      "actual_outcome": "unsupported",
+      "diagnostic_kind": null,
+      "result_digest": null,
+      "evidence_refs": [
+        "docs/decisions/issue-168-formal-semantic-validation-reachability-preflight.md"
+      ],
+      "limitations": [
+        "No governed intervention or ablation protocol exists."
+      ]
+    },
+    {
+      "case_id": "non-necessity-control-request",
+      "execution_id": "issue-168-execution-v2",
+      "configuration_id": "aces-python-reference-offline-v1",
+      "replayable": false,
+      "actual_outcome": "unsupported",
+      "diagnostic_kind": null,
+      "result_digest": null,
+      "evidence_refs": [
+        "docs/decisions/issue-168-formal-semantic-validation-reachability-preflight.md"
+      ],
+      "limitations": [
+        "Attribution and negative fixtures do not demonstrate non-necessity."
+      ]
+    }
+  ],
+  "participant_observations": [
+    {
+      "obligation_id": "hidden-vs-visible-projection",
+      "execution_id": "issue-168-execution-v2",
+      "positive_outcome": "passed",
+      "negative_outcome": "passed",
+      "evidence_refs": [
+        "implementations/python/tests/test_sem_208_participant_behavior.py::test_hidden_truth_disclosure_is_separate_from_observable_projection",
+        "implementations/python/tests/test_sem_208_participant_behavior.py::test_hidden_truth_cannot_be_observed_without_explicit_disclosure_rule"
+      ],
+      "limitations": [
+        "Covers the reference SDL/contract path, not every backend projection."
+      ]
+    },
+    {
+      "obligation_id": "fail-closed-action-applicability",
+      "execution_id": "issue-168-execution-v2",
+      "positive_outcome": "passed",
+      "negative_outcome": "passed",
+      "evidence_refs": [
+        "implementations/python/tests/test_sem_211_participant_action_semantics.py::test_action_contract_declares_sem_211_classes_and_compiles_them",
+        "implementations/python/tests/test_sem_211_participant_action_semantics.py::test_action_result_rejects_success_when_preconditions_are_unresolved"
+      ],
+      "limitations": [
+        "Covers declared applicability and one unresolved-precondition failure."
+      ]
+    },
+    {
+      "obligation_id": "shared-state-effects",
+      "execution_id": "issue-168-execution-v2",
+      "positive_outcome": "passed",
+      "negative_outcome": "passed",
+      "evidence_refs": [
+        "implementations/python/tests/test_run_308_concurrent_participant_execution.py::test_runtime_snapshot_publishes_joint_action_and_time_context_records",
+        "implementations/python/tests/test_run_308_concurrent_participant_execution.py::test_joint_action_record_contract_rejects_unordered_conflicting_writes"
+      ],
+      "limitations": [
+        "Contract evidence does not prove every backend's live concurrency fidelity."
+      ]
+    },
+    {
+      "obligation_id": "ordering-before-causality",
+      "execution_id": "issue-168-execution-v2",
+      "positive_outcome": "passed",
+      "negative_outcome": "passed",
+      "evidence_refs": [
+        "implementations/python/tests/test_participant_runtime_invariants.py::test_order_discipline_accepts_supported_order_claim_strengths",
+        "implementations/python/tests/test_participant_runtime_invariants.py::test_order_discipline_rejects_wall_clock_causality"
+      ],
+      "limitations": [
+        "Rejecting timestamp-only causality does not supply counterfactual proof."
+      ]
+    },
+    {
+      "obligation_id": "evidence-labeled-attribution",
+      "execution_id": "issue-168-execution-v2",
+      "positive_outcome": "passed",
+      "negative_outcome": "passed",
+      "evidence_refs": [
+        "implementations/python/tests/test_sem_212_participant_attribution_semantics.py::test_attribution_edge_round_trips_on_terminal_observation",
+        "implementations/python/tests/test_sem_212_participant_attribution_semantics.py::test_timestamp_adjacency_cannot_be_reported_as_strong_causality"
+      ],
+      "limitations": [
+        "Attribution labels disclose basis; they do not demonstrate necessity."
+      ]
+    },
+    {
+      "obligation_id": "participant-local-outcome-separation",
+      "execution_id": "issue-168-execution-v2",
+      "positive_outcome": "passed",
+      "negative_outcome": "passed",
+      "evidence_refs": [
+        "implementations/python/tests/test_sem_215_participant_outcome_interpretation.py::test_outcome_interpretation_rule_parses_and_compiles_explicit_layers",
+        "implementations/python/tests/test_sem_215_participant_outcome_interpretation.py::test_local_action_success_does_not_imply_objective_success_without_rule_record"
+      ],
+      "limitations": [
+        "The fixtures establish layer separation, not outcome validity in every realization."
+      ]
+    },
+    {
+      "obligation_id": "realization-profile-honesty",
+      "execution_id": "issue-168-execution-v2",
+      "positive_outcome": "passed",
+      "negative_outcome": "passed",
+      "evidence_refs": [
+        "implementations/python/tests/test_realization_honesty_conformance.py::test_constructive_envelope_runs_positive_and_negative_honesty_probes",
+        "implementations/python/tests/test_realization_honesty_conformance.py::test_only_native_live_can_support_native_conformance"
+      ],
+      "limitations": [
+        "Reference conformance evidence remains bounded to declared realization profiles."
+      ]
+    }
+  ],
+  "deviations": []
+}

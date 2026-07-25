@@ -67,6 +67,30 @@ test_schema_edit_passes_with_manifest_update if {
 }
 
 
+test_schema_edit_passes_with_sharded_record_update if {
+  failures := deny with input as {
+    "changed": [
+      "contracts/schemas/backend-manifest/backend-manifest-v2.json",
+      "contracts/schema-publication/entries/backend-manifest-v2.json",
+    ],
+    "check_set": "file-local",
+    "policy": {
+      "legacy_top_level_roots": [],
+      "generated_contracts": {
+        "generated_roots": ["contracts/schemas"],
+        "manifest_path": "contracts/schema-publication-manifest.json",
+        "manifest_records_root": "contracts/schema-publication",
+      },
+      "concept_authority": {"reserved_path_tokens": [], "allowed_paths": []},
+      "source_roots": [],
+      "changelog_path": "CHANGELOG.md",
+      "changelog_fragment_dir": "changelog.d",
+    },
+  }
+  count(failures) == 0
+}
+
+
 test_schema_readme_edit_does_not_require_manifest if {
   failures := deny with input as {
     "changed": ["contracts/schemas/README.md"],
@@ -106,4 +130,24 @@ test_reserved_concept_authority_paths_are_enforced if {
   count(failures) == 1
   some failure in failures
   failure.rule_id == "concept-authority-reserved-path"
+}
+
+
+test_concept_authority_schema_publication_record_is_allowed if {
+  failures := deny with input as {
+    "changed": ["contracts/schema-publication/entries/concept-families-v1.json"],
+    "check_set": "file-local",
+    "policy": {
+      "legacy_top_level_roots": [],
+      "generated_contracts": {"generated_roots": []},
+      "concept_authority": {
+        "reserved_path_tokens": ["concept-authority", "concept-families-v1"],
+        "allowed_paths": ["contracts/schema-publication"],
+      },
+      "source_roots": [],
+      "changelog_path": "CHANGELOG.md",
+      "changelog_fragment_dir": "changelog.d",
+    },
+  }
+  count(failures) == 0
 }

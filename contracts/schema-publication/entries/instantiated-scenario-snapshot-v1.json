@@ -1,0 +1,10 @@
+{
+  "contract_id": "instantiated-scenario-snapshot-v1",
+  "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
+  "stability": "draft",
+  "content_hash": "02ffc6e11ecc9cb171208df98faeb059f6fbb61b52848f1e7635ce06272b4df8",
+  "last_change": {
+    "summary": "Published enterprise tenancy, service materialization, shared time, and autonomous participant execution in immutable snapshots.",
+    "content_hash": "02ffc6e11ecc9cb171208df98faeb059f6fbb61b52848f1e7635ce06272b4df8"
+  }
+}

@@ -16,8 +16,17 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from tools.gitleaks_tool import ensure_gitleaks
-from tools.osv_scanner_tool import OSV_ADVISORY_EXIT_CODES, ensure_osv_scanner, run_osv_scanner
+from tools.osv_scanner_tool import (
+    OSV_ADVISORY_EXIT_CODES,
+    ensure_osv_scanner,
+    run_osv_scanner,
+)
 from tools.tool_versions import PRE_COMMIT_HOOKS_TOOL_SPEC, RUFF_TOOL_SPEC
+from tools.verification_plan import (
+    collect_git_changes,
+    plan_for_changes,
+    resolve_upstream,
+)
 
 PROJECT_ROOT = REPO_ROOT / "implementations" / "python"
 RUFF_CONFIG = PROJECT_ROOT / "pyproject.toml"
@@ -32,6 +41,7 @@ TARGETED_POLICY_TESTS = [
     "implementations/python/tests/test_concept_authority_governance.py",
     "implementations/python/tests/test_agent_guidance_policy.py",
     "implementations/python/tests/test_example_library_policy.py",
+    "implementations/python/tests/test_verification_plan.py",
 ]
 CONTRACT_TRIGGER_PREFIXES = (
     "contracts/",
@@ -111,8 +121,13 @@ class SessionReporter:
         self.session.log(f"[{self.session_name}] {status}: {name}{duration}{suffix}")
 
 
-def _run(session: nox.Session, *args: str, silent: bool = False) -> None:
-    session.run(*args, external=True, silent=silent)
+def _run(
+    session: nox.Session,
+    *args: str,
+    silent: bool = False,
+    env: dict[str, str] | None = None,
+) -> None:
+    session.run(*args, external=True, silent=silent, env=env)
 
 
 def _git_lines(*args: str) -> list[str]:
@@ -197,27 +212,33 @@ def _run_ruff(session: nox.Session, *args: str, project_relative: bool = False) 
     _run(session, *command, "--config", str(RUFF_CONFIG), *args)
 
 
-def _run_pytest(session: nox.Session, *args: str, coverage: bool = False) -> None:
+def _run_pytest(
+    session: nox.Session,
+    *args: str,
+    coverage_file: Path | None = None,
+    append_coverage: bool = False,
+    finalize_coverage: bool = False,
+    parallel: bool = False,
+) -> None:
     _sync_project(session)
     normalized_args = [
         str((REPO_ROOT / arg).relative_to(PROJECT_ROOT)) if arg.startswith("implementations/python/") else arg
         for arg in args
     ]
-    if coverage:
-        with session.chdir(PROJECT_ROOT):
-            _run(session, "uv", "run", "--frozen", "coverage", "erase")
-            _run(
-                session,
-                "uv",
-                "run",
-                "--frozen",
-                "coverage",
-                "run",
-                "-m",
-                "pytest",
-                *normalized_args,
-            )
-            _run(session, "uv", "run", "--frozen", "coverage", "xml")
+    command = ["uv", "run", "--frozen", "python", "-m", "pytest"]
+    if parallel:
+        command.extend(["-n", "auto", "--maxprocesses=8", "--dist=worksteal"])
+    coverage_env: dict[str, str] | None = None
+    if coverage_file is not None:
+        coverage_env = {"COVERAGE_FILE": str(coverage_file)}
+        command.extend(["--cov", "--cov-config=pyproject.toml", "--cov-report="])
+        if append_coverage:
+            command.append("--cov-append")
+    command.extend(normalized_args)
+    with session.chdir(PROJECT_ROOT):
+        _run(session, *command, env=coverage_env)
+        if finalize_coverage:
+            _run(session, "uv", "run", "--frozen", "coverage", "xml", env=coverage_env)
             _run(
                 session,
                 "uv",
@@ -226,10 +247,8 @@ def _run_pytest(session: nox.Session, *args: str, coverage: bool = False) -> Non
                 "coverage",
                 "report",
                 "--fail-under=50",
+                env=coverage_env,
             )
-        return
-    with session.chdir(PROJECT_ROOT):
-        _run(session, "uv", "run", "--frozen", "python", "-m", "pytest", *normalized_args)
 
 
 def _split_policy_session_args(posargs: list[str]) -> tuple[list[str], list[str], bool]:
@@ -385,6 +404,8 @@ def _run_gitleaks_dir_scan(session: nox.Session, paths: list[str]) -> None:
         _run_external_subprocess(
             str(binary),
             "dir",
+            "--config",
+            str(REPO_ROOT / ".gitleaks.toml"),
             "--follow-symlinks",
             "--no-banner",
             "--redact",
@@ -640,6 +661,14 @@ def _run_contracts(session: nox.Session, reporter: SessionReporter, *args: str) 
         lambda: _run_project_python(session, "tools/check_dsl_language_evaluation.py"),
     )
     reporter.run(
+        "contracts / standardized specification coverage",
+        lambda: _run_project_python(session, "tools/check_specification_coverage.py"),
+    )
+    reporter.run(
+        "contracts / formal semantic-validation evidence",
+        lambda: _run_project_python(session, "tools/check_formal_semantic_validation.py"),
+    )
+    reporter.run(
         "contracts / json artifact validation",
         lambda: _run_project_python(session, "tools/check_json_artifacts.py", *json_artifact_args),
     )
@@ -650,6 +679,10 @@ def _run_contracts(session: nox.Session, reporter: SessionReporter, *args: str) 
     reporter.run(
         "contracts / ATLAS tactic vocabulary conformance",
         lambda: _run_project_python(session, "tools/check_atlas_tactic_vocabulary.py"),
+    )
+    reporter.run(
+        "contracts / NIST CSF defensive vocabulary conformance",
+        lambda: _run_project_python(session, "tools/check_nist_csf_defensive_vocabulary.py"),
     )
 
 
@@ -724,12 +757,27 @@ def _run_changed_lint(session: nox.Session, reporter: SessionReporter, paths: li
         )
 
 
-def _run_tests(session: nox.Session, reporter: SessionReporter, posargs: list[str] | None = None) -> None:
+def _run_tests(
+    session: nox.Session,
+    reporter: SessionReporter,
+    coverage_file: Path,
+    posargs: list[str] | None = None,
+    *,
+    finalize_coverage: bool = True,
+) -> None:
     args = list(posargs) if posargs else ["-q"]
+    parallel = not posargs
+    execution = "xdist auto, max 8, worksteal" if parallel else "explicit selection, serial"
     reporter.run(
         "tests / pytest",
-        lambda: _run_pytest(session, *args, coverage=True),
-        detail=" ".join(args),
+        lambda: _run_pytest(
+            session,
+            *args,
+            coverage_file=coverage_file,
+            finalize_coverage=finalize_coverage,
+            parallel=parallel,
+        ),
+        detail=f"{' '.join(args)} :: {execution}",
     )
 
 
@@ -740,10 +788,25 @@ def _run_fuzz(session: nox.Session, reporter: SessionReporter) -> None:
     )
 
 
-def _run_integration_tests(session: nox.Session, reporter: SessionReporter) -> None:
+def _run_integration_tests(
+    session: nox.Session,
+    reporter: SessionReporter,
+    *,
+    coverage_file: Path | None = None,
+    append_coverage: bool = False,
+    finalize_coverage: bool = False,
+) -> None:
     reporter.run(
         "tests / pytest integration",
-        lambda: _run_pytest(session, "-m", "integration", "-v"),
+        lambda: _run_pytest(
+            session,
+            "-m",
+            "integration",
+            "-v",
+            coverage_file=coverage_file,
+            append_coverage=append_coverage,
+            finalize_coverage=finalize_coverage,
+        ),
     )
 
 
@@ -840,7 +903,13 @@ def contracts(session: nox.Session) -> None:
 def tests(session: nox.Session) -> None:
     reporter = SessionReporter(session, "tests")
     try:
-        _run_tests(session, reporter, list(session.posargs))
+        with tempfile.TemporaryDirectory(prefix="aces-coverage-") as coverage_dir:
+            _run_tests(
+                session,
+                reporter,
+                Path(coverage_dir) / ".coverage",
+                list(session.posargs),
+            )
     finally:
         reporter.summary()
 
@@ -858,9 +927,9 @@ def fuzz(session: nox.Session) -> None:
 def integration(session: nox.Session) -> None:
     """Run pytest with the `integration` marker only.
 
-    The default unit-test session excludes integration tests (which read the
-    real repository on disk). This session opts them in. `verify` wires this
-    session in after the unit-test sweep so CI keeps both layers covered.
+    The default test session excludes subprocess, build, installed-distribution,
+    and whole-system tests. This session opts them in. `verify` wires this session
+    in after the parallel test sweep so CI keeps both layers covered.
     """
     reporter = SessionReporter(session, "integration")
     try:
@@ -952,12 +1021,65 @@ def hook_pre_commit(session: nox.Session) -> None:
 def hook_pre_push(session: nox.Session) -> None:
     reporter = SessionReporter(session, "hook-pre-push")
     try:
-        _run_hygiene(session, reporter, posargs=["--all-files"], default_all_files=True)
-        _run_policy(session, reporter)
-        _run_lint(session, reporter)
-        _run_contracts(session, reporter)
-        _run_tests(session, reporter)
+        _run_changed_verification(session, reporter, list(session.posargs))
+    finally:
+        reporter.summary()
+
+
+def _changed_base_rev(posargs: list[str]) -> str:
+    if "--base-rev" in posargs:
+        index = posargs.index("--base-rev")
+        if index + 1 >= len(posargs):
+            raise ValueError("--base-rev requires a revision")
+        return posargs[index + 1]
+    return resolve_upstream(REPO_ROOT)
+
+
+def _run_changed_verification(
+    session: nox.Session,
+    reporter: SessionReporter,
+    posargs: list[str],
+) -> None:
+    try:
+        base_rev = _changed_base_rev(posargs)
+        changes = collect_git_changes(REPO_ROOT, base_rev)
+        plan = plan_for_changes(changes)
+        session.log(f"change-aware verification against {base_rev}: {plan.reason}; {len(changes)} change records")
+    except (RuntimeError, ValueError) as exc:
+        base_rev = None
+        plan = plan_for_changes([])
+        session.log(f"change classification failed closed to the full local gate: {exc}")
+
+    policy_args = ["--base-rev", base_rev] if base_rev is not None else []
+    _run_hygiene(session, reporter, posargs=["--all-files"], default_all_files=True)
+    _run_policy(session, reporter, *policy_args)
+    _run_lint(session, reporter)
+    if plan.contracts:
+        _run_contracts(session, reporter, *policy_args)
+    else:
+        reporter.skip("contracts / governed artifact graph", plan.reason)
+    if plan.regression:
+        with tempfile.TemporaryDirectory(prefix="aces-coverage-") as coverage_dir:
+            _run_tests(session, reporter, Path(coverage_dir) / ".coverage")
+    else:
+        reporter.skip("tests / pytest", plan.reason)
+    if plan.fuzz:
         _run_fuzz(session, reporter)
+    else:
+        reporter.skip("tests / pytest fuzz", plan.reason)
+    if plan.docs:
+        _run_docs(session, reporter)
+    else:
+        reporter.skip("docs / sphinx-build", plan.reason)
+
+
+@nox.session(name="verify-changed")
+def verify_changed(session: nox.Session) -> None:
+    """Run the fail-closed local gate selected from changes since the upstream ref."""
+
+    reporter = SessionReporter(session, "verify-changed")
+    try:
+        _run_changed_verification(session, reporter, list(session.posargs))
     finally:
         reporter.summary()
 
@@ -975,8 +1097,16 @@ def verify(session: nox.Session) -> None:
         _run_policy(session, reporter, *session.posargs)
         _run_lint(session, reporter)
         _run_contracts(session, reporter, *session.posargs)
-        _run_tests(session, reporter)
-        _run_integration_tests(session, reporter)
+        with tempfile.TemporaryDirectory(prefix="aces-coverage-") as coverage_dir:
+            coverage_file = Path(coverage_dir) / ".coverage"
+            _run_tests(session, reporter, coverage_file, finalize_coverage=False)
+            _run_integration_tests(
+                session,
+                reporter,
+                coverage_file=coverage_file,
+                append_coverage=True,
+                finalize_coverage=True,
+            )
         _run_docs(session, reporter)
     finally:
         reporter.summary()

@@ -1,0 +1,10 @@
+{
+  "contract_id": "experiment-run-v1",
+  "schema_path": "contracts/schemas/experiment-core/experiment-run-v1.json",
+  "stability": "draft",
+  "content_hash": "cb17166993230369860931032bd90944fbc79ea73df0f1d2ffd983e50fac5d11",
+  "last_change": {
+    "summary": "Added EXP-734 run-scoped realized-time-model provenance.",
+    "content_hash": "cb17166993230369860931032bd90944fbc79ea73df0f1d2ffd983e50fac5d11"
+  }
+}
