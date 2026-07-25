@@ -78,7 +78,7 @@ def test_artifact_code_claim_must_be_covered_by_audited_derivation_scope() -> No
     )
     claim["aces_boundaries"] = [
         {
-            "artifact": "implementations/python/packages/aces_sdl/accounts.py",
+            "artifact": "implementations/python/packages/raes/accounts.py",
             "symbol_or_pointer": "Account",
         }
     ]

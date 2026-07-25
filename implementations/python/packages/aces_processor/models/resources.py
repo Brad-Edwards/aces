@@ -9,7 +9,7 @@ from aces_contracts.addressing import require_compiled_address
 from aces_contracts.diagnostics import Diagnostic
 from aces_contracts.evaluation import EvaluationExecutionContract, EvaluationResultContract
 from aces_contracts.participant_episode import PARTICIPANT_EPISODE_CONTROL_EVENTS, PARTICIPANT_EPISODE_TERMINAL_EVENTS
-from aces_sdl.participant_behavior import ParticipantFailureClass
+from raes.participant_behavior import ParticipantFailureClass
 
 if TYPE_CHECKING:
     # Forward reference only: ParticipantActionResult is defined in the later

@@ -150,7 +150,7 @@ def register(mcp: FastMCP) -> None:
         ),
     )
     def raes_agent_guidance(audience: str = "all") -> str:
-        from aces_sdl.agent_guidance import agent_guidance
+        from raes.agent_guidance import agent_guidance
 
         return json_response(agent_guidance(audience=audience))
 
@@ -173,7 +173,7 @@ def register(mcp: FastMCP) -> None:
         if size_error is not None:
             return size_error
 
-        from aces_sdl import SDLMigrationPolicy, SDLParseError, SDLValidationError, parse_sdl
+        from raes import SDLMigrationPolicy, SDLParseError, SDLValidationError, parse_sdl
 
         try:
             scenario = parse_sdl(

@@ -3,7 +3,7 @@
 from pathlib import Path
 
 import pytest
-from aces_sdl import SDLMigrationPolicy
+from raes import SDLMigrationPolicy
 
 from aces.core.sdl import instantiate_scenario
 from aces.core.sdl._errors import SDLParseError, SDLValidationError

@@ -202,11 +202,11 @@ different facts.
   [ADR-030](adr-030-process-scoped-linux-capability-policy.md), and
   [ADR-031](adr-031-ssh-server-configuration-surface.md) — concrete runtime and
   provenance surfaces that this ADR generalizes.
-- [`runtime_configuration.py`](../../../implementations/python/packages/aces_sdl/runtime_configuration.py),
-  [`runtime_filesystem.py`](../../../implementations/python/packages/aces_sdl/runtime_filesystem.py),
-  [`runtime_network.py`](../../../implementations/python/packages/aces_sdl/runtime_network.py),
-  [`runtime_capabilities.py`](../../../implementations/python/packages/aces_sdl/runtime_capabilities.py),
-  and [`image_provenance.py`](../../../implementations/python/packages/aces_sdl/image_provenance.py)
+- [`runtime_configuration.py`](../../../implementations/python/packages/raes/runtime_configuration.py),
+  [`runtime_filesystem.py`](../../../implementations/python/packages/raes/runtime_filesystem.py),
+  [`runtime_network.py`](../../../implementations/python/packages/raes/runtime_network.py),
+  [`runtime_capabilities.py`](../../../implementations/python/packages/raes/runtime_capabilities.py),
+  and [`image_provenance.py`](../../../implementations/python/packages/raes/image_provenance.py)
   — current implementation surfaces checked for the owning typed fields.
 - [Open Cyber Range SDL](https://documentation.opencyberrange.ee/docs/sdl/),
   [CACAO Security Playbooks v2.0](https://docs.oasis-open.org/cacao/security-playbooks/v2.0/security-playbooks-v2.0.pdf),
@@ -230,3 +230,4 @@ different facts.
 | Date | Commit/PR | Summary |
 |------|-----------|---------|
 | 2026-07-13 | #417 | Refined the six-way carrier boundary: participant-discoverable facts are preserved in evidence by default and enter authored `Node.runtime` only through a deliberate exact, constrained, or open scenario requirement; observation alone is not promotion authority. |
+| 2026-07-25 | #884 | Updated current implementation links for the breaking `aces_sdl` to `raes` package cutover. |

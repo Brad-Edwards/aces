@@ -62,7 +62,7 @@ Rationale:
 
 Published JSON Schemas are the portable structural contract. They declare draft
 2020-12 schema identity explicitly. Semantic graph constraints that standard
-JSON Schema cannot portably enforce are declared under the ACES semantic-
+JSON Schema cannot portably enforce are declared under the RAES semantic-
 invariant profile through `x-aces-semantic-profile` and `x-aces-invariants`
 metadata. Each invariant records a stable id, severity, validator, and input
 contract/path set; the annotation shape is published as
@@ -320,7 +320,7 @@ family's input-shaped value models (apparatus constraints, run allocation,
 stochastic controls, factors, clock context) by reference or embedding and does
 not re-declare task, scenario, or capture-specification meaning. The reused run-
 allocation model annotates its semantic invariant against `experiment-study-v1`
-even when embedded here; that annotation is descriptive only — the ACES model
+even when embedded here; that annotation is descriptive only — the RAES model
 validator runs regardless of the embedding contract.
 
 ## Invariants
@@ -388,7 +388,7 @@ validator runs regardless of the embedding contract.
     treated as raw evidence.
 17. Backends that declare `capabilities.observation` MUST declare the published
     experiment evidence contracts that make the observation claim inspectable.
-18. `experiment-run-v1` is the canonical run provenance record. ACES MUST NOT
+18. `experiment-run-v1` is the canonical run provenance record. RAES MUST NOT
     publish a parallel run-provenance root schema for the same archival run
     facts unless a later ADR supersedes this boundary.
 19. Run traceability MUST link at least one capture specification and at least
@@ -397,7 +397,7 @@ validator runs regardless of the embedding contract.
     value summary. Processor-realized disclosures MUST be attributed to a
     processor reference, and backend-realized disclosures MUST be attributed to
     a backend reference.
-21. `experiment-run-v1` is the trial record for the current model. ACES MUST
+21. `experiment-run-v1` is the trial record for the current model. RAES MUST
     NOT publish a parallel trial root schema for the same task execution facts
     unless a later ADR supersedes this boundary.
 22. Repeated executions of the same task MUST be represented by distinct run
@@ -407,7 +407,7 @@ validator runs regardless of the embedding contract.
     mutable run statuses MUST NOT stand in for repeated-run identity.
 23. Reproducibility and replay claims MUST use the run traceability chain from
     run context to capture specs, evidence records, derived measures, and
-    claim/report refs. ACES MUST NOT publish parallel replay-run,
+    claim/report refs. RAES MUST NOT publish parallel replay-run,
     reproducibility-claim, replay-claim, or provenance-graph root schemas for
     the same facts unless a later ADR supersedes this boundary.
 24. An experiment authoring input MUST reference its task with a `task`
@@ -461,7 +461,7 @@ validator runs regardless of the embedding contract.
     validity notes, and an analysis plan with at least one metric, a primary
     metric, and structured statistical, uncertainty, multiple-comparison, and
     missing-data policies.
-11. ACES semantic validation MUST be able to resolve canonical processor and
+11. RAES semantic validation MUST be able to resolve canonical processor and
     backend manifest references to concrete manifest payloads with matching
     identities, schema versions, optional digest evidence, and mutual
     processor/backend compatibility declarations.
@@ -528,7 +528,7 @@ validator runs regardless of the embedding contract.
    fixtures for schema-expressible invariants MUST fail both the published JSON
    Schema and the Python contract model.
 5. Consumers that use only generic JSON Schema can validate portable structure
-   but MUST NOT claim full ACES experiment-core conformance until the ACES
+   but MUST NOT claim full RAES experiment-core conformance until the RAES
    semantic validators named by `x-aces-invariants` have been applied.
 
 ### Security And Redaction
@@ -571,7 +571,7 @@ base. The most load-bearing criteria are:
 - Statistical analysis engines.
 - HTTP APIs.
 - New SDL authoring syntax.
-- PROV, RO-Crate, OpenML, or MLflow as the internal ACES schema.
+- PROV, RO-Crate, OpenML, or MLflow as the internal RAES schema.
 - Runtime evidence capture, artifact storage, retention jobs, or capture
   schedulers.
 - Backend-native packet/log/trace parsers.

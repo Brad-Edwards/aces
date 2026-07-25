@@ -1,20 +1,20 @@
 ---
-name: ACES Asset Inventory
-about: Capture participant-discoverable asset evidence and map it to ACES.
+name: RAES Asset Inventory
+about: Capture participant-discoverable asset evidence and map it to RAES.
 title: "[INVENTORY] <scenario>: <asset>"
 labels: enhancement
 assignees: ""
 ---
 
-# ACES Asset Inventory Issue Template
+# RAES Asset Inventory Issue Template
 
 Copy this file, or the body below, into a downstream backend repository's
 `.github/ISSUE_TEMPLATE/` tree when that repository needs an issue form for
-inventorying realized scenario assets against the ACES methodology.
+inventorying realized scenario assets against the RAES methodology.
 
 ## Methodology Authority
 
-Use the ACES participant-discoverable asset inventory methodology as the
+Use the RAES participant-discoverable asset inventory methodology as the
 authority:
 
 - Methodology:
@@ -97,9 +97,9 @@ Before completion:
 - [ ] No `needs_gap_triage` mapping remains.
 - [ ] Every evidence file is referenced by a fact, provenance entry,
       correspondence check, or capture-limit fact.
-- [ ] Every `blocked_by_aces_gap` row links an ACES issue.
+- [ ] Every `blocked_by_aces_gap` row links an RAES issue.
 - [ ] Every `blocked_by_aptl_gap` row links a downstream backend issue.
-- [ ] Correspondence checks describe how later encoding work will compare ACES
+- [ ] Correspondence checks describe how later encoding work will compare RAES
       surfaces against fresh realized evidence.
 
 ## Validation
@@ -118,7 +118,7 @@ changed code, docs, templates, or committed evidence.
 ## Completion Claim
 
 This issue is complete only when every participant-discoverable fact in scope
-is captured, mapped to ACES, or blocked by a linked ACES/downstream issue with
+is captured, mapped to RAES, or blocked by a linked RAES/downstream issue with
 an explicit limitation. Evidence bundles, scanner output, screenshots,
 summaries, and backend support limits are proof inputs only; they do not
-replace ACES specification or explicit gap records.
+replace RAES specification or explicit gap records.

@@ -3,10 +3,10 @@
 :func:`analyze_objective_semantics` is the single name-level source of truth
 for the SDL declarative-objective construct — actor binding, target resolution,
 success interpretation over backend-neutral assertions, the
-optional window (delegated to :func:`aces_sdl.semantics.objectives.analyze_objective_window`),
+optional window (delegated to :func:`raes.semantics.objectives.analyze_objective_window`),
 and the acyclic ``depends_on`` ordering relation. It returns normalized
 references with their dependency-role tags, the per-objective ordering/refresh
-dependency names, and a fail-closed issue list that ``aces_sdl.validator``
+dependency names, and a fail-closed issue list that ``raes.validator``
 renders as authoring errors. ``aces_processor.compiler`` reuses the
 ordering/refresh role decision (:func:`partition_objective_dependencies`) when
 it maps a compiled ``evaluation.objective.*`` resource onto its dependency

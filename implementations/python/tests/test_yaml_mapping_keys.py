@@ -3,16 +3,16 @@
 from pathlib import Path
 
 import pytest
-from aces_sdl import SDLMigrationPolicy, SDLParseDiagnostic, SDLParseError, parse_sdl, parse_sdl_file
-from aces_sdl.language_service import (
+from hypothesis import given
+from hypothesis import strategies as st
+from raes import SDLMigrationPolicy, SDLParseDiagnostic, SDLParseError, parse_sdl, parse_sdl_file
+from raes.language_service import (
     apply_structured_edit,
     language_completions,
     language_diagnostics,
     language_format,
     language_references,
 )
-from hypothesis import given
-from hypothesis import strategies as st
 
 FIXTURE_DIR = Path(__file__).parent / "data" / "sdl" / "invalid"
 

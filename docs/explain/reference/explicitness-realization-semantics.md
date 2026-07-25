@@ -50,13 +50,13 @@ engineering risk is concept conflation: treating "not specified yet",
 
 Build on these existing surfaces before adding anything new:
 
-- SDL parsing and closed models: `aces_sdl.parser`, `aces_sdl.SDLModel`, and
+- SDL parsing and closed models: `raes.parser`, `raes.SDLModel`, and
   Pydantic `extra="forbid"` model boundaries
-- scoped author intent: `aces_sdl.realization_designation`, plus the
+- scoped author intent: `raes.realization_designation`, plus the
   designation records in expansion and instantiation provenance
 - static semantics: `SemanticValidator` and `SDLValidationError`
 - instantiation: `instantiate_scenario()` and `SDLInstantiationError`
-- shared semantic helpers: `aces_sdl.semantics.*` and
+- shared semantic helpers: `raes.semantics.*` and
   `aces_processor.semantics.*`
 - processor/backend declarations: `aces_processor.manifest`,
   `aces_processor.capabilities`, `aces_backend_protocols.capabilities`, and

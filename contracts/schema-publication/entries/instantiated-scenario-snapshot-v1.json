@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-snapshot-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "ef14114ce38498b0f92be91b4304ceeeba787eb607c0d1c75e7ea06b58f17c88",
+  "content_hash": "81ac076d7274fd9d37f8b0d674767416acb0f90885f92fc26784198b06a8a691",
   "last_change": {
-    "summary": "Carried participant-directed inject delivery declarations into immutable instantiated scenario snapshots.",
-    "content_hash": "ef14114ce38498b0f92be91b4304ceeeba787eb607c0d1c75e7ea06b58f17c88"
+    "summary": "Carried participant-directed inject delivery declarations into immutable snapshots and retargeted Python validator references to raes.",
+    "content_hash": "81ac076d7274fd9d37f8b0d674767416acb0f90885f92fc26784198b06a8a691"
   }
 }

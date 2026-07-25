@@ -38,9 +38,9 @@ from aces_runtime.manager import RuntimeManager
 from aces_runtime.participant_clock_driver import ParticipantClockDriver
 from aces_runtime.participant_scheduler import ParticipantScheduler
 from aces_runtime.time_coordinator import ReferenceTimeRuntime, TimeCoordinator
-from aces_sdl._errors import SDLValidationError
-from aces_sdl.parser import parse_sdl
-from aces_sdl.participant_behavior import ParticipantFailureClass
+from raes._errors import SDLValidationError
+from raes.parser import parse_sdl
+from raes.participant_behavior import ParticipantFailureClass
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 EXAMPLE = REPO_ROOT / "examples" / "scenarios" / "enterprise-participant-evidence-loop.sdl.yaml"

@@ -5,7 +5,7 @@ from __future__ import annotations
 import textwrap
 
 from aces_reference_backend import create_reference_backend_target
-from aces_sdl.explicitness import ExplicitnessClass, ExplicitnessProvenance
+from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance
 
 from aces.core.runtime.manager import RuntimeManager
 from aces.core.sdl import parse_sdl

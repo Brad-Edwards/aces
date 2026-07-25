@@ -180,15 +180,15 @@ equivalence or bisimilarity.
 ## Evidence Mapping
 
 - typed phase and provenance records:
-  `implementations/python/packages/aces_sdl/scenario.py` and
+  `implementations/python/packages/raes/scenario.py` and
   `phase_contracts.py`
 - transition and admission functions:
-  `implementations/python/packages/aces_sdl/instantiate.py`
+  `implementations/python/packages/raes/instantiate.py`
 - typed processor lowering:
   `implementations/python/packages/aces_processor/models/` and
   `implementations/python/packages/aces_processor/planner/`
 - canonical snapshot:
-  `implementations/python/packages/aces_sdl/canonical.py`
+  `implementations/python/packages/raes/canonical.py`
 - external contracts:
   `contracts/schemas/sdl/instantiated-scenario-v1.json` and
   `instantiated-scenario-snapshot-v1.json`

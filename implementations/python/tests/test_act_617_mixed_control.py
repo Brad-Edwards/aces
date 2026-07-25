@@ -8,10 +8,10 @@ from pathlib import Path
 
 import pytest
 from aces_processor.compiler import compile_runtime_model
-from aces_sdl._errors import SDLParseError, SDLValidationError
-from aces_sdl.instantiate import instantiate_scenario
-from aces_sdl.parser import parse_sdl, parse_sdl_file
-from aces_sdl.participant_behavior_specification import MixedControlTransitionKind
+from raes._errors import SDLParseError, SDLValidationError
+from raes.instantiate import instantiate_scenario
+from raes.parser import parse_sdl, parse_sdl_file
+from raes.participant_behavior_specification import MixedControlTransitionKind
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 

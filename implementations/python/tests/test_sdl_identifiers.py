@@ -31,27 +31,27 @@ from aces_contracts.planning import (
 from aces_contracts.runtime_state import ApplyResult, OperationStatus, RuntimeSnapshot, SnapshotEntry
 from aces_processor.compiler import compile_runtime_model
 from aces_processor.models import NetworkRuntime, NodeRuntime, RuntimeModel
-from aces_sdl._declarations import build_declaration_index
-from aces_sdl._errors import SDLParseError, SDLValidationError
-from aces_sdl._model_diagnostics import _bounded_model_message
-from aces_sdl._source_profile import SDLParserLimits
-from aces_sdl.identifiers import (
+from hypothesis import given
+from hypothesis import strategies as st
+from pydantic import ValidationError
+from raes._declarations import build_declaration_index
+from raes._errors import SDLParseError, SDLValidationError
+from raes._model_diagnostics import _bounded_model_message
+from raes._source_profile import SDLParserLimits
+from raes.identifiers import (
     PORTABLE_IDENTIFIER_JSON_SCHEMA,
     QUALIFIED_IDENTIFIER_MAX_LENGTH,
     QualifiedName,
     is_portable_identifier,
     require_portable_identifier,
 )
-from aces_sdl.infrastructure import ACLRule
-from aces_sdl.instantiate import instantiate_scenario
-from aces_sdl.nodes import ServicePort
-from aces_sdl.parser import parse_sdl
-from aces_sdl.runtime_values import require_symbol
-from aces_sdl.scenario import ExpandedScenario, ImportDecl, ModuleDescriptor, Scenario
-from aces_sdl.validator import SemanticValidator
-from hypothesis import given
-from hypothesis import strategies as st
-from pydantic import ValidationError
+from raes.infrastructure import ACLRule
+from raes.instantiate import instantiate_scenario
+from raes.nodes import ServicePort
+from raes.parser import parse_sdl
+from raes.runtime_values import require_symbol
+from raes.scenario import ExpandedScenario, ImportDecl, ModuleDescriptor, Scenario
+from raes.validator import SemanticValidator
 
 _PORTABLE_CHARACTERS = "abcdefghijklmnopqrstuvwxyz0123456789-_"
 _PORTABLE_START = "abcdefghijklmnopqrstuvwxyz0123456789"
@@ -646,7 +646,7 @@ imports:
 
     limits = SDLParserLimits(max_imports=1)
     with pytest.raises(SDLParseError, match="composition import budget"):
-        from aces_sdl.parser import parse_sdl_file
+        from raes.parser import parse_sdl_file
 
         parse_sdl_file(root, limits=limits)
 
@@ -676,7 +676,7 @@ imports:
         encoding="utf-8",
     )
 
-    from aces_sdl.parser import parse_sdl_file
+    from raes.parser import parse_sdl_file
 
     with pytest.raises(SDLParseError, match="decoded-byte budget"):
         parse_sdl_file(root, limits=SDLParserLimits(max_composed_bytes=16))
@@ -731,7 +731,7 @@ imports:
         encoding="utf-8",
     )
 
-    from aces_sdl.parser import parse_sdl_file
+    from raes.parser import parse_sdl_file
 
     with pytest.raises(SDLParseError, match=message):
         parse_sdl_file(root, limits=limits)

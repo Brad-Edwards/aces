@@ -147,7 +147,7 @@ The minimum adversarial fixture set for implementation is:
 
 SEM-224 is realized as a carrier-oriented plane classifier plus portable plane
 traceability over the existing carriers. The classifier
-`aces_sdl.observability_plane_semantics` is the single source of plane
+`raes.observability_plane_semantics` is the single source of plane
 ownership; it assigns exactly one primary plane by contract role or runtime
 family identity and never by a free string (OE-01, OE-11). The three
 claim-bearing experiment-core carriers publish their plane as an `x-aces-plane`

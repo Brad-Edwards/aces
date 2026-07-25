@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
   "stability": "draft",
-  "content_hash": "03a122afe0c34afb9d8eecbc7a4a671382893b1dad25b5f0de729a177747fc65",
+  "content_hash": "f8885b00fd6e873a50205d699be8a5892cc5168195090e57c2ec9a0d492e28ef",
   "last_change": {
-    "summary": "Added concrete participant-directed inject delivery declarations with closed policy and resolved-reference inputs.",
-    "content_hash": "03a122afe0c34afb9d8eecbc7a4a671382893b1dad25b5f0de729a177747fc65"
+    "summary": "Added closed participant-directed inject delivery declarations and retargeted Python validator references to raes.",
+    "content_hash": "f8885b00fd6e873a50205d699be8a5892cc5168195090e57c2ec9a0d492e28ef"
   }
 }

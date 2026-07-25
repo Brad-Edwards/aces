@@ -3,7 +3,7 @@
 
 Split out of ``runtime_datastore.py`` so no single source file exceeds the
 ADR-015 600-line cap. These typed children compose into
-:class:`~aces_sdl.runtime_datastore.RuntimeDatastoreService`; the top spine and
+:class:`~raes.runtime_datastore.RuntimeDatastoreService`; the top spine and
 its ``require_profile_for_data_model`` guard live in ``runtime_datastore.py``.
 
 Every typed child carries a ``<child_noun>_id`` validated by ``require_symbol``.

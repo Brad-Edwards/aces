@@ -42,7 +42,7 @@ def compile_pipeline(
         return {"error": json.loads(size_error), "stages": [], "scenario": None, "model": None}
 
     from aces_processor.compiler import compile_runtime_model
-    from aces_sdl import (
+    from raes import (
         SDLInstantiationError,
         SDLMigrationPolicy,
         SDLParseError,

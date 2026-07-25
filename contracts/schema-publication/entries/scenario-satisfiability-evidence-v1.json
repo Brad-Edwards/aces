@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "104474fa4efa744dfe8c46458913ca91480535cf6e833742d8b1643854baf571",
+  "content_hash": "ffdd52a8b09c9d034f4f0f7386be1c196ed253572c164a2f737259a58a08788f",
   "last_change": {
-    "summary": "Carried participant-directed inject delivery declarations and their closed reference shape into satisfiability evidence.",
-    "content_hash": "104474fa4efa744dfe8c46458913ca91480535cf6e833742d8b1643854baf571"
+    "summary": "Carried closed participant-directed inject delivery declarations into satisfiability evidence and retargeted Python validator references to raes.",
+    "content_hash": "ffdd52a8b09c9d034f4f0f7386be1c196ed253572c164a2f737259a58a08788f"
   }
 }

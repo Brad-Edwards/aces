@@ -41,10 +41,10 @@ Use `feat:`/`fix:` for consumer-visible changes so release-please cuts a release
 
 - `release-please-config.json` — package at repo root (so `CHANGELOG.md` stays at
   the root), `release-type: python`, `package-name: raes`. The actual version
-  literal lives in the subdir pyproject and is bumped via `extra-files`
-  (`implementations/python/pyproject.toml` → `$.project.version`).
+  literal lives in a dedicated RAES package file and is bumped via `extra-files`
+  (`implementations/python/packages/raes/_version.py`).
 - `.release-please-manifest.json` — the version source of truth: `{".": "X.Y.Z"}`.
-- `implementations/python/pyproject.toml` — static `[project] version`
+- `implementations/python/packages/raes/_version.py` — build version source
   (release-please rewrites it). The legacy `aces` import namespace's
   `__version__` derives from the installed `raes` distribution metadata.
   The `raes` and `raes-mcp` console scripts are the only current commands.

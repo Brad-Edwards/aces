@@ -9,7 +9,7 @@ next implementation pass aligned with the right architectural model.
 
 ## Goal
 
-Make shared meaning real across ACES artifacts without turning the ontology
+Make shared meaning real across RAES artifacts without turning the ontology
 into the SDL, the manifests, or the contract schema layout.
 
 The core problem is semantic drift:
@@ -42,9 +42,9 @@ concept families such as:
 
 This layer is about semantic authority, not authoring syntax.
 
-### 2. ACES concept layer
+### 2. RAES concept layer
 
-This layer defines the concepts ACES needs that are not naturally covered by
+This layer defines the concepts RAES needs that are not naturally covered by
 the cyber-domain authority, including:
 
 - scenarios
@@ -54,7 +54,7 @@ the cyber-domain authority, including:
 - provenance and evidence requirements
 - time, clocks, and apparatus concerns
 
-These are ACES-native concepts, even when they relate to cyber-domain
+These are RAES-native concepts, even when they relate to cyber-domain
 concepts.
 
 ### 3. Artifact binding layer
@@ -73,7 +73,7 @@ The following constraints should shape any `GOV-917` implementation.
 
 Authors should not be required to write UCO directly.
 
-ACES remains the authoring and ecosystem layer. Shared concept authority exists
+RAES remains the authoring and ecosystem layer. Shared concept authority exists
 behind the authoring surface, not in place of it.
 
 ### Ontology structure is not contract structure
@@ -84,17 +84,17 @@ mechanically.
 Concept authority answers "what does this declared thing mean?" It does not
 require every artifact to serialize in the same shape as the ontology.
 
-### ACES-native concepts must be explicit
+### RAES-native concepts must be explicit
 
-If ACES needs concepts outside the chosen cyber-domain authority, those
-concepts must be declared explicitly as ACES-native extensions.
+If RAES needs concepts outside the chosen cyber-domain authority, those
+concepts must be declared explicitly as RAES-native extensions.
 
 Do not create silent local forks of imported concepts and do not introduce new
 portable labels without saying whether they are:
 
 - adopted from the shared authority
 - adapted from the shared authority
-- native to ACES
+- native to RAES
 
 ### Bind concepts, not just labels
 
@@ -125,7 +125,7 @@ ontology exercise.
 The first slice should enable the repo to say something stronger than
 "different artifacts happen to use similar words."
 
-It should make it possible for ACES artifacts to state:
+It should make it possible for RAES artifacts to state:
 
 - this SDL construct refers to a canonical concept
 - this manifest capability or declaration refers to the same concept
@@ -172,7 +172,7 @@ artifact.
 ## External Knowledge Binding Effects (SEM-217)
 
 `SEM-217` fixes what an external knowledge binding is allowed to do to native
-ACES meaning. The effect is explicit and surface-owned; it is never inferred
+RAES meaning. The effect is explicit and surface-owned; it is never inferred
 from a label, a URL, or the fact that an external source uses similar words.
 
 The current effect vocabulary is closed:
@@ -180,10 +180,10 @@ The current effect vocabulary is closed:
 - `annotates`: the external reference adds reviewable context or evidence and
   does not change native validation, planning, runtime, or conformance meaning
   by itself.
-- `aligns`: the ACES concept family is adopted from the external authority with
+- `aligns`: the RAES concept family is adopted from the external authority with
   equivalent meaning. For the current UCO slice, adopted families align and
   carry an empty divergence list.
-- `refines`: the ACES concept family is adapted from the external authority.
+- `refines`: the RAES concept family is adapted from the external authority.
   It preserves a reviewed correspondence while narrowing or diverging in an
   explicitly recorded way.
 - `constrains`: a governed profile, manifest, or vocabulary surface restricts
@@ -202,14 +202,14 @@ Implementation guidance:
 - do not overload `ConceptBinding` into a general external term-mapping model;
   it remains the manifest vocabulary-to-family binding surface.
 
-## ACES Extension Discipline (GOV-919)
+## RAES Extension Discipline (GOV-919)
 
-`GOV-919` implements the ACES concept layer by making native extension metadata
+`GOV-919` implements the RAES concept layer by making native extension metadata
 normative in the concept-family catalog.
 
 Every `native` concept family declares:
 
-- `extension_scope`, describing the ACES-specific concern covered by the family
+- `extension_scope`, describing the RAES-specific concern covered by the family
 - `relation_rules`, describing how the native family may relate to adopted,
   adapted, or other native families
 - `non_ambiguity_constraints`, describing how the family avoids shadowing
@@ -218,7 +218,7 @@ Every `native` concept family declares:
 This is intentionally stricter than treating native families as loose labels.
 If a field denotes a cyber-domain asset, identity, observable, relationship,
 action, event, tool, or artifact directly, it should bind to the adopted or
-adapted family. Native families are for ACES experiment, runtime, apparatus,
+adapted family. Native families are for RAES experiment, runtime, apparatus,
 provenance, and governance concerns that the shared authority does not
 naturally cover.
 
@@ -351,7 +351,7 @@ The related requirements split the rest of the problem:
 - `GOV-918`
   Cross-artifact concept binding (implemented)
 - `GOV-919`
-  ACES extension discipline over the shared authority (implemented)
+  RAES extension discipline over the shared authority (implemented)
 - `GOV-920`
   shared semantic profiles (implemented)
 - `GOV-921`
@@ -370,7 +370,7 @@ The first pass should not attempt to:
 - make every contract structurally identical to the ontology
 - define one universal super-model for every asset, identity, observable,
   action, event, relationship, and artifact occurrence in the ecosystem
-- model all ACES concepts at once
+- model all RAES concepts at once
 - turn every repeated field group into a portable reference model without
   evidence that it is reused across artifact families
 - solve all participant, provenance, evidence, and time/apparatus semantics in

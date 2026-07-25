@@ -1,5 +1,5 @@
 name: techvault-runtime-parity
-description: TechVault webapp runtime facts used to exercise ACES SDL runtime inventory
+description: TechVault webapp runtime facts used to exercise RAES SDL runtime inventory
   parity.
 nodes:
   techvault-webapp:

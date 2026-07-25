@@ -1,7 +1,7 @@
 """Authored identity-domain declarations and typed topology details.
 
 This authoring surface is realization intent.  It is intentionally separate
-from :mod:`aces_sdl.runtime_directory_identity`, which records runtime
+from :mod:`raes.runtime_directory_identity`, which records runtime
 inventory observed on a node.
 """
 

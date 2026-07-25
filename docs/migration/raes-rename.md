@@ -17,8 +17,8 @@ package distribution metadata, or guidance profile identifiers.
 
 Keep ACES only when the identifier is one of these surfaces:
 
-- Python source package or import namespace that this issue does not rename,
-  such as `aces`, `aces_sdl`, `aces_mcp`, `aces_runtime`, or `aces_contracts`
+- an internal owning package outside the SDL import cut, such as `aces_mcp`,
+  `aces_runtime`, or `aces_contracts`
 - governed SDL, schema, profile, fixture, provenance, or wire identifier whose
   rename requires a separate versioned contract migration
 - retained documentation path or asset-inventory reference that still has
@@ -35,7 +35,8 @@ Keep ACES only when the identifier is one of these surfaces:
 | Documentation links | `Brad-Edwards/aces` current README/docs links | `RAESystem/rae` | Current README and docs config | Migrated for current user-facing links | Docs build |
 | Documentation paths | `docs/aces/` | `docs/aces/` | Documentation tree | Retained path/reference area, not a command alias | Docs build and existing path tests |
 | Python distribution | `aces-sdl` | `raes` | `implementations/python/pyproject.toml` | Renamed for new PyPI publication | Version and corpus packaging tests |
-| Python import packages | `aces`, `aces_sdl`, `aces_mcp`, `aces_runtime`, `aces_contracts`, other `aces_*` packages | Retained source package names | Python package owners | Not renamed by issue #866 | Existing import, module-boundary, and package tests |
+| Canonical Python SDL import | `aces_sdl` | `raes` | SDL package owner | Hard cut by #884; no alias or shim | Source import tests plus isolated wheel/sdist tests |
+| Other internal Python packages | `aces_mcp`, `aces_runtime`, `aces_contracts`, other owning `aces_*` packages | Retained internal owner names | Python package owners | Outside #884 | Existing module-boundary and package tests |
 | CLI command | `aces` | `raes` | `aces_cli` | Old console script removed | CLI version/help and installed-wheel tests |
 | MCP server command | `aces-mcp` | `raes-mcp` | `aces_mcp` | Old console script removed | Packaging and MCP construction tests |
 | MCP server id | `aces-sdl` | `raes` | `aces_mcp.server` | Migrated emitted server name | MCP server construction tests |
@@ -61,12 +62,20 @@ New MCP clients should start with `raes_tool_surface`, then call
 `aces_tool_surface`, `aces_agent_guidance`, `aces_intended_use_profiles`, and
 `aces_reference_manifests`; those tools are no longer registered.
 
-Use `raes` for new PyPI publication and downstream package pins. The
-source import packages remain `aces_*` in this issue's implementation, so Python
-examples keep imports such as `from aces_sdl import parse_sdl_file` until a
-separate module-namespace migration changes that API.
+Use `raes` for PyPI publication, downstream package pins, and the canonical SDL
+import:
 
-Do not rename SDL fields, schema ids, wire discriminators, source import
-packages, or published contract identifiers as part of ordinary prose cleanup.
-Those surfaces require separate contract or module-boundary migrations with
-their own fixtures, compatibility analysis, and verification evidence.
+```python
+from raes import parse_sdl_file
+```
+
+The old `aces_sdl` namespace is not installed and has no compatibility alias,
+shim, fallback import, or namespace-package residue. Code using that import must
+change before upgrading. This package-boundary cut is released as version
+1.0.0.
+
+Do not rename SDL fields, schema ids, wire discriminators, other internal
+owning packages, or published contract identifiers as part of ordinary prose
+cleanup. Those surfaces require separate contract or module-boundary
+migrations with their own fixtures, compatibility analysis, and verification
+evidence.

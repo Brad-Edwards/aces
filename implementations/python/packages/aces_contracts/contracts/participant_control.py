@@ -5,10 +5,10 @@ from __future__ import annotations
 from enum import Enum
 from typing import Annotated, Literal
 
-from aces_sdl.participant_behavior_specification import MixedControlTransitionKind
 from pydantic import Field, GetJsonSchemaHandler, field_validator, model_validator
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema
+from raes.participant_behavior_specification import MixedControlTransitionKind
 
 from .base import (
     ContractModel,

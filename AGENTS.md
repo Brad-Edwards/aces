@@ -1,4 +1,4 @@
-# ACES SDL Agent Rules
+# RAES SDL Agent Rules
 
 Use the repo policy tooling before and after implementation work.
 

@@ -141,7 +141,7 @@ def test_non_completion_reference_domain_drift_is_flagged(tmp_path: Path) -> Non
             "[node validator]",
             "| | [reference rules](#5-cross-section-reference-edge-catalog) | [node validator]",
         ),
-        ("[node validator](../../implementations/python/packages/aces_sdl/validator/_nodes_infra_network.py)", ""),
+        ("[node validator](../../implementations/python/packages/raes/validator/_nodes_infra_network.py)", ""),
     ],
 )
 def test_reference_row_classification_drift_is_flagged(tmp_path: Path, old: str, new: str) -> None:
@@ -217,7 +217,7 @@ def test_implementation_evidence_cannot_be_normative_owner(tmp_path: Path) -> No
         repo,
         "specs/sdl/references.md",
         "[reference rules](#5-cross-section-reference-edge-catalog)",
-        "[implementation](../../implementations/python/packages/aces_sdl/scenario.py)",
+        "[implementation](../../implementations/python/packages/raes/scenario.py)",
     )
     assert "sdl-catalog-reference-owner" in _rule_ids(repo)
 

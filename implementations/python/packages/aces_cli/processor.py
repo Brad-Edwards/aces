@@ -36,8 +36,8 @@ from aces_processor.satisfiability import (
     SatisfiabilityOperationalError,
     analyze_scenario_file,
 )
-from aces_sdl import SDLError, SDLInstantiationError, SDLParseError, SDLValidationError
 from pydantic import ValidationError
+from raes import SDLError, SDLInstantiationError, SDLParseError, SDLValidationError
 
 app = typer.Typer(help="Processor declarations and compatibility surfaces.")
 

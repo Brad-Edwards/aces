@@ -85,7 +85,7 @@ from aces_contracts.workflow import WorkflowStepExecutionState as WorkflowStepEx
 from aces_contracts.workflow import WorkflowStepLifecycle as WorkflowStepLifecycle
 from aces_contracts.workflow import WorkflowStepOutcome as WorkflowStepOutcome
 from aces_contracts.workflow import validate_workflow_step_result_contract as validate_workflow_step_result_contract
-from aces_sdl.participant_temporal_semantics import ParticipantTemporalState as ParticipantTemporalState
+from raes.participant_temporal_semantics import ParticipantTemporalState as ParticipantTemporalState
 
 from aces_processor.semantics.realization import CompiledRealizationRequirement as CompiledRealizationRequirement
 

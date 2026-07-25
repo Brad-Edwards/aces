@@ -5,23 +5,25 @@ from __future__ import annotations
 import inspect
 import json
 
-import aces_sdl
 import pytest
+import raes
 from aces_contracts.contracts import schema_bundle
 from aces_processor.compiler import compile_runtime_model
-from aces_sdl import SDLInstantiationError, SDLValidationError
-from aces_sdl.canonical import (
+from jsonschema import Draft202012Validator
+from pydantic import ValidationError
+from raes import SDLInstantiationError, SDLValidationError
+from raes.canonical import (
     INSTANTIATED_SNAPSHOT_PROFILE,
     canonical_instantiated_sdl_bytes,
     canonical_instantiated_sdl_digest,
 )
-from aces_sdl.instantiate import (
+from raes.instantiate import (
     _bind_scenario_content,
     admit_instantiated_scenario,
     instantiate_scenario,
 )
-from aces_sdl.parser import parse_sdl_file
-from aces_sdl.phase_contracts import (
+from raes.parser import parse_sdl_file
+from raes.phase_contracts import (
     BindingOrigin,
     CapabilityConstraint,
     InstantiationProvenance,
@@ -29,9 +31,7 @@ from aces_sdl.phase_contracts import (
     ResolvedImportProvenance,
     SemanticDigest,
 )
-from aces_sdl.scenario import ExpandedScenario, InstantiatedScenario, Scenario, ScenarioContent
-from jsonschema import Draft202012Validator
-from pydantic import ValidationError
+from raes.scenario import ExpandedScenario, InstantiatedScenario, Scenario, ScenarioContent
 
 
 def _digest() -> SemanticDigest:
@@ -70,7 +70,7 @@ def test_phase_models_have_disjoint_authoring_and_instantiated_fields() -> None:
         "expansion_provenance",
     }
     assert set(InstantiatedScenario.model_fields) == shared | {"instantiation_provenance"}
-    assert "ExpandedScenario" not in aces_sdl.__all__
+    assert "ExpandedScenario" not in raes.__all__
 
 
 @pytest.mark.parametrize(

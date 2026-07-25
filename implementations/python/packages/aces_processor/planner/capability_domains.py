@@ -1,9 +1,9 @@
 """Finite-variable capability-domain validation for provisioner gates."""
 
 from aces_backend_protocols.account_features import provisioner_account_features
-from aces_sdl.infrastructure import MINIMUM_NODE_COUNT
-from aces_sdl.nodes import OSFamily
-from aces_sdl.value_parsing import extract_variable_name, parse_enum_or_var, parse_int_or_var
+from raes.infrastructure import MINIMUM_NODE_COUNT
+from raes.nodes import OSFamily
+from raes.value_parsing import extract_variable_name, parse_enum_or_var, parse_int_or_var
 
 from ..models import CompiledCapabilityConstraint, Diagnostic, NodeRuntime, ResolvedResource, RuntimeModel
 

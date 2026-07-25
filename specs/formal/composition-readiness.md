@@ -29,7 +29,7 @@ It does lock the semantic preconditions those features must respect.
 ## Current Implementation Hooks
 
 - objective/window references already carry a namespace-extensible path slot in
-  `implementations/python/packages/aces_sdl/semantics/objectives.py`
+  `implementations/python/packages/raes/semantics/objectives.py`
 - planner identity handling is already defined in terms of canonical compiled
   addresses in `implementations/python/packages/aces_processor/semantics/planner.py`
 - named regression tests pin the layout/namespace invariants:

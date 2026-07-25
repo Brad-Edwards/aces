@@ -16,12 +16,12 @@ from aces_contracts.satisfiability import (
     ConstraintSymbolModel,
     NormalizedConstraintModel,
 )
-from aces_sdl.canonical import canonical_sdl_digest
-from aces_sdl.infrastructure import ACLAction
-from aces_sdl.nodes import OSFamily
-from aces_sdl.scenario import ExpandedScenario, Scenario
-from aces_sdl.value_parsing import extract_variable_name, normalize_enum_value, variable_names_in_value
-from aces_sdl.variables import Variable, VariableType
+from raes.canonical import canonical_sdl_digest
+from raes.infrastructure import ACLAction
+from raes.nodes import OSFamily
+from raes.scenario import ExpandedScenario, Scenario
+from raes.value_parsing import extract_variable_name, normalize_enum_value, variable_names_in_value
+from raes.variables import Variable, VariableType
 
 _MAX_SYMBOLS = 128
 _MAX_CLAUSES = 512

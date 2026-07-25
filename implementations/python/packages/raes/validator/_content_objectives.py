@@ -24,7 +24,7 @@ from ..semantics.participant_outcome import (
 from ._participant_execution_renderers import AUTONOMOUS_PARTICIPANT_ISSUE_RENDERERS
 
 # Renders an objective-semantics issue (machine-readable code from
-# ``aces_sdl.semantics.objective_semantics``) into the authoring-error string
+# ``raes.semantics.objective_semantics``) into the authoring-error string
 # the SDL surface has always used. Keyed by issue code so a new code is a new
 # line here rather than a new branch in a growing conditional.
 _OBJECTIVE_ISSUE_RENDERERS = {
@@ -444,7 +444,7 @@ class _ContentObjectivesMixin:
         # Declarative-objective semantics — actor binding, target resolution,
         # success interpretation, windows, and dependency ordering (SEM-207).
         # The name-level reference graph, ordering/refresh-role model, and
-        # fail-closed issue set live in ``aces_sdl.semantics.objective_semantics``;
+        # fail-closed issue set live in ``raes.semantics.objective_semantics``;
         # this pass renders the machine-readable issues it reports as authoring
         # errors.
         analysis = analyze_objective_semantics(

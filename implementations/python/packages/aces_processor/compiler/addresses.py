@@ -3,9 +3,9 @@
 from collections.abc import Mapping
 
 from aces_backend_protocols.domain_topology import DomainTopologyBinding
-from aces_sdl.nodes import NodeType
-from aces_sdl.scenario import InstantiatedScenario, Scenario
-from aces_sdl.semantics.domain_topology import (
+from raes.nodes import NodeType
+from raes.scenario import InstantiatedScenario, Scenario
+from raes.semantics.domain_topology import (
     DomainNodeBinding,
 )
 

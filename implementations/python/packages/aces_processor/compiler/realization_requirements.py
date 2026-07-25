@@ -1,11 +1,11 @@
 """Realization-requirement compilation (SEM-218)."""
 
-from aces_sdl.explicitness import ExplicitnessClass, ExplicitnessProvenance
-from aces_sdl.identifiers import QualifiedName
-from aces_sdl.nodes import NodeType
-from aces_sdl.realization_designation import resolve_realization_designation
-from aces_sdl.scenario import InstantiatedScenario
-from aces_sdl.semantics.domain_topology import (
+from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance
+from raes.identifiers import QualifiedName
+from raes.nodes import NodeType
+from raes.realization_designation import resolve_realization_designation
+from raes.scenario import InstantiatedScenario
+from raes.semantics.domain_topology import (
     DomainTopologyAnalysis,
 )
 

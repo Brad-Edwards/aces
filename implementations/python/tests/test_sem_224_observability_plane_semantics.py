@@ -27,8 +27,10 @@ from aces_contracts.contracts import (
     ExperimentEvidenceRecordModel,
     schema_bundle,
 )
-from aces_sdl._runtime_service_families import RUNTIME_SERVICE_FAMILIES
-from aces_sdl.observability_plane_semantics import (
+from jsonschema import Draft202012Validator
+from pydantic import ValidationError
+from raes._runtime_service_families import RUNTIME_SERVICE_FAMILIES
+from raes.observability_plane_semantics import (
     AMBIGUOUS_PLANE_TOKENS,
     PLANE_BY_CONTRACT_ID,
     SCENARIO_NATIVE_OBSERVABILITY_FAMILIES,
@@ -39,8 +41,6 @@ from aces_sdl.observability_plane_semantics import (
     classify_runtime_family,
     token_decides_plane,
 )
-from jsonschema import Draft202012Validator
-from pydantic import ValidationError
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 FIXTURES_ROOT = REPO_ROOT / "contracts" / "fixtures"

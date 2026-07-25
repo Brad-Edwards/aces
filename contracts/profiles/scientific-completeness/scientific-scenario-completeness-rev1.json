@@ -59,7 +59,7 @@
           "taxonomy_id": "aces-behavioral-relations", "taxonomy_revision": "rev2", "relation_id": "semantic-validity",
           "subject": "An artifact admitted by the valid-sdl-fragment profile", "left_carrier_ref": "scientific-scenario-completeness@rev1:valid-sdl-fragment",
           "quantifier_scope": "single-artifact", "evidence_scope": "structural", "evidence_boundary": "Parser and semantic validator acceptance for the submitted SDL artifact under its declared profile.",
-          "assurance_status": "tested", "evidence_refs": ["implementations/python/packages/aces_sdl/validator/", "implementations/python/tests/"],
+          "assurance_status": "tested", "evidence_refs": ["implementations/python/packages/raes/validator/", "implementations/python/tests/"],
           "limitations": ["Acceptance applies only to the submitted artifact and the declared SDL profile revision."],
           "explicit_non_claims": ["Semantic validity does not establish backend realization or behavioral equivalence."]
         }

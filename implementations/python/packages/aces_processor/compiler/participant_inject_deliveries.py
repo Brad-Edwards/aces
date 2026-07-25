@@ -1,6 +1,6 @@
 """Participant-directed inject delivery compilation (DSL-142)."""
 
-from aces_sdl.scenario import InstantiatedScenario
+from raes.scenario import InstantiatedScenario
 
 from ..models import ParticipantInjectDeliveryRuntime
 from .addresses import (

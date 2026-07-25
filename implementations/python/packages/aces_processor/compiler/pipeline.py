@@ -2,13 +2,13 @@
 
 from collections.abc import Mapping
 
-from aces_sdl import build_declaration_index
-from aces_sdl.instantiate import admit_instantiated_scenario, instantiate_scenario
-from aces_sdl.scenario import ExpandedScenario, InstantiatedScenario, Scenario
-from aces_sdl.semantics.domain_topology import (
+from raes import build_declaration_index
+from raes.instantiate import admit_instantiated_scenario, instantiate_scenario
+from raes.scenario import ExpandedScenario, InstantiatedScenario, Scenario
+from raes.semantics.domain_topology import (
     analyze_domain_topology,
 )
-from aces_sdl.value_parsing import is_variable_ref
+from raes.value_parsing import is_variable_ref
 
 from ..models import (
     Diagnostic,

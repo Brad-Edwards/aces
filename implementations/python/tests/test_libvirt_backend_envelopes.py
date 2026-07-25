@@ -15,8 +15,8 @@ from aces_backend_libvirt.techvault_native import TechVaultNativeLibvirtDriver
 from aces_backend_protocols.manifest import backend_manifest_payload
 from aces_contracts.realization_envelope import BackendRealizationEnvelopeModel, realization_envelope_digest
 from aces_processor.reference import run_reference_processor
-from aces_sdl.parser import parse_sdl
 from libvirt_conformance_fixtures import RecordingLibvirtDriver
+from raes.parser import parse_sdl
 
 
 def test_default_libvirt_manifest_selects_generic_envelope():

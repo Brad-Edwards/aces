@@ -9,7 +9,7 @@ from aces_contracts.diagnostics import Diagnostic
 from aces_contracts.evaluation import EvaluationExecutionContract, EvaluationResultContract
 from aces_contracts.planning import EvaluationPlan, OrchestrationPlan, ProvisioningPlan
 from aces_contracts.runtime_state import RuntimeSnapshot
-from aces_sdl.scenario import InstantiatedScenario
+from raes.scenario import InstantiatedScenario
 
 from aces_processor.semantics.realization import CompiledRealizationRequirement
 

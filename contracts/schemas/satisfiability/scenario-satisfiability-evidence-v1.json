@@ -20841,7 +20841,7 @@
         }
       ],
       "level": "error",
-      "validator": "aces_sdl.validator.SemanticValidator._verify_service_materialization"
+      "validator": "raes.validator.SemanticValidator._verify_service_materialization"
     }
   ],
   "x-aces-semantic-profile": {

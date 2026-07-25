@@ -34,7 +34,7 @@ credentials, polling loops, or live control-plane behavior.
 
 ## Name-level source of truth
 
-`aces_sdl.semantics.objective_semantics.analyze_objective_semantics(...)` is the
+`raes.semantics.objective_semantics.analyze_objective_semantics(...)` is the
 single name-level analyzer. Given the name-keyed SDL constructs plus the
 targetable named-reference index (and an optional `is_unresolved` predicate so
 `${var}` placeholders are skipped and re-checked after instantiation), it
@@ -107,7 +107,7 @@ itself is unit-tested in `implementations/python/tests/test_semantics_objectives
 
 ## Anti-patterns
 
-- a second objective schema beside `aces_sdl.objectives`, or a second reference
+- a second objective schema beside `raes.objectives`, or a second reference
   resolver beside `SemanticValidator`'s named-reference index / the compiler's
   canonical address helpers;
 - duplicating the window, dependency, or reference-resolution rules in compiler,

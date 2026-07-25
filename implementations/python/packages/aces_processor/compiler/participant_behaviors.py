@@ -2,7 +2,7 @@
 
 from collections.abc import Callable, Mapping
 
-from aces_sdl.scenario import InstantiatedScenario
+from raes.scenario import InstantiatedScenario
 
 from ..models import (
     Diagnostic,

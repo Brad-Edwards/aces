@@ -1,6 +1,6 @@
 """Mixed-control participant behavior compilation helpers."""
 
-from aces_sdl.participant_behavior_specification import (
+from raes.participant_behavior_specification import (
     MixedControlDispositionRules,
     MixedControlParticipantOperation,
     ParticipantBehaviorSpecification,

@@ -2,9 +2,9 @@
   "contract_id": "sdl-authoring-input-v1",
   "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
   "stability": "draft",
-  "content_hash": "780e42fd35e9fd09e8fa170f4e14109e6ceacdfe7d021f65e8e51ab4159a5694",
+  "content_hash": "41ac5c7de713505855d29bdcc13bcb39dbb84914eb4a0e6779baa66b87615fdf",
   "last_change": {
-    "summary": "Added closed participant-directed inject delivery authoring with governed policy, occurrence, time, evidence, and control references.",
-    "content_hash": "780e42fd35e9fd09e8fa170f4e14109e6ceacdfe7d021f65e8e51ab4159a5694"
+    "summary": "Added closed participant-directed inject delivery authoring and retargeted Python validator references to raes.",
+    "content_hash": "41ac5c7de713505855d29bdcc13bcb39dbb84914eb4a0e6779baa66b87615fdf"
   }
 }

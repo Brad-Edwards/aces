@@ -6,15 +6,15 @@ from aces_backend_protocols.capabilities import (
     WorkflowFeature,
     WorkflowStatePredicateFeature,
 )
-from aces_sdl.orchestration import (
+from raes.orchestration import (
     Workflow,
     WorkflowPredicate,
     WorkflowStep,
     WorkflowStepExecutionMode,
     WorkflowStepType,
 )
-from aces_sdl.scenario import InstantiatedScenario
-from aces_sdl.semantics.workflow import (
+from raes.scenario import InstantiatedScenario
+from raes.semantics.workflow import (
     workflow_step_semantic_contract,
 )
 
