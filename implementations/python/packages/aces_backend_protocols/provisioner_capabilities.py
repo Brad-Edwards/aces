@@ -10,6 +10,20 @@ PROVISIONER_SERVICE_MATERIALIZATION_PROFILE_SCOPE = (
 )
 
 
+def _require_string_values(name: str, values: frozenset[str], *, required: bool = False) -> None:
+    if required and not values:
+        raise ValueError(f"ProvisionerCapabilities.{name} must not be empty")
+    if any(not value.strip() for value in values):
+        raise ValueError(f"ProvisionerCapabilities.{name} must not contain empty strings")
+
+
+def _validate_account_support(capabilities: "ProvisionerCapabilities") -> None:
+    if capabilities.supports_accounts and not capabilities.supported_account_features:
+        raise ValueError("ProvisionerCapabilities that support accounts must declare supported_account_features")
+    if not capabilities.supports_accounts and capabilities.supported_account_features:
+        raise ValueError("supported_account_features require supports_accounts=True")
+
+
 @dataclass(frozen=True)
 class ProvisionerCapabilities:
     name: str
@@ -29,24 +43,15 @@ class ProvisionerCapabilities:
     def __post_init__(self) -> None:
         if not self.name.strip():
             raise ValueError("ProvisionerCapabilities.name must be non-empty")
-        if not self.supported_node_types:
-            raise ValueError("ProvisionerCapabilities.supported_node_types must not be empty")
-        if any(not node_type.strip() for node_type in self.supported_node_types):
-            raise ValueError("ProvisionerCapabilities.supported_node_types must not contain empty strings")
-        if not self.supported_os_families:
-            raise ValueError("ProvisionerCapabilities.supported_os_families must not be empty")
-        if any(not os_family.strip() for os_family in self.supported_os_families):
-            raise ValueError("ProvisionerCapabilities.supported_os_families must not contain empty strings")
-        if any(not content_type.strip() for content_type in self.supported_content_types):
-            raise ValueError("ProvisionerCapabilities.supported_content_types must not contain empty strings")
-        if any(not feature.strip() for feature in self.supported_account_features):
-            raise ValueError("ProvisionerCapabilities.supported_account_features must not contain empty strings")
-        if any(not profile.strip() for profile in self.supported_domain_profiles):
-            raise ValueError("ProvisionerCapabilities.supported_domain_profiles must not contain empty strings")
-        if any(not profile.strip() for profile in self.supported_service_materialization_profiles):
-            raise ValueError(
-                "ProvisionerCapabilities.supported_service_materialization_profiles must not contain empty strings"
-            )
+        _require_string_values("supported_node_types", self.supported_node_types, required=True)
+        _require_string_values("supported_os_families", self.supported_os_families, required=True)
+        _require_string_values("supported_content_types", self.supported_content_types)
+        _require_string_values("supported_account_features", self.supported_account_features)
+        _require_string_values("supported_domain_profiles", self.supported_domain_profiles)
+        _require_string_values(
+            "supported_service_materialization_profiles",
+            self.supported_service_materialization_profiles,
+        )
         validate_controlled_vocabulary_scope_values(
             "capabilities.provisioner.supported_node_types",
             self.supported_node_types,
@@ -73,10 +78,7 @@ class ProvisionerCapabilities:
         )
         if self.max_total_nodes is not None and self.max_total_nodes < 1:
             raise ValueError("ProvisionerCapabilities.max_total_nodes must be positive when provided")
-        if self.supports_accounts and not self.supported_account_features:
-            raise ValueError("ProvisionerCapabilities that support accounts must declare supported_account_features")
-        if not self.supports_accounts and self.supported_account_features:
-            raise ValueError("supported_account_features require supports_accounts=True")
+        _validate_account_support(self)
 
 
 __all__ = [

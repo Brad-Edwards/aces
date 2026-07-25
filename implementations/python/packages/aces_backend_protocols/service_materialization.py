@@ -79,7 +79,8 @@ def service_materialization_plan_diagnostics(
                 _diagnostic(
                     "provisioner.service-materialization-readback-unsupported",
                     operation.address,
-                    "Backend realization envelope does not provide independent native readback for service materialization.",
+                    "Backend realization envelope does not provide independent native readback "
+                    "for service materialization.",
                 )
             )
     return diagnostics
@@ -88,26 +89,56 @@ def service_materialization_plan_diagnostics(
 def _binding_violation(payload: Mapping[str, object], binding: object) -> str | None:
     if not isinstance(binding, Mapping) or set(binding) != _BINDING_FIELDS:
         return "Service materialization binding is missing required closed contract fields."
-    if binding.get("interface_profile") != _PROFILE or binding.get("profile_version") != _VERSION:
-        return "Service materialization profile identity is unsupported or incomplete."
-    if any(binding.get(field) != expected for field, expected in _REQUIREMENTS.items()):
-        return "Service materialization exact operation requirements are unsupported or incomplete."
+    violations = (
+        _profile_violation(binding),
+        _requirements_violation(binding),
+        _content_type_violation(payload, binding),
+        _target_violation(payload, binding),
+        _digest_violation(binding),
+        _readback_violation(binding),
+        _ownership_violation(binding),
+    )
+    return next((message for message in violations if message is not None), None)
+
+
+def _profile_violation(binding: Mapping[str, object]) -> str | None:
+    valid = binding.get("interface_profile") == _PROFILE and binding.get("profile_version") == _VERSION
+    return None if valid else "Service materialization profile identity is unsupported or incomplete."
+
+
+def _requirements_violation(binding: Mapping[str, object]) -> str | None:
+    valid = all(binding.get(field) == expected for field, expected in _REQUIREMENTS.items())
+    return None if valid else "Service materialization exact operation requirements are unsupported or incomplete."
+
+
+def _content_type_violation(payload: Mapping[str, object], binding: Mapping[str, object]) -> str | None:
     content_type = binding.get("content_type")
     spec = payload.get("spec")
-    if not isinstance(spec, Mapping) or content_type != spec.get("type"):
-        return "Service materialization content type does not match the content placement."
-    target_address = payload.get("target_address")
-    service_address = binding.get("target_service_address")
-    if not _service_belongs_to_target(target_address, service_address):
-        return "Service materialization target service does not belong to the content target node."
+    valid = isinstance(spec, Mapping) and content_type == spec.get("type")
+    return None if valid else "Service materialization content type does not match the content placement."
+
+
+def _target_violation(payload: Mapping[str, object], binding: Mapping[str, object]) -> str | None:
+    valid = _service_belongs_to_target(payload.get("target_address"), binding.get("target_service_address"))
+    return None if valid else "Service materialization target service does not belong to the content target node."
+
+
+def _digest_violation(binding: Mapping[str, object]) -> str | None:
     digest = binding.get("canonical_content_digest")
-    if not isinstance(digest, str) or _DIGEST_RE.fullmatch(digest) is None:
-        return "Service materialization canonical content digest is invalid."
-    if not _readback_refs_valid(binding):
-        return "Service materialization readback assertions, evidence, and observation boundaries are required."
-    if not _ownership_valid(binding):
-        return "Service materialization shared-state and reset ownership is incomplete or inconsistent."
-    return None
+    valid = isinstance(digest, str) and _DIGEST_RE.fullmatch(digest) is not None
+    return None if valid else "Service materialization canonical content digest is invalid."
+
+
+def _readback_violation(binding: Mapping[str, object]) -> str | None:
+    if _readback_refs_valid(binding):
+        return None
+    return "Service materialization readback assertions, evidence, and observation boundaries are required."
+
+
+def _ownership_violation(binding: Mapping[str, object]) -> str | None:
+    if _ownership_valid(binding):
+        return None
+    return "Service materialization shared-state and reset ownership is incomplete or inconsistent."
 
 
 def _service_belongs_to_target(target_address: object, service_address: object) -> bool:
