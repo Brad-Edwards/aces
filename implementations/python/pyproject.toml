@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "aces-sdl"
+name = "raes-sdl"
 version = "0.23.1"
 description = "Backend-agnostic cyber range scenario description language and runtime."
 dynamic = ["readme"]
@@ -46,8 +46,8 @@ docs = [
 ]
 
 [project.scripts]
-aces = "aces.cli.main:app"
-aces-mcp = "aces_mcp.server:main"
+raes = "aces.cli.main:app"
+raes-mcp = "aces_mcp.server:main"
 
 # Version is the static `[project] version` above (#684) — the single source of
 # truth, rewritten by release-please on each release. Hatchling reads it directly;

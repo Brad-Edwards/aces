@@ -24,9 +24,9 @@ reproducibility, or behavioral equivalence.
 
 ## Use Through MCP
 
-Agents using `aces-mcp` should call `aces_intended_use_profiles` before
+Agents using `raes-mcp` should call `raes_intended_use_profiles` before
 authoring or making readiness claims. With no argument, the tool lists the five
-profiles and their computed ACES delivery outcomes. Passing `profile_id`
+profiles and their computed RAES delivery outcomes. Passing `profile_id`
 returns the required concerns, current delivery status, evidence references,
 limitations, blocking issue references, explicit nonclaims, and the existing
 authoring tools relevant to that intended use.
@@ -37,7 +37,7 @@ For example:
 {"profile_id": "controlled-experiment-scenario"}
 ```
 
-The result is an assessment of **what the current ACES ecosystem delivers**.
+The result is an assessment of **what the current RAES ecosystem delivers**.
 It deliberately reports `scenario_assessment.status` as `not-assessed`: the
 tool does not inspect or certify a particular SDL document, experiment spec,
 backend, or run. Authors use the result to choose the appropriate SDL and

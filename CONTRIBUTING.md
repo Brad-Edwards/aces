@@ -1,6 +1,6 @@
-# Contributing to ACES SDL
+# Contributing to RAES SDL
 
-ACES SDL is a research-oriented engineering project. Contributions are useful
+RAES SDL is a research-oriented engineering project. Contributions are useful
 when they make the language, reference implementation, contracts, examples, or
 documentation more precise and easier to validate.
 

@@ -1,7 +1,7 @@
 # Specs
 
 `specs/` is the home for normative prose under the
-[ACES SDL authority boundary](authority/authority-boundary.yaml). Every
+[RAES SDL authority boundary](authority/authority-boundary.yaml). Every
 document under this directory is authoritative independent of any reference
 implementation or code-generation pipeline.
 

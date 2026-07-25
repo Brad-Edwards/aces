@@ -1,6 +1,6 @@
 ---
 name: Feature Request
-about: Suggest a feature for ACES SDL
+about: Suggest a feature for RAES SDL
 title: "[FEATURE] "
 labels: enhancement
 assignees: ''

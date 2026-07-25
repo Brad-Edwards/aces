@@ -771,7 +771,7 @@ def test_backend_manifest_v2_rejects_hollow_capability_blocks():
 def test_reference_backend_v2_fixture_matches_emitted_manifest():
     payload = json.loads((V2_VALID_DIR / "stub.json").read_text(encoding="utf-8"))
     emitted = backend_manifest_payload(create_stub_manifest())
-    # identity.version is the live aces-sdl distribution version (the committed
+    # identity.version is the live raes-sdl distribution version (the committed
     # __version__ literal, #684), which is bumped every release and is not pinned
     # to the fixture's example version. Normalize it before the structural
     # comparison; a non-empty real version is asserted elsewhere.

@@ -1,4 +1,4 @@
-"""Support helpers for ACES MCP operation tools."""
+"""Support helpers for RAES MCP operation tools."""
 
 from __future__ import annotations
 
@@ -354,7 +354,7 @@ def design_notes(scenario: Any, model: Any, execution_plan: Any) -> list[dict[st
 def claim_assessment(scenario: Any, model: Any, execution_plan: Any) -> dict[str, list[dict[str, str]]]:
     supported = [
         claim(
-            "authoring-syntax", "SDL YAML parses into the closed ACES SDL model.", "parse_sdl completed successfully."
+            "authoring-syntax", "SDL YAML parses into the closed RAES SDL model.", "parse_sdl completed successfully."
         ),
         claim(
             "semantic-validation",
@@ -368,7 +368,7 @@ def claim_assessment(scenario: Any, model: Any, execution_plan: Any) -> dict[str
         ),
         claim(
             "runtime-compilation",
-            "The scenario can be compiled into the ACES runtime model.",
+            "The scenario can be compiled into the RAES runtime model.",
             "compile_runtime_model completed successfully.",
         ),
     ]

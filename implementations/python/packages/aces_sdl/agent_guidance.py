@@ -65,4 +65,4 @@ def _find_repo_root(start: Path) -> Path:
     for candidate in (start, *start.parents):
         if (candidate / ".ground-control.yaml").exists() or (candidate / ".git").exists():
             return candidate
-    raise RuntimeError(f"could not locate aces-sdl repo root from {start}")
+    raise RuntimeError(f"could not locate RAES repo root from {start}")
