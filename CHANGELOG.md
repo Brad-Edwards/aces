@@ -8,6 +8,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 PRs do **not** edit this file directly. release-please maintains it from the
 Conventional Commit history on `main` (#684).
 
+## [0.24.0](https://github.com/RAESystem/rae/compare/v0.23.1...v0.24.0) (2026-07-25)
+
+
+### Features
+
+* add defensive behavior vocabularies ([#843](https://github.com/RAESystem/rae/issues/843)) ([ced4a42](https://github.com/RAESystem/rae/commit/ced4a42cde890614f16611c940dcad7643f3c426))
+* add EXP-718 controlled-randomness random-stream suite ([#850](https://github.com/RAESystem/rae/issues/850)) ([4043ecc](https://github.com/RAESystem/rae/commit/4043ecc6bb345645a736243d9e29ae530bfef099))
+* add formal semantic validation evidence gate ([#822](https://github.com/RAESystem/rae/issues/822)) ([24e3a32](https://github.com/RAESystem/rae/commit/24e3a323b885c7684181da9c78b95063cdf662b6))
+* add goal-oriented flexible scenario steps ([#851](https://github.com/RAESystem/rae/issues/851)) ([5a8b97a](https://github.com/RAESystem/rae/commit/5a8b97a3a985f54de45337606ffdaae9dd3f5bd6))
+* add governed scenario satisfiability analysis ([#842](https://github.com/RAESystem/rae/issues/842)) ([79b2854](https://github.com/RAESystem/rae/commit/79b2854e6c8bae982f8801319d9b46b60a5d9316))
+* add network namespace sharing to SDL ([#853](https://github.com/RAESystem/rae/issues/853)) ([3f4911b](https://github.com/RAESystem/rae/commit/3f4911b94606580f9ce8193938963be10a85f89d))
+* add portable trial cleanup contracts ([#854](https://github.com/RAESystem/rae/issues/854)) ([8040dbd](https://github.com/RAESystem/rae/commit/8040dbd354361ec106976f4ff2dc1a2a54104fb1))
+* add processor plan CLI to serialize execution plans to JSON ([#830](https://github.com/RAESystem/rae/issues/830)) ([430aa8a](https://github.com/RAESystem/rae/commit/430aa8a76897ccaf0fb257f2c1706985a6131738))
+* add researcher accessibility evidence protocol ([#821](https://github.com/RAESystem/rae/issues/821)) ([03a7856](https://github.com/RAESystem/rae/commit/03a7856eb3e3a30848639b5f9b6e981a52cc47b2))
+* add typed exploit-path analysis ([#848](https://github.com/RAESystem/rae/issues/848)) ([42fc38a](https://github.com/RAESystem/rae/commit/42fc38aac0017853b7201042dd8b4efba9da3a9e))
+* add validation profile catalog ([#867](https://github.com/RAESystem/rae/issues/867)) ([781b1ea](https://github.com/RAESystem/rae/commit/781b1ea1a6377d333558a883a0049de2910d3f6e))
+* compile domain controller placements ([#858](https://github.com/RAESystem/rae/issues/858)) ([4ff18d1](https://github.com/RAESystem/rae/commit/4ff18d1500334746abbf72aecc467bafd7fa61d9))
+* cut over public surfaces to RAES ([#870](https://github.com/RAESystem/rae/issues/870)) ([ecd6d79](https://github.com/RAESystem/rae/commit/ecd6d79dc6855f9d08e5d4b31d0ad9a4d12b2269))
+* define participant decision surface semantics ([#844](https://github.com/RAESystem/rae/issues/844)) ([e60d839](https://github.com/RAESystem/rae/commit/e60d839f6d014a2bf3b18045770296812751dc21))
+* define participant tool affordance semantics ([#838](https://github.com/RAESystem/rae/issues/838)) ([08909cf](https://github.com/RAESystem/rae/commit/08909cf232427971bd6a95023ac1d2e5d7936570))
+* implement participant exposure semantics ([#852](https://github.com/RAESystem/rae/issues/852)) ([e499a4d](https://github.com/RAESystem/rae/commit/e499a4d9050fef581daaf5f9708fd0bf3fea7094))
+* **runtime:** add trusted runtime fact bindings ([#846](https://github.com/RAESystem/rae/issues/846)) ([a6d2659](https://github.com/RAESystem/rae/commit/a6d2659f2c83da90de07376066652cc48e4adb74))
+* **runtime:** execute benign participants under shared time ([#869](https://github.com/RAESystem/rae/issues/869)) ([07c8d50](https://github.com/RAESystem/rae/commit/07c8d5075d8f7a1a486ea4c55e898fb428dac7b4))
+* **runtime:** publish portable shared time contracts ([#865](https://github.com/RAESystem/rae/issues/865)) ([2a76f39](https://github.com/RAESystem/rae/commit/2a76f39eca41b2776545b5d94d39e2b6dc69008e))
+* **sdl:** add bounded scenario-family variation points ([#841](https://github.com/RAESystem/rae/issues/841)) ([ed56a44](https://github.com/RAESystem/rae/commit/ed56a44f24664f8844013d165f56ad9bf55d6195))
+* **sdl:** add enterprise identity and deployment tenancy ([#860](https://github.com/RAESystem/rae/issues/860)) ([4b1f05a](https://github.com/RAESystem/rae/commit/4b1f05a15282c88352467e3e569990317cf01121))
+* **sdl:** add initial service state materialization semantics ([#862](https://github.com/RAESystem/rae/issues/862)) ([80fbf14](https://github.com/RAESystem/rae/commit/80fbf146608b286a79c5996ec4f7ece8ea570d51))
+* **sdl:** add mixed-control participant operations ([#840](https://github.com/RAESystem/rae/issues/840)) ([4a1061d](https://github.com/RAESystem/rae/commit/4a1061dee6a10ee5c0a95a3f4ab371d1553c2583))
+* **sdl:** add shared time semantics and runtime control ([#864](https://github.com/RAESystem/rae/issues/864)) ([b13a178](https://github.com/RAESystem/rae/commit/b13a17887e17341bcceed62b7711a9f70a8a6635))
+* **semantics:** define participant information-flow control ([#831](https://github.com/RAESystem/rae/issues/831)) ([fec6ea6](https://github.com/RAESystem/rae/commit/fec6ea686ef85afc776ddf084458c6cfa9949b9f))
+
 ## [0.23.1](https://github.com/Brad-Edwards/aces/compare/v0.23.0...v0.23.1) (2026-07-17)
 
 
