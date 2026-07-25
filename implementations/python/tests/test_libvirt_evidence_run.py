@@ -265,7 +265,7 @@ def test_non_claims_are_carried_verbatim(tmp_path):
     joined = " ".join(artifact["non_claims"])
     assert "No Wazuh detection-quality claim" in joined
     assert "No byte-equivalence" in joined
-    assert "aces#600" in joined
+    assert "RAESystem/rae#600" in joined
 
 
 # --- redaction gate ------------------------------------------------------------

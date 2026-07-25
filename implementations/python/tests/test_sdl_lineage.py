@@ -129,7 +129,7 @@ def test_native_claim_cannot_smuggle_external_source_or_compatibility() -> None:
     )
     native_subject["claims"][0]["source_refs"] = [payload["sources"][0]["source_id"]]
     native_subject["claims"][0]["compatibility"] = "compatible"
-    with pytest.raises(ValidationError, match="ACES-native claims"):
+    with pytest.raises(ValidationError, match="RAES-native claims"):
         SDLLineageLedgerModel.model_validate(payload)
 
 
@@ -142,7 +142,7 @@ def test_native_claim_requires_internal_authority_refs() -> None:
         if claim["classification"] == "aces_native"
     )
     native_claim["internal_authority_refs"] = []
-    with pytest.raises(ValidationError, match="ACES-native claims require internal authority refs"):
+    with pytest.raises(ValidationError, match="RAES-native claims require internal authority refs"):
         SDLLineageLedgerModel.model_validate(payload)
 
 
@@ -209,7 +209,7 @@ def test_non_native_claim_requires_explicit_compatibility_direction() -> None:
         if claim["classification"] != "aces_native"
     )
     claim["compatibility_direction"] = "not_applicable"
-    with pytest.raises(ValidationError, match="assess ACES relative"):
+    with pytest.raises(ValidationError, match="assess RAES relative"):
         SDLLineageLedgerModel.model_validate(payload)
 
 

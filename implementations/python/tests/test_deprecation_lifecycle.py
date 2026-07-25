@@ -289,7 +289,7 @@ def test_incomplete_security_exception(tmp_path: Path) -> None:
 
 def test_removed_without_removal_record(tmp_path: Path) -> None:
     ledger = _good_ledger()
-    ledger["records"][0]["status"] = "removed"
+    del ledger["records"][0]["removal_record"]
     _write_repo(tmp_path, ledger)
     assert "deprecation-records-removal-record" in _rule_ids(tmp_path)
 
