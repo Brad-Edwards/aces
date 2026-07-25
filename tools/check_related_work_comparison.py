@@ -1425,18 +1425,14 @@ def render_publication(
     observations = snapshot["observations"]
     score_by_key = {(item["system_id"], item["axis_id"]): item["score"] for item in observations}
     system_ids = [system["system_id"] for system in systems]
-    system_name_by_id = {
-        system["system_id"]: _current_project_name(system["name"]) for system in systems
-    }
+    system_name_by_id = {system["system_id"]: _current_project_name(system["name"]) for system in systems}
     lines = [
         PUBLICATION_START,
         f"Frozen snapshot: `{snapshot['snapshot_id']}` under protocol `{protocol['revision']}`.",
         "Scores are axis-specific ordinal evidence levels: 0 absent, 1 limited, 2 substantial, 3 strong;",
         "`oos` means the axis is outside the system's declared scope and is never treated as zero.",
         "",
-        "| Axis | "
-        + " | ".join(_current_project_name(system["name"]) for system in systems)
-        + " |",
+        "| Axis | " + " | ".join(_current_project_name(system["name"]) for system in systems) + " |",
         "| --- | " + " | ".join("---" for _ in systems) + " |",
     ]
     for axis in axes:
