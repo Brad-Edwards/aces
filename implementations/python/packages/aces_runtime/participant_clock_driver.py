@@ -164,7 +164,7 @@ class ParticipantClockDriver:
             candidate, key = self._rate_transition(snapshot, rate, now)
             if candidate is None:
                 continue
-            if candidate[0] == 0.0:
+            if candidate[0] <= 0.0:
                 return candidate[1], candidate[2], candidate[0]
             candidates.append(candidate)
             if key is not None:

@@ -1,6 +1,7 @@
 """Fail-closed validation for autonomous participant action commits."""
 
 from dataclasses import replace
+from typing import cast
 
 from aces_contracts.contracts import ParticipantBehaviorHistoryEventModel
 from aces_contracts.participant_binding import (
@@ -44,7 +45,10 @@ def _bound_request_result(
     action_result: object,
 ) -> tuple[ParticipantActionAdmissionRequest | None, str | None]:
     try:
-        bound_request = replace(request, action_result=action_result)
+        bound_request = cast(
+            ParticipantActionAdmissionRequest,
+            replace(request, action_result=action_result),
+        )
     except (TypeError, ValueError) as exc:
         return None, f"participant runtime action outcome contradicts its binding: {exc}"
     violations = participant_action_admission_request_violations(bound_request)

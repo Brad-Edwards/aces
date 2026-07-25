@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+from typing import cast
 
 from aces_contracts.contracts import (
     ParticipantAutonomousExecutionStateModel,
@@ -122,16 +123,19 @@ def _bound_action_request(
     )
     if request.implementation_selection.manifest_ref != policy.participant_implementation_ref:
         raise ValueError("participant implementation selection does not match the autonomous execution policy")
-    return replace(
-        request,
-        participant_address=context.participant_address,
-        action_contract_address=action_address,
-        observation_boundary_address=policy.observation_boundary_address,
-        action_instance_id=action_instance_id,
-        temporal_contexts=temporal_contexts,
-        action_result=None,
-        post_state_digest=None,
-        requires_terminal_outcome=True,
+    return cast(
+        ParticipantActionAdmissionRequest,
+        replace(
+            request,
+            participant_address=context.participant_address,
+            action_contract_address=action_address,
+            observation_boundary_address=policy.observation_boundary_address,
+            action_instance_id=action_instance_id,
+            temporal_contexts=temporal_contexts,
+            action_result=None,
+            post_state_digest=None,
+            requires_terminal_outcome=True,
+        ),
     )
 
 
