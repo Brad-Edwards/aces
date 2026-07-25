@@ -37,7 +37,7 @@ Canonical serializer notes:
   ``parse -> instantiate -> compile`` path injects no wall-clock / uuid / random
   values, so the compiled ``RuntimeModel`` carries no per-run fields (verified:
   no ``datetime.now`` / ``time.time`` / ``uuid4`` / ``random`` / ``secrets`` in
-  ``aces_sdl`` or ``aces_processor``). Author-provided time-typed values
+  ``raes`` or ``aces_processor``). Author-provided time-typed values
   (``start_time``, OCR durations, script ``time``) are deterministic functions
   of the input and need no exclusion. The strip mechanism is retained and
   check (1) is the tripwire: a future generated timestamp would differ between

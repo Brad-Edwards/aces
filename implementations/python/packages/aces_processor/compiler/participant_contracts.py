@@ -2,11 +2,11 @@
 
 from collections.abc import Callable
 
-from aces_sdl.participant_outcome_semantics import (
+from raes.participant_outcome_semantics import (
     OutcomeInterpretationSourceLayer,
     OutcomeInterpretationTargetLayer,
 )
-from aces_sdl.scenario import InstantiatedScenario
+from raes.scenario import InstantiatedScenario
 
 from ..models import (
     ParticipantActionContractRuntime,

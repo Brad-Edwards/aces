@@ -1,5 +1,5 @@
 from aces._compat import reexport as _reexport
 
-_reexport(globals(), "aces_sdl._errors")
+_reexport(globals(), "raes._errors")
 
 del _reexport

@@ -563,6 +563,10 @@ def _run_policy(session: nox.Session, reporter: SessionReporter, *args: str) -> 
             "skipped on staged check; runs on push and verify",
         )
         reporter.skip(
+            "policy / project positioning",
+            "skipped on staged check; runs on push and verify",
+        )
+        reporter.skip(
             "policy / ADR acceptance-content pin",
             "skipped on staged check; runs on push and verify",
         )
@@ -598,6 +602,10 @@ def _run_policy(session: nox.Session, reporter: SessionReporter, *args: str) -> 
         reporter.run(
             "policy / example library catalog",
             lambda: _run_project_python(session, "tools/check_example_library.py"),
+        )
+        reporter.run(
+            "policy / project positioning",
+            lambda: _run_project_python(session, "tools/check_project_positioning.py"),
         )
         reporter.run(
             "policy / ADR acceptance-content pin",

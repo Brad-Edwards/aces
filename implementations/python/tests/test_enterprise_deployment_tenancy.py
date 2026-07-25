@@ -10,8 +10,8 @@ import pytest
 import yaml
 from aces_contracts.contracts import schema_bundle
 from aces_processor.compiler import compile_runtime_model
-from aces_sdl import SDLParseError, SDLValidationError, parse_sdl, parse_sdl_file
 from jsonschema import Draft202012Validator
+from raes import SDLParseError, SDLValidationError, parse_sdl, parse_sdl_file
 
 _INSTANTIATION_PROVENANCE = {
     "authored_digest": {

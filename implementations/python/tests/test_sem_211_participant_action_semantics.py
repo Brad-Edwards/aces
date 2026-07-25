@@ -22,9 +22,9 @@ from aces_processor.models import (
     map_backend_diagnostic_to_participant_failure,
 )
 from aces_runtime.control_plane_store import LocalControlPlaneStore
-from aces_sdl._errors import SDLParseError
-from aces_sdl.parser import parse_sdl
-from aces_sdl.participant_behavior import (
+from raes._errors import SDLParseError
+from raes.parser import parse_sdl
+from raes.participant_behavior import (
     ParticipantEffectClass,
     ParticipantFailureClass,
     ParticipantPreconditionClass,

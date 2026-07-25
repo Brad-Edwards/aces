@@ -40,25 +40,25 @@ plane (ADR-055/064/069). Declarative `conditions` remain.
 | `scripts` | `dict[str, Script]` | Timed event sequences with human-readable durations |
 | `stories` | `dict[str, Story]` | Top-level exercise orchestration grouping scripts |
 
-### ACES extensions
+### RAES extensions
 
 | Section | Type | Purpose | Adapted From |
 |---------|------|---------|--------------|
 | `content` | `dict[str, Content]` | Data placed into systems (files, datasets, emails) | CyRIS `copy_content` |
 | `accounts` | `dict[str, Account]` | Curated scenario/provisioning accounts on nodes, not full runtime identity inventory | CyRIS `add_account` |
-| `identity_domains` | `dict[str, IdentityDomain]` | Authored domain identity and authority for controller/join realization | ACES ADR-082 |
+| `identity_domains` | `dict[str, IdentityDomain]` | Authored domain identity and authority for controller/join realization | RAES ADR-082 |
 | `relationships` | `dict[str, Relationship]` | Typed edges between elements (auth, trust, federation) | STIX Relationship SRO |
-| `forwarding_agents` | `list[RuntimeForwardingAgent]` | Scenario-level forwarding and shipping agents with element-carried identity | ACES ADR-050 |
-| `agents` | `dict[str, Agent]` | Autonomous participants (actions, knowledge, scope) | CybORG Agents, extended by ACES |
-| `action_contracts` | `dict[str, ParticipantActionContract]` | Preconditions, effects, failures, interactions, and fidelity claims for participant actions | ACES participant model |
-| `observation_boundaries` | `dict[str, ParticipantObservationBoundary]` | Participant-visible, hidden, discovered, and evidence-bearing information projections | ACES participant model |
-| `outcome_interpretation_rules` | `dict[str, OutcomeInterpretationRule]` | Rules connecting action observations and evidence to scenario-local outcomes | ACES participant model |
-| `behavior_specifications` | `dict[str, ParticipantBehaviorSpecification]` | Versioned aggregates over participant action, observation, outcome, authority, and mode surfaces | ACES ACT-606 |
-| `evidence_requirements` | `dict[str, EvidenceRequirement]` | Portable authored capture obligations, distinct from captured evidence | ACES DSL-124, ADR-066 |
+| `forwarding_agents` | `list[RuntimeForwardingAgent]` | Scenario-level forwarding and shipping agents with element-carried identity | RAES ADR-050 |
+| `agents` | `dict[str, Agent]` | Autonomous participants (actions, knowledge, scope) | CybORG Agents, extended by RAES |
+| `action_contracts` | `dict[str, ParticipantActionContract]` | Preconditions, effects, failures, interactions, and fidelity claims for participant actions | RAES participant model |
+| `observation_boundaries` | `dict[str, ParticipantObservationBoundary]` | Participant-visible, hidden, discovered, and evidence-bearing information projections | RAES participant model |
+| `outcome_interpretation_rules` | `dict[str, OutcomeInterpretationRule]` | Rules connecting action observations and evidence to scenario-local outcomes | RAES participant model |
+| `behavior_specifications` | `dict[str, ParticipantBehaviorSpecification]` | Versioned aggregates over participant action, observation, outcome, authority, and mode surfaces | RAES ACT-606 |
+| `evidence_requirements` | `dict[str, EvidenceRequirement]` | Portable authored capture obligations, distinct from captured evidence | RAES DSL-124, ADR-066 |
 | `objectives` | `dict[str, Objective]` | Scenario-local objectives binding actors, targets, windows, and success (against observable `conditions`); not EXP task records | CACAO action/target/agent |
 | `workflows` | `dict[str, Workflow]` | Branching and parallel control graphs over declared objectives | CACAO workflow graph patterns; semantics tightened using Step Functions / Argo / SCXML style control-flow rules |
 | `variables` | `dict[str, Variable]` | Parameterization (types, defaults, substitution) | CACAO playbook_variables |
-| `variation_points` | `dict[str, VariationPoint]` | Named bounded scenario-family domains and typed targets | ACES ADR-084 |
+| `variation_points` | `dict[str, VariationPoint]` | Named bounded scenario-family domains and typed targets | RAES ADR-084 |
 
 ---
 
@@ -754,7 +754,7 @@ propagation, stability, whether a backend may generate the source, and
 sensitivity classifications for the source and option strings. Mount sources
 or options classified as
 `redacted` or `operator_secret` must omit the raw value. This sensitivity
-vocabulary is an ACES runtime contract, not an adopted taxonomy from Docker,
+vocabulary is an RAES runtime contract, not an adopted taxonomy from Docker,
 Compose, or the cited scenario-language precedents. `filesystem_inventory` records
 runtime-observed filesystem entries with absolute path, entry type, ownership,
 UID/GID, mode, size, digest algorithm/value pairs, source-package path,
@@ -776,7 +776,7 @@ such as `seccomp:unconfined` or `no-new-privileges`); a seccomp posture is a
 distinct security control from `privileged`, so it is recorded separately (see
 [ADR-028](../../decisions/adrs/adr-028-container-seccomp-security-options-surface.md));
 `packages` records package-manager rows; `software_components` records
-node-local software identity at component granularity with stable ACES ids,
+node-local software identity at component granularity with stable RAES ids,
 component type, version, purl/CPE/hash identifiers, package or manifest
 lineage, and runtime paths when required; and `dependency_manifests` records
 required manifest files. Software components are required final state, not
@@ -798,7 +798,7 @@ become top-level authored `vulnerabilities`.
 
 `runtime.service_manager_units` records observed service-manager unit
 lifecycle state — what `systemctl` exposes from inside a realized range node.
-Each entry carries a stable ACES `unit_id`, a `manager_kind` (initially
+Each entry carries a stable RAES `unit_id`, a `manager_kind` (initially
 `systemd`, with `other` reserved), the native `unit_name` such as
 `sshd.service`, a `unit_type` (`service`/`socket`/`target`/`timer`/`path`/
 `mount`/`automount`/`swap`/`device`/`slice`/`scope`/`other`), and the
@@ -1044,7 +1044,7 @@ SCIM, SAML, OIDC, or IAM schema clone. Each authority has a stable
 same-node `Node.services[].name` transport bindings; identity-bearing
 subjects; policies; and typed relationships for membership, trust,
 federation, delegation, ownership, synchronization, and association. Stable
-ACES ids (`identity_authority_id`, `service_id`, `subject_id`, `policy_id`, and
+RAES ids (`identity_authority_id`, `service_id`, `subject_id`, `policy_id`, and
 `relationship_id`) are the portable reference surface and must be unique across
 the owning authority's local namespace. Provider-stable object identifiers
 remain observed data: use the specific field when one exists

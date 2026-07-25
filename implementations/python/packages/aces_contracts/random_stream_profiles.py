@@ -3,7 +3,7 @@
 Random-stream profiles live under ``contracts/profiles/random-stream/*.json``
 (ADR-009/019/061 normative corpus). Mirrors ``semantic_profiles.py``, but
 hardened per the EXP-718 preflight's "Normative profile and corpus gate":
-the profile id is validated against ``aces_sdl``'s portable-identifier
+the profile id is validated against ``raes``'s portable-identifier
 grammar *before* any path is constructed, and unsupported ids are rejected
 explicitly rather than allowed to 404 (or path-traverse) through the corpus
 loader.
@@ -15,7 +15,7 @@ import json
 from functools import cache
 from pathlib import Path
 
-from aces_sdl.identifiers import is_portable_identifier
+from raes.identifiers import is_portable_identifier
 
 from .contracts import RandomStreamProfileModel
 from .corpus import PROFILES, corpus_family_root

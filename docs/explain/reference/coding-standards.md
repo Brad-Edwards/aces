@@ -2,7 +2,7 @@
 
 ## Semantic Engineering and Lightweight Formal Methods
 
-ACES SDL uses lightweight formal methods for semantic and stateful subsystems, not
+RAES SDL uses lightweight formal methods for semantic and stateful subsystems, not
 for all code. The goal is to make behavior precise where ambiguity, graph
 constraints, or execution-state semantics matter, while keeping ordinary
 structural work lightweight.

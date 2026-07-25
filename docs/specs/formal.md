@@ -1,6 +1,6 @@
 # Formal Specifications
 
-Optional formal artifacts for ACES SDL semantic and stateful subsystems.
+Optional formal artifacts for RAES SDL semantic and stateful subsystems.
 
 These specifications live under `specs/formal/<domain>/` in the repository and
 cover the formally-verified properties of key subsystems. See

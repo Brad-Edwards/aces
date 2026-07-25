@@ -25,7 +25,7 @@ SCHEMA_DRIVER_PATHS = (
     "implementations/python/packages/aces_contracts/",
     "implementations/python/packages/aces_backend_protocols/",
     "implementations/python/packages/aces_processor/",
-    "implementations/python/packages/aces_sdl/",
+    "implementations/python/packages/raes/",
     "tools/generate_contract_schemas.py",
 )
 

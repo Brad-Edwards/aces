@@ -31,7 +31,7 @@ here. What is enforced:
   ``from package import submodule``, the ``aces.*`` compatibility wrappers, and
   package re-exports written either absolutely (``from pkg.core import name``) or
   with the idiomatic relative form (``from .core import name``); a bare
-  ``import aces_sdl`` does not count as evidence for every ``aces_sdl.*``
+  ``import raes`` does not count as evidence for every ``raes.*``
   artifact. The check is
   row-level: one resolvable import across the row's named tests satisfies it;
 * every ``test_*`` function in an ``active`` row's named test files contains at
@@ -427,7 +427,7 @@ def _check_adr_links_note(repo_root: Path) -> list[PolicyFailure]:
 # ``from package import submodule``, the ``aces.*`` compatibility wrappers, and
 # explicit ``from M import name`` package re-exports — so an honest indirect
 # import still counts. It deliberately does NOT import or execute any module, and
-# a bare ``import aces_sdl`` is not treated as evidence for every ``aces_sdl.*``
+# a bare ``import raes`` is not treated as evidence for every ``raes.*``
 # artifact. Dynamic ``__getattr__`` re-exports in a canonical package ``__init__``
 # are not resolved; those symbols remain reachable through the compat wrappers
 # (which are resolved), and the gate is row-level so one resolvable import per

@@ -363,7 +363,7 @@
         "test_status": "tested",
         "proof_status": "deliberately-unproved",
         "evidence_refs": [
-          "implementations/python/packages/aces_sdl/validator/"
+          "implementations/python/packages/raes/validator/"
         ]
       },
       "source_refs": [
@@ -703,7 +703,7 @@
         "test_status": "tested",
         "proof_status": "not-applicable",
         "evidence_refs": [
-          "implementations/python/packages/aces_sdl/canonical.py"
+          "implementations/python/packages/raes/canonical.py"
         ]
       },
       "source_refs": [

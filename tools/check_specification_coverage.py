@@ -44,6 +44,9 @@ EXPECTED_STRATA = {
 IMPLEMENTATION_SURFACE_PATHS = {
     "contract-models": "implementations/python/packages/aces_contracts",
     "processor-pipeline": "implementations/python/packages/aces_processor",
+    "sdl-pipeline": "implementations/python/packages/raes",
+}
+HISTORICAL_IMPLEMENTATION_SURFACE_PATHS = {
     "sdl-pipeline": "implementations/python/packages/aces_sdl",
 }
 
@@ -752,7 +755,11 @@ def _validate_implementation_surfaces(
             continue
         surface_id = surface.get("surface_id")
         expected_path = IMPLEMENTATION_SURFACE_PATHS.get(surface_id)
-        if surface.get("path") != expected_path:
+        recorded_path = surface.get("path")
+        if recorded_path not in {
+            expected_path,
+            HISTORICAL_IMPLEMENTATION_SURFACE_PATHS.get(surface_id),
+        }:
             failures.append(
                 _failure(
                     "specification-coverage-implementation-identity",
@@ -785,7 +792,7 @@ def _validate_implementation_surfaces(
 def _execute_artifact(repo_root: Path, kind: str, path: Path) -> dict[str, object]:
     if kind == "sdl":
         from aces_processor.compiler import compile_runtime_model
-        from aces_sdl import admit_instantiated_scenario, instantiate_scenario, parse_sdl_file
+        from raes import admit_instantiated_scenario, instantiate_scenario, parse_sdl_file
 
         authored = parse_sdl_file(path)
         instantiated = instantiate_scenario(authored)

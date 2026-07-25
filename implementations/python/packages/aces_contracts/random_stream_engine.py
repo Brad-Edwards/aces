@@ -14,7 +14,7 @@ and the implementation plan:
   pair; pure function, no shared state. (This binding's Python API exposes
   the same key-derivation mode via ``blake3.blake3(derive_key_context=...)``.)
 * ``address_bytes = canonical_jcs_bytes(StreamAddressModel)`` via the RFC
-  8785/JCS canonical-bytes pattern (``aces_sdl/canonical.py``).
+  8785/JCS canonical-bytes pattern (``raes/canonical.py``).
 * ``block = blake3.blake3(address_bytes, key=stream_key).digest(length=BLOCK_BYTES,
   seek=local_coordinate * BLOCK_BYTES)``.
 * Bounded-integer transforms consume the block via rejection sampling

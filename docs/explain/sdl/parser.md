@@ -149,7 +149,7 @@ import json
 from pathlib import Path
 
 from aces.core.sdl import parse_sdl, parse_sdl_file
-from aces_sdl import (
+from raes import (
     SDLMigrationPolicy,
     admit_instantiated_scenario,
     canonical_instantiated_sdl_digest,

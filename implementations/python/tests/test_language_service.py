@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from aces_sdl.language_service import (
+from raes.language_service import (
     apply_structured_edit,
     language_completions,
     language_diagnostics,

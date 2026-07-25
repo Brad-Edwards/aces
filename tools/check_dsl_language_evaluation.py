@@ -25,6 +25,8 @@ from tools.policy.common import (  # noqa: E402
 )
 
 MANIFEST_PATH = "docs/research/dsl-language-evaluation/bundle-manifest.json"
+_HISTORICAL_PACKAGE_PREFIX = "implementations/python/packages/aces_sdl"
+_CURRENT_PACKAGE_PREFIX = "implementations/python/packages/raes"
 _MAX_FILE_BYTES = 2 * 1024 * 1024
 _MAX_CATALOG_ITEMS = 128
 _MAX_EXECUTION_RECORDS = 20_000
@@ -339,6 +341,15 @@ _SENSITIVE_QUERY_KEYS = {
 
 def _failure(rule_id: str, message: str, path: str | None = None) -> PolicyFailure:
     return PolicyFailure(rule_id, message, path)
+
+
+def _resolve_repository_artifact(repo_root: Path, artifact_path: str) -> Path | None:
+    """Resolve an immutable evidence locator through the SDL package move."""
+
+    resolved_path = artifact_path
+    if artifact_path == _HISTORICAL_PACKAGE_PREFIX or artifact_path.startswith(f"{_HISTORICAL_PACKAGE_PREFIX}/"):
+        resolved_path = f"{_CURRENT_PACKAGE_PREFIX}{artifact_path[len(_HISTORICAL_PACKAGE_PREFIX) :]}"
+    return safe_repo_path(repo_root, resolved_path)
 
 
 def _exact_keys(
@@ -1505,7 +1516,7 @@ def _validate_protocol(
                     )
                 )
             else:
-                resolved = safe_repo_path(repo_root, artifact_path)
+                resolved = _resolve_repository_artifact(repo_root, artifact_path)
                 if resolved is None or not resolved.exists():
                     failures.append(
                         _failure(
@@ -1978,7 +1989,7 @@ def _validate_snapshot(
         ):
             continue
         artifact = surface["artifact"]
-        resolved = safe_repo_path(repo_root, artifact) if isinstance(artifact, str) else None
+        resolved = _resolve_repository_artifact(repo_root, artifact) if isinstance(artifact, str) else None
         if resolved is None or not resolved.exists():
             failures.append(
                 _failure(

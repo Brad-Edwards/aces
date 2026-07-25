@@ -3,14 +3,14 @@
 ## Scope
 
 This specification defines the controlled-vocabulary authority surface for
-portable declared terms whose values must compare consistently across ACES
+portable declared terms whose values must compare consistently across RAES
 artifacts.
 
 It distinguishes two cases:
 
 - closed enumerations, where the portable term set is fixed
 - governed-extension vocabularies, where the portable base terms are fixed but
-  controlled extension space remains available for ACES-native, experimental,
+  controlled extension space remains available for RAES-native, experimental,
   or still-evolving declarations
 
 Controlled vocabularies do not replace concept families, reference models, or
@@ -47,13 +47,13 @@ not duplicated inside each vocabulary object.
 
 When `source.provenance` is `adopted`, base terms must preserve the cited
 external authority's identifiers, names, URLs, and descriptions exactly as
-published in the pinned source artifact. ACES may bind those terms to its own
+published in the pinned source artifact. RAES may bind those terms to its own
 fields and may permit governed extensions, but it must not rewrite the adopted
 base-term meanings.
 
 When `source.provenance` is `adapted`, the pinned source artifact must preserve
 the external identifiers and source text while each catalog description clearly
-states the narrower ACES binding. Adaptation must not claim endorsement or
+states the narrower RAES binding. Adaptation must not claim endorsement or
 conformance by the external authority.
 
 ### Enumeration Rules
@@ -228,7 +228,7 @@ For governed apparatus-manifest capability fields:
 
 - GOV-917: canonical concept authority
 - GOV-918: cross-artifact concept binding
-- GOV-919: disciplined ACES-native extensions
+- GOV-919: disciplined RAES-native extensions
 - GOV-920: shared semantic profiles
 - GOV-921: shared reference models
 - GOV-922: controlled vocabularies and enumerations

@@ -19,9 +19,11 @@ from aces_mcp.tools.operations import register as register_operation_tools
 from aces_mcp.tools.reference import register as register_reference_tools
 
 _INSTRUCTIONS = """\
-You are connected to the RAES SDL (Scenario Description Language) server.
+You are connected to the Reproducible Agentic Environments System (RAES)
+authoring server. RAES supports agentic environments; RAES SDL is its authored scenario
+language.
 
-The SDL is a YAML-based language for specifying cyber-range scenarios — \
+The SDL is a YAML-based language for specifying scenarios — \
 who (entities, accounts, agents), what (nodes, features, vulnerabilities, \
 content), when (scripts, stories, events), and declarative experiment \
 semantics (objectives, scoring, conditions, relationships, workflows, \

@@ -7,8 +7,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
-from aces_sdl.semantics.workflow import WorkflowStepSemanticContract
-from aces_sdl.semantics.workflow import validate_workflow_step_result as _validate_workflow_step_result
+from raes.semantics.workflow import WorkflowStepSemanticContract
+from raes.semantics.workflow import validate_workflow_step_result as _validate_workflow_step_result
 
 from aces_contracts._validation import (
     enum_value,

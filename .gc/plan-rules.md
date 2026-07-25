@@ -35,8 +35,9 @@ These encode the hard rules previously in `AGENTS.md` prose.
 - Plans MUST NOT edit `CHANGELOG.md` or add changelog fragments: release-please
   owns `CHANGELOG.md` and generates it from the Conventional Commit history on
   `main` (#684). There is no `changelog.d/`.
-- Plans MUST NOT hand-edit the version (`[project] version` in
-  `implementations/python/pyproject.toml`); release-please bumps it on release.
+- Plans MUST NOT hand-edit the version
+  (`implementations/python/packages/raes/_version.py`); release-please bumps it
+  on release.
   Feature PRs squash-merge, so the PR title becomes the commit release-please
   reads: `feat:` → minor, `fix:`/`perf:` → patch, `feat!:` / a `BREAKING CHANGE:`
   footer → major (pre-1.0 demoted to minor); `docs`/`chore`/`refactor`/`test`/

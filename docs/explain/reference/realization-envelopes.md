@@ -1,6 +1,6 @@
 # Realization Envelopes and Observation Strength
 
-This page explains how ACES states, per backend configuration, **which scenario
+This page explains how RAES states, per backend configuration, **which scenario
 concerns it can realize and how strongly it can prove each one**. It is
 non-normative explanation; the governing decision is
 [ADR-070](../../decisions/adrs/adr-070-realization-envelope-semantics.md) and the
@@ -115,7 +115,7 @@ gate. Then:
    transport → initialization → concern probes → cleanup); a later stage never
    repairs an earlier one. Each concern becomes a `RealizationObservation` at
    `guest-observed` strength, compared to the requested realization. Failures are
-   distinct, stable, redacted `Diagnostic` codes naming the safe ACES address and
+   distinct, stable, redacted `Diagnostic` codes naming the safe RAES address and
    observation level — never raw XML, UUIDs, host paths, URIs, or credentials.
 5. **Commit eligibility.** The provisioner cannot return success, changed
    addresses, or a committed snapshot until all required daemon **and** guest

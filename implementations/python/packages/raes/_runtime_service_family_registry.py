@@ -3,7 +3,7 @@
 This module holds the pure registration data — the :class:`RuntimeServiceFamily`
 and :class:`RuntimeReferenceChild` dataclasses plus the canonical
 ``RUNTIME_SERVICE_FAMILIES`` table.  The traversal/alias logic that consumes the
-registry lives in :mod:`aces_sdl._runtime_service_families`, which re-exports
+registry lives in :mod:`raes._runtime_service_families`, which re-exports
 these names so existing import paths remain stable.
 """
 

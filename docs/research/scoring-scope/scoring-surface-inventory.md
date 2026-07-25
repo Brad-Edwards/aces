@@ -37,8 +37,8 @@ chain.
 - **Schema**: `contracts/schemas/sdl/sdl-authoring-input-v1.json`
   (`$defs.Metric`, `$defs.MetricType` = `manual` | `conditional`,
   `$defs.MinScore`), mirrored in `instantiated-scenario-v1.json`.
-- **Model**: `implementations/python/packages/aces_sdl/scoring.py` (`Metric`),
-  container `aces_sdl/scenario.py`. Cross-field validator forbids `condition`
+- **Model**: `implementations/python/packages/raes/scoring.py` (`Metric`),
+  container `raes/scenario.py`. Cross-field validator forbids `condition`
   on manual metrics and requires it on conditional metrics.
 - **Meaning**: a scored quantity — `max_score`, plus either a human-graded
   `artifact` (manual) or a `condition` reference (conditional). A metric is a
@@ -48,7 +48,7 @@ chain.
 
 - **Schema**: `$defs.Evaluation` in `sdl-authoring-input-v1.json`
   (`metrics` list, `min_score`).
-- **Model**: `aces_sdl/scoring.py` (`Evaluation`, `MinScore` with exclusive
+- **Model**: `raes/scoring.py` (`Evaluation`, `MinScore` with exclusive
   `absolute` / `percentage`).
 - **Meaning**: a pass/fail threshold over a group of metrics. This is a
   grading rule applied to accumulated scores.
@@ -57,7 +57,7 @@ chain.
 
 - **Schema**: `$defs.TLO` in `sdl-authoring-input-v1.json`
   (`evaluation` reference, required).
-- **Model**: `aces_sdl/scoring.py` (`TLO`); docstring defines TLO as
+- **Model**: `raes/scoring.py` (`TLO`); docstring defines TLO as
   "Training Learning Objective." (Note: the term is *training* learning
   objective, an exercise-grading construct, not "terminal" learning objective.)
 - **Meaning**: a training-exercise learning objective linked to one
@@ -66,7 +66,7 @@ chain.
 ### 4. `goals`
 
 - **Schema**: `$defs.Goal` in `sdl-authoring-input-v1.json` (`tlos` list).
-- **Model**: `aces_sdl/scoring.py` (`Goal`).
+- **Model**: `raes/scoring.py` (`Goal`).
 - **Meaning**: a high-level exercise goal composed of TLOs. The top of the
   grading tree.
 
@@ -74,9 +74,9 @@ chain.
 
 - **Schema**: `$defs.Agent.reward_calculator` — a plain string with default
   `""`, no `$ref`.
-- **Model**: `aces_sdl/agents.py` (`Agent.reward_calculator: str = ""`). This
+- **Model**: `raes/agents.py` (`Agent.reward_calculator: str = ""`). This
   is the **only** occurrence, and there is **no cross-reference validator** for
-  it anywhere under `aces_sdl/validator/` — unlike every other surface in this
+  it anywhere under `raes/validator/` — unlike every other surface in this
   inventory, it is an unresolved free-text label.
 - **Meaning**: names a CybORG reward-calculator class
   (e.g. `HybridImpactPwn`, `SupplyChainImpact`). It selects training/scoring
@@ -88,7 +88,7 @@ chain.
 ### The bridge: `objectives.success`
 
 `objectives` is an in-horizon surface (ADR-002), but its success model
-(`$defs.ObjectiveSuccess`, `aces_sdl/objectives.py`) currently lets an objective
+(`$defs.ObjectiveSuccess`, `raes/objectives.py`) currently lets an objective
 succeed on **either** observable state (`conditions`) **or** the score-shaped
 surfaces (`metrics` / `evaluations` / `tlos` / `goals`). This is the seam where
 the scoring pipeline reaches into the participant-facing surface. The validator
@@ -99,7 +99,7 @@ a scenario can express objective success purely in grading terms.
 
 - **Schema**: `$defs.Condition` in `sdl-authoring-input-v1.json` (command +
   interval form, or `source` form).
-- **Model**: `aces_sdl/conditions.py` (`Condition`).
+- **Model**: `raes/conditions.py` (`Condition`).
 - **Meaning**: an observable state fact about the run ("web-alive",
   "OTService available"). This is exactly the class of signal the discriminator
   keeps in scope: it describes the state of the environment that participants

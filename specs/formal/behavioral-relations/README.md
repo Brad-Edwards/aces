@@ -4,7 +4,7 @@ Classification: FM2, relation and assurance semantics.
 
 ## Scope And Authority
 
-This specification governs the meaning of ACES claims about validation,
+This specification governs the meaning of RAES claims about validation,
 conformance, realization, comparison, refinement, equivalence, participant
 visibility, multi-agent interaction, and empirical adequacy. It prevents a
 weaker observation from being reported as a stronger behavioral result.
@@ -146,7 +146,7 @@ Assurance axes are independent:
 | Axis | Question |
 | --- | --- |
 | definition | Is the relation defined precisely? |
-| implementation | Does ACES implement a checker or realization? |
+| implementation | Does RAES implement a checker or realization? |
 | test | What executable cases exercise it? |
 | proof | Is a universal obligation proved, model-checked, deliberately unproved, or future? |
 

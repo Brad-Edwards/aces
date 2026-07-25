@@ -87,9 +87,9 @@ I/O. Direct plan submission MUST repeat these checks.
 
 ## 4. Backend Conformance And Equivalence
 
-ACES standardizes the portable profile without selecting a product or backend.
+RAES standardizes the portable profile without selecting a product or backend.
 A backend MAY claim `service-content-v1` only when its own conformance evidence
-demonstrates native materialization through the ACES control path, fresh
+demonstrates native materialization through the RAES control path, fresh
 independent readback, reset ownership, and the declared participant projection.
 A manifest claim is not execution evidence.
 

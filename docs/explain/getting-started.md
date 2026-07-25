@@ -1,8 +1,29 @@
 # Getting Started With RAES
 
+Reproducible Agentic Environments System (RAES) supports the description,
+realization, control, evaluation, and bounded reproduction of agentic
+environments. An agentic environment is a declared and realized setting in
+which participants receive observations, take actions, interact with resources
+or other participants, and are evaluated under stated controls.
+
 RAES currently provides a Scenario Description Language (SDL), a Python
 reference implementation, contracts, examples, tests, and explanatory
-documentation. It is not a managed cyber range and does not include a
+documentation. RAES is the overall system; RAES SDL records the authored
+scenario and experiment intent that processors, backends, participant
+implementations, and runtime choices turn into a realized environment.
+
+Cyber, AI security, AI safety, testing, research, and evaluation are
+non-exhaustive application areas. The general model can support additional
+domains through their own examples, controlled vocabularies, semantic profiles,
+assets, backend profiles, and evidence requirements.
+
+RAES connects authored scenario intent, governed variation, realization inputs,
+participant behavior, observations, apparatus identity, provenance, evidence,
+replay boundaries, and conformance results for a bounded reproduction attempt.
+It does not guarantee deterministic runtime behavior, equal outcomes, exact
+replay, scientific validity, or reproducibility.
+
+The repository is not a managed environment service and does not include a
 production backend.
 
 Use this page to choose the smallest useful entrypoint for your task.
@@ -11,6 +32,8 @@ Use this page to choose the smallest useful entrypoint for your task.
 
 RAES can currently support:
 
+- describing agentic environments as authored scenarios and explicit apparatus
+  inputs
 - reading and authoring SDL scenario documents
 - parsing and validating SDL through the Python implementation
 - instantiating variables and compiling runtime models in the reference stack
@@ -35,6 +58,7 @@ fixtures or schema authority.
 | Goal | Start with | Current check | Supported statement |
 |------|------------|---------------|---------------------|
 | Understand the repository | `README.md`, [`docs/index.md`](../index.md), [`docs/explain/reference/canonical-reference-map.md`](reference/canonical-reference-map.md) | Read the referenced docs | The repository layout and current boundaries are understood. |
+| Understand the agentic-environment lifecycle | [`docs/explain/reference/glossary.md`](reference/glossary.md), [`docs/explain/sdl/runtime-architecture.md`](sdl/runtime-architecture.md) | Follow the authored scenario, realized environment, evidence, and conformance references | RAES system concepts are distinguished from SDL and backend behavior. |
 | Read a complete scenario | `examples/README.md`, `examples/scenarios/*.sdl.yaml` | `pytest tests/test_scenarios.py` | The checked examples load through the current parser boundary. |
 | Start from a reusable template or pattern | `examples/library/catalog.yaml`, `examples/library/templates/`, `examples/library/patterns/` | `python tools/check_example_library.py` | The catalog covers scenario, workflow, participant behavior, task, run, and study surfaces with parser-validated template bodies. |
 | Author a small SDL file | [`docs/explain/sdl/index.md`](sdl/index.md), [`docs/explain/sdl/sections.md`](sdl/sections.md), [`docs/explain/sdl/validation.md`](sdl/validation.md) | `parse_sdl_file()` or `load_scenario()` | The file is accepted by the current SDL model and semantic validator. |
@@ -72,7 +96,7 @@ Parse and validate a scenario from Python:
 ```python
 from pathlib import Path
 
-from aces_sdl import parse_sdl_file
+from raes import parse_sdl_file
 
 scenario = parse_sdl_file(
     Path("../../examples/scenarios/hospital-ransomware-surgery-day.sdl.yaml")

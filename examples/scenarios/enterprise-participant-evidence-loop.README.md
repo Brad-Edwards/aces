@@ -1,6 +1,6 @@
 # Enterprise Participant Evidence Loop
 
-`enterprise-participant-evidence-loop.sdl.yaml` is the ACES reference scenario for the
+`enterprise-participant-evidence-loop.sdl.yaml` is the RAES reference scenario for the
 authored SDL -> processor -> runtime -> backend handoff. It is a generic
 enterprise slice: a red participant workbench, a DMZ customer portal, an
 internal database, a Wazuh evidence surface, and optional participant policy
@@ -93,7 +93,7 @@ a new backend manifest shape, or APTL-private keys inside the scenario body.
 libvirt evidence validate`) produces a stable, validated evaluator-evidence
 run artifact for this scenario — `aces.libvirt.scenario-evidence-run/v1`, written to
 `runs/<run-id>/scenario-evidence/libvirt-scenario-evidence-run.json`. It composes the
-existing ACES surfaces (libvirt deterministic participant runtime #614, native
+existing RAES surfaces (libvirt deterministic participant runtime #614, native
 substrate realization #601, backend manifest/capability contracts, and the
 experiment/evaluation contracts) into one artifact carrying scenario+compiled
 identity, backend manifest/capability profile and realization provenance, the
@@ -141,7 +141,7 @@ appliances — and its participant runtime is deterministic (#614), so:
 - the **participant action proof** is structural (deterministic domain adapter),
   disclosed as such.
 
-The claim is narrow: ACES can compile the same authored scenario and execute its
+The claim is narrow: RAES can compile the same authored scenario and execute its
 deterministic participant contract while honestly disclosing that the full
 guest/application provisioning plane is not realized by the libvirt TechVault
 mode. A separate bounded scenario demonstrates an independent VM/network
@@ -152,16 +152,16 @@ semantic equivalence.
 
 ## Downstream Links
 
-- ACES issue: Brad-Edwards/aces#598
+- RAES issue: Brad-Edwards/aces#598
 - Participant implementation binding: Brad-Edwards/aces#599
-- ACES n=2 backend proof: Brad-Edwards/aces#600
+- RAES n=2 backend proof: Brad-Edwards/aces#600
   (corpus: `examples/corpus/reference-demonstration/`)
 - Libvirt participant runtime: Brad-Edwards/aces#614
 - Libvirt evaluator/Wazuh evidence readback: Brad-Edwards/aces#615
 - APTL realization and proof: Brad-Edwards/aptl#556,
   Brad-Edwards/aptl#557, Brad-Edwards/aptl#558
 
-This ACES scenario supplies the authored scenario that downstream APTL and
+This RAES scenario supplies the authored scenario that downstream APTL and
 libvirt proof issues can consume.
 
 ## Limitations

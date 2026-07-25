@@ -19,7 +19,7 @@ policy under separate implementation work.
 universal object. The ecosystem does not introduce a `TrustedAsset` abstraction,
 a second registry, or per-reference digest fields. Trust, authenticity, and
 integrity are expressed as a **declarative policy** that, per asset family,
-requires specific **evidence classes**, each satisfied by an *existing* ACES
+requires specific **evidence classes**, each satisfied by an *existing* RAES
 mechanism.
 
 Trust rests on three orthogonal axes; a policy MUST keep them distinct:
@@ -33,7 +33,7 @@ Trust rests on three orthogonal axes; a policy MUST keep them distinct:
 
 ## 2. Evidence classes
 
-| Evidence class | Meaning | Existing ACES mechanism |
+| Evidence class | Meaning | Existing RAES mechanism |
 |---|---|---|
 | `integrity_digest` | Digest bound to canonical payload bytes | module `aces.lock.json` digest pins; scenario-snapshot binding; associated-artifact set digest; study-definition digest; controlled-vocabulary `source_digest`; manifest/config digests |
 | `authenticity_signature` | Signature by a trusted signer set | `RegistryTrustPolicy` signature verification (`_verify_signatures`) |

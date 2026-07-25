@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from aces_contracts.participant_behavior import ParticipantActionPreconditionStatus, ParticipantActionResultStatus
-from aces_sdl.participant_behavior import ParticipantEffectClass, ParticipantFailureClass, ParticipantPreconditionClass
+from raes.participant_behavior import ParticipantEffectClass, ParticipantFailureClass, ParticipantPreconditionClass
 
 from .behavior_resources import (
     _observation_point_matches_action_instance,

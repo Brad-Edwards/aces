@@ -21,14 +21,14 @@ from aces_processor.models import (
     ParticipantObservationStatus,
     iter_participant_behavior_history_violations,
 )
-from aces_sdl.participant_attribution_semantics import (
+from raes.participant_attribution_semantics import (
     OUTCOME_ATTRIBUTION_CANDIDATE_KINDS,
     STRONG_ATTRIBUTION_SUPPORT_CLASSES,
     ParticipantAttributionCandidateKind,
     ParticipantAttributionOrderingBasisKind,
     ParticipantAttributionSupportClass,
 )
-from aces_sdl.participant_behavior import (
+from raes.participant_behavior import (
     ParticipantEffectClass,
     ParticipantPreconditionClass,
 )

@@ -68,8 +68,8 @@ shape before compiler/planner semantics run. Each resolved reference carries:
 
 ## Implementation Mapping
 
-- shared semantic source of truth: `implementations/python/packages/aces_sdl/semantics/objectives.py`
-- validator checks: `implementations/python/packages/aces_sdl/validator/`
+- shared semantic source of truth: `implementations/python/packages/raes/semantics/objectives.py`
+- validator checks: `implementations/python/packages/raes/validator/`
 - compiled runtime references and refresh derivation:
   - `implementations/python/packages/aces_processor/compiler/`
   - `implementations/python/packages/aces_processor/models/`
