@@ -48,7 +48,7 @@ html_title = "ACES SDL"
 html_static_path = ["_static"]
 
 html_theme_options = {
-    "source_repository": "https://github.com/Brad-Edwards/aces",
+    "source_repository": "https://github.com/RAESystem/rae",
     "source_branch": "main",
     "source_directory": "docs/",
     "navigation_with_keys": True,
