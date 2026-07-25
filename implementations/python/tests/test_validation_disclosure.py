@@ -201,10 +201,9 @@ def test_document_wrapper_requires_schema_version_and_embeds_core() -> None:
     )
     assert document.disclosure.profile_id == "aces-structural-validation"
 
+    invalid_document = {"schema_version": "wrong/v1", "disclosure": _structural_disclosure_payload()}
     with pytest.raises(ValidationError):
-        ValidationBasisDisclosureDocumentModel.model_validate(
-            {"schema_version": "wrong/v1", "disclosure": _structural_disclosure_payload()}
-        )
+        ValidationBasisDisclosureDocumentModel.model_validate(invalid_document)
 
 
 # --------------------------------------------------------------------------- #
@@ -674,8 +673,9 @@ def test_experiment_task_rejects_disclosure_with_mismatched_subject_ref() -> Non
         subject_kind="experiment_task",
         subject_ref={"ref_kind": "task", "ref_id": "some-other-task", "ref_version": "v1"},
     )
+    carrier_payload = _task_payload_with_disclosures([disclosure_payload])
     with pytest.raises(ValidationError, match="must match the carrier"):
-        ExperimentTaskModel.model_validate(_task_payload_with_disclosures([disclosure_payload]))
+        ExperimentTaskModel.model_validate(carrier_payload)
 
 
 def test_experiment_task_rejects_disclosure_missing_ref_version() -> None:
@@ -686,8 +686,9 @@ def test_experiment_task_rejects_disclosure_missing_ref_version() -> None:
         subject_kind="experiment_task",
         subject_ref={"ref_kind": "task", "ref_id": "task-1"},
     )
+    carrier_payload = _task_payload_with_disclosures([disclosure_payload])
     with pytest.raises(ValidationError, match="must include ref_version"):
-        ExperimentTaskModel.model_validate(_task_payload_with_disclosures([disclosure_payload]))
+        ExperimentTaskModel.model_validate(carrier_payload)
 
 
 def test_experiment_task_rejects_disclosure_with_wrong_ref_version() -> None:
@@ -695,8 +696,9 @@ def test_experiment_task_rejects_disclosure_with_wrong_ref_version() -> None:
         subject_kind="experiment_task",
         subject_ref={"ref_kind": "task", "ref_id": "task-1", "ref_version": "v2"},
     )
+    carrier_payload = _task_payload_with_disclosures([disclosure_payload])
     with pytest.raises(ValidationError, match="must match the carrier"):
-        ExperimentTaskModel.model_validate(_task_payload_with_disclosures([disclosure_payload]))
+        ExperimentTaskModel.model_validate(carrier_payload)
 
 
 def test_experiment_task_rejects_disclosure_with_mismatched_subject_kind() -> None:
@@ -704,8 +706,9 @@ def test_experiment_task_rejects_disclosure_with_mismatched_subject_kind() -> No
         subject_kind="scenario",
         subject_ref={"ref_kind": "scenario", "ref_id": "scenario-1"},
     )
+    carrier_payload = _task_payload_with_disclosures([disclosure_payload])
     with pytest.raises(ValidationError, match="must match the carrier"):
-        ExperimentTaskModel.model_validate(_task_payload_with_disclosures([disclosure_payload]))
+        ExperimentTaskModel.model_validate(carrier_payload)
 
 
 _RUN_REFERENCE_FIXTURE = REPO_ROOT / "contracts/fixtures/experiment-core/experiment-run-v1/valid/reference.json"
@@ -738,8 +741,9 @@ def test_experiment_run_rejects_disclosure_with_mismatched_subject_ref() -> None
         subject_kind="experiment_run",
         subject_ref={"ref_kind": "run", "ref_id": "some-other-run", "ref_version": "1.0.0"},
     )
+    carrier_payload = _run_payload_with_disclosures([disclosure_payload])
     with pytest.raises(ValidationError, match="must match the carrier"):
-        ExperimentRunModel.model_validate(_run_payload_with_disclosures([disclosure_payload]))
+        ExperimentRunModel.model_validate(carrier_payload)
 
 
 def test_experiment_run_rejects_disclosure_missing_ref_version() -> None:
@@ -750,8 +754,9 @@ def test_experiment_run_rejects_disclosure_missing_ref_version() -> None:
         subject_kind="experiment_run",
         subject_ref={"ref_kind": "run", "ref_id": "run-techvault-001"},
     )
+    carrier_payload = _run_payload_with_disclosures([disclosure_payload])
     with pytest.raises(ValidationError, match="must include ref_version"):
-        ExperimentRunModel.model_validate(_run_payload_with_disclosures([disclosure_payload]))
+        ExperimentRunModel.model_validate(carrier_payload)
 
 
 def test_experiment_run_rejects_disclosure_with_wrong_ref_version() -> None:
@@ -759,8 +764,9 @@ def test_experiment_run_rejects_disclosure_with_wrong_ref_version() -> None:
         subject_kind="experiment_run",
         subject_ref={"ref_kind": "run", "ref_id": "run-techvault-001", "ref_version": "9.9.9"},
     )
+    carrier_payload = _run_payload_with_disclosures([disclosure_payload])
     with pytest.raises(ValidationError, match="must match the carrier"):
-        ExperimentRunModel.model_validate(_run_payload_with_disclosures([disclosure_payload]))
+        ExperimentRunModel.model_validate(carrier_payload)
 
 
 def test_experiment_run_rejects_disclosure_with_mismatched_subject_kind() -> None:
@@ -768,8 +774,9 @@ def test_experiment_run_rejects_disclosure_with_mismatched_subject_kind() -> Non
         subject_kind="scenario",
         subject_ref={"ref_kind": "scenario", "ref_id": "scenario-1"},
     )
+    carrier_payload = _run_payload_with_disclosures([disclosure_payload])
     with pytest.raises(ValidationError, match="must match the carrier"):
-        ExperimentRunModel.model_validate(_run_payload_with_disclosures([disclosure_payload]))
+        ExperimentRunModel.model_validate(carrier_payload)
 
 
 def test_experiment_study_accepts_matching_validation_basis_disclosure() -> None:
@@ -786,8 +793,9 @@ def test_experiment_study_rejects_disclosure_with_mismatched_subject_ref() -> No
         subject_kind="experiment_study",
         subject_ref={"ref_kind": "study", "ref_id": "some-other-study", "ref_version": "1.0.0"},
     )
+    carrier_payload = _study_payload_with_disclosures([disclosure_payload])
     with pytest.raises(ValidationError, match="must match the carrier"):
-        ExperimentStudyModel.model_validate(_study_payload_with_disclosures([disclosure_payload]))
+        ExperimentStudyModel.model_validate(carrier_payload)
 
 
 def test_experiment_study_rejects_disclosure_missing_ref_version() -> None:
@@ -798,8 +806,9 @@ def test_experiment_study_rejects_disclosure_missing_ref_version() -> None:
         subject_kind="experiment_study",
         subject_ref={"ref_kind": "study", "ref_id": "study-techvault-baseline"},
     )
+    carrier_payload = _study_payload_with_disclosures([disclosure_payload])
     with pytest.raises(ValidationError, match="must include ref_version"):
-        ExperimentStudyModel.model_validate(_study_payload_with_disclosures([disclosure_payload]))
+        ExperimentStudyModel.model_validate(carrier_payload)
 
 
 def test_experiment_study_rejects_disclosure_with_wrong_ref_version() -> None:
@@ -807,8 +816,9 @@ def test_experiment_study_rejects_disclosure_with_wrong_ref_version() -> None:
         subject_kind="experiment_study",
         subject_ref={"ref_kind": "study", "ref_id": "study-techvault-baseline", "ref_version": "9.9.9"},
     )
+    carrier_payload = _study_payload_with_disclosures([disclosure_payload])
     with pytest.raises(ValidationError, match="must match the carrier"):
-        ExperimentStudyModel.model_validate(_study_payload_with_disclosures([disclosure_payload]))
+        ExperimentStudyModel.model_validate(carrier_payload)
 
 
 def test_experiment_study_rejects_disclosure_with_mismatched_subject_kind() -> None:
@@ -816,8 +826,9 @@ def test_experiment_study_rejects_disclosure_with_mismatched_subject_kind() -> N
         subject_kind="scenario",
         subject_ref={"ref_kind": "scenario", "ref_id": "scenario-1"},
     )
+    carrier_payload = _study_payload_with_disclosures([disclosure_payload])
     with pytest.raises(ValidationError, match="must match the carrier"):
-        ExperimentStudyModel.model_validate(_study_payload_with_disclosures([disclosure_payload]))
+        ExperimentStudyModel.model_validate(carrier_payload)
 
 
 # --------------------------------------------------------------------------- #

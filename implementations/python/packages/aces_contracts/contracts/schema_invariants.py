@@ -9,6 +9,14 @@ from pydantic.json_schema import JsonSchemaValue
 
 from .base import _ACES_SEMANTIC_INVARIANT_PROFILE_URI
 
+# Shared instance_path for the ASR-515 carrier-embedded
+# validation_basis_disclosures invariant inputs. Defined once here and
+# re-exported for validation_disclosure.py so both call sites (this module's
+# _add_carrier_validation_basis_disclosure_invariant and
+# ValidationBasisDisclosureModel.__get_pydantic_json_schema__) share one
+# canonical literal rather than each declaring their own copy.
+_CARRIER_DISCLOSURES_INSTANCE_PATH = "#/validation_basis_disclosures"
+
 
 def _add_aces_invariant(
     json_schema: JsonSchemaValue,
@@ -171,7 +179,7 @@ def _add_carrier_validation_basis_disclosure_invariant(
         f"Every validation_basis_disclosures entry must declare subject_kind={subject_kind!r} and a subject_ref "
         f"matching this {carrier_label}'s {carrier_label}_id/{carrier_label}_version.",
         validator="aces_contracts.contracts.validation_disclosure.validate_carrier_validation_basis_disclosures",
-        inputs=[{"contract_id": contract_id, "instance_path": "#/validation_basis_disclosures"}],
+        inputs=[{"contract_id": contract_id, "instance_path": _CARRIER_DISCLOSURES_INSTANCE_PATH}],
     )
 
 
