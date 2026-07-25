@@ -7,9 +7,9 @@ import argparse
 import ast
 import re
 import sys
+import tomllib
 from pathlib import Path
 
-import tomllib
 import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
