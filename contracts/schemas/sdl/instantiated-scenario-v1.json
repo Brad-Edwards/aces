@@ -5875,10 +5875,287 @@
       "title": "ParameterBinding",
       "type": "object"
     },
+    "ParticipantActionArgumentCardinality": {
+      "description": "Whether an action argument carries one value or a bounded collection.",
+      "enum": [
+        "one",
+        "many"
+      ],
+      "title": "ParticipantActionArgumentCardinality",
+      "type": "string"
+    },
+    "ParticipantActionArgumentDefinition": {
+      "additionalProperties": false,
+      "description": "Closed authored domain for one non-secret portable action argument.",
+      "properties": {
+        "allowed_values": {
+          "items": {
+            "anyOf": [
+              {
+                "not": {
+                  "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+                },
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          },
+          "title": "Allowed Values",
+          "type": "array"
+        },
+        "cardinality": {
+          "$ref": "#/$defs/ParticipantActionArgumentCardinality",
+          "default": "one"
+        },
+        "default": {
+          "anyOf": [
+            {
+              "not": {
+                "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+              },
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "items": {
+                "anyOf": [
+                  {
+                    "not": {
+                      "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+                    },
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "boolean"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default"
+        },
+        "default_disclosure_ref": {
+          "anyOf": [
+            {
+              "not": {
+                "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+              },
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default Disclosure Ref"
+        },
+        "loss_disclosure_ref": {
+          "not": {
+            "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Loss Disclosure Ref",
+          "type": "string"
+        },
+        "max_items": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Items"
+        },
+        "max_length": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Length"
+        },
+        "maximum": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Maximum"
+        },
+        "min_items": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Min Items"
+        },
+        "min_length": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Min Length"
+        },
+        "minimum": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Minimum"
+        },
+        "normalization": {
+          "$ref": "#/$defs/ParticipantActionArgumentNormalization"
+        },
+        "normalization_disclosure_ref": {
+          "not": {
+            "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Normalization Disclosure Ref",
+          "type": "string"
+        },
+        "omission": {
+          "$ref": "#/$defs/ParticipantActionArgumentOmission"
+        },
+        "omission_disclosure_ref": {
+          "not": {
+            "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Omission Disclosure Ref",
+          "type": "string"
+        },
+        "unique_items": {
+          "default": true,
+          "title": "Unique Items",
+          "type": "boolean"
+        },
+        "value_type": {
+          "$ref": "#/$defs/ParticipantActionArgumentValueType"
+        }
+      },
+      "required": [
+        "value_type",
+        "normalization",
+        "normalization_disclosure_ref",
+        "omission",
+        "omission_disclosure_ref",
+        "loss_disclosure_ref"
+      ],
+      "title": "ParticipantActionArgumentDefinition",
+      "type": "object"
+    },
+    "ParticipantActionArgumentNormalization": {
+      "description": "Portable normalization operations with explicit disclosure.",
+      "enum": [
+        "identity",
+        "trim"
+      ],
+      "title": "ParticipantActionArgumentNormalization",
+      "type": "string"
+    },
+    "ParticipantActionArgumentOmission": {
+      "description": "Portable handling for an omitted action argument.",
+      "enum": [
+        "reject",
+        "use_default",
+        "omit"
+      ],
+      "title": "ParticipantActionArgumentOmission",
+      "type": "string"
+    },
+    "ParticipantActionArgumentValueType": {
+      "description": "Portable JSON value families admitted by an action argument.",
+      "enum": [
+        "string",
+        "integer",
+        "number",
+        "boolean",
+        "reference"
+      ],
+      "title": "ParticipantActionArgumentValueType",
+      "type": "string"
+    },
     "ParticipantActionContract": {
       "additionalProperties": false,
       "description": "Governed semantic contract for one participant action name.",
       "properties": {
+        "arguments": {
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/ParticipantActionArgumentDefinition"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Arguments",
+          "type": "object"
+        },
         "backend_failure_mappings": {
           "items": {
             "$ref": "#/$defs/ParticipantBackendFailureMapping"

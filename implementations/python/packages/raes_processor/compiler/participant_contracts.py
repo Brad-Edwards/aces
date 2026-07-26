@@ -1,7 +1,9 @@
 """Participant action contracts, observation boundaries, outcome-interpretation rules."""
 
+import hashlib
 from collections.abc import Callable
 
+import rfc8785
 from raes.participant_outcome_semantics import (
     OutcomeInterpretationSourceLayer,
     OutcomeInterpretationTargetLayer,
@@ -72,6 +74,22 @@ def _backend_timing_disclosures(contract_spec: dict[str, object]) -> tuple[dict[
     )
 
 
+def _compiled_argument_shape(
+    address: str,
+    contract_spec: dict[str, object],
+) -> tuple[str, tuple[dict[str, object], ...]]:
+    raw_arguments = contract_spec.get("arguments", {})
+    arguments = raw_arguments if isinstance(raw_arguments, dict) else {}
+    canonical = rfc8785.dumps(arguments)
+    digest = hashlib.sha256(canonical).hexdigest()
+    definitions = tuple(
+        {"name": str(name), **definition}
+        for name, definition in sorted(arguments.items())
+        if isinstance(definition, dict)
+    )
+    return f"{address}.argument-shape.sha256-{digest}", definitions
+
+
 def _compile_action_contracts(scenario: InstantiatedScenario) -> dict[str, ParticipantActionContractRuntime]:
     action_contracts: dict[str, ParticipantActionContractRuntime] = {}
     for name, contract in scenario.action_contracts.items():
@@ -79,10 +97,13 @@ def _compile_action_contracts(scenario: InstantiatedScenario) -> dict[str, Parti
         interactions = contract_spec.get("interactions", [])
         temporal_contracts = contract_spec.get("temporal_contracts", [])
         address = _action_contract_address(name)
+        argument_shape_ref, argument_definitions = _compiled_argument_shape(address, contract_spec)
         action_contracts[address] = ParticipantActionContractRuntime(
             address=address,
             name=name,
             action_name=name,
+            argument_shape_ref=argument_shape_ref,
+            argument_definitions=argument_definitions,
             semantic_version=str(contract_spec.get("semantic_version", "")),
             lifecycle_state=str(contract_spec.get("lifecycle_state", "")),
             behavioral_granularity=str(contract_spec.get("behavioral_granularity", "")),

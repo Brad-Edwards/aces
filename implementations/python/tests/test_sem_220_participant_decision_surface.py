@@ -22,6 +22,7 @@ from raes_contracts.contracts import (
 from raes_contracts.participant_binding import (
     ParticipantActionAdmissionRequest,
     ParticipantDecisionSurfaceBindingResolvers,
+    ParticipantValidatedActionSelection,
     bind_participant_decision_surface_selection,
 )
 from raes_processor.models import (
@@ -52,6 +53,10 @@ BEHAVIOR = "participant.behavior-specification.red-surface"
 BOUNDARY = "participant.observation-boundary.red-view"
 SCAN = "participant.action-contract.scan"
 EXFILTRATE = "participant.action-contract.exfiltrate"
+SCAN_ENTRY = "decision-surface-entries.scan"
+EXFILTRATE_ENTRY = "decision-surface-entries.exfiltrate"
+SCAN_SHAPE = f"{SCAN}.argument-shape.sha256-" + "1" * 64
+EXFILTRATE_SHAPE = f"{EXFILTRATE}.argument-shape.sha256-" + "2" * 64
 SCAN_AFFORDANCE = f"{BEHAVIOR}.tool-affordance.scanner"
 EXFILTRATE_AFFORDANCE = f"{BEHAVIOR}.tool-affordance.exfiltration"
 
@@ -237,12 +242,19 @@ def _runtime_model(*, omitted_visibility_ref: str | None = None) -> RuntimeModel
     return RuntimeModel(
         scenario_name="sem-220",
         action_contracts={
-            SCAN: ParticipantActionContractRuntime(address=SCAN, name="scan", spec={}, action_name="scan"),
+            SCAN: ParticipantActionContractRuntime(
+                address=SCAN,
+                name="scan",
+                spec={},
+                action_name="scan",
+                argument_shape_ref=SCAN_SHAPE,
+            ),
             EXFILTRATE: ParticipantActionContractRuntime(
                 address=EXFILTRATE,
                 name="exfiltrate",
                 spec={},
                 action_name="exfiltrate",
+                argument_shape_ref=EXFILTRATE_SHAPE,
             ),
         },
         observation_boundaries={BOUNDARY: boundary},
@@ -297,14 +309,20 @@ def _history() -> tuple[ParticipantBehaviorHistoryEvent, ...]:
     )
 
 
-def _assessment(action_address: str, *, eligibility: str = "eligible") -> ParticipantDecisionSurfaceActionAssessment:
+def _assessment(
+    action_address: str,
+    *,
+    entry_id: str | None = None,
+    eligibility: str = "eligible",
+) -> ParticipantDecisionSurfaceActionAssessment:
     return ParticipantDecisionSurfaceActionAssessment(
+        entry_id=entry_id or f"decision-surface-entries.{action_address.rsplit('.', 1)[-1]}",
         action_contract_address=action_address,
         presentation_basis_ref="projection-policy.red.v1",
         eligibility=eligibility,
         eligibility_reason_refs=(() if eligibility == "eligible" else ("sem211.precondition.authority.out-of-scope",)),
         constraint_refs=(f"{action_address}.preconditions",),
-        selection_shape_ref=f"selection-shapes.{action_address.rsplit('.', 1)[-1]}.v1",
+        selection_shape_ref=SCAN_SHAPE if action_address == SCAN else EXFILTRATE_SHAPE,
         support="supported",
         support_refs=("participant-implementation.reference",),
         realization_refs=("realization.reference",),
@@ -393,9 +411,39 @@ def _projection_input(
     eligibility: str = "eligible",
     implementation_selection_ref: str = "participant-selections.red.agent.v1",
     decision_control_mode: str = "autonomous",
+    surface_form: str = "candidate_action_set",
 ) -> ParticipantDecisionSurfaceProjectionInput:
     affordance_address = SCAN_AFFORDANCE if action_address == SCAN else EXFILTRATE_AFFORDANCE
+    entry_id = SCAN_ENTRY if action_address == SCAN else EXFILTRATE_ENTRY
     emitted_refs = ("context.public", action_address, affordance_address)
+    forms: dict[str, dict[str, object]] = {
+        "candidate_action_set": {
+            "surface_form": "candidate_action_set",
+            "selection_meaning_ref": "selection-meaning.candidate.v1",
+            "candidate_entry_ids": [entry_id],
+            "open_extension_binding_ref": None,
+        },
+        "constrained_form": {
+            "surface_form": "constrained_form",
+            "selection_meaning_ref": "selection-meaning.form.v1",
+            "action_entry_id": entry_id,
+            "argument_shape_ref": SCAN_SHAPE if action_address == SCAN else EXFILTRATE_SHAPE,
+            "validation_policy_ref": "validation-policies.sem220.v1",
+            "constraint_refs": ["forms.action.constraints.v1"],
+            "default_disclosure_refs": ["forms.action.defaults.v1"],
+            "normalization_disclosure_refs": ["forms.action.normalization.v1"],
+            "omission_disclosure_refs": ["forms.action.omission.v1"],
+            "loss_disclosure_refs": ["forms.action.loss.none.v1"],
+        },
+        "open_ended_generation": {
+            "surface_form": "open_ended_generation",
+            "selection_meaning_ref": "selection-meaning.open.v1",
+            "proposal_binding_ref": "proposal-bindings.governed-action.v1",
+            "argument_shape_ref": SCAN_SHAPE if action_address == SCAN else EXFILTRATE_SHAPE,
+            "validation_policy_ref": "validation-policies.sem220.v1",
+            "allowed_action_contract_addresses": [action_address],
+        },
+    }
     return ParticipantDecisionSurfaceProjectionInput(
         surface_id=f"decision-surfaces.red.episode-1.order-{observation_order}",
         participant_address=PARTICIPANT,
@@ -413,17 +461,18 @@ def _projection_input(
         exposure_policy_ref="exposure-policy.red.v1",
         visibility_projection_ref=f"visibility-projection.red.order-{observation_order}",
         visible_context_refs=("context.public",),
-        action_assessments={action_address: _assessment(action_address, eligibility=eligibility)},
+        action_assessments={
+            action_address: _assessment(
+                action_address,
+                entry_id=entry_id,
+                eligibility=eligibility,
+            )
+        },
         exposure_assessments={
             item_ref: _projection_exposure_assessment(item_ref, observation_order=observation_order)
             for item_ref in emitted_refs
         },
-        form={
-            "surface_form": "candidate_action_set",
-            "selection_meaning_ref": "selection-meaning.candidate.v1",
-            "candidate_entry_ids": [action_address],
-            "open_extension_binding_ref": None,
-        },
+        form=forms[surface_form],
         evidence_refs=(f"evidence.surface.red.order-{observation_order}",),
         provenance_refs=(f"provenance.surface.red.order-{observation_order}",),
         marking_definition_refs=("markings.participant-visible.v1",),
@@ -525,14 +574,23 @@ def _surface_selection(
     surface: ParticipantDecisionSurfaceModel,
     *,
     action_contract_address: str = SCAN,
-    argument_shape_ref: str = "selection-shapes.scan.v1",
+    argument_shape_ref: str | None = None,
 ) -> ParticipantDecisionSurfaceSelectionModel:
     return ParticipantDecisionSurfaceSelectionModel(
         surface_id=surface.surface_id,
         observation_order=surface.observation_order,
         action_contract_address=action_contract_address,
-        argument_shape_ref=argument_shape_ref,
+        argument_shape_ref=argument_shape_ref or surface.action_entries[0].selection_shape_ref,
         proposal_ref="proposals.selection.1",
+    )
+
+
+def _resolved_selection(**kwargs: object) -> ParticipantValidatedActionSelection:
+    return ParticipantValidatedActionSelection(
+        action_contract_address=str(kwargs["action_contract_address"]),
+        argument_shape_ref=str(kwargs["argument_shape_ref"]),
+        proposal_ref=str(kwargs["proposal_ref"]),
+        normalized_arguments=(),
     )
 
 
@@ -545,7 +603,7 @@ def _bind_selection(
         surface=surface,
         selection=selection,
         admission_request=request,
-        argument_shape_resolver=lambda **_: True,
+        argument_shape_resolver=_resolved_selection,
         apparatus_resolver=lambda **_: request.implementation_selection,
     )
 
@@ -718,6 +776,99 @@ def test_projection_uses_time_indexed_visibility_and_rejects_future_state() -> N
     assert surface.action_entries[0].visibility == "disclosed"
 
 
+@pytest.mark.parametrize(
+    "surface_form",
+    ("candidate_action_set", "constrained_form", "open_ended_generation"),
+)
+def test_projection_preserves_distinct_entry_and_action_identities(surface_form: str) -> None:
+    projection = _projection_input(
+        observation_order=0,
+        surface_form=surface_form,
+    )
+
+    surface = project_participant_decision_surface(
+        _runtime_model(),
+        history_events=_history(),
+        projection=projection,
+        exposure_resolvers=_projection_exposure_resolvers(projection),
+    )
+
+    assert surface.action_entries[0].entry_id == SCAN_ENTRY
+    assert surface.action_entries[0].action_contract_address == SCAN
+    selection = _surface_selection(surface)
+    assert _bind_selection(surface, selection).action_contract_address == SCAN
+
+
+def test_candidate_projection_rejects_an_action_address_used_as_an_entry_id() -> None:
+    projection = _projection_input(observation_order=0)
+    projection = replace(
+        projection,
+        form={
+            "surface_form": "candidate_action_set",
+            "selection_meaning_ref": "selection-meaning.candidate.v1",
+            "candidate_entry_ids": [SCAN],
+            "open_extension_binding_ref": None,
+        },
+    )
+    runtime_model = _runtime_model()
+    history_events = _history()
+    exposure_resolvers = _projection_exposure_resolvers(projection)
+
+    with pytest.raises(ValueError, match="candidate_entry_ids do not resolve"):
+        project_participant_decision_surface(
+            runtime_model,
+            history_events=history_events,
+            projection=projection,
+            exposure_resolvers=exposure_resolvers,
+        )
+
+
+def test_projection_rejects_duplicate_surface_entry_ids() -> None:
+    projection = _projection_input(observation_order=0)
+    projection = replace(
+        projection,
+        action_assessments={
+            SCAN: _assessment(SCAN, entry_id="decision-surface-entries.shared"),
+            EXFILTRATE: _assessment(EXFILTRATE, entry_id="decision-surface-entries.shared"),
+        },
+    )
+    runtime_model = _runtime_model()
+    history_events = _history()
+    exposure_resolvers = _projection_exposure_resolvers(projection)
+
+    with pytest.raises(ValueError, match="action assessment entry_id values must be unique"):
+        project_participant_decision_surface(
+            runtime_model,
+            history_events=history_events,
+            projection=projection,
+            exposure_resolvers=exposure_resolvers,
+        )
+
+
+def test_projection_rejects_assessment_for_a_different_compiled_argument_shape() -> None:
+    projection = _projection_input(observation_order=0)
+    projection = replace(
+        projection,
+        action_assessments={
+            SCAN: replace(
+                projection.action_assessments[SCAN],
+                selection_shape_ref=EXFILTRATE_SHAPE,
+            )
+        },
+    )
+    runtime_model = _runtime_model()
+    history_events = _history()
+    exposure_resolvers = _projection_exposure_resolvers(projection)
+
+    with pytest.raises(ValueError, match="does not match its compiled argument shape"):
+        project_participant_decision_surface(
+            runtime_model,
+            history_events=history_events,
+            projection=projection,
+            exposure_resolvers=exposure_resolvers,
+        )
+
+
 @pytest.mark.parametrize("omitted_ref", (SCAN, SCAN_AFFORDANCE))
 def test_projection_requires_visibility_proof_for_every_emitted_ref(omitted_ref: str) -> None:
     runtime_model = _runtime_model(omitted_visibility_ref=omitted_ref)
@@ -789,7 +940,7 @@ def test_realization_kind_preserves_surface_semantic_refs(
         exposure_resolvers=_projection_exposure_resolvers(projection),
     )
     assert surface.action_entries[0].action_contract_address == SCAN
-    assert surface.action_entries[0].selection_shape_ref == "selection-shapes.scan.v1"
+    assert surface.action_entries[0].selection_shape_ref == SCAN_SHAPE
     assert surface.form.selection_meaning_ref == "selection-meaning.candidate.v1"
 
 
@@ -923,12 +1074,83 @@ def test_open_ended_proposal_validates_before_existing_admission_path() -> None:
         selection=selection,
         admission_request=request,
         resolvers=ParticipantDecisionSurfaceBindingResolvers(
-            argument_shape=lambda **_: True,
+            argument_shape=_resolved_selection,
             apparatus=resolve_apparatus,
         ),
     )
     assert admitted == "admitted"
-    assert control.admitted is request
+    assert control.admitted is not request
+    assert control.admitted is not None
+    assert control.admitted.validated_selection is not None
+    assert control.admitted.validated_selection.proposal_ref == selection.proposal_ref
+
+
+def test_selection_carries_concrete_arguments_into_the_admitted_portable_carrier() -> None:
+    surface = _eligible_surface(surface_form="open_ended_generation")
+    selection = _surface_selection(surface).model_copy(update={"arguments": {"query": " status "}})
+    request = _admission_request()
+    seen_arguments: list[dict[str, object]] = []
+
+    def resolve_arguments(**kwargs: object) -> ParticipantValidatedActionSelection:
+        seen_arguments.append(dict(kwargs["proposed_arguments"]))  # type: ignore[arg-type]
+        return ParticipantValidatedActionSelection(
+            action_contract_address=str(kwargs["action_contract_address"]),
+            argument_shape_ref=str(kwargs["argument_shape_ref"]),
+            proposal_ref=str(kwargs["proposal_ref"]),
+            normalized_arguments=(("query", "status"),),
+            normalization_disclosure_refs=("arguments.query.normalization.trim",),
+            omission_disclosure_refs=("arguments.query.omission.reject",),
+            loss_disclosure_refs=("arguments.query.loss.none",),
+        )
+
+    bound = bind_participant_decision_surface_selection(
+        surface=surface,
+        selection=selection,
+        admission_request=request,
+        argument_shape_resolver=resolve_arguments,
+        apparatus_resolver=lambda **_: request.implementation_selection,
+    )
+
+    assert seen_arguments == [{"query": " status "}]
+    assert bound.validated_selection is not None
+    assert bound.validated_selection.argument_map == {"query": "status"}
+
+
+@pytest.mark.parametrize(
+    ("coordinate_name", "mismatched_value"),
+    (
+        ("argument_shape_ref", EXFILTRATE_SHAPE),
+        ("proposal_ref", "proposals.selection.stale"),
+    ),
+)
+def test_binding_rejects_resolver_result_for_different_proposal_coordinates(
+    coordinate_name: str,
+    mismatched_value: str,
+) -> None:
+    surface = _eligible_surface(surface_form="open_ended_generation")
+    selection = _surface_selection(surface)
+    request = _admission_request()
+
+    def resolve_different_coordinates(**kwargs: object) -> ParticipantValidatedActionSelection:
+        coordinates = {
+            "action_contract_address": str(kwargs["action_contract_address"]),
+            "argument_shape_ref": str(kwargs["argument_shape_ref"]),
+            "proposal_ref": str(kwargs["proposal_ref"]),
+        }
+        coordinates[coordinate_name] = mismatched_value
+        return ParticipantValidatedActionSelection(
+            **coordinates,
+            normalized_arguments=(),
+        )
+
+    with pytest.raises(ValueError, match="must match the governed proposal coordinates"):
+        bind_participant_decision_surface_selection(
+            surface=surface,
+            selection=selection,
+            admission_request=request,
+            argument_shape_resolver=resolve_different_coordinates,
+            apparatus_resolver=lambda **_: request.implementation_selection,
+        )
 
 
 def test_surface_apparatus_must_resolve_to_the_admission_selection() -> None:
@@ -956,7 +1178,7 @@ def test_surface_apparatus_must_resolve_to_the_admission_selection() -> None:
         selection=selection,
         admission_request=request,
         resolvers=ParticipantDecisionSurfaceBindingResolvers(
-            argument_shape=lambda **kwargs: shape_calls.append(kwargs["proposal_ref"]) or True,
+            argument_shape=lambda **kwargs: shape_calls.append(kwargs["proposal_ref"]) or _resolved_selection(**kwargs),
             apparatus=lambda **_: mismatched_selection,
         ),
     )
@@ -972,7 +1194,7 @@ def test_surface_apparatus_must_resolve_to_the_admission_selection() -> None:
         selection=selection,
         admission_request=request,
         resolvers=ParticipantDecisionSurfaceBindingResolvers(
-            argument_shape=lambda **kwargs: shape_calls.append(kwargs["proposal_ref"]) or True,
+            argument_shape=lambda **kwargs: shape_calls.append(kwargs["proposal_ref"]) or _resolved_selection(**kwargs),
             apparatus=lambda **_: request.implementation_selection,
         ),
     )
