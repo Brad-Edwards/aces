@@ -4,62 +4,14 @@ from dataclasses import dataclass, field
 
 from raes_contracts.addressing import require_compiled_address
 from raes_contracts.controlled_vocabularies import validate_controlled_vocabulary_scope_values
+from raes_contracts.manifest_authority import (
+    PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE,
+    PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS,
+    PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE,
+    PARTICIPANT_RUNTIME_POLICY_FEATURES,
+    PARTICIPANT_RUNTIME_ROLE_SCOPE,
+)
 from raes_contracts.vocabulary import ParticipantFeatureSupportLevel
-
-PARTICIPANT_RUNTIME_ROLE_SCOPE = "capabilities.participant_runtime.supported_participant_roles"
-PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE = "capabilities.participant_runtime.supported_behavior_features"
-PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE = "capabilities.participant_runtime.supported_interaction_features"
-
-_PARTICIPANT_EPISODE_CONTRACTS = frozenset(
-    {
-        "participant-episode-state-envelope-v1",
-        "participant-episode-history-event-stream-v1",
-        "runtime-snapshot-v1",
-    }
-)
-_PARTICIPANT_BEHAVIOR_CONTRACTS = frozenset(
-    {
-        "participant-behavior-history-event-stream-v1",
-        "runtime-snapshot-v1",
-    }
-)
-_PARTICIPANT_INTERACTION_CONTRACTS = frozenset(
-    {
-        "participant-behavior-history-event-stream-v1",
-        "participant-shared-state-record-v1",
-        "participant-joint-action-record-v1",
-        "participant-time-management-context-v1",
-        "runtime-snapshot-v1",
-    }
-)
-
-PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS = {
-    PARTICIPANT_RUNTIME_ROLE_SCOPE: {
-        "blue": _PARTICIPANT_EPISODE_CONTRACTS,
-        "green": _PARTICIPANT_EPISODE_CONTRACTS,
-        "red": _PARTICIPANT_EPISODE_CONTRACTS,
-        "white": _PARTICIPANT_EPISODE_CONTRACTS,
-    },
-    PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE: {
-        "action_contracts": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-        "autonomous_execution": _PARTICIPANT_INTERACTION_CONTRACTS,
-        "attribution_support": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-        "behavior_history": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-        "effects": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-        "failure_classes": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-        "observation_boundaries": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-        "outcome_interpretation": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-        "preconditions": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-        "state_transitions": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-        "temporal_contracts": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-    },
-    PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE: {
-        "contention": _PARTICIPANT_INTERACTION_CONTRACTS,
-        "coordination": _PARTICIPANT_INTERACTION_CONTRACTS,
-        "interference": _PARTICIPANT_INTERACTION_CONTRACTS,
-        "shared_state_change": _PARTICIPANT_INTERACTION_CONTRACTS,
-    },
-}
 
 
 def _validate_unique_non_empty_strings(field_name: str, values: tuple[str, ...]) -> None:
@@ -92,7 +44,9 @@ class ParticipantFeatureSupport:
     feature: str
     support_level: ParticipantFeatureSupportLevel | str
     constraint_refs: tuple[str, ...] = ()
+    limitation_refs: tuple[str, ...] = ()
     disclosure_refs: tuple[str, ...] = ()
+    evidence_refs: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.feature.strip():
@@ -107,16 +61,35 @@ class ParticipantFeatureSupport:
         except ValueError as exc:
             raise ValueError("ParticipantFeatureSupport.support_level must be a valid support level") from exc
         constraint_refs = tuple(self.constraint_refs)
+        limitation_refs = tuple(self.limitation_refs)
         disclosure_refs = tuple(self.disclosure_refs)
+        evidence_refs = tuple(self.evidence_refs)
         _validate_unique_non_empty_strings("ParticipantFeatureSupport.constraint_refs", constraint_refs)
+        _validate_unique_non_empty_strings("ParticipantFeatureSupport.limitation_refs", limitation_refs)
         _validate_unique_non_empty_strings("ParticipantFeatureSupport.disclosure_refs", disclosure_refs)
+        _validate_unique_non_empty_strings("ParticipantFeatureSupport.evidence_refs", evidence_refs)
         if support_level != ParticipantFeatureSupportLevel.EXACT and not disclosure_refs:
             raise ValueError(
                 "ParticipantFeatureSupport disclosure_refs must be non-empty when support_level is below exact"
             )
+        if self.feature in PARTICIPANT_RUNTIME_POLICY_FEATURES:
+            if support_level != ParticipantFeatureSupportLevel.EXACT and not limitation_refs:
+                raise ValueError(
+                    "ParticipantFeatureSupport limitation_refs must be non-empty for below-exact policy support"
+                )
+            if support_level == ParticipantFeatureSupportLevel.BOUNDED and not constraint_refs:
+                raise ValueError(
+                    "ParticipantFeatureSupport constraint_refs must be non-empty for bounded policy support"
+                )
+            if support_level != ParticipantFeatureSupportLevel.UNSUPPORTED and not evidence_refs:
+                raise ValueError(
+                    "ParticipantFeatureSupport evidence_refs must be non-empty for positive policy support"
+                )
         object.__setattr__(self, "support_level", support_level)
         object.__setattr__(self, "constraint_refs", constraint_refs)
+        object.__setattr__(self, "limitation_refs", limitation_refs)
         object.__setattr__(self, "disclosure_refs", disclosure_refs)
+        object.__setattr__(self, "evidence_refs", evidence_refs)
 
 
 @dataclass(frozen=True)
@@ -186,6 +159,14 @@ class ParticipantRuntimeCapabilities:
         feature_names = tuple(entry.feature for entry in feature_support)
         _validate_unique_non_empty_strings("ParticipantRuntimeCapabilities.feature_support", feature_names)
         supported_features = self.supported_behavior_features | self.supported_interaction_features
+        missing_policy_declarations = sorted(
+            (supported_features & PARTICIPANT_RUNTIME_POLICY_FEATURES) - set(feature_names)
+        )
+        if missing_policy_declarations:
+            raise ValueError(
+                "ParticipantRuntimeCapabilities supported participant policy features require explicit "
+                f"feature_support declarations: {', '.join(missing_policy_declarations)}"
+            )
         for entry in feature_support:
             if (
                 entry.support_level == ParticipantFeatureSupportLevel.UNSUPPORTED
@@ -193,6 +174,15 @@ class ParticipantRuntimeCapabilities:
             ):
                 raise ValueError(
                     "ParticipantRuntimeCapabilities.feature_support cannot declare a supported feature unsupported"
+                )
+            if (
+                entry.feature in PARTICIPANT_RUNTIME_POLICY_FEATURES
+                and entry.support_level != ParticipantFeatureSupportLevel.UNSUPPORTED
+                and entry.feature not in supported_features
+            ):
+                raise ValueError(
+                    "ParticipantRuntimeCapabilities positive support for a participant policy feature "
+                    "requires the feature in supported_behavior_features"
                 )
 
     def _validate_autonomous_execution(self) -> None:
@@ -262,6 +252,7 @@ __all__ = [
     "PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE",
     "PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS",
     "PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE",
+    "PARTICIPANT_RUNTIME_POLICY_FEATURES",
     "PARTICIPANT_RUNTIME_ROLE_SCOPE",
     "ParticipantFeatureSupport",
     "ParticipantRuntimeCapabilities",

@@ -125,7 +125,80 @@
     },
     "participant_runtime": {
       "constraints": {},
-      "feature_support": [],
+      "feature_support": [
+        {
+          "constraint_refs": [],
+          "disclosure_refs": [
+            "disclosure:participant_declassification:unsupported"
+          ],
+          "evidence_refs": [],
+          "feature": "participant_declassification",
+          "limitation_refs": [
+            "limitation:participant_declassification:not-realized"
+          ],
+          "support_level": "unsupported"
+        },
+        {
+          "constraint_refs": [],
+          "disclosure_refs": [
+            "disclosure:participant_directed_inject_delivery:unsupported"
+          ],
+          "evidence_refs": [],
+          "feature": "participant_directed_inject_delivery",
+          "limitation_refs": [
+            "limitation:participant_directed_inject_delivery:not-realized"
+          ],
+          "support_level": "unsupported"
+        },
+        {
+          "constraint_refs": [],
+          "disclosure_refs": [
+            "disclosure:participant_egress_projection:unsupported"
+          ],
+          "evidence_refs": [],
+          "feature": "participant_egress_projection",
+          "limitation_refs": [
+            "limitation:participant_egress_projection:not-realized"
+          ],
+          "support_level": "unsupported"
+        },
+        {
+          "constraint_refs": [],
+          "disclosure_refs": [
+            "disclosure:participant_ingress_admission:unsupported"
+          ],
+          "evidence_refs": [],
+          "feature": "participant_ingress_admission",
+          "limitation_refs": [
+            "limitation:participant_ingress_admission:not-realized"
+          ],
+          "support_level": "unsupported"
+        },
+        {
+          "constraint_refs": [],
+          "disclosure_refs": [
+            "disclosure:participant_intervention:unsupported"
+          ],
+          "evidence_refs": [],
+          "feature": "participant_intervention",
+          "limitation_refs": [
+            "limitation:participant_intervention:not-realized"
+          ],
+          "support_level": "unsupported"
+        },
+        {
+          "constraint_refs": [],
+          "disclosure_refs": [
+            "disclosure:participant_transformation:unsupported"
+          ],
+          "evidence_refs": [],
+          "feature": "participant_transformation",
+          "limitation_refs": [
+            "limitation:participant_transformation:not-realized"
+          ],
+          "support_level": "unsupported"
+        }
+      ],
       "max_autonomous_action_attempts": null,
       "max_autonomous_burst_size": null,
       "max_autonomous_in_flight": null,
@@ -313,6 +386,8 @@
     "participant-episode-state-envelope-v1",
     "participant-episode-history-event-stream-v1",
     "participant-behavior-history-event-stream-v1",
+    "participant-control-occurrence-v1",
+    "participant-crossing-occurrence-v1",
     "participant-lifecycle-event-v1",
     "participant-observation-envelope-v1",
     "participant-shared-state-record-v1",

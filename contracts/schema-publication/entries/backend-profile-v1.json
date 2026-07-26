@@ -2,9 +2,9 @@
   "contract_id": "backend-profile-v1",
   "schema_path": "contracts/schemas/profiles/backend-profile-v1.json",
   "stability": "draft",
-  "content_hash": "fd118e131b273684ac540675a8ba8d4b6ef1f10990ddd0d0dc5776c1b6c4a233",
+  "content_hash": "63c54137176f37d1253095c1fb93b3090084f604972e41588d0f71de14855e53",
   "last_change": {
-    "summary": "Added the authoritative experiment binding descriptor contract to the governed backend contract vocabulary.",
-    "content_hash": "fd118e131b273684ac540675a8ba8d4b6ef1f10990ddd0d0dc5776c1b6c4a233"
+    "summary": "Added participant control and crossing occurrence contracts to the governed backend profile vocabulary.",
+    "content_hash": "63c54137176f37d1253095c1fb93b3090084f604972e41588d0f71de14855e53"
   }
 }

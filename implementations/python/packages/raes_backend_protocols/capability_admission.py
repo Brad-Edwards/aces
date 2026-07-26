@@ -12,6 +12,10 @@ from .capabilities import (
     PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE,
     PARTICIPANT_RUNTIME_ROLE_SCOPE,
 )
+from .participant_feature_admission import participant_feature_support_gaps as participant_feature_support_gaps
+from .participant_feature_admission import (
+    resolve_participant_feature_support as resolve_participant_feature_support,
+)
 
 if TYPE_CHECKING:
     from raes_contracts.contracts.time_model import TimeModelDeclarationModel
