@@ -166,9 +166,7 @@ def _load_historical_records(
             continue
         if set(raw_binding) != binding_keys:
             failures.append(
-                _manifest_failure(
-                    f"operational_bindings[{index}] must contain exactly {sorted(binding_keys)!r}"
-                )
+                _manifest_failure(f"operational_bindings[{index}] must contain exactly {sorted(binding_keys)!r}")
             )
             continue
         path = raw_binding.get("path")
@@ -197,15 +195,11 @@ def _load_historical_records(
             failures.append(_manifest_failure(f"operational_bindings[{index}].rationale must be non-empty"))
             continue
         if isinstance(occurrences, bool) or not isinstance(occurrences, int) or occurrences < 1:
-            failures.append(
-                _manifest_failure(f"operational_bindings[{index}].occurrences must be a positive integer")
-            )
+            failures.append(_manifest_failure(f"operational_bindings[{index}].occurrences must be a positive integer"))
             continue
         if not isinstance(content_sha256, str) or not SHA256_RE.fullmatch(content_sha256):
             failures.append(
-                _manifest_failure(
-                    f"operational_bindings[{index}].content_sha256 must be a lowercase sha256 digest"
-                )
+                _manifest_failure(f"operational_bindings[{index}].content_sha256 must be a lowercase sha256 digest")
             )
             continue
         bindings[path] = OperationalBinding(

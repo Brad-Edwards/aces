@@ -143,8 +143,7 @@ def test_exact_content_bound_operational_binding_passes_and_fails_closed(tmp_pat
     failures = evaluate_identity_cutover(tmp_path)
 
     assert any(
-        failure.rule_id == "identity-cutover-operational-content" and failure.path == path
-        for failure in failures
+        failure.rule_id == "identity-cutover-operational-content" and failure.path == path for failure in failures
     )
 
 
