@@ -235,8 +235,10 @@ def test_delivery_binding_is_closed_and_requires_one_explicit_addressee() -> Non
     ],
 )
 def test_delivery_references_fail_closed(old: str, new: str, expected: str) -> None:
+    source = _replace(_scenario_yaml(), old, new)
+
     with pytest.raises(SDLValidationError, match=expected):
-        parse_sdl(_replace(_scenario_yaml(), old, new))
+        parse_sdl(source)
 
 
 @pytest.mark.parametrize(
@@ -252,8 +254,10 @@ def test_occurrence_anchor_must_preserve_the_inject_event_script_story_chain(
     new: str,
     expected: str,
 ) -> None:
+    source = _replace(_scenario_yaml(), old, new)
+
     with pytest.raises((SDLValidationError, SDLParseError), match=expected):
-        parse_sdl(_replace(_scenario_yaml(), old, new))
+        parse_sdl(source)
 
 
 def test_hidden_or_unclassified_items_cannot_cross_the_participant_boundary() -> None:
@@ -304,8 +308,10 @@ def test_delivery_policy_basis_must_match_the_selected_participant_view_rule(
     ],
 )
 def test_delivery_policy_order_and_failure_disposition_are_closed(old: str, new: str) -> None:
+    source = _replace(_scenario_yaml(), old, new)
+
     with pytest.raises(SDLParseError):
-        parse_sdl(_replace(_scenario_yaml(), old, new))
+        parse_sdl(source)
 
 
 def test_direction_and_intervention_require_a_compatible_mixed_control_transition() -> None:
@@ -493,8 +499,10 @@ def test_directed_delivery_rejects_illegitimate_control_transition_bindings(
     case: str,
     expected: str,
 ) -> None:
+    source = _directed_control_legitimacy_case(case)
+
     with pytest.raises(SDLValidationError, match=expected):
-        parse_sdl(_directed_control_legitimacy_case(case))
+        parse_sdl(source)
 
 
 @pytest.mark.parametrize(
@@ -527,8 +535,10 @@ def test_directed_delivery_rejects_incoherent_control_time_and_evidence_agreemen
     new: str,
     expected: str,
 ) -> None:
+    source = _replace(_external_direction_yaml(), old, new)
+
     with pytest.raises(SDLValidationError, match=expected):
-        parse_sdl(_replace(_external_direction_yaml(), old, new))
+        parse_sdl(source)
 
 
 def test_disclosure_cannot_smuggle_an_intervention_binding() -> None:

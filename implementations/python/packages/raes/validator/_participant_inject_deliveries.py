@@ -4,11 +4,13 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
 
+_DECLARATION_INDEX_REQUIRED = "declaration index must be built before reference validation"
+
 
 class _ParticipantInjectDeliveriesMixin:
     def _verify_participant_inject_deliveries(self) -> None:
         if self._declaration_index is None:
-            raise RuntimeError("declaration index must be built before reference validation")
+            raise RuntimeError(_DECLARATION_INDEX_REQUIRED)
         for spec_name, behavior_spec in self._s.behavior_specifications.items():
             for binding_id, binding in behavior_spec.participant_inject_deliveries.items():
                 self._verify_participant_inject_delivery(
@@ -84,6 +86,10 @@ class _ParticipantInjectDeliveriesMixin:
             self._err(f"{label} story_ref '{occurrence.story_ref}' does not contain script '{occurrence.script_ref}'")
 
     def _verify_delivery_items(self, label: str, binding: object) -> None:
+        self._verify_delivery_item_refs(label, binding)
+        self._verify_delivery_observation(label, binding)
+
+    def _verify_delivery_item_refs(self, label: str, binding: object) -> None:
         for field_name in ("source_item_ref", "result_item_ref"):
             ref = getattr(binding, field_name)
             if self._is_unresolved_var(ref):
@@ -94,6 +100,8 @@ class _ParticipantInjectDeliveriesMixin:
                 ref_label=field_name,
                 targetable=True,
             )
+
+    def _verify_delivery_observation(self, label: str, binding: object) -> None:
         boundary_ref = binding.observation_boundary_ref
         if self._is_unresolved_var(boundary_ref) or boundary_ref not in self._s.observation_boundaries:
             if not self._is_unresolved_var(boundary_ref):
@@ -127,7 +135,7 @@ class _ParticipantInjectDeliveriesMixin:
 
     def _references_overlap(self, left: str, right: str) -> bool:
         if self._declaration_index is None:
-            raise RuntimeError("declaration index must be built before reference validation")
+            raise RuntimeError(_DECLARATION_INDEX_REQUIRED)
         left_targets = self._declaration_index.resolve(left)
         right_targets = self._declaration_index.resolve(right)
         return bool(left_targets and right_targets and left_targets.intersection(right_targets))
@@ -181,6 +189,27 @@ class _ParticipantInjectDeliveriesMixin:
         delivery_kind = str(getattr(binding.delivery_kind, "value", binding.delivery_kind))
         if delivery_kind == "disclosure":
             return
+        control = self._resolve_delivery_control(label, behavior_spec, binding)
+        if control is None:
+            return
+        declaration, transition, target_state = control
+        self._verify_delivery_control_agreement(
+            label,
+            binding,
+            delivery_kind,
+            declaration,
+            transition,
+            target_state,
+        )
+        self._verify_delivery_control_time(label, binding)
+        self._verify_delivery_control_evidence(label, binding, transition, target_state)
+
+    def _resolve_delivery_control(
+        self,
+        label: str,
+        behavior_spec: object,
+        binding: object,
+    ) -> tuple[object, object, object] | None:
         declaration = behavior_spec.mixed_control
         if declaration is None:
             self._err(f"{label} control_transition_ref requires mixed_control on the owning behavior specification")
@@ -190,17 +219,27 @@ class _ParticipantInjectDeliveriesMixin:
         if transition is None:
             self._err(f"{label} control_transition_ref '{transition_ref}' does not resolve")
             return
+        return declaration, transition, declaration.controller_states[transition.to_state_ref]
+
+    def _verify_delivery_control_agreement(
+        self,
+        label: str,
+        binding: object,
+        delivery_kind: str,
+        declaration: object,
+        transition: object,
+        target_state: object,
+    ) -> None:
         transition_kind = str(getattr(transition.transition_kind, "value", transition.transition_kind))
         if transition_kind != delivery_kind:
             self._err(
-                f"{label} control_transition_ref '{transition_ref}' kind '{transition_kind}' "
+                f"{label} control_transition_ref '{binding.control_transition_ref}' kind '{transition_kind}' "
                 f"does not match delivery_kind '{delivery_kind}'"
             )
         if declaration.participant_ref != binding.participant_ref:
             self._err(f"{label} control transition participant disagrees with participant_ref")
         if declaration.policy_revision != binding.delivery_policy.policy_revision:
             self._err(f"{label} control transition policy revision disagrees with delivery policy")
-        target_state = declaration.controller_states[transition.to_state_ref]
         expected_controller = (
             declaration.participant_ref if target_state.controller_ref == "self" else target_state.controller_ref
         )
@@ -220,12 +259,10 @@ class _ParticipantInjectDeliveriesMixin:
             self._err(f"{label} control validity interval disagrees with the control transition")
         if not target_state.valid_from_order <= binding.control_effective_order <= target_state.valid_until_order:
             self._err(f"{label} control effective order falls outside the target controller-state validity interval")
-        self._verify_delivery_control_time(label, binding)
-        self._verify_delivery_control_evidence(label, binding, transition, target_state)
 
     def _resolved_control_refs(self, refs: Iterable[str]) -> set[str]:
         if self._declaration_index is None:
-            raise RuntimeError("declaration index must be built before reference validation")
+            raise RuntimeError(_DECLARATION_INDEX_REQUIRED)
         resolved: set[str] = set()
         for ref in refs:
             resolved.update(self._declaration_index.resolve(ref))

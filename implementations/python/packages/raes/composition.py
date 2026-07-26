@@ -374,6 +374,45 @@ def _rewrite_tool_affordance(
     ]
 
 
+def _rewrite_participant_inject_delivery(
+    binding: dict[str, Any],
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
+    binding["participant_ref"] = _maybe_rename(str(binding.get("participant_ref", "")), symbols["agents"])
+    binding["inject_ref"] = _maybe_rename(str(binding.get("inject_ref", "")), symbols["injects"])
+    occurrence = binding.get("occurrence")
+    if isinstance(occurrence, dict):
+        for field_name, section_name in (
+            ("event_ref", "events"),
+            ("script_ref", "scripts"),
+            ("story_ref", "stories"),
+        ):
+            if occurrence.get(field_name):
+                occurrence[field_name] = _maybe_rename(str(occurrence[field_name]), symbols[section_name])
+    for field_name in ("source_item_ref", "result_item_ref"):
+        if binding.get(field_name):
+            binding[field_name] = _maybe_rename(str(binding[field_name]), symbols["named"])
+    binding["observation_boundary_ref"] = _maybe_rename(
+        str(binding.get("observation_boundary_ref", "")),
+        symbols["observation_boundaries"],
+    )
+    binding["temporal_constraint_refs"] = [
+        _maybe_rename(ref, symbols["temporal_constraints"]) for ref in binding.get("temporal_constraint_refs", [])
+    ]
+    binding["evidence_requirement_refs"] = [
+        _maybe_rename(ref, symbols["evidence_requirements"]) for ref in binding.get("evidence_requirement_refs", [])
+    ]
+    controller_ref = binding.get("controller_ref")
+    if controller_ref and controller_ref != "self":
+        binding["controller_ref"] = _maybe_rename(str(controller_ref), symbols["agents"])
+    binding["control_authority_scope_refs"] = [
+        _maybe_rename(ref, symbols["named"]) for ref in binding.get("control_authority_scope_refs", [])
+    ]
+    binding["control_evidence_refs"] = [
+        _maybe_rename(ref, symbols["named"]) for ref in binding.get("control_evidence_refs", [])
+    ]
+
+
 def _rewrite_variation_reference(
     reference: str,
     section: str,
@@ -786,58 +825,8 @@ def _namespace_payload(
                 if isinstance(binding, dict):
                     _rewrite_tool_affordance(binding, symbols)
             for binding in behavior_spec.get("participant_inject_deliveries", {}).values():
-                if not isinstance(binding, dict):
-                    continue
-                binding["participant_ref"] = _maybe_rename(
-                    str(binding.get("participant_ref", "")),
-                    symbols["agents"],
-                )
-                binding["inject_ref"] = _maybe_rename(
-                    str(binding.get("inject_ref", "")),
-                    symbols["injects"],
-                )
-                occurrence = binding.get("occurrence")
-                if isinstance(occurrence, dict):
-                    for field_name, section_name in (
-                        ("event_ref", "events"),
-                        ("script_ref", "scripts"),
-                        ("story_ref", "stories"),
-                    ):
-                        if occurrence.get(field_name):
-                            occurrence[field_name] = _maybe_rename(
-                                str(occurrence[field_name]),
-                                symbols[section_name],
-                            )
-                for field_name in ("source_item_ref", "result_item_ref"):
-                    if binding.get(field_name):
-                        binding[field_name] = _maybe_rename(
-                            str(binding[field_name]),
-                            symbols["named"],
-                        )
-                binding["observation_boundary_ref"] = _maybe_rename(
-                    str(binding.get("observation_boundary_ref", "")),
-                    symbols["observation_boundaries"],
-                )
-                binding["temporal_constraint_refs"] = [
-                    _maybe_rename(ref, symbols["temporal_constraints"])
-                    for ref in binding.get("temporal_constraint_refs", [])
-                ]
-                binding["evidence_requirement_refs"] = [
-                    _maybe_rename(ref, symbols["evidence_requirements"])
-                    for ref in binding.get("evidence_requirement_refs", [])
-                ]
-                controller_ref = binding.get("controller_ref")
-                if controller_ref and controller_ref != "self":
-                    binding["controller_ref"] = _maybe_rename(
-                        str(controller_ref),
-                        symbols["agents"],
-                    )
-                binding["control_authority_scope_refs"] = [
-                    _maybe_rename(ref, symbols["named"]) for ref in binding.get("control_authority_scope_refs", [])
-                ]
-                binding["control_evidence_refs"] = [
-                    _maybe_rename(ref, symbols["named"]) for ref in binding.get("control_evidence_refs", [])
-                ]
+                if isinstance(binding, dict):
+                    _rewrite_participant_inject_delivery(binding, symbols)
     for requirement in namespaced.get("evidence_requirements", {}).values():
         if isinstance(requirement, dict):
             _rewrite_evidence_requirement(requirement, symbols)

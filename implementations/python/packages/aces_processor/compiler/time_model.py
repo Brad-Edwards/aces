@@ -27,7 +27,7 @@ def _address(kind: str, name: str) -> str:
     return render_compiled_address("time", kind, name)
 
 
-def _subject_address(scenario: InstantiatedScenario, ref: str) -> str:
+def _participant_delivery_subject_address(scenario: InstantiatedScenario, ref: str) -> str | None:
     for spec_name, behavior_spec in scenario.behavior_specifications.items():
         prefix = f"behavior_specifications.{spec_name}.participant_inject_deliveries."
         if not ref.startswith(prefix):
@@ -41,6 +41,10 @@ def _subject_address(scenario: InstantiatedScenario, ref: str) -> str:
                 "inject-delivery",
                 binding_id,
             )
+    return None
+
+
+def _section_subject_address(scenario: InstantiatedScenario, ref: str) -> str | None:
     for section_name in (
         "nodes",
         "infrastructure",
@@ -76,10 +80,27 @@ def _subject_address(scenario: InstantiatedScenario, ref: str) -> str:
         candidate = ref[len(prefix) :] if ref.startswith(prefix) else ""
         if candidate in declarations:
             return render_compiled_address("sdl", section_name.replace("_", "-"), candidate)
+    return None
+
+
+def _workflow_step_subject_address(scenario: InstantiatedScenario, ref: str) -> str | None:
     for workflow_name, workflow in scenario.workflows.items():
         prefix = f"{workflow_name}."
         if ref.startswith(prefix) and ref[len(prefix) :] in workflow.steps:
             return render_compiled_address("sdl", "workflow-step", workflow_name, ref[len(prefix) :])
+    return None
+
+
+def _subject_address(scenario: InstantiatedScenario, ref: str) -> str:
+    participant_delivery_address = _participant_delivery_subject_address(scenario, ref)
+    if participant_delivery_address is not None:
+        return participant_delivery_address
+    section_address = _section_subject_address(scenario, ref)
+    if section_address is not None:
+        return section_address
+    workflow_step_address = _workflow_step_subject_address(scenario, ref)
+    if workflow_step_address is not None:
+        return workflow_step_address
     raise ValueError(f"validated temporal subject ref did not resolve: {ref}")
 
 
