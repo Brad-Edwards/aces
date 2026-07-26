@@ -1,6 +1,4 @@
 schema_version: 1
-# Ground Control still owns the pre-cutover project identifier. ADR-096
-# requires external provisioning before this binding can move.
 project: aces-sdl
 github_repo: RAESystem/rae
 workflow:
