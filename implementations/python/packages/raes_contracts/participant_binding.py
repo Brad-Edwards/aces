@@ -115,18 +115,15 @@ class ParticipantActionAdmissionRequest:
     execution_generation: int | None = None
 
     def __post_init__(self) -> None:
-        _validate_admission_request_identifiers(self)
-        _validate_admission_request_models(self)
-        _validate_admission_request_selection(self)
-        _validate_admission_request_execution(self)
-        _validate_admission_request_temporal_contexts(self)
-        _normalize_admission_request_tuples(self)
+        _validate_admission_request_basics(self)
+        _validate_admission_request_selection_and_execution(self)
+        _validate_and_normalize_admission_request_contexts(self)
         violations = participant_action_admission_request_violations(self)
         if violations:
             raise ValueError(violations[0])
 
 
-def _validate_admission_request_identifiers(request: ParticipantActionAdmissionRequest) -> None:
+def _validate_admission_request_basics(request: ParticipantActionAdmissionRequest) -> None:
     _require_non_empty(request.participant_address, "participant_address")
     _require_prefixed(request.action_contract_address, _ACTION_CONTRACT_PREFIX, "action_contract_address")
     _require_prefixed(
@@ -138,9 +135,6 @@ def _validate_admission_request_identifiers(request: ParticipantActionAdmissionR
     _require_non_empty(request.state_transition_kind, "state_transition_kind")
     if request.post_state_digest is not None:
         _require_non_empty(request.post_state_digest, "post_state_digest")
-
-
-def _validate_admission_request_models(request: ParticipantActionAdmissionRequest) -> None:
     if not isinstance(request.implementation_manifest, ParticipantImplementationManifestModel):
         raise TypeError("implementation_manifest must be a ParticipantImplementationManifestModel")
     if not isinstance(request.implementation_selection, ParticipantImplementationSelectionModel):
@@ -149,38 +143,29 @@ def _validate_admission_request_models(request: ParticipantActionAdmissionReques
         raise TypeError("action_result must be a ParticipantActionResultModel or None")
 
 
-def _validate_admission_request_selection(request: ParticipantActionAdmissionRequest) -> None:
+def _validate_admission_request_selection_and_execution(request: ParticipantActionAdmissionRequest) -> None:
     selection = request.validated_selection
-    if selection is None:
-        return
-    if not isinstance(selection, ParticipantValidatedActionSelection):
+    if selection is not None and not isinstance(selection, ParticipantValidatedActionSelection):
         raise TypeError("validated_selection must be a ParticipantValidatedActionSelection or None")
-    if selection.action_contract_address != request.action_contract_address:
+    if selection is not None and selection.action_contract_address != request.action_contract_address:
         raise ValueError("validated_selection action_contract_address must match the admission request")
-
-
-def _validate_admission_request_execution(request: ParticipantActionAdmissionRequest) -> None:
     if not isinstance(request.requires_terminal_outcome, bool):
         raise TypeError("requires_terminal_outcome must be a bool")
     if (request.execution_scope_ref is None) != (request.execution_generation is None):
         raise ValueError("execution_scope_ref and execution_generation must be provided together")
-    if request.execution_scope_ref is None:
-        return
-    _require_non_empty(request.execution_scope_ref, "execution_scope_ref")
-    if request.execution_generation is None or request.execution_generation < 0:
-        raise ValueError("execution_generation must be non-negative")
-    if not request.target_addresses:
-        raise ValueError("generation-bound participant actions require target_addresses")
+    if request.execution_scope_ref is not None:
+        _require_non_empty(request.execution_scope_ref, "execution_scope_ref")
+        if request.execution_generation is None or request.execution_generation < 0:
+            raise ValueError("execution_generation must be non-negative")
+        if not request.target_addresses:
+            raise ValueError("generation-bound participant actions require target_addresses")
 
 
-def _validate_admission_request_temporal_contexts(request: ParticipantActionAdmissionRequest) -> None:
+def _validate_and_normalize_admission_request_contexts(request: ParticipantActionAdmissionRequest) -> None:
     if any(not isinstance(item, ParticipantTemporalRuntimeContextModel) for item in request.temporal_contexts):
         raise TypeError("temporal_contexts entries must be ParticipantTemporalRuntimeContextModel")
     if len({item.temporal_contract_id for item in request.temporal_contexts}) != len(request.temporal_contexts):
         raise ValueError("temporal_contexts temporal_contract_id values must be unique")
-
-
-def _normalize_admission_request_tuples(request: ParticipantActionAdmissionRequest) -> None:
     for field_name in (
         "evidence_refs",
         "visible_refs",
@@ -198,9 +183,7 @@ class ParticipantActionApplyResult(ApplyResult):
     action_result: ParticipantActionResultModel | None = None
 
 
-def participant_action_admission_request_violations(
-    request: ParticipantActionAdmissionRequest,
-) -> tuple[str, ...]:
+def participant_action_admission_request_violations(request: ParticipantActionAdmissionRequest) -> tuple[str, ...]:
     """Return manifest/selection compatibility violations for a binding request."""
 
     return (

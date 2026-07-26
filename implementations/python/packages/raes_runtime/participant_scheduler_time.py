@@ -15,6 +15,18 @@ def clock_coordinate(snapshot: RuntimeSnapshot, clock_address: str) -> tuple[int
     return clock.coordinate.segment, clock.coordinate.tick
 
 
+def cadence(policy: ParticipantAutonomousExecutionRuntime, time_model: CompiledTimeModel) -> tuple[int, int]:
+    selected = [
+        constraint
+        for constraint in time_model.constraints
+        if constraint.address in policy.temporal_constraint_addresses and constraint.kind == "cadence"
+    ]
+    if len(selected) != 1 or selected[0].cadence_ticks is None:
+        raise ValueError("autonomous participant execution requires exactly one cadence constraint")
+    constraint = selected[0]
+    return constraint.start_tick or 0, constraint.cadence_ticks
+
+
 def participant_time_domain(
     policy: ParticipantAutonomousExecutionRuntime,
     time_model: CompiledTimeModel,
@@ -30,4 +42,4 @@ def participant_time_domain(
     }[domain.kind]
 
 
-__all__ = ["clock_coordinate", "participant_time_domain"]
+__all__ = ["cadence", "clock_coordinate", "participant_time_domain"]
