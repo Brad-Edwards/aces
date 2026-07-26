@@ -21,6 +21,18 @@ from raes_contracts.runtime_state import OperationReceipt
 from raes_processor.models import ParticipantBehaviorRuntime
 
 from .control_plane_execution import execute_participant_action
+from .participant_control_intents import (
+    ParticipantApprovalControlIntent,
+    ParticipantCancellationControlIntent,
+    ParticipantControlIntent,
+    ParticipantDenialControlIntent,
+    ParticipantExternalDirectionControlIntent,
+    ParticipantHandoffControlIntent,
+    ParticipantInterventionControlIntent,
+    ParticipantOverrideControlIntent,
+    ParticipantProposalControlIntent,
+)
+from .participant_control_mediation import record_participant_control
 
 _NO_PARTICIPANT_RUNTIME_MESSAGE = "Target does not provide a participant runtime."
 _PARTICIPANT_BINDING_REJECTED = "runtime.participant-binding.rejected"
@@ -204,6 +216,24 @@ def _participant_binding_request_diagnostics(
 
 class ParticipantControlMixin:
     """Participant runtime methods for the shared runtime control plane."""
+
+    def record_participant_control(
+        self,
+        participant_address: str,
+        intent: ParticipantControlIntent,
+        *,
+        identity: object,
+        idempotency_key: str = "",
+    ) -> OperationReceipt:
+        """Mediate and durably append one supervisory control occurrence."""
+
+        return record_participant_control(
+            self,
+            participant_address=participant_address,
+            intent=intent,
+            identity=identity,
+            idempotency_key=idempotency_key,
+        )
 
     def initialize_participant_episode(
         self,
@@ -404,3 +434,17 @@ class ParticipantControlMixin:
             idempotency_key=idempotency_key,
             request_fingerprint=request_fingerprint,
         )
+
+
+__all__ = (
+    "ParticipantApprovalControlIntent",
+    "ParticipantCancellationControlIntent",
+    "ParticipantControlIntent",
+    "ParticipantControlMixin",
+    "ParticipantDenialControlIntent",
+    "ParticipantExternalDirectionControlIntent",
+    "ParticipantHandoffControlIntent",
+    "ParticipantInterventionControlIntent",
+    "ParticipantOverrideControlIntent",
+    "ParticipantProposalControlIntent",
+)
