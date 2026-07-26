@@ -26,9 +26,12 @@ from .participant_decision_surface_exposure_v2 import (
     ParticipantDecisionSurfaceExposureBindingV2Model,
     ParticipantDecisionSurfaceStateCutOrderModel,
 )
+from .participant_decision_surface_v2_validation import _validate_participant_decision_surface_v2
 from .participant_manifests import DigestString
 from .participant_runtime import ParticipantRuntimeDeliveryBasis
 from .schema_invariants import _add_aces_invariant
+
+_SURFACE_V2_VALIDATOR = "raes_contracts.contracts.ParticipantDecisionSurfaceV2Model._validate_surface"
 
 
 class ParticipantDecisionSurfaceSequenceCutModel(ContractModel):
@@ -281,14 +284,6 @@ class ParticipantDecisionSurfaceDeliveryV2Model(ContractModel):
         return self
 
 
-def _view_exposed_refs(view: ParticipantDecisionSurfaceViewV2Model) -> set[str]:
-    return {
-        *view.visible_context_refs,
-        *(entry.action_contract_address for entry in view.action_entries),
-        *view.affordance_refs,
-    }
-
-
 class ParticipantDecisionSurfaceV2Model(ContractModel):
     """A projected or delivered v2 decision surface with separated trust planes."""
 
@@ -300,92 +295,7 @@ class ParticipantDecisionSurfaceV2Model(ContractModel):
 
     @model_validator(mode="after")
     def _validate_surface(self) -> ParticipantDecisionSurfaceV2Model:
-        view = self.participant_view
-        assurance = self.assurance
-        coordinate_comparisons = (
-            ("participant_address", assurance.participant_address, view.participant_address),
-            ("episode_id", assurance.episode_id, view.episode_id),
-            ("decision_epoch", assurance.decision_epoch, view.decision_epoch),
-        )
-        mismatched = [
-            name for name, assurance_value, view_value in coordinate_comparisons if assurance_value != view_value
-        ]
-        if mismatched:
-            raise ValueError("assurance disagrees with the participant view on: " + ", ".join(mismatched))
-
-        from ..satisfiability import canonical_contract_digest
-
-        if assurance.participant_view_digest != canonical_contract_digest(view):
-            raise ValueError("assurance participant_view_digest must match the canonical participant view")
-
-        bindings = {binding.item_ref: binding for binding in assurance.exposure_bindings}
-        _require_unique([binding.item_ref for binding in assurance.exposure_bindings], "exposure_bindings.item_ref")
-        expected = _view_exposed_refs(view)
-        if bindings.keys() != expected:
-            missing = sorted(expected - bindings.keys())
-            extra = sorted(bindings.keys() - expected)
-            details = []
-            if missing:
-                details.append("missing " + ", ".join(missing))
-            if extra:
-                details.append("unexpected " + ", ".join(extra))
-            raise ValueError("exposure_bindings must exactly cover participant view refs: " + "; ".join(details))
-        for binding in assurance.exposure_bindings:
-            comparisons = (
-                ("participant_address", binding.participant_address, view.participant_address),
-                ("episode_id", binding.episode_id, view.episode_id),
-                ("decision_epoch", binding.decision_epoch, view.decision_epoch),
-                ("decision_cut_ref", binding.decision_cut_ref, assurance.derivation_anchor.state_cut.cut_ref),
-                ("audience_scope_ref", binding.audience_scope_ref, assurance.audience_scope_ref),
-                ("projection_policy_ref", binding.projection_policy_ref, assurance.projection_policy_ref),
-                (
-                    "projection_policy_revision",
-                    binding.projection_policy_revision,
-                    assurance.projection_policy_revision,
-                ),
-                (
-                    "projection_policy_decision_ref",
-                    binding.projection_policy_decision_ref,
-                    assurance.projection_policy_decision_ref,
-                ),
-                ("exposure_policy_ref", binding.exposure_policy_ref, assurance.exposure_policy_ref),
-            )
-            binding_mismatches = [
-                name for name, binding_value, expected_value in comparisons if binding_value != expected_value
-            ]
-            if binding_mismatches:
-                raise ValueError(
-                    f"exposure binding {binding.item_ref!r} disagrees with the surface on: "
-                    + ", ".join(binding_mismatches)
-                )
-            if not set(binding.evidence_refs).issubset(assurance.evidence_refs):
-                raise ValueError(f"exposure binding {binding.item_ref!r} evidence must be carried by assurance")
-            if not set(binding.provenance_refs).issubset(assurance.provenance_refs):
-                raise ValueError(f"exposure binding {binding.item_ref!r} provenance must be carried by assurance")
-
-        if self.surface_state == "projected" and self.delivery is not None:
-            raise ValueError("projected surfaces must not carry delivery")
-        if self.surface_state == "delivered" and self.delivery is None:
-            raise ValueError("delivered surfaces require delivery")
-        if self.delivery is not None:
-            delivery_comparisons = (
-                ("surface_id", self.delivery.surface_id, view.surface_id),
-                ("participant_address", self.delivery.participant_address, view.participant_address),
-                ("episode_id", self.delivery.episode_id, view.episode_id),
-                ("decision_epoch", self.delivery.decision_epoch, view.decision_epoch),
-                (
-                    "participant_view_digest",
-                    self.delivery.participant_view_digest,
-                    assurance.participant_view_digest,
-                ),
-            )
-            delivery_mismatches = [
-                name
-                for name, delivery_value, expected_value in delivery_comparisons
-                if delivery_value != expected_value
-            ]
-            if delivery_mismatches:
-                raise ValueError("delivery disagrees with the participant view on: " + ", ".join(delivery_mismatches))
+        _validate_participant_decision_surface_v2(self)
         return self
 
     @classmethod
@@ -401,7 +311,7 @@ class ParticipantDecisionSurfaceV2Model(ContractModel):
             "decision-surface-v2-plane-separation",
             "The participant view contains only participant-available choice material; derivation, policy, evidence, "
             "provenance, and delivery remain in separate assurance and delivery planes.",
-            validator="raes_contracts.contracts.ParticipantDecisionSurfaceV2Model._validate_surface",
+            validator=_SURFACE_V2_VALIDATOR,
             inputs=[{"contract_id": "participant-decision-surface-v2", "instance_path": "#"}],
         )
         _add_aces_invariant(
@@ -409,14 +319,14 @@ class ParticipantDecisionSurfaceV2Model(ContractModel):
             "decision-surface-v2-exact-cut-policy",
             "Each exposed item is bound to the derivation state cut and exact policy decision, independently of the "
             "participant decision epoch.",
-            validator="raes_contracts.contracts.ParticipantDecisionSurfaceV2Model._validate_surface",
+            validator=_SURFACE_V2_VALIDATOR,
             inputs=[{"contract_id": "participant-decision-surface-v2", "instance_path": "#/assurance"}],
         )
         _add_aces_invariant(
             json_schema,
             "decision-surface-v2-delivery-before-selection",
             "A surface is actionable only in delivered state, with delivery bound to the canonical participant view.",
-            validator="raes_contracts.contracts.ParticipantDecisionSurfaceV2Model._validate_surface",
+            validator=_SURFACE_V2_VALIDATOR,
             inputs=[{"contract_id": "participant-decision-surface-v2", "instance_path": "#/delivery"}],
         )
         _add_aces_invariant(

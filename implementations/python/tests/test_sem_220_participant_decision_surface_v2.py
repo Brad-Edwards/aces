@@ -350,9 +350,10 @@ def test_v2_is_closed_against_legacy_or_hidden_order_fields() -> None:
     payload = _projected_surface().model_dump(mode="json")
     payload["observation_order"] = 0
     payload["participant_view"]["anchor_order"] = 1
+    invalid_payload = copy.deepcopy(payload)
 
     with pytest.raises(ValidationError):
-        ParticipantDecisionSurfaceV2Model.model_validate(copy.deepcopy(payload))
+        ParticipantDecisionSurfaceV2Model.model_validate(invalid_payload)
 
 
 def test_v2_published_schema_and_fixtures_match_the_contract_model() -> None:

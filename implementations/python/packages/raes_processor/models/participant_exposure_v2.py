@@ -111,11 +111,10 @@ def _resolve_authorization(
     return authorization
 
 
-def _validate_authorization(
+def _validate_authorization_coordinates(
     authorization: ParticipantExposureAuthorizationRecordV2,
     projection: ParticipantExposureProjectionV2,
     policy: ParticipantExposurePolicyModel,
-    relation: Mapping[str, str],
 ) -> None:
     exact_coordinates = {
         "participant_address": projection.participant_address,
@@ -139,10 +138,22 @@ def _validate_authorization(
             f"exposure authorization {authorization.item_ref!r} has mismatched exact-cut coordinates: "
             + ", ".join(mismatches)
         )
+
+
+def _validate_authorization_visibility_and_policy(
+    authorization: ParticipantExposureAuthorizationRecordV2,
+    relation: Mapping[str, str],
+    policy: ParticipantExposurePolicyModel,
+) -> None:
     if relation.get(authorization.item_ref) not in _PARTICIPANT_VISIBLE_VIEW_DISPOSITIONS:
         raise ValueError(f"exposure item {authorization.item_ref!r} is not participant-visible at the state cut")
     if not _policy_permits_item(policy, authorization.item_ref):
         raise ValueError(f"selected exposure policy does not permit item {authorization.item_ref!r}")
+
+
+def _validate_authorization_authority_refs(
+    authorization: ParticipantExposureAuthorizationRecordV2,
+) -> None:
     required_strings = (
         authorization.source_ref,
         authorization.source_layer_ref,
@@ -155,6 +166,11 @@ def _validate_authorization(
     )
     if any(not value for value in required_strings):
         raise ValueError("participant exposure authorization requires non-empty authority refs")
+
+
+def _validate_authorization_ref_collections(
+    authorization: ParticipantExposureAuthorizationRecordV2,
+) -> None:
     for field_name in (
         "source_marking_definition_refs",
         "result_marking_definition_refs",
@@ -169,6 +185,11 @@ def _validate_authorization(
             raise ValueError(f"exposure authorization {authorization.item_ref!r} requires {field_name}")
         if len(values) != len(set(values)) or any(not value for value in values):
             raise ValueError(f"exposure authorization {authorization.item_ref!r} has invalid {field_name}")
+
+
+def _validate_authorization_transformation(
+    authorization: ParticipantExposureAuthorizationRecordV2,
+) -> None:
     if authorization.source_ref != authorization.item_ref and authorization.transformation_rule_ref is None:
         raise ValueError("derived exposure items require a transformation rule")
     if authorization.operation in {"masking", "redaction", "transformation"} and (
@@ -179,6 +200,11 @@ def _validate_authorization(
         raise ValueError("redaction exposure operations require a redaction policy")
     if authorization.operation == "declassification" and authorization.declassification_basis_ref is None:
         raise ValueError("declassification exposure operations require a declassification basis")
+
+
+def _validate_authorization_inheritance(
+    authorization: ParticipantExposureAuthorizationRecordV2,
+) -> None:
     if authorization.declassification_basis_ref is None and not set(
         authorization.source_marking_definition_refs
     ).issubset(authorization.result_marking_definition_refs):
@@ -187,10 +213,21 @@ def _validate_authorization(
         authorization.result_provenance_refs
     ):
         raise ValueError("derived exposure results must inherit source provenance unless declassification is explicit")
+
+
+def _validate_authorization_provenance_carriage(
+    authorization: ParticipantExposureAuthorizationRecordV2,
+) -> None:
     if not {*authorization.source_provenance_refs, *authorization.result_provenance_refs}.issubset(
         authorization.provenance_refs
     ):
         raise ValueError("source and result exposure provenance must be carried by provenance_refs")
+
+
+def _validate_authorization_assurance_carriage(
+    authorization: ParticipantExposureAuthorizationRecordV2,
+    projection: ParticipantExposureProjectionV2,
+) -> None:
     carried = (
         ("evidence", authorization.evidence_refs, projection.evidence_refs),
         ("provenance", authorization.provenance_refs, projection.provenance_refs),
@@ -199,11 +236,34 @@ def _validate_authorization(
     for label, refs, carrier in carried:
         if not set(refs).issubset(carrier):
             raise ValueError(f"exposure authorization {authorization.item_ref!r} {label} must be carried by assurance")
+
+
+def _validate_authorization_redaction_policy(
+    authorization: ParticipantExposureAuthorizationRecordV2,
+    projection: ParticipantExposureProjectionV2,
+) -> None:
     if (
         authorization.redaction_policy_ref is not None
         and authorization.redaction_policy_ref != projection.redaction_policy_ref
     ):
         raise ValueError("exposure authorization redaction policy must match the participant view")
+
+
+def _validate_authorization(
+    authorization: ParticipantExposureAuthorizationRecordV2,
+    projection: ParticipantExposureProjectionV2,
+    policy: ParticipantExposurePolicyModel,
+    relation: Mapping[str, str],
+) -> None:
+    _validate_authorization_coordinates(authorization, projection, policy)
+    _validate_authorization_visibility_and_policy(authorization, relation, policy)
+    _validate_authorization_authority_refs(authorization)
+    _validate_authorization_ref_collections(authorization)
+    _validate_authorization_transformation(authorization)
+    _validate_authorization_inheritance(authorization)
+    _validate_authorization_provenance_carriage(authorization)
+    _validate_authorization_assurance_carriage(authorization, projection)
+    _validate_authorization_redaction_policy(authorization, projection)
 
 
 def _binding_payload(

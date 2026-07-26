@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 
 from raes_contracts.contracts import (
     ParticipantDecisionSurfaceBehaviorAnchorV2Model,
@@ -25,6 +26,18 @@ from raes_contracts.runtime_state import RuntimeSnapshot
 from .behavior_history_violations import iter_participant_behavior_history_violations
 from .history_event import ParticipantBehaviorHistoryEvent
 from .runtime_model import RuntimeModel
+
+
+@dataclass(frozen=True)
+class ParticipantBehaviorProjectionAnchorRequestV2:
+    """Coordinates and assurance refs for one behavior-derived state cut."""
+
+    participant_address: str
+    episode_id: str
+    decision_epoch: int
+    behavior_history_order: int
+    evidence_refs: Sequence[str]
+    provenance_refs: Sequence[str]
 
 
 def _stable_projection_event_ref(event_domain: str, payload: Mapping[str, object]) -> str:
@@ -153,26 +166,24 @@ def resolve_participant_behavior_projection_anchor_v2(
     runtime_snapshot: RuntimeSnapshot,
     *,
     runtime_model: RuntimeModel,
-    participant_address: str,
-    episode_id: str,
-    decision_epoch: int,
-    behavior_history_order: int,
-    evidence_refs: Sequence[str],
-    provenance_refs: Sequence[str],
+    request: ParticipantBehaviorProjectionAnchorRequestV2,
 ) -> ParticipantDecisionSurfaceBehaviorAnchorV2Model:
     """Resolve a later decision epoch from the exact current behavior prefix."""
 
-    state, episode_history = _participant_episode_snapshot_context(runtime_snapshot, participant_address)
-    if state.status != ParticipantEpisodeStatus.RUNNING or state.episode_id != episode_id:
+    state, episode_history = _participant_episode_snapshot_context(
+        runtime_snapshot,
+        request.participant_address,
+    )
+    if state.status != ParticipantEpisodeStatus.RUNNING or state.episode_id != request.episode_id:
         raise ValueError("behavior projection anchor must identify the current running participant episode")
     events = _current_episode_behavior_events(
         runtime_snapshot,
-        participant_address=participant_address,
-        episode_id=episode_id,
+        participant_address=request.participant_address,
+        episode_id=request.episode_id,
     )
-    if behavior_history_order < 0 or behavior_history_order >= len(events):
+    if request.behavior_history_order < 0 or request.behavior_history_order >= len(events):
         raise ValueError("behavior_history_order must identify an event in the current episode behavior history")
-    if behavior_history_order != len(events) - 1:
+    if request.behavior_history_order != len(events) - 1:
         raise ValueError("behavior projection anchor must identify the exact current behavior-history prefix head")
     violations = tuple(
         iter_participant_behavior_history_violations(
@@ -180,7 +191,7 @@ def resolve_participant_behavior_projection_anchor_v2(
             action_contracts=runtime_model.action_contracts,
             observation_boundaries=runtime_model.observation_boundaries,
             participant_episode_history=[event.to_payload() for event in episode_history],
-            expected_participant_address=participant_address,
+            expected_participant_address=request.participant_address,
         )
     )
     if violations:
@@ -189,7 +200,7 @@ def resolve_participant_behavior_projection_anchor_v2(
     if event.event_type != ParticipantBehaviorHistoryEventType.OBSERVATION_EMITTED:
         raise ValueError("behavior decision surfaces require a terminal observation_emitted event")
     resolved_epoch = _behavior_decision_epoch(events)
-    if decision_epoch != resolved_epoch:
+    if request.decision_epoch != resolved_epoch:
         raise ValueError("decision_epoch must equal the number of completed participant observations")
     event_refs = tuple(_stable_projection_event_ref("behavior", item.to_payload()) for item in events)
     state_cut = _sequence_cut(
@@ -199,15 +210,73 @@ def resolve_participant_behavior_projection_anchor_v2(
     )
     return ParticipantDecisionSurfaceBehaviorAnchorV2Model(
         anchor_kind="behavior_event",
-        participant_address=participant_address,
-        episode_id=episode_id,
-        decision_epoch=decision_epoch,
+        participant_address=request.participant_address,
+        episode_id=request.episode_id,
+        decision_epoch=request.decision_epoch,
         event_ref=event_refs[-1],
         state_cut=state_cut,
         event_type=event.event_type.value,
         action_instance_id=event.action_instance_id,
-        evidence_refs=list(evidence_refs),
-        provenance_refs=list(dict.fromkeys((*provenance_refs, event_refs[-1]))),
+        evidence_refs=list(request.evidence_refs),
+        provenance_refs=list(dict.fromkeys((*request.provenance_refs, event_refs[-1]))),
+    )
+
+
+def _resolve_behavior_anchor_without_runtime_model(
+    runtime_snapshot: RuntimeSnapshot,
+    anchor: ParticipantDecisionSurfaceBehaviorAnchorV2Model,
+) -> ParticipantDecisionSurfaceBehaviorAnchorV2Model:
+    state, _ = _participant_episode_snapshot_context(runtime_snapshot, anchor.participant_address)
+    events = _current_episode_behavior_events(
+        runtime_snapshot,
+        participant_address=anchor.participant_address,
+        episode_id=anchor.episode_id,
+    )
+    if state.status != ParticipantEpisodeStatus.RUNNING or state.episode_id != anchor.episode_id:
+        raise ValueError("behavior derivation anchor is outside the current running episode")
+    if not events or events[-1].event_type != ParticipantBehaviorHistoryEventType.OBSERVATION_EMITTED:
+        raise ValueError("behavior derivation anchor is not at a terminal participant observation")
+    event_refs = tuple(_stable_projection_event_ref("behavior", item.to_payload()) for item in events)
+    return ParticipantDecisionSurfaceBehaviorAnchorV2Model(
+        anchor_kind="behavior_event",
+        participant_address=anchor.participant_address,
+        episode_id=anchor.episode_id,
+        decision_epoch=_behavior_decision_epoch(events),
+        event_ref=event_refs[-1],
+        state_cut=_sequence_cut(
+            history_domain="participant_behavior_history",
+            order_model="behavior_history_order",
+            event_refs=event_refs,
+        ),
+        event_type=events[-1].event_type.value,
+        action_instance_id=events[-1].action_instance_id,
+        evidence_refs=anchor.evidence_refs,
+        provenance_refs=anchor.provenance_refs,
+    )
+
+
+def _resolve_behavior_anchor(
+    runtime_snapshot: RuntimeSnapshot,
+    anchor: ParticipantDecisionSurfaceBehaviorAnchorV2Model,
+    runtime_model: RuntimeModel | None,
+) -> ParticipantDecisionSurfaceBehaviorAnchorV2Model:
+    state_cut = anchor.state_cut
+    if not isinstance(state_cut, ParticipantDecisionSurfaceSequenceCutModel):
+        raise ValueError("the reference runtime cannot re-resolve a causal-frontier behavior anchor")
+    if runtime_model is None:
+        return _resolve_behavior_anchor_without_runtime_model(runtime_snapshot, anchor)
+    request = ParticipantBehaviorProjectionAnchorRequestV2(
+        participant_address=anchor.participant_address,
+        episode_id=anchor.episode_id,
+        decision_epoch=anchor.decision_epoch,
+        behavior_history_order=state_cut.anchor_order,
+        evidence_refs=anchor.evidence_refs,
+        provenance_refs=anchor.provenance_refs,
+    )
+    return resolve_participant_behavior_projection_anchor_v2(
+        runtime_snapshot,
+        runtime_model=runtime_model,
+        request=request,
     )
 
 
@@ -228,47 +297,6 @@ def validate_participant_decision_surface_v2_anchor(
             provenance_refs=anchor.provenance_refs,
         )
     else:
-        state_cut = anchor.state_cut
-        if not isinstance(state_cut, ParticipantDecisionSurfaceSequenceCutModel):
-            raise ValueError("the reference runtime cannot re-resolve a causal-frontier behavior anchor")
-        if runtime_model is not None:
-            resolved = resolve_participant_behavior_projection_anchor_v2(
-                runtime_snapshot,
-                runtime_model=runtime_model,
-                participant_address=anchor.participant_address,
-                episode_id=anchor.episode_id,
-                decision_epoch=anchor.decision_epoch,
-                behavior_history_order=state_cut.anchor_order,
-                evidence_refs=anchor.evidence_refs,
-                provenance_refs=anchor.provenance_refs,
-            )
-        else:
-            state, _ = _participant_episode_snapshot_context(runtime_snapshot, anchor.participant_address)
-            events = _current_episode_behavior_events(
-                runtime_snapshot,
-                participant_address=anchor.participant_address,
-                episode_id=anchor.episode_id,
-            )
-            if state.status != ParticipantEpisodeStatus.RUNNING or state.episode_id != anchor.episode_id:
-                raise ValueError("behavior derivation anchor is outside the current running episode")
-            if not events or events[-1].event_type != ParticipantBehaviorHistoryEventType.OBSERVATION_EMITTED:
-                raise ValueError("behavior derivation anchor is not at a terminal participant observation")
-            event_refs = tuple(_stable_projection_event_ref("behavior", item.to_payload()) for item in events)
-            resolved = ParticipantDecisionSurfaceBehaviorAnchorV2Model(
-                anchor_kind="behavior_event",
-                participant_address=anchor.participant_address,
-                episode_id=anchor.episode_id,
-                decision_epoch=_behavior_decision_epoch(events),
-                event_ref=event_refs[-1],
-                state_cut=_sequence_cut(
-                    history_domain="participant_behavior_history",
-                    order_model="behavior_history_order",
-                    event_refs=event_refs,
-                ),
-                event_type=events[-1].event_type.value,
-                action_instance_id=events[-1].action_instance_id,
-                evidence_refs=anchor.evidence_refs,
-                provenance_refs=anchor.provenance_refs,
-            )
+        resolved = _resolve_behavior_anchor(runtime_snapshot, anchor, runtime_model)
     if resolved != anchor:
         raise ValueError("participant decision-surface v2 derivation anchor is stale or does not resolve")

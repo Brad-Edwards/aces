@@ -14,6 +14,7 @@ from raes_contracts.participant_binding_v2 import ParticipantDecisionSurfaceBind
 from raes_contracts.participant_decision_surface_delivery import deliver_participant_decision_surface_v2
 from raes_processor.models import (
     ParticipantBehaviorHistoryEvent,
+    ParticipantBehaviorProjectionAnchorRequestV2,
     ParticipantBehaviorRuntime,
     ParticipantDecisionSurfaceProjectionInputV2,
     ParticipantExposureAssessment,
@@ -437,10 +438,11 @@ def test_projection_policy_must_be_the_decision_at_the_exact_state_cut() -> None
     )
     projection = _projection(anchor)
     resolvers, _ = _exposure_resolvers(projection, resolved_cut_ref="participant-state-cuts.stale")
+    runtime_model = _runtime_model()
 
     with pytest.raises(ValueError, match="decision_cut_ref"):
         project_participant_decision_surface_v2(
-            _runtime_model(),
+            runtime_model,
             snapshot,
             history_events=(),
             projection=projection,
@@ -525,12 +527,14 @@ def test_later_epoch_uses_behavior_cut_without_reinterpreting_decision_epoch_as_
     anchor = resolve_participant_behavior_projection_anchor_v2(
         snapshot,
         runtime_model=runtime_model,
-        participant_address=PARTICIPANT,
-        episode_id=EPISODE,
-        decision_epoch=1,
-        behavior_history_order=2,
-        evidence_refs=("evidence.scan-result",),
-        provenance_refs=("provenance.runtime-control-plane",),
+        request=ParticipantBehaviorProjectionAnchorRequestV2(
+            participant_address=PARTICIPANT,
+            episode_id=EPISODE,
+            decision_epoch=1,
+            behavior_history_order=2,
+            evidence_refs=("evidence.scan-result",),
+            provenance_refs=("provenance.runtime-control-plane",),
+        ),
     )
     projection = _projection(anchor)
     resolvers, _ = _exposure_resolvers(projection)

@@ -16,6 +16,43 @@ def _require_unique(values: list[str], field_name: str) -> None:
         raise ValueError(f"{field_name} must not contain duplicates")
 
 
+_EXPOSURE_REF_COLLECTIONS = (
+    "source_marking_definition_refs",
+    "result_marking_definition_refs",
+    "source_provenance_refs",
+    "result_provenance_refs",
+    "evidence_refs",
+    "provenance_refs",
+    "loss_and_limitations",
+)
+
+
+def _validate_operation_requirements(binding: ParticipantDecisionSurfaceExposureBindingV2Model) -> None:
+    if binding.source_ref != binding.item_ref and binding.transformation_rule_ref is None:
+        raise ValueError("derived exposure items require transformation_rule_ref")
+    if binding.operation in {"masking", "redaction", "transformation"} and binding.transformation_rule_ref is None:
+        raise ValueError(f"{binding.operation} exposure operations require transformation_rule_ref")
+    if binding.operation == "redaction" and binding.redaction_policy_ref is None:
+        raise ValueError("redaction exposure operations require redaction_policy_ref")
+    if binding.operation == "declassification" and binding.declassification_basis_ref is None:
+        raise ValueError("declassification exposure operations require declassification_basis_ref")
+
+
+def _validate_inherited_information(binding: ParticipantDecisionSurfaceExposureBindingV2Model) -> None:
+    if binding.declassification_basis_ref is not None:
+        return
+    if not set(binding.source_marking_definition_refs).issubset(binding.result_marking_definition_refs):
+        raise ValueError("derived exposure results must inherit source markings unless declassification is explicit")
+    if not set(binding.source_provenance_refs).issubset(binding.result_provenance_refs):
+        raise ValueError("derived exposure results must inherit source provenance unless declassification is explicit")
+
+
+def _validate_provenance_carriage(binding: ParticipantDecisionSurfaceExposureBindingV2Model) -> None:
+    exposed_provenance = {*binding.source_provenance_refs, *binding.result_provenance_refs}
+    if not exposed_provenance.issubset(binding.provenance_refs):
+        raise ValueError("source and result provenance refs must be carried by provenance_refs")
+
+
 class ParticipantDecisionSurfaceExposureBindingV2Model(ContractModel):
     """One exact-cut authorization for an item admitted to a projected view.
 
@@ -58,38 +95,11 @@ class ParticipantDecisionSurfaceExposureBindingV2Model(ContractModel):
 
     @model_validator(mode="after")
     def _validate_exposure_basis(self) -> ParticipantDecisionSurfaceExposureBindingV2Model:
-        for field_name in (
-            "source_marking_definition_refs",
-            "result_marking_definition_refs",
-            "source_provenance_refs",
-            "result_provenance_refs",
-            "evidence_refs",
-            "provenance_refs",
-            "loss_and_limitations",
-        ):
+        for field_name in _EXPOSURE_REF_COLLECTIONS:
             _require_unique(getattr(self, field_name), field_name)
-        if self.source_ref != self.item_ref and self.transformation_rule_ref is None:
-            raise ValueError("derived exposure items require transformation_rule_ref")
-        if self.operation in {"masking", "redaction", "transformation"} and self.transformation_rule_ref is None:
-            raise ValueError(f"{self.operation} exposure operations require transformation_rule_ref")
-        if self.operation == "redaction" and self.redaction_policy_ref is None:
-            raise ValueError("redaction exposure operations require redaction_policy_ref")
-        if self.operation == "declassification" and self.declassification_basis_ref is None:
-            raise ValueError("declassification exposure operations require declassification_basis_ref")
-        if self.declassification_basis_ref is None and not set(self.source_marking_definition_refs).issubset(
-            self.result_marking_definition_refs
-        ):
-            raise ValueError(
-                "derived exposure results must inherit source markings unless declassification is explicit"
-            )
-        if self.declassification_basis_ref is None and not set(self.source_provenance_refs).issubset(
-            self.result_provenance_refs
-        ):
-            raise ValueError(
-                "derived exposure results must inherit source provenance unless declassification is explicit"
-            )
-        if not {*self.source_provenance_refs, *self.result_provenance_refs}.issubset(self.provenance_refs):
-            raise ValueError("source and result provenance refs must be carried by provenance_refs")
+        _validate_operation_requirements(self)
+        _validate_inherited_information(self)
+        _validate_provenance_carriage(self)
         return self
 
 

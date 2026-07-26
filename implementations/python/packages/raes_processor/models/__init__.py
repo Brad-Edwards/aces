@@ -133,6 +133,7 @@ from .decision_surface import (
     project_participant_decision_surface,
 )
 from .decision_surface_anchor_v2 import (
+    ParticipantBehaviorProjectionAnchorRequestV2,
     resolve_participant_behavior_projection_anchor_v2,
     resolve_participant_episode_readiness_anchor_v2,
     validate_participant_decision_surface_v2_anchor,
@@ -276,6 +277,7 @@ __all__ = [
     "ParticipantExposureRealizationAssessment",
     "ParticipantExposureResolvers",
     "ParticipantBehaviorRuntime",
+    "ParticipantBehaviorProjectionAnchorRequestV2",
     "ParticipantBehaviorSpecificationRuntime",
     "ParticipantInjectDeliveryRuntime",
     "ParticipantAutonomousExecutionRuntime",

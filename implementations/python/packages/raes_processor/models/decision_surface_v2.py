@@ -29,6 +29,7 @@ from .decision_surface import (
     _surface_action_assessments,
 )
 from .decision_surface_anchor_v2 import (
+    ParticipantBehaviorProjectionAnchorRequestV2,
     resolve_participant_behavior_projection_anchor_v2,
     resolve_participant_episode_readiness_anchor_v2,
 )
@@ -94,13 +95,10 @@ def _resolve_projection_scope(
     return behavior, boundary
 
 
-def _validate_and_resolve_anchor(
-    runtime_model: RuntimeModel,
-    runtime_snapshot: RuntimeSnapshot,
-    history_events: Sequence[ParticipantBehaviorHistoryEvent],
+def _validate_anchor_projection_agreement(
+    anchor: ParticipantDecisionSurfaceDerivationAnchorV2Model,
     projection: ParticipantDecisionSurfaceProjectionInputV2,
-) -> int | None:
-    anchor = projection.derivation_anchor
+) -> None:
     coordinates = (
         ("participant_address", anchor.participant_address, projection.participant_address),
         ("episode_id", anchor.episode_id, projection.episode_id),
@@ -109,34 +107,60 @@ def _validate_and_resolve_anchor(
     mismatched = [name for name, anchor_value, projected_value in coordinates if anchor_value != projected_value]
     if mismatched:
         raise ValueError("derivation anchor disagrees with projection input on: " + ", ".join(mismatched))
+
+
+def _validate_anchor_assurance_carriage(
+    anchor: ParticipantDecisionSurfaceDerivationAnchorV2Model,
+    projection: ParticipantDecisionSurfaceProjectionInputV2,
+) -> None:
     if not set(anchor.evidence_refs).issubset(projection.evidence_refs):
         raise ValueError("derivation anchor evidence must be carried by assurance")
     if not set(anchor.provenance_refs).issubset(projection.provenance_refs):
         raise ValueError("derivation anchor provenance must be carried by assurance")
-    if isinstance(anchor, ParticipantDecisionSurfaceEpisodeReadinessAnchorV2Model):
-        resolved = resolve_participant_episode_readiness_anchor_v2(
-            runtime_snapshot,
-            participant_address=projection.participant_address,
-            decision_epoch=projection.decision_epoch,
-            evidence_refs=anchor.evidence_refs,
-            provenance_refs=anchor.provenance_refs,
-        )
-        if history_events:
-            raise ValueError("initial decision epoch requires empty current-episode behavior history")
-        if resolved != anchor:
-            raise ValueError("episode-readiness anchor does not match the current trusted snapshot")
-        return None
+
+
+def _resolve_readiness_projection_anchor(
+    runtime_snapshot: RuntimeSnapshot,
+    history_events: Sequence[ParticipantBehaviorHistoryEvent],
+    projection: ParticipantDecisionSurfaceProjectionInputV2,
+) -> None:
+    anchor = projection.derivation_anchor
+    assert isinstance(anchor, ParticipantDecisionSurfaceEpisodeReadinessAnchorV2Model)
+    resolved = resolve_participant_episode_readiness_anchor_v2(
+        runtime_snapshot,
+        participant_address=projection.participant_address,
+        decision_epoch=projection.decision_epoch,
+        evidence_refs=anchor.evidence_refs,
+        provenance_refs=anchor.provenance_refs,
+    )
+    if history_events:
+        raise ValueError("initial decision epoch requires empty current-episode behavior history")
+    if resolved != anchor:
+        raise ValueError("episode-readiness anchor does not match the current trusted snapshot")
+
+
+def _resolve_behavior_projection_anchor(
+    runtime_model: RuntimeModel,
+    runtime_snapshot: RuntimeSnapshot,
+    history_events: Sequence[ParticipantBehaviorHistoryEvent],
+    projection: ParticipantDecisionSurfaceProjectionInputV2,
+) -> int:
+    anchor = projection.derivation_anchor
+    assert not isinstance(anchor, ParticipantDecisionSurfaceEpisodeReadinessAnchorV2Model)
     if not isinstance(anchor.state_cut, ParticipantDecisionSurfaceSequenceCutModel):
         raise ValueError("the reference projector cannot resolve a causal-frontier behavior anchor")
-    resolved = resolve_participant_behavior_projection_anchor_v2(
-        runtime_snapshot,
-        runtime_model=runtime_model,
+    request = ParticipantBehaviorProjectionAnchorRequestV2(
         participant_address=projection.participant_address,
         episode_id=projection.episode_id,
         decision_epoch=projection.decision_epoch,
         behavior_history_order=anchor.state_cut.anchor_order,
         evidence_refs=anchor.evidence_refs,
         provenance_refs=anchor.provenance_refs,
+    )
+    resolved = resolve_participant_behavior_projection_anchor_v2(
+        runtime_snapshot,
+        runtime_model=runtime_model,
+        request=request,
     )
     if resolved != anchor:
         raise ValueError("behavior derivation anchor does not match the current trusted snapshot")
@@ -148,6 +172,26 @@ def _validate_and_resolve_anchor(
     if tuple(history_events) != current:
         raise ValueError("behavior projection requires the exact current behavior-history prefix")
     return anchor.state_cut.anchor_order
+
+
+def _validate_and_resolve_anchor(
+    runtime_model: RuntimeModel,
+    runtime_snapshot: RuntimeSnapshot,
+    history_events: Sequence[ParticipantBehaviorHistoryEvent],
+    projection: ParticipantDecisionSurfaceProjectionInputV2,
+) -> int | None:
+    anchor = projection.derivation_anchor
+    _validate_anchor_projection_agreement(anchor, projection)
+    _validate_anchor_assurance_carriage(anchor, projection)
+    if isinstance(anchor, ParticipantDecisionSurfaceEpisodeReadinessAnchorV2Model):
+        _resolve_readiness_projection_anchor(runtime_snapshot, history_events, projection)
+        return None
+    return _resolve_behavior_projection_anchor(
+        runtime_model,
+        runtime_snapshot,
+        history_events,
+        projection,
+    )
 
 
 def _visibility_relation(
