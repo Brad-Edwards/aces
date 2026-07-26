@@ -8,7 +8,7 @@ Use the repo policy tooling before and after implementation work.
 - `implementations/python/.venv/bin/python tools/check_requirement_governance.py`
 - `implementations/python/.venv/bin/python tools/verify_all.py`
 
-Set `ACES_REQUIREMENT_UID` when the branch name does not already contain a UID
+Set `RAES_REQUIREMENT_UID` when the branch name does not already contain a UID
 such as `GOV-918`.
 
 ## Hard rules
@@ -17,7 +17,7 @@ such as `GOV-918`.
   `docs/`, and `implementations/`.
 - Do not edit `contracts/schemas/` directly; change generator inputs and
   regenerate.
-- Do not recreate the retired `implementations/python/src/aces/` namespace.
+- Do not recreate retired compatibility namespaces.
 - Import only the owning `raes` or `raes_*` packages under
   `implementations/python/packages/`.
 - Keep concept-authority artifacts in the approved concept-authority surfaces.

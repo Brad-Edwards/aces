@@ -2,5 +2,9 @@
   "contract_id": "evaluation-result-envelope-v1",
   "schema_path": "contracts/schemas/control-plane/evaluation-result-envelope-v1.json",
   "stability": "draft",
-  "content_hash": "a3a99913c8e2092fb39483e278d52be2f2a41c553a500b776d08a2500638c95d"
+  "content_hash": "8b312c6b6d1e72af53ffde3d0c33634ac86f84ad3fbd6c4fbcf5902bca544877",
+  "last_change": {
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "8b312c6b6d1e72af53ffde3d0c33634ac86f84ad3fbd6c4fbcf5902bca544877"
+  }
 }

@@ -187,7 +187,7 @@
       "type": "object"
     }
   },
-  "$id": "https://aces.dev/schemas/validation-profile-catalog-v1.json",
+  "$id": "https://raes.dev/schemas/validation-profile-catalog-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
@@ -213,8 +213,8 @@
       "type": "array"
     },
     "profile_family": {
-      "const": "aces-validation",
-      "default": "aces-validation",
+      "const": "raes-validation",
+      "default": "raes-validation",
       "title": "Profile Family",
       "type": "string"
     },
@@ -259,7 +259,7 @@
   ],
   "title": "ValidationProfileCatalogModel",
   "type": "object",
-  "x-aces-invariants": [
+  "x-raes-invariants": [
     {
       "description": "Strength ranks and term ids must be unique, profile identities must be unique, required and optional gates must be disjoint, and every profile reference must resolve within the catalog.",
       "id": "validation-profile-catalog-reference-integrity",
@@ -273,13 +273,13 @@
       "validator": "raes_contracts.validation_profiles.ValidationProfileCatalogModel"
     }
   ],
-  "x-aces-semantic-profile": {
+  "x-raes-semantic-profile": {
     "contract_id": "validation-profile-catalog-v1",
-    "entry_schema_contract_id": "aces-semantic-invariants-v1",
-    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
-    "id": "aces-semantic-invariants-v1",
-    "keyword": "x-aces-invariants",
+    "entry_schema_contract_id": "raes-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/RaesSemanticInvariantEntryModel",
+    "id": "raes-semantic-invariants-v1",
+    "keyword": "x-raes-invariants",
     "required": true,
-    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+    "uri": "https://raes.dev/schemas/semantic-invariants/v1"
   }
 }

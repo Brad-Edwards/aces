@@ -27,7 +27,7 @@ def _catalog_payload() -> dict[str, object]:
 def test_canonical_catalog_defines_the_ordered_validation_strengths() -> None:
     catalog = load_validation_profile_catalog()
 
-    assert catalog.profile_family == "aces-validation"
+    assert catalog.profile_family == "raes-validation"
     assert {strength.strength_id: strength.rank for strength in catalog.strengths} == {
         "structural": 1,
         "semantic": 2,
@@ -50,7 +50,7 @@ def test_canonical_catalog_defines_the_ordered_validation_strengths() -> None:
 def test_profiles_reference_governed_terms_without_implying_gate_execution() -> None:
     catalog = load_validation_profile_catalog()
     evidence_profile = select_validation_profile(
-        "aces-evidence-backed-validation",
+        "raes-evidence-backed-validation",
         "v1",
         subject_kind="experiment_run",
     )
@@ -70,14 +70,14 @@ def test_profiles_reference_governed_terms_without_implying_gate_execution() -> 
 def test_profile_selection_fails_closed_for_unknown_identity_or_subject() -> None:
     with pytest.raises(ValueError, match="unknown validation profile"):
         select_validation_profile(
-            "aces-missing-validation",
+            "raes-missing-validation",
             "v1",
             subject_kind="scenario",
         )
 
     with pytest.raises(ValueError, match="does not declare subject kind"):
         select_validation_profile(
-            "aces-behavioral-validation",
+            "raes-behavioral-validation",
             "v1",
             subject_kind="published_claim",
         )
@@ -130,7 +130,7 @@ def test_catalog_rejects_invalid_identity_and_reference_shapes(mutate, message: 
 def test_catalog_schema_is_published_with_reference_integrity_invariant() -> None:
     schema = schema_bundle()["validation-profile-catalog-v1"]
 
-    assert {item["id"] for item in schema["x-aces-invariants"]} == {"validation-profile-catalog-reference-integrity"}
+    assert {item["id"] for item in schema["x-raes-invariants"]} == {"validation-profile-catalog-reference-integrity"}
     published = json.loads(
         (REPO_ROOT / "contracts/schemas/profiles/validation-profile-catalog-v1.json").read_text(encoding="utf-8")
     )

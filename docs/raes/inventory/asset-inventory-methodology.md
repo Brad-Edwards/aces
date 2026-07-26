@@ -229,16 +229,16 @@ instead of pretending a local build recipe exists.
    - `encoded` when current RAES can represent the fact directly;
    - `encoded_with_caveat` when current RAES can represent the fact but the
      later encoding issue must preserve a stated limitation;
-   - `blocked_by_aces_gap` when RAES lacks a semantically correct surface;
+   - `blocked_by_raes_gap` when RAES lacks a semantically correct surface;
    - `blocked_by_aptl_gap` when RAES can express the fact but APTL cannot yet
      realize or consume that SDL;
    - `needs_gap_triage` only as a temporary local state before filing or
      linking the required issue.
 
    The ledger itself is a schema-governed artifact. The current reference
-   implementation is APTL's `aptl aces-inventory` CLI: `aptl aces-inventory
+   implementation is APTL's `aptl raes-inventory` CLI: `aptl raes-inventory
    schema` prints the current JSON Schema generated from the Pydantic model,
-   and `aptl aces-inventory validate <asset-dir>` fails schema, evidence-path,
+   and `aptl raes-inventory validate <asset-dir>` fails schema, evidence-path,
    and mapping-accountability violations.
 
 11. Handle RAES gaps immediately.
@@ -293,11 +293,11 @@ Required local tools:
 - `sha256sum` or equivalent coreutils for evidence checksums.
 - Trivy for image scanning, CycloneDX SBOM output, and vulnerability JSON.
 - A downstream ledger validator. The current reference implementation is
-  `aptl aces-inventory validate <asset-dir>` to validate the mapping ledger
+  `aptl raes-inventory validate <asset-dir>` to validate the mapping ledger
   and its evidence references.
-- `aptl aces-inventory gaps <asset-dir>` to list the RAES and downstream
+- `aptl raes-inventory gaps <asset-dir>` to list the RAES and downstream
   implementation issues later encoding work must resolve or consume.
-- `aptl aces-inventory schema` to inspect the reference ledger schema.
+- `aptl raes-inventory schema` to inspect the reference ledger schema.
 - Docker Buildx `imagetools inspect`, build-time `--sbom`, and `--provenance`
   or equivalent in-toto/SLSA attestation tooling for provenance capture.
 

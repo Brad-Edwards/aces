@@ -84,7 +84,7 @@ and derived measure schemas under `contracts/schemas/experiment-core/`. These
 contracts are archival design artifacts for scientific experiment records; they
 do not add runtime execution, capture, storage, scheduling, statistical engines,
 or API behavior by themselves. Claim-bearing study and benchmark records bind
-their conclusions to `aces-behavioral-relations@rev1`, including population or
+their conclusions to `raes-behavioral-relations@rev1`, including population or
 case scope, measurement projection, evidence boundary, limitations, and
 explicit nonclaims.
 

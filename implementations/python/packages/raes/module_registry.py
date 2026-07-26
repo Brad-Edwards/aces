@@ -34,14 +34,14 @@ from .scenario import ImportDecl, ModuleDescriptor, Scenario
 if TYPE_CHECKING:
     from .parser import SDLSourceDocument
 
-LOCKFILE_NAME = "aces.lock.json"
-TRUST_POLICY_NAME = "aces-trust.yaml"
+LOCKFILE_NAME = "raes.lock.json"
+TRUST_POLICY_NAME = "raes-trust.yaml"
 OCI_LAYOUT_MEDIA_TYPE = "application/vnd.oci.image.manifest.v1+json"
-OCI_CONFIG_MEDIA_TYPE = "application/vnd.aces.module.config.v1+json"
-OCI_BUNDLE_MEDIA_TYPE = "application/vnd.aces.module.bundle.v1+tar+gzip"
-LOCKFILE_SCHEMA_VERSION = "aces-lock/v1"
-TRUST_POLICY_SCHEMA_VERSION = "aces-trust/v1"
-OCI_LAYOUT_SCHEMA_VERSION = "aces-module-oci/v1"
+OCI_CONFIG_MEDIA_TYPE = "application/vnd.raes.module.config.v1+json"
+OCI_BUNDLE_MEDIA_TYPE = "application/vnd.raes.module.bundle.v1+tar+gzip"
+LOCKFILE_SCHEMA_VERSION = "raes-lock/v1"
+TRUST_POLICY_SCHEMA_VERSION = "raes-trust/v1"
+OCI_LAYOUT_SCHEMA_VERSION = "raes-module-oci/v1"
 
 
 def _sha256_digest(data: bytes) -> str:
@@ -352,7 +352,7 @@ def _select_tag(tags: list[str], requested_version: str) -> str:
 
 
 def _oci_cache_dir(base_dir: Path) -> Path:
-    return base_dir / ".aces" / "module-cache"
+    return base_dir / ".raes" / "module-cache"
 
 
 def _validate_tar_member_shape(
@@ -852,7 +852,7 @@ def publish_module_to_oci_layout(
         ],
         "annotations": {
             "org.opencontainers.image.ref.name": descriptor.version,
-            "io.aces.module.id": descriptor.id,
+            "io.raes.module.id": descriptor.id,
         },
     }
     manifest_bytes = json.dumps(manifest_payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
@@ -875,7 +875,7 @@ def publish_module_to_oci_layout(
                         "size": len(manifest_bytes),
                         "annotations": {
                             "org.opencontainers.image.ref.name": descriptor.version,
-                            "io.aces.module.id": descriptor.id,
+                            "io.raes.module.id": descriptor.id,
                         },
                     }
                 ],

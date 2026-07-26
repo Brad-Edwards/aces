@@ -3,7 +3,7 @@
 Composes existing RAES surfaces — the libvirt participant runtime (issue #614, via
 the runtime control plane), the native libvirt substrate realization (issue #601),
 the backend manifest, and the experiment/evaluation contracts — into one stable,
-validated run artifact (``aces.libvirt.scenario-evidence-run/v1``) that carries
+validated run artifact (``raes.libvirt.scenario-evidence-run/v1``) that carries
 evaluator-facing evidence for the enterprise participant/evidence scenario.
 The artifact is a local proof-artifact wrapper that embeds validated
 published-contract payloads and bounded summaries; it is NOT a new published

@@ -1211,7 +1211,7 @@ def _fixed_topology_manifest() -> BackendManifest:
                 "runtime-snapshot-v1",
             }
         ),
-        compatible_processors=frozenset({"aces-reference-processor"}),
+        compatible_processors=frozenset({"raes-reference-processor"}),
         concept_bindings=(
             ConceptBinding(scope="capabilities.provisioner.supported_node_types", family="assets"),
             ConceptBinding(scope="capabilities.provisioner.supported_os_families", family="assets"),
@@ -1238,7 +1238,7 @@ def _fixed_topology_manifest() -> BackendManifest:
 class _FixedTopologyProvisioner:
     """Realizes only the one pre-built node; fails fast on anything else.
 
-    Mirrors a fixed-topology emulation backend that maps ACES nodes onto a
+    Mirrors a fixed-topology emulation backend that maps RAES nodes onto a
     pre-built environment and refuses nodes it has no realization for.
     """
 
@@ -1294,7 +1294,7 @@ propositions:
     description: The governed node has declared runtime state.
     subjects: [nodes.{node_name}]
     basis: declared_state
-    predicate: {{kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}}
+    predicate: {{kind: presence, property: runtime, semantic_ref: urn:raes:declared-property:runtime, operator: exists}}
 assertions:
   health: {{proposition: health, role: postcondition, polarity: positive}}
 entities:

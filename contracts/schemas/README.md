@@ -32,7 +32,7 @@ Current published schemas cover:
 
 `sdl/sdl-authoring-input-v1.json` begins after `sdl-yaml/v1` source decoding,
 canonical-field recognition, shorthand expansion, enum normalization, and typed
-construction. Its title and `x-aces-document-phase` annotation state that
+construction. Its title and `x-raes-document-phase` annotation state that
 boundary. Raw YAML properties such as duplicate keys, tags, directives,
 anchors, aliases, Core scalar resolution, and resource limits are specified in
 `specs/sdl/document-model.md` and tested by
@@ -42,8 +42,8 @@ anchors, aliases, Core scalar resolution, and resource limits are specified in
 contract. It requires `instantiation_provenance`, forbids `variables`,
 `imports`, and `module` even when empty/null, and forbids a `${name}` token in
 every string value. `sdl/instantiated-scenario-snapshot-v1.json` adds the
-required `aces-sdl-instantiated-snapshot/v1` canonical profile envelope. The
-`x-aces-realization-dimension: false` annotation on
+required `raes-sdl-instantiated-snapshot/v1` canonical profile envelope. The
+`x-raes-realization-dimension: false` annotation on
 `instantiation_provenance` declares that this required exchange metadata is
 excluded only from realization-envelope child-dimension enumeration; it remains
 part of validation and canonical identity. The
@@ -266,10 +266,10 @@ Run traceability and realized-form disclosure invariants keep claims grounded
 in evidence/derived-measure refs and keep realized choices distinct from
 authored scenario meaning and result values.
 Cross-artifact or graph invariants that standard JSON Schema cannot express are
-published under the RAES semantic-invariant profile with `x-aces-invariants`
+published under the RAES semantic-invariant profile with `x-raes-invariants`
 entries that name the validator and input contract paths. The generated schemas
 declare draft 2020-12 identity, and the annotation profile shape is published as
-`aces-semantic-invariants-v1` and checked during generation. Generic JSON Schema
+`raes-semantic-invariants-v1` and checked during generation. Generic JSON Schema
 validation remains structural; consumers of experiment-core records must apply
 the named semantic validators before accepting records as RAES-conformant.
 

@@ -12,7 +12,7 @@
   },
   "derivation": {
     "key_derivation_function": "blake3.derive_key",
-    "context_template": "aces-random-stream-v1|profile={profile_id}"
+    "context_template": "raes-random-stream-v1|profile={profile_id}"
   },
   "block_encoding": {
     "block_bytes": 32,

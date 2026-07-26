@@ -11,7 +11,7 @@ weaker observation from being reported as a stronger behavioral result.
 
 The machine-readable authority is
 `contracts/concept-authority/behavioral-relations-v1.json`, contract
-`behavioral-relations/v1`, taxonomy `aces-behavioral-relations`, revision
+`behavioral-relations/v1`, taxonomy `raes-behavioral-relations`, revision
 `rev3`. Relation identifiers, formal dimensions, claim-surface defaults,
 bibliography coordinates, assurance status, and worked transition systems are
 normative there. ADR-081 and ADR-095 govern the architecture. This document is the

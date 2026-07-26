@@ -2,9 +2,9 @@
   "contract_id": "scheduler-isolation-proof-v1",
   "schema_path": "contracts/schemas/control-plane/scheduler-isolation-proof-v1.json",
   "stability": "draft",
-  "content_hash": "8c2fae279f0446a01c11e8188c5f45dd3ee459526bcc3fb6b6cdf38cafce49a8",
+  "content_hash": "ebf37a997518da860d7e023aef431a2d7eb5c1ea9888d88d015ed29ab1a3fd72",
   "last_change": {
-    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
-    "content_hash": "8c2fae279f0446a01c11e8188c5f45dd3ee459526bcc3fb6b6cdf38cafce49a8"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "ebf37a997518da860d7e023aef431a2d7eb5c1ea9888d88d015ed29ab1a3fd72"
   }
 }

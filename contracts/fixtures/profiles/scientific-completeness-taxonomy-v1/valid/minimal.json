@@ -18,7 +18,7 @@
       "explicit_non_claims": ["No deployability or scientific-adequacy claim."],
       "behavioral_claims": [
         {
-          "taxonomy_id": "aces-behavioral-relations",
+          "taxonomy_id": "raes-behavioral-relations",
           "taxonomy_revision": "rev3",
           "relation_id": "semantic-validity",
           "subject": "One SDL source",

@@ -542,7 +542,7 @@ def test_published_schema_and_fixtures_match_the_closed_reference_model() -> Non
     )
     assert published == schema
     assert schema["additionalProperties"] is False
-    assert schema["x-aces-invariants"]
+    assert schema["x-raes-invariants"]
 
     fixture_root = REPO_ROOT / "contracts" / "fixtures" / "participant-runtime" / CONTRACT_ID
     valid_paths = sorted((fixture_root / "valid").glob("*.json"))

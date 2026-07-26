@@ -64,7 +64,7 @@ def _limited_backend_manifest(
         name=name,
         version="0.0.1",
         supported_contract_versions=frozenset({"backend-manifest-v2"}),
-        compatible_processors=frozenset({"aces-reference-processor"}),
+        compatible_processors=frozenset({"raes-reference-processor"}),
         # The manifest is limited in provisioner capability, not realization
         # support: it declares full SEM-218 realization support so the
         # realization gate is a no-op and these tests isolate the provisioner
@@ -218,7 +218,7 @@ propositions:
     description: The governed node has declared runtime state.
     subjects: [nodes.vm]
     basis: declared_state
-    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:raes:declared-property:runtime, operator: exists}
 assertions:
   health: {proposition: health, role: postcondition, polarity: positive}
   pre-health: {proposition: health, role: precondition, polarity: positive}
@@ -258,7 +258,7 @@ propositions:
     description: The governed node has declared runtime state.
     subjects: [nodes.vm]
     basis: declared_state
-    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:raes:declared-property:runtime, operator: exists}
 assertions:
   health: {proposition: health, role: postcondition, polarity: positive}
   pre-health: {proposition: health, role: precondition, polarity: positive}
@@ -290,7 +290,7 @@ propositions:
     description: The governed node has declared runtime state.
     subjects: [nodes.vm]
     basis: declared_state
-    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime-v2, operator: exists}
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:raes:declared-property:runtime-v2, operator: exists}
 assertions:
   health: {proposition: health, role: postcondition, polarity: positive}
   pre-health: {proposition: health, role: precondition, polarity: positive}
@@ -335,7 +335,7 @@ propositions:
     description: The governed node has declared runtime state.
     subjects: [nodes.a]
     basis: declared_state
-    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:raes:declared-property:runtime, operator: exists}
 assertions:
   health: {proposition: health, role: postcondition, polarity: positive}
   pre-health: {proposition: health, role: precondition, polarity: positive}
@@ -388,7 +388,7 @@ propositions:
     description: The governed node has declared runtime state.
     subjects: [nodes.vm]
     basis: declared_state
-    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:raes:declared-property:runtime, operator: exists}
 assertions:
   health: {proposition: health, role: postcondition, polarity: positive}
   pre-health: {proposition: health, role: precondition, polarity: positive}
@@ -434,7 +434,7 @@ propositions:
     description: The governed node has declared runtime state.
     subjects: [nodes.vm]
     basis: declared_state
-    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:raes:declared-property:runtime, operator: exists}
 assertions:
   health: {proposition: health, role: postcondition, polarity: positive}
   pre-health: {proposition: health, role: precondition, polarity: positive}
@@ -476,7 +476,7 @@ propositions:
     description: The governed node has declared runtime state.
     subjects: [nodes.vm]
     basis: declared_state
-    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:raes:declared-property:runtime, operator: exists}
 assertions:
   health: {proposition: health, role: postcondition, polarity: positive}
   pre-health: {proposition: health, role: precondition, polarity: positive}
@@ -516,7 +516,7 @@ propositions:
     description: The governed node has declared runtime state.
     subjects: [entities.blue]
     basis: declared_state
-    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:raes:declared-property:runtime, operator: exists}
 assertions:
   health: {proposition: health, role: postcondition, polarity: positive}
   pre-health: {proposition: health, role: precondition, polarity: positive}
@@ -563,7 +563,7 @@ propositions:
     description: The governed node has declared runtime state.
     subjects: [entities.blue]
     basis: declared_state
-    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:raes:declared-property:runtime, operator: exists}
 assertions:
   health: {proposition: health, role: postcondition, polarity: positive}
   pre-health: {proposition: health, role: precondition, polarity: positive}
@@ -611,7 +611,7 @@ propositions:
     description: The governed node has declared runtime state.
     subjects: [entities.blue]
     basis: declared_state
-    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:raes:declared-property:runtime, operator: exists}
 assertions:
   health: {proposition: health, role: postcondition, polarity: positive}
   pre-health: {proposition: health, role: precondition, polarity: positive}
@@ -683,7 +683,7 @@ propositions:
     description: The governed node has declared runtime state.
     subjects: [nodes.vm]
     basis: declared_state
-    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:raes:declared-property:runtime, operator: exists}
 assertions:
   health: {proposition: health, role: postcondition, polarity: positive}
   pre-health: {proposition: health, role: precondition, polarity: positive}
@@ -725,7 +725,7 @@ propositions:
     description: The governed node has declared runtime state.
     subjects: [nodes.vm]
     basis: declared_state
-    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime-v2, operator: exists}
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:raes:declared-property:runtime-v2, operator: exists}
 assertions:
   health: {proposition: health, role: postcondition, polarity: positive}
   pre-health: {proposition: health, role: precondition, polarity: positive}
@@ -770,7 +770,7 @@ propositions:
     description: The governed node has declared runtime state.
     subjects: [nodes.vm]
     basis: declared_state
-    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime-v2, operator: exists}
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:raes:declared-property:runtime-v2, operator: exists}
 assertions:
   health: {proposition: health, role: postcondition, polarity: positive}
   pre-health: {proposition: health, role: precondition, polarity: positive}
@@ -789,8 +789,8 @@ events:
         snapshot = _snapshot_from_plan(old_plan)
         new_plan = _plan_with_snapshot(
             base.replace(
-                "urn:aces:declared-property:runtime",
-                "urn:aces:declared-property:runtime-v2",
+                "urn:raes:declared-property:runtime",
+                "urn:raes:declared-property:runtime-v2",
             ),
             snapshot,
         )
@@ -816,7 +816,7 @@ propositions:
     description: The governed node has declared runtime state.
     subjects: [nodes.vm]
     basis: declared_state
-    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:raes:declared-property:runtime, operator: exists}
 assertions:
   health: {proposition: health, role: postcondition, polarity: positive}
   pre-health: {proposition: health, role: precondition, polarity: positive}
@@ -872,7 +872,7 @@ propositions:
     description: The governed node has declared runtime state.
     subjects: [nodes.vm]
     basis: declared_state
-    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:raes:declared-property:runtime, operator: exists}
 assertions:
   health: {proposition: health, role: postcondition, polarity: positive}
   pre-health: {proposition: health, role: precondition, polarity: positive}
@@ -1033,13 +1033,13 @@ generated_artifacts:
     outputs:
       - {name: dc-config, path: dc.yml, sensitivity: restricted}
     consumers:
-      - {node: stateful, mount_destination: /etc/aces/dc.yml, access_mode: read_only}
+      - {node: stateful, mount_destination: /etc/raes/dc.yml, access_mode: read_only}
 persistent_volumes:
   dc-data:
     lifecycle: retain
     access_mode: read_write_once
     consumers:
-      - {node: stateful, mount_destination: /var/lib/aces, access_mode: read_write}
+      - {node: stateful, mount_destination: /var/lib/raes, access_mode: read_write}
 infrastructure:
   corp:
     count: 1
@@ -1068,7 +1068,7 @@ propositions:
     description: The governed node has declared runtime state.
     subjects: [nodes.dc]
     basis: declared_state
-    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:raes:declared-property:runtime, operator: exists}
 assertions:
   health: {proposition: health, role: postcondition, polarity: positive}
   pre-health: {proposition: health, role: precondition, polarity: positive}
@@ -1324,7 +1324,7 @@ infrastructure:
 name: shared
 version: 1.0.0
 module:
-  id: aces/shared
+  id: raes/shared
   version: 1.0.0
   parameters: [os_name]
   exports:
@@ -1561,7 +1561,7 @@ propositions:
     description: The governed node has declared runtime state.
     subjects: [nodes.web]
     basis: declared_state
-    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:raes:declared-property:runtime, operator: exists}
 assertions:
   health: {proposition: health, role: postcondition, polarity: positive}
   pre-health: {proposition: health, role: precondition, polarity: positive}

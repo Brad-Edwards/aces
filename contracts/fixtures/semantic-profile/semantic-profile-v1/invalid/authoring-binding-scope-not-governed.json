@@ -2,7 +2,7 @@
   "schema_version": "semantic-profile/v1",
   "profile_id": "reference-stack-v1",
   "title": "Reference Stack Interoperability Profile",
-  "description": "Shared semantic assumptions for the current ACES reference authoring, exchange, processing, and execution stack.",
+  "description": "Shared semantic assumptions for the current RAES reference authoring, exchange, processing, and execution stack.",
   "concept_catalog_version": "concept-families/v1",
   "authoring": {
     "required_contracts": [
@@ -38,7 +38,7 @@
       },
       {
         "id": "gov-919-native-extension-discipline",
-        "statement": "ACES-native concept families follow the explicit extension-scope, relation-rule, and non-ambiguity discipline declared in the concept catalog."
+        "statement": "RAES-native concept families follow the explicit extension-scope, relation-rule, and non-ambiguity discipline declared in the concept catalog."
       }
     ]
   },

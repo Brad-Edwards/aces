@@ -2,9 +2,9 @@
   "contract_id": "experiment-authoring-input-v1",
   "schema_path": "contracts/schemas/experiment-core/experiment-authoring-input-v1.json",
   "stability": "draft",
-  "content_hash": "47a2a28bd72c252aff22a651e58b216cd4700e9d7c4cabc87728bce0657183a6",
+  "content_hash": "2ffe9d8c055458997b3f78159e7b54eb1ea05a3bf52ce3adaa64234220457cce",
   "last_change": {
-    "summary": "Added explicit binding semantics and authoritative cross-plane binding descriptors joined to factor levels and conditions.",
-    "content_hash": "47a2a28bd72c252aff22a651e58b216cd4700e9d7c4cabc87728bce0657183a6"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "2ffe9d8c055458997b3f78159e7b54eb1ea05a3bf52ce3adaa64234220457cce"
   }
 }

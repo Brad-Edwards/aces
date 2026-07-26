@@ -29,7 +29,7 @@
   ],
   "compatibility": {
     "processors": [
-      "aces-reference-processor"
+      "raes-reference-processor"
     ]
   },
   "realization_support": [

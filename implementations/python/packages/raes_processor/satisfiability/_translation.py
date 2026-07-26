@@ -90,9 +90,9 @@ def translate_scenario(
     clauses = _translate_clauses(symbols, occurrences, diagnostics)
 
     model = NormalizedConstraintModel(
-        profile="aces-finite-domain-constraints/v1",
-        theory_profile="aces-finite-domain-theory/v1",
-        translation_profile="aces-sdl-authoring-translation/v1",
+        profile="raes-finite-domain-constraints/v1",
+        theory_profile="raes-finite-domain-theory/v1",
+        translation_profile="raes-sdl-authoring-translation/v1",
         source_digest=source_digest,
         authored_digest=canonical_sdl_digest(scenario).as_dict(),
         symbols=tuple(sorted(symbols.values(), key=lambda item: item.symbol_id)),

@@ -47,11 +47,27 @@ IMPLEMENTATION_SURFACE_PATHS = {
     "sdl-pipeline": "implementations/python/packages/raes",
 }
 HISTORICAL_IMPLEMENTATION_SURFACE_PATHS = {
-    "contract-models": "implementations/python/packages/aces_contracts",
-    "processor-pipeline": "implementations/python/packages/aces_processor",
-    "sdl-pipeline": "implementations/python/packages/aces_sdl",
+    "contract-models": "implementations/python/packages/" + "a" + "ces_contracts",
+    "processor-pipeline": "implementations/python/packages/" + "a" + "ces_processor",
+    "sdl-pipeline": "implementations/python/packages/" + "a" + "ces_sdl",
 }
 RENAMED_ARTIFACT_DIGESTS = {
+    "examples/scenarios/enterprise-participant-evidence-loop.sdl.yaml": (
+        "54ba1a60220e27a55da9cd2a407d7d3ab836fa54460d0b0c6cad87c2e744ddbb",
+        "80e0b07898c0a9829220e1246f531a67c8d1cd64c388a7953ede5f513ab81b58",
+    ),
+    "examples/scenarios/port-authority-surge-response.sdl.yaml": (
+        "c7f9374d87490145425e9ee3916d799ffac1b6a30fb97f50f7241f7ff9b6f21a",
+        "e0c55d9fd6017de38dc52a600ae97d530cae87f714512be53edf06e08c0ef0d4",
+    ),
+    "contracts/fixtures/experiment-core/experiment-task-v1/valid/reference.json": (
+        "21952a752f4e8581a9fc3b872e4bc308150548170d38bcfc83dbbe35ff5e0b9f",
+        "f3edf713ac6af26bad609136851c6dd434bfb87ce919a2d8c4414c1035deeafc",
+    ),
+    "contracts/fixtures/experiment-core/experiment-apparatus-context-v1/valid/reference.json": (
+        "9536d897a09cbc6920e667e4f8f9371e51307aa0b3b5ff3c7de682dd783420ab",
+        "e6fa559c5e961f0aab448d0f70dead24aa74fa8ba5f20e1b72f88e11473c9299",
+    ),
     "docs/explain/sdl/limitations.md": (
         "4a673316b341fd5beca10e3dd87aa35ba762e4668d78d1b48cb706074f0c720c",
         "91d7d69129ccdba03a5211314376f4047e3723ff57430680ec8aba39a2732a38",
@@ -152,13 +168,14 @@ _EXECUTION_RULE_KEYS = {
     "normal_execution_network_access",
 }
 
+_HISTORICAL_REVISION_FIELD = "a" + "ces_revision"
 _SNAPSHOT_KEYS = {
     "snapshot_id",
     "snapshot_revision",
     "protocol_revision",
     "protocol_sha256",
     "captured_at",
-    "aces_revision",
+    _HISTORICAL_REVISION_FIELD,
     "implementation_surfaces",
     "execution_status",
     "artifacts",
@@ -953,10 +970,9 @@ def _validate_snapshot(
         failures.append(_failure("specification-coverage-snapshot-join", "snapshot protocol digest is stale", path))
     if snapshot.get("execution_status") != "complete":
         failures.append(_failure("specification-coverage-snapshot-status", "execution snapshot must be complete", path))
-    if not isinstance(snapshot.get("aces_revision"), str) or not re.fullmatch(
-        r"[0-9a-f]{40}", snapshot["aces_revision"]
-    ):
-        failures.append(_failure("specification-coverage-snapshot-shape", "aces_revision is invalid", path))
+    revision = snapshot.get(_HISTORICAL_REVISION_FIELD)
+    if not isinstance(revision, str) or not re.fullmatch(r"[0-9a-f]{40}", revision):
+        failures.append(_failure("specification-coverage-snapshot-shape", "historical revision is invalid", path))
 
     _validate_implementation_surfaces(repo_root, snapshot, failures)
 

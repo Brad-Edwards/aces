@@ -439,7 +439,7 @@ class TestVerifyStories:
 
 
 # ---------------------------------------------------------------------------
-# ACES extension validation
+# RAES extension validation
 # ---------------------------------------------------------------------------
 
 
@@ -916,7 +916,7 @@ class TestAgentParticipantFraming:
                     "predicate": {
                         "kind": "boolean",
                         "property": "beacon-online",
-                        "semantic_ref": "urn:aces:declared-property:beacon-online",
+                        "semantic_ref": "urn:raes:declared-property:beacon-online",
                         "operator": "equals",
                         "expected": True,
                     },
@@ -1307,7 +1307,7 @@ class TestVerifyObjectives:
                     "predicate": {
                         "kind": "boolean",
                         "property": "exercise-passed",
-                        "semantic_ref": "urn:aces:declared-property:exercise-passed",
+                        "semantic_ref": "urn:raes:declared-property:exercise-passed",
                         "operator": "equals",
                         "expected": True,
                     },
@@ -1615,7 +1615,7 @@ class TestVerifyWorkflows:
                     "predicate": {
                         "kind": "boolean",
                         "property": "exercise-passed",
-                        "semantic_ref": "urn:aces:declared-property:exercise-passed",
+                        "semantic_ref": "urn:raes:declared-property:exercise-passed",
                         "operator": "equals",
                         "expected": True,
                     },
@@ -2615,7 +2615,7 @@ class TestVerifyVariables:
                     "predicate": {
                         "kind": "presence",
                         "property": "runtime",
-                        "semantic_ref": "urn:aces:declared-property:runtime",
+                        "semantic_ref": "urn:raes:declared-property:runtime",
                         "operator": "exists",
                     },
                 },

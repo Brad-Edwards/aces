@@ -147,8 +147,8 @@ def test_payload_ref_aliasing_raw_archival_source_is_rejected_model_side():
 
 def test_view_schema_publishes_sem216_relational_invariants():
     # The relational obligations that JSON Schema cannot express are still part of the published
-    # portable contract via x-aces-invariants, so the documented boundary is not model-only.
+    # portable contract via x-raes-invariants, so the documented boundary is not model-only.
     schema = schema_bundle()["participant-context-view-v1"]
-    invariant_ids = {entry["id"] for entry in schema.get("x-aces-invariants", [])}
+    invariant_ids = {entry["id"] for entry in schema.get("x-raes-invariants", [])}
     assert "context-view-sem216-archival-source-mediated" in invariant_ids
     assert "context-view-sem216-payload-not-raw-archival" in invariant_ids

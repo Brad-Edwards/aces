@@ -34,7 +34,7 @@ VARIABLE_NAME_RE = re.compile(r"^" + VARIABLE_NAME_PATTERN + r"$")
 VARIABLE_TOKEN_PATTERN = r"\$\{(" + _VARIABLE_TOKEN_NAME_PATTERN + r")\}"
 VARIABLE_TOKEN_RE = re.compile(VARIABLE_TOKEN_PATTERN)
 _VARIABLE_REF_RE = re.compile(r"^" + VARIABLE_TOKEN_PATTERN + r"$")
-VARIABLE_REFERENCE_SCHEMA_MARKER = "x-aces-variable-reference"
+VARIABLE_REFERENCE_SCHEMA_MARKER = "x-raes-variable-reference"
 
 
 def is_variable_ref(v: Any) -> bool:

@@ -482,7 +482,7 @@
       ],
       "title": "ExperimentApparatusContextModel",
       "type": "object",
-      "x-aces-invariants": [
+      "x-raes-invariants": [
         {
           "description": "The canonical processor and backend component manifest_ref values must be present in selected_manifests; digest-qualified selected manifests must be canonical component manifests.",
           "id": "canonical-apparatus-manifest-selected",
@@ -930,7 +930,7 @@
       ],
       "title": "ExperimentAugmentationDisclosureModel",
       "type": "object",
-      "x-aces-invariants": [
+      "x-raes-invariants": [
         {
           "description": "Augmentation disclosures must keep environment-visible, participant-visible, and comparability-relevant semantics explicit and must use processor/backend authority.",
           "id": "augmentation-disclosure-semantics-valid",
@@ -1556,7 +1556,7 @@
       ],
       "title": "ExperimentManifestReferenceModel",
       "type": "object",
-      "x-aces-invariants": [
+      "x-raes-invariants": [
         {
           "description": "Manifest digest qualifiers are limited to processor/backend manifest refs that can be checked against concrete manifest payload digests; manifest path qualifiers are not accepted in v1.",
           "id": "manifest-reference-digest-scope-valid",
@@ -1873,7 +1873,7 @@
       ],
       "title": "ExperimentRealizedFormDisclosureModel",
       "type": "object",
-      "x-aces-invariants": [
+      "x-raes-invariants": [
         {
           "description": "Every realized-form disclosure must name a realized reference or value summary and use the right processor/backend realization authority for processor-realized and backend-realized concerns.",
           "id": "realized-form-disclosure-substantive",
@@ -2177,7 +2177,7 @@
       ],
       "title": "ExperimentRunTraceabilityModel",
       "type": "object",
-      "x-aces-invariants": [
+      "x-raes-invariants": [
         {
           "description": "Run provenance traceability references must be duplicate-free, and claim refs must be grounded by at least one derived measure ref.",
           "id": "run-traceability-refs-unique",
@@ -2970,7 +2970,7 @@
       ],
       "title": "RandomStreamDrawRecordModel",
       "type": "object",
-      "x-aces-invariants": [
+      "x-raes-invariants": [
         {
           "description": "local_coordinate must match address.local_coordinate.",
           "id": "random-stream-draw-record-local-coordinate-matches-address",
@@ -3307,7 +3307,7 @@
       ],
       "title": "StreamAddressModel",
       "type": "object",
-      "x-aces-invariants": [
+      "x-raes-invariants": [
         {
           "description": "draw_purpose must be a term from the random_streams.draw_purpose controlled vocabulary.",
           "id": "random-stream-address-draw-purpose-governed",
@@ -4091,7 +4091,7 @@
       ],
       "title": "ValidationBasisDisclosureModel",
       "type": "object",
-      "x-aces-invariants": [
+      "x-raes-invariants": [
         {
           "description": "profile_id/profile_version/subject_kind must resolve one validation profile that declares the subject kind, and subject_ref.ref_kind must match the profile's ONE subject_kind mapping.",
           "id": "validation-basis-profile-join-resolves",
@@ -4492,7 +4492,7 @@
       "type": "object"
     }
   },
-  "$id": "https://aces.dev/schemas/experiment-run-v1.json",
+  "$id": "https://raes.dev/schemas/experiment-run-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "allOf": [
@@ -4741,7 +4741,7 @@
   ],
   "title": "ExperimentRunModel",
   "type": "object",
-  "x-aces-invariants": [
+  "x-raes-invariants": [
     {
       "description": "ended_at must be greater than or equal to started_at.",
       "id": "ended-at-not-before-started-at",
@@ -4879,13 +4879,13 @@
       "validator": "raes_contracts.contracts.validate_experiment_run_archival_datetimes"
     }
   ],
-  "x-aces-semantic-profile": {
+  "x-raes-semantic-profile": {
     "contract_id": "experiment-run-v1",
-    "entry_schema_contract_id": "aces-semantic-invariants-v1",
-    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
-    "id": "aces-semantic-invariants-v1",
-    "keyword": "x-aces-invariants",
+    "entry_schema_contract_id": "raes-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/RaesSemanticInvariantEntryModel",
+    "id": "raes-semantic-invariants-v1",
+    "keyword": "x-raes-invariants",
     "required": true,
-    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+    "uri": "https://raes.dev/schemas/semantic-invariants/v1"
   }
 }

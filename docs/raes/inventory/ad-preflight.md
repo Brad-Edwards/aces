@@ -17,7 +17,7 @@ the issue phase marker, but the tool did not create a repo-local note file.
 - Do not create an APTL-local schema, parser, validator, Pydantic model, or
   runtime exception hierarchy for AD inventory facts.
 - Reuse `docs/raes/inventory/asset-inventory-methodology.md`,
-  `src/aptl/core/aces_inventory.py`, `src/aptl/cli/aces_inventory.py`, the
+  `src/aptl/core/raes_inventory.py`, `src/aptl/cli/raes_inventory.py`, the
   existing webapp and db inventory bundles, and `docs/raes/parity-inventory.yaml`.
 - Historical note: issue #516 supersedes the original blanket-redaction rule
   for source inventory bundles. Preserve AD administrator credentials,

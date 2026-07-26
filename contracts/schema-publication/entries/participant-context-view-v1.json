@@ -2,9 +2,9 @@
   "contract_id": "participant-context-view-v1",
   "schema_path": "contracts/schemas/control-plane/participant-context-view-v1.json",
   "stability": "draft",
-  "content_hash": "24c40473cb12273bdfebbb1a941b2d266cdad2976f331cda30973153fe8753e5",
+  "content_hash": "9d7bfc3de15e89b20bd27e704feb7683806014cbb3fb0babf4f0193db2602ff4",
   "last_change": {
-    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
-    "content_hash": "24c40473cb12273bdfebbb1a941b2d266cdad2976f331cda30973153fe8753e5"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "9d7bfc3de15e89b20bd27e704feb7683806014cbb3fb0babf4f0193db2602ff4"
   }
 }

@@ -193,7 +193,7 @@
       },
       "title": "ExperimentApparatusConstraintModel",
       "type": "object",
-      "x-aces-invariants": [
+      "x-raes-invariants": [
         {
           "description": "Every allowed processor/backend identity reference must have a matching required manifest ref_id with matching manifest id, subject identity, and manifest schema version.",
           "id": "apparatus-constraint-identity-manifest-resolves",
@@ -466,7 +466,7 @@
       ],
       "title": "ExperimentBindingDescriptorSetModel",
       "type": "object",
-      "x-aces-invariants": [
+      "x-raes-invariants": [
         {
           "description": "Binding ids must be unique and target resolution must be injective within each source condition.",
           "id": "binding-descriptors-canonical-targets-injective",
@@ -1207,7 +1207,7 @@
       ],
       "title": "ExperimentManifestReferenceModel",
       "type": "object",
-      "x-aces-invariants": [
+      "x-raes-invariants": [
         {
           "description": "Manifest digest qualifiers are limited to processor/backend manifest refs that can be checked against concrete manifest payload digests; manifest path qualifiers are not accepted in v1.",
           "id": "manifest-reference-digest-scope-valid",
@@ -1567,7 +1567,7 @@
       ],
       "title": "ExperimentRunAllocationPlanModel",
       "type": "object",
-      "x-aces-invariants": [
+      "x-raes-invariants": [
         {
           "description": "Run-allocation compared_conditions, condition_assignments keys, embedded condition ids, blocking factor ids, factor-level combinations, and run-level criteria signatures must be internally coherent.",
           "id": "run-allocation-condition-assignments-valid",
@@ -1681,7 +1681,7 @@
       ],
       "title": "ExperimentRunPlanModel",
       "type": "object",
-      "x-aces-invariants": [
+      "x-raes-invariants": [
         {
           "description": "A run plan must declare exactly one of allocation or target_run_count, and every red-variant selection map key must equal its embedded variant_id.",
           "id": "run-plan-exactly-one-run-count-source",
@@ -2278,7 +2278,7 @@
       "type": "object"
     }
   },
-  "$id": "https://aces.dev/schemas/experiment-authoring-input-v1.json",
+  "$id": "https://raes.dev/schemas/experiment-authoring-input-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "allOf": [
@@ -2446,7 +2446,7 @@
   ],
   "title": "ExperimentSpecModel",
   "type": "object",
-  "x-aces-invariants": [
+  "x-raes-invariants": [
     {
       "description": "When a run plan declares an allocation with blocking factors, every blocking factor must be a declared experiment-spec factor.",
       "id": "experiment-spec-blocking-factors-declared",
@@ -2472,13 +2472,13 @@
       "validator": "raes_contracts.contracts.ExperimentSpecModel._validate_binding_descriptors"
     }
   ],
-  "x-aces-semantic-profile": {
+  "x-raes-semantic-profile": {
     "contract_id": "experiment-authoring-input-v1",
-    "entry_schema_contract_id": "aces-semantic-invariants-v1",
-    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
-    "id": "aces-semantic-invariants-v1",
-    "keyword": "x-aces-invariants",
+    "entry_schema_contract_id": "raes-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/RaesSemanticInvariantEntryModel",
+    "id": "raes-semantic-invariants-v1",
+    "keyword": "x-raes-invariants",
     "required": true,
-    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+    "uri": "https://raes.dev/schemas/semantic-invariants/v1"
   }
 }

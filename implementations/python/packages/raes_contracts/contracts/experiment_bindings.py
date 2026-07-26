@@ -26,7 +26,7 @@ from ..versions import (
 )
 from .base import ContractModel, NonEmptyString, PrefixedDigestString
 from .capabilities import ApparatusIdentityModel
-from .schema_invariants import _add_aces_invariant
+from .schema_invariants import _add_raes_invariant
 
 
 class BindingScalarType(str, Enum):
@@ -275,7 +275,7 @@ class ExperimentBindingDescriptorSetModel(ContractModel):
     ) -> JsonSchemaValue:
         json_schema = handler(core_schema)
         json_schema = handler.resolve_ref_schema(json_schema)
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "binding-descriptors-canonical-targets-injective",
             "Binding ids must be unique and target resolution must be injective within each source condition.",
@@ -367,7 +367,7 @@ class ParticipantConfigurationResultModel(ContractModel):
     ) -> JsonSchemaValue:
         json_schema = handler(core_schema)
         json_schema = handler.resolve_ref_schema(json_schema)
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "participant-configuration-digest-valid",
             "The configuration digest must be the RFC 8785/JCS digest of the complete normalized configuration.",

@@ -26,7 +26,7 @@ from raes_operations.run_artifacts import (
     run_artifact_path,
 )
 
-_LIVE_SCHEMA = "aces.libvirt.techvault-native-live-gate/v1"
+_LIVE_SCHEMA = "raes.libvirt.techvault-native-live-gate/v1"
 _SHA256_RE = re.compile(r"sha256:[a-f0-9]{64}")
 
 
@@ -97,10 +97,10 @@ def validate_techvault_live(
             else TechVaultNativeLibvirtDriver(
                 state_dir=run_dir / "libvirt",
                 connection_uri=settings.connection_uri,
-                name_prefix="aces-techvault",
+                name_prefix="raes-techvault",
             )
         )
-        target = create_libvirt_target(driver=driver, name_prefix="aces-techvault")
+        target = create_libvirt_target(driver=driver, name_prefix="raes-techvault")
         scenario, plan_check = _plan_scenario(target, scenario_path)
         del scenario
         checks.append(plan_check)
@@ -171,7 +171,7 @@ def _apply_plan(target: object, scenario_path: Path, driver: TechVaultNativeLibv
                 diagnostics = ("native libvirt driver returned no domain snapshot",)
             else:
                 passed = True
-    return LiveCheck("aces_libvirt_native_boot", passed, diagnostics)
+    return LiveCheck("raes_libvirt_native_boot", passed, diagnostics)
 
 
 def _substrate_independence_check(snapshot: Mapping[str, Any]) -> LiveCheck:
@@ -205,7 +205,7 @@ def _write_manifest(
     checks: Sequence[LiveCheck],
 ) -> str | None:
     target = run_artifact_path(output_dir, run_id, "live-gate", "manifest.json")
-    native_succeeded = any(check.name == "aces_libvirt_native_boot" and check.passed for check in checks)
+    native_succeeded = any(check.name == "raes_libvirt_native_boot" and check.passed for check in checks)
     observed_snapshot = snapshot if native_succeeded else {}
     native_surface = expected_surface(observed_snapshot)
     cleanup_check = next((check for check in checks if check.name == "verified_native_cleanup"), None)

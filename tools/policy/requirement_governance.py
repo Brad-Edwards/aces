@@ -222,4 +222,4 @@ def _check_traceability(
 
 
 def requirement_uid_from_context(branch_name: str | None, explicit_uid: str | None) -> str | None:
-    return explicit_uid or os.environ.get("ACES_REQUIREMENT_UID") or detect_requirement_uid(branch_name)
+    return explicit_uid or os.environ.get("RAES_REQUIREMENT_UID") or detect_requirement_uid(branch_name)

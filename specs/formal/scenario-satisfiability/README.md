@@ -6,12 +6,12 @@ normative.
 
 ## Profile Identity And Phase
 
-The analysis profile `aces-finite-domain-satisfiability-v1` SHALL mean exactly:
+The analysis profile `raes-finite-domain-satisfiability-v1` SHALL mean exactly:
 
 ```text
-theory_profile      = aces-finite-domain-theory/v1
-translation_profile = aces-sdl-authoring-translation/v1
-solver_profile      = aces-z3-finite-domain/v1
+theory_profile      = raes-finite-domain-theory/v1
+translation_profile = raes-sdl-authoring-translation/v1
+solver_profile      = raes-z3-finite-domain/v1
 ```
 
 The input SHALL be a successfully parsed and semantically validated, composed

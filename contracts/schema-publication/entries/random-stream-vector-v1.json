@@ -2,9 +2,9 @@
   "contract_id": "random-stream-vector-v1",
   "schema_path": "contracts/schemas/profiles/random-stream-vector-v1.json",
   "stability": "draft",
-  "content_hash": "c3ed8e8febd8dcf705f897a149e15bf3e8e5fddc479b3fba1d8143460f4420ca",
+  "content_hash": "32d04d87018c3ac25a85a3a27e3d7f9cbe27ab37477380c7c8d786257d80e883",
   "last_change": {
     "summary": "Added the closed participant-occurrence stream-address variant to canonical random-stream vectors for issue #897.",
-    "content_hash": "c3ed8e8febd8dcf705f897a149e15bf3e8e5fddc479b3fba1d8143460f4420ca"
+    "content_hash": "32d04d87018c3ac25a85a3a27e3d7f9cbe27ab37477380c7c8d786257d80e883"
   }
 }

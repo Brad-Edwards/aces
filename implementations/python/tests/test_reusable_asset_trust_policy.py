@@ -4,7 +4,7 @@ These tests validate the ``reusable-asset-trust-policy-v1`` contract: its shape,
 its complete coverage of the canonical reusable asset families, the per-family
 invariants (required integrity, unique evidence classes, threshold-backed
 authenticity), and its registration in the published schema bundle + publication
-manifest. The contract declares policy over the *existing* ACES trust mechanisms;
+manifest. The contract declares policy over the *existing* RAES trust mechanisms;
 it carries no evidence payload and no key material (see ADR-071 and
 ``specs/authority/reusable-asset-trust-integrity.md``).
 """

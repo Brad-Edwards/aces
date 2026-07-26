@@ -27,7 +27,7 @@ Set up the Python implementation:
 
 ```shell
 git clone https://github.com/RAESystem/rae.git
-cd aces/implementations/python
+cd raes/implementations/python
 uv sync --all-extras
 ```
 

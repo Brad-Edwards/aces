@@ -1,6 +1,6 @@
 {
   "schema_version": "validation-profile-catalog/v1",
-  "profile_family": "aces-validation",
+  "profile_family": "raes-validation",
   "catalog_version": "v1",
   "strengths": [
     {
@@ -11,7 +11,7 @@
     {
       "strength_id": "semantic",
       "rank": 2,
-      "definition": "Structural validation plus ACES domain invariants, reference resolution, lifecycle separation, and cross-artifact consistency."
+      "definition": "Structural validation plus RAES domain invariants, reference resolution, lifecycle separation, and cross-artifact consistency."
     },
     {
       "strength_id": "behavioral",
@@ -78,7 +78,7 @@
     },
     {
       "gate_kind": "semantic_invariant_validation",
-      "definition": "ACES domain invariants have been evaluated."
+      "definition": "RAES domain invariants have been evaluated."
     },
     {
       "gate_kind": "reference_resolution",
@@ -165,9 +165,9 @@
   ],
   "profiles": [
     {
-      "profile_id": "aces-structural-validation",
+      "profile_id": "raes-structural-validation",
       "profile_version": "v1",
-      "title": "ACES structural validation",
+      "title": "RAES structural validation",
       "intended_subject_kinds": [
         "scenario",
         "scenario_snapshot",
@@ -198,9 +198,9 @@
       "extension_terms_allowed": false
     },
     {
-      "profile_id": "aces-semantic-validation",
+      "profile_id": "raes-semantic-validation",
       "profile_version": "v1",
-      "title": "ACES semantic validation",
+      "title": "RAES semantic validation",
       "intended_subject_kinds": [
         "scenario",
         "scenario_snapshot",
@@ -235,9 +235,9 @@
       "extension_terms_allowed": false
     },
     {
-      "profile_id": "aces-behavioral-validation",
+      "profile_id": "raes-behavioral-validation",
       "profile_version": "v1",
-      "title": "ACES behavioral validation",
+      "title": "RAES behavioral validation",
       "intended_subject_kinds": [
         "scenario",
         "scenario_snapshot",
@@ -277,9 +277,9 @@
       "extension_terms_allowed": false
     },
     {
-      "profile_id": "aces-evidence-backed-validation",
+      "profile_id": "raes-evidence-backed-validation",
       "profile_version": "v1",
-      "title": "ACES evidence-backed validation",
+      "title": "RAES evidence-backed validation",
       "intended_subject_kinds": [
         "scenario",
         "scenario_snapshot",
@@ -326,9 +326,9 @@
       "extension_terms_allowed": false
     },
     {
-      "profile_id": "aces-falsification-backed-validation",
+      "profile_id": "raes-falsification-backed-validation",
       "profile_version": "v1",
-      "title": "ACES falsification-backed validation",
+      "title": "RAES falsification-backed validation",
       "intended_subject_kinds": [
         "scenario",
         "scenario_snapshot",

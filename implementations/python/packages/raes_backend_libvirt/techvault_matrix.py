@@ -228,9 +228,9 @@ def as_sequence(value: object) -> Sequence[object]:
 
 
 def _domain_cmdline(appliance: str, challenge: str | None) -> str:
-    parts = ["console=ttyS0", "panic=-1", f"aces.appliance={appliance}"]
+    parts = ["console=ttyS0", "panic=-1", f"raes.appliance={appliance}"]
     if challenge:
-        parts.append(f"aces.challenge={challenge}")
+        parts.append(f"raes.challenge={challenge}")
     return " ".join(parts)
 
 

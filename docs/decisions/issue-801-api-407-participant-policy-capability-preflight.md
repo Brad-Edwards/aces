@@ -65,7 +65,7 @@ family, report, policy engine, or ADR.
   publication records.
 - `.ground-control.yaml`, `.gc/plan-rules.md`, and `noxfile.py` own workflow.
   The branch name does not contain `API-407`, so implementation and completion
-  checks must set `ACES_REQUIREMENT_UID=API-407`.
+  checks must set `RAES_REQUIREMENT_UID=API-407`.
 
 These authorities settle the architecture. A new ADR is required only if the
 implementation discovers an actual conflict with them.

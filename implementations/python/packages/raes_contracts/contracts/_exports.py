@@ -1,10 +1,10 @@
 """Canonical public export manifest for the contracts facade."""
 
 PUBLIC_EXPORTS = [
-    "AcesSemanticInvariantEntryModel",
-    "AcesSemanticInvariantInputModel",
-    "AcesSemanticInvariantProfileModel",
-    "AcesSemanticInvariantProfileReferenceModel",
+    "RaesSemanticInvariantEntryModel",
+    "RaesSemanticInvariantInputModel",
+    "RaesSemanticInvariantProfileModel",
+    "RaesSemanticInvariantProfileReferenceModel",
     "ATTACK_ENTERPRISE_TACTICS_SOURCE_SCHEMA_VERSION",
     "ATLAS_TACTICS_SOURCE_SCHEMA_VERSION",
     "AttackEnterpriseTacticSourceTermModel",
@@ -301,7 +301,7 @@ PUBLIC_EXPORTS = [
     "WorkflowStatePredicateFeature",
     "WorkflowStepStateModel",
     "WORKFLOW_STATE_SCHEMA_VERSION",
-    "validate_aces_semantic_invariant_annotations",
+    "validate_raes_semantic_invariant_annotations",
     "validate_experiment_apparatus_context_against_manifests",
     "validate_experiment_apparatus_context_archival_datetimes",
     "validate_experiment_run_against_task",

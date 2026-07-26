@@ -64,7 +64,7 @@ def _manifest(
         name="realization-gate-test",
         version="0.0.1",
         supported_contract_versions=frozenset({"backend-manifest-v2"}),
-        compatible_processors=frozenset({"aces-reference-processor"}),
+        compatible_processors=frozenset({"raes-reference-processor"}),
         realization_support=realization_support,
         concept_bindings=(ConceptBinding(scope="capabilities.provisioner.supported_node_types", family="assets"),),
         provisioner=ProvisionerCapabilities(

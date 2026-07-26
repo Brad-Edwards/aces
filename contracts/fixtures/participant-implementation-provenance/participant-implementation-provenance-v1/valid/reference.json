@@ -45,7 +45,7 @@
       }
     }
   ],
-  "processor_manifest_ref": "processor-manifest-v2:aces-reference-processor",
+  "processor_manifest_ref": "processor-manifest-v2:raes-reference-processor",
   "backend_manifest_ref": "backend-manifest-v2:stub",
   "metadata": {
     "apparatus_record": "participant-implementation-selection"

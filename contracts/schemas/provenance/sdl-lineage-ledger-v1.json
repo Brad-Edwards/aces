@@ -139,7 +139,7 @@
     },
     "CompatibilityDirection": {
       "enum": [
-        "aces_relative_to_source",
+        "raes_relative_to_source",
         "not_applicable"
       ],
       "title": "CompatibilityDirection",
@@ -254,14 +254,6 @@
     "LineageClaimModel": {
       "additionalProperties": false,
       "properties": {
-        "aces_boundaries": {
-          "items": {
-            "$ref": "#/$defs/ArtifactBoundaryModel"
-          },
-          "minItems": 1,
-          "title": "Aces Boundaries",
-          "type": "array"
-        },
         "citation_refs": {
           "items": {
             "minLength": 1,
@@ -295,6 +287,14 @@
         "plane": {
           "$ref": "#/$defs/LineagePlane"
         },
+        "raes_boundaries": {
+          "items": {
+            "$ref": "#/$defs/ArtifactBoundaryModel"
+          },
+          "minItems": 1,
+          "title": "Raes Boundaries",
+          "type": "array"
+        },
         "source_boundaries": {
           "items": {
             "$ref": "#/$defs/ArtifactBoundaryModel"
@@ -314,7 +314,7 @@
       "required": [
         "plane",
         "classification",
-        "aces_boundaries",
+        "raes_boundaries",
         "divergence",
         "compatibility",
         "compatibility_direction"
@@ -327,7 +327,7 @@
         "adopted_syntax",
         "adopted_semantics",
         "adapted",
-        "aces_native"
+        "raes_native"
       ],
       "title": "LineageClassification",
       "type": "string"
@@ -575,7 +575,7 @@
       "type": "object"
     }
   },
-  "$id": "https://aces.dev/schemas/sdl-lineage-ledger-v1.json",
+  "$id": "https://raes.dev/schemas/sdl-lineage-ledger-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {

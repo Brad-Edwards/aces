@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-snapshot-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "40acc1309750eaaec3057ec2d9e2dd15e7023bb5658396291cc8e66620682659",
+  "content_hash": "812a22bf742131ea7c255c1305bafd8b695a2ad0ef50535361bd0dbde58c7e68",
   "last_change": {
     "summary": "Published the explicit autonomous activity v2 policy union in immutable instantiated scenario snapshots for issue #897.",
-    "content_hash": "40acc1309750eaaec3057ec2d9e2dd15e7023bb5658396291cc8e66620682659"
+    "content_hash": "812a22bf742131ea7c255c1305bafd8b695a2ad0ef50535361bd0dbde58c7e68"
   }
 }

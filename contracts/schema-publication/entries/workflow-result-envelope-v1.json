@@ -2,9 +2,9 @@
   "contract_id": "workflow-result-envelope-v1",
   "schema_path": "contracts/schemas/control-plane/workflow-result-envelope-v1.json",
   "stability": "draft",
-  "content_hash": "587d87619359a921ff369662e2af090cf49c764694cb855f02188358f298c66c",
+  "content_hash": "0a0db3f0da692b83f72a312eb75ffecc25fb74b56600c7ecb64a759f8a3b4c28",
   "last_change": {
-    "summary": "Published SCE-004 action-attempt, tool-selection, fact-version, outcome, evidence, and assertion-truth provenance.",
-    "content_hash": "587d87619359a921ff369662e2af090cf49c764694cb855f02188358f298c66c"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "0a0db3f0da692b83f72a312eb75ffecc25fb74b56600c7ecb64a759f8a3b4c28"
   }
 }

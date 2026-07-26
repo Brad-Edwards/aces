@@ -615,7 +615,7 @@ def test_decision_surface_schema_is_closed_discriminated_and_published() -> None
     schema = schema_bundle()["participant-decision-surface-v1"]
     assert schema["additionalProperties"] is False
     assert schema["properties"]["form"]["discriminator"]["propertyName"] == "surface_form"
-    assert {entry["id"] for entry in schema["x-aces-invariants"]} >= {
+    assert {entry["id"] for entry in schema["x-raes-invariants"]} >= {
         "decision-surface-entry-reference-agreement",
         "decision-surface-presentation-not-lifecycle-evidence",
         "decision-surface-sem226-item-exposure-agreement",

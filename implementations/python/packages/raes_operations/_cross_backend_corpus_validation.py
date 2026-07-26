@@ -15,7 +15,7 @@ from typing import Any
 
 from raes_operations._evidence_run_validation import redaction_violations
 
-CORPUS_SCHEMA = "aces.cross-backend-evidence-corpus/v1"
+CORPUS_SCHEMA = "raes.cross-backend-evidence-corpus/v1"
 
 _REQUIRED_SECTIONS: tuple[str, ...] = (
     "authored_scenario",

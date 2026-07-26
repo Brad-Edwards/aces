@@ -808,7 +808,7 @@ def _participant_binding_payload(target_id: str = "mode") -> dict[str, object]:
 def _apparatus_binding_payload(
     *,
     component_kind: str = "processor",
-    component_name: str = "aces-reference-processor",
+    component_name: str = "raes-reference-processor",
     component_version: str = "0.2.0",
     manifest_version: str = "processor-manifest/v2",
 ) -> dict[str, object]:
@@ -833,7 +833,7 @@ def _apparatus_binding_payload(
                 "owner": {
                     "contract_id": "processor-manifest/v2",
                     "contract_version": "1",
-                    "validator_id": "aces-reference-processor-configuration",
+                    "validator_id": "raes-reference-processor-configuration",
                     "validator_version": "1",
                 },
             }
@@ -857,7 +857,7 @@ def _processor_manifest_payload_with_registry() -> dict[str, object]:
         "owner": {
             "contract_id": "processor-manifest/v2",
             "contract_version": "1",
-            "validator_id": "aces-reference-processor-configuration",
+            "validator_id": "raes-reference-processor-configuration",
             "validator_version": "1",
         },
         "targets": {
@@ -895,7 +895,7 @@ def _apparatus_manifest_map(
     return {
         (
             component_kind,
-            "aces-reference-processor",
+            "raes-reference-processor",
             "0.2.0",
             "processor-manifest/v2",
         ): manifest
@@ -1269,8 +1269,8 @@ def test_binding_contract_fixture_corpora_are_nonempty_and_enforced(contract_id:
 
 def test_binding_schemas_disclose_semantic_invariants_and_explicit_mode_conditionals() -> None:
     bundle = schema_bundle()
-    descriptor_invariants = {item["id"] for item in bundle["experiment-binding-descriptors-v1"]["x-aces-invariants"]}
-    result_invariants = {item["id"] for item in bundle["participant-configuration-result-v1"]["x-aces-invariants"]}
+    descriptor_invariants = {item["id"] for item in bundle["experiment-binding-descriptors-v1"]["x-raes-invariants"]}
+    result_invariants = {item["id"] for item in bundle["participant-configuration-result-v1"]["x-raes-invariants"]}
     assert "binding-descriptors-canonical-targets-injective" in descriptor_invariants
     assert "participant-configuration-digest-valid" in result_invariants
     assert bundle["experiment-authoring-input-v1"]["allOf"]

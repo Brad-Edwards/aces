@@ -263,7 +263,7 @@
       "type": "object"
     }
   },
-  "$id": "https://aces.dev/schemas/trial-cleanup-plan-v1.json",
+  "$id": "https://raes.dev/schemas/trial-cleanup-plan-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "Schedule-independent cleanup intent carried by one admitted trial entry.",
@@ -329,7 +329,7 @@
   ],
   "title": "TrialCleanupPlanModel",
   "type": "object",
-  "x-aces-invariants": [
+  "x-raes-invariants": [
     {
       "description": "Cleanup boundary and dependency references resolve, ordering is acyclic, required cleanup is verifiable, and retries after non-idempotent effects declare required retry-triggered reset obligations covering the affected boundaries or compensation.",
       "id": "trial-cleanup-plan-references-and-retry-safe",
@@ -343,13 +343,13 @@
       "validator": "raes_contracts.contracts.TrialCleanupPlanModel._validate_plan"
     }
   ],
-  "x-aces-semantic-profile": {
+  "x-raes-semantic-profile": {
     "contract_id": "trial-cleanup-plan-v1",
-    "entry_schema_contract_id": "aces-semantic-invariants-v1",
-    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
-    "id": "aces-semantic-invariants-v1",
-    "keyword": "x-aces-invariants",
+    "entry_schema_contract_id": "raes-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/RaesSemanticInvariantEntryModel",
+    "id": "raes-semantic-invariants-v1",
+    "keyword": "x-raes-invariants",
     "required": true,
-    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+    "uri": "https://raes.dev/schemas/semantic-invariants/v1"
   }
 }

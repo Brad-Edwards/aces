@@ -30,7 +30,7 @@ class BusyboxInitramfsBuilder:
     busybox_path: Path = Path("/usr/bin/busybox")
 
     def build(self, *, domain: Mapping[str, object], target: Path) -> Path:
-        with tempfile.TemporaryDirectory(prefix="aces-initramfs-") as tmp:
+        with tempfile.TemporaryDirectory(prefix="raes-initramfs-") as tmp:
             root = Path(tmp)
             _write_appliance_root(root, self.busybox_path, domain)
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -60,7 +60,7 @@ def make_libvirt_readable(path: Path) -> None:
 
 def _write_appliance_root(root: Path, busybox_path: Path, domain: Mapping[str, object]) -> None:
     bin_dir = root / "bin"
-    etc_dir = root / "etc" / "aces"
+    etc_dir = root / "etc" / "raes"
     for directory in (bin_dir, etc_dir, root / "proc", root / "sys", root / "dev", root / "tmp", root / "run"):
         directory.mkdir(parents=True, exist_ok=True)
     shutil.copy2(busybox_path, bin_dir / "busybox")
@@ -79,7 +79,7 @@ def _init_script(domain: Mapping[str, object]) -> str:
         "mount -t proc proc /proc",
         "mount -t sysfs sysfs /sys",
         "mount -t devtmpfs devtmpfs /dev 2>/dev/null || mdev -s",
-        f"hostname {_shell_quote(str(domain.get('name', 'aces-node')))}",
+        f"hostname {_shell_quote(str(domain.get('name', 'raes-node')))}",
         "ip link set lo up",
         "for iface_path in /sys/class/net/*; do",
         "  iface=${iface_path##*/}",

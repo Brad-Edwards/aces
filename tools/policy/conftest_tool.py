@@ -16,7 +16,7 @@ from ..tool_versions import CONTFEST_VERSION
 from .common import REPO_ROOT, PolicyFailure
 
 POLICY_DIR = REPO_ROOT / "tools" / "policy" / "conftest"
-CACHE_ROOT = REPO_ROOT / ".cache" / "aces-sdl" / "tooling" / "conftest"
+CACHE_ROOT = REPO_ROOT / ".cache" / "raes-sdl" / "tooling" / "conftest"
 
 
 def _release_base_url(version: str = CONTFEST_VERSION) -> str:
@@ -41,7 +41,7 @@ def _release_asset_name(version: str = CONTFEST_VERSION) -> str:
 
 
 def conftest_binary_path(repo_root: Path = REPO_ROOT, *, version: str = CONTFEST_VERSION) -> Path:
-    return repo_root / ".cache" / "aces-sdl" / "tooling" / "conftest" / version / "conftest"
+    return repo_root / ".cache" / "raes-sdl" / "tooling" / "conftest" / version / "conftest"
 
 
 def ensure_conftest(repo_root: Path = REPO_ROOT, *, version: str = CONTFEST_VERSION) -> Path:
@@ -83,7 +83,7 @@ def ensure_conftest(repo_root: Path = REPO_ROOT, *, version: str = CONTFEST_VERS
             f"conftest checksum mismatch for {asset_name}: expected {expected_checksum}, got {actual_checksum}"
         )
 
-    with tempfile.TemporaryDirectory(prefix="aces-conftest-") as tmpdir:
+    with tempfile.TemporaryDirectory(prefix="raes-conftest-") as tmpdir:
         archive_path = Path(tmpdir) / asset_name
         archive_path.write_bytes(archive_bytes)
         with tarfile.open(archive_path, "r:gz") as archive:
@@ -104,7 +104,7 @@ def run_conftest_policy(
 ) -> list[PolicyFailure]:
     binary = ensure_conftest(repo_root)
 
-    with tempfile.TemporaryDirectory(prefix="aces-conftest-input-") as tmpdir:
+    with tempfile.TemporaryDirectory(prefix="raes-conftest-input-") as tmpdir:
         input_path = Path(tmpdir) / "repo-policy-input.json"
         input_path.write_text(json.dumps(input_document, indent=2, sort_keys=True), encoding="utf-8")
         proc = subprocess.run(

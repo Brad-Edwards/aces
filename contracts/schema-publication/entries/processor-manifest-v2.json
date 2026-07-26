@@ -2,9 +2,9 @@
   "contract_id": "processor-manifest-v2",
   "schema_path": "contracts/schemas/processor-manifest/processor-manifest-v2.json",
   "stability": "draft",
-  "content_hash": "bd2e67b226d6eb18eb1cfec69e8840e7d8349161f3357fa71832771f9b8e68dc",
+  "content_hash": "a1afaba381dfec1a3e05467baee34335a15c3e8c6f9e2b6cd20fe99f0484a174",
   "last_change": {
-    "summary": "Added a typed, owner-governed apparatus configuration target registry and experiment binding contract support.",
-    "content_hash": "bd2e67b226d6eb18eb1cfec69e8840e7d8349161f3357fa71832771f9b8e68dc"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "a1afaba381dfec1a3e05467baee34335a15c3e8c6f9e2b6cd20fe99f0484a174"
   }
 }

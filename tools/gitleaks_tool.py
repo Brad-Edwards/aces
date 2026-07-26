@@ -46,7 +46,7 @@ def _checksums_asset_name(version: str = GITLEAKS_VERSION) -> str:
 
 
 def gitleaks_binary_path(repo_root: Path = REPO_ROOT, *, version: str = GITLEAKS_VERSION) -> Path:
-    return repo_root / ".cache" / "aces-sdl" / "tooling" / "gitleaks" / version / "gitleaks"
+    return repo_root / ".cache" / "raes-sdl" / "tooling" / "gitleaks" / version / "gitleaks"
 
 
 def ensure_gitleaks(repo_root: Path = REPO_ROOT, *, version: str = GITLEAKS_VERSION) -> Path:
@@ -88,7 +88,7 @@ def ensure_gitleaks(repo_root: Path = REPO_ROOT, *, version: str = GITLEAKS_VERS
             f"gitleaks checksum mismatch for {asset_name}: expected {expected_checksum}, got {actual_checksum}"
         )
 
-    with tempfile.TemporaryDirectory(prefix="aces-gitleaks-") as tmpdir:
+    with tempfile.TemporaryDirectory(prefix="raes-gitleaks-") as tmpdir:
         archive_path = Path(tmpdir) / asset_name
         archive_path.write_bytes(archive_bytes)
         with tarfile.open(archive_path, "r:gz") as archive:

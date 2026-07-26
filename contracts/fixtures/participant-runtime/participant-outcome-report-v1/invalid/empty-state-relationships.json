@@ -1,6 +1,6 @@
 {
   "event_id": "outcome-red-17",
-  "schema_name": "aces.participant_runtime.outcome_report",
+  "schema_name": "raes.participant_runtime.outcome_report",
   "schema_version": "1.0.0",
   "event_type": "outcome_report",
   "extension_policy": "reject_unknown_required",
@@ -11,7 +11,7 @@
     "status_code": "outcome_interpreted",
     "status_detail": "interpretation rule grounded the outcome in recorded sources",
     "source_status_label": "outcome_interpreted",
-    "source_status_mapping": "aces.outcome.interpreted"
+    "source_status_mapping": "raes.outcome.interpreted"
   },
   "participant_address": "participants.red.llm",
   "episode_id": "ep-red-004",

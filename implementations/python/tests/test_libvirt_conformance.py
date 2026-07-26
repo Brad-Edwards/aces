@@ -2,7 +2,7 @@
 
 Acceptance bar:
 
-1. ``aces conformance backend --profile provisioning-only`` passes with no
+1. ``raes conformance backend --profile provisioning-only`` passes with no
    ``unsupported-capability-claim`` / ``unsupported-contract-declaration``
    diagnostics (covered by ``test_backend_conformance_cli.py`` /
    ``run_fixture_suite`` -- asserted green here for the libvirt-relevant profile).

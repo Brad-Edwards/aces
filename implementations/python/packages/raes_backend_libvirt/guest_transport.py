@@ -20,7 +20,7 @@ from typing import Protocol
 
 _Handler = Callable[[dict[str, object], list[str]], None]
 
-FACT_HEADER = "ACES-GUEST-FACTS v1"
+FACT_HEADER = "RAES-GUEST-FACTS v1"
 INIT_COMPLETE_MARKER = "init complete"
 
 # Bounds keep a hostile or malfunctioning guest from flooding host memory or the

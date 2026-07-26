@@ -11,7 +11,7 @@ It deliberately holds no runtime internals, inspects no backend-native DTOs, and
 infers nothing from arbitrary text. The plane separation each carrier enforces
 lives in the existing experiment-core, participant-runtime, and apparatus
 contracts; this module is the single source of plane ownership and the source of
-the portable ``x-aces-plane`` annotation published on the claim-bearing
+the portable ``x-raes-plane`` annotation published on the claim-bearing
 contracts.
 """
 
@@ -51,7 +51,7 @@ PLANE_BY_SDL_SECTION: dict[str, ObservabilityEvidencePlane] = {
     "evidence_requirements": ObservabilityEvidencePlane.AUTHORED_EVIDENCE_REQUIREMENT,
 }
 
-# Contracts whose ``x-aces-plane`` annotation is published as portable
+# Contracts whose ``x-raes-plane`` annotation is published as portable
 # traceability (the three experiment-core carriers that map 1:1 to a plane).
 PLANE_ANNOTATED_CONTRACT_IDS: tuple[str, ...] = (
     "experiment-capture-spec-v1",

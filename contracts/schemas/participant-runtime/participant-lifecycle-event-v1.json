@@ -389,7 +389,7 @@
       "type": "object"
     }
   },
-  "$id": "https://aces.dev/schemas/participant-lifecycle-event-v1.json",
+  "$id": "https://raes.dev/schemas/participant-lifecycle-event-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "RUN-306 lifecycle boundary record for one participant action event.",

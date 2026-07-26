@@ -6,7 +6,7 @@
   },
   "supported_contract_versions": ["backend-manifest-v2"],
   "compatibility": {
-    "processors": ["aces-reference-processor"]
+    "processors": ["raes-reference-processor"]
   },
   "realization_support": [
     {

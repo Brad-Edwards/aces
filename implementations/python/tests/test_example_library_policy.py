@@ -57,7 +57,7 @@ _VALID_BODY = {
             "predicate": {
                 "kind": "boolean",
                 "property": "service-healthy",
-                "semantic_ref": "urn:aces:observable:service-healthy",
+                "semantic_ref": "urn:raes:observable:service-healthy",
                 "operator": "equals",
                 "expected": True,
             },
@@ -104,7 +104,7 @@ def _write_yaml(path: Path, value: dict[str, Any]) -> None:
 
 def _seed_repo(tmp_path: Path) -> Path:
     catalog: dict[str, Any] = {
-        "library": "aces-example-pattern-library",
+        "library": "raes-example-pattern-library",
         "version": 1,
         "requirement_refs": [REQUIREMENT_REF],
         "source_refs": ["examples/README.md"],
@@ -132,7 +132,7 @@ def _seed_repo(tmp_path: Path) -> Path:
         _write_yaml(
             tmp_path / template_path,
             {
-                "template": "aces-library-template",
+                "template": "raes-library-template",
                 "version": 1,
                 "id": f"{surface}-template",
                 "surface": surface,
@@ -145,7 +145,7 @@ def _seed_repo(tmp_path: Path) -> Path:
         _write_yaml(
             tmp_path / pattern_path,
             {
-                "pattern": "aces-library-pattern",
+                "pattern": "raes-library-pattern",
                 "version": 1,
                 "id": f"{surface}-pattern",
                 "surface": surface,

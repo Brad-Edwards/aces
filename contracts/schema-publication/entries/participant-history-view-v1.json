@@ -2,9 +2,9 @@
   "contract_id": "participant-history-view-v1",
   "schema_path": "contracts/schemas/control-plane/participant-history-view-v1.json",
   "stability": "draft",
-  "content_hash": "1fbe4794585f8ae1c71ba85a2cb7249227163301046ddbb8a2172c1bc201ccaa",
+  "content_hash": "a76e3fabd050a42c46cb2459f93e02aa1b482b95c277fa166c4040a305b06320",
   "last_change": {
     "summary": "Projected safe autonomous activity occurrence provenance through API-408 participant history views for issue #897.",
-    "content_hash": "1fbe4794585f8ae1c71ba85a2cb7249227163301046ddbb8a2172c1bc201ccaa"
+    "content_hash": "a76e3fabd050a42c46cb2459f93e02aa1b482b95c277fa166c4040a305b06320"
   }
 }

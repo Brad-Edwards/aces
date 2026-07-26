@@ -41,7 +41,7 @@ from .experiment_references import (
 from .manifests import ProcessorManifestV2Model
 from .participant_manifests import BackendManifestV2Model
 from .random_stream import RandomStreamControlBindingModel
-from .schema_invariants import _add_aces_invariant, _add_carrier_validation_basis_disclosure_invariant
+from .schema_invariants import _add_carrier_validation_basis_disclosure_invariant, _add_raes_invariant
 from .validation_disclosure import ValidationBasisDisclosureModel, validate_carrier_validation_basis_disclosures
 
 _ManifestReferenceKey = tuple[
@@ -199,7 +199,7 @@ class ExperimentApparatusContextModel(ContractModel):
                     },
                 ]
             )
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "canonical-apparatus-manifest-selected",
             "The canonical processor and backend component manifest_ref values must be present in selected_manifests; "
@@ -207,7 +207,7 @@ class ExperimentApparatusContextModel(ContractModel):
             validator="raes_contracts.contracts.ExperimentApparatusContextModel._validate_instrument_context",
             inputs=[{"contract_id": "experiment-apparatus-context-v1", "instance_path": "#"}],
         )
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "apparatus-manifest-payload-identity-valid",
             "Canonical processor and backend manifest_ref values must resolve to manifest payloads with matching "

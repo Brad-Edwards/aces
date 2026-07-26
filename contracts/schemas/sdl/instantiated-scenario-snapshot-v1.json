@@ -4951,7 +4951,7 @@
         },
         "instantiation_provenance": {
           "$ref": "#/$defs/InstantiationProvenance",
-          "x-aces-realization-dimension": false
+          "x-raes-realization-dimension": false
         },
         "name": {
           "allOf": [
@@ -5225,8 +5225,8 @@
       ],
       "title": "SDL Instantiated Scenario v1",
       "type": "object",
-      "x-aces-authored-identity-profile": "aces-sdl-semantic/v1",
-      "x-aces-document-phase": "instantiated-scenario"
+      "x-raes-authored-identity-profile": "raes-sdl-semantic/v1",
+      "x-raes-document-phase": "instantiated-scenario"
     },
     "InstantiationProvenance": {
       "additionalProperties": false,
@@ -24053,7 +24053,7 @@
           "type": "string"
         },
         "profile": {
-          "const": "aces-sdl-semantic/v1",
+          "const": "raes-sdl-semantic/v1",
           "title": "Profile",
           "type": "string"
         },
@@ -26144,13 +26144,13 @@
       "type": "string"
     }
   },
-  "$id": "https://aces.dev/schemas/instantiated-scenario-snapshot-v1.json",
+  "$id": "https://raes.dev/schemas/instantiated-scenario-snapshot-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "Sealed canonical envelope for one portable instantiated artifact.",
   "properties": {
     "profile": {
-      "const": "aces-sdl-instantiated-snapshot/v1",
+      "const": "raes-sdl-instantiated-snapshot/v1",
       "title": "Profile",
       "type": "string"
     },
@@ -26164,8 +26164,8 @@
   ],
   "title": "SDL Instantiated Scenario Snapshot v1",
   "type": "object",
-  "x-aces-document-phase": "canonical-instantiated-snapshot",
-  "x-aces-invariants": [
+  "x-raes-document-phase": "canonical-instantiated-snapshot",
+  "x-raes-invariants": [
     {
       "description": "Generated artifact output names and paths, consumers, and dependency entries must be unique, and generated artifact consumers must be read-only.",
       "id": "stateful-generated-artifact-semantics",
@@ -26215,13 +26215,13 @@
       "validator": "raes.validator.SemanticValidator._verify_service_materialization"
     }
   ],
-  "x-aces-semantic-profile": {
+  "x-raes-semantic-profile": {
     "contract_id": "instantiated-scenario-snapshot-v1",
-    "entry_schema_contract_id": "aces-semantic-invariants-v1",
-    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
-    "id": "aces-semantic-invariants-v1",
-    "keyword": "x-aces-invariants",
+    "entry_schema_contract_id": "raes-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/RaesSemanticInvariantEntryModel",
+    "id": "raes-semantic-invariants-v1",
+    "keyword": "x-raes-invariants",
     "required": true,
-    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+    "uri": "https://raes.dev/schemas/semantic-invariants/v1"
   }
 }

@@ -34,7 +34,7 @@ from tools.check_deprecation_lifecycle import (  # noqa: E402
 
 
 def _good_ledger() -> dict:
-    # Includes both canonical (retention-floor) records so the positive case and
+    # Includes the canonical retention-floor record so the positive case and
     # every mutation starting point satisfies CANONICAL_DEPRECATION_RECORD_IDS.
     # records[0] is a canonical record; mutation tests operate on it.
     return {
@@ -44,16 +44,16 @@ def _good_ledger() -> dict:
         "spec": SPEC_RELATIVE_PATH,
         "records": [
             {
-                "id": "aces-compat-namespace",
+                "id": "obsolete-example-surface",
                 "surface_class": "python-distribution",
-                "identifier": "implementations/python/src/aces/ (legacy aces.* namespace)",
+                "identifier": "example package alias",
                 "status": "removed",
                 "first_notice": "ADR-010 (example)",
-                "replacement": "the owning packages under implementations/python/packages/",
+                "replacement": "the canonical example package",
                 "migration_reference": "docs/migration/raes-rename.md",
-                "notice_window": "removed at the 1.0 hard cut",
-                "verification_evidence": "the wheel excludes src/aces and policy rejects its reintroduction",
-                "removal_record": "RAES 1.0 removes the aces compatibility namespace.",
+                "notice_window": "removed after the documented test window",
+                "verification_evidence": "the test fixture models a completed removal",
+                "removal_record": "The example alias is no longer published.",
             },
             {
                 "id": "sdl-import-path-field",
@@ -361,7 +361,7 @@ def test_dropping_a_canonical_record_is_rejected(tmp_path: Path) -> None:
 
 
 def test_canonical_record_ids_are_pinned() -> None:
-    assert {"aces-compat-namespace", "sdl-import-path-field"} == CANONICAL_DEPRECATION_RECORD_IDS
+    assert {"sdl-import-path-field"} == CANONICAL_DEPRECATION_RECORD_IDS
 
 
 def test_surface_classes_cover_known_matrix_rows() -> None:

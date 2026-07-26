@@ -12,13 +12,13 @@ if [[ ! -x "$PY" ]]; then
   exit 0
 fi
 
-if ! "$PY" "$ROOT/tools/check_repo_policy.py" >/tmp/aces-sdl-policy.out 2>&1; then
-  tr '\n' ' ' </tmp/aces-sdl-policy.out
+if ! "$PY" "$ROOT/tools/check_repo_policy.py" >/tmp/raes-sdl-policy.out 2>&1; then
+  tr '\n' ' ' </tmp/raes-sdl-policy.out
   exit 0
 fi
 
-if ! "$PY" "$ROOT/tools/check_requirement_governance.py" >/tmp/aces-sdl-gc.out 2>&1; then
-  tr '\n' ' ' </tmp/aces-sdl-gc.out
+if ! "$PY" "$ROOT/tools/check_requirement_governance.py" >/tmp/raes-sdl-gc.out 2>&1; then
+  tr '\n' ' ' </tmp/raes-sdl-gc.out
   exit 0
 fi
 

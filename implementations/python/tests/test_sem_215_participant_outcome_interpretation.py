@@ -79,7 +79,7 @@ def _scenario_yaml() -> str:
             description: Exfiltration was detected for the governed web service.
             subjects: [nodes.web.services.http]
             basis: observed_state
-            predicate: {kind: boolean, property: exfil-detected, semantic_ref: urn:aces:observable:exfil-detected, operator: equals, expected: true}
+            predicate: {kind: boolean, property: exfil-detected, semantic_ref: urn:raes:observable:exfil-detected, operator: equals, expected: true}
             evidence_requirements: [exfil-detection-evidence]
         assertions:
           exfil-detected: {proposition: exfil-detected, role: postcondition, polarity: positive}

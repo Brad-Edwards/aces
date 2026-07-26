@@ -2,9 +2,9 @@
   "contract_id": "operation-status-v1",
   "schema_path": "contracts/schemas/control-plane/operation-status-v1.json",
   "stability": "draft",
-  "content_hash": "fd9af93db03252516e91ffe2cc4eae6c006221b5a10ef6b9998762ec51a5ed53",
+  "content_hash": "407c2b148ea3e9490d5e9d0288f8ae1199d04be3f0ad5a2483d84e7ee0b6510a",
   "last_change": {
-    "summary": "Constrained backend-reported changed addresses to unique canonical compiled addresses for DSL-101/DSL-102.",
-    "content_hash": "fd9af93db03252516e91ffe2cc4eae6c006221b5a10ef6b9998762ec51a5ed53"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "407c2b148ea3e9490d5e9d0288f8ae1199d04be3f0ad5a2483d84e7ee0b6510a"
   }
 }

@@ -2,9 +2,9 @@
   "contract_id": "sdl-lineage-ledger-v1",
   "schema_path": "contracts/schemas/provenance/sdl-lineage-ledger-v1.json",
   "stability": "draft",
-  "content_hash": "ac8a7737debd83fe70cfe791a85f72455d6e474c806e3faf9692cdce38123e6d",
+  "content_hash": "9cbb6dc73655256fb149d2fdabea9af41fae71d56852f0afa528f28ddfdeaf20",
   "last_change": {
-    "summary": "Initial publication of the revision-pinned SDL lineage, derivation, citation identity, compatibility, and third-party notice-disposition contract for issue #726.",
-    "content_hash": "ac8a7737debd83fe70cfe791a85f72455d6e474c806e3faf9692cdce38123e6d"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "9cbb6dc73655256fb149d2fdabea9af41fae71d56852f0afa528f28ddfdeaf20"
   }
 }

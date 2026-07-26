@@ -253,7 +253,7 @@
       "type": "object"
     }
   },
-  "$id": "https://aces.dev/schemas/experiment-derived-measure-v1.json",
+  "$id": "https://raes.dev/schemas/experiment-derived-measure-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "allOf": [
@@ -428,7 +428,7 @@
   ],
   "title": "ExperimentDerivedMeasureModel",
   "type": "object",
-  "x-aces-invariants": [
+  "x-raes-invariants": [
     {
       "description": "Reported derived measures must include a value; missing/withheld/not-applicable measures must not.",
       "id": "derived-measure-reported-value-present",
@@ -454,14 +454,14 @@
       "validator": "raes_contracts.contracts.ExperimentDerivedMeasureModel._validate_derived_measure"
     }
   ],
-  "x-aces-plane": "derived_analysis",
-  "x-aces-semantic-profile": {
+  "x-raes-plane": "derived_analysis",
+  "x-raes-semantic-profile": {
     "contract_id": "experiment-derived-measure-v1",
-    "entry_schema_contract_id": "aces-semantic-invariants-v1",
-    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
-    "id": "aces-semantic-invariants-v1",
-    "keyword": "x-aces-invariants",
+    "entry_schema_contract_id": "raes-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/RaesSemanticInvariantEntryModel",
+    "id": "raes-semantic-invariants-v1",
+    "keyword": "x-raes-invariants",
     "required": true,
-    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+    "uri": "https://raes.dev/schemas/semantic-invariants/v1"
   }
 }

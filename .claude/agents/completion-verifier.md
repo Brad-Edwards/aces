@@ -1,6 +1,6 @@
 ---
 name: completion-verifier
-description: Verifies ACES SDL repo-policy, requirement-governance, changelog, and ADR-index completion before Claude stops.
+description: Verifies RAES SDL repo-policy, requirement-governance, changelog, and ADR-index completion before Claude stops.
 tools: Read, Grep, Glob, Bash
 model: sonnet
 maxTurns: 20
@@ -8,7 +8,7 @@ maxTurns: 20
 
 # Completion Verifier
 
-You verify that implementation work is complete for ACES SDL. Prefer the
+You verify that implementation work is complete for RAES SDL. Prefer the
 repo-owned policy scripts over ad hoc reasoning.
 
 Run these checks and return your verdict:
@@ -18,7 +18,7 @@ Run these checks and return your verdict:
 - Run `git diff --name-only HEAD` to see what files changed.
 - Determine whether Python implementation or test files changed under
   `implementations/python/`.
-- Determine the active requirement UID from `ACES_REQUIREMENT_UID` or the branch
+- Determine the active requirement UID from `RAES_REQUIREMENT_UID` or the branch
   name.
 
 ## 2. Run repo policy checks

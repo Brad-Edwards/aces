@@ -80,7 +80,7 @@ def container_runtime() -> str:
 
 
 def test_real_container_provision_inventory_and_teardown(container_runtime: str):
-    workspace = "aces-ref-it"
+    workspace = "raes-ref-it"
     # The scenario pins an explicit image source, so the operator allowlists it
     # through the image-trust policy (plan-pinned tags are rejected by default).
     driver = OciDeploymentDriver(
@@ -109,12 +109,17 @@ def test_real_container_provision_inventory_and_teardown(container_runtime: str)
 def test_real_driver_conformance_passes(container_runtime: str):
     driver = OciDeploymentDriver(
         runtime=container_runtime,
-        workspace="aces-ref-it-conf",
+        workspace="raes-ref-it-conf",
         image_policy=ImageTrustPolicy(default_image=_IMAGE),
     )
     target = create_reference_backend_target(driver=driver)
 
-    report = run_target_conformance(target)
+    try:
+        report = run_target_conformance(target)
 
-    assert report.profile == BackendCapabilityProfile.FULL_REMOTE_CONTROL_PLANE
-    assert report.passed is True, [diag.message for diag in report.diagnostics]
+        assert report.profile == BackendCapabilityProfile.FULL_REMOTE_CONTROL_PLANE
+        assert report.passed is True, [
+            diagnostic.message for case in report.cases if not case.passed for diagnostic in case.diagnostics
+        ]
+    finally:
+        driver.destroy(networks=(), containers=("provision.node.vm",))

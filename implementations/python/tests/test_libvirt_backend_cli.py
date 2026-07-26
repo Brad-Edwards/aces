@@ -1,4 +1,4 @@
-"""ACES CLI wiring for libvirt operations."""
+"""RAES CLI wiring for libvirt operations."""
 
 from __future__ import annotations
 

@@ -868,7 +868,7 @@ def test_published_schema_fixtures_bundle_and_consumer_match_the_model() -> None
     published = json.loads(published_path.read_text(encoding="utf-8"))
     assert published == schema
     assert schema["additionalProperties"] is False
-    assert schema["x-aces-invariants"]
+    assert schema["x-raes-invariants"]
 
     fixture_root = REPO_ROOT / "contracts" / "fixtures" / "participant-runtime" / CONTRACT_ID
     valid_paths = sorted((fixture_root / "valid").glob("*.json"))

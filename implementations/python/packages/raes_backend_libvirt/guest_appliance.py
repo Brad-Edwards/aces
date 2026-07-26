@@ -45,7 +45,7 @@ class GuestObservingInitramfsBuilder:
     busybox_path: Path = Path("/usr/bin/busybox")
 
     def build(self, *, domain: Mapping[str, object], target: Path) -> Path:
-        with tempfile.TemporaryDirectory(prefix="aces-guest-initramfs-") as tmp:
+        with tempfile.TemporaryDirectory(prefix="raes-guest-initramfs-") as tmp:
             root = Path(tmp)
             _write_guest_root(root, self.busybox_path, domain)
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -57,7 +57,7 @@ class GuestObservingInitramfsBuilder:
 def _write_guest_root(root: Path, busybox_path: Path, domain: Mapping[str, object]) -> None:
     bin_dir = root / "bin"
     etc_dir = root / "etc"
-    guest_dir = etc_dir / "aces" / "guest"
+    guest_dir = etc_dir / "raes" / "guest"
     files_dir = guest_dir / "files"
     for directory in (
         bin_dir,
@@ -120,7 +120,7 @@ def _init_script(domain: Mapping[str, object]) -> str:
         "mount -t proc proc /proc",
         "mount -t sysfs sysfs /sys",
         "mount -t devtmpfs devtmpfs /dev 2>/dev/null || mdev -s",
-        f"hostname {_shell_quote(str(domain.get('name', 'aces-node')))}",
+        f"hostname {_shell_quote(str(domain.get('name', 'raes-node')))}",
         "ip link set lo up",
         "for iface_path in /sys/class/net/*; do",
         "  iface=${iface_path##*/}",
@@ -142,7 +142,7 @@ def _init_script(domain: Mapping[str, object]) -> str:
     lines.extend(["  esac", "done"])
     lines.extend(_REALIZE_SNIPPET)
     lines.append("sleep 1")
-    lines.append("challenge=$(cat /proc/cmdline | tr ' ' '\\n' | sed -n 's/^aces.challenge=//p')")
+    lines.append("challenge=$(cat /proc/cmdline | tr ' ' '\\n' | sed -n 's/^raes.challenge=//p')")
     lines.extend(_REPORT_SNIPPET)
     lines.append("while true; do sleep 3600; done")
     lines.append("")
@@ -150,14 +150,14 @@ def _init_script(domain: Mapping[str, object]) -> str:
 
 
 _REALIZE_SNIPPET = [
-    "if [ -f /etc/aces/guest/accounts ]; then",
+    "if [ -f /etc/raes/guest/accounts ]; then",
     "while IFS='|' read name groups shell home disabled; do",
     _SKIP_IF_NO_NAME,
     '  [ -n "$home" ] || home=/home/$name',
     '  [ -n "$shell" ] || shell=/bin/sh',
     '  mkdir -p "$home"',
     "  uid=$(awk -F: 'BEGIN{m=1000}$3>=m{m=$3+1}END{print m}' /etc/passwd)",
-    '  echo "$name:x:$uid:$uid:aces:$home:$shell" >> /etc/passwd',
+    '  echo "$name:x:$uid:$uid:raes:$home:$shell" >> /etc/passwd',
     '  echo "$name:x:$uid:" >> /etc/group',
     '  if [ "$disabled" = 1 ]; then echo "$name:!:19000:0:99999:7:::" >> /etc/shadow;',
     '  else echo "$name:*:19000:0:99999:7:::" >> /etc/shadow; fi',
@@ -174,29 +174,29 @@ _REALIZE_SNIPPET = [
     "    IFS=,",
     "  done",
     "  IFS=$oldifs",
-    "done < /etc/aces/guest/accounts",
+    "done < /etc/raes/guest/accounts",
     "fi",
-    "if [ -f /etc/aces/guest/content ]; then",
+    "if [ -f /etc/raes/guest/content ]; then",
     "while IFS='|' read path mode idx; do",
     '  [ -n "$path" ] || continue',
     '  mkdir -p "$(dirname "$path")"',
-    '  cp "/etc/aces/guest/files/$idx" "$path"',
+    '  cp "/etc/raes/guest/files/$idx" "$path"',
     '  chmod "$mode" "$path"',
-    "done < /etc/aces/guest/content",
+    "done < /etc/raes/guest/content",
     "fi",
-    "if [ -f /etc/aces/guest/services ]; then",
+    "if [ -f /etc/raes/guest/services ]; then",
     "while IFS='|' read name port; do",
     _SKIP_IF_NO_NAME,
-    '  ( while true; do echo aces-guest-service | nc -l -p "$port" >/dev/null 2>&1 || sleep 1; done ) &',
-    "  echo $! > /run/aces-svc-$name.pid",
-    "done < /etc/aces/guest/services",
+    '  ( while true; do echo raes-guest-service | nc -l -p "$port" >/dev/null 2>&1 || sleep 1; done ) &',
+    "  echo $! > /run/raes-svc-$name.pid",
+    "done < /etc/raes/guest/services",
     "fi",
 ]
 
 _REPORT_SNIPPET = [
     "FC=/dev/ttyS1",
     "{",
-    "echo 'ACES-GUEST-FACTS v1'",
+    "echo 'RAES-GUEST-FACTS v1'",
     'echo "challenge $challenge"',
     'echo "architecture $(uname -m)"',
     'echo "vcpus $(nproc)"',
@@ -208,16 +208,16 @@ _REPORT_SNIPPET = [
     '  up=0; [ "$(cat "$iface_path/operstate" 2>/dev/null)" = up ] && up=1',
     '  echo "iface $mac ${ip4:-none} $up"',
     "done",
-    "if [ -f /etc/aces/guest/content ]; then",
+    "if [ -f /etc/raes/guest/content ]; then",
     "while IFS='|' read path mode idx; do",
     '  [ -n "$path" ] || continue',
     '  [ -f "$path" ] || continue',
     "  d=$(sha256sum \"$path\" | cut -d' ' -f1)",
     "  m=$(stat -c '%a' \"$path\" 2>/dev/null)",
     '  echo "content $path $d $m"',
-    "done < /etc/aces/guest/content",
+    "done < /etc/raes/guest/content",
     "fi",
-    "if [ -f /etc/aces/guest/accounts ]; then",
+    "if [ -f /etc/raes/guest/accounts ]; then",
     "while IFS='|' read name groups shell home disabled; do",
     _SKIP_IF_NO_NAME,
     '  entry=$(grep "^$name:" /etc/passwd) || continue',
@@ -229,15 +229,15 @@ _REPORT_SNIPPET = [
     '  spw=$(grep "^$name:" /etc/shadow | cut -d: -f2)',
     "  dis=0; case \"$spw\" in '!'*|'*'*) dis=1;; esac",
     '  echo "account $name $uid $h $sh $dis $grps"',
-    "done < /etc/aces/guest/accounts",
+    "done < /etc/raes/guest/accounts",
     "fi",
-    "if [ -f /etc/aces/guest/services ]; then",
+    "if [ -f /etc/raes/guest/services ]; then",
     "while IFS='|' read name port; do",
     _SKIP_IF_NO_NAME,
     '  lis=0; netstat -ln 2>/dev/null | grep -q ":$port " && lis=1',
-    '  pid=0; [ -f "/run/aces-svc-$name.pid" ] && kill -0 "$(cat /run/aces-svc-$name.pid)" 2>/dev/null && pid=1',
+    '  pid=0; [ -f "/run/raes-svc-$name.pid" ] && kill -0 "$(cat /run/raes-svc-$name.pid)" 2>/dev/null && pid=1',
     '  echo "service $name $port $lis $pid"',
-    "done < /etc/aces/guest/services",
+    "done < /etc/raes/guest/services",
     "fi",
     "echo 'init complete'",
     '} > "$FC" 2>/dev/null',

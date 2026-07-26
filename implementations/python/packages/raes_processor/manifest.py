@@ -18,7 +18,7 @@ from raes_contracts.vocabulary import ProcessorFeature
 
 from raes_processor.capabilities import ProcessorCapabilitySet, ProcessorManifest
 
-REFERENCE_PROCESSOR_NAME = "aces-reference-processor"
+REFERENCE_PROCESSOR_NAME = "raes-reference-processor"
 REFERENCE_SUPPORTED_CONTRACT_VERSIONS_V2 = (
     "processor-manifest-v2",
     "provisioning-plan-v1",

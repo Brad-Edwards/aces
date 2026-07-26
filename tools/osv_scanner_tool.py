@@ -55,7 +55,7 @@ def _checksums_asset_name(_version: str = OSV_SCANNER_VERSION) -> str:
 
 
 def osv_scanner_binary_path(repo_root: Path = REPO_ROOT, *, version: str = OSV_SCANNER_VERSION) -> Path:
-    return repo_root / ".cache" / "aces-sdl" / "tooling" / "osv-scanner" / version / "osv-scanner"
+    return repo_root / ".cache" / "raes-sdl" / "tooling" / "osv-scanner" / version / "osv-scanner"
 
 
 def _expected_checksum(checksums_text: str, asset_name: str) -> str | None:

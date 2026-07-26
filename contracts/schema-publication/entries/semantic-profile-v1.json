@@ -2,5 +2,9 @@
   "contract_id": "semantic-profile-v1",
   "schema_path": "contracts/schemas/profiles/semantic-profile-v1.json",
   "stability": "draft",
-  "content_hash": "ca78369c63879f21cf57b3ee29e2015163dbdc6a17d496b22ea98b1bd0b38bce"
+  "content_hash": "a3d9fdfea509aad4ea13977457a6467771c33126d2a43cf553161065114d6b90",
+  "last_change": {
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "a3d9fdfea509aad4ea13977457a6467771c33126d2a43cf553161065114d6b90"
+  }
 }

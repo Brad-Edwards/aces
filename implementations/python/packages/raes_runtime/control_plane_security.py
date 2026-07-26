@@ -45,8 +45,8 @@ class ControlPlaneSecurityConfig:
     """
 
     require_verified_identity: bool = True
-    verified_header: str = "x-aces-client-verified"
-    identity_header: str = "x-aces-client-identity"
+    verified_header: str = "x-raes-client-verified"
+    identity_header: str = "x-raes-client-identity"
     trust_proxy_identity_headers: bool = False
     max_request_bytes: int = 1_000_000
     trusted_identities: dict[str, ControlPlaneIdentity] = field(default_factory=dict)

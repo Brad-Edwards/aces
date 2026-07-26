@@ -37,7 +37,7 @@ def test_proposition_is_inspectable_without_probe_execution() -> None:
             "predicate": {
                 "kind": "string",
                 "property": "service-availability",
-                "semantic_ref": "urn:aces:observable:service-availability",
+                "semantic_ref": "urn:raes:observable:service-availability",
                 "operator": "equals",
                 "expected": "available",
             },
@@ -56,7 +56,7 @@ def test_proposition_is_inspectable_without_probe_execution() -> None:
         "predicate": {
             "kind": "string",
             "property": "service-availability",
-            "semantic_ref": "urn:aces:observable:service-availability",
+            "semantic_ref": "urn:raes:observable:service-availability",
             "operator": "equals",
             "expected": "available",
         },
@@ -77,7 +77,7 @@ def test_proposition_is_inspectable_without_probe_execution() -> None:
                 "predicate": {
                     "kind": "boolean",
                     "property": "reachable",
-                    "semantic_ref": "urn:aces:observable:reachable",
+                    "semantic_ref": "urn:raes:observable:reachable",
                     "operator": "equals",
                     "expected": True,
                 },
@@ -92,7 +92,7 @@ def test_proposition_is_inspectable_without_probe_execution() -> None:
                 "predicate": {
                     "kind": "presence",
                     "property": "runtime",
-                    "semantic_ref": "urn:aces:declared-property:runtime",
+                    "semantic_ref": "urn:raes:declared-property:runtime",
                     "operator": "exists",
                 },
                 "quantifier": "at_least",
@@ -113,7 +113,7 @@ def test_predicate_families_are_closed_and_type_specific() -> None:
             {
                 "kind": "boolean",
                 "property": "reachable",
-                "semantic_ref": "urn:aces:observable:reachable",
+                "semantic_ref": "urn:raes:observable:reachable",
                 "operator": "equals",
                 "expected": False,
             }
@@ -125,7 +125,7 @@ def test_predicate_families_are_closed_and_type_specific() -> None:
             {
                 "kind": "number",
                 "property": "packet-loss",
-                "semantic_ref": "urn:aces:observable:packet-loss",
+                "semantic_ref": "urn:raes:observable:packet-loss",
                 "operator": "less_than_or_equal",
                 "expected": 0.01,
                 "unit": "ratio",
@@ -140,7 +140,7 @@ def test_predicate_families_are_closed_and_type_specific() -> None:
             {
                 "kind": "boolean",
                 "property": "reachable",
-                "semantic_ref": "urn:aces:observable:reachable",
+                "semantic_ref": "urn:raes:observable:reachable",
                 "operator": "greater_than",
                 "expected": 1,
             }
@@ -150,7 +150,7 @@ def test_predicate_families_are_closed_and_type_specific() -> None:
             {
                 "kind": "number",
                 "property": "packet-loss",
-                "semantic_ref": "urn:aces:observable:packet-loss",
+                "semantic_ref": "urn:raes:observable:packet-loss",
                 "operator": "matches",
                 "expected": ".*",
                 "unit": "ratio",
@@ -166,7 +166,7 @@ def test_numeric_predicate_rejects_non_finite_operands(expected: float) -> None:
             {
                 "kind": "number",
                 "property": "packet-loss",
-                "semantic_ref": "urn:aces:observable:packet-loss",
+                "semantic_ref": "urn:raes:observable:packet-loss",
                 "operator": "less_than_or_equal",
                 "expected": expected,
                 "unit": "ratio",
@@ -276,7 +276,7 @@ def test_declared_state_can_be_decided_without_an_evidence_capture_requirement()
         predicate={
             "kind": "presence",
             "property": "services.http",
-            "semantic_ref": "urn:aces:declared-property:service",
+            "semantic_ref": "urn:raes:declared-property:service",
             "operator": "exists",
         },
     )
@@ -323,7 +323,7 @@ propositions:
     predicate:
       kind: string
       property: service-availability
-      semantic_ref: urn:aces:observable:service-availability
+      semantic_ref: urn:raes:observable:service-availability
       operator: equals
       expected: available
     evidence_requirements: [service-health-evidence]

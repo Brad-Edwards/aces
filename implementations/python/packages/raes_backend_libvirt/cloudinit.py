@@ -30,7 +30,7 @@ def safe_path_component(value: str, *, fallback: str) -> str:
     """Reduce a plan-controlled value to one safe path-filename component.
 
     Descriptor filenames interpolate plan-controlled identifiers (account name,
-    feature/content name). A value such as ``../../cron.d/aces`` must never let an
+    feature/content name). A value such as ``../../cron.d/raes`` must never let an
     interpolated ``write_files`` path escape its intended directory, so this maps
     anything outside ``[A-Za-z0-9._-]`` to ``_`` and strips leading/trailing
     ``.``/``_``/``-`` (neutralizing ``.``/``..``). The result is always a single,
@@ -133,7 +133,7 @@ def render_meta_data(spec: CloudInitSpec) -> str:
     """
 
     digest = hashlib.sha256(render_user_data(spec).encode("utf-8")).hexdigest()[:16]
-    prefix = spec.hostname or "aces"
+    prefix = spec.hostname or "raes"
     meta: dict[str, object] = {"instance-id": f"{prefix}-{digest}"}
     if spec.hostname:
         meta["local-hostname"] = spec.hostname

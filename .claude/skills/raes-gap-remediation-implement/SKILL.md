@@ -1,9 +1,9 @@
 ---
 name: raes-gap-remediation-implement
-description: Architecture-first overlay for remediating ACES/APTL gaps, especially gaps found by the ACES asset inventory capture methodology. Use before normal Ground Control /implement work when a gap may require new or changed SDL/runtime semantics, schemas, validators, ADRs, docs, capture mappings, or cross-repo ACES/APTL behavior. Forces whole-surface review, lineage and primary-literature grounding, peer-review-grade justification, and then delegates to the repo's standard Ground Control implement workflow.
+description: Architecture-first overlay for remediating RAES/APTL gaps, especially gaps found by the RAES asset inventory capture methodology. Use before normal Ground Control /implement work when a gap may require new or changed SDL/runtime semantics, schemas, validators, ADRs, docs, capture mappings, or cross-repo RAES/APTL behavior. Forces whole-surface review, lineage and primary-literature grounding, peer-review-grade justification, and then delegates to the repo's standard Ground Control implement workflow.
 ---
 
-# ACES Gap Remediation Implement
+# RAES Gap Remediation Implement
 
 Use this skill as an overlay before the normal Ground Control implementation
 lane. It does not replace `/implement`; it supplies the architecture and
@@ -12,7 +12,7 @@ documentation obligations that must be carried into `/implement`.
 The expected review bar is academic peer review for tier-1 publication: a
 reviewer must be able to reconstruct why the remediation exists, why existing
 surfaces were insufficient, why the chosen design is not duplicative, and how
-the implementation follows established ACES lineage and relevant external
+the implementation follows established RAES lineage and relevant external
 practice.
 
 ## Operating Rule
@@ -35,11 +35,11 @@ Before invoking `/implement`, produce or add to the issue a brief with these
 sections:
 
 1. **Gap Claim**: captured fact, discovery vantage, evidence paths, affected
-   scenario/asset, and the assurance claim that current ACES/APTL cannot make.
+   scenario/asset, and the assurance claim that current RAES/APTL cannot make.
 2. **Existing Surface Audit**: SDL sections, runtime subdomains, schemas,
    validators, parser aliases, module refs, docs, examples, and related issues
    checked. State why each near match is insufficient.
-3. **Lineage and Precedent**: relevant ACES lineage, precedents, ADRs, prior
+3. **Lineage and Precedent**: relevant RAES lineage, precedents, ADRs, prior
    issues/PRs, and downstream APTL usage. Explain whether the gap extends an
    existing family or requires a new one.
 4. **Literature and Practice**: primary literature and core/adjacent practice
@@ -67,7 +67,7 @@ Run this gate before choosing a design.
   service, sensor, manager, content, evidence, and source/provenance families as
   applicable.
 - Check whether the fact is scenario state, delivery infrastructure, evidence,
-  control-plane machinery, downstream APTL consumption, or an ACES SDL
+  control-plane machinery, downstream APTL consumption, or an RAES SDL
   expression gap.
 - Treat duplicate parallel surfaces as a design failure. Extend the established
   family when the semantics belong there; create a new family only when the
@@ -81,7 +81,7 @@ Reject an implementation plan if any gate fails.
   generic relationships, or arbitrary key/value fields.
 - **No shallow schema pass**: do not choose the representation that validates
   while changing the meaning of the captured fact.
-- **No downstream-only fix**: do not patch APTL consumption when ACES lacks the
+- **No downstream-only fix**: do not patch APTL consumption when RAES lacks the
   needed expression surface.
 - **No docs-free surface**: every new or changed semantic surface needs public
   rationale in ADR/docs, not just tests.

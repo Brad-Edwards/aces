@@ -102,7 +102,7 @@ Profile validity is also distinct from:
   bisimulation, epistemic equivalence, or multi-agent strategic equivalence.
 
 The revisioned behavioral-relation taxonomy is defined by
-`aces-behavioral-relations@rev1`. Every profile binds its intended claim to that
+`raes-behavioral-relations@rev1`. Every profile binds its intended claim to that
 catalog and lists relations it does not claim. This implements the taxonomy
 concern without promoting any currently incomplete stronger profile: passing
 the same bounded probes or producing equal result tuples is not evidence of

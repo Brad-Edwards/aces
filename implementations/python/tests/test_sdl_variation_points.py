@@ -198,7 +198,7 @@ def test_variation_registry_is_authoring_only_and_instantiation_fails_closed() -
                 "variation_points": {},
                 "instantiation_provenance": {
                     "authored_digest": {
-                        "profile": "aces-sdl-semantic/v1",
+                        "profile": "raes-sdl-semantic/v1",
                         "algorithm": "sha256",
                         "value": "sha256:" + "a" * 64,
                     }
@@ -294,7 +294,7 @@ def test_each_collection_member_must_pass_the_owning_slot_semantics() -> None:
             "predicate": {
                 "kind": "presence",
                 "property": "role",
-                "semantic_ref": "urn:aces:declared-property:entity-role",
+                "semantic_ref": "urn:raes:declared-property:entity-role",
                 "operator": "exists",
             },
         }

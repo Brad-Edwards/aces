@@ -1,4 +1,4 @@
-"""Canonical semantic identity tests for ``aces-sdl-semantic/v1``."""
+"""Canonical semantic identity tests for ``raes-sdl-semantic/v1``."""
 
 from __future__ import annotations
 
@@ -70,12 +70,12 @@ def test_canonical_digest_is_profile_labelled_and_repeatable() -> None:
     second = canonical_sdl_digest(scenario)
 
     assert first == second
-    assert first.profile == SDL_CANONICAL_PROFILE == "aces-sdl-semantic/v1"
+    assert first.profile == SDL_CANONICAL_PROFILE == "raes-sdl-semantic/v1"
     assert first.algorithm == "sha256"
     assert first.value.startswith("sha256:")
     assert len(first.value) == len("sha256:") + 64
     assert first.as_dict() == {
-        "profile": "aces-sdl-semantic/v1",
+        "profile": "raes-sdl-semantic/v1",
         "algorithm": "sha256",
         "value": first.value,
     }
@@ -101,7 +101,7 @@ def test_canonical_bytes_are_map_order_independent_and_array_order_sensitive() -
             """
             name: ordering
             module:
-              id: aces/ordering
+              id: raes/ordering
               version: 1.0.0
               parameters: [alpha, beta]
             """
@@ -113,7 +113,7 @@ def test_canonical_bytes_are_map_order_independent_and_array_order_sensitive() -
             module:
               parameters: [alpha, beta]
               version: 1.0.0
-              id: aces/ordering
+              id: raes/ordering
             name: ordering
             """
         )
@@ -123,7 +123,7 @@ def test_canonical_bytes_are_map_order_independent_and_array_order_sensitive() -
             """
             name: ordering
             module:
-              id: aces/ordering
+              id: raes/ordering
               version: 1.0.0
               parameters: [beta, alpha]
             """
@@ -150,7 +150,7 @@ def test_canonical_payload_carries_profile_and_module_provenance_channels() -> N
 
     assert payload.startswith(b'{"module_node_variable_refs":{}')
     assert b'"module_variable_specs":{}' in payload
-    assert b'"profile":"aces-sdl-semantic/v1"' in payload
+    assert b'"profile":"raes-sdl-semantic/v1"' in payload
     assert b'"scenario":{"name":"envelope"}' in payload
 
 

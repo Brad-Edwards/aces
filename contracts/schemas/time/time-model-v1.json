@@ -479,7 +479,7 @@
       "type": "object"
     }
   },
-  "$id": "https://aces.dev/schemas/time-model-v1.json",
+  "$id": "https://raes.dev/schemas/time-model-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "Canonical backend-neutral declaration compiled from authored SDL.",

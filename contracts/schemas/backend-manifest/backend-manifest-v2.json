@@ -1783,7 +1783,7 @@
       "type": "string"
     }
   },
-  "$id": "https://aces.dev/schemas/backend-manifest-v2.json",
+  "$id": "https://raes.dev/schemas/backend-manifest-v2.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "allOf": [

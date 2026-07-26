@@ -163,5 +163,5 @@ Executable coverage is in
 `implementations/python/tests/test_sce_006_cleanup_contracts.py` and the fixture
 corpora under `contracts/fixtures/plans/` and `contracts/fixtures/control-plane/`.
 Published schemas carry
-`x-aces-invariants` for cross-reference, retry, required-obligation, receipt,
+`x-raes-invariants` for cross-reference, retry, required-obligation, receipt,
 and isolation rules that JSON Schema alone cannot fully join.

@@ -1,7 +1,7 @@
 """Executable cross-family structural invariant lint for runtime service families.
 
 Enforces the single structural invariant set required by DSL-139 (consistency
-epic Brad-Edwards/aces#439 and children #442 / #443 / #444): every registered
+epic Brad-Edwards/raes#439 and children #442 / #443 / #444): every registered
 runtime service family must use a ``Runtime<Noun>`` model class, a
 ``singular(collection_name) + "_id"`` primary identifier field, and a plural
 typed-child container registered through ``_runtime_service_families``.
@@ -390,7 +390,7 @@ def _runtime_family_enums() -> dict[str, type[enum.Enum]]:
 def test_runtime_enums_open_or_closed_not_single_sentinel() -> None:
     """Runtime-family enums must be open (both sentinels) or closed (neither).
 
-    The enum-sentinel convention (DSL-139, Brad-Edwards/aces#443) is: an OPEN
+    The enum-sentinel convention (DSL-139, Brad-Edwards/raes#443) is: an OPEN
     observed-value taxonomy carries BOTH ``unknown`` and ``other``; a CLOSED
     structural/protocol/redaction-lattice vocabulary carries NEITHER. The
     single-sentinel state -- exactly one of ``{unknown, other}`` -- is the

@@ -166,7 +166,7 @@ class BehavioralWorkedExampleModel(ContractModel):
 
 class BehavioralRelationCatalogModel(ContractModel):
     schema_version: Literal[BEHAVIORAL_RELATIONS_SCHEMA_VERSION] = BEHAVIORAL_RELATIONS_SCHEMA_VERSION
-    taxonomy_id: Literal["aces-behavioral-relations"] = "aces-behavioral-relations"
+    taxonomy_id: Literal["raes-behavioral-relations"] = "raes-behavioral-relations"
     taxonomy_revision: BehavioralTaxonomyRevision
     bibliography: list[BehavioralBibliographySourceModel] = Field(min_length=1)
     relations: dict[BehavioralRelationId, BehavioralRelationDefinitionModel] = Field(min_length=1)

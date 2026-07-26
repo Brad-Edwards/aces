@@ -8,7 +8,7 @@
     "encoding": "hex-fixed-width",
     "value": "a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5"
   },
-  "stream_key_hex": "faab80ef9a35dc21293d3f23b58d43687d7808373998e501768be0bedffdfcf9",
+  "stream_key_hex": "0bd8f475de652a6f23763d7cb9bcf92110cdc36f6039b9708fff8e641a902503",
   "address": {
     "namespace": "study-namespace",
     "trial_coordinate": {
@@ -20,7 +20,7 @@
     "local_coordinate": 5
   },
   "address_canonical_bytes_hex": "7b22647261775f707572706f7365223a2273616d706c696e672d73656c656374696f6e222c226c6f63616c5f636f6f7264696e617465223a352c226e616d657370616365223a2273747564792d6e616d657370616365222c2273656c656374696f6e5f706f6c6963795f6964223a22706f6c6963792d62222c22747269616c5f636f6f7264696e617465223a7b22636f6e646974696f6e5f6964223a22636f6e646974696f6e2d62227d2c22766172696174696f6e5f706f696e745f6964223a22706f696e742d62227d",
-  "raw_block_hex": "adc4a2adcbb22d7bd63d5e5552018fb0d076dd7b422b12af08afb999c3602ad5",
+  "raw_block_hex": "e5a8a68e2efe0edfc587c1e4c43a795672e9c22961ec698f50cc1250a6b4b565",
   "transform": {
     "transform_id": "bounded-integer",
     "transform_version": "1",
@@ -31,7 +31,7 @@
     "expected_rejection_exhausted": false,
     "outcome": {
       "kind": "public-value",
-      "value": "3"
+      "value": "9"
     }
   }
 }

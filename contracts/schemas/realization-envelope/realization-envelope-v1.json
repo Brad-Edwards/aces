@@ -761,7 +761,7 @@
       "type": "object"
     }
   },
-  "$id": "https://aces.dev/schemas/realization-envelope-v1.json",
+  "$id": "https://raes.dev/schemas/realization-envelope-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "Published backend carrier: shared set expression plus truthful realization claims.",
@@ -965,7 +965,7 @@
   ],
   "title": "BackendRealizationEnvelopeModel",
   "type": "object",
-  "x-aces-invariants": [
+  "x-raes-invariants": [
     {
       "description": "Configuration bounds, expression references, canonical configuration and envelope digests, and all cross-field realization disclosure semantics must validate together.",
       "id": "realization-envelope-canonical-semantics-valid",
@@ -979,13 +979,13 @@
       "validator": "raes_contracts.realization_envelope.validate_backend_realization_envelope"
     }
   ],
-  "x-aces-semantic-profile": {
+  "x-raes-semantic-profile": {
     "contract_id": "realization-envelope-v1",
-    "entry_schema_contract_id": "aces-semantic-invariants-v1",
-    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
-    "id": "aces-semantic-invariants-v1",
-    "keyword": "x-aces-invariants",
+    "entry_schema_contract_id": "raes-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/RaesSemanticInvariantEntryModel",
+    "id": "raes-semantic-invariants-v1",
+    "keyword": "x-raes-invariants",
     "required": true,
-    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+    "uri": "https://raes.dev/schemas/semantic-invariants/v1"
   }
 }

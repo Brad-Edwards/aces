@@ -570,7 +570,7 @@ propositions:
     predicate:
       kind: boolean
       property: crane-safe-mode
-      semantic_ref: urn:aces:observable:crane-safe-mode
+      semantic_ref: urn:raes:observable:crane-safe-mode
       operator: equals
       expected: true
     quantifier: all
@@ -584,7 +584,7 @@ propositions:
     predicate:
       kind: boolean
       property: customs-link-healthy
-      semantic_ref: urn:aces:observable:customs-link-healthy
+      semantic_ref: urn:raes:observable:customs-link-healthy
       operator: equals
       expected: true
     quantifier: all
@@ -598,7 +598,7 @@ propositions:
     predicate:
       kind: boolean
       property: historian-replication-ok
-      semantic_ref: urn:aces:observable:historian-replication-ok
+      semantic_ref: urn:raes:observable:historian-replication-ok
       operator: equals
       expected: true
     quantifier: all
@@ -612,7 +612,7 @@ propositions:
     predicate:
       kind: boolean
       property: manifest-integrity-ok
-      semantic_ref: urn:aces:observable:manifest-integrity-ok
+      semantic_ref: urn:raes:observable:manifest-integrity-ok
       operator: equals
       expected: true
     quantifier: all
@@ -626,7 +626,7 @@ propositions:
     predicate:
       kind: boolean
       property: tampered-manifest-observed
-      semantic_ref: urn:aces:observable:tampered-manifest-observed
+      semantic_ref: urn:raes:observable:tampered-manifest-observed
       operator: equals
       expected: true
     quantifier: all
@@ -640,7 +640,7 @@ propositions:
     predicate:
       kind: boolean
       property: yard-telemetry-flowing
-      semantic_ref: urn:aces:observable:yard-telemetry-flowing
+      semantic_ref: urn:raes:observable:yard-telemetry-flowing
       operator: equals
       expected: true
     quantifier: all

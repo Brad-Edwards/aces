@@ -4233,7 +4233,7 @@ and OCSF-valid class/profile values are supplied.
 ```yaml
 lifecycle_envelope:
   event_id: evt-llm-17-exec
-  schema_name: aces.participant_runtime.lifecycle
+  schema_name: raes.participant_runtime.lifecycle
   schema_version: 1.0.0
   event_type: execution_attempt
   extension_policy: reject_unknown_required
@@ -4244,7 +4244,7 @@ lifecycle_envelope:
     status_code: tool_call_completed
     status_detail: tool gateway accepted and completed the command
     source_status_label: tool_call_completed
-    source_status_mapping: aces.lifecycle.operation_state.completed
+    source_status_mapping: raes.lifecycle.operation_state.completed
   participant_address: participants.red.llm
   episode_id: ep-red-004
   sequence_number: 17
@@ -4322,7 +4322,7 @@ lifecycle_envelope:
   mapping_loss_detail: selection_private_to_model
 selection_envelope:
   event_id: evt-llm-16-selection
-  schema_name: aces.participant_runtime.lifecycle
+  schema_name: raes.participant_runtime.lifecycle
   schema_version: 1.0.0
   event_type: selection_or_admission
   extension_policy: reject_unknown_required
@@ -4333,7 +4333,7 @@ selection_envelope:
     status_code: model_private_choice
     status_detail: selection existed inside opaque model apparatus
     source_status_label: model_private_choice
-    source_status_mapping: aces.lifecycle.phase_realization.opaque
+    source_status_mapping: raes.lifecycle.phase_realization.opaque
   participant_address: participants.red.llm
   episode_id: ep-red-004
   sequence_number: 16
@@ -4410,7 +4410,7 @@ content, chain-of-thought, policy logits, tool reasoning, or private memory.
 ```yaml
 interaction_context_envelope:
   event_id: interaction-cyborg-tick42
-  schema_name: aces.participant_runtime.interaction_context
+  schema_name: raes.participant_runtime.interaction_context
   schema_version: 1.0.0
   event_type: interaction_context
   extension_policy: reject_unknown_required
@@ -4421,7 +4421,7 @@ interaction_context_envelope:
     status_code: aec_current_actor
     status_detail: AEC step exposes blue as the current actor at tick 42
     source_status_label: cyborg_aec_current_actor
-    source_status_mapping: aces.interaction_mode.agent_environment_cycle
+    source_status_mapping: raes.interaction_mode.agent_environment_cycle
   participant_address: null
   episode_id: null
   sequence_number: null
@@ -4501,7 +4501,7 @@ interaction_context_envelope:
   unsupported_interaction_disclosure: null
 observation_envelope:
   event_id: obs-blue-43
-  schema_name: aces.participant_runtime.observation
+  schema_name: raes.participant_runtime.observation
   schema_version: 1.0.0
   event_type: observation_emission
   extension_policy: reject_unknown_required
@@ -4522,7 +4522,7 @@ observation_envelope:
     status_code: observation_emitted
     status_detail: simulator emitted the blue local telemetry observation
     source_status_label: cyborg_observation
-    source_status_mapping: aces.observation.emitted
+    source_status_mapping: raes.observation.emitted
   participant_address: participants.blue.rl
   episode_id: ep-blue-002
   sequence_number: 43
@@ -4604,7 +4604,7 @@ observation_envelope:
     - /hidden_state_refs
 step_signal_envelope:
   event_id: step-blue-43
-  schema_name: aces.participant_runtime.step_signal
+  schema_name: raes.participant_runtime.step_signal
   schema_version: 1.0.0
   event_type: participant_step_signal
   extension_policy: reject_unknown_required
@@ -4615,7 +4615,7 @@ step_signal_envelope:
     status_code: step_signal_emitted
     status_detail: simulator exposed governed step signal refs
     source_status_label: cyborg_step
-    source_status_mapping: aces.step_signal.emitted
+    source_status_mapping: raes.step_signal.emitted
   participant_address: participants.blue.rl
   episode_id: ep-blue-002
   sequence_number: 43
@@ -4700,7 +4700,7 @@ participant action.
 ```yaml
 lifecycle_envelope:
   event_id: evt-human-09-admission
-  schema_name: aces.participant_runtime.lifecycle
+  schema_name: raes.participant_runtime.lifecycle
   schema_version: 1.0.0
   event_type: selection_or_admission
   extension_policy: reject_unknown_required
@@ -4711,7 +4711,7 @@ lifecycle_envelope:
     status_code: submitted_by_operator
     status_detail: operator submitted an admitted containment command
     source_status_label: submitted_by_operator
-    source_status_mapping: aces.lifecycle.admission.admitted
+    source_status_mapping: raes.lifecycle.admission.admitted
   participant_address: participants.gold.operator
   episode_id: ep-gold-001
   sequence_number: 9
@@ -4791,7 +4791,7 @@ as an automated agent; the source of selection is external, not opaque.
 ```yaml
 operation_record:
   event_id: op-red-55-running
-  schema_name: aces.participant_runtime.operation
+  schema_name: raes.participant_runtime.operation
   schema_version: 1.0.0
   event_type: operation_advance
   extension_policy: reject_unknown_required
@@ -4802,7 +4802,7 @@ operation_record:
     status_code: running
     status_detail: caldera link is running
     source_status_label: running
-    source_status_mapping: aces.operation_state.running
+    source_status_mapping: raes.operation_state.running
   participant_address: participants.red.playbook
   episode_id: ep-red-006
   sequence_number: 55
@@ -4875,7 +4875,7 @@ operation_record:
   terminal_result_ref: null
 cyber_action_envelope:
   event_id: cyber-red-55
-  schema_name: aces.participant_runtime.cyber_action
+  schema_name: raes.participant_runtime.cyber_action
   schema_version: 1.0.0
   event_type: cyber_action_context
   extension_policy: reject_unknown_required
@@ -4896,7 +4896,7 @@ cyber_action_envelope:
     status_code: running
     status_detail: caldera command context recorded while link is running
     source_status_label: running
-    source_status_mapping: aces.operation_state.running
+    source_status_mapping: raes.operation_state.running
   participant_address: participants.red.playbook
   episode_id: ep-red-006
   sequence_number: 55
@@ -5025,7 +5025,7 @@ credential values and unredacted command output remain controlled evidence.
 ```yaml
 joint_action_record:
   event_id: joint-13
-  schema_name: aces.participant_runtime.joint_action
+  schema_name: raes.participant_runtime.joint_action
   schema_version: 1.0.0
   event_type: concurrent_attempt
   extension_policy: reject_unknown_required
@@ -5036,7 +5036,7 @@ joint_action_record:
     status_code: conflict_rejected
     status_detail: runtime detected simultaneous shared-state conflict
     source_status_label: conflict_rejected
-    source_status_mapping: aces.conflict_policy.reject
+    source_status_mapping: raes.conflict_policy.reject
   participant_address: null
   episode_id: null
   sequence_number: null
@@ -5131,7 +5131,7 @@ joint_action_record:
     participants.blue: obs-blue-88-conflict
 time_management_context:
   event_id: time-sim-88
-  schema_name: aces.participant_runtime.time_management
+  schema_name: raes.participant_runtime.time_management
   schema_version: 1.0.0
   event_type: time_management_context
   extension_policy: reject_unknown_required
@@ -5142,7 +5142,7 @@ time_management_context:
     status_code: time_grant_recorded
     status_detail: logical time advance evidence recorded for tick 88
     source_status_label: time_grant_recorded
-    source_status_mapping: aces.time_management.devs_discrete_event
+    source_status_mapping: raes.time_management.devs_discrete_event
   participant_address: null
   episode_id: null
   sequence_number: null
@@ -5229,7 +5229,7 @@ explicit.
 ```yaml
 joint_action_record:
   event_id: joint-21
-  schema_name: aces.participant_runtime.joint_action
+  schema_name: raes.participant_runtime.joint_action
   schema_version: 1.0.0
   event_type: backend_serialized_attempt
   extension_policy: reject_unknown_required
@@ -5240,7 +5240,7 @@ joint_action_record:
     status_code: backend_serialized
     status_detail: backend serialized the attempts and cannot prove simultaneity
     source_status_label: backend_serialized
-    source_status_mapping: aces.conflict_policy.disclose_weak_guarantee
+    source_status_mapping: raes.conflict_policy.disclose_weak_guarantee
   participant_address: null
   episode_id: null
   sequence_number: null

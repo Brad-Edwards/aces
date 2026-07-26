@@ -148,7 +148,7 @@
       "type": "object"
     }
   },
-  "$id": "https://aces.dev/schemas/random-stream-profile-v1.json",
+  "$id": "https://raes.dev/schemas/random-stream-profile-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "Published random-stream profile: one closed, immutable compatibility unit.\n\nChanging any field mints a new ``profile_id`` (the EXP-718 preflight's \"One\nProfile And One Stateless API\" section). This model's JSON Schema is\ngenerated via ``schema_bundle()``, never hand-authored.",
@@ -214,7 +214,7 @@
   ],
   "title": "RandomStreamProfileModel",
   "type": "object",
-  "x-aces-invariants": [
+  "x-raes-invariants": [
     {
       "description": "transforms dict keys must match each entry's embedded transform_id.",
       "id": "random-stream-profile-transform-keys-match",
@@ -228,13 +228,13 @@
       "validator": "raes_contracts.contracts.random_stream.RandomStreamProfileModel._validate_transform_keys"
     }
   ],
-  "x-aces-semantic-profile": {
+  "x-raes-semantic-profile": {
     "contract_id": "random-stream-profile-v1",
-    "entry_schema_contract_id": "aces-semantic-invariants-v1",
-    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
-    "id": "aces-semantic-invariants-v1",
-    "keyword": "x-aces-invariants",
+    "entry_schema_contract_id": "raes-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/RaesSemanticInvariantEntryModel",
+    "id": "raes-semantic-invariants-v1",
+    "keyword": "x-raes-invariants",
     "required": true,
-    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+    "uri": "https://raes.dev/schemas/semantic-invariants/v1"
   }
 }

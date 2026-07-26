@@ -2,9 +2,9 @@
   "contract_id": "validation-basis-disclosure-v1",
   "schema_path": "contracts/schemas/profiles/validation-basis-disclosure-v1.json",
   "stability": "draft",
-  "content_hash": "f24834c634f9cf1fc30dd16e5649b7898dc2e867ab7c80b30652e8a75ebfc49b",
+  "content_hash": "df23116b3c073e6db1c00ef2cbe419eb63af44a938095616ebfa799b39f59f69",
   "last_change": {
-    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
-    "content_hash": "f24834c634f9cf1fc30dd16e5649b7898dc2e867ab7c80b30652e8a75ebfc49b"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "df23116b3c073e6db1c00ef2cbe419eb63af44a938095616ebfa799b39f59f69"
   }
 }

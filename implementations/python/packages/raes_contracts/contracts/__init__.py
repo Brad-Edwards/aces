@@ -320,11 +320,11 @@ from .runtime_facts import (
     RuntimeFactVisibilityModel,
 )
 from .schema_constraints import (
-    AcesSemanticInvariantEntryModel,
-    AcesSemanticInvariantInputModel,
-    AcesSemanticInvariantProfileModel,
-    AcesSemanticInvariantProfileReferenceModel,
-    validate_aces_semantic_invariant_annotations,
+    RaesSemanticInvariantEntryModel,
+    RaesSemanticInvariantInputModel,
+    RaesSemanticInvariantProfileModel,
+    RaesSemanticInvariantProfileReferenceModel,
+    validate_raes_semantic_invariant_annotations,
 )
 from .semantic_profiles import (
     SemanticBehaviorAssumptionModel,

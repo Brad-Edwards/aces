@@ -2,5 +2,9 @@
   "contract_id": "participant-episode-state-envelope-v1",
   "schema_path": "contracts/schemas/control-plane/participant-episode-state-envelope-v1.json",
   "stability": "draft",
-  "content_hash": "e442e8c17d47fa275855664db993b53c501f0fb04e82b661f5bbe9fcb68ae39c"
+  "content_hash": "506a10360067ddd75e086c3e1c6cc031201dfb7ba163220d1ef2d7c53c78e3ed",
+  "last_change": {
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "506a10360067ddd75e086c3e1c6cc031201dfb7ba163220d1ef2d7c53c78e3ed"
+  }
 }

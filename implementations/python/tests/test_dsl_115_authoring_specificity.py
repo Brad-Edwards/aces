@@ -38,7 +38,7 @@ def _scenario_with_specificity_levels():
             predicate:
               kind: boolean
               property: assessment-complete
-              semantic_ref: urn:aces:declared-property:assessment-complete
+              semantic_ref: urn:raes:declared-property:assessment-complete
               operator: equals
               expected: true
         assertions:

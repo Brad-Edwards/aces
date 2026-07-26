@@ -3,7 +3,7 @@
 This is the native-proof gate: it boots the guest-observing appliance through the
 production apply path against an operator-selected real libvirt/QEMU daemon, reads
 concern facts back from inside the guest, and verifies teardown. It is skipped
-unless ``ACES_REAL_LIBVIRT_URI`` is set and the host has libvirt-python, cpio,
+unless ``RAES_REAL_LIBVIRT_URI`` is set and the host has libvirt-python, cpio,
 BusyBox, and a readable kernel. Hermetic fake-driver tests cannot satisfy this
 gate.
 """
@@ -28,9 +28,9 @@ from raes_operations.libvirt_evidence_run import (
 def test_guest_certified_real_libvirt_readback_and_cleanup(tmp_path):
     """Certify guest-observed realization and verified cleanup on a real daemon."""
 
-    connection_uri = os.environ.get("ACES_REAL_LIBVIRT_URI")
+    connection_uri = os.environ.get("RAES_REAL_LIBVIRT_URI")
     if not connection_uri:
-        pytest.skip("set ACES_REAL_LIBVIRT_URI to run real-libvirt guest certification")
+        pytest.skip("set RAES_REAL_LIBVIRT_URI to run real-libvirt guest certification")
     try:
         libvirt = importlib.import_module("libvirt")
     except ImportError:

@@ -29,7 +29,7 @@ from raes_contracts.satisfiability import (
 from ._solver import SolverOperationalError, solve_model
 from ._translation import translate_scenario
 
-ANALYSIS_PROFILE = "aces-finite-domain-satisfiability-v1"
+ANALYSIS_PROFILE = "raes-finite-domain-satisfiability-v1"
 
 
 class SatisfiabilityEvidenceError(ValueError):
@@ -71,7 +71,7 @@ def analyze_scenario_file(
             outcome=SatisfiabilityOutcome.UNSUPPORTED,
             diagnostics=translation.diagnostics,
             unsupported=UnsupportedAnalysisModel(
-                profile="aces-satisfiability-unsupported/v1",
+                profile="raes-satisfiability-unsupported/v1",
                 reason_codes=tuple(sorted({item.code for item in translation.diagnostics})),
             ),
         )
@@ -95,7 +95,7 @@ def analyze_scenario_file(
             outcome=result.outcome,
             diagnostics=(),
             witness=SatisfiableWitnessModel(
-                profile="aces-satisfiability-witness/v1",
+                profile="raes-satisfiability-witness/v1",
                 snapshot=snapshot,
                 snapshot_digest=canonical_instantiated_sdl_digest(instantiated).value,
             ),
@@ -106,7 +106,7 @@ def analyze_scenario_file(
         outcome=result.outcome,
         diagnostics=(),
         unsat_core=UnsatisfiableCoreModel(
-            profile="aces-unsatisfiable-core/v1",
+            profile="raes-unsatisfiable-core/v1",
             clause_ids=result.core,
             minimality="subset-minimal",
         ),
@@ -134,7 +134,7 @@ def _solver_configuration() -> SolverConfigurationModel:
     engine_version = z3.get_version_string()
     try:
         return SolverConfigurationModel(
-            profile="aces-z3-finite-domain/v1",
+            profile="raes-z3-finite-domain/v1",
             engine="z3",
             package="z3-solver",
             package_version=package_version,

@@ -1438,7 +1438,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Cross Tenant Isolation"
@@ -3292,7 +3292,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Profile"
@@ -3330,7 +3330,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Protocol"
@@ -6749,7 +6749,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Channel"
@@ -7775,7 +7775,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Kernel Boundary"
@@ -7858,7 +7858,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Direction"
@@ -7874,7 +7874,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Trust Type"
@@ -7973,7 +7973,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Direction"
@@ -7989,7 +7989,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Mapping Intent"
@@ -8005,7 +8005,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Protocol"
@@ -8026,7 +8026,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Tenant Claim Owner"
@@ -8277,7 +8277,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Mutable State Owner"
@@ -8300,7 +8300,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Reset Generation Owner"
@@ -8316,7 +8316,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Tenant Isolation"
@@ -8332,7 +8332,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Workload Authentication"
@@ -21391,7 +21391,7 @@
       "type": "string"
     }
   },
-  "$id": "https://aces.dev/schemas/sdl-authoring-input-v1.json",
+  "$id": "https://raes.dev/schemas/sdl-authoring-input-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "Normalized SDL authoring object.\n\nThis model applies after ``sdl-yaml/v1`` source-profile checks, structural\nkey canonicalization, shorthand expansion, enum normalization, and typed\nconstruction, but before module expansion and instantiation. Its JSON\nSchema does not validate YAML presentation details.",
@@ -21880,7 +21880,7 @@
         }
       ],
       "default": null,
-      "x-aces-realization-dimension": false
+      "x-raes-realization-dimension": false
     },
     "relationships": {
       "additionalProperties": {
@@ -22102,8 +22102,8 @@
   ],
   "title": "SDL Normalized Authoring Object v1",
   "type": "object",
-  "x-aces-document-phase": "normalized-authoring-object",
-  "x-aces-invariants": [
+  "x-raes-document-phase": "normalized-authoring-object",
+  "x-raes-invariants": [
     {
       "description": "Generated artifact output names and paths, consumers, and dependency entries must be unique, and generated artifact consumers must be read-only.",
       "id": "stateful-generated-artifact-semantics",
@@ -22153,15 +22153,15 @@
       "validator": "raes.validator.SemanticValidator._verify_service_materialization"
     }
   ],
-  "x-aces-semantic-profile": {
+  "x-raes-semantic-profile": {
     "contract_id": "sdl-authoring-input-v1",
-    "entry_schema_contract_id": "aces-semantic-invariants-v1",
-    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
-    "id": "aces-semantic-invariants-v1",
-    "keyword": "x-aces-invariants",
+    "entry_schema_contract_id": "raes-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/RaesSemanticInvariantEntryModel",
+    "id": "raes-semantic-invariants-v1",
+    "keyword": "x-raes-invariants",
     "required": true,
-    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+    "uri": "https://raes.dev/schemas/semantic-invariants/v1"
   },
-  "x-aces-source-profile": "sdl-yaml/v1",
-  "x-aces-validates-raw-source": false
+  "x-raes-source-profile": "sdl-yaml/v1",
+  "x-raes-validates-raw-source": false
 }

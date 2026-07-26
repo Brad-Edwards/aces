@@ -303,7 +303,7 @@ propositions:
     predicate:
       kind: presence
       property: service
-      semantic_ref: urn:aces:declared-property:service
+      semantic_ref: urn:raes:declared-property:service
       operator: exists
 
 assertions:

@@ -48,5 +48,5 @@ configuration is not conformant.
 
 Published JSON Schemas reject exact duplicate collection members. Relational
 uniqueness, cross-resource reference resolution, mount ownership, and access
-cardinality are published as `x-aces-invariants` and enforced by semantic SDL
+cardinality are published as `x-raes-invariants` and enforced by semantic SDL
 admission; JSON Schema success alone is not semantic admission.

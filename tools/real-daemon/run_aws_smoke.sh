@@ -24,8 +24,8 @@ KEEP=0
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 WORK="$(mktemp -d)"
-KEY="$WORK/aces-libvirt-test.pem"
-NAME="aces-libvirt-test"
+KEY="$WORK/raes-libvirt-test.pem"
+NAME="raes-libvirt-test"
 AWS=(aws --profile "$PROFILE" --region "$REGION")
 
 cleanup_aws() {
@@ -50,7 +50,7 @@ SUBNET=$("${AWS[@]}" ec2 describe-subnets --filters Name=default-for-az,Values=t
 "${AWS[@]}" ec2 create-key-pair --key-name "$NAME" --query KeyMaterial --output text > "$KEY"
 chmod 600 "$KEY"
 
-SG=$("${AWS[@]}" ec2 create-security-group --group-name "$NAME-sg" --description "aces libvirt real-daemon smoke" --vpc-id "$VPC" --query GroupId --output text 2>/dev/null \
+SG=$("${AWS[@]}" ec2 create-security-group --group-name "$NAME-sg" --description "raes libvirt real-daemon smoke" --vpc-id "$VPC" --query GroupId --output text 2>/dev/null \
   || "${AWS[@]}" ec2 describe-security-groups --filters Name=group-name,Values="$NAME-sg" --query 'SecurityGroups[0].GroupId' --output text)
 "${AWS[@]}" ec2 authorize-security-group-ingress --group-id "$SG" --protocol tcp --port 22 --cidr "$MYIP/32" >/dev/null 2>&1 || true
 
@@ -90,14 +90,14 @@ for _ in $(seq 1 30); do ssh "${SSHOPT[@]}" ubuntu@"$IP" "test -f /var/lib/cloud
 
 echo "=== deploy code ==="
 # rsync does not create multiple missing parent levels; pre-create the tree.
-ssh "${SSHOPT[@]}" ubuntu@"$IP" "mkdir -p /home/ubuntu/aces/implementations/python /home/ubuntu/aces/contracts"
+ssh "${SSHOPT[@]}" ubuntu@"$IP" "mkdir -p /home/ubuntu/raes/implementations/python /home/ubuntu/raes/contracts"
 rsync -az --delete --exclude '.venv' --exclude '__pycache__' --exclude '.git' --exclude '.pytest_cache' --exclude '.nox' --exclude '*.pyc' \
-  -e "ssh ${SSHOPT[*]}" "$REPO_ROOT/implementations/python/" ubuntu@"$IP":/home/ubuntu/aces/implementations/python/
-rsync -az --delete --exclude '.git' -e "ssh ${SSHOPT[*]}" "$REPO_ROOT/contracts/" ubuntu@"$IP":/home/ubuntu/aces/contracts/
-scp "${SSHOPT[@]}" "$REPO_ROOT/tools/real-daemon/libvirt_smoke.py" ubuntu@"$IP":/home/ubuntu/aces/implementations/python/real_daemon_smoke.py
+  -e "ssh ${SSHOPT[*]}" "$REPO_ROOT/implementations/python/" ubuntu@"$IP":/home/ubuntu/raes/implementations/python/
+rsync -az --delete --exclude '.git' -e "ssh ${SSHOPT[*]}" "$REPO_ROOT/contracts/" ubuntu@"$IP":/home/ubuntu/raes/contracts/
+scp "${SSHOPT[@]}" "$REPO_ROOT/tools/real-daemon/libvirt_smoke.py" ubuntu@"$IP":/home/ubuntu/raes/implementations/python/real_daemon_smoke.py
 
 echo "=== install venv + libvirt-python ==="
-ssh "${SSHOPT[@]}" ubuntu@"$IP" "curl -LsSf https://astral.sh/uv/install.sh | sh >/dev/null 2>&1; cd ~/aces/implementations/python && ~/.local/bin/uv sync --all-extras >/dev/null 2>&1 && ~/.local/bin/uv pip install libvirt-python >/dev/null 2>&1 && echo venv-ready"
+ssh "${SSHOPT[@]}" ubuntu@"$IP" "curl -LsSf https://astral.sh/uv/install.sh | sh >/dev/null 2>&1; cd ~/raes/implementations/python && ~/.local/bin/uv sync --all-extras >/dev/null 2>&1 && ~/.local/bin/uv pip install libvirt-python >/dev/null 2>&1 && echo venv-ready"
 
 echo "=== run real-daemon smoke ==="
-ssh "${SSHOPT[@]}" ubuntu@"$IP" "cd ~/aces/implementations/python && .venv/bin/python real_daemon_smoke.py"
+ssh "${SSHOPT[@]}" ubuntu@"$IP" "cd ~/raes/implementations/python && .venv/bin/python real_daemon_smoke.py"

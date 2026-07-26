@@ -74,7 +74,7 @@ def _scenario(*, objective_target: str = OBSERVABILITY_REF, interaction_target: 
                 "predicate": {
                     "kind": "boolean",
                     "property": "participant-inspected",
-                    "semantic_ref": "urn:aces:observable:participant-inspected",
+                    "semantic_ref": "urn:raes:observable:participant-inspected",
                     "operator": "equals",
                     "expected": True,
                 },

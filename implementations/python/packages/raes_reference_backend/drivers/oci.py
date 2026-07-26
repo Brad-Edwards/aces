@@ -49,7 +49,7 @@ _CODE_NETWORK_NAMESPACE_TARGET_UNAVAILABLE = "reference-backend.driver.network-n
 _CODE_NETWORK_NAMESPACE_CONFLICT = "reference-backend.driver.network-namespace-conflict"
 
 _OWNERSHIP_INSPECT_FORMAT = (
-    '{{.Id}}\n{{index .Config.Labels "aces.workspace"}}\n{{index .Config.Labels "aces.address"}}\n{{.Name}}'
+    '{{.Id}}\n{{index .Config.Labels "raes.workspace"}}\n{{index .Config.Labels "raes.address"}}\n{{.Name}}'
 )
 
 _KIND_TO_CODE = {
@@ -83,9 +83,9 @@ class ImageTrustPolicy:
     allow_digest_pinned: bool = True
 
     def image_for(self, image_ref: str) -> str:
-        # A configured default overrides the synthesized ``aces-reference/*``
+        # A configured default overrides the synthesized ``raes-reference/*``
         # placeholder so an image-less plan can still realize against a registry.
-        if self.default_image and image_ref.startswith("aces-reference/"):
+        if self.default_image and image_ref.startswith("raes-reference/"):
             return self.default_image
         return image_ref
 
@@ -139,9 +139,9 @@ class OciDeploymentDriver:
     def _label_args(self, address: str) -> list[str]:
         return [
             "--label",
-            f"aces.workspace={self._workspace}",
+            f"raes.workspace={self._workspace}",
             "--label",
-            f"aces.address={address}",
+            f"raes.address={address}",
         ]
 
     def _invoke(self, argv: list[str]) -> tuple[bool, str | None, str]:
@@ -205,7 +205,7 @@ class OciDeploymentDriver:
     ) -> list[NetworkHandle]:
         handles: list[NetworkHandle] = []
         for spec in networks:
-            runtime_name = provider_resource_name(spec.address, prefix="aces")
+            runtime_name = provider_resource_name(spec.address, prefix="raes")
             argv = [self._runtime, "network", "create", *self._label_args(spec.address), runtime_name]
             ok, kind = self._run(argv)
             if ok:
@@ -231,7 +231,7 @@ class OciDeploymentDriver:
             if not self._image_policy.permits(image):
                 diagnostics.append(self._image_rejected(spec.address))
                 continue
-            runtime_name = provider_resource_name(spec.address, prefix="aces")
+            runtime_name = provider_resource_name(spec.address, prefix="raes")
             argv = self._container_run_argv(spec, runtime_name=runtime_name, image=image)
             ok, kind, native_stdout = self._invoke(argv)
             if ok:
@@ -379,7 +379,7 @@ class OciDeploymentDriver:
             self.destroy(networks=realized_networks, containers=realized_containers)
 
     def _name_for(self, address: str) -> str:
-        return self._names.get(address, provider_resource_name(address, prefix="aces"))
+        return self._names.get(address, provider_resource_name(address, prefix="raes"))
 
     def destroy(
         self,

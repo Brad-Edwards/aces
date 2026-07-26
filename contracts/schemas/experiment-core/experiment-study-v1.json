@@ -212,7 +212,7 @@
       ],
       "title": "ExperimentAnalysisPlanModel",
       "type": "object",
-      "x-aces-invariants": [
+      "x-raes-invariants": [
         {
           "description": "Analysis plans must name metrics plus structured statistical, uncertainty, multiplicity, and missing-data policies.",
           "id": "analysis-plan-substantive-methods-required",
@@ -999,7 +999,7 @@
       ],
       "title": "ExperimentRunAllocationPlanModel",
       "type": "object",
-      "x-aces-invariants": [
+      "x-raes-invariants": [
         {
           "description": "Run-allocation compared_conditions, condition_assignments keys, embedded condition ids, blocking factor ids, factor-level combinations, and run-level criteria signatures must be internally coherent.",
           "id": "run-allocation-condition-assignments-valid",
@@ -1534,7 +1534,7 @@
       ],
       "title": "ValidationBasisDisclosureModel",
       "type": "object",
-      "x-aces-invariants": [
+      "x-raes-invariants": [
         {
           "description": "profile_id/profile_version/subject_kind must resolve one validation profile that declares the subject kind, and subject_ref.ref_kind must match the profile's ONE subject_kind mapping.",
           "id": "validation-basis-profile-join-resolves",
@@ -1935,7 +1935,7 @@
       "type": "object"
     }
   },
-  "$id": "https://aces.dev/schemas/experiment-study-v1.json",
+  "$id": "https://raes.dev/schemas/experiment-study-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "allOf": [
@@ -2138,7 +2138,7 @@
   ],
   "title": "ExperimentStudyModel",
   "type": "object",
-  "x-aces-invariants": [
+  "x-raes-invariants": [
     {
       "description": "Study and benchmark records must include research questions, revisioned behavioral claim bindings, run allocation, a substantive analysis plan, and validity notes.",
       "id": "claim-bearing-study-analysis-plan-required",
@@ -2288,13 +2288,13 @@
       "validator": "raes_contracts.contracts.validate_experiment_study_archival_datetimes"
     }
   ],
-  "x-aces-semantic-profile": {
+  "x-raes-semantic-profile": {
     "contract_id": "experiment-study-v1",
-    "entry_schema_contract_id": "aces-semantic-invariants-v1",
-    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
-    "id": "aces-semantic-invariants-v1",
-    "keyword": "x-aces-invariants",
+    "entry_schema_contract_id": "raes-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/RaesSemanticInvariantEntryModel",
+    "id": "raes-semantic-invariants-v1",
+    "keyword": "x-raes-invariants",
     "required": true,
-    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+    "uri": "https://raes.dev/schemas/semantic-invariants/v1"
   }
 }

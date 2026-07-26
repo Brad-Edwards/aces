@@ -1331,7 +1331,7 @@
       "type": "object"
     }
   },
-  "$id": "https://aces.dev/schemas/participant-decision-surface-v2.json",
+  "$id": "https://raes.dev/schemas/participant-decision-surface-v2.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "allOf": [
@@ -1420,7 +1420,7 @@
   ],
   "title": "ParticipantDecisionSurfaceV2Model",
   "type": "object",
-  "x-aces-invariants": [
+  "x-raes-invariants": [
     {
       "description": "The participant view contains only participant-available choice material; derivation, policy, evidence, provenance, and delivery remain in separate assurance and delivery planes.",
       "id": "decision-surface-v2-plane-separation",
@@ -1470,13 +1470,13 @@
       "validator": "raes_contracts.contracts.ParticipantDecisionSurfaceAssuranceV2Model._validate_assurance"
     }
   ],
-  "x-aces-semantic-profile": {
+  "x-raes-semantic-profile": {
     "contract_id": "participant-decision-surface-v2",
-    "entry_schema_contract_id": "aces-semantic-invariants-v1",
-    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
-    "id": "aces-semantic-invariants-v1",
-    "keyword": "x-aces-invariants",
+    "entry_schema_contract_id": "raes-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/RaesSemanticInvariantEntryModel",
+    "id": "raes-semantic-invariants-v1",
+    "keyword": "x-raes-invariants",
     "required": true,
-    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+    "uri": "https://raes.dev/schemas/semantic-invariants/v1"
   }
 }

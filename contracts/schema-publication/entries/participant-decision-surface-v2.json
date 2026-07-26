@@ -2,9 +2,9 @@
   "contract_id": "participant-decision-surface-v2",
   "schema_path": "contracts/schemas/control-plane/participant-decision-surface-v2.json",
   "stability": "draft",
-  "content_hash": "216548cdffc0b81d057a87d4932374cc83d00abd0b023510044d52d1945fa9d4",
+  "content_hash": "ec31e314da8d75c87924e2b4cf76945ef419eaf54d02d25ae7c2c20426c411f6",
   "last_change": {
     "summary": "Published decision-surface v2 with independent decision epochs and state cuts, participant-view and assurance separation, exact-cut exposure authorization, explicit memory scope and delivery state, and delivery-bound selection.",
-    "content_hash": "216548cdffc0b81d057a87d4932374cc83d00abd0b023510044d52d1945fa9d4"
+    "content_hash": "ec31e314da8d75c87924e2b4cf76945ef419eaf54d02d25ae7c2c20426c411f6"
   }
 }
