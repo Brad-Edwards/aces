@@ -2,9 +2,9 @@
   "contract_id": "participant-decision-surface-v1",
   "schema_path": "contracts/schemas/control-plane/participant-decision-surface-v1.json",
   "stability": "draft",
-  "content_hash": "e65ab17f47266f0b21964e5d97517b3d5e9ff998454c48605d2fc40057630c13",
+  "content_hash": "77920c1edfa6fe1785d50d6d33a194acd59fdc41845c016eedbf88af342bd2e2",
   "last_change": {
-    "summary": "Breaking semantic and runtime-admission change to the draft v1 contract: added a structurally optional tagged projection anchor, defined observation_order as the derived per-episode decision-surface order distinct from anchor-local history order, and required a current resolved anchor for runtime admission.",
-    "content_hash": "e65ab17f47266f0b21964e5d97517b3d5e9ff998454c48605d2fc40057630c13"
+    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
+    "content_hash": "77920c1edfa6fe1785d50d6d33a194acd59fdc41845c016eedbf88af342bd2e2"
   }
 }

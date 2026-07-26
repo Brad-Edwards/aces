@@ -794,7 +794,7 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   syntax or wire compatibility. The normative participant-policy model is
   `specs/formal/participant-semantics/information-flow-control.md`; the
   machine-readable relation is `policy-noninterference` in behavioral taxonomy
-  revision `rev2`; and the claim surface is
+  revision `rev3`; and the claim surface is
   `participant-information-flow-policy`. Existing `W`, `V`, qualified `H`,
   `X`, participant action/admission, visibility transition, ordering, marking,
   controller, authority, evidence, and provenance objects remain the mapped
@@ -805,14 +805,17 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   semantics; Goguen and Meseguer supply noninterference and purge; Sabelfeld
   and Sands supply the declassification dimensions; Milner and van Glabbeek
   supply labelled-transition, hidden-action, and relation-separation
-  discipline. Lamport happened-before, Winskel event structures, and
-  Mazurkiewicz trace theory enter indirectly through the already governed
-  ADR-054 visible-order model. RAES extends those sources only with the
-  participant/audience, policy-revision/effective-order, controller/authority,
-  marking, and evidence/provenance coordinates needed to bind existing RAES
-  carriers. It does not fork their settled definitions.
+  discipline; Clarkson and Schneider distinguish trace properties from
+  hyperproperties; and Bohannon et al. supply the reactive strategy-sensitive
+  information-flow precedent. Lamport happened-before, Winskel event
+  structures, and Mazurkiewicz trace theory enter indirectly through the
+  already governed ADR-054 visible-order model. RAES extends those sources
+  only with participant/audience, exact-cut policy-decision, participant-memory,
+  controller/authority, marking, and evidence/provenance coordinates needed to
+  bind existing RAES carriers. It does not fork their settled definitions.
 - Delivery status is definition-complete, catalogued, policy-checked, and
-  bounded-tested. Evidence is the SEM-230 formal specification,
+  bounded-tested over finite open-loop and adaptive-strategy cases. Evidence
+  is the SEM-230 formal specification,
   `contracts/concept-authority/behavioral-relations-v1.json`,
   `tools/check_behavioral_relation_claims.py`, and
   `implementations/python/tests/test_sem_230_information_flow_control.py`.
@@ -952,77 +955,55 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   external derivation or compatibility claim.
 - SEM-220's executable participant decision surface adopts the existing
   action/observation-interface lineage above without importing a UI, prompt,
-  command, or backend-native parameter language. RAES maps one participant,
-  episode, per-episode decision-surface order, and typed lifecycle- or
-  behavior-history anchor to `ParticipantDecisionSurfaceModel`. The current
-  RUN-311 `episode_running` event grounds `D(p,e,0)` while behavior history is
-  empty; later surfaces use the exact terminal `observation_emitted` event and
-  complete behavior-history prefix without treating that event's history order
-  as the decision-surface order. RAES maps the three portable selection forms
-  to discriminated open-ended, constrained-form, and candidate-set payloads;
-  maps governed action meaning to compiled
-  `ParticipantActionContractRuntime` addresses; maps participant-local
-  presentation to the shared observation-boundary effective-view selector;
-  maps candidate applicability to explicit SEM-211 eligibility state and
-  reason refs; maps apparatus variation to implementation-selection, support,
-  and realization refs; and maps a chosen proposal through governed
-  argument-shape resolution before the existing
-  `ParticipantActionAdmissionRequest` path. Delivery is implemented for the
-  published closed contract and fixtures, compiled-runtime projection,
-  trusted snapshot/history anchor resolution, admission-time freshness
-  validation, context-envelope agreement, proposal binding, runtime admission
-  routing, schema publication, and adversarial ordering/bypass checks. Evidence
-  is `participant-decision-surface-v1`,
-  `resolve_participant_episode_readiness_anchor()`,
-  `resolve_participant_behavior_projection_anchor()`,
-  `project_participant_decision_surface()`,
-  `bind_participant_decision_surface_selection()`, and
-  `implementations/python/tests/test_sem_220_participant_decision_surface.py`.
-  Human proxy, script, LLM-agent, and RL-agent fixtures retain identical stable
-  action and selection-meaning refs while disclosing apparatus differences.
-  This mapping does not claim that presentation proves eligibility, selection,
-  admission, execution, result, outcome, historical exposure from a final
-  snapshot, backend support, UI behavior, prompt semantics, or complete
-  SEM-211 precondition evaluation. The lineage ledger and source audit remain
-  unchanged because the implementation adds no normative external derivation
-  or compatibility claim.
-- SEM-226 specializes that delivered decision-surface projection without
+  command, or backend-native parameter language. Published v1 retains its
+  historical behavior-history-index meaning and remains available through
+  `ParticipantDecisionSurfaceModel` and
+  `project_participant_decision_surface()`. Issue #909 does not relabel its
+  `observation_order`.
+- `participant-decision-surface-v2` separates the participant choice
+  coordinate `decision_epoch` from the exact derivation `state_cut`. Epoch zero
+  is derived from authoritative `episode_running` state while the new
+  episode's behavior history is empty. Later epochs are derived from terminal
+  participant observations, but retain their complete sequence prefix or
+  causal frontier rather than collapsing that cut into the epoch number. RAES
+  maps the three portable selection forms to the participant-only view; maps
+  governed action meaning to compiled action-contract addresses; maps
+  applicability to explicit SEM-211 eligibility; and keeps derivation,
+  projection/exposure policy, evidence, provenance, and memory scope in a
+  separate assurance plane.
+- Projection, disclosure, delivery, selection, admission, attempt, result, and
+  outcome are distinct v2 occurrences. An actionable selection binds the
+  canonical participant-view digest and authoritative delivery ref. Admission
+  re-resolves the exact derivation anchor and delivery record against current
+  authority before existing argument-shape, apparatus, SEM-211, and backend
+  checks. Reset and restart create a new episode and epoch zero, invalidating
+  prior surfaces; they do not claim that a persistent participant forgot
+  already delivered information. Evidence is the v2 contract and schema,
+  `project_participant_decision_surface_v2()`,
+  `deliver_participant_decision_surface_v2()`,
+  `bind_participant_decision_surface_selection_v2()`, and the v2 SEM-220
+  contract/runtime tests.
+- SEM-226 specializes v1 and v2 decision-surface projection without
   adopting another visibility taxonomy, policy language, or participant I/O
-  envelope. RAES maps the participant/episode/audience/order coordinates to
-  `ParticipantDecisionSurfaceExposureBindingModel`; maps `V_p,o` to the
-  existing `participant_observation_effective_relation()` selector; maps the
-  revisioned SEM-230 `Effective(rho,o)` coordinate to an authoritative
-  `ParticipantExposurePolicyRevision` resolver; maps selected apparatus intent
-  to a separately resolved `ParticipantExposurePolicyModel` identity, version,
-  digest, disclosed and withheld refs; maps item authorization to stable
-  `ParticipantExposureAuthorizationRecord` refs, immutable exposure-policy
-  version/digest, and effective intervals instead of projection-owned gate
-  booleans; and maps source/result identity,
-  markings, transformation, redaction, declassification, evidence,
-  provenance, and limitations to one closed binding per serialized context,
-  action, and affordance ref. Realized delivery remains an optional
-  `ParticipantDecisionSurfaceExposureRealizationModel` occurrence binding
-  whose stable ref resolves independently and binds the exact delivered item
-  and delivery-time authorization record. That record and the occurrence must
-  agree with the policy effective at delivery order and with the participant,
-  episode, action instance, observation boundary, history order, observation
-  identity, evidence, and provenance. Observation lookup uses that semantic
-  identity rather than treating delivery order as a sequence index. It carries
-  its own delivery basis and limitations. Delivery is
-  implemented in `project_participant_decision_surface()` with deny-first
-  item selection, effective-order policy checks, exact item coverage,
-  participant/audience isolation, marking and provenance inheritance, and
-  non-retroactive concealment/revocation behavior. Evidence is the strengthened
-  `participant-decision-surface-v1` schema and fixtures,
-  `implementations/python/tests/test_sem_226_participant_exposure.py`, and
-  the retained SEM-220 projection tests. This mapping does not claim that a
-  selected policy, manifest capability, surface entry, disclosure decision,
-  HTTP response, log, or audit record proves delivery; does not make API-408
-  retrieval participant-safe; and does not claim erasure, a general crossing
-  API, runtime persistence, backend enforcement, or universal
-  noninterference/bisimulation. The lineage ledger and source audit remain
-  unchanged because the implementation changes no normative external
-  derivation or compatibility claim.
+  envelope. V1 retains the published order-indexed binding and delivery
+  realization. V2 binds every exposed item to participant, episode, audience,
+  independent decision epoch, exact state-cut ref, exact projection-policy
+  decision, apparatus, exposure policy, markings, provenance, evidence, and
+  limitations. Policy and item authorization resolve at that exact cut; a
+  maximum scalar order cannot stand in for a causal frontier. Delivery is
+  independently authorized and resolved.
+- Issue #909 adds formal lineage for the resulting backend and security
+  obligations. Abadi-Lamport refinement mappings and Lynch-Vaandrager
+  simulations ground the directional concrete-to-abstract obligation.
+  Lynch-Tuttle I/O automata and Alur et al. alternating refinement ground
+  explicit input/output ownership and availability: projected trace inclusion
+  alone permits a backend to refuse a required participant input. Bisimulation
+  remains optional and projection-relative, not the default conformance
+  relation. Clarkson-Schneider hyperproperties and Bohannon et al. reactive
+  noninterference ground adaptive-strategy quantification. The exact mappings,
+  divergences, source identities, and nonclaims are recorded in the lineage
+  ledger and source audit. Bounded tests may falsify the named finite models;
+  they do not prove universal refinement, bisimulation, or noninterference.
 - API-409 adopts the existing participant-runtime, ACT-617 mixed-control, and
   SEM-220 decision-surface authorities without introducing a generic external
   message or policy language. RAES maps one proposal, approval, denial,

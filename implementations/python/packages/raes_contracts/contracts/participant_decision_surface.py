@@ -11,7 +11,6 @@ from typing_extensions import TypeAliasType
 
 from .base import ContractModel, NonEmptyString
 from .participant_context import ParticipantContextViewModel
-from .participant_decision_surface_anchor import ParticipantDecisionSurfaceProjectionAnchorModel
 from .participant_decision_surface_exposure import (
     ParticipantDecisionSurfaceExposureBindingModel,
 )
@@ -354,7 +353,6 @@ class ParticipantDecisionSurfaceModel(ContractModel):
     marking_definition_refs: list[NonEmptyString] = Field(default_factory=list)
     redaction_policy_ref: NonEmptyString | None = None
     semantic_limitations: list[NonEmptyString] = Field(min_length=1)
-    projection_anchor: ParticipantDecisionSurfaceProjectionAnchorModel | None = None
 
     @model_validator(mode="after")
     def _validate_surface_relations(self) -> ParticipantDecisionSurfaceModel:
@@ -371,28 +369,7 @@ class ParticipantDecisionSurfaceModel(ContractModel):
         _validate_surface_form_relations(self.form, entries_by_id, entries_by_address)
         _validate_surface_affordances(self.affordance_refs, self.action_entries)
         _validate_surface_exposure_bindings(self)
-        self._validate_projection_anchor()
         return self
-
-    def _validate_projection_anchor(self) -> None:
-        anchor = self.projection_anchor
-        if anchor is None:
-            return
-        mismatched = [
-            name
-            for name, anchor_value, surface_value in (
-                ("participant_address", anchor.participant_address, self.participant_address),
-                ("episode_id", anchor.episode_id, self.episode_id),
-                ("decision_surface_order", anchor.decision_surface_order, self.observation_order),
-            )
-            if anchor_value != surface_value
-        ]
-        if mismatched:
-            raise ValueError("projection anchor disagrees with the decision surface on: " + ", ".join(mismatched))
-        if not set(anchor.evidence_refs).issubset(self.evidence_refs):
-            raise ValueError("projection anchor evidence_refs must be carried by the decision surface")
-        if not set(anchor.provenance_refs).issubset(self.provenance_refs):
-            raise ValueError("projection anchor provenance_refs must be carried by the decision surface")
 
     @classmethod
     def __get_pydantic_json_schema__(
@@ -426,14 +403,6 @@ class ParticipantDecisionSurfaceModel(ContractModel):
             "realized delivery is an optional item- and delivery-authorization-bound occurrence.",
             validator="raes_contracts.contracts.ParticipantDecisionSurfaceModel._validate_surface_relations",
             inputs=[{"contract_id": "participant-decision-surface-v1", "instance_path": "#/exposure_bindings"}],
-        )
-        _add_aces_invariant(
-            json_schema,
-            "decision-surface-projection-anchor-agreement",
-            "A typed projection anchor, when present, must agree with the surface participant, episode, anchor-local "
-            "decision-surface order, evidence, and provenance without merging lifecycle and behavior histories.",
-            validator="raes_contracts.contracts.ParticipantDecisionSurfaceModel._validate_projection_anchor",
-            inputs=[{"contract_id": "participant-decision-surface-v1", "instance_path": "#/projection_anchor"}],
         )
         return json_schema
 

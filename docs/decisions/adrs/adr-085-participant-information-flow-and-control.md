@@ -4,6 +4,12 @@
 
 accepted
 
+ADR-095 amends this decision for participant decision-surface v2: policy
+resolution is relative to an exact state cut, noninterference quantifies over
+adaptive low-participant strategies, and every cross-episode information-flow
+claim declares participant-memory scope. Historical scalar-order contracts
+retain their published meaning.
+
 ## Date
 
 2026-07-15
@@ -185,7 +191,7 @@ assumptions, and evidence exist. A finite negative-leakage suite, passing
 backend probes, or equal sampled histories remains bounded evidence.
 
 The relation SHALL be published in the existing
-`aces-behavioral-relations` catalog at taxonomy revision `rev2`, with a
+`aces-behavioral-relations` catalog at taxonomy revision `rev3`, with a
 dedicated participant-information-flow claim surface. The closed catalog
 contract remains `behavioral-relations/v1`; adding the relation changes the
 taxonomy contents, not the contract shape. Current in-repository claim
@@ -302,3 +308,4 @@ risks and are published with issue #794.
 | Date | Commit/PR | Summary |
 |------|-----------|---------|
 | 2026-07-17 | #831 | Recorded ADR-085 acceptance with the SEM-230 formal authority, behavioral taxonomy revision, bounded evidence, and explicit literature-derived lineage and nonclaims. |
+| 2026-07-26 | #909 | Adopted ADR-095 exact-cut policy, reactive-strategy, and explicit participant-memory semantics and advanced the behavioral taxonomy to revision 3. |

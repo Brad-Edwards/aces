@@ -2,9 +2,9 @@
   "contract_id": "behavioral-relations-v1",
   "schema_path": "contracts/schemas/concept-authority/behavioral-relations-v1.json",
   "stability": "draft",
-  "content_hash": "e480fac32221c864dc953eef2700459a3db4b8a435abd02e69fc767ed7e46d76",
+  "content_hash": "4192c58c13d05830c73a089ea9fce462f2aa28d79209a6a1043bdbf8ddbd41d4",
   "last_change": {
-    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
-    "content_hash": "e480fac32221c864dc953eef2700459a3db4b8a435abd02e69fc767ed7e46d76"
+    "summary": "Added an immutable report locator for the revision-3 I/O-automata lineage used by exact-cut reactive information flow and I/O alternating refinement.",
+    "content_hash": "4192c58c13d05830c73a089ea9fce462f2aa28d79209a6a1043bdbf8ddbd41d4"
   }
 }

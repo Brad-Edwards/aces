@@ -1,6 +1,6 @@
 {
   "schema_version": "sdl-lineage-ledger/v1",
-  "reviewed_on": "2026-07-24",
+  "reviewed_on": "2026-07-26",
   "citations": [
     {
       "citation_id": "ocr-sdl-v0.21.2",
@@ -230,6 +230,94 @@
       "verification_evidence": "docs/research/lineage/source-audit-2026-07-12.md#participant-information-flow-sources"
     },
     {
+      "citation_id": "abadi-lamport-1991",
+      "title": "The Existence of Refinement Mappings",
+      "authors_or_maintainer": [
+        "Martín Abadi",
+        "Leslie Lamport"
+      ],
+      "year": 1991,
+      "container_title": "Theoretical Computer Science 82(2)",
+      "doi": "10.1016/0304-3975(91)90224-P",
+      "canonical_url": "https://doi.org/10.1016/0304-3975(91)90224-P",
+      "verified_on": "2026-07-26",
+      "verification_evidence": "docs/research/lineage/source-audit-2026-07-12.md#issue-909-refinement-io-and-reactive-information-flow-sources"
+    },
+    {
+      "citation_id": "lynch-vaandrager-1995",
+      "title": "Forward and Backward Simulations, Part I: Untimed Systems",
+      "authors_or_maintainer": [
+        "Nancy A. Lynch",
+        "Frits W. Vaandrager"
+      ],
+      "year": 1995,
+      "container_title": "Information and Computation 121(2)",
+      "doi": "10.1006/inco.1995.1134",
+      "canonical_url": "https://doi.org/10.1006/inco.1995.1134",
+      "verified_on": "2026-07-26",
+      "verification_evidence": "docs/research/lineage/source-audit-2026-07-12.md#issue-909-refinement-io-and-reactive-information-flow-sources"
+    },
+    {
+      "citation_id": "alur-henzinger-kupferman-vardi-1998",
+      "title": "Alternating Refinement Relations",
+      "authors_or_maintainer": [
+        "Rajeev Alur",
+        "Thomas A. Henzinger",
+        "Orna Kupferman",
+        "Moshe Y. Vardi"
+      ],
+      "year": 1998,
+      "container_title": "CONCUR 1998, LNCS 1466",
+      "doi": "10.1007/BFb0055622",
+      "canonical_url": "https://doi.org/10.1007/BFb0055622",
+      "verified_on": "2026-07-26",
+      "verification_evidence": "docs/research/lineage/source-audit-2026-07-12.md#issue-909-refinement-io-and-reactive-information-flow-sources"
+    },
+    {
+      "citation_id": "lynch-tuttle-1989",
+      "title": "An Introduction to Input/Output Automata",
+      "authors_or_maintainer": [
+        "Nancy A. Lynch",
+        "Mark R. Tuttle"
+      ],
+      "year": 1989,
+      "container_title": "CWI Quarterly 2(3), 219-246; MIT/LCS/TM-373",
+      "canonical_url": "https://groups.csail.mit.edu/tds/papers/Lynch/CWI89.html",
+      "verified_on": "2026-07-26",
+      "verification_evidence": "docs/research/lineage/source-audit-2026-07-12.md#issue-909-refinement-io-and-reactive-information-flow-sources"
+    },
+    {
+      "citation_id": "clarkson-schneider-2010",
+      "title": "Hyperproperties",
+      "authors_or_maintainer": [
+        "Michael R. Clarkson",
+        "Fred B. Schneider"
+      ],
+      "year": 2010,
+      "container_title": "Journal of Computer Security 18(6)",
+      "doi": "10.3233/JCS-2009-0393",
+      "canonical_url": "https://doi.org/10.3233/JCS-2009-0393",
+      "verified_on": "2026-07-26",
+      "verification_evidence": "docs/research/lineage/source-audit-2026-07-12.md#issue-909-refinement-io-and-reactive-information-flow-sources"
+    },
+    {
+      "citation_id": "bohannon-pierce-sjoberg-weirich-zdancewic-2009",
+      "title": "Reactive Noninterference",
+      "authors_or_maintainer": [
+        "Aaron Bohannon",
+        "Benjamin C. Pierce",
+        "Vilhelm Sjöberg",
+        "Stephanie Weirich",
+        "Steve Zdancewic"
+      ],
+      "year": 2009,
+      "container_title": "Proceedings of the 16th ACM Conference on Computer and Communications Security",
+      "doi": "10.1145/1653662.1653673",
+      "canonical_url": "https://doi.org/10.1145/1653662.1653673",
+      "verified_on": "2026-07-26",
+      "verification_evidence": "docs/research/lineage/source-audit-2026-07-12.md#issue-909-refinement-io-and-reactive-information-flow-sources"
+    },
+    {
       "citation_id": "crack-nca-2018",
       "title": "Scenario Design and Validation for Next Generation Cyber Ranges",
       "authors_or_maintainer": [
@@ -440,6 +528,54 @@
       "version_or_edition": "published conference chapter",
       "canonical_url": "https://doi.org/10.1007/BFb0039066",
       "citation_ref": "van-glabbeek-1990"
+    },
+    {
+      "source_id": "abadi-lamport-1991",
+      "kind": "publication",
+      "title": "The Existence of Refinement Mappings",
+      "version_or_edition": "version of record",
+      "canonical_url": "https://doi.org/10.1016/0304-3975(91)90224-P",
+      "citation_ref": "abadi-lamport-1991"
+    },
+    {
+      "source_id": "lynch-vaandrager-1995",
+      "kind": "publication",
+      "title": "Forward and Backward Simulations, Part I: Untimed Systems",
+      "version_or_edition": "version of record",
+      "canonical_url": "https://doi.org/10.1006/inco.1995.1134",
+      "citation_ref": "lynch-vaandrager-1995"
+    },
+    {
+      "source_id": "alur-henzinger-kupferman-vardi-1998",
+      "kind": "publication",
+      "title": "Alternating Refinement Relations",
+      "version_or_edition": "published conference chapter",
+      "canonical_url": "https://doi.org/10.1007/BFb0055622",
+      "citation_ref": "alur-henzinger-kupferman-vardi-1998"
+    },
+    {
+      "source_id": "lynch-tuttle-1989",
+      "kind": "publication",
+      "title": "An Introduction to Input/Output Automata",
+      "version_or_edition": "CWI Quarterly article and MIT/LCS/TM-373",
+      "canonical_url": "https://groups.csail.mit.edu/tds/papers/Lynch/CWI89.html",
+      "citation_ref": "lynch-tuttle-1989"
+    },
+    {
+      "source_id": "clarkson-schneider-2010",
+      "kind": "publication",
+      "title": "Hyperproperties",
+      "version_or_edition": "version of record",
+      "canonical_url": "https://doi.org/10.3233/JCS-2009-0393",
+      "citation_ref": "clarkson-schneider-2010"
+    },
+    {
+      "source_id": "bohannon-pierce-sjoberg-weirich-zdancewic-2009",
+      "kind": "publication",
+      "title": "Reactive Noninterference",
+      "version_or_edition": "version of record",
+      "canonical_url": "https://doi.org/10.1145/1653662.1653673",
+      "citation_ref": "bohannon-pierce-sjoberg-weirich-zdancewic-2009"
     }
   ],
   "subjects": [
@@ -2907,7 +3043,9 @@
             "goguen-meseguer-1982",
             "sabelfeld-sands-2009",
             "milner-1980",
-            "van-glabbeek-1990"
+            "van-glabbeek-1990",
+            "clarkson-schneider-2010",
+            "bohannon-pierce-sjoberg-weirich-zdancewic-2009"
           ],
           "aces_boundaries": [
             {
@@ -2939,23 +3077,86 @@
             {
               "artifact": "The Linear Time-Branching Time Spectrum",
               "symbol_or_pointer": "separation of trace and branching-time relations"
+            },
+            {
+              "artifact": "Hyperproperties",
+              "symbol_or_pointer": "sets-of-traces account of information-flow properties"
+            },
+            {
+              "artifact": "Reactive Noninterference",
+              "symbol_or_pointer": "strategy-sensitive reactive information-flow comparison"
             }
           ],
-          "divergence": "ACES composes interpreted-system local-state indistinguishability, policy noninterference and purge, explicit declassification dimensions, and labelled-transition hidden-action discipline into a participant-, audience-, policy-revision-, scheduler/environment-, and order-relative support-set relation over ACES-native carriers. Its ordering construction remains indirectly derived through ADR-054 from Lamport happened-before, Winskel event structures, and Mazurkiewicz trace theory rather than being redefined here. ACES adds only carrier, policy-revision, marking, controller/authority, ordering, evidence, and assurance coordinates needed by the governed participant model. It does not copy source syntax, define source-compatible wire contracts, claim universal proof, or claim runtime/backend realization.",
+          "divergence": "ACES composes interpreted-system local-state indistinguishability, policy noninterference and purge, explicit declassification dimensions, labelled-transition hidden-action discipline, the hyperproperty distinction, and reactive strategy quantification into a participant-, audience-, exact-cut policy-decision-, memory-scope-, scheduler/environment-, and order-relative support-set relation over ACES-native carriers. Its ordering construction remains indirectly derived through ADR-054 from Lamport happened-before, Winskel event structures, and Mazurkiewicz trace theory rather than being redefined here. ACES adds only carrier, decision-cut, memory, marking, controller/authority, evidence, and assurance coordinates needed by the governed participant model. It does not copy source syntax, define source-compatible wire contracts, claim universal proof, or claim runtime/backend realization.",
           "compatibility": "none",
           "citation_refs": [
             "fagin-halpern-moses-vardi-1995",
             "goguen-meseguer-1982",
             "sabelfeld-sands-2009",
             "milner-1980",
-            "van-glabbeek-1990"
+            "van-glabbeek-1990",
+            "clarkson-schneider-2010",
+            "bohannon-pierce-sjoberg-weirich-zdancewic-2009"
           ],
           "internal_authority_refs": [
             "docs/decisions/adrs/adr-085-participant-information-flow-and-control.md",
+            "docs/decisions/adrs/adr-095-participant-decision-epoch-state-cut-and-delivery-semantics.md",
             "docs/decisions/adrs/adr-054-participant-runtime-observable-lifecycle.md",
             "specs/formal/participant-semantics/information-flow-control.md",
             "specs/formal/participant-runtime/README.md",
             "specs/formal/behavioral-relations/README.md"
+          ],
+          "compatibility_direction": "aces_relative_to_source"
+        },
+        {
+          "plane": "semantics",
+          "classification": "adapted",
+          "source_refs": [
+            "abadi-lamport-1991",
+            "lynch-vaandrager-1995",
+            "lynch-tuttle-1989",
+            "alur-henzinger-kupferman-vardi-1998"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/concept-authority/behavioral-relations-v1.json",
+              "symbol_or_pointer": "#/relations/io-alternating-refinement"
+            },
+            {
+              "artifact": "docs/decisions/adrs/adr-095-participant-decision-epoch-state-cut-and-delivery-semantics.md",
+              "symbol_or_pointer": "Backend realization, simulation, and bisimulation"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "The Existence of Refinement Mappings",
+              "symbol_or_pointer": "lower-level to higher-level state/behavior mapping"
+            },
+            {
+              "artifact": "Forward and Backward Simulations, Part I: Untimed Systems",
+              "symbol_or_pointer": "directional simulation proof methods"
+            },
+            {
+              "artifact": "An Introduction to Input/Output Automata",
+              "symbol_or_pointer": "input/output ownership and input-enabled component model"
+            },
+            {
+              "artifact": "Alternating Refinement Relations",
+              "symbol_or_pointer": "separate quantification over system and environment choices"
+            }
+          ],
+          "divergence": "ACES uses these results to state a directional backend obligation: concrete participant traces must remain admitted by the abstract RAES semantics, while participant/environment inputs, participant-facing outputs, ownership, availability, fairness, and exact delivery remain explicit alternating obligations. The v2 contract is not an I/O-automaton wire format, does not make bisimulation the default conformance relation, and does not claim the universal relation from finite tests. Bisimulation remains optional, projection-relative evidence for a separately declared claim.",
+          "compatibility": "none",
+          "citation_refs": [
+            "abadi-lamport-1991",
+            "lynch-vaandrager-1995",
+            "lynch-tuttle-1989",
+            "alur-henzinger-kupferman-vardi-1998"
+          ],
+          "internal_authority_refs": [
+            "docs/decisions/adrs/adr-095-participant-decision-epoch-state-cut-and-delivery-semantics.md",
+            "specs/formal/behavioral-relations/README.md",
+            "specs/formal/participant-semantics/README.md"
           ],
           "compatibility_direction": "aces_relative_to_source"
         }

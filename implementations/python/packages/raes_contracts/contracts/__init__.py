@@ -1,7 +1,5 @@
 """Schema-first external contract models for RAES artifact boundaries."""
 
-from __future__ import annotations
-
 from ..versions import (
     ASSOCIATED_ARTIFACT_MANIFEST_SCHEMA_VERSION,
     ATLAS_TACTICS_SOURCE_SCHEMA_VERSION,
@@ -187,15 +185,12 @@ from .participant_decision_surface import (
     ParticipantDecisionSurfaceSelectionModel,
     validate_participant_decision_surface_context,
 )
-from .participant_decision_surface_anchor import (
-    ParticipantDecisionSurfaceBehaviorAnchorModel,
-    ParticipantDecisionSurfaceEpisodeReadinessAnchorModel,
-    ParticipantDecisionSurfaceProjectionAnchorModel,
-)
 from .participant_decision_surface_exposure import (
     ParticipantDecisionSurfaceExposureBindingModel,
     ParticipantDecisionSurfaceExposureRealizationModel,
 )
+from .participant_decision_surface_exposure_v2 import *
+from .participant_decision_surface_v2 import *
 from .participant_envelopes import (
     EventClassificationModel,
     ParticipantJointActionAccessSetModel,
@@ -428,15 +423,25 @@ __all__ = [
     "validate_participant_control_occurrence_context",
     "validate_participant_crossing_occurrence_context",
     "ParticipantDecisionSurfaceActionEntryModel",
-    "ParticipantDecisionSurfaceBehaviorAnchorModel",
     "ParticipantDecisionSurfaceCandidateSetFormModel",
     "ParticipantDecisionSurfaceConstrainedFormModel",
-    "ParticipantDecisionSurfaceEpisodeReadinessAnchorModel",
     "ParticipantDecisionSurfaceExposureBindingModel",
     "ParticipantDecisionSurfaceExposureRealizationModel", "ParticipantDecisionSurfaceModel",
+    "ParticipantDecisionSurfaceAssuranceV2Model",
+    "ParticipantDecisionSurfaceBehaviorAnchorV2Model",
+    "ParticipantDecisionSurfaceCausalCutModel",
+    "ParticipantDecisionSurfaceDeliveryV2Model",
+    "ParticipantDecisionSurfaceDerivationAnchorV2Model",
+    "ParticipantDecisionSurfaceEpisodeReadinessAnchorV2Model",
+    "ParticipantDecisionSurfaceExposureBindingV2Model",
     "ParticipantDecisionSurfaceOpenEndedFormModel",
-    "ParticipantDecisionSurfaceProjectionAnchorModel",
     "ParticipantDecisionSurfaceSelectionModel",
+    "ParticipantDecisionSurfaceSelectionV2Model",
+    "ParticipantDecisionSurfaceSequenceCutModel",
+    "ParticipantDecisionSurfaceStateCutModel",
+    "ParticipantDecisionSurfaceStateCutOrderModel",
+    "ParticipantDecisionSurfaceV2Model",
+    "ParticipantDecisionSurfaceViewV2Model",
     "validate_participant_decision_surface_context", "ParticipantEpisodeHistoryEventModel",
     "ParticipantEpisodeStateModel", "ParticipantExposurePolicyModel", "ParticipantFeatureSupportLevel",
     "ParticipantFeatureSupportModel", "ParticipantHistoryViewBehaviorEventModel",

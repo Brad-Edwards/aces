@@ -138,6 +138,7 @@ adr-091-portable-time-capability-control-and-provenance-contracts
 adr-092-autonomous-benign-participants-under-shared-time
 adr-093-raes-rename-and-compatibility-boundaries
 adr-094-authoritative-cross-plane-experiment-bindings
+adr-095-participant-decision-epoch-state-cut-and-delivery-semantics
 ```
 
 | ADR | Title | Status | Date |
@@ -236,3 +237,4 @@ adr-094-authoritative-cross-plane-experiment-bindings
 | [092](adr-092-autonomous-benign-participants-under-shared-time.md) | Autonomous Benign Participants Under Shared Time | accepted | 2026-07-24 |
 | [093](adr-093-raes-rename-and-compatibility-boundaries.md) | RAES Rename and Compatibility Boundaries | accepted | 2026-07-23 |
 | [094](adr-094-authoritative-cross-plane-experiment-bindings.md) | Authoritative Cross-Plane Experiment Bindings | accepted | 2026-07-26 |
+| [095](adr-095-participant-decision-epoch-state-cut-and-delivery-semantics.md) | Participant Decision Epoch, State-Cut, And Delivery Semantics | accepted | 2026-07-26 |

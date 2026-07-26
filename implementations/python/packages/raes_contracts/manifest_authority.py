@@ -78,6 +78,7 @@ PARTICIPANT_IMPLEMENTATION_SUPPORTED_CONTRACT_IDS = (
     "participant-episode-state-envelope-v1",
     "participant-episode-history-event-stream-v1",
     "participant-behavior-history-event-stream-v1",
+    "participant-decision-surface-v2",
 )
 
 

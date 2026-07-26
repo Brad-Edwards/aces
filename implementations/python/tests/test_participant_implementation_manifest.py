@@ -42,6 +42,7 @@ def _manifest_payload() -> dict[str, object]:
             "participant-episode-state-envelope-v1",
             "participant-episode-history-event-stream-v1",
             "participant-behavior-history-event-stream-v1",
+            "participant-decision-surface-v2",
         ],
         "compatibility": {
             "participant_runtimes": ["stub-participant-runtime"],
@@ -61,6 +62,7 @@ def _manifest_payload() -> dict[str, object]:
                 "participant-episode-state-envelope-v1",
                 "participant-episode-history-event-stream-v1",
                 "participant-behavior-history-event-stream-v1",
+                "participant-decision-surface-v2",
             ],
             "supported_decision_surface_modes": ["autonomous", "policy-directed"],
             "tool_affordance_expectations": ["shell", "http-api"],
@@ -117,6 +119,7 @@ def _provenance_payload() -> dict[str, object]:
                 "participant_contract_versions": [
                     "participant-episode-state-envelope-v1",
                     "participant-behavior-history-event-stream-v1",
+                    "participant-decision-surface-v2",
                 ],
                 "exposure_policy": {
                     "policy_id": "red-agent-policy",

@@ -130,14 +130,60 @@ ACES adapts the noninterference policy obligation and explicit
 declassification dimensions, interpreted-system local state, and labelled
 transition/hiding discipline into the ACES-native `policy-noninterference`
 relation. The governed mapping is participant-, audience-, policy-revision-,
-scheduler/environment-, and order-relative and composes existing ACES world,
-view, local-history, archival-evidence, control, authority, marking, and
-provenance objects. The new content is limited to coordinates needed to bind
-those prior definitions to existing ACES carriers. It does not copy publication
-syntax or code and does not claim wire compatibility, universal proof,
-production enforcement, or backend realization. No copied-code notice or
-third-party distribution obligation is introduced by these publication
-citations.
+exact-cut policy-decision-, participant-memory-, scheduler/environment-, and
+order-relative and composes existing ACES world, view, local-history,
+archival-evidence, control, authority, marking, and provenance objects. Issue
+#909 extends the source set and mapping below for reactive strategies and
+backend I/O refinement. It does not copy publication syntax or code and does
+not claim wire compatibility, universal proof, production enforcement, or
+backend realization. No copied-code notice or third-party distribution
+obligation is introduced by these publication citations.
+
+## Issue 909 Refinement, I/O, And Reactive Information-Flow Sources
+
+On 2026-07-26, issue #909 extended the participant-decision lineage audit to
+the formal obligations created by decision epoch zero, exact state cuts,
+delivery, backend realization, adaptive participants, and cross-episode
+memory. The following primary publication identities were checked:
+
+- Martín Abadi and Leslie Lamport, *The Existence of Refinement Mappings*,
+  Theoretical Computer Science 82(2), 1991,
+  <https://doi.org/10.1016/0304-3975(91)90224-P>.
+- Nancy A. Lynch and Frits W. Vaandrager, *Forward and Backward Simulations,
+  Part I: Untimed Systems*, Information and Computation 121(2), 1995,
+  <https://doi.org/10.1006/inco.1995.1134>.
+- Nancy A. Lynch and Mark R. Tuttle, *An Introduction to Input/Output
+  Automata*, CWI Quarterly 2(3), 1989, also MIT/LCS/TM-373,
+  <https://groups.csail.mit.edu/tds/papers/Lynch/CWI89.html>.
+- Rajeev Alur, Thomas A. Henzinger, Orna Kupferman, and Moshe Y. Vardi,
+  *Alternating Refinement Relations*, CONCUR 1998,
+  <https://doi.org/10.1007/BFb0055622>.
+- Michael R. Clarkson and Fred B. Schneider, *Hyperproperties*, Journal of
+  Computer Security 18(6), 2010,
+  <https://doi.org/10.3233/JCS-2009-0393>.
+- Aaron Bohannon, Benjamin C. Pierce, Vilhelm Sjöberg, Stephanie Weirich, and
+  Steve Zdancewic, *Reactive Noninterference*, CCS 2009,
+  <https://doi.org/10.1145/1653662.1653673>.
+
+RAES adapts the refinement and I/O sources into a directional backend
+obligation. Concrete participant behavior must remain admitted by the abstract
+RAES semantics, but trace inclusion is not enough: participant and environment
+inputs, participant-facing outputs, ownership, availability, fairness, exact
+delivery, and state-cut treatment remain explicit obligations. RAES does not
+adopt an I/O-automaton wire format and does not make bisimulation the default
+backend-conformance relation.
+
+The information-flow sources refine the SEM-230 obligation from an open-loop
+trace comparison to a hyperproperty over bounded or universally quantified
+run supports under the same adaptive low-participant strategies. The claim
+must bind exact-cut policy decisions and an explicit participant-memory scope.
+Episode reset alone is not evidence that a human, agent process, external
+controller, or shared memory forgot previously delivered information.
+
+These are semantic adaptations only. The issue copies no publication code or
+syntax, introduces no source-compatible schema, and claims neither universal
+refinement nor universal reactive noninterference from the bounded executable
+counterexamples.
 
 ## DSL-437 Participant And Simulation Sources
 

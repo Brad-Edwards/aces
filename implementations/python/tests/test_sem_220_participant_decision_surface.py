@@ -10,11 +10,8 @@ from types import SimpleNamespace
 import pytest
 from jsonschema import Draft202012Validator
 from pydantic import ValidationError
-from raes_backend_stubs.stubs import create_stub_target
 from raes_contracts.contracts import (
     ParticipantContextViewModel,
-    ParticipantDecisionSurfaceBehaviorAnchorModel,
-    ParticipantDecisionSurfaceEpisodeReadinessAnchorModel,
     ParticipantDecisionSurfaceModel,
     ParticipantDecisionSurfaceSelectionModel,
     ParticipantImplementationManifestModel,
@@ -28,12 +25,10 @@ from raes_contracts.participant_binding import (
     ParticipantValidatedActionSelection,
     bind_participant_decision_surface_selection,
 )
-from raes_contracts.runtime_state import RuntimeSnapshot
 from raes_processor.models import (
     ParticipantActionContractRuntime,
     ParticipantBehaviorHistoryEvent,
     ParticipantBehaviorHistoryEventType,
-    ParticipantBehaviorRuntime,
     ParticipantBehaviorSpecificationRuntime,
     ParticipantDecisionSurfaceActionAssessment,
     ParticipantDecisionSurfaceProjectionInput,
@@ -46,10 +41,7 @@ from raes_processor.models import (
     ParticipantToolAffordanceRuntime,
     RuntimeModel,
     project_participant_decision_surface,
-    resolve_participant_behavior_projection_anchor,
-    resolve_participant_episode_readiness_anchor,
 )
-from raes_runtime.control_plane import RuntimeControlPlane
 from raes_runtime.participant_control import ParticipantControlMixin
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -623,66 +615,11 @@ def test_decision_surface_schema_is_closed_discriminated_and_published() -> None
     schema = schema_bundle()["participant-decision-surface-v1"]
     assert schema["additionalProperties"] is False
     assert schema["properties"]["form"]["discriminator"]["propertyName"] == "surface_form"
-    anchor_schema = schema["properties"]["projection_anchor"]["anyOf"][0]
-    assert anchor_schema["discriminator"]["propertyName"] == "anchor_kind"
-    assert set(anchor_schema["discriminator"]["mapping"]) == {
-        "behavior_event",
-        "episode_readiness",
-    }
     assert {entry["id"] for entry in schema["x-aces-invariants"]} >= {
         "decision-surface-entry-reference-agreement",
         "decision-surface-presentation-not-lifecycle-evidence",
-        "decision-surface-projection-anchor-agreement",
         "decision-surface-sem226-item-exposure-agreement",
     }
-
-
-def _surface_payload_with_readiness_anchor() -> dict[str, object]:
-    payload = _surface_payload()
-    event_ref = "participant-episode-event:sha256:" + "4" * 64
-    payload["provenance_refs"].append(event_ref)  # type: ignore[union-attr]
-    payload["projection_anchor"] = {
-        "anchor_kind": "episode_readiness",
-        "participant_address": PARTICIPANT,
-        "episode_id": EPISODE,
-        "decision_surface_order": 0,
-        "event_ref": event_ref,
-        "anchor_order": 1,
-        "event_type": "episode_running",
-        "episode_sequence_number": 0,
-        "evidence_refs": ["evidence.surface.red.order-0"],
-        "provenance_refs": [event_ref],
-    }
-    return payload
-
-
-@pytest.mark.parametrize(
-    ("anchor_updates", "message"),
-    (
-        ({"participant_address": "participant.behavior.blue-agent"}, "disagrees with the decision surface"),
-        ({"episode_id": "episode-other"}, "disagrees with the decision surface"),
-        ({"decision_surface_order": 1}, "disagrees with the decision surface"),
-        ({"evidence_refs": ["evidence.anchor.other"]}, "evidence_refs must be carried"),
-        (
-            {
-                "provenance_refs": [
-                    "participant-episode-event:sha256:" + "4" * 64,
-                    "provenance.anchor.other",
-                ]
-            },
-            "provenance_refs must be carried",
-        ),
-    ),
-)
-def test_projection_anchor_must_agree_with_surface_scope_and_refs(
-    anchor_updates: dict[str, object],
-    message: str,
-) -> None:
-    payload = _surface_payload_with_readiness_anchor()
-    payload["projection_anchor"].update(anchor_updates)  # type: ignore[union-attr]
-
-    with pytest.raises(ValidationError, match=message):
-        ParticipantDecisionSurfaceModel.model_validate(payload)
 
 
 def test_decision_surface_valid_and_invalid_fixtures_match_model_and_schema() -> None:
@@ -695,8 +632,6 @@ def test_decision_surface_valid_and_invalid_fixtures_match_model_and_schema() ->
         payload = json.loads(path.read_text(encoding="utf-8"))
         validator.validate(payload)
         ParticipantDecisionSurfaceModel.model_validate(payload)
-        if path.stem == "human-candidate":
-            assert payload["projection_anchor"]["anchor_kind"] == "behavior_event"
     for path in invalid_paths:
         payload = json.loads(path.read_text(encoding="utf-8"))
         assert list(validator.iter_errors(payload)), path
@@ -1007,8 +942,6 @@ def test_realization_kind_preserves_surface_semantic_refs(
     assert surface.action_entries[0].action_contract_address == SCAN
     assert surface.action_entries[0].selection_shape_ref == SCAN_SHAPE
     assert surface.form.selection_meaning_ref == "selection-meaning.candidate.v1"
-    assert surface.decision_control_mode == decision_control_mode
-    assert surface.implementation_selection_ref == implementation_selection_ref
 
 
 @pytest.mark.parametrize(
@@ -1078,9 +1011,8 @@ def test_context_envelope_and_payload_must_agree(field_name: str, mismatched_val
 
 
 class _RecordingControl(ParticipantControlMixin):
-    def __init__(self, snapshot: RuntimeSnapshot | None = None) -> None:
+    def __init__(self) -> None:
         self._target = SimpleNamespace(participant_runtime=object())
-        self._snapshot = snapshot or RuntimeSnapshot()
         self.admitted: ParticipantActionAdmissionRequest | None = None
 
     def _reject_diagnostics(self, **kwargs: object) -> str:
@@ -1097,10 +1029,19 @@ class _RecordingControl(ParticipantControlMixin):
 
 
 def test_open_ended_proposal_validates_before_existing_admission_path() -> None:
-    snapshot, surface = _anchored_surface(surface_form="open_ended_generation")
-    selection = _surface_selection(surface)
+    payload = _surface_payload(surface_form="open_ended_generation")
+    payload["action_entries"][0]["eligibility"] = "eligible"  # type: ignore[index]
+    payload["action_entries"][0]["eligibility_reason_refs"] = []  # type: ignore[index]
+    surface = ParticipantDecisionSurfaceModel.model_validate(payload)
+    selection = ParticipantDecisionSurfaceSelectionModel(
+        surface_id=surface.surface_id,
+        observation_order=surface.observation_order,
+        action_contract_address=SCAN,
+        argument_shape_ref="selection-shapes.scan.v1",
+        proposal_ref="proposals.scan.1",
+    )
     request = _admission_request()
-    control = _RecordingControl(snapshot)
+    control = _RecordingControl()
     resolver_calls: list[str] = []
     apparatus_calls: list[tuple[str, str]] = []
 
@@ -1123,7 +1064,7 @@ def test_open_ended_proposal_validates_before_existing_admission_path() -> None:
         ),
     )
     assert rejected == "rejected"
-    assert resolver_calls == ["proposals.selection.1"]
+    assert resolver_calls == ["proposals.scan.1"]
     assert apparatus_calls == [(surface.implementation_selection_ref, surface.exposure_policy_ref)]
     assert control.admitted is None
 
@@ -1213,13 +1154,22 @@ def test_binding_rejects_resolver_result_for_different_proposal_coordinates(
 
 
 def test_surface_apparatus_must_resolve_to_the_admission_selection() -> None:
-    snapshot, surface = _anchored_surface(surface_form="open_ended_generation")
-    selection = _surface_selection(surface)
+    payload = _surface_payload(surface_form="open_ended_generation")
+    payload["action_entries"][0]["eligibility"] = "eligible"  # type: ignore[index]
+    payload["action_entries"][0]["eligibility_reason_refs"] = []  # type: ignore[index]
+    surface = ParticipantDecisionSurfaceModel.model_validate(payload)
+    selection = ParticipantDecisionSurfaceSelectionModel(
+        surface_id=surface.surface_id,
+        observation_order=surface.observation_order,
+        action_contract_address=SCAN,
+        argument_shape_ref="selection-shapes.scan.v1",
+        proposal_ref="proposals.scan.1",
+    )
     request = _admission_request()
     mismatched_selection = request.implementation_selection.model_copy(
         update={"configuration_ref": "participant-configurations.other.v1"}
     )
-    control = _RecordingControl(snapshot)
+    control = _RecordingControl()
     shape_calls: list[str] = []
 
     rejected = control.admit_participant_decision_surface_selection(
@@ -1260,472 +1210,3 @@ def test_presentation_cannot_be_encoded_as_selection_result_or_outcome() -> None
     payload["outcome"] = "succeeded"
     with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
         ParticipantDecisionSurfaceModel.model_validate(payload)
-
-
-def _compiled_participant_behavior() -> ParticipantBehaviorRuntime:
-    return ParticipantBehaviorRuntime(
-        address=PARTICIPANT,
-        name="red-agent",
-        spec={},
-        participant_name="red-agent",
-        action_contract_addresses=(SCAN,),
-        observation_boundary_addresses=(BOUNDARY,),
-    )
-
-
-def _projection_with_anchor(
-    anchor: ParticipantDecisionSurfaceEpisodeReadinessAnchorModel | ParticipantDecisionSurfaceBehaviorAnchorModel,
-    *,
-    surface_form: str = "candidate_action_set",
-) -> ParticipantDecisionSurfaceProjectionInput:
-    projection = _projection_input(
-        observation_order=anchor.decision_surface_order,
-        surface_form=surface_form,
-    )
-    return replace(
-        projection,
-        observation_point=(
-            f"participant-episode-history:{anchor.anchor_order}"
-            if anchor.anchor_kind == "episode_readiness"
-            else f"behavior-history:{anchor.anchor_order}"
-        ),
-        projection_anchor=anchor,
-        evidence_refs=tuple(dict.fromkeys((*projection.evidence_refs, *anchor.evidence_refs))),
-        provenance_refs=tuple(dict.fromkeys((*projection.provenance_refs, *anchor.provenance_refs))),
-    )
-
-
-def _anchored_surface(
-    *,
-    surface_form: str,
-) -> tuple[RuntimeSnapshot, ParticipantDecisionSurfaceModel]:
-    control_plane = RuntimeControlPlane(create_stub_target())
-    control_plane.initialize_participant_episode(PARTICIPANT, episode_id=EPISODE)
-    snapshot = control_plane.get_snapshot().snapshot
-    anchor = resolve_participant_episode_readiness_anchor(
-        snapshot,
-        participant_address=PARTICIPANT,
-        decision_surface_order=0,
-        evidence_refs=("evidence.episode-running",),
-        provenance_refs=("provenance.runtime-control-plane",),
-    )
-    projection = _projection_with_anchor(anchor, surface_form=surface_form)
-    surface = project_participant_decision_surface(
-        _runtime_model(),
-        runtime_snapshot=snapshot,
-        history_events=(),
-        projection=projection,
-        exposure_resolvers=_projection_exposure_resolvers(projection),
-    )
-    return snapshot, surface
-
-
-def _context_for_surface(surface: ParticipantDecisionSurfaceModel) -> ParticipantContextViewModel:
-    return ParticipantContextViewModel.model_validate(
-        {
-            "view_id": surface.context_view_ref,
-            "participant_address": surface.participant_address,
-            "episode_id": surface.episode_id,
-            "generated_at": "2026-07-26T08:00:00Z",
-            "source_snapshot_ref": "snapshots.run-1.initial",
-            "view_ref": "views.decision-surface.v1",
-            "meaning_ref": "semantics.decision-surface.v1",
-            "participant_scope": "participant_local",
-            "audience_scope": "participant_visible",
-            "observation_point": surface.observation_point,
-            "derived_from_refs": [
-                "snapshots.run-1.initial",
-                surface.projection_anchor.event_ref,
-            ],
-            "source_layers": [
-                {
-                    "source_id": "episode-readiness",
-                    "source_layer": "participant_episode_state",
-                    "ref": "snapshots.run-1.initial",
-                    "temporal_relation": "same_observation_point",
-                    "observation_point": surface.observation_point,
-                    "evidence_refs": surface.evidence_refs,
-                    "provenance_refs": surface.provenance_refs,
-                }
-            ],
-            "transformation": {
-                "transformation_rule_ref": surface.projection_policy_ref,
-                "description": "Project the initial participant-local decision surface from episode readiness",
-                "input_source_ids": ["episode-readiness"],
-                "output_semantics_ref": "semantics.decision-surface.v1",
-            },
-            "comparability": {
-                "comparability_class": "portable_equivalent",
-                "comparison_basis_ref": "comparability.decision-surface.v1",
-                "backend_disclosure_refs": [],
-                "limitations": surface.semantic_limitations,
-            },
-            "evidence_refs": surface.evidence_refs,
-            "provenance_refs": surface.provenance_refs,
-            "semantic_limitations": surface.semantic_limitations,
-            "derivation_basis_ref": surface.projection_policy_ref,
-            "payload_ref": surface.surface_id,
-            "visibility_projection_ref": surface.visibility_projection_ref,
-            "marking_definition_refs": surface.marking_definition_refs,
-            "redaction_policy_ref": surface.redaction_policy_ref,
-        }
-    )
-
-
-def test_public_initialize_projects_initial_context_and_surface_before_first_admission() -> None:
-    control_plane = RuntimeControlPlane(create_stub_target())
-    receipt = control_plane.initialize_participant_episode(PARTICIPANT, episode_id=EPISODE)
-    snapshot = control_plane.get_snapshot().snapshot
-
-    assert receipt.accepted is True
-    assert snapshot.participant_behavior_history.get(PARTICIPANT, []) == []
-    anchor = resolve_participant_episode_readiness_anchor(
-        snapshot,
-        participant_address=PARTICIPANT,
-        decision_surface_order=0,
-        evidence_refs=("evidence.episode-running",),
-        provenance_refs=("provenance.runtime-control-plane",),
-    )
-    projection = _projection_with_anchor(anchor)
-    surface = project_participant_decision_surface(
-        _runtime_model(),
-        runtime_snapshot=snapshot,
-        history_events=(),
-        projection=projection,
-        exposure_resolvers=_projection_exposure_resolvers(projection),
-    )
-    context = _context_for_surface(surface)
-
-    assert anchor.anchor_kind == "episode_readiness"
-    assert anchor.event_type == "episode_running"
-    assert anchor.decision_surface_order == 0
-    assert anchor.anchor_order == 1
-    assert surface.observation_order == 0
-    assert surface.projection_anchor == anchor
-    assert surface.action_entries[0].action_contract_address == SCAN
-    validate_participant_decision_surface_context(surface, context)
-
-    selection = _surface_selection(surface)
-    admission_request = _admission_request()
-    admitted = control_plane.admit_participant_decision_surface_selection(
-        _compiled_participant_behavior(),
-        surface=surface,
-        selection=selection,
-        admission_request=admission_request,
-        resolvers=ParticipantDecisionSurfaceBindingResolvers(
-            argument_shape=_resolved_selection,
-            apparatus=lambda **_: admission_request.implementation_selection,
-        ),
-    )
-    admitted_snapshot = control_plane.get_snapshot().snapshot
-
-    assert admitted.accepted is True
-    assert [event["event_type"] for event in admitted_snapshot.participant_behavior_history[PARTICIPANT]] == [
-        "action_attempted",
-        "state_transition_recorded",
-        "observation_emitted",
-    ]
-    replayed = control_plane.admit_participant_decision_surface_selection(
-        _compiled_participant_behavior(),
-        surface=surface,
-        selection=selection,
-        admission_request=admission_request,
-        resolvers=ParticipantDecisionSurfaceBindingResolvers(
-            argument_shape=_resolved_selection,
-            apparatus=lambda **_: admission_request.implementation_selection,
-        ),
-    )
-    replayed_snapshot = control_plane.get_snapshot().snapshot
-    assert replayed.accepted is False
-    assert len(replayed_snapshot.participant_behavior_history[PARTICIPANT]) == 3
-
-
-def test_control_plane_rejects_an_unanchored_surface_without_recording_behavior() -> None:
-    control_plane = RuntimeControlPlane(create_stub_target())
-    control_plane.initialize_participant_episode(PARTICIPANT, episode_id=EPISODE)
-    surface = _eligible_surface()
-    request = _admission_request()
-
-    receipt = control_plane.admit_participant_decision_surface_selection(
-        _compiled_participant_behavior(),
-        surface=surface,
-        selection=_surface_selection(surface),
-        admission_request=request,
-        resolvers=ParticipantDecisionSurfaceBindingResolvers(
-            argument_shape=_resolved_selection,
-            apparatus=lambda **_: request.implementation_selection,
-        ),
-    )
-    snapshot = control_plane.get_snapshot().snapshot
-
-    assert receipt.accepted is False
-    assert snapshot.participant_behavior_history.get(PARTICIPANT, []) == []
-
-
-def test_readiness_anchor_requires_current_complete_running_snapshot() -> None:
-    control_plane = RuntimeControlPlane(create_stub_target())
-    control_plane.initialize_participant_episode(PARTICIPANT, episode_id=EPISODE)
-    snapshot = control_plane.get_snapshot().snapshot
-    anchor = resolve_participant_episode_readiness_anchor(
-        snapshot,
-        participant_address=PARTICIPANT,
-        decision_surface_order=0,
-        evidence_refs=("evidence.episode-running",),
-        provenance_refs=("provenance.runtime-control-plane",),
-    )
-    projection = _projection_with_anchor(anchor)
-
-    with pytest.raises(ValueError, match="current trusted RuntimeSnapshot"):
-        project_participant_decision_surface(
-            _runtime_model(),
-            history_events=(),
-            projection=projection,
-            exposure_resolvers=_projection_exposure_resolvers(projection),
-        )
-    with pytest.raises(ValueError, match="empty current-episode behavior history"):
-        project_participant_decision_surface(
-            _runtime_model(),
-            runtime_snapshot=snapshot,
-            history_events=_history(),
-            projection=projection,
-            exposure_resolvers=_projection_exposure_resolvers(projection),
-        )
-    with pytest.raises(ValueError, match="evidence_refs"):
-        project_participant_decision_surface(
-            _runtime_model(),
-            runtime_snapshot=snapshot,
-            history_events=(),
-            projection=replace(projection, evidence_refs=("evidence.surface.other",)),
-            exposure_resolvers=_projection_exposure_resolvers(projection),
-        )
-    with pytest.raises(ValueError, match="decision_surface_order zero"):
-        resolve_participant_episode_readiness_anchor(
-            snapshot,
-            participant_address=PARTICIPANT,
-            decision_surface_order=1,
-            evidence_refs=anchor.evidence_refs,
-            provenance_refs=anchor.provenance_refs,
-        )
-
-
-def test_reset_invalidates_old_surface_and_creates_new_episode_order_zero_anchor() -> None:
-    control_plane = RuntimeControlPlane(create_stub_target())
-    control_plane.initialize_participant_episode(PARTICIPANT, episode_id=EPISODE)
-    first_snapshot = control_plane.get_snapshot().snapshot
-    first_anchor = resolve_participant_episode_readiness_anchor(
-        first_snapshot,
-        participant_address=PARTICIPANT,
-        decision_surface_order=0,
-        evidence_refs=("evidence.episode-running",),
-        provenance_refs=("provenance.runtime-control-plane",),
-    )
-    first_projection = _projection_with_anchor(first_anchor)
-    first_surface = project_participant_decision_surface(
-        _runtime_model(),
-        runtime_snapshot=first_snapshot,
-        history_events=(),
-        projection=first_projection,
-        exposure_resolvers=_projection_exposure_resolvers(first_projection),
-    )
-
-    control_plane.reset_participant_episode(PARTICIPANT, episode_id="episode-2")
-    reset_snapshot = control_plane.get_snapshot().snapshot
-    stale_request = _admission_request()
-    stale = control_plane.admit_participant_decision_surface_selection(
-        _compiled_participant_behavior(),
-        surface=first_surface,
-        selection=_surface_selection(first_surface),
-        admission_request=stale_request,
-        resolvers=ParticipantDecisionSurfaceBindingResolvers(
-            argument_shape=_resolved_selection,
-            apparatus=lambda **_: stale_request.implementation_selection,
-        ),
-    )
-    reset_anchor = resolve_participant_episode_readiness_anchor(
-        reset_snapshot,
-        participant_address=PARTICIPANT,
-        decision_surface_order=0,
-        evidence_refs=("evidence.episode-running.reset",),
-        provenance_refs=("provenance.runtime-control-plane",),
-    )
-
-    assert stale.accepted is False
-    assert reset_anchor.episode_id == "episode-2"
-    assert reset_anchor.episode_sequence_number == 1
-    assert reset_anchor.decision_surface_order == 0
-    assert reset_snapshot.participant_behavior_history.get(PARTICIPANT, []) == []
-
-
-def test_restart_creates_a_new_episode_order_zero_anchor() -> None:
-    control_plane = RuntimeControlPlane(create_stub_target())
-    control_plane.initialize_participant_episode(PARTICIPANT, episode_id=EPISODE)
-    control_plane.terminate_participant_episode(PARTICIPANT)
-    control_plane.restart_participant_episode(PARTICIPANT, episode_id="episode-restarted")
-    snapshot = control_plane.get_snapshot().snapshot
-
-    anchor = resolve_participant_episode_readiness_anchor(
-        snapshot,
-        participant_address=PARTICIPANT,
-        decision_surface_order=0,
-        evidence_refs=("evidence.episode-running.restart",),
-        provenance_refs=("provenance.runtime-control-plane",),
-    )
-
-    assert anchor.episode_id == "episode-restarted"
-    assert anchor.episode_sequence_number == 1
-    assert anchor.decision_surface_order == 0
-    assert snapshot.participant_behavior_history.get(PARTICIPANT, []) == []
-
-
-def test_readiness_anchor_rejects_incomplete_forged_and_cross_scope_inputs() -> None:
-    control_plane = RuntimeControlPlane(create_stub_target())
-    control_plane.initialize_participant_episode(PARTICIPANT, episode_id=EPISODE)
-    snapshot = control_plane.get_snapshot().snapshot
-    anchor = resolve_participant_episode_readiness_anchor(
-        snapshot,
-        participant_address=PARTICIPANT,
-        decision_surface_order=0,
-        evidence_refs=("evidence.episode-running",),
-        provenance_refs=("provenance.runtime-control-plane",),
-    )
-
-    incomplete = replace(
-        snapshot,
-        participant_episode_history={
-            PARTICIPANT: snapshot.participant_episode_history[PARTICIPANT][-1:],
-        },
-    )
-    with pytest.raises(ValueError, match="complete participant lifecycle history"):
-        resolve_participant_episode_readiness_anchor(
-            incomplete,
-            participant_address=PARTICIPANT,
-            decision_surface_order=0,
-            evidence_refs=anchor.evidence_refs,
-            provenance_refs=anchor.provenance_refs,
-        )
-
-    forged_ref = "participant-episode-event:sha256:" + "0" * 64
-    forged = anchor.model_copy(
-        update={
-            "event_ref": forged_ref,
-            "provenance_refs": [*anchor.provenance_refs, forged_ref],
-        }
-    )
-    forged_projection = _projection_with_anchor(forged)
-    with pytest.raises(ValueError, match="current trusted RuntimeSnapshot"):
-        project_participant_decision_surface(
-            _runtime_model(),
-            runtime_snapshot=snapshot,
-            history_events=(),
-            projection=forged_projection,
-            exposure_resolvers=_projection_exposure_resolvers(forged_projection),
-        )
-
-    cross_episode = anchor.model_copy(update={"episode_id": "episode-other"})
-    with pytest.raises(ValueError, match="episode_id"):
-        project_participant_decision_surface(
-            _runtime_model(),
-            runtime_snapshot=snapshot,
-            history_events=(),
-            projection=_projection_with_anchor(cross_episode),
-            exposure_resolvers=_projection_exposure_resolvers(_projection_with_anchor(cross_episode)),
-        )
-
-    cross_participant = anchor.model_copy(update={"participant_address": "participant.behavior.blue-agent"})
-    with pytest.raises(ValueError, match="participant_address"):
-        project_participant_decision_surface(
-            _runtime_model(),
-            runtime_snapshot=snapshot,
-            history_events=(),
-            projection=_projection_with_anchor(cross_participant),
-            exposure_resolvers=_projection_exposure_resolvers(_projection_with_anchor(cross_participant)),
-        )
-
-
-def test_behavior_anchor_resolves_exact_current_episode_history_prefix() -> None:
-    control_plane = RuntimeControlPlane(create_stub_target())
-    control_plane.initialize_participant_episode(PARTICIPANT, episode_id=EPISODE)
-    control_plane.admit_participant_action(_compiled_participant_behavior(), _admission_request())
-    snapshot = control_plane.get_snapshot().snapshot
-    runtime_model = _runtime_model()
-    boundary = runtime_model.observation_boundaries[BOUNDARY]
-    runtime_model = replace(
-        runtime_model,
-        observation_boundaries={
-            BOUNDARY: replace(
-                boundary,
-                view_transitions=(),
-                view_relation_timeline=(boundary.view_relation_timeline[0],),
-            )
-        },
-    )
-    history = tuple(
-        ParticipantBehaviorHistoryEvent.from_payload(payload)
-        for payload in snapshot.participant_behavior_history[PARTICIPANT]
-    )
-    anchor = resolve_participant_behavior_projection_anchor(
-        snapshot,
-        runtime_model=runtime_model,
-        participant_address=PARTICIPANT,
-        episode_id=EPISODE,
-        decision_surface_order=1,
-        behavior_history_order=2,
-        evidence_refs=("evidence.scan-result",),
-        provenance_refs=("provenance.runtime-control-plane",),
-    )
-
-    assert anchor.anchor_kind == "behavior_event"
-    assert anchor.decision_surface_order == 1
-    assert anchor.anchor_order == 2
-    assert anchor.history_prefix_length == 3
-    assert anchor.event_type == "observation_emitted"
-
-    projection = _projection_with_anchor(anchor)
-    surface = project_participant_decision_surface(
-        runtime_model,
-        runtime_snapshot=snapshot,
-        history_events=history,
-        projection=projection,
-        exposure_resolvers=_projection_exposure_resolvers(projection),
-    )
-    assert surface.observation_order == 1
-    assert surface.projection_anchor.anchor_order == 2
-    with pytest.raises(ValueError, match="number of completed observation_emitted"):
-        resolve_participant_behavior_projection_anchor(
-            snapshot,
-            runtime_model=runtime_model,
-            participant_address=PARTICIPANT,
-            episode_id=EPISODE,
-            decision_surface_order=2,
-            behavior_history_order=2,
-            evidence_refs=anchor.evidence_refs,
-            provenance_refs=anchor.provenance_refs,
-        )
-    forged_anchor = anchor.model_copy(update={"decision_surface_order": 2})
-    forged_surface = surface.model_copy(
-        update={
-            "observation_order": 2,
-            "projection_anchor": forged_anchor,
-        }
-    )
-    request = _admission_request()
-    rejected = control_plane.admit_participant_decision_surface_selection(
-        _compiled_participant_behavior(),
-        surface=forged_surface,
-        selection=_surface_selection(surface).model_copy(update={"observation_order": 2}),
-        admission_request=request,
-        resolvers=ParticipantDecisionSurfaceBindingResolvers(
-            argument_shape=_resolved_selection,
-            apparatus=lambda **_: request.implementation_selection,
-        ),
-    )
-    assert rejected.accepted is False
-    assert len(control_plane.get_snapshot().snapshot.participant_behavior_history[PARTICIPANT]) == 3
-    with pytest.raises(ValueError, match="exact current behavior-history prefix"):
-        project_participant_decision_surface(
-            runtime_model,
-            runtime_snapshot=snapshot,
-            history_events=history[:-1],
-            projection=projection,
-            exposure_resolvers=_projection_exposure_resolvers(projection),
-        )

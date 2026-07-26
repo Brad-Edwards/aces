@@ -153,90 +153,6 @@
       "title": "ParticipantDecisionSurfaceActionEntryModel",
       "type": "object"
     },
-    "ParticipantDecisionSurfaceBehaviorAnchorModel": {
-      "additionalProperties": false,
-      "description": "One terminal observation and exact prefix anchoring a later surface.",
-      "properties": {
-        "action_instance_id": {
-          "minLength": 1,
-          "title": "Action Instance Id",
-          "type": "string"
-        },
-        "anchor_kind": {
-          "const": "behavior_event",
-          "title": "Anchor Kind",
-          "type": "string"
-        },
-        "anchor_order": {
-          "minimum": 0,
-          "title": "Anchor Order",
-          "type": "integer"
-        },
-        "decision_surface_order": {
-          "minimum": 0,
-          "title": "Decision Surface Order",
-          "type": "integer"
-        },
-        "episode_id": {
-          "minLength": 1,
-          "title": "Episode Id",
-          "type": "string"
-        },
-        "event_ref": {
-          "minLength": 1,
-          "title": "Event Ref",
-          "type": "string"
-        },
-        "event_type": {
-          "const": "observation_emitted",
-          "title": "Event Type",
-          "type": "string"
-        },
-        "evidence_refs": {
-          "items": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "minItems": 1,
-          "title": "Evidence Refs",
-          "type": "array"
-        },
-        "history_prefix_length": {
-          "minimum": 1,
-          "title": "History Prefix Length",
-          "type": "integer"
-        },
-        "participant_address": {
-          "minLength": 1,
-          "title": "Participant Address",
-          "type": "string"
-        },
-        "provenance_refs": {
-          "items": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "minItems": 1,
-          "title": "Provenance Refs",
-          "type": "array"
-        }
-      },
-      "required": [
-        "participant_address",
-        "episode_id",
-        "decision_surface_order",
-        "event_ref",
-        "anchor_order",
-        "evidence_refs",
-        "provenance_refs",
-        "anchor_kind",
-        "event_type",
-        "action_instance_id",
-        "history_prefix_length"
-      ],
-      "title": "ParticipantDecisionSurfaceBehaviorAnchorModel",
-      "type": "object"
-    },
     "ParticipantDecisionSurfaceCandidateSetFormModel": {
       "additionalProperties": false,
       "properties": {
@@ -368,84 +284,6 @@
         "loss_disclosure_refs"
       ],
       "title": "ParticipantDecisionSurfaceConstrainedFormModel",
-      "type": "object"
-    },
-    "ParticipantDecisionSurfaceEpisodeReadinessAnchorModel": {
-      "additionalProperties": false,
-      "description": "RUN-311 ``episode_running`` anchor for one episode's initial surface.",
-      "properties": {
-        "anchor_kind": {
-          "const": "episode_readiness",
-          "title": "Anchor Kind",
-          "type": "string"
-        },
-        "anchor_order": {
-          "minimum": 0,
-          "title": "Anchor Order",
-          "type": "integer"
-        },
-        "decision_surface_order": {
-          "minimum": 0,
-          "title": "Decision Surface Order",
-          "type": "integer"
-        },
-        "episode_id": {
-          "minLength": 1,
-          "title": "Episode Id",
-          "type": "string"
-        },
-        "episode_sequence_number": {
-          "minimum": 0,
-          "title": "Episode Sequence Number",
-          "type": "integer"
-        },
-        "event_ref": {
-          "minLength": 1,
-          "title": "Event Ref",
-          "type": "string"
-        },
-        "event_type": {
-          "const": "episode_running",
-          "title": "Event Type",
-          "type": "string"
-        },
-        "evidence_refs": {
-          "items": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "minItems": 1,
-          "title": "Evidence Refs",
-          "type": "array"
-        },
-        "participant_address": {
-          "minLength": 1,
-          "title": "Participant Address",
-          "type": "string"
-        },
-        "provenance_refs": {
-          "items": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "minItems": 1,
-          "title": "Provenance Refs",
-          "type": "array"
-        }
-      },
-      "required": [
-        "participant_address",
-        "episode_id",
-        "decision_surface_order",
-        "event_ref",
-        "anchor_order",
-        "evidence_refs",
-        "provenance_refs",
-        "anchor_kind",
-        "event_type",
-        "episode_sequence_number"
-      ],
-      "title": "ParticipantDecisionSurfaceEpisodeReadinessAnchorModel",
       "type": "object"
     },
     "ParticipantDecisionSurfaceExposureBindingModel": {
@@ -950,32 +788,6 @@
       "title": "Participant Address",
       "type": "string"
     },
-    "projection_anchor": {
-      "anyOf": [
-        {
-          "discriminator": {
-            "mapping": {
-              "behavior_event": "#/$defs/ParticipantDecisionSurfaceBehaviorAnchorModel",
-              "episode_readiness": "#/$defs/ParticipantDecisionSurfaceEpisodeReadinessAnchorModel"
-            },
-            "propertyName": "anchor_kind"
-          },
-          "oneOf": [
-            {
-              "$ref": "#/$defs/ParticipantDecisionSurfaceEpisodeReadinessAnchorModel"
-            },
-            {
-              "$ref": "#/$defs/ParticipantDecisionSurfaceBehaviorAnchorModel"
-            }
-          ]
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Projection Anchor"
-    },
     "projection_policy_ref": {
       "minLength": 1,
       "title": "Projection Policy Ref",
@@ -1099,18 +911,6 @@
       ],
       "level": "error",
       "validator": "raes_contracts.contracts.ParticipantDecisionSurfaceModel._validate_surface_relations"
-    },
-    {
-      "description": "A typed projection anchor, when present, must agree with the surface participant, episode, anchor-local decision-surface order, evidence, and provenance without merging lifecycle and behavior histories.",
-      "id": "decision-surface-projection-anchor-agreement",
-      "inputs": [
-        {
-          "contract_id": "participant-decision-surface-v1",
-          "instance_path": "#/projection_anchor"
-        }
-      ],
-      "level": "error",
-      "validator": "raes_contracts.contracts.ParticipantDecisionSurfaceModel._validate_projection_anchor"
     }
   ],
   "x-aces-semantic-profile": {
