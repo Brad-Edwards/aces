@@ -379,16 +379,18 @@ class ParticipantConfigurationResultModel(ContractModel):
 
 def _binding_value_matches_type(value: BindingScalar, value_type: BindingScalarType) -> bool:
     if value_type == BindingScalarType.NULL:
-        return value is None
-    if value_type == BindingScalarType.BOOLEAN:
-        return isinstance(value, bool)
-    if value_type == BindingScalarType.INTEGER:
-        return isinstance(value, int) and not isinstance(value, bool)
-    if value_type == BindingScalarType.NUMBER:
-        return isinstance(value, (int, float)) and not isinstance(value, bool)
-    if value_type == BindingScalarType.STRING:
-        return isinstance(value, str)
-    return False
+        matches = value is None
+    elif value_type == BindingScalarType.BOOLEAN:
+        matches = isinstance(value, bool)
+    elif value_type == BindingScalarType.INTEGER:
+        matches = isinstance(value, int) and not isinstance(value, bool)
+    elif value_type == BindingScalarType.NUMBER:
+        matches = isinstance(value, (int, float)) and not isinstance(value, bool)
+    elif value_type == BindingScalarType.STRING:
+        matches = isinstance(value, str)
+    else:
+        matches = False
+    return matches
 
 
 def _validate_realized_bindings(bindings: list[RealizedBindingProvenanceModel]) -> None:

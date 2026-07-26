@@ -12,7 +12,7 @@ from ..versions import EXPERIMENT_AUTHORING_INPUT_SCHEMA_VERSION, EXPERIMENT_STU
 from .base import BehavioralClaimBindingModel, ContractModel, NonEmptyString, PositiveInteger
 from .experiment_apparatus import ExperimentClockContextModel, ExperimentStochasticControlModel
 from .experiment_artifacts import ExperimentArtifactRefModel
-from .experiment_bindings import ExperimentBindingDescriptorSetModel
+from .experiment_bindings import ExperimentBindingDescriptorModel, ExperimentBindingDescriptorSetModel
 from .experiment_capture import ExperimentValidityNoteModel
 from .experiment_disclosure import ExperimentApparatusConstraintModel
 from .experiment_manifest_references import ExperimentCaptureSpecReferenceModel
@@ -318,6 +318,30 @@ class ExperimentRunPlanModel(ContractModel):
         return json_schema
 
 
+def _validate_binding_descriptor_source(
+    descriptor: ExperimentBindingDescriptorModel,
+    factors: dict[NonEmptyString, ExperimentStudyFactorModel],
+    allocation: ExperimentRunAllocationPlanModel,
+) -> str:
+    factor = factors.get(descriptor.source_factor_id)
+    if factor is None:
+        raise ValueError(f"binding source factor {descriptor.source_factor_id!r} must reference a declared factor")
+    if descriptor.source_factor_level_id not in factor.levels:
+        raise ValueError(
+            f"binding source factor level {descriptor.source_factor_level_id!r} must be declared "
+            f"by factor {descriptor.source_factor_id!r}"
+        )
+    assignment = allocation.condition_assignments.get(descriptor.source_condition_id)
+    if assignment is None:
+        raise ValueError(
+            f"binding source condition {descriptor.source_condition_id!r} must reference an allocation condition"
+        )
+    assigned_level = assignment.factor_levels.get(descriptor.source_factor_id)
+    if assigned_level != descriptor.source_factor_level_id:
+        raise ValueError("binding source factor level must match its condition assignment")
+    return descriptor.source_condition_id
+
+
 class ExperimentSpecModel(ContractModel):
     """Pre-run experiment authoring input: a design that binds a task to a run plan.
 
@@ -377,27 +401,10 @@ class ExperimentSpecModel(ContractModel):
             raise ValueError(
                 "explicit binding semantics reject legacy required_parameters: " + ", ".join(legacy_conditions)
             )
-        covered_conditions: set[str] = set()
-        for descriptor in self.binding_descriptors.descriptors:
-            factor = self.factors.get(descriptor.source_factor_id)
-            if factor is None:
-                raise ValueError(
-                    f"binding source factor {descriptor.source_factor_id!r} must reference a declared factor"
-                )
-            if descriptor.source_factor_level_id not in factor.levels:
-                raise ValueError(
-                    f"binding source factor level {descriptor.source_factor_level_id!r} must be declared "
-                    f"by factor {descriptor.source_factor_id!r}"
-                )
-            assignment = allocation.condition_assignments.get(descriptor.source_condition_id)
-            if assignment is None:
-                raise ValueError(
-                    f"binding source condition {descriptor.source_condition_id!r} must reference an allocation condition"
-                )
-            assigned_level = assignment.factor_levels.get(descriptor.source_factor_id)
-            if assigned_level != descriptor.source_factor_level_id:
-                raise ValueError("binding source factor level must match its condition assignment")
-            covered_conditions.add(descriptor.source_condition_id)
+        covered_conditions = {
+            _validate_binding_descriptor_source(descriptor, self.factors, allocation)
+            for descriptor in self.binding_descriptors.descriptors
+        }
         missing_conditions = sorted(set(allocation.compared_conditions) - covered_conditions)
         if missing_conditions:
             raise ValueError(

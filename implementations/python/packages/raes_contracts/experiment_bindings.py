@@ -66,7 +66,8 @@ def validate_experiment_binding_targets(
             canonical_target = _resolve_participant_target(descriptor, target, participant_manifests)
         elif isinstance(target, ApparatusBindingTargetModel):
             canonical_target = _resolve_apparatus_target(descriptor, target, apparatus_manifests)
-        else:  # pragma: no cover - the discriminated union is closed before dispatch
+        # The discriminated union is closed before dispatch.
+        else:  # pragma: no cover
             raise ValueError("unknown binding plane")
         admitted.append(descriptor.model_copy(update={"target": canonical_target}))
     return ExperimentBindingDescriptorSetModel(

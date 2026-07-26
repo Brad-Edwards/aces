@@ -118,18 +118,28 @@ def _validate_owner_normalization(
         raise ValueError("participant configuration validator must preserve the complete canonical target set")
     original_by_target = {entry.target_id: entry for entry in original.values}
     for entry in normalized.values:
-        original_entry = original_by_target[entry.target_id]
-        declaration = declarations[entry.target_id]
-        if entry.origin != original_entry.origin:
-            raise ValueError("participant configuration validator must preserve default/override origin")
-        if entry.value_type != declaration.value_type:
-            raise ValueError("participant configuration validator must preserve declared value types")
-        if entry.value.kind != original_entry.value.kind:
-            raise ValueError("participant configuration validator must preserve literal/secret-reference disposition")
-        if entry.value.kind == "secret-reference" and entry.value != original_entry.value:
-            raise ValueError("participant configuration validator must preserve secret-reference identity")
-        declaration.validate_value(entry.value)
+        _validate_normalized_entry(
+            entry,
+            original_by_target[entry.target_id],
+            declarations[entry.target_id],
+        )
     return normalized
+
+
+def _validate_normalized_entry(
+    entry: RealizedConfigurationValueModel,
+    original_entry: RealizedConfigurationValueModel,
+    declaration: ConfigurationTargetDeclarationModel,
+) -> None:
+    if entry.origin != original_entry.origin:
+        raise ValueError("participant configuration validator must preserve default/override origin")
+    if entry.value_type != declaration.value_type:
+        raise ValueError("participant configuration validator must preserve declared value types")
+    if entry.value.kind != original_entry.value.kind:
+        raise ValueError("participant configuration validator must preserve literal/secret-reference disposition")
+    if entry.value.kind == "secret-reference" and entry.value != original_entry.value:
+        raise ValueError("participant configuration validator must preserve secret-reference identity")
+    declaration.validate_value(entry.value)
 
 
 def validate_participant_configuration_selection(

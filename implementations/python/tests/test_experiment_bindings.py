@@ -405,6 +405,16 @@ def test_participant_selection_joins_to_authoritative_configuration_result_diges
 
 def test_participant_configuration_rejects_duplicate_canonical_override_via_alias() -> None:
     manifest = ParticipantImplementationManifestModel.model_validate(_participant_manifest_payload())
+    overrides = [
+        ConfigurationOverrideModel(
+            target_id="policy.mode",
+            value={"kind": "literal", "value": "deterministic"},
+        ),
+        ConfigurationOverrideModel(
+            target_id="mode",
+            value={"kind": "literal", "value": "deterministic"},
+        ),
+    ]
 
     with pytest.raises(ValueError, match="duplicate canonical target"):
         realize_participant_configuration(
@@ -412,16 +422,7 @@ def test_participant_configuration_rejects_duplicate_canonical_override_via_alia
             manifest=manifest,
             manifest_ref="manifests/reference-red-agent.json",
             manifest_digest="sha256:" + "1" * 64,
-            overrides=[
-                ConfigurationOverrideModel(
-                    target_id="policy.mode",
-                    value={"kind": "literal", "value": "deterministic"},
-                ),
-                ConfigurationOverrideModel(
-                    target_id="mode",
-                    value={"kind": "literal", "value": "deterministic"},
-                ),
-            ],
+            overrides=overrides,
         )
 
 
@@ -440,6 +441,20 @@ def test_participant_configuration_rejects_missing_required_target_without_parti
 
 def test_participant_configuration_rejects_type_coercion() -> None:
     manifest = ParticipantImplementationManifestModel.model_validate(_participant_manifest_payload())
+    overrides = [
+        ConfigurationOverrideModel(
+            target_id="policy.mode",
+            value={"kind": "literal", "value": "deterministic"},
+        ),
+        ConfigurationOverrideModel(
+            target_id="temperature",
+            value={"kind": "literal", "value": "0.5"},
+        ),
+        ConfigurationOverrideModel(
+            target_id="credentials.api",
+            value={"kind": "secret-reference", "reference_id": "operator-secret.reference-red-api"},
+        ),
+    ]
 
     with pytest.raises(ValueError, match="value_type"):
         realize_participant_configuration(
@@ -447,20 +462,7 @@ def test_participant_configuration_rejects_type_coercion() -> None:
             manifest=manifest,
             manifest_ref="manifests/reference-red-agent.json",
             manifest_digest="sha256:" + "1" * 64,
-            overrides=[
-                ConfigurationOverrideModel(
-                    target_id="policy.mode",
-                    value={"kind": "literal", "value": "deterministic"},
-                ),
-                ConfigurationOverrideModel(
-                    target_id="temperature",
-                    value={"kind": "literal", "value": "0.5"},
-                ),
-                ConfigurationOverrideModel(
-                    target_id="credentials.api",
-                    value={"kind": "secret-reference", "reference_id": "operator-secret.reference-red-api"},
-                ),
-            ],
+            overrides=overrides,
         )
 
 
@@ -486,6 +488,17 @@ class _SecretDispositionChangingValidator:
 
 def test_participant_owner_normalization_must_preserve_default_override_provenance() -> None:
     manifest = ParticipantImplementationManifestModel.model_validate(_participant_manifest_payload())
+    overrides = [
+        ConfigurationOverrideModel(
+            target_id="mode",
+            value={"kind": "literal", "value": "deterministic"},
+        ),
+        ConfigurationOverrideModel(
+            target_id="credentials.api",
+            value={"kind": "secret-reference", "reference_id": "operator-secret.reference-red-api"},
+        ),
+    ]
+    validator = _OriginChangingValidator()
 
     with pytest.raises(ValueError, match="origin"):
         realize_participant_configuration(
@@ -493,17 +506,8 @@ def test_participant_owner_normalization_must_preserve_default_override_provenan
             manifest=manifest,
             manifest_ref="manifests/reference-red-agent.json",
             manifest_digest="sha256:" + "1" * 64,
-            overrides=[
-                ConfigurationOverrideModel(
-                    target_id="mode",
-                    value={"kind": "literal", "value": "deterministic"},
-                ),
-                ConfigurationOverrideModel(
-                    target_id="credentials.api",
-                    value={"kind": "secret-reference", "reference_id": "operator-secret.reference-red-api"},
-                ),
-            ],
-            validator=_OriginChangingValidator(),
+            overrides=overrides,
+            validator=validator,
         )
 
 
@@ -514,6 +518,17 @@ def test_participant_owner_normalization_must_not_replace_secret_reference_with_
         "secret-reference",
     ]
     manifest = ParticipantImplementationManifestModel.model_validate(payload)
+    overrides = [
+        ConfigurationOverrideModel(
+            target_id="mode",
+            value={"kind": "secret-reference", "reference_id": "operator-secret.mode"},
+        ),
+        ConfigurationOverrideModel(
+            target_id="credentials.api",
+            value={"kind": "secret-reference", "reference_id": "operator-secret.reference-red-api"},
+        ),
+    ]
+    validator = _SecretDispositionChangingValidator()
 
     with pytest.raises(ValueError, match="literal/secret-reference disposition"):
         realize_participant_configuration(
@@ -521,17 +536,8 @@ def test_participant_owner_normalization_must_not_replace_secret_reference_with_
             manifest=manifest,
             manifest_ref="manifests/reference-red-agent.json",
             manifest_digest="sha256:" + "1" * 64,
-            overrides=[
-                ConfigurationOverrideModel(
-                    target_id="mode",
-                    value={"kind": "secret-reference", "reference_id": "operator-secret.mode"},
-                ),
-                ConfigurationOverrideModel(
-                    target_id="credentials.api",
-                    value={"kind": "secret-reference", "reference_id": "operator-secret.reference-red-api"},
-                ),
-            ],
-            validator=_SecretDispositionChangingValidator(),
+            overrides=overrides,
+            validator=validator,
         )
 
 
@@ -868,6 +874,34 @@ def _processor_manifest_payload_with_registry() -> dict[str, object]:
     return payload
 
 
+def _participant_manifest_map(
+    manifest: ParticipantImplementationManifestModel,
+) -> dict[tuple[str, str, str, str], ParticipantImplementationManifestModel]:
+    return {
+        (
+            "participants.red",
+            "reference-red-agent",
+            "1.0.0",
+            "participant-implementation-manifest/v1",
+        ): manifest
+    }
+
+
+def _apparatus_manifest_map(
+    manifest: ProcessorManifestV2Model,
+    *,
+    component_kind: str = "processor",
+) -> dict[tuple[str, str, str, str], ProcessorManifestV2Model]:
+    return {
+        (
+            component_kind,
+            "aces-reference-processor",
+            "0.2.0",
+            "processor-manifest/v2",
+        ): manifest
+    }
+
+
 def test_canonical_target_identity_preserves_scenario_variation_point() -> None:
     payload = _scenario_binding_payload()
     second = deepcopy(payload["descriptors"][0])  # type: ignore[index]
@@ -962,11 +996,12 @@ def test_scenario_binding_admission_rejects_resolver_contract_mismatch(
 
 def test_scenario_binding_admission_rejects_literal_for_secret_target() -> None:
     descriptors = ExperimentBindingDescriptorSetModel.model_validate(_scenario_binding_payload())
+    scenario_resolver = _SecretLiteralScenarioResolver()
 
     with pytest.raises(ValueError, match="secret scenario targets"):
         validate_experiment_binding_targets(
             descriptors,
-            scenario_resolver=_SecretLiteralScenarioResolver(),
+            scenario_resolver=scenario_resolver,
             participant_manifests={},
             apparatus_manifests={},
         )
@@ -977,19 +1012,14 @@ def test_binding_admission_rejects_miskeyed_participant_manifest_identity() -> N
     manifest_payload["identity"]["name"] = "different-red-agent"  # type: ignore[index]
     manifest = ParticipantImplementationManifestModel.model_validate(manifest_payload)
     descriptors = ExperimentBindingDescriptorSetModel.model_validate(_participant_binding_payload())
+    scenario_resolver = _ScenarioResolver()
+    participant_manifests = _participant_manifest_map(manifest)
 
     with pytest.raises(ValueError, match="identity must match"):
         validate_experiment_binding_targets(
             descriptors,
-            scenario_resolver=_ScenarioResolver(),
-            participant_manifests={
-                (
-                    "participants.red",
-                    "reference-red-agent",
-                    "1.0.0",
-                    "participant-implementation-manifest/v1",
-                ): manifest
-            },
+            scenario_resolver=scenario_resolver,
+            participant_manifests=participant_manifests,
             apparatus_manifests={},
         )
 
@@ -999,19 +1029,14 @@ def test_binding_admission_rejects_participant_manifest_without_registry() -> No
     del manifest_payload["configuration_registry"]
     manifest = ParticipantImplementationManifestModel.model_validate(manifest_payload)
     descriptors = ExperimentBindingDescriptorSetModel.model_validate(_participant_binding_payload())
+    scenario_resolver = _ScenarioResolver()
+    participant_manifests = _participant_manifest_map(manifest)
 
     with pytest.raises(ValueError, match="no configuration target registry"):
         validate_experiment_binding_targets(
             descriptors,
-            scenario_resolver=_ScenarioResolver(),
-            participant_manifests={
-                (
-                    "participants.red",
-                    "reference-red-agent",
-                    "1.0.0",
-                    "participant-implementation-manifest/v1",
-                ): manifest
-            },
+            scenario_resolver=scenario_resolver,
+            participant_manifests=participant_manifests,
             apparatus_manifests={},
         )
 
@@ -1021,19 +1046,14 @@ def test_binding_admission_rejects_participant_target_owner_mismatch() -> None:
     payload = _participant_binding_payload()
     payload["descriptors"][0]["owner"]["validator_version"] = "2"  # type: ignore[index]
     descriptors = ExperimentBindingDescriptorSetModel.model_validate(payload)
+    scenario_resolver = _ScenarioResolver()
+    participant_manifests = _participant_manifest_map(manifest)
 
     with pytest.raises(ValueError, match="owner"):
         validate_experiment_binding_targets(
             descriptors,
-            scenario_resolver=_ScenarioResolver(),
-            participant_manifests={
-                (
-                    "participants.red",
-                    "reference-red-agent",
-                    "1.0.0",
-                    "participant-implementation-manifest/v1",
-                ): manifest
-            },
+            scenario_resolver=scenario_resolver,
+            participant_manifests=participant_manifests,
             apparatus_manifests={},
         )
 
@@ -1044,19 +1064,14 @@ def test_binding_admission_rejects_participant_target_value_type_mismatch() -> N
     payload["descriptors"][0]["value_type"] = "integer"  # type: ignore[index]
     payload["descriptors"][0]["value"]["value"] = 1  # type: ignore[index]
     descriptors = ExperimentBindingDescriptorSetModel.model_validate(payload)
+    scenario_resolver = _ScenarioResolver()
+    participant_manifests = _participant_manifest_map(manifest)
 
     with pytest.raises(ValueError, match="value_type"):
         validate_experiment_binding_targets(
             descriptors,
-            scenario_resolver=_ScenarioResolver(),
-            participant_manifests={
-                (
-                    "participants.red",
-                    "reference-red-agent",
-                    "1.0.0",
-                    "participant-implementation-manifest/v1",
-                ): manifest
-            },
+            scenario_resolver=scenario_resolver,
+            participant_manifests=participant_manifests,
             apparatus_manifests={},
         )
 
@@ -1066,20 +1081,15 @@ def test_binding_admission_rejects_miskeyed_apparatus_manifest_identity() -> Non
     manifest_payload["identity"]["name"] = "different-processor"  # type: ignore[index]
     manifest = ProcessorManifestV2Model.model_validate(manifest_payload)
     descriptors = ExperimentBindingDescriptorSetModel.model_validate(_apparatus_binding_payload())
+    scenario_resolver = _ScenarioResolver()
+    apparatus_manifests = _apparatus_manifest_map(manifest)
 
     with pytest.raises(ValueError, match="identity and kind must match"):
         validate_experiment_binding_targets(
             descriptors,
-            scenario_resolver=_ScenarioResolver(),
+            scenario_resolver=scenario_resolver,
             participant_manifests={},
-            apparatus_manifests={
-                (
-                    "processor",
-                    "aces-reference-processor",
-                    "0.2.0",
-                    "processor-manifest/v2",
-                ): manifest
-            },
+            apparatus_manifests=apparatus_manifests,
         )
 
 
@@ -1095,20 +1105,15 @@ def test_binding_admission_rejects_apparatus_manifest_without_registry() -> None
     )
     manifest = ProcessorManifestV2Model.model_validate_json(fixture_path.read_text(encoding="utf-8"))
     descriptors = ExperimentBindingDescriptorSetModel.model_validate(_apparatus_binding_payload())
+    scenario_resolver = _ScenarioResolver()
+    apparatus_manifests = _apparatus_manifest_map(manifest)
 
     with pytest.raises(ValueError, match="no configuration target registry"):
         validate_experiment_binding_targets(
             descriptors,
-            scenario_resolver=_ScenarioResolver(),
+            scenario_resolver=scenario_resolver,
             participant_manifests={},
-            apparatus_manifests={
-                (
-                    "processor",
-                    "aces-reference-processor",
-                    "0.2.0",
-                    "processor-manifest/v2",
-                ): manifest
-            },
+            apparatus_manifests=apparatus_manifests,
         )
 
 
@@ -1117,20 +1122,15 @@ def test_binding_admission_rejects_apparatus_kind_mismatch() -> None:
     descriptors = ExperimentBindingDescriptorSetModel.model_validate(
         _apparatus_binding_payload(component_kind="backend")
     )
+    scenario_resolver = _ScenarioResolver()
+    apparatus_manifests = _apparatus_manifest_map(manifest, component_kind="backend")
 
     with pytest.raises(ValueError, match="identity and kind must match"):
         validate_experiment_binding_targets(
             descriptors,
-            scenario_resolver=_ScenarioResolver(),
+            scenario_resolver=scenario_resolver,
             participant_manifests={},
-            apparatus_manifests={
-                (
-                    "backend",
-                    "aces-reference-processor",
-                    "0.2.0",
-                    "processor-manifest/v2",
-                ): manifest
-            },
+            apparatus_manifests=apparatus_manifests,
         )
 
 
@@ -1139,19 +1139,14 @@ def test_binding_admission_rejects_unknown_participant_target_without_cross_plan
     descriptors = ExperimentBindingDescriptorSetModel.model_validate(
         _participant_binding_payload("variables.worker_count")
     )
+    scenario_resolver = _ScenarioResolver()
+    participant_manifests = _participant_manifest_map(manifest)
 
     with pytest.raises(ValueError, match="unknown configuration target"):
         validate_experiment_binding_targets(
             descriptors,
-            scenario_resolver=_ScenarioResolver(),
-            participant_manifests={
-                (
-                    "participants.red",
-                    "reference-red-agent",
-                    "1.0.0",
-                    "participant-implementation-manifest/v1",
-                ): manifest
-            },
+            scenario_resolver=scenario_resolver,
+            participant_manifests=participant_manifests,
             apparatus_manifests={},
         )
 
@@ -1164,19 +1159,14 @@ def test_binding_admission_rejects_alias_and_canonical_duplicate_after_resolutio
     duplicate["target"]["target_id"] = "policy.mode"
     payload["descriptors"].append(duplicate)  # type: ignore[union-attr]
     descriptors = ExperimentBindingDescriptorSetModel.model_validate(payload)
+    scenario_resolver = _ScenarioResolver()
+    participant_manifests = _participant_manifest_map(manifest)
 
     with pytest.raises(ValidationError, match="duplicate canonical target"):
         validate_experiment_binding_targets(
             descriptors,
-            scenario_resolver=_ScenarioResolver(),
-            participant_manifests={
-                (
-                    "participants.red",
-                    "reference-red-agent",
-                    "1.0.0",
-                    "participant-implementation-manifest/v1",
-                ): manifest
-            },
+            scenario_resolver=scenario_resolver,
+            participant_manifests=participant_manifests,
             apparatus_manifests={},
         )
 
@@ -1189,11 +1179,12 @@ def test_scenario_binding_admission_enforces_owner_declared_value_disposition() 
         "reference_id": "operator-secret.worker-count",
     }
     descriptors = ExperimentBindingDescriptorSetModel.model_validate(payload)
+    scenario_resolver = _ScenarioResolver()
 
     with pytest.raises(ValueError, match="value kind"):
         validate_experiment_binding_targets(
             descriptors,
-            scenario_resolver=_ScenarioResolver(),
+            scenario_resolver=scenario_resolver,
             participant_manifests={},
             apparatus_manifests={},
         )
