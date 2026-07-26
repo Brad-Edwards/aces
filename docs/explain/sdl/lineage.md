@@ -953,10 +953,14 @@ which dynamic queue/log/config details remain evidence or bounded settings.
 - SEM-220's executable participant decision surface adopts the existing
   action/observation-interface lineage above without importing a UI, prompt,
   command, or backend-native parameter language. RAES maps one participant,
-  episode, and behavior-history order point to
-  `ParticipantDecisionSurfaceModel`; maps the three portable selection forms
-  to its discriminated open-ended, constrained-form, and candidate-set
-  payloads; maps governed action meaning to compiled
+  episode, per-episode decision-surface order, and typed lifecycle- or
+  behavior-history anchor to `ParticipantDecisionSurfaceModel`. The current
+  RUN-311 `episode_running` event grounds `D(p,e,0)` while behavior history is
+  empty; later surfaces use the exact terminal `observation_emitted` event and
+  complete behavior-history prefix without treating that event's history order
+  as the decision-surface order. RAES maps the three portable selection forms
+  to discriminated open-ended, constrained-form, and candidate-set payloads;
+  maps governed action meaning to compiled
   `ParticipantActionContractRuntime` addresses; maps participant-local
   presentation to the shared observation-boundary effective-view selector;
   maps candidate applicability to explicit SEM-211 eligibility state and
@@ -965,9 +969,13 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   argument-shape resolution before the existing
   `ParticipantActionAdmissionRequest` path. Delivery is implemented for the
   published closed contract and fixtures, compiled-runtime projection,
-  context-envelope agreement, proposal binding, runtime admission routing,
-  schema publication, and adversarial ordering/bypass checks. Evidence is
-  `participant-decision-surface-v1`, `project_participant_decision_surface()`,
+  trusted snapshot/history anchor resolution, admission-time freshness
+  validation, context-envelope agreement, proposal binding, runtime admission
+  routing, schema publication, and adversarial ordering/bypass checks. Evidence
+  is `participant-decision-surface-v1`,
+  `resolve_participant_episode_readiness_anchor()`,
+  `resolve_participant_behavior_projection_anchor()`,
+  `project_participant_decision_surface()`,
   `bind_participant_decision_surface_selection()`, and
   `implementations/python/tests/test_sem_220_participant_decision_surface.py`.
   Human proxy, script, LLM-agent, and RL-agent fixtures retain identical stable

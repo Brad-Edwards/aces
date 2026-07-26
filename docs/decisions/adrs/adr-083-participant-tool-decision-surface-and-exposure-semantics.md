@@ -279,6 +279,33 @@ to the runtime admission path fails closed. Initial projection continues to use
 the compiled initial view relation; later projection continues to use the
 existing behavior-anchor indexes and effective view-relation selector.
 
+### 9. Classify the anchor integration as a breaking semantic change
+
+The `participant-decision-surface-v1` schema remains in the `draft` stability
+class. ADR-061 therefore permits an in-place v1 change, and adding
+`projection_anchor` is structurally additive because the serialized property is
+optional. That structural fact is not an end-to-end compatibility claim.
+
+This amendment is a breaking semantic and runtime-admission change:
+
+- surface `observation_order` is the derived per-episode decision-surface
+  coordinate, not the referenced behavior-history index;
+- an anchored projector requires the current trusted runtime snapshot; and
+- runtime admission rejects an unanchored surface even though an older payload
+  can still pass structural schema validation.
+
+The Python distribution release carrying this amendment must therefore use the
+repository's breaking-change release classification. The publication ledger
+must describe the structural-versus-semantic distinction and must not claim
+backward, forward, behavioral, or operational compatibility.
+
+Consumers migrate by resolving a readiness or behavior anchor from the current
+trusted snapshot, carrying it on the projected surface, passing that snapshot
+to anchored projection, using `observation_order` for `D(p,e,o)`, and using
+`anchor_order` only for the referenced lifecycle or behavior-history event.
+Cached or independently constructed unanchored surfaces cannot be migrated by
+copying an event ref; they must be reprojected from current authority.
+
 ## Alternatives Considered
 
 ### Add a flat participant `tools` list

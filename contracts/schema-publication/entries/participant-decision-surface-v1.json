@@ -4,7 +4,7 @@
   "stability": "draft",
   "content_hash": "e65ab17f47266f0b21964e5d97517b3d5e9ff998454c48605d2fc40057630c13",
   "last_change": {
-    "summary": "Added an optional tagged projection anchor that distinguishes derived decision-surface order from episode-readiness and terminal-observation history order, evidence, and provenance without changing existing decision-surface fields.",
+    "summary": "Breaking semantic and runtime-admission change to the draft v1 contract: added a structurally optional tagged projection anchor, defined observation_order as the derived per-episode decision-surface order distinct from anchor-local history order, and required a current resolved anchor for runtime admission.",
     "content_hash": "e65ab17f47266f0b21964e5d97517b3d5e9ff998454c48605d2fc40057630c13"
   }
 }
