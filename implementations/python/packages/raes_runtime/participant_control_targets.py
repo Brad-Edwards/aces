@@ -210,26 +210,30 @@ def _register(
 def _intent_target(
     intent: ParticipantControlIntent,
 ) -> tuple[ParticipantControlTargetKind, str, int] | None:
+    target: tuple[ParticipantControlTargetKind, str, int] | None
     if isinstance(intent, ParticipantProposalControlIntent):
         if intent.source_proposal_ref is None:
-            return None
-        assert intent.source_proposal_revision is not None
-        return (
-            ParticipantControlTargetKind.PROPOSAL,
-            intent.source_proposal_ref,
-            intent.source_proposal_revision,
-        )
-    if isinstance(intent, (ParticipantApprovalControlIntent, ParticipantDenialControlIntent)):
-        return ParticipantControlTargetKind.PROPOSAL, intent.proposal_ref, intent.proposal_revision
-    if isinstance(intent, ParticipantExternalDirectionControlIntent):
-        return intent.target_kind, intent.target_ref, intent.target_revision
-    if isinstance(intent, ParticipantInterventionControlIntent):
-        return intent.affected_target_kind, intent.affected_occurrence_ref, intent.affected_revision
-    if isinstance(intent, ParticipantOverrideControlIntent):
-        return intent.superseded_target_kind, intent.superseded_occurrence_ref, intent.superseded_revision
-    if isinstance(intent, ParticipantCancellationControlIntent):
-        return intent.target_kind, intent.target_ref, intent.target_revision
-    return None
+            target = None
+        else:
+            assert intent.source_proposal_revision is not None
+            target = (
+                ParticipantControlTargetKind.PROPOSAL,
+                intent.source_proposal_ref,
+                intent.source_proposal_revision,
+            )
+    elif isinstance(intent, (ParticipantApprovalControlIntent, ParticipantDenialControlIntent)):
+        target = (ParticipantControlTargetKind.PROPOSAL, intent.proposal_ref, intent.proposal_revision)
+    elif isinstance(intent, ParticipantExternalDirectionControlIntent):
+        target = (intent.target_kind, intent.target_ref, intent.target_revision)
+    elif isinstance(intent, ParticipantInterventionControlIntent):
+        target = (intent.affected_target_kind, intent.affected_occurrence_ref, intent.affected_revision)
+    elif isinstance(intent, ParticipantOverrideControlIntent):
+        target = (intent.superseded_target_kind, intent.superseded_occurrence_ref, intent.superseded_revision)
+    elif isinstance(intent, ParticipantCancellationControlIntent):
+        target = (intent.target_kind, intent.target_ref, intent.target_revision)
+    else:
+        target = None
+    return target
 
 
 __all__ = (

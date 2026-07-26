@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from uuid import uuid4
 
 from raes_contracts.contracts import (
@@ -28,13 +28,24 @@ from raes_processor.models import (
 from .control_plane_security import ControlPlaneIdentity
 from .control_plane_store import AuditEvent, ControlPlaneOperationRecord
 from .participant_control_intents import ParticipantControlIntent
-from .participant_control_occurrences import build_participant_control_occurrence
+from .participant_control_occurrences import (
+    ParticipantControlOccurrenceContext,
+    build_participant_control_occurrence,
+)
+from .participant_control_rejections import participant_control_rejection_reason
 from .participant_control_targets import (
     participant_control_target_contexts,
     resolve_participant_control_target,
 )
 
-_ORDER_STRATEGY = "total-effective-order"
+
+@dataclass(frozen=True)
+class _BoundControlRequest:
+    specification: ParticipantBehaviorSpecificationRuntime
+    transition: MixedControlTransitionRuntime
+    state: MixedControlControllerStateRuntime
+    semantic_fingerprint: str
+    scoped_key: str
 
 
 def record_participant_control(
@@ -52,18 +63,7 @@ def record_participant_control(
     if identity.target_name is not None and identity.target_name != control_plane.target_name:
         raise PermissionError("participant control identity is not authorized for this target")
     _require_participant_binding(identity, participant_address)
-    specification = _specification_for_participant(control_plane, participant_address, identity)
-    transition = _transition_for_intent(specification, intent, identity)
-    state = _state_by_address(specification, transition.from_state_address)
-    semantic_fingerprint = _semantic_fingerprint(
-        control_plane,
-        participant_address,
-        intent,
-        identity,
-        specification,
-        transition,
-    )
-    scoped_key = _scoped_idempotency_key(
+    bound = _bind_control_request(
         control_plane,
         participant_address,
         intent,
@@ -72,109 +72,178 @@ def record_participant_control(
     )
 
     with control_plane._participant_control_lock:
-        existing = control_plane._store.find_by_idempotency(scoped_key) if scoped_key else None
+        existing = control_plane._store.find_by_idempotency(bound.scoped_key) if bound.scoped_key else None
         if existing is not None:
-            if existing.request_fingerprint != semantic_fingerprint:
+            if existing.request_fingerprint != bound.semantic_fingerprint:
                 raise ValueError("Idempotency-Key was reused with different semantics.")
             control_plane._operations[existing.receipt.operation_id] = existing
             return existing.receipt
-
-        history = list(control_plane._snapshot.participant_control_history.get(participant_address, ()))
-        current_state, current_revision = _fold_controller_state(
-            specification,
-            history,
-            episode_id=intent.episode_id,
-        )
-        resolved_target, target_rejection_reason = resolve_participant_control_target(
-            control_plane._snapshot,
-            intent,
-            participant_address=participant_address,
-        )
-        rejection_reason = _rejection_reason(
-            specification,
-            transition,
-            state,
-            intent,
-            current_state=current_state,
-            current_revision=current_revision,
-            target_rejection_reason=target_rejection_reason,
-        )
-        accepted = rejection_reason is None
-        occurrence = build_participant_control_occurrence(
+        return _record_new_participant_control(
             control_plane,
             participant_address,
             intent,
+            identity,
+            bound,
+        )
+
+
+def _bind_control_request(
+    control_plane: object,
+    participant_address: str,
+    intent: ParticipantControlIntent,
+    identity: ControlPlaneIdentity,
+    idempotency_key: str,
+) -> _BoundControlRequest:
+    specification = _specification_for_participant(control_plane, participant_address, identity)
+    transition = _transition_for_intent(specification, intent, identity)
+    state = _state_by_address(specification, transition.from_state_address)
+    return _BoundControlRequest(
+        specification=specification,
+        transition=transition,
+        state=state,
+        semantic_fingerprint=_semantic_fingerprint(
+            control_plane,
+            participant_address,
+            intent,
+            identity,
             specification,
             transition,
-            state,
-            history,
-            resolved_target=resolved_target,
-            accepted=accepted,
-            rejection_reason=rejection_reason,
-        )
-        candidate_history = [*history, occurrence.model_dump(mode="json")]
-        _validate_candidate_history(
-            specification,
-            candidate_history,
-            known_targets=participant_control_target_contexts(control_plane._snapshot),
-        )
-        next_snapshot = control_plane._snapshot.with_entries(
-            dict(control_plane._snapshot.entries),
-            participant_control_history={
-                **control_plane._snapshot.participant_control_history,
-                participant_address: candidate_history,
-            },
-        )
-        operation_id = str(uuid4())
-        submitted_at = occurrence.recorded_at
-        diagnostics = [] if accepted else [_rejection_diagnostic(participant_address, rejection_reason)]
-        receipt = OperationReceipt(
-            operation_id=operation_id,
-            domain=RuntimeDomain.PARTICIPANT,
-            submitted_at=submitted_at,
-            accepted=accepted,
-            diagnostics=diagnostics,
-        )
-        status = OperationStatus(
-            operation_id=operation_id,
-            domain=RuntimeDomain.PARTICIPANT,
-            state=OperationState.SUCCEEDED if accepted else OperationState.FAILED,
-            submitted_at=submitted_at,
-            updated_at=submitted_at,
-            diagnostics=diagnostics,
-            changed_addresses=[participant_address],
-        )
-        record = ControlPlaneOperationRecord(
-            receipt=receipt,
-            status=status,
-            request_fingerprint=semantic_fingerprint,
-            idempotency_key=scoped_key,
-        )
-        audit_event = AuditEvent(
-            timestamp=submitted_at,
-            action="record_participant_control",
-            identity=identity.identity,
-            allowed=accepted,
-            target=participant_address,
-            operation_id=operation_id,
-            reason=rejection_reason or "accepted",
-            details={
-                "episode_id": intent.episode_id,
-                "kind": intent.kind,
-                "event_id": occurrence.event_id,
-            },
-        )
-        expected_head = _history_head(history)
-        control_plane._store.commit_control_transition(
+        ),
+        scoped_key=_scoped_idempotency_key(
+            control_plane,
+            participant_address,
+            intent,
+            identity,
+            idempotency_key,
+        ),
+    )
+
+
+def _record_new_participant_control(
+    control_plane: object,
+    participant_address: str,
+    intent: ParticipantControlIntent,
+    identity: ControlPlaneIdentity,
+    bound: _BoundControlRequest,
+) -> OperationReceipt:
+    history = list(control_plane._snapshot.participant_control_history.get(participant_address, ()))
+    current_state, current_revision = _fold_controller_state(
+        bound.specification,
+        history,
+        episode_id=intent.episode_id,
+    )
+    resolved_target, target_rejection_reason = resolve_participant_control_target(
+        control_plane._snapshot,
+        intent,
+        participant_address=participant_address,
+    )
+    rejection_reason = participant_control_rejection_reason(
+        bound.specification,
+        bound.transition,
+        bound.state,
+        intent,
+        current_state=current_state,
+        current_revision=current_revision,
+        target_rejection_reason=target_rejection_reason,
+    )
+    accepted = rejection_reason is None
+    occurrence = build_participant_control_occurrence(
+        ParticipantControlOccurrenceContext(
+            control_plane=control_plane,
             participant_address=participant_address,
-            expected_head=expected_head,
-            snapshot=next_snapshot,
-            record=record,
-            audit_event=audit_event,
-        )
-        control_plane._snapshot = next_snapshot
-        control_plane._operations[operation_id] = record
-        return receipt
+            specification=bound.specification,
+            transition=bound.transition,
+            state=bound.state,
+            history=history,
+        ),
+        intent,
+        resolved_target=resolved_target,
+        accepted=accepted,
+        rejection_reason=rejection_reason,
+    )
+    candidate_history = [*history, occurrence.model_dump(mode="json")]
+    _validate_candidate_history(
+        bound.specification,
+        candidate_history,
+        known_targets=participant_control_target_contexts(control_plane._snapshot),
+    )
+    next_snapshot = control_plane._snapshot.with_entries(
+        dict(control_plane._snapshot.entries),
+        participant_control_history={
+            **control_plane._snapshot.participant_control_history,
+            participant_address: candidate_history,
+        },
+    )
+    record, audit_event = _operation_artifacts(
+        participant_address,
+        intent,
+        identity,
+        bound,
+        occurrence,
+        accepted,
+        rejection_reason,
+    )
+    control_plane._store.commit_control_transition(
+        participant_address=participant_address,
+        expected_head=_history_head(history),
+        snapshot=next_snapshot,
+        record=record,
+        audit_event=audit_event,
+    )
+    control_plane._snapshot = next_snapshot
+    control_plane._operations[record.receipt.operation_id] = record
+    return record.receipt
+
+
+def _operation_artifacts(
+    participant_address: str,
+    intent: ParticipantControlIntent,
+    identity: ControlPlaneIdentity,
+    bound: _BoundControlRequest,
+    occurrence: ParticipantControlOccurrenceModel,
+    accepted: bool,
+    rejection_reason: str | None,
+) -> tuple[ControlPlaneOperationRecord, AuditEvent]:
+    operation_id = str(uuid4())
+    submitted_at = occurrence.recorded_at
+    diagnostics = [] if accepted else [_rejection_diagnostic(participant_address, rejection_reason)]
+    receipt = OperationReceipt(
+        operation_id=operation_id,
+        domain=RuntimeDomain.PARTICIPANT,
+        submitted_at=submitted_at,
+        accepted=accepted,
+        diagnostics=diagnostics,
+    )
+    status = OperationStatus(
+        operation_id=operation_id,
+        domain=RuntimeDomain.PARTICIPANT,
+        state=OperationState.SUCCEEDED if accepted else OperationState.FAILED,
+        submitted_at=submitted_at,
+        updated_at=submitted_at,
+        diagnostics=diagnostics,
+        changed_addresses=[participant_address],
+    )
+    record = ControlPlaneOperationRecord(
+        receipt=receipt,
+        status=status,
+        request_fingerprint=bound.semantic_fingerprint,
+        idempotency_key=bound.scoped_key,
+    )
+    audit_event = AuditEvent(
+        timestamp=submitted_at,
+        action="record_participant_control",
+        identity=identity.identity,
+        allowed=accepted,
+        target=participant_address,
+        operation_id=operation_id,
+        reason=rejection_reason or "accepted",
+        details={
+            "episode_id": intent.episode_id,
+            "kind": intent.kind,
+            "event_id": occurrence.event_id,
+        },
+    )
+    return record, audit_event
 
 
 def _specification_for_participant(
@@ -269,39 +338,6 @@ def _fold_controller_state(
         state_address = transition.to_state_address
         revision = transition.resulting_state_revision
     return state_address, revision
-
-
-def _rejection_reason(
-    specification: ParticipantBehaviorSpecificationRuntime,
-    transition: MixedControlTransitionRuntime,
-    state: MixedControlControllerStateRuntime,
-    intent: ParticipantControlIntent,
-    *,
-    current_state: str,
-    current_revision: int,
-    target_rejection_reason: str | None,
-) -> str | None:
-    if specification.mixed_control_order_strategy != _ORDER_STRATEGY:
-        return "unsupported-order-strategy"
-    if intent.policy_revision != specification.mixed_control_policy_revision:
-        return "stale-policy"
-    if (
-        intent.expected_state_revision != current_revision
-        or transition.expected_state_revision != current_revision
-        or transition.from_state_address != current_state
-    ):
-        return "stale-state"
-    if transition.policy_revision != specification.mixed_control_policy_revision:
-        return "stale-policy"
-    if target_rejection_reason is not None:
-        return target_rejection_reason
-    if state.authority_status != "active":
-        return "revoked-authority"
-    if not state.valid_from_order <= transition.effective_order <= state.valid_until_order:
-        return "late-authority"
-    if not transition.valid_from_order <= transition.effective_order <= transition.valid_until_order:
-        return "late-authority"
-    return None
 
 
 def _history_head(history: list[dict[str, object]]) -> str | None:

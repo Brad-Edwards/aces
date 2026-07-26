@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Literal, TypeAlias
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from raes_contracts.contracts.participant_control import ParticipantControlTargetKind
@@ -111,7 +111,7 @@ class ParticipantCancellationControlIntent(ParticipantControlIntentBase):
     target_revision: int = Field(gt=0)
 
 
-ParticipantControlIntent: TypeAlias = Annotated[
+ParticipantControlIntent = Annotated[
     ParticipantProposalControlIntent
     | ParticipantApprovalControlIntent
     | ParticipantDenialControlIntent

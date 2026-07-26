@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 from raes_contracts.contracts import RealizationEnvelopeIdentityModel
 from raes_contracts.contracts.time_model import TimeRuntimeStateModel
@@ -22,6 +22,9 @@ from raes_contracts.runtime_state import (
     RuntimeSnapshotEnvelope,
     SnapshotEntry,
 )
+
+if TYPE_CHECKING:
+    from .control_plane_store_local import LocalControlPlaneStore
 
 
 @dataclass(frozen=True)
@@ -387,7 +390,15 @@ class InMemoryControlPlaneStore:
         self._audit = [*self._audit, audit_event]
 
 
-from .control_plane_store_local import LocalControlPlaneStore  # noqa: E402
+def __getattr__(name: str) -> object:
+    """Lazily expose the local store without creating an import cycle."""
+
+    if name == "LocalControlPlaneStore":
+        from .control_plane_store_local import LocalControlPlaneStore
+
+        return LocalControlPlaneStore
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 __all__ = (
     "AuditEvent",

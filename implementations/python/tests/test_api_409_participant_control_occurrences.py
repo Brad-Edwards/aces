@@ -418,13 +418,15 @@ def test_rejected_typed_target_preserves_the_invalid_attempt_without_becoming_a_
         )
     )
 
+    records = [direction, intervention]
+    declarations = [
+        _declaration("external-direction"),
+        _declaration("intervention"),
+    ]
     with pytest.raises(ValueError, match="typed target reference and kind must resolve"):
         validate_participant_control_occurrence_context(
-            [direction, intervention],
-            declarations=[
-                _declaration("external-direction"),
-                _declaration("intervention"),
-            ],
+            records,
+            declarations=declarations,
         )
 
 

@@ -352,13 +352,15 @@ def test_atomic_control_transition_commit_checks_head_and_persists_all_outputs(
             ]
         }
     )
+    conflicting_record = replace(record, idempotency_key="scope-key-2")
+    conflicting_audit = replace(audit, operation_id="operation-2")
     with pytest.raises(ValueError, match="expected control history head"):
         restarted.commit_control_transition(
             participant_address="participant.behavior.red-agent",
             expected_head=None,
             snapshot=conflicting,
-            record=replace(record, idempotency_key="scope-key-2"),
-            audit_event=replace(audit, operation_id="operation-2"),
+            record=conflicting_record,
+            audit_event=conflicting_audit,
         )
 
     assert restarted.load_snapshot().participant_control_history == snapshot.participant_control_history
@@ -475,19 +477,21 @@ def test_supervisory_control_is_subject_bound_idempotent_and_state_revision_boun
         payload_ref="payload:proposal-1",
     )
 
+    unbound_identity = _identity(bound=False)
     with pytest.raises(PermissionError, match="subject"):
         control_plane.record_participant_control(
             _PARTICIPANT,
             intent,
-            identity=_identity(bound=False),
+            identity=unbound_identity,
             idempotency_key="key-1",
         )
     assert not control_plane.snapshot.participant_control_history
+    other_target_identity = replace(_identity(), target_name="other-target")
     with pytest.raises(PermissionError, match="target"):
         control_plane.record_participant_control(
             _PARTICIPANT,
             intent,
-            identity=replace(_identity(), target_name="other-target"),
+            identity=other_target_identity,
             idempotency_key="key-target",
         )
     assert not control_plane.snapshot.participant_control_history
@@ -508,11 +512,12 @@ def test_supervisory_control_is_subject_bound_idempotent_and_state_revision_boun
     assert len(control_plane.snapshot.participant_control_history[_PARTICIPANT]) == 1
 
     changed = intent.model_copy(update={"proposal_id": "proposal-2"})
+    changed_identity = _identity()
     with pytest.raises(ValueError, match="different semantics"):
         control_plane.record_participant_control(
             _PARTICIPANT,
             changed,
-            identity=_identity(),
+            identity=changed_identity,
             idempotency_key="key-1",
         )
 
@@ -816,11 +821,12 @@ def test_failed_atomic_control_commit_exposes_no_partial_transition(
         raise OSError("commit failed")
 
     monkeypatch.setattr(store, "_atomic_write", fail_atomic_write)
+    identity = _identity()
     with pytest.raises(OSError, match="commit failed"):
         control_plane.record_participant_control(
             _PARTICIPANT,
             intent,
-            identity=_identity(),
+            identity=identity,
             idempotency_key="key-1",
         )
 

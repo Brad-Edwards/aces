@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import uuid4
 
@@ -30,14 +31,21 @@ from .participant_control_intents import (
 from .participant_control_targets import ResolvedParticipantControlTarget
 
 
+@dataclass(frozen=True)
+class ParticipantControlOccurrenceContext:
+    """Trusted runtime-owned inputs used to construct one occurrence."""
+
+    control_plane: object
+    participant_address: str
+    specification: ParticipantBehaviorSpecificationRuntime
+    transition: MixedControlTransitionRuntime
+    state: MixedControlControllerStateRuntime
+    history: list[dict[str, object]]
+
+
 def build_participant_control_occurrence(
-    control_plane: object,
-    participant_address: str,
+    context: ParticipantControlOccurrenceContext,
     intent: ParticipantControlIntent,
-    specification: ParticipantBehaviorSpecificationRuntime,
-    transition: MixedControlTransitionRuntime,
-    state: MixedControlControllerStateRuntime,
-    history: list[dict[str, object]],
     *,
     resolved_target: ResolvedParticipantControlTarget | None,
     accepted: bool,
@@ -45,6 +53,12 @@ def build_participant_control_occurrence(
 ) -> ParticipantControlOccurrenceModel:
     """Build one immutable runtime-owned occurrence from a caller intent."""
 
+    control_plane = context.control_plane
+    participant_address = context.participant_address
+    specification = context.specification
+    transition = context.transition
+    state = context.state
+    history = context.history
     now = datetime.now(UTC).isoformat().replace("+00:00", "Z")
     detail: dict[str, object] = {
         "kind": intent.kind,
@@ -98,7 +112,7 @@ def _kind_detail(
     transition: MixedControlTransitionRuntime,
 ) -> dict[str, object]:
     if isinstance(intent, ParticipantProposalControlIntent):
-        return {
+        detail = {
             "proposal_id": intent.proposal_id,
             "proposal_revision": intent.proposal_revision,
             "admission_status": "not-admitted",
@@ -111,47 +125,49 @@ def _kind_detail(
             "source_proposal_revision": intent.source_proposal_revision,
             "transformation_ref": intent.transformation_ref,
         }
-    if isinstance(intent, (ParticipantApprovalControlIntent, ParticipantDenialControlIntent)):
-        return {
+    elif isinstance(intent, (ParticipantApprovalControlIntent, ParticipantDenialControlIntent)):
+        detail = {
             "proposal_ref": intent.proposal_ref,
             "proposal_revision": intent.proposal_revision,
             "decision_ref": intent.decision_ref,
             "decision_revision": intent.decision_revision,
         }
-    if isinstance(intent, ParticipantExternalDirectionControlIntent):
-        return {
+    elif isinstance(intent, ParticipantExternalDirectionControlIntent):
+        detail = {
             "target_kind": intent.target_kind.value,
             "target_ref": intent.target_ref,
             "target_revision": intent.target_revision,
         }
-    if isinstance(intent, ParticipantInterventionControlIntent):
-        return {
+    elif isinstance(intent, ParticipantInterventionControlIntent):
+        detail = {
             "affected_target_kind": intent.affected_target_kind.value,
             "affected_occurrence_ref": intent.affected_occurrence_ref,
             "affected_revision": intent.affected_revision,
             "intervention_ref": intent.intervention_ref,
         }
-    if isinstance(intent, ParticipantHandoffControlIntent):
-        return {
+    elif isinstance(intent, ParticipantHandoffControlIntent):
+        detail = {
             "prior_controller_state_ref": transition.from_state_address,
             "resulting_controller_state_ref": transition.to_state_address,
             "resulting_state_revision": transition.resulting_state_revision,
             "completion_evidence_ref": intent.completion_evidence_ref,
         }
-    if isinstance(intent, ParticipantOverrideControlIntent):
-        return {
+    elif isinstance(intent, ParticipantOverrideControlIntent):
+        detail = {
             "superseded_target_kind": intent.superseded_target_kind.value,
             "superseded_occurrence_ref": intent.superseded_occurrence_ref,
             "superseded_revision": intent.superseded_revision,
             "replacement_ref": intent.replacement_ref,
         }
-    assert isinstance(intent, ParticipantCancellationControlIntent)
-    return {
-        "target_kind": intent.target_kind.value,
-        "target_ref": intent.target_ref,
-        "target_revision": intent.target_revision,
-        "cancellation_effect": _cancellation_effect(intent.target_kind).value,
-    }
+    else:
+        assert isinstance(intent, ParticipantCancellationControlIntent)
+        detail = {
+            "target_kind": intent.target_kind.value,
+            "target_ref": intent.target_ref,
+            "target_revision": intent.target_revision,
+            "cancellation_effect": _cancellation_effect(intent.target_kind).value,
+        }
+    return detail
 
 
 def _cancellation_effect(target_kind: ParticipantControlTargetKind) -> ParticipantCancellationEffect:
@@ -162,4 +178,7 @@ def _cancellation_effect(target_kind: ParticipantControlTargetKind) -> Participa
     return ParticipantCancellationEffect.TOO_LATE
 
 
-__all__ = ("build_participant_control_occurrence",)
+__all__ = (
+    "ParticipantControlOccurrenceContext",
+    "build_participant_control_occurrence",
+)
