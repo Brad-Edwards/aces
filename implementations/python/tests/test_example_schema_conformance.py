@@ -4,7 +4,7 @@
 Pydantic parser, but Pydantic acceptance is not published-schema conformance, and the
 worked examples are the proof artifacts third parties read. This suite serializes each
 example with the canonical, contract-shaped publication serialization
-(``model_dump(mode="json", by_alias=True)`` — the same flags ``aces_processor/compiler.py``
+(``model_dump(mode="json", by_alias=True)`` — the same flags ``raes_processor/compiler.py``
 uses) and validates the result against the *checked-in* published schema
 ``contracts/schemas/sdl/sdl-authoring-input-v1.json`` with ``Draft202012Validator``.
 
@@ -27,12 +27,12 @@ from pathlib import Path
 from typing import Any, Protocol
 
 import pytest
-from aces_contracts.corpus import corpus_family_root
-from aces_contracts.experiment_spec import load_experiment_spec
 from jsonschema import Draft202012Validator
 from paths import EXAMPLES_DIR, EXPERIMENTS_DIR
 from raes import load_sdl_fragment
 from raes.scenarios import load_scenario
+from raes_contracts.corpus import corpus_family_root
+from raes_contracts.experiment_spec import load_experiment_spec
 
 
 class SupportsModelDump(Protocol):

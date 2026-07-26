@@ -55,8 +55,8 @@ same objective without changing its backend-neutral success meaning.
 - authored mode and fail-closed validation:
   `implementations/python/packages/raes/orchestration.py`
 - compiled realization projection and feature requirements:
-  `implementations/python/packages/aces_processor/compiler/workflow_steps.py`
+  `implementations/python/packages/raes_processor/compiler/workflow_steps.py`
 - portable attempt provenance:
-  `implementations/python/packages/aces_contracts/workflow.py`
+  `implementations/python/packages/raes_contracts/workflow.py`
 - behavioral regression surface:
   `implementations/python/tests/test_sce_004_goal_oriented_steps.py`

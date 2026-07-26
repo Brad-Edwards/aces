@@ -2,24 +2,24 @@ CLI Reference
 =============
 
 The ``raes`` command-line interface is built with `Typer <https://typer.tiangolo.com/>`_
-and lives in the canonical ``aces_cli`` package.
+and lives in the canonical ``raes_cli`` package.
 
-.. currentmodule:: aces_cli
+.. currentmodule:: raes_cli
 
 Main CLI
 --------
 
-.. automodule:: aces_cli.main
+.. automodule:: raes_cli.main
    :members:
 
 SDL Commands
 ------------
 
-.. automodule:: aces_cli.sdl
+.. automodule:: raes_cli.sdl
    :members:
 
 Processor Commands
 ------------------
 
-.. automodule:: aces_cli.processor
+.. automodule:: raes_cli.processor
    :members:

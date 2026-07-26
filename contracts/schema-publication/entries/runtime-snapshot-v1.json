@@ -2,9 +2,9 @@
   "contract_id": "runtime-snapshot-v1",
   "schema_path": "contracts/schemas/snapshots/runtime-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "e98bcb03deadcca8a7615ade1664297911993584f2c7959c0c628162ff1970d7",
+  "content_hash": "8117be2036ef71aa51cbd5529121ec50d5354ef688d1cc54134f768ce7524df8",
   "last_change": {
-    "summary": "Bound DSL-437 autonomous scheduler state to its live participant episode.",
-    "content_hash": "e98bcb03deadcca8a7615ade1664297911993584f2c7959c0c628162ff1970d7"
+    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
+    "content_hash": "8117be2036ef71aa51cbd5529121ec50d5354ef688d1cc54134f768ce7524df8"
   }
 }

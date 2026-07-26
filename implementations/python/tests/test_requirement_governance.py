@@ -56,7 +56,7 @@ def make_client(*, requirement_status: str = "DRAFT", api_412_status: str = "DRA
     traceability = {
         "req-gov-918": [
             {
-                "artifact_identifier": "implementations/python/packages/aces_processor/bindings.py",
+                "artifact_identifier": "implementations/python/packages/raes_processor/bindings.py",
                 "artifact_type": "CODE_FILE",
                 "link_type": "IMPLEMENTS",
             },
@@ -68,7 +68,7 @@ def make_client(*, requirement_status: str = "DRAFT", api_412_status: str = "DRA
         ],
         "req-api-412": [
             {
-                "artifact_identifier": "implementations/python/packages/aces_processor/manifest.py",
+                "artifact_identifier": "implementations/python/packages/raes_processor/manifest.py",
                 "artifact_type": "CODE_FILE",
                 "link_type": "IMPLEMENTS",
             }
@@ -76,7 +76,7 @@ def make_client(*, requirement_status: str = "DRAFT", api_412_status: str = "DRA
         "req-run-313": [],
         "req-exp-701": [
             {
-                "artifact_identifier": "implementations/python/packages/aces_contracts/contracts.py",
+                "artifact_identifier": "implementations/python/packages/raes_contracts/contracts.py",
                 "artifact_type": "CODE_FILE",
                 "link_type": "IMPLEMENTS",
             },
@@ -99,12 +99,12 @@ def test_detect_requirement_uid_from_branch_name() -> None:
 def test_governed_requirement_paths_excludes_exempt_tooling_files() -> None:
     assert governed_requirement_paths(
         [
-            "implementations/python/packages/aces_processor/manifest.py",
+            "implementations/python/packages/raes_processor/manifest.py",
             "implementations/python/tests/test_repo_policy_tools.py",
             ".pre-commit-config.yaml",
             "tools/check_json_artifacts.py",
         ]
-    ) == ["implementations/python/packages/aces_processor/manifest.py"]
+    ) == ["implementations/python/packages/raes_processor/manifest.py"]
 
 
 def test_dev_to_main_promotion_is_detected(monkeypatch) -> None:
@@ -127,7 +127,7 @@ def test_archived_requirements_are_rejected(tmp_path: Path) -> None:
 
     failures = evaluate_requirement_governance(
         repo_root,
-        ["implementations/python/packages/aces_processor/bindings.py"],
+        ["implementations/python/packages/raes_processor/bindings.py"],
         client=client,
         requirement_uid="GOV-918",
     )
@@ -139,13 +139,13 @@ def test_blocked_phase_requires_previous_phase_completion(tmp_path: Path) -> Non
     repo_root = setup_policy_repo(tmp_path)
     client = make_client(api_412_status="DRAFT")
     write_text(
-        repo_root / "implementations" / "python" / "packages" / "aces_processor" / "manifest.py",
+        repo_root / "implementations" / "python" / "packages" / "raes_processor" / "manifest.py",
         "VALUE = 1\n",
     )
 
     failures = evaluate_requirement_governance(
         repo_root,
-        ["implementations/python/packages/aces_processor/manifest.py"],
+        ["implementations/python/packages/raes_processor/manifest.py"],
         client=client,
         requirement_uid="API-412",
     )
@@ -178,7 +178,7 @@ def test_missing_traceability_links_are_reported(tmp_path: Path) -> None:
     repo_root = setup_policy_repo(tmp_path)
     client = make_client()
     write_text(
-        repo_root / "implementations" / "python" / "packages" / "aces_processor" / "new_binding.py",
+        repo_root / "implementations" / "python" / "packages" / "raes_processor" / "new_binding.py",
         "VALUE = 1\n",
     )
     write_text(
@@ -189,7 +189,7 @@ def test_missing_traceability_links_are_reported(tmp_path: Path) -> None:
     failures = evaluate_requirement_governance(
         repo_root,
         [
-            "implementations/python/packages/aces_processor/new_binding.py",
+            "implementations/python/packages/raes_processor/new_binding.py",
             "implementations/python/tests/test_new_binding.py",
         ],
         client=client,
@@ -206,7 +206,7 @@ def test_requirement_governance_passes_for_allowed_paths_and_traceability(tmp_pa
     repo_root = setup_policy_repo(tmp_path)
     client = make_client()
     write_text(
-        repo_root / "implementations" / "python" / "packages" / "aces_processor" / "bindings.py",
+        repo_root / "implementations" / "python" / "packages" / "raes_processor" / "bindings.py",
         "VALUE = 1\n",
     )
     write_text(
@@ -217,7 +217,7 @@ def test_requirement_governance_passes_for_allowed_paths_and_traceability(tmp_pa
     failures = evaluate_requirement_governance(
         repo_root,
         [
-            "implementations/python/packages/aces_processor/bindings.py",
+            "implementations/python/packages/raes_processor/bindings.py",
             "implementations/python/tests/test_concept_authority.py",
         ],
         client=client,
@@ -231,7 +231,7 @@ def test_experiment_core_requirement_maps_allowed_contract_paths(tmp_path: Path)
     repo_root = setup_policy_repo(tmp_path)
     client = make_client()
     write_text(
-        repo_root / "implementations" / "python" / "packages" / "aces_contracts" / "contracts.py",
+        repo_root / "implementations" / "python" / "packages" / "raes_contracts" / "contracts.py",
         "VALUE = 1\n",
     )
     write_text(
@@ -246,7 +246,7 @@ def test_experiment_core_requirement_maps_allowed_contract_paths(tmp_path: Path)
             "contracts/schemas/backend-manifest/backend-manifest-v2.json",
             "contracts/schemas/experiment-core/experiment-task-v1.json",
             "docs/research/experiment-core/traceability-matrix-exp-701-705.md",
-            "implementations/python/packages/aces_contracts/contracts.py",
+            "implementations/python/packages/raes_contracts/contracts.py",
             "implementations/python/tests/test_runtime_contracts.py",
             "specs/formal/experiment-core/README.md",
         ],
@@ -267,7 +267,7 @@ def test_requirement_governance_accepts_camel_case_traceability_payload(tmp_path
         traceability={
             "req-gov-918": [
                 {
-                    "artifactIdentifier": "implementations/python/packages/aces_contracts/contracts.py",
+                    "artifactIdentifier": "implementations/python/packages/raes_contracts/contracts.py",
                     "artifactType": "CODE_FILE",
                     "linkType": "IMPLEMENTS",
                 },
@@ -280,7 +280,7 @@ def test_requirement_governance_accepts_camel_case_traceability_payload(tmp_path
         },
     )
     write_text(
-        repo_root / "implementations" / "python" / "packages" / "aces_contracts" / "contracts.py",
+        repo_root / "implementations" / "python" / "packages" / "raes_contracts" / "contracts.py",
         "VALUE = 1\n",
     )
     write_text(
@@ -291,7 +291,7 @@ def test_requirement_governance_accepts_camel_case_traceability_payload(tmp_path
     failures = evaluate_requirement_governance(
         repo_root,
         [
-            "implementations/python/packages/aces_contracts/contracts.py",
+            "implementations/python/packages/raes_contracts/contracts.py",
             "implementations/python/tests/test_requirement_governance.py",
         ],
         client=client,

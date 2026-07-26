@@ -7,8 +7,8 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from enum import Enum
 
-from aces_contracts.vocabulary import Closure
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+from raes_contracts.vocabulary import Closure
 
 from ._base import SDLModel
 from ._identifiers import PortableIdentifier

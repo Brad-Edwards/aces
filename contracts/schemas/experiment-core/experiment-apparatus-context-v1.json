@@ -642,7 +642,7 @@
             }
           ],
           "level": "error",
-          "validator": "aces_contracts.contracts.ExperimentManifestReferenceModel._validate_manifest_reference_scope"
+          "validator": "raes_contracts.contracts.ExperimentManifestReferenceModel._validate_manifest_reference_scope"
         }
       ]
     },
@@ -766,7 +766,7 @@
     },
     "ExperimentReferenceModel": {
       "additionalProperties": false,
-      "description": "Typed reference to an experiment-core or adjacent ACES artifact.",
+      "description": "Typed reference to an experiment-core or adjacent RAES artifact.",
       "properties": {
         "ref_digest": {
           "anyOf": [
@@ -1302,7 +1302,7 @@
         }
       ],
       "level": "error",
-      "validator": "aces_contracts.contracts.ExperimentApparatusContextModel._validate_instrument_context"
+      "validator": "raes_contracts.contracts.ExperimentApparatusContextModel._validate_instrument_context"
     },
     {
       "description": "Canonical processor and backend manifest_ref values must resolve to manifest payloads with matching identities and mutual compatibility declarations.",
@@ -1322,7 +1322,7 @@
         }
       ],
       "level": "error",
-      "validator": "aces_contracts.contracts.validate_experiment_apparatus_context_against_manifests"
+      "validator": "raes_contracts.contracts.validate_experiment_apparatus_context_against_manifests"
     },
     {
       "description": "Apparatus declared_at and observed_setup_evidence created_at values must be valid RFC 3339 date-times, including only known valid UTC leap-second instants.",
@@ -1338,7 +1338,7 @@
         }
       ],
       "level": "error",
-      "validator": "aces_contracts.contracts.validate_experiment_apparatus_context_archival_datetimes"
+      "validator": "raes_contracts.contracts.validate_experiment_apparatus_context_archival_datetimes"
     }
   ],
   "x-aces-semantic-profile": {

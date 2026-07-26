@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 
-from aces_contracts.behavioral_relations import load_behavioral_relation_catalog
+from raes_contracts.behavioral_relations import load_behavioral_relation_catalog
 from tools.check_behavioral_relation_claims import (
     _validate_claim_text,
     _validate_structured_bindings,

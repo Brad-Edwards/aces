@@ -253,7 +253,7 @@ generic syntax, or mechanical docstrings on every private helper are disabled in
 `sonar-project.properties` rather than encoded as source churn.
 
 Compatibility modules that intentionally re-export symbols, such as
-`aces_processor.models`, may also receive a narrow Sonar unused-import exclusion.
+`raes_processor.models`, may also receive a narrow Sonar unused-import exclusion.
 Those exclusions must stay file-specific and must not hide unused imports in
 owning implementation modules.
 

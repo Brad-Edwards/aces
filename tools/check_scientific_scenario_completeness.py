@@ -11,8 +11,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from aces_conformance.conformance import validate_contract_payload  # noqa: E402
-from aces_contracts.scientific_completeness import (  # noqa: E402
+from raes_conformance.conformance import validate_contract_payload  # noqa: E402
+from raes_contracts.scientific_completeness import (  # noqa: E402
     DeliveryStatus,
     ProfileCompletenessResult,
     ScientificCompletenessAssessmentModel,

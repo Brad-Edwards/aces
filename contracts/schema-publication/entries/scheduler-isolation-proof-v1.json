@@ -2,9 +2,9 @@
   "contract_id": "scheduler-isolation-proof-v1",
   "schema_path": "contracts/schemas/control-plane/scheduler-isolation-proof-v1.json",
   "stability": "draft",
-  "content_hash": "ae20e0a5a4fe480313c637c21214a422ed5d755cb4a4bfd088f985f2dc86ea2a",
+  "content_hash": "8c2fae279f0446a01c11e8188c5f45dd3ee459526bcc3fb6b6cdf38cafce49a8",
   "last_change": {
-    "summary": "Initial publication of the SCE-007 serial-default and bounded-parallelism isolation proof contract.",
-    "content_hash": "ae20e0a5a4fe480313c637c21214a422ed5d755cb4a4bfd088f985f2dc86ea2a"
+    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
+    "content_hash": "8c2fae279f0446a01c11e8188c5f45dd3ee459526bcc3fb6b6cdf38cafce49a8"
   }
 }

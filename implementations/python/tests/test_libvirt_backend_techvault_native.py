@@ -9,11 +9,13 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
-from aces_backend_libvirt import create_libvirt_target
-from aces_backend_libvirt.cloudinit import CloudInitSpec, CloudInitUser
-from aces_backend_libvirt.driver import DomainSpec, NetworkAcl, NetworkSpec, ServiceSpec
-from aces_backend_libvirt.envelopes import load_libvirt_realization_envelope
-from aces_backend_libvirt.techvault_native import (
+from paths import EXAMPLES_DIR
+from raes import parse_sdl
+from raes_backend_libvirt import create_libvirt_target
+from raes_backend_libvirt.cloudinit import CloudInitSpec, CloudInitUser
+from raes_backend_libvirt.driver import DomainSpec, NetworkAcl, NetworkSpec, ServiceSpec
+from raes_backend_libvirt.envelopes import load_libvirt_realization_envelope
+from raes_backend_libvirt.techvault_native import (
     BusyboxInitramfsBuilder,
     ProbeResult,
     TechVaultNativeLibvirtDriver,
@@ -21,18 +23,15 @@ from aces_backend_libvirt.techvault_native import (
     expected_surface,
     native_soc_readback,
 )
-from aces_backend_protocols.naming import provider_resource_name
-from aces_operations import techvault_live
-from aces_operations.techvault_live import (
+from raes_backend_protocols.naming import provider_resource_name
+from raes_operations import techvault_live
+from raes_operations.techvault_live import (
     TechVaultLiveConfig,
     validate_techvault_live,
     validate_techvault_live_manifest,
 )
-from paths import EXAMPLES_DIR
-
-from aces.core.runtime.control_plane import RuntimeControlPlane
-from aces.core.runtime.manager import RuntimeManager
-from aces.core.sdl import parse_sdl
+from raes_runtime.control_plane import RuntimeControlPlane
+from raes_runtime.manager import RuntimeManager
 
 
 class _NativeObject:

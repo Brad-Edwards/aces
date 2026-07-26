@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
   "stability": "draft",
-  "content_hash": "c56fc31d299c1658e2bded096fc56a1b206d8d6208d0ff33ad15bdab96bb5e57",
+  "content_hash": "a387ce95362c0712ff86273c361ce58c4f90772ae2eabd7c0010d1952910b81c",
   "last_change": {
-    "summary": "Published governed participant action-argument domains in instantiated scenarios after the raes import hard cut.",
-    "content_hash": "c56fc31d299c1658e2bded096fc56a1b206d8d6208d0ff33ad15bdab96bb5e57"
+    "summary": "Published governed participant action-argument domains in instantiated scenarios on the RAES-only package surface after the #884 hard cut.",
+    "content_hash": "a387ce95362c0712ff86273c361ce58c4f90772ae2eabd7c0010d1952910b81c"
   }
 }

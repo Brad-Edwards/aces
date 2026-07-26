@@ -159,8 +159,8 @@ caller-selected shape ref is not sufficient semantic authority.
   provenance, operation, and audit carriers. Do not add an action-space store,
   current-surface cache, event stream, audit channel, logger, or metadata/details
   side channel. Audit and raw logs are not participant-visible evidence.
-- **Package boundary:** neutral DTOs stay in `aces_contracts`, projection logic
-  in `aces_processor`, live admission/security/persistence in `aces_runtime`,
+- **Package boundary:** neutral DTOs stay in `raes_contracts`, projection logic
+  in `raes_processor`, live admission/security/persistence in `raes_runtime`,
   backend protocols in `aces_backend_protocols`, and conformance in
   `aces_conformance`. The compatibility-only `implementations/python/src/aces/`
   tree receives no new implementation logic.

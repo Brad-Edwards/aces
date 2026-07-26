@@ -7,7 +7,10 @@
       "package-name": "raes",
       "changelog-path": "CHANGELOG.md",
       "extra-files": [
-        "implementations/python/packages/raes/_version.py"
+        {
+          "type": "generic",
+          "path": "implementations/python/packages/raes/_version.py"
+        }
       ]
     }
   }

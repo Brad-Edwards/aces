@@ -45,7 +45,7 @@
     },
     "AcesSemanticInvariantInputModel": {
       "additionalProperties": false,
-      "description": "Input contract and instance path required by one ACES semantic invariant.",
+      "description": "Input contract and instance path required by one RAES semantic invariant.",
       "properties": {
         "contract_id": {
           "minLength": 1,
@@ -67,7 +67,7 @@
     },
     "AcesSemanticInvariantProfileReferenceModel": {
       "additionalProperties": false,
-      "description": "Host-schema reference to the ACES semantic-invariant profile.",
+      "description": "Host-schema reference to the RAES semantic-invariant profile.",
       "properties": {
         "contract_id": {
           "minLength": 1,
@@ -121,7 +121,7 @@
   "$id": "https://aces.dev/schemas/semantic-invariants/v1",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "Published shape for ACES semantic-invariant annotations.",
+  "description": "Published shape for RAES semantic-invariant annotations.",
   "properties": {
     "invariant_entry_schema": {
       "const": "#/$defs/AcesSemanticInvariantEntryModel",

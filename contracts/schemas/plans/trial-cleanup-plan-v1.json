@@ -340,7 +340,7 @@
         }
       ],
       "level": "error",
-      "validator": "aces_contracts.contracts.TrialCleanupPlanModel._validate_plan"
+      "validator": "raes_contracts.contracts.TrialCleanupPlanModel._validate_plan"
     }
   ],
   "x-aces-semantic-profile": {

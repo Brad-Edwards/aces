@@ -3,7 +3,7 @@
 Part of the SemanticValidator mixin composition; see __init__.py.
 """
 
-from aces_contracts.controlled_vocabularies import (
+from raes_contracts.controlled_vocabularies import (
     validate_controlled_vocabulary_scope_values,
     validate_controlled_vocabulary_value,
 )

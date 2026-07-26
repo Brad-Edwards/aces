@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-snapshot-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "99358dd696e7f2eb9d7fcdd4e94c7d8f5067209ff5b4da0e10739879560df2c9",
+  "content_hash": "324a8bdfa37afb096599c0ddd569f6e4e8748fd1ba81f25416593bb6efb9616d",
   "last_change": {
-    "summary": "Published governed participant action-argument domains in immutable scenario snapshots after the raes import hard cut.",
-    "content_hash": "99358dd696e7f2eb9d7fcdd4e94c7d8f5067209ff5b4da0e10739879560df2c9"
+    "summary": "Published governed participant action-argument domains in immutable scenario snapshots on the RAES-only package surface after the #884 hard cut.",
+    "content_hash": "324a8bdfa37afb096599c0ddd569f6e4e8748fd1ba81f25416593bb6efb9616d"
   }
 }

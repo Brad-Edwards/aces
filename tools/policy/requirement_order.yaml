@@ -104,13 +104,12 @@ ownership:
     - docs/explain/reference
     - docs/explain/sdl
     - docs/decisions/adrs
-    - implementations/python/packages/aces_contracts
-    - implementations/python/packages/aces_backend_protocols
-    - implementations/python/packages/aces_backend_stubs
-    - implementations/python/packages/aces_conformance
-    - implementations/python/packages/aces_processor
+    - implementations/python/packages/raes_contracts
+    - implementations/python/packages/raes_backend_protocols
+    - implementations/python/packages/raes_backend_stubs
+    - implementations/python/packages/raes_conformance
+    - implementations/python/packages/raes_processor
     - implementations/python/pyproject.toml
-    - implementations/python/src/aces
     - implementations/python/tests
     - CHANGELOG.md
   sdl-language:
@@ -129,10 +128,10 @@ ownership:
     - docs/index.md
     - docs/research/lineage/source-audit-2026-07-12.md
     - docs/research/participant-interactive-access
-    - implementations/python/packages/aces_backend_protocols
-    - implementations/python/packages/aces_backend_stubs
-    - implementations/python/packages/aces_contracts
-    - implementations/python/packages/aces_processor
+    - implementations/python/packages/raes_backend_protocols
+    - implementations/python/packages/raes_backend_stubs
+    - implementations/python/packages/raes_contracts
+    - implementations/python/packages/raes_processor
     - implementations/python/packages/raes
     - implementations/python/tests
     - specs/formal/participant-semantics
@@ -146,11 +145,11 @@ ownership:
     - contracts/fixtures/processor-manifest
     - contracts/schemas/backend-manifest
     - contracts/schemas/processor-manifest
-    - implementations/python/packages/aces_backend_stubs
-    - implementations/python/packages/aces_backend_protocols
-    - implementations/python/packages/aces_conformance
-    - implementations/python/packages/aces_contracts
-    - implementations/python/packages/aces_processor
+    - implementations/python/packages/raes_backend_stubs
+    - implementations/python/packages/raes_backend_protocols
+    - implementations/python/packages/raes_conformance
+    - implementations/python/packages/raes_contracts
+    - implementations/python/packages/raes_processor
     - implementations/python/tests/test_backend_manifest.py
     - implementations/python/tests/test_processor_manifest.py
     - implementations/python/tests/test_runtime_conformance.py
@@ -158,11 +157,11 @@ ownership:
     - CHANGELOG.md
     - tools/generate_contract_schemas.py
   runtime-core:
-    - implementations/python/packages/aces_processor
-    - implementations/python/packages/aces_contracts
-    - implementations/python/packages/aces_conformance
-    - implementations/python/packages/aces_backend_protocols
-    - implementations/python/packages/aces_backend_stubs
+    - implementations/python/packages/raes_processor
+    - implementations/python/packages/raes_contracts
+    - implementations/python/packages/raes_conformance
+    - implementations/python/packages/raes_backend_protocols
+    - implementations/python/packages/raes_backend_stubs
     - implementations/python/tests
     - contracts/schemas/control-plane
     - contracts/schemas/snapshots
@@ -181,7 +180,7 @@ ownership:
   semantics-expansion:
     - contracts/schemas/sdl
     - docs/explain/reference
-    - implementations/python/packages/aces_processor
+    - implementations/python/packages/raes_processor
     - implementations/python/packages/raes
     - implementations/python/tests
     - specs/formal
@@ -190,7 +189,7 @@ ownership:
     - docs
     - implementations/python/pyproject.toml
     - implementations/python/uv.lock
-    - implementations/python/packages/aces_mcp
+    - implementations/python/packages/raes_mcp
     - implementations/python/tests/test_mcp_server.py
     - CHANGELOG.md
   project-identity-migration:
@@ -203,9 +202,9 @@ ownership:
     - examples/README.md
     - implementations/README.md
     - implementations/python/pyproject.toml
-    - implementations/python/packages/aces_cli
-    - implementations/python/packages/aces_mcp
-    - implementations/python/packages/aces_runtime/control_plane_api.py
+    - implementations/python/packages/raes_cli
+    - implementations/python/packages/raes_mcp
+    - implementations/python/packages/raes_runtime/control_plane_api.py
     - implementations/python/tests/test_mcp_server.py
     - implementations/python/tests/test_version_classification.py
     - implementations/python/tests/test_project_positioning.py
@@ -223,20 +222,18 @@ ownership:
     - implementations/python/hatch_build.py
     - implementations/python/packages
     - implementations/python/pyproject.toml
-    - implementations/python/src/aces
     - implementations/python/tests
     - noxfile.py
     - specs
     - tools
   modularity-initiative:
     - implementations/python/packages/raes
-    - implementations/python/packages/aces_processor
-    - implementations/python/packages/aces_contracts
-    - implementations/python/packages/aces_conformance
-    - implementations/python/packages/aces_backend_protocols
-    - implementations/python/packages/aces_backend_stubs
-    - implementations/python/packages/aces_mcp
-    - implementations/python/src/aces
+    - implementations/python/packages/raes_processor
+    - implementations/python/packages/raes_contracts
+    - implementations/python/packages/raes_conformance
+    - implementations/python/packages/raes_backend_protocols
+    - implementations/python/packages/raes_backend_stubs
+    - implementations/python/packages/raes_mcp
     - implementations/python/tests
     - docs/api
     - docs/decisions/adrs
@@ -259,7 +256,7 @@ ownership:
     - docs/research/experiment-core
     - docs/index.md
     - docs/specs/formal.md
-    - implementations/python/packages/aces_contracts
+    - implementations/python/packages/raes_contracts
     - implementations/python/tests/test_runtime_contracts.py
     - tools/generate_contract_schemas.py
     - CHANGELOG.md

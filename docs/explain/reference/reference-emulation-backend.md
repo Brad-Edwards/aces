@@ -4,12 +4,12 @@ The reference emulation backend (RUN-314,
 [ADR-063](../../decisions/adrs/adr-063-reference-emulation-backend.md)) is a
 repository-owned, concrete implementation of the four backend protocol roles —
 Provisioner, Orchestrator, Evaluator, and ParticipantRuntime. It lives in the
-implementation package `aces_reference_backend` and is **not** a normative
+implementation package `raes_reference_backend` and is **not** a normative
 authority surface: it consumes the existing manifest, registry, conformance, and
 SEM-218 realization seams and proves compatibility against the published
 contracts.
 
-Unlike the non-normative in-memory stub (`aces_backend_stubs`), the reference
+Unlike the non-normative in-memory stub (`raes_backend_stubs`), the reference
 backend realizes provisioning plans against a pluggable deployment driver. The
 default driver is hermetic; an opt-in OCI driver realizes against a real
 container runtime (docker/podman). Either way, only portable RAES facts reach
@@ -22,11 +22,11 @@ the name `reference-emulation`. Construct a target directly or through the
 registry:
 
 ```python
-from aces_reference_backend import (
+from raes_reference_backend import (
     create_reference_backend_target,
     register_reference_backend,
 )
-from aces.core.runtime.registry import BackendRegistry
+from raes_runtime.registry import BackendRegistry
 
 # Direct: default hermetic in-process driver.
 target = create_reference_backend_target()
@@ -74,8 +74,8 @@ driver that realizes services or ACLs must use the existing realization-concern
 and diagnostic surfaces and provide evidence for the runtime effect it claims.
 
 ```python
-from aces_reference_backend import create_reference_backend_target
-from aces_reference_backend.drivers.oci import OciDeploymentDriver
+from raes_reference_backend import create_reference_backend_target
+from raes_reference_backend.drivers.oci import OciDeploymentDriver
 
 driver = OciDeploymentDriver(runtime="docker", workspace="aces-ref")
 target = create_reference_backend_target(driver=driver)
@@ -89,9 +89,9 @@ provenance through the existing apply gate:
 
 ```python
 import textwrap
-from aces.core.runtime.manager import RuntimeManager
-from aces.core.sdl import parse_sdl
-from aces_reference_backend import create_reference_backend_target
+from raes_runtime.manager import RuntimeManager
+from raes import parse_sdl
+from raes_reference_backend import create_reference_backend_target
 
 manager = RuntimeManager(create_reference_backend_target())
 plan = manager.plan(parse_sdl(textwrap.dedent("""
@@ -120,11 +120,11 @@ The reference target passes `run_target_conformance` at the
 including the full RUN-311 participant-episode probe:
 
 ```python
-from aces.core.runtime.conformance import (
+from raes_conformance.conformance import (
     BackendCapabilityProfile,
     run_target_conformance,
 )
-from aces_reference_backend import create_reference_backend_target
+from raes_reference_backend import create_reference_backend_target
 
 report = run_target_conformance(create_reference_backend_target())
 assert report.profile == BackendCapabilityProfile.FULL_REMOTE_CONTROL_PLANE

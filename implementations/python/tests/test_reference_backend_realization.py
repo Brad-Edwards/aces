@@ -3,16 +3,16 @@
 from __future__ import annotations
 
 import pytest
-from aces_contracts.planning import (
+from raes_contracts.planning import (
     ChangeAction,
     PlannedResource,
     ProvisioningPlan,
     ProvisionOp,
     RuntimeDomain,
 )
-from aces_reference_backend import interpret_provisioning_plan
-from aces_reference_backend.driver import ServiceSpec
-from aces_reference_backend.realization import Realization
+from raes_reference_backend import interpret_provisioning_plan
+from raes_reference_backend.driver import ServiceSpec
+from raes_reference_backend.realization import Realization
 
 
 def _node_resource(

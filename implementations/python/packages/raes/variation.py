@@ -5,14 +5,14 @@ from __future__ import annotations
 from enum import Enum
 from typing import Annotated, Literal
 
-from aces_contracts.bounded_domains import (
+from pydantic import AfterValidator, Field, WithJsonSchema, model_validator
+from raes_contracts.bounded_domains import (
     BooleanDomain,
     EnumDomain,
     ExactDomain,
     GovernedReferenceDomain,
     NumericIntervalDomain,
 )
-from pydantic import AfterValidator, Field, WithJsonSchema, model_validator
 
 from ._base import SDLModel
 from ._identifiers import PortableIdentifier, require_qualified_identifier

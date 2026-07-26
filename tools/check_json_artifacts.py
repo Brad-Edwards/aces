@@ -22,9 +22,9 @@ REPO_ROOT = POLICY_REPO_ROOT
 
 SCHEMA_DRIVER_PATHS = (
     "contracts/schemas/",
-    "implementations/python/packages/aces_contracts/",
-    "implementations/python/packages/aces_backend_protocols/",
-    "implementations/python/packages/aces_processor/",
+    "implementations/python/packages/raes_contracts/",
+    "implementations/python/packages/raes_backend_protocols/",
+    "implementations/python/packages/raes_processor/",
     "implementations/python/packages/raes/",
     "tools/generate_contract_schemas.py",
 )

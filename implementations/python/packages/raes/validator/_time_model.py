@@ -1,4 +1,4 @@
-"""Semantic checks for the shared ACES time model."""
+"""Semantic checks for the shared RAES time model."""
 
 from ..time_model import TimeDomainMapping, TimeReplayBehavior, TimeResetBehavior
 from ._support import _topological_sort

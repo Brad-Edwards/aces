@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import pytest
-from aces_backend_libvirt.realization import interpret_provisioning_plan
-from aces_backend_protocols.capabilities import ProvisionerCapabilities
-from aces_contracts.planning import PlannedResource, ProvisioningPlan, RuntimeDomain
+from raes_backend_libvirt.realization import interpret_provisioning_plan
+from raes_backend_protocols.capabilities import ProvisionerCapabilities
+from raes_contracts.planning import PlannedResource, ProvisioningPlan, RuntimeDomain
 
 NODE_ADDRESS = "provision.node.web"
 

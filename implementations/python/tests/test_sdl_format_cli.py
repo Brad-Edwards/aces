@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from aces_cli.main import app
 from raes import format_sdl_source
+from raes_cli.main import app
 from typer.testing import CliRunner
 
 

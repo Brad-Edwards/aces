@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from aces_conformance.conformance import (
+from raes_conformance.conformance import (
     observability_evidence_conformance_diagnostics,
     run_fixture_suite,
 )

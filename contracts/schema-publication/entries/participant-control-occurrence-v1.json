@@ -2,9 +2,9 @@
   "contract_id": "participant-control-occurrence-v1",
   "schema_path": "contracts/schemas/participant-runtime/participant-control-occurrence-v1.json",
   "stability": "draft",
-  "content_hash": "de375ee8e71d9277e8916cb8078f70bd9019ac55add9dd4449a0c62526103d94",
+  "content_hash": "edceb2ce36178a4d3c69c2d983ea90737c3a85c213a4a11bed93ed0591890754",
   "last_change": {
-    "summary": "Initial publication of the API-409 participant proposal, decision, direction, intervention, handoff, override, and cancellation occurrence contract.",
-    "content_hash": "de375ee8e71d9277e8916cb8078f70bd9019ac55add9dd4449a0c62526103d94"
+    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
+    "content_hash": "edceb2ce36178a4d3c69c2d983ea90737c3a85c213a4a11bed93ed0591890754"
   }
 }

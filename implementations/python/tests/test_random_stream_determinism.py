@@ -30,16 +30,16 @@ import textwrap
 from concurrent.futures import ThreadPoolExecutor
 
 import pytest
-from aces_contracts.contracts.random_stream import StreamAddressModel, TrialCoordinateModel
-from aces_contracts.random_stream_engine import (
+from hypothesis import HealthCheck, given, settings
+from hypothesis import strategies as st
+from raes_contracts.contracts.random_stream import StreamAddressModel, TrialCoordinateModel
+from raes_contracts.random_stream_engine import (
     BLOCK_BYTES,
     _bounded_integer_byte_width,
     derive_stream_key,
     draw_bounded_integer,
     raw_block,
 )
-from hypothesis import HealthCheck, given, settings
-from hypothesis import strategies as st
 
 pytestmark = pytest.mark.integration
 
@@ -118,8 +118,8 @@ _SUBPROCESS_DRIVER = textwrap.dedent(
     import json
     import sys
 
-    from aces_contracts.contracts.random_stream import StreamAddressModel, TrialCoordinateModel
-    from aces_contracts.random_stream_engine import derive_stream_key, raw_block
+    from raes_contracts.contracts.random_stream import StreamAddressModel, TrialCoordinateModel
+    from raes_contracts.random_stream_engine import derive_stream_key, raw_block
 
     profile_id = "blake3-xof-v1"
     root_entropy = bytes.fromhex("42" * 32)

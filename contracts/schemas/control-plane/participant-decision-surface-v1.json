@@ -886,7 +886,7 @@
         }
       ],
       "level": "error",
-      "validator": "aces_contracts.contracts.ParticipantDecisionSurfaceModel._validate_surface_relations"
+      "validator": "raes_contracts.contracts.ParticipantDecisionSurfaceModel._validate_surface_relations"
     },
     {
       "description": "Surface membership or presentation carries no selection, admission, execution, result, or outcome fact; those facts remain in their existing lifecycle contracts.",
@@ -898,7 +898,7 @@
         }
       ],
       "level": "error",
-      "validator": "aces_contracts.contracts.ParticipantDecisionSurfaceModel"
+      "validator": "raes_contracts.contracts.ParticipantDecisionSurfaceModel"
     },
     {
       "description": "Every serialized context, action, and affordance reference must have one participant-, audience-, order-, immutable-policy-, authorization-, marking-, evidence-, and provenance-bound exposure decision; realized delivery is an optional item- and delivery-authorization-bound occurrence.",
@@ -910,7 +910,7 @@
         }
       ],
       "level": "error",
-      "validator": "aces_contracts.contracts.ParticipantDecisionSurfaceModel._validate_surface_relations"
+      "validator": "raes_contracts.contracts.ParticipantDecisionSurfaceModel._validate_surface_relations"
     }
   ],
   "x-aces-semantic-profile": {

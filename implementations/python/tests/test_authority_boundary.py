@@ -733,7 +733,7 @@ def test_dotfiles_and_hidden_dirs_are_not_unclassified(tmp_path: Path) -> None:
 def test_schema_outside_normative_root_is_flagged(tmp_path: Path) -> None:
     seeded = _seed_repo(
         tmp_path,
-        extra_files={"implementations/python/packages/aces_processor/leaked.schema.json": "{}"},
+        extra_files={"implementations/python/packages/raes_processor/leaked.schema.json": "{}"},
     )
     failures = evaluate_authority_boundary(seeded)
     assert _flagged(failures, "authority-boundary-schema-misplaced")

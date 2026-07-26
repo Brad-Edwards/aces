@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import textwrap
 
-from aces_contracts.contracts import ExperimentReferenceModel
 from raes import parse_sdl
 from raes.explicitness import ExplicitnessClass, classify_authoring_specificity
+from raes_contracts.contracts import ExperimentReferenceModel
 
 
 def _scenario_with_specificity_levels():

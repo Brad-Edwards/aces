@@ -381,7 +381,7 @@ _VIEW_TRANSITION_TARGETS = {
 
 
 class ExternalMappingLoss(SDLModel):
-    """Loss-labeled mapping from an external vocabulary to ACES semantics."""
+    """Loss-labeled mapping from an external vocabulary to RAES semantics."""
 
     system: str
     identifier: str

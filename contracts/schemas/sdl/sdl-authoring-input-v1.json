@@ -2389,7 +2389,7 @@
     },
     "DockerfileInstruction": {
       "additionalProperties": false,
-      "description": "A structured record of one container build-recipe instruction.\n\nThe instruction is kept as a typed kind plus tokenized ``arguments``\nrather than raw recipe text: raw Dockerfile/shell syntax can contain\n``${...}`` strings that collide with ACES variable substitution.",
+      "description": "A structured record of one container build-recipe instruction.\n\nThe instruction is kept as a typed kind plus tokenized ``arguments``\nrather than raw recipe text: raw Dockerfile/shell syntax can contain\n``${...}`` strings that collide with RAES variable substitution.",
       "properties": {
         "arguments": {
           "items": {
@@ -2954,7 +2954,7 @@
     },
     "ExternalMappingLoss": {
       "additionalProperties": false,
-      "description": "Loss-labeled mapping from an external vocabulary to ACES semantics.",
+      "description": "Loss-labeled mapping from an external vocabulary to RAES semantics.",
       "properties": {
         "identifier": {
           "title": "Identifier",
@@ -18935,7 +18935,7 @@
     },
     "ServiceManagerUnit": {
       "additionalProperties": false,
-      "description": "Observed service-manager unit state on a realized range node.\n\nEach record carries a stable ACES ``unit_id`` (the reference target), the\nnative ``unit_name`` (e.g. ``sshd.service``), the participant-observable\nlifecycle facts captured by ``systemctl`` (load/active/sub/enabled/result),\nand bounded optional evidence: the unit-file path, an ``ExecStart``\ndescriptor with explicit redaction discipline, the main PID when present,\nand an optional same-node ``Node.services[]`` ref.\n\nThis is observed WHAT-IS state, not provisioning intent or authored\nbehavior; see ADR-035 for the boundary against ``Node.services``,\n``conditions``, ``runtime.processes``, ``runtime.container.init_process``,\n``runtime.operational_policy``, and ``runtime.ssh_servers``.",
+      "description": "Observed service-manager unit state on a realized range node.\n\nEach record carries a stable RAES ``unit_id`` (the reference target), the\nnative ``unit_name`` (e.g. ``sshd.service``), the participant-observable\nlifecycle facts captured by ``systemctl`` (load/active/sub/enabled/result),\nand bounded optional evidence: the unit-file path, an ``ExecStart``\ndescriptor with explicit redaction discipline, the main PID when present,\nand an optional same-node ``Node.services[]`` ref.\n\nThis is observed WHAT-IS state, not provisioning intent or authored\nbehavior; see ADR-035 for the boundary against ``Node.services``,\n``conditions``, ``runtime.processes``, ``runtime.container.init_process``,\n``runtime.operational_policy``, and ``runtime.ssh_servers``.",
       "properties": {
         "active_state": {
           "anyOf": [
@@ -19880,7 +19880,7 @@
     },
     "TemporalConstraint": {
       "additionalProperties": false,
-      "description": "One typed temporal predicate over ordinary ACES subjects.",
+      "description": "One typed temporal predicate over ordinary RAES subjects.",
       "properties": {
         "cadence_ticks": {
           "anyOf": [

@@ -109,7 +109,7 @@ class DockerfileInstruction(SDLModel):
 
     The instruction is kept as a typed kind plus tokenized ``arguments``
     rather than raw recipe text: raw Dockerfile/shell syntax can contain
-    ``${...}`` strings that collide with ACES variable substitution.
+    ``${...}`` strings that collide with RAES variable substitution.
     """
 
     instruction: DockerfileInstructionKind | str

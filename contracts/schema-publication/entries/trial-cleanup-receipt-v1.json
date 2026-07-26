@@ -2,9 +2,9 @@
   "contract_id": "trial-cleanup-receipt-v1",
   "schema_path": "contracts/schemas/control-plane/trial-cleanup-receipt-v1.json",
   "stability": "draft",
-  "content_hash": "2e5087fd4b9e442f282aa2533a425275f91e1c5ad51f8f872502ffb8e96e6fc5",
+  "content_hash": "5714bdc219d2f19fb4c69ce64076b671ba85332462d63ac4c7e31f863fb3f8cd",
   "last_change": {
-    "summary": "Initial publication of the SCE-007 attempt-scoped cleanup receipt, residual-state disclosure, and clean-state claim contract.",
-    "content_hash": "2e5087fd4b9e442f282aa2533a425275f91e1c5ad51f8f872502ffb8e96e6fc5"
+    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
+    "content_hash": "5714bdc219d2f19fb4c69ce64076b671ba85332462d63ac4c7e31f863fb3f8cd"
   }
 }

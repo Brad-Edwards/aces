@@ -3,12 +3,10 @@
 from pathlib import Path
 
 import pytest
-from raes import SDLMigrationPolicy
-
-from aces.core.sdl import instantiate_scenario
-from aces.core.sdl._errors import SDLParseError, SDLValidationError
-from aces.core.sdl.nodes import NodeType
-from aces.core.sdl.parser import parse_sdl, parse_sdl_file
+from raes import SDLMigrationPolicy, instantiate_scenario
+from raes._errors import SDLParseError, SDLValidationError
+from raes.nodes import NodeType
+from raes.parser import parse_sdl, parse_sdl_file
 
 
 class TestKeyNormalization:
@@ -1596,7 +1594,7 @@ class TestLoadRealScenarios:
 
     @pytest.mark.xfail(reason="Legacy ACES scenario format not supported after SDL cleanup")
     def test_all_scenarios_parse(self, scenarios_dir):
-        from aces.core.sdl.parser import parse_sdl_file
+        from raes.parser import parse_sdl_file
 
         for path in sorted(scenarios_dir.glob("*.yaml")):
             scenario = parse_sdl_file(path)
@@ -1784,7 +1782,7 @@ nodes:
         assert server.chroot_directory == "/var/empty"
 
     def test_ssh_server_variable_ref_server_id_rejected_on_instantiation(self):
-        from aces.core.sdl._errors import SDLInstantiationError
+        from raes._errors import SDLInstantiationError
 
         sdl = """
 name: techvault-ssh-bad-id

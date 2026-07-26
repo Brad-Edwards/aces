@@ -24,7 +24,7 @@
     },
     "ReusableAssetEvidenceRequirementModel": {
       "additionalProperties": false,
-      "description": "One evidence-class expectation an asset family must satisfy.\n\n``mechanism_ref`` names the *existing* ACES mechanism that carries the\nevidence (e.g. ``aces.lock.json`` digest pins, ``ExperimentChecksumModel``,\n``controlled-vocabularies-v1.source``). GOV-913 declares policy over the\nincumbent mechanisms; it does not introduce a parallel evidence store, so\nthis contract never carries the evidence payload itself \u2014 only the\nrequirement and a reference to where the evidence lives.",
+      "description": "One evidence-class expectation an asset family must satisfy.\n\n``mechanism_ref`` names the *existing* RAES mechanism that carries the\nevidence (e.g. ``aces.lock.json`` digest pins, ``ExperimentChecksumModel``,\n``controlled-vocabularies-v1.source``). GOV-913 declares policy over the\nincumbent mechanisms; it does not introduce a parallel evidence store, so\nthis contract never carries the evidence payload itself \u2014 only the\nrequirement and a reference to where the evidence lives.",
       "properties": {
         "description": {
           "minLength": 1,
@@ -315,7 +315,7 @@
   "$id": "https://aces.dev/schemas/reusable-asset-trust-policy-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "Ecosystem trust/authenticity/integrity policy over reusable assets (GOV-913).\n\nA declarative, expectation-based policy: it declares, per asset family, the\nintegrity/authenticity/provenance/governance evidence the ecosystem requires,\nreferencing the existing ACES mechanisms that carry that evidence. It is not a\nper-asset trust record and it invents no cryptography. See\n``specs/authority/reusable-asset-trust-integrity.md`` (normative) and ADR-071.",
+  "description": "Ecosystem trust/authenticity/integrity policy over reusable assets (GOV-913).\n\nA declarative, expectation-based policy: it declares, per asset family, the\nintegrity/authenticity/provenance/governance evidence the ecosystem requires,\nreferencing the existing RAES mechanisms that carry that evidence. It is not a\nper-asset trust record and it invents no cryptography. See\n``specs/authority/reusable-asset-trust-integrity.md`` (normative) and ADR-071.",
   "properties": {
     "families": {
       "allOf": [

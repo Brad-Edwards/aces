@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import pytest
-from aces_backend_protocols.capabilities import EvaluatorCapabilities
-from aces_reference_backend.manifest import create_reference_backend_manifest
+from raes_backend_protocols.capabilities import EvaluatorCapabilities
+from raes_reference_backend.manifest import create_reference_backend_manifest
 
 
 def test_evaluator_declares_finite_truth_and_predicate_capabilities() -> None:

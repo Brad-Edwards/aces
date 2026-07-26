@@ -14,7 +14,20 @@ import json
 from pathlib import Path
 
 import pytest
-from aces_contracts.realization_envelope import (
+from hypothesis import given, settings
+from hypothesis import strategies as st
+from pydantic import ValidationError
+from raes import (
+    SDLInstantiationError,
+    SDLValidationError,
+    instantiate_scenario,
+    parse_sdl,
+)
+from raes._realization_envelope_domains import _MISSING, default_witness_value, out_of_domain_value
+from raes._realization_envelope_engine import effective_constraints
+from raes.realization_envelope import generate_negative_probes, generate_positive_probes, member, subsumes, witness
+from raes.scenario import InstantiatedScenario, Scenario
+from raes_contracts.realization_envelope import (
     BooleanDomain,
     Closure,
     ClosureOverlay,
@@ -30,19 +43,6 @@ from aces_contracts.realization_envelope import (
     RecordDomain,
     WitnessPolicy,
 )
-from hypothesis import given, settings
-from hypothesis import strategies as st
-from pydantic import ValidationError
-from raes import (
-    SDLInstantiationError,
-    SDLValidationError,
-    instantiate_scenario,
-    parse_sdl,
-)
-from raes._realization_envelope_domains import _MISSING, default_witness_value, out_of_domain_value
-from raes._realization_envelope_engine import effective_constraints
-from raes.realization_envelope import generate_negative_probes, generate_positive_probes, member, subsumes, witness
-from raes.scenario import InstantiatedScenario, Scenario
 
 _DATA = Path(__file__).parent / "data" / "realization_envelope"
 

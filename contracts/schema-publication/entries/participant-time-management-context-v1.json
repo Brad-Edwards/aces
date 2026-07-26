@@ -2,9 +2,9 @@
   "contract_id": "participant-time-management-context-v1",
   "schema_path": "contracts/schemas/participant-runtime/participant-time-management-context-v1.json",
   "stability": "draft",
-  "content_hash": "e4711ff9a4674697fb8aed40af863ea0327ad31824ef0a8f07d182ccfa9f28a1",
+  "content_hash": "a6d8e169d9adf1db043e81eca47d38c94c7560386d85f9005a3e4e8ed7ec0a69",
   "last_change": {
-    "summary": "Initial publication of the RUN-308 participant time-management context contract: clock, ordering, lookahead, pacing, rollback, and backend-serialization basis.",
-    "content_hash": "e4711ff9a4674697fb8aed40af863ea0327ad31824ef0a8f07d182ccfa9f28a1"
+    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
+    "content_hash": "a6d8e169d9adf1db043e81eca47d38c94c7560386d85f9005a3e4e8ed7ec0a69"
   }
 }

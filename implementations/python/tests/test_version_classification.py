@@ -18,6 +18,21 @@ from typer.testing import CliRunner
 
 NOT_INSTALLED_SENTINEL = "0.0.0+unknown"
 DISHONEST_LITERAL = "0.1.0"
+RETIRED_IMPORT_NAMES = (
+    "aces",
+    "aces_sdl",
+    "aces_backend_libvirt",
+    "aces_backend_protocols",
+    "aces_backend_stubs",
+    "aces_cli",
+    "aces_conformance",
+    "aces_contracts",
+    "aces_mcp",
+    "aces_operations",
+    "aces_processor",
+    "aces_reference_backend",
+    "aces_runtime",
+)
 
 
 def test_raes_namespace_version_derives_from_distribution() -> None:
@@ -26,22 +41,12 @@ def test_raes_namespace_version_derives_from_distribution() -> None:
     assert raes.__version__ == version("raes")
 
 
-def test_legacy_aces_sdl_namespace_is_absent() -> None:
-    assert find_spec("aces_sdl") is None
-
-
-def test_package_version_helper_uses_supplied_sentinel(monkeypatch) -> None:
-    import aces._compat as compat
-
-    def _raise(_distribution: str) -> str:
-        raise PackageNotFoundError
-
-    monkeypatch.setattr(compat, "version", _raise)
-    assert compat.package_version("raes", default=NOT_INSTALLED_SENTINEL) == NOT_INSTALLED_SENTINEL
+def test_retired_aces_namespaces_are_absent() -> None:
+    assert all(find_spec(name) is None for name in RETIRED_IMPORT_NAMES)
 
 
 def test_cli_version_reports_installed_distribution() -> None:
-    from aces_cli.main import app
+    from raes_cli.main import app
 
     result = CliRunner().invoke(app, ["--version"])
 
@@ -50,7 +55,7 @@ def test_cli_version_reports_installed_distribution() -> None:
 
 
 def test_cli_help_uses_raes_project_identity() -> None:
-    from aces_cli.main import app
+    from raes_cli.main import app
 
     result = CliRunner().invoke(app, ["--help"])
 
@@ -62,7 +67,7 @@ def test_console_scripts_hard_cut_to_raes_names() -> None:
     scripts = {
         entry_point.name
         for entry_point in entry_points(group="console_scripts")
-        if entry_point.value in {"aces.cli.main:app", "aces_mcp.server:main"}
+        if entry_point.value in {"raes_cli.main:app", "raes_mcp.server:main"}
     }
 
     assert {"raes", "raes-mcp"} <= scripts
@@ -71,7 +76,7 @@ def test_console_scripts_hard_cut_to_raes_names() -> None:
 
 
 def test_cli_version_fallback_is_honest_sentinel(monkeypatch) -> None:
-    import aces_cli.main as cli_main
+    import raes_cli.main as cli_main
 
     def _raise(_distribution: str) -> str:
         raise PackageNotFoundError
@@ -85,13 +90,13 @@ def test_cli_version_fallback_is_honest_sentinel(monkeypatch) -> None:
 
 
 def test_control_plane_api_version_derives_from_distribution() -> None:
-    from aces_runtime.control_plane_api import _control_plane_api_version
+    from raes_runtime.control_plane_api import _control_plane_api_version
 
     assert _control_plane_api_version() == version("raes")
 
 
 def test_control_plane_api_version_fallback_is_honest_sentinel(monkeypatch) -> None:
-    import aces_runtime.control_plane_api as control_plane_api
+    import raes_runtime.control_plane_api as control_plane_api
 
     def _raise(_distribution: str) -> str:
         raise PackageNotFoundError
@@ -102,10 +107,9 @@ def test_control_plane_api_version_fallback_is_honest_sentinel(monkeypatch) -> N
 
 
 def test_control_plane_app_openapi_version_matches_distribution() -> None:
-    from aces_runtime.control_plane import RuntimeControlPlane
-    from aces_runtime.control_plane_api import create_control_plane_app
-
-    from aces.backends.stubs import create_stub_target
+    from raes_backend_stubs.stubs import create_stub_target
+    from raes_runtime.control_plane import RuntimeControlPlane
+    from raes_runtime.control_plane_api import create_control_plane_app
 
     app = create_control_plane_app(RuntimeControlPlane(create_stub_target()))
 

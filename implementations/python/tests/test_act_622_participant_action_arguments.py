@@ -5,13 +5,13 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import pytest
-from aces_processor.compiler import compile_runtime_model
-from aces_processor.compiler.participant_contracts import _compile_action_contracts
-from aces_processor.models import resolve_participant_action_arguments
 from pydantic import ValidationError
 from raes.instantiate import instantiate_scenario
 from raes.participant_behavior import ParticipantActionContract
 from raes.scenario import Scenario
+from raes_processor.compiler import compile_runtime_model
+from raes_processor.compiler.participant_contracts import _compile_action_contracts
+from raes_processor.models import resolve_participant_action_arguments
 
 ACTION_ADDRESS = "participant.action-contract.respond"
 

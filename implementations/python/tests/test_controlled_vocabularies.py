@@ -6,20 +6,21 @@ import json
 from pathlib import Path
 
 import pytest
-from aces_contracts.contracts import (
+from pydantic import ValidationError
+from raes_contracts.contracts import (
     AtlasTacticsSourceModel,
     AttackEnterpriseTacticsSourceModel,
     ControlledVocabularyCatalogModel,
     NistCsfDefensiveCategorySourceModel,
     schema_bundle,
 )
-from aces_contracts.controlled_vocabularies import (
+from raes_contracts.controlled_vocabularies import (
     controlled_vocabulary_catalog_path,
     load_controlled_vocabulary_catalog,
     validate_controlled_vocabulary_scope_values,
     validate_controlled_vocabulary_value,
 )
-from aces_contracts.vocabulary import (
+from raes_contracts.vocabulary import (
     ConceptProvenanceCategory,
     ParticipantFeatureSupportLevel,
     ProcessorFeature,
@@ -27,7 +28,6 @@ from aces_contracts.vocabulary import (
     WorkflowFeature,
     WorkflowStatePredicateFeature,
 )
-from pydantic import ValidationError
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 CATALOG_PATH = REPO_ROOT / "contracts" / "concept-authority" / "controlled-vocabularies-v1.json"
