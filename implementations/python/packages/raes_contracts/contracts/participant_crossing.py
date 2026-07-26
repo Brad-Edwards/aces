@@ -29,6 +29,62 @@ from .participant_envelopes import ParticipantRuntimeBaseEnvelopeModel
 from .participant_runtime import ParticipantRuntimeOrderingBasis
 from .schema_invariants import _add_aces_invariant
 
+_TRANSFORMATION_OPERATIONS = frozenset(
+    {
+        ParticipantCrossingOperation.PROJECTION,
+        ParticipantCrossingOperation.MASKING,
+        ParticipantCrossingOperation.REDACTION,
+        ParticipantCrossingOperation.TRANSFORMATION,
+        ParticipantCrossingOperation.DECLASSIFICATION,
+    }
+)
+
+
+def _classify_gate_dispositions(
+    gates: ParticipantCrossingDecisionGatesModel,
+) -> tuple[bool, bool]:
+    dispositions = set(gates.dispositions())
+    failed = ParticipantCrossingGateDisposition.DENY in dispositions
+    unresolved = bool(
+        dispositions
+        & {
+            ParticipantCrossingGateDisposition.UNKNOWN,
+            ParticipantCrossingGateDisposition.UNSUPPORTED,
+        }
+    )
+    return failed, unresolved
+
+
+def _validate_decision_disposition(
+    disposition: ParticipantCrossingDecisionDisposition,
+    *,
+    failed: bool,
+    unresolved: bool,
+) -> None:
+    permitted = {
+        ParticipantCrossingDecisionDisposition.PERMIT,
+        ParticipantCrossingDecisionDisposition.TRANSFORM,
+    }
+    if disposition in permitted and (failed or unresolved):
+        raise ValueError("permitted participant crossing decisions require every applicable gate to permit")
+    if disposition == ParticipantCrossingDecisionDisposition.DENY and not failed:
+        raise ValueError("denied participant crossing decisions require a denied gate")
+    if disposition == ParticipantCrossingDecisionDisposition.UNSUPPORTED and not unresolved:
+        raise ValueError("unsupported participant crossing decisions require an unresolved or unsupported gate")
+
+
+def _validate_required_operation(
+    disposition: ParticipantCrossingDecisionDisposition,
+    required_operation: ParticipantCrossingOperation | None,
+) -> None:
+    if (
+        disposition == ParticipantCrossingDecisionDisposition.TRANSFORM
+        and required_operation not in _TRANSFORMATION_OPERATIONS
+    ):
+        raise ValueError("transform decisions require an explicit transformation operation")
+    if disposition != ParticipantCrossingDecisionDisposition.TRANSFORM and required_operation is not None:
+        raise ValueError("required_operation is reserved for transform decisions")
+
 
 class ParticipantCrossingSubjectReferenceModel(ContractModel):
     """Typed identity for an existing carrier without copying its payload."""
@@ -184,34 +240,13 @@ class ParticipantCrossingDecisionModel(ParticipantCrossingOccurrenceBaseModel):
 
     @model_validator(mode="after")
     def _validate_deny_first_disposition(self) -> ParticipantCrossingDecisionModel:
-        dispositions = set(self.gates.dispositions())
-        failed = ParticipantCrossingGateDisposition.DENY in dispositions
-        unresolved = bool(
-            dispositions
-            & {
-                ParticipantCrossingGateDisposition.UNKNOWN,
-                ParticipantCrossingGateDisposition.UNSUPPORTED,
-            }
+        failed, unresolved = _classify_gate_dispositions(self.gates)
+        _validate_decision_disposition(
+            self.disposition,
+            failed=failed,
+            unresolved=unresolved,
         )
-        if self.disposition in {
-            ParticipantCrossingDecisionDisposition.PERMIT,
-            ParticipantCrossingDecisionDisposition.TRANSFORM,
-        } and (failed or unresolved):
-            raise ValueError("permitted participant crossing decisions require every applicable gate to permit")
-        if self.disposition == ParticipantCrossingDecisionDisposition.DENY and not failed:
-            raise ValueError("denied participant crossing decisions require a denied gate")
-        if self.disposition == ParticipantCrossingDecisionDisposition.UNSUPPORTED and not unresolved:
-            raise ValueError("unsupported participant crossing decisions require an unresolved or unsupported gate")
-        if self.disposition == ParticipantCrossingDecisionDisposition.TRANSFORM and self.required_operation not in {
-            ParticipantCrossingOperation.PROJECTION,
-            ParticipantCrossingOperation.MASKING,
-            ParticipantCrossingOperation.REDACTION,
-            ParticipantCrossingOperation.TRANSFORMATION,
-            ParticipantCrossingOperation.DECLASSIFICATION,
-        }:
-            raise ValueError("transform decisions require an explicit transformation operation")
-        if self.disposition != ParticipantCrossingDecisionDisposition.TRANSFORM and self.required_operation is not None:
-            raise ValueError("required_operation is reserved for transform decisions")
+        _validate_required_operation(self.disposition, self.required_operation)
         return self
 
 

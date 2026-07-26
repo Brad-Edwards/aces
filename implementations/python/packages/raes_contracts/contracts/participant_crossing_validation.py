@@ -23,6 +23,8 @@ from .participant_crossing import (
 
 SubjectKey = tuple[object, str]
 PolicyKey = tuple[str, str]
+_CROSSING_DECISION = "crossing decision"
+_DELIVERY_ATTEMPT = "delivery attempt"
 
 
 def validate_participant_crossing_occurrence_context(
@@ -109,7 +111,7 @@ def _index_records(records: Sequence[ParticipantCrossingOccurrenceModel]) -> _Re
         elif isinstance(occurrence, ParticipantCrossingDisclosureModel):
             _register_record(indexes.disclosures_by_id, occurrence.disclosure_id, record, "disclosure")
         elif isinstance(occurrence, ParticipantCrossingDeliveryAttemptModel):
-            _register_record(indexes.attempts_by_id, occurrence.attempt_id, record, "delivery attempt")
+            _register_record(indexes.attempts_by_id, occurrence.attempt_id, record, _DELIVERY_ATTEMPT)
         elif isinstance(occurrence, ParticipantCrossingDeliveryModel):
             _register_record(indexes.deliveries_by_id, occurrence.delivery_id, record, "delivery")
         elif isinstance(occurrence, ParticipantCrossingObservationModel):
@@ -141,11 +143,33 @@ def _validate_common_context(
     if isinstance(occurrence, ParticipantCrossingTransformationModel):
         _resolve_subject(occurrence.source_subject, subjects_by_key)
         _resolve_subject(occurrence.result_subject, subjects_by_key)
-    policy = policies_by_key.get((occurrence.policy.policy_id, occurrence.policy.policy_revision))
+    _validate_policy_context(occurrence.policy, policies_by_key)
+    _validate_reference_context(
+        record,
+        known_evidence_refs=known_evidence_refs,
+        known_authority_basis_refs=known_authority_basis_refs,
+    )
+    _validate_declassification_authority(occurrence, known_authority_basis_refs)
+
+
+def _validate_policy_context(
+    policy_ref: ParticipantCrossingPolicyReferenceModel,
+    policies_by_key: dict[PolicyKey, ParticipantCrossingPolicyReferenceModel],
+) -> None:
+    policy = policies_by_key.get((policy_ref.policy_id, policy_ref.policy_revision))
     if policy is None:
         raise ValueError("participant crossing policy revision must resolve")
-    if policy != occurrence.policy:
+    if policy != policy_ref:
         raise ValueError("participant crossing policy revision coordinates must match")
+
+
+def _validate_reference_context(
+    record: ParticipantCrossingOccurrenceModel,
+    *,
+    known_evidence_refs: Collection[str],
+    known_authority_basis_refs: Collection[str],
+) -> None:
+    occurrence = record.occurrence
     if not set(record.evidence_refs).issubset(known_evidence_refs):
         raise ValueError("participant crossing evidence reference must resolve")
     if not set(occurrence.authority_basis_refs).issubset(known_authority_basis_refs):
@@ -153,6 +177,12 @@ def _validate_common_context(
     stage_evidence_refs = _stage_evidence_refs(occurrence)
     if not set(stage_evidence_refs).issubset(known_evidence_refs):
         raise ValueError("participant crossing stage-local evidence reference must resolve")
+
+
+def _validate_declassification_authority(
+    occurrence: object,
+    known_authority_basis_refs: Collection[str],
+) -> None:
     if isinstance(
         occurrence,
         ParticipantCrossingTransformationModel | ParticipantCrossingDisclosureModel,
@@ -191,119 +221,158 @@ def _validate_stage_context(
     indexes: _RecordIndexes,
 ) -> None:
     occurrence = record.occurrence
-    if isinstance(occurrence, ParticipantCrossingRequestModel):
-        return
     if isinstance(occurrence, ParticipantCrossingDecisionModel):
-        prior = _resolve_record(indexes.requests_by_id, occurrence.request_ref, "crossing request")
-        _validate_successor(record, prior, require_same_subject=True)
-        return
-    if isinstance(occurrence, ParticipantCrossingTransformationModel):
-        prior = _resolve_record(indexes.decisions_by_id, occurrence.decision_ref, "crossing decision")
-        decision = prior.occurrence
-        assert isinstance(decision, ParticipantCrossingDecisionModel)
-        if decision.disposition != ParticipantCrossingDecisionDisposition.TRANSFORM:
-            raise ValueError("participant crossing transformation requires a transform decision")
-        _validate_successor(record, prior, require_same_subject=False)
-        if occurrence.operation != decision.required_operation:
-            raise ValueError("participant crossing transformation operation must match the decision requirement")
-        _require_declassification_gate(occurrence.operation, decision)
-        if _subject_key(decision.subject) != _subject_key(occurrence.source_subject):
-            raise ValueError("transformation source must match the decided subject")
-        return
-    if isinstance(occurrence, ParticipantCrossingDisclosureModel):
-        prior = _resolve_record(indexes.decisions_by_id, occurrence.decision_ref, "crossing decision")
-        _require_permitted_decision(prior)
-        decision = prior.occurrence
-        assert isinstance(decision, ParticipantCrossingDecisionModel)
-        _require_declassification_gate(occurrence.operation, decision)
-        if occurrence.transformation_ref is not None:
-            transformed = _resolve_record(
-                indexes.transformations_by_id,
-                occurrence.transformation_ref,
-                "crossing transformation",
-            )
-            transformed_occurrence = transformed.occurrence
-            assert isinstance(transformed_occurrence, ParticipantCrossingTransformationModel)
-            _require_same_decision(
-                occurrence.decision_ref,
-                transformed_occurrence.decision_ref,
-                "disclosure transformation",
-            )
-            _validate_successor(record, transformed, require_same_subject=True)
-        else:
-            if decision.disposition == ParticipantCrossingDecisionDisposition.TRANSFORM:
-                raise ValueError("transform decisions require their exact transformation before disclosure")
-            _validate_successor(record, prior, require_same_subject=True)
-        return
-    if isinstance(occurrence, ParticipantCrossingDeliveryAttemptModel):
-        prior = _resolve_record(indexes.decisions_by_id, occurrence.decision_ref, "crossing decision")
-        _require_permitted_decision(prior)
-        decision = prior.occurrence
-        assert isinstance(decision, ParticipantCrossingDecisionModel)
+        _validate_decision_stage(record, occurrence, indexes)
+    elif isinstance(occurrence, ParticipantCrossingTransformationModel):
+        _validate_transformation_stage(record, occurrence, indexes)
+    elif isinstance(occurrence, ParticipantCrossingDisclosureModel):
+        _validate_disclosure_stage(record, occurrence, indexes)
+    elif isinstance(occurrence, ParticipantCrossingDeliveryAttemptModel):
+        _validate_delivery_attempt_stage(record, occurrence, indexes)
+    elif isinstance(occurrence, ParticipantCrossingDeliveryModel):
+        _validate_delivery_stage(record, occurrence, indexes)
+    elif isinstance(occurrence, ParticipantCrossingObservationModel):
+        _validate_observation_stage(record, occurrence, indexes)
+    elif isinstance(occurrence, ParticipantCrossingAuditModel):
+        _validate_audit_stage(record, occurrence, indexes)
+
+
+def _validate_decision_stage(
+    record: ParticipantCrossingOccurrenceModel,
+    occurrence: ParticipantCrossingDecisionModel,
+    indexes: _RecordIndexes,
+) -> None:
+    prior = _resolve_record(indexes.requests_by_id, occurrence.request_ref, "crossing request")
+    _validate_successor(record, prior, require_same_subject=True)
+
+
+def _validate_transformation_stage(
+    record: ParticipantCrossingOccurrenceModel,
+    occurrence: ParticipantCrossingTransformationModel,
+    indexes: _RecordIndexes,
+) -> None:
+    prior = _resolve_record(indexes.decisions_by_id, occurrence.decision_ref, _CROSSING_DECISION)
+    decision = prior.occurrence
+    assert isinstance(decision, ParticipantCrossingDecisionModel)
+    if decision.disposition != ParticipantCrossingDecisionDisposition.TRANSFORM:
+        raise ValueError("participant crossing transformation requires a transform decision")
+    _validate_successor(record, prior, require_same_subject=False)
+    if occurrence.operation != decision.required_operation:
+        raise ValueError("participant crossing transformation operation must match the decision requirement")
+    _require_declassification_gate(occurrence.operation, decision)
+    if _subject_key(decision.subject) != _subject_key(occurrence.source_subject):
+        raise ValueError("transformation source must match the decided subject")
+
+
+def _validate_disclosure_stage(
+    record: ParticipantCrossingOccurrenceModel,
+    occurrence: ParticipantCrossingDisclosureModel,
+    indexes: _RecordIndexes,
+) -> None:
+    prior = _resolve_record(indexes.decisions_by_id, occurrence.decision_ref, _CROSSING_DECISION)
+    _require_permitted_decision(prior)
+    decision = prior.occurrence
+    assert isinstance(decision, ParticipantCrossingDecisionModel)
+    _require_declassification_gate(occurrence.operation, decision)
+    if occurrence.transformation_ref is None:
         if decision.disposition == ParticipantCrossingDecisionDisposition.TRANSFORM:
-            if occurrence.transformation_ref is None:
-                raise ValueError("transform decisions require a transformation before delivery attempt")
-            transformed = _resolve_record(
-                indexes.transformations_by_id,
-                occurrence.transformation_ref,
-                "crossing transformation",
-            )
-            transformed_occurrence = transformed.occurrence
-            assert isinstance(transformed_occurrence, ParticipantCrossingTransformationModel)
-            _require_same_decision(
-                occurrence.decision_ref,
-                transformed_occurrence.decision_ref,
-                "delivery-attempt transformation",
-            )
-            _validate_successor(record, transformed, require_same_subject=True)
-        else:
-            if occurrence.transformation_ref is not None:
-                raise ValueError("delivery attempt transformation_ref requires a transform decision")
-            _validate_successor(record, prior, require_same_subject=True)
-        _require_subject_owner(record, occurrence.owning_occurrence_ref, "delivery attempt")
-        return
-    if isinstance(occurrence, ParticipantCrossingDeliveryModel):
-        decision = _resolve_record(indexes.decisions_by_id, occurrence.decision_ref, "crossing decision")
-        _require_permitted_decision(decision)
-        attempt = _resolve_record(indexes.attempts_by_id, occurrence.attempt_ref, "delivery attempt")
-        attempt_occurrence = attempt.occurrence
-        assert isinstance(attempt_occurrence, ParticipantCrossingDeliveryAttemptModel)
+            raise ValueError("transform decisions require their exact transformation before disclosure")
+        _validate_successor(record, prior, require_same_subject=True)
+    else:
+        transformed = _resolve_record(
+            indexes.transformations_by_id,
+            occurrence.transformation_ref,
+            "crossing transformation",
+        )
+        transformed_occurrence = transformed.occurrence
+        assert isinstance(transformed_occurrence, ParticipantCrossingTransformationModel)
         _require_same_decision(
             occurrence.decision_ref,
-            attempt_occurrence.decision_ref,
-            "delivery",
+            transformed_occurrence.decision_ref,
+            "disclosure transformation",
         )
-        if attempt_occurrence.disposition != "attempted":
-            raise ValueError("participant crossing delivery requires a successful attempt disposition")
-        _validate_successor(record, attempt, require_same_subject=True)
-        if occurrence.delivery_order > occurrence.effective_order:
-            raise ValueError("delivery order cannot be later than its crossing fact")
-        _require_subject_owner(record, occurrence.owning_occurrence_ref, "delivery")
-        if occurrence.owning_occurrence_ref != attempt_occurrence.owning_occurrence_ref:
-            raise ValueError("participant crossing delivery owner must match its attempt")
-        return
-    if isinstance(occurrence, ParticipantCrossingObservationModel):
-        decision = _resolve_record(indexes.decisions_by_id, occurrence.decision_ref, "crossing decision")
-        _require_permitted_decision(decision)
-        delivery = _resolve_record(indexes.deliveries_by_id, occurrence.delivery_ref, "crossing delivery")
-        delivery_occurrence = delivery.occurrence
-        assert isinstance(delivery_occurrence, ParticipantCrossingDeliveryModel)
+        _validate_successor(record, transformed, require_same_subject=True)
+
+
+def _validate_delivery_attempt_stage(
+    record: ParticipantCrossingOccurrenceModel,
+    occurrence: ParticipantCrossingDeliveryAttemptModel,
+    indexes: _RecordIndexes,
+) -> None:
+    prior = _resolve_record(indexes.decisions_by_id, occurrence.decision_ref, _CROSSING_DECISION)
+    _require_permitted_decision(prior)
+    decision = prior.occurrence
+    assert isinstance(decision, ParticipantCrossingDecisionModel)
+    if decision.disposition == ParticipantCrossingDecisionDisposition.TRANSFORM:
+        if occurrence.transformation_ref is None:
+            raise ValueError("transform decisions require a transformation before delivery attempt")
+        transformed = _resolve_record(
+            indexes.transformations_by_id,
+            occurrence.transformation_ref,
+            "crossing transformation",
+        )
+        transformed_occurrence = transformed.occurrence
+        assert isinstance(transformed_occurrence, ParticipantCrossingTransformationModel)
         _require_same_decision(
             occurrence.decision_ref,
-            delivery_occurrence.decision_ref,
-            "observation",
+            transformed_occurrence.decision_ref,
+            "delivery-attempt transformation",
         )
-        if delivery_occurrence.disposition != "delivered":
-            raise ValueError("participant crossing observation requires a delivered disposition")
-        _validate_successor(record, delivery, require_same_subject=False)
-        if occurrence.observation_order > occurrence.effective_order:
-            raise ValueError("observation order cannot be later than its crossing fact")
-        _require_subject_owner(record, occurrence.owning_observation_ref, "observation")
-        return
-    if isinstance(occurrence, ParticipantCrossingAuditModel):
-        audited = _resolve_record(indexes.records_by_event_id, occurrence.audited_event_ref, "audited event")
-        _validate_successor(record, audited, require_same_subject=True)
-        return
+        _validate_successor(record, transformed, require_same_subject=True)
+    else:
+        if occurrence.transformation_ref is not None:
+            raise ValueError("delivery attempt transformation_ref requires a transform decision")
+        _validate_successor(record, prior, require_same_subject=True)
+    _require_subject_owner(record, occurrence.owning_occurrence_ref, _DELIVERY_ATTEMPT)
+
+
+def _validate_delivery_stage(
+    record: ParticipantCrossingOccurrenceModel,
+    occurrence: ParticipantCrossingDeliveryModel,
+    indexes: _RecordIndexes,
+) -> None:
+    decision = _resolve_record(indexes.decisions_by_id, occurrence.decision_ref, _CROSSING_DECISION)
+    _require_permitted_decision(decision)
+    attempt = _resolve_record(indexes.attempts_by_id, occurrence.attempt_ref, _DELIVERY_ATTEMPT)
+    attempt_occurrence = attempt.occurrence
+    assert isinstance(attempt_occurrence, ParticipantCrossingDeliveryAttemptModel)
+    _require_same_decision(occurrence.decision_ref, attempt_occurrence.decision_ref, "delivery")
+    if attempt_occurrence.disposition != "attempted":
+        raise ValueError("participant crossing delivery requires a successful attempt disposition")
+    _validate_successor(record, attempt, require_same_subject=True)
+    if occurrence.delivery_order > occurrence.effective_order:
+        raise ValueError("delivery order cannot be later than its crossing fact")
+    _require_subject_owner(record, occurrence.owning_occurrence_ref, "delivery")
+    if occurrence.owning_occurrence_ref != attempt_occurrence.owning_occurrence_ref:
+        raise ValueError("participant crossing delivery owner must match its attempt")
+
+
+def _validate_observation_stage(
+    record: ParticipantCrossingOccurrenceModel,
+    occurrence: ParticipantCrossingObservationModel,
+    indexes: _RecordIndexes,
+) -> None:
+    decision = _resolve_record(indexes.decisions_by_id, occurrence.decision_ref, _CROSSING_DECISION)
+    _require_permitted_decision(decision)
+    delivery = _resolve_record(indexes.deliveries_by_id, occurrence.delivery_ref, "crossing delivery")
+    delivery_occurrence = delivery.occurrence
+    assert isinstance(delivery_occurrence, ParticipantCrossingDeliveryModel)
+    _require_same_decision(occurrence.decision_ref, delivery_occurrence.decision_ref, "observation")
+    if delivery_occurrence.disposition != "delivered":
+        raise ValueError("participant crossing observation requires a delivered disposition")
+    _validate_successor(record, delivery, require_same_subject=False)
+    if occurrence.observation_order > occurrence.effective_order:
+        raise ValueError("observation order cannot be later than its crossing fact")
+    _require_subject_owner(record, occurrence.owning_observation_ref, "observation")
+
+
+def _validate_audit_stage(
+    record: ParticipantCrossingOccurrenceModel,
+    occurrence: ParticipantCrossingAuditModel,
+    indexes: _RecordIndexes,
+) -> None:
+    audited = _resolve_record(indexes.records_by_event_id, occurrence.audited_event_ref, "audited event")
+    _validate_successor(record, audited, require_same_subject=True)
 
 
 def _resolve_record(

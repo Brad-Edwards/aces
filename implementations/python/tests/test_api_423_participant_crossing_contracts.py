@@ -204,6 +204,25 @@ def _delivery(
     return ParticipantCrossingOccurrenceModel.model_validate(value)
 
 
+def _validate_context(
+    records: list[ParticipantCrossingOccurrenceModel],
+    *,
+    subject_values: list[dict[str, object]] | None = None,
+    policy_values: list[dict[str, object]] | None = None,
+    known_evidence_refs: set[str] | None = None,
+) -> None:
+    subjects = [_subject()] if subject_values is None else subject_values
+    policies = [_policy()] if policy_values is None else policy_values
+    evidence_refs = KNOWN_EVIDENCE_REFS if known_evidence_refs is None else known_evidence_refs
+    validate_participant_crossing_occurrence_context(
+        records,
+        known_subjects=[ParticipantCrossingSubjectReferenceModel.model_validate(subject) for subject in subjects],
+        policies=[ParticipantCrossingPolicyReferenceModel.model_validate(policy) for policy in policies],
+        known_evidence_refs=evidence_refs,
+        known_authority_basis_refs=KNOWN_AUTHORITY_BASIS_REFS,
+    )
+
+
 def test_crossing_request_is_a_closed_participant_runtime_fact() -> None:
     record = _request()
 
@@ -388,45 +407,21 @@ def test_context_validator_accepts_ordered_requested_decided_and_realized_facts(
 
 def test_context_validator_rejects_unknown_subject_stale_policy_and_missing_evidence() -> None:
     request = _request()
-    policy = ParticipantCrossingPolicyReferenceModel.model_validate(_policy())
+    empty_evidence_refs: set[str] = set()
 
     with pytest.raises(ValueError, match="typed subject reference must resolve"):
-        validate_participant_crossing_occurrence_context(
-            [request],
-            known_subjects=[],
-            policies=[policy],
-            known_evidence_refs=KNOWN_EVIDENCE_REFS,
-            known_authority_basis_refs=KNOWN_AUTHORITY_BASIS_REFS,
-        )
+        _validate_context([request], subject_values=[])
     with pytest.raises(ValueError, match="policy revision must resolve"):
-        validate_participant_crossing_occurrence_context(
-            [request],
-            known_subjects=[ParticipantCrossingSubjectReferenceModel.model_validate(_subject())],
-            policies=[],
-            known_evidence_refs=KNOWN_EVIDENCE_REFS,
-            known_authority_basis_refs=KNOWN_AUTHORITY_BASIS_REFS,
-        )
+        _validate_context([request], policy_values=[])
     with pytest.raises(ValueError, match="evidence reference must resolve"):
-        validate_participant_crossing_occurrence_context(
-            [request],
-            known_subjects=[ParticipantCrossingSubjectReferenceModel.model_validate(_subject())],
-            policies=[policy],
-            known_evidence_refs=set(),
-            known_authority_basis_refs=KNOWN_AUTHORITY_BASIS_REFS,
-        )
+        _validate_context([request], known_evidence_refs=empty_evidence_refs)
 
 
 def test_context_validator_rejects_unresolved_stage_local_evidence() -> None:
     request = _request()
 
     with pytest.raises(ValueError, match="stage-local evidence reference must resolve"):
-        validate_participant_crossing_occurrence_context(
-            [request],
-            known_subjects=[ParticipantCrossingSubjectReferenceModel.model_validate(_subject())],
-            policies=[ParticipantCrossingPolicyReferenceModel.model_validate(_policy())],
-            known_evidence_refs={"evidence:crossing-1"},
-            known_authority_basis_refs=KNOWN_AUTHORITY_BASIS_REFS,
-        )
+        _validate_context([request], known_evidence_refs={"evidence:crossing-1"})
 
 
 def test_delivery_must_use_the_attempts_exact_decision_and_successful_disposition() -> None:
@@ -440,24 +435,12 @@ def test_delivery_must_use_the_attempts_exact_decision_and_successful_dispositio
     wrong_decision_delivery = _delivery(attempt, decision_ref="crossing-decision.2")
 
     with pytest.raises(ValueError, match="delivery decision must match its predecessor"):
-        validate_participant_crossing_occurrence_context(
-            [request, decision, second, attempt, wrong_decision_delivery],
-            known_subjects=[ParticipantCrossingSubjectReferenceModel.model_validate(_subject())],
-            policies=[ParticipantCrossingPolicyReferenceModel.model_validate(_policy())],
-            known_evidence_refs=KNOWN_EVIDENCE_REFS,
-            known_authority_basis_refs=KNOWN_AUTHORITY_BASIS_REFS,
-        )
+        _validate_context([request, decision, second, attempt, wrong_decision_delivery])
 
     failed_attempt = _attempt(decision, disposition="failed")
     delivery_after_failure = _delivery(failed_attempt)
     with pytest.raises(ValueError, match="delivery requires a successful attempt disposition"):
-        validate_participant_crossing_occurrence_context(
-            [request, decision, failed_attempt, delivery_after_failure],
-            known_subjects=[ParticipantCrossingSubjectReferenceModel.model_validate(_subject())],
-            policies=[ParticipantCrossingPolicyReferenceModel.model_validate(_policy())],
-            known_evidence_refs=KNOWN_EVIDENCE_REFS,
-            known_authority_basis_refs=KNOWN_AUTHORITY_BASIS_REFS,
-        )
+        _validate_context([request, decision, failed_attempt, delivery_after_failure])
 
 
 def test_delivery_ownership_must_resolve_the_exact_typed_subject() -> None:
@@ -469,17 +452,12 @@ def test_delivery_ownership_must_resolve_the_exact_typed_subject() -> None:
         ref="observation:foreign",
     )
     attempt = _attempt(decision, owning_occurrence_ref="observation:foreign")
+    known_subjects = [_subject(), foreign_subject]
 
     with pytest.raises(ValueError, match="owner must match its typed subject"):
-        validate_participant_crossing_occurrence_context(
+        _validate_context(
             [request, decision, attempt],
-            known_subjects=[
-                ParticipantCrossingSubjectReferenceModel.model_validate(_subject()),
-                ParticipantCrossingSubjectReferenceModel.model_validate(foreign_subject),
-            ],
-            policies=[ParticipantCrossingPolicyReferenceModel.model_validate(_policy())],
-            known_evidence_refs=KNOWN_EVIDENCE_REFS,
-            known_authority_basis_refs=KNOWN_AUTHORITY_BASIS_REFS,
+            subject_values=known_subjects,
         )
 
 
@@ -503,13 +481,7 @@ def test_context_validator_rejects_delivery_without_attempt() -> None:
     delivery = ParticipantCrossingOccurrenceModel.model_validate(delivery_value)
 
     with pytest.raises(ValueError, match="delivery attempt reference must resolve"):
-        validate_participant_crossing_occurrence_context(
-            [request, decision, delivery],
-            known_subjects=[ParticipantCrossingSubjectReferenceModel.model_validate(_subject())],
-            policies=[ParticipantCrossingPolicyReferenceModel.model_validate(_policy())],
-            known_evidence_refs=KNOWN_EVIDENCE_REFS,
-            known_authority_basis_refs=KNOWN_AUTHORITY_BASIS_REFS,
-        )
+        _validate_context([request, decision, delivery])
 
 
 def test_transform_decision_delivers_the_new_subject_after_the_transformation() -> None:
@@ -603,17 +575,12 @@ def test_transform_must_apply_the_exact_operation_prescribed_by_its_decision() -
     value["occurrence"]["effective_order"] = 12
     value["occurrence"]["subject"] = result_subject
     transformation = ParticipantCrossingOccurrenceModel.model_validate(value)
+    known_subjects = [_subject(), result_subject]
 
     with pytest.raises(ValueError, match="operation must match the decision requirement"):
-        validate_participant_crossing_occurrence_context(
+        _validate_context(
             [request, decision, transformation],
-            known_subjects=[
-                ParticipantCrossingSubjectReferenceModel.model_validate(_subject()),
-                ParticipantCrossingSubjectReferenceModel.model_validate(result_subject),
-            ],
-            policies=[ParticipantCrossingPolicyReferenceModel.model_validate(_policy())],
-            known_evidence_refs=KNOWN_EVIDENCE_REFS,
-            known_authority_basis_refs=KNOWN_AUTHORITY_BASIS_REFS,
+            subject_values=known_subjects,
         )
 
 
@@ -703,17 +670,12 @@ def test_declassification_basis_must_resolve_as_declared_authority() -> None:
     value["occurrence"]["effective_order"] = 12
     value["occurrence"]["subject"] = result_subject
     transformation = ParticipantCrossingOccurrenceModel.model_validate(value)
+    known_subjects = [_subject(), result_subject]
 
     with pytest.raises(ValueError, match="declassification authority basis must resolve"):
-        validate_participant_crossing_occurrence_context(
+        _validate_context(
             [request, decision, transformation],
-            known_subjects=[
-                ParticipantCrossingSubjectReferenceModel.model_validate(_subject()),
-                ParticipantCrossingSubjectReferenceModel.model_validate(result_subject),
-            ],
-            policies=[ParticipantCrossingPolicyReferenceModel.model_validate(_policy())],
-            known_evidence_refs=KNOWN_EVIDENCE_REFS,
-            known_authority_basis_refs=KNOWN_AUTHORITY_BASIS_REFS,
+            subject_values=known_subjects,
         )
 
 
@@ -894,15 +856,9 @@ def test_context_validator_rejects_a_transformation_cycle() -> None:
     transform_b = ParticipantCrossingOccurrenceModel.model_validate(transform_b_value)
 
     with pytest.raises(ValueError, match="transformation cycle"):
-        validate_participant_crossing_occurrence_context(
+        _validate_context(
             [request_a, decision_a, transform_a, request_b, decision_b, transform_b],
-            known_subjects=[
-                ParticipantCrossingSubjectReferenceModel.model_validate(subject_a),
-                ParticipantCrossingSubjectReferenceModel.model_validate(subject_b),
-            ],
-            policies=[ParticipantCrossingPolicyReferenceModel.model_validate(_policy())],
-            known_evidence_refs=KNOWN_EVIDENCE_REFS,
-            known_authority_basis_refs=KNOWN_AUTHORITY_BASIS_REFS,
+            subject_values=[subject_a, subject_b],
         )
 
 
