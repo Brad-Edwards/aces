@@ -23,7 +23,7 @@ from typing import ClassVar
 from raes_contracts.diagnostics import Diagnostic
 
 from .driver import DomainSpec, NetworkSpec, RealizationObservation
-from .drivers.libvirt import _aces_uuid
+from .drivers.libvirt import _raes_uuid
 from .guest_appliance import GuestObservingInitramfsBuilder
 from .guest_observation import GuestObservationConfig, correlation_digest, observe_guest
 from .guest_transport import FileSerialGuestFactTransport, GuestFactTransport
@@ -140,7 +140,7 @@ class GuestCertifiedLibvirtDriver(TechVaultNativeLibvirtDriver):
     def _guest_binding(self, matrix: Mapping[str, object]) -> dict[str, object]:
         domains = [item for item in matrix.get("domains", ()) if isinstance(item, Mapping)]
         correlations = {
-            str(domain.get("address", "")): correlation_digest(_aces_uuid(str(domain.get("address", ""))))
+            str(domain.get("address", "")): correlation_digest(_raes_uuid(str(domain.get("address", ""))))
             for domain in domains
         }
         return {
