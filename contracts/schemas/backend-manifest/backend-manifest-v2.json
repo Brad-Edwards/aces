@@ -815,6 +815,19 @@
           "default": null,
           "title": "Max Autonomous Action Attempts"
         },
+        "max_autonomous_burst_size": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Autonomous Burst Size"
+        },
         "max_autonomous_in_flight": {
           "anyOf": [
             {
@@ -828,6 +841,19 @@
           "default": null,
           "title": "Max Autonomous In Flight"
         },
+        "max_autonomous_occurrences": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Autonomous Occurrences"
+        },
         "max_autonomous_participants": {
           "anyOf": [
             {
@@ -840,6 +866,19 @@
           ],
           "default": null,
           "title": "Max Autonomous Participants"
+        },
+        "max_autonomous_retries_per_occurrence": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Autonomous Retries Per Occurrence"
         },
         "name": {
           "minLength": 1,
@@ -855,6 +894,24 @@
           "type": "array",
           "uniqueItems": true
         },
+        "supported_autonomous_activity_features": {
+          "items": {
+            "enum": [
+              "work-windows",
+              "timing-variation",
+              "weighted-selection",
+              "dependencies",
+              "bounded-retries",
+              "cooldowns",
+              "limited-bursts",
+              "occurrence-provenance"
+            ],
+            "type": "string"
+          },
+          "title": "Supported Autonomous Activity Features",
+          "type": "array",
+          "uniqueItems": true
+        },
         "supported_autonomous_observation_boundaries": {
           "items": {
             "minLength": 1,
@@ -864,9 +921,33 @@
           "type": "array",
           "uniqueItems": true
         },
+        "supported_autonomous_policy_profiles": {
+          "items": {
+            "enum": [
+              "participant-autonomous-execution/v1",
+              "participant-autonomous-execution/v2"
+            ],
+            "type": "string"
+          },
+          "title": "Supported Autonomous Policy Profiles",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supported_autonomous_random_stream_profiles": {
+          "items": {
+            "const": "blake3-xof-participant-v1",
+            "type": "string"
+          },
+          "title": "Supported Autonomous Random Stream Profiles",
+          "type": "array",
+          "uniqueItems": true
+        },
         "supported_autonomous_selection_strategies": {
           "items": {
-            "const": "ordered_cycle",
+            "enum": [
+              "ordered_cycle",
+              "weighted"
+            ],
             "type": "string"
           },
           "title": "Supported Autonomous Selection Strategies",

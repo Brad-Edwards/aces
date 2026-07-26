@@ -2,9 +2,9 @@
   "contract_id": "backend-manifest-v2",
   "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
   "stability": "draft",
-  "content_hash": "8645c2b5e00cd595d2661959fe2dfa0ac91e5cca26d4455fe87dad8e6a97db48",
+  "content_hash": "56cd3a5d5f5f08618066975f449c6c86109c4c7cb8230039034db7f41deefcb5",
   "last_change": {
-    "summary": "Added a typed, owner-governed apparatus configuration target registry and experiment binding contract support.",
-    "content_hash": "8645c2b5e00cd595d2661959fe2dfa0ac91e5cca26d4455fe87dad8e6a97db48"
+    "summary": "Added exact autonomous participant policy-profile, activity-feature, random-stream-profile, occurrence, retry, and burst capability declarations for issue #897.",
+    "content_hash": "56cd3a5d5f5f08618066975f449c6c86109c4c7cb8230039034db7f41deefcb5"
   }
 }

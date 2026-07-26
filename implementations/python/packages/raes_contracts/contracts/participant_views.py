@@ -23,6 +23,7 @@ from .base import ContractModel, NonEmptyString, Rfc3339DateTimeString
 from .participant_envelopes import ParticipantRuntimeBaseEnvelopeModel
 from .participant_runtime import (
     ParticipantActionResultModel,
+    ParticipantActivityOccurrenceProvenanceModel,
     ParticipantAttributionEdgeModel,
     ParticipantObservationDetailsModel,
     ParticipantOutcomeInterpretationRecordModel,
@@ -115,6 +116,7 @@ class ParticipantHistoryViewBehaviorEventModel(ContractModel):
     attribution_edges: list[ParticipantAttributionEdgeModel] = Field(default_factory=list)
     outcome_interpretations: list[ParticipantOutcomeInterpretationRecordModel] = Field(default_factory=list)
     temporal_contexts: list[ParticipantTemporalRuntimeContextModel] = Field(default_factory=list)
+    activity_provenance: ParticipantActivityOccurrenceProvenanceModel | None = None
     details: ParticipantObservationDetailsModel = Field(default_factory=ParticipantObservationDetailsModel)
 
     @model_validator(mode="after")

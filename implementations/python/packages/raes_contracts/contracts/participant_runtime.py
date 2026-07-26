@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import Field, StrictInt, model_validator
+from pydantic import Field, SerializerFunctionWrapHandler, StrictInt, model_serializer, model_validator
 from raes.participant_attribution_semantics import (
     ParticipantAttributionCandidateKind,
     ParticipantAttributionOrderingBasisKind,
@@ -36,6 +36,7 @@ from ..participant_behavior import (
 )
 from ..versions import PARTICIPANT_EPISODE_STATE_SCHEMA_VERSION
 from .base import ContractModel, NonEmptyString
+from .random_stream import ParticipantStreamAddressModel
 
 
 class ParticipantEpisodeStateModel(ContractModel):
@@ -189,6 +190,25 @@ class ParticipantOutcomeInterpretationRecordModel(ContractModel):
     diagnostics: list[NonEmptyString] = Field(default_factory=list)
 
 
+class ParticipantActivityOccurrenceProvenanceModel(ContractModel):
+    """Safe within-run scheduler provenance for one native action attempt."""
+
+    policy_address: NonEmptyString
+    policy_profile: Literal["participant-autonomous-execution/v2"]
+    occurrence_id: NonEmptyString
+    attempt_id: NonEmptyString
+    predecessor_attempt_id: NonEmptyString | None = None
+    candidate_id: NonEmptyString
+    dependency_candidate_ids: list[NonEmptyString] = Field(default_factory=list)
+    timing_tick: StrictInt = Field(ge=0)
+    timing_disposition: Literal["drawn", "next_opening", "retry", "burst"]
+    burst_position: StrictInt = Field(ge=0)
+    random_control_id: NonEmptyString
+    random_profile_id: NonEmptyString
+    random_address: ParticipantStreamAddressModel
+    terminal_outcome: NonEmptyString
+
+
 class ParticipantBehaviorHistoryEventModel(ContractModel):
     event_type: ParticipantBehaviorHistoryEventType
     timestamp: NonEmptyString
@@ -215,6 +235,7 @@ class ParticipantBehaviorHistoryEventModel(ContractModel):
     attribution_edges: list[ParticipantAttributionEdgeModel] = Field(default_factory=list)
     outcome_interpretations: list[ParticipantOutcomeInterpretationRecordModel] = Field(default_factory=list)
     temporal_contexts: list[ParticipantTemporalRuntimeContextModel] = Field(default_factory=list)
+    activity_provenance: ParticipantActivityOccurrenceProvenanceModel | None = None
     details: ParticipantObservationDetailsModel = Field(default_factory=ParticipantObservationDetailsModel)
 
     @model_validator(mode="after")
@@ -250,11 +271,59 @@ class ParticipantAutonomousExecutionStateModel(ContractModel):
     failed_actions: StrictInt = Field(ge=0)
     in_flight: StrictInt = Field(default=0, ge=0)
     last_action_instance_id: str | None = None
+    profile: Literal[
+        "participant-autonomous-execution/v1",
+        "participant-autonomous-execution/v2",
+    ] = "participant-autonomous-execution/v1"
+    occurrence_ordinal: StrictInt = Field(default=0, ge=0)
+    current_retry: StrictInt = Field(default=0, ge=0)
+    burst_position: StrictInt = Field(default=0, ge=0)
+    burst_size: StrictInt = Field(default=1, ge=1)
+    next_timing_disposition: Literal["cadence", "drawn", "next_opening"] = "cadence"
+    last_candidate_id: str | None = None
+    completed_candidate_ids: list[NonEmptyString] = Field(default_factory=list)
+    candidate_cooldown_until: dict[NonEmptyString, StrictInt] = Field(default_factory=dict)
+    random_control_id: str | None = None
+    random_profile_id: str | None = None
+    random_namespace: str | None = None
+
+    @model_serializer(mode="wrap")
+    def _serialize_profile_state(
+        self,
+        handler: SerializerFunctionWrapHandler,
+    ) -> dict[str, Any]:
+        payload = handler(self)
+        if self.profile == "participant-autonomous-execution/v1":
+            for field_name in (
+                "profile",
+                "occurrence_ordinal",
+                "current_retry",
+                "burst_position",
+                "burst_size",
+                "next_timing_disposition",
+                "last_candidate_id",
+                "completed_candidate_ids",
+                "candidate_cooldown_until",
+                "random_control_id",
+                "random_profile_id",
+                "random_namespace",
+            ):
+                payload.pop(field_name, None)
+        return payload
 
     @model_validator(mode="after")
     def _validate_counters(self) -> ParticipantAutonomousExecutionStateModel:
         if self.succeeded_actions + self.failed_actions > self.attempted_actions:
             raise ValueError("terminal autonomous action counts cannot exceed attempted actions")
+        if self.profile == "participant-autonomous-execution/v1":
+            if any((self.random_control_id, self.random_profile_id, self.random_namespace)):
+                raise ValueError("v1 autonomous execution state cannot carry participant random-control identity")
+        elif not all((self.random_control_id, self.random_profile_id, self.random_namespace)):
+            raise ValueError("v2 autonomous execution state requires complete participant random-control identity")
+        if len(self.completed_candidate_ids) != len(set(self.completed_candidate_ids)):
+            raise ValueError("completed autonomous activity candidate ids must be unique")
+        if self.current_retry > self.attempted_actions:
+            raise ValueError("autonomous activity current_retry cannot exceed attempted actions")
         return self
 
 

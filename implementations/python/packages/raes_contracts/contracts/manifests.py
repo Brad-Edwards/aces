@@ -28,6 +28,7 @@ from .capabilities import (
     ProvisionerCapabilitiesModel,
 )
 from .experiment_bindings import ConfigurationTargetRegistryModel
+from .time_manifest_capabilities import TimeCapabilitiesModel
 from .trial_cleanup import CleanupActionKind
 from .validators import (
     _validate_canonical_concept_bindings,
@@ -166,7 +167,7 @@ class ParticipantRuntimeCapabilitiesModel(ContractModel):
     )
     feature_support: list[ParticipantFeatureSupportModel] = Field(default_factory=list)
     supports_autonomous_execution: bool = False
-    supported_autonomous_selection_strategies: list[Literal["ordered_cycle"]] = Field(
+    supported_autonomous_selection_strategies: list[Literal["ordered_cycle", "weighted"]] = Field(
         default_factory=list,
         json_schema_extra={"uniqueItems": True},
     )
@@ -182,9 +183,31 @@ class ParticipantRuntimeCapabilitiesModel(ContractModel):
         default_factory=list,
         json_schema_extra={"uniqueItems": True},
     )
+    supported_autonomous_policy_profiles: list[
+        Literal["participant-autonomous-execution/v1", "participant-autonomous-execution/v2"]
+    ] = Field(default_factory=list, json_schema_extra={"uniqueItems": True})
+    supported_autonomous_activity_features: list[
+        Literal[
+            "work-windows",
+            "timing-variation",
+            "weighted-selection",
+            "dependencies",
+            "bounded-retries",
+            "cooldowns",
+            "limited-bursts",
+            "occurrence-provenance",
+        ]
+    ] = Field(default_factory=list, json_schema_extra={"uniqueItems": True})
+    supported_autonomous_random_stream_profiles: list[Literal["blake3-xof-participant-v1"]] = Field(
+        default_factory=list,
+        json_schema_extra={"uniqueItems": True},
+    )
     max_autonomous_participants: int | None = Field(default=None, ge=1)
     max_autonomous_action_attempts: int | None = Field(default=None, ge=1)
     max_autonomous_in_flight: int | None = Field(default=None, ge=1)
+    max_autonomous_occurrences: int | None = Field(default=None, ge=1)
+    max_autonomous_retries_per_occurrence: int | None = Field(default=None, ge=1)
+    max_autonomous_burst_size: int | None = Field(default=None, ge=1)
     constraints: dict[str, str] = Field(default_factory=dict)
 
     @model_validator(mode="after")
@@ -230,8 +253,18 @@ class ParticipantRuntimeCapabilitiesModel(ContractModel):
             raise ValueError("autonomous_execution feature and support flag must agree")
         if self.supports_autonomous_execution and not self._has_complete_autonomous_configuration():
             raise ValueError(
-                "autonomous execution requires selection strategies, exact action and observation support, "
-                "and finite limits"
+                "autonomous execution requires selection strategies, exact action, observation, and policy-profile "
+                "support, and finite limits"
+            )
+        if (
+            self.supports_autonomous_execution
+            and "participant-autonomous-execution/v2" in self.supported_autonomous_policy_profiles
+            and (
+                not self.supported_autonomous_activity_features or not self.supported_autonomous_random_stream_profiles
+            )
+        ):
+            raise ValueError(
+                "autonomous execution v2 requires exact activity-feature and random-stream-profile support"
             )
         if not self.supports_autonomous_execution and self._has_any_autonomous_configuration():
             raise ValueError("autonomous execution limits require autonomous execution support")
@@ -241,6 +274,7 @@ class ParticipantRuntimeCapabilitiesModel(ContractModel):
             self.supported_autonomous_selection_strategies
             and self.supported_autonomous_action_contracts
             and self.supported_autonomous_observation_boundaries
+            and self.supported_autonomous_policy_profiles
             and all(value is not None for value in self._autonomous_limits())
         )
 
@@ -250,14 +284,20 @@ class ParticipantRuntimeCapabilitiesModel(ContractModel):
             or self.supported_autonomous_action_contracts
             or self.supported_autonomous_observation_boundaries
             or self.supported_autonomous_target_addresses
+            or self.supported_autonomous_policy_profiles
+            or self.supported_autonomous_activity_features
+            or self.supported_autonomous_random_stream_profiles
             or any(value is not None for value in self._autonomous_limits())
         )
 
-    def _autonomous_limits(self) -> tuple[int | None, int | None, int | None]:
+    def _autonomous_limits(self) -> tuple[int | None, ...]:
         return (
             self.max_autonomous_participants,
             self.max_autonomous_action_attempts,
             self.max_autonomous_in_flight,
+            self.max_autonomous_occurrences,
+            self.max_autonomous_retries_per_occurrence,
+            self.max_autonomous_burst_size,
         )
 
     def _validate_autonomous_addresses(self) -> None:
@@ -338,72 +378,6 @@ class CleanupCapabilitiesModel(ContractModel):
         validate_backend_supported_contract_versions(self.supported_contract_versions)
         if self.supports_reusable_state and not self.supports_residual_state_disclosure:
             raise ValueError("reusable-state support requires residual-state disclosure")
-        return self
-
-
-_TIME_CAPABILITY_REQUIRED_CONTRACTS = {
-    "time-model-v1",
-    "time-runtime-state-v1",
-    "realized-time-model-v1",
-    "runtime-snapshot-v1",
-    "experiment-run-v1",
-}
-_TIME_CAPABILITY_TERMS = {
-    "supported_domain_kinds": {"wall_clock", "monotonic", "simulated", "logical", "external"},
-    "supported_authority_kinds": {"runtime", "backend", "system", "external"},
-    "supported_advancement_modes": {
-        "real_time",
-        "dilated",
-        "stepped",
-        "event_driven",
-        "externally_paced",
-    },
-    "supported_synchronization_modes": {"none", "authority", "barrier", "conservative"},
-    "supported_mapping_kinds": {"identity", "affine_rational"},
-    "supported_constraint_kinds": {"precedence", "duration", "window", "deadline", "cadence"},
-    "supported_reset_behaviors": {"unsupported", "new_segment_zero", "new_segment_preserve_value"},
-    "supported_replay_behaviors": {"unsupported", "restart_from_anchor", "restore_recorded_advances"},
-}
-
-
-class TimeCapabilitiesModel(ContractModel):
-    """Backend support for the API-421 portable shared-time contract family."""
-
-    name: NonEmptyString
-    supported_contract_versions: list[NonEmptyString] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
-    supported_domain_kinds: list[NonEmptyString] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
-    supported_authority_kinds: list[NonEmptyString] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
-    supported_advancement_modes: list[NonEmptyString] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
-    supported_synchronization_modes: list[NonEmptyString] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
-    supported_mapping_kinds: list[NonEmptyString] = Field(default_factory=list, json_schema_extra={"uniqueItems": True})
-    supported_constraint_kinds: list[NonEmptyString] = Field(
-        default_factory=list, json_schema_extra={"uniqueItems": True}
-    )
-    supported_reset_behaviors: list[NonEmptyString] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
-    supported_replay_behaviors: list[NonEmptyString] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
-    max_time_domains: int | None = Field(default=None, ge=1)
-    max_clocks: int | None = Field(default=None, ge=1)
-    supports_pause: bool = False
-    supports_jump: bool = False
-    supports_exact_rational_mappings: bool = False
-    supports_append_only_history: bool = False
-    supports_run_provenance: bool = False
-    supports_coordinated_participant_reset: bool = False
-    constraints: dict[str, str] = Field(default_factory=dict)
-
-    @model_validator(mode="after")
-    def _validate_time_capability(self) -> TimeCapabilitiesModel:
-        if set(self.supported_contract_versions) != _TIME_CAPABILITY_REQUIRED_CONTRACTS:
-            raise ValueError("time capabilities require the complete time contract family")
-        validate_backend_supported_contract_versions(self.supported_contract_versions)
-        for field_name, allowed in _TIME_CAPABILITY_TERMS.items():
-            values = getattr(self, field_name)
-            _validate_unique_string_values(f"time {field_name}", values)
-            unknown = sorted(set(values) - allowed)
-            if unknown:
-                raise ValueError(f"time {field_name} contains unknown values: {', '.join(unknown)}")
-        if self.supported_mapping_kinds and not self.supports_exact_rational_mappings:
-            raise ValueError("time mapping support requires exact rational mappings")
         return self
 
 

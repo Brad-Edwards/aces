@@ -22,9 +22,10 @@ and the implementation plan:
   bias, recording ``rejection_attempts`` and enforcing a bounded max-attempt
   budget: deterministic exhaustion failure, never fallback or clamping.
 
-Only the ``blake3-xof-v1`` profile id is dispatched. An unknown/unsupported
-profile id fails closed (``ValueError``) rather than falling back to a
-library default or a dynamic plugin lookup.
+Only the published ``blake3-xof-v1`` and ``blake3-xof-participant-v1``
+profile ids are dispatched. An unknown/unsupported profile id fails closed
+(``ValueError``) rather than falling back to a library default or a dynamic
+plugin lookup.
 """
 
 from __future__ import annotations
@@ -34,7 +35,7 @@ from dataclasses import dataclass
 import blake3
 import rfc8785
 
-from .contracts.random_stream import PublicSeedModel, StreamAddressModel
+from .contracts.random_stream import ParticipantStreamAddressModel, PublicSeedModel, StreamAddressModel
 from .diagnostics import Diagnostic, Severity
 from .random_stream_profiles import SUPPORTED_RANDOM_STREAM_PROFILE_IDS
 
@@ -85,7 +86,7 @@ def derive_stream_key(*, profile_id: str, root_entropy: bytes) -> bytes:
     return hasher.digest()
 
 
-def canonical_stream_address_bytes(address: StreamAddressModel) -> bytes:
+def canonical_stream_address_bytes(address: StreamAddressModel | ParticipantStreamAddressModel) -> bytes:
     """Return the RFC 8785/JCS canonical bytes for one closed ``StreamAddressModel``.
 
     Uses ``exclude_none=True`` rather than ``exclude_unset=True``: the
@@ -107,7 +108,7 @@ def raw_block(
     *,
     profile_id: str,
     stream_key: bytes,
-    address: StreamAddressModel,
+    address: StreamAddressModel | ParticipantStreamAddressModel,
     byte_length: int = BLOCK_BYTES,
     byte_offset: int = 0,
 ) -> bytes:
@@ -149,7 +150,7 @@ def draw_bounded_integer(
     *,
     profile_id: str,
     stream_key: bytes,
-    address: StreamAddressModel,
+    address: StreamAddressModel | ParticipantStreamAddressModel,
     minimum: int,
     maximum: int,
     max_rejection_attempts: int,

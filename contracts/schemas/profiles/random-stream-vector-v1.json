@@ -28,6 +28,82 @@
       "title": "GovernedRandomOutcomeRefModel",
       "type": "object"
     },
+    "ParticipantStreamAddressModel": {
+      "additionalProperties": false,
+      "description": "Closed within-run address for one participant-policy draw.",
+      "properties": {
+        "draw_purpose": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Draw Purpose",
+          "type": "string"
+        },
+        "local_coordinate": {
+          "minimum": 0,
+          "title": "Local Coordinate",
+          "type": "integer"
+        },
+        "namespace": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Namespace",
+          "type": "string"
+        },
+        "occurrence_ordinal": {
+          "minimum": 0,
+          "title": "Occurrence Ordinal",
+          "type": "integer"
+        },
+        "participant_address": {
+          "minLength": 1,
+          "title": "Participant Address",
+          "type": "string"
+        },
+        "policy_address": {
+          "minLength": 1,
+          "title": "Policy Address",
+          "type": "string"
+        },
+        "time_segment": {
+          "minimum": 0,
+          "title": "Time Segment",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "namespace",
+        "policy_address",
+        "participant_address",
+        "time_segment",
+        "occurrence_ordinal",
+        "draw_purpose",
+        "local_coordinate"
+      ],
+      "title": "ParticipantStreamAddressModel",
+      "type": "object",
+      "x-aces-invariants": [
+        {
+          "description": "draw_purpose must be governed and policy_address/participant_address must be compiled autonomous participant addresses.",
+          "id": "participant-random-stream-address-governed",
+          "inputs": [
+            {
+              "contract_id": "controlled-vocabularies-v1",
+              "instance_path": "#"
+            }
+          ],
+          "level": "error",
+          "validator": "raes_contracts.contracts.random_stream.ParticipantStreamAddressModel._validate_address"
+        }
+      ]
+    },
     "PublicRandomOutcomeModel": {
       "additionalProperties": false,
       "description": "Public drawn value, recorded as canonical text.",
@@ -301,7 +377,15 @@
   "description": "One canonical cross-language conformance vector case.\n\nComputed independently of the reference engine (a throwaway script that\ncalls the ``blake3`` library directly), so the vector tests do not just\ntest the engine against itself.",
   "properties": {
     "address": {
-      "$ref": "#/$defs/StreamAddressModel"
+      "anyOf": [
+        {
+          "$ref": "#/$defs/StreamAddressModel"
+        },
+        {
+          "$ref": "#/$defs/ParticipantStreamAddressModel"
+        }
+      ],
+      "title": "Address"
     },
     "address_canonical_bytes_hex": {
       "minLength": 1,

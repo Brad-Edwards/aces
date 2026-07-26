@@ -176,9 +176,23 @@ def backend_manifest_v2_model(manifest: BackendManifest) -> BackendManifestV2Mod
                     "supported_autonomous_target_addresses": sorted(
                         manifest.participant_runtime.supported_autonomous_target_addresses
                     ),
+                    "supported_autonomous_policy_profiles": sorted(
+                        manifest.participant_runtime.supported_autonomous_policy_profiles
+                    ),
+                    "supported_autonomous_activity_features": sorted(
+                        manifest.participant_runtime.supported_autonomous_activity_features
+                    ),
+                    "supported_autonomous_random_stream_profiles": sorted(
+                        manifest.participant_runtime.supported_autonomous_random_stream_profiles
+                    ),
                     "max_autonomous_participants": manifest.participant_runtime.max_autonomous_participants,
                     "max_autonomous_action_attempts": (manifest.participant_runtime.max_autonomous_action_attempts),
                     "max_autonomous_in_flight": manifest.participant_runtime.max_autonomous_in_flight,
+                    "max_autonomous_occurrences": manifest.participant_runtime.max_autonomous_occurrences,
+                    "max_autonomous_retries_per_occurrence": (
+                        manifest.participant_runtime.max_autonomous_retries_per_occurrence
+                    ),
+                    "max_autonomous_burst_size": manifest.participant_runtime.max_autonomous_burst_size,
                     "constraints": dict(manifest.participant_runtime.constraints),
                 }
                 if manifest.participant_runtime is not None
@@ -339,9 +353,15 @@ def _participant_runtime_from_model(
         supported_autonomous_action_contracts=frozenset(model.supported_autonomous_action_contracts),
         supported_autonomous_observation_boundaries=frozenset(model.supported_autonomous_observation_boundaries),
         supported_autonomous_target_addresses=frozenset(model.supported_autonomous_target_addresses),
+        supported_autonomous_policy_profiles=frozenset(model.supported_autonomous_policy_profiles),
+        supported_autonomous_activity_features=frozenset(model.supported_autonomous_activity_features),
+        supported_autonomous_random_stream_profiles=frozenset(model.supported_autonomous_random_stream_profiles),
         max_autonomous_participants=model.max_autonomous_participants,
         max_autonomous_action_attempts=model.max_autonomous_action_attempts,
         max_autonomous_in_flight=model.max_autonomous_in_flight,
+        max_autonomous_occurrences=model.max_autonomous_occurrences,
+        max_autonomous_retries_per_occurrence=model.max_autonomous_retries_per_occurrence,
+        max_autonomous_burst_size=model.max_autonomous_burst_size,
         constraints=dict(model.constraints),
     )
 

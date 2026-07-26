@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-snapshot-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "6833f448f35ead054ba95e4a621309c320b5bc227e32d2e12472f276482e5f59",
+  "content_hash": "40acc1309750eaaec3057ec2d9e2dd15e7023bb5658396291cc8e66620682659",
   "last_change": {
-    "summary": "Published participant-directed inject deliveries and governed participant action-argument domains in immutable scenario snapshots on the RAES-only package surface.",
-    "content_hash": "6833f448f35ead054ba95e4a621309c320b5bc227e32d2e12472f276482e5f59"
+    "summary": "Published the explicit autonomous activity v2 policy union in immutable instantiated scenario snapshots for issue #897.",
+    "content_hash": "40acc1309750eaaec3057ec2d9e2dd15e7023bb5658396291cc8e66620682659"
   }
 }

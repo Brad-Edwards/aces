@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "01e502976847abfed1d37f7b6e972971d9109fac34e4e94ef31b5971a0a93032",
+  "content_hash": "cc580a03334f7f1d248ccb17d7151fdb9ed8cfc2f8abfe89d2f6462c2b489854",
   "last_change": {
-    "summary": "Carried participant-directed inject deliveries and governed participant action-argument domains into satisfiability evidence on the RAES-only package surface.",
-    "content_hash": "01e502976847abfed1d37f7b6e972971d9109fac34e4e94ef31b5971a0a93032"
+    "summary": "Carried the explicit autonomous activity v2 policy union through satisfiability evidence scenario definitions for issue #897.",
+    "content_hash": "cc580a03334f7f1d248ccb17d7151fdb9ed8cfc2f8abfe89d2f6462c2b489854"
   }
 }

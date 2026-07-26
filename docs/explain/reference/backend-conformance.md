@@ -140,8 +140,9 @@ DSL-437 autonomous execution is an additional fail-closed participant
 capability. A backend that includes `autonomous_execution` in
 `supported_behavior_features` must set `supports_autonomous_execution`, list
 its supported selection strategies, exact action contracts, observation
-boundaries, target addresses, and positive finite limits for participants,
-attempts, and in-flight actions. The planner also compares the parent behavior
+boundaries, target addresses, policy profiles, and positive finite limits for
+participants, attempts, in-flight actions, occurrences, retries per occurrence,
+and burst size. The planner also compares the parent behavior
 specification's required feature set with the runtime capability. Runtime
 target registration requires the autonomous native-binding method. This is
 admission evidence only: conformance also requires the backend participant
@@ -154,6 +155,16 @@ cadence; externally paced autonomous execution is not admissible until a
 portable transition-notification contract is governed. Durable readback must
 agree across scheduler policy identity, clock segment/lifecycle, and live
 participant episode.
+
+The explicit `participant-autonomous-execution/v2` profile additionally
+requires exact support for all governed activity features, `weighted`
+selection, shared-time `window` constraints, and
+`blake3-xof-participant-v1`. The runtime records dependency, retry, cooldown,
+burst, timing-disposition, and safe random-address facts in typed continuation
+and participant behavior history. A backend must not substitute the
+experiment-selection `blake3-xof-v1` address/profile, silently drop occurrence
+provenance, or treat an apparatus stochastic-control declaration as scenario
+variation. Missing exact support fails planning.
 
 ## Gotchas And Anti-Patterns
 

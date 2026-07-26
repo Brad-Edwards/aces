@@ -1,6 +1,6 @@
 {
   "schema_version": "sdl-lineage-ledger/v1",
-  "reviewed_on": "2026-07-24",
+  "reviewed_on": "2026-07-26",
   "citations": [
     {
       "citation_id": "ocr-sdl-v0.21.2",
@@ -846,7 +846,7 @@
               "symbol_or_pointer": "sections 7.2 and 8.4: storyboard/entity/action/trigger lifecycle and execution"
             }
           ],
-          "divergence": "ACES adapts only the participant-environment, multi-participant ordering, shared-time coordination, and clock-jump callback concerns. The nested autonomous-execution policy, green-role restriction, evaluation-authority boundary, canonical references, reachable-cadence rule, runtime-owned wall pacing, capability admission, and clock/episode/scheduler readback contracts are ACES-defined. Externally paced autonomous execution remains unsupported pending a portable transition-notification contract. ACES adopts no source syntax, actor ontology, scheduler algorithm, clock protocol, federation middleware, automotive hierarchy, or wire compatibility.",
+          "divergence": "ACES adapts only the participant-environment, multi-participant ordering, shared-time coordination, and clock-jump callback concerns. The nested autonomous-execution profiles, green-role restriction, evaluation-authority boundary, canonical references, reachable cadence and activity timing rules, work/pause window algebra, weighted candidate/dependency/retry/cooldown/burst policy, participant-occurrence random address, runtime-owned wall pacing, exact capability admission, and clock/episode/scheduler/provenance readback contracts are ACES-defined. V2 reuses ACES's separately governed random-stream engine and bounded-integer transform but remains within-run participant execution, not trial variation. Externally paced autonomous execution remains unsupported pending a portable transition-notification contract. ACES adopts no source syntax, actor ontology, scheduler algorithm, clock protocol, federation middleware, automotive hierarchy, RNG API, or wire compatibility.",
           "compatibility": "none",
           "citation_refs": [
             "cyborg-2021",
@@ -861,9 +861,12 @@
           ],
           "internal_authority_refs": [
             "specs/sdl/sections.md",
+            "docs/decisions/adrs/adr-084-scenario-variation-and-deterministic-trial-realization.md",
             "docs/decisions/adrs/adr-092-autonomous-benign-participants-under-shared-time.md",
             "specs/formal/participant-semantics/autonomous-execution.md",
+            "specs/formal/scenario-variation-trial-realization/README.md",
             "docs/research/participant-backend-contracts/prior-art-and-design-criteria.md",
+            "docs/research/scenario-variation-trial-realization/prior-art-and-design-criteria.md",
             "docs/research/time-model/prior-art-and-design-criteria.md"
           ],
           "compatibility_direction": "aces_relative_to_source"

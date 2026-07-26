@@ -264,6 +264,112 @@
       "title": "ParticipantActionResultModel",
       "type": "object"
     },
+    "ParticipantActivityOccurrenceProvenanceModel": {
+      "additionalProperties": false,
+      "description": "Safe within-run scheduler provenance for one native action attempt.",
+      "properties": {
+        "attempt_id": {
+          "minLength": 1,
+          "title": "Attempt Id",
+          "type": "string"
+        },
+        "burst_position": {
+          "minimum": 0,
+          "title": "Burst Position",
+          "type": "integer"
+        },
+        "candidate_id": {
+          "minLength": 1,
+          "title": "Candidate Id",
+          "type": "string"
+        },
+        "dependency_candidate_ids": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Dependency Candidate Ids",
+          "type": "array"
+        },
+        "occurrence_id": {
+          "minLength": 1,
+          "title": "Occurrence Id",
+          "type": "string"
+        },
+        "policy_address": {
+          "minLength": 1,
+          "title": "Policy Address",
+          "type": "string"
+        },
+        "policy_profile": {
+          "const": "participant-autonomous-execution/v2",
+          "title": "Policy Profile",
+          "type": "string"
+        },
+        "predecessor_attempt_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Predecessor Attempt Id"
+        },
+        "random_address": {
+          "$ref": "#/$defs/ParticipantStreamAddressModel"
+        },
+        "random_control_id": {
+          "minLength": 1,
+          "title": "Random Control Id",
+          "type": "string"
+        },
+        "random_profile_id": {
+          "minLength": 1,
+          "title": "Random Profile Id",
+          "type": "string"
+        },
+        "terminal_outcome": {
+          "minLength": 1,
+          "title": "Terminal Outcome",
+          "type": "string"
+        },
+        "timing_disposition": {
+          "enum": [
+            "drawn",
+            "next_opening",
+            "retry",
+            "burst"
+          ],
+          "title": "Timing Disposition",
+          "type": "string"
+        },
+        "timing_tick": {
+          "minimum": 0,
+          "title": "Timing Tick",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "policy_address",
+        "policy_profile",
+        "occurrence_id",
+        "attempt_id",
+        "candidate_id",
+        "timing_tick",
+        "timing_disposition",
+        "burst_position",
+        "random_control_id",
+        "random_profile_id",
+        "random_address",
+        "terminal_outcome"
+      ],
+      "title": "ParticipantActivityOccurrenceProvenanceModel",
+      "type": "object"
+    },
     "ParticipantAdmissionDisposition": {
       "description": "RUN-306 selection/admission disposition values.",
       "enum": [
@@ -888,6 +994,82 @@
       "title": "ParticipantRuntimeLifecyclePhase",
       "type": "string"
     },
+    "ParticipantStreamAddressModel": {
+      "additionalProperties": false,
+      "description": "Closed within-run address for one participant-policy draw.",
+      "properties": {
+        "draw_purpose": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Draw Purpose",
+          "type": "string"
+        },
+        "local_coordinate": {
+          "minimum": 0,
+          "title": "Local Coordinate",
+          "type": "integer"
+        },
+        "namespace": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Namespace",
+          "type": "string"
+        },
+        "occurrence_ordinal": {
+          "minimum": 0,
+          "title": "Occurrence Ordinal",
+          "type": "integer"
+        },
+        "participant_address": {
+          "minLength": 1,
+          "title": "Participant Address",
+          "type": "string"
+        },
+        "policy_address": {
+          "minLength": 1,
+          "title": "Policy Address",
+          "type": "string"
+        },
+        "time_segment": {
+          "minimum": 0,
+          "title": "Time Segment",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "namespace",
+        "policy_address",
+        "participant_address",
+        "time_segment",
+        "occurrence_ordinal",
+        "draw_purpose",
+        "local_coordinate"
+      ],
+      "title": "ParticipantStreamAddressModel",
+      "type": "object",
+      "x-aces-invariants": [
+        {
+          "description": "draw_purpose must be governed and policy_address/participant_address must be compiled autonomous participant addresses.",
+          "id": "participant-random-stream-address-governed",
+          "inputs": [
+            {
+              "contract_id": "controlled-vocabularies-v1",
+              "instance_path": "#"
+            }
+          ],
+          "level": "error",
+          "validator": "raes_contracts.contracts.random_stream.ParticipantStreamAddressModel._validate_address"
+        }
+      ]
+    },
     "ParticipantTemporalEventPoint": {
       "description": "Named participant event points used by temporal contracts.",
       "enum": [
@@ -1019,6 +1201,17 @@
         "anyOf": [
           {
             "$ref": "#/$defs/ParticipantActionResultModel"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "activity_provenance": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/ParticipantActivityOccurrenceProvenanceModel"
           },
           {
             "type": "null"
@@ -1258,5 +1451,14 @@
     "type": "object"
   },
   "title": "ParticipantBehaviorHistoryEventStream",
-  "type": "array"
+  "type": "array",
+  "x-aces-semantic-profile": {
+    "contract_id": "participant-behavior-history-event-stream-v1",
+    "entry_schema_contract_id": "aces-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
+    "id": "aces-semantic-invariants-v1",
+    "keyword": "x-aces-invariants",
+    "required": true,
+    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+  }
 }

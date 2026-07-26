@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 
 
 class AutonomousExecutionPolicy(Protocol):
+    profile: str
     participant_addresses: tuple[str, ...]
     action_contract_addresses: tuple[str, ...]
     target_addresses: tuple[str, ...]
@@ -29,6 +30,24 @@ class AutonomousExecutionPolicy(Protocol):
     max_action_attempts: int
     max_in_flight: int
     selection_strategy: str
+    action_candidate_max_retries: tuple[int, ...]
+    max_occurrences: int
+    max_burst_size: int
+
+
+_V2_ACTIVITY_FEATURES = frozenset(
+    {
+        "work-windows",
+        "timing-variation",
+        "weighted-selection",
+        "dependencies",
+        "bounded-retries",
+        "cooldowns",
+        "limited-bursts",
+        "occurrence-provenance",
+    }
+)
+_V2_RANDOM_STREAM_PROFILE = "blake3-xof-participant-v1"
 
 
 def participant_runtime_capability_contract_gaps(manifest: BackendManifest) -> tuple[str, ...]:
@@ -74,6 +93,21 @@ def _autonomous_limit_gaps(
             max(policy.max_in_flight for policy in policies),
             capability.max_autonomous_in_flight,
         ),
+        (
+            "occurrences",
+            max((policy.max_occurrences or policy.max_action_attempts) for policy in policies),
+            capability.max_autonomous_occurrences,
+        ),
+        (
+            "retries per occurrence",
+            max((max(policy.action_candidate_max_retries, default=0) or 1) for policy in policies),
+            capability.max_autonomous_retries_per_occurrence,
+        ),
+        (
+            "burst size",
+            max(policy.max_burst_size for policy in policies),
+            capability.max_autonomous_burst_size,
+        ),
     )
     for label, required, supported in limits:
         if supported is None or required > supported:
@@ -106,12 +140,24 @@ def _unsupported_autonomous_value_gaps(
             {address for policy in policies for address in policy.target_addresses},
             capability.supported_autonomous_target_addresses,
         ),
+        (
+            "policy profiles",
+            {policy.profile for policy in policies},
+            capability.supported_autonomous_policy_profiles,
+        ),
     )
-    return [
+    gaps = [
         f"unsupported autonomous {label}: {', '.join(unsupported)}"
         for label, required, supported in requirements
         if (unsupported := sorted(required - supported))
     ]
+    if any(policy.profile == "participant-autonomous-execution/v2" for policy in policies):
+        missing_features = sorted(_V2_ACTIVITY_FEATURES - capability.supported_autonomous_activity_features)
+        if missing_features:
+            gaps.append(f"unsupported autonomous activity features: {', '.join(missing_features)}")
+        if _V2_RANDOM_STREAM_PROFILE not in capability.supported_autonomous_random_stream_profiles:
+            gaps.append(f"unsupported autonomous random-stream profiles: {_V2_RANDOM_STREAM_PROFILE}")
+    return gaps
 
 
 def _requires_coordinated_reset(
