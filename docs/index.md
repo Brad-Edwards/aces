@@ -144,6 +144,7 @@ explain/reference/explicitness-realization-semantics
 explain/reference/realization-envelopes
 explain/reference/scenario-variation-and-trial-realization
 explain/reference/experiment-binding-contracts
+explain/reference/participant-decision-surface-v2-migration
 ```
 
 ```{toctree}

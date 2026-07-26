@@ -380,10 +380,10 @@ bisimulation is a stronger optional claim.
 - [ADR-081](adr-081-behavioral-relation-taxonomy-and-claim-discipline.md)
 - [ADR-083](adr-083-participant-tool-decision-surface-and-exposure-semantics.md)
 - [ADR-085](adr-085-participant-information-flow-and-control.md)
-- [Participant semantics](../../../specs/formal/participant-semantics/README.md)
-- [Participant information-flow control](../../../specs/formal/participant-semantics/information-flow-control.md)
-- [Participant runtime semantics](../../../specs/formal/participant-runtime/README.md)
-- [Behavioral-relation taxonomy](../../../specs/formal/behavioral-relations/README.md)
+- `specs/formal/participant-semantics/README.md`
+- `specs/formal/participant-semantics/information-flow-control.md`
+- `specs/formal/participant-runtime/README.md`
+- `specs/formal/behavioral-relations/README.md`
 - [V2 migration guidance](../../explain/reference/participant-decision-surface-v2-migration.md)
 
 Primary intellectual lineage is revision-pinned in
