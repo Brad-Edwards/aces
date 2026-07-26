@@ -2,5 +2,9 @@
   "contract_id": "aces-semantic-invariants-v1",
   "schema_path": "contracts/schemas/profiles/aces-semantic-invariants-v1.json",
   "stability": "draft",
-  "content_hash": "e7b858c93b7ec763c361439b1d9c7cc3979a1d150ca64a7f41ebc12c050f5cff"
+  "content_hash": "2d3576e151d4d1e2ff10f33cbd2760a35aab3a5032cd6c239c8b19bdc8b96d2f",
+  "last_change": {
+    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
+    "content_hash": "2d3576e151d4d1e2ff10f33cbd2760a35aab3a5032cd6c239c8b19bdc8b96d2f"
+  }
 }

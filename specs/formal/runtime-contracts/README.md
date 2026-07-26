@@ -55,7 +55,7 @@ remain owned by the backend that defines the extension.
 ### API-405 Evidence Criteria
 
 Standard API-405 terms have term-level evidence criteria in
-`aces_backend_protocols.capabilities.PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS`.
+`raes_backend_protocols.capabilities.PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS`.
 `run_target_conformance()` rejects standard participant capability claims when
 the manifest omits the published contracts that carry the corresponding runtime
 evidence.
@@ -89,16 +89,16 @@ The participant behavior evidence set is
 
 ## Implementation Mapping
 
-- shared result constraints: `implementations/python/packages/aces_processor/semantics/workflow.py`
-- typed result models: `implementations/python/packages/aces_processor/models/`
-- manager contract validation: `implementations/python/packages/aces_processor/manager.py`
-- backend example: `implementations/python/packages/aces_backend_stubs/stubs.py`
+- shared result constraints: `implementations/python/packages/raes_processor/semantics/workflow.py`
+- typed result models: `implementations/python/packages/raes_processor/models/`
+- manager contract validation: `implementations/python/packages/raes_processor/manager.py`
+- backend example: `implementations/python/packages/raes_backend_stubs/stubs.py`
 - participant capability contract model:
-  `implementations/python/packages/aces_contracts/contracts/`
+  `implementations/python/packages/raes_contracts/contracts/`
 - participant capability runtime declaration:
-  `implementations/python/packages/aces_backend_protocols/capabilities.py`
+  `implementations/python/packages/raes_backend_protocols/capabilities.py`
 - backend manifest renderer:
-  `implementations/python/packages/aces_backend_protocols/manifest.py`
+  `implementations/python/packages/raes_backend_protocols/manifest.py`
 - governed vocabulary authority:
   `contracts/concept-authority/controlled-vocabularies-v1.json`
 

@@ -6,9 +6,11 @@ import json
 from pathlib import Path
 
 import pytest
-from aces_conformance.conformance import validate_contract_payload
-from aces_contracts.contracts import schema_bundle
-from aces_contracts.contracts.runtime_facts import (
+from jsonschema import Draft202012Validator
+from pydantic import ValidationError
+from raes_conformance.conformance import validate_contract_payload
+from raes_contracts.contracts import schema_bundle
+from raes_contracts.contracts.runtime_facts import (
     RuntimeFactAbsenceDisposition,
     RuntimeFactAudience,
     RuntimeFactBindingDisposition,
@@ -25,14 +27,12 @@ from aces_contracts.contracts.runtime_facts import (
     RuntimeFactVersionModel,
     RuntimeFactVisibilityModel,
 )
-from aces_runtime.runtime_fact_bindings import (
+from raes_runtime.runtime_fact_bindings import (
     RuntimeFactActionDisposition,
     RuntimeFactBindingAdmission,
     RuntimeFactBindingPlane,
     RuntimeFactDispatchCommand,
 )
-from jsonschema import Draft202012Validator
-from pydantic import ValidationError
 
 
 def _host_declaration() -> RuntimeFactDeclarationModel:

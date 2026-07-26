@@ -10,7 +10,7 @@ from ._source_profile import SDLMigrationPolicy
 from .parser import parse_sdl_file
 from .scenario import Scenario
 
-log = logging.getLogger("aces.scenarios")
+log = logging.getLogger("raes.scenarios")
 
 
 class ScenarioError(Exception):

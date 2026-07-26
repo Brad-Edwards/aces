@@ -58,19 +58,19 @@ work the SEM-218 row tracks.
 
 ## Implementation Mapping
 
-- realization support modes: `implementations/python/packages/aces_contracts/vocabulary.py`
+- realization support modes: `implementations/python/packages/raes_contracts/vocabulary.py`
   (`RealizationSupportMode`)
 - apparatus declarations:
-  `implementations/python/packages/aces_contracts/apparatus.py`
+  `implementations/python/packages/raes_contracts/apparatus.py`
   (`RealizationSupportDeclaration`, `ConceptBinding`, `ApparatusIdentity`)
 - contract-model gates and JSON schema (backend manifest):
-  `implementations/python/packages/aces_contracts/contracts/`
+  `implementations/python/packages/raes_contracts/contracts/`
   (`RealizationSupportDeclarationModel`)
 - processor-vs-backend asymmetry:
-  `implementations/python/packages/aces_contracts/contracts/`
+  `implementations/python/packages/raes_contracts/contracts/`
   (`ProcessorManifestV2Model` rejects `realization_support`)
 - backend-manifest payload encoding:
-  `implementations/python/packages/aces_backend_protocols/manifest.py`
+  `implementations/python/packages/raes_backend_protocols/manifest.py`
 - native concept family for realization semantics:
   `contracts/concept-authority/concept-families-v1.json`
   (`realization-and-disclosure`)

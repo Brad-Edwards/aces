@@ -28,12 +28,12 @@ This directory holds the repo-native formal artifacts for SDL workflow control s
 
 ## Implementation Mapping
 
-- shared rules: `implementations/python/packages/aces_processor/semantics/workflow.py`
+- shared rules: `implementations/python/packages/raes_processor/semantics/workflow.py`
 - validator enforcement: `implementations/python/packages/raes/validator/`
-- compiled contracts: `implementations/python/packages/aces_processor/compiler/`
+- compiled contracts: `implementations/python/packages/raes_processor/compiler/`
 - typed runtime results and contract checks:
-  - `implementations/python/packages/aces_processor/models/`
-  - `implementations/python/packages/aces_processor/manager.py`
+  - `implementations/python/packages/raes_processor/models/`
+  - `implementations/python/packages/raes_processor/manager.py`
 - smoke/regression coverage:
   - `implementations/python/tests/test_sdl_validator.py`
   - `implementations/python/tests/test_runtime_models.py`

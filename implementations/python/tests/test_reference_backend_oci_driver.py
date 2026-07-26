@@ -5,10 +5,10 @@ from __future__ import annotations
 import subprocess
 
 import pytest
-from aces_backend_protocols.naming import provider_resource_name
-from aces_reference_backend.driver import ContainerSpec, NetworkSpec, ServiceSpec
-from aces_reference_backend.drivers.inprocess import InProcessDriver
-from aces_reference_backend.drivers.oci import ImageTrustPolicy, OciDeploymentDriver
+from raes_backend_protocols.naming import provider_resource_name
+from raes_reference_backend.driver import ContainerSpec, NetworkSpec, ServiceSpec
+from raes_reference_backend.drivers.inprocess import InProcessDriver
+from raes_reference_backend.drivers.oci import ImageTrustPolicy, OciDeploymentDriver
 
 
 class _Recorder:

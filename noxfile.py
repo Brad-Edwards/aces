@@ -45,9 +45,9 @@ TARGETED_POLICY_TESTS = [
 ]
 CONTRACT_TRIGGER_PREFIXES = (
     "contracts/",
-    "implementations/python/packages/aces_contracts/",
-    "implementations/python/packages/aces_backend_protocols/",
-    "implementations/python/packages/aces_processor/",
+    "implementations/python/packages/raes_contracts/",
+    "implementations/python/packages/raes_backend_protocols/",
+    "implementations/python/packages/raes_processor/",
     "tools/generate_contract_schemas.py",
     "tools/check_json_artifacts.py",
 )

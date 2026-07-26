@@ -225,7 +225,7 @@
         }
       ],
       "level": "error",
-      "validator": "aces_contracts.contracts.random_stream.RandomStreamProfileModel._validate_transform_keys"
+      "validator": "raes_contracts.contracts.random_stream.RandomStreamProfileModel._validate_transform_keys"
     }
   ],
   "x-aces-semantic-profile": {

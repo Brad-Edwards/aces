@@ -9,8 +9,7 @@ team structures, and scoring — and identifies what it can't express.
 import textwrap
 
 import pytest
-
-from aces.core.sdl import SDLParseError, SDLValidationError, parse_sdl
+from raes import SDLParseError, SDLValidationError, parse_sdl
 
 
 def _parse(yaml_str: str, label: str):

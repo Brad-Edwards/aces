@@ -4,7 +4,7 @@ description: >
   through the production apply path and is certified from inside the guest -
   resource allocation, network addressing, file content, and service state are
   read back from the realized guest, freshness-bound to a per-run challenge, with
-  verified teardown. Used by `aces libvirt techvault guest-certify` and the
+  verified teardown. Used by `raes libvirt techvault guest-certify` and the
   opt-in real-daemon proof.
 nodes:
   guest-net:

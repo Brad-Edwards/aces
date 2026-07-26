@@ -6,13 +6,12 @@ import textwrap
 from pathlib import Path
 
 import pytest
-from aces_contracts.contracts import schema_bundle
 from jsonschema import Draft202012Validator
-
-from aces.backends.stubs import create_stub_manifest
-from aces.core.runtime.compiler import compile_runtime_model
-from aces.core.runtime.planner import plan
-from aces.core.sdl import SDLParseError, SDLValidationError, parse_sdl, parse_sdl_file
+from raes import SDLParseError, SDLValidationError, parse_sdl, parse_sdl_file
+from raes_backend_stubs.stubs import create_stub_manifest
+from raes_contracts.contracts import schema_bundle
+from raes_processor.compiler import compile_runtime_model
+from raes_processor.planner import plan
 
 
 def _scenario(extra: str = ""):

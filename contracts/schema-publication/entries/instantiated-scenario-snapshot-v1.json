@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-snapshot-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "f8edcfb9f653ad387daa3f83d86e882d101af188b5878a7e7641bedc7019cf60",
+  "content_hash": "ef353c97369f6a18e823de9156fdb8f6e33ed0fc18c12fa15085e01b29464325",
   "last_change": {
-    "summary": "Retargeted qualified Python validator references from aces_sdl to raes without changing schema identifiers or semantics.",
-    "content_hash": "f8edcfb9f653ad387daa3f83d86e882d101af188b5878a7e7641bedc7019cf60"
+    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
+    "content_hash": "ef353c97369f6a18e823de9156fdb8f6e33ed0fc18c12fa15085e01b29464325"
   }
 }

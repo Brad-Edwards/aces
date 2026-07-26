@@ -14,12 +14,13 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from aces_conformance.conformance import (  # noqa: E402
+from raes.parser import parse_sdl  # noqa: E402
+from raes_conformance.conformance import (  # noqa: E402
     _fixture_case_diagnostics,
     validate_contract_payload,
 )
-from aces_contracts.contracts import schema_bundle  # noqa: E402
-from aces_contracts.scientific_completeness import (  # noqa: E402
+from raes_contracts.contracts import schema_bundle  # noqa: E402
+from raes_contracts.scientific_completeness import (  # noqa: E402
     DeliveryStatus,
     ProfileDisposition,
     ScientificCompletenessAssessmentModel,
@@ -28,7 +29,6 @@ from aces_contracts.scientific_completeness import (  # noqa: E402
     load_scientific_completeness_assessment,
     load_scientific_completeness_taxonomy,
 )
-from raes.parser import parse_sdl  # noqa: E402
 from tools.check_scientific_scenario_completeness import (  # noqa: E402
     _validate_contract_evidence,
     _validate_evidence_paths,

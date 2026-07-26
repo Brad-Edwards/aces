@@ -7,11 +7,10 @@ import textwrap
 from datetime import UTC, datetime
 
 import pytest
-
-from aces.backends.stubs import create_stub_manifest, create_stub_target
-from aces.core.runtime.compiler import compile_runtime_model
-from aces.core.runtime.manager import RuntimeManager
-from aces.core.runtime.models import (
+from raes import parse_sdl
+from raes_backend_stubs.stubs import create_stub_manifest, create_stub_target
+from raes_processor.compiler import compile_runtime_model
+from raes_processor.models import (
     EVALUATION_STATE_SCHEMA_VERSION,
     ApplyResult,
     ChangeAction,
@@ -19,9 +18,9 @@ from aces.core.runtime.models import (
     RuntimeSnapshot,
     SnapshotEntry,
 )
-from aces.core.runtime.planner import plan
-from aces.core.runtime.registry import RuntimeTarget
-from aces.core.sdl import parse_sdl
+from raes_processor.planner import plan
+from raes_runtime.manager import RuntimeManager
+from raes_runtime.registry import RuntimeTarget
 
 
 def _scenario(yaml_str: str):

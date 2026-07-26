@@ -28,10 +28,10 @@ The implementation must build on these existing authorities:
 - objective-window analysis: `raes.semantics.objectives`
 - assertion resolution over declared backend-neutral propositions
 - runtime compilation: `compile_runtime_model()` and
-  `aces_processor.models.ObjectiveRuntime`
-- dependency graph semantics: `aces_processor.semantics.planner`
-- runtime diagnostics: `aces_processor.models.Diagnostic`
-- contract/schema authority: `aces_contracts.contracts.ContractModel`,
+  `raes_processor.models.ObjectiveRuntime`
+- dependency graph semantics: `raes_processor.semantics.planner`
+- runtime diagnostics: `raes_processor.models.Diagnostic`
+- contract/schema authority: `raes_contracts.contracts.ContractModel`,
   generated `contracts/schemas/`, and fixture validation
 - concept/profile authority: `contracts/concept-authority/`,
   `specs/concept-authority/`, controlled vocabularies, reference models, and
@@ -82,7 +82,7 @@ Dependency ordering:
 - the relation is acyclic and fail-closed
 - compiled objective dependencies use canonical runtime addresses
 - planner ordering and refresh behavior reuse
-  `aces_processor.semantics.planner`
+  `raes_processor.semantics.planner`
 
 Dependency roles (which references propagate through the planner):
 
@@ -177,12 +177,12 @@ Avoid:
   rendering the issue codes back onto the authoring-error strings)
 - compiled runtime objective resource, canonical addresses, diagnostics, and
   ordering/refresh derivation:
-  - `implementations/python/packages/aces_processor/compiler/`
-  - `implementations/python/packages/aces_processor/models/` (`ObjectiveRuntime`,
+  - `implementations/python/packages/raes_processor/compiler/`
+  - `implementations/python/packages/raes_processor/models/` (`ObjectiveRuntime`,
     `Diagnostic`)
 - planner ordering/refresh reconciliation over the compiled edges:
-  - `implementations/python/packages/aces_processor/planner/`
-  - `implementations/python/packages/aces_processor/semantics/planner.py`
+  - `implementations/python/packages/raes_processor/planner/`
+  - `implementations/python/packages/raes_processor/semantics/planner.py`
 - implementation-facing reference note:
   `docs/explain/reference/objective-semantics.md` (governed by ADR-016)
 

@@ -2,9 +2,9 @@
   "contract_id": "participant-lifecycle-event-v1",
   "schema_path": "contracts/schemas/participant-runtime/participant-lifecycle-event-v1.json",
   "stability": "draft",
-  "content_hash": "769ac4f54a36ec7e6031f584595555f7e8faea41ce0bf05b656aaf33e413d5c6",
+  "content_hash": "b7c86b3ad1530153f1185483f2310d6ad331a3bf60a562a12d16d993d02cb90a",
   "last_change": {
-    "summary": "Initial publication of the participant lifecycle-event runtime contract: episode/lifecycle event records in the backend-facing contract family (ADR-060, issue #76).",
-    "content_hash": "769ac4f54a36ec7e6031f584595555f7e8faea41ce0bf05b656aaf33e413d5c6"
+    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
+    "content_hash": "b7c86b3ad1530153f1185483f2310d6ad331a3bf60a562a12d16d993d02cb90a"
   }
 }

@@ -99,7 +99,7 @@ def evaluate_repo_policy(
         )
     )
     failures.extend(_check_package_import_direction(repo_root, policy, changed))
-    failures.extend(_check_compatibility_wrappers(repo_root, policy, changed))
+    failures.extend(_check_retired_namespace(repo_root, policy, changed))
     failures.extend(_check_layering_and_oversized(repo_root, policy, changed))
     failures.extend(_check_module_boundaries(repo_root, policy, changed, check_set=check_set))
 
@@ -117,7 +117,7 @@ def evaluate_repo_policy(
 # ADR-015: SDL→processor layering rule + 500-line source-file cap.
 #
 # These two gates catch unintentional regressions in normal contributions:
-# a developer who accidentally writes `import aces_processor` in `raes/`,
+# a developer who accidentally writes `import raes_processor` in `raes/`,
 # or one who pushes a >500-line file, or a split PR that forgets to drain
 # its allowlist entry. The policy and its YAML config are PR-mutable; PR
 # review (not this code) defends against deliberate weakening. See ADR-015.
@@ -138,23 +138,23 @@ _POLICY_CONFIG_PATH = "tools/policy/adr_policy.yaml"
 # policy, not as data noise.
 _ADR015_INITIAL_OVERSIZED_FILES: frozenset[str] = frozenset(
     {
-        "implementations/python/packages/aces_backend_libvirt/drivers/libvirt.py",
-        "implementations/python/packages/aces_backend_libvirt/realization.py",
-        "implementations/python/packages/aces_backend_libvirt/techvault_native.py",
-        "implementations/python/packages/aces_backend_stubs/stubs.py",
-        "implementations/python/packages/aces_conformance/conformance.py",
-        "implementations/python/packages/aces_contracts/contracts.py",
-        "implementations/python/packages/aces_contracts/workflow.py",
-        "implementations/python/packages/aces_mcp/tools/authoring.py",
-        "implementations/python/packages/aces_mcp/tools/inspection.py",
-        "implementations/python/packages/aces_mcp/tools/reference.py",
-        "implementations/python/packages/aces_operations/_evidence_run_artifact.py",
-        "implementations/python/packages/aces_processor/compiler.py",
-        "implementations/python/packages/aces_processor/models.py",
-        "implementations/python/packages/aces_processor/planner.py",
-        "implementations/python/packages/aces_runtime/control_plane.py",
-        "implementations/python/packages/aces_runtime/control_plane_api.py",
-        "implementations/python/packages/aces_runtime/workflow_result_contract_checks.py",
+        "implementations/python/packages/raes_backend_libvirt/drivers/libvirt.py",
+        "implementations/python/packages/raes_backend_libvirt/realization.py",
+        "implementations/python/packages/raes_backend_libvirt/techvault_native.py",
+        "implementations/python/packages/raes_backend_stubs/stubs.py",
+        "implementations/python/packages/raes_conformance/conformance.py",
+        "implementations/python/packages/raes_contracts/contracts.py",
+        "implementations/python/packages/raes_contracts/workflow.py",
+        "implementations/python/packages/raes_mcp/tools/authoring.py",
+        "implementations/python/packages/raes_mcp/tools/inspection.py",
+        "implementations/python/packages/raes_mcp/tools/reference.py",
+        "implementations/python/packages/raes_operations/_evidence_run_artifact.py",
+        "implementations/python/packages/raes_processor/compiler.py",
+        "implementations/python/packages/raes_processor/models.py",
+        "implementations/python/packages/raes_processor/planner.py",
+        "implementations/python/packages/raes_runtime/control_plane.py",
+        "implementations/python/packages/raes_runtime/control_plane_api.py",
+        "implementations/python/packages/raes_runtime/workflow_result_contract_checks.py",
         "implementations/python/packages/raes/composition.py",
         "implementations/python/packages/raes/module_registry.py",
         "implementations/python/packages/raes/orchestration.py",
@@ -530,8 +530,8 @@ def _check_drain(allowlist: frozenset[str], allowlist_path: str) -> list[PolicyF
 
 def _check_package_import_direction(repo_root: Path, policy: dict, changed: list[str]) -> list[PolicyFailure]:
     failures: list[PolicyFailure] = []
-    package_root = repo_root / policy["compatibility_layer"]["owning_root"]
-    prefixes = tuple(policy["compatibility_layer"]["forbidden_import_prefixes"])
+    package_root = repo_root / policy["retired_namespace"]["owning_root"]
+    prefixes = tuple(policy["retired_namespace"]["forbidden_import_prefixes"])
     for rel_path in changed:
         if not rel_path.endswith(".py") or not path_matches_prefix(
             rel_path, package_root.relative_to(repo_root).as_posix()
@@ -545,71 +545,36 @@ def _check_package_import_direction(repo_root: Path, policy: dict, changed: list
                     if alias.name.startswith(prefixes):
                         failures.append(
                             PolicyFailure(
-                                "compatibility-import-direction",
-                                "owning packages must not import from compatibility-only aces.* modules",
+                                "retired-namespace-import",
+                                "owning packages must not import retired aces or aces_* modules",
                                 rel_path,
                             )
                         )
             elif isinstance(node, ast.ImportFrom) and node.module and node.module.startswith(prefixes):
                 failures.append(
                     PolicyFailure(
-                        "compatibility-import-direction",
-                        "owning packages must not import from compatibility-only aces.* modules",
+                        "retired-namespace-import",
+                        "owning packages must not import retired aces or aces_* modules",
                         rel_path,
                     )
                 )
     return failures
 
 
-def _check_compatibility_wrappers(repo_root: Path, policy: dict, changed: list[str]) -> list[PolicyFailure]:
+def _check_retired_namespace(repo_root: Path, policy: dict, changed: list[str]) -> list[PolicyFailure]:
     failures: list[PolicyFailure] = []
-    compat_root = policy["compatibility_layer"]["root"]
+    retired_root = policy["retired_namespace"]["root"]
     for rel_path in changed:
-        if not rel_path.endswith(".py") or not path_matches_prefix(rel_path, compat_root):
+        if not path_matches_prefix(rel_path, retired_root) or not (repo_root / rel_path).exists():
             continue
-        path = repo_root / rel_path
-        tree = ast.parse(path.read_text(encoding="utf-8"), filename=rel_path)
-        if not _is_wrapper_module(tree):
-            failures.append(
-                PolicyFailure(
-                    "compatibility-wrapper-only",
-                    "compatibility-layer modules must remain wrappers/re-exports only",
-                    rel_path,
-                )
+        failures.append(
+            PolicyFailure(
+                "retired-namespace-path",
+                "the retired implementations/python/src/aces namespace must not be reintroduced",
+                rel_path,
             )
+        )
     return failures
-
-
-def _is_wrapper_module(tree: ast.Module) -> bool:
-    allowed_import_names = {"reexport", "package_version"}
-    allowed_calls = {"_reexport", "package_version"}
-    for node in tree.body:
-        if isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
-            continue
-        if isinstance(node, ast.ImportFrom):
-            if node.module != "aces._compat":
-                return False
-            if any(alias.name not in allowed_import_names for alias in node.names):
-                return False
-            continue
-        if isinstance(node, ast.Assign):
-            if any(not isinstance(target, ast.Name) for target in node.targets):
-                return False
-            target_names = {target.id for target in node.targets if isinstance(target, ast.Name)}
-            if target_names == {"__all__"} and isinstance(node.value, (ast.List, ast.Tuple)):
-                continue
-            if target_names == {"__version__"} and isinstance(node.value, ast.Call):
-                if isinstance(node.value.func, ast.Name) and node.value.func.id in allowed_calls:
-                    continue
-            return False
-        if isinstance(node, ast.Expr) and isinstance(node.value, ast.Call):
-            if isinstance(node.value.func, ast.Name) and node.value.func.id == "_reexport":
-                continue
-            return False
-        if isinstance(node, ast.Delete):
-            continue
-        return False
-    return True
 
 
 def _validate_module_boundary_config(repo_root: Path, config: object) -> tuple[list[dict], list[PolicyFailure]]:
@@ -764,7 +729,7 @@ def _check_module_boundaries(
                 continue
             tree = ast.parse(path.read_text(encoding="utf-8"), filename=rel_path)
             failures.extend(_check_module_imports(rel_path, rule, known_modules, tree))
-            if rule["id"] == "aces_backend_protocols" and rel_path.endswith("protocols.py"):
+            if rule["id"] == "raes_backend_protocols" and rel_path.endswith("protocols.py"):
                 failures.extend(_check_backend_protocol_contract_annotations(rel_path, tree))
     return failures
 
@@ -886,7 +851,7 @@ def _check_backend_protocol_contract_annotations(rel_path: str, tree: ast.Module
                             "backend-protocol-untyped-contract",
                             (
                                 f"{class_node.name}.{function.name} uses Any in its public protocol signature; "
-                                "backend protocols must use neutral contract DTOs from aces_contracts"
+                                "backend protocols must use neutral contract DTOs from raes_contracts"
                             ),
                             rel_path,
                         )

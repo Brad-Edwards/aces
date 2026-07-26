@@ -158,7 +158,7 @@ class ServiceUnitExecStartKind(str, Enum):
 def _validate_unit_name(value: str) -> str:
     """Validate a native service-manager unit name (e.g. ``sshd.service``).
 
-    Unit names are participant-visible data, not stable ACES ids, but they
+    Unit names are participant-visible data, not stable RAES ids, but they
     must be concrete to be useful for duplicate detection and downstream
     consumers. ``${var}`` placeholders are rejected here; the model has a
     separate stable ``unit_id`` for that role.
@@ -248,7 +248,7 @@ class ServiceUnitExecStart(SDLModel):
 class ServiceManagerUnit(SDLModel):
     """Observed service-manager unit state on a realized range node.
 
-    Each record carries a stable ACES ``unit_id`` (the reference target), the
+    Each record carries a stable RAES ``unit_id`` (the reference target), the
     native ``unit_name`` (e.g. ``sshd.service``), the participant-observable
     lifecycle facts captured by ``systemctl`` (load/active/sub/enabled/result),
     and bounded optional evidence: the unit-file path, an ``ExecStart``

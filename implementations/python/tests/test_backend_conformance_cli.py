@@ -7,8 +7,8 @@ import shutil
 from pathlib import Path
 
 import pytest
-from aces_cli.main import app
-from aces_conformance.conformance import fixtures_root
+from raes_cli.main import app
+from raes_conformance.conformance import fixtures_root
 from typer.testing import CliRunner
 
 

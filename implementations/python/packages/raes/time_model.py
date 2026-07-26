@@ -240,7 +240,7 @@ class TimeProgressionPolicy(SDLModel):
 
 
 class TemporalConstraint(SDLModel):
-    """One typed temporal predicate over ordinary ACES subjects."""
+    """One typed temporal predicate over ordinary RAES subjects."""
 
     constraint_kind: TemporalConstraintKind
     clock_ref: str

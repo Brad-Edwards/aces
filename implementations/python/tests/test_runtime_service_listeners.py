@@ -4,11 +4,10 @@ from __future__ import annotations
 
 import pytest
 from pydantic import ValidationError
+from raes import parse_sdl
+from raes._errors import SDLValidationError
 from raes._module_symbols import symbol_index
-
-from aces.core.sdl import parse_sdl
-from aces.core.sdl._errors import SDLValidationError
-from aces.core.sdl.nodes import (
+from raes.nodes import (
     Node,
     RuntimeConfiguration,
     RuntimeListenerAddressFamily,
@@ -17,8 +16,8 @@ from aces.core.sdl.nodes import (
     RuntimeListenerScope,
     RuntimeServiceListener,
 )
-from aces.core.sdl.scenario import ModuleDescriptor, Scenario
-from aces.core.sdl.validator import SemanticValidator
+from raes.scenario import ModuleDescriptor, Scenario
+from raes.validator import SemanticValidator
 
 
 def _validate(scenario: Scenario) -> list[str]:

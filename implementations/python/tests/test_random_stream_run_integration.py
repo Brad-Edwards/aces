@@ -21,13 +21,13 @@ from copy import deepcopy
 from pathlib import Path
 
 import pytest
-from aces_contracts.contracts import (
+from raes_contracts.contracts import (
     ExperimentRunModel,
     ExperimentStochasticControlModel,
     ExperimentTaskModel,
     validate_experiment_run_against_task,
 )
-from aces_contracts.contracts.random_stream import (
+from raes_contracts.contracts.random_stream import (
     PublicRandomOutcomeModel,
     PublicSeedModel,
     RandomStreamControlBindingModel,
@@ -117,7 +117,7 @@ class TestExperimentRunModelStochasticDraws:
         assert run.stochastic_draws[0].control_id == "task-seed"
 
     def test_run_schema_publishes_stochastic_draws_surface(self) -> None:
-        from aces_contracts.contracts import schema_bundle
+        from raes_contracts.contracts import schema_bundle
 
         schema = schema_bundle()["experiment-run-v1"]
         assert "stochastic_draws" in schema["properties"]

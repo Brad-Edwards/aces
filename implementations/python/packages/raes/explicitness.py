@@ -83,7 +83,7 @@ def classify_model_explicitness(
     *,
     variables: dict[str, Variable] | None = None,
 ) -> ExplicitnessResult:
-    """Classify authored declarations on any closed ACES Pydantic model."""
+    """Classify authored declarations on any closed RAES Pydantic model."""
 
     variables = variables if variables is not None else getattr(model, "variables", {})
     classifier = _ExplicitnessClassifier(variables)

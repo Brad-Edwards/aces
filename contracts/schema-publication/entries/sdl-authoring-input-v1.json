@@ -2,9 +2,9 @@
   "contract_id": "sdl-authoring-input-v1",
   "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
   "stability": "draft",
-  "content_hash": "422eb2a20af82a59c42ce1064a4b973207ca7099e4e8ea808b4fdfb9ccfeb471",
+  "content_hash": "da0443ae2299ef45f983c55575e49f4faa271c9f96a808847e951222acb8dc40",
   "last_change": {
-    "summary": "Retargeted qualified Python validator references from aces_sdl to raes without changing schema identifiers or semantics.",
-    "content_hash": "422eb2a20af82a59c42ce1064a4b973207ca7099e4e8ea808b4fdfb9ccfeb471"
+    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
+    "content_hash": "da0443ae2299ef45f983c55575e49f4faa271c9f96a808847e951222acb8dc40"
   }
 }

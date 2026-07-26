@@ -184,17 +184,17 @@ def setup_policy_repo(tmp_path: Path) -> Path:
     )
     for package in (
         "raes",
-        "aces_processor",
-        "aces_runtime",
-        "aces_backend_protocols",
-        "aces_backend_stubs",
-        "aces_backend_libvirt",
-        "aces_operations",
-        "aces_reference_backend",
-        "aces_conformance",
-        "aces_cli",
-        "aces_mcp",
-        "aces_contracts",
+        "raes_processor",
+        "raes_runtime",
+        "raes_backend_protocols",
+        "raes_backend_stubs",
+        "raes_backend_libvirt",
+        "raes_operations",
+        "raes_reference_backend",
+        "raes_conformance",
+        "raes_cli",
+        "raes_mcp",
+        "raes_contracts",
     ):
         write_text(
             tmp_path / "implementations" / "python" / "packages" / package / "__init__.py",
@@ -322,24 +322,24 @@ def test_conftest_policy_runner_parses_and_sorts_failures(
     ]
 
 
-def test_package_import_direction_blocks_aces_compatibility_imports(tmp_path: Path) -> None:
+def test_package_import_direction_blocks_retired_aces_imports(tmp_path: Path) -> None:
     repo_root = setup_policy_repo(tmp_path)
     write_text(
-        repo_root / "implementations" / "python" / "packages" / "aces_processor" / "planner.py",
+        repo_root / "implementations" / "python" / "packages" / "raes_processor" / "planner.py",
         "from aces.runtime import legacy\n",
     )
 
     failures = evaluate_repo_policy(
         repo_root,
-        ["implementations/python/packages/aces_processor/planner.py"],
+        ["implementations/python/packages/raes_processor/planner.py"],
         check_set="file-local",
         structural_runner=structural_runner_stub,
     )
 
-    assert [failure.rule_id for failure in failures] == ["compatibility-import-direction"]
+    assert [failure.rule_id for failure in failures] == ["retired-namespace-import"]
 
 
-def test_compatibility_layer_rejects_non_wrapper_logic(tmp_path: Path) -> None:
+def test_retired_aces_namespace_rejects_any_file(tmp_path: Path) -> None:
     repo_root = setup_policy_repo(tmp_path)
     write_text(
         repo_root / "implementations" / "python" / "src" / "aces" / "runtime.py",
@@ -353,7 +353,7 @@ def test_compatibility_layer_rejects_non_wrapper_logic(tmp_path: Path) -> None:
         structural_runner=structural_runner_stub,
     )
 
-    assert [failure.rule_id for failure in failures] == ["compatibility-wrapper-only"]
+    assert [failure.rule_id for failure in failures] == ["retired-namespace-path"]
 
 
 def test_adr_readme_must_match_adr_documents(tmp_path: Path) -> None:
@@ -429,13 +429,13 @@ def _aces_sdl_file(repo_root: Path, name: str, content: str) -> str:
 @pytest.mark.parametrize(
     "import_line",
     [
-        "import aces_processor",
-        "import aces_processor.compiler",
-        "from aces_processor import compiler",
-        "from aces_processor.compiler import compile_runtime_model",
+        "import raes_processor",
+        "import raes_processor.compiler",
+        "from raes_processor import compiler",
+        "from raes_processor.compiler import compile_runtime_model",
     ],
 )
-def test_layering_rule_rejects_aces_processor_imports(tmp_path: Path, import_line: str) -> None:
+def test_layering_rule_rejects_raes_processor_imports(tmp_path: Path, import_line: str) -> None:
     repo_root = setup_policy_repo(tmp_path)
     rel = _aces_sdl_file(repo_root, "_uses_processor.py", import_line + "\n")
 
@@ -447,10 +447,10 @@ def test_layering_rule_rejects_aces_processor_imports(tmp_path: Path, import_lin
 
 
 def test_layering_rule_does_not_match_prefix_only_package(tmp_path: Path) -> None:
-    """A package merely starting with `aces_processor` (e.g. a
-    hypothetical `aces_processor_extra`) is not the forbidden package."""
+    """A package merely starting with `raes_processor` (e.g. a
+    hypothetical `raes_processor_extra`) is not the forbidden package."""
     repo_root = setup_policy_repo(tmp_path)
-    rel = _aces_sdl_file(repo_root, "_uses_other.py", "from aces_processor_extra import thing\n")
+    rel = _aces_sdl_file(repo_root, "_uses_other.py", "from raes_processor_extra import thing\n")
 
     failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
 
@@ -462,7 +462,7 @@ def test_layering_rule_allows_aces_sdl_importing_other_packages(tmp_path: Path) 
     rel = _aces_sdl_file(
         repo_root,
         "_normal.py",
-        "from aces_contracts.contracts import Scenario\nfrom raes.semantics.objectives import analyze_objective_window\n",
+        "from raes_contracts.contracts import Scenario\nfrom raes.semantics.objectives import analyze_objective_window\n",
     )
 
     failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
@@ -471,11 +471,11 @@ def test_layering_rule_allows_aces_sdl_importing_other_packages(tmp_path: Path) 
 
 
 def test_layering_rule_does_not_check_files_outside_scope(tmp_path: Path) -> None:
-    """An `import aces_processor` inside aces_processor itself (or any
+    """An `import raes_processor` inside raes_processor itself (or any
     package other than raes) is not a layering violation."""
     repo_root = setup_policy_repo(tmp_path)
-    rel = "implementations/python/packages/aces_processor/internal.py"
-    write_text(repo_root / rel, "import aces_processor.models\n")
+    rel = "implementations/python/packages/raes_processor/internal.py"
+    write_text(repo_root / rel, "import raes_processor.models\n")
 
     failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
 
@@ -492,8 +492,8 @@ def install_module_boundary_policy(repo_root: Path) -> None:
 def test_module_boundaries_reject_processor_importing_runtime(tmp_path: Path) -> None:
     repo_root = setup_policy_repo(tmp_path)
     install_module_boundary_policy(repo_root)
-    rel = "implementations/python/packages/aces_processor/uses_runtime.py"
-    write_text(repo_root / rel, "from aces_runtime.manager import RuntimeManager\n")
+    rel = "implementations/python/packages/raes_processor/uses_runtime.py"
+    write_text(repo_root / rel, "from raes_runtime.manager import RuntimeManager\n")
 
     failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
 
@@ -503,8 +503,8 @@ def test_module_boundaries_reject_processor_importing_runtime(tmp_path: Path) ->
 def test_module_boundaries_reject_runtime_importing_processor_private_modules(tmp_path: Path) -> None:
     repo_root = setup_policy_repo(tmp_path)
     install_module_boundary_policy(repo_root)
-    rel = "implementations/python/packages/aces_runtime/uses_private_processor.py"
-    write_text(repo_root / rel, "from aces_processor._private import helper\n")
+    rel = "implementations/python/packages/raes_runtime/uses_private_processor.py"
+    write_text(repo_root / rel, "from raes_processor._private import helper\n")
 
     failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
 
@@ -514,12 +514,12 @@ def test_module_boundaries_reject_runtime_importing_processor_private_modules(tm
 def test_module_boundaries_allow_runtime_using_processor_public_api(tmp_path: Path) -> None:
     repo_root = setup_policy_repo(tmp_path)
     install_module_boundary_policy(repo_root)
-    rel = "implementations/python/packages/aces_runtime/uses_processor.py"
+    rel = "implementations/python/packages/raes_runtime/uses_processor.py"
     write_text(
         repo_root / rel,
-        "from aces_processor.compiler import compile_runtime_model\n"
-        "from aces_processor.models import RuntimeSnapshot\n"
-        "from aces_processor.planner import plan\n",
+        "from raes_processor.compiler import compile_runtime_model\n"
+        "from raes_processor.models import RuntimeSnapshot\n"
+        "from raes_processor.planner import plan\n",
     )
 
     failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
@@ -530,8 +530,8 @@ def test_module_boundaries_allow_runtime_using_processor_public_api(tmp_path: Pa
 def test_module_boundaries_reject_runtime_using_non_public_processor_module(tmp_path: Path) -> None:
     repo_root = setup_policy_repo(tmp_path)
     install_module_boundary_policy(repo_root)
-    rel = "implementations/python/packages/aces_runtime/uses_processor_semantics.py"
-    write_text(repo_root / rel, "from aces_processor.semantics.planner import reverse_delete_order\n")
+    rel = "implementations/python/packages/raes_runtime/uses_processor_semantics.py"
+    write_text(repo_root / rel, "from raes_processor.semantics.planner import reverse_delete_order\n")
 
     failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
 
@@ -542,7 +542,7 @@ def test_module_boundaries_reject_sdl_importing_runtime(tmp_path: Path) -> None:
     repo_root = setup_policy_repo(tmp_path)
     install_module_boundary_policy(repo_root)
     rel = "implementations/python/packages/raes/uses_runtime.py"
-    write_text(repo_root / rel, "import aces_runtime\n")
+    write_text(repo_root / rel, "import raes_runtime\n")
 
     failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
 
@@ -552,8 +552,8 @@ def test_module_boundaries_reject_sdl_importing_runtime(tmp_path: Path) -> None:
 def test_module_boundaries_reject_authoring_importing_runtime_internals(tmp_path: Path) -> None:
     repo_root = setup_policy_repo(tmp_path)
     install_module_boundary_policy(repo_root)
-    rel = "implementations/python/packages/aces_mcp/tools/authoring_runtime.py"
-    write_text(repo_root / rel, "from aces_runtime.control_plane import RuntimeControlPlane\n")
+    rel = "implementations/python/packages/raes_mcp/tools/authoring_runtime.py"
+    write_text(repo_root / rel, "from raes_runtime.control_plane import RuntimeControlPlane\n")
 
     failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
 
@@ -562,8 +562,8 @@ def test_module_boundaries_reject_authoring_importing_runtime_internals(tmp_path
 
 def test_module_boundaries_reject_backend_stub_importing_processor(tmp_path: Path) -> None:
     repo_root = setup_policy_repo(tmp_path)
-    rel = "implementations/python/packages/aces_backend_stubs/uses_processor.py"
-    write_text(repo_root / rel, "from aces_processor.models import ApplyResult\n")
+    rel = "implementations/python/packages/raes_backend_stubs/uses_processor.py"
+    write_text(repo_root / rel, "from raes_processor.models import ApplyResult\n")
 
     failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
 
@@ -572,7 +572,7 @@ def test_module_boundaries_reject_backend_stub_importing_processor(tmp_path: Pat
 
 def test_module_boundaries_reject_backend_protocol_any_signatures(tmp_path: Path) -> None:
     repo_root = setup_policy_repo(tmp_path)
-    rel = "implementations/python/packages/aces_backend_protocols/protocols.py"
+    rel = "implementations/python/packages/raes_backend_protocols/protocols.py"
     write_text(
         repo_root / rel,
         "from typing import Any, Protocol\n\n"
@@ -654,8 +654,8 @@ def test_module_boundaries_reject_uncovered_package_root(tmp_path: Path) -> None
 
 def test_module_boundaries_full_check_scans_all_module_sources(tmp_path: Path) -> None:
     repo_root = setup_policy_repo(tmp_path)
-    rel = "implementations/python/packages/aces_processor/latent_runtime_import.py"
-    write_text(repo_root / rel, "from aces_runtime.manager import RuntimeManager\n")
+    rel = "implementations/python/packages/raes_processor/latent_runtime_import.py"
+    write_text(repo_root / rel, "from raes_runtime.manager import RuntimeManager\n")
 
     failures = evaluate_repo_policy(
         repo_root,
@@ -670,7 +670,7 @@ def test_module_boundaries_full_check_scans_all_module_sources(tmp_path: Path) -
 
 def test_module_boundaries_reject_runtime_importing_sdl_semantics(tmp_path: Path) -> None:
     repo_root = setup_policy_repo(tmp_path)
-    rel = "implementations/python/packages/aces_runtime/uses_sdl_workflow_semantics.py"
+    rel = "implementations/python/packages/raes_runtime/uses_sdl_workflow_semantics.py"
     write_text(repo_root / rel, "from raes.semantics.workflow import validate_workflow_step_result\n")
 
     failures = evaluate_repo_policy(
@@ -688,12 +688,12 @@ def test_module_boundaries_reject_runtime_importing_sdl_semantics(tmp_path: Path
 # A path that is in _ADR015_INITIAL_OVERSIZED_FILES (the code constant in
 # tools/policy/repo_policy.py), so the allowlist-subset (drain) check passes
 # when we put it in the allowlist.
-_LOCKED_PATH = "implementations/python/packages/aces_processor/models.py"
+_LOCKED_PATH = "implementations/python/packages/raes_processor/models.py"
 
 
 def test_oversized_source_file_over_cap_is_rejected(tmp_path: Path) -> None:
     repo_root = setup_policy_repo(tmp_path)
-    rel = "implementations/python/packages/aces_processor/big_new_file.py"
+    rel = "implementations/python/packages/raes_processor/big_new_file.py"
     write_text(repo_root / rel, "x = 1\n" * 700)
 
     failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
@@ -715,7 +715,7 @@ def test_oversized_source_file_in_allowlist_passes(tmp_path: Path) -> None:
 
 def test_oversized_source_file_under_cap_passes(tmp_path: Path) -> None:
     repo_root = setup_policy_repo(tmp_path)
-    rel = "implementations/python/packages/aces_processor/small.py"
+    rel = "implementations/python/packages/raes_processor/small.py"
     write_text(repo_root / rel, "x = 1\n" * 100)
 
     failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
@@ -735,7 +735,7 @@ def test_oversized_cap_excludes_test_files(tmp_path: Path) -> None:
 
 def test_oversized_cap_only_checks_python_files(tmp_path: Path) -> None:
     repo_root = setup_policy_repo(tmp_path)
-    rel = "implementations/python/packages/aces_processor/data.txt"
+    rel = "implementations/python/packages/raes_processor/data.txt"
     write_text(repo_root / rel, "line\n" * 700)
 
     failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
@@ -748,7 +748,7 @@ def test_oversized_cap_only_checks_python_files(tmp_path: Path) -> None:
 
 def test_allowlist_entry_not_in_locked_set_is_rejected(tmp_path: Path) -> None:
     repo_root = setup_policy_repo(tmp_path)
-    bogus = "implementations/python/packages/aces_processor/not_a_locked_file.py"
+    bogus = "implementations/python/packages/raes_processor/not_a_locked_file.py"
     write_text(repo_root / "tools" / "policy" / "oversized_allowlist.yaml", f"files:\n  - {bogus}\n")
 
     failures = evaluate_repo_policy(
@@ -783,7 +783,7 @@ def test_growing_locked_set_via_config_does_not_relax_drain_check(tmp_path: Path
     `locked_initial_files` block in adr_policy.yaml) must not make it pass —
     the locked reference set is not config the same PR can edit."""
     repo_root = setup_policy_repo(tmp_path)
-    sneaky = "implementations/python/packages/aces_processor/sneaky_new_big_file.py"
+    sneaky = "implementations/python/packages/raes_processor/sneaky_new_big_file.py"
     write_text(repo_root / "tools" / "policy" / "oversized_allowlist.yaml", f"files:\n  - {sneaky}\n")
     write_text(repo_root / sneaky, "x = 1\n" * 700)
     # Re-add a config-level locked_initial_files block listing the sneaky file.
@@ -838,7 +838,7 @@ def test_unsafe_locked_allowlist_entry_is_rejected(tmp_path: Path) -> None:
 def test_malformed_policy_config_produces_structured_failure(tmp_path: Path, mutation: str, marker: str) -> None:
     repo_root = setup_policy_repo(tmp_path)
     # Replace the whole adr_policy.yaml with a minimal-but-malformed config.
-    # Keep the keys other parts of the policy need (compatibility_layer,
+    # Keep the keys other parts of the policy need (retired_namespace,
     # adr_index, source_roots, generated_contracts, concept_authority) by
     # appending the mutation onto the real config.
     base = (REPO_ROOT / "tools" / "policy" / "adr_policy.yaml").read_text()
@@ -1024,7 +1024,7 @@ def test_unsafe_changed_path_is_rejected(tmp_path: Path) -> None:
     symlink) is reported as policy-path-unsafe rather than being read."""
     repo_root = setup_policy_repo(tmp_path)
     outside = tmp_path.parent / "outside_secret.py"
-    write_text(outside, "import aces_processor\n")
+    write_text(outside, "import raes_processor\n")
     link_rel = "implementations/python/packages/raes/_link.py"
     (repo_root / "implementations" / "python" / "packages" / "raes").mkdir(parents=True, exist_ok=True)
     (repo_root / link_rel).symlink_to(outside)
@@ -1183,9 +1183,9 @@ def _published_schema(properties: dict[str, Any], *, required: list[str] | None 
 
 def test_should_run_full_validation_for_schema_driver_paths() -> None:
     assert should_run_full_validation(["tools/generate_contract_schemas.py"]) is True
-    assert should_run_full_validation(["implementations/python/packages/aces_contracts/contracts.py"]) is True
+    assert should_run_full_validation(["implementations/python/packages/raes_contracts/contracts.py"]) is True
     # raes supplies the Scenario Pydantic model exposed by schema_bundle();
-    # a change there must trigger full schema validation just like aces_contracts.
+    # a change there must trigger full schema validation just like raes_contracts.
     assert should_run_full_validation(["implementations/python/packages/raes/agents.py"]) is True
     assert should_run_full_validation(["contracts/concept-authority/concept-families-v1.json"]) is False
 
@@ -1936,7 +1936,7 @@ def test_collect_validation_targets_runs_full_scan_when_schema_drivers_change(tm
 
     targets = collect_validation_targets(
         repo_root,
-        paths=["implementations/python/packages/aces_contracts/contracts.py"],
+        paths=["implementations/python/packages/raes_contracts/contracts.py"],
     )
 
     assert any(target.path == "contracts/concept-authority/concept-families-v1.json" for target in targets)

@@ -6,24 +6,24 @@ import json
 from dataclasses import replace
 
 import pytest
-from aces_backend_libvirt.envelopes import LibvirtDriverMode, load_libvirt_realization_envelope
-from aces_backend_libvirt.manifest import create_libvirt_manifest
-from aces_backend_libvirt.target import create_libvirt_target
-from aces_backend_protocols.capabilities import BackendManifest
-from aces_backend_stubs.stubs import StubProvisioner
-from aces_conformance.conformance import (
+from raes_backend_libvirt.envelopes import LibvirtDriverMode, load_libvirt_realization_envelope
+from raes_backend_libvirt.manifest import create_libvirt_manifest
+from raes_backend_libvirt.target import create_libvirt_target
+from raes_backend_protocols.capabilities import BackendManifest
+from raes_backend_stubs.stubs import StubProvisioner
+from raes_conformance.conformance import (
     BackendCapabilityProfile,
     backend_conformance_report_payload,
     run_target_conformance,
 )
-from aces_conformance.realization import (
+from raes_conformance.realization import (
     ExecutionBasis,
     ExpectedRealizationObservation,
     RealizationProbeEvidence,
     RealizationProbeRequest,
     RealizationTransformation,
 )
-from aces_contracts.realization_envelope import (
+from raes_contracts.realization_envelope import (
     BackendRealizationEnvelopeModel,
     ConcernDisposition,
     EnumDomain,
@@ -36,9 +36,9 @@ from aces_contracts.realization_envelope import (
     RealizationEnvelopeModel,
     realization_envelope_digest,
 )
-from aces_contracts.realization_observation import RealizationObservation
-from aces_operations.realization_conformance import write_backend_conformance_report
-from aces_runtime.registry import RuntimeTarget
+from raes_contracts.realization_observation import RealizationObservation
+from raes_operations.realization_conformance import write_backend_conformance_report
+from raes_runtime.registry import RuntimeTarget
 
 _SCENARIO = """\
 name: honesty

@@ -2,16 +2,16 @@
 
 The deterministic participant-implementation manifest, selection, action-result,
 and admission helpers now live in
-``aces_operations.deterministic_participant_fixtures`` (contracts-only, importable
+``raes_operations.deterministic_participant_fixtures`` (contracts-only, importable
 by both the tests and the shipped scenario-evidence producer). This module re-exports
 them for the existing acceptance tests and adds the test-only ``NullLibvirtDriver``
-(which depends on ``aces_backend_libvirt`` and so cannot live in the operations
+(which depends on ``raes_backend_libvirt`` and so cannot live in the operations
 package under the ADR-036 module boundary).
 """
 
 from __future__ import annotations
 
-from aces_operations.deterministic_participant_fixtures import (
+from raes_operations.deterministic_participant_fixtures import (
     AGENT_IDENTITY,
     MANIFEST_DIGEST,
     MANIFEST_REF,
@@ -44,12 +44,12 @@ class NullLibvirtDriver:
     """No-op libvirt driver for structural tests that never call realize()."""
 
     def realize(self, *, networks, domains):
-        from aces_backend_libvirt.driver import DriverResult
+        from raes_backend_libvirt.driver import DriverResult
 
         return DriverResult()
 
     def destroy(self, *, networks, domains):
-        from aces_backend_libvirt.driver import DriverResult
+        from raes_backend_libvirt.driver import DriverResult
 
         return DriverResult()
 

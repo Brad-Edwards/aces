@@ -460,7 +460,7 @@
         }
       ],
       "level": "error",
-      "validator": "aces_contracts.associated_artifacts.validate_associated_artifact_manifest"
+      "validator": "raes_contracts.associated_artifacts.validate_associated_artifact_manifest"
     }
   ],
   "x-aces-semantic-profile": {

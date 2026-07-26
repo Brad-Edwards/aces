@@ -1,4 +1,4 @@
-"""Autonomous execution policy for ordinary ACES participants."""
+"""Autonomous execution policy for ordinary RAES participants."""
 
 from __future__ import annotations
 

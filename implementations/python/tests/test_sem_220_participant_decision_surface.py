@@ -8,7 +8,9 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-from aces_contracts.contracts import (
+from jsonschema import Draft202012Validator
+from pydantic import ValidationError
+from raes_contracts.contracts import (
     ParticipantContextViewModel,
     ParticipantDecisionSurfaceModel,
     ParticipantDecisionSurfaceSelectionModel,
@@ -17,12 +19,12 @@ from aces_contracts.contracts import (
     schema_bundle,
     validate_participant_decision_surface_context,
 )
-from aces_contracts.participant_binding import (
+from raes_contracts.participant_binding import (
     ParticipantActionAdmissionRequest,
     ParticipantDecisionSurfaceBindingResolvers,
     bind_participant_decision_surface_selection,
 )
-from aces_processor.models import (
+from raes_processor.models import (
     ParticipantActionContractRuntime,
     ParticipantBehaviorHistoryEvent,
     ParticipantBehaviorHistoryEventType,
@@ -39,9 +41,7 @@ from aces_processor.models import (
     RuntimeModel,
     project_participant_decision_surface,
 )
-from aces_runtime.participant_control import ParticipantControlMixin
-from jsonschema import Draft202012Validator
-from pydantic import ValidationError
+from raes_runtime.participant_control import ParticipantControlMixin
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 FIXTURE_ROOT = REPO_ROOT / "contracts" / "fixtures" / "control-plane" / "participant-decision-surface-v1"

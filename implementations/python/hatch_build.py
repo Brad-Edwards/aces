@@ -22,8 +22,8 @@ from pathlib import Path
 from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 from hatchling.metadata.plugin.interface import MetadataHookInterface
 
-_WHEEL_DESTINATION = "aces_contracts/_corpus"
-_NOTICE_WHEEL_DESTINATION = "aces_contracts/_corpus/provenance/THIRD_PARTY_NOTICES.md"
+_WHEEL_DESTINATION = "raes_contracts/_corpus"
+_NOTICE_WHEEL_DESTINATION = "raes_contracts/_corpus/provenance/THIRD_PARTY_NOTICES.md"
 
 
 class CustomBuildHook(BuildHookInterface):

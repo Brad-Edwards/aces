@@ -207,7 +207,7 @@
         }
       ],
       "level": "error",
-      "validator": "aces_contracts.scientific_completeness.ScientificCompletenessAssessmentModel"
+      "validator": "raes_contracts.scientific_completeness.ScientificCompletenessAssessmentModel"
     },
     {
       "description": "Assessment family, taxonomy revision, and concern ids must exactly match the joined taxonomy before completeness is computed.",
@@ -223,7 +223,7 @@
         }
       ],
       "level": "error",
-      "validator": "aces_contracts.scientific_completeness.evaluate_profile_completeness"
+      "validator": "raes_contracts.scientific_completeness.evaluate_profile_completeness"
     }
   ],
   "x-aces-semantic-profile": {

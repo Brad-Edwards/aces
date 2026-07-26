@@ -20,7 +20,7 @@ class TestLoadScenario:
     """Tests for loading SDL scenarios from YAML files."""
 
     def test_load_valid_sdl(self, tmp_path):
-        from aces.core.scenarios import load_scenario
+        from raes.scenarios import load_scenario
 
         path = tmp_path / "scenario.yaml"
         path.write_text(VALID_SDL, encoding="utf-8")
@@ -30,13 +30,13 @@ class TestLoadScenario:
         assert scenario.description == "Minimal SDL scenario"
 
     def test_load_nonexistent_file_raises(self, tmp_path):
-        from aces.core.scenarios import load_scenario
+        from raes.scenarios import load_scenario
 
         with pytest.raises(FileNotFoundError):
             load_scenario(tmp_path / "missing.yaml")
 
     def test_load_empty_file_raises_validation_error(self, tmp_path):
-        from aces.core.scenarios import ScenarioValidationError, load_scenario
+        from raes.scenarios import ScenarioValidationError, load_scenario
 
         path = tmp_path / "empty.yaml"
         path.write_text("", encoding="utf-8")
@@ -45,7 +45,7 @@ class TestLoadScenario:
             load_scenario(path)
 
     def test_load_invalid_yaml_raises_validation_error(self, tmp_path):
-        from aces.core.scenarios import ScenarioValidationError, load_scenario
+        from raes.scenarios import ScenarioValidationError, load_scenario
 
         path = tmp_path / "broken.yaml"
         path.write_text("{{not: valid: yaml: [}", encoding="utf-8")
@@ -54,7 +54,7 @@ class TestLoadScenario:
             load_scenario(path)
 
     def test_load_legacy_yaml_is_rejected(self, tmp_path):
-        from aces.core.scenarios import ScenarioValidationError, load_scenario
+        from raes.scenarios import ScenarioValidationError, load_scenario
 
         path = tmp_path / "legacy.yaml"
         path.write_text(
@@ -76,7 +76,7 @@ mode: red
             load_scenario(path)
 
     def test_validation_error_includes_path(self, tmp_path):
-        from aces.core.scenarios import ScenarioValidationError, load_scenario
+        from raes.scenarios import ScenarioValidationError, load_scenario
 
         path = tmp_path / "empty.yaml"
         path.write_text("", encoding="utf-8")
@@ -92,7 +92,7 @@ class TestFindScenarios:
     """Tests for SDL scenario discovery."""
 
     def test_finds_yaml_files(self, tmp_path):
-        from aces.core.scenarios import find_scenarios
+        from raes.scenarios import find_scenarios
 
         (tmp_path / "a.yaml").write_text(VALID_SDL, encoding="utf-8")
         (tmp_path / "b.yaml").write_text(VALID_SDL, encoding="utf-8")
@@ -101,7 +101,7 @@ class TestFindScenarios:
         assert [path.name for path in paths] == ["a.yaml", "b.yaml"]
 
     def test_ignores_non_yaml_files(self, tmp_path):
-        from aces.core.scenarios import find_scenarios
+        from raes.scenarios import find_scenarios
 
         (tmp_path / "a.yml").write_text(VALID_SDL, encoding="utf-8")
         (tmp_path / "notes.txt").write_text("hello", encoding="utf-8")
@@ -109,7 +109,7 @@ class TestFindScenarios:
         assert find_scenarios(tmp_path) == []
 
     def test_returns_empty_for_missing_directory(self, tmp_path):
-        from aces.core.scenarios import find_scenarios
+        from raes.scenarios import find_scenarios
 
         assert find_scenarios(tmp_path / "missing") == []
 
@@ -122,7 +122,7 @@ def test_example_scenario_corpus_is_nonempty():
 @pytest.mark.parametrize("path", EXAMPLE_SCENARIOS, ids=lambda path: path.name)
 def test_example_scenarios_load(path):
     """Every example SDL should load successfully from disk."""
-    from aces.core.scenarios import load_scenario
+    from raes.scenarios import load_scenario
 
     scenario = load_scenario(path)
 
@@ -133,7 +133,7 @@ def test_example_scenarios_load(path):
 @pytest.mark.parametrize("path", COMPLEX_EXAMPLES, ids=lambda path: path.name)
 def test_complex_examples_have_experiment_semantics(path):
     """Curated complex examples should exercise the full experiment surface."""
-    from aces.core.scenarios import load_scenario
+    from raes.scenarios import load_scenario
 
     scenario = load_scenario(path)
 
@@ -150,7 +150,7 @@ def test_complex_examples_have_experiment_semantics(path):
 
 def test_complex_examples_cover_new_sdl_surfaces():
     """Complex examples should exercise workflows, enum vars, and direct refs."""
-    from aces.core.scenarios import load_scenario
+    from raes.scenarios import load_scenario
 
     satcom = load_scenario(EXAMPLES_DIR / "satcom-release-poisoning.sdl.yaml")
     assert satcom.workflows
@@ -183,8 +183,8 @@ def test_complex_examples_cover_new_sdl_surfaces():
 
 def test_reference_scenario_compiles_participant_loop():
     """Issue #598: the reference scenario proves the participant handoff surface."""
-    from aces_processor.compiler import compile_runtime_model
     from raes.scenarios import load_scenario
+    from raes_processor.compiler import compile_runtime_model
 
     scenario = load_scenario(REFERENCE_SCENARIO)
     model = compile_runtime_model(scenario)
@@ -250,14 +250,14 @@ class TestScenarioExceptions:
     """Tests for shared scenario exception types."""
 
     def test_scenario_not_found_error(self):
-        from aces.core.scenarios import ScenarioError, ScenarioNotFoundError
+        from raes.scenarios import ScenarioError, ScenarioNotFoundError
 
         error = ScenarioNotFoundError("example")
         assert error.identifier == "example"
         assert isinstance(error, ScenarioError)
 
     def test_scenario_validation_error_without_path(self):
-        from aces.core.scenarios import ScenarioError, ScenarioValidationError
+        from raes.scenarios import ScenarioError, ScenarioValidationError
 
         error = ScenarioValidationError("bad field")
         assert error.path is None

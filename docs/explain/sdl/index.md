@@ -166,7 +166,7 @@ accounts:
 ## Usage
 
 ```python
-from aces.core.sdl import parse_sdl, parse_sdl_file
+from raes import parse_sdl, parse_sdl_file
 
 # From a string
 scenario = parse_sdl(yaml_string)

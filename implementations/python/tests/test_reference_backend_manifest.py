@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-from aces_backend_protocols.manifest import backend_manifest_payload
-from aces_contracts.contracts import BackendManifestV2Model
-from aces_reference_backend import create_reference_backend_manifest
-
-from aces.core.runtime.conformance import (
+from raes_backend_protocols.manifest import backend_manifest_payload
+from raes_conformance.conformance import (
     BackendCapabilityProfile,
     profile_for_manifest,
 )
+from raes_contracts.contracts import BackendManifestV2Model
+from raes_reference_backend import create_reference_backend_manifest
 
 
 def test_manifest_renders_as_valid_backend_manifest_v2():
@@ -60,7 +59,7 @@ def test_manifest_accepts_and_ignores_extra_config_kwargs():
 def test_manifest_declares_only_evidence_backed_contract_ids():
     # The reference backend mirrors the stub's evidence-backed contract set;
     # it must not over-claim contracts it does not actually emit/validate.
-    from aces_backend_stubs.stubs import create_stub_manifest
+    from raes_backend_stubs.stubs import create_stub_manifest
 
     reference = create_reference_backend_manifest()
     stub = create_stub_manifest()

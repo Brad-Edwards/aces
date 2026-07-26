@@ -219,9 +219,9 @@ def _validate_structured_metadata(repo_root: Path, failures: list[PolicyFailure]
 
 def _validate_mcp_metadata(repo_root: Path, failures: list[PolicyFailure]) -> None:
     assignments = (
-        ("implementations/python/packages/aces_mcp/server.py", "_INSTRUCTIONS"),
+        ("implementations/python/packages/raes_mcp/server.py", "_INSTRUCTIONS"),
         (
-            "implementations/python/packages/aces_mcp/tools/reference.py",
+            "implementations/python/packages/raes_mcp/tools/reference.py",
             "_OVERVIEW_TEXT",
         ),
     )

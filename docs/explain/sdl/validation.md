@@ -1,6 +1,6 @@
 # SDL Semantic Validation
 
-The semantic validator (`aces.core.sdl.validator.SemanticValidator`) runs the
+The semantic validator (`raes.validator.SemanticValidator`) runs the
 named semantic pass set after Pydantic structural validation. It collects all
 errors rather than failing on the first, so authors see every issue at once.
 

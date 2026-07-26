@@ -6,11 +6,11 @@ import json
 from pathlib import Path
 
 import pytest
-from aces_conformance.conformance import _semantic_diagnostics
-from aces_conformance.conformance.snapshot_semantics import _snapshot_from_envelope
-from aces_contracts.contracts.time_model import TimeRuntimeStateModel
-from aces_contracts.runtime_state import RuntimeSnapshot
-from aces_runtime.control_plane_store import InMemoryControlPlaneStore, LocalControlPlaneStore
+from raes_conformance.conformance import _semantic_diagnostics
+from raes_conformance.conformance.snapshot_semantics import _snapshot_from_envelope
+from raes_contracts.contracts.time_model import TimeRuntimeStateModel
+from raes_contracts.runtime_state import RuntimeSnapshot
+from raes_runtime.control_plane_store import InMemoryControlPlaneStore, LocalControlPlaneStore
 
 POLICY_ADDRESS = "participant.autonomous-execution.green-users"
 PARTICIPANT_ADDRESS = "participant.behavior.green-user"

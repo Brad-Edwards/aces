@@ -2,9 +2,9 @@
   "contract_id": "random-stream-profile-v1",
   "schema_path": "contracts/schemas/profiles/random-stream-profile-v1.json",
   "stability": "draft",
-  "content_hash": "86f94c7a6b8de22181e31861f00fa360897e62620594e69120ca8fb481f06ad4",
+  "content_hash": "4c9f405bfa0dce89d463cb0780bd68847922acdbd0836822c033edf967ada0d3",
   "last_change": {
-    "summary": "Initial publication of the EXP-718 random-stream profile: one closed, immutable compatibility unit fixing generator family/version, root-entropy encoding, address canonicalization, key derivation, block encoding, and the admitted transform set.",
-    "content_hash": "86f94c7a6b8de22181e31861f00fa360897e62620594e69120ca8fb481f06ad4"
+    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
+    "content_hash": "4c9f405bfa0dce89d463cb0780bd68847922acdbd0836822c033edf967ada0d3"
   }
 }

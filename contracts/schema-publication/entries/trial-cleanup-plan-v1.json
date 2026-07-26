@@ -2,9 +2,9 @@
   "contract_id": "trial-cleanup-plan-v1",
   "schema_path": "contracts/schemas/plans/trial-cleanup-plan-v1.json",
   "stability": "draft",
-  "content_hash": "dcab542940f10337e637cdeeedac71f740bbae54f01e704ec15640ca27f671e0",
+  "content_hash": "7e0a814f64946f5de1de4b5f540d42e401904202ee608f2015f85df15aee510b",
   "last_change": {
-    "summary": "Initial publication of the SCE-007 clean-state requirements, scoped cleanup obligations, and retry-safety contract, including retry-triggered reset coverage.",
-    "content_hash": "dcab542940f10337e637cdeeedac71f740bbae54f01e704ec15640ca27f671e0"
+    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
+    "content_hash": "7e0a814f64946f5de1de4b5f540d42e401904202ee608f2015f85df15aee510b"
   }
 }

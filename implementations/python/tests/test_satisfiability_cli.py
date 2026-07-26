@@ -8,8 +8,8 @@ import sys
 from pathlib import Path
 
 import pytest
-from aces_cli.main import app
-from aces_contracts.satisfiability import ScenarioSatisfiabilityEvidenceModel
+from raes_cli.main import app
+from raes_contracts.satisfiability import ScenarioSatisfiabilityEvidenceModel
 from typer.testing import CliRunner
 
 

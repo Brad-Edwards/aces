@@ -11,7 +11,7 @@ fixture, or profile model.
 ## Architecture Decisions
 
 - Backend conformance is an implementation-side verifier under
-  `implementations/python/packages/aces_conformance`, not a normative artifact
+  `implementations/python/packages/raes_conformance`, not a normative artifact
   family under `contracts/`.
 - `contracts/fixtures/**/<contract-id>/{valid,invalid}/*.json` is the canonical
   fixture corpus. The runner may accept an override root for tests, but the
@@ -19,15 +19,14 @@ fixture, or profile model.
 - `contracts/profiles/backend/*.json` is the canonical backend capability
   profile corpus. Profile-to-contract requirements must be loaded from these
   artifacts instead of copied into a second in-code table.
-- Published payload validation must go through `aces_contracts.contracts`
+- Published payload validation must go through `raes_contracts.contracts`
   `ContractModel` descendants, `schema_bundle()`, and the existing semantic
   diagnostics helpers.
 - Backend manifests must be rendered through
-  `aces_backend_protocols.manifest.backend_manifest_payload()` and validated as
+  `raes_backend_protocols.manifest.backend_manifest_payload()` and validated as
   `backend-manifest-v2`; the conformance suite must not reassemble manifest
   JSON by hand.
-- CLI entry points belong in the Typer-based `aces_cli` surface unless a
-  compatibility wrapper is retained only as a thin delegate.
+- CLI entry points belong in the Typer-based `raes_cli` surface.
 - End-to-end proof tests for backend conformance should exercise the public
   runner or CLI against a full backend profile and the published fixture corpus;
   seeded-corruption tests should mutate a temporary copy of one existing
@@ -39,26 +38,26 @@ fixture, or profile model.
 Reuse these existing surfaces before adding anything new:
 
 - contract models and closed-world validation:
-  `aces_contracts.contracts.ContractModel`, `BackendManifestV2Model`,
+  `raes_contracts.contracts.ContractModel`, `BackendManifestV2Model`,
   runtime envelope models, plan models, and history event models
 - contract publication inventory: `schema_bundle()` and
   `contracts/schema-publication-manifest.json`
-- contract-corpus resolution: `aces_contracts.corpus.corpus_family_root()` with
+- contract-corpus resolution: `raes_contracts.corpus.corpus_family_root()` with
   the `FIXTURES` and `PROFILES` family constants, so source checkouts and
   packaged installs resolve the same published corpus through one seam
 - backend contract authority:
-  `aces_contracts.manifest_authority.BACKEND_SUPPORTED_CONTRACT_IDS` and
+  `raes_contracts.manifest_authority.BACKEND_SUPPORTED_CONTRACT_IDS` and
   `validate_backend_supported_contract_versions()`
 - controlled vocabulary and concept-binding gates:
-  `aces_contracts.controlled_vocabularies`,
-  `aces_contracts.apparatus`, and the `BackendManifestV2Model` validators
-- manifest rendering: `aces_backend_protocols.manifest.backend_manifest_payload`
+  `raes_contracts.controlled_vocabularies`,
+  `raes_contracts.apparatus`, and the `BackendManifestV2Model` validators
+- manifest rendering: `raes_backend_protocols.manifest.backend_manifest_payload`
 - participant capability declarations:
   `capabilities.participant_runtime.supported_participant_roles`,
   `supported_behavior_features`, and `supported_interaction_features`
 - runtime behavior probes: `compile_runtime_model()`, `plan()`,
   `RuntimeControlPlane`, and `RuntimeTarget`
-- diagnostics: `aces_processor.models.Diagnostic` and `Severity`
+- diagnostics: `raes_processor.models.Diagnostic` and `Severity`
 - participant-episode semantic invariants:
   `iter_participant_episode_snapshot_violations()`
 - verification workflow: `.ground-control.yaml`, `.gc/plan-rules.md`,
@@ -73,7 +72,7 @@ The conformance path touches these gates:
   roots or canonical repo roots; do not fetch remote fixtures or execute fixture
   content.
 - Corpus path resolution: default fixture/profile roots must flow through
-  `aces_contracts.corpus`; tests may pass explicit temporary override roots for
+  `raes_contracts.corpus`; tests may pass explicit temporary override roots for
   mutated corpora, but loaders must not reintroduce `Path(__file__).parents[N]`
   repo-root heuristics.
 - Profile id and path validation: profile ids must pass the backend-profile id
@@ -187,21 +186,19 @@ Avoid:
 
 The published backend capability profile JSONs under
 `contracts/profiles/backend/` are the single source of truth for the
-profile-to-contract mapping. `aces_contracts.backend_profiles.load_backend_profile`
+profile-to-contract mapping. `raes_contracts.backend_profiles.load_backend_profile`
 loads them through `BackendProfileModel` — a closed-world `ContractModel`
 that validates `required_contracts` against the authoritative
 `BACKEND_SUPPORTED_CONTRACT_IDS` set. The conformance runner reads its
 required contract sets from those profiles; no second authority table
 lives in code.
 
-The canonical CLI surface is `aces conformance backend`, registered on the
-Typer `aces_cli` app next to `aces sdl` and `aces processor`. It accepts
+The canonical CLI surface is `raes conformance backend`, registered on the
+Typer `raes_cli` app next to `raes sdl` and `raes processor`. It accepts
 `--profile`, `--fixtures-root`, and `--profiles-root` overrides; the
 defaults point at the canonical `contracts/` tree. The runner exits
 non-zero when the report has any failing case or top-level diagnostic so
-the command can be wired directly into CI gates. The historic
-`python -m aces_conformance.runner` entry point is preserved as a thin
-delegate that forwards to the same Typer command.
+the command can be wired directly into CI gates.
 
 ## Target Conformance Reference Scenario
 

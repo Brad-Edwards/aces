@@ -5,9 +5,17 @@ from __future__ import annotations
 import textwrap
 
 import pytest
-from aces_contracts.contracts import ParticipantBehaviorHistoryEventModel
-from aces_processor.compiler import compile_runtime_model
-from aces_processor.models import (
+from raes._errors import SDLParseError
+from raes.parser import parse_sdl
+from raes.participant_behavior import ParticipantEffectClass, ParticipantPreconditionClass
+from raes.participant_temporal_semantics import (
+    ParticipantTemporalContractKind,
+    ParticipantTemporalEventPoint,
+    ParticipantTimeDomain,
+)
+from raes_contracts.contracts import ParticipantBehaviorHistoryEventModel
+from raes_processor.compiler import compile_runtime_model
+from raes_processor.models import (
     ParticipantActionEffectResult,
     ParticipantActionPreconditionResult,
     ParticipantActionPreconditionStatus,
@@ -21,14 +29,6 @@ from aces_processor.models import (
     ParticipantTemporalStateTransition,
     iter_participant_behavior_history_violations,
     iter_participant_temporal_state_machine_violations,
-)
-from raes._errors import SDLParseError
-from raes.parser import parse_sdl
-from raes.participant_behavior import ParticipantEffectClass, ParticipantPreconditionClass
-from raes.participant_temporal_semantics import (
-    ParticipantTemporalContractKind,
-    ParticipantTemporalEventPoint,
-    ParticipantTimeDomain,
 )
 
 T0 = "2026-05-21T04:00:00Z"

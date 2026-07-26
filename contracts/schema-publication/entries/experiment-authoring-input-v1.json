@@ -2,9 +2,9 @@
   "contract_id": "experiment-authoring-input-v1",
   "schema_path": "contracts/schemas/experiment-core/experiment-authoring-input-v1.json",
   "stability": "draft",
-  "content_hash": "1247c1ccd945663d878ee9ba2d36ff30d85a4b35971029a70702d82594e30c6a",
+  "content_hash": "829ac69c37136596506bf83e0f2fde6cd8c333a79d497c84b93b0497e37aabc9",
   "last_change": {
-    "summary": "Added an optional executable_binding field to ExperimentStochasticControlModel for EXP-718 versioned random-stream profile/namespace/root-entropy binding (issue #274).",
-    "content_hash": "1247c1ccd945663d878ee9ba2d36ff30d85a4b35971029a70702d82594e30c6a"
+    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
+    "content_hash": "829ac69c37136596506bf83e0f2fde6cd8c333a79d497c84b93b0497e37aabc9"
   }
 }
