@@ -336,6 +336,28 @@ def _add_tool_affordance_declarations(index: DeclarationIndex, scenario: Scenari
             )
 
 
+def _add_participant_inject_delivery_declarations(
+    index: DeclarationIndex,
+    scenario: ScenarioContent,
+) -> None:
+    for spec_name, behavior_spec in scenario.behavior_specifications.items():
+        spec_parts = _qualified_parts(spec_name)
+        for binding_id in behavior_spec.participant_inject_deliveries:
+            _add(
+                index,
+                kind="participant-inject-delivery",
+                address_parts=(
+                    "behavior_specifications",
+                    *spec_parts,
+                    "participant_inject_deliveries",
+                    binding_id,
+                ),
+                model_path=(f"behavior_specifications.{spec_name}.participant_inject_deliveries.{binding_id}"),
+                referenceable=True,
+                targetable=True,
+            )
+
+
 def _add_variable_declarations(index: DeclarationIndex, scenario: ScenarioContent) -> None:
     for name in getattr(scenario, "variables", {}):
         _add(
@@ -457,6 +479,7 @@ def build_declaration_index(
 
     _add_section_declarations(index, scenario)
     _add_tool_affordance_declarations(index, scenario)
+    _add_participant_inject_delivery_declarations(index, scenario)
     _add_variable_declarations(index, scenario)
     _add_node_declarations(index, scenario)
     _add_infrastructure_declarations(index, scenario)

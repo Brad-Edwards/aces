@@ -6120,6 +6120,23 @@
           "title": "Outcome Interpretation Rule Refs",
           "type": "array"
         },
+        "participant_inject_deliveries": {
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/ParticipantInjectDelivery"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Participant Inject Deliveries",
+          "type": "object"
+        },
         "participant_refs": {
           "items": {
             "type": "string"
@@ -6298,6 +6315,272 @@
       ],
       "title": "ParticipantInformationBoundaryClass",
       "type": "string"
+    },
+    "ParticipantInjectDelivery": {
+      "additionalProperties": false,
+      "description": "Authored participant-local relation to one orchestration inject occurrence.",
+      "properties": {
+        "control_authority_scope_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Control Authority Scope Refs",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "control_effective_order": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Control Effective Order"
+        },
+        "control_evidence_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Control Evidence Refs",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "control_transition_ref": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "minLength": 1,
+              "not": {
+                "pattern": "[^a-z0-9_-]"
+              },
+              "pattern": "^[a-z0-9]",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Control Transition Ref"
+        },
+        "control_valid_from_order": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Control Valid From Order"
+        },
+        "control_valid_until_order": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Control Valid Until Order"
+        },
+        "controller_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Controller Ref"
+        },
+        "delivery_kind": {
+          "$ref": "#/$defs/ParticipantInjectDeliveryKind"
+        },
+        "delivery_policy": {
+          "$ref": "#/$defs/ParticipantInjectDeliveryPolicy"
+        },
+        "evidence_requirement_refs": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Requirement Refs",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "failure_disposition": {
+          "$ref": "#/$defs/ParticipantInjectDeliveryFailureDisposition"
+        },
+        "inject_ref": {
+          "minLength": 1,
+          "title": "Inject Ref",
+          "type": "string"
+        },
+        "observation_boundary_ref": {
+          "minLength": 1,
+          "title": "Observation Boundary Ref",
+          "type": "string"
+        },
+        "occurrence": {
+          "$ref": "#/$defs/ParticipantInjectOccurrenceAnchor"
+        },
+        "order_basis": {
+          "$ref": "#/$defs/ParticipantInjectDeliveryOrderBasis"
+        },
+        "participant_ref": {
+          "minLength": 1,
+          "title": "Participant Ref",
+          "type": "string"
+        },
+        "result_item_ref": {
+          "minLength": 1,
+          "title": "Result Item Ref",
+          "type": "string"
+        },
+        "source_item_ref": {
+          "minLength": 1,
+          "title": "Source Item Ref",
+          "type": "string"
+        },
+        "temporal_constraint_refs": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Temporal Constraint Refs",
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "participant_ref",
+        "inject_ref",
+        "occurrence",
+        "source_item_ref",
+        "result_item_ref",
+        "observation_boundary_ref",
+        "delivery_kind",
+        "delivery_policy",
+        "order_basis",
+        "temporal_constraint_refs",
+        "evidence_requirement_refs",
+        "failure_disposition"
+      ],
+      "title": "ParticipantInjectDelivery",
+      "type": "object"
+    },
+    "ParticipantInjectDeliveryFailureDisposition": {
+      "description": "Fail-closed behavior when a declared delivery cannot be admitted.",
+      "enum": [
+        "reject-no-delivery"
+      ],
+      "title": "ParticipantInjectDeliveryFailureDisposition",
+      "type": "string"
+    },
+    "ParticipantInjectDeliveryKind": {
+      "description": "Participant-bound meaning kept distinct from orchestration identity.",
+      "enum": [
+        "disclosure",
+        "external-direction",
+        "intervention"
+      ],
+      "title": "ParticipantInjectDeliveryKind",
+      "type": "string"
+    },
+    "ParticipantInjectDeliveryOrderBasis": {
+      "description": "The only admitted ordering basis for participant inject delivery.",
+      "enum": [
+        "orchestration-occurrence-and-shared-time"
+      ],
+      "title": "ParticipantInjectDeliveryOrderBasis",
+      "type": "string"
+    },
+    "ParticipantInjectDeliveryPolicy": {
+      "additionalProperties": false,
+      "description": "Closed, reference-led participant disclosure policy coordinates.",
+      "properties": {
+        "audience_scope_ref": {
+          "minLength": 1,
+          "title": "Audience Scope Ref",
+          "type": "string"
+        },
+        "disclosure_basis_ref": {
+          "minLength": 1,
+          "title": "Disclosure Basis Ref",
+          "type": "string"
+        },
+        "exposure_policy_ref": {
+          "minLength": 1,
+          "title": "Exposure Policy Ref",
+          "type": "string"
+        },
+        "policy_ref": {
+          "minLength": 1,
+          "title": "Policy Ref",
+          "type": "string"
+        },
+        "policy_revision": {
+          "minLength": 1,
+          "title": "Policy Revision",
+          "type": "string"
+        },
+        "visibility_basis_ref": {
+          "minLength": 1,
+          "title": "Visibility Basis Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "policy_ref",
+        "policy_revision",
+        "exposure_policy_ref",
+        "audience_scope_ref",
+        "visibility_basis_ref",
+        "disclosure_basis_ref"
+      ],
+      "title": "ParticipantInjectDeliveryPolicy",
+      "type": "object"
+    },
+    "ParticipantInjectOccurrenceAnchor": {
+      "additionalProperties": false,
+      "description": "Exact inject occurrence in the existing event/script/story chain.",
+      "properties": {
+        "event_ref": {
+          "minLength": 1,
+          "title": "Event Ref",
+          "type": "string"
+        },
+        "script_ref": {
+          "minLength": 1,
+          "title": "Script Ref",
+          "type": "string"
+        },
+        "story_ref": {
+          "minLength": 1,
+          "title": "Story Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_ref",
+        "script_ref",
+        "story_ref"
+      ],
+      "title": "ParticipantInjectOccurrenceAnchor",
+      "type": "object"
     },
     "ParticipantInteractionClass": {
       "description": "SEM-209 interaction classes for multi-participant behavior.",

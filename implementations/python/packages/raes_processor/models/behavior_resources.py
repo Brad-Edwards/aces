@@ -190,6 +190,7 @@ class ParticipantBehaviorSpecificationRuntime(ResolvedResource):
     backend_feature_support_refs: tuple[str, ...] = ()
     evidence_contract_refs: tuple[str, ...] = ()
     tool_affordance_addresses: tuple[str, ...] = ()
+    participant_inject_delivery_addresses: tuple[str, ...] = ()
     extension_policy: str = ""
     extension_keys: tuple[str, ...] = ()
 
@@ -206,6 +207,44 @@ class ParticipantToolAffordanceRuntime(ResolvedResource):
     action_contract_addresses: tuple[str, ...] = ()
     observation_boundary_refs: tuple[str, ...] = ()
     observation_boundary_addresses: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class ParticipantInjectDeliveryRuntime(ResolvedResource):
+    """Compiled declaration of participant delivery intent, never realization."""
+
+    binding_id: str = ""
+    behavior_specification_address: str = ""
+    participant_address: str = ""
+    inject_address: str = ""
+    event_address: str = ""
+    script_address: str = ""
+    story_address: str = ""
+    source_item_ref: str = ""
+    source_item_address: str = ""
+    result_item_ref: str = ""
+    result_item_address: str = ""
+    observation_boundary_address: str = ""
+    delivery_kind: str = ""
+    policy_ref: str = ""
+    policy_revision: str = ""
+    exposure_policy_ref: str = ""
+    audience_scope_ref: str = ""
+    visibility_basis_ref: str = ""
+    disclosure_basis_ref: str = ""
+    order_basis: str = ""
+    temporal_constraint_addresses: tuple[str, ...] = ()
+    evidence_requirement_addresses: tuple[str, ...] = ()
+    failure_disposition: str = ""
+    control_transition_address: str = ""
+    controller_address: str = ""
+    control_authority_scope_refs: tuple[str, ...] = ()
+    control_authority_scope_addresses: tuple[str, ...] = ()
+    control_effective_order: int | None = None
+    control_valid_from_order: int | None = None
+    control_valid_until_order: int | None = None
+    control_evidence_refs: tuple[str, ...] = ()
+    control_evidence_addresses: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)

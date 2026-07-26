@@ -2,9 +2,9 @@
   "contract_id": "sdl-authoring-input-v1",
   "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
   "stability": "draft",
-  "content_hash": "8e0817ecfb075ada09871a922ded632f5208346027ccffc0ee1f9165405be5f5",
+  "content_hash": "65ae337e1fbe2a4b66e8d0cbbb98c66c172360d328fd82c5352a223a1e6429cc",
   "last_change": {
-    "summary": "Published closed governed participant action-argument authoring semantics on the RAES-only package surface after the #884 hard cut.",
-    "content_hash": "8e0817ecfb075ada09871a922ded632f5208346027ccffc0ee1f9165405be5f5"
+    "summary": "Published closed participant-directed inject delivery and governed participant action-argument authoring semantics on the RAES-only package surface.",
+    "content_hash": "65ae337e1fbe2a4b66e8d0cbbb98c66c172360d328fd82c5352a223a1e6429cc"
   }
 }
