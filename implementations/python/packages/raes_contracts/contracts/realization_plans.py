@@ -18,6 +18,7 @@ from .execution_state import (
     WorkflowExecutionStateModel,
     WorkflowHistoryEventModel,
 )
+from .participant_control import ParticipantControlOccurrenceModel
 from .participant_envelopes import (
     ParticipantJointActionRecordModel,
     ParticipantSharedStateRecordModel,
@@ -165,6 +166,7 @@ class RuntimeSnapshotEnvelopeModel(ContractModel):
     participant_episode_results: dict[str, ParticipantEpisodeStateModel] = Field(default_factory=dict)
     participant_episode_history: dict[str, list[ParticipantEpisodeHistoryEventModel]] = Field(default_factory=dict)
     participant_behavior_history: dict[str, list[ParticipantBehaviorHistoryEventModel]] = Field(default_factory=dict)
+    participant_control_history: dict[str, list[ParticipantControlOccurrenceModel]] = Field(default_factory=dict)
     participant_autonomous_execution_states: dict[str, ParticipantAutonomousExecutionStateModel] = Field(
         default_factory=dict
     )
