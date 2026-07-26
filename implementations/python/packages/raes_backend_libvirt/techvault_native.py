@@ -44,7 +44,7 @@ from .driver import (
     NetworkSpec,
     RealizationObservation,
 )
-from .drivers.libvirt import Connector, _aces_uuid, _existing_uuid
+from .drivers.libvirt import Connector, _existing_uuid, _raes_uuid
 from .envelopes import load_libvirt_realization_envelope
 from .techvault_appliance import (
     BusyboxInitramfsBuilder,
@@ -486,7 +486,7 @@ class TechVaultNativeLibvirtDriver:
             if resolved.native is None:
                 cleaned = True
             else:
-                if _existing_uuid(resolved.native) != _aces_uuid(address):
+                if _existing_uuid(resolved.native) != _raes_uuid(address):
                     raise _OwnershipConflict(address)
                 removed = _deactivate_and_undefine(resolved.native)
                 cleaned = removed and _verify_native_removed(
