@@ -43,6 +43,7 @@ REQUIRED_RELATION_IDS = {
     "weak-bisimulation",
     "participant-projected-history-equivalence",
     "policy-noninterference",
+    "io-alternating-refinement",
     "epistemic-indistinguishability",
     "alternating-strategic-equivalence",
     "probabilistic-bisimulation",
@@ -55,7 +56,7 @@ REQUIRED_RELATION_IDS = {
 def _bounded_empirical_claim() -> dict[str, object]:
     return {
         "taxonomy_id": "aces-behavioral-relations",
-        "taxonomy_revision": "rev2",
+        "taxonomy_revision": "rev3",
         "relation_id": "empirical-adequacy",
         "subject": "TechVault baseline study",
         "left_carrier_ref": "study-techvault-baseline@1.0.0",
@@ -84,6 +85,10 @@ def _trace_exists(system, actions: tuple[str, ...]) -> bool:
     for action in actions:
         states = {target for state in states for candidate, target in index[state] if candidate == action}
     return bool(states)
+
+
+def _enabled_actions(system, state: str) -> set[str]:
+    return {action for action, _ in _transition_index(system)[state]}
 
 
 def _strongly_bisimilar(left, right) -> bool:
@@ -177,8 +182,11 @@ def test_catalog_bibliography_claim_surfaces_and_relation_references_resolve():
         "alur-henzinger-kupferman-2002",
         "goguen-meseguer-1982",
         "sabelfeld-sands-2009",
+        "lynch-tuttle-1989",
+        "clarkson-schneider-2010",
+        "bohannon-pierce-sjoberg-weirich-zdancewic-2009",
     }
-    assert all(source.immutable_locator.kind in {"doi", "isbn"} for source in catalog.bibliography)
+    assert all(source.immutable_locator.kind in {"doi", "isbn", "report"} for source in catalog.bibliography)
     assert all(set(relation.source_refs) <= source_ids for relation in catalog.relations.values())
     assert {surface.surface_id for surface in catalog.claim_surfaces} == {
         "sdl-transformation",
@@ -215,6 +223,55 @@ def test_hidden_action_example_distinguishes_strong_from_weak_matching():
     assert _weak_trace_exists(example.right_system, trace, example.hidden_action)
     assert example.expected_strong_bisimulation is False
     assert example.expected_weak_matching is True
+
+
+def test_decision_epoch_zero_hidden_projection_step_can_weakly_match_without_strong_bisimulation():
+    abstract = ExampleTransitionSystemModel(
+        states=["a-ready", "a-delivered"],
+        initial_state="a-ready",
+        transitions=[
+            ExampleTransitionModel(
+                source="a-ready",
+                action="deliver:decision-epoch-0",
+                target="a-delivered",
+            )
+        ],
+    )
+    concrete = ExampleTransitionSystemModel(
+        states=["c-ready", "c-projected", "c-delivered"],
+        initial_state="c-ready",
+        transitions=[
+            ExampleTransitionModel(source="c-ready", action="tau:projection", target="c-projected"),
+            ExampleTransitionModel(
+                source="c-projected",
+                action="deliver:decision-epoch-0",
+                target="c-delivered",
+            ),
+        ],
+    )
+
+    assert not _strongly_bisimilar(abstract, concrete)
+    assert _weak_trace_exists(abstract, ("deliver:decision-epoch-0",), "tau:projection")
+    assert _weak_trace_exists(concrete, ("deliver:decision-epoch-0",), "tau:projection")
+
+
+def test_projected_trace_inclusion_does_not_establish_required_participant_input_availability():
+    abstract = ExampleTransitionSystemModel(
+        states=["a0", "a1"],
+        initial_state="a0",
+        transitions=[ExampleTransitionModel(source="a0", action="select:scan", target="a1")],
+    )
+    refusing_backend = ExampleTransitionSystemModel(
+        states=["c0"],
+        initial_state="c0",
+        transitions=[ExampleTransitionModel(source="c0", action="tau:idle", target="c0")],
+    )
+    observed_concrete_traces = {()}
+    observed_abstract_traces = {()}
+
+    assert observed_concrete_traces <= observed_abstract_traces
+    assert "select:scan" in _enabled_actions(abstract, abstract.initial_state)
+    assert "select:scan" not in _enabled_actions(refusing_backend, refusing_backend.initial_state)
 
 
 @settings(max_examples=40)
@@ -279,7 +336,7 @@ def test_claim_binding_rejects_bounded_evidence_promoted_to_universal_claim():
     with pytest.raises(ValidationError, match="universal quantification requires model-check or proof evidence"):
         BehavioralClaimBindingModel(
             taxonomy_id="aces-behavioral-relations",
-            taxonomy_revision="rev2",
+            taxonomy_revision="rev3",
             relation_id="trace-equivalence",
             subject="two finite backend runs",
             left_carrier_ref="backend-run:left",

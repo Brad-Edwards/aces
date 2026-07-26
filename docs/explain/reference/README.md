@@ -33,3 +33,6 @@ themselves normative specifications or ADRs.
 - [experiment-binding-contracts.md](experiment-binding-contracts.md)
   - Authoritative experiment-to-scenario, participant, and apparatus binding
     contracts and configuration realization
+- [participant-decision-surface-v2-migration.md](participant-decision-surface-v2-migration.md)
+  - Reprojection, delivery, capability declaration, admission, reset, memory,
+    and evidence guidance for participant decision surface v2

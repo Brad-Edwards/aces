@@ -12,15 +12,17 @@ weaker observation from being reported as a stronger behavioral result.
 The machine-readable authority is
 `contracts/concept-authority/behavioral-relations-v1.json`, contract
 `behavioral-relations/v1`, taxonomy `aces-behavioral-relations`, revision
-`rev2`. Relation identifiers, formal dimensions, claim-surface defaults,
+`rev3`. Relation identifiers, formal dimensions, claim-surface defaults,
 bibliography coordinates, assurance status, and worked transition systems are
-normative there. ADR-081 governs the architecture. This document is the
+normative there. ADR-081 and ADR-095 govern the architecture. This document is the
 normative reader-facing formalization of that catalog.
 
-Revision `rev2` adds the SEM-230 `policy-noninterference` relation and its
-dedicated participant-information-flow claim surface. The JSON contract remains
-`behavioral-relations/v1` because its closed shape is unchanged. Revision `rev1`
-is historical taxonomy identity; current in-repository producers bind `rev2`.
+Revision `rev3` makes SEM-230 `policy-noninterference` reactive over adaptive
+low participant strategies and exact state cuts, and adds
+`io-alternating-refinement` for actionable backend participant semantics. The
+JSON contract remains `behavioral-relations/v1` because its closed shape is
+unchanged. Revisions `rev1` and `rev2` are historical taxonomy identities;
+current in-repository producers bind `rev3`.
 
 The taxonomy defines claim vocabulary and proof obligations. It does not add a
 model checker, theorem prover, stochastic simulator, game solver, scheduler,
@@ -80,7 +82,8 @@ identifier rather than an artifact-local synonym.
 | `strong-bisimulation` | behavioral | Every labelled step is matched in both directions without hiding actions. |
 | `weak-bisimulation` | behavioral | Both directions match visible steps while admitting governed hidden-action closure. |
 | `participant-projected-history-equivalence` | behavioral | Two histories are equal after the same named participant projection. |
-| `policy-noninterference` | behavioral | Unauthorized high-input variation preserves the support set of participant-visible histories under fixed low-equivalence, dynamic purge, declassification, policy, scheduler/environment, and order assumptions. |
+| `policy-noninterference` | behavioral | Unauthorized high variation preserves participant-visible history support sets for every adaptive low strategy under fixed memory, low-equivalence, exact-cut policy, declassification, scheduler/environment, and order assumptions. |
+| `io-alternating-refinement` | behavioral | A concrete backend preserves abstract participant inputs/outputs, ownership, and declared availability obligations against quantified environment choices. |
 | `epistemic-indistinguishability` | epistemic | Two worlds are indistinguishable to a named participant under an information model. |
 | `alternating-strategic-equivalence` | strategic | Named coalitions preserve abilities against quantified opponent choices. |
 | `probabilistic-bisimulation` | behavioral | Related states assign equal probability mass to related equivalence classes. |
@@ -168,11 +171,15 @@ property tests. They do not establish `data-refinement`, simulation,
 ### Backend realization
 
 Envelope admission establishes `realization-envelope-membership`. The intended
-universal runtime obligation is projection-bound `trace-inclusion`, but it is
-deliberately unproved in revision `rev2`. Current conformance reports establish
-only `bounded-probe-success` for their named fixture and target-probe cases.
-Provisioning success, snapshots, witnesses, and negative probes do not establish
-reverse inclusion, equivalence, simulation, or bisimulation.
+universal soundness obligation is projection-bound `trace-inclusion`.
+Actionable participant interaction also requires declared input/output
+ownership and action-availability obligations, represented by
+`io-alternating-refinement`; trace inclusion alone permits refusal of required
+inputs. Both remain deliberately unproved in revision `rev3`. Current
+conformance reports establish only `bounded-probe-success` for named fixture
+and target-probe cases. Provisioning success, snapshots, witnesses, and
+negative probes do not establish reverse inclusion, equivalence, simulation,
+alternating refinement, or bisimulation.
 
 ### Backend comparison
 
@@ -194,9 +201,10 @@ comparison.
 ### Participant information-flow policy
 
 The SEM-230 claim surface uses `policy-noninterference` only when participant,
-episode scope, audience, policy-revision sequence, low-equivalence relation,
-dynamic purge, permitted declassification schedule, scheduler/environment
-classes, order model, and observation projection are fixed. The baseline is
+episode and memory scope, audience, exact-cut policy-decision sequence,
+low-equivalence relation, adaptive low-strategy class, dynamic purge, permitted
+declassification schedule, scheduler/environment classes, order model, and
+observation projection are fixed. The baseline is
 termination- and progress-insensitive, untimed, and set-based under
 nondeterminism. Partial-order claims compare the declared visible order
 relation, not one linearization. Probability measures are outside the baseline.
@@ -214,7 +222,7 @@ provide structural and finite evidence only. A future strategic claim MUST use
 availability, opponent quantification, information sets, schedulers, objectives,
 and preserved abilities. A probabilistic claim MUST use
 `probabilistic-bisimulation` and supply the probability kernel and equivalence
-classes. Neither relation is implemented or proved in revision `rev2`.
+classes. Neither relation is implemented or proved in revision `rev3`.
 
 ### Independent adequacy studies
 
@@ -248,7 +256,20 @@ state-relation obligation; matching one visible trace does not prove it.
 The executable versions of both examples are embedded in the revisioned
 catalog and checked by `implementations/python/tests/test_behavioral_relations.py`.
 
-## Assurance Boundary For Revision 2
+### Trace inclusion is not participant-input availability
+
+Let an abstract decision-epoch-zero state accept participant input
+`select:scan`, while a concrete backend refuses every input. The concrete
+projected trace set containing only the empty trace is included in the
+abstract empty-trace prefix, yet the abstract input is unavailable in the
+concrete state. Trace inclusion therefore cannot establish actionable
+participant realization. The executable finite counterexample also checks a
+hidden concrete projection step followed by `deliver:decision-epoch-0`: the
+visible trace can weakly match while strong bisimulation fails. Neither finite
+case proves `io-alternating-refinement`; each can falsify an incorrect
+implication used in a backend claim.
+
+## Assurance Boundary For Revision 3
 
 Implemented and tested now:
 
@@ -258,13 +279,15 @@ Implemented and tested now:
 - canonical artifact identity;
 - realization-envelope membership and subsumption; and
 - participant projection machinery and bounded projected-history comparisons;
-  and
 - the SEM-230 relation definition, catalog/claim-policy validation, and bounded
-  test-local counterexamples.
+  reactive-strategy counterexamples; and
+- bounded decision-epoch-zero step-matching and participant-input-availability
+  counterexamples for `io-alternating-refinement`.
 
 Defined but deliberately unproved or only partially implemented:
 
-- universal `trace-inclusion` for backend realization;
+- universal `trace-inclusion` and `io-alternating-refinement` for backend
+  realization;
 - `trace-equivalence`, forward/backward simulation, and data refinement;
 - strong and weak bisimulation; and
 - universal `policy-noninterference`, production policy enforcement, and
@@ -283,7 +306,8 @@ artifacts:
 ## Primary Sources
 
 The catalog records the complete title, authors, publication year and venue,
-edition/version, and immutable DOI or ISBN for each source. Revision `rev2`
+edition/version, and immutable DOI, ISBN, or primary publication URL for each
+source. Revision `rev3`
 uses, among others:
 
 - Milner, *A Calculus of Communicating Systems* (1980),
@@ -310,6 +334,12 @@ uses, among others:
   `10.1109/SP.1982.10014`; and
 - Sabelfeld and Sands, “Declassification: Dimensions and Principles” (2009),
   DOI `10.3233/JCS-2009-0352`.
+- Lynch and Tuttle, “An Introduction to Input/Output Automata” (1989), *CWI
+  Quarterly* 2(3), 219-246;
+- Clarkson and Schneider, “Hyperproperties” (2010), *Journal of Computer
+  Security* 18(6), 1157-1210; and
+- Bohannon, Pierce, Sjöberg, Weirich, and Zdancewic, “Reactive
+  Noninterference” (2009), DOI `10.1145/1653662.1653673`.
 
 Bibliographic prose here is an aid. The machine-readable catalog is the
 revision-pinned identity surface.

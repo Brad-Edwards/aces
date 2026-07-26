@@ -12,7 +12,8 @@
     "participant-configuration-result-v1",
     "participant-episode-state-envelope-v1",
     "participant-episode-history-event-stream-v1",
-    "participant-behavior-history-event-stream-v1"
+    "participant-behavior-history-event-stream-v1",
+    "participant-decision-surface-v2"
   ],
   "compatibility": {
     "participant_runtimes": [
@@ -54,7 +55,8 @@
     "supported_participant_contracts": [
       "participant-episode-state-envelope-v1",
       "participant-episode-history-event-stream-v1",
-      "participant-behavior-history-event-stream-v1"
+      "participant-behavior-history-event-stream-v1",
+      "participant-decision-surface-v2"
     ],
     "supported_decision_surface_modes": [
       "autonomous",

@@ -2,9 +2,9 @@
   "contract_id": "participant-implementation-manifest-v1",
   "schema_path": "contracts/schemas/participant-implementation-manifest/participant-implementation-manifest-v1.json",
   "stability": "draft",
-  "content_hash": "5b7c636a98c540e1afc74ca74a1e9a421609f498c3b85c473a52c1516e398984",
+  "content_hash": "c74cee900e2e0e89b442f54e9fe597beb88393bf0aa6ef27ee3d76642354817f",
   "last_change": {
-    "summary": "Added typed participant configuration targets, aliases, defaults, sensitivity, and governed validator ownership.",
-    "content_hash": "5b7c636a98c540e1afc74ca74a1e9a421609f498c3b85c473a52c1516e398984"
+    "summary": "Allowed participant implementations to declare exact-cut participant-decision-surface-v2 capability.",
+    "content_hash": "c74cee900e2e0e89b442f54e9fe597beb88393bf0aa6ef27ee3d76642354817f"
   }
 }
