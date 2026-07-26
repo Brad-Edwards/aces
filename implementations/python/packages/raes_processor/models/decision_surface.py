@@ -5,7 +5,11 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
-from raes_contracts.contracts import ParticipantDecisionSurfaceModel
+from raes_contracts.contracts import (
+    ParticipantDecisionSurfaceModel,
+    ParticipantDecisionSurfaceProjectionAnchorModel,
+)
+from raes_contracts.runtime_state import RuntimeSnapshot
 
 from .behavior_anchor_checks import participant_observation_effective_relation
 from .behavior_anchor_index import _participant_behavior_history_anchor_indexes
@@ -14,6 +18,7 @@ from .behavior_resources import (
     ParticipantBehaviorSpecificationRuntime,
     ParticipantObservationBoundaryRuntime,
 )
+from .decision_surface_anchor import _validate_resolved_projection_anchor
 from .history_event import ParticipantBehaviorHistoryEvent
 from .participant_exposure import project_participant_exposure_bindings
 from .participant_exposure_authority import (
@@ -67,6 +72,7 @@ class ParticipantDecisionSurfaceProjectionInput:
     marking_definition_refs: tuple[str, ...]
     redaction_policy_ref: str | None
     semantic_limitations: tuple[str, ...]
+    projection_anchor: ParticipantDecisionSurfaceProjectionAnchorModel | None = None
 
 
 def _surface_action_refs(form: Mapping[str, object]) -> tuple[str, tuple[str, ...]]:
@@ -187,9 +193,20 @@ def _validate_context_visibility(
 
 
 def _validate_projection_history(
+    runtime_model: RuntimeModel,
     history_events: Sequence[ParticipantBehaviorHistoryEvent],
     projection: ParticipantDecisionSurfaceProjectionInput,
-) -> None:
+    runtime_snapshot: RuntimeSnapshot | None,
+) -> int:
+    if projection.projection_anchor is not None:
+        if runtime_snapshot is None:
+            raise ValueError("anchored participant decision surfaces require the current trusted RuntimeSnapshot")
+        return _validate_resolved_projection_anchor(
+            runtime_model,
+            runtime_snapshot,
+            history_events,
+            projection,
+        )
     if not history_events:
         raise ValueError("participant decision surfaces require time-indexed history; a final snapshot is insufficient")
     if projection.observation_order < 0 or projection.observation_order >= len(history_events):
@@ -199,6 +216,7 @@ def _validate_projection_history(
         for event in history_events
     ):
         raise ValueError("participant decision surface history must contain one participant and episode")
+    return projection.observation_order
 
 
 def _resolve_projection_scope(
@@ -220,12 +238,14 @@ def _resolve_projection_scope(
 
 def _projection_visibility_relation(
     history_events: Sequence[ParticipantBehaviorHistoryEvent],
+    *,
+    history_order: int,
     projection: ParticipantDecisionSurfaceProjectionInput,
     boundary: ParticipantObservationBoundaryRuntime,
 ) -> Mapping[str, str]:
     action_attempts, state_transitions, observations = _participant_behavior_history_anchor_indexes(history_events)
     relation, _ = participant_observation_effective_relation(
-        observation_index=projection.observation_order,
+        observation_index=history_order,
         boundary_address=projection.observation_boundary_address,
         boundary=boundary,
         action_attempts=action_attempts,
@@ -345,21 +365,37 @@ def _surface_payload(
         "marking_definition_refs": list(projection.marking_definition_refs),
         "redaction_policy_ref": projection.redaction_policy_ref,
         "semantic_limitations": list(projection.semantic_limitations),
+        **(
+            {"projection_anchor": projection.projection_anchor.model_dump(mode="json")}
+            if projection.projection_anchor is not None
+            else {}
+        ),
     }
 
 
 def project_participant_decision_surface(
     runtime_model: RuntimeModel,
     *,
+    runtime_snapshot: RuntimeSnapshot | None = None,
     history_events: Sequence[ParticipantBehaviorHistoryEvent],
     projection: ParticipantDecisionSurfaceProjectionInput,
     exposure_resolvers: ParticipantExposureResolvers,
 ) -> ParticipantDecisionSurfaceModel:
     """Derive one surface from compiled meaning and one scoped history prefix."""
 
-    _validate_projection_history(history_events, projection)
+    history_order = _validate_projection_history(
+        runtime_model,
+        history_events,
+        projection,
+        runtime_snapshot,
+    )
     behavior, boundary = _resolve_projection_scope(runtime_model, projection)
-    relation = _projection_visibility_relation(history_events, projection, boundary)
+    relation = _projection_visibility_relation(
+        history_events,
+        history_order=history_order,
+        projection=projection,
+        boundary=boundary,
+    )
     _validate_context_visibility(
         relation,
         refs=projection.visible_context_refs,

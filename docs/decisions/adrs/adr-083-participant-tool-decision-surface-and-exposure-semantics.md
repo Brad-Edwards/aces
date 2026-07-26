@@ -232,6 +232,53 @@ implement their rows through existing package ownership and must update the
 matrix when a carrier or enforcement point changes. They may strengthen a row
 but may not redefine the joint relations independently.
 
+### 8. Ground the first surface in RUN-311 episode readiness
+
+A participant episode's first decision surface is grounded by the existing
+RUN-311 lifecycle rather than by a fabricated behavior event.
+`episode_initialized`, `episode_reset`, and `episode_restarted` establish an
+episode generation; the following `episode_running` event is the authoritative
+readiness anchor. Only then may the runtime derive the initial context from
+compiled `V_p,0` and project `D(p,e,0)`.
+
+The public projection anchor is tagged as either episode readiness or a
+behavior event. It references one event in one owning history and carries the
+participant, episode, per-episode decision-surface order, anchor-local order,
+stable event reference, evidence, and provenance. Episode lifecycle and
+participant behavior remain separate histories. The tagged anchor makes the
+surface `observation_order` the per-episode decision-surface coordinate, while
+`anchor_order` remains the referenced lifecycle- or behavior-history
+coordinate. RUN-311 `sequence_number` remains only the episode-generation
+coordinate. Readiness derives decision-surface order zero. Each terminal
+`observation_emitted` event advances the derived decision-surface order by one;
+callers cannot choose that value independently.
+
+The portable order is:
+
+```text
+episode_initialized | episode_reset | episode_restarted
+  -> episode_running
+  -> V_p,0 context
+  -> D(p,e,0)
+  -> proposal and selection
+  -> admitted action_attempted
+  -> state_transition_recorded
+  -> terminal observation_emitted
+  -> D(p,e,1)
+```
+
+Proposal and selection do not create participant behavior. Admission creates
+the first behavior event. A reset or restart creates a new episode id and a new
+order-zero surface with no behavior prefix from the new episode.
+
+Anchor shape is not authority. Projection and admission resolve the anchor
+against the current trusted runtime snapshot and complete participant-local
+history. A standalone event, isolated fragment, final snapshot, prior-episode
+surface, surface superseded by later behavior, or unanchored surface presented
+to the runtime admission path fails closed. Initial projection continues to use
+the compiled initial view relation; later projection continues to use the
+existing behavior-anchor indexes and effective view-relation selector.
+
 ## Alternatives Considered
 
 ### Add a flat participant `tools` list

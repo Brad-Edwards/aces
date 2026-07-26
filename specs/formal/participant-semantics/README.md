@@ -1439,6 +1439,40 @@ Every surface has:
 - evidence/provenance, markings, redaction, limitations, and weakening; and
 - the event/order/evidence anchor from which the surface was derived.
 
+The event/order/evidence anchor is a closed tagged value, not a mixed history.
+An `episode_readiness` anchor resolves the current RUN-311 `episode_running`
+event from the trusted runtime snapshot and complete participant lifecycle
+history. It grounds compiled `V_p,0`, the initial context, and `D(p,e,0)` while
+the new episode's behavior history remains empty. A `behavior_event` anchor
+resolves one exact action-linked event and the complete participant/episode
+behavior-history prefix used by the existing effective-view-relation
+algorithm.
+
+The anchor keeps three order domains explicit:
+
+- RUN-311 `sequence_number` identifies the episode generation only;
+- `decision_surface_order`, carried as the surface `observation_order`, numbers
+  `D(p,e,0)`, `D(p,e,1)`, and subsequent surfaces within that episode; and
+- `anchor_order` identifies the referenced event in its tagged lifecycle or
+  behavior history without changing the meaning of `observation_order`.
+
+The readiness resolver derives decision-surface order zero. A later surface is
+anchored by the exact current terminal `observation_emitted` event, and its
+decision-surface order equals the number of completed observation events in the
+episode. The value is resolved from runtime history rather than supplied as
+caller-authored metadata.
+
+For a new episode, `episode_initialized`, `episode_reset`, or
+`episode_restarted` precedes `episode_running`; readiness then precedes the
+initial context and surface. Proposal and selection follow the surface but do
+not create participant behavior. Admission creates the first
+`action_attempted`; its state transition and terminal observation precede the
+next behavior-anchored surface. Reset and restart create a new episode id and
+restart `decision_surface_order` at zero. Projection and admission both
+re-resolve an anchor against current runtime authority, so a standalone,
+truncated, previous-episode, terminated, behavior-superseded, or absent runtime
+admission anchor fails closed.
+
 The three surface forms have distinct selection meaning:
 
 - **Open-ended generation:** the participant implementation may propose an
@@ -1566,7 +1600,7 @@ must preserve or strengthen its rows.
 | SEM-219 E: constraints fail closed | affordance action refs plus unchanged SEM-211 preconditions/failure classes | semantic validation and existing planner/admission/result gates | complete action constraints remain reachable through the compiled action address | binding copies, drops, or overrides exhausted/unknown constraints | I4, I7 / #294 |
 | SEM-219 F: support is apparatus metadata | authored affordance IR remains separate from manifest/selection support | absence-preserving compilation plus existing apparatus validation | support can be joined later without changing authored meaning | installed content or backend support creates an affordance grant | I11, I12 / #294 |
 | SEM-219 G: side effects and observations are explicit | affordance observation addresses plus action effects/evidence expectations | boundary classification, compiler IR, existing result/snapshot/conformance gates | tool output remains governed by referenced observation/effect contracts | tool output lacks a view rule or leaks hidden truth | I5, I13 / #294 |
-| SEM-220 A: surface has participant/episode/order identity | `ParticipantContextViewModel` envelope plus typed `D(p,e,o)` payload/ref | retrieval and context-view validation | surface resolves to one participant, episode, and observation point | cumulative/global context substitutes for participant-local state | I1, I3, I15 / #295 |
+| SEM-220 A: surface has participant/episode/order identity | `ParticipantContextViewModel` envelope, typed `D(p,e,o)` payload/ref, and tagged episode-readiness or behavior-event projection anchor | trusted runtime-snapshot/history resolution, projection, admission-time freshness validation, and context-view validation | `episode_running` grounds `V_p,0` and `D(p,e,0)` without behavior; later surfaces resolve one exact behavior prefix | cumulative/global context, a standalone lifecycle event, or a stale prior-episode surface substitutes for current participant-local state | I1, I3, I15 / #295, #909 |
 | SEM-220 B: candidate membership is not eligibility | action-entry contract ref plus explicit SEM-211 eligibility state/reason refs | surface derivation followed by independent admission | visible candidate is marked ineligible with a typed reason | every presented candidate is implicitly executable | I4 / #295 |
 | SEM-220 C: open-ended proposals bind before admission | compiled `ParticipantActionContractRuntime.argument_shape_ref`, `ParticipantValidatedActionSelection`, and SEM-211 admission helper | proposal resolution, concrete argument validation/normalization, immutable carrier binding, then runtime admission | generated proposal resolves and validates before an attempt | free-form generation bypasses applicability or invents backend-local meaning | I4, I11 / #295, #303 |
 | SEM-220 D: constrained forms preserve mapping meaning | `ParticipantActionArgumentDefinition`, canonical compiled shape identity, and explicit default/normalization/omission/loss disclosure | closed authoring validation, compiler mapping, `resolve_participant_action_arguments()`, and conformance comparison | form values map deterministically to validated action arguments | omitted/defaulted field changes meaning without disclosure | I12, I14, I16 / #295, #303 |

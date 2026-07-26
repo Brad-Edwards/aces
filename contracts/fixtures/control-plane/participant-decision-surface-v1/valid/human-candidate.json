@@ -1,18 +1,18 @@
 {
-  "surface_id": "decision-surfaces.red.human.order-4",
+  "surface_id": "decision-surfaces.red.human.order-1",
   "participant_address": "participant.behavior.red-agent",
   "episode_id": "episode-1",
   "observation_point": "behavior-history:4",
-  "observation_order": 4,
+  "observation_order": 1,
   "behavior_specification_address": "participant.behavior-specification.red-surface",
   "observation_boundary_address": "participant.observation-boundary.red-view",
-  "context_view_ref": "context-views.red.episode-1.order-4",
+  "context_view_ref": "context-views.red.episode-1.order-1",
   "implementation_selection_ref": "participant-selections.red.human.v1",
   "decision_control_mode": "human-supervised",
   "projection_policy_ref": "projection-policy.red.v1",
   "projection_policy_revision": "1",
   "exposure_policy_ref": "exposure-policy.red.v1",
-  "visibility_projection_ref": "visibility-projection.red.order-4",
+  "visibility_projection_ref": "visibility-projection.red.order-1",
   "visible_context_refs": [
     "context.public"
   ],
@@ -54,10 +54,11 @@
     "open_extension_binding_ref": null
   },
   "evidence_refs": [
-    "evidence.surface.red.order-4"
+    "evidence.surface.red.order-1"
   ],
   "provenance_refs": [
-    "provenance.surface.red.human.order-4"
+    "provenance.surface.red.human.order-1",
+    "participant-behavior-event:sha256:4444444444444444444444444444444444444444444444444444444444444444"
   ],
   "marking_definition_refs": [
     "markings.participant-visible.v1"
@@ -66,6 +67,23 @@
   "semantic_limitations": [
     "Candidate membership does not imply eligibility or admission"
   ],
+  "projection_anchor": {
+    "participant_address": "participant.behavior.red-agent",
+    "episode_id": "episode-1",
+    "decision_surface_order": 1,
+    "event_ref": "participant-behavior-event:sha256:4444444444444444444444444444444444444444444444444444444444444444",
+    "anchor_order": 4,
+    "evidence_refs": [
+      "evidence.surface.red.order-1"
+    ],
+    "provenance_refs": [
+      "participant-behavior-event:sha256:4444444444444444444444444444444444444444444444444444444444444444"
+    ],
+    "anchor_kind": "behavior_event",
+    "event_type": "observation_emitted",
+    "action_instance_id": "scan-1",
+    "history_prefix_length": 5
+  },
   "audience_scope_ref": "audience.participant.behavior.red-agent",
   "exposure_bindings": [
     {
@@ -76,7 +94,7 @@
       "episode_id": "episode-1",
       "audience_scope_ref": "audience.participant.behavior.red-agent",
       "observation_point": "behavior-history:4",
-      "observation_order": 4,
+      "observation_order": 1,
       "visibility_basis_ref": "visibility-bases.context.public",
       "projection_policy_ref": "projection-policy.red.v1",
       "projection_policy_revision": "1",
@@ -95,19 +113,19 @@
         "markings.participant-visible.v1"
       ],
       "source_provenance_refs": [
-        "provenance.surface.red.human.order-4"
+        "provenance.surface.red.human.order-1"
       ],
       "result_provenance_refs": [
-        "provenance.surface.red.human.order-4"
+        "provenance.surface.red.human.order-1"
       ],
       "declassification_basis_ref": null,
       "redaction_policy_ref": null,
       "transformation_rule_ref": null,
       "evidence_refs": [
-        "evidence.surface.red.order-4"
+        "evidence.surface.red.order-1"
       ],
       "provenance_refs": [
-        "provenance.surface.red.human.order-4"
+        "provenance.surface.red.human.order-1"
       ],
       "loss_and_limitations": [
         "No known projection loss"
@@ -123,7 +141,7 @@
       "episode_id": "episode-1",
       "audience_scope_ref": "audience.participant.behavior.red-agent",
       "observation_point": "behavior-history:4",
-      "observation_order": 4,
+      "observation_order": 1,
       "visibility_basis_ref": "visibility-bases.participant.action-contract.scan",
       "projection_policy_ref": "projection-policy.red.v1",
       "projection_policy_revision": "1",
@@ -142,19 +160,19 @@
         "markings.participant-visible.v1"
       ],
       "source_provenance_refs": [
-        "provenance.surface.red.human.order-4"
+        "provenance.surface.red.human.order-1"
       ],
       "result_provenance_refs": [
-        "provenance.surface.red.human.order-4"
+        "provenance.surface.red.human.order-1"
       ],
       "declassification_basis_ref": null,
       "redaction_policy_ref": null,
       "transformation_rule_ref": null,
       "evidence_refs": [
-        "evidence.surface.red.order-4"
+        "evidence.surface.red.order-1"
       ],
       "provenance_refs": [
-        "provenance.surface.red.human.order-4"
+        "provenance.surface.red.human.order-1"
       ],
       "loss_and_limitations": [
         "No known projection loss"
@@ -170,7 +188,7 @@
       "episode_id": "episode-1",
       "audience_scope_ref": "audience.participant.behavior.red-agent",
       "observation_point": "behavior-history:4",
-      "observation_order": 4,
+      "observation_order": 1,
       "visibility_basis_ref": "visibility-bases.participant.behavior-specification.red-surface.tool-affordance.scanner",
       "projection_policy_ref": "projection-policy.red.v1",
       "projection_policy_revision": "1",
@@ -189,19 +207,19 @@
         "markings.participant-visible.v1"
       ],
       "source_provenance_refs": [
-        "provenance.surface.red.human.order-4"
+        "provenance.surface.red.human.order-1"
       ],
       "result_provenance_refs": [
-        "provenance.surface.red.human.order-4"
+        "provenance.surface.red.human.order-1"
       ],
       "declassification_basis_ref": null,
       "redaction_policy_ref": null,
       "transformation_rule_ref": null,
       "evidence_refs": [
-        "evidence.surface.red.order-4"
+        "evidence.surface.red.order-1"
       ],
       "provenance_refs": [
-        "provenance.surface.red.human.order-4"
+        "provenance.surface.red.human.order-1"
       ],
       "loss_and_limitations": [
         "No known projection loss"

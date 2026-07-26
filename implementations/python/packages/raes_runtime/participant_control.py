@@ -18,7 +18,10 @@ from raes_contracts.participant_episode import (
 )
 from raes_contracts.planning import RuntimeDomain
 from raes_contracts.runtime_state import OperationReceipt
-from raes_processor.models import ParticipantBehaviorRuntime
+from raes_processor.models import (
+    ParticipantBehaviorRuntime,
+    validate_participant_decision_surface_projection_anchor,
+)
 
 from .control_plane_execution import execute_participant_action
 
@@ -382,6 +385,9 @@ class ParticipantControlMixin:
                 request_fingerprint=request_fingerprint,
             )
         try:
+            if surface.projection_anchor is None:
+                raise ValueError("participant decision surface admission requires a current projection_anchor")
+            validate_participant_decision_surface_projection_anchor(self._snapshot, surface)
             request = bind_participant_decision_surface_selection(
                 surface=surface,
                 selection=selection,

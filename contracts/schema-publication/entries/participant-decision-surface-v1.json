@@ -2,9 +2,9 @@
   "contract_id": "participant-decision-surface-v1",
   "schema_path": "contracts/schemas/control-plane/participant-decision-surface-v1.json",
   "stability": "draft",
-  "content_hash": "77920c1edfa6fe1785d50d6d33a194acd59fdc41845c016eedbf88af342bd2e2",
+  "content_hash": "e65ab17f47266f0b21964e5d97517b3d5e9ff998454c48605d2fc40057630c13",
   "last_change": {
-    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
-    "content_hash": "77920c1edfa6fe1785d50d6d33a194acd59fdc41845c016eedbf88af342bd2e2"
+    "summary": "Added an optional tagged projection anchor that distinguishes derived decision-surface order from episode-readiness and terminal-observation history order, evidence, and provenance without changing existing decision-surface fields.",
+    "content_hash": "e65ab17f47266f0b21964e5d97517b3d5e9ff998454c48605d2fc40057630c13"
   }
 }

@@ -132,6 +132,11 @@ from .decision_surface import (
     ParticipantDecisionSurfaceProjectionInput,
     project_participant_decision_surface,
 )
+from .decision_surface_anchor import (
+    resolve_participant_behavior_projection_anchor,
+    resolve_participant_episode_readiness_anchor,
+    validate_participant_decision_surface_projection_anchor,
+)
 from .history_event import (
     ParticipantBehaviorHistoryEvent,
 )
@@ -288,6 +293,8 @@ __all__ = [
     "ParticipantPhaseRealization",
     "ParticipantRuntimeLifecyclePhase",
     "project_participant_decision_surface",
+    "resolve_participant_behavior_projection_anchor",
+    "resolve_participant_episode_readiness_anchor",
     "ParticipantTemporalRuntimeContext",
     "ParticipantTemporalState",
     "ParticipantTemporalStateTransition",
@@ -303,6 +310,7 @@ __all__ = [
     "RuntimeModel",
     "RuntimeSnapshot",
     "RuntimeSnapshotEnvelope",
+    "validate_participant_decision_surface_projection_anchor",
     "RuntimeTemplate",
     "ScriptRuntime",
     "Severity",
