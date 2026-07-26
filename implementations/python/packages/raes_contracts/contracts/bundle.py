@@ -25,6 +25,10 @@ from .execution_state import (
     WorkflowHistoryEventModel,
 )
 from .experiment_apparatus import ExperimentApparatusContextModel, ExperimentTaskModel
+from .experiment_bindings import (
+    ExperimentBindingDescriptorSetModel,
+    ParticipantConfigurationResultModel,
+)
 from .experiment_capture import ExperimentCaptureSpecModel
 from .experiment_evidence import ExperimentDerivedMeasureModel, ExperimentEvidenceRecordModel
 from .experiment_run import ExperimentRunModel
@@ -32,6 +36,7 @@ from .experiment_spec import ExperimentSpecModel, ExperimentStudyModel
 from .manifests import ProcessorManifestV2Model
 from .participant_context import ParticipantContextViewModel
 from .participant_control import ParticipantControlOccurrenceModel
+from .participant_crossing import ParticipantCrossingOccurrenceModel
 from .participant_decision_surface import ParticipantDecisionSurfaceModel
 from .participant_envelopes import (
     ParticipantJointActionRecordModel,
@@ -138,6 +143,7 @@ def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
         "random-stream-vector-v1": RandomStreamVectorModel.model_json_schema(),
         "experiment-apparatus-context-v1": ExperimentApparatusContextModel.model_json_schema(),
         "experiment-authoring-input-v1": ExperimentSpecModel.model_json_schema(),
+        "experiment-binding-descriptors-v1": ExperimentBindingDescriptorSetModel.model_json_schema(),
         "experiment-capture-spec-v1": ExperimentCaptureSpecModel.model_json_schema(),
         "experiment-derived-measure-v1": ExperimentDerivedMeasureModel.model_json_schema(),
         "experiment-evidence-record-v1": ExperimentEvidenceRecordModel.model_json_schema(),
@@ -186,12 +192,14 @@ def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
         "participant-joint-action-record-v1": ParticipantJointActionRecordModel.model_json_schema(),
         "participant-time-management-context-v1": ParticipantTimeManagementContextModel.model_json_schema(),
         "participant-control-occurrence-v1": ParticipantControlOccurrenceModel.model_json_schema(),
+        "participant-crossing-occurrence-v1": ParticipantCrossingOccurrenceModel.model_json_schema(),
         "participant-outcome-report-v1": ParticipantOutcomeReportModel.model_json_schema(),
         "participant-status-view-v1": ParticipantStatusViewModel.model_json_schema(),
         "participant-history-view-v1": ParticipantHistoryViewModel.model_json_schema(),
         "participant-context-view-v1": ParticipantContextViewModel.model_json_schema(),
         "runtime-fact-binding-plane-v1": RuntimeFactBindingPlaneModel.model_json_schema(),
         "participant-decision-surface-v1": ParticipantDecisionSurfaceModel.model_json_schema(),
+        "participant-configuration-result-v1": ParticipantConfigurationResultModel.model_json_schema(),
         "operation-receipt-v1": OperationReceiptModel.model_json_schema(),
         "operation-status-v1": OperationStatusModel.model_json_schema(),
         "associated-artifact-manifest-v1": AssociatedArtifactManifestModel.model_json_schema(),

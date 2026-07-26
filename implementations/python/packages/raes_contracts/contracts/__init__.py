@@ -115,19 +115,9 @@ from .experiment_artifacts import (
     ExperimentDerivedMeasureReferenceModel,
     ExperimentMeasurementChannelReferenceModel,
 )
-from .experiment_capture import (
-    ExperimentCaptureRequirementModel,
-    ExperimentCaptureSpecModel,
-    ExperimentCaptureWindowModel,
-    ExperimentValidityNoteModel,
-)
-from .experiment_disclosure import (
-    ExperimentApparatusConstraintModel,
-    ExperimentAugmentationDisclosureModel,
-    ExperimentEvaluationProtocolModel,
-    ExperimentMetricDefinitionModel,
-    ExperimentSplitAndLeakageControlsModel,
-)
+from .experiment_bindings import *
+from .experiment_capture import *
+from .experiment_disclosure import *
 from .experiment_evidence import (
     ExperimentDerivedMeasureMethodModel,
     ExperimentDerivedMeasureModel,
@@ -188,8 +178,6 @@ from .manifests import (
 )
 from .manifests import CleanupCapabilitiesModel as CleanupCapabilitiesModel
 from .participant_context import ParticipantContextViewModel
-from .participant_control import ParticipantControlDeclarationModel, ParticipantControlOccurrenceModel
-from .participant_control_validation import validate_participant_control_occurrence_context
 from .participant_decision_surface import (
     ParticipantDecisionSurfaceActionEntryModel,
     ParticipantDecisionSurfaceCandidateSetFormModel,
@@ -232,6 +220,13 @@ from .participant_manifests import (
     ParticipantImplementationManifestModel,
     ParticipantImplementationProvenanceModel,
     ParticipantImplementationSelectionModel,
+)
+from .participant_occurrences import (
+    ParticipantControlDeclarationModel,
+    ParticipantControlOccurrenceModel,
+    ParticipantCrossingOccurrenceModel,
+    validate_participant_control_occurrence_context,
+    validate_participant_crossing_occurrence_context,
 )
 from .participant_runtime import (
     ParticipantActionEffectResultModel,
@@ -336,39 +331,17 @@ from .semantic_profiles import (
     SemanticProfileModel,
     SemanticProfilePhaseModel,
 )
-from .trial_cleanup import (
-    CleanStateClaimModel as CleanStateClaimModel,
-)
-from .trial_cleanup import (
-    CleanStateRequirementModel as CleanStateRequirementModel,
-)
-from .trial_cleanup import (
-    CleanupObligationModel as CleanupObligationModel,
-)
-from .trial_cleanup import (
-    CleanupObligationResultModel as CleanupObligationResultModel,
-)
-from .trial_cleanup import (
-    CleanupResourceBoundaryModel as CleanupResourceBoundaryModel,
-)
-from .trial_cleanup import (
-    ExecutionRetryPolicyModel as ExecutionRetryPolicyModel,
-)
-from .trial_cleanup import (
-    IsolationDimensionEvidenceModel as IsolationDimensionEvidenceModel,
-)
-from .trial_cleanup import (
-    SchedulerIsolationProofModel as SchedulerIsolationProofModel,
-)
-from .trial_cleanup import (
-    TrialCleanupPlanModel as TrialCleanupPlanModel,
-)
-from .trial_cleanup import (
-    TrialCleanupReceiptModel as TrialCleanupReceiptModel,
-)
-from .trial_cleanup import (
-    validate_trial_cleanup_receipt as validate_trial_cleanup_receipt,
-)
+from .trial_cleanup import CleanStateClaimModel as CleanStateClaimModel
+from .trial_cleanup import CleanStateRequirementModel as CleanStateRequirementModel
+from .trial_cleanup import CleanupObligationModel as CleanupObligationModel
+from .trial_cleanup import CleanupObligationResultModel as CleanupObligationResultModel
+from .trial_cleanup import CleanupResourceBoundaryModel as CleanupResourceBoundaryModel
+from .trial_cleanup import ExecutionRetryPolicyModel as ExecutionRetryPolicyModel
+from .trial_cleanup import IsolationDimensionEvidenceModel as IsolationDimensionEvidenceModel
+from .trial_cleanup import SchedulerIsolationProofModel as SchedulerIsolationProofModel
+from .trial_cleanup import TrialCleanupPlanModel as TrialCleanupPlanModel
+from .trial_cleanup import TrialCleanupReceiptModel as TrialCleanupReceiptModel
+from .trial_cleanup import validate_trial_cleanup_receipt as validate_trial_cleanup_receipt
 from .validation_disclosure import ValidationBasisDisclosureDocumentModel
 from .validators import _collapse_nullable_optional_schema as _collapse_nullable_optional_schema
 from .validators import _resolve_instance_path_schema as _resolve_instance_path_schema
@@ -405,10 +378,13 @@ __all__ = [
     "ControlledVocabularyTermModel", "ContractModel", "ExperimentAnalysisPlanModel",
     "NIST_CSF_DEFENSIVE_CATEGORIES_SOURCE_SCHEMA_VERSION", "NistCsfDefensiveCategorySourceModel",
     "NistCsfDefensiveCategorySourceTermModel",
+    "ApparatusBindingTargetModel", "BindingOwnerModel", "BindingScalarType",
+    "ConfigurationTargetDeclarationModel", "ConfigurationTargetRegistryModel",
     "ExperimentApparatusCompatibilityReferenceModel", "ExperimentApparatusComponentModel",
     "ExperimentApparatusConstraintModel", "ExperimentApparatusContextModel", "ExperimentArtifactRefModel",
     "ExperimentAugmentationDisclosureModel", "ExperimentBackendReferenceModel",
     "ExperimentCaptureRequirementModel", "ExperimentCaptureSpecModel", "ExperimentCaptureSpecReferenceModel",
+    "ExperimentBindingDescriptorModel", "ExperimentBindingDescriptorSetModel",
     "ExperimentCaptureWindowModel", "ExperimentChecksumModel", "ExperimentClockContextModel",
     "ExperimentConditionAssignmentParameterModel", "ExperimentConditionAssignmentReferenceModel",
     "ExperimentDerivedMeasureMethodModel", "ExperimentDerivedMeasureModel",
@@ -425,7 +401,11 @@ __all__ = [
     "ExperimentStatisticalMethodModel", "ExperimentStochasticControlModel", "ExperimentStudyFactorModel",
     "ExperimentStudyMembershipModel", "ExperimentStudyModel", "ExperimentTaskReferenceModel",
     "ExperimentTaskModel", "ExperimentUncertaintyMethodModel", "ExperimentValidityNoteModel",
+    "LiteralBindingValueModel", "ParticipantConfigurationModel", "ParticipantConfigurationResultModel",
+    "ParticipantImplementationBindingTargetModel",
+    "RealizedBindingProvenanceModel", "ScenarioBindingTargetModel", "SecretReferenceBindingValueModel",
     "EXPERIMENT_APPARATUS_CONTEXT_SCHEMA_VERSION", "EXPERIMENT_AUTHORING_INPUT_SCHEMA_VERSION",
+    "EXPERIMENT_BINDING_DESCRIPTORS_V1_SCHEMA_VERSION",
     "EXPERIMENT_CAPTURE_SPEC_SCHEMA_VERSION", "EXPERIMENT_DERIVED_MEASURE_SCHEMA_VERSION",
     "EXPERIMENT_EVIDENCE_RECORD_SCHEMA_VERSION", "EXPERIMENT_RUN_SCHEMA_VERSION",
     "EXPERIMENT_STUDY_SCHEMA_VERSION", "EXPERIMENT_TASK_SCHEMA_VERSION", "EvaluationHistoryEventModel",
@@ -437,18 +417,33 @@ __all__ = [
     "OPERATION_SCHEMA_VERSION", "OperationReceiptModel", "OperationStatusModel", "ObservationCapabilitiesModel",
     "OrchestrationPlanModel", "OrchestratorCapabilitiesModel", "PARTICIPANT_EPISODE_STATE_SCHEMA_VERSION",
     "PARTICIPANT_IMPLEMENTATION_MANIFEST_V1_SCHEMA_VERSION",
-    "PARTICIPANT_IMPLEMENTATION_PROVENANCE_V1_SCHEMA_VERSION", "ParticipantActionEffectResultModel",
+    "PARTICIPANT_IMPLEMENTATION_PROVENANCE_V1_SCHEMA_VERSION",
+    "PARTICIPANT_CONFIGURATION_RESULT_V1_SCHEMA_VERSION", "ParticipantActionEffectResultModel",
     "ParticipantActionPreconditionResultModel", "ParticipantActionResultModel",
     "ParticipantAttributionCandidateModel", "ParticipantAttributionEdgeModel",
     "ParticipantAttributionEvidenceBasisModel", "ParticipantAttributionOrderingBasisModel",
     "ParticipantAutonomousExecutionStateModel", "ParticipantBehaviorHistoryEventModel",
     "ParticipantContextViewModel", "ParticipantControlDeclarationModel",
-    "ParticipantControlOccurrenceModel", "validate_participant_control_occurrence_context",
-    "ParticipantDecisionSurfaceActionEntryModel", "ParticipantDecisionSurfaceBehaviorAnchorModel", "ParticipantDecisionSurfaceCandidateSetFormModel", "ParticipantDecisionSurfaceConstrainedFormModel", "ParticipantDecisionSurfaceEpisodeReadinessAnchorModel", "ParticipantDecisionSurfaceExposureBindingModel", "ParticipantDecisionSurfaceExposureRealizationModel", "ParticipantDecisionSurfaceModel", "ParticipantDecisionSurfaceOpenEndedFormModel", "ParticipantDecisionSurfaceProjectionAnchorModel", "ParticipantDecisionSurfaceSelectionModel", "validate_participant_decision_surface_context",
-    "ParticipantEpisodeHistoryEventModel", "ParticipantEpisodeStateModel", "ParticipantExposurePolicyModel",
-    "ParticipantFeatureSupportLevel", "ParticipantFeatureSupportModel", "ParticipantHistoryViewBehaviorEventModel",
-    "ParticipantHistoryViewEpisodeEventModel", "ParticipantHistoryViewModel", "ParticipantImplementationCapabilitiesModel",
-    "ParticipantImplementationCompatibilityModel", "ParticipantImplementationManifestModel", "ParticipantImplementationProvenanceModel", "ParticipantImplementationSelectionModel", "ParticipantJointActionAccessSetModel",
+    "ParticipantControlOccurrenceModel", "ParticipantCrossingOccurrenceModel",
+    "validate_participant_control_occurrence_context",
+    "validate_participant_crossing_occurrence_context",
+    "ParticipantDecisionSurfaceActionEntryModel",
+    "ParticipantDecisionSurfaceBehaviorAnchorModel",
+    "ParticipantDecisionSurfaceCandidateSetFormModel",
+    "ParticipantDecisionSurfaceConstrainedFormModel",
+    "ParticipantDecisionSurfaceEpisodeReadinessAnchorModel",
+    "ParticipantDecisionSurfaceExposureBindingModel",
+    "ParticipantDecisionSurfaceExposureRealizationModel", "ParticipantDecisionSurfaceModel",
+    "ParticipantDecisionSurfaceOpenEndedFormModel",
+    "ParticipantDecisionSurfaceProjectionAnchorModel",
+    "ParticipantDecisionSurfaceSelectionModel",
+    "validate_participant_decision_surface_context", "ParticipantEpisodeHistoryEventModel",
+    "ParticipantEpisodeStateModel", "ParticipantExposurePolicyModel", "ParticipantFeatureSupportLevel",
+    "ParticipantFeatureSupportModel", "ParticipantHistoryViewBehaviorEventModel",
+    "ParticipantHistoryViewEpisodeEventModel", "ParticipantHistoryViewModel",
+    "ParticipantImplementationCapabilitiesModel", "ParticipantImplementationCompatibilityModel",
+    "ParticipantImplementationManifestModel", "ParticipantImplementationProvenanceModel",
+    "ParticipantImplementationSelectionModel", "ParticipantJointActionAccessSetModel",
     "ParticipantJointActionRecordModel", "ParticipantLifecycleEventModel", "ParticipantObservationEnvelopeModel",
     "ParticipantObservationLossDescriptorModel", "ParticipantObservationStochasticContextModel",
     "ParticipantOutcomeInterpretationRecordModel", "ParticipantOutcomeReportModel",

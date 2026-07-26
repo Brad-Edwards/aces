@@ -2,9 +2,9 @@
   "contract_id": "backend-manifest-v2",
   "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
   "stability": "draft",
-  "content_hash": "178db9d22d522e069bcad2bc91cfb985e58a22e01ee5dc2b8de506373c1952f0",
+  "content_hash": "8645c2b5e00cd595d2661959fe2dfa0ac91e5cca26d4455fe87dad8e6a97db48",
   "last_change": {
-    "summary": "Published service materialization, portable shared-time, and autonomous participant capability controls.",
-    "content_hash": "178db9d22d522e069bcad2bc91cfb985e58a22e01ee5dc2b8de506373c1952f0"
+    "summary": "Added a typed, owner-governed apparatus configuration target registry and experiment binding contract support.",
+    "content_hash": "8645c2b5e00cd595d2661959fe2dfa0ac91e5cca26d4455fe87dad8e6a97db48"
   }
 }

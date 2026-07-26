@@ -1039,6 +1039,68 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   information-flow proof, and API-423 crossing-policy realization are explicit
   nonclaims. The lineage ledger and source audit remain unchanged because this
   delivery adds no normative external derivation or compatibility claim.
+- API-423 composes the already adopted SEM-230/ADR-085 information-flow,
+  API-406 participant-runtime, API-409 control-occurrence, SEM-211 action,
+  SEM-220/226 decision-surface and exposure, DSL-142 participant-inject,
+  experiment-evidence, provenance, marking, and visible-order authorities. The
+  exact RAES mapping is the closed
+  `participant-crossing-occurrence-v1` family and its unchanged
+  `ParticipantRuntimeBaseEnvelopeModel`: each requested, decided, transformed,
+  disclosed, delivery-attempted, delivered, observed, or audited fact has its
+  own event identity and typed incumbent subject reference. The focused
+  occurrence details bind direction and interaction kind, audience,
+  actor/controller/authority, exact policy identity/revision/digest and
+  effective order, markings, deny-first gate results and disposition,
+  transformation/declassification basis, backend posture, evidence,
+  provenance, and explicit loss/weakening without copying a carrier payload or
+  policy body. `validate_participant_crossing_occurrence_context()` is the
+  single resolver-backed join: it fails closed on unknown or mismatched typed
+  subjects, stale or future policy revisions, contradictory decisions,
+  identity reuse, transformation cycles, marking weakening without explicit
+  declassification, missing evidence, invalid predecessor order, and
+  realization claims without their owning fact.
+- API-423 delivery evidence is the hand-governed
+  `participant-crossing-occurrence-v1` schema and publication entry, valid and
+  invalid participant-runtime fixtures, the matching `schema_bundle()` output,
+  the closed participant-crossing concept vocabularies, and
+  `implementations/python/tests/test_api_423_participant_crossing_contracts.py`.
+  This delivers portable policy-decision and evidence relations only. It does
+  not implement a gateway, transport, policy engine, authentication or
+  authorization service, action admission, transformation execution,
+  participant delivery or observation, persistence, audit storage, backend
+  realization, migration, universal noninterference, trace equivalence,
+  refinement, simulation, bisimulation, epistemic equivalence, or proof. The
+  lineage ledger and source audit remain unchanged because API-423 reuses the
+  recorded SEM-230 derivation and changes no normative external derivation or
+- RUN-310 composes the same participant-interface, append-only event-history,
+  mixed-control, information-flow, and access-control lineage into live
+  supervisory mediation; it introduces no new external semantic source. The
+  exact RAES/ACES SDL mapping is trusted
+  `ParticipantBehaviorSpecificationRuntime.controller_states` and
+  `control_transitions` for policy authority, closed
+  `Participant*ControlIntent` models for caller-owned intent,
+  `ControlPlaneIdentity.participant_control_subjects` for the separate
+  principal-to-participant/controller binding, `RuntimeControlPlane` and
+  `ParticipantControlMixin` for mediation, API-409
+  `ParticipantControlOccurrenceModel` for immutable outcomes,
+  `RuntimeSnapshot.participant_control_history` for append-only state, and
+  `ControlPlaneStore.commit_control_transition()` for the expected-head atomic
+  occurrence/receipt/idempotency/audit commit. The existing HTTP request-size,
+  authentication, role/target, redacted-error, SEM-211 admission, and API-408
+  visibility boundaries remain separate gates.
+- RUN-310 delivery evidence is the `runtime-snapshot-v1` schema and publication
+  entry, the in-memory and local-store restart/replay implementation, and
+  `implementations/python/tests/test_run_310_supervisory_lifecycle.py`, which
+  covers every control kind, negative subject binding, stale state, scoped
+  idempotency conflict, append-only integrity, atomic failure, restart, closed
+  HTTP input, and denial without participant occurrence. This does not claim
+  that approval proves admission, execution, delivery, observation, or
+  participant visibility; it does not rewrite prior action or controller
+  history; and it makes no backend-support, multi-process CAS, distributed or
+  partial-order, noninterference, refinement, simulation, bisimulation, UI, or
+  participant-internal-reasoning claim. The lineage ledger and source audit
+  remain unchanged because RUN-310 adds no normative derivation or
+  compatibility claim.
 - CALDERA adversary-emulation research informs the action semantics: cyber
   actions can change foothold, knowledge, observations, detection surface, and
   downstream outcomes under uncertainty.

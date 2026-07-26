@@ -10,6 +10,7 @@ from raes_contracts.contracts import (
     EvaluationPlanModel,
     EvaluationResultStateModel,
     ExperimentApparatusContextModel,
+    ExperimentBindingDescriptorSetModel,
     ExperimentCaptureSpecModel,
     ExperimentDerivedMeasureModel,
     ExperimentEvidenceRecordModel,
@@ -20,6 +21,8 @@ from raes_contracts.contracts import (
     OperationStatusModel,
     OrchestrationPlanModel,
     ParticipantBehaviorHistoryEventModel,
+    ParticipantConfigurationResultModel,
+    ParticipantCrossingOccurrenceModel,
     ParticipantEpisodeHistoryEventModel,
     ParticipantEpisodeStateModel,
     ParticipantImplementationManifestModel,
@@ -63,10 +66,13 @@ _MODEL_VALIDATORS = {
     "participant-lifecycle-event-v1": ParticipantLifecycleEventModel.model_validate,
     "participant-observation-envelope-v1": ParticipantObservationEnvelopeModel.model_validate,
     "participant-shared-state-record-v1": ParticipantSharedStateRecordModel.model_validate,
+    "participant-crossing-occurrence-v1": ParticipantCrossingOccurrenceModel.model_validate,
     "experiment-capture-spec-v1": ExperimentCaptureSpecModel.model_validate,
     "experiment-evidence-record-v1": ExperimentEvidenceRecordModel.model_validate,
     "experiment-derived-measure-v1": ExperimentDerivedMeasureModel.model_validate,
     "experiment-run-v1": ExperimentRunModel.model_validate,
+    "experiment-binding-descriptors-v1": ExperimentBindingDescriptorSetModel.model_validate,
+    "participant-configuration-result-v1": ParticipantConfigurationResultModel.model_validate,
 }
 
 

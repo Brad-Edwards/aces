@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from typing import Literal
 
-from pydantic import Field, GetJsonSchemaHandler, model_validator
+from pydantic import Field, GetJsonSchemaHandler, SerializerFunctionWrapHandler, model_serializer, model_validator
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema
 
@@ -27,6 +27,7 @@ from .capabilities import (
     ProcessorCompatibilityModel,
     ProvisionerCapabilitiesModel,
 )
+from .experiment_bindings import ConfigurationTargetRegistryModel
 from .trial_cleanup import CleanupActionKind
 from .validators import (
     _validate_canonical_concept_bindings,
@@ -424,15 +425,31 @@ class ProcessorManifestV2Model(ContractModel):
     concept_bindings: list[ConceptBindingEntryModel] = Field(min_length=1)
     constraints: dict[str, str] = Field(default_factory=dict)
     capabilities: ProcessorCapabilitiesV2Model
+    configuration_registry: ConfigurationTargetRegistryModel | None = None
 
     @model_validator(mode="after")
     def _validate_unique_binding_scopes(self) -> ProcessorManifestV2Model:
         validate_processor_supported_contract_versions(self.supported_contract_versions)
+        if (
+            self.configuration_registry is not None
+            and "experiment-binding-descriptors-v1" not in self.supported_contract_versions
+        ):
+            raise ValueError("configuration_registry requires experiment-binding-descriptors-v1 support")
         scopes = [binding.scope for binding in self.concept_bindings]
         if len(scopes) != len(set(scopes)):
             raise ValueError("concept_bindings must not contain duplicate scopes")
         _validate_canonical_concept_bindings(self, allowed_scopes=_PROCESSOR_CONCEPT_BINDING_SCOPES)
         return self
+
+    @model_serializer(mode="wrap")
+    def _serialize_optional_configuration_registry(
+        self,
+        handler: SerializerFunctionWrapHandler,
+    ) -> dict[str, object]:
+        payload = handler(self)
+        if self.configuration_registry is None:
+            payload.pop("configuration_registry", None)
+        return payload
 
     @classmethod
     def __get_pydantic_json_schema__(

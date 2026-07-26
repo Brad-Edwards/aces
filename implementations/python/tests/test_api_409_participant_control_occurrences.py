@@ -389,6 +389,47 @@ def test_typed_target_context_rejects_an_unknown_kind_and_reference_pair() -> No
         )
 
 
+def test_rejected_typed_target_preserves_the_invalid_attempt_without_becoming_a_target() -> None:
+    value = _envelope(
+        {
+            "kind": "external-direction",
+            "target_kind": "action",
+            "target_ref": "action:unknown",
+            "target_revision": 1,
+        }
+    )
+    value["occurrence"]["disposition"] = "rejected"
+    value["occurrence"]["reason_code"] = "invalid-target"
+    direction = ParticipantControlOccurrenceModel.model_validate(value)
+
+    validate_participant_control_occurrence_context(
+        [direction],
+        declarations=[_declaration("external-direction")],
+    )
+    intervention = ParticipantControlOccurrenceModel.model_validate(
+        _envelope(
+            {
+                "kind": "intervention",
+                "affected_target_kind": "control",
+                "affected_occurrence_ref": direction.event_id,
+                "affected_revision": direction.occurrence.occurrence_revision,
+                "intervention_ref": "intervention:rejected-direction",
+            }
+        )
+    )
+
+    records = [direction, intervention]
+    declarations = [
+        _declaration("external-direction"),
+        _declaration("intervention"),
+    ]
+    with pytest.raises(ValueError, match="typed target reference and kind must resolve"):
+        validate_participant_control_occurrence_context(
+            records,
+            declarations=declarations,
+        )
+
+
 def test_transformed_proposal_requires_source_provenance_and_marking_inheritance() -> None:
     source, transformed = _transformed_proposal()
     assert transformed.occurrence.admission_status == "not-admitted"

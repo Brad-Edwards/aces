@@ -2,13 +2,9 @@
 
 from __future__ import annotations
 
-import json
 import os
-import tempfile
-from contextlib import suppress
-from dataclasses import asdict, dataclass, field
-from pathlib import Path
-from typing import Any, Protocol
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any, Protocol
 
 from raes_contracts.contracts import RealizationEnvelopeIdentityModel
 from raes_contracts.contracts.time_model import TimeRuntimeStateModel
@@ -26,6 +22,9 @@ from raes_contracts.runtime_state import (
     RuntimeSnapshotEnvelope,
     SnapshotEntry,
 )
+
+if TYPE_CHECKING:
+    from .control_plane_store_local import LocalControlPlaneStore
 
 
 @dataclass(frozen=True)
@@ -72,6 +71,33 @@ class ControlPlaneStore(Protocol):
 
     def read_audit(self) -> list[AuditEvent]: ...
 
+    def commit_control_transition(
+        self,
+        *,
+        participant_address: str,
+        expected_head: str | None,
+        snapshot: RuntimeSnapshot,
+        record: ControlPlaneOperationRecord,
+        audit_event: AuditEvent,
+    ) -> None: ...
+
+
+def _control_history_head(snapshot: RuntimeSnapshot, participant_address: str) -> str | None:
+    events = snapshot.participant_control_history.get(participant_address, ())
+    if not events:
+        return None
+    event_id = events[-1].get("event_id")
+    return event_id if isinstance(event_id, str) and event_id else None
+
+
+def _require_expected_control_head(
+    snapshot: RuntimeSnapshot,
+    participant_address: str,
+    expected_head: str | None,
+) -> None:
+    if _control_history_head(snapshot, participant_address) != expected_head:
+        raise ValueError("expected control history head does not match durable state")
+
 
 def _snapshot_payload(snapshot: RuntimeSnapshot) -> dict[str, Any]:
     require_participant_autonomous_runtime_snapshot(snapshot)
@@ -102,6 +128,10 @@ def _snapshot_payload(snapshot: RuntimeSnapshot) -> dict[str, Any]:
         "participant_behavior_history": {
             participant_address: list(events)
             for participant_address, events in snapshot.participant_behavior_history.items()
+        },
+        "participant_control_history": {
+            participant_address: list(events)
+            for participant_address, events in snapshot.participant_control_history.items()
         },
         "participant_autonomous_execution_states": dict(snapshot.participant_autonomous_execution_states),
         "shared_state_records": dict(snapshot.shared_state_records),
@@ -164,6 +194,10 @@ def _snapshot_from_payload(payload: dict[str, Any]) -> RuntimeSnapshot:
         participant_behavior_history={
             participant_address: list(events)
             for participant_address, events in payload.get("participant_behavior_history", {}).items()
+        },
+        participant_control_history={
+            participant_address: list(events)
+            for participant_address, events in payload.get("participant_control_history", {}).items()
         },
         participant_autonomous_execution_states=dict(payload.get("participant_autonomous_execution_states", {})),
         shared_state_records=dict(payload.get("shared_state_records", {})),
@@ -283,6 +317,19 @@ def _record_from_payload(payload: dict[str, Any]) -> ControlPlaneOperationRecord
     )
 
 
+def _audit_event_from_payload(payload: dict[str, Any]) -> AuditEvent:
+    return AuditEvent(
+        timestamp=str(payload.get("timestamp", "")),
+        action=str(payload.get("action", "")),
+        identity=str(payload.get("identity", "")),
+        allowed=bool(payload.get("allowed", False)),
+        target=str(payload.get("target", "")),
+        operation_id=str(payload.get("operation_id", "")),
+        reason=str(payload.get("reason", "")),
+        details=dict(payload.get("details", {})),
+    )
+
+
 class InMemoryControlPlaneStore:
     """Simple in-memory store."""
 
@@ -322,91 +369,42 @@ class InMemoryControlPlaneStore:
     def read_audit(self) -> list[AuditEvent]:
         return list(self._audit)
 
-
-class LocalControlPlaneStore:
-    """Filesystem-backed control-plane durability."""
-
-    def __init__(self, base_dir: Path) -> None:
-        self._base_dir = base_dir
-        self._base_dir.mkdir(parents=True, exist_ok=True)
-        self._snapshot_path = self._base_dir / "snapshot.json"
-        self._operations_path = self._base_dir / "operations.json"
-        self._audit_path = self._base_dir / "audit.jsonl"
-
-    @staticmethod
-    def _atomic_write(path: Path, content: str) -> None:
-        """Write content atomically via a temporary file and os.replace."""
-        fd, tmp = tempfile.mkstemp(dir=path.parent, suffix=".tmp")
-        try:
-            with os.fdopen(fd, "w", encoding="utf-8") as handle:
-                handle.write(content)
-            os.replace(tmp, path)
-        except BaseException:
-            with suppress(OSError):
-                os.unlink(tmp)
-            raise
-
-    def load_snapshot(self) -> RuntimeSnapshot:
-        if not self._snapshot_path.exists():
-            return RuntimeSnapshot()
-        payload = json.loads(self._snapshot_path.read_text(encoding="utf-8"))
-        return _snapshot_from_payload(payload)
-
-    def save_snapshot(self, snapshot: RuntimeSnapshot) -> None:
-        content = json.dumps(_snapshot_payload(snapshot), indent=2, sort_keys=True) + "\n"
-        self._atomic_write(self._snapshot_path, content)
-
-    def load_records(self) -> dict[str, ControlPlaneOperationRecord]:
-        if not self._operations_path.exists():
-            return {}
-        payload = json.loads(self._operations_path.read_text(encoding="utf-8"))
-        return {
-            operation_id: _record_from_payload(record_payload)
-            for operation_id, record_payload in payload.items()
-            if isinstance(record_payload, dict)
-        }
-
-    def save_record(self, record: ControlPlaneOperationRecord) -> None:
-        records = self.load_records()
-        records[record.receipt.operation_id] = record
-        payload = {
-            operation_id: _record_payload(operation_record) for operation_id, operation_record in records.items()
-        }
-        content = json.dumps(payload, indent=2, sort_keys=True) + "\n"
-        self._atomic_write(self._operations_path, content)
-
-    def find_by_idempotency(
+    def commit_control_transition(
         self,
-        key: str,
-    ) -> ControlPlaneOperationRecord | None:
-        for record in self.load_records().values():
-            if record.idempotency_key == key:
-                return record
-        return None
+        *,
+        participant_address: str,
+        expected_head: str | None,
+        snapshot: RuntimeSnapshot,
+        record: ControlPlaneOperationRecord,
+        audit_event: AuditEvent,
+    ) -> None:
+        _require_expected_control_head(self._snapshot, participant_address, expected_head)
+        require_participant_autonomous_runtime_snapshot(snapshot)
+        records = {**self._records, record.receipt.operation_id: record}
+        idempotency = dict(self._idempotency)
+        if record.idempotency_key:
+            idempotency[record.idempotency_key] = record.receipt.operation_id
+        self._snapshot = snapshot
+        self._records = records
+        self._idempotency = idempotency
+        self._audit = [*self._audit, audit_event]
 
-    def append_audit(self, event: AuditEvent) -> None:
-        self._audit_path.parent.mkdir(parents=True, exist_ok=True)
-        with self._audit_path.open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(asdict(event), sort_keys=True) + "\n")
 
-    def read_audit(self) -> list[AuditEvent]:
-        if not self._audit_path.exists():
-            return []
-        events: list[AuditEvent] = []
-        for line in self._audit_path.read_text(encoding="utf-8").splitlines():
-            if not line.strip():
-                continue
-            payload = json.loads(line)
-            events.append(
-                AuditEvent(
-                    timestamp=str(payload.get("timestamp", "")),
-                    action=str(payload.get("action", "")),
-                    identity=str(payload.get("identity", "")),
-                    allowed=bool(payload.get("allowed", False)),
-                    target=str(payload.get("target", "")),
-                    operation_id=str(payload.get("operation_id", "")),
-                    reason=str(payload.get("reason", "")),
-                    details=dict(payload.get("details", {})),
-                )
-            )
-        return events
+def __getattr__(name: str) -> object:
+    """Lazily expose the local store without creating an import cycle."""
+
+    if name == "LocalControlPlaneStore":
+        from .control_plane_store_local import LocalControlPlaneStore
+
+        return LocalControlPlaneStore
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+__all__ = (
+    "AuditEvent",
+    "ControlPlaneOperationRecord",
+    "ControlPlaneStore",
+    "InMemoryControlPlaneStore",
+    "LocalControlPlaneStore",
+    "os",
+)

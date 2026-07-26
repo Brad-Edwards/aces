@@ -8,7 +8,9 @@ async control plane so non-Python runtimes can evolve behind the same API.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import UTC, datetime
+from threading import RLock
 from uuid import uuid4
 
 from raes_backend_protocols.backend_manifest import BackendManifest
@@ -41,6 +43,7 @@ from raes_contracts.workflow import (
     WorkflowHistoryEventType,
     WorkflowStatus,
 )
+from raes_processor.models import ParticipantBehaviorSpecificationRuntime
 
 from .backend_calls import _call_backend_diagnostics
 from .control_plane_execution import (
@@ -209,11 +212,14 @@ class RuntimeControlPlane(ParticipantControlMixin, ParticipantRetrievalMixin):
         *,
         initial_snapshot: RuntimeSnapshot | None = None,
         store: ControlPlaneStore | None = None,
+        behavior_specifications: Mapping[str, ParticipantBehaviorSpecificationRuntime] | None = None,
     ) -> None:
         self._target = target
         self._store = store or InMemoryControlPlaneStore(initial_snapshot)
         self._snapshot = initial_snapshot if initial_snapshot is not None else self._store.load_snapshot()
         self._operations: dict[str, ControlPlaneOperationRecord] = self._store.load_records()
+        self._behavior_specifications = dict(behavior_specifications or {})
+        self._participant_control_lock = RLock()
 
     @property
     def snapshot(self) -> RuntimeSnapshot:

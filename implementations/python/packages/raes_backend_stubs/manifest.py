@@ -40,7 +40,10 @@ from raes_contracts.apparatus import ConceptBinding, RealizationSupportDeclarati
 from raes_contracts.manifest_authority import BACKEND_SUPPORTED_CONTRACT_IDS
 from raes_contracts.vocabulary import RealizationSupportMode
 
-REFERENCE_BACKEND_SUPPORTED_CONTRACT_VERSIONS = frozenset(BACKEND_SUPPORTED_CONTRACT_IDS) - {"realization-envelope-v1"}
+REFERENCE_BACKEND_SUPPORTED_CONTRACT_VERSIONS = frozenset(BACKEND_SUPPORTED_CONTRACT_IDS) - {
+    "experiment-binding-descriptors-v1",
+    "realization-envelope-v1",
+}
 REFERENCE_PARTICIPANT_ROLES = frozenset(
     PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_ROLE_SCOPE]
 )

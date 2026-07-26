@@ -42,6 +42,7 @@ from .control_plane_security import (
     ControlPlaneRole,
     ControlPlaneSecurityConfig,
 )
+from .participant_control_intents import ParticipantControlIntent
 
 _CONFLICT_RESPONSES = {409: {"description": "Conflict"}}
 _NOT_FOUND_RESPONSES = {404: {"description": "Not found"}}
@@ -181,6 +182,7 @@ def create_control_plane_app(
     _register_operation_routes(app, control_plane)
     _register_workflow_routes(app, control_plane)
     _register_participant_episode_routes(app, control_plane)
+    _register_participant_control_routes(app, control_plane)
     register_participant_retrieval_routes(app, control_plane)
     return app
 
@@ -421,6 +423,44 @@ def _register_participant_episode_routes(
 ) -> None:
     _register_participant_episode_start_routes(app, control_plane)
     _register_participant_episode_end_routes(app, control_plane)
+
+
+def _register_participant_control_routes(
+    app: FastAPI,
+    control_plane: RuntimeControlPlane,
+) -> None:
+    @app.post(
+        "/participants/{participant_address}/control-occurrences",
+        responses=_BAD_REQUEST_CONFLICT_RESPONSES,
+    )
+    async def record_participant_control(
+        participant_address: str,
+        request: Request,
+        body: ParticipantControlIntent,
+        identity: _MutatingIdentity,
+    ) -> OperationReceiptModel:
+        try:
+            receipt = control_plane.record_participant_control(
+                participant_address,
+                body,
+                identity=identity,
+                idempotency_key=request.headers.get("idempotency-key", ""),
+            )
+        except PermissionError as exc:
+            control_plane.record_audit(
+                action="record_participant_control",
+                identity=identity.identity,
+                allowed=False,
+                target=participant_address,
+                reason="forbidden-subject",
+            )
+            raise HTTPException(status_code=403, detail="forbidden") from exc
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=409,
+                detail="control intent conflicts with runtime state",
+            ) from exc
+        return _receipt_response(receipt)
 
 
 def _register_participant_episode_start_routes(

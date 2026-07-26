@@ -1,0 +1,10 @@
+{
+  "contract_id": "participant-crossing-occurrence-v1",
+  "schema_path": "contracts/schemas/participant-runtime/participant-crossing-occurrence-v1.json",
+  "stability": "draft",
+  "content_hash": "392ab485349bef35463a2fd0e843133a8adff2614ffb0ca456c880d7c1d4f0d4",
+  "last_change": {
+    "summary": "Published the API-423 closed participant-crossing policy, transformation, disclosure, realization, evidence, and provenance occurrence family.",
+    "content_hash": "392ab485349bef35463a2fd0e843133a8adff2614ffb0ca456c880d7c1d4f0d4"
+  }
+}
