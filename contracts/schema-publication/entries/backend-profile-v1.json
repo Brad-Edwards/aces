@@ -2,9 +2,9 @@
   "contract_id": "backend-profile-v1",
   "schema_path": "contracts/schemas/profiles/backend-profile-v1.json",
   "stability": "draft",
-  "content_hash": "fd118e131b273684ac540675a8ba8d4b6ef1f10990ddd0d0dc5776c1b6c4a233",
+  "content_hash": "22625802ed2c93e46c4e5688d12300eb74c0dd3b635867a0ee72613241fcfd69",
   "last_change": {
-    "summary": "Added the authoritative experiment binding descriptor contract to the governed backend contract vocabulary.",
-    "content_hash": "fd118e131b273684ac540675a8ba8d4b6ef1f10990ddd0d0dc5776c1b6c4a233"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "22625802ed2c93e46c4e5688d12300eb74c0dd3b635867a0ee72613241fcfd69"
   }
 }

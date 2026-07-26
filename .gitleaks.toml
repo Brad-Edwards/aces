@@ -1,4 +1,4 @@
-title = "aces gitleaks config"
+title = "raes gitleaks config"
 
 [extend]
 useDefault = true
@@ -35,7 +35,7 @@ non-target-ruled allowlists to `c.Allowlists`) so it is evaluated solely at the 
 The `paths` pattern is deliberately not anchored to the string start (`^`): the repo's own
 `noxfile.py` `hygiene` session scans through `--follow-symlinks`, which makes gitleaks match `paths`
 against each file's *resolved absolute* filesystem path, not its repository-relative path. Anchoring
-on `^contracts/...` would never match `/home/.../aces2/contracts/...` and silently stop exempting the
+on `^contracts/...` would never match `/home/.../worktree/contracts/...` and silently stop exempting the
 legitimate vectors under a symlink-following scan. Matching on a `/`-or-start-bounded segment instead
 works for both a plain repository-relative scan and the real resolved-symlink scan, while still
 requiring a full path-segment boundary (rejecting an unrelated path that merely contains this text as

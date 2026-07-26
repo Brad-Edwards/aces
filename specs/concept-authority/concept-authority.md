@@ -11,7 +11,7 @@ and how the ecosystem distinguishes imported meaning from native extensions.
 
 ## Decision Record
 
-[ADR-012](../../docs/decisions/adrs/adr-012-shared-concept-authority-and-aces-extension-discipline.md)
+[ADR-012](../../docs/decisions/adrs/adr-012-shared-concept-authority-and-raes-extension-discipline.md)
 is the architectural decision that governs this specification.
 
 ## Layer Model

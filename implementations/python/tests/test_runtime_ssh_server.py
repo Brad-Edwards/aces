@@ -621,7 +621,7 @@ class TestRuntimeFamilyRegistrySshCoverage:
 name: shared-ssh
 version: 1.0.0
 module:
-  id: aces/shared-ssh
+  id: raes/shared-ssh
   version: 1.0.0
   exports:
     nodes: [kali]

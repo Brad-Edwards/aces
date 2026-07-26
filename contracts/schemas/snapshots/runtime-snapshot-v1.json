@@ -1964,7 +1964,7 @@
       ],
       "title": "ParticipantControlOccurrenceModel",
       "type": "object",
-      "x-aces-invariants": [
+      "x-raes-invariants": [
         {
           "description": "Every occurrence must resolve one matching compiled ACT-617 declaration and preserve participant, episode, controller, authority, policy revision, order, proposal, target, and semantic identity joins.",
           "id": "participant-control-occurrence-context-agreement",
@@ -6708,7 +6708,7 @@
       "type": "object"
     }
   },
-  "$id": "https://aces.dev/schemas/runtime-snapshot-v1.json",
+  "$id": "https://raes.dev/schemas/runtime-snapshot-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "Published envelope for a live runtime snapshot.\n\nParticipant episode surfaces (``participant_episode_results`` and\n``participant_episode_history``) are both keyed by the stable\n``participant_address`` of the participant the state/history belongs\nto. SEM-208 participant behavior history is keyed the same way and\nrecords action, observation, and state-transition events with compiled\nbehavior-contract addresses. The episode results map carries the\ncurrently-live episode state per participant; prior episodes survive only\nthrough append-only history streams and the ``previous_episode_id`` chain\non each state.",
@@ -6891,13 +6891,13 @@
   },
   "title": "RuntimeSnapshotEnvelopeModel",
   "type": "object",
-  "x-aces-semantic-profile": {
+  "x-raes-semantic-profile": {
     "contract_id": "runtime-snapshot-v1",
-    "entry_schema_contract_id": "aces-semantic-invariants-v1",
-    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
-    "id": "aces-semantic-invariants-v1",
-    "keyword": "x-aces-invariants",
+    "entry_schema_contract_id": "raes-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/RaesSemanticInvariantEntryModel",
+    "id": "raes-semantic-invariants-v1",
+    "keyword": "x-raes-invariants",
     "required": true,
-    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+    "uri": "https://raes.dev/schemas/semantic-invariants/v1"
   }
 }

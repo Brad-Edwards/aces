@@ -44,7 +44,7 @@ _GOOD_FAMILIES: dict = {
             "title": "Episodes",
             "description": "Participant runtime episode identity and lifecycle state.",
             "provenance": "native",
-            "extension_scope": "ACES participant runtime episode identity and lifecycle state.",
+            "extension_scope": "RAES participant runtime episode identity and lifecycle state.",
             "relation_rules": [
                 "May relate to `assets` as the asset-bearing scenario node an episode runs on.",
                 "May bind enumerated terms through the `sample-vocab` controlled vocabulary.",

@@ -2,9 +2,9 @@
   "contract_id": "realization-envelope-v1",
   "schema_path": "contracts/schemas/realization-envelope/realization-envelope-v1.json",
   "stability": "draft",
-  "content_hash": "bdb320445010600d2f5e3d5c750504ca7b2244f22589468194d70a341d55981b",
+  "content_hash": "124da1052563cc1457232da763919f02c23f935a86e21e49c1e0d7b781606253",
   "last_change": {
-    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
-    "content_hash": "bdb320445010600d2f5e3d5c750504ca7b2244f22589468194d70a341d55981b"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "124da1052563cc1457232da763919f02c23f935a86e21e49c1e0d7b781606253"
   }
 }

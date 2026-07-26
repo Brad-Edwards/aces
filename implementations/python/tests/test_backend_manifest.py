@@ -98,8 +98,8 @@ def test_backend_manifest_v2_roundtrip_from_stub_manifest():
     assert model.schema_version == "backend-manifest/v2"
     assert model.identity.name == "stub"
     assert model.identity.version
-    assert model.compatibility.processors == ["aces-reference-processor"]
-    assert model.compatibility.model_dump(mode="json") == {"processors": ["aces-reference-processor"]}
+    assert model.compatibility.processors == ["raes-reference-processor"]
+    assert model.compatibility.model_dump(mode="json") == {"processors": ["raes-reference-processor"]}
     assert model.supported_contract_versions == EXPECTED_SUPPORTED_CONTRACT_VERSIONS_V2
     assert model.capabilities.orchestrator is not None
     assert model.capabilities.orchestrator.supported_workflow_features == [
@@ -647,7 +647,7 @@ def test_backend_manifest_runtime_rejects_unknown_supported_contract_versions():
             name="bad",
             version="0.0.1",
             supported_contract_versions=frozenset({"semantic-profile-v1"}),
-            compatible_processors=frozenset({"aces-reference-processor"}),
+            compatible_processors=frozenset({"raes-reference-processor"}),
             realization_support=create_stub_manifest().realization_support,
             concept_bindings=create_stub_manifest().concept_bindings,
             provisioner=ProvisionerCapabilities(
@@ -693,7 +693,7 @@ def test_backend_manifest_v2_rejects_empty_compatibility():
 def test_backend_manifest_v2_rejects_non_processor_compatibility_surfaces():
     payload = json.loads((V2_VALID_DIR / "stub.json").read_text(encoding="utf-8"))
     payload["compatibility"] = {
-        "processors": ["aces-reference-processor"],
+        "processors": ["raes-reference-processor"],
         "backends": ["peer-backend"],
     }
 
@@ -701,7 +701,7 @@ def test_backend_manifest_v2_rejects_non_processor_compatibility_surfaces():
         BackendManifestV2Model.model_validate(payload)
 
     payload["compatibility"] = {
-        "processors": ["aces-reference-processor"],
+        "processors": ["raes-reference-processor"],
         "participant_implementations": ["participant-impl"],
     }
 
@@ -716,7 +716,7 @@ def test_backend_manifest_v2_rejects_hollow_realization_support():
                 "schema_version": "backend-manifest/v2",
                 "identity": {"name": "stub", "version": "0.0.1"},
                 "supported_contract_versions": ["backend-manifest-v2"],
-                "compatibility": {"processors": ["aces-reference-processor"]},
+                "compatibility": {"processors": ["raes-reference-processor"]},
                 "realization_support": [
                     {
                         "domain": "runtime-realization",
@@ -747,7 +747,7 @@ def test_backend_manifest_v2_rejects_hollow_capability_blocks():
                 "schema_version": "backend-manifest/v2",
                 "identity": {"name": "stub", "version": "0.0.1"},
                 "supported_contract_versions": ["backend-manifest-v2"],
-                "compatibility": {"processors": ["aces-reference-processor"]},
+                "compatibility": {"processors": ["raes-reference-processor"]},
                 "realization_support": [
                     {
                         "domain": "runtime-realization",

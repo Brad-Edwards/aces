@@ -352,9 +352,9 @@ class Scenario(ScenarioContent):
     model_config = ConfigDict(
         title="SDL Normalized Authoring Object v1",
         json_schema_extra={
-            "x-aces-document-phase": "normalized-authoring-object",
-            "x-aces-source-profile": "sdl-yaml/v1",
-            "x-aces-validates-raw-source": False,
+            "x-raes-document-phase": "normalized-authoring-object",
+            "x-raes-source-profile": "sdl-yaml/v1",
+            "x-raes-validates-raw-source": False,
         },
     )
 
@@ -362,7 +362,7 @@ class Scenario(ScenarioContent):
     imports: list[ImportDecl] = Field(default_factory=list)
     realization: RealizationDesignation | None = Field(
         default=None,
-        json_schema_extra={"x-aces-realization-dimension": False},
+        json_schema_extra={"x-raes-realization-dimension": False},
     )
     variables: VariableDefinitions = Field(
         default_factory=dict,
@@ -386,7 +386,7 @@ class ExpandedScenario(ScenarioContent):
 
     model_config = ConfigDict(
         title="SDL Expanded Authoring Object v1",
-        json_schema_extra={"x-aces-document-phase": "expanded-authoring-object"},
+        json_schema_extra={"x-raes-document-phase": "expanded-authoring-object"},
     )
 
     variables: dict[str, Variable] = Field(
@@ -431,13 +431,13 @@ class InstantiatedScenario(ScenarioContent):
     model_config = ConfigDict(
         title="SDL Instantiated Scenario v1",
         json_schema_extra={
-            "x-aces-document-phase": "instantiated-scenario",
-            "x-aces-authored-identity-profile": "aces-sdl-semantic/v1",
+            "x-raes-document-phase": "instantiated-scenario",
+            "x-raes-authored-identity-profile": "raes-sdl-semantic/v1",
         },
     )
 
     instantiation_provenance: InstantiationProvenance = Field(
-        json_schema_extra={"x-aces-realization-dimension": False},
+        json_schema_extra={"x-raes-realization-dimension": False},
     )
 
     @property

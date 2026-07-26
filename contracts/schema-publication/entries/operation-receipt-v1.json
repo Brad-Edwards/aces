@@ -2,5 +2,9 @@
   "contract_id": "operation-receipt-v1",
   "schema_path": "contracts/schemas/control-plane/operation-receipt-v1.json",
   "stability": "draft",
-  "content_hash": "07bdbdaf5def120d43500da30a7ea38b736fdce8125e2cdb62b5b6851bf90504"
+  "content_hash": "195b33906287ca5b04fdf1820c48b79f25e6279311f7c79bfbe4c43f1aa7aeba",
+  "last_change": {
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "195b33906287ca5b04fdf1820c48b79f25e6279311f7c79bfbe4c43f1aa7aeba"
+  }
 }

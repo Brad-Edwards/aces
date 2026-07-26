@@ -76,9 +76,9 @@ def test_both_completeness_contracts_are_in_the_published_schema_bundle() -> Non
     bundle = schema_bundle()
     assert "scientific-completeness-taxonomy-v1" in bundle
     assert "scientific-completeness-assessment-v1" in bundle
-    taxonomy_invariants = {item["id"] for item in bundle["scientific-completeness-taxonomy-v1"]["x-aces-invariants"]}
+    taxonomy_invariants = {item["id"] for item in bundle["scientific-completeness-taxonomy-v1"]["x-raes-invariants"]}
     assessment_invariants = {
-        item["id"] for item in bundle["scientific-completeness-assessment-v1"]["x-aces-invariants"]
+        item["id"] for item in bundle["scientific-completeness-assessment-v1"]["x-raes-invariants"]
     }
     assert taxonomy_invariants == {
         "scientific-completeness-behavioral-claim-resolution",

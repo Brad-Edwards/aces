@@ -1,6 +1,6 @@
 {
   "schema_version": "behavioral-relations/v1",
-  "taxonomy_id": "aces-behavioral-relations",
+  "taxonomy_id": "raes-behavioral-relations",
   "taxonomy_revision": "rev2",
   "bibliography": [
     {
@@ -290,7 +290,7 @@
       "display_name": "Semantic validity",
       "relation_class": "predicate",
       "definition": "A structurally admitted artifact satisfies the named cross-reference and domain invariants.",
-      "left_carrier": "A parsed ACES artifact.",
+      "left_carrier": "A parsed RAES artifact.",
       "right_carrier": "The named semantic invariant set.",
       "initial_states": "Not applicable; this is a unary predicate.",
       "transition_signature": {
@@ -886,7 +886,7 @@
       "relation_class": "behavioral",
       "definition": "Every projected concrete trace belongs to the abstract trace set under a declared projection.",
       "left_carrier": "Concrete implementation transition system.",
-      "right_carrier": "Abstract ACES transition system.",
+      "right_carrier": "Abstract RAES transition system.",
       "initial_states": "Related concrete and abstract initial states.",
       "transition_signature": {
         "applicability": "applicable",
@@ -2300,7 +2300,7 @@
       "expected_weak_matching": false,
       "evidence_boundary": "The shared a probe is evidence only for that finite trace; the unmatched b branch refutes strong bisimulation.",
       "explicit_non_claims": [
-        "This toy counterexample is not evidence about any ACES backend."
+        "This toy counterexample is not evidence about any RAES backend."
       ]
     },
     "hidden-action-counterexample": {
@@ -2348,7 +2348,7 @@
       "expected_weak_matching": true,
       "evidence_boundary": "Strong matching fails on tau; weak visible-trace matching succeeds only under the declared tau-hiding projection and finite termination assumptions.",
       "explicit_non_claims": [
-        "The example does not declare arbitrary backend-internal work hidden and does not prove an ACES backend relation."
+        "The example does not declare arbitrary backend-internal work hidden and does not prove an RAES backend relation."
       ]
     }
   }

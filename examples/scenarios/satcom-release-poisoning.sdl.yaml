@@ -626,7 +626,7 @@ propositions:
     predicate:
       kind: boolean
       property: edge-east-poisoned
-      semantic_ref: urn:aces:observable:edge-east-poisoned
+      semantic_ref: urn:raes:observable:edge-east-poisoned
       operator: equals
       expected: true
     quantifier: all
@@ -640,7 +640,7 @@ propositions:
     predicate:
       kind: boolean
       property: release-signature-valid
-      semantic_ref: urn:aces:observable:release-signature-valid
+      semantic_ref: urn:raes:observable:release-signature-valid
       operator: equals
       expected: true
     quantifier: all
@@ -654,7 +654,7 @@ propositions:
     predicate:
       kind: boolean
       property: rogue-release-promoted
-      semantic_ref: urn:aces:observable:rogue-release-promoted
+      semantic_ref: urn:raes:observable:rogue-release-promoted
       operator: equals
       expected: true
     quantifier: all
@@ -668,7 +668,7 @@ propositions:
     predicate:
       kind: boolean
       property: rollback-package-ready
-      semantic_ref: urn:aces:observable:rollback-package-ready
+      semantic_ref: urn:raes:observable:rollback-package-ready
       operator: equals
       expected: true
     quantifier: all
@@ -682,7 +682,7 @@ propositions:
     predicate:
       kind: boolean
       property: telemetry-flowing
-      semantic_ref: urn:aces:observable:telemetry-flowing
+      semantic_ref: urn:raes:observable:telemetry-flowing
       operator: equals
       expected: true
     quantifier: all
@@ -696,7 +696,7 @@ propositions:
     predicate:
       kind: boolean
       property: tenant-isolation-healthy
-      semantic_ref: urn:aces:observable:tenant-isolation-healthy
+      semantic_ref: urn:raes:observable:tenant-isolation-healthy
       operator: equals
       expected: true
     quantifier: all

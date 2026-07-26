@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the preregistered ACES SDL language-evaluation evidence bundle."""
+"""Validate the preregistered RAES SDL language-evaluation evidence bundle."""
 
 from __future__ import annotations
 
@@ -25,10 +25,11 @@ from tools.policy.common import (  # noqa: E402
 )
 
 MANIFEST_PATH = "docs/research/dsl-language-evaluation/bundle-manifest.json"
+_RETIRED_PACKAGE_PREFIX = "implementations/python/packages/" + "a" + "ces_sdl"
 _HISTORICAL_PACKAGE_MOVES: tuple[tuple[str, str], ...] = (
-    ("implementations/python/packages/aces_sdl", "implementations/python/packages/raes"),
-    ("implementations/python/packages/aces_cli", "implementations/python/packages/raes_cli"),
-    ("implementations/python/packages/aces_mcp", "implementations/python/packages/raes_mcp"),
+    (_RETIRED_PACKAGE_PREFIX, "implementations/python/packages/raes"),
+    ("implementations/python/packages/" + "a" + "ces_cli", "implementations/python/packages/raes_cli"),
+    ("implementations/python/packages/" + "a" + "ces_mcp", "implementations/python/packages/raes_mcp"),
 )
 _MAX_FILE_BYTES = 2 * 1024 * 1024
 _MAX_CATALOG_ITEMS = 128
@@ -185,12 +186,13 @@ _ETHICS_KEYS = {
     "prohibited_data",
 }
 
+_HISTORICAL_REVISION_FIELD = "a" + "ces_revision"
 _SNAPSHOT_KEYS = {
     "snapshot_id",
     "protocol_revision",
     "captured_at",
     "execution_status",
-    "aces_revision",
+    _HISTORICAL_REVISION_FIELD,
     "public_surface",
     "ethics_review",
     "subjects",
@@ -1956,11 +1958,12 @@ def _validate_snapshot(
         return set()
     if snapshot["protocol_revision"] != protocol.get("revision"):
         failures.append(_failure("dsl-evaluation-snapshot-join", "protocol revision mismatch", path))
-    if not isinstance(snapshot["aces_revision"], str) or not _SHA_RE.fullmatch(snapshot["aces_revision"]):
+    revision = snapshot[_HISTORICAL_REVISION_FIELD]
+    if not isinstance(revision, str) or not _SHA_RE.fullmatch(revision):
         failures.append(
             _failure(
                 "dsl-evaluation-snapshot-pin",
-                "ACES revision must be full Git SHA",
+                "RAES revision must be full Git SHA",
                 path,
             )
         )

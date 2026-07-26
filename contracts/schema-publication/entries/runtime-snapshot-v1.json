@@ -2,9 +2,9 @@
   "contract_id": "runtime-snapshot-v1",
   "schema_path": "contracts/schemas/snapshots/runtime-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "ce74f9bb39d44c18badc1451d7f4d363d58e3938de8e360dc020ea2d1e4bcdf7",
+  "content_hash": "f31a38dd78bf650e5751f8ae15019227faca3e39d8b7a20d1c32d713aaf90240",
   "last_change": {
-    "summary": "Added first-class append-only API-409 participant control history for RUN-310 supervisory lifecycle persistence and replay.",
-    "content_hash": "ce74f9bb39d44c18badc1451d7f4d363d58e3938de8e360dc020ea2d1e4bcdf7"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "f31a38dd78bf650e5751f8ae15019227faca3e39d8b7a20d1c32d713aaf90240"
   }
 }

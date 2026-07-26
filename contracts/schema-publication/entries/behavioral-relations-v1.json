@@ -2,9 +2,9 @@
   "contract_id": "behavioral-relations-v1",
   "schema_path": "contracts/schemas/concept-authority/behavioral-relations-v1.json",
   "stability": "draft",
-  "content_hash": "e480fac32221c864dc953eef2700459a3db4b8a435abd02e69fc767ed7e46d76",
+  "content_hash": "1d28d7e81f489f2bcbc8772e7eb85d6a45800f99b96b2d3a80e66fa20be29a22",
   "last_change": {
-    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
-    "content_hash": "e480fac32221c864dc953eef2700459a3db4b8a435abd02e69fc767ed7e46d76"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "1d28d7e81f489f2bcbc8772e7eb85d6a45800f99b96b2d3a80e66fa20be29a22"
   }
 }

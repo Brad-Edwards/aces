@@ -1,7 +1,7 @@
 name: fixture-module
 version: 1.0.0
 module:
-  id: aces/fixture-family
+  id: raes/fixture-family
   version: 1.0.0
   exports:
     nodes: [primary, secondary]

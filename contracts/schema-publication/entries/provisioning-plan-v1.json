@@ -2,9 +2,9 @@
   "contract_id": "provisioning-plan-v1",
   "schema_path": "contracts/schemas/plans/provisioning-plan-v1.json",
   "stability": "draft",
-  "content_hash": "7775808973fc934776a5d7ed073bb6f9dfb007c40197fee771e1767dc1f1745b",
+  "content_hash": "70af50f87d61eb5337ca6658b5e9e9d227a99f38fc66dead05bca5122200f003",
   "last_change": {
-    "summary": "Added the domain-controller-placement provisioning resource identity for typed identity-domain bootstrap intent (issue #845).",
-    "content_hash": "7775808973fc934776a5d7ed073bb6f9dfb007c40197fee771e1767dc1f1745b"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "70af50f87d61eb5337ca6658b5e9e9d227a99f38fc66dead05bca5122200f003"
   }
 }

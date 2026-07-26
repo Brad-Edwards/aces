@@ -273,7 +273,7 @@ def create_reference_backend_manifest(*, with_time: bool = False, **config) -> B
             if with_time
             else REFERENCE_BACKEND_SUPPORTED_CONTRACT_VERSIONS - _TIME_DEDICATED_CONTRACT_VERSIONS
         ),
-        compatible_processors=frozenset({"aces-reference-processor"}),
+        compatible_processors=frozenset({"raes-reference-processor"}),
         concept_bindings=_concept_bindings(with_time=with_time),
         realization_support=_realization_support(),
         capabilities=_capabilities(with_time=with_time),

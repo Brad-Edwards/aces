@@ -1,6 +1,6 @@
 {
   "event_id": "evt-llm-17-exec",
-  "schema_name": "aces.participant_runtime.lifecycle",
+  "schema_name": "raes.participant_runtime.lifecycle",
   "schema_version": "1.0.0",
   "event_type": "execution_attempt",
   "extension_policy": "reject_unknown_required",
@@ -11,7 +11,7 @@
     "status_code": "tool_call_completed",
     "status_detail": "tool gateway accepted and completed the command",
     "source_status_label": "tool_call_completed",
-    "source_status_mapping": "aces.lifecycle.operation_state.completed"
+    "source_status_mapping": "raes.lifecycle.operation_state.completed"
   },
   "participant_address": "participants.red.llm",
   "episode_id": "ep-red-004",

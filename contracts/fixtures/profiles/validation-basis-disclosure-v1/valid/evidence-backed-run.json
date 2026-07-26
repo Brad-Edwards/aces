@@ -1,7 +1,7 @@
 {
   "schema_version": "validation-basis-disclosure/v1",
   "disclosure": {
-    "profile_id": "aces-evidence-backed-validation",
+    "profile_id": "raes-evidence-backed-validation",
     "profile_version": "v1",
     "subject_kind": "experiment_run",
     "subject_ref": {
@@ -24,7 +24,7 @@
       {"ref_kind": "evidence-record", "ref_id": "evidence-1"}
     ],
     "producer_refs": [
-      {"ref_kind": "processor", "ref_id": "aces-reference-processor"}
+      {"ref_kind": "processor", "ref_id": "raes-reference-processor"}
     ],
     "recorded_at": "2026-07-24T00:00:00Z"
   }

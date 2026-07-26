@@ -2,9 +2,9 @@
   "contract_id": "participant-status-view-v1",
   "schema_path": "contracts/schemas/control-plane/participant-status-view-v1.json",
   "stability": "draft",
-  "content_hash": "aef73b7d52c99de2a51cb2a58de0e30c37fc7fb2af5627cd6241a6aad288d07c",
+  "content_hash": "704e0997fa71fd8bc199f70034f769d301ccfd4d23a577dc676ae77fbae7758a",
   "last_change": {
-    "summary": "Initial publication of the participant status-view control-plane contract: the participant status/lifecycle projection in the backend-facing contract family (ADR-060, issue #76).",
-    "content_hash": "aef73b7d52c99de2a51cb2a58de0e30c37fc7fb2af5627cd6241a6aad288d07c"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "704e0997fa71fd8bc199f70034f769d301ccfd4d23a577dc676ae77fbae7758a"
   }
 }

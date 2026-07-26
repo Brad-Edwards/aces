@@ -45,7 +45,7 @@ def _manifest_payload() -> dict[str, object]:
         ],
         "compatibility": {
             "participant_runtimes": ["stub-participant-runtime"],
-            "processors": ["aces-reference-processor"],
+            "processors": ["raes-reference-processor"],
             "backends": ["stub"],
         },
         "concept_bindings": [
@@ -131,7 +131,7 @@ def _provenance_payload() -> dict[str, object]:
                 },
             }
         ],
-        "processor_manifest_ref": "processor-manifest-v2:aces-reference-processor",
+        "processor_manifest_ref": "processor-manifest-v2:raes-reference-processor",
         "backend_manifest_ref": "backend-manifest-v2:stub",
         "metadata": {"apparatus_record": "participant-implementation-selection"},
     }

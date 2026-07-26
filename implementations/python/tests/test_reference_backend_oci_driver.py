@@ -35,9 +35,9 @@ def _driver(recorder: _Recorder) -> OciDeploymentDriver:
     # the image-trust policy is covered by its own dedicated tests below.
     return OciDeploymentDriver(
         runtime="docker",
-        workspace="aces-ref-test",
+        workspace="raes-ref-test",
         runner=recorder,
-        image_policy=ImageTrustPolicy(allowed_images=("img", "aces-reference/linux", "pinned-img")),
+        image_policy=ImageTrustPolicy(allowed_images=("img", "raes-reference/linux", "pinned-img")),
     )
 
 
@@ -60,7 +60,7 @@ def test_oci_realize_uses_fixed_argv_list_never_shell():
             ContainerSpec(
                 address="provision.node.web",
                 name="web",
-                image_ref="aces-reference/linux",
+                image_ref="raes-reference/linux",
                 networks=("provision.network.lan",),
             ),
         ),
@@ -124,7 +124,7 @@ def test_oci_no_tokens_in_argv():
     recorder = _Recorder(stdout="id\n")
     driver = OciDeploymentDriver(
         runtime="docker",
-        workspace="aces-ref-test",
+        workspace="raes-ref-test",
         runner=recorder,
         image_policy=ImageTrustPolicy(allowed_images=("img",)),
     )
@@ -147,7 +147,7 @@ def test_oci_timeout_becomes_diagnostic_not_raise():
 
     driver = OciDeploymentDriver(
         runtime="docker",
-        workspace="aces-ref-test",
+        workspace="raes-ref-test",
         runner=_timeout_runner,
         image_policy=ImageTrustPolicy(allowed_images=("img",)),
     )
@@ -181,7 +181,7 @@ def test_oci_destroy_removes_by_the_name_realize_used():
     driver.destroy(networks=(), containers=("provision.node.web",))
 
     rm_calls = [call["argv"] for call in recorder.calls]
-    runtime_name = provider_resource_name("provision.node.web", prefix="aces")
+    runtime_name = provider_resource_name("provision.node.web", prefix="raes")
     assert rm_calls == [["docker", "rm", "--force", runtime_name]]
 
 
@@ -208,13 +208,13 @@ def test_oci_attaches_container_to_requested_networks():
 
     run_argv = next(call["argv"] for call in recorder.calls if "run" in call["argv"])
     assert "--network" in run_argv
-    assert run_argv[run_argv.index("--network") + 1] == provider_resource_name("provision.network.lan", prefix="aces")
+    assert run_argv[run_argv.index("--network") + 1] == provider_resource_name("provision.network.lan", prefix="raes")
 
 
 def test_oci_joins_only_a_run_owned_target_network_namespace():
     owner_address = "provision.node.zzz-owner"
     capture_address = "provision.node.aaa-capture"
-    owner_name = provider_resource_name(owner_address, prefix="aces")
+    owner_name = provider_resource_name(owner_address, prefix="raes")
 
     class _OwnedTargetRecorder:
         def __init__(self) -> None:
@@ -223,7 +223,7 @@ def test_oci_joins_only_a_run_owned_target_network_namespace():
         def __call__(self, argv, **kwargs):
             self.calls.append({"argv": argv, "kwargs": kwargs})
             if "inspect" in argv:
-                stdout = f"owner-native-id\naces-ref-test\n{owner_address}\n/{owner_name}\n"
+                stdout = f"owner-native-id\nraes-ref-test\n{owner_address}\n/{owner_name}\n"
             elif "run" in argv and owner_name in argv:
                 stdout = "owner-native-id\n"
             else:
@@ -250,7 +250,7 @@ def test_oci_joins_only_a_run_owned_target_network_namespace():
     run_calls = [call["argv"] for call in recorder.calls if "run" in call["argv"]]
     assert [argv[argv.index("--name") + 1] for argv in run_calls] == [
         owner_name,
-        provider_resource_name(capture_address, prefix="aces"),
+        provider_resource_name(capture_address, prefix="raes"),
     ]
     inspect_argv = next(call["argv"] for call in recorder.calls if "inspect" in call["argv"])
     assert inspect_argv[-1] == owner_name
@@ -290,7 +290,7 @@ def test_oci_rejects_stale_realized_namespace_target_before_side_effects():
 
 def test_oci_rejects_namespace_target_when_native_id_alone_mismatches():
     owner_address = "provision.node.owner"
-    owner_name = provider_resource_name(owner_address, prefix="aces")
+    owner_name = provider_resource_name(owner_address, prefix="raes")
 
     class _MismatchedOwnershipRecorder:
         def __init__(self) -> None:
@@ -299,7 +299,7 @@ def test_oci_rejects_namespace_target_when_native_id_alone_mismatches():
         def __call__(self, argv, **kwargs):
             self.calls.append(argv)
             if "inspect" in argv:
-                stdout = f"replacement-native-id\naces-ref-test\n{owner_address}\n/{owner_name}\n"
+                stdout = f"replacement-native-id\nraes-ref-test\n{owner_address}\n/{owner_name}\n"
             else:
                 stdout = "owner-native-id\n"
             return subprocess.CompletedProcess(args=argv, returncode=0, stdout=stdout, stderr="")
@@ -507,6 +507,6 @@ def test_oci_rolls_back_realized_resources_on_partial_failure():
         "docker",
         "network",
         "rm",
-        provider_resource_name("provision.network.lan", prefix="aces"),
+        provider_resource_name("provision.network.lan", prefix="raes"),
     ] in runner.calls
     assert driver.realized_addresses() == frozenset()

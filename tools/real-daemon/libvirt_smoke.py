@@ -33,7 +33,7 @@ from raes_contracts.planning import (
 from raes_contracts.runtime_state import RuntimeSnapshot
 
 URI = "qemu:///system"
-PREFIX = "acestest"
+PREFIX = "raestest"
 CIRROS = "/var/lib/libvirt/images/cirros.img"
 
 RESULTS: list[tuple[str, bool, str]] = []
@@ -84,14 +84,14 @@ def new_driver() -> LibvirtDeploymentDriver:
 
 
 def purge():
-    """Best-effort removal of any leftover acestest-* / acesprov-* objects."""
+    """Best-effort removal of any leftover raestest-* / raesprov-* objects."""
     conn = raw()
     for obj in [*conn.listAllDomains(), *conn.listAllNetworks()]:
         try:
             nm = obj.name()
         except libvirt.libvirtError:
             continue
-        if not nm.startswith((PREFIX, "acesprov")):
+        if not nm.startswith((PREFIX, "raesprov")):
             continue
         with contextlib.suppress(libvirt.libvirtError):
             if obj.isActive():
@@ -103,7 +103,7 @@ def purge():
             nm = nf.name()
         except libvirt.libvirtError:
             continue
-        if nm.startswith((PREFIX, "acesprov")):
+        if nm.startswith((PREFIX, "raesprov")):
             with contextlib.suppress(libvirt.libvirtError):
                 nf.undefine()
     conn.close()
@@ -118,12 +118,12 @@ def t_abi_absence_behavior():
     conn = raw()
     try:
         try:
-            conn.lookupByName("acestest-nope-xyz")
+            conn.lookupByName("raestest-nope-xyz")
             raise AssertionError("expected libvirtError for missing domain")
         except libvirt.libvirtError as e:
             assert e.get_error_code() == 42, e.get_error_code()
         try:
-            conn.networkLookupByName("acestest-nope-xyz")
+            conn.networkLookupByName("raestest-nope-xyz")
             raise AssertionError("expected libvirtError for missing network")
         except libvirt.libvirtError as e:
             assert e.get_error_code() == 43, e.get_error_code()
@@ -153,10 +153,10 @@ def t_create_network_and_domain():
     assert d.realized_addresses() == {"provision.network.lan", "provision.node.web"}
     conn = raw()
     try:
-        assert net_exists(conn, "acestest-lan"), "network not defined"
-        assert conn.networkLookupByName("acestest-lan").isActive() == 1, "network not active"
-        assert dom_exists(conn, "acestest-web"), "domain not defined"
-        assert dom_state_running(conn, "acestest-web"), "domain not running"
+        assert net_exists(conn, "raestest-lan"), "network not defined"
+        assert conn.networkLookupByName("raestest-lan").isActive() == 1, "network not active"
+        assert dom_exists(conn, "raestest-web"), "domain not defined"
+        assert dom_state_running(conn, "raestest-web"), "domain not running"
     finally:
         conn.close()
     return "real network active + real domain running under QEMU"
@@ -179,11 +179,11 @@ def t_update_reconverges_no_duplicate():
     assert not r2.diagnostics, [x.code for x in r2.diagnostics]
     conn = raw()
     try:
-        doms = [x.name() for x in conn.listAllDomains() if x.name() == "acestest-web2"]
-        nets = [x.name() for x in conn.listAllNetworks() if x.name() == "acestest-lan2"]
+        doms = [x.name() for x in conn.listAllDomains() if x.name() == "raestest-web2"]
+        nets = [x.name() for x in conn.listAllNetworks() if x.name() == "raestest-lan2"]
         assert len(doms) == 1, f"duplicate domains: {doms}"
         assert len(nets) == 1, f"duplicate networks: {nets}"
-        assert dom_state_running(conn, "acestest-web2")
+        assert dom_state_running(conn, "raestest-web2")
     finally:
         conn.close()
     # teardown
@@ -199,8 +199,8 @@ def t_teardown_removes_everything():
     assert all(not h.realized for h in (*res.networks, *res.domains))
     conn = raw()
     try:
-        assert not dom_exists(conn, "acestest-web"), "domain orphaned after teardown"
-        assert not net_exists(conn, "acestest-lan"), "network orphaned after teardown"
+        assert not dom_exists(conn, "raestest-web"), "domain orphaned after teardown"
+        assert not net_exists(conn, "raestest-lan"), "network orphaned after teardown"
     finally:
         conn.close()
     return "fresh-driver teardown removed real domain + network (no orphans)"
@@ -227,7 +227,7 @@ def t_teardown_inactive_domain():
     assert not r.diagnostics, [x.code for x in r.diagnostics]
     conn = raw()
     try:
-        dom = conn.lookupByName("acestest-inact")
+        dom = conn.lookupByName("raestest-inact")
         dom.destroy()  # stop it out of band -> defined but inactive
         assert dom.isActive() == 0
     finally:
@@ -236,7 +236,7 @@ def t_teardown_inactive_domain():
     assert not res.diagnostics, f"inactive teardown should be clean: {[x.code for x in res.diagnostics]}"
     conn = raw()
     try:
-        assert not dom_exists(conn, "acestest-inact"), "inactive domain not undefined"
+        assert not dom_exists(conn, "raestest-inact"), "inactive domain not undefined"
     finally:
         conn.close()
     return "teardown of an already-inactive domain (VIR_ERR_OPERATION_INVALID on stop) succeeds"
@@ -245,7 +245,7 @@ def t_teardown_inactive_domain():
 def t_ownership_conflict_not_destroyed():
     # Define a FOREIGN domain at our runtime name with a different UUID; driver
     # teardown must refuse and leave it intact.
-    name = "acestest-foreign"
+    name = "raestest-foreign"
     foreign_uuid = "11111111-2222-3333-4444-555555555555"
     xml = f"""<domain type='qemu'><name>{name}</name><uuid>{foreign_uuid}</uuid>
       <memory unit='MiB'>64</memory><vcpu>1</vcpu>
@@ -282,7 +282,7 @@ def t_nwfilter_lifecycle():
     assert not r.diagnostics, [x.code for x in r.diagnostics]
     conn = raw()
     try:
-        nf = conn.nwfilterLookupByName("acestest-fw-acl")  # raises if missing
+        nf = conn.nwfilterLookupByName("raestest-fw-acl")  # raises if missing
         assert nf.UUIDString() == _filter_owner_uuid("provision.node.fw")
     finally:
         conn.close()
@@ -291,7 +291,7 @@ def t_nwfilter_lifecycle():
     try:
         gone = False
         try:
-            conn.nwfilterLookupByName("acestest-fw-acl")
+            conn.nwfilterLookupByName("raestest-fw-acl")
         except libvirt.libvirtError:
             gone = True
         assert gone, "nwfilter not undefined after teardown"
@@ -315,7 +315,7 @@ def t_partial_create_rollback():
     ]
     conn = raw()
     try:
-        assert not dom_exists(conn, "acestest-bad"), "partial-create domain orphaned (not rolled back)"
+        assert not dom_exists(conn, "raestest-bad"), "partial-create domain orphaned (not rolled back)"
     finally:
         conn.close()
     return "domain whose start failed was rolled back (undefined) - no orphan"
@@ -355,7 +355,7 @@ def _plan(*resources, action=ChangeAction.CREATE):
 
 def t_provisioner_full_stack():
     # LibvirtProvisioner -> real driver: CREATE then DELETE (teardown) then idempotent re-DELETE.
-    drv = LibvirtDeploymentDriver(connection_uri=URI, name_prefix="acesprov")
+    drv = LibvirtDeploymentDriver(connection_uri=URI, name_prefix="raesprov")
     prov = LibvirtProvisioner(drv)
     net = PlannedResource(
         address="provision.network.pnet",
@@ -375,8 +375,8 @@ def t_provisioner_full_stack():
     assert set(create.snapshot.entries) == {"provision.network.pnet", "provision.node.pweb"}
     conn = raw()
     try:
-        assert net_exists(conn, "acesprov-pnet") and conn.networkLookupByName("acesprov-pnet").isActive() == 1
-        assert dom_exists(conn, "acesprov-pweb") and dom_state_running(conn, "acesprov-pweb")
+        assert net_exists(conn, "raesprov-pnet") and conn.networkLookupByName("raesprov-pnet").isActive() == 1
+        assert dom_exists(conn, "raesprov-pweb") and dom_state_running(conn, "raesprov-pweb")
     finally:
         conn.close()
 
@@ -399,8 +399,8 @@ def t_provisioner_full_stack():
     assert teardown.snapshot.entries == {}
     conn = raw()
     try:
-        assert not dom_exists(conn, "acesprov-pweb"), "provisioner teardown orphaned domain"
-        assert not net_exists(conn, "acesprov-pnet"), "provisioner teardown orphaned network"
+        assert not dom_exists(conn, "raesprov-pweb"), "provisioner teardown orphaned domain"
+        assert not net_exists(conn, "raesprov-pnet"), "provisioner teardown orphaned network"
     finally:
         conn.close()
 
@@ -413,7 +413,7 @@ def t_provisioner_full_stack():
 def t_cirros_real_boot_and_teardown():
     # Full realize path: cirros overlay disk + cloud-init seed (genisoimage) ->
     # a real guest OS boots, then is torn down.
-    overlay = os.path.join(tempfile.gettempdir(), "aces-cirros-overlay.qcow2")
+    overlay = os.path.join(tempfile.gettempdir(), "raes-cirros-overlay.qcow2")
     subprocess.run(
         ["qemu-img", "create", "-f", "qcow2", "-F", "qcow2", "-b", CIRROS, overlay], check=True, capture_output=True
     )
@@ -435,8 +435,8 @@ def t_cirros_real_boot_and_teardown():
     assert not r.diagnostics, [x.code for x in r.diagnostics]
     conn = raw()
     try:
-        assert dom_state_running(conn, "acestest-cirros"), "cirros domain not running"
-        xml = conn.lookupByName("acestest-cirros").XMLDesc()
+        assert dom_state_running(conn, "raestest-cirros"), "cirros domain not running"
+        xml = conn.lookupByName("raestest-cirros").XMLDesc()
         assert "cdrom" in xml and ".iso" in xml, "cloud-init seed ISO not attached"
     finally:
         conn.close()
@@ -444,7 +444,7 @@ def t_cirros_real_boot_and_teardown():
     assert not res.diagnostics, [x.code for x in res.diagnostics]
     conn = raw()
     try:
-        assert not dom_exists(conn, "acestest-cirros"), "cirros domain orphaned"
+        assert not dom_exists(conn, "raestest-cirros"), "cirros domain orphaned"
     finally:
         conn.close()
     return "real cirros guest booted with cloud-init seed ISO, then torn down cleanly"
@@ -453,13 +453,13 @@ def t_cirros_real_boot_and_teardown():
 def t_no_orphans_at_end():
     conn = raw()
     try:
-        doms = [x.name() for x in conn.listAllDomains() if x.name().startswith((PREFIX, "acesprov"))]
-        nets = [x.name() for x in conn.listAllNetworks() if x.name().startswith((PREFIX, "acesprov"))]
-        nfs = [x.name() for x in conn.listAllNWFilters() if x.name().startswith((PREFIX, "acesprov"))]
+        doms = [x.name() for x in conn.listAllDomains() if x.name().startswith((PREFIX, "raesprov"))]
+        nets = [x.name() for x in conn.listAllNetworks() if x.name().startswith((PREFIX, "raesprov"))]
+        nfs = [x.name() for x in conn.listAllNWFilters() if x.name().startswith((PREFIX, "raesprov"))]
         assert not doms and not nets and not nfs, f"orphans left: doms={doms} nets={nets} nfs={nfs}"
     finally:
         conn.close()
-    return "no acestest/acesprov domains, networks, or nwfilters remain"
+    return "no raestest/raesprov domains, networks, or nwfilters remain"
 
 
 def main() -> int:

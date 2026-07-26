@@ -2,5 +2,9 @@
   "contract_id": "participant-episode-history-event-stream-v1",
   "schema_path": "contracts/schemas/control-plane/participant-episode-history-event-stream-v1.json",
   "stability": "draft",
-  "content_hash": "9fb1a9b0edaf79987e66dd61a34d9c3d4f95f020424783778a2ba4f64eaa2272"
+  "content_hash": "2ef1c837394083ef263bec41a46113e047f9d8a8ba1a75b09abb5e4e4e95c605",
+  "last_change": {
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "2ef1c837394083ef263bec41a46113e047f9d8a8ba1a75b09abb5e4e4e95c605"
+  }
 }

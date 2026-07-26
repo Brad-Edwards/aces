@@ -217,7 +217,7 @@
       ],
       "title": "StreamAddressModel",
       "type": "object",
-      "x-aces-invariants": [
+      "x-raes-invariants": [
         {
           "description": "draw_purpose must be a term from the random_streams.draw_purpose controlled vocabulary.",
           "id": "random-stream-address-draw-purpose-governed",
@@ -295,7 +295,7 @@
       "type": "object"
     }
   },
-  "$id": "https://aces.dev/schemas/random-stream-vector-v1.json",
+  "$id": "https://raes.dev/schemas/random-stream-vector-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "One canonical cross-language conformance vector case.\n\nComputed independently of the reference engine (a throwaway script that\ncalls the ``blake3`` library directly), so the vector tests do not just\ntest the engine against itself.",
@@ -367,13 +367,13 @@
   ],
   "title": "RandomStreamVectorModel",
   "type": "object",
-  "x-aces-semantic-profile": {
+  "x-raes-semantic-profile": {
     "contract_id": "random-stream-vector-v1",
-    "entry_schema_contract_id": "aces-semantic-invariants-v1",
-    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
-    "id": "aces-semantic-invariants-v1",
-    "keyword": "x-aces-invariants",
+    "entry_schema_contract_id": "raes-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/RaesSemanticInvariantEntryModel",
+    "id": "raes-semantic-invariants-v1",
+    "keyword": "x-raes-invariants",
     "required": true,
-    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+    "uri": "https://raes.dev/schemas/semantic-invariants/v1"
   }
 }

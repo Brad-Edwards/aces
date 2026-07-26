@@ -19,7 +19,7 @@ content:
   guest-marker:
     type: file
     target: guest-vm
-    path: /etc/aces/marker
+    path: /etc/raes/marker
     text: "guest-certified realization marker\n"
     sensitive: false
 infrastructure:

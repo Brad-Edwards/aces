@@ -2,9 +2,9 @@
   "contract_id": "reusable-asset-trust-policy-v1",
   "schema_path": "contracts/schemas/asset-trust/reusable-asset-trust-policy-v1.json",
   "stability": "draft",
-  "content_hash": "fcd663287814f1c5072e3f5f4421c67edda0670965d6b04b5bc417501bba127c",
+  "content_hash": "855845de67295da833b426797dfbd60e13bafeaebc2b92e2a1c195748ccebeab",
   "last_change": {
-    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
-    "content_hash": "fcd663287814f1c5072e3f5f4421c67edda0670965d6b04b5bc417501bba127c"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "855845de67295da833b426797dfbd60e13bafeaebc2b92e2a1c195748ccebeab"
   }
 }

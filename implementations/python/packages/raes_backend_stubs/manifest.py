@@ -334,7 +334,7 @@ def create_stub_manifest(
             with_observation=with_observation,
             with_time=with_time,
         ),
-        compatible_processors=frozenset({"aces-reference-processor"}),
+        compatible_processors=frozenset({"raes-reference-processor"}),
         concept_bindings=_stub_concept_bindings(
             with_participant_runtime=with_participant_runtime,
             with_observation=with_observation,

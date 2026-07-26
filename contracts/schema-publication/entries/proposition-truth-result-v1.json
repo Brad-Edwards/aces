@@ -2,9 +2,9 @@
   "contract_id": "proposition-truth-result-v1",
   "schema_path": "contracts/schemas/control-plane/proposition-truth-result-v1.json",
   "stability": "draft",
-  "content_hash": "4a37fa964b8a7e3e641f381a27ea6960e9bc1efb8edfe426b9c19e173f7a045f",
+  "content_hash": "36ead895c2f3be5c975077ccaf4e75e8026fd0a9243c5a67a894999e4f424ac2",
   "last_change": {
-    "summary": "Initial publication of portable four-valued proposition truth results with typed evidence, provenance, temporal context, loss disclosure, and capability-bounded unsupported outcomes.",
-    "content_hash": "4a37fa964b8a7e3e641f381a27ea6960e9bc1efb8edfe426b9c19e173f7a045f"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "36ead895c2f3be5c975077ccaf4e75e8026fd0a9243c5a67a894999e4f424ac2"
   }
 }

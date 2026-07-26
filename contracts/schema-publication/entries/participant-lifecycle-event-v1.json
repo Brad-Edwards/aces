@@ -2,9 +2,9 @@
   "contract_id": "participant-lifecycle-event-v1",
   "schema_path": "contracts/schemas/participant-runtime/participant-lifecycle-event-v1.json",
   "stability": "draft",
-  "content_hash": "b7c86b3ad1530153f1185483f2310d6ad331a3bf60a562a12d16d993d02cb90a",
+  "content_hash": "3bdfd98d46e24c93a9659550f870c8e7c146255e627e74117ccf7b246dcb2afe",
   "last_change": {
-    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
-    "content_hash": "b7c86b3ad1530153f1185483f2310d6ad331a3bf60a562a12d16d993d02cb90a"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "3bdfd98d46e24c93a9659550f870c8e7c146255e627e74117ccf7b246dcb2afe"
   }
 }

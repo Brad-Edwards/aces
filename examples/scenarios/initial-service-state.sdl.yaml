@@ -40,7 +40,7 @@ propositions:
     predicate:
       kind: boolean
       property: service-content-visible
-      semantic_ref: urn:aces:observable:service-content-visible
+      semantic_ref: urn:raes:observable:service-content-visible
       expected: true
     evidence_requirements: [company-mail-readback]
 

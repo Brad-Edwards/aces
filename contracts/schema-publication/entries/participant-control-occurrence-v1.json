@@ -2,9 +2,9 @@
   "contract_id": "participant-control-occurrence-v1",
   "schema_path": "contracts/schemas/participant-runtime/participant-control-occurrence-v1.json",
   "stability": "draft",
-  "content_hash": "edceb2ce36178a4d3c69c2d983ea90737c3a85c213a4a11bed93ed0591890754",
+  "content_hash": "b9ead3b36df6c998df60f2b328ac3433f547d135fc9526d36b54e8c335a3489f",
   "last_change": {
-    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
-    "content_hash": "edceb2ce36178a4d3c69c2d983ea90737c3a85c213a4a11bed93ed0591890754"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "b9ead3b36df6c998df60f2b328ac3433f547d135fc9526d36b54e8c335a3489f"
   }
 }

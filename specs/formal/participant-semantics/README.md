@@ -1175,7 +1175,7 @@ Boundary obligations (each is exercised by an adversarial negative fixture):
   `evidence_record` source layer must declare a `derivation_basis_ref` view rule
   and a `redaction_policy_ref` (published `allOf`), the evidence source must
   appear in `transformation.input_source_ids`, and `payload_ref` must not alias
-  the raw evidence ref (both relational rules published as `x-aces-invariants`).
+  the raw evidence ref (both relational rules published as `x-raes-invariants`).
 - **B2** - hidden adjudication / derived-evaluation outputs must not reach a
   participant view without redaction governance. A `participant_visible` view
   that draws on a `derived_measure` source layer must additionally declare a
@@ -1186,7 +1186,7 @@ The required-ref clauses of B1/B2 (and B4) are enforced both by the closed-world
 model and by the published JSON Schema `allOf`, so schema-only consumers reject
 them. The relational clauses that standard JSON Schema cannot express - archival
 source mediation and `payload_ref` non-aliasing - are enforced by the model and
-published as `x-aces-invariants` on `participant-context-view-v1` (the RAES
+published as `x-raes-invariants` on `participant-context-view-v1` (the RAES
 semantic-invariant profile, per ADR-009 §7 and the experiment-core convention),
 so the portable contract advertises every obligation and names its validator.
 - **B3** - derived analysis is never captured evidence. An
@@ -1221,7 +1221,7 @@ Current implementation artifacts for the `SEM-216` slice:
 - `implementations/python/packages/raes_contracts/contracts/` adds
   `ParticipantContextViewModel._validate_sem216_audience_boundary` with its
   published `allOf` (required view rule + redaction policy) and
-  `x-aces-invariants` (archival source mediation, `payload_ref` non-aliasing)
+  `x-raes-invariants` (archival source mediation, `payload_ref` non-aliasing)
   for the B1/B2/B5 view boundary, and publishes the evidence
   redaction/loss-disclosure rule as a portable schema constraint on
   `ExperimentEvidenceRecordModel` (B4);

@@ -36,7 +36,7 @@ from raes_processor.compiler import compile_runtime_model
 
 def _digest() -> SemanticDigest:
     return SemanticDigest(
-        profile="aces-sdl-semantic/v1",
+        profile="raes-sdl-semantic/v1",
         algorithm="sha256",
         value="sha256:" + "a" * 64,
     )
@@ -394,10 +394,10 @@ def test_direct_artifact_admission_wraps_structural_errors_without_value_echo() 
     (
         ("requested_source", "local:/home/researcher/private/module.yaml"),
         ("resolved_source", "C:\\Users\\researcher\\module.yaml"),
-        ("requested_source", "oci:https://user:token@registry.example/aces/module"),
+        ("requested_source", "oci:https://user:token@registry.example/raes/module"),
         (
             "resolved_source",
-            "user:token@registry.example/aces/module@sha256:" + "b" * 64,
+            "user:token@registry.example/raes/module@sha256:" + "b" * 64,
         ),
     ),
 )
@@ -408,7 +408,7 @@ def test_import_provenance_rejects_host_paths_and_registry_credentials(
     payload = {
         "namespace": ["shared"],
         "requested_source": "local:module.yaml",
-        "module_id": "aces/module",
+        "module_id": "raes/module",
         "module_version": "1.0.0",
         "resolved_source": "module.yaml",
         field: source,
@@ -425,7 +425,7 @@ def test_imported_explicitness_projects_only_surviving_namespaced_fields(tmp_pat
 name: {module_name}
 version: 1.0.0
 module:
-  id: aces/{module_name}
+  id: raes/{module_name}
   version: 1.0.0
   exports: {{nodes: [host]}}
 behavior_specifications: {{}}
@@ -476,7 +476,7 @@ def test_nested_import_provenance_is_ordered_portable_and_replay_complete(tmp_pa
 name: inner
 version: 1.0.0
 module:
-  id: aces/inner
+  id: raes/inner
   version: 1.0.0
   parameters: [image]
   exports: {nodes: [host]}
@@ -499,7 +499,7 @@ nodes:
 name: outer
 version: 2.0.0
 module:
-  id: aces/outer
+  id: raes/outer
   version: 2.0.0
   parameters: [flavor]
   exports: {nodes: [inner.host]}

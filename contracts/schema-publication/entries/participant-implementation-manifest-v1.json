@@ -2,9 +2,9 @@
   "contract_id": "participant-implementation-manifest-v1",
   "schema_path": "contracts/schemas/participant-implementation-manifest/participant-implementation-manifest-v1.json",
   "stability": "draft",
-  "content_hash": "5b7c636a98c540e1afc74ca74a1e9a421609f498c3b85c473a52c1516e398984",
+  "content_hash": "cfeb4e4d3122ffac80370b97b6fd0e2551a001f97fe574ea5b7e63656a7b04bc",
   "last_change": {
-    "summary": "Added typed participant configuration targets, aliases, defaults, sensitivity, and governed validator ownership.",
-    "content_hash": "5b7c636a98c540e1afc74ca74a1e9a421609f498c3b85c473a52c1516e398984"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "cfeb4e4d3122ffac80370b97b6fd0e2551a001f97fe574ea5b7e63656a7b04bc"
   }
 }

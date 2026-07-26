@@ -15,7 +15,7 @@ from raes_backend_libvirt.cloudinit import (
 
 
 def test_safe_path_component_neutralizes_traversal_and_separators():
-    assert safe_path_component("../../cron.d/aces", fallback="x") == "cron.d_aces"
+    assert safe_path_component("../../cron.d/raes", fallback="x") == "cron.d_raes"
     assert safe_path_component("/etc/passwd", fallback="x") == "etc_passwd"
     assert safe_path_component("..", fallback="fallback") == "fallback"
     assert safe_path_component("", fallback="fallback") == "fallback"
@@ -131,5 +131,5 @@ def test_meta_data_instance_id_changes_when_seed_content_changes():
 def test_meta_data_without_hostname_has_content_derived_instance_id():
     meta = json.loads(render_meta_data(CloudInitSpec()))
 
-    assert meta["instance-id"].startswith("aces-")
+    assert meta["instance-id"].startswith("raes-")
     assert "local-hostname" not in meta

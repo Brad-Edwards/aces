@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "01e502976847abfed1d37f7b6e972971d9109fac34e4e94ef31b5971a0a93032",
+  "content_hash": "83cfeca54fae16bbdfaad20f15652aaf384e4b2477f382aa0169c084b165ca69",
   "last_change": {
-    "summary": "Carried participant-directed inject deliveries and governed participant action-argument domains into satisfiability evidence on the RAES-only package surface.",
-    "content_hash": "01e502976847abfed1d37f7b6e972971d9109fac34e4e94ef31b5971a0a93032"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "83cfeca54fae16bbdfaad20f15652aaf384e4b2477f382aa0169c084b165ca69"
   }
 }

@@ -114,8 +114,8 @@ def _security(target_name: str) -> ControlPlaneSecurityConfig:
 
 def _headers() -> dict[str, str]:
     return {
-        "x-aces-client-verified": "true",
-        "x-aces-client-identity": "backend-service",
+        "x-raes-client-verified": "true",
+        "x-raes-client-identity": "backend-service",
     }
 
 

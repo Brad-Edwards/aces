@@ -99,7 +99,7 @@ def test_dsl_124_evidence_requirements_are_not_objective_targets() -> None:
         predicate:
           kind: boolean
           property: network-trace-captured
-          semantic_ref: urn:aces:observable:network-trace-captured
+          semantic_ref: urn:raes:observable:network-trace-captured
           operator: equals
           expected: true
         evidence_requirements:

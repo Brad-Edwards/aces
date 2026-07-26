@@ -5,10 +5,9 @@ established the current layout. The paths below describe historical moves, not
 current uncertainty about where authoritative material lives.
 
 The current project identity migration is recorded separately in
-[RAES Rename Migration Map](raes-rename.md). That map records the hard cutover
-to RAES names and identifies the narrow ACES identifiers that remain only as
-source import paths, governed contract identifiers, historical records, or
-external references.
+[RAES Identity Cutover](raes-rename.md). That note records the final hard
+cutover across repository-owned live surfaces and the exact historical-record
+boundary.
 
 The reorganization moved existing material into the current long-term buckets:
 

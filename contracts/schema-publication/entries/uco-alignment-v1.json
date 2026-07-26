@@ -2,9 +2,9 @@
   "contract_id": "uco-alignment-v1",
   "schema_path": "contracts/schemas/concept-authority/uco-alignment-v1.json",
   "stability": "draft",
-  "content_hash": "445ef9ba99cddaae2b3308a054d26dd968d194af1c2f98710151f2d5a747f5bf",
+  "content_hash": "dc84dac9987d237a7309a15289ee3572dc1096fa5c0ae6b06201e770a1de0086",
   "last_change": {
-    "summary": "Initial publication of the UCO alignment evidence contract (concept-authority review CA-5, issue #495): maps adopted/adapted cyber-domain concept families to pinned UCO 1.4.0 object types, with adapted-family divergences enumerated.",
-    "content_hash": "445ef9ba99cddaae2b3308a054d26dd968d194af1c2f98710151f2d5a747f5bf"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "dc84dac9987d237a7309a15289ee3572dc1096fa5c0ae6b06201e770a1de0086"
   }
 }

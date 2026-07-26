@@ -161,7 +161,7 @@ raes libvirt techvault guest-certify \
   --project-dir . --run-id guest-proof-1 --yes
 ```
 
-The equivalent opt-in pytest is gated on `ACES_REAL_LIBVIRT_URI`, and
+The equivalent opt-in pytest is gated on `RAES_REAL_LIBVIRT_URI`, and
 `tools/real-daemon/run_aws_guest_certify.sh` runs the whole thing on an
 ephemeral, self-cleaning host. A committed real-daemon evidence report lives
 under `tools/real-daemon/evidence/`.

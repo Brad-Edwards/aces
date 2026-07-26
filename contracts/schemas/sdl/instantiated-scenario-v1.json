@@ -23145,7 +23145,7 @@
           "type": "string"
         },
         "profile": {
-          "const": "aces-sdl-semantic/v1",
+          "const": "raes-sdl-semantic/v1",
           "title": "Profile",
           "type": "string"
         },
@@ -25236,7 +25236,7 @@
       "type": "string"
     }
   },
-  "$id": "https://aces.dev/schemas/instantiated-scenario-v1.json",
+  "$id": "https://raes.dev/schemas/instantiated-scenario-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "Scenario with all ``${var}`` references resolved to concrete values.\n\nUnlike the authoring-input contract, an instantiated scenario MUST NOT\ncontain any unresolved ``${name}`` substitution token in any string value,\nwhether a whole-string placeholder (``\"${os}\"``) or embedded\n(``\"host-${index}\"``). The invariant is enforced both by the model\nvalidator below and by the published ``instantiated-scenario-v1`` JSON\nSchema, which forbids the token in every string field. The schema is\nIf a resolved variable value itself introduces a literal ``${name}``\nsequence, the single-pass substitution step does not interpret it as a\nsecond substitution request; final model admission still treats the result\nas non-concrete and rejects the public instantiation.",
@@ -25603,7 +25603,7 @@
     },
     "instantiation_provenance": {
       "$ref": "#/$defs/InstantiationProvenance",
-      "x-aces-realization-dimension": false
+      "x-raes-realization-dimension": false
     },
     "name": {
       "allOf": [
@@ -25877,9 +25877,9 @@
   ],
   "title": "SDL Instantiated Scenario v1",
   "type": "object",
-  "x-aces-authored-identity-profile": "aces-sdl-semantic/v1",
-  "x-aces-document-phase": "instantiated-scenario",
-  "x-aces-invariants": [
+  "x-raes-authored-identity-profile": "raes-sdl-semantic/v1",
+  "x-raes-document-phase": "instantiated-scenario",
+  "x-raes-invariants": [
     {
       "description": "Generated artifact output names and paths, consumers, and dependency entries must be unique, and generated artifact consumers must be read-only.",
       "id": "stateful-generated-artifact-semantics",
@@ -25929,13 +25929,13 @@
       "validator": "raes.validator.SemanticValidator._verify_service_materialization"
     }
   ],
-  "x-aces-semantic-profile": {
+  "x-raes-semantic-profile": {
     "contract_id": "instantiated-scenario-v1",
-    "entry_schema_contract_id": "aces-semantic-invariants-v1",
-    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
-    "id": "aces-semantic-invariants-v1",
-    "keyword": "x-aces-invariants",
+    "entry_schema_contract_id": "raes-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/RaesSemanticInvariantEntryModel",
+    "id": "raes-semantic-invariants-v1",
+    "keyword": "x-raes-invariants",
     "required": true,
-    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+    "uri": "https://raes.dev/schemas/semantic-invariants/v1"
   }
 }

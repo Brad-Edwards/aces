@@ -2,9 +2,9 @@
   "contract_id": "participant-behavior-history-event-stream-v1",
   "schema_path": "contracts/schemas/control-plane/participant-behavior-history-event-stream-v1.json",
   "stability": "draft",
-  "content_hash": "4aeeaba0d4834a38bed72aca834733806fe8625d763b15e7d2dba764637f4234",
+  "content_hash": "4baa867a23fc0b33d8b9091e6dec7e027e9c8cafe4fe1fa0a0ab89e5b7f81cc0",
   "last_change": {
-    "summary": "Revised the participant behavior-history event-stream contract as part of the backend-facing contract family publication (ADR-060, issue #76).",
-    "content_hash": "4aeeaba0d4834a38bed72aca834733806fe8625d763b15e7d2dba764637f4234"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "4baa867a23fc0b33d8b9091e6dec7e027e9c8cafe4fe1fa0a0ab89e5b7f81cc0"
   }
 }

@@ -38,7 +38,7 @@
   "provenance_refs": [
     {
       "ref_kind": "processor",
-      "ref_id": "aces-reference-processor",
+      "ref_id": "raes-reference-processor",
       "ref_version": "0.1.0"
     }
   ]

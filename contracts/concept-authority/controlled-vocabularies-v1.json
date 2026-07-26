@@ -146,7 +146,7 @@
     },
     "participant-defensive-behavior-activities": {
       "title": "Participant Defensive Behavior Activities",
-      "description": "ACES adaptations of NIST CSF 2.0 Detect, Respond, and Recover categories as governed defensive behavior classifications for behavior specifications.",
+      "description": "RAES adaptations of NIST CSF 2.0 Detect, Respond, and Recover categories as governed defensive behavior classifications for behavior specifications.",
       "source": {
         "provenance": "adapted",
         "authority": "NIST Cybersecurity Framework",
@@ -673,11 +673,11 @@
         },
         "adapted": {
           "title": "Adapted",
-          "description": "Concept family adapts an external authority for ACES use."
+          "description": "Concept family adapts an external authority for RAES use."
         },
         "native": {
           "title": "Native",
-          "description": "Concept family is native to ACES."
+          "description": "Concept family is native to RAES."
         }
       }
     },
@@ -933,7 +933,7 @@
         },
         "autonomous_execution": {
           "title": "Autonomous Execution",
-          "description": "Backend supports ACES-clock-governed autonomous execution of ordinary participant actions."
+          "description": "Backend supports RAES-clock-governed autonomous execution of ordinary participant actions."
         },
         "attribution_support": {
           "title": "Attribution Support",

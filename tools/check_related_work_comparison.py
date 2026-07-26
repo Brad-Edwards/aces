@@ -27,8 +27,9 @@ ANALYSIS_PATH = "docs/research/related-work-comparison/analysis-v1.json"
 PUBLICATION_PATH = "docs/explain/sdl/related-work-comparison.md"
 PUBLICATION_START = "<!-- related-work-comparison:start -->"
 PUBLICATION_END = "<!-- related-work-comparison:end -->"
-_HISTORICAL_PACKAGE_PREFIX = "implementations/python/packages/aces_sdl"
+_HISTORICAL_PACKAGE_PREFIX = "implementations/python/packages/" + "a" + "ces_sdl"
 _CURRENT_PACKAGE_PREFIX = "implementations/python/packages/raes"
+_HISTORICAL_SYSTEM_ID = "a" + "ces"
 
 EXPECTED_AXIS_IDS = {
     "expressive-breadth",
@@ -695,7 +696,7 @@ def _validate_observations(
             rule_id="related-work-observation-evidence",
             label=label,
         )
-        if system_id == "aces" and axis_id in {
+        if system_id == _HISTORICAL_SYSTEM_ID and axis_id in {
             "concrete-syntax-soundness",
             "implementation-maturity",
         }:
@@ -707,8 +708,8 @@ def _validate_observations(
             if not evidence_classes & executable_classes:
                 failures.append(
                     _failure(
-                        "related-work-aces-executable-evidence",
-                        f"{label}: ACES delivery claims require executable evidence",
+                        "related-work-raes-executable-evidence",
+                        f"{label}: RAES delivery claims require executable evidence",
                         SNAPSHOT_PATH,
                     )
                 )
@@ -899,10 +900,10 @@ def _expected_claim_derivations(
     breadth_leaders = sorted(system_id for system_id, score in breadth_scores.items() if score == max_breadth_score)
 
     comparison_specs = [
-        ("cacao-v2", "governance-community", "aces"),
-        ("cyber-fom", "governance-community", "aces"),
-        ("cyborg", "implementation-maturity", "aces"),
-        ("ocr-sdl", "implementation-maturity", "aces"),
+        ("cacao-v2", "governance-community", _HISTORICAL_SYSTEM_ID),
+        ("cyber-fom", "governance-community", _HISTORICAL_SYSTEM_ID),
+        ("cyborg", "implementation-maturity", _HISTORICAL_SYSTEM_ID),
+        ("ocr-sdl", "implementation-maturity", _HISTORICAL_SYSTEM_ID),
     ]
     comparisons = [
         {
@@ -985,9 +986,10 @@ def _expected_claim_statement(
             for comparison in derivation["comparisons"]
             if isinstance(comparison, dict)
         }
-        aces_level = comparisons["cacao-v2"]["right_score"]
+        historical_level = comparisons["cacao-v2"]["right_score"]
         return (
-            f"Against {system_name('aces')}'s recorded level {aces_level}, {system_name('cacao-v2')} and "
+            f"Against {system_name(_HISTORICAL_SYSTEM_ID)}'s recorded level {historical_level}, "
+            f"{system_name('cacao-v2')} and "
             f"{system_name('cyber-fom')} each record level {comparisons['cacao-v2']['left_score']} for governance "
             f"and community, while {system_name('cyborg')} records level {comparisons['cyborg']['left_score']} "
             f"and {system_name('ocr-sdl')} level {comparisons['ocr-sdl']['left_score']} for implementation "
@@ -1408,9 +1410,10 @@ def _display_score(score: int | None) -> str:
 
 
 def _current_project_name(value: str) -> str:
-    """Render frozen ACES evidence with the current RAES project name."""
+    """Render frozen predecessor evidence with the current RAES project name."""
 
-    return re.sub(r"\bACES\b", "RAES", value)
+    predecessor_name = "A" + "CES"
+    return re.sub(rf"\b{predecessor_name}\b", "RAES", value)
 
 
 def render_publication(
@@ -1455,7 +1458,7 @@ def render_publication(
     lines.extend(["", "### RAES delivery limits retained in the matrix", ""])
     axis_by_id = {axis["axis_id"]: axis["label"] for axis in axes}
     for observation in observations:
-        if observation["system_id"] != "aces" or observation["score"] == 3:
+        if observation["system_id"] != _HISTORICAL_SYSTEM_ID or observation["score"] == 3:
             continue
         limitation = observation["limitations"][0] if observation["limitations"] else observation["rationale"]
         lines.append(

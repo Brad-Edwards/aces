@@ -2,9 +2,9 @@
   "contract_id": "participant-history-view-v1",
   "schema_path": "contracts/schemas/control-plane/participant-history-view-v1.json",
   "stability": "draft",
-  "content_hash": "380257f288c098c0b94e343dbeb6d51c5216c6b14d91543cc2c147dd06633435",
+  "content_hash": "c98b133455fe41b5ce832243b80cdcaa62e2b60ea351e8e298b11b5c336fe3a6",
   "last_change": {
-    "summary": "Initial publication of the participant history-view control-plane contract: the participant-local interaction-history projection in the backend-facing contract family (ADR-060, issue #76).",
-    "content_hash": "380257f288c098c0b94e343dbeb6d51c5216c6b14d91543cc2c147dd06633435"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "c98b133455fe41b5ce832243b80cdcaa62e2b60ea351e8e298b11b5c336fe3a6"
   }
 }

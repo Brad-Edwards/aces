@@ -1,6 +1,6 @@
 {
   "schema_version": "reusable-asset-trust-policy/v1",
-  "policy_id": "aces-reusable-asset-trust-policy",
+  "policy_id": "raes-reusable-asset-trust-policy",
   "families": [
     {
       "asset_family": "associated_artifact_set",

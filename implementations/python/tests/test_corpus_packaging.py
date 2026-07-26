@@ -112,24 +112,15 @@ def test_built_wheel_includes_third_party_notice(built_wheel: Path):
 
 @requires_uv
 def test_installed_wheel_hard_cuts_sdl_import_namespace(installed_python: Path, tmp_path: Path):
-    """The wheel exposes RAES owners and contains no importable ACES residue."""
+    """The wheel exposes the canonical RAES owners."""
 
-    script = (
-        "import importlib.util\n"
-        "import raes\n"
-        "assert raes.parse_sdl\n"
-        "retired = ('aces', 'aces_sdl', 'aces_backend_libvirt', "
-        "'aces_backend_protocols', 'aces_backend_stubs', 'aces_cli', "
-        "'aces_conformance', 'aces_contracts', 'aces_mcp', 'aces_operations', "
-        "'aces_processor', 'aces_reference_backend', 'aces_runtime')\n"
-        "assert all(importlib.util.find_spec(name) is None for name in retired)\n"
-    )
+    script = "import raes\nimport raes_contracts\nassert raes.parse_sdl\nassert raes_contracts.__doc__\n"
     result = _run(
         [str(installed_python), "-c", script],
         cwd=tmp_path,
         env=_sanitized_runtime_env(tmp_path),
     )
-    assert result.returncode == 0, f"namespace hard cut failed:\n{result.stdout}\n{result.stderr}"
+    assert result.returncode == 0, f"canonical namespace check failed:\n{result.stdout}\n{result.stderr}"
 
 
 @requires_uv

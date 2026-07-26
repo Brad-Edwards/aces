@@ -99,7 +99,7 @@ def _participant_implementation_manifest() -> ParticipantImplementationManifestM
             ],
             "compatibility": {
                 "participant_runtimes": ["stub-participant-runtime"],
-                "processors": ["aces-reference-processor"],
+                "processors": ["raes-reference-processor"],
                 "backends": ["stub"],
             },
             "concept_bindings": [
@@ -470,7 +470,7 @@ propositions:
     description: The governed VM has declared runtime state.
     subjects: [nodes.vm]
     basis: declared_state
-    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:raes:declared-property:runtime, operator: exists}
 assertions:
   health: {proposition: health, role: postcondition, polarity: positive}
 entities:

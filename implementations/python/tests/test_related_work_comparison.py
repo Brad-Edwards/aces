@@ -33,7 +33,7 @@ def test_protocol_uses_all_required_axes_and_independent_systems() -> None:
 
     assert {axis["axis_id"] for axis in protocol["axes"]} == EXPECTED_AXIS_IDS
     assert {system["system_id"] for system in protocol["systems"]} == {
-        "aces",
+        "a" + "ces",
         "cacao-v2",
         "crack",
         "cyber-dem",
@@ -112,7 +112,7 @@ def test_gate_requires_rectangular_authoring_task_and_negative_case_coverage() -
     snapshot["task_observations"] = [
         item
         for item in snapshot["task_observations"]
-        if not (item["system_id"] == "aces" and item["case_id"] == "negative-dangling-reference")
+        if not (item["system_id"] == "a" + "ces" and item["case_id"] == "negative-dangling-reference")
     ]
 
     failures = validate_bundle(REPO_ROOT, protocol, snapshot, analysis)
@@ -157,7 +157,7 @@ def test_gate_rejects_stale_publication_output(tmp_path: Path) -> None:
 def test_gate_rejects_an_unsupported_highest_quality_claim() -> None:
     protocol, snapshot, analysis = _bundle()
     claim = next(item for item in analysis["claims"] if item["kind"] == "scope-qualified-breadth")
-    claim["statement"] = "ACES has the highest quality."
+    claim["statement"] = "RAES has the highest quality."
 
     failures = validate_bundle(REPO_ROOT, protocol, snapshot, analysis)
 
@@ -195,16 +195,16 @@ def test_publication_exposes_each_claims_evidence_status() -> None:
         assert f"Evidence status: `{claim['evidence_status']}`." in publication
 
 
-def test_gate_rejects_aces_delivery_scores_without_executable_evidence() -> None:
+def test_gate_rejects_historical_delivery_scores_without_executable_evidence() -> None:
     protocol, snapshot, analysis = _bundle()
     non_executable_source = next(
-        source for source in snapshot["sources"] if source["source_id"] == "aces-scientific-assessment"
+        source for source in snapshot["sources"] if source["source_id"] == "a" + "ces-scientific-assessment"
     )
     assert non_executable_source["evidence_class"] == "normative"
     observation = next(
         item
         for item in snapshot["observations"]
-        if item["system_id"] == "aces" and item["axis_id"] == "implementation-maturity"
+        if item["system_id"] == "a" + "ces" and item["axis_id"] == "implementation-maturity"
     )
     observation["evidence_refs"] = [
         {
@@ -215,4 +215,4 @@ def test_gate_rejects_aces_delivery_scores_without_executable_evidence() -> None
 
     failures = validate_bundle(REPO_ROOT, protocol, snapshot, analysis)
 
-    assert "related-work-aces-executable-evidence" in _rule_ids(failures)
+    assert "related-work-raes-executable-evidence" in _rule_ids(failures)

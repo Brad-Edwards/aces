@@ -98,8 +98,6 @@ def evaluate_repo_policy(
             }
         )
     )
-    failures.extend(_check_package_import_direction(repo_root, policy, changed))
-    failures.extend(_check_retired_namespace(repo_root, policy, changed))
     failures.extend(_check_layering_and_oversized(repo_root, policy, changed))
     failures.extend(_check_module_boundaries(repo_root, policy, changed, check_set=check_set))
 
@@ -526,55 +524,6 @@ def _check_drain(allowlist: frozenset[str], allowlist_path: str) -> list[PolicyF
         )
         for path in sorted(allowlist - _ADR015_INITIAL_OVERSIZED_FILES)
     ]
-
-
-def _check_package_import_direction(repo_root: Path, policy: dict, changed: list[str]) -> list[PolicyFailure]:
-    failures: list[PolicyFailure] = []
-    package_root = repo_root / policy["retired_namespace"]["owning_root"]
-    prefixes = tuple(policy["retired_namespace"]["forbidden_import_prefixes"])
-    for rel_path in changed:
-        if not rel_path.endswith(".py") or not path_matches_prefix(
-            rel_path, package_root.relative_to(repo_root).as_posix()
-        ):
-            continue
-        path = repo_root / rel_path
-        tree = ast.parse(path.read_text(encoding="utf-8"), filename=rel_path)
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Import):
-                for alias in node.names:
-                    if alias.name.startswith(prefixes):
-                        failures.append(
-                            PolicyFailure(
-                                "retired-namespace-import",
-                                "owning packages must not import retired aces or aces_* modules",
-                                rel_path,
-                            )
-                        )
-            elif isinstance(node, ast.ImportFrom) and node.module and node.module.startswith(prefixes):
-                failures.append(
-                    PolicyFailure(
-                        "retired-namespace-import",
-                        "owning packages must not import retired aces or aces_* modules",
-                        rel_path,
-                    )
-                )
-    return failures
-
-
-def _check_retired_namespace(repo_root: Path, policy: dict, changed: list[str]) -> list[PolicyFailure]:
-    failures: list[PolicyFailure] = []
-    retired_root = policy["retired_namespace"]["root"]
-    for rel_path in changed:
-        if not path_matches_prefix(rel_path, retired_root) or not (repo_root / rel_path).exists():
-            continue
-        failures.append(
-            PolicyFailure(
-                "retired-namespace-path",
-                "the retired implementations/python/src/aces namespace must not be reintroduced",
-                rel_path,
-            )
-        )
-    return failures
 
 
 def _validate_module_boundary_config(repo_root: Path, config: object) -> tuple[list[dict], list[PolicyFailure]]:

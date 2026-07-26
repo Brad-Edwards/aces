@@ -209,7 +209,7 @@ propositions:
     description: The governed release target has declared readiness state.
     subjects: [nodes.vm]
     basis: declared_state
-    predicate: {kind: boolean, property: release-ready, semantic_ref: urn:aces:declared-property:release-ready, operator: equals, expected: true}
+    predicate: {kind: boolean, property: release-ready, semantic_ref: urn:raes:declared-property:release-ready, operator: equals, expected: true}
 assertions:
   release-ready: {proposition: release-ready, role: postcondition, polarity: positive}
 objectives:
@@ -927,7 +927,7 @@ propositions:
     description: The governed release target has declared readiness state.
     subjects: [nodes.vm]
     basis: declared_state
-    predicate: {kind: boolean, property: release-ready, semantic_ref: urn:aces:declared-property:release-ready, operator: equals, expected: true}
+    predicate: {kind: boolean, property: release-ready, semantic_ref: urn:raes:declared-property:release-ready, operator: equals, expected: true}
 assertions:
   release-ready: {proposition: release-ready, role: postcondition, polarity: positive}
 objectives:
@@ -1140,7 +1140,7 @@ class TestModuleImports:
 name: common
 version: 1.2.0
 module:
-  id: aces/common
+  id: raes/common
   version: 1.2.0
   exports:
     nodes: [vm]
@@ -1168,7 +1168,7 @@ propositions:
     description: The governed VM has declared runtime state.
     subjects: [nodes.vm]
     basis: declared_state
-    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:raes:declared-property:runtime, operator: exists}
 assertions:
   health: {proposition: health, role: postcondition, polarity: positive}
 entities:
@@ -1226,7 +1226,7 @@ imports:
 name: common
 version: 1.2.0
 module:
-  id: aces/common
+  id: raes/common
   version: 1.2.0
   exports:
     nodes: [vm, net]
@@ -1272,7 +1272,7 @@ propositions:
     description: The governed VM has declared runtime state.
     subjects: [nodes.vm]
     basis: declared_state
-    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:raes:declared-property:runtime, operator: exists}
 assertions:
   health: {proposition: health, role: precondition, polarity: positive}
 content:
@@ -1336,7 +1336,7 @@ imports:
 name: common
 version: 1.2.0
 module:
-  id: aces/common
+  id: raes/common
   version: 1.2.0
   exports:
     nodes: [vm, net]
@@ -1378,7 +1378,7 @@ propositions:
     description: The governed VM has declared runtime state.
     subjects: [nodes.vm]
     basis: declared_state
-    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:raes:declared-property:runtime, operator: exists}
 assertions:
   health: {proposition: health, role: precondition, polarity: positive}
 relationships:
@@ -1425,7 +1425,7 @@ imports:
 name: common
 version: 2.0.0
 module:
-  id: aces/common
+  id: raes/common
   version: 2.0.0
   exports:
     nodes: [sw]
@@ -1457,7 +1457,7 @@ imports:
 name: shared
 version: 1.0.0
 module:
-  id: aces/first
+  id: raes/first
   version: 1.0.0
   exports:
     nodes: [vm]
@@ -1475,7 +1475,7 @@ nodes:
 name: shared
 version: 1.0.0
 module:
-  id: aces/second
+  id: raes/second
   version: 1.0.0
   exports:
     nodes: [vm]
@@ -1517,7 +1517,7 @@ imports:
 name: shared-db
 version: 1.0.0
 module:
-  id: aces/shared-db
+  id: raes/shared-db
   version: 1.0.0
   exports:
     nodes: [db, web]
@@ -1579,7 +1579,7 @@ imports:
 
 
 class TestLoadRealScenarios:
-    """ACES legacy scenario YAMLs use the metadata format which is no
+    """RAES legacy scenario YAMLs use the metadata format which is no
     longer part of the SDL. These are expected to fail until the
     scenario YAMLs are migrated to SDL format."""
 
@@ -1592,7 +1592,7 @@ class TestLoadRealScenarios:
             pytest.skip("scenarios/ directory not found")
         return d
 
-    @pytest.mark.xfail(reason="Legacy ACES scenario format not supported after SDL cleanup")
+    @pytest.mark.xfail(reason="Legacy RAES scenario format not supported after SDL cleanup")
     def test_all_scenarios_parse(self, scenarios_dir):
         from raes.parser import parse_sdl_file
 
@@ -2057,7 +2057,7 @@ nodes:
 name: shared-directory
 version: 1.0.0
 module:
-  id: aces/shared-directory
+  id: raes/shared-directory
   version: 1.0.0
   exports:
     nodes: [ad]
@@ -2176,7 +2176,7 @@ nodes:
 name: shared-dns
 version: 1.0.0
 module:
-  id: aces/shared-dns
+  id: raes/shared-dns
   version: 1.0.0
   exports:
     nodes: [dns]
@@ -2366,7 +2366,7 @@ propositions:
     description: The governed team has declared release readiness.
     subjects: [entities.blue-team]
     basis: declared_state
-    predicate: {kind: boolean, property: release-ready, semantic_ref: urn:aces:declared-property:release-ready, operator: equals, expected: true}
+    predicate: {kind: boolean, property: release-ready, semantic_ref: urn:raes:declared-property:release-ready, operator: equals, expected: true}
 assertions:
   release-ready: {proposition: release-ready, role: postcondition, polarity: positive}
 objectives:

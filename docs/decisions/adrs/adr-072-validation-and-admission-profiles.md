@@ -20,7 +20,7 @@ spawned implementation issues #258 and #259.
 
 ## Context
 
-ACES already has several validation and admission surfaces:
+RAES already has several validation and admission surfaces:
 
 - SDL parsing and closed-world model validation;
 - SDL semantic validation, reference resolution, instantiation, compilation,
@@ -40,7 +40,7 @@ consumers can over-read a weak signal as a strong validation result.
 
 ASR-511 requires the ecosystem to define layered validation and admission
 profiles that distinguish structural, semantic, behavioral, and stronger
-validity claims. ASR-515 requires ACES to preserve and expose the profile,
+validity claims. ASR-515 requires RAES to preserve and expose the profile,
 strength, and limitations of the basis used for scenarios, tasks, runs,
 studies, and related claims. These requirements have to be designed together:
 the disclosure shape depends on the profile taxonomy, and the taxonomy is not
@@ -56,10 +56,10 @@ disclosure discipline.
 
 ### 1. Profiles name the kind and strength of a validation basis
 
-ACES validation/admission profiles use an ordered strength vocabulary:
+RAES validation/admission profiles use an ordered strength vocabulary:
 
 - `structural`: syntax, schema, closed-world shape, type, and vocabulary checks.
-- `semantic`: structural validation plus ACES domain invariants, reference
+- `semantic`: structural validation plus RAES domain invariants, reference
   resolution, lifecycle separation, and cross-artifact consistency checks.
 - `behavioral`: semantic validation plus a concrete processor, backend,
   conformance, runtime, or admission path that exercised the relevant behavior
@@ -133,7 +133,7 @@ name the publication scope or audience when that matters.
 Portable profile ids, strength classes, gate kinds, limitation categories, and
 subject kinds are governed vocabulary terms. Backend-specific or
 processor-specific terms use the existing `x-<owner>:<term>` extension
-discipline and cannot replace the ACES portable terms.
+discipline and cannot replace the RAES portable terms.
 
 This decision does not introduce a second schema registry, validator stack,
 claim graph, evidence store, admission service, profile loader, or persistence
@@ -171,7 +171,7 @@ or persistence changes remain owned by #258 and #259.
 
 ### Positive
 
-- ACES gains one vocabulary for explaining whether a validation claim is only
+- RAES gains one vocabulary for explaining whether a validation claim is only
   structural, semantic, behavioral, evidence-backed, or falsification-backed.
 - Consumers can inspect which gate produced a claim and what limits it.
 - Existing scenario, experiment-core, participant-runtime, conformance, and

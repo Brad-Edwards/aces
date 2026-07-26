@@ -1512,7 +1512,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Cross Tenant Isolation"
@@ -3334,7 +3334,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Profile"
@@ -3372,7 +3372,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Protocol"
@@ -4076,7 +4076,7 @@
         },
         "instantiation_provenance": {
           "$ref": "#/$defs/InstantiationProvenance",
-          "x-aces-realization-dimension": false
+          "x-raes-realization-dimension": false
         },
         "name": {
           "maxLength": 64,
@@ -4205,15 +4205,15 @@
       ],
       "title": "SDL Instantiated Scenario v1",
       "type": "object",
-      "x-aces-authored-identity-profile": "aces-sdl-semantic/v1",
-      "x-aces-document-phase": "instantiated-scenario"
+      "x-raes-authored-identity-profile": "raes-sdl-semantic/v1",
+      "x-raes-document-phase": "instantiated-scenario"
     },
     "InstantiatedScenarioSnapshot": {
       "additionalProperties": false,
       "description": "Sealed canonical envelope for one portable instantiated artifact.",
       "properties": {
         "profile": {
-          "const": "aces-sdl-instantiated-snapshot/v1",
+          "const": "raes-sdl-instantiated-snapshot/v1",
           "title": "Profile",
           "type": "string"
         },
@@ -4227,7 +4227,7 @@
       ],
       "title": "SDL Instantiated Scenario Snapshot v1",
       "type": "object",
-      "x-aces-document-phase": "canonical-instantiated-snapshot"
+      "x-raes-document-phase": "canonical-instantiated-snapshot"
     },
     "InstantiationProvenance": {
       "additionalProperties": false,
@@ -4819,7 +4819,7 @@
           "type": "array"
         },
         "profile": {
-          "const": "aces-finite-domain-constraints/v1",
+          "const": "raes-finite-domain-constraints/v1",
           "title": "Profile",
           "type": "string"
         },
@@ -4838,12 +4838,12 @@
           "type": "array"
         },
         "theory_profile": {
-          "const": "aces-finite-domain-theory/v1",
+          "const": "raes-finite-domain-theory/v1",
           "title": "Theory Profile",
           "type": "string"
         },
         "translation_profile": {
-          "const": "aces-sdl-authoring-translation/v1",
+          "const": "raes-sdl-authoring-translation/v1",
           "title": "Translation Profile",
           "type": "string"
         }
@@ -6659,7 +6659,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Channel"
@@ -7624,7 +7624,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Kernel Boundary"
@@ -7707,7 +7707,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Direction"
@@ -7723,7 +7723,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Trust Type"
@@ -7822,7 +7822,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Direction"
@@ -7838,7 +7838,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Mapping Intent"
@@ -7854,7 +7854,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Protocol"
@@ -7875,7 +7875,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Tenant Claim Owner"
@@ -8126,7 +8126,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Mutable State Owner"
@@ -8149,7 +8149,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Reset Generation Owner"
@@ -8165,7 +8165,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Tenant Isolation"
@@ -8181,7 +8181,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Workload Authentication"
@@ -18930,7 +18930,7 @@
       "description": "Independently admitted canonical instantiation witness.",
       "properties": {
         "profile": {
-          "const": "aces-satisfiability-witness/v1",
+          "const": "raes-satisfiability-witness/v1",
           "title": "Profile",
           "type": "string"
         },
@@ -19034,7 +19034,7 @@
           "type": "string"
         },
         "profile": {
-          "const": "aces-sdl-semantic/v1",
+          "const": "raes-sdl-semantic/v1",
           "title": "Profile",
           "type": "string"
         },
@@ -19593,7 +19593,7 @@
           "type": "string"
         },
         "profile": {
-          "const": "aces-z3-finite-domain/v1",
+          "const": "raes-z3-finite-domain/v1",
           "title": "Profile",
           "type": "string"
         },
@@ -20452,7 +20452,7 @@
           "type": "string"
         },
         "profile": {
-          "const": "aces-unsatisfiable-core/v1",
+          "const": "raes-unsatisfiable-core/v1",
           "title": "Profile",
           "type": "string"
         }
@@ -20470,7 +20470,7 @@
       "description": "Stable fail-closed reason set for an unsupported analysis.",
       "properties": {
         "profile": {
-          "const": "aces-satisfiability-unsupported/v1",
+          "const": "raes-satisfiability-unsupported/v1",
           "title": "Profile",
           "type": "string"
         },
@@ -20980,13 +20980,13 @@
       "type": "string"
     }
   },
-  "$id": "https://aces.dev/schemas/scenario-satisfiability-evidence-v1.json",
+  "$id": "https://raes.dev/schemas/scenario-satisfiability-evidence-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "Closed evidence envelope binding source, model, solver, and result.",
   "properties": {
     "analysis_profile": {
-      "const": "aces-finite-domain-satisfiability-v1",
+      "const": "raes-finite-domain-satisfiability-v1",
       "title": "Analysis Profile",
       "type": "string"
     },
@@ -21086,7 +21086,7 @@
   ],
   "title": "ScenarioSatisfiabilityEvidenceModel",
   "type": "object",
-  "x-aces-invariants": [
+  "x-raes-invariants": [
     {
       "description": "Service-target content must resolve to one named service, retain exact tenant/reset ownership and content ordering, and bind observed-state postconditions to participant observation boundaries.",
       "id": "initial-service-state-semantics",
@@ -21100,13 +21100,13 @@
       "validator": "raes.validator.SemanticValidator._verify_service_materialization"
     }
   ],
-  "x-aces-semantic-profile": {
+  "x-raes-semantic-profile": {
     "contract_id": "scenario-satisfiability-evidence-v1",
-    "entry_schema_contract_id": "aces-semantic-invariants-v1",
-    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
-    "id": "aces-semantic-invariants-v1",
-    "keyword": "x-aces-invariants",
+    "entry_schema_contract_id": "raes-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/RaesSemanticInvariantEntryModel",
+    "id": "raes-semantic-invariants-v1",
+    "keyword": "x-raes-invariants",
     "required": true,
-    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+    "uri": "https://raes.dev/schemas/semantic-invariants/v1"
   }
 }

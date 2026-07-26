@@ -150,7 +150,7 @@ traceability over the existing carriers. The classifier
 `raes.observability_plane_semantics` is the single source of plane
 ownership; it assigns exactly one primary plane by contract role or runtime
 family identity and never by a free string (OE-01, OE-11). The three
-claim-bearing experiment-core carriers publish their plane as an `x-aces-plane`
+claim-bearing experiment-core carriers publish their plane as an `x-raes-plane`
 annotation sourced from that classifier. The plane *separation* each carrier
 enforces was already realized by the EXP-707/708/709 contracts and SEM-216; this
 issue adds the unifying classifier, the portable annotation, and the SEM-224
@@ -165,7 +165,7 @@ probe set.
 | Distinguish processor/backend operational | `PLANE_BY_CONTRACT_ID` (manifests, apparatus context) | `test_operational_carriers_map_to_processor_backend_plane` | yes |
 | OE-05 captured evidence is not derived analysis | `ExperimentEvidenceRecordModel` shape; SEM-216 B3 | `test_derived_analysis_is_not_captured_evidence` | classifier new; B3 reused |
 | OE-06 derived analysis must cite source evidence | `ExperimentDerivedMeasureModel.source_evidence_refs` (`min_length=1`) | `test_derived_measure_without_source_evidence_is_rejected`, `test_reference_derived_measure_cites_source_evidence` | pre-existing rule, SEM-224 probe |
-| Plane traceability published portably | `x-aces-plane` on the three experiment-core schemas | `test_claim_bearing_contracts_publish_their_plane_annotation` | yes |
+| Plane traceability published portably | `x-raes-plane` on the three experiment-core schemas | `test_claim_bearing_contracts_publish_their_plane_annotation` | yes |
 
 ## Implementation Coverage (#335 / SEM-225)
 

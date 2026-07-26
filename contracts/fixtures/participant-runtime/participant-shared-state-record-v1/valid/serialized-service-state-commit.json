@@ -1,6 +1,6 @@
 {
   "event_id": "state-web01-http-rev8",
-  "schema_name": "aces.participant_runtime.shared_state",
+  "schema_name": "raes.participant_runtime.shared_state",
   "schema_version": "1.0.0",
   "event_type": "state_update_commit",
   "extension_policy": "reject_unknown_required",
@@ -11,7 +11,7 @@
     "status_code": "state_committed",
     "status_detail": "runtime committed the serialized shared-state write",
     "source_status_label": "state_committed",
-    "source_status_mapping": "aces.shared_state.commit"
+    "source_status_mapping": "raes.shared_state.commit"
   },
   "participant_address": "participants.red.llm",
   "episode_id": "ep-red-004",

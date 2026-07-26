@@ -1,18 +1,18 @@
 ---
 name: raes-asset-inventory-capture
-description: Run the ACES asset inventory methodology as an agent-runnable capture workflow from either Claude Code or Codex. Use when asked to inventory a target image, container, host, or asset into a methodology-conformant evidence bundle with mapping-ledger.yaml, explicit capture-limits.txt declinations, scanner/SBOM evidence, and ACES/APTL gap triage.
+description: Run the RAES asset inventory methodology as an agent-runnable capture workflow from either Claude Code or Codex. Use when asked to inventory a target image, container, host, or asset into a methodology-conformant evidence bundle with mapping-ledger.yaml, explicit capture-limits.txt declinations, scanner/SBOM evidence, and RAES/APTL gap triage.
 ---
 
-# ACES Asset Inventory Capture
+# RAES Asset Inventory Capture
 
 This skill runs from either Claude Code or Codex. Use it as the canonical
 agent entry point for the participant-discoverable asset inventory
-methodology: capture evidence first, map facts to ACES only when the mapping is
+methodology: capture evidence first, map facts to RAES only when the mapping is
 semantically correct, and leave every omission as durable evidence.
 
-The ACES methodology remains the authority. Read
-`docs/raes/inventory/asset-inventory-methodology.md` from the ACES repo before
-capture; when working in a downstream checkout, use that ACES document as the
+The RAES methodology remains the authority. Read
+`docs/raes/inventory/asset-inventory-methodology.md` from the RAES repo before
+capture; when working in a downstream checkout, use that RAES document as the
 canonical source. This skill operationalizes that prose; it does not define a
 second ledger schema or a second secret taxonomy.
 
@@ -67,9 +67,9 @@ it.
 Run these before returning:
 
 ```shell
-aptl aces-inventory schema
-aptl aces-inventory validate <asset-dir>
-aptl aces-inventory gaps <asset-dir>
+aptl raes-inventory schema
+aptl raes-inventory validate <asset-dir>
+aptl raes-inventory gaps <asset-dir>
 ```
 
 No `needs_gap_triage` row may remain at review time.
@@ -144,8 +144,8 @@ No `needs_gap_triage` row may remain at review time.
 
 6. Build the ledger fact-by-fact.
 
-   Each captured fact needs evidence and an ACES/APTL mapping disposition:
-   `encoded`, `encoded_with_caveat`, `blocked_by_aces_gap`,
+   Each captured fact needs evidence and an RAES/APTL mapping disposition:
+   `encoded`, `encoded_with_caveat`, `blocked_by_raes_gap`,
    `blocked_by_aptl_gap`, or temporary `needs_gap_triage`. Before review,
    replace every `needs_gap_triage` with an encoded mapping or a linked gap.
 
@@ -176,7 +176,7 @@ CLI commands as fake URL paths, collapse flags into
 schema-passing representation. A fact that requires reinterpretation of the
 surface is a gap.
 
-**Lineage-before-gap gate.** Before reporting an ACES expressivity gap, read
+**Lineage-before-gap gate.** Before reporting an RAES expressivity gap, read
 `docs/explain/sdl/lineage.md`, `docs/explain/sdl/precedents.md`, relevant
 ADRs, and primary literature for the affected semantic family. The gap report
 must state the captured fact, checked surfaces, lineage/prior-art treatment,
@@ -189,18 +189,18 @@ explicitly asks for upstream design work.
 
 ## Gap Handling
 
-When current ACES cannot express a participant-discoverable fact:
+When current RAES cannot express a participant-discoverable fact:
 
-1. Search existing ACES and APTL issues.
+1. Search existing RAES and APTL issues.
 2. If a matching issue exists, link it in `mapping-ledger.yaml`.
 3. If none exists, file or draft a gap with evidence path, discovery vantage,
-   checked ACES surfaces, lineage/prior-art notes, and why the surfaces are
+   checked RAES surfaces, lineage/prior-art notes, and why the surfaces are
    insufficient.
 4. Stop for discussion before continuing through additional gaps when the
    methodology or issue asks for that pause.
 
-Do not use APTL backend consumption gaps as a substitute for ACES SDL
-expression. Do not use ACES schema shape as the authority for what was
+Do not use APTL backend consumption gaps as a substitute for RAES SDL
+expression. Do not use RAES schema shape as the authority for what was
 discovered.
 
 ## Completion Checklist
@@ -219,8 +219,8 @@ Before returning:
   limits;
 - scenario-target secrets are preserved as source capture facts, while
   operator/out-of-scenario material is excluded or recorded as a capture limit;
-- `aptl aces-inventory validate <asset-dir>` passes;
-- `aptl aces-inventory gaps <asset-dir>` has no unresolved
+- `aptl raes-inventory validate <asset-dir>` passes;
+- `aptl raes-inventory gaps <asset-dir>` has no unresolved
   `needs_gap_triage`;
 - any methodology document in the target checkout references this skill as the
   canonical agent entry point;

@@ -2,9 +2,9 @@
   "contract_id": "evaluation-plan-v1",
   "schema_path": "contracts/schemas/plans/evaluation-plan-v1.json",
   "stability": "draft",
-  "content_hash": "804f1970cbf9d80e80c3f984deb1d0f034470df7b25ee10ce7c7959b6ad69a4b",
+  "content_hash": "76211999362eed211814484ada9d12ab2c479871ed976ba9a51f1ec299d65410",
   "last_change": {
-    "summary": "Added proposition and assertion semantic-admission resources to the closed evaluation-plan vocabulary.",
-    "content_hash": "804f1970cbf9d80e80c3f984deb1d0f034470df7b25ee10ce7c7959b6ad69a4b"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "76211999362eed211814484ada9d12ab2c479871ed976ba9a51f1ec299d65410"
   }
 }

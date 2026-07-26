@@ -1,4 +1,4 @@
-"""Tests for the ``aces processor plan`` plan-inspection CLI (issue #609)."""
+"""Tests for the ``raes processor plan`` plan-inspection CLI (issue #609)."""
 
 from __future__ import annotations
 

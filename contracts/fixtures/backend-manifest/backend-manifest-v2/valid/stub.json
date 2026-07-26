@@ -201,7 +201,7 @@
   },
   "compatibility": {
     "processors": [
-      "aces-reference-processor"
+      "raes-reference-processor"
     ]
   },
   "concept_bindings": [

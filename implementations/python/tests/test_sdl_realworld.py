@@ -841,13 +841,13 @@ propositions:
     description: The governed SCADA HMI is responsive.
     subjects: [nodes.hmi-server]
     basis: observed_state
-    predicate: {kind: boolean, property: hmi-responsive, semantic_ref: urn:aces:observable:hmi-responsive, operator: equals, expected: true}
+    predicate: {kind: boolean, property: hmi-responsive, semantic_ref: urn:raes:observable:hmi-responsive, operator: equals, expected: true}
     evidence_requirements: [scada-state-evidence]
   scada-hmi-disrupted:
     description: The governed SCADA HMI is disrupted.
     subjects: [nodes.hmi-server]
     basis: observed_state
-    predicate: {kind: boolean, property: hmi-disrupted, semantic_ref: urn:aces:observable:hmi-disrupted, operator: equals, expected: true}
+    predicate: {kind: boolean, property: hmi-disrupted, semantic_ref: urn:raes:observable:hmi-disrupted, operator: equals, expected: true}
     evidence_requirements: [scada-state-evidence]
 
 assertions:

@@ -36,7 +36,7 @@ class LineageClassification(str, Enum):
     ADOPTED_SYNTAX = "adopted_syntax"
     ADOPTED_SEMANTICS = "adopted_semantics"
     ADAPTED = "adapted"
-    ACES_NATIVE = "aces_native"
+    RAES_NATIVE = "raes_native"
 
 
 class LineageDisposition(str, Enum):
@@ -53,7 +53,7 @@ class CompatibilityStatus(str, Enum):
 
 
 class CompatibilityDirection(str, Enum):
-    ACES_RELATIVE_TO_SOURCE = "aces_relative_to_source"
+    RAES_RELATIVE_TO_SOURCE = "raes_relative_to_source"
     NOT_APPLICABLE = "not_applicable"
 
 
@@ -130,7 +130,7 @@ class LineageClaimModel(ContractModel):
     plane: LineagePlane
     classification: LineageClassification
     source_refs: list[NonEmptyString] = Field(default_factory=list)
-    aces_boundaries: list[ArtifactBoundaryModel] = Field(min_length=1)
+    raes_boundaries: list[ArtifactBoundaryModel] = Field(min_length=1)
     source_boundaries: list[ArtifactBoundaryModel] = Field(default_factory=list)
     divergence: NonEmptyString
     compatibility: CompatibilityStatus
@@ -140,7 +140,7 @@ class LineageClaimModel(ContractModel):
 
     @model_validator(mode="after")
     def validate_claim_dimensions(self) -> LineageClaimModel:
-        if self.classification is LineageClassification.ACES_NATIVE:
+        if self.classification is LineageClassification.RAES_NATIVE:
             self._validate_native_dimensions()
         else:
             self._validate_external_dimensions()
@@ -163,7 +163,7 @@ class LineageClaimModel(ContractModel):
             raise ValueError("adopted_syntax is valid only on the syntax plane")
         if self.classification is LineageClassification.ADOPTED_SEMANTICS and self.plane is not LineagePlane.SEMANTICS:
             raise ValueError("adopted_semantics is valid only on the semantics plane")
-        if self.compatibility_direction is not CompatibilityDirection.ACES_RELATIVE_TO_SOURCE:
+        if self.compatibility_direction is not CompatibilityDirection.RAES_RELATIVE_TO_SOURCE:
             raise ValueError("non-native claims assess RAES relative to the named source")
 
 
@@ -318,7 +318,7 @@ class SDLLineageLedgerModel(ContractModel):
             raise ValueError(f"subject {subject_id!r} artifact/code claim lacks notice disposition")
         if not claim_sources.issubset(resolved_disposition_sources):
             raise ValueError(f"subject {subject_id!r} artifact/code claim has unresolved notice disposition")
-        claim_artifacts = {boundary.artifact for boundary in claim.aces_boundaries}
+        claim_artifacts = {boundary.artifact for boundary in claim.raes_boundaries}
         for source_ref in claim.source_refs:
             uncovered = claim_artifacts - disposition_artifacts.get(source_ref, set())
             if uncovered:

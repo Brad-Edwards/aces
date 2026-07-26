@@ -1786,7 +1786,7 @@
       "type": "object"
     }
   },
-  "$id": "https://aces.dev/schemas/participant-crossing-occurrence-v1.json",
+  "$id": "https://raes.dev/schemas/participant-crossing-occurrence-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "Closed participant-runtime carrier for one API-423 crossing fact.",
@@ -2164,7 +2164,7 @@
   ],
   "title": "ParticipantCrossingOccurrenceModel",
   "type": "object",
-  "x-aces-invariants": [
+  "x-raes-invariants": [
     {
       "description": "Every crossing fact must resolve typed subjects, exact policy revisions, predecessor stages, evidence, markings, and order coordinates without retroactive authorization or identity reuse.",
       "id": "participant-crossing-context-agreement",
@@ -2190,13 +2190,13 @@
       "validator": "raes_contracts.contracts.ParticipantCrossingOccurrenceModel"
     }
   ],
-  "x-aces-semantic-profile": {
+  "x-raes-semantic-profile": {
     "contract_id": "participant-crossing-occurrence-v1",
-    "entry_schema_contract_id": "aces-semantic-invariants-v1",
-    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
-    "id": "aces-semantic-invariants-v1",
-    "keyword": "x-aces-invariants",
+    "entry_schema_contract_id": "raes-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/RaesSemanticInvariantEntryModel",
+    "id": "raes-semantic-invariants-v1",
+    "keyword": "x-raes-invariants",
     "required": true,
-    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+    "uri": "https://raes.dev/schemas/semantic-invariants/v1"
   }
 }

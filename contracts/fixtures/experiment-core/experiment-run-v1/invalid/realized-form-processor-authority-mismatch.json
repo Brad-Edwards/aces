@@ -22,16 +22,16 @@
       "processor": {
         "component_kind": "processor",
         "identity": {
-          "name": "aces-reference-processor",
+          "name": "raes-reference-processor",
           "version": "0.1.0"
         },
         "manifest_ref": {
           "ref_kind": "manifest",
-          "ref_id": "aces-reference-processor",
+          "ref_id": "raes-reference-processor",
           "ref_version": "processor-manifest/v2",
           "subject_ref": {
             "ref_kind": "processor",
-            "ref_id": "aces-reference-processor",
+            "ref_id": "raes-reference-processor",
             "ref_version": "0.1.0"
           }
         },
@@ -77,11 +77,11 @@
     "selected_manifests": [
       {
         "ref_kind": "manifest",
-        "ref_id": "aces-reference-processor",
+        "ref_id": "raes-reference-processor",
         "ref_version": "processor-manifest/v2",
         "subject_ref": {
           "ref_kind": "processor",
-          "ref_id": "aces-reference-processor",
+          "ref_id": "raes-reference-processor",
           "ref_version": "0.1.0"
         }
       },
@@ -214,7 +214,7 @@
         }
       }
     ],
-    "processor_manifest_ref": "processor-manifest-v2:aces-reference-processor",
+    "processor_manifest_ref": "processor-manifest-v2:raes-reference-processor",
     "backend_manifest_ref": "backend-manifest-v2:stub-backend"
   },
   "parameter_set": [
@@ -279,7 +279,7 @@
       "basis": "processor-realized",
       "realized_by_ref": {
         "ref_kind": "backend",
-        "ref_id": "aces-reference-processor",
+        "ref_id": "raes-reference-processor",
         "ref_version": "0.1.0"
       },
       "authored_ref": {

@@ -403,7 +403,7 @@ Composition is registry-ready as well:
 - local imports remain supported through `path:` and `source: local:...`
 - reusable remote modules use `source: oci:...`
 - concrete resolved imports may be pinned via `source: locked:...`
-- `raes sdl resolve` writes `aces.lock.json`
+- `raes sdl resolve` writes `raes.lock.json`
 - `raes sdl verify-imports` verifies lockfile, trust, digests, and signatures
 - `raes sdl publish` packages a publishable SDL module as an OCI image layout
 

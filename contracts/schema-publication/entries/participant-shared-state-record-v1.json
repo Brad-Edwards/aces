@@ -2,9 +2,9 @@
   "contract_id": "participant-shared-state-record-v1",
   "schema_path": "contracts/schemas/participant-runtime/participant-shared-state-record-v1.json",
   "stability": "draft",
-  "content_hash": "af85858ae18c680d570a24c2991d06a98d13dd2901f2dd287ff2e50080c1a200",
+  "content_hash": "525cb514917251807cb5c1cdf52dca0118663416e59f36da35045e8cfed8d31b",
   "last_change": {
-    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
-    "content_hash": "af85858ae18c680d570a24c2991d06a98d13dd2901f2dd287ff2e50080c1a200"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "525cb514917251807cb5c1cdf52dca0118663416e59f36da35045e8cfed8d31b"
   }
 }

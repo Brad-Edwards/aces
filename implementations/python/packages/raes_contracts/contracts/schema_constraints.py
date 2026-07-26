@@ -20,10 +20,10 @@ from raes.value_parsing import VARIABLE_REFERENCE_SCHEMA_MARKER
 from ..addressing import COMPILED_ADDRESS_JSON_SCHEMA
 from ..planning import PLAN_ADDRESS_ROOT_BY_DOMAIN, PLAN_RESOURCE_TYPES_BY_DOMAIN, RuntimeDomain
 from .base import (
-    _ACES_SEMANTIC_INVARIANT_PROFILE_URI,
     _BACKEND_CONCEPT_BINDING_SCOPES,
     _PARTICIPANT_IMPLEMENTATION_CONCEPT_BINDING_SCOPES,
     _PROCESSOR_CONCEPT_BINDING_SCOPES,
+    _RAES_SEMANTIC_INVARIANT_PROFILE_URI,
     ContractModel,
     JsonInstancePathString,
     NonEmptyString,
@@ -268,9 +268,9 @@ def _attach_instantiation_invariants(contract_id: str, json_schema: dict[str, An
 
 
 def _schema_id_for_contract_id(contract_id: str) -> str:
-    if contract_id == "aces-semantic-invariants-v1":
-        return _ACES_SEMANTIC_INVARIANT_PROFILE_URI
-    return f"https://aces.dev/schemas/{contract_id}.json"
+    if contract_id == "raes-semantic-invariants-v1":
+        return _RAES_SEMANTIC_INVARIANT_PROFILE_URI
+    return f"https://raes.dev/schemas/{contract_id}.json"
 
 
 def _attach_json_schema_metadata(contract_id: str, json_schema: dict[str, Any]) -> None:
@@ -325,71 +325,71 @@ _JSON_SCHEMA_KEY = "$schema"
 _JSON_SCHEMA_DRAFT_2020_12 = "https://json-schema.org/draft/2020-12/schema"
 
 
-_ACES_SEMANTIC_INVARIANTS_SCHEMA_VERSION = "aces-semantic-invariants/v1"
+_RAES_SEMANTIC_INVARIANTS_SCHEMA_VERSION = "raes-semantic-invariants/v1"
 
 
-class AcesSemanticInvariantInputModel(ContractModel):
+class RaesSemanticInvariantInputModel(ContractModel):
     """Input contract and instance path required by one RAES semantic invariant."""
 
     contract_id: NonEmptyString
     instance_path: JsonInstancePathString
 
 
-class AcesSemanticInvariantEntryModel(ContractModel):
+class RaesSemanticInvariantEntryModel(ContractModel):
     """Machine-readable semantic invariant annotation entry."""
 
     id: NonEmptyString
     description: NonEmptyString
     level: Literal["error"]
     validator: NonEmptyString
-    inputs: list[AcesSemanticInvariantInputModel] = Field(min_length=1)
+    inputs: list[RaesSemanticInvariantInputModel] = Field(min_length=1)
 
 
-class AcesSemanticInvariantProfileModel(ContractModel):
+class RaesSemanticInvariantProfileModel(ContractModel):
     """Published shape for RAES semantic-invariant annotations."""
 
-    schema_version: Literal[_ACES_SEMANTIC_INVARIANTS_SCHEMA_VERSION]
-    profile_id: Literal["aces-semantic-invariants-v1"]
-    uri: Literal["https://aces.dev/schemas/semantic-invariants/v1"]
-    keyword: Literal["x-aces-invariants"]
-    invariant_entry_schema: Literal["#/$defs/AcesSemanticInvariantEntryModel"]
-    profile_reference_schema: Literal["#/$defs/AcesSemanticInvariantProfileReferenceModel"]
-    invariants: list[AcesSemanticInvariantEntryModel]
+    schema_version: Literal[_RAES_SEMANTIC_INVARIANTS_SCHEMA_VERSION]
+    profile_id: Literal["raes-semantic-invariants-v1"]
+    uri: Literal["https://raes.dev/schemas/semantic-invariants/v1"]
+    keyword: Literal["x-raes-invariants"]
+    invariant_entry_schema: Literal["#/$defs/RaesSemanticInvariantEntryModel"]
+    profile_reference_schema: Literal["#/$defs/RaesSemanticInvariantProfileReferenceModel"]
+    invariants: list[RaesSemanticInvariantEntryModel]
 
 
-class AcesSemanticInvariantProfileReferenceModel(ContractModel):
+class RaesSemanticInvariantProfileReferenceModel(ContractModel):
     """Host-schema reference to the RAES semantic-invariant profile."""
 
-    id: Literal["aces-semantic-invariants-v1"]
-    uri: Literal["https://aces.dev/schemas/semantic-invariants/v1"]
+    id: Literal["raes-semantic-invariants-v1"]
+    uri: Literal["https://raes.dev/schemas/semantic-invariants/v1"]
     contract_id: NonEmptyString
-    keyword: Literal["x-aces-invariants"]
+    keyword: Literal["x-raes-invariants"]
     required: Literal[True]
-    entry_schema_contract_id: Literal["aces-semantic-invariants-v1"]
-    entry_schema_pointer: Literal["#/$defs/AcesSemanticInvariantEntryModel"]
+    entry_schema_contract_id: Literal["raes-semantic-invariants-v1"]
+    entry_schema_pointer: Literal["#/$defs/RaesSemanticInvariantEntryModel"]
 
 
-def _aces_semantic_invariant_profile_schema_for_bundle() -> dict[str, Any]:
-    json_schema = AcesSemanticInvariantProfileModel.model_json_schema()
-    json_schema.setdefault(_DEFS_KEY, {})["AcesSemanticInvariantProfileReferenceModel"] = (
-        AcesSemanticInvariantProfileReferenceModel.model_json_schema()
+def _raes_semantic_invariant_profile_schema_for_bundle() -> dict[str, Any]:
+    json_schema = RaesSemanticInvariantProfileModel.model_json_schema()
+    json_schema.setdefault(_DEFS_KEY, {})["RaesSemanticInvariantProfileReferenceModel"] = (
+        RaesSemanticInvariantProfileReferenceModel.model_json_schema()
     )
     return json_schema
 
 
-def _iter_aces_semantic_invariant_entries(schema_node: object) -> list[dict[str, Any]]:
+def _iter_raes_semantic_invariant_entries(schema_node: object) -> list[dict[str, Any]]:
     entries: list[dict[str, Any]] = []
     if isinstance(schema_node, dict):
-        invariants = schema_node.get("x-aces-invariants")
+        invariants = schema_node.get("x-raes-invariants")
         if invariants is not None:
             if not isinstance(invariants, list):
-                raise ValueError("x-aces-invariants must be an array")
+                raise ValueError("x-raes-invariants must be an array")
             entries.extend(invariants)
         for value in schema_node.values():
-            entries.extend(_iter_aces_semantic_invariant_entries(value))
+            entries.extend(_iter_raes_semantic_invariant_entries(value))
     elif isinstance(schema_node, list):
         for value in schema_node:
-            entries.extend(_iter_aces_semantic_invariant_entries(value))
+            entries.extend(_iter_raes_semantic_invariant_entries(value))
     return entries
 
 
@@ -415,26 +415,26 @@ def _resolve_semantic_validator(validator: str) -> object:
     raise ValueError(f"semantic invariant validator '{validator}' does not resolve to an importable object")
 
 
-def _validate_aces_semantic_invariant_annotations(
+def _validate_raes_semantic_invariant_annotations(
     *,
     contract_id: str,
     json_schema: dict[str, Any],
     known_contract_ids: frozenset[str],
 ) -> None:
-    invariant_entries = _iter_aces_semantic_invariant_entries(json_schema)
-    profile_payload = json_schema.get("x-aces-semantic-profile")
+    invariant_entries = _iter_raes_semantic_invariant_entries(json_schema)
+    profile_payload = json_schema.get("x-raes-semantic-profile")
     if not invariant_entries:
         if profile_payload is not None:
             raise ValueError(f"schema '{contract_id}' declares a semantic profile without semantic invariants")
         return
 
-    profile = AcesSemanticInvariantProfileReferenceModel.model_validate(profile_payload)
+    profile = RaesSemanticInvariantProfileReferenceModel.model_validate(profile_payload)
     if profile.contract_id != contract_id:
         raise ValueError(f"schema '{contract_id}' semantic profile contract_id must match the published contract id")
 
     seen_invariant_ids: set[str] = set()
     for invariant_payload in invariant_entries:
-        invariant = AcesSemanticInvariantEntryModel.model_validate(invariant_payload)
+        invariant = RaesSemanticInvariantEntryModel.model_validate(invariant_payload)
         if not callable(_resolve_semantic_validator(invariant.validator)):
             raise ValueError(f"semantic invariant validator '{invariant.validator}' must resolve to a callable")
         if invariant.id in seen_invariant_ids:
@@ -455,10 +455,10 @@ def _published_contract_ids() -> frozenset[str]:
     return frozenset(_schema_bundle_template())
 
 
-def validate_aces_semantic_invariant_annotations(contract_id: str, json_schema: dict[str, Any]) -> None:
+def validate_raes_semantic_invariant_annotations(contract_id: str, json_schema: dict[str, Any]) -> None:
     """Validate RAES semantic-invariant metadata on a published JSON Schema."""
 
-    _validate_aces_semantic_invariant_annotations(
+    _validate_raes_semantic_invariant_annotations(
         contract_id=contract_id,
         json_schema=json_schema,
         known_contract_ids=_published_contract_ids(),

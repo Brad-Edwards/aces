@@ -2,9 +2,9 @@
   "contract_id": "experiment-study-v1",
   "schema_path": "contracts/schemas/experiment-core/experiment-study-v1.json",
   "stability": "draft",
-  "content_hash": "a0fda94413a08751303f4d57a2f4bc6507cc5da50bc99f065b661a28693345e4",
+  "content_hash": "e3968289f399d09a974dfb7ac04266d5e37f9ad68abaa73e49c3862c87f69a03",
   "last_change": {
-    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
-    "content_hash": "a0fda94413a08751303f4d57a2f4bc6507cc5da50bc99f065b661a28693345e4"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "e3968289f399d09a974dfb7ac04266d5e37f9ad68abaa73e49c3862c87f69a03"
   }
 }

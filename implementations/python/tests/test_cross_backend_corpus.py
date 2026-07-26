@@ -5,7 +5,7 @@ scenario: the n=2 pairing (libvirt reference backend + APTL) over one authored
 scenario digest, the four ledger sections, the redaction/validation gates, the
 optional APTL evidence-export translation (allowlisted portable fields only), and
 build determinism (two fresh builds are byte-identical). The canonical published
-corpus lives in Brad-Edwards/research, not in this repo; ACES ships the producer.
+corpus lives in Brad-Edwards/research, not in this repo; RAES ships the producer.
 """
 
 from __future__ import annotations

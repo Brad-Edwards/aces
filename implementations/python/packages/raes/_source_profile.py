@@ -10,7 +10,7 @@ import yaml
 from yaml.nodes import ScalarNode
 
 SDL_SOURCE_FORMAT = "sdl-yaml/v1"
-SDL_CANONICAL_PROFILE = "aces-sdl-semantic/v1"
+SDL_CANONICAL_PROFILE = "raes-sdl-semantic/v1"
 
 
 class SDLMigrationPolicy(str, Enum):

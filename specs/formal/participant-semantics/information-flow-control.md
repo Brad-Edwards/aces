@@ -14,7 +14,7 @@ runtime objects; it does not add another carrier family, policy engine, gateway,
 transport, store, logger, or audit stream.
 
 The machine-readable relation binding is
-`policy-noninterference` in taxonomy `aces-behavioral-relations`, revision
+`policy-noninterference` in taxonomy `raes-behavioral-relations`, revision
 `rev2`, published by
 `contracts/concept-authority/behavioral-relations-v1.json`. The contract name
 remains `behavioral-relations/v1` because the closed JSON shape is unchanged;

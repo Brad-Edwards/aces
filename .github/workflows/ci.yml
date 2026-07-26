@@ -46,7 +46,7 @@ jobs:
           echo "uid=$REQ_UID" >> "$GITHUB_OUTPUT"
       - name: Run canonical verification graph
         env:
-          ACES_REQUIREMENT_UID: ${{ steps.requirement.outputs.uid }}
+          RAES_REQUIREMENT_UID: ${{ steps.requirement.outputs.uid }}
           GC_BASE_URL: ${{ vars.GC_BASE_URL }}
         run: |
           verify_args=(--base-rev "${{ steps.base.outputs.base_rev }}")

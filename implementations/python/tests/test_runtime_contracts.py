@@ -11,8 +11,6 @@ from jsonschema import Draft202012Validator
 from pydantic import ValidationError
 from raes_conformance.conformance import observability_evidence_conformance_diagnostics
 from raes_contracts.contracts import (
-    AcesSemanticInvariantEntryModel,
-    AcesSemanticInvariantProfileReferenceModel,
     BackendManifestV2Model,
     ExperimentApparatusContextModel,
     ExperimentCaptureSpecModel,
@@ -26,12 +24,14 @@ from raes_contracts.contracts import (
     ParticipantImplementationManifestModel,
     ParticipantImplementationProvenanceModel,
     ProcessorManifestV2Model,
+    RaesSemanticInvariantEntryModel,
+    RaesSemanticInvariantProfileReferenceModel,
     schema_bundle,
-    validate_aces_semantic_invariant_annotations,
     validate_experiment_apparatus_context_against_manifests,
     validate_experiment_run_against_task,
     validate_experiment_run_archival_datetimes,
     validate_experiment_study_against_tasks_and_runs,
+    validate_raes_semantic_invariant_annotations,
 )
 from raes_contracts.contracts import bundle as contract_bundle
 from raes_contracts.manifest_authority import (
@@ -100,11 +100,11 @@ def _assert_schema_and_model_reject(contract_id: str, payload: dict) -> None:
 
 
 def _invariant_ids(schema: dict) -> set[str]:
-    return {invariant["id"] for invariant in schema.get("x-aces-invariants", [])}
+    return {invariant["id"] for invariant in schema.get("x-raes-invariants", [])}
 
 
 def _invariant_by_id(schema: dict, invariant_id: str) -> dict:
-    return {invariant["id"]: invariant for invariant in schema.get("x-aces-invariants", [])}[invariant_id]
+    return {invariant["id"]: invariant for invariant in schema.get("x-raes-invariants", [])}[invariant_id]
 
 
 def test_schema_bundle_caches_generation_but_returns_isolated_copies(mocker):
@@ -127,16 +127,16 @@ def test_closed_world_contract_models_for_runtime_envelopes():
 
     for contract_id, schema in generated.items():
         assert schema["$schema"] == "https://json-schema.org/draft/2020-12/schema"
-        assert schema["$id"].startswith("https://aces.dev/schemas/")
-        validate_aces_semantic_invariant_annotations(contract_id, schema)
+        assert schema["$id"].startswith("https://raes.dev/schemas/")
+        validate_raes_semantic_invariant_annotations(contract_id, schema)
 
-    assert generated["aces-semantic-invariants-v1"]["additionalProperties"] is False
+    assert generated["raes-semantic-invariants-v1"]["additionalProperties"] is False
     assert (
-        generated["aces-semantic-invariants-v1"]["properties"]["profile_reference_schema"]["const"]
-        == "#/$defs/AcesSemanticInvariantProfileReferenceModel"
+        generated["raes-semantic-invariants-v1"]["properties"]["profile_reference_schema"]["const"]
+        == "#/$defs/RaesSemanticInvariantProfileReferenceModel"
     )
-    assert "AcesSemanticInvariantProfileReferenceModel" in generated["aces-semantic-invariants-v1"]["$defs"]
-    assert generated["aces-semantic-invariants-v1"]["required"] == [
+    assert "RaesSemanticInvariantProfileReferenceModel" in generated["raes-semantic-invariants-v1"]["$defs"]
+    assert generated["raes-semantic-invariants-v1"]["required"] == [
         "schema_version",
         "profile_id",
         "uri",
@@ -145,7 +145,7 @@ def test_closed_world_contract_models_for_runtime_envelopes():
         "profile_reference_schema",
         "invariants",
     ]
-    assert list(Draft202012Validator(generated["aces-semantic-invariants-v1"]).iter_errors({}))
+    assert list(Draft202012Validator(generated["raes-semantic-invariants-v1"]).iter_errors({}))
     assert generated["workflow-result-envelope-v1"]["additionalProperties"] is False
     assert generated["evaluation-result-envelope-v1"]["additionalProperties"] is False
     assert generated["operation-receipt-v1"]["additionalProperties"] is False
@@ -175,11 +175,11 @@ def test_experiment_core_schemas_publish_closed_world_contracts():
     run_schema = generated["experiment-run-v1"]
     study_schema = generated["experiment-study-v1"]
 
-    assert task_schema["x-aces-semantic-profile"]["uri"] == "https://aces.dev/schemas/semantic-invariants/v1"
+    assert task_schema["x-raes-semantic-profile"]["uri"] == "https://raes.dev/schemas/semantic-invariants/v1"
     assert "apparatus-archival-times-rfc3339-valid" in _invariant_ids(apparatus_context_schema)
-    assert run_schema["x-aces-semantic-profile"]["required"] is True
-    assert study_schema["x-aces-semantic-profile"]["keyword"] == "x-aces-invariants"
-    assert run_schema["x-aces-semantic-profile"]["entry_schema_contract_id"] == "aces-semantic-invariants-v1"
+    assert run_schema["x-raes-semantic-profile"]["required"] is True
+    assert study_schema["x-raes-semantic-profile"]["keyword"] == "x-raes-invariants"
+    assert run_schema["x-raes-semantic-profile"]["entry_schema_contract_id"] == "raes-semantic-invariants-v1"
     assert set(task_schema["required"]) >= {
         "split_and_leakage_controls",
         "apparatus_constraints",
@@ -568,25 +568,25 @@ def test_experiment_evidence_measure_contracts_reject_boundary_blurring():
     _assert_schema_and_model_reject("experiment-derived-measure-v1", derived_payload)
 
 
-def test_aces_semantic_invariant_annotations_have_published_shape():
+def test_raes_semantic_invariant_annotations_have_published_shape():
     generated = schema_bundle()
     run_schema = generated["experiment-run-v1"]
-    profile = AcesSemanticInvariantProfileReferenceModel.model_validate(run_schema["x-aces-semantic-profile"])
-    assert profile.entry_schema_pointer == "#/$defs/AcesSemanticInvariantEntryModel"
+    profile = RaesSemanticInvariantProfileReferenceModel.model_validate(run_schema["x-raes-semantic-profile"])
+    assert profile.entry_schema_pointer == "#/$defs/RaesSemanticInvariantEntryModel"
 
     task_run_invariant = _invariant_by_id(run_schema, "task-run-protocol-binding-valid")
-    invariant = AcesSemanticInvariantEntryModel.model_validate(task_run_invariant)
+    invariant = RaesSemanticInvariantEntryModel.model_validate(task_run_invariant)
     assert invariant.inputs[0].contract_id == "experiment-task-v1"
 
     corrupted_schema = deepcopy(run_schema)
-    del corrupted_schema["x-aces-invariants"][0]["validator"]
+    del corrupted_schema["x-raes-invariants"][0]["validator"]
     with pytest.raises(ValidationError):
-        validate_aces_semantic_invariant_annotations("experiment-run-v1", corrupted_schema)
+        validate_raes_semantic_invariant_annotations("experiment-run-v1", corrupted_schema)
 
     unresolved_validator_schema = deepcopy(run_schema)
-    unresolved_validator_schema["x-aces-invariants"][0]["validator"] = "raes_contracts.contracts.DoesNotExist"
+    unresolved_validator_schema["x-raes-invariants"][0]["validator"] = "raes_contracts.contracts.DoesNotExist"
     with pytest.raises(ValueError, match="does not resolve"):
-        validate_aces_semantic_invariant_annotations("experiment-run-v1", unresolved_validator_schema)
+        validate_raes_semantic_invariant_annotations("experiment-run-v1", unresolved_validator_schema)
 
 
 def test_experiment_core_valid_fixtures_pass_model_validation():
@@ -624,7 +624,7 @@ def test_experiment_core_invalid_fixtures_fail_schema_and_model_validation():
 
 def test_experiment_authoring_input_rejects_undeclared_blocking_factor():
     # A run-allocation blocking factor must resolve to a declared spec factor even
-    # when the factors map is empty/absent — the model enforces the x-aces-invariant
+    # when the factors map is empty/absent — the model enforces the x-raes-invariant
     # that portable JSON Schema cannot express (issue #675 codex review).
     payload = _experiment_fixture("experiment-authoring-input-v1")
     payload["factors"] = {}
@@ -1497,12 +1497,12 @@ def test_experiment_core_validates_study_run_allocation_against_evaluation_membe
 
     condition_qualifier_references = [
         {"ref_kind": "participant-implementation", "ref_id": "reference-red-agent", "ref_version": "1.0.0"},
-        {"ref_kind": "processor", "ref_id": "aces-reference-processor", "ref_version": "0.1.0"},
+        {"ref_kind": "processor", "ref_id": "raes-reference-processor", "ref_version": "0.1.0"},
         {"ref_kind": "backend", "ref_id": "stub-backend", "ref_version": "0.1.0"},
         {"ref_kind": "apparatus-context", "ref_id": "apparatus-techvault-reference", "ref_version": "1.0.0"},
         {"ref_kind": "scenario-snapshot", "ref_id": "scenario-techvault", "ref_version": "2026-05-26"},
         {"ref_kind": "task", "ref_id": "task-techvault-red-team-v1", "ref_version": "1.0.0"},
-        {"ref_kind": "manifest", "ref_id": "aces-reference-processor", "ref_version": "processor-manifest/v2"},
+        {"ref_kind": "manifest", "ref_id": "raes-reference-processor", "ref_version": "processor-manifest/v2"},
         {"ref_kind": "profile", "ref_id": "reference-stack-v1", "ref_version": "semantic-profile/v1"},
         {"ref_kind": "capability", "ref_id": "workflow-results"},
         {
@@ -1623,7 +1623,7 @@ def test_experiment_core_validates_study_run_allocation_against_evaluation_membe
     overlapping_condition_payload["run_allocation"]["condition_assignments"]["baseline"]["required_refs"] = [
         {
             "ref_kind": "processor",
-            "ref_id": "aces-reference-processor",
+            "ref_id": "raes-reference-processor",
             "ref_version": "0.1.0",
         }
     ]

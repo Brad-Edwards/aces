@@ -2,9 +2,9 @@
   "contract_id": "backend-manifest-v2",
   "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
   "stability": "draft",
-  "content_hash": "8645c2b5e00cd595d2661959fe2dfa0ac91e5cca26d4455fe87dad8e6a97db48",
+  "content_hash": "d4e5419c2ba534d55a358b20808a8759f0a819e4ecf6a12f39d04bc713e9b138",
   "last_change": {
-    "summary": "Added a typed, owner-governed apparatus configuration target registry and experiment binding contract support.",
-    "content_hash": "8645c2b5e00cd595d2661959fe2dfa0ac91e5cca26d4455fe87dad8e6a97db48"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "d4e5419c2ba534d55a358b20808a8759f0a819e4ecf6a12f39d04bc713e9b138"
   }
 }

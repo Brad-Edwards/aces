@@ -99,7 +99,7 @@ def test_processor_manifest_rejects_hollow_defaults():
 
 def test_processor_manifest_with_features():
     manifest = ProcessorManifest(
-        name="aces-reference",
+        name="raes-reference",
         version="0.1.0",
         supported_contract_versions=frozenset({"processor-manifest-v2"}),
         supported_sdl_versions=frozenset({"sdl-authoring-input-v1"}),

@@ -572,7 +572,7 @@ propositions:
     predicate:
       kind: boolean
       property: boundary-checks-recorded
-      semantic_ref: urn:aces:observable:boundary-checks-recorded
+      semantic_ref: urn:raes:observable:boundary-checks-recorded
       operator: equals
       expected: true
     quantifier: all
@@ -586,7 +586,7 @@ propositions:
     predicate:
       kind: boolean
       property: participant-observation-recorded
-      semantic_ref: urn:aces:observable:participant-observation-recorded
+      semantic_ref: urn:raes:observable:participant-observation-recorded
       operator: equals
       expected: true
     quantifier: all
@@ -600,7 +600,7 @@ propositions:
     predicate:
       kind: boolean
       property: policy-decision-recorded
-      semantic_ref: urn:aces:observable:policy-decision-recorded
+      semantic_ref: urn:raes:observable:policy-decision-recorded
       operator: equals
       expected: true
     quantifier: all
@@ -614,7 +614,7 @@ propositions:
     predicate:
       kind: boolean
       property: wazuh-evidence-recorded
-      semantic_ref: urn:aces:observable:wazuh-evidence-recorded
+      semantic_ref: urn:raes:observable:wazuh-evidence-recorded
       operator: equals
       expected: true
     quantifier: all

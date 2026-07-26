@@ -1,4 +1,4 @@
-template: aces-library-template
+template: raes-library-template
 version: 1
 id: observational-study-protocol
 surface: study
@@ -19,7 +19,7 @@ body:
   conditions:
     study-task-success:
       proposition: study-task-success
-      command: test -f /var/lib/aces/study-task-success
+      command: test -f /var/lib/raes/study-task-success
       interval: 30
   entities:
     participant-team:
@@ -36,7 +36,7 @@ body:
       predicate:
         kind: boolean
         property: study-task-success
-        semantic_ref: urn:aces:observable:study-task-success
+        semantic_ref: urn:raes:observable:study-task-success
         operator: equals
         expected: true
       evidence_requirements: [objective-truth-evidence]

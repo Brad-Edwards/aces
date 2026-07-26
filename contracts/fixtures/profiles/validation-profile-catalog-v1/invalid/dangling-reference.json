@@ -1,6 +1,6 @@
 {
   "schema_version": "validation-profile-catalog/v1",
-  "profile_family": "aces-validation",
+  "profile_family": "raes-validation",
   "catalog_version": "v1",
   "strengths": [
     {
@@ -29,9 +29,9 @@
   ],
   "profiles": [
     {
-      "profile_id": "aces-structural-validation",
+      "profile_id": "raes-structural-validation",
       "profile_version": "v1",
-      "title": "ACES structural validation",
+      "title": "RAES structural validation",
       "intended_subject_kinds": [
         "scenario"
       ],

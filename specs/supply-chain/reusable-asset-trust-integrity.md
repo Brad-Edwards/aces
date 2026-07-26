@@ -35,7 +35,7 @@ Trust rests on three orthogonal axes; a policy MUST keep them distinct:
 
 | Evidence class | Meaning | Existing RAES mechanism |
 |---|---|---|
-| `integrity_digest` | Digest bound to canonical payload bytes | module `aces.lock.json` digest pins; scenario-snapshot binding; associated-artifact set digest; study-definition digest; controlled-vocabulary `source_digest`; manifest/config digests |
+| `integrity_digest` | Digest bound to canonical payload bytes | module `raes.lock.json` digest pins; scenario-snapshot binding; associated-artifact set digest; study-definition digest; controlled-vocabulary `source_digest`; manifest/config digests |
 | `authenticity_signature` | Signature by a trusted signer set | `RegistryTrustPolicy` signature verification (`_verify_signatures`) |
 | `provenance_lock_record` | Pinned inputs / derivation record | `LockRecord` / `resolve_lock_records`; experiment references pinned by digest; participant provenance |
 | `governance_source` | Authoritative origin for governed terms | `controlled-vocabularies-v1` `source` (authority + version + extension policy) |

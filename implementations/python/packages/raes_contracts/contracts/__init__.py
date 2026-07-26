@@ -315,11 +315,11 @@ from .runtime_facts import (
     RuntimeFactVisibilityModel,
 )
 from .schema_constraints import (
-    AcesSemanticInvariantEntryModel,
-    AcesSemanticInvariantInputModel,
-    AcesSemanticInvariantProfileModel,
-    AcesSemanticInvariantProfileReferenceModel,
-    validate_aces_semantic_invariant_annotations,
+    RaesSemanticInvariantEntryModel,
+    RaesSemanticInvariantInputModel,
+    RaesSemanticInvariantProfileModel,
+    RaesSemanticInvariantProfileReferenceModel,
+    validate_raes_semantic_invariant_annotations,
 )
 from .semantic_profiles import (
     SemanticBehaviorAssumptionModel,
@@ -358,8 +358,8 @@ from .vocabulary_sources import (
 
 # fmt: off
 __all__ = [
-    "AcesSemanticInvariantEntryModel", "AcesSemanticInvariantInputModel", "AcesSemanticInvariantProfileModel",
-    "AcesSemanticInvariantProfileReferenceModel", "ATTACK_ENTERPRISE_TACTICS_SOURCE_SCHEMA_VERSION",
+    "RaesSemanticInvariantEntryModel", "RaesSemanticInvariantInputModel", "RaesSemanticInvariantProfileModel",
+    "RaesSemanticInvariantProfileReferenceModel", "ATTACK_ENTERPRISE_TACTICS_SOURCE_SCHEMA_VERSION",
     "ATLAS_TACTICS_SOURCE_SCHEMA_VERSION", "AttackEnterpriseTacticSourceTermModel",
     "AttackEnterpriseTacticsSourceModel", "AtlasTacticSourceTermModel", "AtlasTacticsSourceModel",
     "ASSOCIATED_ARTIFACT_MANIFEST_SCHEMA_VERSION", "AssociatedArtifactManifestModel",
@@ -474,7 +474,7 @@ __all__ = [
     "UcoFamilyAlignmentModel", "UCO_ALIGNMENT_SCHEMA_VERSION", "WorkflowCancellationRequestModel",
     "WORKFLOW_CANCELLATION_REQUEST_SCHEMA_VERSION", "WorkflowExecutionStateModel", "WorkflowFeature",
     "WorkflowHistoryEventModel", "WorkflowStatePredicateFeature", "WorkflowStepStateModel",
-    "WORKFLOW_STATE_SCHEMA_VERSION", "validate_aces_semantic_invariant_annotations",
+    "WORKFLOW_STATE_SCHEMA_VERSION", "validate_raes_semantic_invariant_annotations",
     "validate_experiment_apparatus_context_against_manifests",
     "validate_experiment_apparatus_context_archival_datetimes", "validate_experiment_run_against_task",
     "validate_experiment_run_archival_datetimes", "validate_experiment_study_against_tasks_and_runs",

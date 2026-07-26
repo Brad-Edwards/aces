@@ -13,7 +13,7 @@ asset-inventorying methodology.
 
 - The completion artifact is an RAES inventory bundle under
   `docs/raes/inventory/kali/`, using the existing `mapping-ledger.yaml`
-  schema, `aptl aces-inventory validate`, and the evidence/checksum shape
+  schema, `aptl raes-inventory validate`, and the evidence/checksum shape
   already used by `shuffle-backend` and `webapp`.
 - The inventory describes the realized `aptl-kali` container at one
   post-`aptl lab start` steady-state snapshot. If the capture is not from a
@@ -39,8 +39,8 @@ asset-inventorying methodology.
 
 - Inventory methodology and ledger validation:
   `docs/raes/inventory/asset-inventory-methodology.md`,
-  `src/aptl/core/aces_inventory.py`, `src/aptl/cli/aces_inventory.py`, and
-  `tests/test_aces_inventory_methodology.py`.
+  `src/aptl/core/raes_inventory.py`, `src/aptl/cli/raes_inventory.py`, and
+  `tests/test_raes_inventory_methodology.py`.
 - Prior asset patterns:
   `docs/raes/inventory/shuffle-backend/`,
   `docs/raes/inventory/webapp/`,
@@ -71,7 +71,7 @@ asset-inventorying methodology.
   `raes.parse_sdl_file` and compile through the RAES runtime compiler.
   Do not add local structural validators for RAES fields.
 - **Inventory ledger:** every captured fact needs an existing
-  `AcesSurface` mapping, caveat, or linked RAES issue in
+  `RaesSurface` mapping, caveat, or linked RAES issue in
   `mapping-ledger.yaml`. No `needs_gap_triage` rows should remain at review.
 - **Secret classification:** ADR-057 is canonical for scenario-target values,
   with ADR-029 still governing operator/control-plane handling. Preserve

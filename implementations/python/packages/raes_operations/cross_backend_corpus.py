@@ -3,10 +3,10 @@
 Assembles the backend-paired demonstration corpus for the RAES reference
 scenario: one libvirt reference-backend realization and one APTL realization of the
 *same authored scenario*, compared through an inspectable cross-backend invariant
-ledger (``aces.cross-backend-evidence-corpus/v1``).
+ledger (``raes.cross-backend-evidence-corpus/v1``).
 
 The corpus is a thin **local** artifact that composes existing surfaces (issue #600
-preflight): it consumes the real ``aces.libvirt.scenario-evidence-run/v1`` artifact
+preflight): it consumes the real ``raes.libvirt.scenario-evidence-run/v1`` artifact
 through ``run_libvirt_evidence_run`` (deterministic mode -- no libvirt daemon) and
 records the APTL realization as a bounded, honestly-labeled summary + link to
 Brad-Edwards/aptl#558 (or, when an operator supplies one, its allowlisted portable

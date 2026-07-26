@@ -1,4 +1,4 @@
-template: aces-library-template
+template: raes-library-template
 version: 1
 id: parallel-objective-workflow
 surface: workflow
@@ -19,7 +19,7 @@ body:
   conditions:
     patch-applied:
       proposition: patch-applied
-      command: test -f /var/lib/aces/patch-applied
+      command: test -f /var/lib/raes/patch-applied
       interval: 30
     service-verified:
       proposition: service-verified
@@ -40,7 +40,7 @@ body:
       predicate:
         kind: boolean
         property: patch-applied
-        semantic_ref: urn:aces:observable:patch-applied
+        semantic_ref: urn:raes:observable:patch-applied
         operator: equals
         expected: true
       evidence_requirements: [objective-truth-evidence]
@@ -52,7 +52,7 @@ body:
       predicate:
         kind: boolean
         property: service-verified
-        semantic_ref: urn:aces:observable:service-verified
+        semantic_ref: urn:raes:observable:service-verified
         operator: equals
         expected: true
       evidence_requirements: [objective-truth-evidence]

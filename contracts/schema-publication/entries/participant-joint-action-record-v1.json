@@ -2,9 +2,9 @@
   "contract_id": "participant-joint-action-record-v1",
   "schema_path": "contracts/schemas/participant-runtime/participant-joint-action-record-v1.json",
   "stability": "draft",
-  "content_hash": "412ed8b1156463900b6d06c28b3ed39ccd3fa4a693d78bff534a7f82226a2a1c",
+  "content_hash": "0af0593bc1fde776db0835d0baff6cd0ae232051e74eac1b8a26f7d1a532c88e",
   "last_change": {
-    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
-    "content_hash": "412ed8b1156463900b6d06c28b3ed39ccd3fa4a693d78bff534a7f82226a2a1c"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "0af0593bc1fde776db0835d0baff6cd0ae232051e74eac1b8a26f7d1a532c88e"
   }
 }

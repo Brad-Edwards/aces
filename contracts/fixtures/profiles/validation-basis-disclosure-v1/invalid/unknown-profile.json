@@ -1,7 +1,7 @@
 {
   "schema_version": "validation-basis-disclosure/v1",
   "disclosure": {
-    "profile_id": "aces-missing-validation",
+    "profile_id": "raes-missing-validation",
     "profile_version": "v1",
     "subject_kind": "scenario",
     "subject_ref": {

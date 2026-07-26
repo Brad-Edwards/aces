@@ -170,7 +170,7 @@ def test_validation_producer_reference_dump_validates_against_published_disclosu
     # just the freshly generated in-process schema), proving the fix holds
     # for the artifact that actually ships.
     disclosure_payload: dict[str, Any] = {
-        "profile_id": "aces-structural-validation",
+        "profile_id": "raes-structural-validation",
         "profile_version": "v1",
         "subject_kind": "scenario",
         "subject_ref": {"ref_kind": "scenario", "ref_id": "scenario-1"},

@@ -1,4 +1,4 @@
-template: aces-library-template
+template: raes-library-template
 version: 1
 id: single-objective-task
 surface: task
@@ -19,7 +19,7 @@ body:
   conditions:
     task-complete:
       proposition: task-complete
-      command: test -f /tmp/aces-task-complete
+      command: test -f /tmp/raes-task-complete
       interval: 15
   entities:
     participant:
@@ -36,7 +36,7 @@ body:
       predicate:
         kind: boolean
         property: task-complete
-        semantic_ref: urn:aces:observable:task-complete
+        semantic_ref: urn:raes:observable:task-complete
         operator: equals
         expected: true
       evidence_requirements: [objective-truth-evidence]

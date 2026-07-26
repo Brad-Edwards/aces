@@ -1,6 +1,6 @@
 # Architecture Decision Records
 
-This directory contains Architecture Decision Records (ADRs) for the ACES SDL
+This directory contains Architecture Decision Records (ADRs) for the RAES SDL
 ecosystem. ADRs capture significant architectural decisions along with their
 context, rationale, and consequences.
 
@@ -138,6 +138,7 @@ adr-091-portable-time-capability-control-and-provenance-contracts
 adr-092-autonomous-benign-participants-under-shared-time
 adr-093-raes-rename-and-compatibility-boundaries
 adr-094-authoritative-cross-plane-experiment-bindings
+adr-095-identity-cutover-and-historical-record-boundary
 ```
 
 | ADR | Title | Status | Date |
@@ -234,5 +235,6 @@ adr-094-authoritative-cross-plane-experiment-bindings
 | [090](adr-090-shared-time-domain-clock-and-progression-authority.md) | Shared Time-Domain, Clock, And Progression Authority | accepted | 2026-07-24 |
 | [091](adr-091-portable-time-capability-control-and-provenance-contracts.md) | Portable Time Capability, Control, And Provenance Contracts | accepted | 2026-07-24 |
 | [092](adr-092-autonomous-benign-participants-under-shared-time.md) | Autonomous Benign Participants Under Shared Time | accepted | 2026-07-24 |
-| [093](adr-093-raes-rename-and-compatibility-boundaries.md) | RAES Rename and Compatibility Boundaries | accepted | 2026-07-23 |
+| [093](adr-093-raes-rename-and-compatibility-boundaries.md) | RAES Rename and Compatibility Boundaries | superseded by ADR-095 | 2026-07-23 |
 | [094](adr-094-authoritative-cross-plane-experiment-bindings.md) | Authoritative Cross-Plane Experiment Bindings | accepted | 2026-07-26 |
+| [095](adr-095-identity-cutover-and-historical-record-boundary.md) | Identity Cutover and Historical-Record Boundary | accepted | 2026-07-26 |

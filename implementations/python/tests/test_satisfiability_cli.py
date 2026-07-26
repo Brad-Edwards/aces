@@ -21,7 +21,7 @@ def _invoke(path: Path):
             "satisfiability",
             str(path),
             "--profile",
-            "aces-finite-domain-satisfiability-v1",
+            "raes-finite-domain-satisfiability-v1",
         ],
     )
 
@@ -66,7 +66,7 @@ nodes:
         "satisfiability",
         str(source),
         "--profile",
-        "aces-finite-domain-satisfiability-v1",
+        "raes-finite-domain-satisfiability-v1",
     ]
 
     outputs = [

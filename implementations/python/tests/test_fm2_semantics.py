@@ -56,7 +56,7 @@ propositions:
     description: The governed VM has declared runtime state.
     subjects: [nodes.vm]
     basis: declared_state
-    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:raes:declared-property:runtime, operator: exists}
 assertions:
   health: {proposition: health, role: postcondition, polarity: positive}
   pre-health: {proposition: health, role: precondition, polarity: positive}
@@ -120,7 +120,7 @@ propositions:
     description: The governed VM has declared runtime state.
     subjects: [nodes.vm]
     basis: declared_state
-    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:raes:declared-property:runtime, operator: exists}
 assertions:
   health: {proposition: health, role: postcondition, polarity: positive}
   pre-health: {proposition: health, role: precondition, polarity: positive}
@@ -153,8 +153,8 @@ workflows:
         mutated = compile_runtime_model(
             parse_sdl(
                 raw.replace("/bin/true", "/bin/false").replace(
-                    "urn:aces:declared-property:runtime",
-                    "urn:aces:declared-property:runtime-v2",
+                    "urn:raes:declared-property:runtime",
+                    "urn:raes:declared-property:runtime-v2",
                 ),
                 skip_semantic_validation=False,
             )
@@ -218,12 +218,12 @@ propositions:
     description: The governed VM has declared ready state.
     subjects: [nodes.vm]
     basis: declared_state
-    predicate: {kind: boolean, property: ready, semantic_ref: urn:aces:declared-property:ready, operator: equals, expected: true}
+    predicate: {kind: boolean, property: ready, semantic_ref: urn:raes:declared-property:ready, operator: equals, expected: true}
   gate:
     description: The governed VM has declared gate state.
     subjects: [nodes.vm]
     basis: declared_state
-    predicate: {kind: boolean, property: gate, semantic_ref: urn:aces:declared-property:gate, operator: equals, expected: true}
+    predicate: {kind: boolean, property: gate, semantic_ref: urn:raes:declared-property:gate, operator: equals, expected: true}
 assertions:
   ready: {proposition: ready, role: postcondition, polarity: positive}
   gate: {proposition: gate, role: postcondition, polarity: positive}
@@ -249,8 +249,8 @@ objectives:
         mutated = compile_runtime_model(
             parse_sdl(
                 raw.replace("/bin/true", "/bin/false").replace(
-                    "urn:aces:declared-property:ready",
-                    "urn:aces:declared-property:ready-v2",
+                    "urn:raes:declared-property:ready",
+                    "urn:raes:declared-property:ready-v2",
                 )
             )
         )

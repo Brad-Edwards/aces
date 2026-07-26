@@ -91,12 +91,12 @@ interaction is defined over:
 
 Action names, tool names, ATT&CK/CVE labels, backend commands, reward values,
 timestamps, scheduler order, and raw logs are not portable interaction
-semantics unless they are bound through the governed ACES contracts above.
+semantics unless they are bound through the governed RAES contracts above.
 
-### 3. ACT-602 executable model means machine-checkable ACES contracts
+### 3. ACT-602 executable model means machine-checkable RAES contracts
 
 The executable participant behavior model is executable because processors,
-backends, conformance tools, and validators can check it, not because ACES
+backends, conformance tools, and validators can check it, not because RAES
 standardizes one participant runtime loop or one external agent API.
 
 Executable behavior must flow through existing gates:
@@ -113,7 +113,7 @@ Executable behavior must flow through existing gates:
 
 Backends may realize behavior with humans, scripts, policies, LLM agents, RL
 policies, emulators, simulators, services, or mixed controllers. The portable
-claim is the ACES contract and evidence record, not the backend's private
+claim is the RAES contract and evidence record, not the backend's private
 implementation.
 
 ### 4. ACT-606 behavior specifications are first-class aggregates
@@ -228,8 +228,8 @@ meaning across two SDL surfaces.
 ### Treat backend or agent-framework APIs as the executable model
 
 Rejected. Gym-like, PettingZoo-like, CybORG-like, service, script, human, and
-LLM-agent interfaces can all be useful realizations. None is the portable ACES
-semantic authority. ACES claims must be expressed through its own contracts,
+LLM-agent interfaces can all be useful realizations. None is the portable RAES
+semantic authority. RAES claims must be expressed through its own contracts,
 evidence, capability, and conformance surfaces.
 
 ### Treat behavior modes as free-form strings
@@ -268,7 +268,7 @@ backend acts.
 ### Risks
 
 - If a child issue treats action names or tool labels as action contracts,
-  ACES behavior portability will be overstated.
+  RAES behavior portability will be overstated.
 - If behavior modes are duplicated outside the controlled vocabulary, run
   comparability and conformance will drift.
 - If authority or scope is enforced only by credentials or backend sandboxing,

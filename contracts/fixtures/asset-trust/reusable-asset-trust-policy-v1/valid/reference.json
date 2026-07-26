@@ -1,6 +1,6 @@
 {
   "schema_version": "reusable-asset-trust-policy/v1",
-  "policy_id": "aces-reusable-asset-trust-policy",
+  "policy_id": "raes-reusable-asset-trust-policy",
   "families": [
     {
       "asset_family": "associated_artifact_set",
@@ -39,7 +39,7 @@
         {
           "evidence_class": "provenance_lock_record",
           "enforcement": "required",
-          "mechanism_ref": "aces.lock.json module lock records for every composed module",
+          "mechanism_ref": "raes.lock.json module lock records for every composed module",
           "description": "The scenario's composed modules are pinned by digest via the lockfile, giving SLSA-style resolved-dependency provenance over sub-assets."
         },
         {
@@ -50,7 +50,7 @@
         }
       ],
       "authenticity_policy": {
-        "trusted_signer_set_ref": "aces-trust.yaml:trusted_signers",
+        "trusted_signer_set_ref": "raes-trust.yaml:trusted_signers",
         "threshold": 1
       }
     },
@@ -61,7 +61,7 @@
         {
           "evidence_class": "integrity_digest",
           "enforcement": "required",
-          "mechanism_ref": "aces.lock.json digest pin (_validate_digest_pin)",
+          "mechanism_ref": "raes.lock.json digest pin (_validate_digest_pin)",
           "description": "A resolved module import is pinned to a content digest recorded in the lockfile."
         },
         {
@@ -78,7 +78,7 @@
         }
       ],
       "authenticity_policy": {
-        "trusted_signer_set_ref": "aces-trust.yaml:trusted_signers",
+        "trusted_signer_set_ref": "raes-trust.yaml:trusted_signers",
         "threshold": 1
       }
     },
@@ -172,7 +172,7 @@
         }
       ],
       "authenticity_policy": {
-        "trusted_signer_set_ref": "aces-trust.yaml:evidence_signers",
+        "trusted_signer_set_ref": "raes-trust.yaml:evidence_signers",
         "threshold": 1
       }
     }

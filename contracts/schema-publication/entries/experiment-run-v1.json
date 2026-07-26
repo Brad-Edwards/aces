@@ -2,9 +2,9 @@
   "contract_id": "experiment-run-v1",
   "schema_path": "contracts/schemas/experiment-core/experiment-run-v1.json",
   "stability": "draft",
-  "content_hash": "718d8b108bfc7cc7cee4d55970c12e7fd87c3873f13aaee51b2b4de468ba5db7",
+  "content_hash": "f6e1c277a1a48e764cbbcf8433d666fa7bbd9bb1d38953f8b55b9c4a1a1d1180",
   "last_change": {
-    "summary": "Added realized cross-plane binding provenance with explicit source, target, value origin, and configuration digest.",
-    "content_hash": "718d8b108bfc7cc7cee4d55970c12e7fd87c3873f13aaee51b2b4de468ba5db7"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "f6e1c277a1a48e764cbbcf8433d666fa7bbd9bb1d38953f8b55b9c4a1a1d1180"
   }
 }

@@ -32,7 +32,7 @@ from pydantic_core import CoreSchema
 from ..versions import VALIDATION_BASIS_DISCLOSURE_SCHEMA_VERSION
 from .base import ContractModel, NonEmptyString, Rfc3339DateTimeString, _parse_rfc3339_datetime
 from .experiment_manifest_references import ExperimentEvidenceRecordReferenceModel
-from .schema_invariants import _CARRIER_DISCLOSURES_INSTANCE_PATH, _add_aces_invariant
+from .schema_invariants import _CARRIER_DISCLOSURES_INSTANCE_PATH, _add_raes_invariant
 from .validation_disclosure_gates import (
     _EVIDENCE_REF_REQUIRED_STRENGTHS,
     _STRENGTH_RANK,
@@ -263,7 +263,7 @@ class ValidationBasisDisclosureModel(ContractModel):
             {"contract_id": "experiment-study-v1", "instance_path": _CARRIER_DISCLOSURES_INSTANCE_PATH},
         ]
         for invariant_id, description in _DISCLOSURE_INVARIANTS:
-            _add_aces_invariant(json_schema, invariant_id, description, validator=validator, inputs=inputs)
+            _add_raes_invariant(json_schema, invariant_id, description, validator=validator, inputs=inputs)
         return json_schema
 
 

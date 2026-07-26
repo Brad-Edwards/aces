@@ -136,7 +136,7 @@ class _TargetConformanceOptions:
     realization_harness: RealizationConformanceHarness | None = None
     execution_basis: ExecutionBasis = ExecutionBasis.HERMETIC_LIVE
     realization_envelope: BackendRealizationEnvelopeModel | None = None
-    observer_version: str = "aces-realization-observer/v1"
+    observer_version: str = "raes-realization-observer/v1"
     native_conformance: bool = False
 
 

@@ -261,7 +261,7 @@ def test_composition_rewrites_network_namespace_target(tmp_path: Path) -> None:
             name: shared
             version: 1.0.0
             module:
-              id: aces/shared
+              id: raes/shared
               version: 1.0.0
               exports:
                 nodes: [owner, capture]

@@ -19,7 +19,7 @@
       "stub-participant-runtime"
     ],
     "processors": [
-      "aces-reference-processor"
+      "raes-reference-processor"
     ],
     "backends": [
       "stub"

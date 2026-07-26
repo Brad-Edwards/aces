@@ -1298,7 +1298,7 @@
       "type": "string"
     }
   },
-  "$id": "https://aces.dev/schemas/participant-history-view-v1.json",
+  "$id": "https://raes.dev/schemas/participant-history-view-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "allOf": [

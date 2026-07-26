@@ -13,7 +13,7 @@ def test_linux_dialect_uses_systemd_and_aliases():
     assert ("systemctl", "enable", "--now", "wazuh-agent") in feature.runcmd
 
     mail = linux.mail_alias("alice", "alice@example.test")
-    assert any(f.path == "/etc/aliases.d/aces-alice" for f in mail.write_files)
+    assert any(f.path == "/etc/aliases.d/raes-alice" for f in mail.write_files)
     assert ("newaliases",) in mail.runcmd
 
 
@@ -47,4 +47,4 @@ def test_unknown_os_family_falls_back_to_portable_descriptor():
 
     assert feature.packages == ()
     assert feature.runcmd == ()
-    assert any(f.path == "/etc/aces/features/svc.json" for f in feature.write_files)
+    assert any(f.path == "/etc/raes/features/svc.json" for f in feature.write_files)

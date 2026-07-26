@@ -14,7 +14,7 @@ from ._errors import SDLParseError
 from ._source_profile import SDL_CANONICAL_PROFILE
 from .scenario import ExpandedScenario, InstantiatedScenario, Scenario
 
-INSTANTIATED_SNAPSHOT_PROFILE = "aces-sdl-instantiated-snapshot/v1"
+INSTANTIATED_SNAPSHOT_PROFILE = "raes-sdl-instantiated-snapshot/v1"
 
 
 @dataclass(frozen=True)
@@ -73,10 +73,10 @@ class InstantiatedScenarioSnapshot(SDLModel):
         title="SDL Instantiated Scenario Snapshot v1",
         extra="forbid",
         frozen=True,
-        json_schema_extra={"x-aces-document-phase": "canonical-instantiated-snapshot"},
+        json_schema_extra={"x-raes-document-phase": "canonical-instantiated-snapshot"},
     )
 
-    profile: Literal["aces-sdl-instantiated-snapshot/v1"]
+    profile: Literal["raes-sdl-instantiated-snapshot/v1"]
     scenario: InstantiatedScenario
 
 

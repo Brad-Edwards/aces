@@ -1,4 +1,4 @@
-template: aces-library-template
+template: raes-library-template
 version: 1
 id: timed-run-control
 surface: run
@@ -19,7 +19,7 @@ body:
   conditions:
     telemetry-ready:
       proposition: telemetry-ready
-      command: test -f /var/lib/aces/telemetry-ready
+      command: test -f /var/lib/raes/telemetry-ready
       interval: 30
   injects:
     start-run:
@@ -54,7 +54,7 @@ body:
       predicate:
         kind: boolean
         property: telemetry-ready
-        semantic_ref: urn:aces:observable:telemetry-ready
+        semantic_ref: urn:raes:observable:telemetry-ready
         operator: equals
         expected: true
       evidence_requirements: [objective-truth-evidence]

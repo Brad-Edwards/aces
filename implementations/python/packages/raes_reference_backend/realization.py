@@ -118,7 +118,7 @@ def _resource_name(resource: PlannedResource, payload: Mapping[str, object]) -> 
     name = payload.get("name") or payload.get("node_name")
     if isinstance(name, str) and name:
         return name
-    return provider_resource_name(resource.address, prefix="aces")
+    return provider_resource_name(resource.address, prefix="raes")
 
 
 def _infrastructure_spec(payload: Mapping[str, object]) -> Mapping[str, object]:
@@ -246,8 +246,8 @@ def _image_ref(payload: Mapping[str, object]) -> str:
         return source
     os_family = payload.get("os_family")
     if isinstance(os_family, str) and os_family:
-        return f"aces-reference/{os_family}"
-    return "aces-reference/base"
+        return f"raes-reference/{os_family}"
+    return "raes-reference/base"
 
 
 def _node_source(payload: Mapping[str, object]) -> str | None:

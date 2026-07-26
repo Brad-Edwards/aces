@@ -27,7 +27,7 @@ from .experiment_study import (
     ExperimentStudyFactorModel,
     ExperimentStudyMembershipModel,
 )
-from .schema_invariants import _add_aces_invariant, _add_carrier_validation_basis_disclosure_invariant
+from .schema_invariants import _add_carrier_validation_basis_disclosure_invariant, _add_raes_invariant
 from .validation_disclosure import ValidationBasisDisclosureModel, validate_carrier_validation_basis_disclosures
 
 _STUDY_AGAINST_TASKS_AND_RUNS_VALIDATOR = "raes_contracts.contracts.validate_experiment_study_against_tasks_and_runs"
@@ -158,7 +158,7 @@ class ExperimentStudyModel(ContractModel):
                 },
             }
         )
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "claim-bearing-study-analysis-plan-required",
             "Study and benchmark records must include research questions, revisioned behavioral claim bindings, run "
@@ -166,7 +166,7 @@ class ExperimentStudyModel(ContractModel):
             validator="raes_contracts.contracts.ExperimentStudyModel._validate_claim_bearing_study",
             inputs=[{"contract_id": "experiment-study-v1", "instance_path": "#"}],
         )
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "study-analysis-metrics-grounded-in-task-protocols",
             "Study analysis_plan metrics must be declared by included experiment task protocols.",
@@ -177,7 +177,7 @@ class ExperimentStudyModel(ContractModel):
                 {"contract_id": "experiment-run-v1", "instance_path": "#"},
             ],
         )
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "study-analysis-metrics-covered-by-evaluation-run-results",
             "Study analysis_plan metrics must have result_summaries, including explicit missing/withheld "
@@ -189,7 +189,7 @@ class ExperimentStudyModel(ContractModel):
                 {"contract_id": "experiment-run-v1", "instance_path": "#"},
             ],
         )
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "study-analysis-runs-eligible",
             "Study analysis_plan evaluation-run members must resolve unambiguously and exclude invalidated, "
@@ -200,7 +200,7 @@ class ExperimentStudyModel(ContractModel):
                 {"contract_id": "experiment-run-v1", "instance_path": "#"},
             ],
         )
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "study-run-allocation-covered-by-evaluation-run-members",
             "Study run_allocation compared_conditions must be represented by eligible included evaluation-run "
@@ -216,7 +216,7 @@ class ExperimentStudyModel(ContractModel):
         _add_carrier_validation_basis_disclosure_invariant(
             json_schema, contract_id="experiment-study-v1", subject_kind="experiment_study"
         )
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "study-run-allocation-stochastic-control-consistency",
             "When run_allocation compares evaluation runs, every shared stochastic_controls control_id across "
@@ -307,7 +307,7 @@ class ExperimentRunPlanModel(ContractModel):
                 },
             ]
         )
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "run-plan-exactly-one-run-count-source",
             "A run plan must declare exactly one of allocation or target_run_count, and every red-variant "
@@ -442,7 +442,7 @@ class ExperimentSpecModel(ContractModel):
                 },
             ]
         )
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "experiment-spec-blocking-factors-declared",
             "When a run plan declares an allocation with blocking factors, every blocking factor must be a "
@@ -450,7 +450,7 @@ class ExperimentSpecModel(ContractModel):
             validator="raes_contracts.contracts.ExperimentSpecModel._validate_experiment_spec",
             inputs=[{"contract_id": "experiment-authoring-input-v1", "instance_path": "#"}],
         )
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "experiment-binding-source-joins-valid",
             "Explicit bindings must cover every compared condition and resolve exact declared factor levels.",

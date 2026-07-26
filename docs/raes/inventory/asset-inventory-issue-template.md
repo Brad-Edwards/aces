@@ -88,7 +88,7 @@ For every captured fact, record one mapping disposition in
 
 - `encoded`
 - `encoded_with_caveat`
-- `blocked_by_aces_gap`
+- `blocked_by_raes_gap`
 - `blocked_by_aptl_gap`
 - `needs_gap_triage` only while actively triaging
 
@@ -97,7 +97,7 @@ Before completion:
 - [ ] No `needs_gap_triage` mapping remains.
 - [ ] Every evidence file is referenced by a fact, provenance entry,
       correspondence check, or capture-limit fact.
-- [ ] Every `blocked_by_aces_gap` row links an RAES issue.
+- [ ] Every `blocked_by_raes_gap` row links an RAES issue.
 - [ ] Every `blocked_by_aptl_gap` row links a downstream backend issue.
 - [ ] Correspondence checks describe how later encoding work will compare RAES
       surfaces against fresh realized evidence.
@@ -107,9 +107,9 @@ Before completion:
 Run the downstream ledger validator before closing:
 
 ```shell
-aptl aces-inventory schema
-aptl aces-inventory validate <asset-dir>
-aptl aces-inventory gaps <asset-dir>
+aptl raes-inventory schema
+aptl raes-inventory validate <asset-dir>
+aptl raes-inventory gaps <asset-dir>
 ```
 
 Also run the backend repository's normal test and documentation checks for any

@@ -255,7 +255,7 @@ compilation.
 
 The **canonical instantiated snapshot** is a sealed identity envelope, not
 input to source parsing, composition, or substitution. Its profile is
-`aces-sdl-instantiated-snapshot/v1`; §9 defines its bytes and digest.
+`raes-sdl-instantiated-snapshot/v1`; §9 defines its bytes and digest.
 
 The source -> normalized -> expanded -> instantiated progression refines the two-phase
 authoring/instantiation model of
@@ -268,7 +268,7 @@ designation and is out of scope for the authoring model.
 
 ## 8. Canonical semantic identity
 
-The canonicalization profile `aces-sdl-semantic/v1` identifies one semantically
+The canonicalization profile `raes-sdl-semantic/v1` identifies one semantically
 validated, expanded authoring scenario independently of YAML layout, map order,
 recognized migration spelling, and documented shorthand spelling. It does not
 identify raw source, an instantiated scenario, a compiled runtime model, a
@@ -278,7 +278,7 @@ The canonical input is the following JSON object:
 
 ```json
 {
-  "profile": "aces-sdl-semantic/v1",
+  "profile": "raes-sdl-semantic/v1",
   "scenario": {},
   "module_variable_specs": {},
   "module_node_variable_refs": {}
@@ -310,13 +310,13 @@ declaration identities to the portable ASCII grammar above.
 
 ## 9. Canonical instantiated snapshot
 
-The `aces-sdl-instantiated-snapshot/v1` profile identifies one semantically
+The `raes-sdl-instantiated-snapshot/v1` profile identifies one semantically
 admitted instantiated artifact, including its portable derivation evidence. Its
 canonical input is exactly:
 
 ```json
 {
-  "profile": "aces-sdl-instantiated-snapshot/v1",
+  "profile": "raes-sdl-instantiated-snapshot/v1",
   "scenario": {}
 }
 ```

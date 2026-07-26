@@ -2,7 +2,7 @@
 
 ## Status
 
-accepted
+superseded by ADR-095
 
 ## Date
 

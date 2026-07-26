@@ -155,7 +155,7 @@ Positive:
 
 Negative:
 
-- The contract-model surface in `aces_contracts` grows substantially, and the
+- The contract-model surface in `raes_contracts` grows substantially, and the
   base envelope is modeled ahead of the `RUN-30x` carriers that will also
   embed it; that model must be reused, not duplicated, when those land.
 - Schemas exist before any runtime emits them. Consumers must read manifest

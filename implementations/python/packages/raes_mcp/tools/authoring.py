@@ -410,7 +410,7 @@ propositions:
     predicate:
       kind: boolean
       property: service-healthy
-      semantic_ref: urn:aces:observable:service-healthy
+      semantic_ref: urn:raes:observable:service-healthy
       operator: equals
       expected: true
     evidence_requirements: [web-health-evidence]
@@ -556,7 +556,7 @@ propositions:
     predicate:
       kind: boolean
       property: service-healthy
-      semantic_ref: urn:aces:observable:service-healthy
+      semantic_ref: urn:raes:observable:service-healthy
       operator: equals
       expected: true
     evidence_requirements: [web-health-evidence]

@@ -11,7 +11,7 @@ publication, processing, and runtime operation.
 
 ## Decision Record
 
-[ADR-012](../../docs/decisions/adrs/adr-012-shared-concept-authority-and-aces-extension-discipline.md)
+[ADR-012](../../docs/decisions/adrs/adr-012-shared-concept-authority-and-raes-extension-discipline.md)
 governs this specification.
 
 ## Profile Model
@@ -97,7 +97,7 @@ The concept-authority relationship behind the adopted and adapted cyber-domain
 families a profile may require is recorded as machine-checkable evidence in
 `contracts/concept-authority/uco-alignment-v1.json` (schema `uco-alignment/v1`),
 which pins the reviewed UCO version and enumerates each adapted family's
-divergences. See [ADR-012](../../docs/decisions/adrs/adr-012-shared-concept-authority-and-aces-extension-discipline.md).
+divergences. See [ADR-012](../../docs/decisions/adrs/adr-012-shared-concept-authority-and-raes-extension-discipline.md).
 
 ## Relationship To Other Requirements
 

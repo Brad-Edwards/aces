@@ -281,10 +281,10 @@ Filed as RAES expressivity issues, ordered by dependency. Each ships its ADR (ad
 **Open questions for the user.** (a) Confirm the rename-migration consult gate before executing the id-field/class renames. (b) Confirm whether `analytics_dashboard` ships as a platform_kind (with the mandated worked wazuh.dashboard defense) or is folded out to the four content-bearing kinds. (c) Confirm the deferred relational→`datastore_services` fold timeline (named coherence debt while `database_services` and `datastore_services` co-exist).
 
 Key source paths (all absolute):
-- `/home/atomik/src/aces4/implementations/python/packages/aces_sdl/runtime_database_vocab.py` (closed `DatabaseObjectType`, REDIS/MARIADB enums)
-- `/home/atomik/src/aces4/implementations/python/packages/aces_sdl/runtime_mounts.py` (`RuntimeControlInterface`, no id)
-- `/home/atomik/src/aces4/implementations/python/packages/aces_sdl/runtime_application.py` (`RuntimeApplicationRoute`, no upstream)
-- `/home/atomik/src/aces4/implementations/python/packages/aces_sdl/runtime_directory_identity.py` (relationship kinds, policy kind)
-- `/home/atomik/src/aces4/implementations/python/packages/aces_sdl/runtime_security_monitoring.py` (listener roles, agent roster)
-- `/home/atomik/src/aces4/implementations/python/packages/aces_sdl/_runtime_service_families.py` (registry shape)
-- `/home/atomik/src/aces4/implementations/python/packages/aces_sdl/runtime_ssh_server.py:303`, `runtime_configuration.py:358-359`, `runtime_mail_service.py:111-128` (reconciliation targets)
+- `implementations/python/packages/raes/runtime_database_vocab.py` (closed `DatabaseObjectType`, REDIS/MARIADB enums)
+- `implementations/python/packages/raes/runtime_mounts.py` (`RuntimeControlInterface`, no id)
+- `implementations/python/packages/raes/runtime_application.py` (`RuntimeApplicationRoute`, no upstream)
+- `implementations/python/packages/raes/runtime_directory_identity.py` (relationship kinds, policy kind)
+- `implementations/python/packages/raes/runtime_security_monitoring.py` (listener roles, agent roster)
+- `implementations/python/packages/raes/_runtime_service_families.py` (registry shape)
+- `implementations/python/packages/raes/runtime_ssh_server.py:303`, `runtime_configuration.py:358-359`, `runtime_mail_service.py:111-128` (reconciliation targets)
