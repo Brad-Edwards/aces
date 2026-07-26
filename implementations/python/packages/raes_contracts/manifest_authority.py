@@ -53,6 +53,8 @@ BACKEND_SUPPORTED_CONTRACT_IDS = (
     "participant-episode-state-envelope-v1",
     "participant-episode-history-event-stream-v1",
     "participant-behavior-history-event-stream-v1",
+    "participant-control-occurrence-v1",
+    "participant-crossing-occurrence-v1",
     "participant-lifecycle-event-v1",
     "participant-observation-envelope-v1",
     "participant-shared-state-record-v1",
@@ -69,6 +71,86 @@ BACKEND_SUPPORTED_CONTRACT_IDS = (
     "time-runtime-state-v1",
     "realized-time-model-v1",
 )
+
+PARTICIPANT_RUNTIME_ROLE_SCOPE = "capabilities.participant_runtime.supported_participant_roles"
+PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE = "capabilities.participant_runtime.supported_behavior_features"
+PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE = "capabilities.participant_runtime.supported_interaction_features"
+
+PARTICIPANT_RUNTIME_POLICY_FEATURES = frozenset(
+    {
+        "participant_declassification",
+        "participant_directed_inject_delivery",
+        "participant_egress_projection",
+        "participant_ingress_admission",
+        "participant_intervention",
+        "participant_transformation",
+    }
+)
+
+_PARTICIPANT_EPISODE_CONTRACTS = frozenset(
+    {
+        "participant-episode-state-envelope-v1",
+        "participant-episode-history-event-stream-v1",
+        "runtime-snapshot-v1",
+    }
+)
+_PARTICIPANT_BEHAVIOR_CONTRACTS = frozenset(
+    {
+        "participant-behavior-history-event-stream-v1",
+        "runtime-snapshot-v1",
+    }
+)
+_PARTICIPANT_INTERACTION_CONTRACTS = frozenset(
+    {
+        "participant-behavior-history-event-stream-v1",
+        "participant-shared-state-record-v1",
+        "participant-joint-action-record-v1",
+        "participant-time-management-context-v1",
+        "runtime-snapshot-v1",
+    }
+)
+
+PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS = {
+    PARTICIPANT_RUNTIME_ROLE_SCOPE: {
+        "blue": _PARTICIPANT_EPISODE_CONTRACTS,
+        "green": _PARTICIPANT_EPISODE_CONTRACTS,
+        "red": _PARTICIPANT_EPISODE_CONTRACTS,
+        "white": _PARTICIPANT_EPISODE_CONTRACTS,
+    },
+    PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE: {
+        "action_contracts": _PARTICIPANT_BEHAVIOR_CONTRACTS,
+        "autonomous_execution": _PARTICIPANT_INTERACTION_CONTRACTS,
+        "attribution_support": _PARTICIPANT_BEHAVIOR_CONTRACTS,
+        "behavior_history": _PARTICIPANT_BEHAVIOR_CONTRACTS,
+        "effects": _PARTICIPANT_BEHAVIOR_CONTRACTS,
+        "failure_classes": _PARTICIPANT_BEHAVIOR_CONTRACTS,
+        "observation_boundaries": _PARTICIPANT_BEHAVIOR_CONTRACTS,
+        "outcome_interpretation": _PARTICIPANT_BEHAVIOR_CONTRACTS,
+        "participant_declassification": frozenset({"participant-crossing-occurrence-v1"}),
+        "participant_directed_inject_delivery": frozenset(
+            {"orchestration-plan-v1", "participant-crossing-occurrence-v1"}
+        ),
+        "participant_egress_projection": frozenset(
+            {"participant-observation-envelope-v1", "participant-crossing-occurrence-v1"}
+        ),
+        "participant_ingress_admission": frozenset(
+            {"participant-control-occurrence-v1", "participant-crossing-occurrence-v1"}
+        ),
+        "participant_intervention": frozenset(
+            {"participant-control-occurrence-v1", "participant-crossing-occurrence-v1"}
+        ),
+        "participant_transformation": frozenset({"participant-crossing-occurrence-v1"}),
+        "preconditions": _PARTICIPANT_BEHAVIOR_CONTRACTS,
+        "state_transitions": _PARTICIPANT_BEHAVIOR_CONTRACTS,
+        "temporal_contracts": _PARTICIPANT_BEHAVIOR_CONTRACTS,
+    },
+    PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE: {
+        "contention": _PARTICIPANT_INTERACTION_CONTRACTS,
+        "coordination": _PARTICIPANT_INTERACTION_CONTRACTS,
+        "interference": _PARTICIPANT_INTERACTION_CONTRACTS,
+        "shared_state_change": _PARTICIPANT_INTERACTION_CONTRACTS,
+    },
+}
 
 PARTICIPANT_IMPLEMENTATION_SUPPORTED_CONTRACT_IDS = (
     "participant-implementation-manifest-v1",

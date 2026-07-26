@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from typing import Literal
 
 from pydantic import Field, GetJsonSchemaHandler, SerializerFunctionWrapHandler, model_serializer, model_validator
@@ -11,6 +10,7 @@ from pydantic_core import CoreSchema
 
 from ..addressing import require_compiled_address
 from ..manifest_authority import (
+    PARTICIPANT_RUNTIME_POLICY_FEATURES,
     PROCESSOR_SUPPORTED_CONTRACT_IDS,
     PROCESSOR_SUPPORTED_SDL_VERSION_IDS,
     validate_backend_supported_contract_versions,
@@ -28,6 +28,7 @@ from .capabilities import (
     ProvisionerCapabilitiesModel,
 )
 from .experiment_bindings import ConfigurationTargetRegistryModel
+from .feature_support import ParticipantFeatureSupportModel
 from .trial_cleanup import CleanupActionKind
 from .validators import (
     _validate_canonical_concept_bindings,
@@ -64,75 +65,6 @@ class ProcessorCapabilitiesV2Model(ContractModel):
         json_schema = handler(core_schema)
         json_schema = handler.resolve_ref_schema(json_schema)
         json_schema["properties"]["supported_sdl_versions"]["items"]["enum"] = list(PROCESSOR_SUPPORTED_SDL_VERSION_IDS)
-        return json_schema
-
-
-_PARTICIPANT_FEATURE_SUPPORT_VOCABULARY_IDS = (
-    "participant-runtime-behavior-features",
-    "participant-runtime-interaction-features",
-)
-
-
-def _validate_participant_feature_support_term(feature: str) -> None:
-    from ..controlled_vocabularies import load_controlled_vocabulary_catalog
-
-    catalog = load_controlled_vocabulary_catalog()
-    for vocabulary_id in _PARTICIPANT_FEATURE_SUPPORT_VOCABULARY_IDS:
-        definition = catalog.vocabularies[vocabulary_id]
-        if feature in definition.terms:
-            return
-        if definition.extension_pattern is not None and re.fullmatch(definition.extension_pattern, feature):
-            return
-    joined = ", ".join(_PARTICIPANT_FEATURE_SUPPORT_VOCABULARY_IDS)
-    raise ValueError(
-        f"feature_support feature '{feature}' is not a governed term of {joined} "
-        "and does not match the governed extension pattern"
-    )
-
-
-class ParticipantFeatureSupportModel(ContractModel):
-    """API-407 per-feature participant runtime support declaration."""
-
-    feature: NonEmptyString
-    support_level: ParticipantFeatureSupportLevel
-    constraint_refs: list[NonEmptyString] = Field(default_factory=list)
-    disclosure_refs: list[NonEmptyString] = Field(default_factory=list)
-
-    @model_validator(mode="after")
-    def _validate_feature_support_declaration(self) -> ParticipantFeatureSupportModel:
-        _validate_participant_feature_support_term(self.feature)
-        _validate_unique_string_values("constraint_refs", self.constraint_refs)
-        _validate_unique_string_values("disclosure_refs", self.disclosure_refs)
-        if self.support_level != ParticipantFeatureSupportLevel.EXACT and not self.disclosure_refs:
-            raise ValueError(
-                f"feature_support entry '{self.feature}' declares support_level "
-                f"'{self.support_level.value}' below 'exact' and must carry at least one disclosure_refs entry"
-            )
-        return self
-
-    @classmethod
-    def __get_pydantic_json_schema__(
-        cls,
-        core_schema: CoreSchema,
-        handler: GetJsonSchemaHandler,
-    ) -> JsonSchemaValue:
-        json_schema = handler(core_schema)
-        json_schema = handler.resolve_ref_schema(json_schema)
-        below_exact = [
-            level.value for level in ParticipantFeatureSupportLevel if level != ParticipantFeatureSupportLevel.EXACT
-        ]
-        json_schema.setdefault("allOf", []).append(
-            {
-                "if": {
-                    "properties": {"support_level": {"enum": below_exact}},
-                    "required": ["support_level"],
-                },
-                "then": {
-                    "required": ["disclosure_refs"],
-                    "properties": {"disclosure_refs": {"minItems": 1}},
-                },
-            }
-        )
         return json_schema
 
 
@@ -216,12 +148,30 @@ class ParticipantRuntimeCapabilitiesModel(ContractModel):
 
     def _validate_supported_feature_levels(self) -> None:
         supported_features = set(self.supported_behavior_features) | set(self.supported_interaction_features)
+        declared_features = {entry.feature for entry in self.feature_support}
+        missing_policy_declarations = sorted(
+            (supported_features & PARTICIPANT_RUNTIME_POLICY_FEATURES) - declared_features
+        )
+        if missing_policy_declarations:
+            raise ValueError(
+                "supported participant policy features require explicit feature_support declarations: "
+                + ", ".join(missing_policy_declarations)
+            )
         for entry in self.feature_support:
             declared_unsupported = entry.support_level == ParticipantFeatureSupportLevel.UNSUPPORTED
             if declared_unsupported and entry.feature in supported_features:
                 raise ValueError(
                     f"feature_support entry '{entry.feature}' declares support_level 'unsupported' but the "
                     "feature is declared in supported_behavior_features or supported_interaction_features"
+                )
+            if (
+                entry.feature in PARTICIPANT_RUNTIME_POLICY_FEATURES
+                and not declared_unsupported
+                and entry.feature not in supported_features
+            ):
+                raise ValueError(
+                    f"feature_support entry '{entry.feature}' declares positive support but the feature "
+                    "is absent from supported_behavior_features"
                 )
 
     def _validate_autonomous_configuration(self) -> None:

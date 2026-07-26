@@ -11,6 +11,9 @@ from pydantic_core import CoreSchema
 from ..manifest_authority import (
     BACKEND_SUPPORTED_CONTRACT_IDS,
     PARTICIPANT_IMPLEMENTATION_SUPPORTED_CONTRACT_IDS,
+    PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE,
+    PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS,
+    PARTICIPANT_RUNTIME_POLICY_FEATURES,
     validate_backend_supported_contract_versions,
     validate_participant_implementation_supported_contract_versions,
     validate_participant_supported_contract_versions,
@@ -64,8 +67,26 @@ class BackendManifestV2Model(ContractModel):
         self._validate_realization_envelope_contract()
         self._validate_cleanup_contracts()
         self._validate_time_contracts()
+        self._validate_participant_policy_contracts()
         self._validate_concept_bindings()
         return self
+
+    def _validate_participant_policy_contracts(self) -> None:
+        participant_runtime = self.capabilities.participant_runtime
+        if participant_runtime is None:
+            return
+        declared_contracts = set(self.supported_contract_versions)
+        required_by_feature = PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[
+            PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE
+        ]
+        for entry in participant_runtime.feature_support:
+            if entry.feature not in PARTICIPANT_RUNTIME_POLICY_FEATURES or entry.support_level.value == "unsupported":
+                continue
+            missing = sorted(required_by_feature[entry.feature] - declared_contracts)
+            if missing:
+                raise ValueError(
+                    f"feature_support entry '{entry.feature}' is missing required contracts: {', '.join(missing)}"
+                )
 
     def _validate_realization_envelope_contract(self) -> None:
         envelope_contract_declared = "realization-envelope-v1" in self.supported_contract_versions

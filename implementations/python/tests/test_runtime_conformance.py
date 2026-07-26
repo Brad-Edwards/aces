@@ -10,6 +10,7 @@ import pytest
 from raes_backend_protocols.capabilities import (
     BackendCapabilitySet,
     BackendManifest,
+    ParticipantFeatureSupport,
     ProvisionerCapabilities,
 )
 from raes_backend_stubs.stubs import create_stub_components, create_stub_manifest, create_stub_target
@@ -24,7 +25,7 @@ from raes_conformance.conformance import (
 from raes_contracts.apparatus import ConceptBinding, RealizationSupportDeclaration
 from raes_contracts.planning import ChangeAction, RuntimeDomain
 from raes_contracts.runtime_state import ApplyResult, RuntimeSnapshot, SnapshotEntry
-from raes_contracts.vocabulary import RealizationSupportMode
+from raes_contracts.vocabulary import ParticipantFeatureSupportLevel, RealizationSupportMode
 from raes_runtime.registry import RuntimeTarget
 
 API_406_CARRIER_CONTRACTS = {
@@ -59,6 +60,15 @@ def test_target_conformance_passes_for_stub_target():
     assert "Does not establish trace equivalence or bisimulation." in report.claim.explicit_non_claims
     assert not report.unsupported_contract_gaps
     assert not report.unsupported_capability_gaps
+    feature_cases = [case for case in report.cases if case.capability_feature is not None]
+    assert len(feature_cases) == 6
+    assert all(case.declared_support_level == "unsupported" for case in feature_cases)
+    assert all(case.effective_support_level == "unsupported" for case in feature_cases)
+    assert all(
+        case.finite_scope and "no unexecuted participant behavior" in case.finite_scope for case in feature_cases
+    )
+    assert all(case.limitations for case in feature_cases)
+    assert all(case.explicit_non_claims for case in feature_cases)
     # RUN-311 finding 4: the live probe must actually drive every
     # participant episode control action and end with a non-empty,
     # consistent snapshot for the conformance participant.
@@ -84,6 +94,40 @@ def test_target_conformance_passes_for_stub_target():
             )
 
 
+def test_target_conformance_records_evidence_backed_exact_policy_support():
+    target = create_stub_target()
+    manifest = target.manifest
+    assert manifest.participant_runtime is not None
+    feature = "participant_ingress_admission"
+    declaration = ParticipantFeatureSupport(
+        feature=feature,
+        support_level=ParticipantFeatureSupportLevel.EXACT,
+        evidence_refs=("conformance:participant-ingress-admission:case-1",),
+    )
+    manifest = replace(
+        manifest,
+        capabilities=replace(
+            manifest.capabilities,
+            participant_runtime=replace(
+                manifest.participant_runtime,
+                supported_behavior_features=manifest.participant_runtime.supported_behavior_features | {feature},
+                feature_support=(declaration,),
+            ),
+        ),
+    )
+
+    report = run_target_conformance(replace(target, manifest=manifest))
+
+    case = next(case for case in report.cases if case.capability_feature == feature)
+    assert report.passed is True
+    assert case.passed is True
+    assert case.declared_support_level == "exact"
+    assert case.effective_support_level == "exact"
+    assert case.evidence_refs == ("conformance:participant-ingress-admission:case-1",)
+    assert case.finite_scope and "no unexecuted participant behavior" in case.finite_scope
+    assert case.explicit_non_claims
+
+
 def test_full_remote_control_plane_profile_requires_api_406_carriers():
     contracts = required_contracts(BackendCapabilityProfile.FULL_REMOTE_CONTROL_PLANE)
 
@@ -93,6 +137,8 @@ def test_full_remote_control_plane_profile_requires_api_406_carriers():
         "participant-episode-state-envelope-v1",
         "participant-episode-history-event-stream-v1",
         "participant-behavior-history-event-stream-v1",
+        "participant-control-occurrence-v1",
+        "participant-crossing-occurrence-v1",
     } <= contracts
 
 
@@ -253,6 +299,8 @@ def test_fixture_suite_passes_for_full_remote_control_plane_profile():
     assert "participant-episode-state-envelope-v1" in contract_names
     assert "participant-episode-history-event-stream-v1" in contract_names
     assert "participant-behavior-history-event-stream-v1" in contract_names
+    assert "participant-control-occurrence-v1" in contract_names
+    assert "participant-crossing-occurrence-v1" in contract_names
 
 
 def test_runtime_snapshot_semantic_diagnostics_reject_invalid_participant_episode_state():
@@ -843,6 +891,8 @@ def test_target_conformance_fails_when_declared_contracts_do_not_cover_profile_r
         "operation-status-v1",
         "orchestration-plan-v1",
         "participant-behavior-history-event-stream-v1",
+        "participant-control-occurrence-v1",
+        "participant-crossing-occurrence-v1",
         "participant-episode-history-event-stream-v1",
         "participant-episode-state-envelope-v1",
         "participant-lifecycle-event-v1",

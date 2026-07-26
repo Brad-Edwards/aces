@@ -76,6 +76,37 @@ IETF/IANA registries govern extension terms. Lessons:
   evidence criteria — the API-405 term-level evidence table generalizes to
   API-407 constraints.
 
+Issue #801 reviewed four additional standards-level mechanisms against the
+participant-policy problem:
+
+- [YANG 1.1 features and deviations](https://www.rfc-editor.org/rfc/rfc7950.html)
+  plus the [YANG Library](https://www.rfc-editor.org/rfc/rfc8525.html) partially
+  solve governed feature advertisement and server-specific deviation
+  disclosure. ACES adopts the named-feature and explicit-deviation discipline,
+  but not YANG syntax, datastore semantics, or wire compatibility; YANG has no
+  equivalent of the ACES ordered support-strength/evidence vector.
+- [Vulkan device feature negotiation](https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html)
+  partially solves fail-closed target admission: a requested unsupported
+  device feature makes device creation fail. ACES adopts that admission
+  posture, but not Vulkan feature structs, API calls, or driver
+  compatibility; ACES additionally permits only policy-authorized,
+  provenance-bound weakening and removes the stronger claim.
+- [XACML 3.0](https://docs.oasis-open.org/xacml/3.0/xacml-3.0-core-spec-cos01-en.html)
+  partially solves deny-first policy evaluation and keeps obligations tied to
+  the decision that produced them. ACES adopts the fail-closed separation of
+  capability from authorization, but not the XACML policy language, combining
+  algorithms, request/response format, or PDP/PEP architecture.
+- [OGC API conformance classes](https://docs.ogc.org/is/20-057/20-057.html)
+  partially solve requirements-class-to-test traceability. ACES adopts named,
+  finite, falsifiable cases with explicit evidence scope and nonclaims, but
+  does not claim OGC conformance or promote finite cases to universal runtime
+  realization.
+
+None is a full solution. The ACES-specific addition is one governed
+per-feature declaration carrying ordered strength, separate constraint,
+limitation, disclosure, and evidence references, required portable contracts,
+and a shared admission comparison that cannot itself grant policy authority.
+
 ### 2.5 Retrieval surfaces (control planes, replay logs)
 
 The repo's own control-plane contract (API-403/404, `runtime-snapshot-v1`,
