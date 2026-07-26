@@ -422,11 +422,14 @@ adrs:
     pin: c2a0e6ac9fb87aa10fbb571b0f70efe0b99520b806f6ffe706f1556b0ec7e84b
   - id: ADR-092
     path: docs/decisions/adrs/adr-092-autonomous-benign-participants-under-shared-time.md
-    pin: f813aebad329c94ad78bd97f945c683ec1426e781666b7136a5dd2904476acd5
+    pin: a4398471e58b052d6b7c05cf9014aa4a76adf3e39c7dddd6b1db8a8301047577
     amendments:
       - date: 2026-07-24
         ref: "#861"
         summary: "Required exact action provenance and capability-specific atomic participant batching."
+      - date: 2026-07-26
+        ref: "#897"
+        summary: "Kept v1 stable and governed richer within-run timing, weighted selection, lifecycle state, and provenance as a versioned autonomous-execution profile."
   - id: ADR-093
     path: docs/decisions/adrs/adr-093-raes-rename-and-compatibility-boundaries.md
     pin: 72725b8f09063b0b1d8ec65c4fda58e5648113035588ee4effbece5e0b1c3436

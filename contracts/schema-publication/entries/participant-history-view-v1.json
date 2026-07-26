@@ -2,9 +2,9 @@
   "contract_id": "participant-history-view-v1",
   "schema_path": "contracts/schemas/control-plane/participant-history-view-v1.json",
   "stability": "draft",
-  "content_hash": "380257f288c098c0b94e343dbeb6d51c5216c6b14d91543cc2c147dd06633435",
+  "content_hash": "1fbe4794585f8ae1c71ba85a2cb7249227163301046ddbb8a2172c1bc201ccaa",
   "last_change": {
-    "summary": "Initial publication of the participant history-view control-plane contract: the participant-local interaction-history projection in the backend-facing contract family (ADR-060, issue #76).",
-    "content_hash": "380257f288c098c0b94e343dbeb6d51c5216c6b14d91543cc2c147dd06633435"
+    "summary": "Projected safe autonomous activity occurrence provenance through API-408 participant history views for issue #897.",
+    "content_hash": "1fbe4794585f8ae1c71ba85a2cb7249227163301046ddbb8a2172c1bc201ccaa"
   }
 }

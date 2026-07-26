@@ -43,6 +43,24 @@ AUTONOMOUS_PARTICIPANT_ISSUE_RENDERERS = {
     "participant.autonomous-constraint-clock-mismatch": (
         lambda i: f"Behavior specification '{i.spec_name}' autonomous temporal constraint '{i.ref}' uses another clock"
     ),
+    "participant.autonomous-activity-window-kind-invalid": (
+        lambda i: (
+            f"Behavior specification '{i.spec_name}' activity work and pause refs must resolve to window constraints; "
+            f"'{i.ref}' does not"
+        )
+    ),
+    "participant.autonomous-activity-timing-unreachable": (
+        lambda i: (
+            f"Behavior specification '{i.spec_name}' activity timing bounds are unreachable by stepped "
+            f"progression '{i.ref}'"
+        )
+    ),
+    "participant.autonomous-activity-window-subject-mismatch": (
+        lambda i: (
+            f"Behavior specification '{i.spec_name}' activity window '{i.ref}' must name the behavior "
+            "specification or every governed participant as a subject"
+        )
+    ),
     "participant.autonomous-cadence-missing": (
         lambda i: f"Behavior specification '{i.spec_name}' autonomous execution requires exactly one cadence constraint"
     ),

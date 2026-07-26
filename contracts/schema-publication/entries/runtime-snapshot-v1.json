@@ -2,9 +2,9 @@
   "contract_id": "runtime-snapshot-v1",
   "schema_path": "contracts/schemas/snapshots/runtime-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "ce74f9bb39d44c18badc1451d7f4d363d58e3938de8e360dc020ea2d1e4bcdf7",
+  "content_hash": "d0b31b768af1ebd963e590429e0d38f4b16e816f25c59b95703d3166d463985b",
   "last_change": {
-    "summary": "Added first-class append-only API-409 participant control history for RUN-310 supervisory lifecycle persistence and replay.",
-    "content_hash": "ce74f9bb39d44c18badc1451d7f4d363d58e3938de8e360dc020ea2d1e4bcdf7"
+    "summary": "Added typed autonomous activity v2 continuation and safe occurrence provenance to runtime snapshots for issue #897.",
+    "content_hash": "d0b31b768af1ebd963e590429e0d38f4b16e816f25c59b95703d3166d463985b"
   }
 }

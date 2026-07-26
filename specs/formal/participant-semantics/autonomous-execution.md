@@ -4,7 +4,7 @@ This specification defines DSL-437 execution as a composition of existing
 participant semantics and the shared time model. It introduces no background
 actor, inject, or private clock.
 
-## Authored Policy
+## V1 Authored Policy
 
 For behavior specification \(B\), autonomous policy \(P\) contains:
 
@@ -30,6 +30,36 @@ policies only when the bound clock declares runtime authority. Backend,
 system, and external clock authorities are never advanced by the participant
 driver. Stepped and event-driven clocks advance only through shared-time
 control.
+
+## V2 Activity Policy
+
+`participant-autonomous-execution/v2` preserves the same participant, action,
+observation, implementation, clock, progression, authority, and native
+execution boundaries. It replaces v1 cadence/order fields with:
+
+- a non-empty work-window set \(W_P\) and optional pause-window set \(H_P\);
+- inclusive positive timing bounds \([d_{min}, d_{max}]\);
+- stable keyed candidates \(q_i=(action_i, weight_i, dependencies_i,
+  retryClasses_i, maxRetries_i, cooldown_i)\);
+- an `agent-policy` stochastic-control reference; and
+- positive finite occurrence, attempt, burst, and in-flight bounds.
+
+Every availability reference is a finite shared-time `window` on \(C_P\) that
+names the governed behavior specification or every governed participant.
+Eligibility at tick \(t\) is:
+
+\[
+eligibleTime(P,t) =
+  (\exists [s,e) \in W_P : s \le t < e)
+  \land
+  \neg(\exists [s,e) \in H_P : s \le t < e)
+\]
+
+Declaration order is not semantic. For stepped progression, both timing bounds
+are integer multiples of `step_ticks`. A drawn tick outside eligibility follows
+the authored disposition exactly: `skip` terminates that scheduling path;
+`next_opening` performs a finite forward search over declared work windows. It
+never clamps, redraws, sleeps on wall time, or consults host calendar state.
 
 ## Non-Evaluated Authority Invariant
 
@@ -63,6 +93,32 @@ apparatus contracts; it does not change this selection relation.
 The digest covers the resolved clock, time domain, progression policy, and
 temporal constraints, not only their addresses.
 
+For v2, let \(E(S,t)\) be candidate ids whose dependencies are present in the
+typed completed-candidate set and whose cooldown is not later than \(t\).
+Candidate ids are sorted canonically before compilation. With exact positive
+integer weights and an addressed bounded draw:
+
+\[
+r \in [0,\sum_{i \in E} weight_i - 1]
+\]
+
+the selected candidate is the first canonical prefix interval containing
+\(r\). Dependency filtering precedes the draw. An empty set follows the
+authored `complete` or `wait` disposition and never falls back to all
+candidates. Timing, selection, and burst-size draws use the immutable
+`blake3-xof-participant-v1` profile and the closed address:
+
+\[
+(namespace, policyAddress, participantAddress, segment,
+ occurrenceOrdinal, purpose, localCoordinate)
+\]
+
+Retries retain the occurrence ordinal, selected candidate, timing tick, and
+selection draw. Retry number, worker identity, call order, wall time, and
+backend availability are not stream coordinates. Activity draws are within-run
+policy execution and are separate from scenario-family variation and trial
+compilation.
+
 ## Execution And Evidence
 
 An action may commit only in this order:
@@ -90,6 +146,21 @@ match the selected participant implementation.
 `stop` marks the scheduler failed; `continue` advances the bounded attempt
 counter and cadence.
 
+For v2, a retry is admitted only when the typed terminal failure class is in
+the selected candidate's declared retry set and the per-occurrence retry and
+global attempt bounds both remain. Each retry has a distinct attempt id and
+names its predecessor. Protocol-invalid or indeterminate work is not retried.
+A terminal occurrence updates dependency completion and cooldown state before
+the next selection. A burst performs at most `max_burst_size` serialized
+occurrences at one due tick; each remains a distinct occurrence and action
+attempt.
+
+Every committed v2 behavior-history event carries safe occurrence provenance:
+policy/profile, occurrence and attempt identity, predecessor and dependency
+ids, candidate, timing tick/disposition, burst position, terminal outcome, and
+the safe control/profile/address identity. It never carries root entropy,
+derived keys, raw blocks, or backend-private objects.
+
 ## Lifecycle
 
 Pause changes non-terminal scheduler states on the governed clock to `paused`;
@@ -114,6 +185,12 @@ atomic batch implementation rather than inherit the reference in-memory
 transaction.
 Durable and conformance validation require scheduler segment/lifecycle and
 episode identity to agree with the bound shared clock and live episode.
+V2 reset also clears occurrence, retry, dependency, cooldown, and burst
+continuation, then derives the next timing and burst values under the new
+shared-time segment. The segment is part of every activity address, so reset
+generations cannot alias prior draws. Participant/service state changes remain
+owned by native action results and existing episode/reset contracts; scheduler
+timestamps alone make no causal or rollback claim.
 
 ## Backend Admission
 
@@ -151,6 +228,18 @@ and every parent behavior feature required by \(P\) must be in the backend
 feature set. A reset-capable policy additionally requires the coordinated
 participant-reset capability and runtime method. Runtime state, typed native
 action outcome, history, and backend evidence establish what occurred.
+
+V2 additionally requires exact admission of:
+
+- `participant-autonomous-execution/v2`;
+- all governed activity features;
+- `weighted`;
+- `blake3-xof-participant-v1`;
+- shared-time `window`; and
+- occurrence, retry-per-occurrence, and burst-size maxima.
+
+Missing or differently named support fails admission; no compatible-profile,
+transform, or strategy fallback is inferred.
 
 ## Nonclaims
 

@@ -10,6 +10,10 @@ to RAES names and identifies the narrow ACES identifiers that remain only as
 source import paths, governed contract identifiers, historical records, or
 external references.
 
+The explicit opt-in from fixed-cadence autonomous participant execution to the
+governed activity profile is documented in
+[Autonomous Execution V2 Migration](autonomous-execution-v2.md).
+
 The reorganization moved existing material into the current long-term buckets:
 
 - root `schemas/` -> `contracts/schemas/`

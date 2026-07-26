@@ -1,6 +1,6 @@
-"""Canonical-vector conformance tests for the EXP-718 ``blake3-xof-v1`` engine.
+"""Canonical-vector conformance tests for published EXP-718 BLAKE3 profiles.
 
-Every vector under ``contracts/fixtures/random-stream-vectors/blake3-xof-v1/``
+Every vector under ``contracts/fixtures/random-stream-vectors/``
 was computed independently of ``raes_contracts.random_stream_engine`` (a
 one-off script that calls the ``blake3`` library directly -- see the EXP-718
 implementation notes); these tests run the same inputs through the public
@@ -28,12 +28,12 @@ from raes_contracts.random_stream_engine import (
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-VECTORS_ROOT = REPO_ROOT / "contracts" / "fixtures" / "random-stream-vectors" / "blake3-xof-v1"
+VECTORS_ROOT = REPO_ROOT / "contracts" / "fixtures" / "random-stream-vectors"
 
 
 def _load_vectors() -> list[RandomStreamVectorModel]:
     vectors = []
-    for path in sorted(VECTORS_ROOT.glob("*.json")):
+    for path in sorted(VECTORS_ROOT.glob("*/*.json")):
         payload = json.loads(path.read_text(encoding="utf-8"))
         vectors.append(RandomStreamVectorModel.model_validate(payload))
     return vectors
@@ -43,7 +43,8 @@ VECTORS = _load_vectors()
 
 
 def test_vector_corpus_is_non_empty() -> None:
-    assert len(VECTORS) >= 6
+    assert len(VECTORS) >= 7
+    assert any(vector.profile_id == "blake3-xof-participant-v1" for vector in VECTORS)
 
 
 @pytest.mark.parametrize("vector", VECTORS, ids=lambda v: v.vector_id)

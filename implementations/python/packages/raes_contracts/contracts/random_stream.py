@@ -157,6 +157,47 @@ class StreamAddressModel(ContractModel):
         return json_schema
 
 
+class ParticipantStreamAddressModel(ContractModel):
+    """Closed within-run address for one participant-policy draw."""
+
+    namespace: PortableIdentifier
+    policy_address: NonEmptyString
+    participant_address: NonEmptyString
+    time_segment: NonNegativeInteger
+    occurrence_ordinal: NonNegativeInteger
+    draw_purpose: PortableIdentifier
+    local_coordinate: NonNegativeInteger
+
+    @model_validator(mode="after")
+    def _validate_address(self) -> ParticipantStreamAddressModel:
+        _validate_controlled_vocabulary_terms(RANDOM_STREAM_DRAW_PURPOSE_SCOPE, [self.draw_purpose])
+        if not self.policy_address.startswith("participant.autonomous-execution."):
+            raise ValueError("participant stream policy_address must be a compiled autonomous-execution address")
+        if not self.participant_address.startswith("participant.behavior."):
+            raise ValueError("participant stream participant_address must be a compiled participant address")
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        _add_aces_invariant(
+            json_schema,
+            "participant-random-stream-address-governed",
+            (
+                "draw_purpose must be governed and policy_address/participant_address must be compiled "
+                "autonomous participant addresses."
+            ),
+            validator=("raes_contracts.contracts.random_stream.ParticipantStreamAddressModel._validate_address"),
+            inputs=[{"contract_id": "controlled-vocabularies-v1", "instance_path": "#"}],
+        )
+        return json_schema
+
+
 class RandomStreamControlBindingModel(ContractModel):
     """Executable binding: profile identity, namespace, and root entropy.
 
@@ -358,7 +399,7 @@ class RandomStreamVectorModel(ContractModel):
     profile_id: SemanticProfileId
     root_entropy: PublicSeedModel
     stream_key_hex: NonEmptyString = Field(pattern=_PUBLIC_SEED_HEX_PATTERN)
-    address: StreamAddressModel
+    address: StreamAddressModel | ParticipantStreamAddressModel
     address_canonical_bytes_hex: NonEmptyString
     raw_block_hex: NonEmptyString
     transform: RandomStreamBoundedIntegerVectorCaseModel | None = None

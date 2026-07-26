@@ -209,6 +209,24 @@ exists. Coordinated clock/participant reset is an ACES backend transaction
 obligation, not a derivation from any source rollback API. No source callback,
 transaction protocol, or wire protocol is implied.
 
+### Issue 897 autonomous activity extension review
+
+The participant and simulation-time source boundaries above were re-reviewed
+on 2026-07-26 for issue #897. No new external syntax, API, scheduler, calendar,
+or wire contract was adopted. Work/pause window algebra, bounded logical-tick
+timing, canonical integer-weight selection, dependency/retry/cooldown/burst
+policy, exact backend admission, and typed occurrence provenance are
+ACES-defined extensions under ADR-092.
+
+The participant activity profile reuses the ACES-governed random-stream
+principles and sources already audited in
+`docs/research/scenario-variation-trial-realization/prior-art-and-design-criteria.md`.
+It publishes a distinct participant-occurrence profile/address and does not
+reinterpret experiment selection-policy or variation-point coordinates.
+Accordingly, NumPy, Random123, and stream-splitting precedents remain design
+criteria rather than source compatibility or copied-code claims. No additional
+license notice is required by this extension.
+
 ## CRACK Publications
 
 Two related works by Russo, Costa, and Armando are distinct and must not share

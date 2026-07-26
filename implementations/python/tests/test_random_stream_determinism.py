@@ -32,7 +32,12 @@ from concurrent.futures import ThreadPoolExecutor
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
-from raes_contracts.contracts.random_stream import StreamAddressModel, TrialCoordinateModel
+from pydantic import ValidationError
+from raes_contracts.contracts.random_stream import (
+    ParticipantStreamAddressModel,
+    StreamAddressModel,
+    TrialCoordinateModel,
+)
 from raes_contracts.random_stream_engine import (
     BLOCK_BYTES,
     _bounded_integer_byte_width,
@@ -176,6 +181,81 @@ def test_cross_process_and_hash_seed_independence() -> None:
         ).encode("utf-8")
     ).hexdigest()
     assert digest_seed_0 == digest_seed_1 == in_process
+
+
+def test_participant_occurrence_address_is_deterministic_and_reset_scoped() -> None:
+    profile_id = "blake3-xof-participant-v1"
+    stream_key = derive_stream_key(profile_id=profile_id, root_entropy=ROOT_ENTROPY)
+    address = ParticipantStreamAddressModel(
+        namespace="run-policy",
+        policy_address="participant.autonomous-execution.participant-behavior",
+        participant_address="participant.behavior.participant-agent",
+        time_segment=2,
+        occurrence_ordinal=7,
+        draw_purpose="agent-policy",
+        local_coordinate=0,
+    )
+
+    first = draw_bounded_integer(
+        profile_id=profile_id,
+        stream_key=stream_key,
+        address=address,
+        minimum=0,
+        maximum=9,
+        max_rejection_attempts=32,
+    )
+    repeated = draw_bounded_integer(
+        profile_id=profile_id,
+        stream_key=stream_key,
+        address=address,
+        minimum=0,
+        maximum=9,
+        max_rejection_attempts=32,
+    )
+    reset = draw_bounded_integer(
+        profile_id=profile_id,
+        stream_key=stream_key,
+        address=address.model_copy(update={"time_segment": 3}),
+        minimum=0,
+        maximum=9,
+        max_rejection_attempts=32,
+    )
+
+    assert first == repeated
+    assert first.value is not None
+    assert reset.value is not None
+    assert raw_block(profile_id=profile_id, stream_key=stream_key, address=address) != raw_block(
+        profile_id=profile_id,
+        stream_key=stream_key,
+        address=address.model_copy(update={"time_segment": 3}),
+    )
+
+
+@pytest.mark.parametrize(
+    ("field_name", "invalid_value"),
+    [
+        ("policy_address", "participant.behavior.not-a-policy"),
+        ("participant_address", "participant.agent.not-a-behavior"),
+        ("draw_purpose", "ungoverned-purpose"),
+    ],
+)
+def test_participant_occurrence_address_rejects_ungoverned_identity_fields(
+    field_name: str,
+    invalid_value: str,
+) -> None:
+    payload = {
+        "namespace": "run-policy",
+        "policy_address": "participant.autonomous-execution.participant-behavior",
+        "participant_address": "participant.behavior.participant-agent",
+        "time_segment": 2,
+        "occurrence_ordinal": 7,
+        "draw_purpose": "agent-policy",
+        "local_coordinate": 0,
+    }
+    payload[field_name] = invalid_value
+
+    with pytest.raises(ValidationError):
+        ParticipantStreamAddressModel.model_validate(payload)
 
 
 class TestNonInterferenceProperty:

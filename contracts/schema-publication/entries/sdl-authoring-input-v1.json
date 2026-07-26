@@ -2,9 +2,9 @@
   "contract_id": "sdl-authoring-input-v1",
   "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
   "stability": "draft",
-  "content_hash": "65ae337e1fbe2a4b66e8d0cbbb98c66c172360d328fd82c5352a223a1e6429cc",
+  "content_hash": "adc8e52852a98d07b14cfa48d0dc78a57935b6cf25d4777eda271d75ec68485d",
   "last_change": {
-    "summary": "Published closed participant-directed inject delivery and governed participant action-argument authoring semantics on the RAES-only package surface.",
-    "content_hash": "65ae337e1fbe2a4b66e8d0cbbb98c66c172360d328fd82c5352a223a1e6429cc"
+    "summary": "Published the explicit autonomous activity v2 authoring profile with governed windows, timing, weighted candidates, retries, cooldowns, and bursts for issue #897.",
+    "content_hash": "adc8e52852a98d07b14cfa48d0dc78a57935b6cf25d4777eda271d75ec68485d"
   }
 }

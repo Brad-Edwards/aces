@@ -106,9 +106,15 @@ class ParticipantRuntimeCapabilities:
     supported_autonomous_action_contracts: frozenset[str] = frozenset()
     supported_autonomous_observation_boundaries: frozenset[str] = frozenset()
     supported_autonomous_target_addresses: frozenset[str] = frozenset()
+    supported_autonomous_policy_profiles: frozenset[str] = frozenset()
+    supported_autonomous_activity_features: frozenset[str] = frozenset()
+    supported_autonomous_random_stream_profiles: frozenset[str] = frozenset()
     max_autonomous_participants: int | None = None
     max_autonomous_action_attempts: int | None = None
     max_autonomous_in_flight: int | None = None
+    max_autonomous_occurrences: int | None = None
+    max_autonomous_retries_per_occurrence: int | None = None
+    max_autonomous_burst_size: int | None = None
     constraints: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -191,13 +197,20 @@ class ParticipantRuntimeCapabilities:
     def _validate_enabled_autonomous_execution(self) -> None:
         if not self.supported_autonomous_selection_strategies:
             raise ValueError("autonomous execution requires supported selection strategies")
-        unknown_strategies = sorted(self.supported_autonomous_selection_strategies - {"ordered_cycle"})
+        unknown_strategies = sorted(self.supported_autonomous_selection_strategies - {"ordered_cycle", "weighted"})
         if unknown_strategies:
             raise ValueError("unsupported autonomous selection strategies: " + ", ".join(unknown_strategies))
         if not self.supported_autonomous_action_contracts:
             raise ValueError("autonomous execution requires exact supported action contracts")
         if not self.supported_autonomous_observation_boundaries:
             raise ValueError("autonomous execution requires exact supported observation boundaries")
+        if not self.supported_autonomous_policy_profiles:
+            raise ValueError("autonomous execution requires exact supported policy profiles")
+        if "participant-autonomous-execution/v2" in self.supported_autonomous_policy_profiles:
+            if not self.supported_autonomous_activity_features:
+                raise ValueError("autonomous execution v2 requires exact supported activity features")
+            if not self.supported_autonomous_random_stream_profiles:
+                raise ValueError("autonomous execution v2 requires exact supported random-stream profiles")
         self._validate_autonomous_addresses()
         for label, value in self._autonomous_limits():
             if value is None or value < 1:
@@ -217,6 +230,9 @@ class ParticipantRuntimeCapabilities:
             ("max_autonomous_participants", self.max_autonomous_participants),
             ("max_autonomous_action_attempts", self.max_autonomous_action_attempts),
             ("max_autonomous_in_flight", self.max_autonomous_in_flight),
+            ("max_autonomous_occurrences", self.max_autonomous_occurrences),
+            ("max_autonomous_retries_per_occurrence", self.max_autonomous_retries_per_occurrence),
+            ("max_autonomous_burst_size", self.max_autonomous_burst_size),
         )
 
     def _has_autonomous_configuration(self) -> bool:
@@ -225,6 +241,9 @@ class ParticipantRuntimeCapabilities:
             or self.supported_autonomous_action_contracts
             or self.supported_autonomous_observation_boundaries
             or self.supported_autonomous_target_addresses
+            or self.supported_autonomous_policy_profiles
+            or self.supported_autonomous_activity_features
+            or self.supported_autonomous_random_stream_profiles
             or any(value is not None for _, value in self._autonomous_limits())
         )
 

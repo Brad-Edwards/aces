@@ -80,6 +80,7 @@ class RuntimeParticipantExecutionMixin:
             execution_plan.model.time_model,
             self._target.participant_runtime,
             state.working_snapshot,
+            self._participant_activity_controls,
         )
         self._record_phase_result(state, result)
         if not result.success:
@@ -97,6 +98,7 @@ class RuntimeParticipantExecutionMixin:
             execution_plan.model.time_model,
             self._target.participant_runtime,
             state.working_snapshot,
+            self._participant_activity_controls,
         )
         self._record_phase_result(state, due)
         return due.success
@@ -110,6 +112,7 @@ class RuntimeParticipantExecutionMixin:
                 self._participant_execution_time_model,
                 self._target.participant_runtime,
                 self._snapshot,
+                self._participant_activity_controls,
             )
             self._snapshot = result.snapshot
             return result
@@ -181,6 +184,7 @@ class RuntimeParticipantExecutionMixin:
             self._snapshot,
             clock_address,
             reset_participants=False,
+            activity_controls=self._participant_activity_controls,
         )
         self._snapshot = result.snapshot
         return result

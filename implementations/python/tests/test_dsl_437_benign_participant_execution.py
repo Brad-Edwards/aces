@@ -12,17 +12,26 @@ import yaml
 from raes._errors import SDLValidationError
 from raes.parser import parse_sdl
 from raes.participant_behavior import ParticipantFailureClass
+from raes.participant_execution import ParticipantAutonomousExecutionPolicyV2
 from raes_backend_protocols.capabilities import ParticipantFeatureSupport
 from raes_backend_protocols.capability_admission import participant_autonomous_execution_capability_gaps
+from raes_backend_protocols.manifest import backend_manifest_from_v2_model, backend_manifest_v2_model
 from raes_backend_protocols.participant_runtime_base import BaseParticipantRuntime
 from raes_backend_stubs.manifest import create_stub_manifest
 from raes_backend_stubs.stubs import create_stub_target
 from raes_contracts.contracts import (
+    ExperimentStochasticControlModel,
     ParticipantActionResultModel,
     ParticipantAutonomousExecutionStateModel,
     ParticipantImplementationManifestModel,
     ParticipantImplementationSelectionModel,
     RuntimeSnapshotEnvelopeModel,
+)
+from raes_contracts.contracts.random_stream import (
+    GovernedEntropyRefModel,
+    PublicSeedModel,
+    RandomStreamControlBindingModel,
+    RandomStreamProfileReferenceModel,
 )
 from raes_contracts.contracts.time_model import TimeRuntimeStateModel
 from raes_contracts.participant_binding import (
@@ -40,6 +49,12 @@ from raes_processor.compiler import compile_runtime_model
 from raes_processor.compiler.time_model import time_model_contract_model
 from raes_processor.planner import plan
 from raes_runtime.manager import RuntimeManager
+from raes_runtime.participant_activity import (
+    activity_tick_is_eligible,
+    next_activity_timing,
+    resolve_participant_activity_controls,
+    select_activity_candidate,
+)
 from raes_runtime.participant_clock_driver import ParticipantClockDriver
 from raes_runtime.participant_scheduler import ParticipantScheduler
 from raes_runtime.time_coordinator import ReferenceTimeRuntime, TimeCoordinator
@@ -124,6 +139,61 @@ def _scenario_yaml(*, role: str = "green") -> str:
     return yaml.safe_dump(payload, sort_keys=False)
 
 
+def _activity_policy_yaml() -> str:
+    payload = yaml.safe_load(_scenario_yaml())
+    payload["temporal_constraints"].update(
+        {
+            "work-window": {
+                "constraint_kind": "window",
+                "clock_ref": "scenario-clock",
+                "subject_refs": ["participant-agent"],
+                "start": {"tick": 0},
+                "end": {"tick": 100},
+                "description": "Participant work availability.",
+            },
+            "pause-window": {
+                "constraint_kind": "window",
+                "clock_ref": "scenario-clock",
+                "subject_refs": ["participant-agent"],
+                "start": {"tick": 40},
+                "end": {"tick": 50},
+                "description": "Participant pause interval.",
+            },
+        }
+    )
+    payload["behavior_specifications"]["participant-behavior"]["autonomous_execution"] = {
+        "profile": "participant-autonomous-execution/v2",
+        "participant_implementation_ref": IMPLEMENTATION_REF,
+        "clock_ref": "scenario-clock",
+        "progression_policy_ref": "scenario-progression",
+        "work_window_refs": ["work-window"],
+        "pause_window_refs": ["pause-window"],
+        "observation_boundary_ref": "participant-view",
+        "stochastic_control_ref": "green-activity-policy",
+        "selection_strategy": "weighted",
+        "timing": {"minimum_ticks": 10, "maximum_ticks": 30},
+        "outside_window_disposition": "next_opening",
+        "empty_eligible_disposition": "complete",
+        "action_candidates": {
+            "portal_login": {
+                "action_ref": "probe-customer-portal-login",
+                "weight": 3,
+                "depends_on": [],
+                "retryable_failure_classes": ["target_unavailable", "timeout"],
+                "max_retries": 2,
+                "cooldown_ticks": 20,
+            }
+        },
+        "max_occurrences": 8,
+        "max_action_attempts": 24,
+        "max_burst_size": 2,
+        "max_in_flight": 1,
+        "failure_policy": "continue",
+        "evaluation_authority": {"mode": "none"},
+    }
+    return yaml.safe_dump(payload, sort_keys=False)
+
+
 def _implementation_manifest() -> ParticipantImplementationManifestModel:
     return ParticipantImplementationManifestModel.model_validate(
         {
@@ -168,6 +238,26 @@ def _implementation_manifest() -> ParticipantImplementationManifestModel:
                 "exposure_policy_kinds": ["observation-stream"],
             },
         }
+    )
+
+
+def _activity_control() -> ExperimentStochasticControlModel:
+    return ExperimentStochasticControlModel(
+        control_id="green-activity-policy",
+        role="agent-policy",
+        executable_binding=RandomStreamControlBindingModel(
+            profile_ref=RandomStreamProfileReferenceModel(
+                ref_id="blake3-xof-participant-v1",
+                ref_kind="profile",
+                ref_version="1",
+            ),
+            namespace="green-activity",
+            root_entropy=PublicSeedModel(
+                kind="public-seed",
+                encoding="hex-fixed-width",
+                value="42" * 32,
+            ),
+        ),
     )
 
 
@@ -475,7 +565,7 @@ def _autonomous_manifest(runtime_model: object) -> object:
                     base_manifest.participant_runtime.supported_behavior_features | {"autonomous_execution"}
                 ),
                 supports_autonomous_execution=True,
-                supported_autonomous_selection_strategies=frozenset({"ordered_cycle"}),
+                supported_autonomous_selection_strategies=frozenset(policy.selection_strategy for policy in policies),
                 supported_autonomous_action_contracts=frozenset(
                     address for policy in policies for address in policy.action_contract_addresses
                 ),
@@ -485,9 +575,39 @@ def _autonomous_manifest(runtime_model: object) -> object:
                 supported_autonomous_target_addresses=frozenset(
                     address for policy in policies for address in policy.target_addresses
                 ),
+                supported_autonomous_policy_profiles=frozenset(policy.profile for policy in policies),
+                supported_autonomous_activity_features=frozenset(
+                    {
+                        "work-windows",
+                        "timing-variation",
+                        "weighted-selection",
+                        "dependencies",
+                        "bounded-retries",
+                        "cooldowns",
+                        "limited-bursts",
+                        "occurrence-provenance",
+                    }
+                    if any(policy.profile == "participant-autonomous-execution/v2" for policy in policies)
+                    else ()
+                ),
+                supported_autonomous_random_stream_profiles=frozenset(
+                    {"blake3-xof-participant-v1"}
+                    if any(policy.profile == "participant-autonomous-execution/v2" for policy in policies)
+                    else ()
+                ),
                 max_autonomous_participants=8,
-                max_autonomous_action_attempts=8,
+                max_autonomous_action_attempts=max(policy.max_action_attempts for policy in policies),
                 max_autonomous_in_flight=1,
+                max_autonomous_occurrences=max(
+                    (policy.max_occurrences or policy.max_action_attempts for policy in policies),
+                    default=1,
+                ),
+                max_autonomous_retries_per_occurrence=max(
+                    (max(policy.action_candidate_max_retries, default=0) for policy in policies),
+                    default=0,
+                )
+                or 1,
+                max_autonomous_burst_size=max((policy.max_burst_size for policy in policies), default=1),
             ),
         ),
     )
@@ -506,6 +626,86 @@ def test_autonomous_execution_compiles_existing_participant_and_shared_time_refs
     action = runtime_model.action_contracts["participant.action-contract.probe-customer-portal-login"]
     assert action.interaction_classes == ("shared_state_change",)
     assert action.shared_state_refs == ("nodes.customer-portal.services.http",)
+
+
+def test_activity_policy_v2_compiles_weighted_candidates_and_shared_time_windows() -> None:
+    runtime_model = compile_runtime_model(parse_sdl(_activity_policy_yaml()))
+    policy = runtime_model.behavior_specifications[
+        "participant.behavior-specification.participant-behavior"
+    ].autonomous_execution
+
+    assert policy is not None
+    assert policy.profile == "participant-autonomous-execution/v2"
+    assert policy.selection_strategy == "weighted"
+    assert policy.work_window_addresses == ("time.constraint.work-window",)
+    assert policy.pause_window_addresses == ("time.constraint.pause-window",)
+    assert policy.stochastic_control_ref == "green-activity-policy"
+    assert policy.timing_minimum_ticks == 10
+    assert policy.timing_maximum_ticks == 30
+    assert policy.action_candidate_ids == ("portal_login",)
+    assert policy.action_candidate_weights == (3,)
+    assert policy.action_contract_addresses == ("participant.action-contract.probe-customer-portal-login",)
+    assert policy.max_occurrences == 8
+    assert policy.max_burst_size == 2
+
+
+def test_activity_policy_v2_compiles_section_qualified_window_refs_to_canonical_addresses() -> None:
+    payload = yaml.safe_load(_activity_policy_yaml())
+    policy = payload["behavior_specifications"]["participant-behavior"]["autonomous_execution"]
+    policy["work_window_refs"] = ["temporal_constraints.work-window"]
+    policy["pause_window_refs"] = ["temporal_constraints.pause-window"]
+
+    runtime_model = compile_runtime_model(parse_sdl(yaml.safe_dump(payload, sort_keys=False)))
+    compiled = runtime_model.behavior_specifications[
+        "participant.behavior-specification.participant-behavior"
+    ].autonomous_execution
+
+    assert compiled is not None
+    assert compiled.work_window_addresses == ("time.constraint.work-window",)
+    assert compiled.pause_window_addresses == ("time.constraint.pause-window",)
+    assert set(compiled.temporal_constraint_addresses) == {
+        "time.constraint.work-window",
+        "time.constraint.pause-window",
+    }
+
+
+def test_activity_policy_v2_rejects_dependency_cycles() -> None:
+    payload = yaml.safe_load(_activity_policy_yaml())
+    policy = payload["behavior_specifications"]["participant-behavior"]["autonomous_execution"]
+    policy["action_candidates"]["portal_login"]["depends_on"] = ["second_action"]
+    policy["action_candidates"]["second_action"] = {
+        **policy["action_candidates"]["portal_login"],
+        "depends_on": ["portal_login"],
+    }
+
+    with pytest.raises(ValueError, match="dependency graph must be acyclic"):
+        ParticipantAutonomousExecutionPolicyV2.model_validate(policy)
+
+
+def test_activity_policy_v2_rejects_non_window_availability_constraint() -> None:
+    payload = yaml.safe_load(_activity_policy_yaml())
+    payload["behavior_specifications"]["participant-behavior"]["autonomous_execution"]["work_window_refs"] = [
+        "green-cadence"
+    ]
+
+    with pytest.raises(SDLValidationError, match="work and pause refs must resolve to window constraints"):
+        parse_sdl(yaml.safe_dump(payload, sort_keys=False))
+
+
+def test_activity_policy_v2_rejects_timing_bounds_unreachable_by_stepped_progression() -> None:
+    payload = yaml.safe_load(_activity_policy_yaml())
+    payload["behavior_specifications"]["participant-behavior"]["autonomous_execution"]["timing"]["minimum_ticks"] = 15
+
+    with pytest.raises(SDLValidationError, match="activity timing bounds are unreachable by stepped progression"):
+        parse_sdl(yaml.safe_dump(payload, sort_keys=False))
+
+
+def test_activity_policy_v2_rejects_window_for_unrelated_subject() -> None:
+    payload = yaml.safe_load(_activity_policy_yaml())
+    payload["temporal_constraints"]["work-window"]["subject_refs"] = ["nodes.customer-portal"]
+
+    with pytest.raises(SDLValidationError, match="must name the behavior specification or every governed participant"):
+        parse_sdl(yaml.safe_dump(payload, sort_keys=False))
 
 
 def test_non_evaluated_autonomous_participant_must_be_green() -> None:
@@ -594,6 +794,52 @@ def test_backend_admission_enforces_finite_autonomous_execution_limits() -> None
     )
     assert "autonomous clock reset requires coordinated participant reset support" in gaps
     assert "action attempts" in gaps[0]
+
+
+def test_backend_admission_requires_exact_v2_activity_and_random_profile_support() -> None:
+    runtime_model = compile_runtime_model(parse_sdl(_activity_policy_yaml()))
+    policies = tuple(
+        specification.autonomous_execution
+        for specification in runtime_model.behavior_specifications.values()
+        if specification.autonomous_execution is not None
+    )
+    manifest = _autonomous_manifest(runtime_model)
+
+    assert participant_autonomous_execution_capability_gaps(manifest, policies, runtime_model.time_model) == ()
+    restored = backend_manifest_from_v2_model(backend_manifest_v2_model(manifest))
+    assert participant_autonomous_execution_capability_gaps(restored, policies, runtime_model.time_model) == ()
+    assert manifest.participant_runtime is not None
+    unsupported = replace(
+        manifest,
+        capabilities=replace(
+            manifest.capabilities,
+            participant_runtime=replace(
+                manifest.participant_runtime,
+                supported_autonomous_random_stream_profiles=frozenset({"blake3-xof-v1"}),
+            ),
+        ),
+    )
+
+    gaps = participant_autonomous_execution_capability_gaps(unsupported, policies, runtime_model.time_model)
+    assert "unsupported autonomous random-stream profiles: blake3-xof-participant-v1" in gaps
+    missing_dependency_support = replace(
+        manifest,
+        capabilities=replace(
+            manifest.capabilities,
+            participant_runtime=replace(
+                manifest.participant_runtime,
+                supported_autonomous_activity_features=(
+                    manifest.participant_runtime.supported_autonomous_activity_features - {"dependencies"}
+                ),
+            ),
+        ),
+    )
+    gaps = participant_autonomous_execution_capability_gaps(
+        missing_dependency_support,
+        policies,
+        runtime_model.time_model,
+    )
+    assert "unsupported autonomous activity features: dependencies" in gaps
 
 
 def test_planner_enforces_required_participant_features_and_exact_targets() -> None:
@@ -730,6 +976,446 @@ def test_runtime_manager_drives_due_actions_from_shared_clock_controls() -> None
     due = manager.run_due_participant_actions()
     assert due.success
     assert len(participant_runtime.native_actions) == 3
+
+
+def test_runtime_manager_executes_v2_activity_from_admitted_random_control() -> None:
+    scenario = parse_sdl(_activity_policy_yaml())
+    runtime_model = compile_runtime_model(scenario)
+    participant_runtime = _NativeParticipantRuntime()
+    target = replace(
+        create_stub_target(),
+        manifest=_autonomous_manifest(runtime_model),
+        participant_runtime=participant_runtime,
+    )
+    manager = RuntimeManager(target, stochastic_controls=[_activity_control()])
+
+    applied = manager.apply(manager.plan(scenario))
+
+    assert applied.success
+    assert participant_runtime.native_actions == []
+    state = ParticipantAutonomousExecutionStateModel.model_validate(
+        next(iter(applied.snapshot.participant_autonomous_execution_states.values()))
+    )
+    assert 10 <= state.next_tick <= 30
+    due = manager.advance_time("time.clock.scenario-clock", ticks=state.next_tick)
+    assert due.success
+    assert len(participant_runtime.native_actions) == 1
+    advanced = ParticipantAutonomousExecutionStateModel.model_validate(
+        next(iter(due.snapshot.participant_autonomous_execution_states.values()))
+    )
+    assert advanced.occurrence_ordinal == 1
+    assert advanced.last_candidate_id == "portal_login"
+    assert advanced.random_control_id == "green-activity-policy"
+    assert advanced.random_profile_id == "blake3-xof-participant-v1"
+    history = due.snapshot.participant_behavior_history[advanced.participant_address]
+    assert len(history) == 3
+    provenances = [event["activity_provenance"] for event in history]
+    assert all(provenance is not None for provenance in provenances)
+    assert {provenance["occurrence_id"] for provenance in provenances} == {
+        (
+            "participant.autonomous-execution.participant-behavior:"
+            "participant.behavior.participant-agent:segment=0:occurrence=0"
+        )
+    }
+    assert all(provenance["candidate_id"] == "portal_login" for provenance in provenances)
+    assert all(
+        provenance["random_address"]["time_segment"] == 0 and provenance["random_address"]["occurrence_ordinal"] == 0
+        for provenance in provenances
+    )
+
+
+def test_runtime_manager_bounds_v2_retries_and_preserves_occurrence_causality() -> None:
+    scenario = parse_sdl(_activity_policy_yaml())
+    runtime_model = compile_runtime_model(scenario)
+    participant_runtime = _FailedParticipantRuntime()
+    target = replace(
+        create_stub_target(),
+        manifest=_autonomous_manifest(runtime_model),
+        participant_runtime=participant_runtime,
+    )
+    manager = RuntimeManager(target, stochastic_controls=[_activity_control()])
+    applied = manager.apply(manager.plan(scenario))
+    initial = ParticipantAutonomousExecutionStateModel.model_validate(
+        next(iter(applied.snapshot.participant_autonomous_execution_states.values()))
+    )
+
+    due = manager.advance_time("time.clock.scenario-clock", ticks=initial.next_tick)
+
+    assert due.success
+    assert participant_runtime.native_actions == [
+        (
+            "participant.autonomous-execution.participant-behavior:"
+            "participant.behavior.participant-agent:"
+            f"episode={initial.episode_id}:segment=0:occurrence=0:retry=0"
+        ),
+        (
+            "participant.autonomous-execution.participant-behavior:"
+            "participant.behavior.participant-agent:"
+            f"episode={initial.episode_id}:segment=0:occurrence=0:retry=1"
+        ),
+        (
+            "participant.autonomous-execution.participant-behavior:"
+            "participant.behavior.participant-agent:"
+            f"episode={initial.episode_id}:segment=0:occurrence=0:retry=2"
+        ),
+    ]
+    state = ParticipantAutonomousExecutionStateModel.model_validate(
+        next(iter(due.snapshot.participant_autonomous_execution_states.values()))
+    )
+    assert (state.occurrence_ordinal, state.current_retry) == (1, 0)
+    assert (state.attempted_actions, state.failed_actions) == (3, 3)
+    history = due.snapshot.participant_behavior_history[state.participant_address]
+    attempted = [event for event in history if event["event_type"] == "action_attempted"]
+    assert [event["activity_provenance"]["timing_disposition"] for event in attempted] == [
+        initial.next_timing_disposition,
+        "retry",
+        "retry",
+    ]
+    assert attempted[1]["activity_provenance"]["predecessor_attempt_id"] == participant_runtime.native_actions[0]
+    assert attempted[2]["activity_provenance"]["predecessor_attempt_id"] == participant_runtime.native_actions[1]
+
+
+def test_runtime_manager_global_attempt_bound_stops_v2_retry_chain() -> None:
+    payload = yaml.safe_load(_activity_policy_yaml())
+    policy = payload["behavior_specifications"]["participant-behavior"]["autonomous_execution"]
+    policy.update(max_occurrences=2, max_action_attempts=2, max_burst_size=1)
+    scenario = parse_sdl(yaml.safe_dump(payload, sort_keys=False))
+    runtime_model = compile_runtime_model(scenario)
+    participant_runtime = _FailedParticipantRuntime()
+    target = replace(
+        create_stub_target(),
+        manifest=_autonomous_manifest(runtime_model),
+        participant_runtime=participant_runtime,
+    )
+    manager = RuntimeManager(target, stochastic_controls=[_activity_control()])
+    applied = manager.apply(manager.plan(scenario))
+    initial = ParticipantAutonomousExecutionStateModel.model_validate(
+        next(iter(applied.snapshot.participant_autonomous_execution_states.values()))
+    )
+
+    due = manager.advance_time("time.clock.scenario-clock", ticks=initial.next_tick)
+
+    assert due.success
+    assert len(participant_runtime.native_actions) == 2
+    state = ParticipantAutonomousExecutionStateModel.model_validate(
+        next(iter(due.snapshot.participant_autonomous_execution_states.values()))
+    )
+    assert state.lifecycle_state == "completed"
+    assert (state.occurrence_ordinal, state.attempted_actions, state.failed_actions) == (1, 2, 2)
+
+
+def test_runtime_manager_normalizes_v2_timing_to_half_open_work_availability() -> None:
+    payload = yaml.safe_load(_activity_policy_yaml())
+    payload["temporal_constraints"]["work-window"]["start"] = {"tick": 20, "microstep": 1}
+    timing = payload["behavior_specifications"]["participant-behavior"]["autonomous_execution"]["timing"]
+    timing.update(minimum_ticks=10, maximum_ticks=10)
+    scenario = parse_sdl(yaml.safe_dump(payload, sort_keys=False))
+    runtime_model = compile_runtime_model(scenario)
+    target = replace(
+        create_stub_target(),
+        manifest=_autonomous_manifest(runtime_model),
+        participant_runtime=_NativeParticipantRuntime(),
+    )
+    manager = RuntimeManager(target, stochastic_controls=[_activity_control()])
+
+    applied = manager.apply(manager.plan(scenario))
+
+    assert applied.success
+    state = ParticipantAutonomousExecutionStateModel.model_validate(
+        next(iter(applied.snapshot.participant_autonomous_execution_states.values()))
+    )
+    policy = next(
+        specification.autonomous_execution
+        for specification in runtime_model.behavior_specifications.values()
+        if specification.autonomous_execution is not None
+    )
+    assert state.next_tick == 30
+    assert state.next_timing_disposition == "next_opening"
+    assert not activity_tick_is_eligible(policy, runtime_model.time_model, 20)
+    assert not activity_tick_is_eligible(policy, runtime_model.time_model, 40)
+    assert activity_tick_is_eligible(policy, runtime_model.time_model, 50)
+    assert not activity_tick_is_eligible(policy, runtime_model.time_model, 100)
+
+
+def test_v2_weighted_selection_honors_each_cumulative_weight_boundary(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payload = yaml.safe_load(_activity_policy_yaml())
+    authored_policy = payload["behavior_specifications"]["participant-behavior"]["autonomous_execution"]
+    authored_policy["action_candidates"]["follow_up"] = {
+        **authored_policy["action_candidates"]["portal_login"],
+        "weight": 2,
+    }
+    runtime_model = compile_runtime_model(parse_sdl(yaml.safe_dump(payload, sort_keys=False)))
+    policy = runtime_model.behavior_specifications[
+        "participant.behavior-specification.participant-behavior"
+    ].autonomous_execution
+    assert policy is not None
+    control = resolve_participant_activity_controls([_activity_control()])["green-activity-policy"]
+    first_weight = policy.action_candidate_weights[0]
+    total_weight = sum(policy.action_candidate_weights)
+
+    for drawn_value, expected_index in (
+        (0, 0),
+        (first_weight - 1, 0),
+        (first_weight, 1),
+        (total_weight - 1, 1),
+    ):
+        monkeypatch.setattr(
+            "raes_runtime.participant_activity.draw_activity_integer",
+            lambda drawn_value=drawn_value, **_kwargs: drawn_value,
+        )
+        selected = select_activity_candidate(
+            policy=policy,
+            participant_address=policy.participant_addresses[0],
+            time_segment=0,
+            occurrence_ordinal=0,
+            control=control,
+            eligible_indices=(0, 1),
+        )
+        assert selected == expected_index
+
+
+def test_v2_timing_search_advances_across_disjoint_work_windows() -> None:
+    payload = yaml.safe_load(_activity_policy_yaml())
+    payload["temporal_constraints"]["work-window"]["end"] = {"tick": 20}
+    payload["temporal_constraints"]["second-work-window"] = {
+        **payload["temporal_constraints"]["work-window"],
+        "start": {"tick": 50},
+        "end": {"tick": 100},
+    }
+    authored_policy = payload["behavior_specifications"]["participant-behavior"]["autonomous_execution"]
+    authored_policy["work_window_refs"] = ["work-window", "second-work-window"]
+    authored_policy["pause_window_refs"] = []
+    authored_policy["timing"] = {"minimum_ticks": 30, "maximum_ticks": 30}
+    runtime_model = compile_runtime_model(parse_sdl(yaml.safe_dump(payload, sort_keys=False)))
+    policy = runtime_model.behavior_specifications[
+        "participant.behavior-specification.participant-behavior"
+    ].autonomous_execution
+    assert policy is not None
+    control = resolve_participant_activity_controls([_activity_control()])["green-activity-policy"]
+
+    timing = next_activity_timing(
+        policy=policy,
+        time_model=runtime_model.time_model,
+        participant_address=policy.participant_addresses[0],
+        time_segment=0,
+        occurrence_ordinal=0,
+        current_tick=0,
+        control=control,
+    )
+
+    assert timing.tick == 50
+    assert timing.disposition == "next_opening"
+
+
+def test_runtime_manager_waits_when_every_v2_candidate_is_cooling_down() -> None:
+    payload = yaml.safe_load(_activity_policy_yaml())
+    authored_policy = payload["behavior_specifications"]["participant-behavior"]["autonomous_execution"]
+    authored_policy["empty_eligible_disposition"] = "wait"
+    authored_policy["timing"] = {"minimum_ticks": 10, "maximum_ticks": 10}
+    authored_policy["max_occurrences"] = 2
+    authored_policy["max_burst_size"] = 2
+    scenario = parse_sdl(yaml.safe_dump(payload, sort_keys=False))
+    runtime_model = compile_runtime_model(scenario)
+    participant_runtime = _NativeParticipantRuntime()
+    target = replace(
+        create_stub_target(),
+        manifest=_autonomous_manifest(runtime_model),
+        participant_runtime=participant_runtime,
+    )
+    manager = RuntimeManager(target, stochastic_controls=[_activity_control()])
+    applied = manager.apply(manager.plan(scenario))
+    initial = ParticipantAutonomousExecutionStateModel.model_validate(
+        next(iter(applied.snapshot.participant_autonomous_execution_states.values()))
+    )
+    assert initial.burst_size == 2
+
+    due = manager.advance_time("time.clock.scenario-clock", ticks=initial.next_tick)
+
+    assert due.success
+    assert len(participant_runtime.native_actions) == 1
+    waiting = ParticipantAutonomousExecutionStateModel.model_validate(
+        next(iter(due.snapshot.participant_autonomous_execution_states.values()))
+    )
+    assert waiting.lifecycle_state == "running"
+    assert waiting.occurrence_ordinal == 1
+    assert waiting.attempted_actions == 1
+    assert waiting.next_tick == initial.next_tick + 10
+
+
+def test_runtime_manager_skips_v2_timing_outside_work_windows() -> None:
+    payload = yaml.safe_load(_activity_policy_yaml())
+    payload["temporal_constraints"]["work-window"]["end"] = {"tick": 20}
+    payload["temporal_constraints"]["second-work-window"] = {
+        **payload["temporal_constraints"]["work-window"],
+        "start": {"tick": 50},
+        "end": {"tick": 100},
+    }
+    authored_policy = payload["behavior_specifications"]["participant-behavior"]["autonomous_execution"]
+    authored_policy["work_window_refs"] = ["work-window", "second-work-window"]
+    authored_policy["pause_window_refs"] = []
+    authored_policy["timing"] = {"minimum_ticks": 30, "maximum_ticks": 30}
+    authored_policy["outside_window_disposition"] = "skip"
+    scenario = parse_sdl(yaml.safe_dump(payload, sort_keys=False))
+    runtime_model = compile_runtime_model(scenario)
+    participant_runtime = _NativeParticipantRuntime()
+    target = replace(
+        create_stub_target(),
+        manifest=_autonomous_manifest(runtime_model),
+        participant_runtime=participant_runtime,
+    )
+    manager = RuntimeManager(target, stochastic_controls=[_activity_control()])
+
+    applied = manager.apply(manager.plan(scenario))
+
+    assert applied.success
+    assert participant_runtime.native_actions == []
+    state = ParticipantAutonomousExecutionStateModel.model_validate(
+        next(iter(applied.snapshot.participant_autonomous_execution_states.values()))
+    )
+    assert state.lifecycle_state == "completed"
+    assert state.next_tick == 0
+    assert state.next_timing_disposition == "drawn"
+
+
+def test_runtime_manager_enforces_v2_dependencies_cooldowns_and_limited_burst() -> None:
+    payload = yaml.safe_load(_activity_policy_yaml())
+    policy = payload["behavior_specifications"]["participant-behavior"]["autonomous_execution"]
+    policy["action_candidates"]["follow_up"] = {
+        **policy["action_candidates"]["portal_login"],
+        "weight": 1,
+        "depends_on": ["portal_login"],
+    }
+    scenario = parse_sdl(yaml.safe_dump(payload, sort_keys=False))
+    runtime_model = compile_runtime_model(scenario)
+    participant_runtime = _NativeParticipantRuntime()
+    target = replace(
+        create_stub_target(),
+        manifest=_autonomous_manifest(runtime_model),
+        participant_runtime=participant_runtime,
+    )
+    manager = RuntimeManager(target, stochastic_controls=[_activity_control()])
+    applied = manager.apply(manager.plan(scenario))
+    initial = ParticipantAutonomousExecutionStateModel.model_validate(
+        next(iter(applied.snapshot.participant_autonomous_execution_states.values()))
+    )
+    assert initial.burst_size == 2
+
+    due = manager.advance_time("time.clock.scenario-clock", ticks=initial.next_tick)
+
+    assert due.success
+    assert len(participant_runtime.native_actions) == 2
+    state = ParticipantAutonomousExecutionStateModel.model_validate(
+        next(iter(due.snapshot.participant_autonomous_execution_states.values()))
+    )
+    assert state.occurrence_ordinal == 2
+    assert state.completed_candidate_ids == ["portal_login", "follow_up"]
+    assert state.candidate_cooldown_until == {
+        "portal_login": initial.next_tick + 20,
+        "follow_up": initial.next_tick + 20,
+    }
+    attempted = [
+        event
+        for event in due.snapshot.participant_behavior_history[state.participant_address]
+        if event["event_type"] == "action_attempted"
+    ]
+    assert attempted[1]["activity_provenance"]["candidate_id"] == "follow_up"
+    assert attempted[1]["activity_provenance"]["dependency_candidate_ids"] == ["portal_login"]
+    assert attempted[1]["activity_provenance"]["timing_disposition"] == "burst"
+
+
+def test_runtime_manager_resets_v2_continuation_and_random_generation() -> None:
+    scenario = parse_sdl(_activity_policy_yaml())
+    runtime_model = compile_runtime_model(scenario)
+    participant_runtime = _NativeParticipantRuntime()
+    target = replace(
+        create_stub_target(),
+        manifest=_autonomous_manifest(runtime_model),
+        participant_runtime=participant_runtime,
+    )
+    manager = RuntimeManager(target, stochastic_controls=[_activity_control()])
+    applied = manager.apply(manager.plan(scenario))
+    initial = ParticipantAutonomousExecutionStateModel.model_validate(
+        next(iter(applied.snapshot.participant_autonomous_execution_states.values()))
+    )
+    first_due = manager.advance_time("time.clock.scenario-clock", ticks=initial.next_tick)
+    assert first_due.success
+    first_attempts = [
+        event["activity_provenance"]
+        for event in first_due.snapshot.participant_behavior_history[initial.participant_address]
+        if event["event_type"] == "action_attempted"
+    ]
+    first_attempt_ids = {provenance["attempt_id"] for provenance in first_attempts}
+
+    reset = manager.reset_time("time.clock.scenario-clock")
+
+    assert reset.success
+    reset_state = ParticipantAutonomousExecutionStateModel.model_validate(
+        next(iter(reset.snapshot.participant_autonomous_execution_states.values()))
+    )
+    assert reset_state.time_segment == 1
+    assert reset_state.occurrence_ordinal == 0
+    assert reset_state.current_retry == 0
+    assert reset_state.completed_candidate_ids == []
+    assert reset_state.candidate_cooldown_until == {}
+    second_due = manager.advance_time("time.clock.scenario-clock", ticks=reset_state.next_tick)
+    assert second_due.success
+    state = ParticipantAutonomousExecutionStateModel.model_validate(
+        next(iter(second_due.snapshot.participant_autonomous_execution_states.values()))
+    )
+    attempted = [
+        event
+        for event in second_due.snapshot.participant_behavior_history[state.participant_address]
+        if event["event_type"] == "action_attempted"
+    ]
+    assert [event["activity_provenance"] for event in attempted[: len(first_attempts)]] == first_attempts
+    second_attempt_ids = {event["activity_provenance"]["attempt_id"] for event in attempted[len(first_attempts) :]}
+    assert first_attempt_ids.isdisjoint(second_attempt_ids)
+    latest = attempted[-1]["activity_provenance"]
+    assert f"episode={reset_state.episode_id}" in latest["attempt_id"]
+    assert "segment=1" in latest["attempt_id"]
+    assert latest["occurrence_id"].endswith("segment=1:occurrence=0")
+    assert latest["random_address"]["time_segment"] == 1
+    assert latest["random_address"]["occurrence_ordinal"] == 0
+
+
+def test_runtime_manager_rejects_v2_activity_without_admitted_random_control() -> None:
+    scenario = parse_sdl(_activity_policy_yaml())
+    runtime_model = compile_runtime_model(scenario)
+    participant_runtime = _NativeParticipantRuntime()
+    target = replace(
+        create_stub_target(),
+        manifest=_autonomous_manifest(runtime_model),
+        participant_runtime=participant_runtime,
+    )
+
+    manager = RuntimeManager(target)
+    applied = manager.apply(manager.plan(scenario))
+
+    assert not applied.success
+    assert any("stochastic control" in diagnostic.message for diagnostic in applied.diagnostics)
+
+
+def test_runtime_manager_fails_closed_for_unresolved_governed_activity_entropy() -> None:
+    control = _activity_control()
+    assert control.executable_binding is not None
+    governed = control.model_copy(
+        update={
+            "executable_binding": control.executable_binding.model_copy(
+                update={
+                    "root_entropy": GovernedEntropyRefModel(
+                        kind="governed-reference",
+                        reference_id="participant-activity-seed",
+                        reference_version="1",
+                    )
+                }
+            )
+        }
+    )
+
+    with pytest.raises(ValueError, match="governed entropy without a resolver"):
+        RuntimeManager(create_stub_target(), stochastic_controls=[governed])
 
 
 def test_runtime_manager_rolls_back_clock_when_participant_reset_fails() -> None:
@@ -869,7 +1555,7 @@ def test_scheduler_executes_native_actions_and_persists_shared_time_readback() -
     )
     assert (state.attempted_actions, state.succeeded_actions, state.next_tick) == (1, 1, 10)
     assert state.time_segment == 0
-    assert state.policy_digest.startswith("sha256:")
+    assert state.policy_digest == "sha256:d7c496e43e5782f4459b4b74b62e8b15b4f6d1ddba0ab4044c7fa3f406f502ef"
     events = first.snapshot.participant_behavior_history[state.participant_address]
     assert [event["event_type"] for event in events] == [
         "action_attempted",
@@ -947,6 +1633,35 @@ def test_scheduler_rejects_reapplication_after_material_policy_change() -> None:
         runtime_model.time_model,
         participant_runtime,
         snapshot,
+    )
+
+    assert not changed.success
+    assert changed.diagnostics[0].code == "runtime.participant-autonomous-state-conflict"
+
+
+def test_scheduler_rejects_v2_continuation_after_material_policy_change() -> None:
+    runtime_model = compile_runtime_model(parse_sdl(_activity_policy_yaml()))
+    policy = runtime_model.behavior_specifications[
+        "participant.behavior-specification.participant-behavior"
+    ].autonomous_execution
+    assert policy is not None
+    scheduler = ParticipantScheduler()
+    controls = resolve_participant_activity_controls([_activity_control()])
+    initialized = scheduler.initialize(
+        [policy],
+        runtime_model.time_model,
+        _NativeParticipantRuntime(),
+        TimeCoordinator(runtime_model.time_model).initialize(),
+        controls,
+    )
+    assert initialized.success
+
+    changed = scheduler.initialize(
+        [replace(policy, timing_maximum_ticks=policy.timing_maximum_ticks + 10)],
+        runtime_model.time_model,
+        _NativeParticipantRuntime(),
+        initialized.snapshot,
+        controls,
     )
 
     assert not changed.success
