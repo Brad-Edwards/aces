@@ -76,10 +76,7 @@ def _common_readback_matches(
     before: ParticipantExecutionServiceStateModel,
     observed: ParticipantExecutionServiceStateModel,
 ) -> bool:
-    return (
-        _observed_state_matches(request, observed)
-        and _has_new_transition_evidence(before, observed)
-    )
+    return _observed_state_matches(request, observed) and _has_new_transition_evidence(before, observed)
 
 
 def _observed_state_matches(
