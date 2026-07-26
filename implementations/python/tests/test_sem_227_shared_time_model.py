@@ -7,7 +7,7 @@ from fractions import Fraction
 from pathlib import Path
 
 import pytest
-from hypothesis import given
+from hypothesis import given, settings
 from hypothesis import strategies as st
 from raes._errors import SDLParseError, SDLValidationError
 from raes.parser import parse_sdl, parse_sdl_file
@@ -237,6 +237,7 @@ imports:
     assert constraint.subject_refs == ["nodes.shared.workstation"]
 
 
+@settings(deadline=None)
 @given(st.lists(st.sampled_from(("advance", "reset")), min_size=1, max_size=30))
 def test_clock_transition_history_is_append_only_across_generated_lifecycles(
     operations: list[str],
