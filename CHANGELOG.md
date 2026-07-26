@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 PRs do **not** edit this file directly. release-please maintains it from the
 Conventional Commit history on `main` (#684).
 
+## [1.1.0](https://github.com/RAESystem/rae/compare/v1.0.0...v1.1.0) (2026-07-26)
+
+
+### Features
+
+* add participant-directed inject delivery ([48cb44e](https://github.com/RAESystem/rae/commit/48cb44e4f10f359e3585c45cbb64318469477460))
+* support participant action-space modes ([b7a523a](https://github.com/RAESystem/rae/commit/b7a523a810809e3e5ad38b923aebc716d86a32bd))
+
 ## [1.0.0](https://github.com/RAESystem/rae/compare/v0.25.0...v1.0.0) (2026-07-25)
 
 
