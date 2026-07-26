@@ -549,8 +549,8 @@ def test_control_plane_exposes_authenticated_generation_bound_execution_control(
         security=_test_security(target.name),
     )
     backend_headers = {
-        "x-aces-client-verified": "true",
-        "x-aces-client-identity": "backend-service",
+        "x-raes-client-verified": "true",
+        "x-raes-client-identity": "backend-service",
         "idempotency-key": "start-generation-0",
     }
     auditor_headers = {"authorization": "Bearer test-auditor-token"}

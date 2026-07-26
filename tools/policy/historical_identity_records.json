@@ -478,7 +478,7 @@
       "record_class": "accepted-adr",
       "rationale": "Preserves an accepted architecture decision as written before the RAES identity cutover.",
       "occurrences": 2,
-      "content_sha256": "4e791ecbd467547be40932d4b7580124571709016fcc207b21600e943e12b68c"
+      "content_sha256": "966cb55a1a2d74350403996a5ae2eaa81e59876d35f0f3000ddcf2941600aff7"
     },
     {
       "path": "docs/decisions/adrs/adr-093-raes-rename-and-compatibility-boundaries.md",
@@ -492,7 +492,7 @@
       "record_class": "historical-index",
       "rationale": "Indexes immutable pre-cutover ADR titles, paths, pins, and amendment summaries without making them current identity surf\u0061ces.",
       "occurrences": 4,
-      "content_sha256": "fbbaa8aee300174af664fea63031221f93bd45d734566ddf1f255b3c05e98e25"
+      "content_sha256": "52f0eed782027820a62ef271a6c83fa23763d96410185c4278e626312e30a969"
     },
     {
       "path": "docs/decisions/cage-2-replication-design.md",
@@ -1563,7 +1563,7 @@
       "record_class": "research-record",
       "rationale": "Preserves preregistered, frozen, dated, or lineage-bearing research evidence from before the RAES identity cutover.",
       "occurrences": 24,
-      "content_sha256": "87d29b6a072b0fac2f8c9008072236cac001d4df0777842b81e22cd7b04a35ee"
+      "content_sha256": "050e205672cf340fa167e2a2d7b3e2739f058794eb28d34b68612767249a511a"
     },
     {
       "path": "docs/research/participant-backend-contracts/index.md",

@@ -2,9 +2,9 @@
   "contract_id": "participant-execution-service-state-v1",
   "schema_path": "contracts/schemas/participant-runtime/participant-execution-service-state-v1.json",
   "stability": "draft",
-  "content_hash": "59bb66a44d86b6466bb2511abb9f62148291d762ab0a4a93ca912c2fb8c970bc",
+  "content_hash": "3cfd82795d44408fa86f3c89e221023a1924e596c8a72334b9f8ead01a33e9e8",
   "last_change": {
-    "summary": "Published participant execution lifecycle, generation, health, readiness, concurrency, shared-time provenance, and evidence readback for issue #898.",
-    "content_hash": "59bb66a44d86b6466bb2511abb9f62148291d762ab0a4a93ca912c2fb8c970bc"
+    "summary": "Published participant execution lifecycle, generation, health, readiness, concurrency, shared-time provenance, and evidence readback for issue #898 under the RAES schema identity.",
+    "content_hash": "3cfd82795d44408fa86f3c89e221023a1924e596c8a72334b9f8ead01a33e9e8"
   }
 }

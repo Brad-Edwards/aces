@@ -1,5 +1,5 @@
 {
-  "$id": "https://aces.dev/schemas/participant-execution-service-state-v1.json",
+  "$id": "https://raes.dev/schemas/participant-execution-service-state-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "Typed health, readiness, lifecycle, capacity, and evidence readback.",
