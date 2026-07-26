@@ -24,8 +24,8 @@ Write a new entry when:
   real backend has to provide.
 - The fixture corpus passes for a backend that's not actually production-
   conformant, or fails for a backend that is.
-- The reference Python implementation (`aces_processor`,
-  `aces_backend_stubs`, `aces_conformance`) makes an assumption the real
+- The reference Python implementation (`raes_processor`,
+  `raes_backend_stubs`, `raes_conformance`) makes an assumption the real
   backend can't honor.
 - The `RuntimeTarget` / `RuntimeManager` API needs a shape change to
   accommodate a backend's actual lifecycle, capabilities, or failure
@@ -101,7 +101,7 @@ embodies them.
 
 ## Relationship To The Reference Backend
 
-`aces_backend_stubs` is the reference Python backend. When the same finding
+`raes_backend_stubs` is the reference Python backend. When the same finding
 applies to both the reference stub and a real backend, prefer recording it
 on the RAES side with `contract_impact` / `profile_impact` populated, and
 cross-link the backend repo's entry only when the backend-specific

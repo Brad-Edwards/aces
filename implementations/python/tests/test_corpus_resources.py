@@ -2,7 +2,7 @@
 
 The published ``contracts/`` tree is the hand-governed normative authority
 (ADR-009). Every corpus loader must resolve through the single
-``aces_contracts.corpus`` seam so the corpus is reachable from an installed
+``raes_contracts.corpus`` seam so the corpus is reachable from an installed
 distribution (where it ships as package data) without each loader
 reconstructing a ``Path(__file__).parents[N]`` repository path.
 """
@@ -19,7 +19,7 @@ CONTRACTS_ROOT = REPO_ROOT / "contracts"
 
 
 def test_corpus_root_resolves_to_an_existing_directory():
-    from aces_contracts.corpus import corpus_root
+    from raes_contracts.corpus import corpus_root
 
     root = corpus_root()
     assert isinstance(root, Path)
@@ -29,7 +29,7 @@ def test_corpus_root_resolves_to_an_existing_directory():
 def test_corpus_root_matches_repo_contracts_in_source_checkout():
     """In a source checkout the seam resolves to the in-repo authority tree."""
 
-    from aces_contracts.corpus import corpus_root
+    from raes_contracts.corpus import corpus_root
 
     assert corpus_root() == CONTRACTS_ROOT
 
@@ -44,7 +44,7 @@ def test_corpus_root_matches_repo_contracts_in_source_checkout():
     ],
 )
 def test_corpus_family_root_resolves_each_normative_family(family: str, probe: str | None):
-    from aces_contracts.corpus import corpus_family_root
+    from raes_contracts.corpus import corpus_family_root
 
     family_root = corpus_family_root(family)
     assert family_root == CONTRACTS_ROOT / family
@@ -54,7 +54,7 @@ def test_corpus_family_root_resolves_each_normative_family(family: str, probe: s
 
 
 def test_family_constants_match_authority_boundary_families():
-    from aces_contracts import corpus
+    from raes_contracts import corpus
 
     assert corpus.PROFILES == "profiles"
     assert corpus.FIXTURES == "fixtures"
@@ -63,22 +63,22 @@ def test_family_constants_match_authority_boundary_families():
 
 
 def test_backend_profiles_loader_routes_through_seam():
-    from aces_contracts.backend_profiles import backend_profiles_root
-    from aces_contracts.corpus import corpus_family_root
+    from raes_contracts.backend_profiles import backend_profiles_root
+    from raes_contracts.corpus import corpus_family_root
 
     assert backend_profiles_root() == corpus_family_root("profiles") / "backend"
 
 
 def test_semantic_profiles_loader_routes_through_seam():
-    from aces_contracts.corpus import corpus_family_root
-    from aces_contracts.semantic_profiles import semantic_profiles_root
+    from raes_contracts.corpus import corpus_family_root
+    from raes_contracts.semantic_profiles import semantic_profiles_root
 
     assert semantic_profiles_root() == corpus_family_root("profiles") / "semantic"
 
 
 def test_controlled_vocabulary_loader_routes_through_seam():
-    from aces_contracts.controlled_vocabularies import controlled_vocabulary_catalog_path
-    from aces_contracts.corpus import corpus_family_root
+    from raes_contracts.controlled_vocabularies import controlled_vocabulary_catalog_path
+    from raes_contracts.corpus import corpus_family_root
 
     assert controlled_vocabulary_catalog_path() == (
         corpus_family_root("concept-authority") / "controlled-vocabularies-v1.json"
@@ -86,22 +86,22 @@ def test_controlled_vocabulary_loader_routes_through_seam():
 
 
 def test_reference_model_loader_routes_through_seam():
-    from aces_contracts.corpus import corpus_family_root
-    from aces_contracts.reference_models import reference_model_catalog_path
+    from raes_contracts.corpus import corpus_family_root
+    from raes_contracts.reference_models import reference_model_catalog_path
 
     assert reference_model_catalog_path() == (corpus_family_root("concept-authority") / "reference-models-v1.json")
 
 
 def test_uco_alignment_loader_routes_through_seam():
-    from aces_contracts.corpus import corpus_family_root
-    from aces_contracts.uco_alignment import uco_alignment_catalog_path
+    from raes_contracts.corpus import corpus_family_root
+    from raes_contracts.uco_alignment import uco_alignment_catalog_path
 
     assert uco_alignment_catalog_path() == (corpus_family_root("concept-authority") / "uco-alignment-v1.json")
 
 
 def test_fixtures_root_routes_through_seam():
-    from aces_conformance.conformance import fixtures_root
-    from aces_contracts.corpus import corpus_family_root
+    from raes_conformance.conformance import fixtures_root
+    from raes_contracts.corpus import corpus_family_root
 
     assert fixtures_root() == corpus_family_root("fixtures")
 
@@ -109,13 +109,13 @@ def test_fixtures_root_routes_through_seam():
 @pytest.mark.parametrize(
     "module_name",
     [
-        "aces_contracts.backend_profiles",
-        "aces_contracts.semantic_profiles",
-        "aces_contracts.controlled_vocabularies",
-        "aces_contracts.reference_models",
-        "aces_contracts.uco_alignment",
-        "aces_contracts.contracts",
-        "aces_conformance.conformance",
+        "raes_contracts.backend_profiles",
+        "raes_contracts.semantic_profiles",
+        "raes_contracts.controlled_vocabularies",
+        "raes_contracts.reference_models",
+        "raes_contracts.uco_alignment",
+        "raes_contracts.contracts",
+        "raes_conformance.conformance",
     ],
 )
 def test_no_loader_keeps_a_parents_based_repo_root(module_name: str):
@@ -126,7 +126,7 @@ def test_no_loader_keeps_a_parents_based_repo_root(module_name: str):
     module = importlib.import_module(module_name)
     assert not hasattr(module, "_repo_root"), (
         f"{module_name} still defines a parents[N]-based _repo_root; "
-        "resolve the corpus through aces_contracts.corpus instead."
+        "resolve the corpus through raes_contracts.corpus instead."
     )
 
 
@@ -135,7 +135,7 @@ def test_bundled_corpus_takes_precedence_over_source_checkout(monkeypatch, tmp_p
     when both a bundled corpus and a source checkout are visible, bundled wins,
     so the installed wheel is what gets exercised."""
 
-    from aces_contracts import corpus
+    from raes_contracts import corpus
 
     bundled = tmp_path / "_corpus"
     bundled.mkdir()
@@ -151,7 +151,7 @@ def test_corpus_root_raises_when_no_corpus_is_available(monkeypatch):
     """A missing packaged corpus must surface as a hard error, never a silent
     empty corpus that would make conformance/validation pass vacuously."""
 
-    from aces_contracts import corpus
+    from raes_contracts import corpus
 
     monkeypatch.setattr(corpus, "_bundled_corpus_root", lambda: None)
     monkeypatch.setattr(corpus, "_source_checkout_corpus_root", lambda: None)

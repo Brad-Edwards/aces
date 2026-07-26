@@ -7,13 +7,13 @@ import textwrap
 from pathlib import Path
 
 import pytest
-from aces_contracts.contracts import schema_bundle
-from aces_processor.compiler import compile_runtime_model
 from jsonschema import Draft202012Validator
 from raes import build_declaration_index
 from raes._errors import SDLInstantiationError, SDLParseError, SDLValidationError
 from raes.instantiate import instantiate_scenario
 from raes.parser import parse_sdl, parse_sdl_file
+from raes_contracts.contracts import schema_bundle
+from raes_processor.compiler import compile_runtime_model
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 BINDING_REF = "behavior_specifications.red-briefing.participant_inject_deliveries.briefing"

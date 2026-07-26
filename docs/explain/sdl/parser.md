@@ -1,6 +1,6 @@
 # SDL Parser Behavior
 
-The parser (`aces.core.sdl.parser`) transforms raw YAML into a validated
+The parser (`raes.parser`) transforms raw YAML into a validated
 `Scenario` object through `sdl-yaml/v1` decoding, source-marked safe
 composition, canonical-field validation, shorthand expansion, and typed model
 construction.
@@ -36,7 +36,7 @@ nodes:
 ```
 
 Ordinary parsing is strict. Callers doing a deliberate conversion can select
-`SDLMigrationPolicy.ACCEPT` or use `aces sdl format`; each recognized rewrite
+`SDLMigrationPolicy.ACCEPT` or use `raes sdl format`; each recognized rewrite
 produces a source-ranged `sdl.noncanonical_field` or
 `sdl.noncanonical_merge` warning. The formatter emits strict, typed, longhand
 YAML and never invents identifier renames.
@@ -148,7 +148,7 @@ On success, the returned `Scenario` may still carry non-fatal advisories in `sce
 import json
 from pathlib import Path
 
-from aces.core.sdl import parse_sdl, parse_sdl_file
+from raes import parse_sdl, parse_sdl_file
 from raes import (
     SDLMigrationPolicy,
     admit_instantiated_scenario,

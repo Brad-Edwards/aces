@@ -63,13 +63,13 @@ is `active`. What is *enforced today* spans authoring through observation:
 - the typed compiler emission in `compile_runtime_model`, which lowers
   each authored realization concern into a `CompiledRealizationRequirement`
   on the `RuntimeModel` preserving its exact / constrained / open class;
-- the planner realization-support gate in `aces_processor.planner.plan`,
+- the planner realization-support gate in `raes_processor.planner.plan`,
   which matches each compiled exact / constrained / open requirement against
   the selected backend's `realization_support` and rejects open demand unless
   the selected domain explicitly declares `OPEN_REALIZATION`;
 - the runtime non-approximation gate on backend adapters in
-  `aces_processor.semantics.realization.realization_disclosure` (invoked from
-  `aces_runtime.backend_calls._call_backend_apply`, the runtime adapter
+  `raes_processor.semantics.realization.realization_disclosure` (invoked from
+  `raes_runtime.backend_calls._call_backend_apply`, the runtime adapter
   boundary), which compares each realized exact concern against the author
   declaration and rejects a silent approximation with a
   `runtime.backend-contract-invalid` diagnostic before the backend snapshot is
@@ -91,17 +91,17 @@ The semantics rest on existing authority surfaces. Implementations MUST
 extend these rather than introduce parallel registries:
 
 - realization support modes:
-  `implementations/python/packages/aces_contracts/vocabulary.py`
+  `implementations/python/packages/raes_contracts/vocabulary.py`
   (`RealizationSupportMode`)
 - apparatus declarations:
-  `implementations/python/packages/aces_contracts/apparatus.py`
+  `implementations/python/packages/raes_contracts/apparatus.py`
   (`RealizationSupportDeclaration`)
 - contract-model gates and generated JSON schema:
-  `implementations/python/packages/aces_contracts/contracts/`
+  `implementations/python/packages/raes_contracts/contracts/`
   (`RealizationSupportDeclarationModel`)
 - processor and backend manifest payloads:
-  `implementations/python/packages/aces_processor/manifest.py`,
-  `implementations/python/packages/aces_backend_protocols/manifest.py`
+  `implementations/python/packages/raes_processor/manifest.py`,
+  `implementations/python/packages/raes_backend_protocols/manifest.py`
 - native concept family for realization concerns:
   `contracts/concept-authority/concept-families-v1.json`
   (`realization-and-disclosure`)
@@ -114,13 +114,13 @@ extend these rather than introduce parallel registries:
   `implementations/python/packages/raes/instantiate.py`
   (`instantiate_scenario`, `SDLInstantiationError`)
 - runtime compilation and planning:
-  `implementations/python/packages/aces_processor/compiler/`,
-  `implementations/python/packages/aces_processor/semantics/planner.py`
+  `implementations/python/packages/raes_processor/compiler/`,
+  `implementations/python/packages/raes_processor/semantics/planner.py`
 - runtime diagnostics, results, and snapshots:
-  `implementations/python/packages/aces_processor/models/`
+  `implementations/python/packages/raes_processor/models/`
   (`Diagnostic`, runtime plan / result / snapshot models)
 - semantic profiles, controlled vocabularies, and reference models:
-  `specs/concept-authority/`, `implementations/python/packages/aces_contracts/`
+  `specs/concept-authority/`, `implementations/python/packages/raes_contracts/`
 
 ## Required Semantics
 
@@ -239,7 +239,7 @@ by `RealizationSupportDeclaration.__post_init__` and
 planner-side matching of compiled exact-requirement-kinds against the
 selected backend's `realization_support` — by which an unsupported
 exact requirement causes plan rejection before deployment — is
-realized by the realization-support gate in `aces_processor.planner.plan`
+realized by the realization-support gate in `raes_processor.planner.plan`
 (over the compiled `RuntimeModel.realization_requirements`), alongside the
 concrete provisioner / orchestrator / evaluator capability checks in
 `_validate_manifest`. The rule is binding under this spec.
@@ -283,7 +283,7 @@ now enforced by named, tested code.
 | Instantiation | Parameter and default substitution may resolve open concerns and constrained surfaces. Substitution MUST NOT downgrade an exact declaration into a constrained or open one, and MUST NOT introduce an exact declaration that the author did not write. The concrete scenario MUST be revalidated after substitution. | active — `instantiate_scenario` preserves explicitness plus typed designation provenance and revalidates concrete content. |
 | Compilation | Lowers each declaration into a typed runtime requirement preserving class. Exact requirements carry their declared kind into the compiled representation; constrained requirements carry the typed constraint surface; open requirements are emitted as realizable slots tagged with the realization-and-disclosure family. | active — `compile_runtime_model` applies leaf precedence and the scoped cascade, carrying open and delegated demand plus its governing scope. |
 | Planning | Matches every compiled requirement against the candidate backend manifest. An unsupported exact-requirement-kind MUST cause plan rejection through a structured `Diagnostic` before deployment; an unsupported constraint-kind MUST cause the same outcome. An open realizable slot MAY be left for the backend only when its manifest declares matching support. | active — the planner rejects open demand without explicit `OPEN_REALIZATION` support and never approximates it. |
-| Execution | Backend realizers honor the compiled class. A runtime adapter MUST NOT silently broaden an exact requirement, MUST NOT silently narrow an open realization beyond its declared constraints, and MUST surface incompatibilities through the existing runtime error envelope rather than approximate. | active — the runtime non-approximation gate `aces_processor.semantics.realization.realization_disclosure` (invoked from `aces_runtime.backend_calls._call_backend_apply`) compares each realized exact concern against the author declaration and rejects a silent approximation with a `runtime.backend-contract-invalid` diagnostic before the backend snapshot is accepted. |
+| Execution | Backend realizers honor the compiled class. A runtime adapter MUST NOT silently broaden an exact requirement, MUST NOT silently narrow an open realization beyond its declared constraints, and MUST surface incompatibilities through the existing runtime error envelope rather than approximate. | active — the runtime non-approximation gate `raes_processor.semantics.realization.realization_disclosure` (invoked from `raes_runtime.backend_calls._call_backend_apply`) compares each realized exact concern against the author declaration and rejects a silent approximation with a `runtime.backend-contract-invalid` diagnostic before the backend snapshot is accepted. |
 | Observation | Realized values land in plan, result, snapshot, history, and evidence surfaces with provenance per I5. Realization choices are observation data, not private backend state. | active — realized concerns are recorded on the runtime snapshot envelope's `realization_provenance` ledger with their explicitness class and author-declared / processor-derived / backend-realized origin; the snapshot is the aggregate observation surface that carries result and history data. |
 
 ## Cross-Cutting Gates
@@ -325,7 +325,7 @@ realization status, are:
   deployment (I1, I2, I4). *Enforced today* by the typed compiler
   emission on `RuntimeModel.realization_requirements` and the
   realization-support plus open-request envelope-subsumption gates in
-  `aces_processor.planner.plan`.
+  `raes_processor.planner.plan`.
 - **Error-envelope gate** — unsupported exact requirements and
   forbidden approximations MUST be surfaced through stable validation
   errors or structured diagnostics (I1, I2). *Enforced today*; the
@@ -378,7 +378,7 @@ The governance of the surface is **staged**:
   validated only as non-empty strings (the `__post_init__` invariants
   and `RealizationSupportDeclarationModel` enforce shape, not value
   membership). The contract model at
-  `implementations/python/packages/aces_contracts/contracts/`
+  `implementations/python/packages/raes_contracts/contracts/`
   declares each as `list[NonEmptyString]`; the controlled-vocabulary
   authority does not yet bind those slots.
 - Adding governed vocabularies for those four fields is normative
@@ -424,20 +424,20 @@ The rules above are realized today by these existing surfaces; every
 invariant I1–I5 is enforced by named code.
 
 - I4 shape floor (backend manifests) — apparatus contract:
-  `implementations/python/packages/aces_contracts/apparatus.py`
+  `implementations/python/packages/raes_contracts/apparatus.py`
   (`RealizationSupportDeclaration.__post_init__` rejects empty kinds and
   forbids `EXACT_ONLY` with `supported_constraint_kinds`).
 - I4 JSON-schema gate (backend manifests) —
-  `implementations/python/packages/aces_contracts/contracts/`
+  `implementations/python/packages/raes_contracts/contracts/`
   (`RealizationSupportDeclarationModel._validate_realization_support`
   and the `__get_pydantic_json_schema__` conditional schema, exercised
   by published `contracts/schemas/`).
 - I4 processor-vs-backend asymmetry — `ProcessorManifestV2Model` in
-  `implementations/python/packages/aces_contracts/contracts/` rejects
+  `implementations/python/packages/raes_contracts/contracts/` rejects
   any `realization_support` section; the generated processor schema has
   no `realization_support` property.
 - I4 backend-manifest payload boundary —
-  `implementations/python/packages/aces_backend_protocols/manifest.py`
+  `implementations/python/packages/raes_backend_protocols/manifest.py`
   (sorted-kind serialization preserves the contract under
   canonicalization).
 - I3 concept-authority binding —
@@ -456,24 +456,24 @@ invariant I1–I5 is enforced by named code.
   `contracts/fixtures/processor-manifest/processor-manifest-v2/invalid/hollow-realization-support.json`,
   `contracts/fixtures/processor-manifest/processor-manifest-v2/invalid/malformed-realization-support.json`.
 - I1, I2, I4 typed compiler emission + planner gate —
-  `aces_processor.compiler._compile_realization_requirements` emits
+  `raes_processor.compiler._compile_realization_requirements` emits
   `RuntimeModel.realization_requirements`, and
-  `aces_processor.semantics.realization.realization_support_diagnostics`
-  (called from `aces_processor.planner.plan`) matches them against the
+  `raes_processor.semantics.realization.realization_support_diagnostics`
+  (called from `raes_processor.planner.plan`) matches them against the
   backend's `realization_support`, rejecting unsupported kinds with a
   `Diagnostic`. `realization_envelope_diagnostics` projects the offered
   envelope onto compiled open concern paths and calls the canonical
   `subsumes()` relation.
 - I2 runtime non-approximation gate —
-  `aces_processor.semantics.realization.realization_disclosure` (re-exported
-  through `aces_processor.planner`), invoked from
-  `aces_runtime.backend_calls._call_backend_apply`, compares each realized
+  `raes_processor.semantics.realization.realization_disclosure` (re-exported
+  through `raes_processor.planner`), invoked from
+  `raes_runtime.backend_calls._call_backend_apply`, compares each realized
   exact concern against the author declaration and rejects a silent
   approximation with a `runtime.backend-contract-invalid` diagnostic before the
   backend snapshot is accepted.
 - I5 runtime provenance — the `realization_provenance` ledger
   (`RealizationProvenanceEntry` in
-  `implementations/python/packages/aces_contracts/runtime_state.py`, published as
+  `implementations/python/packages/raes_contracts/runtime_state.py`, published as
   `RealizationProvenanceEntryModel` on the `runtime-snapshot-v1` envelope)
   records each realized concern's explicitness class and author-declared /
   processor-derived / backend-realized origin, and round-trips through the

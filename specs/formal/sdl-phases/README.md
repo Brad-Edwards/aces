@@ -185,8 +185,8 @@ equivalence or bisimilarity.
 - transition and admission functions:
   `implementations/python/packages/raes/instantiate.py`
 - typed processor lowering:
-  `implementations/python/packages/aces_processor/models/` and
-  `implementations/python/packages/aces_processor/planner/`
+  `implementations/python/packages/raes_processor/models/` and
+  `implementations/python/packages/raes_processor/planner/`
 - canonical snapshot:
   `implementations/python/packages/raes/canonical.py`
 - external contracts:

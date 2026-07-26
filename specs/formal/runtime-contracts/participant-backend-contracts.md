@@ -84,7 +84,7 @@ PR #405 is the participant capability declaration surface: governed
 participant roles, behavior features, and interaction features from
 `controlled-vocabularies-v1`, the `x-<owner>:<term>` governed extension rule,
 and the term-level evidence criteria in
-`aces_backend_protocols.capabilities.PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS`.
+`raes_backend_protocols.capabilities.PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS`.
 This design ratifies that surface without amendment. See the API-405 section
 of `specs/formal/runtime-contracts/README.md`.
 
@@ -207,7 +207,7 @@ Rules:
 
 ## Publication, Generation, And Authority Obligations
 
-- Carriers are generated from contract models (`aces_contracts`) into
+- Carriers are generated from contract models (`raes_contracts`) into
   `contracts/schemas/participant-runtime/` and
   `contracts/schemas/control-plane/`; generated output is never hand-edited.
 - `tools/generate_contract_schemas.py` routes the family explicitly; no

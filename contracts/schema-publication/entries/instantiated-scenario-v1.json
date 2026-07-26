@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
   "stability": "draft",
-  "content_hash": "f8885b00fd6e873a50205d699be8a5892cc5168195090e57c2ec9a0d492e28ef",
+  "content_hash": "665f23af990a892af5f47ccda88a1eb254ca60552fe8bece6faffec4840475ec",
   "last_change": {
-    "summary": "Added closed participant-directed inject delivery declarations and retargeted Python validator references to raes.",
-    "content_hash": "f8885b00fd6e873a50205d699be8a5892cc5168195090e57c2ec9a0d492e28ef"
+    "summary": "Added closed participant-directed inject delivery declarations and applied the RAES package hard cut.",
+    "content_hash": "665f23af990a892af5f47ccda88a1eb254ca60552fe8bece6faffec4840475ec"
   }
 }

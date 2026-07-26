@@ -114,7 +114,7 @@ explain/sdl/runtime-architecture
 :maxdepth: 2
 :caption: Asset Inventory
 
-aces/inventory/index
+raes/inventory/index
 ```
 
 ```{toctree}

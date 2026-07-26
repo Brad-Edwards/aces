@@ -46,11 +46,11 @@ target-resolution, success-interpretation, and dependency-ordering semantics
   (`_verify_objectives`)
 - compiled runtime objective resource, addresses, diagnostics, and
   ordering/refresh derivation:
-  - `implementations/python/packages/aces_processor/compiler/`
-  - `implementations/python/packages/aces_processor/models/`
+  - `implementations/python/packages/raes_processor/compiler/`
+  - `implementations/python/packages/raes_processor/models/`
 - planner ordering/refresh reconciliation:
-  - `implementations/python/packages/aces_processor/planner/`
-  - `implementations/python/packages/aces_processor/semantics/planner.py`
+  - `implementations/python/packages/raes_processor/planner/`
+  - `implementations/python/packages/raes_processor/semantics/planner.py`
 
 ## Tests
 

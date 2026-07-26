@@ -223,7 +223,7 @@
             }
           ],
           "level": "error",
-          "validator": "aces_contracts.contracts.ExperimentAnalysisPlanModel._validate_primary_metric"
+          "validator": "raes_contracts.contracts.ExperimentAnalysisPlanModel._validate_primary_metric"
         }
       ]
     },
@@ -824,7 +824,7 @@
     },
     "ExperimentReferenceModel": {
       "additionalProperties": false,
-      "description": "Typed reference to an experiment-core or adjacent ACES artifact.",
+      "description": "Typed reference to an experiment-core or adjacent RAES artifact.",
       "properties": {
         "ref_digest": {
           "anyOf": [
@@ -1010,7 +1010,7 @@
             }
           ],
           "level": "error",
-          "validator": "aces_contracts.contracts.ExperimentRunAllocationPlanModel._validate_condition_assignments"
+          "validator": "raes_contracts.contracts.ExperimentRunAllocationPlanModel._validate_condition_assignments"
         }
       ]
     },
@@ -1557,7 +1557,7 @@
             }
           ],
           "level": "error",
-          "validator": "aces_contracts.contracts.validation_disclosure.ValidationBasisDisclosureModel._validate_validation_basis_disclosure"
+          "validator": "raes_contracts.contracts.validation_disclosure.ValidationBasisDisclosureModel._validate_validation_basis_disclosure"
         },
         {
           "description": "gate_results gate_kind values must be unique, drawn from the resolved profile's required/optional union, and every required gate_kind must be present.",
@@ -1581,7 +1581,7 @@
             }
           ],
           "level": "error",
-          "validator": "aces_contracts.contracts.validation_disclosure.ValidationBasisDisclosureModel._validate_validation_basis_disclosure"
+          "validator": "raes_contracts.contracts.validation_disclosure.ValidationBasisDisclosureModel._validate_validation_basis_disclosure"
         },
         {
           "description": "achieved_strength must be supported by ADR-072-ordered passed gate rows for its own rank (structural never implies semantic; semantic never implies behavioral); evidence_backed/falsification_backed additionally require at least one evidence_ref.",
@@ -1605,7 +1605,7 @@
             }
           ],
           "level": "error",
-          "validator": "aces_contracts.contracts.validation_disclosure.ValidationBasisDisclosureModel._validate_validation_basis_disclosure"
+          "validator": "raes_contracts.contracts.validation_disclosure.ValidationBasisDisclosureModel._validate_validation_basis_disclosure"
         },
         {
           "description": "A required gate not passed, a not_applicable gate outcome, a below-minimum achieved_strength, and a public/audience-restricted audience each require an explicit, profile-declared limitation (the audience-restricted case specifically requires the audience_restricted category).",
@@ -1629,7 +1629,7 @@
             }
           ],
           "level": "error",
-          "validator": "aces_contracts.contracts.validation_disclosure.ValidationBasisDisclosureModel._validate_validation_basis_disclosure"
+          "validator": "raes_contracts.contracts.validation_disclosure.ValidationBasisDisclosureModel._validate_validation_basis_disclosure"
         }
       ]
     },
@@ -2149,7 +2149,7 @@
         }
       ],
       "level": "error",
-      "validator": "aces_contracts.contracts.ExperimentStudyModel._validate_claim_bearing_study"
+      "validator": "raes_contracts.contracts.ExperimentStudyModel._validate_claim_bearing_study"
     },
     {
       "description": "Study analysis_plan metrics must be declared by included experiment task protocols.",
@@ -2169,7 +2169,7 @@
         }
       ],
       "level": "error",
-      "validator": "aces_contracts.contracts.validate_experiment_study_against_tasks_and_runs"
+      "validator": "raes_contracts.contracts.validate_experiment_study_against_tasks_and_runs"
     },
     {
       "description": "Study analysis_plan metrics must have result_summaries, including explicit missing/withheld statuses, in included evaluation runs.",
@@ -2189,7 +2189,7 @@
         }
       ],
       "level": "error",
-      "validator": "aces_contracts.contracts.validate_experiment_study_against_tasks_and_runs"
+      "validator": "raes_contracts.contracts.validate_experiment_study_against_tasks_and_runs"
     },
     {
       "description": "Study analysis_plan evaluation-run members must resolve unambiguously and exclude invalidated, superseded, and not-evaluated runs.",
@@ -2205,7 +2205,7 @@
         }
       ],
       "level": "error",
-      "validator": "aces_contracts.contracts.validate_experiment_study_against_tasks_and_runs"
+      "validator": "raes_contracts.contracts.validate_experiment_study_against_tasks_and_runs"
     },
     {
       "description": "Study run_allocation compared_conditions must be represented by eligible included evaluation-run membership groupings that meet target_runs_per_condition, use operational blocking factors, and satisfy exactly one distinct factor-level combination and auditable condition assignment.",
@@ -2225,7 +2225,7 @@
         }
       ],
       "level": "error",
-      "validator": "aces_contracts.contracts.validate_experiment_study_against_tasks_and_runs"
+      "validator": "raes_contracts.contracts.validate_experiment_study_against_tasks_and_runs"
     },
     {
       "description": "Every validation_basis_disclosures entry must declare subject_kind='experiment_study' and a subject_ref matching this study's study_id/study_version.",
@@ -2237,7 +2237,7 @@
         }
       ],
       "level": "error",
-      "validator": "aces_contracts.contracts.validation_disclosure.validate_carrier_validation_basis_disclosures"
+      "validator": "raes_contracts.contracts.validation_disclosure.validate_carrier_validation_basis_disclosures"
     },
     {
       "description": "When run_allocation compares evaluation runs, every shared stochastic_controls control_id across those runs must use a consistent executable_binding profile_ref and namespace, and either all or none of the runs that share the control_id may carry an executable_binding (EXP-718 common random numbers / controlled-variation comparability).",
@@ -2253,7 +2253,7 @@
         }
       ],
       "level": "error",
-      "validator": "aces_contracts.contracts.validate_experiment_study_against_tasks_and_runs"
+      "validator": "raes_contracts.contracts.validate_experiment_study_against_tasks_and_runs"
     },
     {
       "description": "Every study behavioral claim must resolve against the canonical taxonomy revision, include a required observation projection, and keep bounded evidence out of universal quantifiers.",
@@ -2269,7 +2269,7 @@
         }
       ],
       "level": "error",
-      "validator": "aces_contracts.behavioral_relations.validate_behavioral_claim_binding"
+      "validator": "raes_contracts.behavioral_relations.validate_behavioral_claim_binding"
     },
     {
       "description": "Study report_artifacts and export_artifacts created_at values must be valid RFC 3339 date-times, including only known valid UTC leap-second instants.",
@@ -2285,7 +2285,7 @@
         }
       ],
       "level": "error",
-      "validator": "aces_contracts.contracts.validate_experiment_study_archival_datetimes"
+      "validator": "raes_contracts.contracts.validate_experiment_study_archival_datetimes"
     }
   ],
   "x-aces-semantic-profile": {

@@ -53,7 +53,7 @@ Each surface class owns its version meaning and compatibility rule.
 |---|---|---|---|---|---|
 | Python distribution | `implementations/python/pyproject.toml`, release-please config, Git tag, PyPI artifact | SemVer package version and matching `vX.Y.Z` tag | Consumer code imports installed package APIs for the documented release | Release PR, GitHub Release, generated `CHANGELOG.md` | Release notes and package/API docs |
 | Published JSON Schema | ADR-061, `contracts/schema-publication-manifest.json`, and `contracts/schema-publication/` | Contract id such as `backend-manifest-v2`; wire discriminator such as `backend-manifest/v2` | Schema lineage and stability-specific structural compatibility | Per-contract `stability` and `last_change` records; independent removal tombstones | Schema diff, fixtures, checker output, and contract docs |
-| Closed contract DTO and wire envelope | `aces_contracts.versions`, contract models, manifest authority | Exact discriminator such as `workflow-step-state/v1` | Exact payload-shape selection by owning reader | Contract ADR/spec and release notes | Reader validation tests and conformance fixtures |
+| Closed contract DTO and wire envelope | `raes_contracts.versions`, contract models, manifest authority | Exact discriminator such as `workflow-step-state/v1` | Exact payload-shape selection by owning reader | Contract ADR/spec and release notes | Reader validation tests and conformance fixtures |
 | Processor/backend support declaration | Manifest models and manifest authority allowlists | Exact governed contract ids, not version ranges | Declared support for named counterpart contract ids | Manifest contract lineage and conformance result | Manifest update, fixture, and conformance report |
 | Apparatus or implementation identity | Processor, backend, and participant manifests | Product/component identity version string | Operational interoperability declared by manifest capability blocks | Manifest release and conformance profile | Backend/processor/participant conformance evidence |
 | SDL scenario and module | SDL spec, module registry, lockfile, trust policy | Scenario/module version and import version constraint | Import constraint satisfaction plus registry, digest, signature, and semantic validation | SDL/module documentation and release notes | Migration note or deterministic source rewrite |
@@ -163,10 +163,10 @@ ambiguous or lossy cases, and fail closed rather than drop unknown fields.
 
 Compatibility adapters stay at the owning boundary:
 
-- legacy `aces.*` re-exports stay in the compatibility tree;
+- retired `aces`, `aces_sdl`, and `aces_*` imports remain absent;
 - SDL normalization and module composition stay in `raes`;
-- contract readers stay in `aces_contracts`;
-- CLI presentation stays in `aces_cli`; and
+- contract readers stay in `raes_contracts`;
+- CLI presentation stays in `raes_cli`; and
 - backend/runtime layers do not reinterpret authored source to hide migration
   needs.
 

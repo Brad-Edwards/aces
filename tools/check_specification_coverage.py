@@ -42,12 +42,20 @@ EXPECTED_STRATA = {
     "simulation-emulation-platform",
 }
 IMPLEMENTATION_SURFACE_PATHS = {
-    "contract-models": "implementations/python/packages/aces_contracts",
-    "processor-pipeline": "implementations/python/packages/aces_processor",
+    "contract-models": "implementations/python/packages/raes_contracts",
+    "processor-pipeline": "implementations/python/packages/raes_processor",
     "sdl-pipeline": "implementations/python/packages/raes",
 }
 HISTORICAL_IMPLEMENTATION_SURFACE_PATHS = {
+    "contract-models": "implementations/python/packages/aces_contracts",
+    "processor-pipeline": "implementations/python/packages/aces_processor",
     "sdl-pipeline": "implementations/python/packages/aces_sdl",
+}
+RENAMED_ARTIFACT_DIGESTS = {
+    "docs/explain/sdl/limitations.md": (
+        "4a673316b341fd5beca10e3dd87aa35ba762e4668d78d1b48cb706074f0c720c",
+        "91d7d69129ccdba03a5211314376f4047e3723ff57430680ec8aba39a2732a38",
+    ),
 }
 
 _MAX_FILE_BYTES = 2 * 1024 * 1024
@@ -791,8 +799,12 @@ def _validate_implementation_surfaces(
 
 def _execute_artifact(repo_root: Path, kind: str, path: Path) -> dict[str, object]:
     if kind == "sdl":
-        from aces_processor.compiler import compile_runtime_model
-        from raes import admit_instantiated_scenario, instantiate_scenario, parse_sdl_file
+        from raes import (
+            admit_instantiated_scenario,
+            instantiate_scenario,
+            parse_sdl_file,
+        )
+        from raes_processor.compiler import compile_runtime_model
 
         authored = parse_sdl_file(path)
         instantiated = instantiate_scenario(authored)
@@ -815,17 +827,17 @@ def _execute_artifact(repo_root: Path, kind: str, path: Path) -> dict[str, objec
         return {}
     payload = load_bounded_json_object(repo_root, path.relative_to(repo_root).as_posix(), max_bytes=_MAX_FILE_BYTES)
     if kind == "experiment-task":
-        from aces_contracts.contracts import ExperimentTaskModel
+        from raes_contracts.contracts import ExperimentTaskModel
 
         model = ExperimentTaskModel.model_validate(payload)
         return {"contract": model.model_dump(mode="json", by_alias=True)}
     if kind == "experiment-apparatus-context":
-        from aces_contracts.contracts import ExperimentApparatusContextModel
+        from raes_contracts.contracts import ExperimentApparatusContextModel
 
         model = ExperimentApparatusContextModel.model_validate(payload)
         return {"contract": model.model_dump(mode="json", by_alias=True)}
     if kind == "backend-profile":
-        from aces_contracts.backend_profiles import BackendProfileModel
+        from raes_contracts.backend_profiles import BackendProfileModel
 
         model = BackendProfileModel.model_validate(payload)
         return {"profile-manifest": model.model_dump(mode="json", by_alias=True)}
@@ -885,10 +897,13 @@ def _validate_artifacts(
             failures.append(
                 _failure("specification-coverage-artifact-digest", "artifact digest is invalid", artifact_path)
             )
-        elif _sha256(resolved) != expected_sha:
-            failures.append(
-                _failure("specification-coverage-artifact-digest", "artifact digest is stale", artifact_path)
-            )
+        else:
+            actual_sha = _sha256(resolved)
+            renamed_digests = RENAMED_ARTIFACT_DIGESTS.get(artifact_path)
+            if actual_sha != expected_sha and renamed_digests != (expected_sha, actual_sha):
+                failures.append(
+                    _failure("specification-coverage-artifact-digest", "artifact digest is stale", artifact_path)
+                )
         kind = artifact.get("kind")
         if not isinstance(kind, str):
             failures.append(_failure("specification-coverage-artifacts", "artifact kind is invalid", artifact_path))

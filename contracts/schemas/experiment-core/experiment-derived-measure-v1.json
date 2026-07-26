@@ -168,7 +168,7 @@
     },
     "ExperimentReferenceModel": {
       "additionalProperties": false,
-      "description": "Typed reference to an experiment-core or adjacent ACES artifact.",
+      "description": "Typed reference to an experiment-core or adjacent RAES artifact.",
       "properties": {
         "ref_digest": {
           "anyOf": [
@@ -439,7 +439,7 @@
         }
       ],
       "level": "error",
-      "validator": "aces_contracts.contracts.ExperimentDerivedMeasureModel._validate_derived_measure"
+      "validator": "raes_contracts.contracts.ExperimentDerivedMeasureModel._validate_derived_measure"
     },
     {
       "description": "generated_at must be a valid RFC 3339 date-time.",
@@ -451,7 +451,7 @@
         }
       ],
       "level": "error",
-      "validator": "aces_contracts.contracts.ExperimentDerivedMeasureModel._validate_derived_measure"
+      "validator": "raes_contracts.contracts.ExperimentDerivedMeasureModel._validate_derived_measure"
     }
   ],
   "x-aces-plane": "derived_analysis",

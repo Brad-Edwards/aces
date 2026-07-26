@@ -5,8 +5,9 @@ from __future__ import annotations
 from dataclasses import fields, replace
 
 import pytest
-from aces_contracts.contracts import ParticipantDecisionSurfaceModel, ParticipantImplementationSelectionModel
-from aces_processor.models import (
+from pydantic import ValidationError
+from raes_contracts.contracts import ParticipantDecisionSurfaceModel, ParticipantImplementationSelectionModel
+from raes_processor.models import (
     ParticipantBehaviorHistoryEvent,
     ParticipantDecisionSurfaceActionAssessment,
     ParticipantDecisionSurfaceProjectionInput,
@@ -18,7 +19,6 @@ from aces_processor.models import (
     ParticipantExposureResolvers,
     project_participant_decision_surface,
 )
-from pydantic import ValidationError
 from test_sem_220_participant_decision_surface import (
     BEHAVIOR,
     BOUNDARY,

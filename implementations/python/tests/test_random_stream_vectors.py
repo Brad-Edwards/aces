@@ -1,7 +1,7 @@
 """Canonical-vector conformance tests for the EXP-718 ``blake3-xof-v1`` engine.
 
 Every vector under ``contracts/fixtures/random-stream-vectors/blake3-xof-v1/``
-was computed independently of ``aces_contracts.random_stream_engine`` (a
+was computed independently of ``raes_contracts.random_stream_engine`` (a
 one-off script that calls the ``blake3`` library directly -- see the EXP-718
 implementation notes); these tests run the same inputs through the public
 reference engine API and assert the outputs match, so the vector tests do not
@@ -14,12 +14,12 @@ import json
 from pathlib import Path
 
 import pytest
-from aces_contracts.contracts.random_stream import (
+from raes_contracts.contracts.random_stream import (
     PublicSeedModel,
     RandomStreamVectorModel,
     StreamAddressModel,
 )
-from aces_contracts.random_stream_engine import (
+from raes_contracts.random_stream_engine import (
     canonical_stream_address_bytes,
     decode_public_seed,
     derive_stream_key,

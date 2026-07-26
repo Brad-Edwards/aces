@@ -11,12 +11,12 @@ digest-checked declaration the planner needs.
 from __future__ import annotations
 
 import pytest
-from aces_backend_protocols.manifest import (
+from raes_backend_protocols.manifest import (
     backend_manifest_from_v2_model,
     backend_manifest_v2_model,
 )
-from aces_backend_stubs.manifest import create_stub_manifest
-from aces_contracts.contracts import BackendManifestV2Model
+from raes_backend_stubs.manifest import create_stub_manifest
+from raes_contracts.contracts import BackendManifestV2Model
 
 
 def test_round_trips_the_full_stub_manifest() -> None:

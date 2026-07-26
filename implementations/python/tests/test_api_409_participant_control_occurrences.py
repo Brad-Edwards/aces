@@ -6,15 +6,15 @@ import json
 from pathlib import Path
 
 import pytest
-from aces_contracts.contracts import (
+from jsonschema import Draft202012Validator
+from pydantic import ValidationError
+from raes_contracts.contracts import (
     ParticipantControlDeclarationModel,
     ParticipantControlOccurrenceModel,
     schema_bundle,
     validate_participant_control_occurrence_context,
 )
-from aces_contracts.contracts.participant_control import ParticipantControlTargetContextModel
-from jsonschema import Draft202012Validator
-from pydantic import ValidationError
+from raes_contracts.contracts.participant_control import ParticipantControlTargetContextModel
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 CONTRACT_ID = "participant-control-occurrence-v1"

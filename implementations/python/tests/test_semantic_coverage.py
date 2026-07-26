@@ -391,22 +391,6 @@ def test_active_row_import_via_relative_submodule_reexport_passes(tmp_path: Path
     assert "coverage-test-integration" not in _rule_ids(evaluate_semantic_coverage(repo))
 
 
-def test_active_row_import_via_compat_wrapper_passes(tmp_path: Path) -> None:
-    repo = _seed_integration_repo(
-        tmp_path,
-        rows=_WIDGET_ROW,
-        files={
-            _WIDGET_INIT: "",
-            _WIDGET_CORE: "VALUE = 1\n",
-            "implementations/python/src/aces/widget_compat.py": (
-                'from aces._compat import reexport as _reexport\n_reexport(globals(), "widget.core")\ndel _reexport\n'
-            ),
-            _WIDGET_TEST: ("from aces.widget_compat import VALUE\n\ndef test_widget():\n    assert VALUE == 1\n"),
-        },
-    )
-    assert "coverage-test-integration" not in _rule_ids(evaluate_semantic_coverage(repo))
-
-
 def test_stub_test_function_fails(tmp_path: Path) -> None:
     repo = _seed_integration_repo(
         tmp_path,

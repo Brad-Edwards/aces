@@ -246,7 +246,7 @@
         }
       ],
       "level": "error",
-      "validator": "aces_contracts.contracts.SchedulerIsolationProofModel._validate_isolation"
+      "validator": "raes_contracts.contracts.SchedulerIsolationProofModel._validate_isolation"
     }
   ],
   "x-aces-semantic-profile": {

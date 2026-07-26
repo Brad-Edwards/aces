@@ -7,7 +7,7 @@ optional window (delegated to :func:`raes.semantics.objectives.analyze_objective
 and the acyclic ``depends_on`` ordering relation. It returns normalized
 references with their dependency-role tags, the per-objective ordering/refresh
 dependency names, and a fail-closed issue list that ``raes.validator``
-renders as authoring errors. ``aces_processor.compiler`` reuses the
+renders as authoring errors. ``raes_processor.compiler`` reuses the
 ordering/refresh role decision (:func:`partition_objective_dependencies`) when
 it maps a compiled ``evaluation.objective.*`` resource onto its dependency
 tuples, and the planner then walks those edges generically.

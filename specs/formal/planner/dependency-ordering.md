@@ -60,10 +60,10 @@ change.
 
 ## Implementation Mapping
 
-- shared semantic source of truth: `implementations/python/packages/aces_processor/semantics/planner.py`
+- shared semantic source of truth: `implementations/python/packages/raes_processor/semantics/planner.py`
 - planner use sites:
-  - `implementations/python/packages/aces_processor/planner/`
-  - `implementations/python/packages/aces_processor/manager.py`
+  - `implementations/python/packages/raes_processor/planner/`
+  - `implementations/python/packages/raes_processor/manager.py`
 - property and agreement tests:
   - `implementations/python/tests/test_semantics_planner.py`
   - `implementations/python/tests/test_runtime_planner.py`

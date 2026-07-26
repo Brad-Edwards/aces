@@ -23,7 +23,7 @@ to claim more than it can show.
 
 Every governed concern carries an **observation strength** — the strongest
 evidence the selected configuration produces for it. The ladder is closed
-(`aces_contracts.realization_envelope_carrier.ObservationStrength`):
+(`raes_contracts.realization_envelope_carrier.ObservationStrength`):
 
 | Strength | Meaning |
 | --- | --- |
@@ -58,7 +58,7 @@ relabel a weaker configuration as stronger. Published envelopes live under
 
 ## The libvirt backend's configurations
 
-The libvirt backend (`aces_backend_libvirt.envelopes.LibvirtDriverMode`) ships
+The libvirt backend (`raes_backend_libvirt.envelopes.LibvirtDriverMode`) ships
 three material configurations:
 
 - **`generic`** — qcow2/cloud-init driver; concerns are `driver-reported`.
@@ -99,19 +99,19 @@ spec, or fake connection can exercise a leaf but cannot satisfy the native-proof
 gate. Then:
 
 1. **Boot.** A guest-observing BusyBox appliance
-   (`aces_backend_libvirt.guest_appliance`) is booted on real QEMU. It realizes
+   (`raes_backend_libvirt.guest_appliance`) is booted on real QEMU. It realizes
    the bounded seeded content, account, and service placements from the plan.
 2. **Read back from inside.** The appliance reads its *own* realized state —
    `nproc`/`/proc/meminfo`, `ip addr`/`/sys/class/net`, in-guest file
    `sha256`/mode, `/etc/passwd` posture (no credential material), and service
    process + bound port — and reports bounded, line-oriented facts over a
    credential-free file-backed serial channel
-   (`aces_backend_libvirt.guest_transport`). No SSH, no password, no general
+   (`raes_backend_libvirt.guest_transport`). No SSH, no password, no general
    command runner.
 3. **Freshness.** A fresh per-run challenge is injected via the kernel command
    line and must be echoed back; a cached or prior-boot report cannot pass.
 4. **Stage and compare.** The observer
-   (`aces_backend_libvirt.guest_observation`) runs ordered stages (daemon →
+   (`raes_backend_libvirt.guest_observation`) runs ordered stages (daemon →
    transport → initialization → concern probes → cleanup); a later stage never
    repairs an earlier one. Each concern becomes a `RealizationObservation` at
    `guest-observed` strength, compared to the requested realization. Failures are
@@ -129,11 +129,11 @@ gate. Then:
 The envelope, the observer, the falsification tests, and the evidence artifact
 move together, so an envelope cannot drift into overclaiming:
 
-- The evidence producer (`aces_operations.libvirt_evidence_run`) binds each guest
+- The evidence producer (`raes_operations.libvirt_evidence_run`) binds each guest
   observation to the control-plane operation, the fresh challenge, the selected
   envelope/configuration and appliance digests, and a `sha256:` correlation from
   the ownership-verified native identity, then runs the shared redaction and
-  binding validators (`aces_operations._evidence_run_validation`) *before* the
+  binding validators (`raes_operations._evidence_run_validation`) *before* the
   artifact is written.
 - **Native-proof boundary.** A guest-certified artifact is `certifying` only when
   the production driver/transport produced it. An injected fake driver may
@@ -156,7 +156,7 @@ opt-in run:
 ```sh
 # Operator/self-hosted command: boots the guest-observing appliance against a
 # real libvirt/QEMU daemon and emits a validated evidence artifact.
-aces libvirt techvault guest-certify \
+raes libvirt techvault guest-certify \
   --scenario examples/scenarios/techvault-guest-certified.sdl.yaml \
   --project-dir . --run-id guest-proof-1 --yes
 ```

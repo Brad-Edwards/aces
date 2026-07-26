@@ -447,7 +447,7 @@
         "test_status": "tested",
         "proof_status": "not-applicable",
         "evidence_refs": [
-          "implementations/python/packages/aces_contracts/manifest_authority.py"
+          "implementations/python/packages/raes_contracts/manifest_authority.py"
         ]
       },
       "source_refs": [
@@ -617,7 +617,7 @@
         "test_status": "tested",
         "proof_status": "not-applicable",
         "evidence_refs": [
-          "implementations/python/packages/aces_conformance/conformance.py"
+          "implementations/python/packages/raes_conformance/conformance.py"
         ]
       },
       "source_refs": [
@@ -873,7 +873,7 @@
         "test_status": "tested",
         "proof_status": "deliberately-unproved",
         "evidence_refs": [
-          "implementations/python/packages/aces_contracts/realization_envelope.py"
+          "implementations/python/packages/raes_contracts/realization_envelope.py"
         ]
       },
       "source_refs": [

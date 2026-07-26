@@ -240,7 +240,7 @@
     },
     "EventClassificationModel": {
       "additionalProperties": false,
-      "description": "ACES-native normalized event classification tuple (ADR-054).",
+      "description": "RAES-native normalized event classification tuple (ADR-054).",
       "properties": {
         "activity_id": {
           "title": "Activity Id",

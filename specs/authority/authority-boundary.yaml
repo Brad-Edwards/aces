@@ -113,7 +113,7 @@ legacy_top_level_dirs:
 
 # Schema authority direction (ADR-009 section 7): contracts/schemas/ owns the
 # hand-governed published schemas and is bound to the publication manifest.
-# The aces_contracts owning package and the generator drivers under tools/ are
+# The raes_contracts owning package and the generator drivers under tools/ are
 # the reference implementation; tools/check_generated_schemas.py only proves
 # that implementation generates an identical bundle (into a throwaway
 # directory) — it does not define authority and never overwrites the published

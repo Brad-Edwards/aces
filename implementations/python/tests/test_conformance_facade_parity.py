@@ -1,16 +1,16 @@
-"""Facade-parity contract for the ``aces_conformance.conformance`` package (issue #46).
+"""Facade-parity contract for the ``raes_conformance.conformance`` package (issue #46).
 
 The module was split into subdomain modules behind an API-stable re-export
 facade. These tests pin the public export surface, the four private hooks that
-external code imports directly, singular object identity through the re-export,
-and the dynamic ``aces.core.runtime.conformance`` compatibility wrapper — so a
-future internal reshuffle cannot silently drop, fork, or over-export a name.
+external code imports directly, and singular object identity through the
+re-export so a future internal reshuffle cannot silently drop, fork, or
+over-export a name.
 """
 
 from __future__ import annotations
 
-import aces_conformance.conformance as facade
-from aces_conformance.conformance import (
+import raes_conformance.conformance as facade
+from raes_conformance.conformance import (
     fixture_suite,
     observability,
     profiles,
@@ -19,8 +19,6 @@ from aces_conformance.conformance import (
     target,
     validators,
 )
-
-import aces.core.runtime.conformance as compat
 
 _PUBLIC_EXPORTS = {
     "BackendCapabilityProfile",
@@ -82,8 +80,3 @@ def test_private_hooks_are_importable_and_singular():
 
 def test_private_hooks_excluded_from_star_exports():
     assert not (set(_PRIVATE_HOOKS) & set(facade.__all__))
-
-
-def test_compat_wrapper_reexports_identical_objects():
-    for name in _PUBLIC_EXPORTS | set(_PRIVATE_HOOKS):
-        assert getattr(compat, name) is getattr(facade, name), name

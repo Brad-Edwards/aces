@@ -14,26 +14,26 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import pytest
-from aces_backend_libvirt.techvault_native import TechVaultNativeLibvirtDriver
-from aces_backend_protocols.naming import provider_resource_name
-from aces_contracts.contracts import (
+from paths import EXAMPLES_DIR
+from raes_backend_libvirt.techvault_native import TechVaultNativeLibvirtDriver
+from raes_backend_protocols.naming import provider_resource_name
+from raes_contracts.contracts import (
     BackendManifestV2Model,
     EvaluationHistoryEventModel,
     EvaluationResultStateModel,
     ExperimentRealizedFormDisclosureModel,
 )
-from aces_operations.libvirt_evidence_run import (
+from raes_operations.libvirt_evidence_run import (
     EVIDENCE_RUN_SCHEMA,
     LibvirtEvidenceRunConfig,
     run_libvirt_evidence_run,
     validate_libvirt_evidence_run_artifact,
 )
-from aces_operations.run_artifacts import (
+from raes_operations.run_artifacts import (
     atomic_write_json_artifact,
     is_valid_run_id_label,
     run_artifact_path,
 )
-from paths import EXAMPLES_DIR
 
 _REFERENCE_SCENARIO = EXAMPLES_DIR / "enterprise-participant-evidence-loop.sdl.yaml"
 _TECHVAULT_SCENARIO = EXAMPLES_DIR / "techvault-operational.sdl.yaml"
@@ -265,7 +265,7 @@ def test_non_claims_are_carried_verbatim(tmp_path):
     joined = " ".join(artifact["non_claims"])
     assert "No Wazuh detection-quality claim" in joined
     assert "No byte-equivalence" in joined
-    assert "aces#600" in joined
+    assert "RAESystem/rae#600" in joined
 
 
 # --- redaction gate ------------------------------------------------------------

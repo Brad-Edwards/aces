@@ -16,10 +16,10 @@ reconciliation semantics.
 
 ## Implementation Mapping
 
-- shared graph helpers: `implementations/python/packages/aces_processor/semantics/planner.py`
+- shared graph helpers: `implementations/python/packages/raes_processor/semantics/planner.py`
 - planner use sites:
-  - `implementations/python/packages/aces_processor/planner/`
-  - `implementations/python/packages/aces_processor/manager.py`
+  - `implementations/python/packages/raes_processor/planner/`
+  - `implementations/python/packages/raes_processor/manager.py`
 
 ## Tests
 

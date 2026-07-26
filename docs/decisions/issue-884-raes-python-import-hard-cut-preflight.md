@@ -15,14 +15,12 @@ contract semantics.
   provide a re-export package, import hook, `sys.modules` alias, namespace-only
   directory, warning shim, or fallback import. An old import must fail with the
   normal `ModuleNotFoundError`.
-- The existing deprecated `aces.*` compatibility tree is a distinct surface.
-  If retained during this migration, its SDL wrappers may target `raes` only;
-  new repository source and all user-facing examples must import `raes`, not
-  `aces.core.sdl`. This does not preserve `aces_sdl` compatibility.
-- Other owning packages (`aces_contracts`, `aces_processor`, `aces_runtime`,
-  and siblings), contract ids, schema `$id` values, wire discriminators, SDL
-  fields, and persisted artifact meaning are outside this cut. Do not create a
-  `raes_sdl` package or a new aggregate package to avoid changing imports.
+- The deprecated `aces.*` compatibility tree is removed. No source, wheel, or
+  sdist may provide that namespace.
+- Other owning Python packages move from `aces_*` to corresponding `raes_*`
+  namespaces without aliases. Contract ids, schema `$id` values, wire
+  discriminators, SDL fields, and persisted artifact meaning remain governed
+  separately. Do not create a `raes_sdl` compatibility package.
 
 ADR-093 is amended to replace its intentionally temporary retained-source-
 namespace position. The release is a breaking 1.0.0 release; release-please,
@@ -30,7 +28,7 @@ not this change, owns the version literal and `CHANGELOG.md`.
 
 ## Required Existing Owners
 
-- `implementations/python/packages/aces_sdl/` is the sole SDL owner to move to
+- `implementations/python/packages/aces_sdl/` is the historical SDL owner moved to
   `raes/`; preserve its parser, source-profile, semantic-validator,
   instantiation, canonicalization, formatting, language-service, and module
   registry implementations rather than duplicating any of them.

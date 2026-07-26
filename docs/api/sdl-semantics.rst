@@ -8,7 +8,7 @@ processor at compile time, and by the processor runtime.
 
 Per ADR-015 these helpers live with the SDL package because ``raes``
 defines the language; they depend only on the standard library and have no
-import-time coupling to ``aces_processor``.
+import-time coupling to ``raes_processor``.
 
 .. currentmodule:: raes.semantics
 

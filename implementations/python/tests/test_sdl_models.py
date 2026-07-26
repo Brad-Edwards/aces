@@ -4,13 +4,12 @@ import pytest
 from jsonschema import Draft202012Validator
 from jsonschema import ValidationError as JsonSchemaValidationError
 from pydantic import ValidationError
-
-from aces.core.sdl._source import Source
-from aces.core.sdl.conditions import Condition
-from aces.core.sdl.entities import Entity, ExerciseRole, flatten_entities
-from aces.core.sdl.features import Feature, FeatureType
-from aces.core.sdl.infrastructure import ACLAction, ACLRule, InfraNode, SimpleProperties
-from aces.core.sdl.nodes import (
+from raes._source import Source
+from raes.conditions import Condition
+from raes.entities import Entity, ExerciseRole, flatten_entities
+from raes.features import Feature, FeatureType
+from raes.infrastructure import ACLAction, ACLRule, InfraNode, SimpleProperties
+from raes.nodes import (
     ContainerImageBuildProvenance,
     DatabaseAuthMethod,
     DatabaseEngine,
@@ -108,8 +107,8 @@ from aces.core.sdl.nodes import (
     RuntimeSudoRule,
     parse_ram,
 )
-from aces.core.sdl.objectives import Objective, ObjectiveSuccess, ObjectiveWindow
-from aces.core.sdl.orchestration import (
+from raes.objectives import Objective, ObjectiveSuccess, ObjectiveWindow
+from raes.orchestration import (
     Inject,
     Script,
     Story,
@@ -120,7 +119,7 @@ from aces.core.sdl.orchestration import (
     WorkflowStepType,
     parse_duration,
 )
-from aces.core.sdl.vulnerabilities import Vulnerability
+from raes.vulnerabilities import Vulnerability
 
 # ---------------------------------------------------------------------------
 # Source
@@ -2337,9 +2336,9 @@ class TestObjective:
 # Extension models (G1-G9, G12-G13)
 # ---------------------------------------------------------------------------
 
-from aces.core.sdl.accounts import Account, PasswordStrength
-from aces.core.sdl.content import Content, ContentItem, ContentType
-from aces.core.sdl.nodes import AssetValue, AssetValueLevel, OSFamily, ServicePort
+from raes.accounts import Account, PasswordStrength
+from raes.content import Content, ContentItem, ContentType
+from raes.nodes import AssetValue, AssetValueLevel, OSFamily, ServicePort
 
 
 class TestContent:
@@ -2558,7 +2557,7 @@ class TestServicePort:
 
 class TestConditionExtensions:
     def test_timeout_and_retries(self):
-        from aces.core.sdl.conditions import Condition
+        from raes.conditions import Condition
 
         c = Condition(command="/check", interval=15, timeout=5, retries=3, start_period=10)
         assert c.timeout == 5
@@ -2568,13 +2567,13 @@ class TestConditionExtensions:
 
 class TestSimplePropertiesInternal:
     def test_internal_flag(self):
-        from aces.core.sdl.infrastructure import SimpleProperties
+        from raes.infrastructure import SimpleProperties
 
         p = SimpleProperties(cidr="10.0.0.0/24", gateway="10.0.0.1", internal=True)
         assert p.internal is True
 
     def test_default_not_internal(self):
-        from aces.core.sdl.infrastructure import SimpleProperties
+        from raes.infrastructure import SimpleProperties
 
         p = SimpleProperties(cidr="10.0.0.0/24", gateway="10.0.0.1")
         assert p.internal is False
@@ -2778,9 +2777,9 @@ class TestWorkflow:
 # Relationships, Agents, Variables (G10, G11, Identity)
 # ---------------------------------------------------------------------------
 
-from aces.core.sdl.agents import Agent, InitialKnowledge
-from aces.core.sdl.relationships import Relationship, RelationshipType
-from aces.core.sdl.variables import Variable, VariableType
+from raes.agents import Agent, InitialKnowledge
+from raes.relationships import Relationship, RelationshipType
+from raes.variables import Variable, VariableType
 
 
 class TestRelationship:
@@ -3851,7 +3850,7 @@ class TestRuntimeDatabaseService:
             )
 
     def test_relationship_database_access_auth_method_normalized(self):
-        from aces.core.sdl.relationships import Relationship, RelationshipDatabaseAccess
+        from raes.relationships import Relationship, RelationshipDatabaseAccess
 
         access = RelationshipDatabaseAccess(role_ref="app-role", auth_method="SCRAM-SHA-256")
         assert access.auth_method == DatabaseAuthMethod.SCRAM_SHA_256

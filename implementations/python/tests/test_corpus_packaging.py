@@ -30,17 +30,17 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]  # implementations/python
 REPO_ROOT = PROJECT_ROOT.parents[1]
 REPO_CONTRACTS = REPO_ROOT / "contracts"
 
-_CORPUS_PREFIX = "aces_contracts/_corpus/"
+_CORPUS_PREFIX = "raes_contracts/_corpus/"
 _FAMILY_PROBES = {
-    "profiles": "aces_contracts/_corpus/profiles/backend/provisioning-only.json",
-    "scientific-completeness": "aces_contracts/_corpus/profiles/scientific-completeness/scientific-scenario-completeness-rev1.json",
-    "fixtures": "aces_contracts/_corpus/fixtures/",
-    "concept-authority": "aces_contracts/_corpus/concept-authority/behavioral-relations-v1.json",
-    "schemas": "aces_contracts/_corpus/schemas/",
-    "provenance": "aces_contracts/_corpus/provenance/sdl-lineage-ledger-v1.json",
+    "profiles": "raes_contracts/_corpus/profiles/backend/provisioning-only.json",
+    "scientific-completeness": "raes_contracts/_corpus/profiles/scientific-completeness/scientific-scenario-completeness-rev1.json",
+    "fixtures": "raes_contracts/_corpus/fixtures/",
+    "concept-authority": "raes_contracts/_corpus/concept-authority/behavioral-relations-v1.json",
+    "schemas": "raes_contracts/_corpus/schemas/",
+    "provenance": "raes_contracts/_corpus/provenance/sdl-lineage-ledger-v1.json",
 }
 
-_NOTICE_PATH = "aces_contracts/_corpus/provenance/THIRD_PARTY_NOTICES.md"
+_NOTICE_PATH = "raes_contracts/_corpus/provenance/THIRD_PARTY_NOTICES.md"
 
 _UV = shutil.which("uv")
 requires_uv = pytest.mark.skipif(_UV is None, reason="uv toolchain not available")
@@ -95,7 +95,7 @@ def test_built_wheel_bundles_each_corpus_family(built_wheel: Path, family: str):
     with zipfile.ZipFile(built_wheel) as zf:
         names = zf.namelist()
     corpus_names = [n for n in names if n.startswith(_CORPUS_PREFIX)]
-    assert corpus_names, "wheel ships no aces_contracts/_corpus payload at all"
+    assert corpus_names, "wheel ships no raes_contracts/_corpus payload at all"
     probe = _FAMILY_PROBES[family]
     assert any(n == probe or n.startswith(probe) for n in names), (
         f"corpus family {family!r} ({probe}) missing from wheel"
@@ -112,13 +112,17 @@ def test_built_wheel_includes_third_party_notice(built_wheel: Path):
 
 @requires_uv
 def test_installed_wheel_hard_cuts_sdl_import_namespace(installed_python: Path, tmp_path: Path):
-    """The wheel exposes ``raes`` and contains no importable ``aces_sdl`` residue."""
+    """The wheel exposes RAES owners and contains no importable ACES residue."""
 
     script = (
         "import importlib.util\n"
         "import raes\n"
         "assert raes.parse_sdl\n"
-        "assert importlib.util.find_spec('aces_sdl') is None\n"
+        "retired = ('aces', 'aces_sdl', 'aces_backend_libvirt', "
+        "'aces_backend_protocols', 'aces_backend_stubs', 'aces_cli', "
+        "'aces_conformance', 'aces_contracts', 'aces_mcp', 'aces_operations', "
+        "'aces_processor', 'aces_reference_backend', 'aces_runtime')\n"
+        "assert all(importlib.util.find_spec(name) is None for name in retired)\n"
     )
     result = _run(
         [str(installed_python), "-c", script],
@@ -136,7 +140,7 @@ def test_corpus_discoverable_via_importlib_resources_from_installed_wheel(instal
 
     script = (
         "import json\n"
-        "from aces_contracts.corpus import corpus_root, corpus_family_root\n"
+        "from raes_contracts.corpus import corpus_root, corpus_family_root\n"
         "root = corpus_root()\n"
         "print(json.dumps({\n"
         "  'root': str(root),\n"
@@ -188,7 +192,7 @@ def test_sdl_semantic_validation_loads_corpus_from_installed_wheel(installed_pyt
     from the installed wheel with no source checkout."""
 
     script = (
-        "from aces_contracts.controlled_vocabularies import load_controlled_vocabulary_catalog\n"
+        "from raes_contracts.controlled_vocabularies import load_controlled_vocabulary_catalog\n"
         "catalog = load_controlled_vocabulary_catalog()\n"
         "assert catalog.vocabularies, 'no controlled vocabularies loaded'\n"
         "print(len(catalog.vocabularies))\n"

@@ -429,8 +429,9 @@ adrs:
         summary: "Required exact action provenance and capability-specific atomic participant batching."
   - id: ADR-093
     path: docs/decisions/adrs/adr-093-raes-rename-and-compatibility-boundaries.md
-    pin: 42c87cc0065ae55c5deadfd8ab6e1b4a36ff9b8f03b7a28f17648e875ce6e950
+    pin: 72725b8f09063b0b1d8ec65c4fda58e5648113035588ee4effbece5e0b1c3436
     amendments:
       - ref: "#866"
       - ref: "#866-pypi-name-correction"
       - ref: "#884"
+      - ref: "#894"

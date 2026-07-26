@@ -48,7 +48,7 @@ guidance:
         dry-run SDL scenarios. They do not execute participant cyber actions or
         start a live range.
       source_refs:
-        - implementations/python/packages/aces_mcp/tools/operations.py
+        - implementations/python/packages/raes_mcp/tools/operations.py
         - docs/explain/getting-started.md
         - docs/explain/sdl/language-service.md
 
@@ -72,7 +72,7 @@ guidance:
         planning claims. It is not evidence that a live range ran or that a
         participant demonstrated skill.
       source_refs:
-        - implementations/python/packages/aces_mcp/tools/operations.py
+        - implementations/python/packages/raes_mcp/tools/operations.py
         - docs/decisions/adrs/adr-021-falsification-first-claim-evidence-gate.md
 
     - id: valid-sdl-not-scientific-completeness
@@ -125,7 +125,7 @@ guidance:
         alone is not enough.
       source_refs:
         - docs/decisions/adrs/adr-021-falsification-first-claim-evidence-gate.md
-        - implementations/python/packages/aces_mcp/tools/operation_support.py
+        - implementations/python/packages/raes_mcp/tools/operation_support.py
 
     - id: requirement-traceability-aligned
       audience: [contributor]
@@ -201,7 +201,7 @@ guidance:
         exploit, SSH, execute commands, reveal hidden state, or bypass backend
         controls.
       source_refs:
-        - implementations/python/packages/aces_mcp/tools/operations.py
+        - implementations/python/packages/raes_mcp/tools/operations.py
         - docs/explain/getting-started.md
 
     - id: do-not-carry-secrets
@@ -223,5 +223,5 @@ guidance:
         presenting an SDL scenario as ready, portable, executed, or evidence
         backed.
       source_refs:
-        - implementations/python/packages/aces_mcp/tools/operations.py
+        - implementations/python/packages/raes_mcp/tools/operations.py
         - docs/explain/getting-started.md

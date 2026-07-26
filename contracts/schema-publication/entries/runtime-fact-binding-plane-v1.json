@@ -2,9 +2,9 @@
   "contract_id": "runtime-fact-binding-plane-v1",
   "schema_path": "contracts/schemas/participant-runtime/runtime-fact-binding-plane-v1.json",
   "stability": "draft",
-  "content_hash": "5ae5c93e3e4d6823bf7296a12ade3d484bae7dad561e082582526d2bfe8d0de7",
+  "content_hash": "753c6eea97c86e7b083d05ed8ea32adf57fc2bd9145f55454cd35c5057630dbc",
   "last_change": {
-    "summary": "Initial publication of the typed run-local fact declaration, immutable version, late-bound action sink, binding and dispatch dispositions, version-faithful provenance and projection invariants, and redacted projection contract for issue #791.",
-    "content_hash": "5ae5c93e3e4d6823bf7296a12ade3d484bae7dad561e082582526d2bfe8d0de7"
+    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
+    "content_hash": "753c6eea97c86e7b083d05ed8ea32adf57fc2bd9145f55454cd35c5057630dbc"
   }
 }

@@ -2,9 +2,9 @@
   "contract_id": "reusable-asset-trust-policy-v1",
   "schema_path": "contracts/schemas/asset-trust/reusable-asset-trust-policy-v1.json",
   "stability": "draft",
-  "content_hash": "de371c60018cc27664915404443df13dd881a57264a1539028409a14af1823b5",
+  "content_hash": "fcd663287814f1c5072e3f5f4421c67edda0670965d6b04b5bc417501bba127c",
   "last_change": {
-    "summary": "Added the associated_artifact_set family with required set-integrity and concrete payload-checksum evidence (ADR-077, issue #738).",
-    "content_hash": "de371c60018cc27664915404443df13dd881a57264a1539028409a14af1823b5"
+    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
+    "content_hash": "fcd663287814f1c5072e3f5f4421c67edda0670965d6b04b5bc417501bba127c"
   }
 }

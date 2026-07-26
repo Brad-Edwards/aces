@@ -2,9 +2,9 @@
   "contract_id": "experiment-derived-measure-v1",
   "schema_path": "contracts/schemas/experiment-core/experiment-derived-measure-v1.json",
   "stability": "draft",
-  "content_hash": "3619f07b4e075a47a99e026aed5395a6a9c06b663a81e62f67bba7fd196ccf34",
+  "content_hash": "33dc362225a5850c45f7ef2fbca7b5ef320e687865c4cdedb5b40c2da70b9c65",
   "last_change": {
-    "summary": "Extended shared experiment artifact roles and typed references for associated-artifact parents (ADR-077, issue #738).",
-    "content_hash": "3619f07b4e075a47a99e026aed5395a6a9c06b663a81e62f67bba7fd196ccf34"
+    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
+    "content_hash": "33dc362225a5850c45f7ef2fbca7b5ef320e687865c4cdedb5b40c2da70b9c65"
   }
 }

@@ -23,11 +23,10 @@ These encode the hard rules previously in `AGENTS.md` prose.
   `tools/check_generated_schemas.py` passes. The published schema is the
   authority; a generator/Python edit alone is NOT authorization for a schema
   change.
-- Plans MUST NOT add new implementation logic to
-  `implementations/python/src/aces/`; that tree is compatibility-only
-  wrappers.
-- Plans MUST NOT import `aces.*` from owning packages under
-  `implementations/python/packages/`.
+- Plans MUST NOT recreate the retired `implementations/python/src/aces/`
+  namespace.
+- Plans MUST NOT import retired `aces` or `aces_*` modules from owning packages
+  under `implementations/python/packages/`.
 - Plans MUST keep concept-authority artifacts in the approved
   concept-authority surfaces.
 - Plans MUST keep IMPLEMENTS and TESTS traceability in Ground Control

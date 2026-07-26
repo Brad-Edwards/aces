@@ -6,22 +6,22 @@ import json
 from dataclasses import replace
 from pathlib import Path
 
-from aces_backend_stubs.manifest import create_stub_manifest
-from aces_contracts.contracts import (
+from paths import EXAMPLES_DIR, REPO_ROOT
+from raes_backend_stubs.manifest import create_stub_manifest
+from raes_contracts.contracts import (
     EvaluationPlanModel,
     OrchestrationPlanModel,
     ProvisioningPlanModel,
     RealizationEnvelopeIdentityModel,
 )
-from aces_contracts.diagnostics import Diagnostic, Severity
-from aces_contracts.plan_projection import (
+from raes_contracts.diagnostics import Diagnostic, Severity
+from raes_contracts.plan_projection import (
     evaluation_plan_model,
     orchestration_plan_model,
     provisioning_plan_model,
 )
-from aces_contracts.planning import ProvisioningPlan
-from aces_processor.reference import run_reference_processor
-from paths import EXAMPLES_DIR, REPO_ROOT
+from raes_contracts.planning import ProvisioningPlan
+from raes_processor.reference import run_reference_processor
 
 _PLAN_FIXTURES = REPO_ROOT / "contracts" / "fixtures" / "plans"
 _SCENARIO = EXAMPLES_DIR / "techvault-defensive-min.sdl.yaml"

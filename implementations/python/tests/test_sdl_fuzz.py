@@ -16,9 +16,8 @@ import pytest
 import yaml
 from hypothesis import HealthCheck, assume, given, settings
 from hypothesis import strategies as st
-
-from aces.core.sdl import SDLParseError, SDLValidationError, parse_sdl
-from aces.core.sdl.scenario import Scenario
+from raes import SDLParseError, SDLValidationError, parse_sdl
+from raes.scenario import Scenario
 
 # Mark entire module so it's excluded from default test runs.
 # Run with: pytest tests/test_sdl_fuzz.py -v

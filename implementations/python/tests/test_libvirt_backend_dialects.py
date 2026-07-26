@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from aces_backend_libvirt.dialects import dialect_for
+from raes_backend_libvirt.dialects import dialect_for
 
 
 def test_linux_dialect_uses_systemd_and_aliases():

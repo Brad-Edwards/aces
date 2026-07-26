@@ -71,8 +71,8 @@ shape before compiler/planner semantics run. Each resolved reference carries:
 - shared semantic source of truth: `implementations/python/packages/raes/semantics/objectives.py`
 - validator checks: `implementations/python/packages/raes/validator/`
 - compiled runtime references and refresh derivation:
-  - `implementations/python/packages/aces_processor/compiler/`
-  - `implementations/python/packages/aces_processor/models/`
+  - `implementations/python/packages/raes_processor/compiler/`
+  - `implementations/python/packages/raes_processor/models/`
 - differential and property tests:
   - `implementations/python/tests/test_semantics_objectives.py`
     (`test_window_invariant_story_refs_must_resolve`,

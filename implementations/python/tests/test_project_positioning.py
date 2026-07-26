@@ -63,13 +63,13 @@ replay, or reproducibility.
         'project = "Reproducible Agentic Environments System"\nhtml_title = "RAES Documentation"\n',
     )
     _write(
-        repo_root / "implementations/python/packages/aces_mcp/server.py",
+        repo_root / "implementations/python/packages/raes_mcp/server.py",
         '_INSTRUCTIONS = """Reproducible Agentic Environments System (RAES) '
         "supports agentic environments. RAES SDL is the authored scenario "
         'language."""\n',
     )
     _write(
-        repo_root / "implementations/python/packages/aces_mcp/tools/reference.py",
+        repo_root / "implementations/python/packages/raes_mcp/tools/reference.py",
         '_OVERVIEW_TEXT = """RAES supports reproducible agentic environments. '
         "RAES SDL describes authored scenarios; backends produce realized "
         'environments for bounded reproduction attempts."""\n',
@@ -213,9 +213,9 @@ def test_positioning_check_reports_invalid_structured_metadata(
 @pytest.mark.parametrize(
     ("relative_path", "assignment"),
     (
-        ("implementations/python/packages/aces_mcp/server.py", "_INSTRUCTIONS"),
+        ("implementations/python/packages/raes_mcp/server.py", "_INSTRUCTIONS"),
         (
-            "implementations/python/packages/aces_mcp/tools/reference.py",
+            "implementations/python/packages/raes_mcp/tools/reference.py",
             "_OVERVIEW_TEXT",
         ),
     ),

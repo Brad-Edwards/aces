@@ -133,9 +133,9 @@ scheduler state, or backend refusal back into experiment selection.
 | 1. Module composition | `raes.composition` and `module_registry` | Normalized root SDL, locked imports, trust policy, verified module bytes | Expanded scenario family | Resolve the complete declaration graph before selection; preserve qualified canonical symbols; selected values never influence module or declaration identity | Import preorder, namespace, requested and resolved source identities, versions, content/manifest/export digests, signer attribution, bindings |
 | 2. Scenario-family declaration | SDL models and `SemanticValidator` | Normalized/composed family with a keyed map of variation points | Semantically admitted expanded scenario family | Every point has a stable qualified id, a closed kind, a bounded domain, a typed target, and locally valid alternatives; the family is not experiment allocation | Family semantic digest, point/domain/profile versions, source locations, expansion evidence |
 | 3. Experiment design | `experiment-authoring-input-v1` and experiment-core validators | Task/family refs, factors, allocation, selection policies, stochastic controls, apparatus intent | Closed experiment specification | Policies target existing point ids; factors and conditions remain experiment concepts; refs/digests pin the family and task; descriptive legacy randomization fields cannot execute by convention | Spec identity/digest, task/family refs, factor and condition ids, policy/control ids and versions, randomness namespace, requested apparatus and capture refs |
-| 4. Trial-set compilation and admission | `aces_processor` using neutral DTOs from `aces_contracts` | Admitted experiment spec, exact family/task bytes, apparatus manifests/accepted envelopes, compiler/identity/RNG profiles | One canonical admitted trial plan | Pure deterministic function of admitted inputs; preallocate one archival `run_id` per logical coordinate; emit no plan if any selected entry is invalid, impossible, duplicate, or unrealizable | All input refs/digests, profiles, coordinates, run ids, selections, factor assignments, stochastic controls and stream addresses, apparatus bindings, bounded admission evidence |
-| 5. SDL instantiation | Public `raes` selection/instantiation/admission APIs, orchestrated by `aces_processor` | One plan entry and the exact expanded family it pins | Admitted `InstantiatedScenario` and canonical snapshot | Apply only recorded selections/bindings; no new draw, import, query, fallback, or private binder; rerun whole-scenario semantic validation | Existing expansion/instantiation evidence plus point selections and trial-plan/run linkage |
-| 6. Runtime fact binding | `aces_runtime` over compiled slots and neutral fact DTOs | Admitted compiled plans, authorized observations and secret references | Run-local bound operation/action input and binding event evidence | Fill only a declared sink with matching type/source/scope/freshness/sensitivity; never mutate the plan, snapshot, factors, topology, choices, run id, or streams | Slot id, safe fact/source ref, scope, freshness, sensitivity, authorization/evidence refs, binding outcome; no raw secret |
+| 4. Trial-set compilation and admission | `raes_processor` using neutral DTOs from `raes_contracts` | Admitted experiment spec, exact family/task bytes, apparatus manifests/accepted envelopes, compiler/identity/RNG profiles | One canonical admitted trial plan | Pure deterministic function of admitted inputs; preallocate one archival `run_id` per logical coordinate; emit no plan if any selected entry is invalid, impossible, duplicate, or unrealizable | All input refs/digests, profiles, coordinates, run ids, selections, factor assignments, stochastic controls and stream addresses, apparatus bindings, bounded admission evidence |
+| 5. SDL instantiation | Public `raes` selection/instantiation/admission APIs, orchestrated by `raes_processor` | One plan entry and the exact expanded family it pins | Admitted `InstantiatedScenario` and canonical snapshot | Apply only recorded selections/bindings; no new draw, import, query, fallback, or private binder; rerun whole-scenario semantic validation | Existing expansion/instantiation evidence plus point selections and trial-plan/run linkage |
+| 6. Runtime fact binding | `raes_runtime` over compiled slots and neutral fact DTOs | Admitted compiled plans, authorized observations and secret references | Run-local bound operation/action input and binding event evidence | Fill only a declared sink with matching type/source/scope/freshness/sensitivity; never mutate the plan, snapshot, factors, topology, choices, run id, or streams | Slot id, safe fact/source ref, scope, freshness, sensitivity, authorization/evidence refs, binding outcome; no raw secret |
 | 7. Backend realization | Existing planner, manifest, realization-envelope, and backend protocols | Admitted plans plus selected apparatus/envelope/manifests | Existing backend plans, operation receipts/status, runtime snapshots, and realized-form disclosures | Realize only within the selected envelope and capabilities; backend refusal is failure/deviation, never permission to resample | Manifest/envelope/configuration refs/digests, realized forms, transformations, omissions, operation ids, receipts |
 | 8. Orchestration and scheduling | External scheduler, including APTL for SCE-006 | Admitted plan entries and execution/isolation policy | Queue/placement state and dispatch decisions, outside scenario identity | May order, delay, pause, retry transport, and use bounded parallelism after isolation proof; cannot select, instantiate, randomize, compare, or score | Dispatch order, instance/lock/storage allocation, timeouts, clean-state/cleanup evidence, retry reason |
 | 9. Archival provenance | `ExperimentRunModel`, `ExperimentStudyModel`, evidence and cross-artifact validators | Sealed execution/evidence plus plan/snapshot refs | One run per started trial and study/allocation records | The preallocated plan-entry `run_id` becomes the archival `run_id`; a genuine re-execution receives a new admitted id; live state is not the run record | Actual parameters/stochastic/apparatus facts, scenario snapshot, realized forms, evidence, deviations, lineage to plan/spec/task and source run where applicable |
@@ -218,7 +218,7 @@ primitives introduced with ADR-070. They do not reuse
 or witness generation as experiment selection. ADR-070 is accepted and owns
 only the realizability relation; its witness seed is not experiment randomness.
 
-The reusable domain algebra belongs in a dependency-neutral `aces_contracts`
+The reusable domain algebra belongs in a dependency-neutral `raes_contracts`
 leaf that does not import SDL models or schema-bundle machinery. Realization
 envelopes and scenario-family declarations consume (and may re-export) those
 same closed domain types and membership helpers. They must not copy the
@@ -546,7 +546,7 @@ fallback value or scenario resampling is permitted.
 
 The reference implementation exposes this boundary through the closed
 `runtime-fact-binding-plane-v1` contract and
-`aces_runtime.runtime_fact_bindings.RuntimeFactBindingPlane`.
+`raes_runtime.runtime_fact_bindings.RuntimeFactBindingPlane`.
 
 - `RuntimeFactDeclarationModel` fixes portable type, source, sensitivity,
   visibility, and authority semantics before values arrive.
@@ -773,7 +773,7 @@ fact_binding_event:
 
 ADR-070 is accepted by this change after its closed value-domain primitives,
 membership/subsumption relation, contract carriage, posture semantics, and
-honesty conformance landed. Those neutral `aces_contracts`/SDL primitives may
+honesty conformance landed. Those neutral `raes_contracts`/SDL primitives may
 be reused, but `WitnessPolicy.seed` is not randomness and backend posture is
 never scenario or experiment selection.
 

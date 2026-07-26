@@ -2,9 +2,9 @@
   "contract_id": "participant-decision-surface-v1",
   "schema_path": "contracts/schemas/control-plane/participant-decision-surface-v1.json",
   "stability": "draft",
-  "content_hash": "ccaa6a83ff8380d328339c51a8e6c7cca7fdb4aefb10d25b4f0c356840c9e1a6",
+  "content_hash": "77920c1edfa6fe1785d50d6d33a194acd59fdc41845c016eedbf88af342bd2e2",
   "last_change": {
-    "summary": "Require SEM-226 item-level exposure bindings for every serialized context, action, and affordance reference, including authorization-record identity, participant/audience/order scope, immutable effective and selected policy coordinates, markings, transformation and declassification bases, evidence, provenance, limitations, and item-bound delivery-time-authorized realized occurrences.",
-    "content_hash": "ccaa6a83ff8380d328339c51a8e6c7cca7fdb4aefb10d25b4f0c356840c9e1a6"
+    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
+    "content_hash": "77920c1edfa6fe1785d50d6d33a194acd59fdc41845c016eedbf88af342bd2e2"
   }
 }

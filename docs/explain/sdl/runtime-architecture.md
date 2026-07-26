@@ -54,11 +54,10 @@ here come from mature workflow and distributed-runtime systems:
 
 ```text
 raes                -> parse + instantiate + SDL-language semantics
-aces_processor          -> compile + plan + support/contract semantics
-aces_runtime            -> live control + manager + control-plane APIs
-aces_backend_protocols  -> backend capability/protocol declarations
-aces_backend_stubs      -> non-normative in-memory target implementations
-aces.*                  -> legacy compatibility wrappers
+raes_processor          -> compile + plan + support/contract semantics
+raes_runtime            -> live control + manager + control-plane APIs
+raes_backend_protocols  -> backend capability/protocol declarations
+raes_backend_stubs      -> non-normative in-memory target implementations
 ```
 
 ADR-036 backs this package boundary with `tools/check_repo_policy.py`: the
@@ -182,7 +181,7 @@ diagnostics and invalidates the plan if a cycle survives into runtime planning.
 
 ### Reference processor
 
-`aces_processor.reference.run_reference_processor(scenario, backend_manifest)`
+`raes_processor.reference.run_reference_processor(scenario, backend_manifest)`
 (and the `ReferenceProcessor` class) is the repository-owned reference
 implementation of the processing model. It assembles the stages above into one
 call — accepting SDL text, a file path, or an already-parsed scenario — and
@@ -194,7 +193,7 @@ exposes the published processor manifest through the canonical renderer.
 Per ADR-008 the processor is the semantics-bearing layer between SDL authoring
 and backend realization, so the reference processor's responsibility ends at the
 `ExecutionPlan`: it imports only the SDL/processor/contract layers and never
-`aces_runtime` (the one-directional boundary enforced by
+`raes_runtime` (the one-directional boundary enforced by
 `tools/policy/adr_policy.yaml`). End-to-end execution is realized by composing
 its plan with the reference runtime (`RuntimeManager` / `RuntimeControlPlane`);
 the backend-conformance live probe drives exactly this composition, and the
@@ -391,7 +390,7 @@ Planner FM2 semantics are explicit rather than incidental:
 - refresh propagation is transitive over the refresh graph
 - cross-domain refresh does not create startup ordering
 
-Those rules are owned by `aces_processor.semantics.planner`, not by local planner
+Those rules are owned by `raes_processor.semantics.planner`, not by local planner
 algorithm shape.
 
 This phase is also intentionally composition-ready. Module/import expansion
@@ -404,9 +403,9 @@ Composition is registry-ready as well:
 - local imports remain supported through `path:` and `source: local:...`
 - reusable remote modules use `source: oci:...`
 - concrete resolved imports may be pinned via `source: locked:...`
-- `aces sdl resolve` writes `aces.lock.json`
-- `aces sdl verify-imports` verifies lockfile, trust, digests, and signatures
-- `aces sdl publish` packages a publishable SDL module as an OCI image layout
+- `raes sdl resolve` writes `aces.lock.json`
+- `raes sdl verify-imports` verifies lockfile, trust, digests, and signatures
+- `raes sdl publish` packages a publishable SDL module as an OCI image layout
 
 Resolution and trust happen before instantiation and semantic validation.
 Planner/runtime semantics see one admitted concrete scenario; replay-relevant

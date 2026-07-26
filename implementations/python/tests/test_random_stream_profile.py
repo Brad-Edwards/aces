@@ -13,14 +13,14 @@ import json
 from pathlib import Path
 
 import pytest
-from aces_contracts.contracts import RandomStreamProfileModel
-from aces_contracts.random_stream_profiles import (
+from pydantic import ValidationError
+from raes_contracts.contracts import RandomStreamProfileModel
+from raes_contracts.random_stream_profiles import (
     SUPPORTED_RANDOM_STREAM_PROFILE_IDS,
     load_random_stream_profile,
     random_stream_profile_path,
     random_stream_profiles_root,
 )
-from pydantic import ValidationError
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PROFILE_PATH = REPO_ROOT / "contracts" / "profiles" / "random-stream" / "blake3-xof-v1.json"

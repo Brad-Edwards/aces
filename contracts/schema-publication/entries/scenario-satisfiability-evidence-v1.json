@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "ffdd52a8b09c9d034f4f0f7386be1c196ed253572c164a2f737259a58a08788f",
+  "content_hash": "d43fe22c020b658c302baeca1b6b7ea2ffab603e80aa209bdd69bf1e6e2c03a7",
   "last_change": {
-    "summary": "Carried closed participant-directed inject delivery declarations into satisfiability evidence and retargeted Python validator references to raes.",
-    "content_hash": "ffdd52a8b09c9d034f4f0f7386be1c196ed253572c164a2f737259a58a08788f"
+    "summary": "Carried closed participant-directed inject delivery declarations into satisfiability evidence and applied the RAES package hard cut.",
+    "content_hash": "d43fe22c020b658c302baeca1b6b7ea2ffab603e80aa209bdd69bf1e6e2c03a7"
   }
 }

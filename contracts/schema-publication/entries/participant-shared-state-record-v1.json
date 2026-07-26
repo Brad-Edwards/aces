@@ -2,9 +2,9 @@
   "contract_id": "participant-shared-state-record-v1",
   "schema_path": "contracts/schemas/participant-runtime/participant-shared-state-record-v1.json",
   "stability": "draft",
-  "content_hash": "8de5075b682a2ef7f7bf9d18f9dcb51667f2efeb496f283d0bb54b9bb0ffd38b",
+  "content_hash": "af85858ae18c680d570a24c2991d06a98d13dd2901f2dd287ff2e50080c1a200",
   "last_change": {
-    "summary": "Require participant shared-state records and accesses to carry revision or digest markers for RUN-307 version discipline.",
-    "content_hash": "8de5075b682a2ef7f7bf9d18f9dcb51667f2efeb496f283d0bb54b9bb0ffd38b"
+    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
+    "content_hash": "af85858ae18c680d570a24c2991d06a98d13dd2901f2dd287ff2e50080c1a200"
   }
 }

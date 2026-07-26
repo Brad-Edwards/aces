@@ -2,9 +2,9 @@
   "contract_id": "experiment-capture-spec-v1",
   "schema_path": "contracts/schemas/experiment-core/experiment-capture-spec-v1.json",
   "stability": "draft",
-  "content_hash": "b262408eda4309d265a292ffd2fbcb1e34ba58c28205e4d99996f1b854a70876",
+  "content_hash": "abd5fc6cfc1c77159328531c531112c34685a348463405d30f7f63082c945705",
   "last_change": {
-    "summary": "Extended shared experiment artifact roles and typed references for associated-artifact parents (ADR-077, issue #738).",
-    "content_hash": "b262408eda4309d265a292ffd2fbcb1e34ba58c28205e4d99996f1b854a70876"
+    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
+    "content_hash": "abd5fc6cfc1c77159328531c531112c34685a348463405d30f7f63082c945705"
   }
 }

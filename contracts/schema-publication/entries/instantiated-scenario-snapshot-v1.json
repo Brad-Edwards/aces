@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-snapshot-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "81ac076d7274fd9d37f8b0d674767416acb0f90885f92fc26784198b06a8a691",
+  "content_hash": "7a2858ed5733cefd306c8166bc7d3c75eba70adcb09141a79054e23b493a864e",
   "last_change": {
-    "summary": "Carried participant-directed inject delivery declarations into immutable snapshots and retargeted Python validator references to raes.",
-    "content_hash": "81ac076d7274fd9d37f8b0d674767416acb0f90885f92fc26784198b06a8a691"
+    "summary": "Carried participant-directed inject delivery declarations into immutable snapshots and applied the RAES package hard cut.",
+    "content_hash": "7a2858ed5733cefd306c8166bc7d3c75eba70adcb09141a79054e23b493a864e"
   }
 }

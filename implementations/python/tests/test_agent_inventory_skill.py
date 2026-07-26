@@ -3,10 +3,10 @@ from __future__ import annotations
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-CLAUDE_SKILL_DIR = REPO_ROOT / ".claude" / "skills" / "aces-asset-inventory-capture"
-CODEX_SKILL_DIR = REPO_ROOT / ".codex-skills" / "aces-asset-inventory-capture"
-GAP_CLAUDE_SKILL_DIR = REPO_ROOT / ".claude" / "skills" / "aces-gap-remediation-implement"
-GAP_CODEX_SKILL_DIR = REPO_ROOT / ".codex-skills" / "aces-gap-remediation-implement"
+CLAUDE_SKILL_DIR = REPO_ROOT / ".claude" / "skills" / "raes-asset-inventory-capture"
+CODEX_SKILL_DIR = REPO_ROOT / ".codex-skills" / "raes-asset-inventory-capture"
+GAP_CLAUDE_SKILL_DIR = REPO_ROOT / ".claude" / "skills" / "raes-gap-remediation-implement"
+GAP_CODEX_SKILL_DIR = REPO_ROOT / ".codex-skills" / "raes-gap-remediation-implement"
 SKILL_PATHS = (
     CLAUDE_SKILL_DIR / "SKILL.md",
     CODEX_SKILL_DIR / "SKILL.md",
@@ -31,11 +31,11 @@ def test_asset_inventory_skill_is_cross_agent_and_discoverable_by_codex() -> Non
     assert "TODO" not in codex_skill
     assert claude_skill == codex_skill
     assert "from either Claude Code or Codex" in claude_skill
-    assert "aces-asset-inventory-capture" in codex_rules
-    assert ".codex-skills/aces-asset-inventory-capture/SKILL.md" in codex_rules
-    assert ".claude/skills/aces-asset-inventory-capture/SKILL.md" in codex_rules
-    assert "~/.codex/skills/aces-asset-inventory-capture" in codex_rules
-    assert "~/.claude/skills/aces-asset-inventory-capture" in codex_rules
+    assert "raes-asset-inventory-capture" in codex_rules
+    assert ".codex-skills/raes-asset-inventory-capture/SKILL.md" in codex_rules
+    assert ".claude/skills/raes-asset-inventory-capture/SKILL.md" in codex_rules
+    assert "~/.codex/skills/raes-asset-inventory-capture" in codex_rules
+    assert "~/.claude/skills/raes-asset-inventory-capture" in codex_rules
 
 
 def test_asset_inventory_skill_metadata_is_agent_runnable() -> None:
@@ -43,10 +43,10 @@ def test_asset_inventory_skill_metadata_is_agent_runnable() -> None:
         skill = skill_path.read_text(encoding="utf-8")
         openai_yaml = (skill_path.parent / "agents" / "openai.yaml").read_text(encoding="utf-8")
 
-        assert "name: aces-asset-inventory-capture" in skill
+        assert "name: raes-asset-inventory-capture" in skill
         assert "description: Run the ACES asset inventory methodology" in skill
         assert "default_prompt:" in openai_yaml
-        assert "$aces-asset-inventory-capture" in openai_yaml
+        assert "$raes-asset-inventory-capture" in openai_yaml
 
 
 def test_asset_inventory_skill_encodes_methodology_tool_baseline() -> None:
@@ -176,11 +176,11 @@ def test_gap_remediation_skill_is_cross_agent_and_discoverable_by_codex() -> Non
     assert "TODO" not in claude_skill
     assert "TODO" not in codex_skill
     assert claude_skill == codex_skill
-    assert "aces-gap-remediation-implement" in codex_rules
-    assert ".codex-skills/aces-gap-remediation-implement/SKILL.md" in codex_rules
-    assert ".claude/skills/aces-gap-remediation-implement/SKILL.md" in codex_rules
-    assert "~/.codex/skills/aces-gap-remediation-implement" in codex_rules
-    assert "~/.claude/skills/aces-gap-remediation-implement" in codex_rules
+    assert "raes-gap-remediation-implement" in codex_rules
+    assert ".codex-skills/raes-gap-remediation-implement/SKILL.md" in codex_rules
+    assert ".claude/skills/raes-gap-remediation-implement/SKILL.md" in codex_rules
+    assert "~/.codex/skills/raes-gap-remediation-implement" in codex_rules
+    assert "~/.claude/skills/raes-gap-remediation-implement" in codex_rules
 
 
 def test_gap_remediation_skill_metadata_is_agent_runnable() -> None:
@@ -188,10 +188,10 @@ def test_gap_remediation_skill_metadata_is_agent_runnable() -> None:
         skill = skill_path.read_text(encoding="utf-8")
         openai_yaml = (skill_path.parent / "agents" / "openai.yaml").read_text(encoding="utf-8")
 
-        assert "name: aces-gap-remediation-implement" in skill
+        assert "name: raes-gap-remediation-implement" in skill
         assert "description: Architecture-first overlay" in skill
         assert "default_prompt:" in openai_yaml
-        assert "$aces-gap-remediation-implement" in openai_yaml
+        assert "$raes-gap-remediation-implement" in openai_yaml
 
 
 def test_gap_remediation_skill_encodes_overlay_contract() -> None:

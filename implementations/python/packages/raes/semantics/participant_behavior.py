@@ -277,7 +277,7 @@ def _behavior_mode_issue(*, spec_name: str, behavior_mode: object) -> Participan
     if not behavior_mode:
         return None
     try:
-        from aces_contracts.controlled_vocabularies import validate_controlled_vocabulary_scope_values
+        from raes_contracts.controlled_vocabularies import validate_controlled_vocabulary_scope_values
 
         validate_controlled_vocabulary_scope_values("behavior_specifications.behavior_mode", [str(behavior_mode)])
     except ValueError as exc:
@@ -293,7 +293,7 @@ def _behavior_mode_issue(*, spec_name: str, behavior_mode: object) -> Participan
 
 def _backend_feature_support_issue(*, spec_name: str, feature_ref: object) -> ParticipantBehaviorIssue | None:
     try:
-        from aces_contracts.controlled_vocabularies import validate_controlled_vocabulary_value
+        from raes_contracts.controlled_vocabularies import validate_controlled_vocabulary_value
 
         validation_errors: list[str] = []
         for vocabulary_id in (
@@ -317,7 +317,7 @@ def _backend_feature_support_issue(*, spec_name: str, feature_ref: object) -> Pa
 
 
 def _evidence_contract_issue(*, spec_name: str, evidence_contract_ref: object) -> ParticipantBehaviorIssue | None:
-    from aces_contracts.manifest_authority import (
+    from raes_contracts.manifest_authority import (
         BACKEND_SUPPORTED_CONTRACT_IDS,
         PARTICIPANT_IMPLEMENTATION_SUPPORTED_CONTRACT_IDS,
         PROCESSOR_SUPPORTED_CONTRACT_IDS,
@@ -1047,7 +1047,7 @@ def _behavior_specification_vocabulary_issues(
     )
     if mode_issue is not None:
         issues.append(mode_issue)
-    from aces_contracts.controlled_vocabularies import validate_controlled_vocabulary_scope_values
+    from raes_contracts.controlled_vocabularies import validate_controlled_vocabulary_scope_values
 
     for field_name, scope, code in (
         (

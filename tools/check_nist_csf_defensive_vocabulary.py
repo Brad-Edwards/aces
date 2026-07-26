@@ -21,7 +21,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from aces_contracts.contracts import (  # noqa: E402
+from raes_contracts.contracts import (  # noqa: E402
     ControlledVocabularyCatalogModel,
     NistCsfDefensiveCategorySourceModel,
 )
@@ -193,7 +193,7 @@ def _check_remote(source: NistCsfDefensiveCategorySourceModel) -> list[str]:
         return [f"{SOURCE_RELATIVE_PATH}: remote verification URL must stay on csrc.nist.gov HTTPS"]
     request = urllib.request.Request(  # noqa: S310 - allowlisted NIST HTTPS endpoint above
         source.source_url,
-        headers={"User-Agent": "ACES-NIST-CSF-verifier/1"},
+        headers={"User-Agent": "RAES-NIST-CSF-verifier/1"},
     )
     with urllib.request.urlopen(request, timeout=60) as response:  # noqa: S310
         categories = _extract_defensive_categories(response.read())

@@ -4,7 +4,7 @@ Per ADR-073 the OCR-inherited SDL scoring chain
 (``metric -> evaluation -> TLO -> goal``) was removed from the language. Graded
 scoring, reward, and evaluation outputs live in the experiment/evaluator plane
 (ADR-055/064/069), not in authored SDL. What remains in
-``aces.core.semantics.assessment`` is the resource-kind qualifier that objective
+``raes.semantics.assessment`` is the resource-kind qualifier that objective
 success references carry: objective success composes backend-neutral assertions,
 so ``ASSERTION`` is the sole member.
 
@@ -16,8 +16,8 @@ from __future__ import annotations
 
 from enum import Enum
 
-from aces.core.semantics import assessment as compat_assessment
-from aces.core.semantics.assessment import AssessmentResourceKind
+from raes.semantics import assessment as compat_assessment
+from raes.semantics.assessment import AssessmentResourceKind
 
 
 class TestAssessmentResourceKind:

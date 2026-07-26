@@ -6,8 +6,8 @@ from copy import deepcopy
 from dataclasses import dataclass
 from enum import Enum
 
-from aces_contracts.realization_envelope import Posture
 from pydantic import BaseModel
+from raes_contracts.realization_envelope import Posture
 
 from ._realization_envelope_domains import out_of_domain_candidates
 from ._realization_envelope_engine import (
