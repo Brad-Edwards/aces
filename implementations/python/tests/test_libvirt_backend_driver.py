@@ -7,7 +7,7 @@ from pathlib import Path
 
 from raes_backend_libvirt.cloudinit import CloudInitSpec, CloudInitUser
 from raes_backend_libvirt.driver import DomainSpec, NetworkAcl, NetworkSpec
-from raes_backend_libvirt.drivers.libvirt import LibvirtDeploymentDriver, _aces_uuid
+from raes_backend_libvirt.drivers.libvirt import LibvirtDeploymentDriver, _raes_uuid
 from raes_backend_protocols.naming import provider_resource_name
 
 # Real libvirt reports a missing object with these stable VIR_ERR_NO_* codes via
@@ -391,7 +391,7 @@ def test_libvirt_convergence_fails_closed_when_stopping_owned_object_fails():
     # (permission/internal) must NOT be suppressed-then-undefined — the apply fails
     # closed and the still-running owned domain is left intact for retry.
     connection = _FakeConnection()
-    existing = _NativeObject(uuid=_aces_uuid("provision.node.web"), fail_destroy_code=_VIR_ERR_INTERNAL_ERROR)
+    existing = _NativeObject(uuid=_raes_uuid("provision.node.web"), fail_destroy_code=_VIR_ERR_INTERNAL_ERROR)
     connection.domains[_runtime_name("provision.node.web")] = existing
     driver = LibvirtDeploymentDriver(connection=connection, name_prefix="aces-test", seed_builder=_FakeSeedBuilder())
 
@@ -408,7 +408,7 @@ def test_libvirt_convergence_tolerates_stopping_an_inactive_owned_object():
     # The benign side of the same path: converging an owned object that is already
     # inactive (stop raises VIR_ERR_OPERATION_INVALID) still undefines + redefines.
     connection = _FakeConnection()
-    existing = _NativeObject(uuid=_aces_uuid("provision.node.web"), fail_destroy_code=_VIR_ERR_OPERATION_INVALID)
+    existing = _NativeObject(uuid=_raes_uuid("provision.node.web"), fail_destroy_code=_VIR_ERR_OPERATION_INVALID)
     connection.domains[_runtime_name("provision.node.web")] = existing
     driver = LibvirtDeploymentDriver(connection=connection, name_prefix="aces-test", seed_builder=_FakeSeedBuilder())
 
@@ -421,7 +421,7 @@ def test_libvirt_convergence_tolerates_stopping_an_inactive_owned_object():
     assert driver.realized_addresses() == {"provision.node.web"}
 
 
-def test_libvirt_domain_xml_carries_deterministic_aces_uuid():
+def test_libvirt_domain_xml_carries_stable_raes_ownership_uuid():
     connection = _FakeConnection()
     driver = LibvirtDeploymentDriver(connection=connection, name_prefix="aces-test", seed_builder=_FakeSeedBuilder())
 
@@ -434,6 +434,7 @@ def test_libvirt_domain_xml_carries_deterministic_aces_uuid():
     uuid_second = _uuid_from_xml(connection.domain_xml[1])
 
     assert not first.diagnostics
+    assert _raes_uuid("provision.node.web") == "049f04cb-0e5b-50b5-935e-acee9fe0cce9"
     assert uuid_first and uuid_first == uuid_second
 
 
@@ -705,7 +706,7 @@ def test_libvirt_realize_rollback_leaves_a_pre_existing_updated_object_intact():
     # second (foreign-named) domain fails; the updated domain must survive so the
     # preserved baseline snapshot that still claims it realized stays truthful.
     connection = _FakeConnection()
-    existing = _NativeObject(uuid=_aces_uuid("provision.node.web"))
+    existing = _NativeObject(uuid=_raes_uuid("provision.node.web"))
     connection.domains[_runtime_name("provision.node.web")] = existing
     foreign = _NativeObject(uuid="11111111-2222-3333-4444-555555555555")
     connection.domains[_runtime_name("provision.node.other")] = foreign
