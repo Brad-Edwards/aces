@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
   "stability": "draft",
-  "content_hash": "665f23af990a892af5f47ccda88a1eb254ca60552fe8bece6faffec4840475ec",
+  "content_hash": "1017a5db698151a50081675174b6c0f3cfb3eb2f22ec0532cd7334f7ee3ec76a",
   "last_change": {
-    "summary": "Added closed participant-directed inject delivery declarations and applied the RAES package hard cut.",
-    "content_hash": "665f23af990a892af5f47ccda88a1eb254ca60552fe8bece6faffec4840475ec"
+    "summary": "Published participant-directed inject deliveries and governed participant action-argument domains in instantiated scenarios on the RAES-only package surface.",
+    "content_hash": "1017a5db698151a50081675174b6c0f3cfb3eb2f22ec0532cd7334f7ee3ec76a"
   }
 }

@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-snapshot-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "7a2858ed5733cefd306c8166bc7d3c75eba70adcb09141a79054e23b493a864e",
+  "content_hash": "6833f448f35ead054ba95e4a621309c320b5bc227e32d2e12472f276482e5f59",
   "last_change": {
-    "summary": "Carried participant-directed inject delivery declarations into immutable snapshots and applied the RAES package hard cut.",
-    "content_hash": "7a2858ed5733cefd306c8166bc7d3c75eba70adcb09141a79054e23b493a864e"
+    "summary": "Published participant-directed inject deliveries and governed participant action-argument domains in immutable scenario snapshots on the RAES-only package surface.",
+    "content_hash": "6833f448f35ead054ba95e4a621309c320b5bc227e32d2e12472f276482e5f59"
   }
 }
