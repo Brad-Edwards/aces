@@ -845,6 +845,33 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   implementation reuses the revision-pinned SEM-230 lineage without changing
   its normative derivation or compatibility claims, the SDL lineage ledger
   and source audit remain unchanged.
+- DSL-142 composes the existing orchestration-inject, participant-observation,
+  SEM-230 information-flow, ACT-617 mixed-control, shared-time, and evidence
+  lineages without introducing another external derivation. The exact ACES
+  mapping is
+  `ParticipantBehaviorSpecification.participant_inject_deliveries`: one
+  participant, the original inject and event/script/story occurrence
+  identities, source/result item identities, an observation boundary, a
+  revisioned audience/exposure/visibility/disclosure policy, the
+  orchestration-occurrence-and-shared-time order basis, temporal and evidence
+  bindings, fail-closed disposition, and an optional compatible mixed-control
+  transition. Direction/intervention bindings repeat the controller, target
+  authority scope, effective order, validity interval, and evidence basis so
+  admission can reject disagreement and incompatible time/evidence coverage.
+  Module composition rewrites external references while preserving local
+  binding and control-transition identities; compilation emits canonical typed
+  addresses without copying hidden inject bodies or environment commands into
+  participant metadata.
+- DSL-142 delivery evidence is the governed SDL schemas and publication
+  entries, the valid/invalid participant-inject delivery fixtures, and
+  `implementations/python/tests/test_dsl_142_participant_inject_delivery.py`.
+  This delivers authoring, composition, semantic and post-instantiation
+  validation, deterministic compilation, and schema compatibility. It does not
+  claim runtime delivery, wire or receipt contracts, persistence, backend
+  realization, proof of observation, or universal information-flow security.
+  Because it only binds already governed carriers and does not change their
+  normative derivation or compatibility claims, the SDL lineage ledger and
+  source audit remain unchanged.
 - DSL-437 composes the incumbent participant and time lineages rather than
   introducing a live-activity ontology. CybORG and the Gymnasium, PettingZoo,
   and OpenSpiel family remain precedents for agents, actions, observations,

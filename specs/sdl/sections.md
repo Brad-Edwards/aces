@@ -108,6 +108,19 @@ ordering is normative (resolution and failure semantics in
   `injects` naming `entities` and `events` naming precondition assertions. Objective
   windows bind `stories`/`scripts`/`events`/`workflows`.
 
+Participant-directed delivery is an explicit nested binding under
+`behavior_specifications.*.participant_inject_deliveries`. It anchors one
+participant to one inject occurrence across the event/script/story chain and
+binds a participant-visible result, observation boundary, revisioned delivery
+policy, shared-time constraint, evidence requirement, and—when applicable—a
+mixed-control transition. Direction and intervention bindings also state the
+controller, authority scope, effective order, validity interval, and evidence
+basis that must agree with that transition and its target controller state.
+Their order must satisfy the named temporal constraints, and their control
+evidence must be covered by the named evidence requirements. An inject without
+that binding remains ordinary orchestration input; `injects.*.environment`
+never implies participant delivery.
+
 `propositions` state typed claims; `assertions` use them as preconditions,
 invariants, or postconditions. Objective success composes invariant or
 postcondition assertions, while events and workflow predicates reference

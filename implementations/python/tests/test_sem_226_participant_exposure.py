@@ -26,6 +26,8 @@ from test_sem_220_participant_decision_surface import (
     PARTICIPANT,
     SCAN,
     SCAN_AFFORDANCE,
+    SCAN_ENTRY,
+    SCAN_SHAPE,
     _history,
     _runtime_model,
 )
@@ -143,12 +145,13 @@ def _history_through_order_2() -> tuple[ParticipantBehaviorHistoryEvent, ...]:
 
 def _action_assessment(*, eligibility: str = "eligible") -> ParticipantDecisionSurfaceActionAssessment:
     return ParticipantDecisionSurfaceActionAssessment(
+        entry_id=SCAN_ENTRY,
         action_contract_address=SCAN,
         presentation_basis_ref=POLICY,
         eligibility=eligibility,
         eligibility_reason_refs=(() if eligibility == "eligible" else ("preconditions.scan.unsatisfied",)),
         constraint_refs=(f"{SCAN}.preconditions",),
-        selection_shape_ref="selection-shapes.scan.v1",
+        selection_shape_ref=SCAN_SHAPE,
         support="supported",
         support_refs=("participant-implementation.reference",),
         realization_refs=("realization.reference",),
@@ -240,7 +243,7 @@ def _projection(
         form={
             "surface_form": "candidate_action_set",
             "selection_meaning_ref": "selection-meaning.candidate.v1",
-            "candidate_entry_ids": [SCAN],
+            "candidate_entry_ids": [SCAN_ENTRY],
             "open_extension_binding_ref": None,
         },
         evidence_refs=tuple(

@@ -1964,6 +1964,35 @@ outcome-rule runtime addresses. Each nested affordance compiles independently
 at `participant.behavior-specification.<name>.tool-affordance.<id>` with raw
 refs and resolved content/action/observation addresses.
 
+`participant_inject_deliveries` is a closed, keyed mapping for explicit
+participant-directed delivery. Each binding has exactly one `participant_ref`
+and preserves the original orchestration `inject_ref` plus its
+`occurrence.event_ref`, `occurrence.script_ref`, and `occurrence.story_ref`.
+It also names the governed source/result item, the participant's observation
+boundary, a revisioned delivery policy with audience, exposure, visibility,
+and disclosure bases, the fixed
+`orchestration-occurrence-and-shared-time` order basis, temporal constraints,
+evidence requirements, and the fail-closed `reject-no-delivery` disposition.
+`external-direction` and `intervention` deliveries additionally bind a
+compatible local `mixed_control` transition plus an explicit controller,
+authority scope, effective order, validity interval, and control-evidence
+basis; ordinary `disclosure` deliveries must not carry those fields. Admission
+requires these coordinates to agree with the selected transition and target
+controller state. The effective order must also fall inside the delivery's
+bounded temporal constraints, and its control evidence must be covered by the
+named evidence requirements.
+
+The result item must be explicitly observable or disclosed by the named
+boundary, and its visibility/disclosure bases must match the delivery policy.
+The temporal and evidence declarations must bind the delivery declaration
+itself. Environment-only injects remain orchestration input and do not create a
+delivery implicitly. Compilation retains canonical participant, inject,
+occurrence, item, boundary, time, evidence, controller, authority, order,
+validity, and control-transition identities but never copies the inject body
+or `environment` commands into participant metadata.
+Runtime delivery, receipts, persistence, backend realization, and proof of
+observation remain downstream contracts.
+
 For `behavior_mode: mixed-control`, authors must also provide a closed
 `mixed_control` declaration. It binds one controlled participant, explicit
 controller states, fail-closed disposition rules, and ordered control facts.

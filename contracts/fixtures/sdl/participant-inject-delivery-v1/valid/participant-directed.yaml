@@ -1,0 +1,113 @@
+name: dsl-142
+nodes:
+  web:
+    type: vm
+    resources: {ram: 1 gib, cpu: 1}
+entities:
+  red-team:
+    role: red
+content:
+  briefing:
+    type: file
+    target: web
+    path: /opt/briefing.txt
+    text: governed participant briefing
+    sensitive: true
+injects:
+  briefing-inject:
+    description: orchestration briefing
+    environment: [set-exercise-banner]
+events:
+  briefing-event:
+    injects: [briefing-inject]
+scripts:
+  briefing-script:
+    start_time: 0
+    end_time: 10
+    speed: 1
+    events:
+      briefing-event: 5
+stories:
+  briefing-story:
+    scripts: [briefing-script]
+time_domains:
+  exercise-time:
+    kind: logical
+    tick_period_seconds: {numerator: 1, denominator: 1}
+    epoch: scenario_start
+    visibility: participant_visible
+    description: exercise logical time
+clocks:
+  exercise-clock:
+    time_domain_ref: exercise-time
+    authority_kind: runtime
+    authority_ref: runtime.scheduler
+    monotonicity: non_decreasing
+    description: exercise scheduler clock
+temporal_constraints:
+  briefing-window:
+    constraint_kind: window
+    clock_ref: exercise-clock
+    subject_refs:
+      - behavior_specifications.red-briefing.participant_inject_deliveries.briefing
+    start: {tick: 4}
+    end: {tick: 6}
+    description: participant briefing delivery window
+evidence_requirements:
+  briefing-delivery-evidence:
+    description: capture governed participant delivery evidence
+    source_refs:
+      - behavior_specifications.red-briefing.participant_inject_deliveries.briefing
+    scope_refs: [web]
+    window: briefing delivery window
+    channel: log
+    artifact_role: delivery_evidence
+    sensitivity: plain
+    redaction: none
+    integrity: checksum
+    retention: study_lifetime
+    loss_disclosure: required
+observation_boundaries:
+  red-view:
+    projection_basis: participant-local governed briefing view
+    observable_refs: [content.briefing]
+    redaction_policy: hidden refs remain hidden
+    latency_profile: delivery-order bound
+    view_rules:
+      - information_ref: content.briefing
+        boundary_class: instruction
+        disposition: disclosed
+        visibility_basis: visibility-bases.briefing.v1
+        disclosure_rule: disclosures.briefing.v1
+agents:
+  red-agent:
+    entity: red-team
+    observation_boundaries: [red-view]
+behavior_specifications:
+  red-briefing:
+    semantic_version: 1.0.0
+    participant_refs: [red-agent]
+    observation_boundary_refs: [red-view]
+    participant_inject_deliveries:
+      briefing:
+        participant_ref: red-agent
+        inject_ref: briefing-inject
+        occurrence:
+          event_ref: briefing-event
+          script_ref: briefing-script
+          story_ref: briefing-story
+        source_item_ref: content.briefing
+        result_item_ref: content.briefing
+        observation_boundary_ref: red-view
+        delivery_kind: disclosure
+        delivery_policy:
+          policy_ref: projection-policy.red.v1
+          policy_revision: 1.0.0
+          exposure_policy_ref: exposure-policy.red.v1
+          audience_scope_ref: audience.participant.red-agent
+          visibility_basis_ref: visibility-bases.briefing.v1
+          disclosure_basis_ref: disclosures.briefing.v1
+        order_basis: orchestration-occurrence-and-shared-time
+        temporal_constraint_refs: [briefing-window]
+        evidence_requirement_refs: [briefing-delivery-evidence]
+        failure_disposition: reject-no-delivery

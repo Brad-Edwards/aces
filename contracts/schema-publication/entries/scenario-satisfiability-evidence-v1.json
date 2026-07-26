@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "cfe81837593f38a4a8871c4392425fb7407e96c66179b3dc7d36cd749f94c88a",
+  "content_hash": "01e502976847abfed1d37f7b6e972971d9109fac34e4e94ef31b5971a0a93032",
   "last_change": {
-    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
-    "content_hash": "cfe81837593f38a4a8871c4392425fb7407e96c66179b3dc7d36cd749f94c88a"
+    "summary": "Carried participant-directed inject deliveries and governed participant action-argument domains into satisfiability evidence on the RAES-only package surface.",
+    "content_hash": "01e502976847abfed1d37f7b6e972971d9109fac34e4e94ef31b5971a0a93032"
   }
 }

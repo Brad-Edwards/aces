@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
-from dataclasses import dataclass
-from typing import Protocol
+from collections.abc import Mapping
+from dataclasses import dataclass, replace
+from typing import Protocol, cast
 
 from .contracts import (
     ParticipantActionResultModel,
@@ -20,6 +20,11 @@ from .contracts import (
     ParticipantObservationDetailsModel,
     ParticipantTemporalRuntimeContextModel,
 )
+from .participant_action_arguments import (
+    ParticipantActionArgumentScalar,
+    ParticipantActionArgumentValue,
+    ParticipantValidatedActionSelection,
+)
 from .participant_behavior import (
     ParticipantAdmissionDisposition,
     ParticipantBehaviorHistoryEventType,
@@ -27,14 +32,33 @@ from .participant_behavior import (
     ParticipantPhaseRealization,
     ParticipantRuntimeLifecyclePhase,
 )
+from .participant_binding_events import (
+    action_result_evidence_refs as _action_result_evidence_refs,
+)
+from .participant_binding_events import (
+    participant_behavior_event_payload,
+    participant_implementation_actor_provenance,
+)
+from .participant_binding_validation import (
+    ACTION_CONTRACT_PREFIX as _ACTION_CONTRACT_PREFIX,
+)
+from .participant_binding_validation import (
+    OBSERVATION_BOUNDARY_PREFIX as _OBSERVATION_BOUNDARY_PREFIX,
+)
+from .participant_binding_validation import (
+    require_non_empty as _require_non_empty,
+)
+from .participant_binding_validation import (
+    require_prefixed as _require_prefixed,
+)
+from .participant_binding_validation import (
+    string_tuple as _string_tuple,
+)
 from .runtime_state import ApplyResult
-
-_ACTION_CONTRACT_PREFIX = "participant.action-contract."
-_OBSERVATION_BOUNDARY_PREFIX = "participant.observation-boundary."
 
 
 class ParticipantDecisionSurfaceArgumentShapeResolver(Protocol):
-    """Resolve a governed argument shape and validate one referenced proposal."""
+    """Resolve and normalize one proposal against a governed argument shape."""
 
     def __call__(
         self,
@@ -42,7 +66,8 @@ class ParticipantDecisionSurfaceArgumentShapeResolver(Protocol):
         action_contract_address: str,
         argument_shape_ref: str,
         proposal_ref: str,
-    ) -> bool: ...
+        proposed_arguments: Mapping[str, object],
+    ) -> ParticipantValidatedActionSelection | None: ...
 
 
 class ParticipantDecisionSurfaceApparatusResolver(Protocol):
@@ -80,6 +105,7 @@ class ParticipantActionAdmissionRequest:
     observation_boundary_evidence_refs: tuple[str, ...] = ()
     temporal_contexts: tuple[ParticipantTemporalRuntimeContextModel, ...] = ()
     action_result: ParticipantActionResultModel | None = None
+    validated_selection: ParticipantValidatedActionSelection | None = None
     state_transition_kind: str = "participant_action_admitted"
     post_state_digest: str | None = None
     requires_terminal_outcome: bool = False
@@ -106,6 +132,11 @@ class ParticipantActionAdmissionRequest:
             raise TypeError("implementation_selection must be a ParticipantImplementationSelectionModel")
         if self.action_result is not None and not isinstance(self.action_result, ParticipantActionResultModel):
             raise TypeError("action_result must be a ParticipantActionResultModel or None")
+        if self.validated_selection is not None:
+            if not isinstance(self.validated_selection, ParticipantValidatedActionSelection):
+                raise TypeError("validated_selection must be a ParticipantValidatedActionSelection or None")
+            if self.validated_selection.action_contract_address != self.action_contract_address:
+                raise ValueError("validated_selection action_contract_address must match the admission request")
         if not isinstance(self.requires_terminal_outcome, bool):
             raise TypeError("requires_terminal_outcome must be a bool")
         if any(not isinstance(item, ParticipantTemporalRuntimeContextModel) for item in self.temporal_contexts):
@@ -149,13 +180,6 @@ class ParticipantNativeActionExecution:
             _require_non_empty(self.post_state_digest, "post_state_digest")
 
 
-def participant_implementation_actor_provenance(selection: ParticipantImplementationSelectionModel) -> str:
-    """Return the portable actor provenance ref for a selected implementation."""
-
-    identity = selection.implementation_identity
-    return f"participant-implementation:{identity.name}@{identity.version}"
-
-
 def participant_action_admission_request_violations(
     request: ParticipantActionAdmissionRequest,
 ) -> tuple[str, ...]:
@@ -184,9 +208,13 @@ def bind_participant_decision_surface_selection(
     _validate_surface_form_selection(surface.form, entry, selection)
     _validate_admission_surface_agreement(surface, selection, admission_request)
     _validate_surface_apparatus(surface, admission_request, apparatus_resolver)
-    _validate_proposal_arguments(selection, argument_shape_resolver)
-    _validate_bound_admission_request(admission_request)
-    return admission_request
+    validated_selection = _validate_proposal_arguments(selection, argument_shape_resolver)
+    bound_request = cast(
+        ParticipantActionAdmissionRequest,
+        replace(admission_request, validated_selection=validated_selection),
+    )
+    _validate_bound_admission_request(bound_request)
+    return bound_request
 
 
 def _validate_selection_surface_identity(
@@ -280,17 +308,31 @@ def _validate_surface_apparatus(
 def _validate_proposal_arguments(
     selection: ParticipantDecisionSurfaceSelectionModel,
     argument_shape_resolver: ParticipantDecisionSurfaceArgumentShapeResolver,
-) -> None:
+) -> ParticipantValidatedActionSelection:
     try:
-        valid_arguments = argument_shape_resolver(
+        validated_selection = argument_shape_resolver(
             action_contract_address=selection.action_contract_address,
             argument_shape_ref=selection.argument_shape_ref,
             proposal_ref=selection.proposal_ref,
+            proposed_arguments=selection.arguments,
         )
     except Exception as exc:
         raise ValueError("participant decision surface argument-shape resolution failed") from exc
-    if valid_arguments is not True:
+    if not isinstance(validated_selection, ParticipantValidatedActionSelection):
         raise ValueError("participant decision surface proposal failed governed argument-shape validation")
+    expected = (
+        selection.action_contract_address,
+        selection.argument_shape_ref,
+        selection.proposal_ref,
+    )
+    actual = (
+        validated_selection.action_contract_address,
+        validated_selection.argument_shape_ref,
+        validated_selection.proposal_ref,
+    )
+    if actual != expected:
+        raise ValueError("validated participant action selection must match the governed proposal coordinates")
+    return validated_selection
 
 
 def _validate_bound_admission_request(admission_request: ParticipantActionAdmissionRequest) -> None:
@@ -379,17 +421,6 @@ def _action_result_violations(request: ParticipantActionAdmissionRequest) -> tup
     return tuple(violations)
 
 
-def _action_result_evidence_refs(action_result: ParticipantActionResultModel | None) -> set[str]:
-    if action_result is None:
-        return set()
-    evidence_refs = set(action_result.evidence_refs)
-    for precondition in action_result.preconditions:
-        evidence_refs.update(precondition.evidence_refs)
-    for effect in action_result.effects:
-        evidence_refs.update(effect.evidence_refs)
-    return evidence_refs
-
-
 def participant_action_binding_events(
     request: ParticipantActionAdmissionRequest,
     *,
@@ -450,40 +481,15 @@ def participant_action_binding_events(
     )
 
 
-def participant_behavior_event_payload(event: ParticipantBehaviorHistoryEventModel) -> dict[str, object]:
-    """Serialize a behavior event without empty optional/default fields."""
-
-    return event.model_dump(mode="json", exclude_none=True, exclude_defaults=True)
-
-
-def _require_non_empty(value: str, field_name: str) -> None:
-    if not isinstance(value, str) or not value:
-        raise TypeError(f"{field_name} must be a non-empty string")
-
-
-def _require_prefixed(value: str, prefix: str, field_name: str) -> None:
-    _require_non_empty(value, field_name)
-    if not value.startswith(prefix):
-        raise ValueError(f"{field_name} must be a compiled {prefix.removesuffix('.')} address")
-
-
-def _string_tuple(value: Iterable[str], field_name: str) -> tuple[str, ...]:
-    if isinstance(value, (str, bytes)) or not isinstance(value, Iterable):
-        raise TypeError(f"{field_name} must be an iterable of strings")
-    values = tuple(value)
-    if any(not isinstance(item, str) or not item for item in values):
-        raise TypeError(f"{field_name} entries must be non-empty strings")
-    if len(set(values)) != len(values):
-        raise ValueError(f"{field_name} entries must be unique")
-    return values
-
-
 __all__ = (
     "ParticipantActionAdmissionRequest",
+    "ParticipantActionArgumentScalar",
+    "ParticipantActionArgumentValue",
     "ParticipantActionApplyResult",
     "ParticipantDecisionSurfaceArgumentShapeResolver",
     "ParticipantDecisionSurfaceBindingResolvers",
     "ParticipantNativeActionExecution",
+    "ParticipantValidatedActionSelection",
     "bind_participant_decision_surface_selection",
     "participant_action_admission_request_violations",
     "participant_action_binding_events",

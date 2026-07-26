@@ -27,6 +27,7 @@ from .runtime_model import RuntimeModel
 class ParticipantDecisionSurfaceActionAssessment:
     """Order-scoped eligibility/support facts supplied by their owning gates."""
 
+    entry_id: str
     action_contract_address: str
     presentation_basis_ref: str
     eligibility: str
@@ -68,7 +69,7 @@ class ParticipantDecisionSurfaceProjectionInput:
     semantic_limitations: tuple[str, ...]
 
 
-def _surface_action_addresses(form: Mapping[str, object]) -> tuple[str, ...]:
+def _surface_action_refs(form: Mapping[str, object]) -> tuple[str, tuple[str, ...]]:
     surface_form = form.get("surface_form")
     if surface_form == "candidate_action_set":
         raw = form.get("candidate_entry_ids")
@@ -83,7 +84,51 @@ def _surface_action_addresses(form: Mapping[str, object]) -> tuple[str, ...]:
     addresses = tuple(item for item in raw if isinstance(item, str) and item)
     if len(addresses) != len(raw) or not addresses or len(set(addresses)) != len(addresses):
         raise ValueError("participant decision surface action references must be unique non-empty strings")
-    return addresses
+    return surface_form, addresses
+
+
+def _action_assessment_indexes(
+    projection: ParticipantDecisionSurfaceProjectionInput,
+) -> tuple[
+    dict[str, ParticipantDecisionSurfaceActionAssessment],
+    dict[str, ParticipantDecisionSurfaceActionAssessment],
+]:
+    assessments_by_entry_id: dict[str, ParticipantDecisionSurfaceActionAssessment] = {}
+    assessments_by_action_address: dict[str, ParticipantDecisionSurfaceActionAssessment] = {}
+    for action_address, assessment in projection.action_assessments.items():
+        if action_address != assessment.action_contract_address:
+            raise ValueError("action assessment mapping keys must match their action_contract_address values")
+        if not assessment.entry_id:
+            raise ValueError("action assessment entry_id values must be non-empty")
+        if assessment.entry_id in assessments_by_entry_id:
+            raise ValueError("action assessment entry_id values must be unique")
+        if assessment.action_contract_address in assessments_by_action_address:
+            raise ValueError("action assessment action_contract_address values must be unique")
+        assessments_by_entry_id[assessment.entry_id] = assessment
+        assessments_by_action_address[assessment.action_contract_address] = assessment
+    return assessments_by_entry_id, assessments_by_action_address
+
+
+def _surface_action_assessments(
+    projection: ParticipantDecisionSurfaceProjectionInput,
+) -> tuple[ParticipantDecisionSurfaceActionAssessment, ...]:
+    surface_form, action_refs = _surface_action_refs(projection.form)
+    assessments_by_entry_id, assessments_by_action_address = _action_assessment_indexes(projection)
+    if surface_form == "candidate_action_set":
+        assessments = assessments_by_entry_id
+        field_name = "candidate_entry_ids"
+    elif surface_form == "constrained_form":
+        assessments = assessments_by_entry_id
+        field_name = "action_entry_id"
+    else:
+        assessments = assessments_by_action_address
+        field_name = "allowed_action_contract_addresses"
+    unresolved = [ref for ref in action_refs if ref not in assessments]
+    if unresolved:
+        raise ValueError(
+            f"participant decision surface {field_name} do not resolve to action assessments: " + ", ".join(unresolved)
+        )
+    return tuple(assessments[ref] for ref in action_refs)
 
 
 def _action_affordance_addresses(
@@ -195,15 +240,16 @@ def _project_surface_action(
     behavior: ParticipantBehaviorSpecificationRuntime,
     relation: Mapping[str, str],
     projection: ParticipantDecisionSurfaceProjectionInput,
-    action_address: str,
+    assessment: ParticipantDecisionSurfaceActionAssessment,
 ) -> tuple[dict[str, object], tuple[str, ...]]:
+    action_address = assessment.action_contract_address
     if action_address not in behavior.action_contract_addresses:
         raise ValueError(f"action {action_address!r} is outside the compiled behavior specification")
     if action_address not in runtime_model.action_contracts:
         raise ValueError(f"action {action_address!r} does not resolve in the compiled runtime model")
-    assessment = projection.action_assessments.get(action_address)
-    if assessment is None or assessment.action_contract_address != action_address:
-        raise ValueError(f"action {action_address!r} lacks a matching order-scoped assessment")
+    action_contract = runtime_model.action_contracts[action_address]
+    if not action_contract.argument_shape_ref or assessment.selection_shape_ref != action_contract.argument_shape_ref:
+        raise ValueError(f"action {action_address!r} selection_shape_ref does not match its compiled argument shape")
     affordance_addresses = _action_affordance_addresses(
         runtime_model,
         behavior_affordance_addresses=behavior.tool_affordance_addresses,
@@ -217,14 +263,14 @@ def _project_surface_action(
     )
     return (
         {
-            "entry_id": action_address,
+            "entry_id": assessment.entry_id,
             "action_contract_address": action_address,
             "presentation_basis_ref": assessment.presentation_basis_ref,
             "visibility": visibility,
             "eligibility": assessment.eligibility,
             "eligibility_reason_refs": list(assessment.eligibility_reason_refs),
             "constraint_refs": list(assessment.constraint_refs),
-            "selection_shape_ref": assessment.selection_shape_ref,
+            "selection_shape_ref": action_contract.argument_shape_ref,
             "support": assessment.support,
             "support_refs": list(assessment.support_refs),
             "affordance_refs": list(affordance_addresses),
@@ -242,13 +288,13 @@ def _project_surface_actions(
 ) -> tuple[list[dict[str, object]], list[str]]:
     entries: list[dict[str, object]] = []
     surface_affordances: list[str] = []
-    for action_address in _surface_action_addresses(projection.form):
+    for assessment in _surface_action_assessments(projection):
         entry, affordance_addresses = _project_surface_action(
             runtime_model,
             behavior,
             relation,
             projection,
-            action_address,
+            assessment,
         )
         entries.append(entry)
         surface_affordances.extend(affordance_addresses)

@@ -12,6 +12,7 @@ from typing_extensions import TypeAliasType
 from ._base import SDLModel
 from ._identifiers import PortableIdentifier
 from .participant_execution import ParticipantAutonomousExecutionPolicy
+from .participant_inject_delivery import ParticipantInjectDelivery
 
 
 class ParticipantBehaviorSpecificationLifecycle(str, Enum):
@@ -336,6 +337,10 @@ class ParticipantBehaviorSpecification(SDLModel):
         default_factory=dict,
         json_schema_extra={"additionalProperties": False},
     )
+    participant_inject_deliveries: dict[PortableIdentifier, ParticipantInjectDelivery] = Field(
+        default_factory=dict,
+        json_schema_extra={"additionalProperties": False},
+    )
     extension_policy: str = "governed-extension"
     extensions: dict[str, BehaviorSpecificationExtensionValue] = Field(default_factory=dict)
 
@@ -413,6 +418,7 @@ class ParticipantBehaviorSpecification(SDLModel):
                 self.backend_feature_support_refs,
                 self.evidence_contract_refs,
                 self.tool_affordances,
+                self.participant_inject_deliveries,
             )
         ):
             raise ValueError("behavior specifications must aggregate at least one behavior surface reference")
