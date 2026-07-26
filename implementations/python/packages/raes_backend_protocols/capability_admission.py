@@ -125,16 +125,16 @@ def _validate_participant_feature_evidence(
         raise ValueError(f"participant feature '{feature}' has no conformance evidence")
 
 
-def _resolve_participant_feature_strength(
+def _validate_participant_feature_strength(
     feature: str,
     declaration: ParticipantFeatureSupport,
     required_level: ParticipantFeatureSupportLevel,
     allowed_downgrade_level: ParticipantFeatureSupportLevel | None,
-) -> ParticipantFeatureSupport:
+) -> None:
     declared_rank = _PARTICIPANT_FEATURE_SUPPORT_RANK[declaration.support_level]
     required_rank = _PARTICIPANT_FEATURE_SUPPORT_RANK[required_level]
     if declared_rank >= required_rank:
-        return declaration
+        return
     if allowed_downgrade_level is None:
         raise ValueError(
             f"participant feature '{feature}' requires {required_level.value} support; "
@@ -145,7 +145,6 @@ def _resolve_participant_feature_strength(
             f"participant feature '{feature}' authorized downgrade is "
             f"{allowed_downgrade_level.value}; backend declares {declaration.support_level.value}"
         )
-    return declaration
 
 
 def resolve_participant_feature_support(
@@ -176,12 +175,13 @@ def resolve_participant_feature_support(
     if declaration is None:
         return None
     _validate_participant_feature_evidence(manifest, feature, declaration)
-    return _resolve_participant_feature_strength(
+    _validate_participant_feature_strength(
         feature,
         declaration,
         required_level,
         allowed_downgrade_level,
     )
+    return declaration
 
 
 def participant_feature_support_gaps(
