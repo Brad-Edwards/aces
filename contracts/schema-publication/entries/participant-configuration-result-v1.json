@@ -1,0 +1,10 @@
+{
+  "contract_id": "participant-configuration-result-v1",
+  "schema_path": "contracts/schemas/participant-implementation-configuration/participant-configuration-result-v1.json",
+  "stability": "draft",
+  "content_hash": "915c2557c352fc5866fa0e5171abb02afb0b9eea485749aefa94ba0bc0dc3c51",
+  "last_change": {
+    "summary": "Published atomic normalized participant configuration results with value provenance and a canonical digest.",
+    "content_hash": "915c2557c352fc5866fa0e5171abb02afb0b9eea485749aefa94ba0bc0dc3c51"
+  }
+}

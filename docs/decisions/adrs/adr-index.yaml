@@ -435,3 +435,6 @@ adrs:
       - ref: "#866-pypi-name-correction"
       - ref: "#884"
       - ref: "#894"
+  - id: ADR-094
+    path: docs/decisions/adrs/adr-094-authoritative-cross-plane-experiment-bindings.md
+    pin: 90578754323795ca8775c47dd6095752ccb5a769a0f932ebe60abbe1d8954246

@@ -1,5 +1,7 @@
 """Schema-first external contract models for RAES artifact boundaries."""
 
+# ruff: noqa: F405 - this package intentionally re-exports subdomain __all__ surfaces
+
 from __future__ import annotations
 
 from ..versions import (
@@ -115,19 +117,9 @@ from .experiment_artifacts import (
     ExperimentDerivedMeasureReferenceModel,
     ExperimentMeasurementChannelReferenceModel,
 )
-from .experiment_capture import (
-    ExperimentCaptureRequirementModel,
-    ExperimentCaptureSpecModel,
-    ExperimentCaptureWindowModel,
-    ExperimentValidityNoteModel,
-)
-from .experiment_disclosure import (
-    ExperimentApparatusConstraintModel,
-    ExperimentAugmentationDisclosureModel,
-    ExperimentEvaluationProtocolModel,
-    ExperimentMetricDefinitionModel,
-    ExperimentSplitAndLeakageControlsModel,
-)
+from .experiment_bindings import *  # noqa: F403 - package-level contract re-export
+from .experiment_capture import *  # noqa: F403 - package-level contract re-export
+from .experiment_disclosure import *  # noqa: F403 - package-level contract re-export
 from .experiment_evidence import (
     ExperimentDerivedMeasureMethodModel,
     ExperimentDerivedMeasureModel,
@@ -400,10 +392,12 @@ __all__ = [
     "ControlledVocabularyTermModel", "ContractModel", "ExperimentAnalysisPlanModel",
     "NIST_CSF_DEFENSIVE_CATEGORIES_SOURCE_SCHEMA_VERSION", "NistCsfDefensiveCategorySourceModel",
     "NistCsfDefensiveCategorySourceTermModel",
+    "ApparatusBindingTargetModel", "BindingOwnerModel", "BindingScalarType", "ConfigurationTargetDeclarationModel", "ConfigurationTargetRegistryModel",
     "ExperimentApparatusCompatibilityReferenceModel", "ExperimentApparatusComponentModel",
     "ExperimentApparatusConstraintModel", "ExperimentApparatusContextModel", "ExperimentArtifactRefModel",
     "ExperimentAugmentationDisclosureModel", "ExperimentBackendReferenceModel",
     "ExperimentCaptureRequirementModel", "ExperimentCaptureSpecModel", "ExperimentCaptureSpecReferenceModel",
+    "ExperimentBindingDescriptorModel", "ExperimentBindingDescriptorSetModel",
     "ExperimentCaptureWindowModel", "ExperimentChecksumModel", "ExperimentClockContextModel",
     "ExperimentConditionAssignmentParameterModel", "ExperimentConditionAssignmentReferenceModel",
     "ExperimentDerivedMeasureMethodModel", "ExperimentDerivedMeasureModel",
@@ -420,7 +414,10 @@ __all__ = [
     "ExperimentStatisticalMethodModel", "ExperimentStochasticControlModel", "ExperimentStudyFactorModel",
     "ExperimentStudyMembershipModel", "ExperimentStudyModel", "ExperimentTaskReferenceModel",
     "ExperimentTaskModel", "ExperimentUncertaintyMethodModel", "ExperimentValidityNoteModel",
+    "LiteralBindingValueModel", "ParticipantConfigurationModel", "ParticipantConfigurationResultModel", "ParticipantImplementationBindingTargetModel",
+    "RealizedBindingProvenanceModel", "ScenarioBindingTargetModel", "SecretReferenceBindingValueModel",
     "EXPERIMENT_APPARATUS_CONTEXT_SCHEMA_VERSION", "EXPERIMENT_AUTHORING_INPUT_SCHEMA_VERSION",
+    "EXPERIMENT_BINDING_DESCRIPTORS_V1_SCHEMA_VERSION",
     "EXPERIMENT_CAPTURE_SPEC_SCHEMA_VERSION", "EXPERIMENT_DERIVED_MEASURE_SCHEMA_VERSION",
     "EXPERIMENT_EVIDENCE_RECORD_SCHEMA_VERSION", "EXPERIMENT_RUN_SCHEMA_VERSION",
     "EXPERIMENT_STUDY_SCHEMA_VERSION", "EXPERIMENT_TASK_SCHEMA_VERSION", "EvaluationHistoryEventModel",
@@ -432,7 +429,8 @@ __all__ = [
     "OPERATION_SCHEMA_VERSION", "OperationReceiptModel", "OperationStatusModel", "ObservationCapabilitiesModel",
     "OrchestrationPlanModel", "OrchestratorCapabilitiesModel", "PARTICIPANT_EPISODE_STATE_SCHEMA_VERSION",
     "PARTICIPANT_IMPLEMENTATION_MANIFEST_V1_SCHEMA_VERSION",
-    "PARTICIPANT_IMPLEMENTATION_PROVENANCE_V1_SCHEMA_VERSION", "ParticipantActionEffectResultModel",
+    "PARTICIPANT_IMPLEMENTATION_PROVENANCE_V1_SCHEMA_VERSION",
+    "PARTICIPANT_CONFIGURATION_RESULT_V1_SCHEMA_VERSION", "ParticipantActionEffectResultModel",
     "ParticipantActionPreconditionResultModel", "ParticipantActionResultModel",
     "ParticipantAttributionCandidateModel", "ParticipantAttributionEdgeModel",
     "ParticipantAttributionEvidenceBasisModel", "ParticipantAttributionOrderingBasisModel",

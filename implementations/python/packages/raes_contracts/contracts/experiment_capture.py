@@ -19,6 +19,13 @@ from .experiment_references import ExperimentReferenceModel
 from .schema_invariants import _add_aces_invariant, _add_aces_plane
 from .validators import _validate_unique_string_values
 
+__all__ = [
+    "ExperimentCaptureRequirementModel",
+    "ExperimentCaptureSpecModel",
+    "ExperimentCaptureWindowModel",
+    "ExperimentValidityNoteModel",
+]
+
 
 class ExperimentValidityNoteModel(ContractModel):
     """Validity threat, limitation, or mitigation note for experiment interpretation."""

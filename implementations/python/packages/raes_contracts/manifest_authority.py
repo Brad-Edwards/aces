@@ -12,6 +12,7 @@ PROCESSOR_SUPPORTED_SDL_VERSION_IDS = ("sdl-authoring-input-v1",)
 # separate authority surfaces and do not belong in this declaration field.
 PROCESSOR_SUPPORTED_CONTRACT_IDS = (
     "processor-manifest-v2",
+    "experiment-binding-descriptors-v1",
     "provisioning-plan-v1",
     "orchestration-plan-v1",
     "evaluation-plan-v1",
@@ -36,6 +37,7 @@ PROCESSOR_SUPPORTED_CONTRACT_IDS = (
 # separate authority surfaces and do not belong in this declaration field.
 BACKEND_SUPPORTED_CONTRACT_IDS = (
     "backend-manifest-v2",
+    "experiment-binding-descriptors-v1",
     "realization-envelope-v1",
     "provisioning-plan-v1",
     "orchestration-plan-v1",
@@ -71,6 +73,8 @@ BACKEND_SUPPORTED_CONTRACT_IDS = (
 PARTICIPANT_IMPLEMENTATION_SUPPORTED_CONTRACT_IDS = (
     "participant-implementation-manifest-v1",
     "participant-implementation-provenance-v1",
+    "experiment-binding-descriptors-v1",
+    "participant-configuration-result-v1",
     "participant-episode-state-envelope-v1",
     "participant-episode-history-event-stream-v1",
     "participant-behavior-history-event-stream-v1",

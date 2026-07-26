@@ -114,6 +114,36 @@
     },
     "ParticipantImplementationSelectionModel": {
       "additionalProperties": false,
+      "oneOf": [
+        {
+          "properties": {
+            "configuration_digest": {
+              "not": {
+                "type": "null"
+              }
+            },
+            "configuration_ref": {
+              "not": {
+                "type": "null"
+              }
+            }
+          },
+          "required": [
+            "configuration_ref",
+            "configuration_digest"
+          ]
+        },
+        {
+          "properties": {
+            "configuration_digest": {
+              "type": "null"
+            },
+            "configuration_ref": {
+              "type": "null"
+            }
+          }
+        }
+      ],
       "properties": {
         "configuration_digest": {
           "anyOf": [

@@ -25,7 +25,6 @@ requirements:
 routing:
   enabled: true
   default_provider: claude
-  default_fallback: parent
   stages: {}
 sonarcloud:
   project_key: Brad-Edwards_aces

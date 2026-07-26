@@ -2,9 +2,9 @@
   "contract_id": "backend-profile-v1",
   "schema_path": "contracts/schemas/profiles/backend-profile-v1.json",
   "stability": "draft",
-  "content_hash": "05f507351c826558d03cec48b0e99501022acbbd5b6e1d816f86727e9f4ad78d",
+  "content_hash": "fd118e131b273684ac540675a8ba8d4b6ef1f10990ddd0d0dc5776c1b6c4a233",
   "last_change": {
-    "summary": "Added API-421 shared-time contract ids to the governed backend contract vocabulary.",
-    "content_hash": "05f507351c826558d03cec48b0e99501022acbbd5b6e1d816f86727e9f4ad78d"
+    "summary": "Added the authoritative experiment binding descriptor contract to the governed backend contract vocabulary.",
+    "content_hash": "fd118e131b273684ac540675a8ba8d4b6ef1f10990ddd0d0dc5776c1b6c4a233"
   }
 }

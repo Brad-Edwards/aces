@@ -12,6 +12,7 @@ from ..versions import EXPERIMENT_AUTHORING_INPUT_SCHEMA_VERSION, EXPERIMENT_STU
 from .base import BehavioralClaimBindingModel, ContractModel, NonEmptyString, PositiveInteger
 from .experiment_apparatus import ExperimentClockContextModel, ExperimentStochasticControlModel
 from .experiment_artifacts import ExperimentArtifactRefModel
+from .experiment_bindings import ExperimentBindingDescriptorSetModel
 from .experiment_capture import ExperimentValidityNoteModel
 from .experiment_disclosure import ExperimentApparatusConstraintModel
 from .experiment_manifest_references import ExperimentCaptureSpecReferenceModel
@@ -338,6 +339,8 @@ class ExperimentSpecModel(ContractModel):
     intended_scenario_ref: ExperimentScenarioReferenceModel | None = None
     apparatus_intent: ExperimentApparatusConstraintModel | None = None
     factors: dict[NonEmptyString, ExperimentStudyFactorModel] = Field(default_factory=dict)
+    binding_semantics: Literal["descriptive", "explicit-required"] = "descriptive"
+    binding_descriptors: ExperimentBindingDescriptorSetModel | None = None
     capture_spec_refs: list[ExperimentCaptureSpecReferenceModel] = Field(default_factory=list)
     validity_notes: list[ExperimentValidityNoteModel] = Field(default_factory=list)
     artifact_refs: list[ExperimentArtifactRefModel] = Field(default_factory=list)
@@ -352,7 +355,54 @@ class ExperimentSpecModel(ContractModel):
                     raise ValueError(
                         f"run_plan allocation blocking factor '{blocking_factor}' must be a declared factor"
                     )
+        self._validate_binding_descriptors()
         return self
+
+    def _validate_binding_descriptors(self) -> None:
+        if self.binding_semantics == "explicit-required" and self.binding_descriptors is None:
+            raise ValueError("binding_semantics explicit-required requires binding_descriptors")
+        if self.binding_descriptors is None:
+            return
+        if self.binding_semantics != "explicit-required":
+            raise ValueError("binding_descriptors require binding_semantics explicit-required")
+        allocation = self.run_plan.allocation
+        if allocation is None:
+            raise ValueError("explicit binding descriptors require condition-based run allocation")
+        legacy_conditions = sorted(
+            condition_id
+            for condition_id, assignment in allocation.condition_assignments.items()
+            if assignment.required_parameters
+        )
+        if legacy_conditions:
+            raise ValueError(
+                "explicit binding semantics reject legacy required_parameters: " + ", ".join(legacy_conditions)
+            )
+        covered_conditions: set[str] = set()
+        for descriptor in self.binding_descriptors.descriptors:
+            factor = self.factors.get(descriptor.source_factor_id)
+            if factor is None:
+                raise ValueError(
+                    f"binding source factor {descriptor.source_factor_id!r} must reference a declared factor"
+                )
+            if descriptor.source_factor_level_id not in factor.levels:
+                raise ValueError(
+                    f"binding source factor level {descriptor.source_factor_level_id!r} must be declared "
+                    f"by factor {descriptor.source_factor_id!r}"
+                )
+            assignment = allocation.condition_assignments.get(descriptor.source_condition_id)
+            if assignment is None:
+                raise ValueError(
+                    f"binding source condition {descriptor.source_condition_id!r} must reference an allocation condition"
+                )
+            assigned_level = assignment.factor_levels.get(descriptor.source_factor_id)
+            if assigned_level != descriptor.source_factor_level_id:
+                raise ValueError("binding source factor level must match its condition assignment")
+            covered_conditions.add(descriptor.source_condition_id)
+        missing_conditions = sorted(set(allocation.compared_conditions) - covered_conditions)
+        if missing_conditions:
+            raise ValueError(
+                "explicit binding descriptors must cover every compared condition: " + ", ".join(missing_conditions)
+            )
 
     @classmethod
     def __get_pydantic_json_schema__(
@@ -362,12 +412,42 @@ class ExperimentSpecModel(ContractModel):
     ) -> JsonSchemaValue:
         json_schema = handler(core_schema)
         json_schema = handler.resolve_ref_schema(json_schema)
+        json_schema.setdefault("allOf", []).extend(
+            [
+                {
+                    "if": {
+                        "properties": {"binding_semantics": {"const": "explicit-required"}},
+                        "required": ["binding_semantics"],
+                    },
+                    "then": {
+                        "required": ["binding_descriptors"],
+                        "properties": {"binding_descriptors": {"not": {"type": "null"}}},
+                    },
+                },
+                {
+                    "if": {
+                        "properties": {"binding_descriptors": {"not": {"type": "null"}}},
+                        "required": ["binding_descriptors"],
+                    },
+                    "then": {
+                        "properties": {"binding_semantics": {"const": "explicit-required"}},
+                    },
+                },
+            ]
+        )
         _add_aces_invariant(
             json_schema,
             "experiment-spec-blocking-factors-declared",
             "When a run plan declares an allocation with blocking factors, every blocking factor must be a "
             "declared experiment-spec factor.",
             validator="raes_contracts.contracts.ExperimentSpecModel._validate_experiment_spec",
+            inputs=[{"contract_id": "experiment-authoring-input-v1", "instance_path": "#"}],
+        )
+        _add_aces_invariant(
+            json_schema,
+            "experiment-binding-source-joins-valid",
+            "Explicit bindings must cover every compared condition and resolve exact declared factor levels.",
+            validator="raes_contracts.contracts.ExperimentSpecModel._validate_binding_descriptors",
             inputs=[{"contract_id": "experiment-authoring-input-v1", "instance_path": "#"}],
         )
         return json_schema

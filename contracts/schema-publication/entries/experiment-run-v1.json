@@ -2,9 +2,9 @@
   "contract_id": "experiment-run-v1",
   "schema_path": "contracts/schemas/experiment-core/experiment-run-v1.json",
   "stability": "draft",
-  "content_hash": "5c936907be31c0b1d0f7071ecd1785a39804afb52f6277671c11c95d325baf16",
+  "content_hash": "718d8b108bfc7cc7cee4d55970c12e7fd87c3873f13aaee51b2b4de468ba5db7",
   "last_change": {
-    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
-    "content_hash": "5c936907be31c0b1d0f7071ecd1785a39804afb52f6277671c11c95d325baf16"
+    "summary": "Added realized cross-plane binding provenance with explicit source, target, value origin, and configuration digest.",
+    "content_hash": "718d8b108bfc7cc7cee4d55970c12e7fd87c3873f13aaee51b2b4de468ba5db7"
   }
 }
