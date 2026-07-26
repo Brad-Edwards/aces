@@ -2,9 +2,9 @@
   "contract_id": "participant-history-view-v1",
   "schema_path": "contracts/schemas/control-plane/participant-history-view-v1.json",
   "stability": "draft",
-  "content_hash": "c98b133455fe41b5ce832243b80cdcaa62e2b60ea351e8e298b11b5c336fe3a6",
+  "content_hash": "a76e3fabd050a42c46cb2459f93e02aa1b482b95c277fa166c4040a305b06320",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "c98b133455fe41b5ce832243b80cdcaa62e2b60ea351e8e298b11b5c336fe3a6"
+    "summary": "Projected safe autonomous activity occurrence provenance through API-408 participant history views for issue #897.",
+    "content_hash": "a76e3fabd050a42c46cb2459f93e02aa1b482b95c277fa166c4040a305b06320"
   }
 }

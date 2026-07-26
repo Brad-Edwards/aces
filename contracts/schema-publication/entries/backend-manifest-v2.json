@@ -2,9 +2,9 @@
   "contract_id": "backend-manifest-v2",
   "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
   "stability": "draft",
-  "content_hash": "d4e5419c2ba534d55a358b20808a8759f0a819e4ecf6a12f39d04bc713e9b138",
+  "content_hash": "bba1960be577a405db21a90cf9052820f3eceb85ad6ecfacf1ca621bc7fe037e",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "d4e5419c2ba534d55a358b20808a8759f0a819e4ecf6a12f39d04bc713e9b138"
+    "summary": "Combined evidence-backed participant policy support declarations with exact autonomous activity profile, feature, random-stream, occurrence, retry, and burst capabilities.",
+    "content_hash": "bba1960be577a405db21a90cf9052820f3eceb85ad6ecfacf1ca621bc7fe037e"
   }
 }

@@ -15,7 +15,8 @@
       "selected_decision_surface_mode": "policy-directed",
       "participant_contract_versions": [
         "participant-episode-state-envelope-v1",
-        "participant-behavior-history-event-stream-v1"
+        "participant-behavior-history-event-stream-v1",
+        "participant-decision-surface-v2"
       ],
       "exposure_policy": {
         "policy_id": "red-agent-policy",

@@ -25,7 +25,7 @@ from .corpus import PROFILES, corpus_family_root
 # ``contracts/profiles/random-stream/`` *and* its id here -- there is no
 # dynamic plugin, "latest" alias, or version-range fallback (EXP-718
 # preflight, "One Profile And One Stateless API").
-SUPPORTED_RANDOM_STREAM_PROFILE_IDS = frozenset({"blake3-xof-v1"})
+SUPPORTED_RANDOM_STREAM_PROFILE_IDS = frozenset({"blake3-xof-participant-v1", "blake3-xof-v1"})
 
 
 def random_stream_profiles_root() -> Path:

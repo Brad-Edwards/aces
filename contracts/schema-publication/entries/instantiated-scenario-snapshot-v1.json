@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-snapshot-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "fc0302c9c6f75df99c1f46e02faa74475b01d99e8498f9ff8f951555a7410c1b",
+  "content_hash": "812a22bf742131ea7c255c1305bafd8b695a2ad0ef50535361bd0dbde58c7e68",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "fc0302c9c6f75df99c1f46e02faa74475b01d99e8498f9ff8f951555a7410c1b"
+    "summary": "Published the explicit autonomous activity v2 policy union in immutable instantiated scenario snapshots for issue #897.",
+    "content_hash": "812a22bf742131ea7c255c1305bafd8b695a2ad0ef50535361bd0dbde58c7e68"
   }
 }

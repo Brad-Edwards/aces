@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "83cfeca54fae16bbdfaad20f15652aaf384e4b2477f382aa0169c084b165ca69",
+  "content_hash": "b67869d52a1c78da43d56d01465e85f09023e348ffd185b71e276b20f3798765",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "83cfeca54fae16bbdfaad20f15652aaf384e4b2477f382aa0169c084b165ca69"
+    "summary": "Carried the explicit autonomous activity v2 policy union through satisfiability evidence scenario definitions for issue #897.",
+    "content_hash": "b67869d52a1c78da43d56d01465e85f09023e348ffd185b71e276b20f3798765"
   }
 }

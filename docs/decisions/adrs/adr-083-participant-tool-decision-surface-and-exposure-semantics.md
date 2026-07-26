@@ -4,6 +4,12 @@
 
 proposed
 
+ADR-095 is the accepted amendment for executable decision-surface coordinates,
+participant/assurance separation, exact-cut policy decisions, delivery, and
+runtime admission. The `D(p,e,o)` notation in this ADR describes the original
+abstract and v1 behavior-history-indexed design; it must not be read as
+authority to reinterpret v1 `observation_order` as a decision ordinal.
+
 ## Date
 
 2026-07-14

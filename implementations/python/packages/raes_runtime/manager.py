@@ -1,7 +1,9 @@
 """Runtime manager for compiled SDL runtime plans."""
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 
+from raes_contracts.contracts import ExperimentStochasticControlModel
 from raes_contracts.contracts.time_model import TimeModelDeclarationModel
 from raes_contracts.diagnostics import Diagnostic
 from raes_contracts.planning import ChangeAction, ProvisioningPlan, ProvisionOp, RuntimeDomain
@@ -13,6 +15,7 @@ from raes_processor.planner import plan, snapshot_delete_order
 from .apply_failure import maybe_synthesize_failure, rollback_services
 from .backend_calls import _call_backend_apply, _call_backend_diagnostics
 from .diagnostics import _failure_diagnostic, _has_error_diagnostic
+from .participant_activity import resolve_participant_activity_controls
 from .participant_execution_control import RuntimeParticipantExecutionMixin
 from .registry import RuntimeTarget, _validate_runtime_target_shape
 from .time_control import RuntimeTimeControlMixin
@@ -87,6 +90,7 @@ class RuntimeManager(RuntimeParticipantExecutionMixin, RuntimeTimeControlMixin):
         target: RuntimeTarget,
         *,
         initial_snapshot: RuntimeSnapshot | None = None,
+        stochastic_controls: Iterable[ExperimentStochasticControlModel] = (),
     ) -> None:
         _validate_runtime_target_shape(
             manifest=target.manifest,
@@ -98,6 +102,7 @@ class RuntimeManager(RuntimeParticipantExecutionMixin, RuntimeTimeControlMixin):
         )
         self._target = target
         self._snapshot = initial_snapshot if initial_snapshot is not None else RuntimeSnapshot()
+        self._participant_activity_controls = resolve_participant_activity_controls(stochastic_controls)
         self._time_declaration: TimeModelDeclarationModel | None = None
         self._initialize_participant_scheduler()
 

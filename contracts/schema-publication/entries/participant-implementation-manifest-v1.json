@@ -2,9 +2,9 @@
   "contract_id": "participant-implementation-manifest-v1",
   "schema_path": "contracts/schemas/participant-implementation-manifest/participant-implementation-manifest-v1.json",
   "stability": "draft",
-  "content_hash": "cfeb4e4d3122ffac80370b97b6fd0e2551a001f97fe574ea5b7e63656a7b04bc",
+  "content_hash": "ea14b7737f13e08900758135825095bf12672b99cf7dd2665b0c6049b0d47a40",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "cfeb4e4d3122ffac80370b97b6fd0e2551a001f97fe574ea5b7e63656a7b04bc"
+    "summary": "Allowed participant implementations to declare exact-cut participant-decision-surface-v2 capability.",
+    "content_hash": "ea14b7737f13e08900758135825095bf12672b99cf7dd2665b0c6049b0d47a40"
   }
 }

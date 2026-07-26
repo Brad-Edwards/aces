@@ -381,7 +381,8 @@
         "kind": {
           "enum": [
             "doi",
-            "isbn"
+            "isbn",
+            "report"
           ],
           "title": "Kind",
           "type": "string"

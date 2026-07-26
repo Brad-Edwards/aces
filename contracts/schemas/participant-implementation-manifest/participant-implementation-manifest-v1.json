@@ -361,7 +361,8 @@
           "participant-configuration-result-v1",
           "participant-episode-state-envelope-v1",
           "participant-episode-history-event-stream-v1",
-          "participant-behavior-history-event-stream-v1"
+          "participant-behavior-history-event-stream-v1",
+          "participant-decision-surface-v2"
         ],
         "minLength": 1,
         "type": "string"

@@ -2,9 +2,9 @@
   "contract_id": "backend-profile-v1",
   "schema_path": "contracts/schemas/profiles/backend-profile-v1.json",
   "stability": "draft",
-  "content_hash": "22625802ed2c93e46c4e5688d12300eb74c0dd3b635867a0ee72613241fcfd69",
+  "content_hash": "8ed965d2fd39acd0f76059b2f3e8dad1ee060b58477b3299b7c864c5049e3c82",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "22625802ed2c93e46c4e5688d12300eb74c0dd3b635867a0ee72613241fcfd69"
+    "summary": "Added participant control and crossing occurrence contracts to the governed backend profile vocabulary.",
+    "content_hash": "8ed965d2fd39acd0f76059b2f3e8dad1ee060b58477b3299b7c864c5049e3c82"
   }
 }

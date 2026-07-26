@@ -13,8 +13,8 @@
       "path": "contracts/provenance/sdl-lineage-ledger-v1.json",
       "record_class": "provenance-record",
       "rationale": "Preserves append-only lineage observations recorded before the RAES identity cutover.",
-      "occurrences": 346,
-      "content_sha256": "911dd45e3fd09dd763515bda0a821bda2747d01a39d2decd075c8c4036a8060f"
+      "occurrences": 350,
+      "content_sha256": "2ded49472972eaeedf5753ff64e420020e0576e9d7753f0271046a7340d9ada9"
     },
     {
       "path": "contracts/schema-publication/tombstones/\u0061ces-semantic-invariants-v1.json",
@@ -27,8 +27,8 @@
       "path": "docs/decisions/adrs/README.md",
       "record_class": "historical-index",
       "rationale": "Indexes immutable pre-cutover ADR titles, paths, pins, and amendment summaries without making them current identity surf\u0061ces.",
-      "occurrences": 3,
-      "content_sha256": "ae376b6d7b92869049d06af380a80568fbced5cd08901e4345d214b24b43faa6"
+      "occurrences": 4,
+      "content_sha256": "bcb796f8491d00f1c842cffbfe36dc3c0fccd5838e7353d1d600f6a780bfa184"
     },
     {
       "path": "docs/decisions/adrs/adr-000-use-adrs.md",
@@ -434,7 +434,7 @@
       "record_class": "accepted-adr",
       "rationale": "Preserves an accepted architecture decision as written before the RAES identity cutover.",
       "occurrences": 5,
-      "content_sha256": "17452d266b2de0e4536a9c1f53b1a86f9fc9d9c8eaad962632876e605ddc2a5f"
+      "content_sha256": "a4df034f1ed75f63119d8b56dbcc34b5fee6c6c81822c0d7c507ef2290078684"
     },
     {
       "path": "docs/decisions/adrs/adr-086-governed-whole-scenario-satisfiability.md",
@@ -469,21 +469,21 @@
       "record_class": "accepted-adr",
       "rationale": "Preserves an accepted architecture decision as written before the RAES identity cutover.",
       "occurrences": 2,
-      "content_sha256": "038b015badce7196ef3f558379584cac4bcc9c4304b83829e885c94a0eb82444"
+      "content_sha256": "4e791ecbd467547be40932d4b7580124571709016fcc207b21600e943e12b68c"
     },
     {
       "path": "docs/decisions/adrs/adr-093-raes-rename-and-compatibility-boundaries.md",
       "record_class": "dated-design-record",
-      "rationale": "Preserves the superseded compatibility-era decision that ADR-095 replaced at the RAES hard-cut boundary.",
+      "rationale": "Preserves the superseded compatibility-era decision that ADR-096 replaced at the RAES hard-cut boundary.",
       "occurrences": 18,
-      "content_sha256": "08fc7a66a07919f261158650d129fbfc63203604f7562e78d354c0d85d46a86a"
+      "content_sha256": "6ad17d9a9fcfda6bf0ab7a19839a32230213457ebd79682df45a074b7a71702d"
     },
     {
       "path": "docs/decisions/adrs/adr-index.yaml",
       "record_class": "historical-index",
       "rationale": "Indexes immutable pre-cutover ADR titles, paths, pins, and amendment summaries without making them current identity surf\u0061ces.",
       "occurrences": 4,
-      "content_sha256": "5fbf044089f4ce37e1f674f3bdd28cc666f4ec03658f577cc514ec80f7402678"
+      "content_sha256": "4d8077e5dced72d2980fa7846b8908b400941757a332cd7ae502c42fe829e626"
     },
     {
       "path": "docs/decisions/cage-2-replication-design.md",
@@ -1553,8 +1553,8 @@
       "path": "docs/research/lineage/source-audit-2026-07-12.md",
       "record_class": "research-record",
       "rationale": "Preserves preregistered, frozen, dated, or lineage-bearing research evidence from before the RAES identity cutover.",
-      "occurrences": 23,
-      "content_sha256": "dd3e5fd6835192dbe142fc456f18203ebc07fe9ab8e5be0ad0586562cc641253"
+      "occurrences": 24,
+      "content_sha256": "87d29b6a072b0fac2f8c9008072236cac001d4df0777842b81e22cd7b04a35ee"
     },
     {
       "path": "docs/research/participant-backend-contracts/index.md",
@@ -1574,8 +1574,8 @@
       "path": "docs/research/participant-backend-contracts/prior-art-and-design-criteria.md",
       "record_class": "research-record",
       "rationale": "Preserves preregistered, frozen, dated, or lineage-bearing research evidence from before the RAES identity cutover.",
-      "occurrences": 4,
-      "content_sha256": "4ded03f3a8a26687e4043b1a6ebb9947e19d3611af5f8a369965b1a82501e3d4"
+      "occurrences": 11,
+      "content_sha256": "0543af2a8df39ee64aefa9116964717c6825e7cf375c8a69a9754afb2233d367"
     },
     {
       "path": "docs/research/participant-interactive-access/index.md",

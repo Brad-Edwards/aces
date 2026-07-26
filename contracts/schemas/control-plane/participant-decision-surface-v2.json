@@ -1,0 +1,1482 @@
+{
+  "$defs": {
+    "ParticipantDecisionSurfaceActionEntryModel": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "eligibility": {
+                "enum": [
+                  "ineligible",
+                  "unknown",
+                  "unsupported"
+                ]
+              }
+            },
+            "required": [
+              "eligibility"
+            ]
+          },
+          "then": {
+            "properties": {
+              "eligibility_reason_refs": {
+                "minItems": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "support": {
+                "const": "supported"
+              }
+            },
+            "required": [
+              "support"
+            ]
+          },
+          "then": {
+            "properties": {
+              "support_refs": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ],
+      "description": "One presented or generable action without lifecycle implications.",
+      "properties": {
+        "action_contract_address": {
+          "minLength": 1,
+          "title": "Action Contract Address",
+          "type": "string"
+        },
+        "affordance_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Affordance Refs",
+          "type": "array"
+        },
+        "constraint_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Constraint Refs",
+          "type": "array"
+        },
+        "eligibility": {
+          "enum": [
+            "eligible",
+            "ineligible",
+            "unknown",
+            "unsupported"
+          ],
+          "title": "Eligibility",
+          "type": "string"
+        },
+        "eligibility_reason_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Eligibility Reason Refs",
+          "type": "array"
+        },
+        "entry_id": {
+          "minLength": 1,
+          "title": "Entry Id",
+          "type": "string"
+        },
+        "presentation_basis_ref": {
+          "minLength": 1,
+          "title": "Presentation Basis Ref",
+          "type": "string"
+        },
+        "realization_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Realization Refs",
+          "type": "array"
+        },
+        "selection_shape_ref": {
+          "minLength": 1,
+          "title": "Selection Shape Ref",
+          "type": "string"
+        },
+        "support": {
+          "enum": [
+            "supported",
+            "unsupported",
+            "unknown"
+          ],
+          "title": "Support",
+          "type": "string"
+        },
+        "support_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Support Refs",
+          "type": "array"
+        },
+        "visibility": {
+          "enum": [
+            "observable",
+            "discovered",
+            "inferred",
+            "disclosed",
+            "deceptive"
+          ],
+          "title": "Visibility",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entry_id",
+        "action_contract_address",
+        "presentation_basis_ref",
+        "visibility",
+        "eligibility",
+        "constraint_refs",
+        "selection_shape_ref",
+        "support"
+      ],
+      "title": "ParticipantDecisionSurfaceActionEntryModel",
+      "type": "object"
+    },
+    "ParticipantDecisionSurfaceAssuranceV2Model": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "participant_memory_scope": {
+                "const": "episode_local_reset"
+              }
+            },
+            "required": [
+              "participant_memory_scope"
+            ]
+          },
+          "then": {
+            "properties": {
+              "memory_reset_authority_ref": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "memory_reset_authority_ref"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "participant_memory_scope": {
+                "const": "persistent_across_episodes"
+              }
+            },
+            "required": [
+              "participant_memory_scope"
+            ]
+          },
+          "then": {
+            "properties": {
+              "memory_reset_authority_ref": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ],
+      "description": "Trusted derivation, policy, provenance, and evidence for one view.",
+      "properties": {
+        "audience_scope_ref": {
+          "minLength": 1,
+          "title": "Audience Scope Ref",
+          "type": "string"
+        },
+        "behavior_specification_address": {
+          "minLength": 1,
+          "title": "Behavior Specification Address",
+          "type": "string"
+        },
+        "decision_epoch": {
+          "minimum": 0,
+          "title": "Decision Epoch",
+          "type": "integer"
+        },
+        "derivation_anchor": {
+          "discriminator": {
+            "mapping": {
+              "behavior_event": "#/$defs/ParticipantDecisionSurfaceBehaviorAnchorV2Model",
+              "episode_readiness": "#/$defs/ParticipantDecisionSurfaceEpisodeReadinessAnchorV2Model"
+            },
+            "propertyName": "anchor_kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ParticipantDecisionSurfaceEpisodeReadinessAnchorV2Model"
+            },
+            {
+              "$ref": "#/$defs/ParticipantDecisionSurfaceBehaviorAnchorV2Model"
+            }
+          ],
+          "title": "Derivation Anchor"
+        },
+        "episode_id": {
+          "minLength": 1,
+          "title": "Episode Id",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "exposure_bindings": {
+          "items": {
+            "$ref": "#/$defs/ParticipantDecisionSurfaceExposureBindingV2Model"
+          },
+          "minItems": 1,
+          "title": "Exposure Bindings",
+          "type": "array"
+        },
+        "exposure_policy_ref": {
+          "minLength": 1,
+          "title": "Exposure Policy Ref",
+          "type": "string"
+        },
+        "implementation_selection_ref": {
+          "minLength": 1,
+          "title": "Implementation Selection Ref",
+          "type": "string"
+        },
+        "memory_reset_authority_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Memory Reset Authority Ref"
+        },
+        "observation_boundary_address": {
+          "minLength": 1,
+          "title": "Observation Boundary Address",
+          "type": "string"
+        },
+        "participant_address": {
+          "minLength": 1,
+          "title": "Participant Address",
+          "type": "string"
+        },
+        "participant_memory_scope": {
+          "enum": [
+            "episode_local_reset",
+            "persistent_across_episodes"
+          ],
+          "title": "Participant Memory Scope",
+          "type": "string"
+        },
+        "participant_view_digest": {
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "title": "Participant View Digest",
+          "type": "string"
+        },
+        "projection_policy_decision_ref": {
+          "minLength": 1,
+          "title": "Projection Policy Decision Ref",
+          "type": "string"
+        },
+        "projection_policy_ref": {
+          "minLength": 1,
+          "title": "Projection Policy Ref",
+          "type": "string"
+        },
+        "projection_policy_revision": {
+          "minLength": 1,
+          "title": "Projection Policy Revision",
+          "type": "string"
+        },
+        "provenance_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Provenance Refs",
+          "type": "array"
+        },
+        "visibility_projection_ref": {
+          "minLength": 1,
+          "title": "Visibility Projection Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "participant_address",
+        "episode_id",
+        "decision_epoch",
+        "behavior_specification_address",
+        "observation_boundary_address",
+        "implementation_selection_ref",
+        "audience_scope_ref",
+        "projection_policy_ref",
+        "projection_policy_revision",
+        "projection_policy_decision_ref",
+        "exposure_policy_ref",
+        "visibility_projection_ref",
+        "participant_memory_scope",
+        "participant_view_digest",
+        "derivation_anchor",
+        "exposure_bindings",
+        "evidence_refs",
+        "provenance_refs"
+      ],
+      "title": "ParticipantDecisionSurfaceAssuranceV2Model",
+      "type": "object"
+    },
+    "ParticipantDecisionSurfaceBehaviorAnchorV2Model": {
+      "additionalProperties": false,
+      "description": "A later decision epoch derived from a terminal participant observation.",
+      "properties": {
+        "action_instance_id": {
+          "minLength": 1,
+          "title": "Action Instance Id",
+          "type": "string"
+        },
+        "anchor_kind": {
+          "const": "behavior_event",
+          "title": "Anchor Kind",
+          "type": "string"
+        },
+        "decision_epoch": {
+          "minimum": 0,
+          "title": "Decision Epoch",
+          "type": "integer"
+        },
+        "episode_id": {
+          "minLength": 1,
+          "title": "Episode Id",
+          "type": "string"
+        },
+        "event_ref": {
+          "minLength": 1,
+          "title": "Event Ref",
+          "type": "string"
+        },
+        "event_type": {
+          "const": "observation_emitted",
+          "title": "Event Type",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "participant_address": {
+          "minLength": 1,
+          "title": "Participant Address",
+          "type": "string"
+        },
+        "provenance_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Provenance Refs",
+          "type": "array"
+        },
+        "state_cut": {
+          "discriminator": {
+            "mapping": {
+              "causal_frontier": "#/$defs/ParticipantDecisionSurfaceCausalCutModel",
+              "sequence_prefix": "#/$defs/ParticipantDecisionSurfaceSequenceCutModel"
+            },
+            "propertyName": "cut_kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ParticipantDecisionSurfaceSequenceCutModel"
+            },
+            {
+              "$ref": "#/$defs/ParticipantDecisionSurfaceCausalCutModel"
+            }
+          ],
+          "title": "State Cut"
+        }
+      },
+      "required": [
+        "participant_address",
+        "episode_id",
+        "decision_epoch",
+        "event_ref",
+        "state_cut",
+        "evidence_refs",
+        "provenance_refs",
+        "anchor_kind",
+        "event_type",
+        "action_instance_id"
+      ],
+      "title": "ParticipantDecisionSurfaceBehaviorAnchorV2Model",
+      "type": "object"
+    },
+    "ParticipantDecisionSurfaceCandidateSetFormModel": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_entry_ids": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Candidate Entry Ids",
+          "type": "array"
+        },
+        "open_extension_binding_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Open Extension Binding Ref"
+        },
+        "selection_meaning_ref": {
+          "minLength": 1,
+          "title": "Selection Meaning Ref",
+          "type": "string"
+        },
+        "surface_form": {
+          "const": "candidate_action_set",
+          "title": "Surface Form",
+          "type": "string"
+        }
+      },
+      "required": [
+        "surface_form",
+        "selection_meaning_ref",
+        "candidate_entry_ids"
+      ],
+      "title": "ParticipantDecisionSurfaceCandidateSetFormModel",
+      "type": "object"
+    },
+    "ParticipantDecisionSurfaceCausalCutModel": {
+      "additionalProperties": false,
+      "description": "A downward-closed causal frontier for a partially ordered realization.",
+      "properties": {
+        "cut_kind": {
+          "const": "causal_frontier",
+          "title": "Cut Kind",
+          "type": "string"
+        },
+        "cut_ref": {
+          "minLength": 1,
+          "title": "Cut Ref",
+          "type": "string"
+        },
+        "frontier_event_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Frontier Event Refs",
+          "type": "array"
+        },
+        "history_domain": {
+          "minLength": 1,
+          "title": "History Domain",
+          "type": "string"
+        },
+        "order_model": {
+          "const": "causal_partial_order",
+          "title": "Order Model",
+          "type": "string"
+        },
+        "predecessor_closure_ref": {
+          "minLength": 1,
+          "title": "Predecessor Closure Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "cut_kind",
+        "cut_ref",
+        "history_domain",
+        "order_model",
+        "frontier_event_refs",
+        "predecessor_closure_ref"
+      ],
+      "title": "ParticipantDecisionSurfaceCausalCutModel",
+      "type": "object"
+    },
+    "ParticipantDecisionSurfaceConstrainedFormModel": {
+      "additionalProperties": false,
+      "properties": {
+        "action_entry_id": {
+          "minLength": 1,
+          "title": "Action Entry Id",
+          "type": "string"
+        },
+        "argument_shape_ref": {
+          "minLength": 1,
+          "title": "Argument Shape Ref",
+          "type": "string"
+        },
+        "constraint_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Constraint Refs",
+          "type": "array"
+        },
+        "default_disclosure_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Default Disclosure Refs",
+          "type": "array"
+        },
+        "loss_disclosure_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Loss Disclosure Refs",
+          "type": "array"
+        },
+        "normalization_disclosure_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Normalization Disclosure Refs",
+          "type": "array"
+        },
+        "omission_disclosure_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Omission Disclosure Refs",
+          "type": "array"
+        },
+        "selection_meaning_ref": {
+          "minLength": 1,
+          "title": "Selection Meaning Ref",
+          "type": "string"
+        },
+        "surface_form": {
+          "const": "constrained_form",
+          "title": "Surface Form",
+          "type": "string"
+        },
+        "validation_policy_ref": {
+          "minLength": 1,
+          "title": "Validation Policy Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "surface_form",
+        "selection_meaning_ref",
+        "action_entry_id",
+        "argument_shape_ref",
+        "validation_policy_ref",
+        "constraint_refs",
+        "default_disclosure_refs",
+        "normalization_disclosure_refs",
+        "omission_disclosure_refs",
+        "loss_disclosure_refs"
+      ],
+      "title": "ParticipantDecisionSurfaceConstrainedFormModel",
+      "type": "object"
+    },
+    "ParticipantDecisionSurfaceDeliveryV2Model": {
+      "additionalProperties": false,
+      "description": "Evidence that the exact participant view became available to its subject.",
+      "properties": {
+        "decision_epoch": {
+          "minimum": 0,
+          "title": "Decision Epoch",
+          "type": "integer"
+        },
+        "delivery_authorization_ref": {
+          "minLength": 1,
+          "title": "Delivery Authorization Ref",
+          "type": "string"
+        },
+        "delivery_basis": {
+          "enum": [
+            "emission_is_delivery",
+            "runtime_delivery",
+            "participant_acknowledgement",
+            "external_delivery",
+            "unknown",
+            "unsupported"
+          ],
+          "title": "Delivery Basis",
+          "type": "string"
+        },
+        "delivery_cut_ref": {
+          "minLength": 1,
+          "title": "Delivery Cut Ref",
+          "type": "string"
+        },
+        "delivery_policy_decision_ref": {
+          "minLength": 1,
+          "title": "Delivery Policy Decision Ref",
+          "type": "string"
+        },
+        "delivery_ref": {
+          "minLength": 1,
+          "title": "Delivery Ref",
+          "type": "string"
+        },
+        "episode_id": {
+          "minLength": 1,
+          "title": "Episode Id",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "limitations": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Limitations",
+          "type": "array"
+        },
+        "observation_ref": {
+          "minLength": 1,
+          "title": "Observation Ref",
+          "type": "string"
+        },
+        "participant_address": {
+          "minLength": 1,
+          "title": "Participant Address",
+          "type": "string"
+        },
+        "participant_view_digest": {
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "title": "Participant View Digest",
+          "type": "string"
+        },
+        "provenance_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Provenance Refs",
+          "type": "array"
+        },
+        "surface_id": {
+          "minLength": 1,
+          "title": "Surface Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "delivery_ref",
+        "surface_id",
+        "participant_address",
+        "episode_id",
+        "decision_epoch",
+        "participant_view_digest",
+        "delivery_basis",
+        "delivery_cut_ref",
+        "delivery_authorization_ref",
+        "delivery_policy_decision_ref",
+        "observation_ref",
+        "evidence_refs",
+        "provenance_refs",
+        "limitations"
+      ],
+      "title": "ParticipantDecisionSurfaceDeliveryV2Model",
+      "type": "object"
+    },
+    "ParticipantDecisionSurfaceEpisodeReadinessAnchorV2Model": {
+      "additionalProperties": false,
+      "description": "The initial decision epoch derived from a trusted ``episode_running`` cut.",
+      "properties": {
+        "anchor_kind": {
+          "const": "episode_readiness",
+          "title": "Anchor Kind",
+          "type": "string"
+        },
+        "decision_epoch": {
+          "minimum": 0,
+          "title": "Decision Epoch",
+          "type": "integer"
+        },
+        "episode_id": {
+          "minLength": 1,
+          "title": "Episode Id",
+          "type": "string"
+        },
+        "episode_sequence_number": {
+          "minimum": 0,
+          "title": "Episode Sequence Number",
+          "type": "integer"
+        },
+        "event_ref": {
+          "minLength": 1,
+          "title": "Event Ref",
+          "type": "string"
+        },
+        "event_type": {
+          "const": "episode_running",
+          "title": "Event Type",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "participant_address": {
+          "minLength": 1,
+          "title": "Participant Address",
+          "type": "string"
+        },
+        "provenance_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Provenance Refs",
+          "type": "array"
+        },
+        "state_cut": {
+          "discriminator": {
+            "mapping": {
+              "causal_frontier": "#/$defs/ParticipantDecisionSurfaceCausalCutModel",
+              "sequence_prefix": "#/$defs/ParticipantDecisionSurfaceSequenceCutModel"
+            },
+            "propertyName": "cut_kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ParticipantDecisionSurfaceSequenceCutModel"
+            },
+            {
+              "$ref": "#/$defs/ParticipantDecisionSurfaceCausalCutModel"
+            }
+          ],
+          "title": "State Cut"
+        }
+      },
+      "required": [
+        "participant_address",
+        "episode_id",
+        "decision_epoch",
+        "event_ref",
+        "state_cut",
+        "evidence_refs",
+        "provenance_refs",
+        "anchor_kind",
+        "event_type",
+        "episode_sequence_number"
+      ],
+      "title": "ParticipantDecisionSurfaceEpisodeReadinessAnchorV2Model",
+      "type": "object"
+    },
+    "ParticipantDecisionSurfaceExposureBindingV2Model": {
+      "additionalProperties": false,
+      "description": "One exact-cut authorization for an item admitted to a projected view.\n\n``decision_epoch`` orders participant choices. ``decision_cut_ref`` and\n``projection_policy_decision_ref`` identify the state and policy decision\nthat authorized this item. None of those coordinates is a delivery fact.",
+      "properties": {
+        "actor_ref": {
+          "minLength": 1,
+          "title": "Actor Ref",
+          "type": "string"
+        },
+        "audience_scope_ref": {
+          "minLength": 1,
+          "title": "Audience Scope Ref",
+          "type": "string"
+        },
+        "authority_basis_ref": {
+          "minLength": 1,
+          "title": "Authority Basis Ref",
+          "type": "string"
+        },
+        "authorization_record_ref": {
+          "minLength": 1,
+          "title": "Authorization Record Ref",
+          "type": "string"
+        },
+        "controller_ref": {
+          "minLength": 1,
+          "title": "Controller Ref",
+          "type": "string"
+        },
+        "decision_cut_ref": {
+          "minLength": 1,
+          "title": "Decision Cut Ref",
+          "type": "string"
+        },
+        "decision_epoch": {
+          "minimum": 0,
+          "title": "Decision Epoch",
+          "type": "integer"
+        },
+        "declassification_basis_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Declassification Basis Ref"
+        },
+        "episode_id": {
+          "minLength": 1,
+          "title": "Episode Id",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "exposure_policy_digest": {
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "title": "Exposure Policy Digest",
+          "type": "string"
+        },
+        "exposure_policy_ref": {
+          "minLength": 1,
+          "title": "Exposure Policy Ref",
+          "type": "string"
+        },
+        "exposure_policy_version": {
+          "minLength": 1,
+          "title": "Exposure Policy Version",
+          "type": "string"
+        },
+        "item_ref": {
+          "minLength": 1,
+          "title": "Item Ref",
+          "type": "string"
+        },
+        "loss_and_limitations": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Loss And Limitations",
+          "type": "array"
+        },
+        "operation": {
+          "enum": [
+            "projection",
+            "masking",
+            "redaction",
+            "declassification",
+            "disclosure",
+            "transformation"
+          ],
+          "title": "Operation",
+          "type": "string"
+        },
+        "operation_basis_ref": {
+          "minLength": 1,
+          "title": "Operation Basis Ref",
+          "type": "string"
+        },
+        "participant_address": {
+          "minLength": 1,
+          "title": "Participant Address",
+          "type": "string"
+        },
+        "projection_policy_decision_ref": {
+          "minLength": 1,
+          "title": "Projection Policy Decision Ref",
+          "type": "string"
+        },
+        "projection_policy_ref": {
+          "minLength": 1,
+          "title": "Projection Policy Ref",
+          "type": "string"
+        },
+        "projection_policy_revision": {
+          "minLength": 1,
+          "title": "Projection Policy Revision",
+          "type": "string"
+        },
+        "provenance_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Provenance Refs",
+          "type": "array"
+        },
+        "redaction_policy_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Redaction Policy Ref"
+        },
+        "result_marking_definition_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Result Marking Definition Refs",
+          "type": "array"
+        },
+        "result_provenance_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Result Provenance Refs",
+          "type": "array"
+        },
+        "source_layer_ref": {
+          "minLength": 1,
+          "title": "Source Layer Ref",
+          "type": "string"
+        },
+        "source_marking_definition_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Source Marking Definition Refs",
+          "type": "array"
+        },
+        "source_provenance_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Source Provenance Refs",
+          "type": "array"
+        },
+        "source_ref": {
+          "minLength": 1,
+          "title": "Source Ref",
+          "type": "string"
+        },
+        "transformation_rule_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Transformation Rule Ref"
+        },
+        "visibility_basis_ref": {
+          "minLength": 1,
+          "title": "Visibility Basis Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "item_ref",
+        "authorization_record_ref",
+        "source_ref",
+        "source_layer_ref",
+        "participant_address",
+        "episode_id",
+        "audience_scope_ref",
+        "decision_epoch",
+        "decision_cut_ref",
+        "visibility_basis_ref",
+        "projection_policy_ref",
+        "projection_policy_revision",
+        "projection_policy_decision_ref",
+        "exposure_policy_ref",
+        "exposure_policy_version",
+        "exposure_policy_digest",
+        "operation",
+        "operation_basis_ref",
+        "actor_ref",
+        "controller_ref",
+        "authority_basis_ref",
+        "source_provenance_refs",
+        "result_provenance_refs",
+        "evidence_refs",
+        "provenance_refs",
+        "loss_and_limitations"
+      ],
+      "title": "ParticipantDecisionSurfaceExposureBindingV2Model",
+      "type": "object"
+    },
+    "ParticipantDecisionSurfaceOpenEndedFormModel": {
+      "additionalProperties": false,
+      "properties": {
+        "allowed_action_contract_addresses": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Allowed Action Contract Addresses",
+          "type": "array"
+        },
+        "argument_shape_ref": {
+          "minLength": 1,
+          "title": "Argument Shape Ref",
+          "type": "string"
+        },
+        "proposal_binding_ref": {
+          "minLength": 1,
+          "title": "Proposal Binding Ref",
+          "type": "string"
+        },
+        "selection_meaning_ref": {
+          "minLength": 1,
+          "title": "Selection Meaning Ref",
+          "type": "string"
+        },
+        "surface_form": {
+          "const": "open_ended_generation",
+          "title": "Surface Form",
+          "type": "string"
+        },
+        "validation_policy_ref": {
+          "minLength": 1,
+          "title": "Validation Policy Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "surface_form",
+        "selection_meaning_ref",
+        "proposal_binding_ref",
+        "argument_shape_ref",
+        "validation_policy_ref",
+        "allowed_action_contract_addresses"
+      ],
+      "title": "ParticipantDecisionSurfaceOpenEndedFormModel",
+      "type": "object"
+    },
+    "ParticipantDecisionSurfaceSequenceCutModel": {
+      "additionalProperties": false,
+      "description": "A complete prefix ending at one event in a declared total order.",
+      "properties": {
+        "anchor_event_ref": {
+          "minLength": 1,
+          "title": "Anchor Event Ref",
+          "type": "string"
+        },
+        "anchor_order": {
+          "minimum": 0,
+          "title": "Anchor Order",
+          "type": "integer"
+        },
+        "cut_kind": {
+          "const": "sequence_prefix",
+          "title": "Cut Kind",
+          "type": "string"
+        },
+        "cut_ref": {
+          "minLength": 1,
+          "title": "Cut Ref",
+          "type": "string"
+        },
+        "history_domain": {
+          "enum": [
+            "participant_episode_lifecycle",
+            "participant_behavior_history"
+          ],
+          "title": "History Domain",
+          "type": "string"
+        },
+        "history_prefix_length": {
+          "minimum": 1,
+          "title": "History Prefix Length",
+          "type": "integer"
+        },
+        "order_model": {
+          "enum": [
+            "control_plane_order",
+            "backend_serialized_order",
+            "behavior_history_order"
+          ],
+          "title": "Order Model",
+          "type": "string"
+        },
+        "predecessor_event_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Predecessor Event Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "cut_kind",
+        "cut_ref",
+        "history_domain",
+        "order_model",
+        "anchor_event_ref",
+        "anchor_order",
+        "history_prefix_length"
+      ],
+      "title": "ParticipantDecisionSurfaceSequenceCutModel",
+      "type": "object"
+    },
+    "ParticipantDecisionSurfaceViewV2Model": {
+      "additionalProperties": false,
+      "description": "The complete payload made available to one participant for one choice.",
+      "properties": {
+        "action_entries": {
+          "items": {
+            "$ref": "#/$defs/ParticipantDecisionSurfaceActionEntryModel"
+          },
+          "minItems": 1,
+          "title": "Action Entries",
+          "type": "array"
+        },
+        "affordance_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Affordance Refs",
+          "type": "array"
+        },
+        "context_view_ref": {
+          "minLength": 1,
+          "title": "Context View Ref",
+          "type": "string"
+        },
+        "decision_control_mode": {
+          "minLength": 1,
+          "title": "Decision Control Mode",
+          "type": "string"
+        },
+        "decision_epoch": {
+          "minimum": 0,
+          "title": "Decision Epoch",
+          "type": "integer"
+        },
+        "episode_id": {
+          "minLength": 1,
+          "title": "Episode Id",
+          "type": "string"
+        },
+        "form": {
+          "discriminator": {
+            "mapping": {
+              "candidate_action_set": "#/$defs/ParticipantDecisionSurfaceCandidateSetFormModel",
+              "constrained_form": "#/$defs/ParticipantDecisionSurfaceConstrainedFormModel",
+              "open_ended_generation": "#/$defs/ParticipantDecisionSurfaceOpenEndedFormModel"
+            },
+            "propertyName": "surface_form"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ParticipantDecisionSurfaceOpenEndedFormModel"
+            },
+            {
+              "$ref": "#/$defs/ParticipantDecisionSurfaceConstrainedFormModel"
+            },
+            {
+              "$ref": "#/$defs/ParticipantDecisionSurfaceCandidateSetFormModel"
+            }
+          ],
+          "title": "Form"
+        },
+        "information_state_ref": {
+          "minLength": 1,
+          "title": "Information State Ref",
+          "type": "string"
+        },
+        "marking_definition_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Marking Definition Refs",
+          "type": "array"
+        },
+        "participant_address": {
+          "minLength": 1,
+          "title": "Participant Address",
+          "type": "string"
+        },
+        "redaction_policy_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Redaction Policy Ref"
+        },
+        "semantic_limitations": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Semantic Limitations",
+          "type": "array"
+        },
+        "surface_id": {
+          "minLength": 1,
+          "title": "Surface Id",
+          "type": "string"
+        },
+        "visible_context_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Visible Context Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "surface_id",
+        "participant_address",
+        "episode_id",
+        "decision_epoch",
+        "information_state_ref",
+        "context_view_ref",
+        "decision_control_mode",
+        "visible_context_refs",
+        "action_entries",
+        "form",
+        "semantic_limitations"
+      ],
+      "title": "ParticipantDecisionSurfaceViewV2Model",
+      "type": "object"
+    }
+  },
+  "$id": "https://raes.dev/schemas/participant-decision-surface-v2.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "surface_state": {
+            "const": "delivered"
+          }
+        },
+        "required": [
+          "surface_state"
+        ]
+      },
+      "then": {
+        "properties": {
+          "delivery": {
+            "not": {
+              "type": "null"
+            }
+          }
+        },
+        "required": [
+          "delivery"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "surface_state": {
+            "const": "projected"
+          }
+        },
+        "required": [
+          "surface_state"
+        ]
+      },
+      "then": {
+        "properties": {
+          "delivery": {
+            "type": "null"
+          }
+        }
+      }
+    }
+  ],
+  "description": "A projected or delivered v2 decision surface with separated trust planes.",
+  "properties": {
+    "assurance": {
+      "$ref": "#/$defs/ParticipantDecisionSurfaceAssuranceV2Model"
+    },
+    "delivery": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ParticipantDecisionSurfaceDeliveryV2Model"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "participant_view": {
+      "$ref": "#/$defs/ParticipantDecisionSurfaceViewV2Model"
+    },
+    "schema_version": {
+      "const": "participant-decision-surface/v2",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "surface_state": {
+      "enum": [
+        "projected",
+        "delivered"
+      ],
+      "title": "Surface State",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "surface_state",
+    "participant_view",
+    "assurance"
+  ],
+  "title": "ParticipantDecisionSurfaceV2Model",
+  "type": "object",
+  "x-raes-invariants": [
+    {
+      "description": "The participant view contains only participant-available choice material; derivation, policy, evidence, provenance, and delivery remain in separate assurance and delivery planes.",
+      "id": "decision-surface-v2-plane-separation",
+      "inputs": [
+        {
+          "contract_id": "participant-decision-surface-v2",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "raes_contracts.contracts.ParticipantDecisionSurfaceV2Model._validate_surface"
+    },
+    {
+      "description": "Each exposed item is bound to the derivation state cut and exact policy decision, independently of the participant decision epoch.",
+      "id": "decision-surface-v2-exact-cut-policy",
+      "inputs": [
+        {
+          "contract_id": "participant-decision-surface-v2",
+          "instance_path": "#/assurance"
+        }
+      ],
+      "level": "error",
+      "validator": "raes_contracts.contracts.ParticipantDecisionSurfaceV2Model._validate_surface"
+    },
+    {
+      "description": "A surface is actionable only in delivered state, with delivery bound to the canonical participant view.",
+      "id": "decision-surface-v2-delivery-before-selection",
+      "inputs": [
+        {
+          "contract_id": "participant-decision-surface-v2",
+          "instance_path": "#/delivery"
+        }
+      ],
+      "level": "error",
+      "validator": "raes_contracts.contracts.ParticipantDecisionSurfaceV2Model._validate_surface"
+    },
+    {
+      "description": "Assurance declares whether participant-visible memory persists across episodes; an episode-local claim requires an authoritative reset of every participant-visible memory channel.",
+      "id": "decision-surface-v2-explicit-memory-scope",
+      "inputs": [
+        {
+          "contract_id": "participant-decision-surface-v2",
+          "instance_path": "#/assurance"
+        }
+      ],
+      "level": "error",
+      "validator": "raes_contracts.contracts.ParticipantDecisionSurfaceAssuranceV2Model._validate_assurance"
+    }
+  ],
+  "x-raes-semantic-profile": {
+    "contract_id": "participant-decision-surface-v2",
+    "entry_schema_contract_id": "raes-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/RaesSemanticInvariantEntryModel",
+    "id": "raes-semantic-invariants-v1",
+    "keyword": "x-raes-invariants",
+    "required": true,
+    "uri": "https://raes.dev/schemas/semantic-invariants/v1"
+  }
+}

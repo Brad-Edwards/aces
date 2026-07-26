@@ -16,11 +16,17 @@ from raes_contracts.participant_episode import (
 from raes_contracts.runtime_state import ApplyResult, RuntimeSnapshot
 from raes_processor.models import CompiledTimeModel, ParticipantAutonomousExecutionRuntime
 
+from .participant_activity import (
+    ParticipantActivityRandomControl,
+    activity_control_for,
+    draw_activity_integer,
+    next_activity_timing,
+)
 from .participant_scheduler_operations import (
     SchedulerRunState,
-    clock_coordinate,
     run_participant_due,
 )
+from .participant_scheduler_time import clock_coordinate
 
 
 def _state_key(policy_address: str, participant_address: str) -> str:
@@ -64,6 +70,27 @@ def _policy_digest(
         "resolved_progression_policy": asdict(progression),
         "resolved_temporal_constraints": constraints,
     }
+    if policy.profile == "participant-autonomous-execution/v2":
+        payload.update(
+            {
+                "profile": policy.profile,
+                "work_window_addresses": policy.work_window_addresses,
+                "pause_window_addresses": policy.pause_window_addresses,
+                "stochastic_control_ref": policy.stochastic_control_ref,
+                "timing_minimum_ticks": policy.timing_minimum_ticks,
+                "timing_maximum_ticks": policy.timing_maximum_ticks,
+                "outside_window_disposition": policy.outside_window_disposition,
+                "empty_eligible_disposition": policy.empty_eligible_disposition,
+                "action_candidate_ids": policy.action_candidate_ids,
+                "action_candidate_weights": policy.action_candidate_weights,
+                "action_candidate_dependencies": policy.action_candidate_dependencies,
+                "action_candidate_retry_failure_classes": (policy.action_candidate_retry_failure_classes),
+                "action_candidate_max_retries": policy.action_candidate_max_retries,
+                "action_candidate_cooldown_ticks": policy.action_candidate_cooldown_ticks,
+                "max_occurrences": policy.max_occurrences,
+                "max_burst_size": policy.max_burst_size,
+            }
+        )
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     return "sha256:" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
@@ -98,6 +125,10 @@ def _state_identity(state: ParticipantAutonomousExecutionStateModel) -> tuple[ob
         state.participant_implementation_ref,
         state.clock_address,
         state.time_segment,
+        state.profile,
+        state.random_control_id,
+        state.random_profile_id,
+        state.random_namespace,
     )
 
 
@@ -107,6 +138,7 @@ def _initialize_participant(
     participant_runtime: object,
     snapshot: RuntimeSnapshot,
     participant_address: str,
+    activity_controls: dict[str, ParticipantActivityRandomControl],
 ) -> ApplyResult:
     working = snapshot
     changed: list[str] = []
@@ -123,8 +155,51 @@ def _initialize_participant(
         working = result.snapshot
         changed.extend(result.changed_addresses)
     key = _state_key(policy.address, participant_address)
-    first_tick, _ = _cadence(policy, time_model)
     segment, _ = clock_coordinate(working, policy.clock_address)
+    activity_control = activity_control_for(policy, activity_controls)
+    if policy.profile == "participant-autonomous-execution/v2" and activity_control is None:
+        return ApplyResult(
+            success=False,
+            snapshot=working,
+            diagnostics=[
+                Diagnostic(
+                    code="runtime.participant-activity-control-unbound",
+                    domain="participant",
+                    address=policy.address,
+                    message=(
+                        f"Participant activity policy requires admitted stochastic control "
+                        f"{policy.stochastic_control_ref!r}."
+                    ),
+                )
+            ],
+        )
+    if activity_control is None:
+        first_tick, _ = _cadence(policy, time_model)
+        burst_size = 1
+        timing_disposition = "cadence"
+    else:
+        current_tick = _clock_tick(working, policy.clock_address)
+        burst_size = draw_activity_integer(
+            policy=policy,
+            participant_address=participant_address,
+            time_segment=segment,
+            occurrence_ordinal=0,
+            control=activity_control,
+            local_coordinate=2,
+            minimum=1,
+            maximum=policy.max_burst_size,
+        )
+        timing = next_activity_timing(
+            policy=policy,
+            time_model=time_model,
+            participant_address=participant_address,
+            time_segment=segment,
+            occurrence_ordinal=0,
+            current_tick=current_tick,
+            control=activity_control,
+        )
+        first_tick = timing.tick
+        timing_disposition = timing.disposition
     expected = ParticipantAutonomousExecutionStateModel(
         policy_address=policy.address,
         policy_digest=_policy_digest(policy, time_model),
@@ -133,12 +208,18 @@ def _initialize_participant(
         participant_implementation_ref=policy.participant_implementation_ref,
         clock_address=policy.clock_address,
         time_segment=segment,
-        lifecycle_state="running",
-        next_tick=first_tick,
+        lifecycle_state="running" if first_tick is not None else "completed",
+        next_tick=first_tick if first_tick is not None else _clock_tick(working, policy.clock_address),
         next_action_index=0,
         attempted_actions=0,
         succeeded_actions=0,
         failed_actions=0,
+        profile=policy.profile,
+        random_control_id=activity_control.control_id if activity_control is not None else None,
+        random_profile_id=activity_control.profile_id if activity_control is not None else None,
+        random_namespace=activity_control.namespace if activity_control is not None else None,
+        burst_size=burst_size,
+        next_timing_disposition=timing_disposition,
     )
     states = dict(working.participant_autonomous_execution_states)
     if key in states and _state_identity(ParticipantAutonomousExecutionStateModel.model_validate(states[key])) != (
@@ -175,8 +256,10 @@ class ParticipantScheduler:
         time_model: CompiledTimeModel,
         participant_runtime: object,
         snapshot: RuntimeSnapshot,
+        activity_controls: dict[str, ParticipantActivityRandomControl] | None = None,
     ) -> ApplyResult:
         working = snapshot
+        resolved_activity_controls = activity_controls or {}
         changed: list[str] = []
         for policy in policies:
             for participant_address in policy.participant_addresses:
@@ -186,6 +269,7 @@ class ParticipantScheduler:
                     participant_runtime,
                     working,
                     participant_address,
+                    resolved_activity_controls,
                 )
                 if not result.success:
                     return result
@@ -203,10 +287,14 @@ class ParticipantScheduler:
         time_model: CompiledTimeModel,
         participant_runtime: object,
         snapshot: RuntimeSnapshot,
+        activity_controls: dict[str, ParticipantActivityRandomControl] | None = None,
     ) -> ApplyResult:
         run = SchedulerRunState(working=snapshot, diagnostics=[], changed=[])
+        resolved_activity_controls = activity_controls or {}
         for policy in policies:
-            _, cadence_ticks = _cadence(policy, time_model)
+            cadence_ticks = (
+                _cadence(policy, time_model)[1] if policy.profile == "participant-autonomous-execution/v1" else 0
+            )
             current_tick = _clock_tick(run.working, policy.clock_address)
             for participant_address in policy.participant_addresses:
                 run_participant_due(
@@ -217,6 +305,7 @@ class ParticipantScheduler:
                     current_tick,
                     cadence_ticks,
                     run,
+                    resolved_activity_controls,
                 )
                 if run.failure is not None:
                     return run.result()
@@ -231,20 +320,25 @@ class ParticipantScheduler:
         clock_address: str,
         *,
         reset_participants: bool = True,
+        activity_controls: dict[str, ParticipantActivityRandomControl] | None = None,
     ) -> ApplyResult:
         """Reset bound episodes and scheduler counters at a shared-clock segment boundary."""
 
         working = snapshot
+        resolved_activity_controls = activity_controls or {}
         changed: list[str] = []
         segment, _ = clock_coordinate(snapshot, clock_address)
         for policy in policies:
             if policy.clock_address != clock_address:
                 continue
-            first_tick, cadence_ticks = _cadence(policy, time_model)
             current_tick = _clock_tick(snapshot, clock_address)
-            next_tick = first_tick
-            if next_tick < current_tick:
-                next_tick += ((current_tick - next_tick + cadence_ticks - 1) // cadence_ticks) * cadence_ticks
+            activity_control = activity_control_for(policy, resolved_activity_controls)
+            if activity_control is None:
+                first_tick, cadence_ticks = _cadence(policy, time_model)
+                next_tick = first_tick
+                timing_disposition = "cadence"
+                if next_tick < current_tick:
+                    next_tick += ((current_tick - next_tick + cadence_ticks - 1) // cadence_ticks) * cadence_ticks
             for participant_address in policy.participant_addresses:
                 result_changed: list[str] = []
                 if reset_participants:
@@ -264,6 +358,29 @@ class ParticipantScheduler:
                 state = ParticipantAutonomousExecutionStateModel.model_validate(
                     working.participant_autonomous_execution_states[key]
                 )
+                if activity_control is not None:
+                    burst_size = draw_activity_integer(
+                        policy=policy,
+                        participant_address=participant_address,
+                        time_segment=segment,
+                        occurrence_ordinal=0,
+                        control=activity_control,
+                        local_coordinate=2,
+                        minimum=1,
+                        maximum=policy.max_burst_size,
+                    )
+                    timing = next_activity_timing(
+                        policy=policy,
+                        time_model=time_model,
+                        participant_address=participant_address,
+                        time_segment=segment,
+                        occurrence_ordinal=0,
+                        current_tick=current_tick,
+                        control=activity_control,
+                    )
+                    selected_tick = timing.tick
+                    timing_disposition = timing.disposition
+                    next_tick = selected_tick if selected_tick is not None else current_tick
                 states = dict(working.participant_autonomous_execution_states)
                 states[key] = state.model_copy(
                     update={
@@ -277,6 +394,14 @@ class ParticipantScheduler:
                         "failed_actions": 0,
                         "in_flight": 0,
                         "last_action_instance_id": None,
+                        "occurrence_ordinal": 0,
+                        "current_retry": 0,
+                        "burst_position": 0,
+                        "last_candidate_id": None,
+                        "completed_candidate_ids": [],
+                        "candidate_cooldown_until": {},
+                        "burst_size": burst_size if activity_control is not None else 1,
+                        "next_timing_disposition": timing_disposition,
                     }
                 ).model_dump(mode="json")
                 working = working.with_entries(

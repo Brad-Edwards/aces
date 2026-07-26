@@ -70,6 +70,8 @@ def test_full_remote_profile_includes_participant_episode_contracts():
     assert "participant-episode-state-envelope-v1" in profile.required_contracts
     assert "participant-episode-history-event-stream-v1" in profile.required_contracts
     assert "participant-behavior-history-event-stream-v1" in profile.required_contracts
+    assert "participant-control-occurrence-v1" in profile.required_contracts
+    assert "participant-crossing-occurrence-v1" in profile.required_contracts
 
 
 def test_backend_profile_model_rejects_unknown_contract_id():

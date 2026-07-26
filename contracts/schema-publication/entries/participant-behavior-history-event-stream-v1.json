@@ -2,9 +2,9 @@
   "contract_id": "participant-behavior-history-event-stream-v1",
   "schema_path": "contracts/schemas/control-plane/participant-behavior-history-event-stream-v1.json",
   "stability": "draft",
-  "content_hash": "4baa867a23fc0b33d8b9091e6dec7e027e9c8cafe4fe1fa0a0ab89e5b7f81cc0",
+  "content_hash": "d1baba6ec1967d08d28d8342ec526aa4041f8123e31d693cb744ad6a9351028a",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "4baa867a23fc0b33d8b9091e6dec7e027e9c8cafe4fe1fa0a0ab89e5b7f81cc0"
+    "summary": "Added safe typed autonomous activity occurrence, attempt, timing, dependency, burst, and random-address provenance for issue #897.",
+    "content_hash": "d1baba6ec1967d08d28d8342ec526aa4041f8123e31d693cb744ad6a9351028a"
   }
 }

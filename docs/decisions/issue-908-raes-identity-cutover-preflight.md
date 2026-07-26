@@ -23,8 +23,8 @@ occurrence count are registered in the historical-record manifest. Directory
 exemptions, globs, generated-file exclusions, and general policy waivers do
 not qualify.
 
-ADR-095 is the terminal architecture authority. ADR-093 becomes a superseded
-historical decision after ADR-095 is accepted.
+ADR-096 is the terminal architecture authority. ADR-093 becomes a superseded
+historical decision after ADR-096 is accepted.
 
 ## Surface Decisions
 

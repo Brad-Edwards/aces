@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from raes_contracts.contracts import ParticipantDecisionSurfaceModel, ParticipantDecisionSurfaceSelectionModel
+from raes_contracts.contracts import (
+    ParticipantDecisionSurfaceModel,
+    ParticipantDecisionSurfaceSelectionModel,
+)
 from raes_contracts.diagnostics import Diagnostic
 from raes_contracts.participant_binding import (
     ParticipantActionAdmissionRequest,
@@ -21,6 +24,11 @@ from raes_contracts.runtime_state import OperationReceipt
 from raes_processor.models import ParticipantBehaviorRuntime
 
 from .control_plane_execution import execute_participant_action
+from .participant_control_diagnostics import (
+    _NO_PARTICIPANT_RUNTIME_MESSAGE,
+    _participant_binding_address,
+    _participant_binding_diagnostic,
+)
 from .participant_control_intents import (
     ParticipantApprovalControlIntent,
     ParticipantCancellationControlIntent,
@@ -33,23 +41,7 @@ from .participant_control_intents import (
     ParticipantProposalControlIntent,
 )
 from .participant_control_mediation import record_participant_control
-
-_NO_PARTICIPANT_RUNTIME_MESSAGE = "Target does not provide a participant runtime."
-_PARTICIPANT_BINDING_REJECTED = "runtime.participant-binding.rejected"
-
-
-def _participant_binding_address(participant_behavior: object) -> str:
-    address = getattr(participant_behavior, "address", None)
-    return address if isinstance(address, str) and address else "runtime.control-plane.participant-binding"
-
-
-def _participant_binding_diagnostic(address: str, message: str) -> Diagnostic:
-    return Diagnostic(
-        code=_PARTICIPANT_BINDING_REJECTED,
-        domain="runtime",
-        address=address,
-        message=message,
-    )
+from .participant_decision_surface_control_v2 import ParticipantDecisionSurfaceV2ControlMixin
 
 
 def _participant_binding_diagnostics(
@@ -214,7 +206,7 @@ def _participant_binding_request_diagnostics(
     return diagnostics
 
 
-class ParticipantControlMixin:
+class ParticipantControlMixin(ParticipantDecisionSurfaceV2ControlMixin):
     """Participant runtime methods for the shared runtime control plane."""
 
     def record_participant_control(

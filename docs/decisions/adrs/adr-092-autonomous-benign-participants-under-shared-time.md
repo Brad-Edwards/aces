@@ -118,6 +118,53 @@ and experiment apparatus contracts; the deterministic `ordered_cycle`
 scheduler needs no seed field. Historical files remain ordinary initial service
 state. Exercise injects remain orchestration, not simulated users.
 
+### 7. Extend autonomous execution through a versioned activity policy
+
+The fixed-cadence `participant-autonomous-execution/v1` profile remains
+unchanged. Richer admitted behavior is a new profile variant under the same
+`ParticipantBehaviorSpecification.autonomous_execution` authority, not
+optional fields that silently change v1 meaning and not a second activity
+root.
+
+The richer profile composes:
+
+- inclusion and pause windows that resolve existing shared-time `window`
+  constraints on the policy clock;
+- positive bounded logical-tick timing intervals and cooldowns;
+- stable keyed action candidates with exact integer weights, explicit
+  dependency guards, portable failure-class retry rules, and finite burst,
+  retry, attempt, and in-flight bounds; and
+- a reference to an admitted run/apparatus stochastic control whose role is
+  `agent-policy`.
+
+It reuses the governed random-stream engine and publishes a new immutable
+profile/address variant when participant-runtime coordinates or transforms are
+needed. A participant draw address is based on the run randomness namespace,
+policy and participant addresses, shared-time segment/reset generation,
+occurrence ordinal, governed draw purpose, and stable local draw coordinate.
+It does not relabel experiment selection-policy or variation-point fields, use
+the aggregate scenario/experiment digest, or include worker, thread, host,
+wall-time, retry, or call-order coordinates. Exact weighted choice and bounded
+timing reuse the admitted bounded-integer transform. Their canonical range and
+prefix-interval mappings are policy semantics with conformance vectors; they
+are not new random transforms or library RNG behavior.
+
+Within-run activity draws are not scenario-family selection, factor
+allocation, or trial compilation. SDL declares the activity policy and a
+stochastic-control reference; admitted run apparatus supplies the exact
+profile, namespace, and public seed or governed entropy reference. Raw entropy
+never enters SDL, compiled addresses, snapshots, behavior history, diagnostics,
+logs, argv, or telemetry.
+
+Scheduler continuation remains typed autonomous participant state. Append-only
+behavior history carries occurrence, selection, timing, dependency, attempt,
+terminal outcome, and safe random-draw provenance. Reset creates a new
+shared-time segment and participant episode, starts a new scheduler generation,
+and preserves predecessor lineage; it does not infer rollback of service state
+or causality from timestamps. Backend admission is exact for profile, policy
+features, selection strategy, random-stream profile/transform support, time
+constraint kinds, and finite limits.
+
 ## Consequences
 
 - Human, AI, scripted, and benign simulated participants share one semantic and
@@ -127,6 +174,9 @@ state. Exercise injects remain orchestration, not simulated users.
   declared controls and observable contracts.
 - The reference implementation proves protocol behavior, not production
   backend fidelity or throughput.
+- Existing v1 policies retain fixed-cadence `ordered_cycle` semantics. Consumers
+  opt into the richer profile explicitly and fail closed when any activity
+  feature or governed random-stream profile is unsupported.
 
 ## Rejected Alternatives
 
@@ -137,9 +187,17 @@ state. Exercise injects remain orchestration, not simulated users.
 - Adding a seed field to a deterministic scheduler that performs no random
   draws.
 - Inferring native execution from a backend capability boolean.
+- Adding activity-policy fields to v1 and changing its existing meaning.
+- Reusing experiment variation-point address fields as participant occurrence
+  coordinates.
+- Adding a weighted-choice random transform when the governed bounded-integer
+  transform plus a canonical policy mapping already expresses the choice.
+- A mutable or process-global RNG, host-local calendar, cron expression, or
+  wall-clock sleep as participant semantic authority.
 
 ## Amendments
 
 | Date | Commit/PR | Summary |
 |------|-----------|---------|
 | 2026-07-24 | #861 | Required exact action provenance and capability-specific atomic participant batching. |
+| 2026-07-26 | #897 | Kept v1 stable and governed richer within-run timing, weighted selection, lifecycle state, and provenance as a versioned autonomous-execution profile. |

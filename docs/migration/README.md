@@ -9,6 +9,10 @@ The current project identity migration is recorded separately in
 cutover across repository-owned live surfaces and the exact historical-record
 boundary.
 
+The explicit opt-in from fixed-cadence autonomous participant execution to the
+governed activity profile is documented in
+[Autonomous Execution V2 Migration](autonomous-execution-v2.md).
+
 The reorganization moved existing material into the current long-term buckets:
 
 - root `schemas/` -> `contracts/schemas/`

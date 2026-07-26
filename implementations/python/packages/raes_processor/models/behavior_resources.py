@@ -105,6 +105,22 @@ class ParticipantAutonomousExecutionRuntime(ResolvedResource):
     proof_producer_refs: tuple[str, ...] = ()
     score_authority_refs: tuple[str, ...] = ()
     receipt_authority_refs: tuple[str, ...] = ()
+    profile: str = "participant-autonomous-execution/v1"
+    work_window_addresses: tuple[str, ...] = ()
+    pause_window_addresses: tuple[str, ...] = ()
+    stochastic_control_ref: str = ""
+    timing_minimum_ticks: int = 0
+    timing_maximum_ticks: int = 0
+    outside_window_disposition: str = ""
+    empty_eligible_disposition: str = ""
+    action_candidate_ids: tuple[str, ...] = ()
+    action_candidate_weights: tuple[int, ...] = ()
+    action_candidate_dependencies: tuple[tuple[str, ...], ...] = ()
+    action_candidate_retry_failure_classes: tuple[tuple[str, ...], ...] = ()
+    action_candidate_max_retries: tuple[int, ...] = ()
+    action_candidate_cooldown_ticks: tuple[int, ...] = ()
+    max_occurrences: int = 0
+    max_burst_size: int = 1
 
 
 @dataclass(frozen=True)

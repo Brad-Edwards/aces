@@ -13,7 +13,7 @@
   "behavioral_claims": [
     {
       "taxonomy_id": "raes-behavioral-relations",
-      "taxonomy_revision": "rev2",
+      "taxonomy_revision": "rev3",
       "relation_id": "empirical-adequacy",
       "subject": "TechVault baseline study",
       "left_carrier_ref": "study-techvault-baseline@1.0.0",

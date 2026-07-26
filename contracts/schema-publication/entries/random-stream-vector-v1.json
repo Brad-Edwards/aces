@@ -2,9 +2,9 @@
   "contract_id": "random-stream-vector-v1",
   "schema_path": "contracts/schemas/profiles/random-stream-vector-v1.json",
   "stability": "draft",
-  "content_hash": "4936d1422c64f27ac0f454068db28e81e24f6ead50771bb305d67d2f94fa992e",
+  "content_hash": "32d04d87018c3ac25a85a3a27e3d7f9cbe27ab37477380c7c8d786257d80e883",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "4936d1422c64f27ac0f454068db28e81e24f6ead50771bb305d67d2f94fa992e"
+    "summary": "Added the closed participant-occurrence stream-address variant to canonical random-stream vectors for issue #897.",
+    "content_hash": "32d04d87018c3ac25a85a3a27e3d7f9cbe27ab37477380c7c8d786257d80e883"
   }
 }

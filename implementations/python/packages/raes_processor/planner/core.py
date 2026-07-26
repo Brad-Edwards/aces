@@ -6,6 +6,7 @@ from raes.realization_envelope import member
 from raes_backend_protocols.capabilities import BackendManifest
 from raes_backend_protocols.capability_admission import (
     participant_autonomous_execution_capability_gaps,
+    participant_feature_support_gaps,
     time_model_capability_gaps,
 )
 from raes_backend_protocols.domain_topology import domain_topology_plan_diagnostics
@@ -50,12 +51,11 @@ def _participant_execution_diagnostics(
     model: RuntimeModel,
     manifest: BackendManifest,
 ) -> list[Diagnostic]:
-    specifications = tuple(
-        specification
-        for specification in model.behavior_specifications.values()
-        if specification.autonomous_execution is not None
+    specifications = tuple(model.behavior_specifications.values())
+    autonomous_specifications = tuple(
+        specification for specification in specifications if specification.autonomous_execution is not None
     )
-    policies = tuple(specification.autonomous_execution for specification in specifications)
+    policies = tuple(specification.autonomous_execution for specification in autonomous_specifications)
     diagnostics = [
         Diagnostic(
             code="participant.autonomous-execution-unsupported",
@@ -65,20 +65,17 @@ def _participant_execution_diagnostics(
         )
         for gap in participant_autonomous_execution_capability_gaps(manifest, policies, model.time_model)
     ]
-    capability = manifest.participant_runtime
-    supported_features = (
-        capability.supported_behavior_features | capability.supported_interaction_features
-        if capability is not None
-        else frozenset()
-    )
     for specification in specifications:
-        for feature in sorted(set(specification.backend_feature_support_refs) - supported_features):
+        for gap in participant_feature_support_gaps(
+            manifest,
+            specification.backend_feature_support_refs,
+        ):
             diagnostics.append(
                 Diagnostic(
-                    code="participant.autonomous-feature-unsupported",
+                    code="participant.feature-support-insufficient",
                     domain="participant",
                     address=specification.address,
-                    message=f"Backend does not support required participant feature '{feature}'.",
+                    message=gap,
                 )
             )
     return diagnostics

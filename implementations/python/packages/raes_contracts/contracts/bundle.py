@@ -38,6 +38,7 @@ from .participant_context import ParticipantContextViewModel
 from .participant_control import ParticipantControlOccurrenceModel
 from .participant_crossing import ParticipantCrossingOccurrenceModel
 from .participant_decision_surface import ParticipantDecisionSurfaceModel
+from .participant_decision_surface_v2 import ParticipantDecisionSurfaceV2Model
 from .participant_envelopes import (
     ParticipantJointActionRecordModel,
     ParticipantLifecycleEventModel,
@@ -199,6 +200,7 @@ def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
         "participant-context-view-v1": ParticipantContextViewModel.model_json_schema(),
         "runtime-fact-binding-plane-v1": RuntimeFactBindingPlaneModel.model_json_schema(),
         "participant-decision-surface-v1": ParticipantDecisionSurfaceModel.model_json_schema(),
+        "participant-decision-surface-v2": ParticipantDecisionSurfaceV2Model.model_json_schema(),
         "participant-configuration-result-v1": ParticipantConfigurationResultModel.model_json_schema(),
         "operation-receipt-v1": OperationReceiptModel.model_json_schema(),
         "operation-status-v1": OperationStatusModel.model_json_schema(),

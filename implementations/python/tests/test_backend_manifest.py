@@ -15,6 +15,7 @@ from raes_backend_protocols.capabilities import (
     PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE,
     PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS,
     PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE,
+    PARTICIPANT_RUNTIME_POLICY_FEATURES,
     PARTICIPANT_RUNTIME_ROLE_SCOPE,
     BackendManifest,
     ObservationCapabilities,
@@ -23,7 +24,9 @@ from raes_backend_protocols.capabilities import (
     ParticipantRuntimeCapabilities,
     ProvisionerCapabilities,
     observation_capability_contract_gaps,
+    participant_feature_support_gaps,
     participant_runtime_capability_contract_gaps,
+    resolve_participant_feature_support,
 )
 from raes_backend_protocols.manifest import backend_manifest_payload
 from raes_backend_stubs.stubs import create_stub_manifest
@@ -156,7 +159,11 @@ def test_backend_manifest_v2_declares_participant_capability_dimensions():
         "interference",
         "shared_state_change",
     ]
-    assert participant_runtime["feature_support"] == []
+    assert {entry["feature"]: entry["support_level"] for entry in participant_runtime["feature_support"]} == {
+        feature: "unsupported" for feature in sorted(PARTICIPANT_RUNTIME_POLICY_FEATURES)
+    }
+    assert all(entry["limitation_refs"] for entry in participant_runtime["feature_support"])
+    assert all(entry["disclosure_refs"] for entry in participant_runtime["feature_support"])
     assert participant_runtime["supports_autonomous_execution"] is False
     assert participant_runtime["supported_autonomous_action_contracts"] == []
     assert participant_runtime["supported_autonomous_observation_boundaries"] == []
@@ -389,13 +396,17 @@ def test_backend_manifest_payload_renders_api_407_feature_support_entries():
             "feature": "behavior_history",
             "support_level": "bounded",
             "constraint_refs": ["constraints.behavior-history.retention-window"],
+            "limitation_refs": [],
             "disclosure_refs": ["disclosures.behavior-history.bounded.v1"],
+            "evidence_refs": [],
         },
         {
             "feature": "coordination",
             "support_level": "exact",
             "constraint_refs": [],
+            "limitation_refs": [],
             "disclosure_refs": [],
+            "evidence_refs": [],
         },
     ]
     BackendManifestV2Model.model_validate(payload)
@@ -423,6 +434,9 @@ def test_participant_runtime_capability_evidence_covers_standard_vocabularies():
         set(PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE])
         == terms_by_scope[PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE]
     )
+    assert terms_by_scope[PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE] >= PARTICIPANT_RUNTIME_POLICY_FEATURES
+    for feature in PARTICIPANT_RUNTIME_POLICY_FEATURES:
+        assert PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE][feature]
 
 
 def test_observation_capability_evidence_covers_standard_vocabularies():
@@ -489,15 +503,265 @@ def test_backend_manifest_v2_accepts_feature_support_declarations():
     assert [entry.feature for entry in feature_support] == [
         "behavior_history",
         "coordination",
+        "participant_transformation",
         "x-acme:custom-feature",
     ]
     assert feature_support[0].support_level == ParticipantFeatureSupportLevel.BOUNDED
     assert feature_support[0].disclosure_refs == ["disclosures.behavior-history.bounded.v1"]
-    assert feature_support[2].support_level == ParticipantFeatureSupportLevel.DISCLOSED_WEAK
+    assert feature_support[2].evidence_refs == ["conformance:participant-transformation:bounded-case-1"]
+    assert feature_support[3].support_level == ParticipantFeatureSupportLevel.DISCLOSED_WEAK
+
+
+def test_backend_manifest_v2_accepts_evidence_backed_participant_policy_support():
+    payload = _stub_payload_with_feature_support(
+        [
+            {
+                "feature": "participant_ingress_admission",
+                "support_level": "exact",
+                "constraint_refs": [],
+                "limitation_refs": [],
+                "disclosure_refs": [],
+                "evidence_refs": ["conformance:participant-ingress-admission:case-1"],
+            }
+        ]
+    )
+    participant_runtime = payload["capabilities"]["participant_runtime"]
+    participant_runtime["supported_behavior_features"].append("participant_ingress_admission")
+
+    model = BackendManifestV2Model.model_validate(payload)
+
+    assert model.capabilities.participant_runtime is not None
+    declaration = model.capabilities.participant_runtime.feature_support[0]
+    assert declaration.feature == "participant_ingress_admission"
+    assert declaration.evidence_refs == ["conformance:participant-ingress-admission:case-1"]
+
+
+def test_backend_manifest_v2_rejects_positive_participant_policy_support_without_evidence():
+    payload = _stub_payload_with_feature_support(
+        [
+            {
+                "feature": "participant_ingress_admission",
+                "support_level": "exact",
+                "constraint_refs": [],
+                "limitation_refs": [],
+                "disclosure_refs": [],
+                "evidence_refs": [],
+            }
+        ]
+    )
+    payload["capabilities"]["participant_runtime"]["supported_behavior_features"].append(
+        "participant_ingress_admission"
+    )
+
+    with pytest.raises(ValidationError, match="evidence_refs"):
+        BackendManifestV2Model.model_validate(payload)
+
+
+def test_backend_manifest_v2_rejects_bounded_policy_support_without_constraints():
+    payload = _stub_payload_with_feature_support(
+        [
+            {
+                "feature": "participant_transformation",
+                "support_level": "bounded",
+                "constraint_refs": [],
+                "limitation_refs": ["limitation:participant-transformation:finite-rules"],
+                "disclosure_refs": ["disclosure:participant-transformation:bounded"],
+                "evidence_refs": ["conformance:participant-transformation:case-1"],
+            }
+        ]
+    )
+    payload["capabilities"]["participant_runtime"]["supported_behavior_features"].append("participant_transformation")
+
+    with pytest.raises(ValidationError, match="constraint_refs"):
+        BackendManifestV2Model.model_validate(payload)
+
+
+def test_backend_manifest_v2_rejects_weak_policy_support_without_limitations():
+    payload = _stub_payload_with_feature_support(
+        [
+            {
+                "feature": "participant_declassification",
+                "support_level": "disclosed_weak",
+                "constraint_refs": [],
+                "limitation_refs": [],
+                "disclosure_refs": ["disclosure:participant-declassification:weak"],
+                "evidence_refs": ["conformance:participant-declassification:case-1"],
+            }
+        ]
+    )
+    payload["capabilities"]["participant_runtime"]["supported_behavior_features"].append("participant_declassification")
+
+    with pytest.raises(ValidationError, match="limitation_refs"):
+        BackendManifestV2Model.model_validate(payload)
+
+
+def test_backend_manifest_v2_rejects_positive_participant_policy_support_without_required_contracts():
+    payload = _stub_payload_with_feature_support(
+        [
+            {
+                "feature": "participant_intervention",
+                "support_level": "bounded",
+                "constraint_refs": ["constraint:participant-intervention:bounded"],
+                "limitation_refs": ["limitation:participant-intervention:finite-scope"],
+                "disclosure_refs": ["disclosure:participant-intervention:bounded"],
+                "evidence_refs": ["conformance:participant-intervention:case-1"],
+            }
+        ]
+    )
+    payload["capabilities"]["participant_runtime"]["supported_behavior_features"].append("participant_intervention")
+    payload["supported_contract_versions"].remove("participant-control-occurrence-v1")
+
+    with pytest.raises(ValidationError, match="required contracts"):
+        BackendManifestV2Model.model_validate(payload)
+
+
+def test_backend_manifest_v2_rejects_positive_policy_support_absent_from_supported_features():
+    payload = _stub_payload_with_feature_support(
+        [
+            {
+                "feature": "participant_egress_projection",
+                "support_level": "exact",
+                "constraint_refs": [],
+                "limitation_refs": [],
+                "disclosure_refs": [],
+                "evidence_refs": ["conformance:participant-egress-projection:case-1"],
+            }
+        ]
+    )
+    with pytest.raises(ValidationError, match="positive support"):
+        BackendManifestV2Model.model_validate(payload)
+
+
+def test_backend_manifest_v2_rejects_supported_policy_feature_without_strength_declaration():
+    payload = _stub_payload_with_feature_support([])
+    payload["capabilities"]["participant_runtime"]["supported_behavior_features"].append(
+        "participant_ingress_admission"
+    )
+
+    with pytest.raises(ValidationError, match="require explicit feature_support declarations"):
+        BackendManifestV2Model.model_validate(payload)
+
+
+def test_backend_manifest_v2_accepts_honest_unsupported_policy_features():
+    entries = [
+        {
+            "feature": feature,
+            "support_level": "unsupported",
+            "constraint_refs": [],
+            "limitation_refs": [f"limitation:{feature}:not-realized"],
+            "disclosure_refs": [f"disclosure:{feature}:unsupported"],
+            "evidence_refs": [],
+        }
+        for feature in sorted(PARTICIPANT_RUNTIME_POLICY_FEATURES)
+    ]
+
+    model = BackendManifestV2Model.model_validate(_stub_payload_with_feature_support(entries))
+
+    assert model.capabilities.participant_runtime is not None
+    assert {entry.feature for entry in model.capabilities.participant_runtime.feature_support} == set(
+        PARTICIPANT_RUNTIME_POLICY_FEATURES
+    )
+    assert all(
+        entry.support_level == ParticipantFeatureSupportLevel.UNSUPPORTED
+        for entry in model.capabilities.participant_runtime.feature_support
+    )
+
+
+def test_participant_policy_feature_support_admission_fails_closed_and_demotes_authorized_downgrade():
+    base = create_stub_manifest()
+    feature = "participant_transformation"
+    declaration = ParticipantFeatureSupport(
+        feature=feature,
+        support_level=ParticipantFeatureSupportLevel.BOUNDED,
+        constraint_refs=("constraint:participant-transformation:bounded",),
+        limitation_refs=("limitation:participant-transformation:finite-rules",),
+        disclosure_refs=("disclosure:participant-transformation:bounded",),
+        evidence_refs=("conformance:participant-transformation:case-1",),
+    )
+    participant_runtime = replace(
+        base.participant_runtime,
+        supported_behavior_features=base.participant_runtime.supported_behavior_features | {feature},
+        feature_support=(declaration,),
+    )
+    manifest = BackendManifest(
+        identity=base.identity,
+        supported_contract_versions=base.supported_contract_versions | {"participant-crossing-occurrence-v1"},
+        compatibility=base.compatibility,
+        realization_support=base.realization_support,
+        concept_bindings=base.concept_bindings,
+        constraints=base.constraints,
+        capabilities=replace(base.capabilities, participant_runtime=participant_runtime),
+    )
+
+    assert participant_feature_support_gaps(manifest, (feature,)) == (
+        "participant feature 'participant_transformation' requires exact support; backend declares bounded",
+    )
+    with pytest.raises(ValueError, match="explicit downgrade authorization"):
+        resolve_participant_feature_support(
+            manifest,
+            feature,
+            required_level=ParticipantFeatureSupportLevel.EXACT,
+            allowed_downgrade_level=ParticipantFeatureSupportLevel.BOUNDED,
+        )
+
+    effective = resolve_participant_feature_support(
+        manifest,
+        feature,
+        required_level=ParticipantFeatureSupportLevel.EXACT,
+        allowed_downgrade_level=ParticipantFeatureSupportLevel.BOUNDED,
+        downgrade_policy_ref="policy:participant-crossing:revision-3",
+        downgrade_provenance_ref="provenance:participant-crossing:decision-7",
+    )
+
+    assert effective is declaration
+    assert effective.support_level == ParticipantFeatureSupportLevel.BOUNDED
+    assert effective.support_level != ParticipantFeatureSupportLevel.EXACT
+
+
+def test_participant_policy_feature_support_admission_accepts_evidence_backed_exact_support():
+    base = create_stub_manifest()
+    assert base.participant_runtime is not None
+    feature = "participant_ingress_admission"
+    declaration = ParticipantFeatureSupport(
+        feature=feature,
+        support_level=ParticipantFeatureSupportLevel.EXACT,
+        evidence_refs=("conformance:participant-ingress-admission:case-1",),
+    )
+    manifest = replace(
+        base,
+        capabilities=replace(
+            base.capabilities,
+            participant_runtime=replace(
+                base.participant_runtime,
+                supported_behavior_features=base.participant_runtime.supported_behavior_features | {feature},
+                feature_support=(declaration,),
+            ),
+        ),
+    )
+
+    assert resolve_participant_feature_support(manifest, feature) is declaration
+    assert participant_feature_support_gaps(manifest, (feature,)) == ()
+
+
+def test_participant_policy_feature_support_admission_rejects_missing_declaration():
+    base = create_stub_manifest()
+    assert base.participant_runtime is not None
+    manifest = replace(
+        base,
+        capabilities=replace(
+            base.capabilities,
+            participant_runtime=replace(base.participant_runtime, feature_support=()),
+        ),
+    )
+
+    assert participant_feature_support_gaps(manifest, ("participant_ingress_admission",)) == (
+        "participant feature 'participant_ingress_admission' has no explicit support declaration",
+    )
 
 
 def test_backend_manifest_v2_feature_support_defaults_to_empty():
     payload = json.loads((V2_VALID_DIR / "stub.json").read_text(encoding="utf-8"))
+    payload["capabilities"]["participant_runtime"].pop("feature_support")
     model = BackendManifestV2Model.model_validate(payload)
 
     assert model.capabilities.participant_runtime is not None
@@ -627,6 +891,19 @@ def test_backend_manifest_v2_schema_publishes_feature_support_disclosure_rule():
             "properties": {"disclosure_refs": {"minItems": 1}},
         },
     } in feature_support_schema["allOf"]
+    assert {"limitation_refs", "evidence_refs"} <= feature_support_schema["properties"].keys()
+    assert any(
+        condition.get("then", {}).get("properties", {}).get("limitation_refs", {}).get("minItems") == 1
+        for condition in feature_support_schema["allOf"]
+    )
+    assert any(
+        condition.get("then", {}).get("properties", {}).get("constraint_refs", {}).get("minItems") == 1
+        for condition in feature_support_schema["allOf"]
+    )
+    assert any(
+        condition.get("then", {}).get("properties", {}).get("evidence_refs", {}).get("minItems") == 1
+        for condition in feature_support_schema["allOf"]
+    )
 
 
 def test_backend_manifest_v2_requires_manifest_sections():

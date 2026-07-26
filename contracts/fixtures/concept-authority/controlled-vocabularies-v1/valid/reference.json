@@ -85,6 +85,10 @@
           "title": "Participant Behavior History Event Stream V1",
           "description": "Participant behavior history event stream contract."
         },
+        "participant-decision-surface-v2": {
+          "title": "Participant Decision Surface V2",
+          "description": "Exact-cut participant decision view, assurance, delivery, and selection contract."
+        },
         "participant-episode-history-event-stream-v1": {
           "title": "Participant Episode History Event Stream V1",
           "description": "Participant episode history event stream contract."
@@ -958,6 +962,30 @@
         "outcome_interpretation": {
           "title": "Outcome Interpretation",
           "description": "Backend supports participant-local outcome interpretation records."
+        },
+        "participant_declassification": {
+          "title": "Participant Declassification",
+          "description": "Backend supports governed participant-relative declassification decisions and evidence."
+        },
+        "participant_directed_inject_delivery": {
+          "title": "Participant-Directed Inject Delivery",
+          "description": "Backend supports governed delivery of participant-directed injects without conflating environment injects."
+        },
+        "participant_egress_projection": {
+          "title": "Participant Egress Projection",
+          "description": "Backend supports governed participant-relative projection at the egress boundary."
+        },
+        "participant_ingress_admission": {
+          "title": "Participant Ingress Admission",
+          "description": "Backend supports governed participant action or control admission at the ingress boundary."
+        },
+        "participant_intervention": {
+          "title": "Participant Intervention",
+          "description": "Backend supports governed participant intervention and supervisory control occurrences."
+        },
+        "participant_transformation": {
+          "title": "Participant Transformation",
+          "description": "Backend supports governed non-mutating participant-boundary transformations with fresh result identity."
         },
         "preconditions": {
           "title": "Preconditions",

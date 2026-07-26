@@ -2,9 +2,9 @@
   "contract_id": "sdl-authoring-input-v1",
   "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
   "stability": "draft",
-  "content_hash": "c12f8eb2819b43c2b2ed15de3e7fd71fcb4e039a25b59512de30099c28c85515",
+  "content_hash": "f1bc1cfb91a66b739f94ee34ff5ee13070a9a062f4071a2693e8639e09a5ba92",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "c12f8eb2819b43c2b2ed15de3e7fd71fcb4e039a25b59512de30099c28c85515"
+    "summary": "Published the explicit autonomous activity v2 authoring profile with governed windows, timing, weighted candidates, retries, cooldowns, and bursts for issue #897.",
+    "content_hash": "f1bc1cfb91a66b739f94ee34ff5ee13070a9a062f4071a2693e8639e09a5ba92"
   }
 }

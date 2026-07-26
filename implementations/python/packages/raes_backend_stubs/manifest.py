@@ -22,6 +22,7 @@ from raes_backend_protocols.capabilities import (
     PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE,
     PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS,
     PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE,
+    PARTICIPANT_RUNTIME_POLICY_FEATURES,
     PARTICIPANT_RUNTIME_ROLE_SCOPE,
     TIME_CAPABILITY_REQUIRED_CONTRACTS,
     BackendCapabilitySet,
@@ -30,6 +31,7 @@ from raes_backend_protocols.capabilities import (
     EvaluatorCapabilities,
     ObservationCapabilities,
     OrchestratorCapabilities,
+    ParticipantFeatureSupport,
     ParticipantRuntimeCapabilities,
     ProvisionerCapabilities,
     TimeCapabilities,
@@ -38,7 +40,7 @@ from raes_backend_protocols.capabilities import (
 )
 from raes_contracts.apparatus import ConceptBinding, RealizationSupportDeclaration
 from raes_contracts.manifest_authority import BACKEND_SUPPORTED_CONTRACT_IDS
-from raes_contracts.vocabulary import RealizationSupportMode
+from raes_contracts.vocabulary import ParticipantFeatureSupportLevel, RealizationSupportMode
 
 REFERENCE_BACKEND_SUPPORTED_CONTRACT_VERSIONS = frozenset(BACKEND_SUPPORTED_CONTRACT_IDS) - {
     "experiment-binding-descriptors-v1",
@@ -47,9 +49,11 @@ REFERENCE_BACKEND_SUPPORTED_CONTRACT_VERSIONS = frozenset(BACKEND_SUPPORTED_CONT
 REFERENCE_PARTICIPANT_ROLES = frozenset(
     PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_ROLE_SCOPE]
 )
-REFERENCE_PARTICIPANT_BEHAVIOR_FEATURES = frozenset(
-    PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE]
-) - {"autonomous_execution"}
+REFERENCE_PARTICIPANT_BEHAVIOR_FEATURES = (
+    frozenset(PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE])
+    - {"autonomous_execution"}
+    - PARTICIPANT_RUNTIME_POLICY_FEATURES
+)
 REFERENCE_PARTICIPANT_INTERACTION_FEATURES = frozenset(
     PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE]
 )
@@ -234,6 +238,15 @@ def _stub_participant_runtime() -> ParticipantRuntimeCapabilities:
         supported_participant_roles=REFERENCE_PARTICIPANT_ROLES,
         supported_behavior_features=REFERENCE_PARTICIPANT_BEHAVIOR_FEATURES,
         supported_interaction_features=REFERENCE_PARTICIPANT_INTERACTION_FEATURES,
+        feature_support=tuple(
+            ParticipantFeatureSupport(
+                feature=feature,
+                support_level=ParticipantFeatureSupportLevel.UNSUPPORTED,
+                limitation_refs=(f"limitation:{feature}:not-realized",),
+                disclosure_refs=(f"disclosure:{feature}:unsupported",),
+            )
+            for feature in sorted(PARTICIPANT_RUNTIME_POLICY_FEATURES)
+        ),
     )
 
 

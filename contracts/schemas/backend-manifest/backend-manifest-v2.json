@@ -748,6 +748,113 @@
               "disclosure_refs"
             ]
           }
+        },
+        {
+          "if": {
+            "properties": {
+              "feature": {
+                "enum": [
+                  "participant_declassification",
+                  "participant_directed_inject_delivery",
+                  "participant_egress_projection",
+                  "participant_ingress_admission",
+                  "participant_intervention",
+                  "participant_transformation"
+                ]
+              },
+              "support_level": {
+                "enum": [
+                  "unsupported",
+                  "disclosed_weak",
+                  "bounded"
+                ]
+              }
+            },
+            "required": [
+              "feature",
+              "support_level"
+            ]
+          },
+          "then": {
+            "properties": {
+              "limitation_refs": {
+                "minItems": 1
+              }
+            },
+            "required": [
+              "limitation_refs"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "feature": {
+                "enum": [
+                  "participant_declassification",
+                  "participant_directed_inject_delivery",
+                  "participant_egress_projection",
+                  "participant_ingress_admission",
+                  "participant_intervention",
+                  "participant_transformation"
+                ]
+              },
+              "support_level": {
+                "const": "bounded"
+              }
+            },
+            "required": [
+              "feature",
+              "support_level"
+            ]
+          },
+          "then": {
+            "properties": {
+              "constraint_refs": {
+                "minItems": 1
+              }
+            },
+            "required": [
+              "constraint_refs"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "feature": {
+                "enum": [
+                  "participant_declassification",
+                  "participant_directed_inject_delivery",
+                  "participant_egress_projection",
+                  "participant_ingress_admission",
+                  "participant_intervention",
+                  "participant_transformation"
+                ]
+              },
+              "support_level": {
+                "enum": [
+                  "disclosed_weak",
+                  "bounded",
+                  "exact"
+                ]
+              }
+            },
+            "required": [
+              "feature",
+              "support_level"
+            ]
+          },
+          "then": {
+            "properties": {
+              "evidence_refs": {
+                "minItems": 1
+              }
+            },
+            "required": [
+              "evidence_refs"
+            ]
+          }
         }
       ],
       "description": "API-407 per-feature participant runtime support declaration.",
@@ -768,10 +875,26 @@
           "title": "Disclosure Refs",
           "type": "array"
         },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
         "feature": {
           "minLength": 1,
           "title": "Feature",
           "type": "string"
+        },
+        "limitation_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Limitation Refs",
+          "type": "array"
         },
         "support_level": {
           "$ref": "#/$defs/ParticipantFeatureSupportLevel"
@@ -815,6 +938,19 @@
           "default": null,
           "title": "Max Autonomous Action Attempts"
         },
+        "max_autonomous_burst_size": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Autonomous Burst Size"
+        },
         "max_autonomous_in_flight": {
           "anyOf": [
             {
@@ -828,6 +964,19 @@
           "default": null,
           "title": "Max Autonomous In Flight"
         },
+        "max_autonomous_occurrences": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Autonomous Occurrences"
+        },
         "max_autonomous_participants": {
           "anyOf": [
             {
@@ -840,6 +989,19 @@
           ],
           "default": null,
           "title": "Max Autonomous Participants"
+        },
+        "max_autonomous_retries_per_occurrence": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Autonomous Retries Per Occurrence"
         },
         "name": {
           "minLength": 1,
@@ -855,6 +1017,24 @@
           "type": "array",
           "uniqueItems": true
         },
+        "supported_autonomous_activity_features": {
+          "items": {
+            "enum": [
+              "work-windows",
+              "timing-variation",
+              "weighted-selection",
+              "dependencies",
+              "bounded-retries",
+              "cooldowns",
+              "limited-bursts",
+              "occurrence-provenance"
+            ],
+            "type": "string"
+          },
+          "title": "Supported Autonomous Activity Features",
+          "type": "array",
+          "uniqueItems": true
+        },
         "supported_autonomous_observation_boundaries": {
           "items": {
             "minLength": 1,
@@ -864,9 +1044,33 @@
           "type": "array",
           "uniqueItems": true
         },
+        "supported_autonomous_policy_profiles": {
+          "items": {
+            "enum": [
+              "participant-autonomous-execution/v1",
+              "participant-autonomous-execution/v2"
+            ],
+            "type": "string"
+          },
+          "title": "Supported Autonomous Policy Profiles",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supported_autonomous_random_stream_profiles": {
+          "items": {
+            "const": "blake3-xof-participant-v1",
+            "type": "string"
+          },
+          "title": "Supported Autonomous Random Stream Profiles",
+          "type": "array",
+          "uniqueItems": true
+        },
         "supported_autonomous_selection_strategies": {
           "items": {
-            "const": "ordered_cycle",
+            "enum": [
+              "ordered_cycle",
+              "weighted"
+            ],
             "type": "string"
           },
           "title": "Supported Autonomous Selection Strategies",
@@ -1613,6 +1817,8 @@
           "participant-episode-state-envelope-v1",
           "participant-episode-history-event-stream-v1",
           "participant-behavior-history-event-stream-v1",
+          "participant-control-occurrence-v1",
+          "participant-crossing-occurrence-v1",
           "participant-lifecycle-event-v1",
           "participant-observation-envelope-v1",
           "participant-shared-state-record-v1",

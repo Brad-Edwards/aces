@@ -2,9 +2,9 @@
   "contract_id": "behavioral-relations-v1",
   "schema_path": "contracts/schemas/concept-authority/behavioral-relations-v1.json",
   "stability": "draft",
-  "content_hash": "1d28d7e81f489f2bcbc8772e7eb85d6a45800f99b96b2d3a80e66fa20be29a22",
+  "content_hash": "e6486c4411ac0f63724558f0556b3fc2b1dc866045dcadfd5d1a88ecd7e3aa5e",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "1d28d7e81f489f2bcbc8772e7eb85d6a45800f99b96b2d3a80e66fa20be29a22"
+    "summary": "Added an immutable report locator for the revision-3 I/O-automata lineage used by exact-cut reactive information flow and I/O alternating refinement.",
+    "content_hash": "e6486c4411ac0f63724558f0556b3fc2b1dc866045dcadfd5d1a88ecd7e3aa5e"
   }
 }

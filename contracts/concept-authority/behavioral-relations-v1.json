@@ -1,7 +1,7 @@
 {
   "schema_version": "behavioral-relations/v1",
   "taxonomy_id": "raes-behavioral-relations",
-  "taxonomy_revision": "rev2",
+  "taxonomy_revision": "rev3",
   "bibliography": [
     {
       "source_id": "park-1981",
@@ -120,6 +120,54 @@
       "immutable_locator": {
         "kind": "doi",
         "value": "10.3233/JCS-2009-0352"
+      }
+    },
+    {
+      "source_id": "lynch-tuttle-1989",
+      "title": "An Introduction to Input/Output Automata",
+      "authors": [
+        "Nancy A. Lynch",
+        "Mark R. Tuttle"
+      ],
+      "publication_year": 1989,
+      "publication_venue": "CWI Quarterly 2(3), 219-246",
+      "edition_or_version": "published journal article",
+      "immutable_locator": {
+        "kind": "report",
+        "value": "MIT/LCS/TM-373"
+      }
+    },
+    {
+      "source_id": "clarkson-schneider-2010",
+      "title": "Hyperproperties",
+      "authors": [
+        "Michael R. Clarkson",
+        "Fred B. Schneider"
+      ],
+      "publication_year": 2010,
+      "publication_venue": "Journal of Computer Security 18(6), 1157-1210",
+      "edition_or_version": "version of record",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.3233/JCS-2009-0393"
+      }
+    },
+    {
+      "source_id": "bohannon-pierce-sjoberg-weirich-zdancewic-2009",
+      "title": "Reactive Noninterference",
+      "authors": [
+        "Aaron Bohannon",
+        "Benjamin C. Pierce",
+        "Vilhelm Sjöberg",
+        "Stephanie Weirich",
+        "Steve Zdancewic"
+      ],
+      "publication_year": 2009,
+      "publication_venue": "Proceedings of the 16th ACM Conference on Computer and Communications Security, 79-90",
+      "edition_or_version": "version of record",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.1145/1653662.1653673"
       }
     },
     {
@@ -1547,23 +1595,23 @@
       "relation_id": "policy-noninterference",
       "display_name": "Participant-policy noninterference",
       "relation_class": "behavioral",
-      "definition": "For a fixed participant, episode scope, model, environment class, scheduler class, order model, policy-revision sequence, and permitted declassification schedule, low-equivalent initial states and input histories with equal admitted low inputs and equal participant-policy purge results produce equal support sets of projected participant-visible histories despite variation in unauthorized high inputs.",
-      "left_carrier": "The support set of valid labelled participant-policy runs from one low-equivalent initial state and input history.",
-      "right_carrier": "The support set of valid labelled participant-policy runs from another low-equivalent initial state and input history.",
-      "initial_states": "Initial world, participant-view, participant-history, archival-evidence, controller, authority, marking, and policy states related by the SEM-230 low-equivalence relation at the declared initial policy/order point.",
+      "definition": "For a fixed participant, episode and memory scope, model, environment class, scheduler class, order model, exact-cut policy-decision sequence, permitted declassification schedule, and low-strategy class, every low participant strategy produces equal support sets of projected participant-visible histories from low-equivalent initial states despite unauthorized high variation.",
+      "left_carrier": "The support set of valid labelled participant-policy runs from one low-equivalent initial state under one adaptive low strategy.",
+      "right_carrier": "The support set of valid labelled participant-policy runs from another low-equivalent initial state under the same adaptive low strategy.",
+      "initial_states": "Initial world, participant-view, delivered decision-surface history, participant memory, archival-evidence, controller, authority, marking, and policy states related by the SEM-230 low-equivalence relation at the declared initial state cut.",
       "transition_signature": {
         "applicability": "applicable",
         "labels": "The closed SEM-230 alphabet for proposal, approval or denial, direction, intervention, handoff, override or cancellation, admission or rejection, attempt or result, disclosure or withholding, concealment, revocation, transformation, delivery, observation, policy change, evidence, and audit actions.",
         "transition_relation": "The SEM-230 participant-policy crossing relation over existing world, view, local-history, archival-evidence, action, lifecycle, ordering, marking, controller, authority, policy, and provenance state.",
-        "observable_actions": "Labels retained for the named participant and audience by the effective policy revision, marking/declassification intersection, and declared order-point projection.",
-        "hidden_actions": "Only labels mapped to tau by the named participant-, audience-, policy-revision-, and order-relative projection; backend-internal actions are not intrinsically hidden.",
+        "observable_actions": "Labels retained for the named participant and audience by the exact-cut policy decision, marking/declassification intersection, and declared state-cut projection, including delivered decision surfaces.",
+        "hidden_actions": "Only labels mapped to tau by the named participant-, audience-, policy-decision-, and state-cut-relative projection; backend-internal actions are not intrinsically hidden.",
         "stuttering_actions": "Finite hidden stuttering is removed by the declared tau closure; the baseline is termination- and progress-insensitive and does not claim divergence-sensitive preservation."
       },
       "observation_projection": {
         "applicability": "required",
         "subject": "Named participant and audience within one episode scope",
         "policy_ref": "SEM-230 participant-information-flow policy",
-        "policy_revision": "The complete declared policy-revision sequence and effective order points",
+        "policy_revision": "The complete declared policy-decision sequence and exact state-cut bindings",
         "redaction_scope": "Projection, masking, redaction, declassification, transformation, marking, loss, and weakening remain distinct and are evaluated deny-first.",
         "order_treatment": "Compare occurrence-preserving visible histories under the same declared total, partial, causal, simultaneous, or backend-serialized order model; one convenient linearization is insufficient for a partial-order claim.",
         "simultaneity_treatment": "Preserve declared simultaneity groups and visible order relations; timestamp equality does not establish simultaneity."
@@ -1571,10 +1619,10 @@
       "projection_required": true,
       "direction": "symmetric",
       "quantification": {
-        "states": "For every pair of initial and reachable states related by low equivalence at the applicable participant-policy/order point.",
-        "traces": "For all valid run support sets generated from equal admitted low inputs, equal dynamic-purge results, and equal permitted declassification schedules.",
+        "states": "For every pair of initial and reachable states related by low equivalence at the applicable participant-policy state cut and memory scope.",
+        "traces": "For all valid run support sets generated under the same low strategy, exact-cut policy decisions, and permitted declassification schedule.",
         "schedulers": "For the fixed declared scheduler class; scheduler-sensitive variants must select and evidence a stronger relation.",
-        "strategies": "No strategic or coalitional quantification; alternating-strategic equivalence is a separate relation.",
+        "strategies": "Universally over the declared class of adaptive low participant strategies mapping delivered local histories to choices or choice sets; no coalition-ability equivalence is implied.",
         "environments": "For the fixed declared environment class and equal low environment inputs, allowing only the unauthorized high variation under examination.",
         "observations": "Equality of support sets of occurrence-preserving histories projected for the named participant, audience, policy sequence, markings, declassification schedule, and order model."
       },
@@ -1601,15 +1649,15 @@
         }
       },
       "preservation": {
-        "property": "Unauthorized high-input variation does not change the support set of participant-visible histories after dynamic purge, except at equal explicitly governed declassification events.",
-        "proof_obligation": "Prove support-set equality for every quantified low-equivalent pair under the fixed participant, policy sequence, declassification schedule, model, scheduler, environment, and order assumptions, or report only the bounded counterexamples actually checked."
+        "property": "Unauthorized high variation does not change the support set of participant-visible histories observed by any declared adaptive low strategy, except at equal explicitly governed declassification events.",
+        "proof_obligation": "Prove support-set equality for every quantified low-equivalent pair and low strategy under the fixed participant, memory scope, exact-cut policy decisions, declassification schedule, model, scheduler, environment, and order assumptions, or report only the bounded counterexamples actually checked."
       },
       "bounded_evidence": [
         "implementations/python/tests/test_sem_230_information_flow_control.py checks finite unauthorized-high, declassification-order, policy-revision, participant-relative hiding, deny-first, append-only-history, transformation-admission, and support-set counterexamples."
       ],
       "explicit_non_claims": [
         "The finite SEM-230 executable cases do not establish universal noninterference.",
-        "Projected-history equality does not establish policy noninterference without the stated low-equivalence, purge, declassification, scheduler, environment, and quantifier obligations.",
+        "Projected-history equality does not establish policy noninterference without the stated low-equivalence, adaptive-strategy, memory, exact-cut policy, purge, declassification, scheduler, environment, and quantifier obligations.",
         "No trace equivalence, simulation, refinement, strong or weak bisimulation, epistemic indistinguishability, timing security, probabilistic security, or backend realization is claimed."
       ],
       "incompatible_claim_surfaces": [
@@ -1629,11 +1677,101 @@
         ]
       },
       "source_refs": [
+        "bohannon-pierce-sjoberg-weirich-zdancewic-2009",
+        "clarkson-schneider-2010",
         "fagin-halpern-moses-vardi-1995",
         "goguen-meseguer-1982",
         "milner-1980",
         "sabelfeld-sands-2009",
         "van-glabbeek-1990"
+      ]
+    },
+    "io-alternating-refinement": {
+      "relation_id": "io-alternating-refinement",
+      "display_name": "Input/output alternating refinement",
+      "relation_class": "behavioral",
+      "definition": "A directional concrete-to-abstract relation preserves abstract outputs and internal behavior while respecting input ownership and declared action-availability obligations against environment choices.",
+      "left_carrier": "A concrete backend participant I/O transition system.",
+      "right_carrier": "An abstract RAES participant I/O transition system.",
+      "initial_states": "Every concrete initial participant decision state, including decision epoch zero, relates to an abstract initial decision state.",
+      "transition_signature": {
+        "applicability": "applicable",
+        "labels": "Participant proposals are inputs; participant views and observations are outputs; backend, scheduler, and environment labels retain their declared owners.",
+        "transition_relation": "Concrete and abstract I/O-labelled step relations under a declared refinement mapping.",
+        "observable_actions": "Participant-visible inputs and outputs under the named projection.",
+        "hidden_actions": "Only governed backend/internal labels mapped to tau by the named projection.",
+        "stuttering_actions": "Finite hidden concrete paths may match one abstract step only when the selected weak or branching treatment permits them."
+      },
+      "observation_projection": {
+        "applicability": "required",
+        "subject": "Named participant and audience",
+        "policy_ref": "participant-observation-boundary",
+        "policy_revision": "The exact-cut projection policy used by the claim",
+        "redaction_scope": "No redaction beyond the named projection.",
+        "order_treatment": "Decision epochs are preserved under hidden stuttering; state cuts retain their declared order model.",
+        "simultaneity_treatment": "Simultaneity and partial-order frontiers are preserved only when declared by the claim."
+      },
+      "projection_required": true,
+      "direction": "left-to-right",
+      "quantification": {
+        "states": "Universally over related reachable concrete and abstract states.",
+        "traces": "All concrete traces induced by quantified inputs, outputs, and environment choices.",
+        "schedulers": "All schedulers in the declared fairness class.",
+        "strategies": "All participant and environment strategies in the declared action-ownership classes.",
+        "environments": "All environment choices admitted by the declared alternating quantifiers.",
+        "observations": "Under the exact named participant projection and delivery semantics."
+      },
+      "dimensions": {
+        "nondeterminism": {
+          "status": "supported",
+          "treatment": "Input, output, scheduler, backend, and environment choices are separately owned and quantified."
+        },
+        "concurrency": {
+          "status": "parameterized",
+          "treatment": "Interleaving, simultaneous, step, or true-concurrency semantics must be declared."
+        },
+        "probability": {
+          "status": "outside-scope",
+          "treatment": "Probability requires a separately governed probabilistic alternating relation."
+        },
+        "time": {
+          "status": "parameterized",
+          "treatment": "Timed claims require explicit clock, fairness, timeout, and progress semantics."
+        },
+        "partial_order": {
+          "status": "parameterized",
+          "treatment": "A partial-order claim relates declared causal frontiers rather than arbitrary linearizations."
+        }
+      },
+      "preservation": {
+        "property": "Projected concrete traces remain abstractly admitted and declared participant inputs and outputs retain their availability and ownership obligations.",
+        "proof_obligation": "Supply the refinement relation, initial-state mapping, input/output ownership, availability and fairness obligations, and alternating step correspondence for every quantified choice."
+      },
+      "bounded_evidence": [
+        "Decision-surface lifecycle tests may falsify selected initiality, delivery, availability, freshness, and step-matching cases on finite models."
+      ],
+      "explicit_non_claims": [
+        "Trace inclusion alone does not establish input availability or alternating refinement.",
+        "Successful participant loops do not establish the universal relation."
+      ],
+      "incompatible_claim_surfaces": [
+        "Current bounded backend conformance reports"
+      ],
+      "assurance": {
+        "definition_status": "defined",
+        "implementation_status": "not-implemented",
+        "test_status": "bounded",
+        "proof_status": "deliberately-unproved",
+      "evidence_refs": [
+        "docs/decisions/adrs/adr-095-participant-decision-epoch-state-cut-and-delivery-semantics.md",
+        "implementations/python/tests/test_sem_220_participant_decision_surface_v2_runtime.py",
+        "implementations/python/tests/test_behavioral_relations.py"
+      ]
+      },
+      "source_refs": [
+        "alur-henzinger-kupferman-vardi-1998",
+        "lynch-tuttle-1989",
+        "lynch-vaandrager-1995"
       ]
     },
     "epistemic-indistinguishability": {
@@ -2156,9 +2294,10 @@
       "intended_relation_ids": [
         "realization-envelope-membership",
         "bounded-probe-success",
-        "trace-inclusion"
+        "trace-inclusion",
+        "io-alternating-refinement"
       ],
-      "evidence_boundary": "Envelope checks and named target probes are bounded evidence; projected trace inclusion is the intended universal obligation and remains deliberately unproved.",
+      "evidence_boundary": "Envelope checks and named target probes are bounded evidence; projected trace inclusion plus input/output ownership and availability under I/O alternating refinement are the intended universal actionable-participant obligations and remain deliberately unproved.",
       "prohibited_relation_ids": [
         "trace-equivalence",
         "backward-simulation",
@@ -2204,7 +2343,7 @@
       "intended_relation_ids": [
         "policy-noninterference"
       ],
-      "evidence_boundary": "The SEM-230 relation is defined over named participant, audience, policy-revision sequence, low-equivalence, dynamic purge, permitted declassification schedule, scheduler/environment classes, order model, and support-set semantics. Current executable evidence is limited to the finite test-local model.",
+      "evidence_boundary": "The SEM-230 relation is defined over named participant, audience, memory scope, exact-cut policy-decision sequence, low-equivalence, adaptive low-strategy class, dynamic purge, permitted declassification schedule, scheduler/environment classes, order model, and support-set semantics. Current executable evidence is limited to finite models.",
       "prohibited_relation_ids": [
         "participant-projected-history-equivalence",
         "trace-equivalence",

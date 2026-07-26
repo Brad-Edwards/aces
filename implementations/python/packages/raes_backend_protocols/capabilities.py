@@ -15,6 +15,7 @@ PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS = (
     _participant_capabilities.PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS
 )
 PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE = _participant_capabilities.PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE
+PARTICIPANT_RUNTIME_POLICY_FEATURES = _participant_capabilities.PARTICIPANT_RUNTIME_POLICY_FEATURES
 PARTICIPANT_RUNTIME_ROLE_SCOPE = _participant_capabilities.PARTICIPANT_RUNTIME_ROLE_SCOPE
 ParticipantFeatureSupport = _participant_capabilities.ParticipantFeatureSupport
 ParticipantRuntimeCapabilities = _participant_capabilities.ParticipantRuntimeCapabilities
@@ -259,7 +260,9 @@ def __getattr__(name: str) -> object:
     if name in {
         "observation_capability_contract_gaps",
         "participant_autonomous_execution_capability_gaps",
+        "participant_feature_support_gaps",
         "participant_runtime_capability_contract_gaps",
+        "resolve_participant_feature_support",
         "require_cleanup_plan_capability",
         "require_time_model_capability",
         "time_capability_contract_gaps",

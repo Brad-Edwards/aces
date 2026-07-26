@@ -1,4 +1,4 @@
-# ADR-095: Identity Cutover and Historical-Record Boundary
+# ADR-096: Identity Cutover and Historical-Record Boundary
 
 ## Status
 

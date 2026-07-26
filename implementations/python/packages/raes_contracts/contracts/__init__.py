@@ -1,7 +1,5 @@
 """Schema-first external contract models for RAES artifact boundaries."""
 
-from __future__ import annotations
-
 from ..versions import (
     ASSOCIATED_ARTIFACT_MANIFEST_SCHEMA_VERSION,
     ATLAS_TACTICS_SOURCE_SCHEMA_VERSION,
@@ -191,6 +189,8 @@ from .participant_decision_surface_exposure import (
     ParticipantDecisionSurfaceExposureBindingModel,
     ParticipantDecisionSurfaceExposureRealizationModel,
 )
+from .participant_decision_surface_exposure_v2 import *
+from .participant_decision_surface_v2 import *
 from .participant_envelopes import (
     EventClassificationModel,
     ParticipantJointActionAccessSetModel,
@@ -227,6 +227,7 @@ from .participant_runtime import (
     ParticipantActionEffectResultModel,
     ParticipantActionPreconditionResultModel,
     ParticipantActionResultModel,
+    ParticipantActivityOccurrenceProvenanceModel,
     ParticipantAttributionCandidateModel,
     ParticipantAttributionEdgeModel,
     ParticipantAttributionEvidenceBasisModel,
@@ -371,8 +372,7 @@ __all__ = [
     "CONTROLLED_VOCABULARIES_SCHEMA_VERSION", "ControlledVocabularyCatalogModel",
     "ControlledVocabularyDefinitionModel", "ControlledVocabularySourceModel", "ControlledVocabularyTermId",
     "ControlledVocabularyTermModel", "ContractModel", "ExperimentAnalysisPlanModel",
-    "NIST_CSF_DEFENSIVE_CATEGORIES_SOURCE_SCHEMA_VERSION", "NistCsfDefensiveCategorySourceModel",
-    "NistCsfDefensiveCategorySourceTermModel",
+    "NIST_CSF_DEFENSIVE_CATEGORIES_SOURCE_SCHEMA_VERSION", "NistCsfDefensiveCategorySourceModel", "NistCsfDefensiveCategorySourceTermModel",
     "ApparatusBindingTargetModel", "BindingOwnerModel", "BindingScalarType",
     "ConfigurationTargetDeclarationModel", "ConfigurationTargetRegistryModel",
     "ExperimentApparatusCompatibilityReferenceModel", "ExperimentApparatusComponentModel",
@@ -417,16 +417,32 @@ __all__ = [
     "ParticipantActionPreconditionResultModel", "ParticipantActionResultModel",
     "ParticipantAttributionCandidateModel", "ParticipantAttributionEdgeModel",
     "ParticipantAttributionEvidenceBasisModel", "ParticipantAttributionOrderingBasisModel",
-    "ParticipantAutonomousExecutionStateModel", "ParticipantBehaviorHistoryEventModel",
+    "ParticipantActivityOccurrenceProvenanceModel", "ParticipantAutonomousExecutionStateModel",
+    "ParticipantBehaviorHistoryEventModel",
     "ParticipantContextViewModel", "ParticipantControlDeclarationModel",
     "ParticipantControlOccurrenceModel", "ParticipantCrossingOccurrenceModel",
     "validate_participant_control_occurrence_context",
     "validate_participant_crossing_occurrence_context",
     "ParticipantDecisionSurfaceActionEntryModel",
     "ParticipantDecisionSurfaceCandidateSetFormModel",
-    "ParticipantDecisionSurfaceConstrainedFormModel", "ParticipantDecisionSurfaceExposureBindingModel",
+    "ParticipantDecisionSurfaceConstrainedFormModel",
+    "ParticipantDecisionSurfaceExposureBindingModel",
     "ParticipantDecisionSurfaceExposureRealizationModel", "ParticipantDecisionSurfaceModel",
-    "ParticipantDecisionSurfaceOpenEndedFormModel", "ParticipantDecisionSurfaceSelectionModel",
+    "ParticipantDecisionSurfaceAssuranceV2Model",
+    "ParticipantDecisionSurfaceBehaviorAnchorV2Model",
+    "ParticipantDecisionSurfaceCausalCutModel",
+    "ParticipantDecisionSurfaceDeliveryV2Model",
+    "ParticipantDecisionSurfaceDerivationAnchorV2Model",
+    "ParticipantDecisionSurfaceEpisodeReadinessAnchorV2Model",
+    "ParticipantDecisionSurfaceExposureBindingV2Model",
+    "ParticipantDecisionSurfaceOpenEndedFormModel",
+    "ParticipantDecisionSurfaceSelectionModel",
+    "ParticipantDecisionSurfaceSelectionV2Model",
+    "ParticipantDecisionSurfaceSequenceCutModel",
+    "ParticipantDecisionSurfaceStateCutModel",
+    "ParticipantDecisionSurfaceStateCutOrderModel",
+    "ParticipantDecisionSurfaceV2Model",
+    "ParticipantDecisionSurfaceViewV2Model",
     "validate_participant_decision_surface_context", "ParticipantEpisodeHistoryEventModel",
     "ParticipantEpisodeStateModel", "ParticipantExposurePolicyModel", "ParticipantFeatureSupportLevel",
     "ParticipantFeatureSupportModel", "ParticipantHistoryViewBehaviorEventModel",

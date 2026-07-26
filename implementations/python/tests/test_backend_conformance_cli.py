@@ -50,7 +50,7 @@ def test_backend_conformance_cli_passes_for_provisioning_only_profile():
     assert payload["passed"] is True
     claim = payload["claim"]
     assert claim["taxonomy_id"] == "raes-behavioral-relations"
-    assert claim["taxonomy_revision"] == "rev2"
+    assert claim["taxonomy_revision"] == "rev3"
     assert claim["relation_id"] == "bounded-probe-success"
     assert claim["quantifier_scope"] == "finite-cases"
     assert claim["evidence_scope"] == "finite"

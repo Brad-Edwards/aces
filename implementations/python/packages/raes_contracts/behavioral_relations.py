@@ -20,7 +20,7 @@ from .versions import BEHAVIORAL_RELATIONS_SCHEMA_VERSION
 
 
 class ImmutablePublicationLocatorModel(ContractModel):
-    kind: Literal["doi", "isbn"]
+    kind: Literal["doi", "isbn", "report"]
     value: NonEmptyString
 
 

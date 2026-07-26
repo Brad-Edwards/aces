@@ -262,6 +262,34 @@ or downgraded by the declared enforcement point.
   only the emitted observation, a history-consistent reconstruction, a
   perfect-recall history, a lossy projection, unknown, or unsupported.
 
+`Decision epoch`
+: A zero-based participant choice opportunity within one episode. It is not a
+  lifecycle-history index, behavior-history index, policy order, delivery
+  order, or backend scheduler step.
+
+`Decision state cut`
+: The exact total-order prefix or downward-closed causal frontier from which a
+  participant decision view is derived. A sequence cut and a causal cut are
+  distinct order models; a maximum scalar index cannot resolve an incomparable
+  causal frontier.
+
+`Participant decision view`
+: The participant-available context, action entries, affordances, form, and
+  semantic limitations for one participant, episode, and decision epoch. The
+  view excludes trusted derivation, policy, evidence, provenance, and delivery
+  material.
+
+`Participant decision assurance`
+: The trusted derivation anchor, exact-cut projection/exposure decisions,
+  canonical view digest, evidence, provenance, and participant-memory scope for
+  one decision view.
+
+`Participant memory scope`
+: Either `episode_local_reset`, which requires an authoritative reset of every
+  participant-visible memory channel, or `persistent_across_episodes`. Episode
+  reset/restart alone changes episode identity and restarts decision epoch; it
+  does not prove forgetting.
+
 `Step signal`
 : A participant-visible or evaluator-visible signal produced at an action step:
   observation, reward, return, action mask, termination, truncation, or
@@ -3860,18 +3888,35 @@ to the supported conclusion scope or explicitly record
 
 ## Refinement And Conformance Obligations
 
-The intended universal relation is `trace-inclusion`: under the named
-participant observation projection, every admitted concrete backend trace must
-map to a valid abstract RAES trace. This section defines that obligation; it
-does not establish it. Current executable evidence is bounded to named fixtures
-and target probes, so no simulation, data-refinement, trace-equivalence, or
-bisimulation claim follows. The evidence boundary for each executed check must
-be carried by its conformance report.
+The intended universal soundness relation includes `trace-inclusion`: under
+the named participant observation projection, every admitted concrete backend
+trace must map to a valid abstract RAES trace. Actionable participant
+realization additionally requires `io-alternating-refinement`: participant and
+environment inputs, participant-facing outputs, action ownership, availability,
+fairness, exact-cut derivation, and delivery must satisfy their declared
+alternating obligations. Trace inclusion alone is insufficient because a
+backend that refuses every participant input can have a trivially included
+trace set.
+
+This section defines those obligations; it does not establish them. Current
+executable evidence is bounded to named fixtures, target probes, and finite
+counterexamples, so no universal simulation, data-refinement, alternating
+refinement, trace-equivalence, or bisimulation claim follows. Bisimulation is
+optional and projection-relative when separately claimed; it is not the
+default backend-conformance relation. The evidence boundary for each executed
+check must be carried by its conformance report.
 
 Required preservation properties:
 
 - participant, episode, action, operation, observation, state, joint-action, and
   evidence identity;
+- decision epoch independent of its derivation state cut, with epoch zero
+  grounded in authoritative `episode_running` state and empty current-episode
+  behavior history;
+- participant-view, assurance, projection, disclosure, delivery, selection,
+  admission, attempt, result, and outcome separation;
+- exact-cut policy and authorization resolution plus delivery-before-selection;
+- declared participant-memory scope across reset and restart;
 - append-only history and monotonic participant sequence numbers;
 - lifecycle phase, phase realization, admission disposition, and operation
   state vocabulary;

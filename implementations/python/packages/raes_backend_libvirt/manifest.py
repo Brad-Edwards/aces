@@ -6,6 +6,7 @@ from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as distribution_version
 
 from raes_backend_protocols.capabilities import (
+    PARTICIPANT_RUNTIME_POLICY_FEATURES,
     BackendCapabilitySet,
     BackendManifest,
     ParticipantFeatureSupport,
@@ -124,6 +125,15 @@ def _participant_runtime_capabilities() -> ParticipantRuntimeCapabilities:
                 feature="contention",
                 support_level=ParticipantFeatureSupportLevel.DISCLOSED_WEAK,
                 disclosure_refs=(disclosure_ref,),
+            ),
+            *(
+                ParticipantFeatureSupport(
+                    feature=feature,
+                    support_level=ParticipantFeatureSupportLevel.UNSUPPORTED,
+                    limitation_refs=(f"limitation:{feature}:not-realized",),
+                    disclosure_refs=(disclosure_ref,),
+                )
+                for feature in sorted(PARTICIPANT_RUNTIME_POLICY_FEATURES)
             ),
         ),
         constraints={
