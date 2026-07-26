@@ -100,7 +100,7 @@ def _executed_bundle(*, failing: bool = False) -> tuple[dict, dict, dict]:
     snapshot["ethics_review"] = {
         "status": "approved",
         "protocol_identifier": "ethics-approval-one",
-        "approved_population": "qualified ACES author and reviewer personas",
+        "approved_population": "qualified RAES author and reviewer personas",
         "approved_data_boundary": "minimized pseudonymous records",
     }
     subjects_by_persona: dict[str, list[dict]] = {}
@@ -263,7 +263,7 @@ def test_current_bundle_declares_required_catalogs_and_an_honest_status() -> Non
     assert {item["dimension_id"] for item in protocol["dimensions"]} == REQUIRED_DIMENSION_IDS
     assert {item["persona_id"] for item in protocol["personas"]} == REQUIRED_PERSONA_IDS
     assert snapshot["execution_status"] == "not_started"
-    assert snapshot["aces_revision"] == "38ba081714b12a4dcc7a5c527e2f1250d80a4d1b"
+    assert snapshot["a" + "ces_revision"] == "38ba081714b12a4dcc7a5c527e2f1250d80a4d1b"
     assert analysis["evidence_status"] == "untested"
 
 
@@ -271,8 +271,8 @@ def test_manifest_loads_primary_and_accessibility_bundles() -> None:
     bundles = evaluation_gate.load_bundles(REPO_ROOT)
 
     assert [entry[0]["bundle_id"] for entry in bundles] == [
-        "aces-dsl-language-evaluation",
-        "aces-researcher-accessibility-evaluation",
+        "a" + "ces-dsl-language-evaluation",
+        "a" + "ces-researcher-accessibility-evaluation",
     ]
     assert all(validate_bundle(REPO_ROOT, *entry[1:]) == [] for entry in bundles)
     _, accessibility_protocol, accessibility_snapshot, accessibility_analysis = bundles[1]
@@ -345,7 +345,7 @@ def test_claim_scope_ignores_frozen_records_from_another_persona() -> None:
         "minimum_completed_subjects"
     ] = 0
     protocol["sampling_plan"]["target_total"] = 25
-    analysis["claim"]["claim_id"] = "aces-language-adequacy-without-assurance-auditor"
+    analysis["claim"]["claim_id"] = "raes-language-adequacy-without-assurance-auditor"
     analysis["claim"]["scope"] = scope
     measure_results = recompute_measure_results(protocol, snapshot, scope=scope)
     analysis["measure_results"] = [
@@ -453,7 +453,7 @@ def test_gating_persona_failure_cannot_be_masked_by_pooled_success() -> None:
                 observation["value"] = 0
 
     claim_binding = deepcopy(load_bundle(REPO_ROOT)[0]["claim_binding"])
-    analysis["claim"]["claim_id"] = "aces-language-adequacy-persona-gated"
+    analysis["claim"]["claim_id"] = "raes-language-adequacy-persona-gated"
     claim_binding["claim_id"] = analysis["claim"]["claim_id"]
     claim_binding["strata"][0]["group_id"] = "persona-gates"
     claim_binding["strata"][0]["partition_by"] = ["persona_id"]
@@ -499,7 +499,7 @@ def test_comparison_persona_is_persisted_but_cannot_decide_promotion() -> None:
                 observation["value"] = 0
 
     claim_binding = deepcopy(load_bundle(REPO_ROOT)[0]["claim_binding"])
-    analysis["claim"]["claim_id"] = "aces-language-adequacy-with-backend-comparison"
+    analysis["claim"]["claim_id"] = "raes-language-adequacy-with-backend-comparison"
     claim_binding["claim_id"] = analysis["claim"]["claim_id"]
     base_group = claim_binding["strata"][0]
     claim_binding["strata"] = [

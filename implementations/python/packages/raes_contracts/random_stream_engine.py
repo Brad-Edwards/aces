@@ -9,7 +9,7 @@ process-global RNG, worker-local singleton, or cursor-style ``next()``.
 Construction, verbatim from ``docs/decisions/issue-274-exp-718-controlled-randomness-preflight.md``
 and the implementation plan:
 
-* ``stream_key = blake3.derive_key(context=f"aces-random-stream-v1|profile={profile_id}",
+* ``stream_key = blake3.derive_key(context=f"raes-random-stream-v1|profile={profile_id}",
   key_material=root_entropy_bytes)`` -- one call per (profile, root entropy)
   pair; pure function, no shared state. (This binding's Python API exposes
   the same key-derivation mode via ``blake3.blake3(derive_key_context=...)``.)
@@ -51,7 +51,7 @@ ROOT_ENTROPY_BYTE_LENGTH = 32
 #: Key-derivation domain-separation context template fixed by the
 #: ``blake3-xof-v1`` profile. ``{profile_id}`` is substituted with the exact
 #: requested profile id -- changing this template mints a new profile id.
-DERIVATION_CONTEXT_TEMPLATE = "aces-random-stream-v1|profile={profile_id}"
+DERIVATION_CONTEXT_TEMPLATE = "raes-random-stream-v1|profile={profile_id}"
 
 BOUNDED_INTEGER_TRANSFORM_ID = "bounded-integer"
 BOUNDED_INTEGER_TRANSFORM_VERSION = "1"

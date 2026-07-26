@@ -9,7 +9,7 @@ from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema
 
 from .base import ContractModel, NonEmptyString, Rfc3339DateTimeString
-from .schema_invariants import _add_aces_invariant
+from .schema_invariants import _add_raes_invariant
 
 ParticipantContextAudienceScope = Literal[
     "participant_visible",
@@ -203,7 +203,7 @@ class ParticipantContextViewModel(ContractModel):
         #
         # The required-ref clauses are also published as a schema allOf so schema-only consumers
         # enforce them; the relational mediation and payload-aliasing clauses cannot be expressed
-        # in JSON Schema and are published as x-aces-invariants (see __get_pydantic_json_schema__).
+        # in JSON Schema and are published as x-raes-invariants (see __get_pydantic_json_schema__).
         if self.audience_scope != "participant_visible":
             return self
         archival_layers = [
@@ -272,8 +272,8 @@ class ParticipantContextViewModel(ContractModel):
         )
         # SEM-216 relational obligations that standard JSON Schema cannot express are published
         # as RAES semantic invariants so schema-only consumers see the full portable contract and
-        # the validator that enforces it (mirrors the experiment-core x-aces-invariants pattern).
-        _add_aces_invariant(
+        # the validator that enforces it (mirrors the experiment-core x-raes-invariants pattern).
+        _add_raes_invariant(
             json_schema,
             "context-view-sem216-archival-source-mediated",
             "Participant-visible context views drawing on an archival evidence_record or derived_measure "
@@ -281,7 +281,7 @@ class ParticipantContextViewModel(ContractModel):
             validator="raes_contracts.contracts.ParticipantContextViewModel._validate_sem216_audience_boundary",
             inputs=[{"contract_id": "participant-context-view-v1", "instance_path": "#"}],
         )
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "context-view-sem216-payload-not-raw-archival",
             "Participant-visible context views must not set payload_ref to a raw archival evidence_record or "

@@ -1,6 +1,6 @@
 {
   "event_id": "obs-blue-43",
-  "schema_name": "aces.participant_runtime.observation",
+  "schema_name": "raes.participant_runtime.observation",
   "schema_version": "1.0.0",
   "event_type": "observation_emission",
   "extension_policy": "reject_unknown_required",
@@ -22,7 +22,7 @@
     "status_code": "observation_emitted",
     "status_detail": "simulator emitted the blue local telemetry observation",
     "source_status_label": "cyborg_observation",
-    "source_status_mapping": "aces.observation.emitted"
+    "source_status_mapping": "raes.observation.emitted"
   },
   "participant_address": "participants.blue.rl",
   "episode_id": "ep-blue-002",

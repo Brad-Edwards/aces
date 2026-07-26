@@ -19,7 +19,7 @@ from .experiment_manifest_references import (
     ExperimentProcessorReferenceModel,
 )
 from .experiment_references import ExperimentReferenceModel
-from .schema_invariants import _add_aces_invariant
+from .schema_invariants import _add_raes_invariant
 from .validators import _validate_unique_string_values
 
 __all__ = [
@@ -193,7 +193,7 @@ class ExperimentAugmentationDisclosureModel(ContractModel):
                 },
             ]
         )
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "augmentation-disclosure-semantics-valid",
             "Augmentation disclosures must keep environment-visible, participant-visible, and "
@@ -254,7 +254,7 @@ class ExperimentEvaluationProtocolModel(ContractModel):
     ) -> JsonSchemaValue:
         json_schema = handler(core_schema)
         json_schema = handler.resolve_ref_schema(json_schema)
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "metric-definition-key-matches-metric-id",
             "Every metric_definitions object key must match the embedded metric_id value.",
@@ -442,7 +442,7 @@ class ExperimentApparatusConstraintModel(ContractModel):
                 {"required": ["notes"], "properties": {"notes": {"minItems": 1}}},
             ]
         )
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "apparatus-constraint-identity-manifest-resolves",
             "Every allowed processor/backend identity reference must have a matching required manifest ref_id "

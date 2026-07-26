@@ -3,7 +3,7 @@
   "identity": {"name": "stub", "version": "0.2.0"},
   "supported_contract_versions": ["backend-manifest-v2"],
   "compatibility": {
-    "processors": ["aces-reference-processor"],
+    "processors": ["raes-reference-processor"],
     "backends": ["peer-backend"]
   },
   "realization_support": [

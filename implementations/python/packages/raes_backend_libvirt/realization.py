@@ -6,7 +6,7 @@ resources become libvirt networks; and placement resources are bound to their
 target domains. Content, account, and feature placements contribute to cloud-init:
 
 - ``account-placement`` → cloud-init ``users`` (groups, shell, home, disabled,
-  auth_method) plus ``/etc/aliases.d`` (mail) and ``/etc/aces/spn`` (spn) files;
+  auth_method) plus ``/etc/aliases.d`` (mail) and ``/etc/raes/spn`` (spn) files;
 - ``content-placement`` → cloud-init ``write_files`` (file/text) or ``runcmd``
   and a descriptor file (dataset/directory/source-backed);
 - ``feature-binding`` → cloud-init ``packages``/``runcmd`` (service) or a
@@ -290,7 +290,7 @@ def _realize_account(accumulator: _CloudInitAccumulator, payload: Mapping[str, o
         # portable maximum is a host-side principal descriptor the guest can join with.
         safe_user = safe_path_component(username, fallback="user")
         accumulator.write_files.append(
-            CloudInitFile(path=f"/etc/aces/spn/{safe_user}", content=f"{spn}\n", permissions="0600")
+            CloudInitFile(path=f"/etc/raes/spn/{safe_user}", content=f"{spn}\n", permissions="0600")
         )
 
 
@@ -342,7 +342,7 @@ def _realize_feature(
             accumulator.runcmd.append(("mkdir", "-p", _dirname(destination)))
         accumulator.write_files.append(
             CloudInitFile(
-                path=f"/etc/aces/features/{safe_path_component(name, fallback='feature')}.json",
+                path=f"/etc/raes/features/{safe_path_component(name, fallback='feature')}.json",
                 content=_descriptor_body({"feature": name, "type": feature_type, "destination": destination}),
                 permissions="0644",
             )
@@ -362,7 +362,7 @@ def _content_descriptor(
         "location": location or "",
     }
     safe_name = safe_path_component(name, fallback="content")
-    return CloudInitFile(path=f"/etc/aces/content/{safe_name}.json", content=_descriptor_body(descriptor))
+    return CloudInitFile(path=f"/etc/raes/content/{safe_name}.json", content=_descriptor_body(descriptor))
 
 
 def _descriptor_body(descriptor: Mapping[str, object]) -> str:
@@ -410,7 +410,7 @@ def _resource_name(resource: PlannedResource, payload: Mapping[str, object]) -> 
     name = payload.get("name") or payload.get("node_name")
     if isinstance(name, str) and name:
         return name
-    return provider_resource_name(resource.address, prefix="aces")
+    return provider_resource_name(resource.address, prefix="raes")
 
 
 def _infrastructure_spec(payload: Mapping[str, object]) -> Mapping[str, object]:

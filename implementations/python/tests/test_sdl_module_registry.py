@@ -287,7 +287,7 @@ def test_scenario_forwarding_agents_compose_by_stable_list_identity(tmp_path: Pa
         name: shared
         version: 1.0.0
         module:
-          id: aces/shared-forwarder
+          id: raes/shared-forwarder
           version: 1.0.0
           exports:
             nodes: [source, sink]
@@ -327,7 +327,7 @@ def test_import_cycles_and_namespace_collisions_are_rejected(tmp_path: Path):
         name: a
         version: 1.0.0
         module:
-          id: aces/a
+          id: raes/a
           version: 1.0.0
         imports:
           - source: local:b.yaml
@@ -340,7 +340,7 @@ def test_import_cycles_and_namespace_collisions_are_rejected(tmp_path: Path):
         name: b
         version: 1.0.0
         module:
-          id: aces/b
+          id: raes/b
           version: 1.0.0
         imports:
           - source: local:a.yaml
@@ -754,9 +754,9 @@ def test_signed_oci_import_resolution_and_publish_cli(tmp_path: Path):
 
     with _OCIRegistry(layout_dir, repo="acme/shared") as registry:
         _write(
-            tmp_path / "aces-trust.yaml",
+            tmp_path / "raes-trust.yaml",
             f"""
-            schema_version: aces-trust/v1
+            schema_version: raes-trust/v1
             registries:
               "127.0.0.1:{registry.port}":
                 require_signatures: true
@@ -803,9 +803,9 @@ def test_untrusted_and_unsigned_oci_imports_fail_closed(tmp_path: Path):
             parse_sdl_file(root)
 
         _write(
-            tmp_path / "aces-trust.yaml",
+            tmp_path / "raes-trust.yaml",
             f"""
-            schema_version: aces-trust/v1
+            schema_version: raes-trust/v1
             registries:
               "127.0.0.1:{registry.port}":
                 require_signatures: true
@@ -855,7 +855,7 @@ def test_database_and_application_refs_survive_module_namespacing():
     index = symbol_index(
         scenario,
         namespace="shared",
-        descriptor=ModuleDescriptor(id="aces/db-module", version="1.0.0"),
+        descriptor=ModuleDescriptor(id="raes/db-module", version="1.0.0"),
     )
     named = index["named"]
     assert named["nodes.db.runtime.database_services.tv-pg"] == ("nodes.shared.db.runtime.database_services.tv-pg")
@@ -1069,9 +1069,9 @@ def test_oci_import_rejects_tampered_config_blob(tmp_path: Path):
 
     with _OCIRegistry(layout_dir, repo="acme/shared") as registry:
         _write(
-            tmp_path / "aces-trust.yaml",
+            tmp_path / "raes-trust.yaml",
             f"""
-            schema_version: aces-trust/v1
+            schema_version: raes-trust/v1
             registries:
               "127.0.0.1:{registry.port}":
                 require_signatures: false
@@ -1117,9 +1117,9 @@ def test_oci_import_rejects_root_file_tampering(tmp_path: Path):
 
     with _OCIRegistry(layout_dir, repo="acme/shared") as registry:
         _write(
-            tmp_path / "aces-trust.yaml",
+            tmp_path / "raes-trust.yaml",
             f"""
-            schema_version: aces-trust/v1
+            schema_version: raes-trust/v1
             registries:
               "127.0.0.1:{registry.port}":
                 require_signatures: true
@@ -1150,9 +1150,9 @@ def test_oci_import_rejects_non_string_root_file(tmp_path: Path):
 
     with _OCIRegistry(layout_dir, repo="acme/shared") as registry:
         _write(
-            tmp_path / "aces-trust.yaml",
+            tmp_path / "raes-trust.yaml",
             f"""
-            schema_version: aces-trust/v1
+            schema_version: raes-trust/v1
             registries:
               "127.0.0.1:{registry.port}":
                 require_signatures: false

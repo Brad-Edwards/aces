@@ -134,7 +134,7 @@ def _bounded_conformance_claim(
 
     evidence_refs = [f"conformance-case:{case.contract_name}:{case.name}" for case in cases]
     binding = BehavioralClaimBindingModel(
-        taxonomy_id="aces-behavioral-relations",
+        taxonomy_id="raes-behavioral-relations",
         taxonomy_revision="rev3",
         relation_id="bounded-probe-success",
         subject=f"Backend conformance for profile {profile}",

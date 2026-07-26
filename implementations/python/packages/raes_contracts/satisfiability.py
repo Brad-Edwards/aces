@@ -107,9 +107,9 @@ class ConstraintClauseModel(ContractModel):
 class NormalizedConstraintModel(ContractModel):
     """Solver-neutral normalized RAES finite-domain constraint model."""
 
-    profile: Literal["aces-finite-domain-constraints/v1"]
-    theory_profile: Literal["aces-finite-domain-theory/v1"]
-    translation_profile: Literal["aces-sdl-authoring-translation/v1"]
+    profile: Literal["raes-finite-domain-constraints/v1"]
+    theory_profile: Literal["raes-finite-domain-theory/v1"]
+    translation_profile: Literal["raes-sdl-authoring-translation/v1"]
     source_digest: PrefixedDigestString
     authored_digest: SemanticDigest
     symbols: tuple[ConstraintSymbolModel, ...] = Field(max_length=128)
@@ -137,7 +137,7 @@ class NormalizedConstraintModel(ContractModel):
 class SolverConfigurationModel(ContractModel):
     """Complete output-affecting configuration for the pinned v1 Z3 adapter."""
 
-    profile: Literal["aces-z3-finite-domain/v1"]
+    profile: Literal["raes-z3-finite-domain/v1"]
     engine: Literal["z3"]
     package: Literal["z3-solver"]
     package_version: Literal["4.16.0.0"]  # NOSONAR -- pinned package version, not an IP address
@@ -156,7 +156,7 @@ class SolverConfigurationModel(ContractModel):
 class SatisfiableWitnessModel(ContractModel):
     """Independently admitted canonical instantiation witness."""
 
-    profile: Literal["aces-satisfiability-witness/v1"]
+    profile: Literal["raes-satisfiability-witness/v1"]
     snapshot: InstantiatedScenarioSnapshot
     snapshot_digest: PrefixedDigestString
 
@@ -173,7 +173,7 @@ class SatisfiableWitnessModel(ContractModel):
 class UnsatisfiableCoreModel(ContractModel):
     """Governed subset-minimal clause set, not a proof certificate."""
 
-    profile: Literal["aces-unsatisfiable-core/v1"]
+    profile: Literal["raes-unsatisfiable-core/v1"]
     clause_ids: tuple[ClauseId, ...] = Field(min_length=1, max_length=512)
     minimality: Literal["subset-minimal"]
 
@@ -187,7 +187,7 @@ class UnsatisfiableCoreModel(ContractModel):
 class UnsupportedAnalysisModel(ContractModel):
     """Stable fail-closed reason set for an unsupported analysis."""
 
-    profile: Literal["aces-satisfiability-unsupported/v1"]
+    profile: Literal["raes-satisfiability-unsupported/v1"]
     reason_codes: tuple[str, ...] = Field(min_length=1, max_length=64)
 
     @model_validator(mode="after")
@@ -201,7 +201,7 @@ class ScenarioSatisfiabilityEvidenceModel(ContractModel):
     """Closed evidence envelope binding source, model, solver, and result."""
 
     profile: Literal["scenario-satisfiability-evidence/v1"]
-    analysis_profile: Literal["aces-finite-domain-satisfiability-v1"]
+    analysis_profile: Literal["raes-finite-domain-satisfiability-v1"]
     source: SourceArtifactIdentityModel
     authored_digest: SemanticDigest
     imports: tuple[ResolvedImportProvenance, ...] = ()

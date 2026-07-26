@@ -55,7 +55,7 @@ REQUIRED_RELATION_IDS = {
 
 def _bounded_empirical_claim() -> dict[str, object]:
     return {
-        "taxonomy_id": "aces-behavioral-relations",
+        "taxonomy_id": "raes-behavioral-relations",
         "taxonomy_revision": "rev3",
         "relation_id": "empirical-adequacy",
         "subject": "TechVault baseline study",
@@ -146,7 +146,7 @@ def test_authoritative_catalog_covers_required_relation_classes_and_dimensions()
     catalog = load_behavioral_relation_catalog()
 
     assert catalog.schema_version == "behavioral-relations/v1"
-    assert catalog.taxonomy_id == "aces-behavioral-relations"
+    assert catalog.taxonomy_id == "raes-behavioral-relations"
     assert set(catalog.relations) >= REQUIRED_RELATION_IDS
     for relation_id, relation in catalog.relations.items():
         assert relation.left_carrier
@@ -335,7 +335,7 @@ def test_a_generated_hidden_prefix_separates_strong_matching_from_weak_visible_t
 def test_claim_binding_rejects_bounded_evidence_promoted_to_universal_claim():
     with pytest.raises(ValidationError, match="universal quantification requires model-check or proof evidence"):
         BehavioralClaimBindingModel(
-            taxonomy_id="aces-behavioral-relations",
+            taxonomy_id="raes-behavioral-relations",
             taxonomy_revision="rev3",
             relation_id="trace-equivalence",
             subject="two finite backend runs",
@@ -355,7 +355,7 @@ def test_schema_bundle_publishes_behavioral_relation_catalog():
 
     assert schema["properties"]["schema_version"]["const"] == "behavioral-relations/v1"
     assert schema["properties"]["relations"]["minProperties"] == 1
-    assert {item["id"] for item in schema["x-aces-invariants"]} == {"behavioral-relations-reference-resolution"}
+    assert {item["id"] for item in schema["x-raes-invariants"]} == {"behavioral-relations-reference-resolution"}
 
 
 @pytest.mark.parametrize(

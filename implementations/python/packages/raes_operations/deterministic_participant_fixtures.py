@@ -65,7 +65,7 @@ def build_implementation_manifest() -> ParticipantImplementationManifestModel:
             ],
             "compatibility": {
                 "participant_runtimes": ["libvirt-qemu"],
-                "processors": ["aces-reference-processor"],
+                "processors": ["raes-reference-processor"],
                 "backends": ["libvirt-qemu"],
             },
             "concept_bindings": [

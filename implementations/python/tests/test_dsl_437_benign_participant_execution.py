@@ -62,6 +62,19 @@ from raes_runtime.time_coordinator import ReferenceTimeRuntime, TimeCoordinator
 REPO_ROOT = Path(__file__).resolve().parents[3]
 EXAMPLE = REPO_ROOT / "examples" / "scenarios" / "enterprise-participant-evidence-loop.sdl.yaml"
 IMPLEMENTATION_REF = "participant-implementation-manifests.green-worker.v1"
+SCENARIO_CLOCK_ADDRESS = "time.clock.scenario-clock"
+SCENARIO_CLOCK_STEP_TICKS = 10
+
+
+def _advance_stepped_clock_to_tick(manager: RuntimeManager, target_tick: int) -> ApplyResult:
+    current_tick = manager.read_time_state().clocks[SCENARIO_CLOCK_ADDRESS].coordinate.tick
+    assert target_tick > current_tick
+    assert (target_tick - current_tick) % SCENARIO_CLOCK_STEP_TICKS == 0
+    while current_tick < target_tick:
+        advanced = manager.advance_time(SCENARIO_CLOCK_ADDRESS, ticks=SCENARIO_CLOCK_STEP_TICKS)
+        assert advanced.success
+        current_tick += SCENARIO_CLOCK_STEP_TICKS
+    return advanced
 
 
 def _scenario_yaml(*, role: str = "green") -> str:
@@ -997,7 +1010,7 @@ def test_runtime_manager_executes_v2_activity_from_admitted_random_control() -> 
         next(iter(applied.snapshot.participant_autonomous_execution_states.values()))
     )
     assert 10 <= state.next_tick <= 30
-    due = manager.advance_time("time.clock.scenario-clock", ticks=state.next_tick)
+    due = _advance_stepped_clock_to_tick(manager, state.next_tick)
     assert due.success
     assert len(participant_runtime.native_actions) == 1
     advanced = ParticipantAutonomousExecutionStateModel.model_validate(
@@ -1039,7 +1052,7 @@ def test_runtime_manager_bounds_v2_retries_and_preserves_occurrence_causality() 
         next(iter(applied.snapshot.participant_autonomous_execution_states.values()))
     )
 
-    due = manager.advance_time("time.clock.scenario-clock", ticks=initial.next_tick)
+    due = _advance_stepped_clock_to_tick(manager, initial.next_tick)
 
     assert due.success
     assert participant_runtime.native_actions == [
@@ -1093,7 +1106,7 @@ def test_runtime_manager_global_attempt_bound_stops_v2_retry_chain() -> None:
         next(iter(applied.snapshot.participant_autonomous_execution_states.values()))
     )
 
-    due = manager.advance_time("time.clock.scenario-clock", ticks=initial.next_tick)
+    due = _advance_stepped_clock_to_tick(manager, initial.next_tick)
 
     assert due.success
     assert len(participant_runtime.native_actions) == 2
@@ -1231,7 +1244,7 @@ def test_runtime_manager_waits_when_every_v2_candidate_is_cooling_down() -> None
     )
     assert initial.burst_size == 2
 
-    due = manager.advance_time("time.clock.scenario-clock", ticks=initial.next_tick)
+    due = _advance_stepped_clock_to_tick(manager, initial.next_tick)
 
     assert due.success
     assert len(participant_runtime.native_actions) == 1
@@ -1302,7 +1315,7 @@ def test_runtime_manager_enforces_v2_dependencies_cooldowns_and_limited_burst() 
     )
     assert initial.burst_size == 2
 
-    due = manager.advance_time("time.clock.scenario-clock", ticks=initial.next_tick)
+    due = _advance_stepped_clock_to_tick(manager, initial.next_tick)
 
     assert due.success
     assert len(participant_runtime.native_actions) == 2
@@ -1339,7 +1352,7 @@ def test_runtime_manager_resets_v2_continuation_and_random_generation() -> None:
     initial = ParticipantAutonomousExecutionStateModel.model_validate(
         next(iter(applied.snapshot.participant_autonomous_execution_states.values()))
     )
-    first_due = manager.advance_time("time.clock.scenario-clock", ticks=initial.next_tick)
+    first_due = _advance_stepped_clock_to_tick(manager, initial.next_tick)
     assert first_due.success
     first_attempts = [
         event["activity_provenance"]
@@ -1359,7 +1372,7 @@ def test_runtime_manager_resets_v2_continuation_and_random_generation() -> None:
     assert reset_state.current_retry == 0
     assert reset_state.completed_candidate_ids == []
     assert reset_state.candidate_cooldown_until == {}
-    second_due = manager.advance_time("time.clock.scenario-clock", ticks=reset_state.next_tick)
+    second_due = _advance_stepped_clock_to_tick(manager, reset_state.next_tick)
     assert second_due.success
     state = ParticipantAutonomousExecutionStateModel.model_validate(
         next(iter(second_due.snapshot.participant_autonomous_execution_states.values()))

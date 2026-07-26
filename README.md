@@ -215,7 +215,7 @@ or provisioning a scenario:
 ```shell
 uv run --project implementations/python raes processor satisfiability \
   path/to/scenario.sdl.yaml \
-  --profile aces-finite-domain-satisfiability-v1
+  --profile raes-finite-domain-satisfiability-v1
 ```
 
 The command emits the published replayable evidence envelope. Exit `0` is a

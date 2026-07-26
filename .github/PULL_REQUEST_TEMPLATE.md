@@ -10,7 +10,7 @@
 
 - Requirement UID:
 - ADRs touched:
-- Ground Control project: `aces-sdl`
+- Ground Control project: `raes-sdl`
 
 ## Changes
 

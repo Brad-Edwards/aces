@@ -22,7 +22,7 @@ dependencies = [
     "packaging>=23.0",
     "rfc8785>=0.1.4,<0.2",
     "blake3>=1.0.8,<2",
-    # Pinned to the governed aces-z3-finite-domain/v1 solver profile. The
+    # Pinned to the governed raes-z3-finite-domain/v1 solver profile. The
     # published scenario-satisfiability-evidence-v1 schema and
     # SolverConfigurationModel both require package_version 4.16.0.0 /
     # engine_version 4.16.0, so bumping this without re-pinning that governed

@@ -2,9 +2,9 @@
   "contract_id": "runtime-fact-binding-plane-v1",
   "schema_path": "contracts/schemas/participant-runtime/runtime-fact-binding-plane-v1.json",
   "stability": "draft",
-  "content_hash": "753c6eea97c86e7b083d05ed8ea32adf57fc2bd9145f55454cd35c5057630dbc",
+  "content_hash": "4ebbf42cc283ad2419d0bbb8724f30e437bec1b1cf1058b4c580475eb83f1699",
   "last_change": {
-    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
-    "content_hash": "753c6eea97c86e7b083d05ed8ea32adf57fc2bd9145f55454cd35c5057630dbc"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "4ebbf42cc283ad2419d0bbb8724f30e437bec1b1cf1058b4c580475eb83f1699"
   }
 }

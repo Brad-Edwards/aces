@@ -44,7 +44,7 @@ def test_asset_inventory_skill_metadata_is_agent_runnable() -> None:
         openai_yaml = (skill_path.parent / "agents" / "openai.yaml").read_text(encoding="utf-8")
 
         assert "name: raes-asset-inventory-capture" in skill
-        assert "description: Run the ACES asset inventory methodology" in skill
+        assert "description: Run the RAES asset inventory methodology" in skill
         assert "default_prompt:" in openai_yaml
         assert "$raes-asset-inventory-capture" in openai_yaml
 
@@ -86,9 +86,9 @@ def test_asset_inventory_skill_requires_declinations_and_valid_ledger() -> None:
         "first-class limit",
         "mapping-ledger.yaml",
         "every evidence file",
-        "aptl aces-inventory validate",
-        "aptl aces-inventory gaps",
-        "aptl aces-inventory schema",
+        "aptl raes-inventory validate",
+        "aptl raes-inventory gaps",
+        "aptl raes-inventory schema",
     )
 
     missing = [

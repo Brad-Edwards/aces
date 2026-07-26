@@ -407,7 +407,7 @@
       "type": "object"
     }
   },
-  "$id": "https://aces.dev/schemas/participant-joint-action-record-v1.json",
+  "$id": "https://raes.dev/schemas/participant-joint-action-record-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "RUN-308 joint action / concurrency record over behavior events.",

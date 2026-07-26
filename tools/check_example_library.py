@@ -19,9 +19,9 @@ import yaml
 from tools.policy.common import PolicyFailure, apply_exceptions, failures_to_json, load_exceptions
 
 CATALOG_RELATIVE_PATH = "examples/library/catalog.yaml"
-LIBRARY_VALUE = "aces-example-pattern-library"
-TEMPLATE_VALUE = "aces-library-template"
-PATTERN_VALUE = "aces-library-pattern"
+LIBRARY_VALUE = "raes-example-pattern-library"
+TEMPLATE_VALUE = "raes-library-template"
+PATTERN_VALUE = "raes-library-pattern"
 REQUIREMENT_REF = "AUT-806"
 REQUIRED_SURFACES: tuple[str, ...] = (
     "scenario",

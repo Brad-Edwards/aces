@@ -32,12 +32,12 @@ _CODE_OPERATION_FAILED = "libvirt-backend.driver.operation-failed"
 _CODE_UNAVAILABLE = "libvirt-backend.driver.unavailable"
 _CODE_OWNERSHIP_CONFLICT = "libvirt-backend.driver.ownership-conflict"
 _DEFAULT_CONNECTION_URI = "qemu:///system"
-_WORKSPACE_PREFIX = "aces-libvirt-"
+_WORKSPACE_PREFIX = "raes-libvirt-"
 _SAFE_NAME_RE = re.compile(r"[^a-zA-Z0-9_.-]+")
 # Fixed namespace for deriving a per-address libvirt UUID. The UUID proves an
 # existing host object was realized by RAES for *this* address, so convergence
 # never destroys a foreign or another-address object that merely shares a name.
-_RAES_UUID_NAMESPACE = uuid.UUID("ace50000-0000-5000-8000-000000000001")
+_RAES_UUID_NAMESPACE = uuid.UUID("af20aedd-47bd-5870-b3f8-2f1baebde508")
 
 # libvirt signals a missing object with a stable VIR_ERR_NO_* code (part of its
 # public C ABI) on ``libvirtError.get_error_code()``. Idempotent teardown treats
@@ -141,7 +141,7 @@ class LibvirtDeploymentDriver:
         connection: object | None = None,
         connection_uri: str = _DEFAULT_CONNECTION_URI,
         connector: Connector | None = None,
-        name_prefix: str = "aces",
+        name_prefix: str = "raes",
         workspace: str | Path | None = None,
         seed_builder: SeedBuilder | None = None,
     ) -> None:
@@ -152,7 +152,7 @@ class LibvirtDeploymentDriver:
         self._connection = connection
         self._connection_uri = connection_uri
         self._connector = connector or _default_connector
-        self._name_prefix = _safe_name(name_prefix, fallback="aces", prefix="")
+        self._name_prefix = _safe_name(name_prefix, fallback="raes", prefix="")
         self._workspace = Path(workspace) if workspace is not None else None
         self._seed_builder = seed_builder if seed_builder is not None else GenisoimageSeedBuilder()
         self._names: dict[str, str] = {}

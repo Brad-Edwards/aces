@@ -24,8 +24,8 @@ KEEP=0
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 WORK="$(mktemp -d)"
-KEY="$WORK/aces-guest-test.pem"
-NAME="aces-guest-certify-test"
+KEY="$WORK/raes-guest-test.pem"
+NAME="raes-guest-certify-test"
 AWS=(aws --profile "$PROFILE" --region "$REGION")
 
 cleanup_aws() {
@@ -50,7 +50,7 @@ SUBNET=$("${AWS[@]}" ec2 describe-subnets --filters Name=default-for-az,Values=t
 "${AWS[@]}" ec2 create-key-pair --key-name "$NAME" --query KeyMaterial --output text > "$KEY"
 chmod 600 "$KEY"
 
-SG=$("${AWS[@]}" ec2 create-security-group --group-name "$NAME-sg" --description "aces guest-certify proof" --vpc-id "$VPC" --query GroupId --output text 2>/dev/null \
+SG=$("${AWS[@]}" ec2 create-security-group --group-name "$NAME-sg" --description "raes guest-certify proof" --vpc-id "$VPC" --query GroupId --output text 2>/dev/null \
   || "${AWS[@]}" ec2 describe-security-groups --filters Name=group-name,Values="$NAME-sg" --query 'SecurityGroups[0].GroupId' --output text)
 "${AWS[@]}" ec2 authorize-security-group-ingress --group-id "$SG" --protocol tcp --port 22 --cidr "$MYIP/32" >/dev/null 2>&1 || true
 
@@ -89,30 +89,30 @@ echo "=== wait for ssh + userdata ==="
 for _ in $(seq 1 40); do ssh "${SSHOPT[@]}" ubuntu@"$IP" "test -f /var/lib/cloud/userdata-done" 2>/dev/null && break; sleep 10; done
 
 echo "=== deploy code ==="
-ssh "${SSHOPT[@]}" ubuntu@"$IP" "mkdir -p /home/ubuntu/aces/implementations/python /home/ubuntu/aces/contracts /home/ubuntu/aces/examples"
+ssh "${SSHOPT[@]}" ubuntu@"$IP" "mkdir -p /home/ubuntu/raes/implementations/python /home/ubuntu/raes/contracts /home/ubuntu/raes/examples"
 rsync -az --delete --exclude '.venv' --exclude '__pycache__' --exclude '.git' --exclude '.pytest_cache' --exclude '.nox' --exclude '*.pyc' \
-  -e "ssh ${SSHOPT[*]}" "$REPO_ROOT/implementations/python/" ubuntu@"$IP":/home/ubuntu/aces/implementations/python/
-rsync -az --delete --exclude '.git' -e "ssh ${SSHOPT[*]}" "$REPO_ROOT/contracts/" ubuntu@"$IP":/home/ubuntu/aces/contracts/
-rsync -az --delete --exclude '.git' -e "ssh ${SSHOPT[*]}" "$REPO_ROOT/examples/" ubuntu@"$IP":/home/ubuntu/aces/examples/
-scp "${SSHOPT[@]}" "$REPO_ROOT/.ground-control.yaml" ubuntu@"$IP":/home/ubuntu/aces/.ground-control.yaml
+  -e "ssh ${SSHOPT[*]}" "$REPO_ROOT/implementations/python/" ubuntu@"$IP":/home/ubuntu/raes/implementations/python/
+rsync -az --delete --exclude '.git' -e "ssh ${SSHOPT[*]}" "$REPO_ROOT/contracts/" ubuntu@"$IP":/home/ubuntu/raes/contracts/
+rsync -az --delete --exclude '.git' -e "ssh ${SSHOPT[*]}" "$REPO_ROOT/examples/" ubuntu@"$IP":/home/ubuntu/raes/examples/
+scp "${SSHOPT[@]}" "$REPO_ROOT/.ground-control.yaml" ubuntu@"$IP":/home/ubuntu/raes/.ground-control.yaml
 # The editable build (hatch_build.py) reads the repo-root README for packaging.
-scp "${SSHOPT[@]}" "$REPO_ROOT/README.md" ubuntu@"$IP":/home/ubuntu/aces/README.md
+scp "${SSHOPT[@]}" "$REPO_ROOT/README.md" ubuntu@"$IP":/home/ubuntu/raes/README.md
 
 echo "=== install venv + libvirt-python ==="
-ssh "${SSHOPT[@]}" ubuntu@"$IP" "curl -LsSf https://astral.sh/uv/install.sh | sh >/dev/null 2>&1; cd ~/aces/implementations/python && ~/.local/bin/uv sync --all-extras >/dev/null 2>&1 && ~/.local/bin/uv pip install libvirt-python >/dev/null 2>&1 && echo venv-ready"
+ssh "${SSHOPT[@]}" ubuntu@"$IP" "curl -LsSf https://astral.sh/uv/install.sh | sh >/dev/null 2>&1; cd ~/raes/implementations/python && ~/.local/bin/uv sync --all-extras >/dev/null 2>&1 && ~/.local/bin/uv pip install libvirt-python >/dev/null 2>&1 && echo venv-ready"
 
 echo "=== run guest-certified proof ==="
-ssh "${SSHOPT[@]}" ubuntu@"$IP" "sudo bash -lc 'cd /home/ubuntu/aces && implementations/python/.venv/bin/python -c \"
+ssh "${SSHOPT[@]}" ubuntu@"$IP" "sudo bash -lc 'cd /home/ubuntu/raes && implementations/python/.venv/bin/python -c \"
 from pathlib import Path
 from raes_operations.libvirt_evidence_run import run_libvirt_evidence_run, LibvirtEvidenceRunConfig
-r = run_libvirt_evidence_run(scenario_path=Path(\\\"examples/scenarios/techvault-guest-certified.sdl.yaml\\\").resolve(), project_dir=Path(\\\"/home/ubuntu/aces/gc-out\\\"), run_id=\\\"$RUN_ID\\\", config=LibvirtEvidenceRunConfig(evidence_source_mode=\\\"guest-certified\\\", connection_uri=\\\"qemu:///system\\\"))
+r = run_libvirt_evidence_run(scenario_path=Path(\\\"examples/scenarios/techvault-guest-certified.sdl.yaml\\\").resolve(), project_dir=Path(\\\"/home/ubuntu/raes/gc-out\\\"), run_id=\\\"$RUN_ID\\\", config=LibvirtEvidenceRunConfig(evidence_source_mode=\\\"guest-certified\\\", connection_uri=\\\"qemu:///system\\\"))
 print(r.render())
 import sys; sys.exit(0 if r.passed else 1)
 \"'"
 
 echo "=== pull evidence artifact ==="
-ssh "${SSHOPT[@]}" ubuntu@"$IP" "sudo chown -R ubuntu /home/ubuntu/aces/gc-out 2>/dev/null || true"
+ssh "${SSHOPT[@]}" ubuntu@"$IP" "sudo chown -R ubuntu /home/ubuntu/raes/gc-out 2>/dev/null || true"
 mkdir -p "$REPO_ROOT/tools/real-daemon/evidence"
-scp "${SSHOPT[@]}" ubuntu@"$IP":/home/ubuntu/aces/gc-out/runs/"$RUN_ID"/scenario-evidence/libvirt-scenario-evidence-run.json \
+scp "${SSHOPT[@]}" ubuntu@"$IP":/home/ubuntu/raes/gc-out/runs/"$RUN_ID"/scenario-evidence/libvirt-scenario-evidence-run.json \
   "$REPO_ROOT/tools/real-daemon/evidence/guest-certified-$RUN_ID.json"
 echo "pulled: tools/real-daemon/evidence/guest-certified-$RUN_ID.json"

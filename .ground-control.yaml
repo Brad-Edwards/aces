@@ -1,5 +1,5 @@
 schema_version: 1
-project: aces-sdl
+project: raes-sdl
 github_repo: RAESystem/rae
 workflow:
   test_command: uv tool run --from 'nox[uv]==2026.4.10' nox -f noxfile.py -s verify
@@ -31,7 +31,7 @@ routing:
   default_provider: claude
   stages: {}
 sonarcloud:
-  project_key: Brad-Edwards_aces
+  project_key: Brad-Edwards_raes
   organization: brad-edwards
 rules:
   plan_rules: .gc/plan-rules.md

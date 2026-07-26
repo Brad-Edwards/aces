@@ -17,9 +17,9 @@ from raes_operations.techvault_live import TechVaultLiveConfig, validate_techvau
 def test_bounded_techvault_real_libvirt_readback_and_cleanup(tmp_path):
     """Certify exact daemon readback and verified cleanup on an operator-selected daemon."""
 
-    connection_uri = os.environ.get("ACES_REAL_LIBVIRT_URI")
+    connection_uri = os.environ.get("RAES_REAL_LIBVIRT_URI")
     if not connection_uri:
-        pytest.skip("set ACES_REAL_LIBVIRT_URI to run real-libvirt certification")
+        pytest.skip("set RAES_REAL_LIBVIRT_URI to run real-libvirt certification")
     try:
         libvirt = importlib.import_module("libvirt")
     except ImportError:

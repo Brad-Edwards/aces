@@ -89,9 +89,9 @@ a new backend manifest shape, or APTL-private keys inside the scenario body.
 
 ## Libvirt Scenario Evidence Artifact (#615)
 
-`raes_operations.libvirt_evidence_run.run_libvirt_evidence_run` (CLI: `aces
+`raes_operations.libvirt_evidence_run.run_libvirt_evidence_run` (CLI: `raes
 libvirt evidence validate`) produces a stable, validated evaluator-evidence
-run artifact for this scenario — `aces.libvirt.scenario-evidence-run/v1`, written to
+run artifact for this scenario — `raes.libvirt.scenario-evidence-run/v1`, written to
 `runs/<run-id>/scenario-evidence/libvirt-scenario-evidence-run.json`. It composes the
 existing RAES surfaces (libvirt deterministic participant runtime #614, native
 substrate realization #601, backend manifest/capability contracts, and the

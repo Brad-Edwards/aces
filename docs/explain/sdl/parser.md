@@ -203,8 +203,8 @@ Top-level composition supports:
 - `imports` using backward-compatible `path:` or canonical `source:`
 - `source:` classes `local:`, `oci:`, and `locked:`
 - repo-owned trust and resolution files:
-  - `aces.lock.json`
-  - `aces-trust.yaml`
+  - `raes.lock.json`
+  - `raes-trust.yaml`
 
 Import `source:` values are not treated as ordinary SDL package-source
 shorthand. They are resolved by the composition layer, not expanded into

@@ -2,5 +2,9 @@
   "contract_id": "concept-families-v1",
   "schema_path": "contracts/schemas/concept-authority/concept-families-v1.json",
   "stability": "draft",
-  "content_hash": "5e75b2d14d9f2537f5bb2e172edccb8ab158671b587dc01abc7477aabf2a5a3a"
+  "content_hash": "196b00f05a7100ecda790a05114c6bb47423a5ad4bbc8cf693fd30c9acd6f945",
+  "last_change": {
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "196b00f05a7100ecda790a05114c6bb47423a5ad4bbc8cf693fd30c9acd6f945"
+  }
 }

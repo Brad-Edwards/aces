@@ -2,9 +2,9 @@
   "contract_id": "participant-time-management-context-v1",
   "schema_path": "contracts/schemas/participant-runtime/participant-time-management-context-v1.json",
   "stability": "draft",
-  "content_hash": "a6d8e169d9adf1db043e81eca47d38c94c7560386d85f9005a3e4e8ed7ec0a69",
+  "content_hash": "f73a94028c86c301ea487b08ddf985b0badb03a91309e3028dfed05226614c3c",
   "last_change": {
-    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
-    "content_hash": "a6d8e169d9adf1db043e81eca47d38c94c7560386d85f9005a3e4e8ed7ec0a69"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "f73a94028c86c301ea487b08ddf985b0badb03a91309e3028dfed05226614c3c"
   }
 }

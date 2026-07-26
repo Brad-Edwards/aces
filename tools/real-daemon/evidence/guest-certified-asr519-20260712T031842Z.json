@@ -95,7 +95,7 @@
       },
       "compatibility": {
         "processors": [
-          "aces-reference-processor"
+          "raes-reference-processor"
         ]
       },
       "concept_bindings": [
@@ -187,7 +187,7 @@
       "participant_behaviors": []
     },
     "compiled_model_fingerprint": "sha256:b0ce6d650a49f579592b7746e84ab43e73ca3d31a7b3e2dd2a6620eb2fcee654",
-    "processor": "aces-reference-processor"
+    "processor": "raes-reference-processor"
   },
   "defensive_evidence": {
     "captured_at": "2026-07-12T03:20:52.516205+00:00",
@@ -246,7 +246,7 @@
       "negative_boundary_checks",
       "evaluator_outcome"
     ],
-    "note": "Stable ACES addresses and evidence refs for the Brad-Edwards/aces#600 cross-backend invariant ledger; no libvirt domain UUIDs, host paths, or APTL-private identifiers.",
+    "note": "Stable RAES addresses and evidence refs for the Brad-Edwards/raes#600 cross-backend invariant ledger; no libvirt domain UUIDs, host paths, or APTL-private identifiers.",
     "observation_boundaries": [],
     "participant_behaviors": [],
     "scenario_content_sha256": "sha256:54cfbf2301510771eff148748e60dc0917efbbf695270d9a5b837ee80bcbb454",
@@ -268,7 +268,7 @@
     "No Wazuh detection-quality claim.",
     "No model-defense robustness claim.",
     "No byte-equivalence or application-internals equivalence claim between libvirt appliances and APTL containers.",
-    "No full semantic-equivalence claim beyond the invariant ledger in Brad-Edwards/aces#600."
+    "No full semantic-equivalence claim beyond the invariant ledger in Brad-Edwards/raes#600."
   ],
   "participant_action_proof": {
     "admitted_action_addresses": [],
@@ -308,7 +308,7 @@
           "architecture": "x86_64",
           "image_policy": "generated-initramfs-appliance",
           "memory_mib": 128,
-          "name": "aces-evidence-guest-vm",
+          "name": "raes-evidence-guest-vm",
           "network_attachments": [
             "provision.network.guest-net"
           ],
@@ -323,7 +323,7 @@
           "forward_mode": "none",
           "gateway": "192.0.2.1",
           "internal": true,
-          "name": "aces-evidence-guest-net",
+          "name": "raes-evidence-guest-net",
           "observation_source": "daemon-observed"
         }
       ],
@@ -345,7 +345,7 @@
           "address": "provision.node.guest-vm",
           "architecture": "x86_64",
           "content": [
-            "/etc/aces/marker|aabb38db6cd478c6dcbf41b2973d99a8e72cafe9a026df5808d5015452b38a55|644"
+            "/etc/raes/marker|aabb38db6cd478c6dcbf41b2973d99a8e72cafe9a026df5808d5015452b38a55|644"
           ],
           "correlation": "sha256:e02c8435b23e310dbe541c17e94a776cf501b290b07e398dbb7a67c89c23d9bb",
           "memory_mib": 78,
@@ -414,10 +414,10 @@
     "disclosure": "Compiled topology remains planned; the native surface contains only independently daemon-observed substrate fields.",
     "native_surface": {
       "domains": [
-        "aces-evidence-guest-vm"
+        "raes-evidence-guest-vm"
       ],
       "networks": [
-        "aces-evidence-guest-net"
+        "raes-evidence-guest-net"
       ],
       "source": "daemon-observed",
       "substrate": "libvirt-qemu-initramfs"
@@ -482,7 +482,7 @@
     "relative_path": "examples/scenarios/techvault-guest-certified.sdl.yaml",
     "version": "*"
   },
-  "schema": "aces.libvirt.scenario-evidence-run/v1",
+  "schema": "raes.libvirt.scenario-evidence-run/v1",
   "terminal_observation": {
     "behavior_history": {},
     "disclosure": "The libvirt participant runtime emits a behavior-history event stream rather than a standalone SEM-210 observation envelope; the terminal participant view is reported as the behavior-history equivalent.",

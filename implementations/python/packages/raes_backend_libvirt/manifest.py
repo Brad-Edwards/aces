@@ -172,7 +172,7 @@ def create_libvirt_manifest(**config: object) -> BackendManifest:
         name=LIBVIRT_BACKEND_NAME,
         version=_current_backend_version(),
         supported_contract_versions=supported_contract_versions,
-        compatible_processors=frozenset({"aces-reference-processor"}),
+        compatible_processors=frozenset({"raes-reference-processor"}),
         concept_bindings=(
             ConceptBinding(scope="capabilities.provisioner.supported_node_types", family="assets"),
             ConceptBinding(scope="capabilities.provisioner.supported_os_families", family="assets"),

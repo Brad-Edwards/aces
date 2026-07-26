@@ -2,9 +2,9 @@
   "contract_id": "runtime-snapshot-v1",
   "schema_path": "contracts/schemas/snapshots/runtime-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "d0b31b768af1ebd963e590429e0d38f4b16e816f25c59b95703d3166d463985b",
+  "content_hash": "7e4b85af7e430a93eede96c467b6f260c4fbecf84dc44346d654b9a356ff7560",
   "last_change": {
     "summary": "Added typed autonomous activity v2 continuation and safe occurrence provenance to runtime snapshots for issue #897.",
-    "content_hash": "d0b31b768af1ebd963e590429e0d38f4b16e816f25c59b95703d3166d463985b"
+    "content_hash": "7e4b85af7e430a93eede96c467b6f260c4fbecf84dc44346d654b9a356ff7560"
   }
 }

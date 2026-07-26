@@ -55,7 +55,7 @@ def _manifest(mode: RealizationSupportMode) -> BackendManifest:
         name="designation-test",
         version="1.0.0",
         supported_contract_versions=frozenset({"backend-manifest-v2"}),
-        compatible_processors=frozenset({"aces-reference-processor"}),
+        compatible_processors=frozenset({"raes-reference-processor"}),
         realization_support=(
             RealizationSupportDeclaration(
                 domain="runtime-realization",

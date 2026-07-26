@@ -2,5 +2,9 @@
   "contract_id": "reference-models-v1",
   "schema_path": "contracts/schemas/concept-authority/reference-models-v1.json",
   "stability": "draft",
-  "content_hash": "28ae8b46e4bcb4436a01adf3a70472b2f8ffc1fc8c13ff7ea8766492652f8267"
+  "content_hash": "e028dfbb74c458399eb3012b4abcb09bef09e047fc1dd74dd0f4dc1f20fa64f0",
+  "last_change": {
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "e028dfbb74c458399eb3012b4abcb09bef09e047fc1dd74dd0f4dc1f20fa64f0"
+  }
 }

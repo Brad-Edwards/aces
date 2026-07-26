@@ -2,9 +2,9 @@
   "contract_id": "participant-implementation-provenance-v1",
   "schema_path": "contracts/schemas/participant-implementation-provenance/participant-implementation-provenance-v1.json",
   "stability": "draft",
-  "content_hash": "88076dc67b837b282a0efe482d4b74d5fb053ad7b44cb6bc0d862b4fe17eb30e",
+  "content_hash": "76d081fc933ededd72648dbab37451b3ce638ed346cd6e0bee69a8fb94d445be",
   "last_change": {
-    "summary": "Required participant configuration references and authoritative normalized configuration digests to be supplied together.",
-    "content_hash": "88076dc67b837b282a0efe482d4b74d5fb053ad7b44cb6bc0d862b4fe17eb30e"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "76d081fc933ededd72648dbab37451b3ce638ed346cd6e0bee69a8fb94d445be"
   }
 }

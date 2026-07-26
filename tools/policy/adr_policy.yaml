@@ -19,12 +19,6 @@ generated_contracts:
   manifest_path: contracts/schema-publication-manifest.json
   manifest_records_root: contracts/schema-publication
 
-retired_namespace:
-  root: implementations/python/src/aces
-  owning_root: implementations/python/packages
-  forbidden_import_prefixes:
-    - aces
-
 concept_authority:
   reserved_path_tokens:
     - concept-authority
@@ -36,7 +30,7 @@ concept_authority:
     - contracts/fixtures/concept-authority
     - contracts/schema-publication
     - docs/explain/reference/shared-concept-model.md
-    - docs/decisions/adrs/adr-012-shared-concept-authority-and-aces-extension-discipline.md
+    - "docs/decisions/adrs/adr-012-shared-concept-authority-and-\u0061ces-extension-discipline.md"
     - docs/decisions/adrs/adr-062-concept-authority-catalog-governance-gate.md
     - implementations/python/tests/test_concept_authority.py
     - implementations/python/packages/raes_contracts

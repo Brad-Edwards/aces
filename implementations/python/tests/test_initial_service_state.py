@@ -76,7 +76,7 @@ propositions:
     predicate:
       kind: boolean
       property: service-content-visible
-      semantic_ref: urn:aces:observable:service-content-visible
+      semantic_ref: urn:raes:observable:service-content-visible
       expected: true
     evidence_requirements: [service-readback]
 assertions:
@@ -297,7 +297,7 @@ def test_runtime_rejects_changed_service_materialization_binding() -> None:
 def test_module_composition_rewrites_service_materialization_refs(tmp_path: Path) -> None:
     payload = _scenario().model_dump(mode="json", exclude_none=True)
     payload["module"] = {
-        "id": "aces/initial-service-state",
+        "id": "raes/initial-service-state",
         "version": "1.0.0",
         "exports": {
             section: list(payload[section])

@@ -2,9 +2,9 @@
   "contract_id": "nist-csf-defensive-categories-source-v1",
   "schema_path": "contracts/schemas/concept-authority/nist-csf-defensive-categories-source-v1.json",
   "stability": "draft",
-  "content_hash": "60d34916929a8607dda79fb2578e162e04d1f91d1554b6991058ff79968bc82a",
+  "content_hash": "f5aa81e3c9c0cac489bc1ff89eb65a94b751d50f73c58baedb82371faf72c14f",
   "last_change": {
-    "summary": "Initial publication of the pinned NIST CSF 2.0 defensive-category source schema for the ACT-610 adapted defensive behavior vocabulary.",
-    "content_hash": "60d34916929a8607dda79fb2578e162e04d1f91d1554b6991058ff79968bc82a"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "f5aa81e3c9c0cac489bc1ff89eb65a94b751d50f73c58baedb82371faf72c14f"
   }
 }

@@ -38,7 +38,7 @@ canonical methodology, skill, or runtime ADRs.
   omission. `name_indicates_secret()` is advisory only and must not be copied
   into capture-time source evidence policy.
 - Ledger accountability: `mapping-ledger.yaml`, `capture-limits.txt`, evidence
-  checksums, and the downstream `aptl aces-inventory validate/gaps/schema`
+  checksums, and the downstream `aptl raes-inventory validate/gaps/schema`
   commands remain the evidence accountability surface.
 
 ## Security And Validation Layers

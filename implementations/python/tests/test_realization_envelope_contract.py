@@ -178,7 +178,7 @@ def test_published_schema_enforces_expressible_realization_invariants():
 
 def test_published_schema_declares_callable_canonical_semantic_validator():
     schema = BackendRealizationEnvelopeModel.model_json_schema()
-    invariant = schema["x-aces-invariants"][0]
+    invariant = schema["x-raes-invariants"][0]
 
     assert invariant["validator"] == "raes_contracts.realization_envelope.validate_backend_realization_envelope"
     with pytest.raises(ValidationError, match="digest does not match"):
@@ -227,7 +227,7 @@ def test_manifest_plan_and_snapshot_publish_the_same_typed_identity():
                 "provisioning-plan-v1",
                 "runtime-snapshot-v1",
             ],
-            "compatibility": {"processors": ["aces-reference-processor"]},
+            "compatibility": {"processors": ["raes-reference-processor"]},
             "realization_support": [
                 {
                     "domain": "runtime-realization",
@@ -287,7 +287,7 @@ def test_backend_manifest_requires_contract_declaration_for_envelope_identity():
     base = {
         "identity": {"name": "test-backend", "version": "1.0.0"},
         "supported_contract_versions": ["backend-manifest-v2"],
-        "compatibility": {"processors": ["aces-reference-processor"]},
+        "compatibility": {"processors": ["raes-reference-processor"]},
         "realization_support": [
             {
                 "domain": "runtime-realization",

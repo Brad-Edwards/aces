@@ -2,9 +2,9 @@
   "contract_id": "scientific-completeness-taxonomy-v1",
   "schema_path": "contracts/schemas/profiles/scientific-completeness-taxonomy-v1.json",
   "stability": "draft",
-  "content_hash": "7c0904b5ef9b791e3eedbe758755ea3ed0f4eabe0db3c40d9a75eb507823fd90",
+  "content_hash": "8236164dfb48091b5e3dd8ca187ea6ee4df07ad8da48bc6b84628c74c166b129",
   "last_change": {
-    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
-    "content_hash": "7c0904b5ef9b791e3eedbe758755ea3ed0f4eabe0db3c40d9a75eb507823fd90"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "8236164dfb48091b5e3dd8ca187ea6ee4df07ad8da48bc6b84628c74c166b129"
   }
 }

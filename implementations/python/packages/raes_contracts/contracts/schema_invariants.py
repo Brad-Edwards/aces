@@ -7,7 +7,7 @@ from typing import Any
 from pydantic.json_schema import JsonSchemaValue
 from raes.observability_plane_semantics import classify_contract_plane
 
-from .base import _ACES_SEMANTIC_INVARIANT_PROFILE_URI
+from .base import _RAES_SEMANTIC_INVARIANT_PROFILE_URI
 
 # Shared instance_path for the ASR-515 carrier-embedded
 # validation_basis_disclosures invariant inputs. Defined once here and
@@ -18,7 +18,7 @@ from .base import _ACES_SEMANTIC_INVARIANT_PROFILE_URI
 _CARRIER_DISCLOSURES_INSTANCE_PATH = "#/validation_basis_disclosures"
 
 
-def _add_aces_invariant(
+def _add_raes_invariant(
     json_schema: JsonSchemaValue,
     invariant_id: str,
     description: str,
@@ -26,7 +26,7 @@ def _add_aces_invariant(
     validator: str,
     inputs: list[dict[str, str]],
 ) -> None:
-    invariants = json_schema.setdefault("x-aces-invariants", [])
+    invariants = json_schema.setdefault("x-raes-invariants", [])
     if isinstance(invariants, list):
         invariants.append(
             {
@@ -39,37 +39,37 @@ def _add_aces_invariant(
         )
 
 
-def _add_aces_plane(json_schema: JsonSchemaValue, contract_id: str) -> None:
+def _add_raes_plane(json_schema: JsonSchemaValue, contract_id: str) -> None:
     """Publish the carrier's single SEM-224 observability/evidence plane.
 
     Plane ownership is sourced from the carrier-oriented classifier so the
-    portable ``x-aces-plane`` annotation cannot drift from
+    portable ``x-raes-plane`` annotation cannot drift from
     ``raes.observability_plane_semantics`` (ADR-066 / SEM-224).
     """
 
-    json_schema["x-aces-plane"] = classify_contract_plane(contract_id).value
+    json_schema["x-raes-plane"] = classify_contract_plane(contract_id).value
 
 
-def _schema_contains_aces_invariants(schema_node: object) -> bool:
+def _schema_contains_raes_invariants(schema_node: object) -> bool:
     if isinstance(schema_node, dict):
-        return "x-aces-invariants" in schema_node or any(
-            _schema_contains_aces_invariants(value) for value in schema_node.values()
+        return "x-raes-invariants" in schema_node or any(
+            _schema_contains_raes_invariants(value) for value in schema_node.values()
         )
     if isinstance(schema_node, list):
-        return any(_schema_contains_aces_invariants(value) for value in schema_node)
+        return any(_schema_contains_raes_invariants(value) for value in schema_node)
     return False
 
 
-def _attach_aces_semantic_profile(contract_id: str, json_schema: dict[str, Any]) -> None:
-    if _schema_contains_aces_invariants(json_schema):
-        json_schema["x-aces-semantic-profile"] = {
-            "id": "aces-semantic-invariants-v1",
-            "uri": _ACES_SEMANTIC_INVARIANT_PROFILE_URI,
+def _attach_raes_semantic_profile(contract_id: str, json_schema: dict[str, Any]) -> None:
+    if _schema_contains_raes_invariants(json_schema):
+        json_schema["x-raes-semantic-profile"] = {
+            "id": "raes-semantic-invariants-v1",
+            "uri": _RAES_SEMANTIC_INVARIANT_PROFILE_URI,
             "contract_id": contract_id,
-            "keyword": "x-aces-invariants",
+            "keyword": "x-raes-invariants",
             "required": True,
-            "entry_schema_contract_id": "aces-semantic-invariants-v1",
-            "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
+            "entry_schema_contract_id": "raes-semantic-invariants-v1",
+            "entry_schema_pointer": "#/$defs/RaesSemanticInvariantEntryModel",
         }
 
 
@@ -119,7 +119,7 @@ def _attach_experiment_datetime_invariants(contract_id: str, json_schema: dict[s
     if invariant is None:
         return
     invariant_id, description, validator, inputs = invariant
-    _add_aces_invariant(
+    _add_raes_invariant(
         json_schema,
         invariant_id,
         description,
@@ -136,7 +136,7 @@ def _attach_stateful_resource_invariants(contract_id: str, json_schema: dict[str
     }:
         return
     input_contract = [{"contract_id": contract_id, "instance_path": "#"}]
-    _add_aces_invariant(
+    _add_raes_invariant(
         json_schema,
         "stateful-generated-artifact-semantics",
         "Generated artifact output names and paths, consumers, and dependency entries must be unique, and "
@@ -144,7 +144,7 @@ def _attach_stateful_resource_invariants(contract_id: str, json_schema: dict[str
         validator="raes.stateful_resources.GeneratedArtifact._unique_outputs_and_consumers",
         inputs=input_contract,
     )
-    _add_aces_invariant(
+    _add_raes_invariant(
         json_schema,
         "stateful-persistent-volume-semantics",
         "Persistent volume consumers and dependency entries must be unique and access cardinality must match "
@@ -152,7 +152,7 @@ def _attach_stateful_resource_invariants(contract_id: str, json_schema: dict[str
         validator="raes.stateful_resources.PersistentVolume._unique_consumers",
         inputs=input_contract,
     )
-    _add_aces_invariant(
+    _add_raes_invariant(
         json_schema,
         "stateful-cross-resource-semantics",
         "Stateful resource consumers and dependencies must resolve unambiguously, use the POSIX v1 path dialect, "
@@ -173,7 +173,7 @@ def _add_carrier_validation_basis_disclosure_invariant(
     ``validate_carrier_validation_basis_disclosures`` does.
     """
     carrier_label = subject_kind.removeprefix("experiment_")
-    _add_aces_invariant(
+    _add_raes_invariant(
         json_schema,
         f"{carrier_label}-validation-basis-disclosure-identity-matches",
         f"Every validation_basis_disclosures entry must declare subject_kind={subject_kind!r} and a subject_ref "
@@ -191,7 +191,7 @@ def _attach_initial_service_state_invariants(contract_id: str, json_schema: dict
         "scenario-satisfiability-evidence-v1",
     }:
         return
-    _add_aces_invariant(
+    _add_raes_invariant(
         json_schema,
         "initial-service-state-semantics",
         "Service-target content must resolve to one named service, retain exact tenant/reset ownership and "

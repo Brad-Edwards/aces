@@ -29,7 +29,10 @@ LEDGER_PATH = REPO_ROOT / "contracts/provenance/sdl-lineage-ledger-v1.json"
 
 
 def _payload() -> dict[str, object]:
-    return json.loads(LEDGER_PATH.read_text(encoding="utf-8"))
+    payload = json.loads(LEDGER_PATH.read_text(encoding="utf-8"))
+    projected = lineage_checker.project_historical_ledger_to_current_contract(payload)
+    assert isinstance(projected, dict)
+    return projected
 
 
 def test_real_lineage_ledger_is_valid_and_covers_exact_current_subject_set() -> None:
@@ -76,7 +79,7 @@ def test_artifact_code_claim_must_be_covered_by_audited_derivation_scope() -> No
     claim = next(
         claim for subject in payload["subjects"] for claim in subject["claims"] if claim["plane"] == "artifact_code"
     )
-    claim["aces_boundaries"] = [
+    claim["raes_boundaries"] = [
         {
             "artifact": "implementations/python/packages/raes/accounts.py",
             "symbol_or_pointer": "Account",
@@ -125,7 +128,7 @@ def test_non_required_notice_disposition_rejects_notice_artifact(decision: str) 
 def test_native_claim_cannot_smuggle_external_source_or_compatibility() -> None:
     payload = _payload()
     native_subject = next(
-        subject for subject in payload["subjects"] if subject["claims"][0]["classification"] == "aces_native"
+        subject for subject in payload["subjects"] if subject["claims"][0]["classification"] == "raes_native"
     )
     native_subject["claims"][0]["source_refs"] = [payload["sources"][0]["source_id"]]
     native_subject["claims"][0]["compatibility"] = "compatible"
@@ -139,7 +142,7 @@ def test_native_claim_requires_internal_authority_refs() -> None:
         claim
         for subject in payload["subjects"]
         for claim in subject["claims"]
-        if claim["classification"] == "aces_native"
+        if claim["classification"] == "raes_native"
     )
     native_claim["internal_authority_refs"] = []
     with pytest.raises(ValidationError, match="RAES-native claims require internal authority refs"):
@@ -152,7 +155,7 @@ def test_native_claim_rejects_source_compatibility_relation() -> None:
         claim
         for subject in payload["subjects"]
         for claim in subject["claims"]
-        if claim["classification"] == "aces_native"
+        if claim["classification"] == "raes_native"
     )
     native_claim["compatibility"] = "partial"
     with pytest.raises(ValidationError, match="no source compatibility relation"):
@@ -165,9 +168,9 @@ def test_native_claim_rejects_source_compatibility_direction() -> None:
         claim
         for subject in payload["subjects"]
         for claim in subject["claims"]
-        if claim["classification"] == "aces_native"
+        if claim["classification"] == "raes_native"
     )
-    native_claim["compatibility_direction"] = "aces_relative_to_source"
+    native_claim["compatibility_direction"] = "raes_relative_to_source"
     with pytest.raises(ValidationError, match="no source compatibility direction"):
         SDLLineageLedgerModel.model_validate(payload)
 
@@ -206,7 +209,7 @@ def test_non_native_claim_requires_explicit_compatibility_direction() -> None:
         claim
         for subject in payload["subjects"]
         for claim in subject["claims"]
-        if claim["classification"] != "aces_native"
+        if claim["classification"] != "raes_native"
     )
     claim["compatibility_direction"] = "not_applicable"
     with pytest.raises(ValidationError, match="assess RAES relative"):
@@ -234,7 +237,7 @@ def test_native_internal_authority_refs_must_resolve() -> None:
         claim
         for subject in payload["subjects"]
         for claim in subject["claims"]
-        if claim["classification"] == "aces_native"
+        if claim["classification"] == "raes_native"
     )
     native_claim["internal_authority_refs"] = ["specs/sdl/does-not-exist.md"]
     ledger = SDLLineageLedgerModel.model_validate(payload)

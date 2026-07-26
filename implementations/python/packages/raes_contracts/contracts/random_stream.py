@@ -33,7 +33,7 @@ from raes.identifiers import PortableIdentifier
 from ..versions import RANDOM_STREAM_PROFILE_SCHEMA_VERSION, RANDOM_STREAM_VECTOR_SCHEMA_VERSION
 from .base import ContractModel, NonEmptyString, NonNegativeInteger, PositiveInteger, SemanticProfileId
 from .experiment_references import ExperimentReferenceModel
-from .schema_invariants import _add_aces_invariant
+from .schema_invariants import _add_raes_invariant
 from .validators import _validate_controlled_vocabulary_terms
 
 RANDOM_STREAM_DRAW_PURPOSE_SCOPE = "random_streams.draw_purpose"
@@ -147,7 +147,7 @@ class StreamAddressModel(ContractModel):
     ) -> JsonSchemaValue:
         json_schema = handler(core_schema)
         json_schema = handler.resolve_ref_schema(json_schema)
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "random-stream-address-draw-purpose-governed",
             "draw_purpose must be a term from the random_streams.draw_purpose controlled vocabulary.",
@@ -185,7 +185,7 @@ class ParticipantStreamAddressModel(ContractModel):
     ) -> JsonSchemaValue:
         json_schema = handler(core_schema)
         json_schema = handler.resolve_ref_schema(json_schema)
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "participant-random-stream-address-governed",
             (
@@ -290,7 +290,7 @@ class RandomStreamProfileModel(ContractModel):
     ) -> JsonSchemaValue:
         json_schema = handler(core_schema)
         json_schema = handler.resolve_ref_schema(json_schema)
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "random-stream-profile-transform-keys-match",
             "transforms dict keys must match each entry's embedded transform_id.",
@@ -339,7 +339,7 @@ class RandomStreamDrawRecordModel(ContractModel):
     ) -> JsonSchemaValue:
         json_schema = handler(core_schema)
         json_schema = handler.resolve_ref_schema(json_schema)
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "random-stream-draw-record-local-coordinate-matches-address",
             "local_coordinate must match address.local_coordinate.",
@@ -349,7 +349,7 @@ class RandomStreamDrawRecordModel(ContractModel):
             ),
             inputs=[{"contract_id": "experiment-run-v1", "instance_path": "#/stochastic_draws"}],
         )
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "random-stream-draw-record-outcome-matches-exhaustion",
             "outcome must be present exactly when rejection_exhausted is false, and absent when true.",

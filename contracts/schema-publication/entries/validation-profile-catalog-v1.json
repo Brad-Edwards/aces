@@ -2,9 +2,9 @@
   "contract_id": "validation-profile-catalog-v1",
   "schema_path": "contracts/schemas/profiles/validation-profile-catalog-v1.json",
   "stability": "draft",
-  "content_hash": "6c5ba8ad4fa6d5841e68b09742b1ced48455fe3617d2cc1bf4a9c8c1ef0c9bc9",
+  "content_hash": "426679f49e406a66b4b5bd9dde39ba4f01afcb0360161cf6d489cf197c85cd17",
   "last_change": {
-    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
-    "content_hash": "6c5ba8ad4fa6d5841e68b09742b1ced48455fe3617d2cc1bf4a9c8c1ef0c9bc9"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "426679f49e406a66b4b5bd9dde39ba4f01afcb0360161cf6d489cf197c85cd17"
   }
 }

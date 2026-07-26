@@ -11,7 +11,7 @@
         {
           "uco_class": "observable:ObservableObject",
           "iri": "https://ontology.unifiedcyberontology.org/uco/observable/ObservableObject",
-          "note": "Base observable cyber object; ACES asset-bearing scenario nodes and deployable resources are represented as observable objects."
+          "note": "Base observable cyber object; RAES asset-bearing scenario nodes and deployable resources are represented as observable objects."
         },
         {
           "uco_class": "observable:Computer",
@@ -85,7 +85,7 @@
         {
           "uco_class": "core:Relationship",
           "iri": "https://ontology.unifiedcyberontology.org/uco/core/Relationship",
-          "note": "UCO directed/typed assertion that objects relate to one another; the closest UCO anchor for ACES typed scenario relationships."
+          "note": "UCO directed/typed assertion that objects relate to one another; the closest UCO anchor for RAES typed scenario relationships."
         }
       ],
       "divergences": [

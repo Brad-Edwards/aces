@@ -16,7 +16,7 @@ Waivers: none
 
 ## Context
 
-ACES now has several independently versioned surfaces:
+RAES now has several independently versioned surfaces:
 
 - the Python distribution and Git tags;
 - published JSON Schema contract lineages;

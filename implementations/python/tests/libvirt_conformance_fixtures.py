@@ -2,7 +2,7 @@
 
 ``RecordingLibvirtDriver`` implements the :class:`LibvirtDriver` protocol and
 *confirms* realization (returns ``realized=True`` handles) while recording the
-ACES addresses it was asked to realize/destroy. Injecting it via
+RAES addresses it was asked to realize/destroy. Injecting it via
 ``create_libvirt_target(driver=...)`` exercises the real ``LibvirtProvisioner``
 path -- plan validation, capability-envelope checks, snapshot reconciliation,
 ``_drive`` dispatch, and the unconfirmed-realization guard -- with no libvirt

@@ -103,9 +103,9 @@ def test_experiment_run_schema_publishes_sem_225_augmentation_surface():
     )
     disclosure_schema = run_schema["$defs"]["ExperimentAugmentationDisclosureModel"]
     assert disclosure_schema["additionalProperties"] is False
-    invariant_ids = {invariant["id"] for invariant in disclosure_schema.get("x-aces-invariants", [])}
+    invariant_ids = {invariant["id"] for invariant in disclosure_schema.get("x-raes-invariants", [])}
     assert "augmentation-disclosure-semantics-valid" in invariant_ids
-    run_invariant_ids = {invariant["id"] for invariant in run_schema.get("x-aces-invariants", [])}
+    run_invariant_ids = {invariant["id"] for invariant in run_schema.get("x-raes-invariants", [])}
     assert "augmentation-disclosure-evidence-refs-traced" in run_invariant_ids
     environment_then = _conditional_then_for(disclosure_schema, "environment_visible")
     assert {"carrier_refs", "environment_effect", "evidence_refs"} <= set(environment_then["required"])

@@ -118,7 +118,7 @@ class TestBackendRegistry:
                 name="manifest-a",
                 version="0.0.1",
                 supported_contract_versions=frozenset({"backend-manifest-v2"}),
-                compatible_processors=frozenset({"aces-reference-processor"}),
+                compatible_processors=frozenset({"raes-reference-processor"}),
                 realization_support=(
                     RealizationSupportDeclaration(
                         domain="runtime-realization",

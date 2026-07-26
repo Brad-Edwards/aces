@@ -1,6 +1,6 @@
 {
   "$defs": {
-    "AcesSemanticInvariantEntryModel": {
+    "RaesSemanticInvariantEntryModel": {
       "additionalProperties": false,
       "description": "Machine-readable semantic invariant annotation entry.",
       "properties": {
@@ -16,7 +16,7 @@
         },
         "inputs": {
           "items": {
-            "$ref": "#/$defs/AcesSemanticInvariantInputModel"
+            "$ref": "#/$defs/RaesSemanticInvariantInputModel"
           },
           "minItems": 1,
           "title": "Inputs",
@@ -40,10 +40,10 @@
         "validator",
         "inputs"
       ],
-      "title": "AcesSemanticInvariantEntryModel",
+      "title": "RaesSemanticInvariantEntryModel",
       "type": "object"
     },
-    "AcesSemanticInvariantInputModel": {
+    "RaesSemanticInvariantInputModel": {
       "additionalProperties": false,
       "description": "Input contract and instance path required by one RAES semantic invariant.",
       "properties": {
@@ -62,10 +62,10 @@
         "contract_id",
         "instance_path"
       ],
-      "title": "AcesSemanticInvariantInputModel",
+      "title": "RaesSemanticInvariantInputModel",
       "type": "object"
     },
-    "AcesSemanticInvariantProfileReferenceModel": {
+    "RaesSemanticInvariantProfileReferenceModel": {
       "additionalProperties": false,
       "description": "Host-schema reference to the RAES semantic-invariant profile.",
       "properties": {
@@ -75,22 +75,22 @@
           "type": "string"
         },
         "entry_schema_contract_id": {
-          "const": "aces-semantic-invariants-v1",
+          "const": "raes-semantic-invariants-v1",
           "title": "Entry Schema Contract Id",
           "type": "string"
         },
         "entry_schema_pointer": {
-          "const": "#/$defs/AcesSemanticInvariantEntryModel",
+          "const": "#/$defs/RaesSemanticInvariantEntryModel",
           "title": "Entry Schema Pointer",
           "type": "string"
         },
         "id": {
-          "const": "aces-semantic-invariants-v1",
+          "const": "raes-semantic-invariants-v1",
           "title": "Id",
           "type": "string"
         },
         "keyword": {
-          "const": "x-aces-invariants",
+          "const": "x-raes-invariants",
           "title": "Keyword",
           "type": "string"
         },
@@ -100,7 +100,7 @@
           "type": "boolean"
         },
         "uri": {
-          "const": "https://aces.dev/schemas/semantic-invariants/v1",
+          "const": "https://raes.dev/schemas/semantic-invariants/v1",
           "title": "Uri",
           "type": "string"
         }
@@ -114,49 +114,49 @@
         "entry_schema_contract_id",
         "entry_schema_pointer"
       ],
-      "title": "AcesSemanticInvariantProfileReferenceModel",
+      "title": "RaesSemanticInvariantProfileReferenceModel",
       "type": "object"
     }
   },
-  "$id": "https://aces.dev/schemas/semantic-invariants/v1",
+  "$id": "https://raes.dev/schemas/semantic-invariants/v1",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "Published shape for RAES semantic-invariant annotations.",
   "properties": {
     "invariant_entry_schema": {
-      "const": "#/$defs/AcesSemanticInvariantEntryModel",
+      "const": "#/$defs/RaesSemanticInvariantEntryModel",
       "title": "Invariant Entry Schema",
       "type": "string"
     },
     "invariants": {
       "items": {
-        "$ref": "#/$defs/AcesSemanticInvariantEntryModel"
+        "$ref": "#/$defs/RaesSemanticInvariantEntryModel"
       },
       "title": "Invariants",
       "type": "array"
     },
     "keyword": {
-      "const": "x-aces-invariants",
+      "const": "x-raes-invariants",
       "title": "Keyword",
       "type": "string"
     },
     "profile_id": {
-      "const": "aces-semantic-invariants-v1",
+      "const": "raes-semantic-invariants-v1",
       "title": "Profile Id",
       "type": "string"
     },
     "profile_reference_schema": {
-      "const": "#/$defs/AcesSemanticInvariantProfileReferenceModel",
+      "const": "#/$defs/RaesSemanticInvariantProfileReferenceModel",
       "title": "Profile Reference Schema",
       "type": "string"
     },
     "schema_version": {
-      "const": "aces-semantic-invariants/v1",
+      "const": "raes-semantic-invariants/v1",
       "title": "Schema Version",
       "type": "string"
     },
     "uri": {
-      "const": "https://aces.dev/schemas/semantic-invariants/v1",
+      "const": "https://raes.dev/schemas/semantic-invariants/v1",
       "title": "Uri",
       "type": "string"
     }
@@ -170,6 +170,6 @@
     "profile_reference_schema",
     "invariants"
   ],
-  "title": "AcesSemanticInvariantProfileModel",
+  "title": "RaesSemanticInvariantProfileModel",
   "type": "object"
 }

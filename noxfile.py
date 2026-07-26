@@ -393,7 +393,7 @@ def _run_pre_commit_hook(_session: nox.Session, command: str, *args: str, paths:
 
 def _run_gitleaks_dir_scan(session: nox.Session, paths: list[str]) -> None:
     binary = ensure_gitleaks(REPO_ROOT)
-    with tempfile.TemporaryDirectory(prefix="aces-gitleaks-") as tmpdir:
+    with tempfile.TemporaryDirectory(prefix="raes-gitleaks-") as tmpdir:
         scan_root = Path(tmpdir) / "scan"
         scan_root.mkdir()
         for path in paths:
@@ -567,6 +567,10 @@ def _run_policy(session: nox.Session, reporter: SessionReporter, *args: str) -> 
             "skipped on staged check; runs on push and verify",
         )
         reporter.skip(
+            "policy / identity cutover",
+            "skipped on staged check; runs on push and verify",
+        )
+        reporter.skip(
             "policy / ADR acceptance-content pin",
             "skipped on staged check; runs on push and verify",
         )
@@ -606,6 +610,10 @@ def _run_policy(session: nox.Session, reporter: SessionReporter, *args: str) -> 
         reporter.run(
             "policy / project positioning",
             lambda: _run_project_python(session, "tools/check_project_positioning.py"),
+        )
+        reporter.run(
+            "policy / identity cutover",
+            lambda: _run_project_python(session, "tools/check_identity_cutover.py"),
         )
         reporter.run(
             "policy / ADR acceptance-content pin",
@@ -911,7 +919,7 @@ def contracts(session: nox.Session) -> None:
 def tests(session: nox.Session) -> None:
     reporter = SessionReporter(session, "tests")
     try:
-        with tempfile.TemporaryDirectory(prefix="aces-coverage-") as coverage_dir:
+        with tempfile.TemporaryDirectory(prefix="raes-coverage-") as coverage_dir:
             _run_tests(
                 session,
                 reporter,
@@ -1067,7 +1075,7 @@ def _run_changed_verification(
     else:
         reporter.skip("contracts / governed artifact graph", plan.reason)
     if plan.regression:
-        with tempfile.TemporaryDirectory(prefix="aces-coverage-") as coverage_dir:
+        with tempfile.TemporaryDirectory(prefix="raes-coverage-") as coverage_dir:
             _run_tests(session, reporter, Path(coverage_dir) / ".coverage")
     else:
         reporter.skip("tests / pytest", plan.reason)
@@ -1105,7 +1113,7 @@ def verify(session: nox.Session) -> None:
         _run_policy(session, reporter, *session.posargs)
         _run_lint(session, reporter)
         _run_contracts(session, reporter, *session.posargs)
-        with tempfile.TemporaryDirectory(prefix="aces-coverage-") as coverage_dir:
+        with tempfile.TemporaryDirectory(prefix="raes-coverage-") as coverage_dir:
             coverage_file = Path(coverage_dir) / ".coverage"
             _run_tests(session, reporter, coverage_file, finalize_coverage=False)
             _run_integration_tests(

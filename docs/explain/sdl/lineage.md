@@ -122,7 +122,7 @@ literature. The cyber-range and V&V sources are adjacent methodological support:
 Russo/Costa/Armando, Swiler, Oberkampf/Roy, and Sargent are citable proceedings,
 technical-report, or book sources; Garg et al. is used as a current survey
 preprint rather than as settled normative authority. The working Zotero library
-tracks these identity-authority references under `aces-sdl-identity-authority`
+tracks these identity-authority references under `raes-sdl-identity-authority`
 and the adjacent V&V subset under `adjacent-vv-lineage`; because that library is
 private, the Garg et al. preprint citation is also snapshotted in-repo under
 [`docs/research/primary/`](../../research/primary/literature/cyber-range-scenario-survey.md)
@@ -850,7 +850,7 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   and source audit remain unchanged.
 - DSL-142 composes the existing orchestration-inject, participant-observation,
   SEM-230 information-flow, ACT-617 mixed-control, shared-time, and evidence
-  lineages without introducing another external derivation. The exact ACES
+  lineages without introducing another external derivation. The exact RAES
   mapping is
   `ParticipantBehaviorSpecification.participant_inject_deliveries`: one
   participant, the original inject and event/script/story occurrence
@@ -1069,8 +1069,8 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   XACML's deny-first decision/obligation separation maps to the rule that
   capability never grants policy authority; and OGC conformance classes map to
   named finite evidence cases and explicit nonclaims. No one source supplies
-  the complete ACES vector.
-- The exact ACES mapping is the existing
+  the complete RAES vector.
+- The exact RAES mapping is the existing
   `capabilities.participant_runtime.feature_support` entry with
   `unsupported < disclosed_weak < bounded < exact`, separate constraint,
   limitation, disclosure, and evidence references, the six governed ingress,
@@ -1097,7 +1097,7 @@ which dynamic queue/log/config details remain evidence or bounded settings.
 - RUN-310 composes the same participant-interface, append-only event-history,
   mixed-control, information-flow, and access-control lineage into live
   supervisory mediation; it introduces no new external semantic source. The
-  exact RAES/ACES SDL mapping is trusted
+  exact RAES/RAES SDL mapping is trusted
   `ParticipantBehaviorSpecificationRuntime.controller_states` and
   `control_transitions` for policy authority, closed
   `Participant*ControlIntent` models for caller-owned intent,

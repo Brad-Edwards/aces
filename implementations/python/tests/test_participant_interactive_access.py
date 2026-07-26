@@ -372,8 +372,8 @@ def test_authoring_and_instantiated_schemas_publish_closed_access_shape() -> Non
         assert access_registry["additionalProperties"] is False
     assert frozenset({"ssh", "rdp"}) in _collect_enum_sets(authoring)
     assert frozenset({"ssh", "rdp"}) in _collect_enum_sets(instantiated)
-    assert "x-aces-variable-reference" in json.dumps(authoring)
-    assert "x-aces-variable-reference" not in json.dumps(instantiated)
+    assert "x-raes-variable-reference" in json.dumps(authoring)
+    assert "x-raes-variable-reference" not in json.dumps(instantiated)
 
 
 def test_channel_enum_matches_controlled_vocabulary_authority() -> None:

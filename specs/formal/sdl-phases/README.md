@@ -165,7 +165,7 @@ For admitted `I`:
 
 ```text
 S(I) = {
-  "profile": "aces-sdl-instantiated-snapshot/v1",
+  "profile": "raes-sdl-instantiated-snapshot/v1",
   "scenario": I
 }
 

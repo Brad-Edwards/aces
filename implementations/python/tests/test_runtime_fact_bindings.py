@@ -578,7 +578,7 @@ def test_runtime_fact_plane_rejects_dangling_binding_provenance() -> None:
         RuntimeFactBindingPlaneModel.model_validate(payload)
 
     schema = schema_bundle()["runtime-fact-binding-plane-v1"]
-    invariant_ids = {item["id"] for item in schema.get("x-aces-invariants", [])}
+    invariant_ids = {item["id"] for item in schema.get("x-raes-invariants", [])}
     assert "runtime-fact-binding-references-resolve" in invariant_ids
 
 

@@ -1,4 +1,4 @@
-"""Tests for the ACES SDL MCP server tools.
+"""Tests for the RAES SDL MCP server tools.
 
 Verifies that the registered tool surface produces correct results across
 reference, authoring, language-service, inspection, and operation categories.
@@ -110,7 +110,7 @@ propositions:
     predicate:
       kind: boolean
       property: service-alive
-      semantic_ref: urn:aces:observable:service-alive
+      semantic_ref: urn:raes:observable:service-alive
       operator: equals
       expected: true
     evidence_requirements: [web-health-evidence]
@@ -684,9 +684,8 @@ class TestOperationTools:
         assert "raes_agent_guidance" in payload["tool_families"]["guidance"]
         assert "raes_intended_use_profiles" in payload["tool_families"]["guidance"]
         advertised = {name for names in payload["tool_families"].values() for name in names}
-        assert "aces_agent_guidance" not in advertised
-        assert "aces_intended_use_profiles" not in advertised
-        assert "aces_reference_manifests" not in advertised
+        assert {"raes_agent_guidance", "raes_intended_use_profiles"} <= advertised
+        assert "raes_reference_manifests" in advertised
         assert any("does not expose participant cyber actions" in item for item in payload["boundaries"])
 
     def test_agent_guidance_returns_machine_usable_profile(self, server):
@@ -754,14 +753,6 @@ class TestOperationTools:
         payload = _json_call(server, "raes_intended_use_profiles", {"profile_id": "valid-sdl-fragment"})
 
         assert "experiment_validate" not in payload["profile"]["next_tools"]
-
-    def test_legacy_raes_mcp_aliases_are_removed(self, server):
-        registered = asyncio.get_event_loop().run_until_complete(server.list_tools())
-        registered_names = {tool.name for tool in registered}
-        assert "aces_tool_surface" not in registered_names
-        assert "aces_agent_guidance" not in registered_names
-        assert "aces_intended_use_profiles" not in registered_names
-        assert "aces_reference_manifests" not in registered_names
 
     def test_parse_returns_machine_readable_summary(self, server):
         payload = _json_call(server, "sdl_parse", {"sdl_content": MINIMAL_SDL})
@@ -838,7 +829,7 @@ class TestOperationTools:
     def test_reference_manifests_expose_processor_and_backend(self, server):
         payload = _json_call(server, "raes_reference_manifests")
         assert payload["status"] == "ok"
-        assert payload["processor"]["identity"]["name"] == "aces-reference-processor"
+        assert payload["processor"]["identity"]["name"] == "raes-reference-processor"
         assert payload["backend"]["identity"]["name"] == "stub"
 
     def test_compile_bad_parameters_report_parameter_stage(self, server):

@@ -2,9 +2,9 @@
   "contract_id": "random-stream-profile-v1",
   "schema_path": "contracts/schemas/profiles/random-stream-profile-v1.json",
   "stability": "draft",
-  "content_hash": "4c9f405bfa0dce89d463cb0780bd68847922acdbd0836822c033edf967ada0d3",
+  "content_hash": "28f4a59b393157c1995a5043029c9b109cc512a7e84d64784835619fdff40a59",
   "last_change": {
-    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
-    "content_hash": "4c9f405bfa0dce89d463cb0780bd68847922acdbd0836822c033edf967ada0d3"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "28f4a59b393157c1995a5043029c9b109cc512a7e84d64784835619fdff40a59"
   }
 }

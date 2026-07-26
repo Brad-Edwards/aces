@@ -302,7 +302,7 @@
       "type": "object"
     }
   },
-  "$id": "https://aces.dev/schemas/participant-implementation-manifest-v1.json",
+  "$id": "https://raes.dev/schemas/participant-implementation-manifest-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {

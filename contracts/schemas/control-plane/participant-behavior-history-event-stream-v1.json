@@ -1055,7 +1055,7 @@
       ],
       "title": "ParticipantStreamAddressModel",
       "type": "object",
-      "x-aces-invariants": [
+      "x-raes-invariants": [
         {
           "description": "draw_purpose must be governed and policy_address/participant_address must be compiled autonomous participant addresses.",
           "id": "participant-random-stream-address-governed",
@@ -1174,7 +1174,7 @@
       "type": "string"
     }
   },
-  "$id": "https://aces.dev/schemas/participant-behavior-history-event-stream-v1.json",
+  "$id": "https://raes.dev/schemas/participant-behavior-history-event-stream-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "items": {
     "additionalProperties": false,
@@ -1452,13 +1452,13 @@
   },
   "title": "ParticipantBehaviorHistoryEventStream",
   "type": "array",
-  "x-aces-semantic-profile": {
+  "x-raes-semantic-profile": {
     "contract_id": "participant-behavior-history-event-stream-v1",
-    "entry_schema_contract_id": "aces-semantic-invariants-v1",
-    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
-    "id": "aces-semantic-invariants-v1",
-    "keyword": "x-aces-invariants",
+    "entry_schema_contract_id": "raes-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/RaesSemanticInvariantEntryModel",
+    "id": "raes-semantic-invariants-v1",
+    "keyword": "x-raes-invariants",
     "required": true,
-    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+    "uri": "https://raes.dev/schemas/semantic-invariants/v1"
   }
 }

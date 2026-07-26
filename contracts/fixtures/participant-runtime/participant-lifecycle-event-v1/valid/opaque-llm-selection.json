@@ -1,6 +1,6 @@
 {
   "event_id": "evt-llm-16-selection",
-  "schema_name": "aces.participant_runtime.lifecycle",
+  "schema_name": "raes.participant_runtime.lifecycle",
   "schema_version": "1.0.0",
   "event_type": "selection_or_admission",
   "extension_policy": "reject_unknown_required",
@@ -11,7 +11,7 @@
     "status_code": "model_private_choice",
     "status_detail": "selection existed inside opaque model apparatus",
     "source_status_label": "model_private_choice",
-    "source_status_mapping": "aces.lifecycle.phase_realization.opaque"
+    "source_status_mapping": "raes.lifecycle.phase_realization.opaque"
   },
   "participant_address": "participants.red.llm",
   "episode_id": "ep-red-004",

@@ -2,9 +2,9 @@
   "contract_id": "time-model-v1",
   "schema_path": "contracts/schemas/time/time-model-v1.json",
   "stability": "draft",
-  "content_hash": "5978b5a9afc8f27af066803d9b7628681b07db7a4b9a2cad66a87dd148e47e9f",
+  "content_hash": "14b9679439dd53c3a0e70f1518c3271ecef729032d2085f0b38707271204870a",
   "last_change": {
-    "summary": "Published the API-421 backend-neutral shared-time declaration contract.",
-    "content_hash": "5978b5a9afc8f27af066803d9b7628681b07db7a4b9a2cad66a87dd148e47e9f"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "14b9679439dd53c3a0e70f1518c3271ecef729032d2085f0b38707271204870a"
   }
 }

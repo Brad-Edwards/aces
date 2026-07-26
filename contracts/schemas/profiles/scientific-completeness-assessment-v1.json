@@ -148,7 +148,7 @@
       "type": "string"
     }
   },
-  "$id": "https://aces.dev/schemas/scientific-completeness-assessment-v1.json",
+  "$id": "https://raes.dev/schemas/scientific-completeness-assessment-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
@@ -196,7 +196,7 @@
   ],
   "title": "ScientificCompletenessAssessmentModel",
   "type": "object",
-  "x-aces-invariants": [
+  "x-raes-invariants": [
     {
       "description": "Concern ids must be unique and each delivery status must carry its required executable evidence, external binding, issue refs, or exclusion rationale.",
       "id": "scientific-completeness-assessment-status-evidence",
@@ -226,13 +226,13 @@
       "validator": "raes_contracts.scientific_completeness.evaluate_profile_completeness"
     }
   ],
-  "x-aces-semantic-profile": {
+  "x-raes-semantic-profile": {
     "contract_id": "scientific-completeness-assessment-v1",
-    "entry_schema_contract_id": "aces-semantic-invariants-v1",
-    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
-    "id": "aces-semantic-invariants-v1",
-    "keyword": "x-aces-invariants",
+    "entry_schema_contract_id": "raes-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/RaesSemanticInvariantEntryModel",
+    "id": "raes-semantic-invariants-v1",
+    "keyword": "x-raes-invariants",
     "required": true,
-    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+    "uri": "https://raes.dev/schemas/semantic-invariants/v1"
   }
 }

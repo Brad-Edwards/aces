@@ -51,8 +51,8 @@ from .experiment_run_stochastic import _validate_run_stochastic_draw_control_ref
 from .participant_manifests import ParticipantImplementationProvenanceModel
 from .random_stream import RandomStreamDrawRecordModel
 from .schema_invariants import (
-    _add_aces_invariant,
     _add_carrier_validation_basis_disclosure_invariant,
+    _add_raes_invariant,
     _extend_reported_value_status_schema,
     _validate_reported_value_status,
 )
@@ -184,35 +184,35 @@ class ExperimentRunModel(ContractModel):
                 },
             }
         )
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "ended-at-not-before-started-at",
             "ended_at must be greater than or equal to started_at.",
             validator=_ARCHIVAL_RUN_VALIDATOR,
             inputs=[{"contract_id": "experiment-run-v1", "instance_path": "#"}],
         )
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "result-evidence-ref-resolves",
             "Every result_summaries evidence_refs ref_id must match an evidence_artifacts artifact_id.",
             validator=_ARCHIVAL_RUN_VALIDATOR,
             inputs=[{"contract_id": "experiment-run-v1", "instance_path": "#"}],
         )
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "participant-implementation-provenance-resolves",
             "Participant implementation apparatus components must resolve to run-level participant provenance.",
             validator=_ARCHIVAL_RUN_VALIDATOR,
             inputs=[{"contract_id": "experiment-run-v1", "instance_path": "#"}],
         )
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "realized-form-evidence-refs-traced",
             "Every realized-form disclosure evidence ref must also appear in the run traceability evidence refs.",
             validator=_ARCHIVAL_RUN_VALIDATOR,
             inputs=[{"contract_id": "experiment-run-v1", "instance_path": "#"}],
         )
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "augmentation-disclosure-evidence-refs-traced",
             "Every augmentation disclosure evidence ref must also appear in the run traceability evidence refs, "
@@ -223,7 +223,7 @@ class ExperimentRunModel(ContractModel):
         _add_carrier_validation_basis_disclosure_invariant(
             json_schema, contract_id="experiment-run-v1", subject_kind="experiment_run"
         )
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "stochastic-draws-control-ref-resolves",
             "Every stochastic_draws control_id must resolve to a stochastic_controls control_id with an "
@@ -232,14 +232,14 @@ class ExperimentRunModel(ContractModel):
             validator="raes_contracts.contracts.validate_experiment_run_against_task",
             inputs=[{"contract_id": "experiment-run-v1", "instance_path": "#/stochastic_draws"}],
         )
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "realized-time-model-bound-to-run",
             "When present, realized-time provenance must match the run id and its declared model digest.",
             validator=_ARCHIVAL_RUN_VALIDATOR,
             inputs=[{"contract_id": "experiment-run-v1", "instance_path": "#/realized_time_model"}],
         )
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "task-run-protocol-binding-valid",
             "Run apparatus, result metric ids, and concrete evidence artifacts must satisfy the "

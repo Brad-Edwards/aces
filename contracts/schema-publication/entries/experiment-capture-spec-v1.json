@@ -2,9 +2,9 @@
   "contract_id": "experiment-capture-spec-v1",
   "schema_path": "contracts/schemas/experiment-core/experiment-capture-spec-v1.json",
   "stability": "draft",
-  "content_hash": "abd5fc6cfc1c77159328531c531112c34685a348463405d30f7f63082c945705",
+  "content_hash": "59a5a2fc7c28eb5d27725916def11b11af919e13be7942ded83df30c05be833d",
   "last_change": {
-    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
-    "content_hash": "abd5fc6cfc1c77159328531c531112c34685a348463405d30f7f63082c945705"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "59a5a2fc7c28eb5d27725916def11b11af919e13be7942ded83df30c05be833d"
   }
 }

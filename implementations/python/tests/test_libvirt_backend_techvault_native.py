@@ -669,7 +669,7 @@ def test_native_driver_verifies_partial_create_rollback_and_reports_residual_sta
 
     assert result.domains == ()
     assert "libvirt-backend.techvault-native.operation-failed" in {diagnostic.code for diagnostic in result.diagnostics}
-    first = connection.domains[provider_resource_name(domains[0].address, prefix="aces-techvault")]
+    first = connection.domains[provider_resource_name(domains[0].address, prefix="raes-techvault")]
     if rollback_fails:
         assert "libvirt-backend.techvault-native.residual-state" in {
             diagnostic.code for diagnostic in result.diagnostics
@@ -688,7 +688,7 @@ def test_native_driver_verifies_partial_create_rollback_and_reports_residual_sta
 
 def test_native_driver_refuses_to_destroy_foreign_name_collision(tmp_path):
     connection = _FakeConnection()
-    foreign_name = provider_resource_name("provision.node.demo", prefix="aces-techvault")
+    foreign_name = provider_resource_name("provision.node.demo", prefix="raes-techvault")
     foreign = _NativeObject(
         foreign_name,
         f"<domain><name>{foreign_name}</name><uuid>00000000-0000-4000-8000-000000000000</uuid></domain>",
@@ -709,7 +709,7 @@ def test_native_driver_refuses_to_destroy_foreign_name_collision(tmp_path):
 
 def test_native_driver_refuses_to_replace_foreign_name_collision(tmp_path):
     connection = _FakeConnection()
-    foreign_name = provider_resource_name("provision.node.demo", prefix="aces-techvault")
+    foreign_name = provider_resource_name("provision.node.demo", prefix="raes-techvault")
     foreign = _NativeObject(
         foreign_name,
         f"<domain><name>{foreign_name}</name><uuid>00000000-0000-4000-8000-000000000000</uuid></domain>",
@@ -789,7 +789,7 @@ def test_validate_techvault_live_records_truthful_failed_manifest(tmp_path):
     assert report.passed is False
     manifest = tmp_path / "runs" / "native-live" / "live-gate" / "manifest.json"
     payload = json.loads(manifest.read_text(encoding="utf-8"))
-    assert payload["schema"] == "aces.libvirt.techvault-native-live-gate/v1"
+    assert payload["schema"] == "raes.libvirt.techvault-native-live-gate/v1"
     assert payload["scenario"]["path"] == "examples/scenarios/techvault-attacker-target.sdl.yaml"
     facts = payload["realization_facts"]
     assert facts["authored"]["source"] == "authored"
@@ -906,7 +906,7 @@ def test_native_driver_derives_provider_name_from_address_not_display_name(tmp_p
     result = driver.realize(networks=(), domains=(domain,))
 
     assert not result.diagnostics
-    assert provider_resource_name(domain.address, prefix="aces-techvault") in connection.domain_xml[0]
+    assert provider_resource_name(domain.address, prefix="raes-techvault") in connection.domain_xml[0]
     assert "unsafe name" not in connection.domain_xml[0]
 
 

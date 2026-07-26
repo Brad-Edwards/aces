@@ -2,9 +2,9 @@
   "contract_id": "orchestration-plan-v1",
   "schema_path": "contracts/schemas/plans/orchestration-plan-v1.json",
   "stability": "draft",
-  "content_hash": "2ada1a85e8049b7ab52e8c867ab6360fb7fe2833c62ab9469d0b7a49aa0dd2e7",
+  "content_hash": "b2fe219bb20fe8c30aa8e7cacced28e44671512a7f809d1ab5a1c980b0ab9fef",
   "last_change": {
-    "summary": "Constrained orchestration operations to the orchestration address domain and closed resource-type vocabulary for DSL-101/DSL-102/SEM-205.",
-    "content_hash": "2ada1a85e8049b7ab52e8c867ab6360fb7fe2833c62ab9469d0b7a49aa0dd2e7"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "b2fe219bb20fe8c30aa8e7cacced28e44671512a7f809d1ab5a1c980b0ab9fef"
   }
 }

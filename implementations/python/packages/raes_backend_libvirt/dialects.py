@@ -46,12 +46,12 @@ class GuestDialect:
     def enable_feature(self, package: str) -> GuestEmit:
         safe = safe_path_component(package, fallback="feature")
         body = {"os_family": self.os_family, "service": package}
-        return GuestEmit(write_files=(_descriptor(f"/etc/aces/features/{safe}.json", body),))
+        return GuestEmit(write_files=(_descriptor(f"/etc/raes/features/{safe}.json", body),))
 
     def mail_alias(self, username: str, mail: str) -> GuestEmit:
         safe = safe_path_component(username, fallback="user")
         body = {"os_family": self.os_family, "user": username, "mail": mail}
-        return GuestEmit(write_files=(_descriptor(f"/etc/aces/mail/{safe}.json", body),))
+        return GuestEmit(write_files=(_descriptor(f"/etc/raes/mail/{safe}.json", body),))
 
 
 class LinuxDialect(GuestDialect):
@@ -63,7 +63,7 @@ class LinuxDialect(GuestDialect):
     def mail_alias(self, username: str, mail: str) -> GuestEmit:
         safe = safe_path_component(username, fallback="user")
         return GuestEmit(
-            write_files=(CloudInitFile(path=f"/etc/aliases.d/aces-{safe}", content=f"{username}: {mail}\n"),),
+            write_files=(CloudInitFile(path=f"/etc/aliases.d/raes-{safe}", content=f"{username}: {mail}\n"),),
             runcmd=(("newaliases",),),
         )
 
@@ -80,7 +80,7 @@ class FreeBsdDialect(GuestDialect):
     def mail_alias(self, username: str, mail: str) -> GuestEmit:
         safe = safe_path_component(username, fallback="user")
         return GuestEmit(
-            write_files=(CloudInitFile(path=f"/etc/aces/mail/{safe}", content=f"{username}: {mail}\n"),),
+            write_files=(CloudInitFile(path=f"/etc/raes/mail/{safe}", content=f"{username}: {mail}\n"),),
             runcmd=(("newaliases",),),
         )
 

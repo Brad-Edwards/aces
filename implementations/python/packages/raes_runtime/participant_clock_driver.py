@@ -85,7 +85,7 @@ class ParticipantClockDriver:
         self._stop.clear()
         self._thread = threading.Thread(
             target=self._run,
-            name="aces-participant-clock-driver",
+            name="raes-participant-clock-driver",
             daemon=True,
         )
         self._thread.start()

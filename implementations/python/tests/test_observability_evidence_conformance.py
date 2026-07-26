@@ -90,7 +90,7 @@ def test_observability_evidence_conformance_requires_authored_ref_for_run_refine
             "basis": "processor-realized",
             "realized_by_ref": {
                 "ref_kind": "processor",
-                "ref_id": "aces-reference-processor",
+                "ref_id": "raes-reference-processor",
                 "ref_version": "0.1.0",
             },
             "realized_value_summary": "Run used a narrower post-condition capture window.",

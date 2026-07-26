@@ -60,7 +60,7 @@ _DEFAULT_CONFORMANCE_SCENARIO = dedent(
         predicate:
           kind: presence
           property: node
-          semantic_ref: urn:aces:declared-property:node
+          semantic_ref: urn:raes:declared-property:node
           operator: exists
     assertions:
       health:

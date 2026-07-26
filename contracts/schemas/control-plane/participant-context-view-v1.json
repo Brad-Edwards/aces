@@ -236,7 +236,7 @@
       "type": "object"
     }
   },
-  "$id": "https://aces.dev/schemas/participant-context-view-v1.json",
+  "$id": "https://raes.dev/schemas/participant-context-view-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "allOf": [
@@ -476,7 +476,7 @@
   ],
   "title": "ParticipantContextViewModel",
   "type": "object",
-  "x-aces-invariants": [
+  "x-raes-invariants": [
     {
       "description": "Participant-visible context views drawing on an archival evidence_record or derived_measure source layer must mediate that source through transformation.input_source_ids.",
       "id": "context-view-sem216-archival-source-mediated",
@@ -502,13 +502,13 @@
       "validator": "raes_contracts.contracts.ParticipantContextViewModel._validate_sem216_audience_boundary"
     }
   ],
-  "x-aces-semantic-profile": {
+  "x-raes-semantic-profile": {
     "contract_id": "participant-context-view-v1",
-    "entry_schema_contract_id": "aces-semantic-invariants-v1",
-    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
-    "id": "aces-semantic-invariants-v1",
-    "keyword": "x-aces-invariants",
+    "entry_schema_contract_id": "raes-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/RaesSemanticInvariantEntryModel",
+    "id": "raes-semantic-invariants-v1",
+    "keyword": "x-raes-invariants",
     "required": true,
-    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+    "uri": "https://raes.dev/schemas/semantic-invariants/v1"
   }
 }

@@ -77,19 +77,19 @@ from .reusable_assets import (
 )
 from .runtime_facts import RuntimeFactBindingPlaneModel
 from .schema_constraints import (
-    _aces_semantic_invariant_profile_schema_for_bundle,
     _attach_compiled_address_map_constraints,
     _attach_instantiation_invariants,
     _attach_json_schema_metadata,
     _attach_plan_identity_constraints,
     _attach_sdl_identifier_constraints,
-    _validate_aces_semantic_invariant_annotations,
+    _raes_semantic_invariant_profile_schema_for_bundle,
+    _validate_raes_semantic_invariant_annotations,
 )
 from .schema_invariants import (
-    _add_aces_invariant,
-    _attach_aces_semantic_profile,
+    _add_raes_invariant,
     _attach_experiment_datetime_invariants,
     _attach_initial_service_state_invariants,
+    _attach_raes_semantic_profile,
     _attach_stateful_resource_invariants,
 )
 from .semantic_profiles import SemanticProfileModel
@@ -118,7 +118,7 @@ def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
     from ..validation_profiles import ValidationProfileCatalogModel
 
     return {
-        "aces-semantic-invariants-v1": _aces_semantic_invariant_profile_schema_for_bundle(),
+        "raes-semantic-invariants-v1": _raes_semantic_invariant_profile_schema_for_bundle(),
         "sdl-authoring-input-v1": Scenario.model_json_schema(),
         "instantiated-scenario-v1": InstantiatedScenario.model_json_schema(),
         "instantiated-scenario-snapshot-v1": InstantiatedScenarioSnapshot.model_json_schema(),
@@ -214,7 +214,7 @@ def _schema_bundle_template() -> dict[str, dict[str, Any]]:
     """Build the immutable-in-practice template used by :func:`schema_bundle`."""
 
     bundle = _raw_schema_bundle()
-    _add_aces_invariant(
+    _add_raes_invariant(
         bundle["behavioral-relations-v1"],
         "behavioral-relations-reference-resolution",
         "Relation map keys, bibliography references, claim-surface relation references, and worked-example keys "
@@ -222,7 +222,7 @@ def _schema_bundle_template() -> dict[str, dict[str, Any]]:
         validator="raes_contracts.behavioral_relations.BehavioralRelationCatalogModel",
         inputs=[{"contract_id": "behavioral-relations-v1", "instance_path": "#"}],
     )
-    _add_aces_invariant(
+    _add_raes_invariant(
         bundle["experiment-study-v1"],
         "study-behavioral-claim-catalog-resolution",
         "Every study behavioral claim must resolve against the canonical taxonomy revision, include a required "
@@ -233,7 +233,7 @@ def _schema_bundle_template() -> dict[str, dict[str, Any]]:
             {"contract_id": "behavioral-relations-v1", "instance_path": "#"},
         ],
     )
-    _add_aces_invariant(
+    _add_raes_invariant(
         bundle["scientific-completeness-taxonomy-v1"],
         "scientific-completeness-taxonomy-rectangular",
         "Concern and profile ids must be unique, and every profile disposition "
@@ -241,7 +241,7 @@ def _schema_bundle_template() -> dict[str, dict[str, Any]]:
         validator="raes_contracts.scientific_completeness.ScientificCompletenessTaxonomyModel",
         inputs=[{"contract_id": "scientific-completeness-taxonomy-v1", "instance_path": "#"}],
     )
-    _add_aces_invariant(
+    _add_raes_invariant(
         bundle["scientific-completeness-taxonomy-v1"],
         "scientific-completeness-behavioral-claim-resolution",
         "Each profile must carry resolved behavioral claim bindings and disjoint, catalog-resolved nonclaimed "
@@ -252,7 +252,7 @@ def _schema_bundle_template() -> dict[str, dict[str, Any]]:
             {"contract_id": "behavioral-relations-v1", "instance_path": "#"},
         ],
     )
-    _add_aces_invariant(
+    _add_raes_invariant(
         bundle["scientific-completeness-assessment-v1"],
         "scientific-completeness-assessment-status-evidence",
         "Concern ids must be unique and each delivery status must carry its "
@@ -261,7 +261,7 @@ def _schema_bundle_template() -> dict[str, dict[str, Any]]:
         validator="raes_contracts.scientific_completeness.ScientificCompletenessAssessmentModel",
         inputs=[{"contract_id": "scientific-completeness-assessment-v1", "instance_path": "#"}],
     )
-    _add_aces_invariant(
+    _add_raes_invariant(
         bundle["runtime-fact-binding-plane-v1"],
         "runtime-fact-binding-references-resolve",
         "Every fact version resolves to a declaration, every binding event resolves to its compiled sink and "
@@ -270,7 +270,7 @@ def _schema_bundle_template() -> dict[str, dict[str, Any]]:
         validator="raes_contracts.contracts.runtime_facts.RuntimeFactBindingPlaneModel._validate_references",
         inputs=[{"contract_id": "runtime-fact-binding-plane-v1", "instance_path": "#"}],
     )
-    _add_aces_invariant(
+    _add_raes_invariant(
         bundle["scientific-completeness-assessment-v1"],
         "scientific-completeness-taxonomy-assessment-join",
         "Assessment family, taxonomy revision, and concern ids must exactly "
@@ -281,7 +281,7 @@ def _schema_bundle_template() -> dict[str, dict[str, Any]]:
             {"contract_id": "scientific-completeness-assessment-v1", "instance_path": "#"},
         ],
     )
-    _add_aces_invariant(
+    _add_raes_invariant(
         bundle["validation-profile-catalog-v1"],
         "validation-profile-catalog-reference-integrity",
         "Strength ranks and term ids must be unique, profile identities must "
@@ -304,10 +304,10 @@ def _schema_bundle_template() -> dict[str, dict[str, Any]]:
         _attach_json_schema_metadata(contract_id, json_schema)
         _attach_compiled_address_map_constraints(contract_id, json_schema)
         _attach_plan_identity_constraints(contract_id, json_schema)
-        _attach_aces_semantic_profile(contract_id, json_schema)
+        _attach_raes_semantic_profile(contract_id, json_schema)
     known_contract_ids = frozenset(bundle)
     for contract_id, json_schema in bundle.items():
-        _validate_aces_semantic_invariant_annotations(
+        _validate_raes_semantic_invariant_annotations(
             contract_id=contract_id,
             json_schema=json_schema,
             known_contract_ids=known_contract_ids,

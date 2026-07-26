@@ -699,7 +699,7 @@
       "type": "object"
     }
   },
-  "$id": "https://aces.dev/schemas/behavioral-relations-v1.json",
+  "$id": "https://raes.dev/schemas/behavioral-relations-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
@@ -736,8 +736,8 @@
       "type": "string"
     },
     "taxonomy_id": {
-      "const": "aces-behavioral-relations",
-      "default": "aces-behavioral-relations",
+      "const": "raes-behavioral-relations",
+      "default": "raes-behavioral-relations",
       "title": "Taxonomy Id",
       "type": "string"
     },
@@ -766,7 +766,7 @@
   ],
   "title": "BehavioralRelationCatalogModel",
   "type": "object",
-  "x-aces-invariants": [
+  "x-raes-invariants": [
     {
       "description": "Relation map keys, bibliography references, claim-surface relation references, and worked-example keys must resolve exactly inside one taxonomy revision.",
       "id": "behavioral-relations-reference-resolution",
@@ -780,13 +780,13 @@
       "validator": "raes_contracts.behavioral_relations.BehavioralRelationCatalogModel"
     }
   ],
-  "x-aces-semantic-profile": {
+  "x-raes-semantic-profile": {
     "contract_id": "behavioral-relations-v1",
-    "entry_schema_contract_id": "aces-semantic-invariants-v1",
-    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
-    "id": "aces-semantic-invariants-v1",
-    "keyword": "x-aces-invariants",
+    "entry_schema_contract_id": "raes-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/RaesSemanticInvariantEntryModel",
+    "id": "raes-semantic-invariants-v1",
+    "keyword": "x-raes-invariants",
     "required": true,
-    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+    "uri": "https://raes.dev/schemas/semantic-invariants/v1"
   }
 }

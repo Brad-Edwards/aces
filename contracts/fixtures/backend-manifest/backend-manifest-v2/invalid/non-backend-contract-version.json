@@ -2,7 +2,7 @@
   "schema_version": "backend-manifest/v2",
   "identity": {"name": "stub", "version": "0.2.0"},
   "supported_contract_versions": ["semantic-profile-v1"],
-  "compatibility": {"processors": ["aces-reference-processor"]},
+  "compatibility": {"processors": ["raes-reference-processor"]},
   "realization_support": [
     {
       "domain": "runtime-realization",

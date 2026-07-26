@@ -12,14 +12,14 @@ captures and later RAES/downstream gap issues do the full encoding work.
 
 The methodology is defensible as a capture-to-specification workflow if it is
 used with explicit ledger gates. The current reference implementation is APTL's
-`aptl aces-inventory` CLI:
+`aptl raes-inventory` CLI:
 
 - `mapping-ledger.yaml` is the accountability artifact for every captured fact.
-- `aptl aces-inventory validate <asset-dir>` validates the ledger schema,
+- `aptl raes-inventory validate <asset-dir>` validates the ledger schema,
   evidence references, and mapping disposition requirements.
-- `aptl aces-inventory gaps <asset-dir>` emits the actionable gap list later
+- `aptl raes-inventory gaps <asset-dir>` emits the actionable gap list later
   issues must consume or fix.
-- `aptl aces-inventory schema` emits the current JSON Schema generated from the
+- `aptl raes-inventory schema` emits the current JSON Schema generated from the
   Pydantic ledger model.
 
 The methodology is not yet sufficient to claim final equivalence between a
@@ -87,8 +87,8 @@ Each follow-on asset issue should meet this minimum:
 4. For custom builds, emit or capture build-time SBOM/provenance attestations
    using Docker Buildx `--sbom` and `--provenance` or equivalent in-toto/SLSA
    tooling.
-5. Validate the mapping ledger with `aptl aces-inventory validate`.
-6. Run `aptl aces-inventory gaps` and file/link gap issues before encoding
+5. Validate the mapping ledger with `aptl raes-inventory validate`.
+6. Run `aptl raes-inventory gaps` and file/link gap issues before encoding
    unsupported facts through semantically wrong RAES fields.
 7. Add or update correspondence checks so the future RAES encoding can be
    verified against realized evidence.

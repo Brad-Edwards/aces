@@ -63,10 +63,10 @@ Rationale:
 Published JSON Schemas are the portable structural contract. They declare draft
 2020-12 schema identity explicitly. Semantic graph constraints that standard
 JSON Schema cannot portably enforce are declared under the RAES semantic-
-invariant profile through `x-aces-semantic-profile` and `x-aces-invariants`
+invariant profile through `x-raes-semantic-profile` and `x-raes-invariants`
 metadata. Each invariant records a stable id, severity, validator, and input
 contract/path set; the annotation shape is published as
-`aces-semantic-invariants-v1` and is validated during schema generation.
+`raes-semantic-invariants-v1` and is validated during schema generation.
 Examples include metric key equality, task/run protocol binding, run time
 ordering, result-evidence reference resolution, capture-requirement key
 resolution, raw evidence content disclosure, derived-measure source evidence
@@ -529,7 +529,7 @@ validator runs regardless of the embedding contract.
    Schema and the Python contract model.
 5. Consumers that use only generic JSON Schema can validate portable structure
    but MUST NOT claim full RAES experiment-core conformance until the RAES
-   semantic validators named by `x-aces-invariants` have been applied.
+   semantic validators named by `x-raes-invariants` have been applied.
 
 ### Security And Redaction
 

@@ -172,7 +172,7 @@ def test_shared_time_model_references_follow_module_namespacing(tmp_path: Path) 
         """
 name: time-module
 module:
-  id: aces/time-module
+  id: raes/time-module
   version: 1.0.0
   exports:
     nodes: [workstation]

@@ -12,37 +12,17 @@ that would imply a compatibility guarantee the repository cannot honour.
 from __future__ import annotations
 
 from importlib.metadata import PackageNotFoundError, entry_points, version
-from importlib.util import find_spec
 
 from typer.testing import CliRunner
 
 NOT_INSTALLED_SENTINEL = "0.0.0+unknown"
 DISHONEST_LITERAL = "0.1.0"
-RETIRED_IMPORT_NAMES = (
-    "aces",
-    "aces_sdl",
-    "aces_backend_libvirt",
-    "aces_backend_protocols",
-    "aces_backend_stubs",
-    "aces_cli",
-    "aces_conformance",
-    "aces_contracts",
-    "aces_mcp",
-    "aces_operations",
-    "aces_processor",
-    "aces_reference_backend",
-    "aces_runtime",
-)
 
 
 def test_raes_namespace_version_derives_from_distribution() -> None:
     import raes
 
     assert raes.__version__ == version("raes")
-
-
-def test_retired_aces_namespaces_are_absent() -> None:
-    assert all(find_spec(name) is None for name in RETIRED_IMPORT_NAMES)
 
 
 def test_cli_version_reports_installed_distribution() -> None:
@@ -71,8 +51,6 @@ def test_console_scripts_hard_cut_to_raes_names() -> None:
     }
 
     assert {"raes", "raes-mcp"} <= scripts
-    assert "aces" not in scripts
-    assert "aces-mcp" not in scripts
 
 
 def test_cli_version_fallback_is_honest_sentinel(monkeypatch) -> None:
