@@ -1072,6 +1072,34 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   refinement, simulation, bisimulation, epistemic equivalence, or proof. The
   lineage ledger and source audit remain unchanged because API-423 reuses the
   recorded SEM-230 derivation and changes no normative external derivation or
+- RUN-310 composes the same participant-interface, append-only event-history,
+  mixed-control, information-flow, and access-control lineage into live
+  supervisory mediation; it introduces no new external semantic source. The
+  exact RAES/ACES SDL mapping is trusted
+  `ParticipantBehaviorSpecificationRuntime.controller_states` and
+  `control_transitions` for policy authority, closed
+  `Participant*ControlIntent` models for caller-owned intent,
+  `ControlPlaneIdentity.participant_control_subjects` for the separate
+  principal-to-participant/controller binding, `RuntimeControlPlane` and
+  `ParticipantControlMixin` for mediation, API-409
+  `ParticipantControlOccurrenceModel` for immutable outcomes,
+  `RuntimeSnapshot.participant_control_history` for append-only state, and
+  `ControlPlaneStore.commit_control_transition()` for the expected-head atomic
+  occurrence/receipt/idempotency/audit commit. The existing HTTP request-size,
+  authentication, role/target, redacted-error, SEM-211 admission, and API-408
+  visibility boundaries remain separate gates.
+- RUN-310 delivery evidence is the `runtime-snapshot-v1` schema and publication
+  entry, the in-memory and local-store restart/replay implementation, and
+  `implementations/python/tests/test_run_310_supervisory_lifecycle.py`, which
+  covers every control kind, negative subject binding, stale state, scoped
+  idempotency conflict, append-only integrity, atomic failure, restart, closed
+  HTTP input, and denial without participant occurrence. This does not claim
+  that approval proves admission, execution, delivery, observation, or
+  participant visibility; it does not rewrite prior action or controller
+  history; and it makes no backend-support, multi-process CAS, distributed or
+  partial-order, noninterference, refinement, simulation, bisimulation, UI, or
+  participant-internal-reasoning claim. The lineage ledger and source audit
+  remain unchanged because RUN-310 adds no normative derivation or
   compatibility claim.
 - CALDERA adversary-emulation research informs the action semantics: cyber
   actions can change foothold, knowledge, observations, detection surface, and

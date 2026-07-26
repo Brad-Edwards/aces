@@ -2,9 +2,9 @@
   "contract_id": "runtime-snapshot-v1",
   "schema_path": "contracts/schemas/snapshots/runtime-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "8117be2036ef71aa51cbd5529121ec50d5354ef688d1cc54134f768ce7524df8",
+  "content_hash": "ce74f9bb39d44c18badc1451d7f4d363d58e3938de8e360dc020ea2d1e4bcdf7",
   "last_change": {
-    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
-    "content_hash": "8117be2036ef71aa51cbd5529121ec50d5354ef688d1cc54134f768ce7524df8"
+    "summary": "Added first-class append-only API-409 participant control history for RUN-310 supervisory lifecycle persistence and replay.",
+    "content_hash": "ce74f9bb39d44c18badc1451d7f4d363d58e3938de8e360dc020ea2d1e4bcdf7"
   }
 }
