@@ -38,6 +38,12 @@ class ConformanceCaseResult:
     cleanup_verified: bool | None = None
     residual_state: tuple[str, ...] = ()
     evidence_refs: tuple[str, ...] = ()
+    capability_feature: str | None = None
+    declared_support_level: str | None = None
+    effective_support_level: str | None = None
+    finite_scope: str | None = None
+    limitations: tuple[str, ...] = ()
+    explicit_non_claims: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         """Keep the closed outcome vocabulary aligned with the gating boolean."""
@@ -104,6 +110,12 @@ def backend_conformance_report_payload(report: BackendConformanceReport) -> dict
                 "cleanup_verified": case.cleanup_verified,
                 "residual_state": list(case.residual_state),
                 "evidence_refs": list(case.evidence_refs),
+                "capability_feature": case.capability_feature,
+                "declared_support_level": case.declared_support_level,
+                "effective_support_level": case.effective_support_level,
+                "finite_scope": case.finite_scope,
+                "limitations": list(case.limitations),
+                "explicit_non_claims": list(case.explicit_non_claims),
                 "diagnostics": [_diagnostic_payload(diag) for diag in case.diagnostics],
             }
             for case in report.cases

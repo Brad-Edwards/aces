@@ -159,7 +159,9 @@ def backend_manifest_v2_model(manifest: BackendManifest) -> BackendManifestV2Mod
                             feature=entry.feature,
                             support_level=entry.support_level,
                             constraint_refs=list(entry.constraint_refs),
+                            limitation_refs=list(entry.limitation_refs),
                             disclosure_refs=list(entry.disclosure_refs),
+                            evidence_refs=list(entry.evidence_refs),
                         )
                         for entry in manifest.participant_runtime.feature_support
                     ],
@@ -319,7 +321,9 @@ def _participant_feature_support_from_model(model: ParticipantFeatureSupportMode
         feature=model.feature,
         support_level=model.support_level,
         constraint_refs=tuple(model.constraint_refs),
+        limitation_refs=tuple(model.limitation_refs),
         disclosure_refs=tuple(model.disclosure_refs),
+        evidence_refs=tuple(model.evidence_refs),
     )
 
 

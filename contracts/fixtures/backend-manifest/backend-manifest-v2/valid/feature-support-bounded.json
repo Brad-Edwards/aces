@@ -19,6 +19,7 @@
     "participant-episode-state-envelope-v1",
     "participant-episode-history-event-stream-v1",
     "participant-behavior-history-event-stream-v1",
+    "participant-crossing-occurrence-v1",
     "participant-lifecycle-event-v1",
     "participant-observation-envelope-v1",
     "participant-shared-state-record-v1",
@@ -181,6 +182,7 @@
         "failure_classes",
         "observation_boundaries",
         "outcome_interpretation",
+        "participant_transformation",
         "preconditions",
         "state_transitions",
         "temporal_contracts"
@@ -207,6 +209,22 @@
           "support_level": "exact",
           "constraint_refs": [],
           "disclosure_refs": []
+        },
+        {
+          "feature": "participant_transformation",
+          "support_level": "bounded",
+          "constraint_refs": [
+            "constraint:participant-transformation:finite-rule-set"
+          ],
+          "limitation_refs": [
+            "limitation:participant-transformation:finite-rule-set"
+          ],
+          "disclosure_refs": [
+            "disclosure:participant-transformation:bounded"
+          ],
+          "evidence_refs": [
+            "conformance:participant-transformation:bounded-case-1"
+          ]
         },
         {
           "feature": "x-acme:custom-feature",

@@ -19,6 +19,7 @@ from raes_backend_protocols.capabilities import (
     PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE,
     PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS,
     PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE,
+    PARTICIPANT_RUNTIME_POLICY_FEATURES,
     PARTICIPANT_RUNTIME_ROLE_SCOPE,
     TIME_CAPABILITY_REQUIRED_CONTRACTS,
     BackendCapabilitySet,
@@ -27,6 +28,7 @@ from raes_backend_protocols.capabilities import (
     EvaluatorCapabilities,
     ObservationCapabilities,
     OrchestratorCapabilities,
+    ParticipantFeatureSupport,
     ParticipantRuntimeCapabilities,
     ProvisionerCapabilities,
     TimeCapabilities,
@@ -35,7 +37,7 @@ from raes_backend_protocols.capabilities import (
 )
 from raes_contracts.apparatus import ConceptBinding, RealizationSupportDeclaration
 from raes_contracts.manifest_authority import BACKEND_SUPPORTED_CONTRACT_IDS
-from raes_contracts.vocabulary import RealizationSupportMode
+from raes_contracts.vocabulary import ParticipantFeatureSupportLevel, RealizationSupportMode
 
 REFERENCE_BACKEND_NAME = "reference-emulation"
 REFERENCE_BACKEND_SUPPORTED_CONTRACT_VERSIONS = frozenset(
@@ -46,9 +48,11 @@ REFERENCE_BACKEND_SUPPORTED_CONTRACT_VERSIONS = frozenset(
 _TIME_DEDICATED_CONTRACT_VERSIONS = frozenset({"time-model-v1", "time-runtime-state-v1", "realized-time-model-v1"})
 
 _PARTICIPANT_ROLES = frozenset(PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_ROLE_SCOPE])
-_PARTICIPANT_BEHAVIOR_FEATURES = frozenset(
-    PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE]
-) - {"autonomous_execution"}
+_PARTICIPANT_BEHAVIOR_FEATURES = (
+    frozenset(PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE])
+    - {"autonomous_execution"}
+    - PARTICIPANT_RUNTIME_POLICY_FEATURES
+)
 _PARTICIPANT_INTERACTION_FEATURES = frozenset(
     PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE]
 )
@@ -216,6 +220,15 @@ def _capabilities(*, with_time: bool) -> BackendCapabilitySet:
             supported_participant_roles=_PARTICIPANT_ROLES,
             supported_behavior_features=_PARTICIPANT_BEHAVIOR_FEATURES,
             supported_interaction_features=_PARTICIPANT_INTERACTION_FEATURES,
+            feature_support=tuple(
+                ParticipantFeatureSupport(
+                    feature=feature,
+                    support_level=ParticipantFeatureSupportLevel.UNSUPPORTED,
+                    limitation_refs=(f"limitation:{feature}:not-realized",),
+                    disclosure_refs=(f"disclosure:{feature}:unsupported",),
+                )
+                for feature in sorted(PARTICIPANT_RUNTIME_POLICY_FEATURES)
+            ),
         ),
         observation=ObservationCapabilities(
             name="reference-emulation-observation",

@@ -1072,6 +1072,39 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   refinement, simulation, bisimulation, epistemic equivalence, or proof. The
   lineage ledger and source audit remain unchanged because API-423 reuses the
   recorded SEM-230 derivation and changes no normative external derivation or
+  compatibility claim.
+- API-407's participant-policy capability extension adopts partial design
+  precedents, not source syntax or compatibility. YANG 1.1 features/deviations
+  and the YANG Library map to governed feature ids and explicit limitations;
+  Vulkan device-feature negotiation maps to fail-closed target admission;
+  XACML's deny-first decision/obligation separation maps to the rule that
+  capability never grants policy authority; and OGC conformance classes map to
+  named finite evidence cases and explicit nonclaims. No one source supplies
+  the complete ACES vector.
+- The exact ACES mapping is the existing
+  `capabilities.participant_runtime.feature_support` entry with
+  `unsupported < disclosed_weak < bounded < exact`, separate constraint,
+  limitation, disclosure, and evidence references, the six governed ingress,
+  egress, declassification, transformation, intervention, and
+  participant-directed inject-delivery features, and their API-409/API-423
+  required-contract evidence. `resolve_participant_feature_support()` is the
+  single strength comparison used by planner admission; an authorized
+  downgrade returns the weaker manifest entry unchanged and requires separate
+  policy and provenance references.
+- Delivery status is contract-, profile-, admission-, fixture-, and
+  bounded-conformance-implemented. Evidence is the backend-manifest schema and
+  publication entries, controlled vocabulary, stub/reference/libvirt
+  declarations, full-remote-control-plane profile, planner and conformance
+  integration, and `implementations/python/tests/test_backend_manifest.py`,
+  `test_dsl_437_benign_participant_execution.py`, and
+  `test_runtime_conformance.py`. The existing backends disclose all six
+  features as unsupported; issue #801 does not implement RUN-319 policy
+  enforcement. Manifest validity, method presence, finite cases, or adjacent
+  API-409/API-423 carriers do not establish authorization, delivery, native
+  realization, noninterference, equivalence, bisimulation, model checking, or
+  proof. These standards are comparative design precedents only, so this
+  change introduces no normative external derivation or compatibility claim
+  and the lineage ledger/source audit remain unchanged.
 - RUN-310 composes the same participant-interface, append-only event-history,
   mixed-control, information-flow, and access-control lineage into live
   supervisory mediation; it introduces no new external semantic source. The

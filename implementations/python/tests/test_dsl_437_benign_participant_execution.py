@@ -12,6 +12,7 @@ import yaml
 from raes._errors import SDLValidationError
 from raes.parser import parse_sdl
 from raes.participant_behavior import ParticipantFailureClass
+from raes_backend_protocols.capabilities import ParticipantFeatureSupport
 from raes_backend_protocols.capability_admission import participant_autonomous_execution_capability_gaps
 from raes_backend_protocols.participant_runtime_base import BaseParticipantRuntime
 from raes_backend_stubs.manifest import create_stub_manifest
@@ -34,6 +35,7 @@ from raes_contracts.participant_episode import (
     ParticipantEpisodeResetRequest,
 )
 from raes_contracts.runtime_state import ApplyResult, RuntimeSnapshot
+from raes_contracts.vocabulary import ParticipantFeatureSupportLevel
 from raes_processor.compiler import compile_runtime_model
 from raes_processor.compiler.time_model import time_model_contract_model
 from raes_processor.planner import plan
@@ -613,8 +615,71 @@ def test_planner_enforces_required_participant_features_and_exact_targets() -> N
     execution_plan = plan(runtime_model, unsupported)
 
     messages = [diagnostic.message for diagnostic in execution_plan.diagnostics]
-    assert any("required participant feature 'action_contracts'" in message for message in messages)
+    assert any("participant feature 'action_contracts'" in message for message in messages)
     assert any("unsupported autonomous target addresses" in message for message in messages)
+
+
+def test_planner_fails_closed_for_policy_features_outside_autonomous_execution() -> None:
+    runtime_model, _ = _compiled()
+    address = "participant.behavior-specification.participant-behavior"
+    specification = replace(
+        runtime_model.behavior_specifications[address],
+        autonomous_execution=None,
+        backend_feature_support_refs=("participant_ingress_admission",),
+    )
+    runtime_model = replace(
+        runtime_model,
+        behavior_specifications={**runtime_model.behavior_specifications, address: specification},
+    )
+
+    execution_plan = plan(runtime_model, create_stub_manifest(with_time=True))
+
+    assert any(
+        diagnostic.code == "participant.feature-support-insufficient"
+        and diagnostic.address == address
+        and "explicitly unsupported" in diagnostic.message
+        for diagnostic in execution_plan.diagnostics
+    )
+
+
+def test_planner_accepts_evidence_backed_exact_policy_feature_support() -> None:
+    runtime_model, _ = _compiled()
+    address = "participant.behavior-specification.participant-behavior"
+    feature = "participant_ingress_admission"
+    specification = replace(
+        runtime_model.behavior_specifications[address],
+        autonomous_execution=None,
+        backend_feature_support_refs=(feature,),
+    )
+    runtime_model = replace(
+        runtime_model,
+        behavior_specifications={**runtime_model.behavior_specifications, address: specification},
+    )
+    manifest = create_stub_manifest(with_time=True)
+    assert manifest.participant_runtime is not None
+    declaration = ParticipantFeatureSupport(
+        feature=feature,
+        support_level=ParticipantFeatureSupportLevel.EXACT,
+        evidence_refs=("conformance:participant-ingress-admission:case-1",),
+    )
+    manifest = replace(
+        manifest,
+        capabilities=replace(
+            manifest.capabilities,
+            participant_runtime=replace(
+                manifest.participant_runtime,
+                supported_behavior_features=manifest.participant_runtime.supported_behavior_features | {feature},
+                feature_support=(declaration,),
+            ),
+        ),
+    )
+
+    execution_plan = plan(runtime_model, manifest)
+
+    assert not any(
+        diagnostic.code == "participant.feature-support-insufficient" and diagnostic.address == address
+        for diagnostic in execution_plan.diagnostics
+    )
 
 
 def test_runtime_manager_drives_due_actions_from_shared_clock_controls() -> None:
