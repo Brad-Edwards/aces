@@ -188,8 +188,6 @@ from .manifests import (
 )
 from .manifests import CleanupCapabilitiesModel as CleanupCapabilitiesModel
 from .participant_context import ParticipantContextViewModel
-from .participant_control import ParticipantControlDeclarationModel, ParticipantControlOccurrenceModel
-from .participant_control_validation import validate_participant_control_occurrence_context
 from .participant_decision_surface import (
     ParticipantDecisionSurfaceActionEntryModel,
     ParticipantDecisionSurfaceCandidateSetFormModel,
@@ -228,6 +226,7 @@ from .participant_manifests import (
     ParticipantImplementationProvenanceModel,
     ParticipantImplementationSelectionModel,
 )
+from .participant_occurrences import *  # noqa: F403
 from .participant_runtime import (
     ParticipantActionEffectResultModel,
     ParticipantActionPreconditionResultModel,
@@ -437,9 +436,10 @@ __all__ = [
     "ParticipantAttributionCandidateModel", "ParticipantAttributionEdgeModel",
     "ParticipantAttributionEvidenceBasisModel", "ParticipantAttributionOrderingBasisModel",
     "ParticipantAutonomousExecutionStateModel", "ParticipantBehaviorHistoryEventModel",
-    "ParticipantContextViewModel", "ParticipantControlDeclarationModel",
-    "ParticipantControlOccurrenceModel", "validate_participant_control_occurrence_context",
-    "ParticipantDecisionSurfaceActionEntryModel", "ParticipantDecisionSurfaceCandidateSetFormModel",
+    "ParticipantContextViewModel", "ParticipantControlDeclarationModel", "ParticipantControlOccurrenceModel",  # noqa: F405
+    "ParticipantCrossingOccurrenceModel", "validate_participant_control_occurrence_context",  # noqa: F405
+    "validate_participant_crossing_occurrence_context", "ParticipantDecisionSurfaceActionEntryModel",  # noqa: F405
+    "ParticipantDecisionSurfaceCandidateSetFormModel",
     "ParticipantDecisionSurfaceConstrainedFormModel", "ParticipantDecisionSurfaceExposureBindingModel",
     "ParticipantDecisionSurfaceExposureRealizationModel", "ParticipantDecisionSurfaceModel",
     "ParticipantDecisionSurfaceOpenEndedFormModel", "ParticipantDecisionSurfaceSelectionModel",
