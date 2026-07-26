@@ -125,12 +125,14 @@ change invalidates the entry. The gate does not consume
 The repository targets these final identities:
 
 - schema namespace: `https://raes.dev/schemas/`
-- Sonar project: `Brad-Edwards_raes`
+- Sonar project: the existing pre-cutover service-owned key, retained as an
+  exact operational designation
 - Ground Control project: `raes-sdl`
 
-Their remote resources must exist before the corresponding repository
-configuration is considered verified. OBL-908-REMOTE-IDENTITIES-1 records that
-provisioning dependency.
+Replacement remote resources must exist before the corresponding repository
+configuration points to them. OBL-908-REMOTE-IDENTITIES-1 records that
+provisioning dependency; the retained Sonar project does not require a
+replacement resource.
 
 ## Non-Goals
 

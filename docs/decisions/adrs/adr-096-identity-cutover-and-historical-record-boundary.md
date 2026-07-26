@@ -129,3 +129,9 @@ validation, or evidence semantics beyond their identity-bearing values.
 - [ADR-061](adr-061-published-schema-evolution-policy.md)
 - [ADR-075](adr-075-ecosystem-versioning-deprecation-and-migration-governance.md)
 - [ADR-093](adr-093-raes-rename-and-compatibility-boundaries.md)
+
+## Amendments
+
+| Date | Commit/PR | Summary |
+|---|---|---|
+| 2026-07-26 | #908 | Retained the existing SonarCloud project key as an exact, content-bound external-service designation; it is not a current RAES product identity or a general compatibility allowance. |

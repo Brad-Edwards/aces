@@ -1,6 +1,15 @@
 {
-  "schema_version": "historical-identity-records/v1",
+  "schema_version": "historical-identity-records/v2",
   "hash_algorithm": "sha256",
+  "operational_bindings": [
+    {
+      "path": "sonar-project.properties",
+      "binding_class": "external-service-project-key",
+      "rationale": "Retains the existing service-owned SonarCloud project designation without treating it as current RAES product identity.",
+      "occurrences": 2,
+      "content_sha256": "df85536b996b633de8f1400941ce9a8b47e72c22bfe1cb5736e520a02d0fe361"
+    }
+  ],
   "records": [
     {
       "path": "CHANGELOG.md",

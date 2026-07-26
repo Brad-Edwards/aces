@@ -442,3 +442,7 @@ adrs:
   - id: ADR-096
     path: docs/decisions/adrs/adr-096-identity-cutover-and-historical-record-boundary.md
     pin: 4d3ccdf376fd6eee58da0831d1215cf0a55ae25d2666d6bf3452978a3d0b3997
+    amendments:
+      - date: 2026-07-26
+        ref: "#908"
+        summary: "Retained the existing SonarCloud project key as an exact, content-bound external-service designation rather than a current RAES product identity."

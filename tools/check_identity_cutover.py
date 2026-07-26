@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reject retired project naming outside exact historical records."""
+"""Reject retired project naming outside exact content-bound records."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ from tools.policy.common import (  # noqa: E402
 )
 
 MANIFEST_PATH = "tools/policy/historical_identity_records.json"
-MANIFEST_SCHEMA = "historical-identity-records/v1"
+MANIFEST_SCHEMA = "historical-identity-records/v2"
 MAX_MANIFEST_BYTES = 1_000_000
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 IDENTITY_PATTERN = re.compile(
@@ -41,12 +41,15 @@ RECORD_CLASSES = {
     "release-history",
     "research-record",
 }
+OPERATIONAL_BINDING_CLASSES = {"external-service-project-key"}
 
 RULE_LIVE = "identity-cutover-live-token"
 RULE_MANIFEST = "identity-cutover-manifest"
 RULE_MANIFEST_PATH = "identity-cutover-manifest-path"
 RULE_HISTORICAL_CONTENT = "identity-cutover-historical-content"
 RULE_HISTORICAL_COUNT = "identity-cutover-historical-count"
+RULE_OPERATIONAL_CONTENT = "identity-cutover-operational-content"
+RULE_OPERATIONAL_COUNT = "identity-cutover-operational-count"
 RULE_TRACKED_TREE = "identity-cutover-tracked-tree"
 
 
@@ -59,13 +62,22 @@ class HistoricalRecord:
     content_sha256: str
 
 
+@dataclass(frozen=True)
+class OperationalBinding:
+    path: str
+    binding_class: str
+    rationale: str
+    occurrences: int
+    content_sha256: str
+
+
 def _manifest_failure(message: str) -> PolicyFailure:
     return PolicyFailure(RULE_MANIFEST, message, MANIFEST_PATH)
 
 
 def _load_historical_records(
     repo_root: Path,
-) -> tuple[dict[str, HistoricalRecord], list[PolicyFailure]]:
+) -> tuple[dict[str, HistoricalRecord], dict[str, OperationalBinding], list[PolicyFailure]]:
     try:
         payload = load_bounded_json_object(
             repo_root,
@@ -73,7 +85,7 @@ def _load_historical_records(
             max_bytes=MAX_MANIFEST_BYTES,
         )
     except (OSError, UnicodeDecodeError, ValueError) as exc:
-        return {}, [_manifest_failure(str(exc))]
+        return {}, {}, [_manifest_failure(str(exc))]
 
     failures: list[PolicyFailure] = []
     if payload.get("schema_version") != MANIFEST_SCHEMA:
@@ -83,7 +95,11 @@ def _load_historical_records(
     raw_records = payload.get("records")
     if not isinstance(raw_records, list):
         failures.append(_manifest_failure("records must be a list"))
-        return {}, failures
+        return {}, {}, failures
+    raw_bindings = payload.get("operational_bindings")
+    if not isinstance(raw_bindings, list):
+        failures.append(_manifest_failure("operational_bindings must be a list"))
+        return {}, {}, failures
 
     records: dict[str, HistoricalRecord] = {}
     expected_keys = {
@@ -135,7 +151,71 @@ def _load_historical_records(
             occurrences=occurrences,
             content_sha256=content_sha256,
         )
-    return records, failures
+
+    bindings: dict[str, OperationalBinding] = {}
+    binding_keys = {
+        "path",
+        "binding_class",
+        "rationale",
+        "occurrences",
+        "content_sha256",
+    }
+    for index, raw_binding in enumerate(raw_bindings):
+        if not isinstance(raw_binding, dict):
+            failures.append(_manifest_failure(f"operational_bindings[{index}] must be an object"))
+            continue
+        if set(raw_binding) != binding_keys:
+            failures.append(
+                _manifest_failure(
+                    f"operational_bindings[{index}] must contain exactly {sorted(binding_keys)!r}"
+                )
+            )
+            continue
+        path = raw_binding.get("path")
+        binding_class = raw_binding.get("binding_class")
+        rationale = raw_binding.get("rationale")
+        occurrences = raw_binding.get("occurrences")
+        content_sha256 = raw_binding.get("content_sha256")
+        if not isinstance(path, str) or not path:
+            failures.append(_manifest_failure(f"operational_bindings[{index}].path must be a non-empty string"))
+            continue
+        if path in records or path in bindings:
+            failures.append(_manifest_failure(f"duplicate content-bound path {path!r}"))
+            continue
+        if safe_repo_path(repo_root, path) is None:
+            failures.append(PolicyFailure(RULE_MANIFEST_PATH, "operational binding path is unsafe", path))
+            continue
+        if binding_class not in OPERATIONAL_BINDING_CLASSES:
+            failures.append(
+                _manifest_failure(
+                    f"operational_bindings[{index}].binding_class must be one of "
+                    f"{sorted(OPERATIONAL_BINDING_CLASSES)!r}"
+                )
+            )
+            continue
+        if not isinstance(rationale, str) or not rationale.strip():
+            failures.append(_manifest_failure(f"operational_bindings[{index}].rationale must be non-empty"))
+            continue
+        if isinstance(occurrences, bool) or not isinstance(occurrences, int) or occurrences < 1:
+            failures.append(
+                _manifest_failure(f"operational_bindings[{index}].occurrences must be a positive integer")
+            )
+            continue
+        if not isinstance(content_sha256, str) or not SHA256_RE.fullmatch(content_sha256):
+            failures.append(
+                _manifest_failure(
+                    f"operational_bindings[{index}].content_sha256 must be a lowercase sha256 digest"
+                )
+            )
+            continue
+        bindings[path] = OperationalBinding(
+            path=path,
+            binding_class=binding_class,
+            rationale=rationale,
+            occurrences=occurrences,
+            content_sha256=content_sha256,
+        )
+    return records, bindings, failures
 
 
 def _tracked_paths(repo_root: Path) -> tuple[list[str], list[PolicyFailure]]:
@@ -157,7 +237,7 @@ def _match_lines(content: bytes, matches: list[re.Match[bytes]]) -> list[int]:
 
 
 def evaluate_identity_cutover(repo_root: Path = REPO_ROOT) -> list[PolicyFailure]:
-    records, failures = _load_historical_records(repo_root)
+    records, bindings, failures = _load_historical_records(repo_root)
     tracked_paths, tracked_failures = _tracked_paths(repo_root)
     failures.extend(tracked_failures)
     if failures:
@@ -170,6 +250,14 @@ def evaluate_identity_cutover(repo_root: Path = REPO_ROOT) -> list[PolicyFailure
                 RULE_MANIFEST_PATH,
                 "historical record is not a tracked file",
                 record_path,
+            )
+        )
+    for binding_path in sorted(bindings.keys() - tracked):
+        failures.append(
+            PolicyFailure(
+                RULE_MANIFEST_PATH,
+                "operational binding is not a tracked file",
+                binding_path,
             )
         )
 
@@ -198,21 +286,33 @@ def evaluate_identity_cutover(repo_root: Path = REPO_ROOT) -> list[PolicyFailure
 
         matches = list(IDENTITY_PATTERN.finditer(content))
         record = records.get(relative_path)
-        if record is not None:
+        binding = bindings.get(relative_path)
+        content_bound = record or binding
+        if content_bound is not None:
             digest = hashlib.sha256(content).hexdigest()
-            if digest != record.content_sha256:
+            if digest != content_bound.content_sha256:
                 failures.append(
                     PolicyFailure(
-                        RULE_HISTORICAL_CONTENT,
-                        "historical record content no longer matches its classified digest",
+                        RULE_HISTORICAL_CONTENT if record is not None else RULE_OPERATIONAL_CONTENT,
+                        (
+                            "historical record content no longer matches its classified digest"
+                            if record is not None
+                            else "operational binding content no longer matches its classified digest"
+                        ),
                         relative_path,
                     )
                 )
-            if len(matches) != record.occurrences:
+            if len(matches) != content_bound.occurrences:
                 failures.append(
                     PolicyFailure(
-                        RULE_HISTORICAL_COUNT,
-                        f"historical record declares {record.occurrences} occurrences but contains {len(matches)}",
+                        RULE_HISTORICAL_COUNT if record is not None else RULE_OPERATIONAL_COUNT,
+                        (
+                            f"historical record declares {content_bound.occurrences} occurrences "
+                            f"but contains {len(matches)}"
+                            if record is not None
+                            else f"operational binding declares {content_bound.occurrences} occurrences "
+                            f"but contains {len(matches)}"
+                        ),
                         relative_path,
                     )
                 )

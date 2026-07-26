@@ -41,17 +41,29 @@ def _record(path: str, content: bytes, *, occurrences: int = 1) -> dict[str, obj
     }
 
 
+def _binding(path: str, content: bytes, *, occurrences: int = 1) -> dict[str, object]:
+    return {
+        "path": path,
+        "binding_class": "external-service-project-key",
+        "rationale": "Retains an exact service-owned project key.",
+        "occurrences": occurrences,
+        "content_sha256": hashlib.sha256(content).hexdigest(),
+    }
+
+
 def _seed_repo(
     repo_root: Path,
     *,
     files: dict[str, str | bytes],
     records: list[dict[str, object]] | None = None,
+    bindings: list[dict[str, object]] | None = None,
 ) -> None:
     for relative_path, content in files.items():
         _write(repo_root / relative_path, content)
     manifest = {
-        "schema_version": "historical-identity-records/v1",
+        "schema_version": "historical-identity-records/v2",
         "hash_algorithm": "sha256",
+        "operational_bindings": bindings or [],
         "records": records or [],
     }
     _write(
@@ -113,6 +125,26 @@ def test_changed_historical_record_fails_closed(tmp_path: Path) -> None:
 
     assert any(
         failure.rule_id == "identity-cutover-historical-content" and failure.path == path for failure in failures
+    )
+
+
+def test_exact_content_bound_operational_binding_passes_and_fails_closed(tmp_path: Path) -> None:
+    content = f"projectKey=Brad-Edwards_{RETIRED_LOWER}\n".encode()
+    path = "sonar-project.properties"
+    _seed_repo(
+        tmp_path,
+        files={path: content},
+        bindings=[_binding(path, content)],
+    )
+
+    assert evaluate_identity_cutover(tmp_path) == []
+
+    _write(tmp_path / path, content + b"changed=true\n")
+    failures = evaluate_identity_cutover(tmp_path)
+
+    assert any(
+        failure.rule_id == "identity-cutover-operational-content" and failure.path == path
+        for failure in failures
     )
 
 
