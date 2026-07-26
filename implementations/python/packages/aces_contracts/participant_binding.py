@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass, replace
-from typing import Protocol
+from typing import Protocol, cast
 
 from .contracts import (
     ParticipantActionResultModel,
@@ -209,9 +209,9 @@ def bind_participant_decision_surface_selection(
     _validate_admission_surface_agreement(surface, selection, admission_request)
     _validate_surface_apparatus(surface, admission_request, apparatus_resolver)
     validated_selection = _validate_proposal_arguments(selection, argument_shape_resolver)
-    bound_request: ParticipantActionAdmissionRequest = replace(
-        admission_request,
-        validated_selection=validated_selection,
+    bound_request = cast(
+        ParticipantActionAdmissionRequest,
+        replace(admission_request, validated_selection=validated_selection),
     )
     _validate_bound_admission_request(bound_request)
     return bound_request
