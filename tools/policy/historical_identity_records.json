@@ -3,6 +3,13 @@
   "hash_algorithm": "sha256",
   "operational_bindings": [
     {
+      "path": ".ground-control.yaml",
+      "binding_class": "external-service-project-key",
+      "rationale": "Retains the existing service-owned Ground Control project designation without treating it as current RAES product identity.",
+      "occurrences": 1,
+      "content_sha256": "e0596809035a079630de05e4d350ed27fac0675526b247c3b069627ca4abe267"
+    },
+    {
       "path": "sonar-project.properties",
       "binding_class": "external-service-project-key",
       "rationale": "Retains the existing service-owned SonarCloud project designation without treating it as current RAES product identity.",

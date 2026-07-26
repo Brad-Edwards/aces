@@ -1,5 +1,5 @@
 schema_version: 1
-project: raes-sdl
+project: aces-sdl
 github_repo: RAESystem/rae
 workflow:
   test_command: uv tool run --from 'nox[uv]==2026.4.10' nox -f noxfile.py -s verify
