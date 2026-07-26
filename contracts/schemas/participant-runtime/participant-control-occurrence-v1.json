@@ -2,7 +2,7 @@
   "$defs": {
     "EventClassificationModel": {
       "additionalProperties": false,
-      "description": "ACES-native normalized event classification tuple (ADR-054).",
+      "description": "RAES-native normalized event classification tuple (ADR-054).",
       "properties": {
         "activity_id": {
           "title": "Activity Id",
@@ -2191,7 +2191,7 @@
         }
       ],
       "level": "error",
-      "validator": "aces_contracts.contracts.validate_participant_control_occurrence_context"
+      "validator": "raes_contracts.contracts.validate_participant_control_occurrence_context"
     },
     {
       "description": "Proposal, approval, denial, direction, intervention, handoff, override, and cancellation remain distinct from action admission, execution, delivery, observation, and audit evidence.",
@@ -2203,7 +2203,7 @@
         }
       ],
       "level": "error",
-      "validator": "aces_contracts.contracts.ParticipantControlOccurrenceModel"
+      "validator": "raes_contracts.contracts.ParticipantControlOccurrenceModel"
     }
   ],
   "x-aces-semantic-profile": {

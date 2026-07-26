@@ -7,7 +7,7 @@ capability-envelope diagnostics, so the two never diverge.
 
 from __future__ import annotations
 
-from aces_backend_protocols.account_features import provisioner_account_features
+from raes_backend_protocols.account_features import provisioner_account_features
 
 
 def test_empty_spec_uses_no_features():

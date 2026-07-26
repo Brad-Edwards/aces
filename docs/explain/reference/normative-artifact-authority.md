@@ -44,13 +44,13 @@ Reuse these existing surfaces before adding anything new:
   `contracts/fixtures/`, `contracts/profiles/`, and
   `contracts/realization-envelopes/`
 - contract model and schema bundle helpers:
-  `aces_contracts.contracts.ContractModel`, `schema_bundle()`, and the
+  `raes_contracts.contracts.ContractModel`, `schema_bundle()`, and the
   published `*Model` validators
 - manifest and profile authority helpers:
-  `aces_contracts.manifest_authority`,
-  `aces_contracts.backend_profiles`, `aces_contracts.semantic_profiles`,
-  `aces_contracts.controlled_vocabularies`, and
-  `aces_contracts.reference_models`
+  `raes_contracts.manifest_authority`,
+  `raes_contracts.backend_profiles`, `raes_contracts.semantic_profiles`,
+  `raes_contracts.controlled_vocabularies`, and
+  `raes_contracts.reference_models`
 - generation and validation gates: `tools/generate_contract_schemas.py`,
   `tools/check_generated_schemas.py`, `tools/check_schema_publication.py`, and
   `tools/check_json_artifacts.py`
@@ -129,8 +129,7 @@ Avoid:
   artifacts). `docs/`, `implementations/`, `examples/`, `research/`,
   `notes/`, and `tools/` are non-normative roots per the
   authority manifest and may not host authority artifacts
-- adding implementation logic under the compatibility-only
-  `implementations/python/src/aces/` tree
+- recreating the retired `implementations/python/src/aces/` namespace
 - preserving legacy or transitional path names as current authority when
   `ADR-009` already defines the target model
 - making invalid fixtures multi-concern when one focused fixture can prove the

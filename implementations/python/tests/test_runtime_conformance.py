@@ -7,26 +7,25 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
-from aces_backend_protocols.capabilities import (
+from raes_backend_protocols.capabilities import (
     BackendCapabilitySet,
     BackendManifest,
     ProvisionerCapabilities,
 )
-from aces_conformance.conformance import _semantic_diagnostics
-from aces_contracts.apparatus import ConceptBinding, RealizationSupportDeclaration
-from aces_contracts.planning import ChangeAction, RuntimeDomain
-from aces_contracts.runtime_state import ApplyResult, RuntimeSnapshot, SnapshotEntry
-from aces_contracts.vocabulary import RealizationSupportMode
-
-from aces.backends.stubs import create_stub_components, create_stub_manifest, create_stub_target
-from aces.core.runtime.conformance import (
+from raes_backend_stubs.stubs import create_stub_components, create_stub_manifest, create_stub_target
+from raes_conformance.conformance import (
     BackendCapabilityProfile,
+    _semantic_diagnostics,
     profile_for_manifest,
     required_contracts,
     run_fixture_suite,
     run_target_conformance,
 )
-from aces.core.runtime.registry import RuntimeTarget
+from raes_contracts.apparatus import ConceptBinding, RealizationSupportDeclaration
+from raes_contracts.planning import ChangeAction, RuntimeDomain
+from raes_contracts.runtime_state import ApplyResult, RuntimeSnapshot, SnapshotEntry
+from raes_contracts.vocabulary import RealizationSupportMode
+from raes_runtime.registry import RuntimeTarget
 
 API_406_CARRIER_CONTRACTS = {
     "participant-lifecycle-event-v1",
@@ -143,7 +142,7 @@ def test_profile_falls_back_to_orchestration_evaluation_without_participant_runt
     ``ORCHESTRATION_EVALUATION`` so existing two-tier backends remain
     compatible.
     """
-    from aces_backend_stubs.stubs import create_stub_manifest
+    from raes_backend_stubs.stubs import create_stub_manifest
 
     manifest = create_stub_manifest(with_participant_runtime=False)
     assert profile_for_manifest(manifest) == BackendCapabilityProfile.ORCHESTRATION_EVALUATION
@@ -154,13 +153,13 @@ def test_live_probe_catches_participant_runtime_that_does_not_populate_snapshot(
     surface but never publishes state/history through the snapshot must
     fail conformance, not silently certify clean.
     """
-    from aces_backend_stubs.stubs import (
+    from raes_backend_stubs.stubs import (
         StubEvaluator,
         StubOrchestrator,
         StubProvisioner,
         create_stub_manifest,
     )
-    from aces_processor.models import ApplyResult
+    from raes_processor.models import ApplyResult
 
     class _SilentParticipantRuntime:
         """Accepts every action without mutating the snapshot."""
@@ -909,7 +908,7 @@ def test_in_code_profile_requirements_table_is_removed():
     be gone. This is a structural gate: if a future change re-introduces the
     in-code table, this test fails and the drift is caught before merge."""
 
-    from aces_conformance import conformance as conformance_module
+    from raes_conformance import conformance as conformance_module
 
     assert not hasattr(conformance_module, "_PROFILE_REQUIREMENTS")
 

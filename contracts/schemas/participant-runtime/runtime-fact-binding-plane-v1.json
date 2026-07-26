@@ -744,7 +744,7 @@
         }
       ],
       "level": "error",
-      "validator": "aces_contracts.contracts.runtime_facts.RuntimeFactBindingPlaneModel._validate_references"
+      "validator": "raes_contracts.contracts.runtime_facts.RuntimeFactBindingPlaneModel._validate_references"
     }
   ],
   "x-aces-semantic-profile": {

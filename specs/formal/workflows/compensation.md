@@ -99,7 +99,7 @@ workflow can be `cancelled` or `timed_out` while compensation is `running` or
 
 - SDL authoring models: `implementations/python/packages/raes/orchestration.py`
 - semantic validation: `implementations/python/packages/raes/validator/`
-- compiled contracts: `implementations/python/packages/aces_processor/compiler/`
-- runtime state/history models: `implementations/python/packages/aces_processor/models/`
-- manager validation: `implementations/python/packages/aces_processor/manager.py`
-- control-plane lifecycle handling: `implementations/python/packages/aces_processor/control_plane.py`
+- compiled contracts: `implementations/python/packages/raes_processor/compiler/`
+- runtime state/history models: `implementations/python/packages/raes_processor/models/`
+- manager validation: `implementations/python/packages/raes_processor/manager.py`
+- control-plane lifecycle handling: `implementations/python/packages/raes_processor/control_plane.py`

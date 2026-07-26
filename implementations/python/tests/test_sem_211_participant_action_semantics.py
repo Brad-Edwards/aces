@@ -5,8 +5,15 @@ from __future__ import annotations
 import textwrap
 
 import pytest
-from aces_processor.compiler import compile_runtime_model
-from aces_processor.models import (
+from raes._errors import SDLParseError
+from raes.parser import parse_sdl
+from raes.participant_behavior import (
+    ParticipantEffectClass,
+    ParticipantFailureClass,
+    ParticipantPreconditionClass,
+)
+from raes_processor.compiler import compile_runtime_model
+from raes_processor.models import (
     Diagnostic,
     ParticipantActionEffectResult,
     ParticipantActionPreconditionResult,
@@ -21,14 +28,7 @@ from aces_processor.models import (
     iter_participant_behavior_history_violations,
     map_backend_diagnostic_to_participant_failure,
 )
-from aces_runtime.control_plane_store import LocalControlPlaneStore
-from raes._errors import SDLParseError
-from raes.parser import parse_sdl
-from raes.participant_behavior import (
-    ParticipantEffectClass,
-    ParticipantFailureClass,
-    ParticipantPreconditionClass,
-)
+from raes_runtime.control_plane_store import LocalControlPlaneStore
 
 T0 = "2026-05-19T20:00:00Z"
 PARTICIPANT_ADDRESS = "participant.behavior.red-agent"

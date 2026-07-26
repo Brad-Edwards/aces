@@ -7,16 +7,16 @@
 # was re-baselined to the 500-line cap on 2026-07-12 (#561); see ADR-015 §2 and
 # its Amendments section.
 files:
-  - implementations/python/packages/aces_backend_libvirt/drivers/libvirt.py
-  - implementations/python/packages/aces_backend_libvirt/realization.py
-  - implementations/python/packages/aces_backend_libvirt/techvault_native.py
-  - implementations/python/packages/aces_contracts/workflow.py
-  - implementations/python/packages/aces_mcp/tools/authoring.py
-  - implementations/python/packages/aces_mcp/tools/inspection.py
-  - implementations/python/packages/aces_operations/_evidence_run_artifact.py
-  - implementations/python/packages/aces_runtime/control_plane_api.py
-  - implementations/python/packages/aces_runtime/control_plane.py
-  - implementations/python/packages/aces_runtime/workflow_result_contract_checks.py
+  - implementations/python/packages/raes_backend_libvirt/drivers/libvirt.py
+  - implementations/python/packages/raes_backend_libvirt/realization.py
+  - implementations/python/packages/raes_backend_libvirt/techvault_native.py
+  - implementations/python/packages/raes_contracts/workflow.py
+  - implementations/python/packages/raes_mcp/tools/authoring.py
+  - implementations/python/packages/raes_mcp/tools/inspection.py
+  - implementations/python/packages/raes_operations/_evidence_run_artifact.py
+  - implementations/python/packages/raes_runtime/control_plane_api.py
+  - implementations/python/packages/raes_runtime/control_plane.py
+  - implementations/python/packages/raes_runtime/workflow_result_contract_checks.py
   - implementations/python/packages/raes/composition.py
   - implementations/python/packages/raes/module_registry.py
   - implementations/python/packages/raes/orchestration.py

@@ -2,9 +2,9 @@
   "contract_id": "experiment-evidence-record-v1",
   "schema_path": "contracts/schemas/experiment-core/experiment-evidence-record-v1.json",
   "stability": "draft",
-  "content_hash": "b6b14039002d04329d760a30b26cb191d795de3b49e377edd084be4d10f9c32b",
+  "content_hash": "97e633634abdefb8cd4343b14f557065e79616e40edb87da14294ff892823317",
   "last_change": {
-    "summary": "Extended shared experiment artifact roles and typed references for associated-artifact parents (ADR-077, issue #738).",
-    "content_hash": "b6b14039002d04329d760a30b26cb191d795de3b49e377edd084be4d10f9c32b"
+    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
+    "content_hash": "97e633634abdefb8cd4343b14f557065e79616e40edb87da14294ff892823317"
   }
 }

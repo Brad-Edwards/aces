@@ -25,10 +25,8 @@ import json
 from pathlib import Path
 
 import pytest
-from aces_contracts.contracts import schema_bundle
-from aces_runtime.result_contracts import participant_episode_contract_diagnostics
-
-from aces.core.runtime.models import (
+from raes_contracts.contracts import schema_bundle
+from raes_processor.models import (
     ParticipantEpisodeControlAction,
     ParticipantEpisodeExecutionState,
     ParticipantEpisodeHistoryEvent,
@@ -37,6 +35,7 @@ from aces.core.runtime.models import (
     ParticipantEpisodeTerminalReason,
     RuntimeSnapshot,
 )
+from raes_runtime.result_contracts import participant_episode_contract_diagnostics
 
 PARTICIPANT_ADDRESS = "participant.alice"
 EP1 = "ep-0001"
@@ -1292,7 +1291,7 @@ class TestRun311ParticipantEpisodeLifecycle:
         ``_live_target_cases``.
         """
 
-        from aces_conformance.conformance import _semantic_diagnostics
+        from raes_conformance.conformance import _semantic_diagnostics
 
         snapshot_payload = {
             "schema_version": "runtime-snapshot/v1",
@@ -1350,7 +1349,7 @@ class TestRun311ParticipantEpisodeLifecycle:
     def test_published_state_schema_matches_bundle_for_run_311(self):
         """Schema parity — the on-disk control-plane schemas for the participant
         episode envelope and the history event stream must equal the live
-        schema bundle. If a developer edits ``aces_contracts/contracts.py``
+        schema bundle. If a developer edits ``raes_contracts/contracts.py``
         without re-running ``tools/generate_contract_schemas.py``, this test
         gives a clear local failure mode.
         """

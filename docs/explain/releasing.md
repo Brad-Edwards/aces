@@ -45,8 +45,8 @@ Use `feat:`/`fix:` for consumer-visible changes so release-please cuts a release
   (`implementations/python/packages/raes/_version.py`).
 - `.release-please-manifest.json` — the version source of truth: `{".": "X.Y.Z"}`.
 - `implementations/python/packages/raes/_version.py` — build version source
-  (release-please rewrites it). The legacy `aces` import namespace's
-  `__version__` derives from the installed `raes` distribution metadata.
+  (release-please rewrites it). `raes.__version__` derives from the installed
+  `raes` distribution metadata.
   The `raes` and `raes-mcp` console scripts are the only current commands.
 
 ## Caveat: the release PR and required checks

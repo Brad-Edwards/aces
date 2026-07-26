@@ -776,7 +776,7 @@
         }
       ],
       "level": "error",
-      "validator": "aces_contracts.behavioral_relations.BehavioralRelationCatalogModel"
+      "validator": "raes_contracts.behavioral_relations.BehavioralRelationCatalogModel"
     }
   ],
   "x-aces-semantic-profile": {

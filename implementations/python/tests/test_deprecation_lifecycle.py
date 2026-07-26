@@ -47,12 +47,13 @@ def _good_ledger() -> dict:
                 "id": "aces-compat-namespace",
                 "surface_class": "python-distribution",
                 "identifier": "implementations/python/src/aces/ (legacy aces.* namespace)",
-                "status": "deprecated",
+                "status": "removed",
                 "first_notice": "ADR-010 (example)",
                 "replacement": "the owning packages under implementations/python/packages/",
-                "migration_reference": "docs/decisions/adrs/adr-010-...md",
-                "notice_window": "supported through the pre-1.0 series",
-                "verification_evidence": "check_repo_policy.py enforces wrapper-only + import ban",
+                "migration_reference": "docs/migration/raes-rename.md",
+                "notice_window": "removed at the 1.0 hard cut",
+                "verification_evidence": "the wheel excludes src/aces and policy rejects its reintroduction",
+                "removal_record": "RAES 1.0 removes the aces compatibility namespace.",
             },
             {
                 "id": "sdl-import-path-field",
@@ -288,7 +289,7 @@ def test_incomplete_security_exception(tmp_path: Path) -> None:
 
 def test_removed_without_removal_record(tmp_path: Path) -> None:
     ledger = _good_ledger()
-    ledger["records"][0]["status"] = "removed"
+    del ledger["records"][0]["removal_record"]
     _write_repo(tmp_path, ledger)
     assert "deprecation-records-removal-record" in _rule_ids(tmp_path)
 

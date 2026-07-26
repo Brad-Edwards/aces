@@ -28,8 +28,8 @@ here. What is enforced:
 * for an ``active`` row that names importable Python realizing modules, at least
   one of its named tests actually *imports* one of those modules — existence is
   not integration (#504). The resolver recognizes direct submodule imports,
-  ``from package import submodule``, the ``aces.*`` compatibility wrappers, and
-  package re-exports written either absolutely (``from pkg.core import name``) or
+  ``from package import submodule``, and package re-exports written either
+  absolutely (``from pkg.core import name``) or
   with the idiomatic relative form (``from .core import name``); a bare
   ``import raes`` does not count as evidence for every ``raes.*``
   artifact. The check is
@@ -132,14 +132,9 @@ _BACKTICK_SPAN_RE = re.compile(r"`([^`]+)`")
 
 _EXPECTED_COLUMNS = 5
 
-# Source roots used by the import-integration resolver (#504). Realization
-# artifacts that are importable Python live under the packages root; the
-# ``aces.*`` compatibility wrappers live under the src root.
+# Source root used by the import-integration resolver (#504). Realization
+# artifacts that are importable Python live under the packages root.
 _PACKAGES_ROOT = "implementations/python/packages"
-_COMPAT_SRC_ROOT = "implementations/python/src"
-# Names the ``aces._compat`` re-export helper is imported as (``reexport`` or the
-# conventional ``_reexport`` alias).
-_REEXPORT_FUNCS: frozenset[str] = frozenset({"reexport", "_reexport"})
 # A ``test_*`` function counts as asserting if it contains an ``assert`` statement
 # or calls anything whose name carries one of these hints (``pytest.raises``,
 # ``self.assertEqual``, ``pytest.fail``, ``assert_*`` helpers, ...).
@@ -424,14 +419,13 @@ def _check_adr_links_note(repo_root: Path) -> list[PolicyFailure]:
 # one named test *imports* one of the row's realizing Python modules. The
 # resolver maps a realizing artifact path to its canonical module and normalizes
 # the imports a test actually makes — recognizing direct submodule imports,
-# ``from package import submodule``, the ``aces.*`` compatibility wrappers, and
-# explicit ``from M import name`` package re-exports — so an honest indirect
-# import still counts. It deliberately does NOT import or execute any module, and
+# ``from package import submodule`` and explicit ``from M import name`` package
+# re-exports — so an honest indirect import still counts. It deliberately does
+# NOT import or execute any module, and
 # a bare ``import raes`` is not treated as evidence for every ``raes.*``
 # artifact. Dynamic ``__getattr__`` re-exports in a canonical package ``__init__``
-# are not resolved; those symbols remain reachable through the compat wrappers
-# (which are resolved), and the gate is row-level so one resolvable import per
-# row suffices.
+# are not resolved; the gate is row-level so one resolvable import per row
+# suffices.
 # --------------------------------------------------------------------------- #
 
 
@@ -469,71 +463,36 @@ def _resolve_relative_module(pkg: str, level: int, module: str | None) -> str | 
     return ".".join(parts) if parts else None
 
 
-def _reexport_target(tree: ast.Module) -> str | None:
-    """The canonical module a compat wrapper re-exports, from ``reexport(globals(), "...")``."""
-    for node in ast.walk(tree):
-        if (
-            isinstance(node, ast.Call)
-            and isinstance(node.func, ast.Name)
-            and node.func.id in _REEXPORT_FUNCS
-            and len(node.args) == 2
-            and isinstance(node.args[1], ast.Constant)
-            and isinstance(node.args[1].value, str)
-        ):
-            return node.args[1].value
-    return None
-
-
 @dataclass(frozen=True)
 class _ImportResolver:
-    """Maps test imports to the canonical modules they reach. The single extension
-    seam: new source roots, wrappers, or package exports extend the two maps
-    without touching row validation."""
+    """Maps test imports to the canonical modules they reach."""
 
-    compat_to_canonical: dict[str, str]
     package_symbol_to_module: dict[str, str]
-
-    def normalize(self, module: str) -> str:
-        return self.compat_to_canonical.get(module, module)
 
     def imported_modules(self, tree: ast.Module) -> set[str]:
         reached: set[str] = set()
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
                 for alias in node.names:
-                    reached.add(self.normalize(alias.name))
+                    reached.add(alias.name)
             elif isinstance(node, ast.ImportFrom):
                 if node.level or not node.module:
                     continue  # relative imports are not used by the test suite
-                reached.add(self.normalize(node.module))
+                reached.add(node.module)
                 for alias in node.names:
                     full = f"{node.module}.{alias.name}"
                     if full in self.package_symbol_to_module:
                         reached.add(self.package_symbol_to_module[full])
                     else:
-                        reached.add(self.normalize(full))
+                        reached.add(full)
         return reached
 
 
 def _build_import_resolver(repo_root: Path) -> _ImportResolver:
-    compat: dict[str, str] = {}
     symbols: dict[str, str] = {}
-    src_root = repo_root / _COMPAT_SRC_ROOT
     pkg_root = repo_root / _PACKAGES_ROOT
-    aces_root = src_root / "aces"
-
-    if aces_root.is_dir():
-        for file in sorted(aces_root.rglob("*.py")):
-            tree = _safe_parse(file)
-            if tree is None:
-                continue
-            target = _reexport_target(tree)
-            if target:
-                compat[_module_name_under(src_root, file)] = target
 
     init_files: list[tuple[Path, Path]] = []
-    if aces_root.is_dir():
-        init_files += [(f, src_root) for f in aces_root.rglob("__init__.py")]
     if pkg_root.is_dir():
         init_files += [(f, pkg_root) for f in pkg_root.rglob("__init__.py")]
     for file, root in init_files:
@@ -566,8 +525,8 @@ def _build_import_resolver(repo_root: Path) -> _ImportResolver:
                     target = source_module
                 if target is None:
                     continue
-                symbols[f"{pkg}.{alias.name}"] = compat.get(target, target)
-    return _ImportResolver(compat, symbols)
+                symbols[f"{pkg}.{alias.name}"] = target
+    return _ImportResolver(symbols)
 
 
 def _artifact_module(token: str) -> str | None:

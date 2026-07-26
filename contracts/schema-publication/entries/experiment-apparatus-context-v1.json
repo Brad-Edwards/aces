@@ -2,9 +2,9 @@
   "contract_id": "experiment-apparatus-context-v1",
   "schema_path": "contracts/schemas/experiment-core/experiment-apparatus-context-v1.json",
   "stability": "draft",
-  "content_hash": "743ed0a7461edbae755ca4f1b9a21fefe9927eb022d4c0fa062a8edfa7e7e81b",
+  "content_hash": "758ea626dfb224bd59c0a8cf39fec3f5318d7d27e915a506489d56a4be649490",
   "last_change": {
-    "summary": "Added an optional executable_binding field to ExperimentStochasticControlModel for EXP-718 versioned random-stream profile/namespace/root-entropy binding (issue #274).",
-    "content_hash": "743ed0a7461edbae755ca4f1b9a21fefe9927eb022d4c0fa062a8edfa7e7e81b"
+    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
+    "content_hash": "758ea626dfb224bd59c0a8cf39fec3f5318d7d27e915a506489d56a4be649490"
   }
 }

@@ -20,13 +20,13 @@ from copy import deepcopy
 from pathlib import Path
 
 import pytest
-from aces_contracts.contracts import (
+from raes_contracts.contracts import (
     ExperimentRunModel,
     ExperimentStudyModel,
     ExperimentTaskModel,
     validate_experiment_study_against_tasks_and_runs,
 )
-from aces_contracts.contracts.random_stream import (
+from raes_contracts.contracts.random_stream import (
     PublicSeedModel,
     RandomStreamControlBindingModel,
     RandomStreamProfileReferenceModel,

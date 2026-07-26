@@ -3,7 +3,7 @@
 JSON Schema must also drop those keys from ``model_dump()`` -- otherwise a
 producer serializes a payload its own published schema (``additionalProperties:
 false``) forbids. ``PrunedReferenceFieldsMixin`` (in
-``aces_contracts.contracts.experiment_references``) is the single shared
+``raes_contracts.contracts.experiment_references``) is the single shared
 mechanism that derives both the schema pruning and the dump pruning from one
 ``_PRUNED_REF_FIELDS`` declaration per model, so this test module is the
 durable structural gate for the whole category: parametrized over every
@@ -18,7 +18,9 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from aces_contracts.contracts import (
+from jsonschema import Draft202012Validator
+from pydantic import BaseModel, ValidationError
+from raes_contracts.contracts import (
     ExperimentApparatusCompatibilityReferenceModel,
     ExperimentBackendReferenceModel,
     ExperimentCaptureSpecReferenceModel,
@@ -28,16 +30,14 @@ from aces_contracts.contracts import (
     ExperimentProcessorReferenceModel,
     ExperimentTaskReferenceModel,
 )
-from aces_contracts.contracts.experiment_manifest_references import (
+from raes_contracts.contracts.experiment_manifest_references import (
     ExperimentEvidenceSatisfactionReferenceModel,
     ExperimentRunEvidenceArtifactReferenceModel,
 )
-from aces_contracts.contracts.validation_disclosure import (
+from raes_contracts.contracts.validation_disclosure import (
     ValidationBasisDisclosureDocumentModel,
     ValidationProducerReferenceModel,
 )
-from jsonschema import Draft202012Validator
-from pydantic import BaseModel, ValidationError
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PUBLISHED_DISCLOSURE_SCHEMA_PATH = REPO_ROOT / "contracts/schemas/profiles/validation-basis-disclosure-v1.json"

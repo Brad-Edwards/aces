@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import math
 
-from aces_contracts.bounded_domains import (
+from pydantic import ValidationError
+from raes_contracts.bounded_domains import (
     BooleanDomain,
     EnumDomain,
     ExactDomain,
     NumericIntervalDomain,
     NumericType,
 )
-from pydantic import ValidationError
 
 from .._errors import SDLValidationError
 from .._identifiers import QualifiedName

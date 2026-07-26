@@ -89,7 +89,7 @@ AUTONOMOUS_PARTICIPANT_ISSUE_RENDERERS = {
     "participant.autonomous-evaluation-authority-namespace-unsupported": (
         lambda i: (
             f"Behavior specification '{i.spec_name}' evaluation-authority {i.message} ref "
-            f"'{i.ref}' cannot resolve because ACES SDL declares no such authority namespace"
+            f"'{i.ref}' cannot resolve because RAES SDL declares no such authority namespace"
         )
     ),
     "participant.autonomous-participant-owner-conflict": (

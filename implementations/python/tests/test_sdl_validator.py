@@ -2,10 +2,9 @@
 
 import pytest
 from pydantic import ValidationError
-
-from aces.core.sdl._errors import SDLValidationError
-from aces.core.sdl.scenario import Scenario
-from aces.core.sdl.validator import SemanticValidator
+from raes._errors import SDLValidationError
+from raes.scenario import Scenario
+from raes.validator import SemanticValidator
 
 
 def _validate(scenario: Scenario) -> list[str]:
@@ -583,7 +582,7 @@ class TestVerifyACLs:
 class TestFeatureListShorthand:
     def test_features_as_list_with_empty_role(self):
         """Nodes with features as list (no role) should validate."""
-        from aces.core.sdl import parse_sdl
+        from raes import parse_sdl
 
         s = parse_sdl("""
 name: shorthand-test

@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from copy import deepcopy
 
-from aces_contracts.behavioral_relations import load_behavioral_relation_catalog
 from hypothesis import given, settings
 from hypothesis import strategies as st
+from raes_contracts.behavioral_relations import load_behavioral_relation_catalog
 from sem230_information_flow_model import (
     Crossing,
     CrossingKind,

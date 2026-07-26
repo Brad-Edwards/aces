@@ -1,4 +1,4 @@
-# ACES SDL Codex Rules
+# RAES Codex Rules
 
 Use the repo policy tooling before and after implementation work.
 
@@ -17,9 +17,8 @@ such as `GOV-918`.
   `docs/`, and `implementations/`.
 - Do not edit `contracts/schemas/` directly; change generator inputs and
   regenerate.
-- Do not add new implementation logic to `implementations/python/src/aces/`;
-  that tree is compatibility-only wrappers.
-- Do not import `aces.*` from owning packages under
+- Do not recreate the retired `implementations/python/src/aces/` namespace.
+- Import only the owning `raes` or `raes_*` packages under
   `implementations/python/packages/`.
 - Keep concept-authority artifacts in the approved concept-authority surfaces.
 - Keep IMPLEMENTS and TESTS traceability in Ground Control aligned with changed
@@ -27,17 +26,17 @@ such as `GOV-918`.
 
 ## Repo skills
 
-- For Codex, use `.codex-skills/aces-asset-inventory-capture/SKILL.md`.
+- For Codex, use `.codex-skills/raes-asset-inventory-capture/SKILL.md`.
   This server also links it at
-  `~/.codex/skills/aces-asset-inventory-capture`.
+  `~/.codex/skills/raes-asset-inventory-capture`.
 - For Claude Code, use
-  `.claude/skills/aces-asset-inventory-capture/SKILL.md`. This server also
-  links it at `~/.claude/skills/aces-asset-inventory-capture`.
-- For Codex, use `.codex-skills/aces-gap-remediation-implement/SKILL.md`
-  when remediating ACES/APTL gaps found by the asset-inventory methodology.
+  `.claude/skills/raes-asset-inventory-capture/SKILL.md`. This server also
+  links it at `~/.claude/skills/raes-asset-inventory-capture`.
+- For Codex, use `.codex-skills/raes-gap-remediation-implement/SKILL.md`
+  when remediating RAES/APTL gaps found by the asset-inventory methodology.
   This server also links it at
-  `~/.codex/skills/aces-gap-remediation-implement`.
+  `~/.codex/skills/raes-gap-remediation-implement`.
 - For Claude Code, use
-  `.claude/skills/aces-gap-remediation-implement/SKILL.md` for the same
+  `.claude/skills/raes-gap-remediation-implement/SKILL.md` for the same
   overlay. This server also links it at
-  `~/.claude/skills/aces-gap-remediation-implement`.
+  `~/.claude/skills/raes-gap-remediation-implement`.

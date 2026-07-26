@@ -14,16 +14,15 @@ import subprocess
 import textwrap
 
 import pytest
-from aces_reference_backend import create_reference_backend_target
-from aces_reference_backend.drivers.oci import ImageTrustPolicy, OciDeploymentDriver
-
-from aces.core.runtime.conformance import (
+from raes import parse_sdl
+from raes_conformance.conformance import (
     BackendCapabilityProfile,
     run_target_conformance,
 )
-from aces.core.runtime.control_plane import RuntimeControlPlane
-from aces.core.runtime.manager import RuntimeManager
-from aces.core.sdl import parse_sdl
+from raes_reference_backend import create_reference_backend_target
+from raes_reference_backend.drivers.oci import ImageTrustPolicy, OciDeploymentDriver
+from raes_runtime.control_plane import RuntimeControlPlane
+from raes_runtime.manager import RuntimeManager
 
 pytestmark = pytest.mark.docker
 

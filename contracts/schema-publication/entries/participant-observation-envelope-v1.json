@@ -2,9 +2,9 @@
   "contract_id": "participant-observation-envelope-v1",
   "schema_path": "contracts/schemas/participant-runtime/participant-observation-envelope-v1.json",
   "stability": "draft",
-  "content_hash": "57c7ca12df146ce59b164551a5a87a2e72dd1f9b6644e3b0975b7da1a71e8d40",
+  "content_hash": "802cbc844f702694cf985148b6f71168c89d59c2b2edeebac282d7a8a114bbe9",
   "last_change": {
-    "summary": "Initial publication of the participant observation-envelope runtime contract: the participant observation payload envelope in the backend-facing contract family (ADR-060, issue #76).",
-    "content_hash": "57c7ca12df146ce59b164551a5a87a2e72dd1f9b6644e3b0975b7da1a71e8d40"
+    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
+    "content_hash": "802cbc844f702694cf985148b6f71168c89d59c2b2edeebac282d7a8a114bbe9"
   }
 }

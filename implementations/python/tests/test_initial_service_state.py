@@ -8,18 +8,17 @@ from pathlib import Path
 
 import pytest
 import yaml
-from aces_backend_protocols.backend_manifest import BackendManifest
-from aces_contracts.planning import ChangeAction, ProvisioningPlan, ProvisionOp, RuntimeDomain
-from aces_contracts.runtime_state import RuntimeSnapshot, SnapshotEntry
-from aces_processor.compiler import compile_scenario_runtime_model
-from aces_processor.models import resource_payload
-from aces_processor.planner import plan
-from aces_processor.semantics.realization import realization_disclosure
-from aces_runtime.control_plane import RuntimeControlPlane
-from aces_runtime.registry import RuntimeTarget
 from raes import SDLValidationError, parse_sdl, parse_sdl_file
-
-from aces.backends.stubs import create_stub_manifest, create_stub_target
+from raes_backend_protocols.backend_manifest import BackendManifest
+from raes_backend_stubs.stubs import create_stub_manifest, create_stub_target
+from raes_contracts.planning import ChangeAction, ProvisioningPlan, ProvisionOp, RuntimeDomain
+from raes_contracts.runtime_state import RuntimeSnapshot, SnapshotEntry
+from raes_processor.compiler import compile_scenario_runtime_model
+from raes_processor.models import resource_payload
+from raes_processor.planner import plan
+from raes_processor.semantics.realization import realization_disclosure
+from raes_runtime.control_plane import RuntimeControlPlane
+from raes_runtime.registry import RuntimeTarget
 
 
 def _scenario(*replacements: tuple[str, str]):

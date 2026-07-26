@@ -1,7 +1,7 @@
 # libvirt backend — real-daemon smoke test
 
 The hermetic `nox verify` graph exercises the libvirt/QEMU backend
-(`aces_backend_libvirt`) through in-process fakes — it deliberately does **not**
+(`raes_backend_libvirt`) through in-process fakes — it deliberately does **not**
 require a real `libvirtd`, QEMU/KVM, or privileged host access (see the issue
 #604 preflight note). This directory is the out-of-band counterpart: it runs the
 backend against a **real libvirt daemon** so we can periodically confirm the
@@ -45,7 +45,7 @@ Exit code is non-zero if any check fails.
 
 ## Run it on any libvirt host
 
-Copy `libvirt_smoke.py` next to an installed `aces_backend_libvirt` (with
+Copy `libvirt_smoke.py` next to an installed `raes_backend_libvirt` (with
 `libvirt-python` available) on a host with libvirt/qemu/genisoimage and a
 `/var/lib/libvirt/images/cirros.img`, then:
 
@@ -72,7 +72,7 @@ The reproducible operator/self-hosted command is:
 # Against a real libvirt/QEMU daemon (qemu:///system). Boots the appliance,
 # certifies from inside the guest, writes a machine-readable evidence artifact,
 # and returns non-zero on any failed stage.
-aces libvirt techvault guest-certify \
+raes libvirt techvault guest-certify \
   --scenario examples/scenarios/techvault-guest-certified.sdl.yaml \
   --project-dir . --run-id guest-proof-1 --yes
 ```

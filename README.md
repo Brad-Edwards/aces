@@ -236,7 +236,7 @@ conformance, and existing scenario examples.
 ## Versioning
 
 The Python package version lives in
-[`implementations/python/pyproject.toml`](https://github.com/RAESystem/rae/blob/main/implementations/python/pyproject.toml)
+[`implementations/python/packages/raes/_version.py`](https://github.com/RAESystem/rae/blob/main/implementations/python/packages/raes/_version.py)
 and is bumped by [release-please](https://github.com/googleapis/release-please)
 from the Conventional Commit history on `main`, which also generates
 `CHANGELOG.md`. Do not hand-edit the version or `CHANGELOG.md`. See

@@ -6,12 +6,12 @@ import json
 from pathlib import Path
 
 import pytest
-from aces_contracts.contracts import (
+from raes_contracts.contracts import (
     ConceptFamilyCatalogModel,
     SemanticProfileModel,
     UcoAlignmentCatalogModel,
 )
-from aces_contracts.semantic_binding_effects import (
+from raes_contracts.semantic_binding_effects import (
     ExternalKnowledgeBindingEffect,
     semantic_profile_required_binding_effects,
     uco_alignment_binding_effects,

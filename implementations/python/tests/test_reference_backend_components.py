@@ -4,15 +4,14 @@ from __future__ import annotations
 
 import textwrap
 
-from aces_contracts.participant_episode import (
+from raes import parse_sdl
+from raes_contracts.participant_episode import (
     ParticipantEpisodeTerminalReason,
     iter_participant_episode_snapshot_violations,
 )
-from aces_reference_backend import create_reference_backend_target
-
-from aces.core.runtime.control_plane import RuntimeControlPlane
-from aces.core.runtime.manager import RuntimeManager
-from aces.core.sdl import parse_sdl
+from raes_reference_backend import create_reference_backend_target
+from raes_runtime.control_plane import RuntimeControlPlane
+from raes_runtime.manager import RuntimeManager
 
 _SCENARIO = """
 name: ref-components

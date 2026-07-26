@@ -1,1 +1,1 @@
-"""Repo policy enforcement helpers for ACES SDL."""
+"""Repo policy enforcement helpers for RAES SDL."""

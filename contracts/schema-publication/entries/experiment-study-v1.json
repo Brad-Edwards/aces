@@ -2,9 +2,9 @@
   "contract_id": "experiment-study-v1",
   "schema_path": "contracts/schemas/experiment-core/experiment-study-v1.json",
   "stability": "draft",
-  "content_hash": "4904d1cb58bb104b5e177fd85eee004d5f0791c7a53daee7488012d14b004a2d",
+  "content_hash": "a0fda94413a08751303f4d57a2f4bc6507cc5da50bc99f065b661a28693345e4",
   "last_change": {
-    "summary": "Tightened the embedded validation_basis_disclosures subject_ref binding (issue #259 CLASS finding): a study subject_ref now requires ref_version, so a disclosure can no longer carry the correct study_id while omitting ref_version to be replayed unchanged against a later study_version.",
-    "content_hash": "4904d1cb58bb104b5e177fd85eee004d5f0791c7a53daee7488012d14b004a2d"
+    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
+    "content_hash": "a0fda94413a08751303f4d57a2f4bc6507cc5da50bc99f065b661a28693345e4"
   }
 }

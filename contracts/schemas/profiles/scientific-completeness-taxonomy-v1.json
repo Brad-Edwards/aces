@@ -332,7 +332,7 @@
         }
       ],
       "level": "error",
-      "validator": "aces_contracts.scientific_completeness.ScientificCompletenessTaxonomyModel"
+      "validator": "raes_contracts.scientific_completeness.ScientificCompletenessTaxonomyModel"
     },
     {
       "description": "Each profile must carry resolved behavioral claim bindings and disjoint, catalog-resolved nonclaimed relation ids.",
@@ -348,7 +348,7 @@
         }
       ],
       "level": "error",
-      "validator": "aces_contracts.scientific_completeness.CompletenessProfileModel.validate_behavioral_claims"
+      "validator": "raes_contracts.scientific_completeness.CompletenessProfileModel.validate_behavioral_claims"
     }
   ],
   "x-aces-semantic-profile": {

@@ -104,7 +104,7 @@
     },
     {
       "concern_id": "backend-teardown-reconciliation", "status": "partial", "limitation": "Reference backends have teardown paths, but portable authored cleanup and cross-backend reconciliation guarantees are incomplete.", "issue_refs": ["#658"],
-      "evidence": [{"kind": "implementation", "path": "implementations/python/packages/aces_backend_libvirt/provisioner.py", "claim": "Libvirt teardown and reconciliation implementation."}]
+      "evidence": [{"kind": "implementation", "path": "implementations/python/packages/raes_backend_libvirt/provisioner.py", "claim": "Libvirt teardown and reconciliation implementation."}]
     },
     {
       "concern_id": "manual-rollback", "status": "missing", "limitation": "No general authored manual or advanced rollback contract exists.", "issue_refs": ["#658"], "evidence": []
@@ -119,7 +119,7 @@
     },
     {
       "concern_id": "temporal-ordering-causality", "status": "partial", "limitation": "Workflow and participant records preserve bounded order, but general causal and partial-order SDL semantics remain open.", "issue_refs": ["#285", "#288"],
-      "evidence": [{"kind": "implementation", "path": "implementations/python/packages/aces_contracts/participant_concurrency.py", "claim": "Participant concurrency and order invariants."}]
+      "evidence": [{"kind": "implementation", "path": "implementations/python/packages/raes_contracts/participant_concurrency.py", "claim": "Participant concurrency and order invariants."}]
     },
     {
       "concern_id": "deadlines-and-windows", "status": "partial", "limitation": "Objective windows exist, but a complete time-domain-bound deadline surface is not published.", "issue_refs": ["#285", "#288"],
@@ -142,7 +142,7 @@
     },
     {
       "concern_id": "participant-episode-reset", "status": "partial", "limitation": "Runtime episode lifecycle is implemented, while complete authored episode/reset semantics and conformance remain open.", "issue_refs": ["#305", "#307", "#311", "#314"],
-      "evidence": [{"kind": "implementation", "path": "implementations/python/packages/aces_contracts/participant_episode.py", "claim": "Runtime episode lifecycle invariants."}]
+      "evidence": [{"kind": "implementation", "path": "implementations/python/packages/raes_contracts/participant_episode.py", "claim": "Runtime episode lifecycle invariants."}]
     },
     {
       "concern_id": "participant-budgets", "status": "missing", "limitation": "Portable authored budget, exhaustion, and usage-accounting contracts are not complete.", "issue_refs": ["#306", "#308", "#312", "#313"], "evidence": []
@@ -213,7 +213,7 @@
         {"kind": "normative-spec", "path": "specs/formal/behavioral-relations/README.md", "claim": "Normative relation definitions, dimensions, claim surfaces, assurance states, and counterexamples."},
         {"kind": "published-schema", "path": "contracts/schemas/concept-authority/behavioral-relations-v1.json", "contract_id": "behavioral-relations-v1", "claim": "Published closed contract for the revisioned taxonomy."},
         {"kind": "implementation", "path": "tools/check_behavioral_relation_claims.py", "claim": "Semantic claim-binding and overclaim gate."},
-        {"kind": "conformance", "path": "implementations/python/packages/aces_conformance/conformance/__init__.py", "claim": "Backend conformance reports disclose bounded-probe relation, projection, case boundary, and nonclaims."},
+        {"kind": "conformance", "path": "implementations/python/packages/raes_conformance/conformance/__init__.py", "claim": "Backend conformance reports disclose bounded-probe relation, projection, case boundary, and nonclaims."},
         {"kind": "test", "path": "implementations/python/tests/test_behavioral_relations.py", "claim": "Catalog, binding, counterexample, and property-based relation tests."},
         {"kind": "documentation", "path": "docs/research/behavioral-relations/conflation-audit-2026-07-13.md", "claim": "Claim-surface conflation audit and remediation record."}
       ]

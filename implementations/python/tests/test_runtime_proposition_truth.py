@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from copy import deepcopy
 
-from aces_contracts.planning import RuntimeDomain
-from aces_contracts.runtime_state import RuntimeSnapshot, SnapshotEntry
-from aces_runtime.proposition_truth_contracts import proposition_truth_contract_diagnostics
+from raes_contracts.planning import RuntimeDomain
+from raes_contracts.runtime_state import RuntimeSnapshot, SnapshotEntry
+from raes_runtime.proposition_truth_contracts import proposition_truth_contract_diagnostics
 from test_truth_result_contracts import _observed_result
 
 

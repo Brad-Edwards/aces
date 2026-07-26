@@ -104,7 +104,7 @@ ssh "${SSHOPT[@]}" ubuntu@"$IP" "curl -LsSf https://astral.sh/uv/install.sh | sh
 echo "=== run guest-certified proof ==="
 ssh "${SSHOPT[@]}" ubuntu@"$IP" "sudo bash -lc 'cd /home/ubuntu/aces && implementations/python/.venv/bin/python -c \"
 from pathlib import Path
-from aces_operations.libvirt_evidence_run import run_libvirt_evidence_run, LibvirtEvidenceRunConfig
+from raes_operations.libvirt_evidence_run import run_libvirt_evidence_run, LibvirtEvidenceRunConfig
 r = run_libvirt_evidence_run(scenario_path=Path(\\\"examples/scenarios/techvault-guest-certified.sdl.yaml\\\").resolve(), project_dir=Path(\\\"/home/ubuntu/aces/gc-out\\\"), run_id=\\\"$RUN_ID\\\", config=LibvirtEvidenceRunConfig(evidence_source_mode=\\\"guest-certified\\\", connection_uri=\\\"qemu:///system\\\"))
 print(r.render())
 import sys; sys.exit(0 if r.passed else 1)

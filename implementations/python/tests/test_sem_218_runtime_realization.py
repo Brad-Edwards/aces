@@ -21,19 +21,18 @@ from __future__ import annotations
 import textwrap
 from dataclasses import replace
 
-from aces_contracts.runtime_state import (
+from raes import parse_sdl
+from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance
+from raes_backend_stubs.stubs import StubProvisioner, create_stub_target
+from raes_contracts.runtime_state import (
     ApplyResult,
     RealizationProvenanceEntry,
     RuntimeSnapshot,
 )
-from aces_contracts.versions import RUNTIME_SNAPSHOT_SCHEMA_VERSION
-from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance
-
-from aces.backends.stubs import StubProvisioner, create_stub_target
-from aces.core.runtime.control_plane_store import _snapshot_from_payload, _snapshot_payload
-from aces.core.runtime.manager import RuntimeManager
-from aces.core.runtime.registry import RuntimeTarget
-from aces.core.sdl import parse_sdl
+from raes_contracts.versions import RUNTIME_SNAPSHOT_SCHEMA_VERSION
+from raes_runtime.control_plane_store import _snapshot_from_payload, _snapshot_payload
+from raes_runtime.manager import RuntimeManager
+from raes_runtime.registry import RuntimeTarget
 
 _EXACT_SCENARIO = """
 name: sem-218-runtime-exact
@@ -215,7 +214,7 @@ def test_realization_provenance_round_trips_through_control_plane_store():
 def test_runtime_snapshot_envelope_schema_accepts_realization_provenance():
     """The published runtime-snapshot envelope carries the provenance field."""
 
-    from aces_contracts.contracts import RuntimeSnapshotEnvelopeModel
+    from raes_contracts.contracts import RuntimeSnapshotEnvelopeModel
 
     model = RuntimeSnapshotEnvelopeModel.model_validate(
         {

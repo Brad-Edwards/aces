@@ -428,7 +428,7 @@
     },
     "ExperimentReferenceModel": {
       "additionalProperties": false,
-      "description": "Typed reference to an experiment-core or adjacent ACES artifact.",
+      "description": "Typed reference to an experiment-core or adjacent RAES artifact.",
       "properties": {
         "ref_digest": {
           "anyOf": [
@@ -727,7 +727,7 @@
         }
       ],
       "level": "error",
-      "validator": "aces_contracts.contracts.ExperimentEvidenceRecordModel._validate_evidence_record"
+      "validator": "raes_contracts.contracts.ExperimentEvidenceRecordModel._validate_evidence_record"
     },
     {
       "description": "captured_at must be a valid RFC 3339 date-time.",
@@ -739,7 +739,7 @@
         }
       ],
       "level": "error",
-      "validator": "aces_contracts.contracts.ExperimentEvidenceRecordModel._validate_evidence_record"
+      "validator": "raes_contracts.contracts.ExperimentEvidenceRecordModel._validate_evidence_record"
     }
   ],
   "x-aces-plane": "captured_evidence",

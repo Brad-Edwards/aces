@@ -133,11 +133,11 @@ new participant stack. The canonical incumbents are:
 - Compiled runtime addresses: `participant.action-contract.*`,
   `participant.observation-boundary.*`,
   `participant.outcome-interpretation-rule.*`, and
-  `participant.behavior.*` from `aces_processor.compiler`.
+  `participant.behavior.*` from `raes_processor.compiler`.
 - Runtime interaction evidence: `ParticipantActionResult`,
   precondition/effect/result records, outcome interpretation records, and
   `iter_participant_behavior_history_violations` in
-  `aces_processor.models`.
+  `raes_processor.models`.
 - Published contract authority: `ContractModel`, `schema_bundle()`,
   `contracts/schemas/`, `contracts/schema-publication-manifest.json`, and the
   `contracts/fixtures/` positive/negative fixture pattern.
@@ -330,7 +330,7 @@ behavior surfaces. The canonical incumbents are:
   `analyze_participant_behavior`.
 - Runtime compilation: stable participant behavior, action-contract,
   observation-boundary, outcome-rule, and behavior-specification addresses from
-  `aces_processor.compiler`.
+  `raes_processor.compiler`.
 - Published contract authority: closed `ContractModel` payloads,
   `schema_bundle()`, generated schemas, the schema-publication manifest, and
   valid/invalid fixtures.

@@ -11,7 +11,7 @@ metadata attached to ``Node.runtime``; they never mutate ``Node.services``,
 The portable shape factors share/resource identity, service-local
 principals, authorization rules, and observed access outcomes into
 distinct records so vendor ACLs (POSIX, Windows DACL, NFSv4 ACE,
-Zanzibar) are not smuggled in as the canonical ACES rule language.
+Zanzibar) are not smuggled in as the canonical RAES rule language.
 Service-local principals carry only a credential-strength classification
 (``RuntimeFileServiceCredentialClassification``); raw passwords, hashes,
 keys, and other secret material are unrepresentable in this surface per

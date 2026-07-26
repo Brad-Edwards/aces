@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-from aces_processor.compiler import compile_runtime_model
 from pydantic import ValidationError
 from raes._errors import SDLParseError, SDLValidationError
 from raes.parser import parse_sdl
@@ -26,6 +25,7 @@ from raes.semantics.propositions import (
     negate_truth,
     quantify_subject_truth,
 )
+from raes_processor.compiler import compile_runtime_model
 
 
 def test_proposition_is_inspectable_without_probe_execution() -> None:

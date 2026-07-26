@@ -6,13 +6,12 @@ import textwrap
 from pathlib import Path
 
 import pytest
-
-from aces.core.runtime.capabilities import (
+from raes import SDLInstantiationError, parse_sdl, parse_sdl_file
+from raes_backend_protocols.capabilities import (
     WorkflowFeature,
     WorkflowStatePredicateFeature,
 )
-from aces.core.runtime.compiler import compile_runtime_model
-from aces.core.sdl import SDLInstantiationError, parse_sdl, parse_sdl_file
+from raes_processor.compiler import compile_runtime_model
 
 
 def _scenario(yaml_str: str):

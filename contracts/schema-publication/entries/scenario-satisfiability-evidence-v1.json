@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "4f49b1c744b930b4e100bfef12e105ab3a569208356d06016b7d06e8b5a669c0",
+  "content_hash": "cfe81837593f38a4a8871c4392425fb7407e96c66179b3dc7d36cd749f94c88a",
   "last_change": {
-    "summary": "Retargeted qualified Python validator references from aces_sdl to raes without changing schema identifiers or semantics.",
-    "content_hash": "4f49b1c744b930b4e100bfef12e105ab3a569208356d06016b7d06e8b5a669c0"
+    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
+    "content_hash": "cfe81837593f38a4a8871c4392425fb7407e96c66179b3dc7d36cd749f94c88a"
   }
 }

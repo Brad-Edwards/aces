@@ -31,7 +31,7 @@ It does lock the semantic preconditions those features must respect.
 - objective/window references already carry a namespace-extensible path slot in
   `implementations/python/packages/raes/semantics/objectives.py`
 - planner identity handling is already defined in terms of canonical compiled
-  addresses in `implementations/python/packages/aces_processor/semantics/planner.py`
+  addresses in `implementations/python/packages/raes_processor/semantics/planner.py`
 - named regression tests pin the layout/namespace invariants:
   - assessment pipeline: `implementations/python/tests/test_semantics_assessment.py`
     (`test_composition_ready_invariant_layout_variation_preserves_normalized_references_and_aggregation`,

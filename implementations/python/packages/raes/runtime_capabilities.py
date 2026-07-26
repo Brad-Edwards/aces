@@ -10,7 +10,7 @@ It is split out of ``runtime_configuration`` so the file housing the
 top-level ``RuntimeConfiguration`` aggregate stays under the per-file size
 cap from ADR-015. ``RuntimeConfiguration`` re-imports
 ``RuntimeProcessIdentity`` and ``RuntimeCapabilityPolicy`` from here so
-external callers still reach them via ``aces.core.sdl.nodes``.
+external callers still reach them via ``raes.nodes``.
 """
 
 from __future__ import annotations
