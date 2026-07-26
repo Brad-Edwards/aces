@@ -213,15 +213,34 @@ class _ParticipantInjectDeliveriesMixin:
         declaration = behavior_spec.mixed_control
         if declaration is None:
             self._err(f"{label} control_transition_ref requires mixed_control on the owning behavior specification")
-            return
+            return None
         transition_ref = binding.control_transition_ref
         transition = declaration.transitions.get(transition_ref) if transition_ref is not None else None
         if transition is None:
             self._err(f"{label} control_transition_ref '{transition_ref}' does not resolve")
-            return
+            return None
         return declaration, transition, declaration.controller_states[transition.to_state_ref]
 
     def _verify_delivery_control_agreement(
+        self,
+        label: str,
+        binding: object,
+        delivery_kind: str,
+        declaration: object,
+        transition: object,
+        target_state: object,
+    ) -> None:
+        self._verify_delivery_control_identity(
+            label,
+            binding,
+            delivery_kind,
+            declaration,
+            transition,
+            target_state,
+        )
+        self._verify_delivery_control_bounds(label, binding, transition, target_state)
+
+    def _verify_delivery_control_identity(
         self,
         label: str,
         binding: object,
@@ -250,6 +269,14 @@ class _ParticipantInjectDeliveriesMixin:
             target_state.scope_refs
         ):
             self._err(f"{label} control authority scope disagrees with the control transition target state")
+
+    def _verify_delivery_control_bounds(
+        self,
+        label: str,
+        binding: object,
+        transition: object,
+        target_state: object,
+    ) -> None:
         if binding.control_effective_order != transition.effective_order:
             self._err(f"{label} control effective order disagrees with the control transition")
         if (
