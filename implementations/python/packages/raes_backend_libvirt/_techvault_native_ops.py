@@ -15,7 +15,7 @@ from typing import Protocol, cast
 
 from raes_contracts.diagnostics import Diagnostic, Severity
 
-from .drivers.libvirt import _aces_uuid, _error_code, _existing_uuid
+from .drivers.libvirt import _error_code, _existing_uuid, _raes_uuid
 from .techvault_lifecycle import (
     NativeOwnershipConflict as _OwnershipConflict,
 )
@@ -54,13 +54,13 @@ def _ensure_name_available(connection: object, method_name: str, name: str, addr
         if _error_code(exc) in {42, 43}:
             return
         raise
-    if _existing_uuid(native) != _aces_uuid(address):
+    if _existing_uuid(native) != _raes_uuid(address):
         raise _OwnershipConflict(address)
     raise RuntimeError("owned native object already exists for CREATE")
 
 
 def _artifact_token(address: str) -> str:
-    return _aces_uuid(address).replace("-", "")
+    return _raes_uuid(address).replace("-", "")
 
 
 _MESSAGES = {
