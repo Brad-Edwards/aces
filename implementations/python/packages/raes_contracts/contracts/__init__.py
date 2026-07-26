@@ -178,8 +178,6 @@ from .manifests import (
 )
 from .manifests import CleanupCapabilitiesModel as CleanupCapabilitiesModel
 from .participant_context import ParticipantContextViewModel
-from .participant_control import ParticipantControlDeclarationModel, ParticipantControlOccurrenceModel
-from .participant_control_validation import validate_participant_control_occurrence_context
 from .participant_decision_surface import (
     ParticipantDecisionSurfaceActionEntryModel,
     ParticipantDecisionSurfaceCandidateSetFormModel,
@@ -217,6 +215,13 @@ from .participant_manifests import (
     ParticipantImplementationManifestModel,
     ParticipantImplementationProvenanceModel,
     ParticipantImplementationSelectionModel,
+)
+from .participant_occurrences import (
+    ParticipantControlDeclarationModel,
+    ParticipantControlOccurrenceModel,
+    ParticipantCrossingOccurrenceModel,
+    validate_participant_control_occurrence_context,
+    validate_participant_crossing_occurrence_context,
 )
 from .participant_runtime import (
     ParticipantActionEffectResultModel,
@@ -321,39 +326,17 @@ from .semantic_profiles import (
     SemanticProfileModel,
     SemanticProfilePhaseModel,
 )
-from .trial_cleanup import (
-    CleanStateClaimModel as CleanStateClaimModel,
-)
-from .trial_cleanup import (
-    CleanStateRequirementModel as CleanStateRequirementModel,
-)
-from .trial_cleanup import (
-    CleanupObligationModel as CleanupObligationModel,
-)
-from .trial_cleanup import (
-    CleanupObligationResultModel as CleanupObligationResultModel,
-)
-from .trial_cleanup import (
-    CleanupResourceBoundaryModel as CleanupResourceBoundaryModel,
-)
-from .trial_cleanup import (
-    ExecutionRetryPolicyModel as ExecutionRetryPolicyModel,
-)
-from .trial_cleanup import (
-    IsolationDimensionEvidenceModel as IsolationDimensionEvidenceModel,
-)
-from .trial_cleanup import (
-    SchedulerIsolationProofModel as SchedulerIsolationProofModel,
-)
-from .trial_cleanup import (
-    TrialCleanupPlanModel as TrialCleanupPlanModel,
-)
-from .trial_cleanup import (
-    TrialCleanupReceiptModel as TrialCleanupReceiptModel,
-)
-from .trial_cleanup import (
-    validate_trial_cleanup_receipt as validate_trial_cleanup_receipt,
-)
+from .trial_cleanup import CleanStateClaimModel as CleanStateClaimModel
+from .trial_cleanup import CleanStateRequirementModel as CleanStateRequirementModel
+from .trial_cleanup import CleanupObligationModel as CleanupObligationModel
+from .trial_cleanup import CleanupObligationResultModel as CleanupObligationResultModel
+from .trial_cleanup import CleanupResourceBoundaryModel as CleanupResourceBoundaryModel
+from .trial_cleanup import ExecutionRetryPolicyModel as ExecutionRetryPolicyModel
+from .trial_cleanup import IsolationDimensionEvidenceModel as IsolationDimensionEvidenceModel
+from .trial_cleanup import SchedulerIsolationProofModel as SchedulerIsolationProofModel
+from .trial_cleanup import TrialCleanupPlanModel as TrialCleanupPlanModel
+from .trial_cleanup import TrialCleanupReceiptModel as TrialCleanupReceiptModel
+from .trial_cleanup import validate_trial_cleanup_receipt as validate_trial_cleanup_receipt
 from .validation_disclosure import ValidationBasisDisclosureDocumentModel
 from .validators import _collapse_nullable_optional_schema as _collapse_nullable_optional_schema
 from .validators import _resolve_instance_path_schema as _resolve_instance_path_schema
@@ -436,8 +419,11 @@ __all__ = [
     "ParticipantAttributionEvidenceBasisModel", "ParticipantAttributionOrderingBasisModel",
     "ParticipantAutonomousExecutionStateModel", "ParticipantBehaviorHistoryEventModel",
     "ParticipantContextViewModel", "ParticipantControlDeclarationModel",
-    "ParticipantControlOccurrenceModel", "validate_participant_control_occurrence_context",
-    "ParticipantDecisionSurfaceActionEntryModel", "ParticipantDecisionSurfaceCandidateSetFormModel",
+    "ParticipantControlOccurrenceModel", "ParticipantCrossingOccurrenceModel",
+    "validate_participant_control_occurrence_context",
+    "validate_participant_crossing_occurrence_context",
+    "ParticipantDecisionSurfaceActionEntryModel",
+    "ParticipantDecisionSurfaceCandidateSetFormModel",
     "ParticipantDecisionSurfaceConstrainedFormModel", "ParticipantDecisionSurfaceExposureBindingModel",
     "ParticipantDecisionSurfaceExposureRealizationModel", "ParticipantDecisionSurfaceModel",
     "ParticipantDecisionSurfaceOpenEndedFormModel", "ParticipantDecisionSurfaceSelectionModel",
