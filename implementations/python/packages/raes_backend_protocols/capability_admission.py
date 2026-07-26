@@ -79,6 +79,75 @@ def _participant_feature_required_contracts(feature: str) -> frozenset[str]:
     return frozenset()
 
 
+def _validate_downgrade_authorization(
+    feature: str,
+    allowed_downgrade_level: ParticipantFeatureSupportLevel | None,
+    downgrade_policy_ref: str | None,
+    downgrade_provenance_ref: str | None,
+) -> None:
+    if allowed_downgrade_level is not None and (not downgrade_policy_ref or not downgrade_provenance_ref):
+        raise ValueError(
+            f"participant feature '{feature}' requires explicit downgrade authorization "
+            "with policy and provenance references"
+        )
+
+
+def _participant_feature_declaration(
+    manifest: BackendManifest,
+    feature: str,
+) -> ParticipantFeatureSupport | None:
+    capability = manifest.participant_runtime
+    if capability is None:
+        raise ValueError(f"participant feature '{feature}' requires participant runtime capabilities")
+
+    supported_features = capability.supported_behavior_features | capability.supported_interaction_features
+    declaration = next((entry for entry in capability.feature_support if entry.feature == feature), None)
+    if declaration is None:
+        if feature in supported_features and feature not in PARTICIPANT_RUNTIME_POLICY_FEATURES:
+            return None
+        raise ValueError(f"participant feature '{feature}' has no explicit support declaration")
+    if declaration.support_level == ParticipantFeatureSupportLevel.UNSUPPORTED:
+        raise ValueError(f"participant feature '{feature}' is explicitly unsupported")
+    return declaration
+
+
+def _validate_participant_feature_evidence(
+    manifest: BackendManifest,
+    feature: str,
+    declaration: ParticipantFeatureSupport,
+) -> None:
+    missing_contracts = sorted(_participant_feature_required_contracts(feature) - manifest.supported_contract_versions)
+    if missing_contracts:
+        raise ValueError(
+            f"participant feature '{feature}' is missing required contracts: {', '.join(missing_contracts)}"
+        )
+    if not declaration.evidence_refs and feature in PARTICIPANT_RUNTIME_POLICY_FEATURES:
+        raise ValueError(f"participant feature '{feature}' has no conformance evidence")
+
+
+def _resolve_participant_feature_strength(
+    feature: str,
+    declaration: ParticipantFeatureSupport,
+    required_level: ParticipantFeatureSupportLevel,
+    allowed_downgrade_level: ParticipantFeatureSupportLevel | None,
+) -> ParticipantFeatureSupport:
+    declared_rank = _PARTICIPANT_FEATURE_SUPPORT_RANK[declaration.support_level]
+    required_rank = _PARTICIPANT_FEATURE_SUPPORT_RANK[required_level]
+    if declared_rank >= required_rank:
+        return declaration
+    if allowed_downgrade_level is None:
+        raise ValueError(
+            f"participant feature '{feature}' requires {required_level.value} support; "
+            f"backend declares {declaration.support_level.value}"
+        )
+    if declaration.support_level != allowed_downgrade_level:
+        raise ValueError(
+            f"participant feature '{feature}' authorized downgrade is "
+            f"{allowed_downgrade_level.value}; backend declares {declaration.support_level.value}"
+        )
+    return declaration
+
+
 def resolve_participant_feature_support(
     manifest: BackendManifest,
     feature: str,
@@ -97,47 +166,22 @@ def resolve_participant_feature_support(
     cannot retain the stronger requested claim.
     """
 
-    if allowed_downgrade_level is not None and (not downgrade_policy_ref or not downgrade_provenance_ref):
-        raise ValueError(
-            f"participant feature '{feature}' requires explicit downgrade authorization "
-            "with policy and provenance references"
-        )
-
-    capability = manifest.participant_runtime
-    if capability is None:
-        raise ValueError(f"participant feature '{feature}' requires participant runtime capabilities")
-    supported_features = capability.supported_behavior_features | capability.supported_interaction_features
-    declaration = next((entry for entry in capability.feature_support if entry.feature == feature), None)
+    _validate_downgrade_authorization(
+        feature,
+        allowed_downgrade_level,
+        downgrade_policy_ref,
+        downgrade_provenance_ref,
+    )
+    declaration = _participant_feature_declaration(manifest, feature)
     if declaration is None:
-        if feature in supported_features and feature not in PARTICIPANT_RUNTIME_POLICY_FEATURES:
-            return None
-        raise ValueError(f"participant feature '{feature}' has no explicit support declaration")
-    if declaration.support_level == ParticipantFeatureSupportLevel.UNSUPPORTED:
-        raise ValueError(f"participant feature '{feature}' is explicitly unsupported")
-
-    missing_contracts = sorted(_participant_feature_required_contracts(feature) - manifest.supported_contract_versions)
-    if missing_contracts:
-        raise ValueError(
-            f"participant feature '{feature}' is missing required contracts: {', '.join(missing_contracts)}"
-        )
-    if not declaration.evidence_refs and feature in PARTICIPANT_RUNTIME_POLICY_FEATURES:
-        raise ValueError(f"participant feature '{feature}' has no conformance evidence")
-
-    declared_rank = _PARTICIPANT_FEATURE_SUPPORT_RANK[declaration.support_level]
-    required_rank = _PARTICIPANT_FEATURE_SUPPORT_RANK[required_level]
-    if declared_rank >= required_rank:
-        return declaration
-    if allowed_downgrade_level is None:
-        raise ValueError(
-            f"participant feature '{feature}' requires {required_level.value} support; "
-            f"backend declares {declaration.support_level.value}"
-        )
-    if declaration.support_level != allowed_downgrade_level:
-        raise ValueError(
-            f"participant feature '{feature}' authorized downgrade is "
-            f"{allowed_downgrade_level.value}; backend declares {declaration.support_level.value}"
-        )
-    return declaration
+        return None
+    _validate_participant_feature_evidence(manifest, feature, declaration)
+    return _resolve_participant_feature_strength(
+        feature,
+        declaration,
+        required_level,
+        allowed_downgrade_level,
+    )
 
 
 def participant_feature_support_gaps(
