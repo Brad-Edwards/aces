@@ -31,6 +31,7 @@ from .experiment_artifacts import (
     _reference_identity_satisfies_requirement,
     _reference_satisfies_requirement,
 )
+from .experiment_bindings import RealizedBindingProvenanceModel, _validate_realized_bindings
 from .experiment_disclosure import ExperimentAugmentationDisclosureModel
 from .experiment_evidence import (
     ExperimentRealizedFormDisclosureModel,
@@ -122,6 +123,7 @@ class ExperimentRunModel(ContractModel):
     apparatus_context: ExperimentApparatusContextModel
     participant_implementation_provenance: ParticipantImplementationProvenanceModel | None = None
     parameter_set: list[ExperimentParameterModel] = Field(min_length=1)
+    realized_bindings: list[RealizedBindingProvenanceModel] = Field(default_factory=list)
     stochastic_controls: list[ExperimentStochasticControlModel] = Field(min_length=1)
     stochastic_draws: list[RandomStreamDrawRecordModel] = Field(default_factory=list)
     started_at: Rfc3339DateTimeString
@@ -152,6 +154,7 @@ class ExperimentRunModel(ContractModel):
         _validate_run_evidence_artifact_refs(self)
         _validate_run_realized_form_disclosures(self)
         _validate_run_augmentation_disclosures(self)
+        _validate_realized_bindings(self.realized_bindings)
         validate_carrier_validation_basis_disclosures(self, subject_kind="experiment_run")
         if self.realized_time_model is not None:
             validate_realized_time_model(

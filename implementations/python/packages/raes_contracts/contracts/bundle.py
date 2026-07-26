@@ -25,6 +25,10 @@ from .execution_state import (
     WorkflowHistoryEventModel,
 )
 from .experiment_apparatus import ExperimentApparatusContextModel, ExperimentTaskModel
+from .experiment_bindings import (
+    ExperimentBindingDescriptorSetModel,
+    ParticipantConfigurationResultModel,
+)
 from .experiment_capture import ExperimentCaptureSpecModel
 from .experiment_evidence import ExperimentDerivedMeasureModel, ExperimentEvidenceRecordModel
 from .experiment_run import ExperimentRunModel
@@ -138,6 +142,7 @@ def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
         "random-stream-vector-v1": RandomStreamVectorModel.model_json_schema(),
         "experiment-apparatus-context-v1": ExperimentApparatusContextModel.model_json_schema(),
         "experiment-authoring-input-v1": ExperimentSpecModel.model_json_schema(),
+        "experiment-binding-descriptors-v1": ExperimentBindingDescriptorSetModel.model_json_schema(),
         "experiment-capture-spec-v1": ExperimentCaptureSpecModel.model_json_schema(),
         "experiment-derived-measure-v1": ExperimentDerivedMeasureModel.model_json_schema(),
         "experiment-evidence-record-v1": ExperimentEvidenceRecordModel.model_json_schema(),
@@ -192,6 +197,7 @@ def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
         "participant-context-view-v1": ParticipantContextViewModel.model_json_schema(),
         "runtime-fact-binding-plane-v1": RuntimeFactBindingPlaneModel.model_json_schema(),
         "participant-decision-surface-v1": ParticipantDecisionSurfaceModel.model_json_schema(),
+        "participant-configuration-result-v1": ParticipantConfigurationResultModel.model_json_schema(),
         "operation-receipt-v1": OperationReceiptModel.model_json_schema(),
         "operation-status-v1": OperationStatusModel.model_json_schema(),
         "associated-artifact-manifest-v1": AssociatedArtifactManifestModel.model_json_schema(),

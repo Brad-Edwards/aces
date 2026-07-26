@@ -29,6 +29,7 @@ page is an index, not a replacement for the linked artifacts.
 | Instantiation, planning, and realization path | [`docs/explain/sdl/runtime-architecture.md`](../sdl/runtime-architecture.md) |
 | Explicitness and realized-form semantics | [`explicitness-realization-semantics.md`](explicitness-realization-semantics.md), [`realization-envelopes.md`](realization-envelopes.md) |
 | Variation and trial realization | [`scenario-variation-and-trial-realization.md`](scenario-variation-and-trial-realization.md) |
+| Experiment binding contracts | [`experiment-binding-contracts.md`](experiment-binding-contracts.md), [ADR-094](../../decisions/adrs/adr-094-authoritative-cross-plane-experiment-bindings.md) |
 | Backend conformance | [`backend-conformance.md`](backend-conformance.md) |
 | Evidence-bounded claim guidance | [`docs/explain/sdl/agent-guidance.md`](../sdl/agent-guidance.md), [`docs/explain/sdl/scientific-scenario-completeness.md`](../sdl/scientific-scenario-completeness.md) |
 
@@ -59,6 +60,7 @@ page is an index, not a replacement for the linked artifacts.
 | Design precedents | [`docs/explain/sdl/precedents.md`](../sdl/precedents.md) |
 | Academic lineage | [`docs/explain/sdl/lineage.md`](../sdl/lineage.md) |
 | Scenario variation and trial realization design | [`scenario-variation-and-trial-realization.md`](scenario-variation-and-trial-realization.md), [ADR-084](../../decisions/adrs/adr-084-scenario-variation-and-deterministic-trial-realization.md) |
+| Cross-plane experiment binding and configuration | [`experiment-binding-contracts.md`](experiment-binding-contracts.md), [ADR-094](../../decisions/adrs/adr-094-authoritative-cross-plane-experiment-bindings.md) |
 
 ## Contracts And Processing
 

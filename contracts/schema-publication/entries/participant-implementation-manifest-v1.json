@@ -2,5 +2,9 @@
   "contract_id": "participant-implementation-manifest-v1",
   "schema_path": "contracts/schemas/participant-implementation-manifest/participant-implementation-manifest-v1.json",
   "stability": "draft",
-  "content_hash": "93e30291adbc08b1969adb9b938f888b004d317ac864e90151d0f43a395948e4"
+  "content_hash": "5b7c636a98c540e1afc74ca74a1e9a421609f498c3b85c473a52c1516e398984",
+  "last_change": {
+    "summary": "Added typed participant configuration targets, aliases, defaults, sensitivity, and governed validator ownership.",
+    "content_hash": "5b7c636a98c540e1afc74ca74a1e9a421609f498c3b85c473a52c1516e398984"
+  }
 }

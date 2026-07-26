@@ -2,5 +2,9 @@
   "contract_id": "participant-implementation-provenance-v1",
   "schema_path": "contracts/schemas/participant-implementation-provenance/participant-implementation-provenance-v1.json",
   "stability": "draft",
-  "content_hash": "a4c050fb2a53129148f7d2960a7cb06d36c4682483064734e505acda4677d7ec"
+  "content_hash": "88076dc67b837b282a0efe482d4b74d5fb053ad7b44cb6bc0d862b4fe17eb30e",
+  "last_change": {
+    "summary": "Required participant configuration references and authoritative normalized configuration digests to be supplied together.",
+    "content_hash": "88076dc67b837b282a0efe482d4b74d5fb053ad7b44cb6bc0d862b4fe17eb30e"
+  }
 }

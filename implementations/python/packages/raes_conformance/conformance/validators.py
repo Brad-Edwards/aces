@@ -10,6 +10,7 @@ from raes_contracts.contracts import (
     EvaluationPlanModel,
     EvaluationResultStateModel,
     ExperimentApparatusContextModel,
+    ExperimentBindingDescriptorSetModel,
     ExperimentCaptureSpecModel,
     ExperimentDerivedMeasureModel,
     ExperimentEvidenceRecordModel,
@@ -20,6 +21,7 @@ from raes_contracts.contracts import (
     OperationStatusModel,
     OrchestrationPlanModel,
     ParticipantBehaviorHistoryEventModel,
+    ParticipantConfigurationResultModel,
     ParticipantEpisodeHistoryEventModel,
     ParticipantEpisodeStateModel,
     ParticipantImplementationManifestModel,
@@ -67,6 +69,8 @@ _MODEL_VALIDATORS = {
     "experiment-evidence-record-v1": ExperimentEvidenceRecordModel.model_validate,
     "experiment-derived-measure-v1": ExperimentDerivedMeasureModel.model_validate,
     "experiment-run-v1": ExperimentRunModel.model_validate,
+    "experiment-binding-descriptors-v1": ExperimentBindingDescriptorSetModel.model_validate,
+    "participant-configuration-result-v1": ParticipantConfigurationResultModel.model_validate,
 }
 
 
