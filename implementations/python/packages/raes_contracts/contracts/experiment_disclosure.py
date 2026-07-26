@@ -22,6 +22,14 @@ from .experiment_references import ExperimentReferenceModel
 from .schema_invariants import _add_aces_invariant
 from .validators import _validate_unique_string_values
 
+__all__ = [
+    "ExperimentApparatusConstraintModel",
+    "ExperimentAugmentationDisclosureModel",
+    "ExperimentEvaluationProtocolModel",
+    "ExperimentMetricDefinitionModel",
+    "ExperimentSplitAndLeakageControlsModel",
+]
+
 _SEM_225_PORTABLE_CARRIER_KINDS = frozenset(
     {
         "apparatus-context",

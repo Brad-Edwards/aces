@@ -2,9 +2,9 @@
   "contract_id": "experiment-authoring-input-v1",
   "schema_path": "contracts/schemas/experiment-core/experiment-authoring-input-v1.json",
   "stability": "draft",
-  "content_hash": "829ac69c37136596506bf83e0f2fde6cd8c333a79d497c84b93b0497e37aabc9",
+  "content_hash": "47a2a28bd72c252aff22a651e58b216cd4700e9d7c4cabc87728bce0657183a6",
   "last_change": {
-    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
-    "content_hash": "829ac69c37136596506bf83e0f2fde6cd8c333a79d497c84b93b0497e37aabc9"
+    "summary": "Added explicit binding semantics and authoritative cross-plane binding descriptors joined to factor levels and conditions.",
+    "content_hash": "47a2a28bd72c252aff22a651e58b216cd4700e9d7c4cabc87728bce0657183a6"
   }
 }

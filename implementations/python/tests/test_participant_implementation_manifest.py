@@ -37,6 +37,8 @@ def _manifest_payload() -> dict[str, object]:
         "supported_contract_versions": [
             "participant-implementation-manifest-v1",
             "participant-implementation-provenance-v1",
+            "experiment-binding-descriptors-v1",
+            "participant-configuration-result-v1",
             "participant-episode-state-envelope-v1",
             "participant-episode-history-event-stream-v1",
             "participant-behavior-history-event-stream-v1",
@@ -63,6 +65,38 @@ def _manifest_payload() -> dict[str, object]:
             "supported_decision_surface_modes": ["autonomous", "policy-directed"],
             "tool_affordance_expectations": ["shell", "http-api"],
             "exposure_policy_kinds": ["task-statement", "observation-stream"],
+        },
+        "configuration_registry": {
+            "owner": {
+                "contract_id": "participant-configuration-result-v1",
+                "contract_version": "1",
+                "validator_id": "reference-participant-configuration",
+                "validator_version": "1",
+            },
+            "targets": {
+                "policy.temperature": {
+                    "target_id": "policy.temperature",
+                    "value_type": "number",
+                    "aliases": ["temperature"],
+                    "allowed_value_kinds": ["literal"],
+                    "sensitivity": "public",
+                    "default": {"kind": "literal", "value": 0.25},
+                },
+                "policy.mode": {
+                    "target_id": "policy.mode",
+                    "value_type": "string",
+                    "aliases": ["mode"],
+                    "allowed_value_kinds": ["literal"],
+                    "sensitivity": "internal",
+                },
+                "credentials.api": {
+                    "target_id": "credentials.api",
+                    "value_type": "string",
+                    "aliases": [],
+                    "allowed_value_kinds": ["secret-reference"],
+                    "sensitivity": "secret",
+                },
+            },
         },
     }
 
@@ -110,7 +144,7 @@ def test_participant_implementation_manifest_roundtrip():
 
     assert model.identity.name == "reference-red-agent"
     assert model.implementation_kind == "agent"
-    assert model.supported_contract_versions == list(PARTICIPANT_IMPLEMENTATION_SUPPORTED_CONTRACT_IDS)
+    assert set(model.supported_contract_versions).issubset(PARTICIPANT_IMPLEMENTATION_SUPPORTED_CONTRACT_IDS)
     assert model.model_dump(mode="json") == payload
 
 

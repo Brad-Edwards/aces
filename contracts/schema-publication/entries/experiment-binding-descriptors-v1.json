@@ -1,0 +1,10 @@
+{
+  "contract_id": "experiment-binding-descriptors-v1",
+  "schema_path": "contracts/schemas/experiment-core/experiment-binding-descriptors-v1.json",
+  "stability": "draft",
+  "content_hash": "88d57279e1d4467de97fa32893dfad58f3dccb5bf6a9d6e9610ce84e78265f2c",
+  "last_change": {
+    "summary": "Published explicit, typed, plane-specific experiment binding descriptors with factor and condition provenance.",
+    "content_hash": "88d57279e1d4467de97fa32893dfad58f3dccb5bf6a9d6e9610ce84e78265f2c"
+  }
+}

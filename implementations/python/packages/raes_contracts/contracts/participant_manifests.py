@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Annotated, Any, Literal
 
-from pydantic import Field, GetJsonSchemaHandler, model_validator
+from pydantic import Field, GetJsonSchemaHandler, SerializerFunctionWrapHandler, model_serializer, model_validator
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema
 
@@ -31,6 +31,7 @@ from .capabilities import (
     BackendCompatibilityModel,
     RealizationSupportDeclarationModel,
 )
+from .experiment_bindings import ConfigurationTargetRegistryModel
 from .manifests import BackendCapabilitiesV2Model, ConceptBindingEntryModel
 from .realization_plans import RealizationEnvelopeIdentityModel
 from .validators import (
@@ -50,10 +51,16 @@ class BackendManifestV2Model(ContractModel):
     concept_bindings: list[ConceptBindingEntryModel] = Field(min_length=1)
     constraints: dict[str, str] = Field(default_factory=dict)
     capabilities: BackendCapabilitiesV2Model
+    configuration_registry: ConfigurationTargetRegistryModel | None = None
 
     @model_validator(mode="after")
     def _validate_unique_binding_scopes(self) -> BackendManifestV2Model:
         validate_backend_supported_contract_versions(self.supported_contract_versions)
+        if (
+            self.configuration_registry is not None
+            and "experiment-binding-descriptors-v1" not in self.supported_contract_versions
+        ):
+            raise ValueError("configuration_registry requires experiment-binding-descriptors-v1 support")
         self._validate_realization_envelope_contract()
         self._validate_cleanup_contracts()
         self._validate_time_contracts()
@@ -103,6 +110,16 @@ class BackendManifestV2Model(ContractModel):
         if len(scopes) != len(set(scopes)):
             raise ValueError("concept_bindings must not contain duplicate scopes")
         _validate_canonical_concept_bindings(self, allowed_scopes=_BACKEND_CONCEPT_BINDING_SCOPES)
+
+    @model_serializer(mode="wrap")
+    def _serialize_optional_configuration_registry(
+        self,
+        handler: SerializerFunctionWrapHandler,
+    ) -> dict[str, object]:
+        payload = handler(self)
+        if self.configuration_registry is None:
+            payload.pop("configuration_registry", None)
+        return payload
 
     @classmethod
     def __get_pydantic_json_schema__(
@@ -230,6 +247,7 @@ class ParticipantImplementationManifestModel(ContractModel):
     concept_bindings: list[ConceptBindingEntryModel] = Field(min_length=1)
     constraints: dict[str, str] = Field(default_factory=dict)
     capabilities: ParticipantImplementationCapabilitiesModel
+    configuration_registry: ConfigurationTargetRegistryModel | None = None
 
     @model_validator(mode="after")
     def _validate_participant_implementation_manifest(self) -> ParticipantImplementationManifestModel:
@@ -244,6 +262,14 @@ class ParticipantImplementationManifestModel(ContractModel):
             raise ValueError(
                 "supported_participant_contracts must be declared in supported_contract_versions: " + joined
             )
+        if self.configuration_registry is not None:
+            required_configuration_contracts = {
+                "experiment-binding-descriptors-v1",
+                "participant-configuration-result-v1",
+            }
+            missing = sorted(required_configuration_contracts - set(self.supported_contract_versions))
+            if missing:
+                raise ValueError("configuration_registry requires supported_contract_versions: " + ", ".join(missing))
         scopes = [binding.scope for binding in self.concept_bindings]
         if len(scopes) != len(set(scopes)):
             raise ValueError("concept_bindings must not contain duplicate scopes")
@@ -252,6 +278,16 @@ class ParticipantImplementationManifestModel(ContractModel):
             allowed_scopes=_PARTICIPANT_IMPLEMENTATION_CONCEPT_BINDING_SCOPES,
         )
         return self
+
+    @model_serializer(mode="wrap")
+    def _serialize_optional_configuration_registry(
+        self,
+        handler: SerializerFunctionWrapHandler,
+    ) -> dict[str, object]:
+        payload = handler(self)
+        if self.configuration_registry is None:
+            payload.pop("configuration_registry", None)
+        return payload
 
     @classmethod
     def __get_pydantic_json_schema__(
@@ -316,6 +352,8 @@ class ParticipantImplementationSelectionModel(ContractModel):
 
     @model_validator(mode="after")
     def _validate_participant_implementation_selection(self) -> ParticipantImplementationSelectionModel:
+        if (self.configuration_ref is None) != (self.configuration_digest is None):
+            raise ValueError("configuration_ref and configuration_digest must be supplied together")
         _validate_unique_string_values("participant_contract_versions", self.participant_contract_versions)
         validate_participant_supported_contract_versions(self.participant_contract_versions)
         _validate_controlled_vocabulary_terms(
@@ -323,6 +361,33 @@ class ParticipantImplementationSelectionModel(ContractModel):
             [self.selected_decision_surface_mode],
         )
         return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        json_schema.setdefault("oneOf", []).extend(
+            [
+                {
+                    "required": ["configuration_ref", "configuration_digest"],
+                    "properties": {
+                        "configuration_ref": {"not": {"type": "null"}},
+                        "configuration_digest": {"not": {"type": "null"}},
+                    },
+                },
+                {
+                    "properties": {
+                        "configuration_ref": {"type": "null"},
+                        "configuration_digest": {"type": "null"},
+                    }
+                },
+            ]
+        )
+        return json_schema
 
 
 class ParticipantImplementationProvenanceModel(ContractModel):

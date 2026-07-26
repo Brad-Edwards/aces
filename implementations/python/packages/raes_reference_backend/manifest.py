@@ -39,7 +39,9 @@ from raes_contracts.vocabulary import RealizationSupportMode
 
 REFERENCE_BACKEND_NAME = "reference-emulation"
 REFERENCE_BACKEND_SUPPORTED_CONTRACT_VERSIONS = frozenset(
-    contract_id for contract_id in BACKEND_SUPPORTED_CONTRACT_IDS if contract_id != "realization-envelope-v1"
+    contract_id
+    for contract_id in BACKEND_SUPPORTED_CONTRACT_IDS
+    if contract_id not in {"experiment-binding-descriptors-v1", "realization-envelope-v1"}
 )
 _TIME_DEDICATED_CONTRACT_VERSIONS = frozenset({"time-model-v1", "time-runtime-state-v1", "realized-time-model-v1"})
 
