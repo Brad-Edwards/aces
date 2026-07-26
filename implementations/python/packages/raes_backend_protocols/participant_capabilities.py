@@ -283,6 +283,11 @@ class ParticipantRuntimeCapabilities:
                 raise ValueError(f"autonomous execution requires positive {label}")
 
     def _validate_execution_control(self) -> None:
+        self._validate_execution_control_actions()
+        self._validate_execution_capacity()
+        self._validate_execution_bindings()
+
+    def _validate_execution_control_actions(self) -> None:
         if not self.supports_execution_control:
             raise ValueError("autonomous execution requires execution control support")
         missing_actions = PARTICIPANT_EXECUTION_CONTROL_ACTIONS - self.supported_execution_control_actions
@@ -291,12 +296,16 @@ class ParticipantRuntimeCapabilities:
         unknown_actions = self.supported_execution_control_actions - PARTICIPANT_EXECUTION_CONTROL_ACTIONS
         if unknown_actions:
             raise ValueError("unsupported execution control actions: " + ", ".join(sorted(unknown_actions)))
+
+    def _validate_execution_capacity(self) -> None:
         if not self.supports_bounded_concurrency:
             raise ValueError("autonomous execution requires bounded concurrency support")
         if self.max_execution_services is None or self.max_execution_services < 1:
             raise ValueError("autonomous execution requires positive max_execution_services")
         if self.max_concurrent_actions is None or self.max_concurrent_actions < 2:
             raise ValueError("bounded concurrency requires max_concurrent_actions of at least 2")
+
+    def _validate_execution_bindings(self) -> None:
         if not self.execution_bindings:
             raise ValueError("autonomous execution requires relational execution_bindings")
         binding_ids = tuple(binding.binding_id for binding in self.execution_bindings)

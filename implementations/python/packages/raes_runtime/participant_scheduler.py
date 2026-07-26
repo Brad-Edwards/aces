@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from dataclasses import dataclass
 
 from raes_contracts.contracts import (
     ParticipantAutonomousExecutionStateModel,
@@ -192,6 +193,182 @@ def _initialize_participant(
     return ApplyResult(success=True, snapshot=working, changed_addresses=changed)
 
 
+@dataclass(frozen=True)
+class _ClockResetContext:
+    policy: ParticipantAutonomousExecutionRuntime
+    time_model: CompiledTimeModel
+    participant_runtime: object
+    segment: int
+    current_tick: int
+    reset_participants: bool
+    activity_control: ParticipantActivityRandomControl | None
+    next_tick: int
+    timing_disposition: str
+
+
+def _clock_reset_context(
+    policy: ParticipantAutonomousExecutionRuntime,
+    time_model: CompiledTimeModel,
+    participant_runtime: object,
+    segment: int,
+    current_tick: int,
+    reset_participants: bool,
+    activity_control: ParticipantActivityRandomControl | None,
+) -> _ClockResetContext:
+    next_tick = current_tick
+    timing_disposition = "cadence"
+    if activity_control is None:
+        next_tick, cadence_ticks = _cadence(policy, time_model)
+        if next_tick < current_tick:
+            next_tick += ((current_tick - next_tick + cadence_ticks - 1) // cadence_ticks) * cadence_ticks
+    return _ClockResetContext(
+        policy=policy,
+        time_model=time_model,
+        participant_runtime=participant_runtime,
+        segment=segment,
+        current_tick=current_tick,
+        reset_participants=reset_participants,
+        activity_control=activity_control,
+        next_tick=next_tick,
+        timing_disposition=timing_disposition,
+    )
+
+
+def _reset_scheduler_participant(
+    context: _ClockResetContext,
+    snapshot: RuntimeSnapshot,
+    participant_address: str,
+) -> ApplyResult:
+    working = snapshot
+    changed: list[str] = []
+    if context.reset_participants:
+        reset = context.participant_runtime.reset(
+            ParticipantEpisodeResetRequest(
+                participant_address=participant_address,
+                episode_id=f"{participant_address}-autonomous-{context.segment}",
+                reason=f"shared clock reset to segment {context.segment}",
+            ),
+            working,
+        )
+        if not reset.success:
+            return reset
+        working = reset.snapshot
+        changed.extend(reset.changed_addresses)
+    key = _state_key(context.policy.address, participant_address)
+    state = ParticipantAutonomousExecutionStateModel.model_validate(
+        working.participant_autonomous_execution_states[key]
+    )
+    next_tick = context.next_tick
+    timing_disposition = context.timing_disposition
+    burst_size = 1
+    if context.activity_control is not None:
+        burst_size = draw_activity_integer(
+            policy=context.policy,
+            participant_address=participant_address,
+            time_segment=context.segment,
+            occurrence_ordinal=0,
+            control=context.activity_control,
+            local_coordinate=2,
+            minimum=1,
+            maximum=context.policy.max_burst_size,
+        )
+        timing = next_activity_timing(
+            policy=context.policy,
+            time_model=context.time_model,
+            participant_address=participant_address,
+            time_segment=context.segment,
+            occurrence_ordinal=0,
+            current_tick=context.current_tick,
+            control=context.activity_control,
+        )
+        next_tick = timing.tick if timing.tick is not None else context.current_tick
+        timing_disposition = timing.disposition
+    states = dict(working.participant_autonomous_execution_states)
+    states[key] = state.model_copy(
+        update={
+            "episode_id": working.participant_episode_results[participant_address]["episode_id"],
+            "lifecycle_state": "running",
+            "time_segment": context.segment,
+            "next_tick": next_tick,
+            "next_action_index": 0,
+            "attempted_actions": 0,
+            "succeeded_actions": 0,
+            "failed_actions": 0,
+            "in_flight": 0,
+            "last_action_instance_id": None,
+            "occurrence_ordinal": 0,
+            "current_retry": 0,
+            "burst_position": 0,
+            "last_candidate_id": None,
+            "completed_candidate_ids": [],
+            "candidate_cooldown_until": {},
+            "burst_size": burst_size,
+            "next_timing_disposition": timing_disposition,
+        }
+    ).model_dump(mode="json")
+    working = working.with_entries(
+        dict(working.entries),
+        participant_autonomous_execution_states=states,
+    )
+    changed.append(key)
+    return ApplyResult(success=True, snapshot=working, changed_addresses=changed)
+
+
+def _missing_execution_service_result(
+    policy: ParticipantAutonomousExecutionRuntime,
+    run: SchedulerRunState,
+) -> ApplyResult:
+    return ApplyResult(
+        success=False,
+        snapshot=run.working,
+        diagnostics=[
+            Diagnostic(
+                code="runtime.participant-execution-state-missing",
+                domain="participant",
+                address=policy.address,
+                message="Autonomous participant execution requires typed execution-service state.",
+            )
+        ],
+    )
+
+
+def _execution_service_accepts_work(service: ParticipantExecutionServiceStateModel) -> bool:
+    return service.observed_lifecycle == "running" and service.accepting_new_work and service.readiness == "ready"
+
+
+def _run_due_policy(
+    policy: ParticipantAutonomousExecutionRuntime,
+    time_model: CompiledTimeModel,
+    participant_runtime: object,
+    activity_controls: dict[str, ParticipantActivityRandomControl],
+    run: SchedulerRunState,
+) -> None:
+    service_payload = run.working.participant_execution_services.get(policy.address)
+    if service_payload is None:
+        run.failure = _missing_execution_service_result(policy, run)
+        return
+    service = ParticipantExecutionServiceStateModel.model_validate(service_payload)
+    if not _execution_service_accepts_work(service):
+        return
+    cadence_ticks = _cadence(policy, time_model)[1] if policy.profile == "participant-autonomous-execution/v1" else 0
+    current_tick = _clock_tick(run.working, policy.clock_address)
+    if run_policy_due_concurrently(policy, time_model, participant_runtime, current_tick, cadence_ticks, run):
+        return
+    for participant_address in policy.participant_addresses:
+        run_participant_due(
+            policy,
+            time_model,
+            participant_runtime,
+            participant_address,
+            current_tick,
+            cadence_ticks,
+            run,
+            activity_controls,
+        )
+        if run.failure is not None:
+            return
+
+
 class ParticipantScheduler:
     """Deterministically selects due actions and delegates native execution."""
 
@@ -274,55 +451,9 @@ class ParticipantScheduler:
         run = SchedulerRunState(working=snapshot, diagnostics=[], changed=[])
         resolved_activity_controls = activity_controls or {}
         for policy in policies:
-            service_payload = run.working.participant_execution_services.get(policy.address)
-            if service_payload is None:
-                return ApplyResult(
-                    success=False,
-                    snapshot=run.working,
-                    diagnostics=[
-                        Diagnostic(
-                            code="runtime.participant-execution-state-missing",
-                            domain="participant",
-                            address=policy.address,
-                            message=("Autonomous participant execution requires typed execution-service state."),
-                        )
-                    ],
-                )
-            service = ParticipantExecutionServiceStateModel.model_validate(service_payload)
-            if (
-                service.observed_lifecycle != "running"
-                or not service.accepting_new_work
-                or service.readiness != "ready"
-            ):
-                continue
-            cadence_ticks = (
-                _cadence(policy, time_model)[1] if policy.profile == "participant-autonomous-execution/v1" else 0
-            )
-            current_tick = _clock_tick(run.working, policy.clock_address)
-            if run_policy_due_concurrently(
-                policy,
-                time_model,
-                participant_runtime,
-                current_tick,
-                cadence_ticks,
-                run,
-            ):
-                if run.failure is not None:
-                    return run.result()
-                continue
-            for participant_address in policy.participant_addresses:
-                run_participant_due(
-                    policy,
-                    time_model,
-                    participant_runtime,
-                    participant_address,
-                    current_tick,
-                    cadence_ticks,
-                    run,
-                    resolved_activity_controls,
-                )
-                if run.failure is not None:
-                    return run.result()
+            _run_due_policy(policy, time_model, participant_runtime, resolved_activity_controls, run)
+            if run.failure is not None:
+                break
         return run.result()
 
     @staticmethod
@@ -347,82 +478,21 @@ class ParticipantScheduler:
                 continue
             current_tick = _clock_tick(snapshot, clock_address)
             activity_control = activity_control_for(policy, resolved_activity_controls)
-            if activity_control is None:
-                first_tick, cadence_ticks = _cadence(policy, time_model)
-                next_tick = first_tick
-                timing_disposition = "cadence"
-                if next_tick < current_tick:
-                    next_tick += ((current_tick - next_tick + cadence_ticks - 1) // cadence_ticks) * cadence_ticks
+            context = _clock_reset_context(
+                policy,
+                time_model,
+                participant_runtime,
+                segment,
+                current_tick,
+                reset_participants,
+                activity_control,
+            )
             for participant_address in policy.participant_addresses:
-                result_changed: list[str] = []
-                if reset_participants:
-                    result = participant_runtime.reset(
-                        ParticipantEpisodeResetRequest(
-                            participant_address=participant_address,
-                            episode_id=f"{participant_address}-autonomous-{segment}",
-                            reason=f"shared clock reset to segment {segment}",
-                        ),
-                        working,
-                    )
-                    if not result.success:
-                        return result
-                    working = result.snapshot
-                    result_changed.extend(result.changed_addresses)
-                key = _state_key(policy.address, participant_address)
-                state = ParticipantAutonomousExecutionStateModel.model_validate(
-                    working.participant_autonomous_execution_states[key]
-                )
-                if activity_control is not None:
-                    burst_size = draw_activity_integer(
-                        policy=policy,
-                        participant_address=participant_address,
-                        time_segment=segment,
-                        occurrence_ordinal=0,
-                        control=activity_control,
-                        local_coordinate=2,
-                        minimum=1,
-                        maximum=policy.max_burst_size,
-                    )
-                    timing = next_activity_timing(
-                        policy=policy,
-                        time_model=time_model,
-                        participant_address=participant_address,
-                        time_segment=segment,
-                        occurrence_ordinal=0,
-                        current_tick=current_tick,
-                        control=activity_control,
-                    )
-                    selected_tick = timing.tick
-                    timing_disposition = timing.disposition
-                    next_tick = selected_tick if selected_tick is not None else current_tick
-                states = dict(working.participant_autonomous_execution_states)
-                states[key] = state.model_copy(
-                    update={
-                        "episode_id": working.participant_episode_results[participant_address]["episode_id"],
-                        "lifecycle_state": "running",
-                        "time_segment": segment,
-                        "next_tick": next_tick,
-                        "next_action_index": 0,
-                        "attempted_actions": 0,
-                        "succeeded_actions": 0,
-                        "failed_actions": 0,
-                        "in_flight": 0,
-                        "last_action_instance_id": None,
-                        "occurrence_ordinal": 0,
-                        "current_retry": 0,
-                        "burst_position": 0,
-                        "last_candidate_id": None,
-                        "completed_candidate_ids": [],
-                        "candidate_cooldown_until": {},
-                        "burst_size": burst_size if activity_control is not None else 1,
-                        "next_timing_disposition": timing_disposition,
-                    }
-                ).model_dump(mode="json")
-                working = working.with_entries(
-                    dict(working.entries),
-                    participant_autonomous_execution_states=states,
-                )
-                changed.extend([*result_changed, key])
+                result = _reset_scheduler_participant(context, working, participant_address)
+                if not result.success:
+                    return result
+                working = result.snapshot
+                changed.extend(result.changed_addresses)
             working, service_changed = reset_execution_service(
                 working,
                 policy.address,

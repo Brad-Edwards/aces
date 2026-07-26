@@ -110,21 +110,37 @@ class ParticipantExecutionServiceStateModel(ContractModel):
 
     @model_validator(mode="after")
     def _validate_state(self) -> ParticipantExecutionServiceStateModel:
+        self._validate_generations()
+        self._validate_capacity()
+        self._validate_admission_readback()
+        self._validate_lifecycle_readback()
+        self._validate_unique_references()
+        return self
+
+    def _validate_generations(self) -> None:
         if self.observed_generation > self.generation:
             raise ValueError("observed_generation cannot exceed generation")
+
+    def _validate_capacity(self) -> None:
         if self.reserved + self.in_flight > self.capacity:
             raise ValueError("reserved and in_flight work cannot exceed capacity")
+
+    def _validate_admission_readback(self) -> None:
         accepting_states = {"starting", "running"}
         if self.accepting_new_work and self.observed_lifecycle not in accepting_states:
             raise ValueError("accepting_new_work requires a starting or running observed lifecycle")
         if self.accepting_new_work and self.readiness != "ready":
             raise ValueError("accepting_new_work requires ready readback")
+
+    def _validate_lifecycle_readback(self) -> None:
         if self.draining != (self.observed_lifecycle == "draining"):
             raise ValueError("draining must agree with the observed lifecycle")
         if self.resources_released != (self.observed_lifecycle == "terminated"):
             raise ValueError("resources_released must agree with terminated lifecycle")
         if self.quiescent and (self.reserved or self.in_flight):
             raise ValueError("quiescent execution cannot retain reserved or in-flight work")
+
+    def _validate_unique_references(self) -> None:
         for field_name in (
             "scheduler_state_refs",
             "pacing_deviation_refs",
@@ -133,7 +149,6 @@ class ParticipantExecutionServiceStateModel(ContractModel):
             values = getattr(self, field_name)
             if len(values) != len(set(values)):
                 raise ValueError(f"{field_name} must contain unique values")
-        return self
 
 
 __all__ = [

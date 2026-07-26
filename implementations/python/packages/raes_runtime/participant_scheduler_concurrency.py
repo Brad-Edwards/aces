@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from raes_contracts.contracts import ParticipantAutonomousExecutionStateModel
 from raes_contracts.contracts.participant_execution import ParticipantExecutionServiceStateModel
 from raes_contracts.diagnostics import Diagnostic
-from raes_contracts.participant_binding import ParticipantActionAdmissionRequest
+from raes_contracts.participant_binding import ParticipantActionAdmissionRequest, ParticipantActionApplyResult
 from raes_contracts.runtime_state import ApplyResult, RuntimeSnapshot
 from raes_processor.models import CompiledTimeModel, ParticipantAutonomousExecutionRuntime
 
@@ -155,6 +155,171 @@ def _finish_concurrent_service_state(
     )
 
 
+def _due_contexts(
+    policy: ParticipantAutonomousExecutionRuntime,
+    time_model: CompiledTimeModel,
+    participant_runtime: object,
+    current_tick: int,
+    cadence_ticks: int,
+    run: SchedulerRunState,
+) -> tuple[list[_DueActionContext], list[ParticipantAutonomousExecutionStateModel]]:
+    from .participant_scheduler_operations import _cadence_missed_result
+    from .participant_scheduler_types import _DueActionContext
+
+    contexts: list[_DueActionContext] = []
+    states: list[ParticipantAutonomousExecutionStateModel] = []
+    for participant_address in policy.participant_addresses:
+        key = f"{policy.address}.state.{participant_address}"
+        state = ParticipantAutonomousExecutionStateModel.model_validate(
+            run.working.participant_autonomous_execution_states[key]
+        )
+        if state.lifecycle_state == "running" and state.next_tick < current_tick:
+            run.failure = _cadence_missed_result(run.working, key, current_tick, state)
+            break
+        due = (
+            state.lifecycle_state == "running"
+            and state.next_tick == current_tick
+            and state.attempted_actions < policy.max_action_attempts
+        )
+        if due:
+            contexts.append(
+                _DueActionContext(
+                    policy=policy,
+                    time_model=time_model,
+                    participant_runtime=participant_runtime,
+                    participant_address=participant_address,
+                    key=key,
+                    current_tick=current_tick,
+                    cadence_ticks=cadence_ticks,
+                )
+            )
+            states.append(state)
+    return contexts, states
+
+
+def _set_concurrent_failure(run: SchedulerRunState, diagnostic: Diagnostic) -> None:
+    run.diagnostics.append(diagnostic)
+    run.failure = ApplyResult(
+        success=False,
+        snapshot=run.working,
+        diagnostics=run.diagnostics,
+        changed_addresses=list(dict.fromkeys(run.changed)),
+    )
+
+
+def _unsupported_concurrency_failure(policy: ParticipantAutonomousExecutionRuntime, run: SchedulerRunState) -> None:
+    run.failure = ApplyResult(
+        success=False,
+        snapshot=run.working,
+        diagnostics=[
+            Diagnostic(
+                code="runtime.participant-concurrency-unsupported",
+                domain="participant",
+                address=policy.address,
+                message="Backend declared bounded participant concurrency without an executable batch method.",
+            )
+        ],
+    )
+
+
+def _commit_concurrent_result(
+    context: _DueActionContext,
+    state: ParticipantAutonomousExecutionStateModel,
+    request: ParticipantActionAdmissionRequest,
+    result: ParticipantActionApplyResult,
+    base: RuntimeSnapshot,
+    run: SchedulerRunState,
+) -> None:
+    from .participant_scheduler_operations import _next_action_state
+
+    stale_completion = participant_generation_commit_diagnostic(request, run.working)
+    if stale_completion is not None:
+        _set_concurrent_failure(run, stale_completion)
+        return
+    try:
+        run.working = _merge_concurrent_action_snapshot(base, run.working, result.snapshot)
+    except ValueError as exc:
+        _set_concurrent_failure(
+            run,
+            Diagnostic(
+                code="runtime.participant-concurrent-commit-conflict",
+                domain="participant",
+                address=context.key,
+                message=str(exc),
+            ),
+        )
+        return
+    protocol_violation = autonomous_action_result_violation(
+        request,
+        result,
+        episode_id=state.episode_id,
+        predecessor=base,
+    )
+    if protocol_violation is not None:
+        _set_concurrent_failure(
+            run,
+            Diagnostic(
+                code="runtime.participant-autonomous-action-protocol-invalid",
+                domain="participant",
+                address=context.participant_address,
+                message=protocol_violation,
+            ),
+        )
+        return
+    action_result = result.action_result
+    action_succeeded = bool(result.success and action_result is not None and action_result.status == "succeeded")
+    next_state = _next_action_state(
+        context,
+        state,
+        request,
+        action_succeeded=action_succeeded,
+        protocol_failure=False,
+    ).model_copy(update={"in_flight": 0})
+    scheduler_states = dict(run.working.participant_autonomous_execution_states)
+    scheduler_states[context.key] = next_state.model_dump(mode="json")
+    run.working = run.working.with_entries(
+        dict(run.working.entries),
+        participant_autonomous_execution_states=scheduler_states,
+    )
+    run.diagnostics.extend(result.diagnostics)
+    run.changed.extend([*result.changed_addresses, context.key])
+    if not action_succeeded and context.policy.failure_policy == "stop":
+        run.failure = ApplyResult(
+            success=False,
+            snapshot=run.working,
+            diagnostics=run.diagnostics,
+            changed_addresses=list(dict.fromkeys(run.changed)),
+        )
+
+
+def _finish_due_policy(
+    policy: ParticipantAutonomousExecutionRuntime,
+    time_model: CompiledTimeModel,
+    participant_runtime: object,
+    current_tick: int,
+    cadence_ticks: int,
+    run: SchedulerRunState,
+) -> None:
+    from .participant_scheduler_operations import run_participant_due
+
+    if run.failure is not None:
+        return
+    if run_policy_due_concurrently(policy, time_model, participant_runtime, current_tick, cadence_ticks, run):
+        return
+    for participant_address in policy.participant_addresses:
+        run_participant_due(
+            policy,
+            time_model,
+            participant_runtime,
+            participant_address,
+            current_tick,
+            cadence_ticks,
+            run,
+        )
+        if run.failure is not None:
+            break
+
+
 def run_policy_due_concurrently(
     policy: ParticipantAutonomousExecutionRuntime,
     time_model: CompiledTimeModel,
@@ -165,190 +330,34 @@ def run_policy_due_concurrently(
 ) -> bool:
     """Execute one due v1 occurrence per participant with bounded overlap."""
 
-    from .participant_scheduler_operations import (
-        _bound_action_request,
-        _cadence_missed_result,
-        _next_action_state,
-        run_participant_due,
-    )
-    from .participant_scheduler_types import _DueActionContext
-
     if policy.profile != "participant-autonomous-execution/v1":
         return False
-    contexts: list[_DueActionContext] = []
-    states: list[ParticipantAutonomousExecutionStateModel] = []
-    for participant_address in policy.participant_addresses:
-        key = f"{policy.address}.state.{participant_address}"
-        state = ParticipantAutonomousExecutionStateModel.model_validate(
-            run.working.participant_autonomous_execution_states[key]
-        )
-        if state.lifecycle_state == "running" and state.next_tick < current_tick:
-            run.failure = _cadence_missed_result(
-                run.working,
-                key,
-                current_tick,
-                state,
-            )
-            return True
-        if not (
-            state.lifecycle_state == "running"
-            and state.next_tick == current_tick
-            and state.attempted_actions < policy.max_action_attempts
-        ):
-            continue
-        contexts.append(
-            _DueActionContext(
-                policy=policy,
-                time_model=time_model,
-                participant_runtime=participant_runtime,
-                participant_address=participant_address,
-                key=key,
-                current_tick=current_tick,
-                cadence_ticks=cadence_ticks,
-            )
-        )
-        states.append(state)
+    contexts, states = _due_contexts(policy, time_model, participant_runtime, current_tick, cadence_ticks, run)
+    if run.failure is not None:
+        return True
     if len(contexts) < 2 or policy.max_in_flight < 2:
         return False
     batch_method = getattr(participant_runtime, "admit_actions_concurrently", None)
     if not callable(batch_method):
-        run.failure = ApplyResult(
-            success=False,
-            snapshot=run.working,
-            diagnostics=[
-                Diagnostic(
-                    code="runtime.participant-concurrency-unsupported",
-                    domain="participant",
-                    address=policy.address,
-                    message=("Backend declared bounded participant concurrency without an executable batch method."),
-                )
-            ],
-        )
+        _unsupported_concurrency_failure(policy, run)
         return True
-    contexts_tuple = tuple(contexts[: policy.max_in_flight])
-    states = states[: policy.max_in_flight]
+    selected_contexts = tuple(contexts[: policy.max_in_flight])
+    selected_states = states[: policy.max_in_flight]
+    from .participant_scheduler_operations import _bound_action_request
+
     requests = tuple(
         _bound_action_request(context, run.working, state)
-        for context, state in zip(contexts_tuple, states, strict=True)
+        for context, state in zip(selected_contexts, selected_states, strict=True)
     )
-    _reserve_concurrent_actions(run, contexts_tuple)
+    _reserve_concurrent_actions(run, selected_contexts)
     base = run.working
-    results = batch_method(
-        requests,
-        base,
-        len(requests),
-    )
+    results = batch_method(requests, base, len(requests))
     if len(results) != len(requests):
         raise ValueError("concurrent participant result count must match requests")
-    for context, state, request, result in zip(
-        contexts_tuple,
-        states,
-        requests,
-        results,
-        strict=True,
-    ):
-        stale_completion = participant_generation_commit_diagnostic(
-            request,
-            run.working,
-        )
-        if stale_completion is not None:
-            run.diagnostics.append(stale_completion)
-            run.failure = ApplyResult(
-                success=False,
-                snapshot=run.working,
-                diagnostics=run.diagnostics,
-                changed_addresses=list(dict.fromkeys(run.changed)),
-            )
-            break
-        try:
-            run.working = _merge_concurrent_action_snapshot(
-                base,
-                run.working,
-                result.snapshot,
-            )
-        except ValueError as exc:
-            run.diagnostics.append(
-                Diagnostic(
-                    code="runtime.participant-concurrent-commit-conflict",
-                    domain="participant",
-                    address=context.key,
-                    message=str(exc),
-                )
-            )
-            run.failure = ApplyResult(
-                success=False,
-                snapshot=run.working,
-                diagnostics=run.diagnostics,
-                changed_addresses=list(dict.fromkeys(run.changed)),
-            )
-            break
-        protocol_violation = autonomous_action_result_violation(
-            request,
-            result,
-            episode_id=state.episode_id,
-            predecessor=base,
-        )
-        if protocol_violation is not None:
-            run.diagnostics.append(
-                Diagnostic(
-                    code="runtime.participant-autonomous-action-protocol-invalid",
-                    domain="participant",
-                    address=context.participant_address,
-                    message=protocol_violation,
-                )
-            )
-            run.failure = ApplyResult(
-                success=False,
-                snapshot=run.working,
-                diagnostics=run.diagnostics,
-                changed_addresses=list(dict.fromkeys(run.changed)),
-            )
-            break
-        action_result = result.action_result
-        action_succeeded = bool(result.success and action_result is not None and action_result.status == "succeeded")
-        next_state = _next_action_state(
-            context,
-            state,
-            request,
-            action_succeeded=action_succeeded,
-            protocol_failure=False,
-        ).model_copy(update={"in_flight": 0})
-        scheduler_states = dict(run.working.participant_autonomous_execution_states)
-        scheduler_states[context.key] = next_state.model_dump(mode="json")
-        run.working = run.working.with_entries(
-            dict(run.working.entries),
-            participant_autonomous_execution_states=scheduler_states,
-        )
-        run.diagnostics.extend(result.diagnostics)
-        run.changed.extend([*result.changed_addresses, context.key])
-        if not action_succeeded and policy.failure_policy == "stop":
-            run.failure = ApplyResult(
-                success=False,
-                snapshot=run.working,
-                diagnostics=run.diagnostics,
-                changed_addresses=list(dict.fromkeys(run.changed)),
-            )
+    for context, state, request, result in zip(selected_contexts, selected_states, requests, results, strict=True):
+        _commit_concurrent_result(context, state, request, result, base, run)
+        if run.failure is not None:
             break
     _finish_concurrent_service_state(run, policy.address)
-    if run.failure is None:
-        if not run_policy_due_concurrently(
-            policy,
-            time_model,
-            participant_runtime,
-            current_tick,
-            cadence_ticks,
-            run,
-        ):
-            for participant_address in policy.participant_addresses:
-                run_participant_due(
-                    policy,
-                    time_model,
-                    participant_runtime,
-                    participant_address,
-                    current_tick,
-                    cadence_ticks,
-                    run,
-                )
-                if run.failure is not None:
-                    break
+    _finish_due_policy(policy, time_model, participant_runtime, current_tick, cadence_ticks, run)
     return True

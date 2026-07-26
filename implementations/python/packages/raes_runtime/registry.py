@@ -22,6 +22,24 @@ ReferenceTimeRuntime = _time_coordinator.ReferenceTimeRuntime
 _TIME_CLOCK_PROBE = "time.clock.probe"
 
 
+@dataclass(frozen=True)
+class _ParticipantRuntimeMethodRequirements:
+    autonomous_binding: bool
+    coordinated_reset: bool
+    execution_control: bool
+    bounded_concurrency: bool
+
+
+def _participant_runtime_method_requirements(manifest: BackendManifest) -> _ParticipantRuntimeMethodRequirements:
+    capability = manifest.participant_runtime
+    return _ParticipantRuntimeMethodRequirements(
+        autonomous_binding=bool(capability and capability.supports_autonomous_execution),
+        coordinated_reset=bool(manifest.time and manifest.time.supports_coordinated_participant_reset),
+        execution_control=bool(capability and capability.supports_execution_control),
+        bounded_concurrency=bool(capability and capability.supports_bounded_concurrency),
+    )
+
+
 def _require_invokable_method(
     component: object | None,
     *,
@@ -87,16 +105,7 @@ def _validate_runtime_target_shape(
         sample_request,
         sample_admission_request,
         sample_snapshot,
-        require_autonomous_binding=bool(
-            manifest.participant_runtime and manifest.participant_runtime.supports_autonomous_execution
-        ),
-        require_coordinated_reset=bool(manifest.time and manifest.time.supports_coordinated_participant_reset),
-        require_execution_control=bool(
-            manifest.participant_runtime and manifest.participant_runtime.supports_execution_control
-        ),
-        require_bounded_concurrency=bool(
-            manifest.participant_runtime and manifest.participant_runtime.supports_bounded_concurrency
-        ),
+        requirements=_participant_runtime_method_requirements(manifest),
     )
     _validate_time_runtime_methods(
         time_runtime,
@@ -229,10 +238,7 @@ def _validate_participant_runtime_methods(
     sample_admission_request: ParticipantActionAdmissionRequest,
     sample_snapshot: object,
     *,
-    require_autonomous_binding: bool,
-    require_coordinated_reset: bool,
-    require_execution_control: bool,
-    require_bounded_concurrency: bool,
+    requirements: _ParticipantRuntimeMethodRequirements,
 ) -> None:
     _require_invokable_method(
         participant_runtime,
@@ -282,7 +288,7 @@ def _validate_participant_runtime_methods(
         method_name="history",
         invocation_args=(),
     )
-    if require_autonomous_binding:
+    if requirements.autonomous_binding:
         _require_invokable_method(
             participant_runtime,
             label="participant_runtime",
@@ -297,14 +303,14 @@ def _validate_participant_runtime_methods(
                 sample_snapshot,
             ),
         )
-    if require_coordinated_reset:
+    if requirements.coordinated_reset:
         _require_invokable_method(
             participant_runtime,
             label="participant_runtime",
             method_name="reset_many",
             invocation_args=((sample_request,), sample_snapshot),
         )
-    if require_execution_control:
+    if requirements.execution_control:
         _require_invokable_method(
             participant_runtime,
             label="participant_runtime",
@@ -320,7 +326,7 @@ def _validate_participant_runtime_methods(
                 sample_snapshot,
             ),
         )
-    if require_bounded_concurrency:
+    if requirements.bounded_concurrency:
         _require_invokable_method(
             participant_runtime,
             label="participant_runtime",

@@ -96,12 +96,12 @@ def test_execution_binding_is_relational_and_finite() -> None:
     assert binding.target_addresses == ("service.customer-portal.https",)
     assert binding.max_in_flight == 2
 
+    invalid_target_binding = _binding().model_copy(update={"target_addresses": ()}).model_dump()
+    invalid_max_in_flight_binding = {**_binding().model_dump(), "max_in_flight": 0}
     with pytest.raises(ValueError, match="target_addresses"):
-        _binding().model_copy(update={"target_addresses": ()}).model_validate(
-            _binding().model_copy(update={"target_addresses": ()}).model_dump()
-        )
+        ParticipantExecutionBindingModel.model_validate(invalid_target_binding)
     with pytest.raises(ValueError, match="max_in_flight"):
-        ParticipantExecutionBindingModel.model_validate({**_binding().model_dump(), "max_in_flight": 0})
+        ParticipantExecutionBindingModel.model_validate(invalid_max_in_flight_binding)
 
 
 def test_execution_control_request_requires_generation_and_bounded_drain() -> None:
@@ -146,16 +146,16 @@ def test_execution_readback_separates_health_readiness_and_lifecycle() -> None:
     assert state.readiness == "ready"
     assert state.accepting_new_work is True
 
+    invalid_admission_readback = {
+        **state.model_dump(),
+        "observed_lifecycle": "paused",
+        "accepting_new_work": True,
+    }
+    invalid_generation_readback = {**state.model_dump(), "observed_generation": 4}
     with pytest.raises(ValueError, match="accepting_new_work"):
-        ParticipantExecutionServiceStateModel.model_validate(
-            {
-                **state.model_dump(),
-                "observed_lifecycle": "paused",
-                "accepting_new_work": True,
-            }
-        )
+        ParticipantExecutionServiceStateModel.model_validate(invalid_admission_readback)
     with pytest.raises(ValueError, match="observed_generation"):
-        ParticipantExecutionServiceStateModel.model_validate({**state.model_dump(), "observed_generation": 4})
+        ParticipantExecutionServiceStateModel.model_validate(invalid_generation_readback)
 
 
 def test_compiler_preserves_exact_action_to_target_execution_binding() -> None:

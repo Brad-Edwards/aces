@@ -20,14 +20,37 @@ from .participant_execution_service import participant_execution_state
 class ParticipantExecutionRuntimeMixin:
     """Generation fencing, lifecycle readback, and bounded native dispatch."""
 
+    @staticmethod
     def execution_state(
-        self,
         execution_scope_ref: str,
         snapshot: RuntimeSnapshot,
     ) -> ParticipantExecutionServiceStateModel:
         """Return typed health/readiness and lifecycle readback."""
 
         return participant_execution_state(execution_scope_ref, snapshot)
+
+    @staticmethod
+    def _execution_generation_failure_reason(
+        request: ParticipantActionAdmissionRequest,
+        snapshot: RuntimeSnapshot,
+        *,
+        completion: bool,
+    ) -> str | None:
+        scope = request.execution_scope_ref
+        payload = snapshot.participant_execution_services.get(scope) if scope is not None else None
+        if payload is None:
+            return "execution-service state is missing"
+        state = ParticipantExecutionServiceStateModel.model_validate(payload)
+        if (
+            state.generation != request.execution_generation
+            or state.observed_generation != request.execution_generation
+        ):
+            return "execution generation changed"
+        if not completion and (
+            state.observed_lifecycle != "running" or not state.accepting_new_work or state.readiness != "ready"
+        ):
+            return "execution service is not accepting work"
+        return None
 
     @staticmethod
     def _execution_generation_failure(
@@ -37,22 +60,13 @@ class ParticipantExecutionRuntimeMixin:
         completion: bool,
         predecessor: RuntimeSnapshot | None = None,
     ) -> ParticipantActionApplyResult | None:
-        scope = request.execution_scope_ref
-        if scope is None:
+        if request.execution_scope_ref is None:
             return None
-        payload = snapshot.participant_execution_services.get(scope)
-        expected = request.execution_generation
-        reason = None
-        if payload is None:
-            reason = "execution-service state is missing"
-        else:
-            state = ParticipantExecutionServiceStateModel.model_validate(payload)
-            if state.generation != expected or state.observed_generation != expected:
-                reason = "execution generation changed"
-            elif not completion and (
-                state.observed_lifecycle != "running" or not state.accepting_new_work or state.readiness != "ready"
-            ):
-                reason = "execution service is not accepting work"
+        reason = ParticipantExecutionRuntimeMixin._execution_generation_failure_reason(
+            request,
+            snapshot,
+            completion=completion,
+        )
         if reason is None:
             return None
         phase = "completion" if completion else "work"
