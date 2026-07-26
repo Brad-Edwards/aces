@@ -37,6 +37,7 @@ RECORD_CLASSES = {
     "accepted-adr",
     "dated-design-record",
     "historical-index",
+    "lifecycle-record",
     "provenance-record",
     "release-history",
     "research-record",

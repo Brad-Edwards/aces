@@ -1,5 +1,7 @@
 schema_version: 1
-project: raes-sdl
+# Ground Control still owns the pre-cutover project identifier. ADR-096
+# requires external provisioning before this binding can move.
+project: aces-sdl
 github_repo: RAESystem/rae
 workflow:
   test_command: uv tool run --from 'nox[uv]==2026.4.10' nox -f noxfile.py -s verify

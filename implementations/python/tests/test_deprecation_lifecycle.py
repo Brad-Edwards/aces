@@ -34,7 +34,7 @@ from tools.check_deprecation_lifecycle import (  # noqa: E402
 
 
 def _good_ledger() -> dict:
-    # Includes the canonical retention-floor record so the positive case and
+    # Includes all canonical (retention-floor) records so the positive case and
     # every mutation starting point satisfies CANONICAL_DEPRECATION_RECORD_IDS.
     # records[0] is a canonical record; mutation tests operate on it.
     return {
@@ -65,6 +65,17 @@ def _good_ledger() -> dict:
                 "migration_reference": "docs/explain/sdl/parser.md",
                 "notice_window": "supported indefinitely as a backward-compatible alias",
                 "verification_evidence": "parser normalises the legacy field; tests exercise both forms",
+            },
+            {
+                "id": "legacy-python-distribution",
+                "surface_class": "python-distribution",
+                "identifier": "the legacy PyPI distribution",
+                "status": "deprecated",
+                "first_notice": "ADR-093 and issue #907",
+                "replacement": "the raes PyPI distribution",
+                "migration_reference": "docs/migration/raes-rename.md",
+                "notice_window": "publish the final pointer release, verify it, then archive the project",
+                "verification_evidence": "the current release path publishes only raes",
             },
         ],
     }
@@ -342,11 +353,11 @@ def test_empty_ledger_is_rejected(tmp_path: Path) -> None:
 
 
 def test_dropping_a_canonical_record_is_rejected(tmp_path: Path) -> None:
-    # Deleting an established record (leaving the other) must fail: an existing
+    # Deleting an established record (leaving the others) must fail: an existing
     # deprecation is permanent lifecycle history, not something a later diff can
     # silently remove.
     ledger = _good_ledger()
-    dropped = ledger["records"].pop()  # remove sdl-import-path-field
+    dropped = ledger["records"].pop()  # remove the legacy distribution record
     _write_repo(tmp_path, ledger)
     failures = evaluate_deprecation_records(tmp_path)
     assert any(f.rule_id == "deprecation-records-canonical-record-missing" for f in failures)
@@ -361,7 +372,10 @@ def test_dropping_a_canonical_record_is_rejected(tmp_path: Path) -> None:
 
 
 def test_canonical_record_ids_are_pinned() -> None:
-    assert {"sdl-import-path-field"} == CANONICAL_DEPRECATION_RECORD_IDS
+    assert {
+        "legacy-python-distribution",
+        "sdl-import-path-field",
+    } == CANONICAL_DEPRECATION_RECORD_IDS
 
 
 def test_surface_classes_cover_known_matrix_rows() -> None:

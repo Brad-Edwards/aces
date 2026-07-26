@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import subprocess
 from pathlib import Path
 
+import pytest
 from tools.check_identity_cutover import evaluate_identity_cutover
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -31,10 +33,16 @@ def _git(repo_root: Path, *args: str) -> None:
     )
 
 
-def _record(path: str, content: bytes, *, occurrences: int = 1) -> dict[str, object]:
+def _record(
+    path: str,
+    content: bytes,
+    *,
+    occurrences: int = 1,
+    record_class: str = "dated-design-record",
+) -> dict[str, object]:
     return {
         "path": path,
-        "record_class": "dated-design-record",
+        "record_class": record_class,
         "rationale": "Preserves a dated design decision from before the identity cutover.",
         "occurrences": occurrences,
         "content_sha256": hashlib.sha256(content).hexdigest(),
@@ -74,8 +82,132 @@ def _seed_repo(
     _git(repo_root, "add", "-A")
 
 
+def _seed_manifest_fixture(repo_root: Path) -> dict[str, object]:
+    record_content = f"Historical {RETIRED_UPPER} record.\n".encode()
+    binding_content = f"projectKey=service_{RETIRED_LOWER}\n".encode()
+    record_path = "docs/decisions/issue-1-preflight.md"
+    binding_path = "service-project.properties"
+    _seed_repo(
+        repo_root,
+        files={
+            record_path: record_content,
+            binding_path: binding_content,
+        },
+        records=[_record(record_path, record_content)],
+        bindings=[_binding(binding_path, binding_content)],
+    )
+    return json.loads((repo_root / MANIFEST_PATH).read_text(encoding="utf-8"))
+
+
+def _write_manifest(repo_root: Path, manifest: object) -> None:
+    _write(
+        repo_root / MANIFEST_PATH,
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+    )
+
+
+def _manifest_rule_ids(repo_root: Path) -> set[str]:
+    return {failure.rule_id for failure in evaluate_identity_cutover(repo_root)}
+
+
 def test_current_repository_satisfies_identity_cutover() -> None:
     assert evaluate_identity_cutover(REPO_ROOT) == []
+
+
+@pytest.mark.parametrize(
+    ("field", "invalid_value"),
+    [
+        ("schema_version", "wrong-schema"),
+        ("hash_algorithm", "sha512"),
+        ("records", {}),
+        ("operational_bindings", {}),
+    ],
+)
+def test_invalid_manifest_top_level_fields_fail(tmp_path: Path, field: str, invalid_value: object) -> None:
+    manifest = _seed_manifest_fixture(tmp_path)
+    manifest[field] = invalid_value
+    _write_manifest(tmp_path, manifest)
+
+    assert "identity-cutover-manifest" in _manifest_rule_ids(tmp_path)
+
+
+@pytest.mark.parametrize("collection", ["records", "operational_bindings"])
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "non-object",
+        "missing-key",
+        "extra-key",
+        "unknown-class",
+        "blank-rationale",
+        "bad-digest",
+    ],
+)
+def test_invalid_manifest_entry_shapes_fail(tmp_path: Path, collection: str, mutation: str) -> None:
+    manifest = _seed_manifest_fixture(tmp_path)
+    entries = manifest[collection]
+    assert isinstance(entries, list)
+    entry = entries[0]
+    assert isinstance(entry, dict)
+
+    if mutation == "non-object":
+        entries[0] = "not-an-object"
+    elif mutation == "missing-key":
+        del entry["content_sha256"]
+    elif mutation == "extra-key":
+        entry["unexpected"] = "field"
+    elif mutation == "unknown-class":
+        class_field = "record_class" if collection == "records" else "binding_class"
+        entry[class_field] = "unknown-class"
+    elif mutation == "blank-rationale":
+        entry["rationale"] = " "
+    else:
+        entry["content_sha256"] = "not-a-sha256"
+
+    _write_manifest(tmp_path, manifest)
+
+    assert "identity-cutover-manifest" in _manifest_rule_ids(tmp_path)
+
+
+@pytest.mark.parametrize("collection", ["records", "operational_bindings"])
+@pytest.mark.parametrize("invalid_occurrences", [True, 0, -1, "1"])
+def test_invalid_manifest_occurrence_counts_fail(
+    tmp_path: Path,
+    collection: str,
+    invalid_occurrences: object,
+) -> None:
+    manifest = _seed_manifest_fixture(tmp_path)
+    entries = manifest[collection]
+    assert isinstance(entries, list)
+    entry = entries[0]
+    assert isinstance(entry, dict)
+    entry["occurrences"] = invalid_occurrences
+    _write_manifest(tmp_path, manifest)
+
+    assert "identity-cutover-manifest" in _manifest_rule_ids(tmp_path)
+
+
+@pytest.mark.parametrize("collection", ["records", "operational_bindings"])
+def test_duplicate_manifest_paths_fail(tmp_path: Path, collection: str) -> None:
+    manifest = _seed_manifest_fixture(tmp_path)
+    entries = manifest[collection]
+    assert isinstance(entries, list)
+    entries.append(copy.deepcopy(entries[0]))
+    _write_manifest(tmp_path, manifest)
+
+    assert "identity-cutover-manifest" in _manifest_rule_ids(tmp_path)
+
+
+def test_path_shared_between_record_and_binding_fails(tmp_path: Path) -> None:
+    manifest = _seed_manifest_fixture(tmp_path)
+    records = manifest["records"]
+    bindings = manifest["operational_bindings"]
+    assert isinstance(records, list) and isinstance(records[0], dict)
+    assert isinstance(bindings, list) and isinstance(bindings[0], dict)
+    bindings[0]["path"] = records[0]["path"]
+    _write_manifest(tmp_path, manifest)
+
+    assert "identity-cutover-manifest" in _manifest_rule_ids(tmp_path)
 
 
 def test_live_retired_identity_fails_in_visible_hidden_and_binary_files(tmp_path: Path) -> None:
@@ -106,6 +238,18 @@ def test_exact_content_bound_historical_record_passes(tmp_path: Path) -> None:
         tmp_path,
         files={path: content},
         records=[_record(path, content)],
+    )
+
+    assert evaluate_identity_cutover(tmp_path) == []
+
+
+def test_exact_content_bound_lifecycle_record_passes(tmp_path: Path) -> None:
+    content = f'identifier: "retired {RETIRED_LOWER}-sdl distribution"\n'.encode()
+    path = "specs/evolution/deprecation-records.yaml"
+    _seed_repo(
+        tmp_path,
+        files={path: content},
+        records=[_record(path, content, record_class="lifecycle-record")],
     )
 
     assert evaluate_identity_cutover(tmp_path) == []
@@ -176,6 +320,16 @@ def test_unsafe_or_untracked_historical_path_fails_closed(tmp_path: Path) -> Non
     failures = evaluate_identity_cutover(tmp_path)
 
     assert any(failure.rule_id == "identity-cutover-manifest-path" for failure in failures)
+
+
+def test_unsafe_operational_binding_path_fails_closed(tmp_path: Path) -> None:
+    manifest = _seed_manifest_fixture(tmp_path)
+    bindings = manifest["operational_bindings"]
+    assert isinstance(bindings, list) and isinstance(bindings[0], dict)
+    bindings[0]["path"] = "../outside.properties"
+    _write_manifest(tmp_path, manifest)
+
+    assert "identity-cutover-manifest-path" in _manifest_rule_ids(tmp_path)
 
 
 def test_identity_cutover_check_is_registered_in_canonical_policy_graph() -> None:

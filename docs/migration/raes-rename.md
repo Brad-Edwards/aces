@@ -52,3 +52,44 @@ The hard cut does not automatically rewrite persisted artifacts or clean
 resources created under an earlier identity. Operators should complete any
 required environment cleanup before deploying the cutover release; the
 repository does not discover or destroy old-name resources.
+
+## Downstream Cutover Sequencing
+
+Issue #908 migrated current contract, schema, wire, workflow, runtime, and host
+identities together. Consumers pinned to RAES 1.1.0 continue to use that
+release's pre-cutover values. They must switch all affected values atomically
+when adopting the next breaking RAES release that contains the identity
+cutover, targeted as 2.0.0.
+
+Consumers must not guess replacement spellings, mix identities from the two
+release lines, or introduce aliases and fallback reads. The release's schemas,
+fixtures, and migration evidence are the source of truth for the new values.
+
+## Scenario And Environment-Pack Vocabulary
+
+`Scenario` remains the RAES SDL authored-content concept, and
+`instantiate_scenario()` continues to produce an instantiated scenario. An
+**environment pack** is a downstream packaging and distribution unit that may
+contain SDL scenarios and other reusable assets. It is not another name for a
+scenario, an SDL document phase or model, or a realized environment.
+
+The intended split is therefore: packs are environment packs; the SDL content
+they carry remains scenarios. A pack repository owns its layout and release
+mechanics, while this repository remains authoritative for SDL, concept, and
+reusable-asset trust-policy meanings.
+
+## Legacy PyPI Distribution Retirement
+
+The legacy PyPI distribution named in issue #907 is end-of-life, and `raes` is
+its replacement. One final 0.23.2 release will be cut from the immutable 0.23.1
+legacy lineage with unchanged code behavior and an updated long description
+that points consumers to `raes` and this migration guide. It will not depend on
+`raes`, install a placeholder, or restore retired import aliases.
+
+After the final artifact name, version, contents, metadata, and replacement
+links are verified on PyPI, the legacy project will be archived. Existing
+historical releases will remain available rather than being deleted or broadly
+yanked. The current release-please workflow remains exclusive to `raes`; the
+one-time legacy publication requires an immutable reviewed source, the
+protected PyPI environment, and short-lived OIDC credentials rather than a
+stored token.

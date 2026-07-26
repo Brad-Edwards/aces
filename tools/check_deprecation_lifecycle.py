@@ -94,6 +94,7 @@ STATUSES: frozenset[str] = frozenset({"deprecated", "removed"})
 # this floor -- exactly the predictability GOV-902 requires.
 CANONICAL_DEPRECATION_RECORD_IDS: frozenset[str] = frozenset(
     {
+        "legacy-python-distribution",
         "sdl-import-path-field",
     }
 )

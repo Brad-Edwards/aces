@@ -3,6 +3,13 @@
   "hash_algorithm": "sha256",
   "operational_bindings": [
     {
+      "path": ".ground-control.yaml",
+      "binding_class": "external-service-project-key",
+      "rationale": "Retains the existing service-owned Ground Control project identifier until its replacement is externally provisioned.",
+      "occurrences": 1,
+      "content_sha256": "f89fa216218b0c68786c464b7777ceb194e3c6aa0c3bc12a61a245068d967c7e"
+    },
+    {
       "path": "sonar-project.properties",
       "binding_class": "external-service-project-key",
       "rationale": "Retains the existing service-owned SonarCloud project designation without treating it as current RAES product identity.",
@@ -1279,6 +1286,13 @@
       "content_sha256": "3128021de32125f2d8ce6270e1386c2c8cc5dd3af45514fb8e335a17c9469940"
     },
     {
+      "path": "docs/decisions/issue-907-raes-env-packs-naming-preflight.md",
+      "record_class": "dated-design-record",
+      "rationale": "Preserves the dated issue preflight and its base-synchronization correction as historical identity-cutover evidence.",
+      "occurrences": 4,
+      "content_sha256": "82c441869cca975874236fa02946298bb4dbf70ecd04336550652193673e0022"
+    },
+    {
       "path": "docs/decisions/issue-97-asr-511-515-validation-strength-disclosure-preflight.md",
       "record_class": "dated-design-record",
       "rationale": "Preserves a completed, dated design or architecture-preflight record from before the RAES identity cutover.",
@@ -1788,6 +1802,13 @@
       "rationale": "Preserves preregistered, frozen, dated, or lineage-bearing research evidence from before the RAES identity cutover.",
       "occurrences": 4,
       "content_sha256": "778711fccb5b5912a6fd106d080b4eac9dd354e4ccd4574204274fea653fecbc"
+    },
+    {
+      "path": "specs/evolution/deprecation-records.yaml",
+      "record_class": "lifecycle-record",
+      "rationale": "Preserves the exact retired distribution identifier in its governed deprecation and removal record.",
+      "occurrences": 2,
+      "content_sha256": "eff30897103368c6583701e886078f810188bcc47f4d9183853faeb1739fbdcb"
     }
   ]
 }
