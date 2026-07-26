@@ -1,0 +1,10 @@
+{
+  "contract_id": "participant-execution-binding-v1",
+  "schema_path": "contracts/schemas/participant-runtime/participant-execution-binding-v1.json",
+  "stability": "draft",
+  "content_hash": "3b80c5ca6cf152de84426f2e22c1d66bdba8157b18b9ed85c2ca051b323df818",
+  "last_change": {
+    "summary": "Published the exact native participant action-to-target execution relation and finite execution bounds for issue #898.",
+    "content_hash": "3b80c5ca6cf152de84426f2e22c1d66bdba8157b18b9ed85c2ca051b323df818"
+  }
+}

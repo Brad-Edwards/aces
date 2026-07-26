@@ -709,6 +709,94 @@
       "title": "OrchestratorCapabilitiesModel",
       "type": "object"
     },
+    "ParticipantExecutionBindingModel": {
+      "additionalProperties": false,
+      "description": "Exact executable relation between one action and its native targets.",
+      "properties": {
+        "action_contract_address": {
+          "minLength": 1,
+          "title": "Action Contract Address",
+          "type": "string"
+        },
+        "binding_id": {
+          "minLength": 1,
+          "title": "Binding Id",
+          "type": "string"
+        },
+        "constraint_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Constraint Refs",
+          "type": "array"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "max_action_attempts": {
+          "minimum": 1,
+          "title": "Max Action Attempts",
+          "type": "integer"
+        },
+        "max_in_flight": {
+          "minimum": 1,
+          "title": "Max In Flight",
+          "type": "integer"
+        },
+        "max_retries": {
+          "minimum": 0,
+          "title": "Max Retries",
+          "type": "integer"
+        },
+        "participant_implementation_ref": {
+          "minLength": 1,
+          "title": "Participant Implementation Ref",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "participant-execution-binding/v1",
+          "default": "participant-execution-binding/v1",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "target_addresses": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Target Addresses",
+          "type": "array"
+        },
+        "timeout_seconds": {
+          "minimum": 1,
+          "title": "Timeout Seconds",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "binding_id",
+        "action_contract_address",
+        "target_addresses",
+        "participant_implementation_ref",
+        "constraint_refs",
+        "evidence_refs",
+        "max_action_attempts",
+        "max_in_flight",
+        "timeout_seconds",
+        "max_retries"
+      ],
+      "title": "ParticipantExecutionBindingModel",
+      "type": "object"
+    },
     "ParticipantFeatureSupportLevel": {
       "description": "ADR-054 guarantee-strength scale for per-feature participant runtime support.",
       "enum": [
@@ -918,6 +1006,13 @@
           "title": "Constraints",
           "type": "object"
         },
+        "execution_bindings": {
+          "items": {
+            "$ref": "#/$defs/ParticipantExecutionBindingModel"
+          },
+          "title": "Execution Bindings",
+          "type": "array"
+        },
         "feature_support": {
           "items": {
             "$ref": "#/$defs/ParticipantFeatureSupportModel"
@@ -1002,6 +1097,32 @@
           ],
           "default": null,
           "title": "Max Autonomous Retries Per Occurrence"
+        },
+        "max_concurrent_actions": {
+          "anyOf": [
+            {
+              "minimum": 2,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Concurrent Actions"
+        },
+        "max_execution_services": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Execution Services"
         },
         "name": {
           "minLength": 1,
@@ -1096,6 +1217,22 @@
           "type": "array",
           "uniqueItems": true
         },
+        "supported_execution_control_actions": {
+          "items": {
+            "enum": [
+              "start",
+              "pause",
+              "resume",
+              "drain",
+              "reset",
+              "teardown"
+            ],
+            "type": "string"
+          },
+          "title": "Supported Execution Control Actions",
+          "type": "array",
+          "uniqueItems": true
+        },
         "supported_interaction_features": {
           "items": {
             "minLength": 1,
@@ -1119,6 +1256,16 @@
         "supports_autonomous_execution": {
           "default": false,
           "title": "Supports Autonomous Execution",
+          "type": "boolean"
+        },
+        "supports_bounded_concurrency": {
+          "default": false,
+          "title": "Supports Bounded Concurrency",
+          "type": "boolean"
+        },
+        "supports_execution_control": {
+          "default": false,
+          "title": "Supports Execution Control",
           "type": "boolean"
         }
       },
@@ -1817,6 +1964,9 @@
           "participant-episode-state-envelope-v1",
           "participant-episode-history-event-stream-v1",
           "participant-behavior-history-event-stream-v1",
+          "participant-execution-binding-v1",
+          "participant-execution-control-v1",
+          "participant-execution-service-state-v1",
           "participant-control-occurrence-v1",
           "participant-crossing-occurrence-v1",
           "participant-lifecycle-event-v1",

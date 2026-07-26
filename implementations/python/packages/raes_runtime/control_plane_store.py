@@ -134,6 +134,7 @@ def _snapshot_payload(snapshot: RuntimeSnapshot) -> dict[str, Any]:
             for participant_address, events in snapshot.participant_control_history.items()
         },
         "participant_autonomous_execution_states": dict(snapshot.participant_autonomous_execution_states),
+        "participant_execution_services": dict(snapshot.participant_execution_services),
         "shared_state_records": dict(snapshot.shared_state_records),
         "shared_state_history": {
             state_address: list(records) for state_address, records in snapshot.shared_state_history.items()
@@ -200,6 +201,7 @@ def _snapshot_from_payload(payload: dict[str, Any]) -> RuntimeSnapshot:
             for participant_address, events in payload.get("participant_control_history", {}).items()
         },
         participant_autonomous_execution_states=dict(payload.get("participant_autonomous_execution_states", {})),
+        participant_execution_services=dict(payload.get("participant_execution_services", {})),
         shared_state_records=dict(payload.get("shared_state_records", {})),
         shared_state_history={
             state_address: list(records) for state_address, records in payload.get("shared_state_history", {}).items()

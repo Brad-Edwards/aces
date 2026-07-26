@@ -91,6 +91,12 @@ def _validate_runtime_target_shape(
             manifest.participant_runtime and manifest.participant_runtime.supports_autonomous_execution
         ),
         require_coordinated_reset=bool(manifest.time and manifest.time.supports_coordinated_participant_reset),
+        require_execution_control=bool(
+            manifest.participant_runtime and manifest.participant_runtime.supports_execution_control
+        ),
+        require_bounded_concurrency=bool(
+            manifest.participant_runtime and manifest.participant_runtime.supports_bounded_concurrency
+        ),
     )
     _validate_time_runtime_methods(
         time_runtime,
@@ -225,6 +231,8 @@ def _validate_participant_runtime_methods(
     *,
     require_autonomous_binding: bool,
     require_coordinated_reset: bool,
+    require_execution_control: bool,
+    require_bounded_concurrency: bool,
 ) -> None:
     _require_invokable_method(
         participant_runtime,
@@ -295,6 +303,33 @@ def _validate_participant_runtime_methods(
             label="participant_runtime",
             method_name="reset_many",
             invocation_args=((sample_request,), sample_snapshot),
+        )
+    if require_execution_control:
+        _require_invokable_method(
+            participant_runtime,
+            label="participant_runtime",
+            method_name="control_execution",
+            invocation_args=(sample_request, sample_snapshot),
+        )
+        _require_invokable_method(
+            participant_runtime,
+            label="participant_runtime",
+            method_name="execution_state",
+            invocation_args=(
+                "participant.autonomous-execution.registry-probe",
+                sample_snapshot,
+            ),
+        )
+    if require_bounded_concurrency:
+        _require_invokable_method(
+            participant_runtime,
+            label="participant_runtime",
+            method_name="admit_actions_concurrently",
+            invocation_args=(
+                (sample_admission_request, sample_admission_request),
+                sample_snapshot,
+                2,
+            ),
         )
 
 

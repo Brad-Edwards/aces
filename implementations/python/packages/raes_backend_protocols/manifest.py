@@ -36,6 +36,10 @@ from .capabilities import (
     ProvisionerCapabilities,
     TimeCapabilities,
 )
+from .participant_execution_manifest import (
+    participant_execution_capability_kwargs,
+    participant_execution_capability_payload,
+)
 
 
 class BackendManifestEnvelopeUnsupportedError(ValueError):
@@ -195,6 +199,7 @@ def backend_manifest_v2_model(manifest: BackendManifest) -> BackendManifestV2Mod
                         manifest.participant_runtime.max_autonomous_retries_per_occurrence
                     ),
                     "max_autonomous_burst_size": manifest.participant_runtime.max_autonomous_burst_size,
+                    **participant_execution_capability_payload(manifest.participant_runtime),
                     "constraints": dict(manifest.participant_runtime.constraints),
                 }
                 if manifest.participant_runtime is not None
@@ -366,6 +371,7 @@ def _participant_runtime_from_model(
         max_autonomous_occurrences=model.max_autonomous_occurrences,
         max_autonomous_retries_per_occurrence=model.max_autonomous_retries_per_occurrence,
         max_autonomous_burst_size=model.max_autonomous_burst_size,
+        **participant_execution_capability_kwargs(model),
         constraints=dict(model.constraints),
     )
 

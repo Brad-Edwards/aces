@@ -86,6 +86,7 @@ class RuntimeSnapshot:
     participant_behavior_history: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
     participant_control_history: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
     participant_autonomous_execution_states: dict[str, dict[str, Any]] = field(default_factory=dict)
+    participant_execution_services: dict[str, dict[str, Any]] = field(default_factory=dict)
     shared_state_records: dict[str, dict[str, Any]] = field(default_factory=dict)
     shared_state_history: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
     joint_action_records: dict[str, dict[str, Any]] = field(default_factory=dict)
@@ -160,6 +161,11 @@ class RuntimeSnapshot:
                 "participant_autonomous_execution_states",
                 self.participant_autonomous_execution_states,
             ),
+            participant_execution_services=_mapping_update(
+                updates,
+                "participant_execution_services",
+                self.participant_execution_services,
+            ),
             shared_state_records=_mapping_update(
                 updates,
                 "shared_state_records",
@@ -210,6 +216,7 @@ _SNAPSHOT_UPDATE_KEYS = {
     "participant_behavior_history",
     "participant_control_history",
     "participant_autonomous_execution_states",
+    "participant_execution_services",
     "shared_state_records",
     "shared_state_history",
     "joint_action_records",

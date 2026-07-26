@@ -2,9 +2,9 @@
   "contract_id": "runtime-snapshot-v1",
   "schema_path": "contracts/schemas/snapshots/runtime-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "d0b31b768af1ebd963e590429e0d38f4b16e816f25c59b95703d3166d463985b",
+  "content_hash": "c5e118021ab5337ca2bb7a79db7a71fce276413463ffe9fe8dee46989d123e6b",
   "last_change": {
-    "summary": "Added typed autonomous activity v2 continuation and safe occurrence provenance to runtime snapshots for issue #897.",
-    "content_hash": "d0b31b768af1ebd963e590429e0d38f4b16e816f25c59b95703d3166d463985b"
+    "summary": "Added generation-fenced participant execution service health, readiness, capacity, shared-time provenance, and lifecycle evidence for issue #898.",
+    "content_hash": "c5e118021ab5337ca2bb7a79db7a71fce276413463ffe9fe8dee46989d123e6b"
   }
 }

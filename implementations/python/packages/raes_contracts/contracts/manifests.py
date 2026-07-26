@@ -29,6 +29,7 @@ from .capabilities import (
 )
 from .experiment_bindings import ConfigurationTargetRegistryModel
 from .feature_support import ParticipantFeatureSupportModel
+from .participant_execution import ParticipantExecutionBindingModel
 from .time_manifest_capabilities import TimeCapabilitiesModel
 from .trial_cleanup import CleanupActionKind
 from .validators import (
@@ -140,6 +141,14 @@ class ParticipantRuntimeCapabilitiesModel(ContractModel):
     max_autonomous_occurrences: int | None = Field(default=None, ge=1)
     max_autonomous_retries_per_occurrence: int | None = Field(default=None, ge=1)
     max_autonomous_burst_size: int | None = Field(default=None, ge=1)
+    execution_bindings: list[ParticipantExecutionBindingModel] = Field(default_factory=list)
+    supports_execution_control: bool = False
+    supported_execution_control_actions: list[Literal["start", "pause", "resume", "drain", "reset", "teardown"]] = (
+        Field(default_factory=list, json_schema_extra={"uniqueItems": True})
+    )
+    supports_bounded_concurrency: bool = False
+    max_execution_services: int | None = Field(default=None, ge=1)
+    max_concurrent_actions: int | None = Field(default=None, ge=2)
     constraints: dict[str, str] = Field(default_factory=dict)
 
     @model_validator(mode="after")
@@ -167,6 +176,7 @@ class ParticipantRuntimeCapabilitiesModel(ContractModel):
         self._validate_supported_feature_levels()
         self._validate_autonomous_configuration()
         self._validate_autonomous_addresses()
+        self._validate_execution_control()
         return self
 
     def _validate_supported_feature_levels(self) -> None:
@@ -226,6 +236,11 @@ class ParticipantRuntimeCapabilitiesModel(ContractModel):
             and self.supported_autonomous_observation_boundaries
             and self.supported_autonomous_policy_profiles
             and all(value is not None for value in self._autonomous_limits())
+            and self.execution_bindings
+            and self.supports_execution_control
+            and self.supports_bounded_concurrency
+            and self.max_execution_services is not None
+            and self.max_concurrent_actions is not None
         )
 
     def _has_any_autonomous_configuration(self) -> bool:
@@ -238,7 +253,32 @@ class ParticipantRuntimeCapabilitiesModel(ContractModel):
             or self.supported_autonomous_activity_features
             or self.supported_autonomous_random_stream_profiles
             or any(value is not None for value in self._autonomous_limits())
+            or self.execution_bindings
+            or self.supports_execution_control
+            or self.supported_execution_control_actions
+            or self.supports_bounded_concurrency
+            or self.max_execution_services is not None
+            or self.max_concurrent_actions is not None
         )
+
+    def _validate_execution_control(self) -> None:
+        if not self.supports_autonomous_execution:
+            return
+        required_actions = {"start", "pause", "resume", "drain", "reset", "teardown"}
+        missing = required_actions - set(self.supported_execution_control_actions)
+        if missing:
+            raise ValueError("execution control is missing required actions: " + ", ".join(sorted(missing)))
+        binding_ids = [binding.binding_id for binding in self.execution_bindings]
+        _validate_unique_string_values("execution_bindings", binding_ids)
+        supported_actions = set(self.supported_autonomous_action_contracts)
+        supported_targets = set(self.supported_autonomous_target_addresses)
+        for binding in self.execution_bindings:
+            if binding.action_contract_address not in supported_actions:
+                raise ValueError("execution binding action is not declared supported")
+            if not set(binding.target_addresses).issubset(supported_targets):
+                raise ValueError("execution binding target is not declared supported")
+            if self.max_concurrent_actions is not None and binding.max_in_flight > self.max_concurrent_actions:
+                raise ValueError("execution binding exceeds max_concurrent_actions")
 
     def _autonomous_limits(self) -> tuple[int | None, ...]:
         return (

@@ -2,7 +2,10 @@
 
 from raes.scenario import InstantiatedScenario
 
-from ..models import ParticipantAutonomousExecutionRuntime
+from ..models import (
+    ParticipantAutonomousExecutionRuntime,
+    ParticipantExecutionBindingRuntime,
+)
 from .addresses import (
     _action_contract_address,
     _behavior_specification_address,
@@ -42,25 +45,36 @@ def _compile_autonomous_execution(
         else list(policy.temporal_constraint_refs)
     )
     addressable_ref_index = _runtime_addressable_ref_index(scenario)
-    target_refs = [
-        str(ref)
-        for action_ref in action_refs
-        for effect in scenario.action_contracts[
-            _section_ref_name(action_ref, "action_contracts", scenario.action_contracts)
-        ].effects
-        for ref in effect.target_refs
-    ]
-    target_refs.extend(
-        str(ref)
-        for action_ref in action_refs
-        for precondition in scenario.action_contracts[
-            _section_ref_name(action_ref, "action_contracts", scenario.action_contracts)
-        ].preconditions
-        for ref in precondition.support_refs
-    )
-    target_addresses = _runtime_addresses_for_refs(
-        list(dict.fromkeys(target_refs)),
-        addressable_ref_index=addressable_ref_index,
+    execution_bindings_by_key: dict[tuple[str, tuple[str, ...]], ParticipantExecutionBindingRuntime] = {}
+    for action_ref in action_refs:
+        action_name = _section_ref_name(
+            action_ref,
+            "action_contracts",
+            scenario.action_contracts,
+        )
+        action = scenario.action_contracts[action_name]
+        target_refs = [
+            *(str(ref) for effect in action.effects for ref in effect.target_refs),
+            *(str(ref) for precondition in action.preconditions for ref in precondition.support_refs),
+        ]
+        action_contract_address = _action_contract_address(action_name)
+        target_addresses = _runtime_addresses_for_refs(
+            list(dict.fromkeys(target_refs)),
+            addressable_ref_index=addressable_ref_index,
+        )
+        execution_bindings_by_key.setdefault(
+            (action_contract_address, target_addresses),
+            ParticipantExecutionBindingRuntime(
+                action_contract_address=action_contract_address,
+                target_addresses=target_addresses,
+                participant_implementation_ref=policy.participant_implementation_ref,
+                max_action_attempts=policy.max_action_attempts,
+                max_in_flight=policy.max_in_flight,
+            ),
+        )
+    execution_bindings = tuple(execution_bindings_by_key.values())
+    target_addresses = tuple(
+        dict.fromkeys(target for binding in execution_bindings for target in binding.target_addresses)
     )
     return ParticipantAutonomousExecutionRuntime(
         address=address,
@@ -91,6 +105,7 @@ def _compile_autonomous_execution(
             for ref in action_refs
         ),
         target_addresses=target_addresses,
+        execution_bindings=execution_bindings,
         observation_boundary_address=_observation_boundary_address(
             _section_ref_name(
                 policy.observation_boundary_ref,

@@ -273,6 +273,42 @@ Accordingly, NumPy, Random123, and stream-splitting precedents remain design
 criteria rather than source compatibility or copied-code claims. No additional
 license notice is required by this extension.
 
+### Issue 898 portable execution-control review
+
+The DSL-437 participant and simulation-time sources above were re-reviewed on
+2026-07-26 for issue #898. The following operational-control precedents add
+design criteria without changing the existing semantic derivation:
+
+- Modelica Association Project FMI, *Functional Mock-up Interface
+  Specification* 3.0.2 (2024), <https://fmi-standard.org/docs/3.0.2/>,
+  separates importer-controlled activation, legal lifecycle states, and
+  quiescent termination, while explicitly leaving parallel computation outside
+  the FMI API.
+- gRPC, *Health Checking*,
+  <https://grpc.io/docs/guides/health-checking/>, separates
+  implementation-maintained service health from ordinary application calls.
+- Google, *AIP-151: Long-running operations*,
+  <https://google.aip.dev/151>, uses a shared operation resource and makes
+  parallel-operation behavior explicit.
+- Kubernetes, *Pod Conditions*,
+  <https://kubernetes.io/docs/concepts/workloads/pods/pod-condition/>, binds
+  observations to an `observedGeneration`, so a consumer can detect stale
+  readiness.
+- OASIS, *Topology and Orchestration Specification for Cloud Applications
+  Version 2.0* (2024),
+  <https://docs.oasis-open.org/tosca/TOSCA/v2.0/cs01/TOSCA-v2.0-cs01.html>,
+  separates portable lifecycle interface operations from the implementation
+  artifacts that realize them.
+
+RAES adapts only the separation of scheduler activation, lifecycle legality,
+generation-bound readback, reusable operation status, health/readiness, and
+backend-owned implementations. It does not adopt an FMI importer/FMU API, gRPC
+service, Google operation schema, Kubernetes resource model, TOSCA topology or
+workflow language, or any source lifecycle vocabulary or wire compatibility.
+Bounded concurrent native participant execution, coordinated drain/reset, and
+action-to-target evidence remain RAES-defined obligations under ADR-092,
+ADR-054/RUN-308, ADR-091, and issue #898.
+
 ## CRACK Publications
 
 Two related works by Russo, Costa, and Armando are distinct and must not share

@@ -88,6 +88,29 @@ and the term-level evidence criteria in
 This design ratifies that surface without amendment. See the API-405 section
 of `specs/formal/runtime-contracts/README.md`.
 
+### Portable autonomous execution services
+
+Issue #898 extends only the `autonomous_execution` portion of the ratified
+participant capability block. Autonomous support now includes relational
+`execution_bindings`, the complete generation-fenced lifecycle action set,
+bounded-concurrency support, and finite service/action capacity. The three
+published carriers are:
+
+| Contract id | Carries |
+| --- | --- |
+| `participant-execution-binding-v1` | Exact action contract, native target-service addresses, selected implementation, constraints/evidence, and finite execution policy |
+| `participant-execution-control-v1` | Expected-generation `start`, `pause`, `resume`, bounded `drain`, `reset`, and `teardown` request |
+| `participant-execution-service-state-v1` | Lifecycle, generation, health, readiness, admission/capacity, quiescence/resource release, shared-time provenance, pacing deviations, and evidence |
+
+Control mutations reuse `operation-receipt-v1` and `operation-status-v1`; state
+is embedded in `runtime-snapshot-v1.participant_execution_services`. These
+carriers do not merge participant episode lifecycle, scheduler continuation,
+or shared-clock state. Conditional live conformance is required because
+schema-valid declarations cannot establish native action behavior. The shared
+runtime does not manufacture lifecycle transitions: a backend-owned control
+operation must coordinate those incumbent surfaces, and changed typed
+readback plus new evidence must validate each successful operation.
+
 ## API-407 - Feature Support And Constraint Declaration
 
 `capabilities.participant_runtime.feature_support` is a list of per-feature

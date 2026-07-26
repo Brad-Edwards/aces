@@ -77,6 +77,9 @@ def _snapshot_from_envelope(payload: dict[str, Any]) -> RuntimeSnapshot:
             state_address: state.model_dump(mode="json")
             for state_address, state in validated.participant_autonomous_execution_states.items()
         },
+        participant_execution_services={
+            scope: state.model_dump(mode="json") for scope, state in validated.participant_execution_services.items()
+        },
         shared_state_records={
             state_address: record.model_dump(mode="json")
             for state_address, record in validated.shared_state_records.items()

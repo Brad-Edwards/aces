@@ -1,0 +1,10 @@
+{
+  "contract_id": "participant-execution-control-v1",
+  "schema_path": "contracts/schemas/participant-runtime/participant-execution-control-v1.json",
+  "stability": "draft",
+  "content_hash": "efe00dae0e16258eb63f6c1ca2c833027ee1a659f5e7f41053d0d81a1ec69e50",
+  "last_change": {
+    "summary": "Published generation-fenced start, pause, resume, bounded drain, reset, and teardown requests for issue #898.",
+    "content_hash": "efe00dae0e16258eb63f6c1ca2c833027ee1a659f5e7f41053d0d81a1ec69e50"
+  }
+}

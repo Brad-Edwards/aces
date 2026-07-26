@@ -13,6 +13,8 @@ from raes_contracts.manifest_authority import (
 )
 from raes_contracts.vocabulary import ParticipantFeatureSupportLevel
 
+PARTICIPANT_EXECUTION_CONTROL_ACTIONS = frozenset({"start", "pause", "resume", "drain", "reset", "teardown"})
+
 
 def _validate_unique_non_empty_strings(field_name: str, values: tuple[str, ...]) -> None:
     if any(not value.strip() for value in values):
@@ -93,6 +95,58 @@ class ParticipantFeatureSupport:
 
 
 @dataclass(frozen=True)
+class ParticipantExecutionBinding:
+    """Manifest claim for one exact action-to-target native binding."""
+
+    binding_id: str
+    action_contract_address: str
+    target_addresses: tuple[str, ...]
+    participant_implementation_ref: str
+    constraint_refs: tuple[str, ...]
+    evidence_refs: tuple[str, ...]
+    max_action_attempts: int
+    max_in_flight: int
+    timeout_seconds: int
+    max_retries: int
+
+    def __post_init__(self) -> None:
+        for field_name in (
+            "binding_id",
+            "action_contract_address",
+            "participant_implementation_ref",
+        ):
+            if not str(getattr(self, field_name)).strip():
+                raise ValueError(f"ParticipantExecutionBinding.{field_name} must be non-empty")
+        for field_name in ("target_addresses", "constraint_refs", "evidence_refs"):
+            values = tuple(getattr(self, field_name))
+            if not values:
+                raise ValueError(f"ParticipantExecutionBinding.{field_name} must not be empty")
+            _validate_unique_non_empty_strings(
+                f"ParticipantExecutionBinding.{field_name}",
+                values,
+            )
+            object.__setattr__(self, field_name, values)
+        require_compiled_address(
+            self.action_contract_address,
+            field_name="action_contract_address",
+        )
+        for target_address in self.target_addresses:
+            require_compiled_address(
+                target_address,
+                field_name="target_addresses",
+            )
+        for field_name in (
+            "max_action_attempts",
+            "max_in_flight",
+            "timeout_seconds",
+        ):
+            if getattr(self, field_name) < 1:
+                raise ValueError(f"ParticipantExecutionBinding.{field_name} must be positive")
+        if self.max_retries < 0:
+            raise ValueError("ParticipantExecutionBinding.max_retries must be non-negative")
+
+
+@dataclass(frozen=True)
 class ParticipantRuntimeCapabilities:
     """Backend participant lifecycle, behavior, and execution support."""
 
@@ -115,6 +169,12 @@ class ParticipantRuntimeCapabilities:
     max_autonomous_occurrences: int | None = None
     max_autonomous_retries_per_occurrence: int | None = None
     max_autonomous_burst_size: int | None = None
+    execution_bindings: tuple[ParticipantExecutionBinding, ...] = ()
+    supports_execution_control: bool = False
+    supported_execution_control_actions: frozenset[str] = frozenset()
+    supports_bounded_concurrency: bool = False
+    max_execution_services: int | None = None
+    max_concurrent_actions: int | None = None
     constraints: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -123,6 +183,11 @@ class ParticipantRuntimeCapabilities:
         self._validate_required_vocabularies()
         feature_support = self._normalize_feature_support()
         self._validate_feature_support(feature_support)
+        execution_bindings = tuple(
+            binding if isinstance(binding, ParticipantExecutionBinding) else ParticipantExecutionBinding(**binding)
+            for binding in self.execution_bindings
+        )
+        object.__setattr__(self, "execution_bindings", execution_bindings)
         self._validate_autonomous_execution()
         object.__setattr__(self, "feature_support", feature_support)
 
@@ -212,9 +277,40 @@ class ParticipantRuntimeCapabilities:
             if not self.supported_autonomous_random_stream_profiles:
                 raise ValueError("autonomous execution v2 requires exact supported random-stream profiles")
         self._validate_autonomous_addresses()
+        self._validate_execution_control()
         for label, value in self._autonomous_limits():
             if value is None or value < 1:
                 raise ValueError(f"autonomous execution requires positive {label}")
+
+    def _validate_execution_control(self) -> None:
+        if not self.supports_execution_control:
+            raise ValueError("autonomous execution requires execution control support")
+        missing_actions = PARTICIPANT_EXECUTION_CONTROL_ACTIONS - self.supported_execution_control_actions
+        if missing_actions:
+            raise ValueError("execution control is missing required actions: " + ", ".join(sorted(missing_actions)))
+        unknown_actions = self.supported_execution_control_actions - PARTICIPANT_EXECUTION_CONTROL_ACTIONS
+        if unknown_actions:
+            raise ValueError("unsupported execution control actions: " + ", ".join(sorted(unknown_actions)))
+        if not self.supports_bounded_concurrency:
+            raise ValueError("autonomous execution requires bounded concurrency support")
+        if self.max_execution_services is None or self.max_execution_services < 1:
+            raise ValueError("autonomous execution requires positive max_execution_services")
+        if self.max_concurrent_actions is None or self.max_concurrent_actions < 2:
+            raise ValueError("bounded concurrency requires max_concurrent_actions of at least 2")
+        if not self.execution_bindings:
+            raise ValueError("autonomous execution requires relational execution_bindings")
+        binding_ids = tuple(binding.binding_id for binding in self.execution_bindings)
+        _validate_unique_non_empty_strings(
+            "ParticipantRuntimeCapabilities.execution_bindings",
+            binding_ids,
+        )
+        for binding in self.execution_bindings:
+            if binding.action_contract_address not in self.supported_autonomous_action_contracts:
+                raise ValueError("execution binding action is not declared supported")
+            if not set(binding.target_addresses).issubset(self.supported_autonomous_target_addresses):
+                raise ValueError("execution binding target is not declared supported")
+            if binding.max_in_flight > self.max_concurrent_actions:
+                raise ValueError("execution binding exceeds max_concurrent_actions")
 
     def _validate_autonomous_addresses(self) -> None:
         for field_name, addresses in (
@@ -244,16 +340,24 @@ class ParticipantRuntimeCapabilities:
             or self.supported_autonomous_policy_profiles
             or self.supported_autonomous_activity_features
             or self.supported_autonomous_random_stream_profiles
+            or self.execution_bindings
+            or self.supports_execution_control
+            or self.supported_execution_control_actions
+            or self.supports_bounded_concurrency
+            or self.max_execution_services is not None
+            or self.max_concurrent_actions is not None
             or any(value is not None for _, value in self._autonomous_limits())
         )
 
 
 __all__ = [
+    "PARTICIPANT_EXECUTION_CONTROL_ACTIONS",
     "PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE",
     "PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS",
     "PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE",
     "PARTICIPANT_RUNTIME_POLICY_FEATURES",
     "PARTICIPANT_RUNTIME_ROLE_SCOPE",
     "ParticipantFeatureSupport",
+    "ParticipantExecutionBinding",
     "ParticipantRuntimeCapabilities",
 ]

@@ -2,9 +2,9 @@
   "contract_id": "backend-profile-v1",
   "schema_path": "contracts/schemas/profiles/backend-profile-v1.json",
   "stability": "draft",
-  "content_hash": "63c54137176f37d1253095c1fb93b3090084f604972e41588d0f71de14855e53",
+  "content_hash": "475bb6cc6cf7be8bda19fd0e3cb0e6d27321fabf81c31c7417f332846f1cf516",
   "last_change": {
-    "summary": "Added participant control and crossing occurrence contracts to the governed backend profile vocabulary.",
-    "content_hash": "63c54137176f37d1253095c1fb93b3090084f604972e41588d0f71de14855e53"
+    "summary": "Added participant execution binding, lifecycle control, and service-state contracts to the governed backend profile vocabulary for issue #898.",
+    "content_hash": "475bb6cc6cf7be8bda19fd0e3cb0e6d27321fabf81c31c7417f332846f1cf516"
   }
 }

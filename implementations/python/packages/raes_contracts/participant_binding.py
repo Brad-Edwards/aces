@@ -54,6 +54,7 @@ from .participant_binding_validation import (
 from .participant_binding_validation import (
     string_tuple as _string_tuple,
 )
+from .participant_native_execution import ParticipantNativeActionExecution
 from .runtime_state import ApplyResult
 
 
@@ -109,6 +110,9 @@ class ParticipantActionAdmissionRequest:
     state_transition_kind: str = "participant_action_admitted"
     post_state_digest: str | None = None
     requires_terminal_outcome: bool = False
+    target_addresses: tuple[str, ...] = ()
+    execution_scope_ref: str | None = None
+    execution_generation: int | None = None
 
     def __post_init__(self) -> None:
         _require_non_empty(self.participant_address, "participant_address")
@@ -139,6 +143,14 @@ class ParticipantActionAdmissionRequest:
                 raise ValueError("validated_selection action_contract_address must match the admission request")
         if not isinstance(self.requires_terminal_outcome, bool):
             raise TypeError("requires_terminal_outcome must be a bool")
+        if (self.execution_scope_ref is None) != (self.execution_generation is None):
+            raise ValueError("execution_scope_ref and execution_generation must be provided together")
+        if self.execution_scope_ref is not None:
+            _require_non_empty(self.execution_scope_ref, "execution_scope_ref")
+            if self.execution_generation is None or self.execution_generation < 0:
+                raise ValueError("execution_generation must be non-negative")
+            if not self.target_addresses:
+                raise ValueError("generation-bound participant actions require target_addresses")
         if any(not isinstance(item, ParticipantTemporalRuntimeContextModel) for item in self.temporal_contexts):
             raise TypeError("temporal_contexts entries must be ParticipantTemporalRuntimeContextModel")
         if len({item.temporal_contract_id for item in self.temporal_contexts}) != len(self.temporal_contexts):
@@ -151,6 +163,11 @@ class ParticipantActionAdmissionRequest:
             "observation_boundary_evidence_refs",
             _string_tuple(self.observation_boundary_evidence_refs, "observation_boundary_evidence_refs"),
         )
+        object.__setattr__(
+            self,
+            "target_addresses",
+            _string_tuple(self.target_addresses, "target_addresses"),
+        )
         violations = participant_action_admission_request_violations(self)
         if violations:
             raise ValueError(violations[0])
@@ -161,23 +178,6 @@ class ParticipantActionApplyResult(ApplyResult):
     """Control-plane result plus the independently reported native action outcome."""
 
     action_result: ParticipantActionResultModel | None = None
-
-
-@dataclass(frozen=True)
-class ParticipantNativeActionExecution:
-    """Backend-native execution output used to commit portable action history."""
-
-    apply_result: ApplyResult
-    action_result: ParticipantActionResultModel | None = None
-    post_state_digest: str | None = None
-
-    def __post_init__(self) -> None:
-        if not isinstance(self.apply_result, ApplyResult):
-            raise TypeError("apply_result must be an ApplyResult")
-        if self.action_result is not None and not isinstance(self.action_result, ParticipantActionResultModel):
-            raise TypeError("action_result must be a ParticipantActionResultModel or None")
-        if self.post_state_digest is not None:
-            _require_non_empty(self.post_state_digest, "post_state_digest")
 
 
 def participant_action_admission_request_violations(

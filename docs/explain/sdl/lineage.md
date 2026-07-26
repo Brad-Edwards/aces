@@ -908,6 +908,17 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   Historical files remain ordinary initial service state; injects remain
   exercise orchestration; stochastic participant implementations remain
   governed run apparatus.
+- Issue #898 extends that same DSL-437 lineage across a remote backend control
+  boundary. It keeps authored behavior, participant episodes, scheduler
+  continuation, execution-service lifecycle, shared time, native action
+  outcome, and control-plane operation status distinct. FMI Scheduled
+  Execution, gRPC health checking, Google long-running operations, Kubernetes
+  generation-bound conditions, and TOSCA lifecycle interfaces are operational
+  design precedents only. RAES retains its own contracts and requires exact
+  action-to-target bindings, generation-checked lifecycle/readback, bounded
+  RUN-308 concurrency evidence, existing operation receipts/statuses, and
+  existing time-state/provenance. It claims no wire, API, lifecycle-token, or
+  behavioral compatibility with those sources.
 - Issues #810 through #813 own the opacity/supervisor-visibility,
   proof-bearing bisimulation, adversarial threat-model, and
   simulation/federation extensions. SEM-230 preserves their participant,

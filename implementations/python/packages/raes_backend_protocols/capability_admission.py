@@ -37,6 +37,7 @@ class AutonomousExecutionPolicy(Protocol):
     action_candidate_max_retries: tuple[int, ...]
     max_occurrences: int
     max_burst_size: int
+    execution_bindings: tuple[object, ...]
 
 
 _V2_ACTIVITY_FEATURES = frozenset(
@@ -164,6 +165,37 @@ def _unsupported_autonomous_value_gaps(
     return gaps
 
 
+def _autonomous_execution_binding_gaps(
+    capability: ParticipantRuntimeCapabilities,
+    policies: tuple[AutonomousExecutionPolicy, ...],
+) -> list[str]:
+    gaps: list[str] = []
+    declared = tuple(capability.execution_bindings)
+    for policy in policies:
+        for required in policy.execution_bindings:
+            matching = [
+                binding
+                for binding in declared
+                if binding.action_contract_address == required.action_contract_address
+                and binding.participant_implementation_ref == required.participant_implementation_ref
+            ]
+            exact = [
+                binding
+                for binding in matching
+                if set(binding.target_addresses) == set(required.target_addresses)
+                and binding.max_action_attempts >= required.max_action_attempts
+                and binding.max_in_flight >= required.max_in_flight
+            ]
+            if exact:
+                continue
+            required_targets = ", ".join(required.target_addresses)
+            gaps.append(
+                "unsupported autonomous execution binding for "
+                f"{required.action_contract_address} targets: {required_targets}"
+            )
+    return gaps
+
+
 def _requires_coordinated_reset(
     policies: tuple[AutonomousExecutionPolicy, ...],
     time_model: object,
@@ -207,6 +239,12 @@ def participant_autonomous_execution_capability_gaps(
     elif normalized_policies and capability is not None:
         gaps.extend(_autonomous_limit_gaps(capability, normalized_policies))
         gaps.extend(_unsupported_autonomous_value_gaps(capability, normalized_policies))
+        gaps.extend(
+            _autonomous_execution_binding_gaps(
+                capability,
+                normalized_policies,
+            )
+        )
         gaps.extend(_autonomous_reset_gaps(manifest, normalized_policies, time_model))
     return tuple(gaps)
 

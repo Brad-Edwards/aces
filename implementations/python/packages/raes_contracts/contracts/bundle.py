@@ -46,6 +46,11 @@ from .participant_envelopes import (
     ParticipantSharedStateRecordModel,
     ParticipantTimeManagementContextModel,
 )
+from .participant_execution import (
+    ParticipantExecutionBindingModel,
+    ParticipantExecutionControlRequestModel,
+    ParticipantExecutionServiceStateModel,
+)
 from .participant_manifests import (
     BackendManifestV2Model,
     ParticipantImplementationManifestModel,
@@ -187,6 +192,9 @@ def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
             "ParticipantBehaviorHistoryEventStream",
             ParticipantBehaviorHistoryEventModel.model_json_schema(),
         ),
+        "participant-execution-binding-v1": ParticipantExecutionBindingModel.model_json_schema(),
+        "participant-execution-control-v1": ParticipantExecutionControlRequestModel.model_json_schema(),
+        "participant-execution-service-state-v1": ParticipantExecutionServiceStateModel.model_json_schema(),
         "participant-lifecycle-event-v1": ParticipantLifecycleEventModel.model_json_schema(),
         "participant-observation-envelope-v1": ParticipantObservationEnvelopeModel.model_json_schema(),
         "participant-shared-state-record-v1": ParticipantSharedStateRecordModel.model_json_schema(),

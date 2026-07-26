@@ -6,6 +6,10 @@ from raes_contracts.contracts import (
     ParticipantDecisionSurfaceModel,
     ParticipantDecisionSurfaceSelectionModel,
 )
+from raes_contracts.contracts.participant_execution import (
+    ParticipantExecutionControlRequestModel,
+    ParticipantExecutionServiceStateModel,
+)
 from raes_contracts.diagnostics import Diagnostic
 from raes_contracts.participant_binding import (
     ParticipantActionAdmissionRequest,
@@ -42,6 +46,7 @@ from .participant_control_intents import (
 )
 from .participant_control_mediation import record_participant_control
 from .participant_decision_surface_control_v2 import ParticipantDecisionSurfaceV2ControlMixin
+from .participant_execution_control_boundary import backend_execution_control_method
 
 
 def _participant_binding_diagnostics(
@@ -226,6 +231,45 @@ class ParticipantControlMixin(ParticipantDecisionSurfaceV2ControlMixin):
             identity=identity,
             idempotency_key=idempotency_key,
         )
+
+    def control_participant_execution(
+        self,
+        request: ParticipantExecutionControlRequestModel,
+        *,
+        idempotency_key: str = "",
+        request_fingerprint: str = "",
+    ) -> OperationReceipt:
+        """Submit one generation-fenced execution-service lifecycle mutation."""
+
+        participant_runtime = self._target.participant_runtime
+        method = getattr(participant_runtime, "control_execution", None)
+        if participant_runtime is None or not callable(method):
+            return self._reject_submission(
+                domain=RuntimeDomain.PARTICIPANT,
+                message=("Participant runtime does not expose portable execution control."),
+                idempotency_key=idempotency_key,
+                request_fingerprint=request_fingerprint,
+            )
+        return execute_participant_action(
+            self,
+            method=backend_execution_control_method(method),
+            request=request,
+            address=(f"runtime.control-plane.participant-execution.{request.execution_scope_ref}.{request.action}"),
+            idempotency_key=idempotency_key,
+            request_fingerprint=request_fingerprint,
+        )
+
+    def participant_execution_state(
+        self,
+        execution_scope_ref: str,
+    ) -> ParticipantExecutionServiceStateModel:
+        """Read typed lifecycle, health, readiness, capacity, and evidence state."""
+
+        participant_runtime = self._target.participant_runtime
+        method = getattr(participant_runtime, "execution_state", None)
+        if participant_runtime is None or not callable(method):
+            raise ValueError("participant runtime does not expose execution-service readback")
+        return method(execution_scope_ref, self._snapshot)
 
     def initialize_participant_episode(
         self,

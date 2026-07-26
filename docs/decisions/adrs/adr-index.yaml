@@ -425,7 +425,7 @@ adrs:
     pin: c2a0e6ac9fb87aa10fbb571b0f70efe0b99520b806f6ffe706f1556b0ec7e84b
   - id: ADR-092
     path: docs/decisions/adrs/adr-092-autonomous-benign-participants-under-shared-time.md
-    pin: a4398471e58b052d6b7c05cf9014aa4a76adf3e39c7dddd6b1db8a8301047577
+    pin: adf8a99f99a941a2a24b781df017f03e155b601ded2ecd170dd605549456521b
     amendments:
       - date: 2026-07-24
         ref: "#861"
@@ -433,6 +433,9 @@ adrs:
       - date: 2026-07-26
         ref: "#897"
         summary: "Kept v1 stable and governed richer within-run timing, weighted selection, lifecycle state, and provenance as a versioned autonomous-execution profile."
+      - date: 2026-07-26
+        ref: "#898"
+        summary: "Added exact native action-to-target bindings, bounded concurrent execution, generation-fenced lifecycle control, typed service readback, and conditional live conformance."
   - id: ADR-093
     path: docs/decisions/adrs/adr-093-raes-rename-and-compatibility-boundaries.md
     pin: 72725b8f09063b0b1d8ec65c4fda58e5648113035588ee4effbece5e0b1c3436

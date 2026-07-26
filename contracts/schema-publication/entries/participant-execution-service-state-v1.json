@@ -1,0 +1,10 @@
+{
+  "contract_id": "participant-execution-service-state-v1",
+  "schema_path": "contracts/schemas/participant-runtime/participant-execution-service-state-v1.json",
+  "stability": "draft",
+  "content_hash": "59bb66a44d86b6466bb2511abb9f62148291d762ab0a4a93ca912c2fb8c970bc",
+  "last_change": {
+    "summary": "Published participant execution lifecycle, generation, health, readiness, concurrency, shared-time provenance, and evidence readback for issue #898.",
+    "content_hash": "59bb66a44d86b6466bb2511abb9f62148291d762ab0a4a93ca912c2fb8c970bc"
+  }
+}

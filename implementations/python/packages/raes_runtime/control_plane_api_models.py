@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import asdict
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import Request
 from pydantic import BaseModel, ConfigDict, Field
@@ -50,6 +50,13 @@ class _ParticipantTerminateBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
     terminal_reason: str = Field(default=ParticipantEpisodeTerminalReason.INTERRUPTED.value)
     detail: str = Field(default="terminated by operator")
+
+
+class _ParticipantExecutionControlBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    action: Literal["start", "pause", "resume", "drain", "reset", "teardown"]
+    expected_generation: int = Field(ge=0)
+    timeout_seconds: int | None = Field(default=None, ge=1)
 
 
 def _diagnostic_from_mapping(payload: dict[str, Any]) -> Diagnostic:
@@ -158,6 +165,7 @@ def _snapshot_model(envelope: RuntimeSnapshotEnvelope) -> RuntimeSnapshotEnvelop
             "participant_behavior_history": dict(snapshot.participant_behavior_history),
             "participant_control_history": dict(snapshot.participant_control_history),
             "participant_autonomous_execution_states": dict(snapshot.participant_autonomous_execution_states),
+            "participant_execution_services": dict(snapshot.participant_execution_services),
             "shared_state_records": dict(snapshot.shared_state_records),
             "shared_state_history": dict(snapshot.shared_state_history),
             "joint_action_records": dict(snapshot.joint_action_records),

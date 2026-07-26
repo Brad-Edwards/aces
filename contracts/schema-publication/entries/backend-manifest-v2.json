@@ -2,9 +2,9 @@
   "contract_id": "backend-manifest-v2",
   "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
   "stability": "draft",
-  "content_hash": "1b770e2150f7a36f51fa4da1a7fa267e256302da4b687c4438065ee0cbebf3ae",
+  "content_hash": "222e608578080336f461faee05fc37e2a28acf99f65276403b2d8d98511d9957",
   "last_change": {
-    "summary": "Combined evidence-backed participant policy support declarations with exact autonomous activity profile, feature, random-stream, occurrence, retry, and burst capabilities.",
-    "content_hash": "1b770e2150f7a36f51fa4da1a7fa267e256302da4b687c4438065ee0cbebf3ae"
+    "summary": "Added exact action-to-target execution bindings, lifecycle control, and bounded concurrent participant-service capability declarations for issue #898.",
+    "content_hash": "222e608578080336f461faee05fc37e2a28acf99f65276403b2d8d98511d9957"
   }
 }

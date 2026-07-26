@@ -24,6 +24,7 @@ from .participant_envelopes import (
     ParticipantSharedStateRecordModel,
     ParticipantTimeManagementContextModel,
 )
+from .participant_execution import ParticipantExecutionServiceStateModel
 from .participant_runtime import (
     ParticipantAutonomousExecutionStateModel,
     ParticipantBehaviorHistoryEventModel,
@@ -170,6 +171,7 @@ class RuntimeSnapshotEnvelopeModel(ContractModel):
     participant_autonomous_execution_states: dict[str, ParticipantAutonomousExecutionStateModel] = Field(
         default_factory=dict
     )
+    participant_execution_services: dict[str, ParticipantExecutionServiceStateModel] = Field(default_factory=dict)
     shared_state_records: dict[str, ParticipantSharedStateRecordModel] = Field(default_factory=dict)
     shared_state_history: dict[str, list[ParticipantSharedStateRecordModel]] = Field(default_factory=dict)
     joint_action_records: dict[str, ParticipantJointActionRecordModel] = Field(default_factory=dict)
@@ -190,6 +192,9 @@ class RuntimeSnapshotEnvelopeModel(ContractModel):
                 raise ValueError(
                     "Autonomous participant state map key must equal the embedded policy and participant address"
                 )
+        for map_key, state in self.participant_execution_services.items():
+            if map_key != state.execution_scope_ref:
+                raise ValueError("Participant execution service map key must equal execution_scope_ref")
         return self
 
 
