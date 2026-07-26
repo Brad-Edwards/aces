@@ -8,6 +8,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 PRs do **not** edit this file directly. release-please maintains it from the
 Conventional Commit history on `main` (#684).
 
+## [2.0.0](https://github.com/RAESystem/rae/compare/v1.0.0...v2.0.0) (2026-07-26)
+
+
+### ⚠ BREAKING CHANGES
+
+* The aces, aces_sdl, and aces_* Python namespaces and old console entry points are removed without compatibility aliases. Consumers must import raes and raes_* packages and invoke the raes commands.
+
+### Features
+
+* complete the RAES Python namespace hard cut ([f912dd2](https://github.com/RAESystem/rae/commit/f912dd2a7b5e2e0e74a9eea9a603151d57ce899d))
+
+
+### Bug Fixes
+
+* align verification with the RAES hard cut ([68a292e](https://github.com/RAESystem/rae/commit/68a292e857d9064933a2cc1223f1fc4b849edc4a))
+* bind Release Please to the RAES build version ([36879ce](https://github.com/RAESystem/rae/commit/36879ce81250e4628feab72d940ce9bb3b47b810))
+* preserve source-size policy after package rename ([943517d](https://github.com/RAESystem/rae/commit/943517d18e95eeb0e2b2b618c3266a0400b856f7))
+* remove retired source root from Sonar ([1b4293e](https://github.com/RAESystem/rae/commit/1b4293e7c85af00875f557ac0ab8ced175f29e45))
+* resolve frozen evidence through package moves ([20a6900](https://github.com/RAESystem/rae/commit/20a69004d2e1c54b830b3174bdf6be2c509e7e94))
+* resolve specification evidence through package moves ([1842f97](https://github.com/RAESystem/rae/commit/1842f978b653a34dee73d585064dba2c974ff62c))
+
+
+### Documentation
+
+* record the complete namespace hard-cut amendment ([a516249](https://github.com/RAESystem/rae/commit/a516249b57c985e376f8c3253f4a1971b3f268d1))
+
 ## [1.0.0](https://github.com/RAESystem/rae/compare/v0.25.0...v1.0.0) (2026-07-25)
 
 
