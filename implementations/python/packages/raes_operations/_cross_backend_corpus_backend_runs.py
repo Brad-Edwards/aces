@@ -213,13 +213,13 @@ def _apply_export_addresses(
     export_addresses = export.get("compiled_address_sets")
     if not isinstance(export_addresses, Mapping):
         return []
-    aces_sets = {cls: sorted(str(a) for a in _sequence(values)) for cls, values in address_sets.items()}
-    export_sets = {cls: sorted(str(a) for a in _sequence(export_addresses.get(cls))) for cls in aces_sets}
+    raes_sets = {cls: sorted(str(a) for a in _sequence(values)) for cls, values in address_sets.items()}
+    export_sets = {cls: sorted(str(a) for a in _sequence(export_addresses.get(cls))) for cls in raes_sets}
     descriptor["compiled_address_sets"] = export_sets
     return [
         f"APTL export compiled_address_sets[{cls}] differs from the compiled RAES address set"
-        for cls in aces_sets
-        if export_sets[cls] != aces_sets[cls]
+        for cls in raes_sets
+        if export_sets[cls] != raes_sets[cls]
     ]
 
 

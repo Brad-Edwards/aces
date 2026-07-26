@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from .drivers.libvirt import _aces_uuid, _error_code, _existing_uuid
+from .drivers.libvirt import _error_code, _existing_uuid, _raes_uuid
 from .techvault_matrix import runtime_name
 
 
@@ -45,7 +45,7 @@ def _resolve_by_uuid(
     native_items = _list_native(connection, list_method)
     resolved: NativeResolution | None = None
     if native_items is not None:
-        owned = [item for item in native_items if _existing_uuid(item) == _aces_uuid(address)]
+        owned = [item for item in native_items if _existing_uuid(item) == _raes_uuid(address)]
         if not owned:
             fallback_name = runtime_name(name_prefix, address)
             if any(_native_name(item) == fallback_name for item in native_items):
@@ -84,7 +84,7 @@ def _resolve_verified_absence(
     address: str,
 ) -> NativeResolution | None:
     native_items = _list_native(connection, list_method)
-    if native_items is None or any(_existing_uuid(item) == _aces_uuid(address) for item in native_items):
+    if native_items is None or any(_existing_uuid(item) == _raes_uuid(address) for item in native_items):
         return None
     return NativeResolution(native=None, name=None)
 
@@ -97,7 +97,7 @@ def verify_native_removed(
 ) -> bool:
     native_items = _list_native(connection, list_method)
     return native_items is not None and not any(
-        _native_name(item) == name or _existing_uuid(item) == _aces_uuid(address) for item in native_items
+        _native_name(item) == name or _existing_uuid(item) == _raes_uuid(address) for item in native_items
     )
 
 
