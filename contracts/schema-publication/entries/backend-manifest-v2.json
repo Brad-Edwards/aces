@@ -2,9 +2,9 @@
   "contract_id": "backend-manifest-v2",
   "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
   "stability": "draft",
-  "content_hash": "9cf0d750399b97c7d5eb9a988f6525898e10992567b724806e4ae9fbf9297154",
+  "content_hash": "8f140797bd697fb49969fcf61a50c6b658f9b7e002d46f3a63cd566109436e83",
   "last_change": {
     "summary": "Added portable artifact satisfaction capabilities and participant resource-budget support for issues #920 and #899.",
-    "content_hash": "9cf0d750399b97c7d5eb9a988f6525898e10992567b724806e4ae9fbf9297154"
+    "content_hash": "8f140797bd697fb49969fcf61a50c6b658f9b7e002d46f3a63cd566109436e83"
   }
 }

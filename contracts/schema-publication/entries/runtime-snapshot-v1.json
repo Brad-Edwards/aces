@@ -2,9 +2,9 @@
   "contract_id": "runtime-snapshot-v1",
   "schema_path": "contracts/schemas/snapshots/runtime-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "feff711696fe15419039cb14fce07ecfcf1066815786b79611688b01a0e3e34e",
+  "content_hash": "73b2b3eba4400777c380b1d532614d29c2eb83ec82da5fef127918768aa2f8d8",
   "last_change": {
     "summary": "Added artifact satisfaction evidence and participant resource-budget state and allocation evidence for issues #920 and #899.",
-    "content_hash": "feff711696fe15419039cb14fce07ecfcf1066815786b79611688b01a0e3e34e"
+    "content_hash": "73b2b3eba4400777c380b1d532614d29c2eb83ec82da5fef127918768aa2f8d8"
   }
 }

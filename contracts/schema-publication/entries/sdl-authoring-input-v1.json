@@ -2,9 +2,9 @@
   "contract_id": "sdl-authoring-input-v1",
   "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
   "stability": "draft",
-  "content_hash": "c558d108dd38eea13ebd8d6c85dd091fa98b8728846d44098c6acfeb22c17fe8",
+  "content_hash": "d8e490195ae4fb192e559686d8089c8b13ac69d19fb1b8682192275f75f5623e",
   "last_change": {
     "summary": "Published portable Source artifact authoring and scoped participant resource-budget policy for issues #920 and #899.",
-    "content_hash": "c558d108dd38eea13ebd8d6c85dd091fa98b8728846d44098c6acfeb22c17fe8"
+    "content_hash": "d8e490195ae4fb192e559686d8089c8b13ac69d19fb1b8682192275f75f5623e"
   }
 }
