@@ -175,7 +175,10 @@ def test_experiment_core_schemas_publish_closed_world_contracts():
     run_schema = generated["experiment-run-v1"]
     study_schema = generated["experiment-study-v1"]
 
-    assert task_schema["x-raes-semantic-profile"]["uri"] == "https://raesystem.github.io/rae/schemas/semantic-invariants/v1"
+    assert (
+        task_schema["x-raes-semantic-profile"]["uri"]
+        == "https://raesystem.github.io/rae/schemas/semantic-invariants/v1"
+    )
     assert "apparatus-archival-times-rfc3339-valid" in _invariant_ids(apparatus_context_schema)
     assert run_schema["x-raes-semantic-profile"]["required"] is True
     assert study_schema["x-raes-semantic-profile"]["keyword"] == "x-raes-invariants"

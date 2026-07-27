@@ -67,5 +67,15 @@ jobs:
             echo "::notice::tools/check_pr_title.py is not on the base ref yet; skipping (bootstrap for the PR that introduces the guard). Enforcement is active for every subsequent PR."
             exit 0
           fi
-          python tools/check_pr_title.py \
-            --commit-messages-file "${RUNNER_TEMP}/pr-commit-messages.txt"
+          # The checker comes from the base ref, but this workflow file comes
+          # from the PR head, so on the PR that introduces --commit-messages-file
+          # the base copy does not accept it yet. Probe before passing it, the
+          # same bootstrap shape as the missing-file case above. Enforcement of
+          # commit-message footers is active from the next PR onward.
+          guard_args=()
+          if python tools/check_pr_title.py --help 2>/dev/null | grep -q -- '--commit-messages-file'; then
+            guard_args+=(--commit-messages-file "${RUNNER_TEMP}/pr-commit-messages.txt")
+          else
+            echo "::notice::base-ref tools/check_pr_title.py predates --commit-messages-file; title-only enforcement for this PR."
+          fi
+          python tools/check_pr_title.py "${guard_args[@]}"
