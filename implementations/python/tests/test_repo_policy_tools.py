@@ -139,6 +139,59 @@ def test_canonical_verify_does_not_use_change_aware_selection(monkeypatch: pytes
     assert "_run_docs" in source
 
 
+def test_docs_graph_uses_curated_root_and_reader_style_gate(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    noxfile = load_noxfile_with_fake_nox(monkeypatch)
+    commands: list[tuple[str, ...]] = []
+
+    class FakeSession:
+        def log(self, _message: str) -> None:
+            pass
+
+        def run(self, *args: str, **_kwargs: Any) -> None:
+            commands.append(args)
+
+    fake_vale = tmp_path / "vale"
+    fake_vale.write_text("", encoding="utf-8")
+    monkeypatch.setattr(noxfile, "ensure_vale", lambda _repo_root: fake_vale)
+    monkeypatch.setattr(noxfile, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(noxfile, "PROJECT_ROOT", tmp_path / "implementations" / "python")
+    public_root = tmp_path / "docs" / "public"
+    monkeypatch.setattr(noxfile, "PUBLIC_DOCS_ROOT", public_root)
+    monkeypatch.setattr(noxfile, "DOCS_BUILD_ROOT", tmp_path / "docs" / "_build")
+    reporter = noxfile.SessionReporter(FakeSession(), "docs")
+
+    noxfile._run_docs(reporter.session, reporter)
+
+    assert [result.name for result in reporter.results] == [
+        "docs / public source boundary",
+        "docs / Vale reader style",
+        "docs / executable quickstart",
+        "docs / Sphinx HTML",
+        "docs / public output inventory",
+        "docs / Sphinx link check",
+    ]
+    sphinx_commands = [command for command in commands if "sphinx-build" in command]
+    assert len(sphinx_commands) == 2
+    assert all(str(public_root) in command for command in sphinx_commands)
+    assert all("-W" in command and "--keep-going" in command for command in sphinx_commands)
+    vale_command = next(command for command in commands if command and command[0] == str(fake_vale))
+    assert "--config=.vale.ini" in vale_command
+    assert "README.md" in vale_command
+    assert str(public_root) in vale_command
+    pytest_command = next(command for command in commands if "pytest" in command)
+    assert (
+        "implementations/python/tests/test_public_docs_policy.py::test_checked_in_quickstart_scenario_parses"
+        in pytest_command
+    )
+    assert (
+        "implementations/python/tests/test_public_docs_policy.py::test_readme_quickstart_matches_checked_in_scenario"
+        in pytest_command
+    )
+
+
 def write_text(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8")

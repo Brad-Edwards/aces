@@ -32,22 +32,15 @@ replay, or reproducibility.
 """
     for relative_path in (
         "README.md",
-        "docs/index.md",
-        "docs/explain/getting-started.md",
-        "docs/explain/reference/canonical-reference-map.md",
-        "docs/explain/sdl/index.md",
-        "docs/explain/sdl/runtime-architecture.md",
+        "docs/public/index.md",
+        "docs/public/quickstart.md",
+        "docs/public/concepts.md",
+        "docs/public/sdl/index.md",
+        "docs/public/backends.md",
+        "docs/public/research.md",
         "examples/README.md",
     ):
         _write(repo_root / relative_path, primary_copy)
-
-    _write(
-        repo_root / "docs/explain/reference/glossary.md",
-        primary_copy
-        + "\n**RAES**\n: The overall system.\n"
-        + "\n**Agentic environment**\n: A declared and realized setting.\n"
-        + "\n**Reproducibility support**\n: Support for a bounded reproduction attempt.\n",
-    )
     _write(
         repo_root / "examples/library/catalog.yaml",
         "description: >\n"
@@ -59,7 +52,7 @@ replay, or reproducibility.
         '[project]\ndescription = "Contracts and reference tooling for reproducible agentic environments."\n',
     )
     _write(
-        repo_root / "docs/conf.py",
+        repo_root / "docs/public/conf.py",
         'project = "Reproducible Agentic Environments System"\nhtml_title = "RAES Documentation"\n',
     )
     _write(
@@ -98,14 +91,14 @@ def test_positioning_check_reports_missing_domain_neutral_metadata(tmp_path: Pat
 def test_positioning_check_reports_missing_claim_boundary(tmp_path: Path) -> None:
     _seed_positioning_surfaces(tmp_path)
     _write(
-        tmp_path / "docs/explain/getting-started.md",
+        tmp_path / "docs/public/concepts.md",
         "Reproducible Agentic Environments System guarantees exact replay.\n",
     )
 
     failures = validate_project_positioning(tmp_path)
 
     assert any(
-        failure.rule_id == "project-positioning-claim-boundary" and failure.path == "docs/explain/getting-started.md"
+        failure.rule_id == "project-positioning-claim-boundary" and failure.path == "docs/public/concepts.md"
         for failure in failures
     )
 
@@ -114,7 +107,7 @@ def test_positioning_check_reports_missing_claim_boundary(tmp_path: Path) -> Non
     ("relative_path", "replacement"),
     (
         ("README.md", None),
-        ("docs/index.md", "x" * (MAX_SURFACE_BYTES + 1)),
+        ("docs/public/index.md", "x" * (MAX_SURFACE_BYTES + 1)),
     ),
 )
 def test_positioning_check_reports_invalid_required_surface(
@@ -140,7 +133,7 @@ def test_positioning_check_reports_invalid_required_surface(
     "relative_path",
     (
         "README.md",
-        "docs/explain/reference/canonical-reference-map.md",
+        "docs/public/backends.md",
     ),
 )
 def test_positioning_check_reports_missing_entrypoint_framing(
@@ -154,21 +147,6 @@ def test_positioning_check_reports_missing_entrypoint_framing(
 
     assert any(
         failure.rule_id == "project-positioning-framing" and failure.path == relative_path for failure in failures
-    )
-
-
-def test_positioning_check_reports_incomplete_glossary_framing(tmp_path: Path) -> None:
-    _seed_positioning_surfaces(tmp_path)
-    _write(
-        tmp_path / "docs/explain/reference/glossary.md",
-        "Agentic environments are declared and realized settings.\n",
-    )
-
-    failures = validate_project_positioning(tmp_path)
-
-    assert any(
-        failure.rule_id == "project-positioning-framing" and failure.path == "docs/explain/reference/glossary.md"
-        for failure in failures
     )
 
 
@@ -186,7 +164,7 @@ def test_positioning_check_reports_incomplete_application_areas(tmp_path: Path) 
     ("relative_path", "replacement"),
     (
         (
-            "docs/conf.py",
+            "docs/public/conf.py",
             'project = "RAES"\nhtml_title = "Documentation"\n',
         ),
         (

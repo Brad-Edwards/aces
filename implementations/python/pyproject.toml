@@ -47,6 +47,7 @@ docs = [
     "myst-parser>=3.0.0",
     "sphinx-copybutton>=0.5.2",
     "sphinx-autobuild>=2024.4.16",
+    "sphinx-reredirects==1.1.0",
 ]
 
 [project.scripts]

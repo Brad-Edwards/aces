@@ -33,14 +33,14 @@ RULE_METADATA = "project-positioning-metadata"
 
 PRIMARY_ENTRYPOINTS = (
     "README.md",
-    "docs/index.md",
-    "docs/explain/getting-started.md",
+    "docs/public/index.md",
 )
 SUPPORTING_DOCS = (
-    "docs/explain/reference/glossary.md",
-    "docs/explain/reference/canonical-reference-map.md",
-    "docs/explain/sdl/index.md",
-    "docs/explain/sdl/runtime-architecture.md",
+    "docs/public/quickstart.md",
+    "docs/public/concepts.md",
+    "docs/public/sdl/index.md",
+    "docs/public/backends.md",
+    "docs/public/research.md",
     "examples/README.md",
 )
 APPLICATION_AREAS = (
@@ -121,11 +121,11 @@ def _validate_entrypoints(
             )
 
     for relative_path in SUPPORTING_DOCS:
-        if _missing_terms(surfaces[relative_path], ("agentic environment",)):
+        if _missing_terms(surfaces[relative_path], ("RAES",)):
             failures.append(
                 PolicyFailure(
                     RULE_FRAMING,
-                    "supporting entrypoint must connect its subject to agentic environments",
+                    "supporting entrypoint must connect its subject to RAES",
                     relative_path,
                 )
             )
@@ -141,30 +141,20 @@ def _validate_entrypoints(
             )
         )
 
-    getting_started = surfaces["docs/explain/getting-started.md"]
+    concepts = surfaces["docs/public/concepts.md"]
     required_boundaries = (
         "authored scenario",
         "realized environment",
-        "bounded reproduction attempt",
-        "does not guarantee",
+        "bounded reproduction",
+        "does not",
         "exact replay",
     )
-    if _missing_terms(getting_started, required_boundaries):
+    if _missing_terms(concepts, required_boundaries):
         failures.append(
             PolicyFailure(
                 RULE_CLAIM_BOUNDARY,
-                "getting-started guidance must retain the bounded reproduction and nonclaim boundary",
-                "docs/explain/getting-started.md",
-            )
-        )
-
-    glossary = surfaces["docs/explain/reference/glossary.md"]
-    if _missing_terms(glossary, ("**RAES**", "**Agentic environment**", "**Reproducibility support**")):
-        failures.append(
-            PolicyFailure(
-                RULE_FRAMING,
-                "glossary must define RAES, agentic environment, and reproducibility support",
-                "docs/explain/reference/glossary.md",
+                "concept guidance must retain the bounded reproduction and nonclaim boundary",
+                "docs/public/concepts.md",
             )
         )
 
@@ -187,7 +177,7 @@ def _validate_structured_metadata(repo_root: Path, failures: list[PolicyFailure]
                 )
             )
 
-    conf_path = "docs/conf.py"
+    conf_path = "docs/public/conf.py"
     conf_text = _read_required(repo_root, conf_path, failures)
     project_name = _literal_assignment(conf_text, "project")
     html_title = _literal_assignment(conf_text, "html_title")

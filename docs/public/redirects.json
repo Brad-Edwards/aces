@@ -1,0 +1,14 @@
+{
+  "explain/getting-started": "../quickstart.html",
+  "explain/reference/backend-conformance": "../../backends.html",
+  "explain/reference/canonical-reference-map": "../../concepts.html",
+  "explain/reference/documentation-style-guide": "../../contributing.html",
+  "explain/reference/glossary": "../../concepts.html",
+  "explain/sdl/index": "../../sdl/index.html",
+  "explain/sdl/limitations": "../../limitations.html",
+  "explain/sdl/lineage": "../../research.html",
+  "explain/sdl/related-work-comparison": "../../research.html",
+  "explain/sdl/runtime-architecture": "../../backends.html",
+  "explain/sdl/scientific-scenario-completeness": "../../research.html",
+  "specs/formal": "../research.html"
+}
