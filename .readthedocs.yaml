@@ -9,13 +9,13 @@ build:
     python: "3.13"
 
 sphinx:
-  configuration: docs/conf.py
+  configuration: docs/public/conf.py
   fail_on_warning: true
 
 python:
   install:
     - method: uv
-      command: sync
+      command: sync --frozen
       path: implementations/python
       extras:
         - docs

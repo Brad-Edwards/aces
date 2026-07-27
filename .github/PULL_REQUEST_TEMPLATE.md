@@ -2,34 +2,28 @@
 
 <!-- Brief description of changes -->
 
-## Related Issues
+## Related issues
 
 <!-- Link to GitHub issues: Closes #XX -->
-
-## Requirement Context
-
-- Requirement UID:
-- ADRs touched:
-- Ground Control project: `raes-sdl`
 
 ## Changes
 
 -
 
-## Test Plan
+## Test plan
 
 - [ ] Relevant tests pass
-- [ ] `uvx nox -s verify` passes, or the unchecked sessions are listed below
-- [ ] Docs build passes when documentation changed (`uvx nox -s docs`)
+- [ ] The canonical `nox -s verify` gate passes, or unchecked sessions are listed below
+- [ ] The docs gate passes when public documentation changed
 
 ## Checklist
 
-- [ ] Code follows project coding standards (`docs/explain/reference/coding-standards.md`)
+- [ ] Code follows the [project coding standards](../docs/explain/reference/coding-standards.md)
 - [ ] FM level classified if semantic change
 - [ ] Published contract schemas regenerated if models changed
 - [ ] PR title is a Conventional Commit (release-please derives the version and `CHANGELOG.md` from it)
 - [ ] Architectural docs updated if applicable
 
-## Notes for Review
+## Notes for review
 
 <!-- List any skipped checks, known limitations, or follow-up work. -->

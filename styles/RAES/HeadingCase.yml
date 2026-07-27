@@ -1,0 +1,21 @@
+extends: capitalization
+message: "Use sentence case for headings: found '%s'; expected '%s'."
+level: error
+scope: heading
+match: $sentence
+exceptions:
+  - API
+  - CLI
+  - Conformance
+  - GitHub
+  - MCP
+  - OpenSSF
+  - PyPI
+  - Python
+  - RAES
+  - Reproducible Agentic Environments System
+  - Release
+  - Please
+  - SDL
+  - SARIF
+  - Vale

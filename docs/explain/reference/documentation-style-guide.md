@@ -1,11 +1,103 @@
 # Documentation Style Guide
 
 This guide applies to prose documentation in this repository: root Markdown
-files, `docs/`, `specs/`, `contracts/`, `implementations/`, and release-note
-fragments.
+files, `docs/`, `specs/`, `contracts/`, and `implementations/`.
 
 The audience is technical and academic. Documentation describes the current
 repository state. It is not a product page, roadmap, or funding document.
+
+## Stripe Documentation Is The Editorial Exemplar
+
+[Stripe Documentation](https://docs.stripe.com/) is the explicit editorial
+exemplar for RAES public documentation. Stripe's docs are approachable because
+they move a reader from a concrete task to a visible result with little
+friction. RAES adopts that reader experience while retaining its own technical
+voice, evidence boundaries, semantics, and visual identity.
+
+Study these official examples:
+
+- [Development environment](https://docs.stripe.com/get-started/development-environment?lang=python)
+  leads with a task, states what the reader will achieve, and puts exact
+  commands next to the step they complete.
+- [Quickstarts](https://docs.stripe.com/quickstarts) helps readers choose a
+  route before presenting detail.
+- [Checkout quickstart](https://docs.stripe.com/checkout/quickstart) moves in
+  small numbered steps from setup to a working result.
+- [Create a customer](https://docs.stripe.com/api/customers/create) keeps the
+  resource purpose, parameters, request example, and returned result close
+  together.
+- [Testing](https://docs.stripe.com/testing) places test values and cautions
+  where readers use them instead of opening with a caveat wall.
+
+These pages are examples of information design. Do not copy Stripe wording,
+brand assets, theme code, product concepts, or API conventions. Do not imply
+that Stripe has reviewed or endorsed RAES.
+
+### Translate The Pattern Into RAES
+
+| Stripe pattern | RAES rule |
+| --- | --- |
+| Task-oriented title | Name the action and its result: "Validate your first scenario." |
+| Short outcome-led opening | Tell the reader what they will complete before explaining the system. |
+| Early route choice | Offer separate routes for authors, Python users, CLI users, backend implementers, and researchers. |
+| Working request or command | Use a current SDL file, Python call, or CLI command that a test executes. |
+| Placeholder near first use | Explain each path, name, or value beside the step that introduces it. |
+| Visible response or result | Show the output, created file, exit meaning, or next screen immediately after the action. |
+| Contextual caution | Put limits beside the claim or command they constrain. |
+| Progressive disclosure | Finish first success before linking to concepts, specifications, and full API reference. |
+
+Public entry pages follow this order:
+
+1. State the reader's task and outcome.
+2. List only the prerequisites needed for that task.
+3. Give exact steps with current commands or code.
+4. Explain placeholders where they first appear.
+5. Show the expected result.
+6. State the boundary of that result.
+7. Link to the next task and deeper reference material.
+
+### Before And After
+
+Avoid an abstract opening:
+
+> The scenario validation capability facilitates the establishment of a
+> structurally and semantically conformant authored artifact.
+
+Lead with the task and result:
+
+> Validate an SDL file from Python. If the file is valid, RAES returns a
+> `Scenario` that your code can inspect.
+
+Avoid separating a command from its meaning:
+
+> Run the formatter. See the reference section for flags and exit behavior.
+
+Keep the outcome with the command:
+
+> Run `raes sdl format --check scenario.sdl.yaml`. Exit code `0` means the
+> file parses and already uses the canonical format. The command does not
+> provision infrastructure.
+
+### Vale Enforcement
+
+The repository-owned style under `styles/RAES/` enforces the objective part of
+this guide on the root README, hosted public docs, and public community
+entrypoints. It checks:
+
+- plain words instead of formal substitutes such as "utilize" or "in order
+  to";
+- dismissive words such as "obviously", "trivial", "simply", and "just";
+- promotional terms that replace evidence with praise;
+- sentence-case headings without terminal punctuation;
+- repeated words, sentence length, and a document-level Flesch-Kincaid target.
+
+Vale does not decide whether a technical claim is true. The repository's
+positioning, contract, schema, example, and link checks keep those
+responsibilities. Run the complete documentation gate with:
+
+```shell
+uv tool run --from 'nox[uv]==2026.4.10' nox -f noxfile.py -s docs
+```
 
 ## Required Stance
 

@@ -1,0 +1,6 @@
+extends: occurrence
+message: "Keep sentences to 32 words or fewer (found %s)."
+level: error
+scope: sentence
+max: 32
+token: '\b[\p{L}\p{N}_''-]+\b'

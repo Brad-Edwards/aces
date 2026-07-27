@@ -1,6 +1,6 @@
 ---
-name: Bug Report
-about: Report a bug in RAES SDL
+name: Bug report
+about: Report a reproducible problem in RAES
 title: "[BUG] "
 labels: bug
 assignees: ''
@@ -10,17 +10,17 @@ assignees: ''
 
 <!-- Clear description of the bug. Do not report security issues here; use SECURITY.md. -->
 
-## Steps to Reproduce
+## Steps to reproduce
 
 1.
 2.
 3.
 
-## Expected Behavior
+## Expected behavior
 
 <!-- What should happen -->
 
-## Actual Behavior
+## Actual behavior
 
 <!-- What actually happens -->
 
@@ -31,6 +31,6 @@ assignees: ''
 - Python version:
 - OS:
 
-## Minimal Input
+## Minimal input
 
 <!-- Smallest SDL fragment, command, or API call that reproduces the issue. -->

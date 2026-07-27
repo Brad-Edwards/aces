@@ -65,7 +65,23 @@ def test_executable_contract_configuration_and_unknown_paths_fail_closed(path: s
     assert plan.contracts
     assert plan.regression
     assert plan.fuzz
-    assert not plan.docs
+    assert plan.docs
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        ".vale.ini",
+        "styles/RAES/PlainWords.yml",
+        "tools/check_public_docs.py",
+        "tools/vale_tool.py",
+        ".github/workflows/docs.yml",
+        ".readthedocs.yaml",
+        "noxfile.py",
+    ],
+)
+def test_documentation_tooling_changes_select_docs_graph(path: str) -> None:
+    assert _plan(path).docs
 
 
 @pytest.mark.parametrize("status", ["D", "R", "C", "T"])
