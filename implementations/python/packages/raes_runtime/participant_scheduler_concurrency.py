@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from raes_contracts.contracts import ParticipantAutonomousExecutionStateModel
@@ -320,39 +321,49 @@ def _finish_due_policy(
             break
 
 
-def _execute_concurrent_batch(
-    policy: ParticipantAutonomousExecutionRuntime,
-    time_model: CompiledTimeModel,
-    participant_runtime: object,
-    current_tick: int,
-    cadence_ticks: int,
-    run: SchedulerRunState,
-    contexts: list[_DueActionContext],
-    states: list[ParticipantAutonomousExecutionStateModel],
-) -> None:
-    batch_method = getattr(participant_runtime, "admit_actions_concurrently", None)
+@dataclass(frozen=True)
+class _ConcurrentBatch:
+    policy: ParticipantAutonomousExecutionRuntime
+    time_model: CompiledTimeModel
+    participant_runtime: object
+    current_tick: int
+    cadence_ticks: int
+    run: SchedulerRunState
+    contexts: list[_DueActionContext]
+    states: list[ParticipantAutonomousExecutionStateModel]
+
+
+def _execute_concurrent_batch(batch: _ConcurrentBatch) -> None:
+    batch_method = getattr(batch.participant_runtime, "admit_actions_concurrently", None)
     if not callable(batch_method):
-        _unsupported_concurrency_failure(policy, run)
+        _unsupported_concurrency_failure(batch.policy, batch.run)
         return
-    selected_contexts = tuple(contexts[: policy.max_in_flight])
-    selected_states = states[: policy.max_in_flight]
+    selected_contexts = tuple(batch.contexts[: batch.policy.max_in_flight])
+    selected_states = batch.states[: batch.policy.max_in_flight]
     from .participant_scheduler_operations import _bound_action_request
 
     requests = tuple(
-        _bound_action_request(context, run.working, state)
+        _bound_action_request(context, batch.run.working, state)
         for context, state in zip(selected_contexts, selected_states, strict=True)
     )
-    _reserve_concurrent_actions(run, selected_contexts)
-    base = run.working
+    _reserve_concurrent_actions(batch.run, selected_contexts)
+    base = batch.run.working
     results = batch_method(requests, base, len(requests))
     if len(results) != len(requests):
         raise ValueError("concurrent participant result count must match requests")
     for context, state, request, result in zip(selected_contexts, selected_states, requests, results, strict=True):
-        _commit_concurrent_result(context, state, request, result, base, run)
-        if run.failure is not None:
+        _commit_concurrent_result(context, state, request, result, base, batch.run)
+        if batch.run.failure is not None:
             break
-    _finish_concurrent_service_state(run, policy.address)
-    _finish_due_policy(policy, time_model, participant_runtime, current_tick, cadence_ticks, run)
+    _finish_concurrent_service_state(batch.run, batch.policy.address)
+    _finish_due_policy(
+        batch.policy,
+        batch.time_model,
+        batch.participant_runtime,
+        batch.current_tick,
+        batch.cadence_ticks,
+        batch.run,
+    )
 
 
 def run_policy_due_concurrently(
@@ -368,11 +379,20 @@ def run_policy_due_concurrently(
     if policy.profile != "participant-autonomous-execution/v1":
         return False
     contexts, states = _due_contexts(policy, time_model, participant_runtime, current_tick, cadence_ticks, run)
-    if run.failure is not None:
-        return True
-    if len(contexts) < 2 or policy.max_in_flight < 2:
+    enough_due_work = len(contexts) >= 2 and policy.max_in_flight >= 2
+    if run.failure is None and not enough_due_work:
         return False
-    _execute_concurrent_batch(
-        policy, time_model, participant_runtime, current_tick, cadence_ticks, run, contexts, states
-    )
-    return True
+    if run.failure is None:
+        _execute_concurrent_batch(
+            _ConcurrentBatch(
+                policy=policy,
+                time_model=time_model,
+                participant_runtime=participant_runtime,
+                current_tick=current_tick,
+                cadence_ticks=cadence_ticks,
+                run=run,
+                contexts=contexts,
+                states=states,
+            )
+        )
+    return run.failure is not None or enough_due_work

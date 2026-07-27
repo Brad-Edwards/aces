@@ -204,7 +204,13 @@ def _execution_service_accepts_work(service: ParticipantExecutionServiceStateMod
 
 
 def _run_serial_due(
-    policy, time_model, participant_runtime, current_tick, cadence_ticks, activity_controls, run
+    policy: ParticipantAutonomousExecutionRuntime,
+    time_model: CompiledTimeModel,
+    participant_runtime: object,
+    current_tick: int,
+    cadence_ticks: int,
+    activity_controls: dict[str, ParticipantActivityRandomControl],
+    run: SchedulerRunState,
 ) -> None:
     for participant_address in policy.participant_addresses:
         run_participant_due(
