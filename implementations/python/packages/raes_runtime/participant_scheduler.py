@@ -17,11 +17,13 @@ from .participant_execution_scheduler_state import (
     set_execution_clock_lifecycle,
 )
 from .participant_resource_budgets import initialize_participant_resource_budgets
-from .participant_scheduler_lifecycle import reset_policy_at_clock
 from .participant_scheduler_initialization import (
     clock_tick as _clock_tick,
+)
+from .participant_scheduler_initialization import (
     initialize_participant as _initialize_participant,
 )
+from .participant_scheduler_lifecycle import reset_policy_at_clock
 from .participant_scheduler_operations import (
     SchedulerRunState,
     participant_due_context,
@@ -31,6 +33,8 @@ from .participant_scheduler_operations import (
 from .participant_scheduler_policy import _policy_digest
 from .participant_scheduler_time import cadence as _cadence
 from .participant_scheduler_time import clock_coordinate
+
+_RESOURCE_GOVERNED_PROFILE = "participant-autonomous-execution/v3"
 
 
 def _missing_execution_service_result(
