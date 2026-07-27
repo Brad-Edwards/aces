@@ -32,6 +32,7 @@ from .participant_scheduler_policy import _policy_digest
 from .participant_scheduler_time import cadence as _cadence
 from .participant_scheduler_time import clock_coordinate
 
+
 def _missing_execution_service_result(
     policy: ParticipantAutonomousExecutionRuntime,
     run: SchedulerRunState,
