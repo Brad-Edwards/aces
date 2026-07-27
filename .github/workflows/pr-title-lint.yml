@@ -41,8 +41,11 @@ jobs:
         with:
           python-version: "3.12"
       - name: Validate PR title
-        # The checker reads the title from $GITHUB_EVENT_PATH (set automatically
-        # by the runner). It is stdlib-only, so no dependency install is needed.
+        # The checker reads the title and body from $GITHUB_EVENT_PATH (set
+        # automatically by the runner). It is stdlib-only, so no dependency
+        # install is needed. The body is read only for `BREAKING CHANGE:`
+        # footers, which release-please copies into CHANGELOG.md along with the
+        # squashed title (#908); body prose is not inspected.
         run: |
           if [ ! -f tools/check_pr_title.py ]; then
             echo "::notice::tools/check_pr_title.py is not on the base ref yet; skipping (bootstrap for the PR that introduces the guard). Enforcement is active for every subsequent PR."
