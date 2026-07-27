@@ -42,6 +42,25 @@ def _missing_execution_service_result(
     )
 
 
+def _reset_resource_generation(
+    policy: ParticipantAutonomousExecutionRuntime,
+    snapshot: RuntimeSnapshot,
+) -> ApplyResult:
+    service_payload = snapshot.participant_execution_services.get(policy.address)
+    if service_payload is None:
+        return _missing_execution_service_result(policy, snapshot)
+    service = ParticipantExecutionServiceStateModel.model_validate(service_payload)
+    generation = service.generation + 1
+    return reconcile_participant_resource_budgets(
+        snapshot,
+        policy_address=policy.address,
+        current_generation=service.generation,
+        next_generation=generation,
+        boundary="time_segment",
+        evidence_refs=(f"evidence:{policy.address}:shared-time-reset:generation-{generation}",),
+    )
+
+
 def reset_policy_at_clock(
     policy: ParticipantAutonomousExecutionRuntime,
     time_model: CompiledTimeModel,
@@ -73,24 +92,11 @@ def reset_policy_at_clock(
         working = participant_result.snapshot
         changed.extend(participant_result.changed_addresses)
     if failure is None and policy.profile == _RESOURCE_GOVERNED_PROFILE:
-        service_payload = working.participant_execution_services.get(policy.address)
-        if service_payload is None:
-            failure = _missing_execution_service_result(policy, working)
+        budget_reset = _reset_resource_generation(policy, working)
+        if budget_reset.success:
+            working = budget_reset.snapshot
         else:
-            service = ParticipantExecutionServiceStateModel.model_validate(service_payload)
-            generation = service.generation + 1
-            budget_reset = reconcile_participant_resource_budgets(
-                working,
-                policy_address=policy.address,
-                current_generation=service.generation,
-                next_generation=generation,
-                boundary="time_segment",
-                evidence_refs=(f"evidence:{policy.address}:shared-time-reset:generation-{generation}",),
-            )
-            if budget_reset.success:
-                working = budget_reset.snapshot
-            else:
-                failure = budget_reset
+            failure = budget_reset
     if failure is None:
         working, service_changed = reset_execution_service(working, policy.address)
         if service_changed:

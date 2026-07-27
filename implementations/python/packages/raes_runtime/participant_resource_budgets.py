@@ -169,6 +169,55 @@ def _new_budget_state(
     )
 
 
+def _existing_budget_failure(
+    mutation: _InitializationMutation,
+    policy: ResourcePolicy,
+    demand: ResourceDemand,
+    state_ref: str,
+) -> tuple[bool, ApplyResult | None]:
+    existing = mutation.states.get(state_ref)
+    failure = None
+    if existing is not None and _state(existing).generation != mutation.execution_generation:
+        failure = _initialization_failure(
+            mutation,
+            policy,
+            "runtime.participant-resource-state-conflict",
+            f"resource budget {demand.budget_id} already has incompatible state",
+        )
+    return existing is not None, failure
+
+
+def _initialize_new_budget(
+    mutation: _InitializationMutation,
+    policy: ResourcePolicy,
+    demand: ResourceDemand,
+    pool: ResourcePool,
+    state_ref: str,
+) -> ApplyResult | None:
+    budget_state = _new_budget_state(policy, demand, pool, mutation.execution_generation)
+    exact_pool_ref = pool_state_ref(pool)
+    existing_pool = mutation.pool_states.get(exact_pool_ref)
+    physical_pool = new_pool_state(pool) if existing_pool is None else _pool_state(existing_pool)
+    failure = None
+    try:
+        physical_pool = ensure_allocation(
+            physical_pool,
+            budget_state,
+            fairness=policy.resource_fairness,
+        )
+    except ValueError as exc:
+        failure = _initialization_failure(
+            mutation,
+            policy,
+            "runtime.participant-resource-pool-conflict",
+            str(exc),
+        )
+    if failure is None:
+        mutation.states[state_ref] = _payload(budget_state)
+        mutation.pool_states[exact_pool_ref] = _payload(physical_pool)
+    return failure
+
+
 def _initialize_demand(
     mutation: _InitializationMutation,
     policy: ResourcePolicy,
@@ -193,37 +242,9 @@ def _initialize_demand(
         )
     else:
         state_ref = participant_resource_budget_state_ref(policy.address, demand.budget_id)
-        existing = mutation.states.get(state_ref)
-        if existing is not None:
-            current = _state(existing)
-            if current.generation != mutation.execution_generation:
-                failure = _initialization_failure(
-                    mutation,
-                    policy,
-                    "runtime.participant-resource-state-conflict",
-                    f"resource budget {demand.budget_id} already has incompatible state",
-                )
-        else:
-            budget_state = _new_budget_state(policy, demand, pool, mutation.execution_generation)
-            exact_pool_ref = pool_state_ref(pool)
-            existing_pool = mutation.pool_states.get(exact_pool_ref)
-            physical_pool = new_pool_state(pool) if existing_pool is None else _pool_state(existing_pool)
-            try:
-                physical_pool = ensure_allocation(
-                    physical_pool,
-                    budget_state,
-                    fairness=policy.resource_fairness,
-                )
-            except ValueError as exc:
-                failure = _initialization_failure(
-                    mutation,
-                    policy,
-                    "runtime.participant-resource-pool-conflict",
-                    str(exc),
-                )
-            if failure is None:
-                mutation.states[state_ref] = _payload(budget_state)
-                mutation.pool_states[exact_pool_ref] = _payload(physical_pool)
+        exists, failure = _existing_budget_failure(mutation, policy, demand, state_ref)
+        if not exists:
+            failure = _initialize_new_budget(mutation, policy, demand, pool, state_ref)
     return failure
 
 

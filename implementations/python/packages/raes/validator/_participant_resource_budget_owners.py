@@ -63,22 +63,41 @@ def _owner_error(
 ) -> str | None:
     kind = getattr(getattr(owner, "kind", ""), "value", getattr(owner, "kind", ""))
     ref = str(getattr(owner, "ref", ""))
-    if kind == "participant" and ref.removeprefix("agents.") not in scope.participant_refs:
-        return f"{label} participant ref '{ref}' is outside the policy participant scope"
-    if kind == "deployment_tenant":
-        tenant_ref = ref.removeprefix(_TENANT_PREFIX)
-        if tenant_ref not in scope.deployment_tenants:
-            return f"{label} deployment tenant ref '{ref}' is undefined"
-        if tenant_ref not in scope.target_tenants:
-            return f"{label} deployment tenant ref '{ref}' does not own an authorized action target"
-    if kind == "shared_service":
-        if split_node_service_ref(ref) is None:
-            return f"{label} shared service ref '{ref}' is undefined"
-        if ref not in scope.action_targets:
-            return f"{label} shared service ref '{ref}' is not an exact execution target"
-        if not any((tenant, ref) in scope.shared_permissions for tenant in scope.declared_tenants):
-            return f"{label} shared service ref '{ref}' lacks an authorized tenant uses_shared_service edge"
-    return None
+    error = None
+    if kind == "participant":
+        if ref.removeprefix("agents.") not in scope.participant_refs:
+            error = f"{label} participant ref '{ref}' is outside the policy participant scope"
+    elif kind == "deployment_tenant":
+        error = _tenant_owner_error(label, ref, scope)
+    elif kind == "shared_service":
+        error = _shared_service_owner_error(label, ref, scope, split_node_service_ref)
+    return error
+
+
+def _tenant_owner_error(label: str, ref: str, scope: _OwnerScope) -> str | None:
+    tenant_ref = ref.removeprefix(_TENANT_PREFIX)
+    error = None
+    if tenant_ref not in scope.deployment_tenants:
+        error = f"{label} deployment tenant ref '{ref}' is undefined"
+    elif tenant_ref not in scope.target_tenants:
+        error = f"{label} deployment tenant ref '{ref}' does not own an authorized action target"
+    return error
+
+
+def _shared_service_owner_error(
+    label: str,
+    ref: str,
+    scope: _OwnerScope,
+    split_node_service_ref: Callable[[str], object | None],
+) -> str | None:
+    error = None
+    if split_node_service_ref(ref) is None:
+        error = f"{label} shared service ref '{ref}' is undefined"
+    elif ref not in scope.action_targets:
+        error = f"{label} shared service ref '{ref}' is not an exact execution target"
+    elif not any((tenant, ref) in scope.shared_permissions for tenant in scope.declared_tenants):
+        error = f"{label} shared service ref '{ref}' lacks an authorized tenant uses_shared_service edge"
+    return error
 
 
 def participant_resource_budget_owner_errors(

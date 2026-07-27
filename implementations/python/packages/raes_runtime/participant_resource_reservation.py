@@ -152,15 +152,12 @@ def _requested_amount(
     return amount
 
 
-def _check_reservation(
+def _budget_state_check(
     mutation: _ReservationMutation,
     demand: ResourceDemand,
     state_ref: str,
-    requested_quantities: Mapping[str, int] | None,
-) -> _ReservationCheck:
-    current: ParticipantResourceBudgetStateModel | None = None
-    physical_pool: ParticipantResourcePoolStateModel | None = None
-    amount = 0
+) -> tuple[ParticipantResourceBudgetStateModel | None, ApplyResult | None]:
+    current = None
     failure = None
     raw = mutation.states.get(state_ref)
     if raw is None:
@@ -171,30 +168,67 @@ def _check_reservation(
         )
     else:
         current = _state(raw)
-    if current is not None and current.generation != mutation.execution_generation:
-        failure = _failure(
-            mutation,
-            "runtime.participant-resource-stale-generation",
-            (
-                f"resource budget {demand.budget_id} is generation {current.generation}; "
-                f"request is generation {mutation.execution_generation}"
-            ),
-        )
-    if current is not None and failure is None:
-        amount = _requested_amount(demand, requested_quantities)
-        raw_pool = mutation.pool_states.get(_pool_ref_for_state(current))
-        if raw_pool is None:
+        if current.generation != mutation.execution_generation:
             failure = _failure(
                 mutation,
-                "runtime.participant-resource-pool-state-missing",
-                f"physical pool for resource budget {demand.budget_id} was not initialized",
+                "runtime.participant-resource-stale-generation",
+                (
+                    f"resource budget {demand.budget_id} is generation {current.generation}; "
+                    f"request is generation {mutation.execution_generation}"
+                ),
             )
-        else:
-            physical_pool = _pool_state(raw_pool)
+    return current, failure
+
+
+def _pool_state_check(
+    mutation: _ReservationMutation,
+    demand: ResourceDemand,
+    current: ParticipantResourceBudgetStateModel,
+    requested_quantities: Mapping[str, int] | None,
+) -> tuple[ParticipantResourcePoolStateModel | None, int, ApplyResult | None]:
+    amount = _requested_amount(demand, requested_quantities)
+    raw_pool = mutation.pool_states.get(_pool_ref_for_state(current))
+    physical_pool = None
+    failure = None
+    if raw_pool is None:
+        failure = _failure(
+            mutation,
+            "runtime.participant-resource-pool-state-missing",
+            f"physical pool for resource budget {demand.budget_id} was not initialized",
+        )
+    else:
+        physical_pool = _pool_state(raw_pool)
+    return physical_pool, amount, failure
+
+
+def _capacity_failure(
+    mutation: _ReservationMutation,
+    demand: ResourceDemand,
+    current: ParticipantResourceBudgetStateModel,
+    physical_pool: ParticipantResourcePoolStateModel,
+    state_ref: str,
+    amount: int,
+) -> ApplyResult | None:
+    budget_available = _used_capacity(current) + amount <= min(current.limit, current.configured_capacity)
+    failure = None
+    if not budget_available or not pool_can_reserve(physical_pool, state_ref, amount):
+        failure = _throttled_result(mutation, demand, current, amount, budget_available)
+    return failure
+
+
+def _check_reservation(
+    mutation: _ReservationMutation,
+    demand: ResourceDemand,
+    state_ref: str,
+    requested_quantities: Mapping[str, int] | None,
+) -> _ReservationCheck:
+    current, failure = _budget_state_check(mutation, demand, state_ref)
+    physical_pool: ParticipantResourcePoolStateModel | None = None
+    amount = 0
+    if current is not None and failure is None:
+        physical_pool, amount, failure = _pool_state_check(mutation, demand, current, requested_quantities)
     if current is not None and physical_pool is not None and failure is None:
-        budget_available = _used_capacity(current) + amount <= min(current.limit, current.configured_capacity)
-        if not budget_available or not pool_can_reserve(physical_pool, state_ref, amount):
-            failure = _throttled_result(mutation, demand, current, amount, budget_available)
+        failure = _capacity_failure(mutation, demand, current, physical_pool, state_ref, amount)
     return _ReservationCheck(
         demand=demand,
         current=current,
