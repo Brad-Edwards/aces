@@ -16,6 +16,7 @@ from raes_contracts.planning import RuntimeDomain
 from raes_contracts.versions import OPERATION_SCHEMA_VERSION, RUNTIME_SNAPSHOT_SCHEMA_VERSION
 
 if TYPE_CHECKING:
+    from raes_contracts.artifact_requirements import ArtifactSatisfactionDisclosureModel
     from raes_contracts.contracts import RealizationEnvelopeIdentityModel
     from raes_contracts.contracts.time_model import TimeRuntimeStateModel
 
@@ -69,6 +70,7 @@ class RealizationProvenanceEntry:
     explicitness: ExplicitnessClass
     provenance: ExplicitnessProvenance
     governing_scope: str | None = None
+    artifact_satisfaction: ArtifactSatisfactionDisclosureModel | None = None
 
 
 @dataclass

@@ -2,9 +2,9 @@
   "contract_id": "backend-manifest-v2",
   "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
   "stability": "draft",
-  "content_hash": "fdce66f526907a096c90b6e9ef8e4141ad908a181a52670083e43f3471405f66",
+  "content_hash": "8f140797bd697fb49969fcf61a50c6b658f9b7e002d46f3a63cd566109436e83",
   "last_change": {
-    "summary": "Added versioned participant resource-budget support, configured pool capacity, fairness, isolation, and realization declarations for issue #899.",
-    "content_hash": "fdce66f526907a096c90b6e9ef8e4141ad908a181a52670083e43f3471405f66"
+    "summary": "Added portable artifact satisfaction capabilities and participant resource-budget support for issues #920 and #899.",
+    "content_hash": "8f140797bd697fb49969fcf61a50c6b658f9b7e002d46f3a63cd566109436e83"
   }
 }

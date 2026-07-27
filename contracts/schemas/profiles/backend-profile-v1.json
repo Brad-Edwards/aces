@@ -13,6 +13,7 @@
       "items": {
         "enum": [
           "backend-manifest-v2",
+          "artifact-requirement-v1",
           "experiment-binding-descriptors-v1",
           "realization-envelope-v1",
           "provisioning-plan-v1",

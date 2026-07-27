@@ -38,6 +38,7 @@ PROCESSOR_SUPPORTED_CONTRACT_IDS = (
 # separate authority surfaces and do not belong in this declaration field.
 BACKEND_SUPPORTED_CONTRACT_IDS = (
     "backend-manifest-v2",
+    "artifact-requirement-v1",
     "experiment-binding-descriptors-v1",
     "realization-envelope-v1",
     "provisioning-plan-v1",

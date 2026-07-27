@@ -6,6 +6,7 @@ from typing import Any
 from raes.scenario import InstantiatedScenario
 from raes_backend_protocols.capabilities import BackendManifest
 from raes_contracts.addressing import require_compiled_address
+from raes_contracts.artifact_requirements import ArtifactAvailabilityContext
 from raes_contracts.diagnostics import Diagnostic
 from raes_contracts.evaluation import EvaluationExecutionContract, EvaluationResultContract
 from raes_contracts.planning import EvaluationPlan, OrchestrationPlan, ProvisioningPlan
@@ -205,6 +206,9 @@ class ExecutionPlan:
     orchestration: OrchestrationPlan
     evaluation: EvaluationPlan
     diagnostics: list[Diagnostic] = field(default_factory=list)
+    artifact_availability: ArtifactAvailabilityContext = field(
+        default_factory=ArtifactAvailabilityContext,
+    )
 
     @property
     def is_valid(self) -> bool:

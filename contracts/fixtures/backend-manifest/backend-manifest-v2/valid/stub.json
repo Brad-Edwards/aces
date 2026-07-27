@@ -355,6 +355,7 @@
   },
   "realization_support": [
     {
+      "artifact_mechanisms": [],
       "constraints": {},
       "disclosure_kinds": [
         "backend-manifest-v2",
@@ -379,6 +380,7 @@
   "schema_version": "backend-manifest/v2",
   "supported_contract_versions": [
     "backend-manifest-v2",
+    "artifact-requirement-v1",
     "provisioning-plan-v1",
     "orchestration-plan-v1",
     "evaluation-plan-v1",

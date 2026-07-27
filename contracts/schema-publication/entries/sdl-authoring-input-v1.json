@@ -2,9 +2,9 @@
   "contract_id": "sdl-authoring-input-v1",
   "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
   "stability": "draft",
-  "content_hash": "cd3e58a6fb92f0de031d3f51dcad963ba43892d41721cd3e5dcb5e74e021d72c",
+  "content_hash": "d8e490195ae4fb192e559686d8089c8b13ac69d19fb1b8682192275f75f5623e",
   "last_change": {
-    "summary": "Published the v3 autonomous profile with scoped owners, complete typed resource budgets, aggregation, fairness, and reset policy for issue #899.",
-    "content_hash": "cd3e58a6fb92f0de031d3f51dcad963ba43892d41721cd3e5dcb5e74e021d72c"
+    "summary": "Published portable Source artifact authoring and scoped participant resource-budget policy for issues #920 and #899.",
+    "content_hash": "d8e490195ae4fb192e559686d8089c8b13ac69d19fb1b8682192275f75f5623e"
   }
 }

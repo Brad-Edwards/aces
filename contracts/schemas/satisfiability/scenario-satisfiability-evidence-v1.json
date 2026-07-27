@@ -267,6 +267,529 @@
       "title": "Agent",
       "type": "object"
     },
+    "ArtifactCandidate": {
+      "additionalProperties": false,
+      "description": "One immutable candidate explicitly admitted by the author.",
+      "properties": {
+        "artifact": {
+          "$ref": "#/$defs/ArtifactIdentity"
+        },
+        "candidate_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:/@+-]*$",
+          "title": "Candidate Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "candidate_id",
+        "artifact"
+      ],
+      "title": "ArtifactCandidate",
+      "type": "object"
+    },
+    "ArtifactConstraint": {
+      "additionalProperties": false,
+      "description": "One typed, named bound on a constrained artifact selection.",
+      "properties": {
+        "allowed_values": {
+          "items": {
+            "maxLength": 1024,
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Allowed Values",
+          "type": "array"
+        },
+        "constraint_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:/@+-]*$",
+          "title": "Constraint Id",
+          "type": "string"
+        },
+        "kind": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:/@+-]*$",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "constraint_id",
+        "kind",
+        "allowed_values"
+      ],
+      "title": "ArtifactConstraint",
+      "type": "object"
+    },
+    "ArtifactIdentity": {
+      "additionalProperties": false,
+      "description": "Immutable provider-neutral identity for one artifact payload.",
+      "properties": {
+        "artifact_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:/@+-]*$",
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "digest": {
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "media_type": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Media Type",
+          "type": "string"
+        },
+        "version": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "version",
+        "digest",
+        "media_type"
+      ],
+      "title": "ArtifactIdentity",
+      "type": "object"
+    },
+    "ArtifactLockedInput": {
+      "additionalProperties": false,
+      "description": "One immutable materialization input joined to existing trust contracts.",
+      "properties": {
+        "artifact": {
+          "$ref": "#/$defs/ArtifactIdentity"
+        },
+        "associated_artifact_manifest_ref": {
+          "maxLength": 1024,
+          "minLength": 1,
+          "title": "Associated Artifact Manifest Ref",
+          "type": "string"
+        },
+        "input_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:/@+-]*$",
+          "title": "Input Id",
+          "type": "string"
+        },
+        "trust_policy_ref": {
+          "maxLength": 1024,
+          "minLength": 1,
+          "title": "Trust Policy Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "input_id",
+        "artifact",
+        "associated_artifact_manifest_ref",
+        "trust_policy_ref"
+      ],
+      "title": "ArtifactLockedInput",
+      "type": "object"
+    },
+    "ArtifactMaterializationSpecification": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "properties": {
+            "profile": {
+              "allOf": [
+                {
+                  "properties": {
+                    "mechanism": {
+                      "anyOf": [
+                        {
+                          "const": "materialization-specification"
+                        },
+                        {
+                          "pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "mechanism"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "description": "Reference to a closed executable materialization profile.\n\nThis is a digest-bound specification reference, not shell text, a\nDockerfile, an environment map, or a reinterpretation of ``Source.build``.",
+      "properties": {
+        "digest": {
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "locked_input_ids": {
+          "items": {
+            "maxLength": 256,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:/@+-]*$",
+            "type": "string"
+          },
+          "title": "Locked Input Ids",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "profile": {
+          "$ref": "#/$defs/ArtifactMechanismProfile"
+        },
+        "specification_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:/@+-]*$",
+          "title": "Specification Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "specification_id",
+        "profile",
+        "digest"
+      ],
+      "title": "ArtifactMaterializationSpecification",
+      "type": "object"
+    },
+    "ArtifactMechanismProfile": {
+      "additionalProperties": false,
+      "description": "Versioned portable mechanism profile.\n\nPortable mechanisms use the governed base names above or a namespaced\n``x-<authority>:<term>`` extension. The profile digest binds the exact\nmechanism contract without making the mechanism set a closed union.",
+      "properties": {
+        "digest": {
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "mechanism": {
+          "anyOf": [
+            {
+              "enum": [
+                "backend-owned-artifact",
+                "dynamic-composition",
+                "exact-artifact",
+                "materialization-specification",
+                "published-candidate"
+              ]
+            },
+            {
+              "pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$"
+            }
+          ],
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Mechanism",
+          "type": "string"
+        },
+        "profile": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:/@+-]*$",
+          "title": "Profile",
+          "type": "string"
+        },
+        "version": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "mechanism",
+        "profile",
+        "version",
+        "digest"
+      ],
+      "title": "ArtifactMechanismProfile",
+      "type": "object"
+    },
+    "ArtifactRequirement": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "explicitness": {
+                "const": "exact"
+              }
+            },
+            "required": [
+              "explicitness"
+            ]
+          },
+          "then": {
+            "properties": {
+              "candidates": {
+                "maxItems": 0
+              },
+              "constraints": {
+                "maxItems": 0
+              },
+              "exact_artifact": {
+                "not": {
+                  "type": "null"
+                }
+              },
+              "locked_inputs": {
+                "maxItems": 0
+              },
+              "materialization_specifications": {
+                "maxItems": 0
+              },
+              "permitted_routes": {
+                "items": {
+                  "properties": {
+                    "mechanism": {
+                      "properties": {
+                        "mechanism": {
+                          "const": "exact-artifact"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "required": [
+              "exact_artifact"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "explicitness": {
+                "const": "constrained"
+              }
+            },
+            "required": [
+              "explicitness"
+            ]
+          },
+          "then": {
+            "anyOf": [
+              {
+                "properties": {
+                  "constraints": {
+                    "minItems": 1
+                  }
+                },
+                "required": [
+                  "constraints"
+                ]
+              },
+              {
+                "properties": {
+                  "candidates": {
+                    "minItems": 1
+                  }
+                },
+                "required": [
+                  "candidates"
+                ]
+              },
+              {
+                "properties": {
+                  "locked_inputs": {
+                    "minItems": 1
+                  }
+                },
+                "required": [
+                  "locked_inputs"
+                ]
+              },
+              {
+                "properties": {
+                  "materialization_specifications": {
+                    "minItems": 1
+                  }
+                },
+                "required": [
+                  "materialization_specifications"
+                ]
+              }
+            ],
+            "properties": {
+              "exact_artifact": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "explicitness": {
+                "const": "open"
+              }
+            },
+            "required": [
+              "explicitness"
+            ]
+          },
+          "then": {
+            "properties": {
+              "candidates": {
+                "maxItems": 0
+              },
+              "constraints": {
+                "maxItems": 0
+              },
+              "exact_artifact": {
+                "type": "null"
+              },
+              "materialization_specifications": {
+                "maxItems": 0
+              }
+            }
+          }
+        }
+      ],
+      "description": "Author-owned artifact requirement attached to a ``Source`` selector.",
+      "properties": {
+        "associated_artifact_manifest_refs": {
+          "items": {
+            "maxLength": 1024,
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Associated Artifact Manifest Refs",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "candidates": {
+          "items": {
+            "$ref": "#/$defs/ArtifactCandidate"
+          },
+          "title": "Candidates",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "constraints": {
+          "items": {
+            "$ref": "#/$defs/ArtifactConstraint"
+          },
+          "title": "Constraints",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "exact_artifact": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ArtifactIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "explicitness": {
+          "$ref": "#/$defs/ExplicitnessClass"
+        },
+        "locked_inputs": {
+          "items": {
+            "$ref": "#/$defs/ArtifactLockedInput"
+          },
+          "title": "Locked Inputs",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "materialization_specifications": {
+          "items": {
+            "$ref": "#/$defs/ArtifactMaterializationSpecification"
+          },
+          "title": "Materialization Specifications",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "permitted_routes": {
+          "items": {
+            "$ref": "#/$defs/ArtifactSatisfactionRoute"
+          },
+          "minItems": 1,
+          "title": "Permitted Routes",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "requirement_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:/@+-]*$",
+          "title": "Requirement Id",
+          "type": "string"
+        },
+        "trust_policy_refs": {
+          "items": {
+            "maxLength": 1024,
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Trust Policy Refs",
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "requirement_id",
+        "explicitness",
+        "permitted_routes"
+      ],
+      "title": "ArtifactRequirement",
+      "type": "object"
+    },
+    "ArtifactSatisfactionRoute": {
+      "additionalProperties": false,
+      "description": "One permitted mechanism/acquisition/timing combination.",
+      "properties": {
+        "acquisition": {
+          "enum": [
+            "pull",
+            "copy",
+            "import",
+            "local-lookup",
+            "none"
+          ],
+          "title": "Acquisition",
+          "type": "string"
+        },
+        "mechanism": {
+          "$ref": "#/$defs/ArtifactMechanismProfile"
+        },
+        "timing": {
+          "enum": [
+            "publication",
+            "pack-ingestion",
+            "backend-preparation",
+            "realization"
+          ],
+          "title": "Timing",
+          "type": "string"
+        }
+      },
+      "required": [
+        "mechanism",
+        "acquisition",
+        "timing"
+      ],
+      "title": "ArtifactSatisfactionRoute",
+      "type": "object"
+    },
     "Assertion": {
       "additionalProperties": false,
       "description": "A typed use of one proposition at a governed semantic boundary.",
@@ -20321,6 +20844,17 @@
       "additionalProperties": false,
       "description": "Provider-neutral artifact reference.\n\nShorthand: ``source: \"package-name\"`` (version defaults to ``\"*\"``).\nLonghand: ``source: {name: \"package-name\", version: \"1.2.3\"}``.",
       "properties": {
+        "artifact_requirement": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ArtifactRequirement"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "build": {
           "anyOf": [
             {

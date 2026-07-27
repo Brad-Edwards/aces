@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "a7a2b5c03e42e64b499e21d902e1bfe1fcc6d7052df9119c45a252f5538d63df",
+  "content_hash": "3ebaa6f78e03ebbdf06052cfc85abc4f1f40746ce0ea7a8eccc96637e1fcdace",
   "last_change": {
-    "summary": "Carried the v3 scoped participant resource-budget policy through satisfiability evidence scenario definitions for issue #899.",
-    "content_hash": "a7a2b5c03e42e64b499e21d902e1bfe1fcc6d7052df9119c45a252f5538d63df"
+    "summary": "Carried portable artifact requirements and scoped participant resource budgets through satisfiability evidence for issues #920 and #899.",
+    "content_hash": "3ebaa6f78e03ebbdf06052cfc85abc4f1f40746ce0ea7a8eccc96637e1fcdace"
   }
 }
