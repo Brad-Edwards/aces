@@ -67,5 +67,7 @@ def test_vale_extraction_rejects_archive_without_root_binary(tmp_path: Path) -> 
         info.size = len(body)
         archive.addfile(info, io.BytesIO(body))
 
+    archive_bytes = payload.getvalue()
+    binary_path = tmp_path / "vale"
     with pytest.raises(RuntimeError, match="root vale binary"):
-        vale_tool._extract_binary(payload.getvalue(), tmp_path / "vale")
+        vale_tool._extract_binary(archive_bytes, binary_path)
