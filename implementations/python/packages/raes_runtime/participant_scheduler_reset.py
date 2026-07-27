@@ -9,7 +9,12 @@ from raes_contracts.participant_episode import ParticipantEpisodeResetRequest
 from raes_contracts.runtime_state import ApplyResult, RuntimeSnapshot
 from raes_processor.models import CompiledTimeModel, ParticipantAutonomousExecutionRuntime
 
-from .participant_activity import ParticipantActivityRandomControl, draw_activity_integer, next_activity_timing
+from .participant_activity import (
+    ParticipantActivityDrawContext,
+    ParticipantActivityRandomControl,
+    draw_activity_integer,
+    next_activity_timing,
+)
 from .participant_scheduler_time import cadence
 
 
@@ -82,11 +87,13 @@ def reset_scheduler_participant(
     burst_size = 1
     if context.activity_control is not None:
         burst_size = draw_activity_integer(
-            policy=context.policy,
-            participant_address=participant_address,
-            time_segment=context.segment,
-            occurrence_ordinal=0,
-            control=context.activity_control,
+            ParticipantActivityDrawContext(
+                policy=context.policy,
+                participant_address=participant_address,
+                time_segment=context.segment,
+                occurrence_ordinal=0,
+                control=context.activity_control,
+            ),
             local_coordinate=2,
             minimum=1,
             maximum=context.policy.max_burst_size,

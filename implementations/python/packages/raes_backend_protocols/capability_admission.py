@@ -12,9 +12,9 @@ from .capabilities import (
     PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE,
     PARTICIPANT_RUNTIME_ROLE_SCOPE,
 )
-from .participant_feature_admission import participant_feature_support_gaps as participant_feature_support_gaps
 from .participant_feature_admission import (
-    resolve_participant_feature_support as resolve_participant_feature_support,
+    participant_feature_support_gaps,
+    resolve_participant_feature_support,
 )
 from .participant_resource_admission import (
     ResourceGovernedPolicy,
@@ -430,3 +430,9 @@ def require_cleanup_plan_capability(manifest: BackendManifest, plan: TrialCleanu
     required_cleanup = any(obligation.requirement == "required" for obligation in plan.cleanup_obligations.values())
     if required_cleanup and not cleanup.supports_residual_state_disclosure:
         raise ValueError("required cleanup needs backend residual-state disclosure")
+
+
+__all__ = [
+    "participant_feature_support_gaps",
+    "resolve_participant_feature_support",
+]

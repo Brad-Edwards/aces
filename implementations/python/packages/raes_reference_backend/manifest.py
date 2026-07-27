@@ -164,6 +164,65 @@ def _time_capabilities(*, enabled: bool) -> TimeCapabilities | None:
     )
 
 
+def _participant_runtime_capabilities() -> ParticipantRuntimeCapabilities:
+    return ParticipantRuntimeCapabilities(
+        name="reference-emulation-participant-runtime",
+        supported_participant_roles=_PARTICIPANT_ROLES,
+        supported_behavior_features=_PARTICIPANT_BEHAVIOR_FEATURES,
+        supported_interaction_features=_PARTICIPANT_INTERACTION_FEATURES,
+        feature_support=tuple(
+            ParticipantFeatureSupport(
+                feature=feature,
+                support_level=ParticipantFeatureSupportLevel.UNSUPPORTED,
+                limitation_refs=(f"limitation:{feature}:not-realized",),
+                disclosure_refs=(f"disclosure:{feature}:unsupported",),
+            )
+            for feature in sorted(PARTICIPANT_RUNTIME_POLICY_FEATURES)
+        ),
+    )
+
+
+def _observation_capabilities() -> ObservationCapabilities:
+    return ObservationCapabilities(
+        name="reference-emulation-observation",
+        supported_capture_kinds=frozenset({"artifact", "log", "observation", "telemetry", "trace"}),
+        supported_channel_kinds=frozenset(
+            {
+                "backend-log",
+                "evaluation-history",
+                "file-artifact",
+                "participant-observation",
+                "runtime-snapshot",
+                "workflow-history",
+            }
+        ),
+        supported_evidence_contracts=frozenset(
+            {
+                "experiment-capture-spec-v1",
+                "experiment-evidence-record-v1",
+                "experiment-derived-measure-v1",
+                "experiment-run-v1",
+            }
+        ),
+        supported_media_types=frozenset({"application/json", "text/plain"}),
+        supported_sealing_modes=frozenset({"digest", "immutable-store"}),
+        supports_redaction=True,
+        supports_loss_disclosure=True,
+        supports_chain_of_custody=False,
+    )
+
+
+def _cleanup_capabilities() -> CleanupCapabilities:
+    return CleanupCapabilities(
+        name="reference-emulation-cleanup",
+        supported_contract_versions=CLEANUP_CAPABILITY_REQUIRED_CONTRACTS,
+        supported_action_kinds=frozenset({"destroy", "reset", "restore", "compensate", "verify"}),
+        supported_verification_methods=frozenset({"probe", "receipt"}),
+        supports_reusable_state=True,
+        supports_residual_state_disclosure=True,
+    )
+
+
 def _capabilities(*, with_time: bool) -> BackendCapabilitySet:
     return BackendCapabilitySet(
         provisioner=ProvisionerCapabilities(
@@ -215,56 +274,9 @@ def _capabilities(*, with_time: bool) -> BackendCapabilitySet:
             supported_time_domains=frozenset({"scenario_time"}),
             preserves_binding_provenance=True,
         ),
-        participant_runtime=ParticipantRuntimeCapabilities(
-            name="reference-emulation-participant-runtime",
-            supported_participant_roles=_PARTICIPANT_ROLES,
-            supported_behavior_features=_PARTICIPANT_BEHAVIOR_FEATURES,
-            supported_interaction_features=_PARTICIPANT_INTERACTION_FEATURES,
-            feature_support=tuple(
-                ParticipantFeatureSupport(
-                    feature=feature,
-                    support_level=ParticipantFeatureSupportLevel.UNSUPPORTED,
-                    limitation_refs=(f"limitation:{feature}:not-realized",),
-                    disclosure_refs=(f"disclosure:{feature}:unsupported",),
-                )
-                for feature in sorted(PARTICIPANT_RUNTIME_POLICY_FEATURES)
-            ),
-        ),
-        observation=ObservationCapabilities(
-            name="reference-emulation-observation",
-            supported_capture_kinds=frozenset({"artifact", "log", "observation", "telemetry", "trace"}),
-            supported_channel_kinds=frozenset(
-                {
-                    "backend-log",
-                    "evaluation-history",
-                    "file-artifact",
-                    "participant-observation",
-                    "runtime-snapshot",
-                    "workflow-history",
-                }
-            ),
-            supported_evidence_contracts=frozenset(
-                {
-                    "experiment-capture-spec-v1",
-                    "experiment-evidence-record-v1",
-                    "experiment-derived-measure-v1",
-                    "experiment-run-v1",
-                }
-            ),
-            supported_media_types=frozenset({"application/json", "text/plain"}),
-            supported_sealing_modes=frozenset({"digest", "immutable-store"}),
-            supports_redaction=True,
-            supports_loss_disclosure=True,
-            supports_chain_of_custody=False,
-        ),
-        cleanup=CleanupCapabilities(
-            name="reference-emulation-cleanup",
-            supported_contract_versions=CLEANUP_CAPABILITY_REQUIRED_CONTRACTS,
-            supported_action_kinds=frozenset({"destroy", "reset", "restore", "compensate", "verify"}),
-            supported_verification_methods=frozenset({"probe", "receipt"}),
-            supports_reusable_state=True,
-            supports_residual_state_disclosure=True,
-        ),
+        participant_runtime=_participant_runtime_capabilities(),
+        observation=_observation_capabilities(),
+        cleanup=_cleanup_capabilities(),
         time=_time_capabilities(enabled=with_time),
     )
 

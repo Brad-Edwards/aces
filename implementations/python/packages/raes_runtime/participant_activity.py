@@ -39,6 +39,17 @@ class ParticipantActivityTimingSelection:
     disposition: str
 
 
+@dataclass(frozen=True)
+class ParticipantActivityDrawContext:
+    """Stable address inputs shared by occurrence-local random draws."""
+
+    policy: ParticipantAutonomousExecutionRuntime
+    participant_address: str
+    time_segment: int
+    occurrence_ordinal: int
+    control: ParticipantActivityRandomControl
+
+
 def resolve_participant_activity_controls(
     controls: Iterable[ExperimentStochasticControlModel],
 ) -> dict[str, ParticipantActivityRandomControl]:
@@ -103,12 +114,8 @@ def activity_draw_address(
 
 
 def draw_activity_integer(
+    context: ParticipantActivityDrawContext,
     *,
-    policy: ParticipantAutonomousExecutionRuntime,
-    participant_address: str,
-    time_segment: int,
-    occurrence_ordinal: int,
-    control: ParticipantActivityRandomControl,
     local_coordinate: int,
     minimum: int,
     maximum: int,
@@ -116,14 +123,14 @@ def draw_activity_integer(
     """Draw one bounded value from a stable occurrence-local coordinate."""
 
     draw = draw_bounded_integer(
-        profile_id=control.profile_id,
-        stream_key=control.stream_key,
+        profile_id=context.control.profile_id,
+        stream_key=context.control.stream_key,
         address=activity_draw_address(
-            policy=policy,
-            participant_address=participant_address,
-            time_segment=time_segment,
-            occurrence_ordinal=occurrence_ordinal,
-            control=control,
+            policy=context.policy,
+            participant_address=context.participant_address,
+            time_segment=context.time_segment,
+            occurrence_ordinal=context.occurrence_ordinal,
+            control=context.control,
             local_coordinate=local_coordinate,
         ),
         minimum=minimum,
@@ -187,14 +194,16 @@ def next_activity_timing(
         item for item in time_model.progression_policies if item.address == policy.progression_policy_address
     )
     step_ticks = progression.step_ticks if progression.advancement_mode == "stepped" else None
-    minimum = policy.timing_minimum_ticks // step_ticks if step_ticks is not None else policy.timing_minimum_ticks
-    maximum = policy.timing_maximum_ticks // step_ticks if step_ticks is not None else policy.timing_maximum_ticks
+    minimum = _timing_units(policy.timing_minimum_ticks, step_ticks)
+    maximum = _timing_units(policy.timing_maximum_ticks, step_ticks)
     interval_units = draw_activity_integer(
-        policy=policy,
-        participant_address=participant_address,
-        time_segment=time_segment,
-        occurrence_ordinal=occurrence_ordinal,
-        control=control,
+        context=ParticipantActivityDrawContext(
+            policy=policy,
+            participant_address=participant_address,
+            time_segment=time_segment,
+            occurrence_ordinal=occurrence_ordinal,
+            control=control,
+        ),
         local_coordinate=0,
         minimum=minimum,
         maximum=maximum,
@@ -202,18 +211,40 @@ def next_activity_timing(
     interval = interval_units * step_ticks if step_ticks is not None else interval_units
     candidate = current_tick + interval
     if activity_tick_is_eligible(policy, time_model, candidate):
-        return ParticipantActivityTimingSelection(tick=candidate, disposition="drawn")
-    if policy.outside_window_disposition == "skip":
-        return ParticipantActivityTimingSelection(tick=None, disposition="drawn")
+        selection = ParticipantActivityTimingSelection(tick=candidate, disposition="drawn")
+    elif policy.outside_window_disposition == "skip":
+        selection = ParticipantActivityTimingSelection(tick=None, disposition="drawn")
+    else:
+        selection = ParticipantActivityTimingSelection(
+            tick=_next_activity_opening(policy, time_model, candidate, step_ticks),
+            disposition="next_opening",
+        )
+    return selection
+
+
+def _timing_units(ticks: int, step_ticks: int | None) -> int:
+    return ticks // step_ticks if step_ticks is not None else ticks
+
+
+def _aligned_activity_tick(tick: int, step_ticks: int | None) -> int:
+    if step_ticks is not None and tick % step_ticks:
+        return tick + step_ticks - tick % step_ticks
+    return tick
+
+
+def _next_activity_opening(
+    policy: ParticipantAutonomousExecutionRuntime,
+    time_model: CompiledTimeModel,
+    candidate: int,
+    step_ticks: int | None,
+) -> int | None:
     work = _window_ranges(policy.work_window_addresses, time_model)
     for start, end in work:
         first_tick = start[0] + int(start[1] > 0)
-        normalized = max(candidate, first_tick)
-        if step_ticks is not None and normalized % step_ticks:
-            normalized += step_ticks - normalized % step_ticks
+        normalized = _aligned_activity_tick(max(candidate, first_tick), step_ticks)
         while (normalized, 0) < end:
             if activity_tick_is_eligible(policy, time_model, normalized):
-                return ParticipantActivityTimingSelection(tick=normalized, disposition="next_opening")
+                return normalized
             pause_end = max(
                 (
                     pause_end[0] + int(pause_end[1] > 0)
@@ -222,10 +253,8 @@ def next_activity_timing(
                 ),
                 default=normalized + 1,
             )
-            normalized = pause_end
-            if step_ticks is not None and normalized % step_ticks:
-                normalized += step_ticks - normalized % step_ticks
-    return ParticipantActivityTimingSelection(tick=None, disposition="next_opening")
+            normalized = _aligned_activity_tick(pause_end, step_ticks)
+    return None
 
 
 def next_activity_tick(
@@ -266,11 +295,13 @@ def select_activity_candidate(
         return None
     total = sum(policy.action_candidate_weights[index] for index in eligible_indices)
     selected = draw_activity_integer(
-        policy=policy,
-        participant_address=participant_address,
-        time_segment=time_segment,
-        occurrence_ordinal=occurrence_ordinal,
-        control=control,
+        context=ParticipantActivityDrawContext(
+            policy=policy,
+            participant_address=participant_address,
+            time_segment=time_segment,
+            occurrence_ordinal=occurrence_ordinal,
+            control=control,
+        ),
         local_coordinate=1,
         minimum=0,
         maximum=total - 1,
@@ -284,6 +315,7 @@ def select_activity_candidate(
 
 
 __all__ = [
+    "ParticipantActivityDrawContext",
     "ParticipantActivityRandomControl",
     "activity_draw_address",
     "activity_control_for",
