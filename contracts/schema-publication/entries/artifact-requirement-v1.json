@@ -1,0 +1,10 @@
+{
+  "contract_id": "artifact-requirement-v1",
+  "schema_path": "contracts/schemas/artifact-requirements/artifact-requirement-v1.json",
+  "stability": "draft",
+    "content_hash": "2f287a0b78b61cb5045c9481a6f76e6b7d279caf084110d56f709c8e5fee7e23",
+  "last_change": {
+    "summary": "Published portable exact, constrained, and open Source artifact requirements with governed satisfaction routes for issue #920.",
+    "content_hash": "2f287a0b78b61cb5045c9481a6f76e6b7d279caf084110d56f709c8e5fee7e23"
+  }
+}

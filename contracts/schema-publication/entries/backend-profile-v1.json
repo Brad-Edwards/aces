@@ -2,9 +2,9 @@
   "contract_id": "backend-profile-v1",
   "schema_path": "contracts/schemas/profiles/backend-profile-v1.json",
   "stability": "draft",
-  "content_hash": "736ef55570ccbfa97b966cfdf121eea0b75e42d8a1e94e0897371aa6a6502a47",
+  "content_hash": "feeec868e943507ba5dbcf7e079a54fd24e14eccc6aedf2f098de64c15b6629c",
   "last_change": {
-    "summary": "Combined participant control and crossing occurrence contracts with execution binding, lifecycle control, and service-state contracts for issue #898.",
-    "content_hash": "736ef55570ccbfa97b966cfdf121eea0b75e42d8a1e94e0897371aa6a6502a47"
+    "summary": "Advertised the portable artifact requirement contract in backend contract profiles for issue #920.",
+    "content_hash": "feeec868e943507ba5dbcf7e079a54fd24e14eccc6aedf2f098de64c15b6629c"
   }
 }

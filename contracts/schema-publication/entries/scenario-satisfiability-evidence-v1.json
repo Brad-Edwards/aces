@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "b67869d52a1c78da43d56d01465e85f09023e348ffd185b71e276b20f3798765",
+    "content_hash": "725d837a9f9f131192f138957c2970b3751aa196e75aeb5635828c1aa7996431",
   "last_change": {
-    "summary": "Carried the explicit autonomous activity v2 policy union through satisfiability evidence scenario definitions for issue #897.",
-    "content_hash": "b67869d52a1c78da43d56d01465e85f09023e348ffd185b71e276b20f3798765"
+    "summary": "Carried portable Source artifact requirements through scenario satisfiability evidence definitions for issue #920.",
+    "content_hash": "725d837a9f9f131192f138957c2970b3751aa196e75aeb5635828c1aa7996431"
   }
 }

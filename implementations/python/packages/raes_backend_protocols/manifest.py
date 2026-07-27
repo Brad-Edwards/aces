@@ -99,6 +99,7 @@ def backend_manifest_v2_model(manifest: BackendManifest) -> BackendManifestV2Mod
                 supported_constraint_kinds=sorted(declaration.supported_constraint_kinds),
                 supported_exact_requirement_kinds=sorted(declaration.supported_exact_requirement_kinds),
                 disclosure_kinds=sorted(declaration.disclosure_kinds),
+                artifact_mechanisms=list(declaration.artifact_mechanisms),
                 constraints=dict(declaration.constraints),
             )
             for declaration in manifest.realization_support
@@ -280,6 +281,7 @@ def _realization_support_from_model(model: RealizationSupportDeclarationModel) -
         supported_constraint_kinds=frozenset(model.supported_constraint_kinds),
         supported_exact_requirement_kinds=frozenset(model.supported_exact_requirement_kinds),
         disclosure_kinds=frozenset(model.disclosure_kinds),
+        artifact_mechanisms=tuple(model.artifact_mechanisms),
         constraints=dict(model.constraints),
     )
 

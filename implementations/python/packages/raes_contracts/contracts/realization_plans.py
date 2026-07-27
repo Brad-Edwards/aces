@@ -8,6 +8,7 @@ from pydantic import Field, model_validator
 from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance
 
 from ..addressing import CompiledAddress
+from ..artifact_requirements import ArtifactSatisfactionDisclosureModel
 from ..planning import RuntimeDomain, require_plan_operation_identity
 from ..versions import OPERATION_SCHEMA_VERSION, RUNTIME_SNAPSHOT_SCHEMA_VERSION
 from .base import ContractModel, NonEmptyString
@@ -141,6 +142,10 @@ class RealizationProvenanceEntryModel(ContractModel):
     explicitness: ExplicitnessClass
     provenance: ExplicitnessProvenance
     governing_scope: NonEmptyString | None = None
+    artifact_satisfaction: ArtifactSatisfactionDisclosureModel | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+    )
 
 
 class RuntimeSnapshotEnvelopeModel(ContractModel):

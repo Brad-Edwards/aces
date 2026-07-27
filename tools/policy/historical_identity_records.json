@@ -44,7 +44,7 @@
       "record_class": "historical-index",
       "rationale": "Indexes immutable pre-cutover ADR titles, paths, pins, and amendment summaries without making them current identity surf\u0061ces.",
       "occurrences": 4,
-      "content_sha256": "bcb796f8491d00f1c842cffbfe36dc3c0fccd5838e7353d1d600f6a780bfa184"
+      "content_sha256": "e0eda7d0e69151a1c46617469ec8ebe78202217bfae49247c6564c1949d802e6"
     },
     {
       "path": "docs/decisions/adrs/adr-000-use-adrs.md",
@@ -499,7 +499,7 @@
       "record_class": "historical-index",
       "rationale": "Indexes immutable pre-cutover ADR titles, paths, pins, and amendment summaries without making them current identity surf\u0061ces.",
       "occurrences": 4,
-      "content_sha256": "52f0eed782027820a62ef271a6c83fa23763d96410185c4278e626312e30a969"
+      "content_sha256": "e29f225969cda63915a39d4f75bcce0e37330ee008105a0f0c823954e031635b"
     },
     {
       "path": "docs/decisions/cage-2-replication-design.md",
@@ -1528,7 +1528,7 @@
       "record_class": "research-record",
       "rationale": "Preserves preregistered, frozen, dated, or lineage-bearing research evidence from before the RAES identity cutover.",
       "occurrences": 19,
-      "content_sha256": "2a411d210a4d24916290b2e61a7b96acf36b63e648fa8188186d2ce7822c4c10"
+      "content_sha256": "631b59c4a40ec935a68ab975814c023d3824e5c42e62415e3176b88baacf6519"
     },
     {
       "path": "docs/research/formal-semantic-validation/execution-snapshot-v1.json",

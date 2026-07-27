@@ -21,6 +21,125 @@
       "title": "ApparatusIdentityModel",
       "type": "object"
     },
+    "ArtifactAcquisitionTimingModel": {
+      "additionalProperties": false,
+      "description": "One exact acquisition/timing combination supported by a backend.",
+      "properties": {
+        "acquisition": {
+          "enum": [
+            "pull",
+            "copy",
+            "import",
+            "local-lookup",
+            "none"
+          ],
+          "title": "Acquisition",
+          "type": "string"
+        },
+        "timing": {
+          "enum": [
+            "publication",
+            "pack-ingestion",
+            "backend-preparation",
+            "realization"
+          ],
+          "title": "Timing",
+          "type": "string"
+        }
+      },
+      "required": [
+        "acquisition",
+        "timing"
+      ],
+      "title": "ArtifactAcquisitionTimingModel",
+      "type": "object"
+    },
+    "ArtifactMechanismCapability": {
+      "additionalProperties": false,
+      "description": "Mechanism-indexed backend support without Cartesian-product overclaim.",
+      "properties": {
+        "mechanism": {
+          "$ref": "#/$defs/ArtifactMechanismProfile"
+        },
+        "supported_requirement_kinds": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Requirement Kinds",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supported_routes": {
+          "items": {
+            "$ref": "#/$defs/ArtifactAcquisitionTimingModel"
+          },
+          "minItems": 1,
+          "title": "Supported Routes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "mechanism",
+        "supported_requirement_kinds",
+        "supported_routes"
+      ],
+      "title": "ArtifactMechanismCapability",
+      "type": "object"
+    },
+    "ArtifactMechanismProfile": {
+      "additionalProperties": false,
+      "description": "Versioned portable mechanism profile.\n\nPortable mechanisms use the governed base names above or a namespaced\n``x-<authority>:<term>`` extension. The profile digest binds the exact\nmechanism contract without making the mechanism set a closed union.",
+      "properties": {
+        "digest": {
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "mechanism": {
+          "anyOf": [
+            {
+              "enum": [
+                "backend-owned-artifact",
+                "dynamic-composition",
+                "exact-artifact",
+                "materialization-specification",
+                "published-candidate"
+              ]
+            },
+            {
+              "pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$"
+            }
+          ],
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Mechanism",
+          "type": "string"
+        },
+        "profile": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:/@+-]*$",
+          "title": "Profile",
+          "type": "string"
+        },
+        "version": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "mechanism",
+        "profile",
+        "version",
+        "digest"
+      ],
+      "title": "ArtifactMechanismProfile",
+      "type": "object"
+    },
     "BackendCapabilitiesV2Model": {
       "additionalProperties": false,
       "properties": {
@@ -1522,6 +1641,13 @@
         }
       ],
       "properties": {
+        "artifact_mechanisms": {
+          "items": {
+            "$ref": "#/$defs/ArtifactMechanismCapability"
+          },
+          "title": "Artifact Mechanisms",
+          "type": "array"
+        },
         "constraints": {
           "additionalProperties": {
             "type": "string"
@@ -1948,6 +2074,7 @@
       "items": {
         "enum": [
           "backend-manifest-v2",
+          "artifact-requirement-v1",
           "experiment-binding-descriptors-v1",
           "realization-envelope-v1",
           "provisioning-plan-v1",

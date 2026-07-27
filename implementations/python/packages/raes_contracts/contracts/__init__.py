@@ -3,7 +3,19 @@
 # This module is an intentional re-export facade governed by PUBLIC_EXPORTS.
 # ruff: noqa: F401, F403
 
+from ..artifact_requirements import (
+    ArtifactAcquisitionTimingModel,
+    ArtifactAvailabilityContext,
+    ArtifactMechanismCapability,
+    ArtifactRequirementAvailability,
+    ArtifactRequirementContractModel,
+    ArtifactRequirementSource,
+    ArtifactSatisfactionDisclosureModel,
+    artifact_requirement_invariant_violations,
+    validate_artifact_requirement_invariants,
+)
 from ..versions import (
+    ARTIFACT_REQUIREMENT_SCHEMA_VERSION,
     ASSOCIATED_ARTIFACT_MANIFEST_SCHEMA_VERSION,
     ATLAS_TACTICS_SOURCE_SCHEMA_VERSION,
     ATTACK_ENTERPRISE_TACTICS_SOURCE_SCHEMA_VERSION,

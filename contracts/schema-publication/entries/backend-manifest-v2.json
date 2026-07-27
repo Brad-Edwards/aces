@@ -2,9 +2,9 @@
   "contract_id": "backend-manifest-v2",
   "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
   "stability": "draft",
-  "content_hash": "4d842923928a9e80e92fa31559fd557a846c4854ac41c30e4d88fa53288c2b22",
+  "content_hash": "95e0b07360d92eec0b930ca73762f3fa7646d38ab32c5f9d35e9acd38fd61cca",
   "last_change": {
-    "summary": "Combined current autonomous activity and policy capabilities with exact action-to-target bindings, lifecycle control, and bounded concurrent participant-service declarations for issue #898.",
-    "content_hash": "4d842923928a9e80e92fa31559fd557a846c4854ac41c30e4d88fa53288c2b22"
+    "summary": "Added mechanism-indexed portable artifact satisfaction capabilities without Cartesian acquisition and timing overclaims for issue #920.",
+    "content_hash": "95e0b07360d92eec0b930ca73762f3fa7646d38ab32c5f9d35e9acd38fd61cca"
   }
 }

@@ -1,5 +1,270 @@
 {
   "$defs": {
+    "ApparatusIdentity": {
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "title": "ApparatusIdentity",
+      "type": "object"
+    },
+    "ArtifactIdentity": {
+      "additionalProperties": false,
+      "description": "Immutable provider-neutral identity for one artifact payload.",
+      "properties": {
+        "artifact_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:/@+-]*$",
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "digest": {
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "media_type": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Media Type",
+          "type": "string"
+        },
+        "version": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "version",
+        "digest",
+        "media_type"
+      ],
+      "title": "ArtifactIdentity",
+      "type": "object"
+    },
+    "ArtifactMechanismProfile": {
+      "additionalProperties": false,
+      "description": "Versioned portable mechanism profile.\n\nPortable mechanisms use the governed base names above or a namespaced\n``x-<authority>:<term>`` extension. The profile digest binds the exact\nmechanism contract without making the mechanism set a closed union.",
+      "properties": {
+        "digest": {
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "mechanism": {
+          "anyOf": [
+            {
+              "enum": [
+                "backend-owned-artifact",
+                "dynamic-composition",
+                "exact-artifact",
+                "materialization-specification",
+                "published-candidate"
+              ]
+            },
+            {
+              "pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$"
+            }
+          ],
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Mechanism",
+          "type": "string"
+        },
+        "profile": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:/@+-]*$",
+          "title": "Profile",
+          "type": "string"
+        },
+        "version": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "mechanism",
+        "profile",
+        "version",
+        "digest"
+      ],
+      "title": "ArtifactMechanismProfile",
+      "type": "object"
+    },
+    "ArtifactSatisfactionDisclosureModel": {
+      "additionalProperties": false,
+      "description": "Typed realized artifact and mechanism disclosure.\n\nMutable provider/account/project/region/registry/channel locations are\ndeliberately absent. They belong to operational evidence, not artifact or\nscenario identity.",
+      "properties": {
+        "acquisition": {
+          "enum": [
+            "pull",
+            "copy",
+            "import",
+            "local-lookup",
+            "none"
+          ],
+          "title": "Acquisition",
+          "type": "string"
+        },
+        "admission_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Admission Refs",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "artifact": {
+          "$ref": "#/$defs/ArtifactIdentity"
+        },
+        "authenticity_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Authenticity Refs",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "backend": {
+          "$ref": "#/$defs/ApparatusIdentity"
+        },
+        "candidate_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Candidate Id"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "integrity_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Integrity Refs",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "locked_input_ids": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Locked Input Ids",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "materialization_specification_digest": {
+          "anyOf": [
+            {
+              "pattern": "^sha256:[a-f0-9]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Materialization Specification Digest"
+        },
+        "materialization_specification_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Materialization Specification Id"
+        },
+        "mechanism": {
+          "$ref": "#/$defs/ArtifactMechanismProfile"
+        },
+        "provenance_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Provenance Refs",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "requirement_id": {
+          "minLength": 1,
+          "title": "Requirement Id",
+          "type": "string"
+        },
+        "satisfied_constraint_ids": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Satisfied Constraint Ids",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "timing": {
+          "enum": [
+            "publication",
+            "pack-ingestion",
+            "backend-preparation",
+            "realization"
+          ],
+          "title": "Timing",
+          "type": "string"
+        }
+      },
+      "required": [
+        "requirement_id",
+        "artifact",
+        "mechanism",
+        "acquisition",
+        "timing",
+        "backend",
+        "integrity_refs",
+        "provenance_refs"
+      ],
+      "title": "ArtifactSatisfactionDisclosureModel",
+      "type": "object"
+    },
     "ClockTransitionEventModel": {
       "additionalProperties": false,
       "properties": {
@@ -6400,6 +6665,17 @@
           "minLength": 1,
           "title": "Address",
           "type": "string"
+        },
+        "artifact_satisfaction": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ArtifactSatisfactionDisclosureModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "domain": {
           "minLength": 1,

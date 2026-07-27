@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
   "stability": "draft",
-  "content_hash": "7c228bd1b4b1004c5f71c3e8b9b17dd63fdb146ac84fdc5ad5437d1c63075eda",
+    "content_hash": "288912cc33394ee5741129af749181e760f4d640cebb92439de9d24dba7cd7b1",
   "last_change": {
-    "summary": "Published the explicit autonomous activity v2 policy union in instantiated scenarios for issue #897.",
-    "content_hash": "7c228bd1b4b1004c5f71c3e8b9b17dd63fdb146ac84fdc5ad5437d1c63075eda"
+    "summary": "Published portable Source artifact requirements in instantiated scenarios for issue #920.",
+    "content_hash": "288912cc33394ee5741129af749181e760f4d640cebb92439de9d24dba7cd7b1"
   }
 }

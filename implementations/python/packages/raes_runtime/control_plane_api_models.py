@@ -182,6 +182,11 @@ def _snapshot_model(envelope: RuntimeSnapshotEnvelope) -> RuntimeSnapshotEnvelop
                     "explicitness": entry.explicitness.value,
                     "provenance": entry.provenance.value,
                     "governing_scope": entry.governing_scope,
+                    **(
+                        {"artifact_satisfaction": entry.artifact_satisfaction.model_dump(mode="json")}
+                        if entry.artifact_satisfaction is not None
+                        else {}
+                    ),
                 }
                 for entry in snapshot.realization_provenance
             ],

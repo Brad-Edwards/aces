@@ -3,6 +3,7 @@
 from collections.abc import Iterable
 from dataclasses import dataclass
 
+from raes_contracts.artifact_requirements import ArtifactAvailabilityContext
 from raes_contracts.contracts import ExperimentStochasticControlModel
 from raes_contracts.contracts.time_model import TimeModelDeclarationModel
 from raes_contracts.diagnostics import Diagnostic
@@ -117,6 +118,7 @@ class RuntimeManager(RuntimeParticipantExecutionMixin, RuntimeTimeControlMixin):
         *,
         parameters: dict[str, object] | None = None,
         profile: str | None = None,
+        artifact_availability: ArtifactAvailabilityContext | None = None,
     ) -> ExecutionPlan:
         model = compile_scenario_runtime_model(scenario, parameters=parameters, profile=profile)
         effective_snapshot = snapshot if snapshot is not None else self._snapshot
@@ -125,6 +127,7 @@ class RuntimeManager(RuntimeParticipantExecutionMixin, RuntimeTimeControlMixin):
             self._target.manifest,
             effective_snapshot,
             target_name=self._target.name,
+            artifact_availability=artifact_availability,
         )
 
     def apply(self, execution_plan: ExecutionPlan) -> ApplyResult:
@@ -194,6 +197,8 @@ class RuntimeManager(RuntimeParticipantExecutionMixin, RuntimeTimeControlMixin):
             snapshot=state.working_snapshot,
             realization_requirements=execution_plan.model.realization_requirements,
             realization_plan=execution_plan.provisioning,
+            backend_manifest=execution_plan.manifest,
+            artifact_availability=execution_plan.artifact_availability,
         )
         self._record_phase_result(state, provision_result)
         if not provision_result.success:
