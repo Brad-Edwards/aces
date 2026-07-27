@@ -81,6 +81,11 @@ class RuntimeParticipantExecutionMixin:
             self._target.participant_runtime,
             state.working_snapshot,
             self._participant_activity_controls,
+            (
+                self._target.manifest.participant_runtime.resource_budgets
+                if self._target.manifest.participant_runtime is not None
+                else None
+            ),
         )
         self._record_phase_result(state, result)
         if not result.success:

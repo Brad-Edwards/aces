@@ -28,6 +28,7 @@ PROCESSOR_SUPPORTED_CONTRACT_IDS = (
     "participant-episode-state-envelope-v1",
     "participant-episode-history-event-stream-v1",
     "participant-behavior-history-event-stream-v1",
+    "participant-resource-budget-policy-v1",
     "time-model-v1",
 )
 
@@ -56,6 +57,10 @@ BACKEND_SUPPORTED_CONTRACT_IDS = (
     "participant-execution-binding-v1",
     "participant-execution-control-v1",
     "participant-execution-service-state-v1",
+    "participant-resource-budget-policy-v1",
+    "participant-resource-pool-capacity-v1",
+    "participant-resource-budget-state-v1",
+    "participant-resource-budget-event-v1",
     "participant-control-occurrence-v1",
     "participant-crossing-occurrence-v1",
     "participant-lifecycle-event-v1",

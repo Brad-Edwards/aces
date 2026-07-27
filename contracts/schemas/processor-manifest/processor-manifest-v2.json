@@ -348,6 +348,7 @@
           "participant-episode-state-envelope-v1",
           "participant-episode-history-event-stream-v1",
           "participant-behavior-history-event-stream-v1",
+          "participant-resource-budget-policy-v1",
           "time-model-v1"
         ],
         "minLength": 1,

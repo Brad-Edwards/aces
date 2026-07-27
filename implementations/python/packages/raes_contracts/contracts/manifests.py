@@ -30,6 +30,7 @@ from .capabilities import (
 from .experiment_bindings import ConfigurationTargetRegistryModel
 from .feature_support import ParticipantFeatureSupportModel
 from .participant_execution import ParticipantExecutionBindingModel
+from .participant_resource_budgets import ParticipantResourceBudgetCapabilitiesModel
 from .time_manifest_capabilities import TimeCapabilitiesModel
 from .trial_cleanup import CleanupActionKind
 from .validators import (
@@ -117,7 +118,11 @@ class ParticipantRuntimeCapabilitiesModel(ContractModel):
         json_schema_extra={"uniqueItems": True},
     )
     supported_autonomous_policy_profiles: list[
-        Literal["participant-autonomous-execution/v1", "participant-autonomous-execution/v2"]
+        Literal[
+            "participant-autonomous-execution/v1",
+            "participant-autonomous-execution/v2",
+            "participant-autonomous-execution/v3",
+        ]
     ] = Field(default_factory=list, json_schema_extra={"uniqueItems": True})
     supported_autonomous_activity_features: list[
         Literal[
@@ -149,6 +154,7 @@ class ParticipantRuntimeCapabilitiesModel(ContractModel):
     supports_bounded_concurrency: bool = False
     max_execution_services: int | None = Field(default=None, ge=1)
     max_concurrent_actions: int | None = Field(default=None, ge=2)
+    resource_budgets: ParticipantResourceBudgetCapabilitiesModel | None = None
     constraints: dict[str, str] = Field(default_factory=dict)
 
     @model_validator(mode="after")
@@ -218,7 +224,10 @@ class ParticipantRuntimeCapabilitiesModel(ContractModel):
             )
         if (
             self.supports_autonomous_execution
-            and "participant-autonomous-execution/v2" in self.supported_autonomous_policy_profiles
+            and {
+                "participant-autonomous-execution/v2",
+                "participant-autonomous-execution/v3",
+            }.intersection(self.supported_autonomous_policy_profiles)
             and (
                 not self.supported_autonomous_activity_features or not self.supported_autonomous_random_stream_profiles
             )
@@ -226,6 +235,12 @@ class ParticipantRuntimeCapabilitiesModel(ContractModel):
             raise ValueError(
                 "autonomous execution v2 requires exact activity-feature and random-stream-profile support"
             )
+        if (
+            self.supports_autonomous_execution
+            and "participant-autonomous-execution/v3" in self.supported_autonomous_policy_profiles
+            and self.resource_budgets is None
+        ):
+            raise ValueError("autonomous execution v3 requires participant resource-budget capabilities")
         if not self.supports_autonomous_execution and self._has_any_autonomous_configuration():
             raise ValueError("autonomous execution limits require autonomous execution support")
 
@@ -259,6 +274,7 @@ class ParticipantRuntimeCapabilitiesModel(ContractModel):
             or self.supports_bounded_concurrency
             or self.max_execution_services is not None
             or self.max_concurrent_actions is not None
+            or self.resource_budgets is not None
         )
 
     def _validate_execution_control(self) -> None:

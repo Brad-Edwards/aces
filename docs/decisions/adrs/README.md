@@ -140,6 +140,7 @@ adr-093-raes-rename-and-compatibility-boundaries
 adr-094-authoritative-cross-plane-experiment-bindings
 adr-095-participant-decision-epoch-state-cut-and-delivery-semantics
 adr-096-identity-cutover-and-historical-record-boundary
+adr-097-scoped-participant-resource-budgets-and-shared-service-fairness
 ```
 
 | ADR | Title | Status | Date |
@@ -240,3 +241,4 @@ adr-096-identity-cutover-and-historical-record-boundary
 | [094](adr-094-authoritative-cross-plane-experiment-bindings.md) | Authoritative Cross-Plane Experiment Bindings | accepted | 2026-07-26 |
 | [095](adr-095-participant-decision-epoch-state-cut-and-delivery-semantics.md) | Participant Decision Epoch, State-Cut, And Delivery Semantics | accepted | 2026-07-26 |
 | [096](adr-096-identity-cutover-and-historical-record-boundary.md) | Identity Cutover and Historical-Record Boundary | accepted | 2026-07-26 |
+| [097](adr-097-scoped-participant-resource-budgets-and-shared-service-fairness.md) | Scoped Participant Resource Budgets And Shared-Service Fairness | proposed | 2026-07-27 |

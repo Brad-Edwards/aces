@@ -164,7 +164,7 @@ def _due_contexts(
     cadence_ticks: int,
     run: SchedulerRunState,
 ) -> tuple[list[_DueActionContext], list[ParticipantAutonomousExecutionStateModel]]:
-    from .participant_scheduler_operations import _cadence_missed_result
+    from .participant_scheduler_time import cadence_missed_result
     from .participant_scheduler_types import _DueActionContext
 
     contexts: list[_DueActionContext] = []
@@ -175,7 +175,7 @@ def _due_contexts(
             run.working.participant_autonomous_execution_states[key]
         )
         if state.lifecycle_state == "running" and state.next_tick < current_tick:
-            run.failure = _cadence_missed_result(run.working, key, current_tick, state)
+            run.failure = cadence_missed_result(run.working, key, current_tick, state)
             break
         due = (
             state.lifecycle_state == "running"

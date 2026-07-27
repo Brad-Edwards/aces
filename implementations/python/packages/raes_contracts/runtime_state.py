@@ -87,6 +87,9 @@ class RuntimeSnapshot:
     participant_control_history: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
     participant_autonomous_execution_states: dict[str, dict[str, Any]] = field(default_factory=dict)
     participant_execution_services: dict[str, dict[str, Any]] = field(default_factory=dict)
+    participant_resource_budget_states: dict[str, dict[str, Any]] = field(default_factory=dict)
+    participant_resource_pool_states: dict[str, dict[str, Any]] = field(default_factory=dict)
+    participant_resource_budget_events: dict[str, dict[str, Any]] = field(default_factory=dict)
     shared_state_records: dict[str, dict[str, Any]] = field(default_factory=dict)
     shared_state_history: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
     joint_action_records: dict[str, dict[str, Any]] = field(default_factory=dict)
@@ -104,6 +107,11 @@ class RuntimeSnapshot:
             if map_key != entry.address:
                 raise ValueError("RuntimeSnapshot entries map key must equal embedded address")
         require_participant_autonomous_state_snapshot(self.participant_autonomous_execution_states)
+        _require_participant_resource_budget_snapshot(
+            self.participant_resource_budget_states,
+            self.participant_resource_pool_states,
+            self.participant_resource_budget_events,
+        )
 
     def get(self, address: str) -> SnapshotEntry | None:
         return self.entries.get(address)
@@ -166,6 +174,21 @@ class RuntimeSnapshot:
                 "participant_execution_services",
                 self.participant_execution_services,
             ),
+            participant_resource_budget_states=_mapping_update(
+                updates,
+                "participant_resource_budget_states",
+                self.participant_resource_budget_states,
+            ),
+            participant_resource_pool_states=_mapping_update(
+                updates,
+                "participant_resource_pool_states",
+                self.participant_resource_pool_states,
+            ),
+            participant_resource_budget_events=_mapping_update(
+                updates,
+                "participant_resource_budget_events",
+                self.participant_resource_budget_events,
+            ),
             shared_state_records=_mapping_update(
                 updates,
                 "shared_state_records",
@@ -217,6 +240,9 @@ _SNAPSHOT_UPDATE_KEYS = {
     "participant_control_history",
     "participant_autonomous_execution_states",
     "participant_execution_services",
+    "participant_resource_budget_states",
+    "participant_resource_pool_states",
+    "participant_resource_budget_events",
     "shared_state_records",
     "shared_state_history",
     "joint_action_records",
@@ -226,6 +252,31 @@ _SNAPSHOT_UPDATE_KEYS = {
     "realization_envelope",
     "metadata",
 }
+
+
+def _require_participant_resource_budget_snapshot(
+    states: Mapping[str, Mapping[str, Any]],
+    pools: Mapping[str, Mapping[str, Any]],
+    events: Mapping[str, Mapping[str, Any]],
+) -> None:
+    from raes_contracts.contracts.participant_resource_budgets import (
+        ParticipantResourceBudgetEventModel,
+        ParticipantResourceBudgetStateModel,
+        ParticipantResourcePoolStateModel,
+    )
+
+    for state_ref, payload in states.items():
+        state = ParticipantResourceBudgetStateModel.model_validate(payload)
+        if state_ref != state.state_ref:
+            raise ValueError("participant resource-budget state key must equal state_ref")
+    for pool_state_ref, payload in pools.items():
+        pool = ParticipantResourcePoolStateModel.model_validate(payload)
+        if pool_state_ref != pool.pool_state_ref:
+            raise ValueError("participant resource-pool state key must equal pool_state_ref")
+    for event_id, payload in events.items():
+        event = ParticipantResourceBudgetEventModel.model_validate(payload)
+        if event_id != event.event_id:
+            raise ValueError("participant resource-budget event key must equal event_id")
 
 
 def _validate_snapshot_update_keys(updates: Mapping[str, object]) -> None:

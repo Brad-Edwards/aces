@@ -1,0 +1,159 @@
+{
+  "$id": "https://raes.dev/schemas/participant-resource-budget-event-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "budget_id": {
+      "minLength": 1,
+      "title": "Budget Id",
+      "type": "string"
+    },
+    "budget_state_ref": {
+      "minLength": 1,
+      "title": "Budget State Ref",
+      "type": "string"
+    },
+    "disposition": {
+      "enum": [
+        "reserved",
+        "committed",
+        "released",
+        "throttled",
+        "rejected",
+        "reconciled"
+      ],
+      "title": "Disposition",
+      "type": "string"
+    },
+    "event_id": {
+      "minLength": 1,
+      "title": "Event Id",
+      "type": "string"
+    },
+    "evidence_refs": {
+      "default": [],
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Evidence Refs",
+      "type": "array"
+    },
+    "execution_generation": {
+      "minimum": 0,
+      "title": "Execution Generation",
+      "type": "integer"
+    },
+    "measured": {
+      "anyOf": [
+        {
+          "maximum": 1000000000000000000,
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Measured"
+    },
+    "meter_profile_ref": {
+      "minLength": 1,
+      "title": "Meter Profile Ref",
+      "type": "string"
+    },
+    "operation_id": {
+      "minLength": 1,
+      "title": "Operation Id",
+      "type": "string"
+    },
+    "owner_ref": {
+      "minLength": 1,
+      "title": "Owner Ref",
+      "type": "string"
+    },
+    "policy_address": {
+      "minLength": 1,
+      "title": "Policy Address",
+      "type": "string"
+    },
+    "pool_ref": {
+      "minLength": 1,
+      "title": "Pool Ref",
+      "type": "string"
+    },
+    "predecessor_event_ref": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Predecessor Event Ref"
+    },
+    "requested": {
+      "maximum": 1000000000000000000,
+      "minimum": 0,
+      "title": "Requested",
+      "type": "integer"
+    },
+    "resource_kind": {
+      "enum": [
+        "action_rate",
+        "concurrent_actions",
+        "storage_growth",
+        "inference_tokens",
+        "image_generations",
+        "accelerator"
+      ],
+      "title": "Resource Kind",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "participant-resource-budget-event/v1",
+      "default": "participant-resource-budget-event/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "transition": {
+      "enum": [
+        "reserve",
+        "commit",
+        "release",
+        "throttle",
+        "reject",
+        "reconcile"
+      ],
+      "title": "Transition",
+      "type": "string"
+    },
+    "unit": {
+      "minLength": 1,
+      "title": "Unit",
+      "type": "string"
+    }
+  },
+  "required": [
+    "event_id",
+    "operation_id",
+    "budget_state_ref",
+    "budget_id",
+    "policy_address",
+    "owner_ref",
+    "pool_ref",
+    "execution_generation",
+    "transition",
+    "disposition",
+    "requested",
+    "resource_kind",
+    "unit",
+    "meter_profile_ref"
+  ],
+  "title": "ParticipantResourceBudgetEventModel",
+  "type": "object"
+}

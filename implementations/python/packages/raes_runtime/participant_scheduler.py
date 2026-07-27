@@ -23,18 +23,20 @@ from .participant_activity import (
 )
 from .participant_execution_scheduler_state import (
     execution_service_state,
-    reset_execution_service,
     set_execution_clock_lifecycle,
 )
+from .participant_resource_budgets import initialize_participant_resource_budgets
+from .participant_scheduler_lifecycle import reset_policy_at_clock
 from .participant_scheduler_operations import (
     SchedulerRunState,
     run_participant_due,
     run_policy_due_concurrently,
 )
 from .participant_scheduler_policy import _policy_digest
-from .participant_scheduler_reset import clock_reset_context, reset_scheduler_participant
 from .participant_scheduler_time import cadence as _cadence
 from .participant_scheduler_time import clock_coordinate
+
+_RESOURCE_GOVERNED_PROFILE = "participant-autonomous-execution/v3"
 
 
 def _state_key(policy_address: str, participant_address: str) -> str:
@@ -91,7 +93,14 @@ def _initialize_participant(
     key = _state_key(policy.address, participant_address)
     segment, _ = clock_coordinate(working, policy.clock_address)
     activity_control = activity_control_for(policy, activity_controls)
-    if policy.profile == "participant-autonomous-execution/v2" and activity_control is None:
+    if (
+        policy.profile
+        in {
+            "participant-autonomous-execution/v2",
+            _RESOURCE_GOVERNED_PROFILE,
+        }
+        and activity_control is None
+    ):
         return ApplyResult(
             success=False,
             snapshot=working,
@@ -247,6 +256,109 @@ def _run_due_policy(
         _run_serial_due(policy, time_model, participant_runtime, current_tick, cadence_ticks, activity_controls, run)
 
 
+def _initialize_governed_resources(
+    policies: tuple[ParticipantAutonomousExecutionRuntime, ...],
+    snapshot: RuntimeSnapshot,
+    resource_capabilities: object | None,
+) -> ApplyResult:
+    governed = tuple(policy for policy in policies if policy.profile == _RESOURCE_GOVERNED_PROFILE)
+    if not governed:
+        return ApplyResult(success=True, snapshot=snapshot)
+    if resource_capabilities is None:
+        return ApplyResult(
+            success=False,
+            snapshot=snapshot,
+            diagnostics=[
+                Diagnostic(
+                    code="runtime.participant-resource-capabilities-missing",
+                    domain="participant",
+                    address=governed[0].address,
+                    message="Participant execution v3 requires admitted resource-budget capabilities.",
+                )
+            ],
+        )
+    return initialize_participant_resource_budgets(
+        snapshot,
+        governed,
+        resource_capabilities,
+        execution_generation=0,
+    )
+
+
+def _initialize_policy(
+    policy: ParticipantAutonomousExecutionRuntime,
+    time_model: CompiledTimeModel,
+    participant_runtime: object,
+    snapshot: RuntimeSnapshot,
+    activity_controls: dict[str, ParticipantActivityRandomControl],
+) -> ApplyResult:
+    working = snapshot
+    changed: list[str] = []
+    failure = None
+    for participant_address in policy.participant_addresses:
+        participant_result = _initialize_participant(
+            policy,
+            time_model,
+            participant_runtime,
+            working,
+            participant_address,
+            activity_controls,
+        )
+        if not participant_result.success:
+            failure = participant_result
+            break
+        working = participant_result.snapshot
+        changed.extend(participant_result.changed_addresses)
+    if failure is None:
+        services = dict(working.participant_execution_services)
+        expected_service = execution_service_state(
+            policy,
+            time_model,
+            policy_digest=_policy_digest(policy, time_model),
+        )
+        existing_payload = services.get(policy.address)
+        if existing_payload is not None:
+            existing = ParticipantExecutionServiceStateModel.model_validate(existing_payload)
+            identity = (
+                existing.policy_digest,
+                existing.binding_digest,
+                existing.time_declaration_digest,
+            )
+            expected_identity = (
+                expected_service.policy_digest,
+                expected_service.binding_digest,
+                expected_service.time_declaration_digest,
+            )
+            if identity != expected_identity:
+                failure = ApplyResult(
+                    success=False,
+                    snapshot=working,
+                    diagnostics=[
+                        Diagnostic(
+                            code="runtime.participant-execution-state-conflict",
+                            domain="participant",
+                            address=policy.address,
+                            message=(
+                                "Existing participant execution service state does not match "
+                                "the admitted policy, bindings, or shared-time declaration."
+                            ),
+                        )
+                    ],
+                )
+        else:
+            services[policy.address] = expected_service.model_dump(mode="json")
+            working = working.with_entries(
+                dict(working.entries),
+                participant_execution_services=services,
+            )
+            changed.append(policy.address)
+    return failure or ApplyResult(
+        success=True,
+        snapshot=working,
+        changed_addresses=list(dict.fromkeys(changed)),
+    )
+
+
 class ParticipantScheduler:
     """Deterministically selects due actions and delegates native execution."""
 
@@ -257,61 +369,28 @@ class ParticipantScheduler:
         participant_runtime: object,
         snapshot: RuntimeSnapshot,
         activity_controls: dict[str, ParticipantActivityRandomControl] | None = None,
+        resource_capabilities: object | None = None,
     ) -> ApplyResult:
         working = snapshot
         resolved_activity_controls = activity_controls or {}
         changed: list[str] = []
-        for policy in policies:
-            for participant_address in policy.participant_addresses:
-                result = _initialize_participant(
-                    policy,
-                    time_model,
-                    participant_runtime,
-                    working,
-                    participant_address,
-                    resolved_activity_controls,
-                )
-                if not result.success:
-                    return result
-                working = result.snapshot
-                changed.extend(result.changed_addresses)
-            services = dict(working.participant_execution_services)
-            expected_service = execution_service_state(
+        normalized_policies = tuple(policies)
+        initialized = _initialize_governed_resources(normalized_policies, working, resource_capabilities)
+        if not initialized.success:
+            return initialized
+        working = initialized.snapshot
+        for policy in normalized_policies:
+            policy_result = _initialize_policy(
                 policy,
                 time_model,
-                policy_digest=_policy_digest(policy, time_model),
+                participant_runtime,
+                working,
+                resolved_activity_controls,
             )
-            existing_service = services.get(policy.address)
-            if existing_service is not None:
-                existing = ParticipantExecutionServiceStateModel.model_validate(existing_service)
-                if (
-                    existing.policy_digest != expected_service.policy_digest
-                    or existing.binding_digest != expected_service.binding_digest
-                    or existing.time_declaration_digest != expected_service.time_declaration_digest
-                ):
-                    return ApplyResult(
-                        success=False,
-                        snapshot=working,
-                        diagnostics=[
-                            Diagnostic(
-                                code="runtime.participant-execution-state-conflict",
-                                domain="participant",
-                                address=policy.address,
-                                message=(
-                                    "Existing participant execution service state "
-                                    "does not match the admitted policy, bindings, "
-                                    "or shared-time declaration."
-                                ),
-                            )
-                        ],
-                    )
-            else:
-                services[policy.address] = expected_service.model_dump(mode="json")
-                working = working.with_entries(
-                    dict(working.entries),
-                    participant_execution_services=services,
-                )
-                changed.append(policy.address)
+            if not policy_result.success:
+                return policy_result
+            working = policy_result.snapshot
+            changed.extend(policy_result.changed_addresses)
         return ApplyResult(
             success=True,
             snapshot=working,
@@ -354,29 +433,19 @@ class ParticipantScheduler:
         for policy in policies:
             if policy.clock_address != clock_address:
                 continue
-            current_tick = _clock_tick(snapshot, clock_address)
-            activity_control = activity_control_for(policy, resolved_activity_controls)
-            context = clock_reset_context(
+            policy_result = reset_policy_at_clock(
                 policy,
                 time_model,
                 participant_runtime,
-                segment,
-                current_tick,
-                reset_participants,
-                activity_control,
-            )
-            for participant_address in policy.participant_addresses:
-                result = reset_scheduler_participant(context, working, participant_address)
-                if not result.success:
-                    return result
-                working = result.snapshot
-                changed.extend(result.changed_addresses)
-            working, service_changed = reset_execution_service(
                 working,
-                policy.address,
+                segment,
+                reset_participants,
+                resolved_activity_controls,
             )
-            if service_changed:
-                changed.append(policy.address)
+            if not policy_result.success:
+                return policy_result
+            working = policy_result.snapshot
+            changed.extend(policy_result.changed_addresses)
         return ApplyResult(
             success=True,
             snapshot=working,

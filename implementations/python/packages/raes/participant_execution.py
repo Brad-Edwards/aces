@@ -10,6 +10,7 @@ from pydantic import Field, field_validator, model_validator
 from ._base import SDLModel
 from ._identifiers import PortableIdentifier
 from .participant_action_semantics import ParticipantFailureClass
+from .participant_resource_budgets import ParticipantResourceBudgetPolicy
 
 
 class ParticipantExecutionFailurePolicy(str, Enum):
@@ -200,7 +201,34 @@ class ParticipantAutonomousExecutionPolicyV2(SDLModel):
         return self
 
 
-ParticipantAutonomousExecutionPolicy = ParticipantAutonomousExecutionPolicyV1 | ParticipantAutonomousExecutionPolicyV2
+class ParticipantAutonomousExecutionPolicyV3(ParticipantAutonomousExecutionPolicyV2):
+    """V2 activity plus scoped multi-resource governance."""
+
+    profile: Literal["participant-autonomous-execution/v3"]
+    resource_budget: ParticipantResourceBudgetPolicy
+
+    @model_validator(mode="after")
+    def _validate_concurrency_projection(self) -> ParticipantAutonomousExecutionPolicyV3:
+        participant_concurrency = [
+            dimension
+            for dimension in self.resource_budget.dimensions.values()
+            if dimension.resource_kind.value == "concurrent_actions"
+            and self.resource_budget.owners[dimension.owner_ref].kind.value == "participant"
+        ]
+        if len(participant_concurrency) != 1:
+            raise ValueError(
+                "participant-autonomous-execution/v3 requires exactly one participant-owned concurrent_actions budget"
+            )
+        if participant_concurrency[0].limit != self.max_in_flight:
+            raise ValueError("participant concurrent_actions budget limit must equal max_in_flight")
+        return self
+
+
+ParticipantAutonomousExecutionPolicy = (
+    ParticipantAutonomousExecutionPolicyV1
+    | ParticipantAutonomousExecutionPolicyV2
+    | ParticipantAutonomousExecutionPolicyV3
+)
 
 
 __all__ = [
@@ -209,6 +237,7 @@ __all__ = [
     "ParticipantAutonomousExecutionPolicy",
     "ParticipantAutonomousExecutionPolicyV1",
     "ParticipantAutonomousExecutionPolicyV2",
+    "ParticipantAutonomousExecutionPolicyV3",
     "ParticipantEvaluationAuthority",
     "ParticipantEvaluationAuthorityMode",
     "ParticipantExecutionFailurePolicy",

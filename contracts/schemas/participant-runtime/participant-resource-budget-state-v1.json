@@ -1,0 +1,184 @@
+{
+  "$id": "https://raes.dev/schemas/participant-resource-budget-state-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "accounting_mode": {
+      "enum": [
+        "windowed_counter",
+        "cumulative_counter",
+        "reservable_gauge",
+        "growth_counter",
+        "lease"
+      ],
+      "title": "Accounting Mode",
+      "type": "string"
+    },
+    "budget_id": {
+      "minLength": 1,
+      "title": "Budget Id",
+      "type": "string"
+    },
+    "configured_capacity": {
+      "maximum": 1000000000000000000,
+      "minimum": 1,
+      "title": "Configured Capacity",
+      "type": "integer"
+    },
+    "cumulative_use": {
+      "maximum": 1000000000000000000,
+      "minimum": 0,
+      "title": "Cumulative Use",
+      "type": "integer"
+    },
+    "current_use": {
+      "maximum": 1000000000000000000,
+      "minimum": 0,
+      "title": "Current Use",
+      "type": "integer"
+    },
+    "evidence_refs": {
+      "default": [],
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Evidence Refs",
+      "type": "array"
+    },
+    "generation": {
+      "minimum": 0,
+      "title": "Generation",
+      "type": "integer"
+    },
+    "last_event_ref": {
+      "minLength": 1,
+      "title": "Last Event Ref",
+      "type": "string"
+    },
+    "limit": {
+      "maximum": 1000000000000000000,
+      "minimum": 1,
+      "title": "Limit",
+      "type": "integer"
+    },
+    "meter_profile_ref": {
+      "minLength": 1,
+      "title": "Meter Profile Ref",
+      "type": "string"
+    },
+    "owner_kind": {
+      "enum": [
+        "participant",
+        "deployment_tenant",
+        "shared_service",
+        "fleet"
+      ],
+      "title": "Owner Kind",
+      "type": "string"
+    },
+    "owner_ref": {
+      "minLength": 1,
+      "title": "Owner Ref",
+      "type": "string"
+    },
+    "policy_address": {
+      "minLength": 1,
+      "title": "Policy Address",
+      "type": "string"
+    },
+    "pool_ref": {
+      "minLength": 1,
+      "title": "Pool Ref",
+      "type": "string"
+    },
+    "reconciliation_status": {
+      "enum": [
+        "reconciled",
+        "pending",
+        "unreconciled"
+      ],
+      "title": "Reconciliation Status",
+      "type": "string"
+    },
+    "rejected": {
+      "minimum": 0,
+      "title": "Rejected",
+      "type": "integer"
+    },
+    "reserved": {
+      "maximum": 1000000000000000000,
+      "minimum": 0,
+      "title": "Reserved",
+      "type": "integer"
+    },
+    "reset": {
+      "enum": [
+        "episode",
+        "time_segment",
+        "run",
+        "reconciled"
+      ],
+      "title": "Reset",
+      "type": "string"
+    },
+    "resource_kind": {
+      "enum": [
+        "action_rate",
+        "concurrent_actions",
+        "storage_growth",
+        "inference_tokens",
+        "image_generations",
+        "accelerator"
+      ],
+      "title": "Resource Kind",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "participant-resource-budget-state/v1",
+      "default": "participant-resource-budget-state/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "state_ref": {
+      "minLength": 1,
+      "title": "State Ref",
+      "type": "string"
+    },
+    "throttled": {
+      "minimum": 0,
+      "title": "Throttled",
+      "type": "integer"
+    },
+    "unit": {
+      "minLength": 1,
+      "title": "Unit",
+      "type": "string"
+    }
+  },
+  "required": [
+    "state_ref",
+    "budget_id",
+    "policy_address",
+    "owner_kind",
+    "owner_ref",
+    "pool_ref",
+    "resource_kind",
+    "unit",
+    "accounting_mode",
+    "meter_profile_ref",
+    "reset",
+    "generation",
+    "limit",
+    "configured_capacity",
+    "reserved",
+    "current_use",
+    "cumulative_use",
+    "throttled",
+    "rejected",
+    "reconciliation_status",
+    "last_event_ref"
+  ],
+  "title": "ParticipantResourceBudgetStateModel",
+  "type": "object"
+}

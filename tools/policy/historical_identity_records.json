@@ -29,8 +29,8 @@
       "path": "contracts/provenance/sdl-lineage-ledger-v1.json",
       "record_class": "provenance-record",
       "rationale": "Preserves append-only lineage observations recorded before the RAES identity cutover.",
-      "occurrences": 350,
-      "content_sha256": "2ded49472972eaeedf5753ff64e420020e0576e9d7753f0271046a7340d9ada9"
+      "occurrences": 346,
+      "content_sha256": "362f96df38c79d9d33f85e69a919b4f0e3732482e9589b26c932470bc6e7d82f"
     },
     {
       "path": "contracts/schema-publication/tombstones/\u0061ces-semantic-invariants-v1.json",
@@ -44,7 +44,7 @@
       "record_class": "historical-index",
       "rationale": "Indexes immutable pre-cutover ADR titles, paths, pins, and amendment summaries without making them current identity surf\u0061ces.",
       "occurrences": 4,
-      "content_sha256": "bcb796f8491d00f1c842cffbfe36dc3c0fccd5838e7353d1d600f6a780bfa184"
+      "content_sha256": "a467393349328faccb797dfb20c871cbfe3a4ce4b115c64630a6b136a7089744"
     },
     {
       "path": "docs/decisions/adrs/adr-000-use-adrs.md",
@@ -1577,7 +1577,7 @@
       "record_class": "research-record",
       "rationale": "Preserves preregistered, frozen, dated, or lineage-bearing research evidence from before the RAES identity cutover.",
       "occurrences": 24,
-      "content_sha256": "050e205672cf340fa167e2a2d7b3e2739f058794eb28d34b68612767249a511a"
+      "content_sha256": "89676790565dc970e4f07ff48dd705094124877bdd4f4aaa7e574c4cce4af9e9"
     },
     {
       "path": "docs/research/participant-backend-contracts/index.md",

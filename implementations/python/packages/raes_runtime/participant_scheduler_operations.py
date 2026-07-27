@@ -30,31 +30,13 @@ from .participant_activity_support import (
     persist_activity_state,
 )
 from .participant_scheduler_concurrency import participant_generation_commit_diagnostic, run_policy_due_concurrently
-from .participant_scheduler_time import clock_coordinate, participant_time_domain
+from .participant_scheduler_resources import (
+    commit_activity_resources,
+    measurement_requirements,
+    reserve_activity_resources,
+)
+from .participant_scheduler_time import cadence_missed_result, clock_coordinate, participant_time_domain
 from .participant_scheduler_types import SchedulerRunState, _DueActionContext
-
-
-def _cadence_missed_result(
-    working: RuntimeSnapshot,
-    key: str,
-    current_tick: int,
-    state: ParticipantAutonomousExecutionStateModel,
-) -> ApplyResult:
-    return ApplyResult(
-        success=False,
-        snapshot=working,
-        diagnostics=[
-            Diagnostic(
-                code="runtime.participant-autonomous-cadence-missed",
-                domain="participant",
-                address=key,
-                message=(
-                    f"Shared clock is at tick {current_tick}, after the next governed "
-                    f"participant cadence tick {state.next_tick}."
-                ),
-            )
-        ],
-    )
 
 
 def _bound_action_request(
@@ -64,7 +46,10 @@ def _bound_action_request(
 ) -> ParticipantActionAdmissionRequest:
     policy = context.policy
     action_address = policy.action_contract_addresses[state.next_action_index % len(policy.action_contract_addresses)]
-    if policy.profile == "participant-autonomous-execution/v2":
+    if policy.profile in {
+        "participant-autonomous-execution/v2",
+        "participant-autonomous-execution/v3",
+    }:
         action_instance_id = activity_attempt_id(
             policy_address=policy.address,
             participant_address=context.participant_address,
@@ -122,6 +107,7 @@ def _bound_action_request(
             target_addresses=matching_bindings[0].target_addresses,
             execution_scope_ref=policy.address,
             execution_generation=service.generation,
+            resource_measurement_requirements=measurement_requirements(policy),
         ),
     )
 
@@ -344,6 +330,8 @@ def _run_one_activity_action(
     run: SchedulerRunState,
 ) -> ParticipantAutonomousExecutionStateModel:
     request = _bound_action_request(context, run.working, state)
+    if not reserve_activity_resources(context, request, run):
+        return state
     predecessor = run.working
     result = context.participant_runtime.admit_action(request, predecessor)
     protocol_violation = autonomous_action_result_violation(
@@ -353,6 +341,14 @@ def _run_one_activity_action(
         predecessor=predecessor,
     )
     protocol_failure = _record_protocol_result(run, context, predecessor, result, protocol_violation)
+    if not commit_activity_resources(
+        context,
+        request,
+        result,
+        protocol_failure=protocol_failure,
+        run=run,
+    ):
+        return state
     action_result = getattr(result, "action_result", None)
     status = getattr(getattr(action_result, "status", None), "value", getattr(action_result, "status", None))
     action_succeeded = bool(not protocol_failure and result.success and status == "succeeded")
@@ -463,7 +459,7 @@ def run_participant_due(
         run.working.participant_autonomous_execution_states[key]
     )
     if state.lifecycle_state == "running" and state.next_tick < current_tick:
-        run.failure = _cadence_missed_result(run.working, key, current_tick, state)
+        run.failure = cadence_missed_result(run.working, key, current_tick, state)
         return
     action_context = _DueActionContext(
         policy=policy,
@@ -475,7 +471,10 @@ def run_participant_due(
         cadence_ticks=cadence_ticks,
         activity_control=activity_control_for(policy, activity_controls or {}),
     )
-    if policy.profile == "participant-autonomous-execution/v2":
+    if policy.profile in {
+        "participant-autonomous-execution/v2",
+        "participant-autonomous-execution/v3",
+    }:
         _run_participant_activity_due(action_context, state, run)
         return
     action_is_due = (

@@ -61,6 +61,37 @@ the authored disposition exactly: `skip` terminates that scheduling path;
 `next_opening` performs a finite forward search over declared work windows. It
 never clamps, redraws, sleeps on wall time, or consults host calendar state.
 
+## V3 Scoped Resource Policy
+
+`participant-autonomous-execution/v3` preserves all v2 activity semantics and
+adds one required `resource_budget`. A policy declares a finite owner table,
+one fairness obligation, and a complete typed demand vector containing:
+
+- action-rate (`actions`, windowed counter);
+- concurrent-action (`actions`, reservable gauge);
+- storage-growth (`bytes`, growth counter);
+- inference-token (`tokens`, windowed or cumulative counter);
+- image-generation (`images`, windowed or cumulative counter); and
+- accelerator (`accelerator_milliseconds`, lease).
+
+Each demand binds exactly one owner, logical pool, unit, accounting mode,
+meter profile, limit, reservation quantity, and reset owner. Owner kinds are
+participant, deployment tenant, shared service, and fleet. Participant,
+deployment-tenant, and shared-service refs resolve to their existing canonical
+addresses; a resource owner grants no participant authority or cross-tenant
+access. Deployment-tenant ownership must match an authorized execution target,
+and shared-service ownership must match both the exact target and an explicit
+tenant `uses_shared_service` edge. The optional parent relation is acyclic,
+preserves resource kind, unit, accounting mode, and meter, and cannot increase
+or overcommit its parent limit. Two budget ids cannot alias one canonical pool.
+Storage growth resets only through evidence-backed reconciliation. The single
+participant-owned concurrent-action limit equals `max_in_flight`, so execution
+service and budget readback cannot become independent authorities.
+
+V1 and v2 limits compile into the same canonical demand representation with
+`legacy_maximum` provenance. They do not acquire v3 capacity, fairness,
+isolation, or runtime-accounting requirements.
+
 ## Non-Evaluated Authority Invariant
 
 When `evaluation_authority.mode = none`:
@@ -142,6 +173,18 @@ An action may commit only in this order:
 5. require a typed native outcome distinct from control-operation success;
 6. append action, state-transition, and observation events; and
 7. update typed scheduler readback.
+
+V3 inserts an atomic reservation of the complete resource vector before step
+4. Physical capacity is owned by one canonical pool ledger shared across
+policies. An exactly-once commit occurs only after the native result supplies
+the complete matching operation/generation/resource/unit/meter measurement
+vector with evidence; protocol failure or an absent/untrusted vector releases
+or rolls back the reservation.
+If any dimension or ancestor pool cannot reserve, no dimension reserves and
+the native action is not invoked. Stable action identity makes reservation and
+settlement idempotent. Every throttle, reservation, commit, release, or reset
+reconciliation is a typed, generation-fenced event; metadata and log text are
+not authoritative accounting.
 
 The scheduler applies these checks to every participant-runtime implementation,
 not only implementations derived from the reference base class. If the result
@@ -248,6 +291,14 @@ pacing marks the service degraded, not ready, and paused and appends an
 explicit pacing-deviation evidence reference; it is never silently treated as
 successful timing.
 
+V3 reset reconciles outstanding reservations before advancing the execution
+generation. A `time_segment` boundary clears only dimensions owned by that
+boundary. Tenant, shared-service, fleet, and persistent storage use survive
+participant or segment reset unless their own declared reset/reconciliation
+rule applies. Execution-service resource refs name the authoritative budget
+states; its concurrency capacity, reservation, and in-flight projection must
+equal the referenced concurrent-action state.
+
 ## Backend Admission
 
 Let backend capability \(K\) declare supported strategies and finite maxima.
@@ -308,6 +359,25 @@ V2 additionally requires exact admission of:
 Missing or differently named support fails admission; no compatible-profile,
 transform, or strategy fallback is inferred.
 
+V3 additionally requires exact, all-or-nothing admission of:
+
+- the complete six-kind demand vector and owner/parent graph;
+- bounded or exact backend support for every owner, kind, accounting mode,
+  reset mode, and fairness policy;
+- one configuration-bound pool entry matching each demand's canonical owner,
+  pool, kind, unit, accounting mode, and meter;
+- configured capacity at least equal to the admitted limit;
+- tenant-partitioned isolation for every declared cross-range pool; and
+- the budget state and event realization contracts.
+
+Manifest support, configured capacity, and measured realization are distinct
+authorities. A capability declaration is not utilization evidence; a runtime
+sample cannot enlarge configured capacity. Fairness is explicit and
+role-independent: priority class, weight, protected posture, borrowing,
+reclaim, queue bound, and starvation bound are admitted as one obligation.
+Backends may not infer priority from participant color or evaluation
+authority.
+
 ## Nonclaims
 
 This contract does not prove participant intelligence, human realism, service
@@ -329,4 +399,7 @@ execution remains rejected because no portable transition-notification
 contract is yet governed. This establishes the portable protocol behavior only. A
 production backend still must prove that its selected participant
 implementation, native adapter, targets, evidence, and readback faithfully
-materialize a scenario.
+materialize a scenario. V3 additionally covers canonical legacy projection,
+atomic multi-resource admission and reservation, typed runtime state/events,
+generation-fenced settlement and reset reconciliation, durable/control-plane
+projection, and cross-range isolation rejection.

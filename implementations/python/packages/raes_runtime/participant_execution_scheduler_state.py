@@ -8,6 +8,7 @@ from dataclasses import asdict
 
 from raes_contracts.contracts import ParticipantAutonomousExecutionStateModel
 from raes_contracts.contracts.participant_execution import ParticipantExecutionServiceStateModel
+from raes_contracts.contracts.participant_resource_budgets import participant_resource_budget_state_ref
 from raes_contracts.runtime_state import ApplyResult, RuntimeSnapshot
 from raes_processor.models import CompiledTimeModel, ParticipantAutonomousExecutionRuntime
 
@@ -56,6 +57,14 @@ def execution_service_state(
         ),
         scheduler_state_refs=tuple(
             f"{policy.address}.state.{participant_address}" for participant_address in policy.participant_addresses
+        ),
+        resource_budget_state_refs=(
+            tuple(
+                participant_resource_budget_state_ref(policy.address, demand.budget_id)
+                for demand in policy.resource_demands
+            )
+            if policy.profile == "participant-autonomous-execution/v3"
+            else ()
         ),
         capacity=policy.max_in_flight,
         reserved=0,

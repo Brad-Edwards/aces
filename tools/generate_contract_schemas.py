@@ -77,6 +77,10 @@ def _schema_output_path(schemas_dir: Path, name: str) -> Path:
         "participant-execution-binding-v1",
         "participant-execution-control-v1",
         "participant-execution-service-state-v1",
+        "participant-resource-budget-policy-v1",
+        "participant-resource-pool-capacity-v1",
+        "participant-resource-budget-state-v1",
+        "participant-resource-budget-event-v1",
         "participant-outcome-report-v1",
         "runtime-fact-binding-plane-v1",
     }:

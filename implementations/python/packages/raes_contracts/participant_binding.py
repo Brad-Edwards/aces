@@ -6,6 +6,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from typing import Protocol, cast
 
+from . import participant_binding_validation as _binding_validation
 from .contracts import (
     ParticipantActionResultModel,
     ParticipantBehaviorHistoryEventModel,
@@ -20,6 +21,7 @@ from .contracts import (
     ParticipantObservationDetailsModel,
     ParticipantTemporalRuntimeContextModel,
 )
+from .contracts.participant_resource_budgets import ParticipantResourceMeasurementRequirementModel
 from .participant_action_arguments import (
     ParticipantActionArgumentScalar,
     ParticipantActionArgumentValue,
@@ -38,21 +40,6 @@ from .participant_binding_events import (
 from .participant_binding_events import (
     participant_behavior_event_payload,
     participant_implementation_actor_provenance,
-)
-from .participant_binding_validation import (
-    ACTION_CONTRACT_PREFIX as _ACTION_CONTRACT_PREFIX,
-)
-from .participant_binding_validation import (
-    OBSERVATION_BOUNDARY_PREFIX as _OBSERVATION_BOUNDARY_PREFIX,
-)
-from .participant_binding_validation import (
-    require_non_empty as _require_non_empty,
-)
-from .participant_binding_validation import (
-    require_prefixed as _require_prefixed,
-)
-from .participant_binding_validation import (
-    string_tuple as _string_tuple,
 )
 from .participant_native_execution import ParticipantNativeActionExecution
 from .runtime_state import ApplyResult
@@ -113,6 +100,7 @@ class ParticipantActionAdmissionRequest:
     target_addresses: tuple[str, ...] = ()
     execution_scope_ref: str | None = None
     execution_generation: int | None = None
+    resource_measurement_requirements: tuple[ParticipantResourceMeasurementRequirementModel, ...] = ()
 
     def __post_init__(self) -> None:
         _validate_admission_request_basics(self)
@@ -124,17 +112,21 @@ class ParticipantActionAdmissionRequest:
 
 
 def _validate_admission_request_basics(request: ParticipantActionAdmissionRequest) -> None:
-    _require_non_empty(request.participant_address, "participant_address")
-    _require_prefixed(request.action_contract_address, _ACTION_CONTRACT_PREFIX, "action_contract_address")
-    _require_prefixed(
+    _binding_validation.require_non_empty(request.participant_address, "participant_address")
+    _binding_validation.require_prefixed(
+        request.action_contract_address,
+        _binding_validation.ACTION_CONTRACT_PREFIX,
+        "action_contract_address",
+    )
+    _binding_validation.require_prefixed(
         request.observation_boundary_address,
-        _OBSERVATION_BOUNDARY_PREFIX,
+        _binding_validation.OBSERVATION_BOUNDARY_PREFIX,
         "observation_boundary_address",
     )
-    _require_non_empty(request.action_instance_id, "action_instance_id")
-    _require_non_empty(request.state_transition_kind, "state_transition_kind")
+    _binding_validation.require_non_empty(request.action_instance_id, "action_instance_id")
+    _binding_validation.require_non_empty(request.state_transition_kind, "state_transition_kind")
     if request.post_state_digest is not None:
-        _require_non_empty(request.post_state_digest, "post_state_digest")
+        _binding_validation.require_non_empty(request.post_state_digest, "post_state_digest")
     if not isinstance(request.implementation_manifest, ParticipantImplementationManifestModel):
         raise TypeError("implementation_manifest must be a ParticipantImplementationManifestModel")
     if not isinstance(request.implementation_selection, ParticipantImplementationSelectionModel):
@@ -155,11 +147,12 @@ def _validate_admission_request_selection_and_execution(request: ParticipantActi
     if (request.execution_scope_ref is None) != (request.execution_generation is None):
         raise ValueError("execution_scope_ref and execution_generation must be provided together")
     if request.execution_scope_ref is not None:
-        _require_non_empty(request.execution_scope_ref, "execution_scope_ref")
+        _binding_validation.require_non_empty(request.execution_scope_ref, "execution_scope_ref")
         if request.execution_generation is None or request.execution_generation < 0:
             raise ValueError("execution_generation must be non-negative")
         if not request.target_addresses:
             raise ValueError("generation-bound participant actions require target_addresses")
+    _binding_validation.validate_resource_measurement_requirements(request.resource_measurement_requirements)
 
 
 def _validate_and_normalize_admission_request_contexts(request: ParticipantActionAdmissionRequest) -> None:
@@ -174,7 +167,11 @@ def _validate_and_normalize_admission_request_contexts(request: ParticipantActio
         "observation_boundary_evidence_refs",
         "target_addresses",
     ):
-        object.__setattr__(request, field_name, _string_tuple(getattr(request, field_name), field_name))
+        object.__setattr__(
+            request,
+            field_name,
+            _binding_validation.string_tuple(getattr(request, field_name), field_name),
+        )
 
 
 @dataclass
