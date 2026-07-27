@@ -372,10 +372,12 @@ def test_dropping_a_canonical_record_is_rejected(tmp_path: Path) -> None:
 
 
 def test_canonical_record_ids_are_pinned() -> None:
-    assert {
+    expected = {
         "legacy-python-distribution",
         "sdl-import-path-field",
-    } == CANONICAL_DEPRECATION_RECORD_IDS
+    }
+    actual = CANONICAL_DEPRECATION_RECORD_IDS
+    assert actual == expected
 
 
 def test_surface_classes_cover_known_matrix_rows() -> None:
