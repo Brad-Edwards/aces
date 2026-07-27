@@ -274,6 +274,14 @@ class ParticipantRuntimeCapabilities:
             raise ValueError("autonomous execution requires exact supported observation boundaries")
         if not self.supported_autonomous_policy_profiles:
             raise ValueError("autonomous execution requires exact supported policy profiles")
+        self._validate_activity_profiles()
+        self._validate_autonomous_addresses()
+        self._validate_execution_control()
+        for label, value in self._autonomous_limits():
+            if value is None or value < 1:
+                raise ValueError(f"autonomous execution requires positive {label}")
+
+    def _validate_activity_profiles(self) -> None:
         if {
             "participant-autonomous-execution/v2",
             "participant-autonomous-execution/v3",
@@ -287,11 +295,6 @@ class ParticipantRuntimeCapabilities:
             and self.resource_budgets is None
         ):
             raise ValueError("autonomous execution v3 requires participant resource-budget capabilities")
-        self._validate_autonomous_addresses()
-        self._validate_execution_control()
-        for label, value in self._autonomous_limits():
-            if value is None or value < 1:
-                raise ValueError(f"autonomous execution requires positive {label}")
 
     def _validate_execution_control(self) -> None:
         self._validate_execution_control_actions()

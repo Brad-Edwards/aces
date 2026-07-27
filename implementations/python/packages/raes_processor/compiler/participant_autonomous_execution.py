@@ -32,16 +32,18 @@ def _resource_owner_address(
         matching = tuple(address for address in participant_addresses if address.endswith(f".{ref}"))
         if len(matching) != 1:
             raise ValueError("participant resource owner must resolve to one policy participant")
-        return matching[0]
-    if kind == "deployment_tenant":
+        address = matching[0]
+    elif kind == "deployment_tenant":
         name = _section_ref_name(ref, "deployment_tenants", scenario.deployment_tenants)
-        return _address("deployment", "tenant", name)
-    if kind == "shared_service":
+        address = _address("deployment", "tenant", name)
+    elif kind == "shared_service":
         resolved = _resolve_node_service_ref(scenario, ref)
         if resolved is None:
             raise ValueError("shared-service resource owner must resolve to one node service")
-        return _address("provision", "node", resolved[0], "service", resolved[1])
-    return ref
+        address = _address("provision", "node", resolved[0], "service", resolved[1])
+    else:
+        address = ref
+    return address
 
 
 def _legacy_resource_demands(

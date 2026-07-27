@@ -127,6 +127,51 @@ class ParticipantResourceBudgetDimension(SDLModel):
         return self
 
 
+def _dimension_semantics(dimension: ParticipantResourceBudgetDimension) -> tuple[object, ...]:
+    return (
+        dimension.resource_kind,
+        dimension.unit,
+        dimension.accounting_mode,
+        dimension.meter_profile_ref,
+    )
+
+
+def _visit_parent_budget(
+    dimensions: dict[PortableIdentifier, ParticipantResourceBudgetDimension],
+    budget_id: str,
+    visiting: set[str],
+    visited: set[str],
+) -> None:
+    if budget_id in visiting:
+        raise ValueError("resource-budget parent aggregation graph must be acyclic")
+    if budget_id in visited:
+        return
+    visiting.add(budget_id)
+    dimension = dimensions[budget_id]
+    parent_ref = dimension.parent_budget_ref
+    if parent_ref is not None:
+        parent = dimensions[parent_ref]
+        if _dimension_semantics(dimension) != _dimension_semantics(parent):
+            raise ValueError("resource-budget parent must use the same resource, unit, mode, and meter")
+        if dimension.limit > parent.limit:
+            raise ValueError("resource-budget child limit cannot exceed its parent")
+        _visit_parent_budget(dimensions, str(parent_ref), visiting, visited)
+    visiting.remove(budget_id)
+    visited.add(budget_id)
+
+
+def _validate_sibling_limits(
+    dimensions: dict[PortableIdentifier, ParticipantResourceBudgetDimension],
+) -> None:
+    children_by_parent: dict[str, list[ParticipantResourceBudgetDimension]] = {}
+    for dimension in dimensions.values():
+        if dimension.parent_budget_ref is not None:
+            children_by_parent.setdefault(str(dimension.parent_budget_ref), []).append(dimension)
+    for parent_id, children in children_by_parent.items():
+        if sum(child.limit for child in children) > dimensions[parent_id].limit:
+            raise ValueError("resource-budget sibling limits cannot exceed their parent limit")
+
+
 class ParticipantResourceBudgetPolicy(SDLModel):
     policy_id: PortableIdentifier
     owners: dict[PortableIdentifier, ParticipantResourceOwner] = Field(min_length=1, max_length=1024)
@@ -174,45 +219,9 @@ class ParticipantResourceBudgetPolicy(SDLModel):
         visiting: set[str] = set()
         visited: set[str] = set()
 
-        def visit(budget_id: str) -> None:
-            if budget_id in visiting:
-                raise ValueError("resource-budget parent aggregation graph must be acyclic")
-            if budget_id in visited:
-                return
-            visiting.add(budget_id)
-            dimension = self.dimensions[budget_id]
-            parent_ref = dimension.parent_budget_ref
-            if parent_ref is not None:
-                parent = self.dimensions[parent_ref]
-                comparable = (
-                    dimension.resource_kind,
-                    dimension.unit,
-                    dimension.accounting_mode,
-                    dimension.meter_profile_ref,
-                )
-                parent_comparable = (
-                    parent.resource_kind,
-                    parent.unit,
-                    parent.accounting_mode,
-                    parent.meter_profile_ref,
-                )
-                if comparable != parent_comparable:
-                    raise ValueError("resource-budget parent must use the same resource, unit, mode, and meter")
-                if dimension.limit > parent.limit:
-                    raise ValueError("resource-budget child limit cannot exceed its parent")
-                visit(str(parent_ref))
-            visiting.remove(budget_id)
-            visited.add(budget_id)
-
         for budget_id in self.dimensions:
-            visit(str(budget_id))
-        children_by_parent: dict[str, list[ParticipantResourceBudgetDimension]] = {}
-        for dimension in self.dimensions.values():
-            if dimension.parent_budget_ref is not None:
-                children_by_parent.setdefault(str(dimension.parent_budget_ref), []).append(dimension)
-        for parent_id, children in children_by_parent.items():
-            if sum(child.limit for child in children) > self.dimensions[parent_id].limit:
-                raise ValueError("resource-budget sibling limits cannot exceed their parent limit")
+            _visit_parent_budget(self.dimensions, str(budget_id), visiting, visited)
+        _validate_sibling_limits(self.dimensions)
 
 
 __all__ = [

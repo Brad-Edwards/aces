@@ -421,12 +421,13 @@ def test_v3_resource_budget_compiles_complete_typed_vector() -> None:
 def test_resource_owners_must_bind_to_authorized_execution_topology() -> None:
     payload = yaml.safe_load(_budget_policy_yaml())
     del payload["relationships"]["range-a-inference-service"]
+    serialized = yaml.safe_dump(payload, sort_keys=False)
 
     with pytest.raises(
         SDLValidationError,
         match="lacks an authorized tenant uses_shared_service edge",
     ):
-        parse_sdl(yaml.safe_dump(payload, sort_keys=False))
+        parse_sdl(serialized)
 
 
 def test_composition_rewrites_kind_specific_resource_owner_refs() -> None:
@@ -871,6 +872,7 @@ def test_cross_range_shared_pool_requires_partitioned_isolation() -> None:
         replace(pool, tenant_isolation="none") if pool.pool_ref == "inference-pool" else pool
         for pool in capabilities.configured_pools
     )
+    cross_range_pool_refs = frozenset({"inference-pool"})
 
     with pytest.raises(ValueError, match="cross-range.*tenant_partitioned"):
         ParticipantResourceBudgetCapabilities(
@@ -883,7 +885,7 @@ def test_cross_range_shared_pool_requires_partitioned_isolation() -> None:
             supported_isolation_strengths=capabilities.supported_isolation_strengths,
             configured_pools=shared,
             realization_contract_ids=capabilities.realization_contract_ids,
-            cross_range_pool_refs=frozenset({"inference-pool"}),
+            cross_range_pool_refs=cross_range_pool_refs,
         )
 
 

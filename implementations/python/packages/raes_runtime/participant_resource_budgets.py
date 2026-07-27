@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from typing import Protocol
 
 from raes_contracts.contracts.participant_resource_budgets import (
@@ -10,21 +11,14 @@ from raes_contracts.contracts.participant_resource_budgets import (
     ParticipantResourceBudgetStateModel,
     ParticipantResourcePoolStateModel,
     participant_resource_budget_state_ref,
-    participant_resource_pool_state_ref,
 )
 from raes_contracts.diagnostics import Diagnostic
 from raes_contracts.runtime_state import ApplyResult, RuntimeSnapshot
 
 from .participant_resource_pool_ledger import (
-    can_reserve as pool_can_reserve,
-)
-from .participant_resource_pool_ledger import (
     ensure_allocation,
     new_pool_state,
     pool_state_ref,
-)
-from .participant_resource_pool_ledger import (
-    reserve as reserve_pool_allocation,
 )
 
 
@@ -80,6 +74,14 @@ class ResourceCapabilities(Protocol):
     configured_pools: tuple[ResourcePool, ...]
 
 
+@dataclass
+class _InitializationMutation:
+    snapshot: RuntimeSnapshot
+    execution_generation: int
+    states: dict[str, dict[str, object]]
+    pool_states: dict[str, dict[str, object]]
+
+
 def _diagnostic(code: str, policy_address: str, message: str) -> Diagnostic:
     return Diagnostic(
         code=code,
@@ -122,6 +124,109 @@ def _matching_pool(demand: ResourceDemand, capabilities: ResourceCapabilities) -
     )
 
 
+def _initialization_failure(
+    mutation: _InitializationMutation,
+    policy: ResourcePolicy,
+    code: str,
+    message: str,
+) -> ApplyResult:
+    return ApplyResult(
+        success=False,
+        snapshot=mutation.snapshot,
+        diagnostics=[_diagnostic(code, policy.address, message)],
+    )
+
+
+def _new_budget_state(
+    policy: ResourcePolicy,
+    demand: ResourceDemand,
+    pool: ResourcePool,
+    execution_generation: int,
+) -> ParticipantResourceBudgetStateModel:
+    state_ref = participant_resource_budget_state_ref(policy.address, demand.budget_id)
+    return ParticipantResourceBudgetStateModel(
+        state_ref=state_ref,
+        budget_id=demand.budget_id,
+        policy_address=policy.address,
+        owner_kind=demand.owner_kind,
+        owner_ref=demand.owner_address,
+        pool_ref=demand.pool_ref,
+        resource_kind=demand.resource_kind,
+        unit=demand.unit,
+        accounting_mode=demand.accounting_mode,
+        meter_profile_ref=demand.meter_profile_ref,
+        reset=demand.reset,
+        generation=execution_generation,
+        limit=demand.limit,
+        configured_capacity=pool.capacity,
+        reserved=0,
+        current_use=0,
+        cumulative_use=0,
+        throttled=0,
+        rejected=0,
+        reconciliation_status="reconciled",
+        last_event_ref=f"initial:{state_ref}",
+    )
+
+
+def _initialize_demand(
+    mutation: _InitializationMutation,
+    policy: ResourcePolicy,
+    demand: ResourceDemand,
+    capabilities: ResourceCapabilities,
+) -> ApplyResult | None:
+    failure = None
+    pool = _matching_pool(demand, capabilities)
+    if pool is None:
+        failure = _initialization_failure(
+            mutation,
+            policy,
+            "runtime.participant-resource-capacity-missing",
+            f"no exact configured capacity matches resource budget {demand.budget_id}",
+        )
+    elif policy.resource_fairness.protected and pool.protected_capacity < demand.reservation:
+        failure = _initialization_failure(
+            mutation,
+            policy,
+            "runtime.participant-resource-protected-capacity-missing",
+            f"resource budget {demand.budget_id} lacks its protected reservation",
+        )
+    else:
+        state_ref = participant_resource_budget_state_ref(policy.address, demand.budget_id)
+        existing = mutation.states.get(state_ref)
+        if existing is not None:
+            current = _state(existing)
+            if current.generation != mutation.execution_generation:
+                failure = _initialization_failure(
+                    mutation,
+                    policy,
+                    "runtime.participant-resource-state-conflict",
+                    f"resource budget {demand.budget_id} already has incompatible state",
+                )
+        else:
+            budget_state = _new_budget_state(policy, demand, pool, mutation.execution_generation)
+            exact_pool_ref = pool_state_ref(pool)
+            existing_pool = mutation.pool_states.get(exact_pool_ref)
+            physical_pool = new_pool_state(pool) if existing_pool is None else _pool_state(existing_pool)
+            try:
+                physical_pool = ensure_allocation(
+                    physical_pool,
+                    budget_state,
+                    fairness=policy.resource_fairness,
+                )
+            except ValueError as exc:
+                failure = _initialization_failure(
+                    mutation,
+                    policy,
+                    "runtime.participant-resource-pool-conflict",
+                    str(exc),
+                )
+            if failure is None:
+                mutation.states[state_ref] = _payload(budget_state)
+                mutation.pool_states[exact_pool_ref] = _payload(physical_pool)
+    return failure
+
+
 def initialize_participant_resource_budgets(
     snapshot: RuntimeSnapshot,
     policies: Sequence[ResourcePolicy],
@@ -131,191 +236,32 @@ def initialize_participant_resource_budgets(
 ) -> ApplyResult:
     """Materialize policy budgets and authoritative physical-pool allocations."""
 
-    states = dict(snapshot.participant_resource_budget_states)
-    pool_states = dict(snapshot.participant_resource_pool_states)
+    mutation = _InitializationMutation(
+        snapshot=snapshot,
+        execution_generation=execution_generation,
+        states=dict(snapshot.participant_resource_budget_states),
+        pool_states=dict(snapshot.participant_resource_pool_states),
+    )
+    failure = None
     for policy in policies:
         for demand in policy.resource_demands:
-            pool = _matching_pool(demand, capabilities)
-            if pool is None:
-                return ApplyResult(
-                    success=False,
-                    snapshot=snapshot,
-                    diagnostics=[
-                        _diagnostic(
-                            "runtime.participant-resource-capacity-missing",
-                            policy.address,
-                            f"no exact configured capacity matches resource budget {demand.budget_id}",
-                        )
-                    ],
-                )
-            if policy.resource_fairness.protected and pool.protected_capacity < demand.reservation:
-                return ApplyResult(
-                    success=False,
-                    snapshot=snapshot,
-                    diagnostics=[
-                        _diagnostic(
-                            "runtime.participant-resource-protected-capacity-missing",
-                            policy.address,
-                            f"resource budget {demand.budget_id} lacks its protected reservation",
-                        )
-                    ],
-                )
-            state_ref = participant_resource_budget_state_ref(policy.address, demand.budget_id)
-            existing = states.get(state_ref)
-            if existing is not None:
-                current = _state(existing)
-                if current.generation != execution_generation:
-                    return ApplyResult(
-                        success=False,
-                        snapshot=snapshot,
-                        diagnostics=[
-                            _diagnostic(
-                                "runtime.participant-resource-state-conflict",
-                                policy.address,
-                                f"resource budget {demand.budget_id} already has incompatible state",
-                            )
-                        ],
-                    )
-                continue
-            budget_state = ParticipantResourceBudgetStateModel(
-                state_ref=state_ref,
-                budget_id=demand.budget_id,
-                policy_address=policy.address,
-                owner_kind=demand.owner_kind,
-                owner_ref=demand.owner_address,
-                pool_ref=demand.pool_ref,
-                resource_kind=demand.resource_kind,
-                unit=demand.unit,
-                accounting_mode=demand.accounting_mode,
-                meter_profile_ref=demand.meter_profile_ref,
-                reset=demand.reset,
-                generation=execution_generation,
-                limit=demand.limit,
-                configured_capacity=pool.capacity,
-                reserved=0,
-                current_use=0,
-                cumulative_use=0,
-                throttled=0,
-                rejected=0,
-                reconciliation_status="reconciled",
-                last_event_ref=f"initial:{state_ref}",
-            )
-            states[state_ref] = _payload(budget_state)
-            exact_pool_ref = pool_state_ref(pool)
-            existing_pool = pool_states.get(exact_pool_ref)
-            physical_pool = new_pool_state(pool) if existing_pool is None else _pool_state(existing_pool)
-            try:
-                physical_pool = ensure_allocation(
-                    physical_pool,
-                    budget_state,
-                    fairness=policy.resource_fairness,
-                )
-            except ValueError as exc:
-                return ApplyResult(
-                    success=False,
-                    snapshot=snapshot,
-                    diagnostics=[
-                        _diagnostic(
-                            "runtime.participant-resource-pool-conflict",
-                            policy.address,
-                            str(exc),
-                        )
-                    ],
-                )
-            pool_states[exact_pool_ref] = _payload(physical_pool)
-    return ApplyResult(
-        success=True,
-        snapshot=snapshot.with_entries(
-            dict(snapshot.entries),
-            participant_resource_budget_states=states,
-            participant_resource_pool_states=pool_states,
-        ),
-    )
-
-
-def _reservation_event_id(operation_id: str, state_ref: str) -> str:
-    return f"{operation_id}:{state_ref}:reserve"
-
-
-def _used_capacity(state: ParticipantResourceBudgetStateModel) -> int:
-    if state.accounting_mode in {"reservable_gauge", "lease"}:
-        return state.current_use + state.reserved
-    return state.cumulative_use + state.reserved
-
-
-def _pool_ref_for_state(state: ParticipantResourceBudgetStateModel) -> str:
-    return participant_resource_pool_state_ref(
-        pool_ref=state.pool_ref,
-        owner_kind=state.owner_kind,
-        owner_ref=state.owner_ref,
-        resource_kind=state.resource_kind,
-        unit=state.unit,
-        accounting_mode=state.accounting_mode,
-        meter_profile_ref=state.meter_profile_ref,
-    )
-
-
-def _throttled_result(
-    snapshot: RuntimeSnapshot,
-    states: dict[str, dict[str, object]],
-    pool_states: dict[str, dict[str, object]],
-    events: dict[str, dict[str, object]],
-    *,
-    policy: ResourcePolicy,
-    demand: ResourceDemand,
-    current: ParticipantResourceBudgetStateModel,
-    operation_id: str,
-    execution_generation: int,
-    amount: int,
-    budget_available: bool,
-) -> ApplyResult:
-    event_id = f"{operation_id}:{current.state_ref}:throttle"
-    states[current.state_ref] = _payload(
-        current.model_copy(
-            update={
-                "throttled": current.throttled + 1,
-                "last_event_ref": event_id,
-            }
+            failure = _initialize_demand(mutation, policy, demand, capabilities)
+            if failure is not None:
+                break
+        if failure is not None:
+            break
+    if failure is not None:
+        result = failure
+    else:
+        result = ApplyResult(
+            success=True,
+            snapshot=snapshot.with_entries(
+                dict(snapshot.entries),
+                participant_resource_budget_states=mutation.states,
+                participant_resource_pool_states=mutation.pool_states,
+            ),
         )
-    )
-    events[event_id] = _payload(
-        ParticipantResourceBudgetEventModel(
-            event_id=event_id,
-            operation_id=operation_id,
-            budget_state_ref=current.state_ref,
-            budget_id=demand.budget_id,
-            policy_address=policy.address,
-            owner_ref=current.owner_ref,
-            pool_ref=current.pool_ref,
-            execution_generation=execution_generation,
-            transition="throttle",
-            disposition="throttled",
-            requested=amount,
-            resource_kind=current.resource_kind,
-            unit=current.unit,
-            meter_profile_ref=current.meter_profile_ref,
-            predecessor_event_ref=current.last_event_ref,
-        )
-    )
-    return ApplyResult(
-        success=False,
-        snapshot=snapshot.with_entries(
-            dict(snapshot.entries),
-            participant_resource_budget_states=states,
-            participant_resource_pool_states=pool_states,
-            participant_resource_budget_events=events,
-        ),
-        diagnostics=[
-            _diagnostic(
-                "runtime.participant-resource-throttled",
-                policy.address,
-                (
-                    f"resource budget {demand.budget_id} has insufficient "
-                    f"{'logical budget' if not budget_available else 'shared pool'} capacity"
-                ),
-            )
-        ],
-    )
+    return result
 
 
 def reserve_participant_resources(
@@ -328,133 +274,14 @@ def reserve_participant_resources(
 ) -> ApplyResult:
     """Reserve a policy's complete resource vector or reserve none of it."""
 
-    events = dict(snapshot.participant_resource_budget_events)
-    state_refs = [
-        participant_resource_budget_state_ref(policy.address, demand.budget_id) for demand in policy.resource_demands
-    ]
-    event_ids = [_reservation_event_id(operation_id, state_ref) for state_ref in state_refs]
-    if event_ids and all(event_id in events for event_id in event_ids):
-        return ApplyResult(success=True, snapshot=snapshot)
-    states = dict(snapshot.participant_resource_budget_states)
-    pool_states = dict(snapshot.participant_resource_pool_states)
-    checked: list[
-        tuple[
-            ResourceDemand,
-            ParticipantResourceBudgetStateModel,
-            ParticipantResourcePoolStateModel,
-            int,
-        ]
-    ] = []
-    for demand, state_ref in zip(policy.resource_demands, state_refs, strict=True):
-        raw = states.get(state_ref)
-        if raw is None:
-            return ApplyResult(
-                success=False,
-                snapshot=snapshot,
-                diagnostics=[
-                    _diagnostic(
-                        "runtime.participant-resource-state-missing",
-                        policy.address,
-                        f"resource budget {demand.budget_id} was not initialized",
-                    )
-                ],
-            )
-        current = _state(raw)
-        if current.generation != execution_generation:
-            return ApplyResult(
-                success=False,
-                snapshot=snapshot,
-                diagnostics=[
-                    _diagnostic(
-                        "runtime.participant-resource-stale-generation",
-                        policy.address,
-                        (
-                            f"resource budget {demand.budget_id} is generation {current.generation}; "
-                            f"request is generation {execution_generation}"
-                        ),
-                    )
-                ],
-            )
-        amount = (
-            requested_quantities.get(demand.budget_id, demand.reservation)
-            if requested_quantities is not None
-            else demand.reservation
-        )
-        if amount < 0:
-            raise ValueError("requested participant resource quantities must be non-negative")
-        exact_pool_ref = _pool_ref_for_state(current)
-        raw_pool = pool_states.get(exact_pool_ref)
-        if raw_pool is None:
-            return ApplyResult(
-                success=False,
-                snapshot=snapshot,
-                diagnostics=[
-                    _diagnostic(
-                        "runtime.participant-resource-pool-state-missing",
-                        policy.address,
-                        f"physical pool for resource budget {demand.budget_id} was not initialized",
-                    )
-                ],
-            )
-        physical_pool = _pool_state(raw_pool)
-        budget_available = _used_capacity(current) + amount <= min(
-            current.limit,
-            current.configured_capacity,
-        )
-        if not budget_available or not pool_can_reserve(physical_pool, state_ref, amount):
-            return _throttled_result(
-                snapshot,
-                states,
-                pool_states,
-                events,
-                policy=policy,
-                demand=demand,
-                current=current,
-                operation_id=operation_id,
-                execution_generation=execution_generation,
-                amount=amount,
-                budget_available=budget_available,
-            )
-        checked.append((demand, current, physical_pool, amount))
-    for demand, current, physical_pool, amount in checked:
-        event_id = _reservation_event_id(operation_id, current.state_ref)
-        event = ParticipantResourceBudgetEventModel(
-            event_id=event_id,
-            operation_id=operation_id,
-            budget_state_ref=current.state_ref,
-            budget_id=demand.budget_id,
-            policy_address=policy.address,
-            owner_ref=current.owner_ref,
-            pool_ref=current.pool_ref,
-            execution_generation=execution_generation,
-            transition="reserve",
-            disposition="reserved",
-            requested=amount,
-            resource_kind=current.resource_kind,
-            unit=current.unit,
-            meter_profile_ref=current.meter_profile_ref,
-            predecessor_event_ref=current.last_event_ref,
-        )
-        states[current.state_ref] = _payload(
-            current.model_copy(
-                update={
-                    "reserved": current.reserved + amount,
-                    "last_event_ref": event_id,
-                }
-            )
-        )
-        pool_states[physical_pool.pool_state_ref] = _payload(
-            reserve_pool_allocation(physical_pool, current.state_ref, amount)
-        )
-        events[event_id] = _payload(event)
-    return ApplyResult(
-        success=True,
-        snapshot=snapshot.with_entries(
-            dict(snapshot.entries),
-            participant_resource_budget_states=states,
-            participant_resource_pool_states=pool_states,
-            participant_resource_budget_events=events,
-        ),
+    from .participant_resource_reservation import reserve_participant_resources as reserve
+
+    return reserve(
+        snapshot,
+        policy,
+        operation_id=operation_id,
+        execution_generation=execution_generation,
+        requested_quantities=requested_quantities,
     )
 
 

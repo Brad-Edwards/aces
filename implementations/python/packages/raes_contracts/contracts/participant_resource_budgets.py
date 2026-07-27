@@ -32,6 +32,12 @@ from .participant_resource_types import (
 from .participant_resource_types import (
     require_quantity_semantics as _require_quantity_semantics,
 )
+from .participant_resource_validation import (
+    pool_allocated_total,
+    validate_budget_capabilities,
+    validate_budget_policy,
+    validate_pool_allocations,
+)
 
 
 class ParticipantResourceOwnerModel(ContractModel):
@@ -104,77 +110,7 @@ class ParticipantResourceBudgetPolicyModel(ContractModel):
 
     @model_validator(mode="after")
     def _validate_policy(self) -> ParticipantResourceBudgetPolicyModel:
-        owner_ids = [owner.owner_id for owner in self.owners]
-        budget_ids = [demand.budget_id for demand in self.demands]
-        if len(owner_ids) != len(set(owner_ids)):
-            raise ValueError("resource-budget policy owner ids must be unique")
-        if len(budget_ids) != len(set(budget_ids)):
-            raise ValueError("resource-budget policy budget ids must be unique")
-        owners = {owner.owner_id: owner for owner in self.owners}
-        demands = {demand.budget_id: demand for demand in self.demands}
-        required_kinds = set(_RESOURCE_UNIT)
-        actual_kinds = {demand.quantity.resource_kind for demand in self.demands}
-        missing = sorted(required_kinds - actual_kinds)
-        if missing:
-            raise ValueError("resource-budget policy requires complete resource vector: " + ", ".join(missing))
-        for demand in self.demands:
-            if demand.owner.owner_id not in owners or owners[demand.owner.owner_id] != demand.owner:
-                raise ValueError("resource-budget demand owner must resolve exactly in policy owners")
-            if demand.parent_budget_ref is not None and demand.parent_budget_ref not in demands:
-                raise ValueError("resource-budget demand parent must resolve in policy demands")
-        visiting: set[str] = set()
-        visited: set[str] = set()
-
-        def visit(budget_id: str) -> None:
-            if budget_id in visiting:
-                raise ValueError("resource-budget policy parent graph must be acyclic")
-            if budget_id in visited:
-                return
-            visiting.add(budget_id)
-            demand = demands[budget_id]
-            if demand.parent_budget_ref is not None:
-                parent = demands[demand.parent_budget_ref]
-                if (
-                    demand.quantity.resource_kind,
-                    demand.quantity.unit,
-                    demand.quantity.accounting_mode,
-                    demand.quantity.meter_profile_ref,
-                ) != (
-                    parent.quantity.resource_kind,
-                    parent.quantity.unit,
-                    parent.quantity.accounting_mode,
-                    parent.quantity.meter_profile_ref,
-                ):
-                    raise ValueError("resource-budget parent must use the same resource, unit, mode, and meter")
-                if demand.limit > parent.limit:
-                    raise ValueError("resource-budget child limit cannot exceed its parent")
-                visit(demand.parent_budget_ref)
-            visiting.remove(budget_id)
-            visited.add(budget_id)
-
-        for budget_id in demands:
-            visit(budget_id)
-        children_by_parent: dict[str, list[ParticipantResourceBudgetDemandModel]] = {}
-        for demand in self.demands:
-            if demand.parent_budget_ref is not None:
-                children_by_parent.setdefault(demand.parent_budget_ref, []).append(demand)
-        for parent_id, children in children_by_parent.items():
-            if sum(child.limit for child in children) > demands[parent_id].limit:
-                raise ValueError("resource-budget sibling limits cannot exceed their parent limit")
-        pool_keys = [
-            (
-                demand.pool_ref,
-                demand.owner.kind,
-                demand.owner.owner_ref,
-                demand.quantity.resource_kind,
-                demand.quantity.unit,
-                demand.quantity.accounting_mode,
-                demand.quantity.meter_profile_ref,
-            )
-            for demand in self.demands
-        ]
-        if len(pool_keys) != len(set(pool_keys)):
-            raise ValueError("resource-budget demands cannot alias the same canonical resource pool")
+        validate_budget_policy(self.owners, self.demands, set(_RESOURCE_UNIT))
         return self
 
 
@@ -229,42 +165,7 @@ class ParticipantResourceBudgetCapabilitiesModel(ContractModel):
 
     @model_validator(mode="after")
     def _validate_capabilities(self) -> ParticipantResourceBudgetCapabilitiesModel:
-        for field_name in (
-            "supported_owner_kinds",
-            "supported_resource_kinds",
-            "supported_accounting_modes",
-            "supported_reset_modes",
-            "supported_fairness_policies",
-            "supported_isolation_strengths",
-            "realization_contract_ids",
-            "cross_range_pool_refs",
-        ):
-            values = getattr(self, field_name)
-            if len(values) != len(set(values)):
-                raise ValueError(f"{field_name} must be unique")
-        keys = [(pool.pool_ref, pool.resource_kind, pool.meter_profile_ref) for pool in self.configured_pools]
-        if len(keys) != len(set(keys)):
-            raise ValueError("configured pool resource entries must be unique")
-        pools_by_ref = {
-            pool_ref: tuple(pool for pool in self.configured_pools if pool.pool_ref == pool_ref)
-            for pool_ref in self.cross_range_pool_refs
-        }
-        for _pool_ref, pools in pools_by_ref.items():
-            if not pools:
-                raise ValueError("cross-range pool ref must resolve")
-            if any(pool.tenant_isolation != "tenant_partitioned" for pool in pools):
-                raise ValueError("cross-range shared pools require tenant_partitioned isolation")
-        for pool in self.configured_pools:
-            if pool.owner_kind not in self.supported_owner_kinds:
-                raise ValueError("configured pool owner kind is not declared supported")
-            if pool.resource_kind not in self.supported_resource_kinds:
-                raise ValueError("configured pool resource kind is not declared supported")
-            if pool.accounting_mode not in self.supported_accounting_modes:
-                raise ValueError("configured pool accounting mode is not declared supported")
-            if pool.fairness_policy not in self.supported_fairness_policies:
-                raise ValueError("configured pool fairness policy is not declared supported")
-            if pool.tenant_isolation not in self.supported_isolation_strengths:
-                raise ValueError("configured pool isolation strength is not declared supported")
+        validate_budget_capabilities(self)
         return self
 
 
@@ -407,27 +308,8 @@ class ParticipantResourcePoolStateModel(ContractModel):
             raise ValueError("pool_state_ref must equal the canonical exact-pool identity")
         if self.protected_capacity > self.capacity:
             raise ValueError("protected capacity cannot exceed physical pool capacity")
-        for allocation_ref, allocation in self.allocations.items():
-            if allocation_ref != allocation.budget_state_ref:
-                raise ValueError("pool allocation map key must equal budget_state_ref")
-            if allocation.priority_class not in self.priority_classes:
-                raise ValueError("pool allocation priority class must be configured")
-            if allocation.borrowing != self.borrowing or allocation.reclaim != self.reclaim:
-                raise ValueError("pool allocation borrowing and reclaim must match pool authority")
-            if (
-                self.max_queue_ticks > allocation.max_queue_ticks
-                or self.starvation_bound_ticks > allocation.starvation_bound_ticks
-            ):
-                raise ValueError("pool allocation fairness bounds are weaker than required")
-        total = sum(
-            (
-                allocation.current_use + allocation.reserved
-                if self.accounting_mode in {"reservable_gauge", "lease"}
-                else allocation.cumulative_use + allocation.reserved
-            )
-            for allocation in self.allocations.values()
-        )
-        if total > self.capacity:
+        validate_pool_allocations(self)
+        if pool_allocated_total(self) > self.capacity:
             raise ValueError("physical pool allocations cannot exceed capacity")
         return self
 

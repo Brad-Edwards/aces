@@ -3,6 +3,7 @@
 from typing import Protocol
 
 from raes_contracts.contracts.participant_resource_budgets import (
+    ParticipantResourceMeasurementModel,
     ParticipantResourceMeasurementRequirementModel,
     participant_resource_budget_state_ref,
 )
@@ -18,6 +19,8 @@ from .participant_resource_budgets import (
     reserve_participant_resources,
 )
 from .participant_scheduler_types import SchedulerRunState, _DueActionContext
+
+_RESOURCE_GOVERNED_PROFILE = "participant-autonomous-execution/v3"
 
 
 class _MeasurementDemand(Protocol):
@@ -37,7 +40,7 @@ class _MeasurementPolicy(Protocol):
 def measurement_requirements(
     policy: _MeasurementPolicy,
 ) -> tuple[ParticipantResourceMeasurementRequirementModel, ...]:
-    if policy.profile != "participant-autonomous-execution/v3":
+    if policy.profile != _RESOURCE_GOVERNED_PROFILE:
         return ()
     return tuple(
         ParticipantResourceMeasurementRequirementModel(
@@ -67,7 +70,7 @@ def reserve_activity_resources(
 ) -> bool:
     """Reserve the complete v3 resource vector before native execution."""
 
-    if context.policy.profile != "participant-autonomous-execution/v3":
+    if context.policy.profile != _RESOURCE_GOVERNED_PROFILE:
         return True
     reservation = reserve_participant_resources(
         run.working,
@@ -82,18 +85,11 @@ def reserve_activity_resources(
     return reservation.success
 
 
-def commit_activity_resources(
-    context: _DueActionContext,
+def _trusted_measurements(
     request: ParticipantActionAdmissionRequest,
     result: ParticipantActionApplyResult,
-    *,
     protocol_failure: bool,
-    run: SchedulerRunState,
-) -> bool:
-    """Commit only a complete, trusted native measurement vector."""
-
-    if context.policy.profile != "participant-autonomous-execution/v3":
-        return True
+) -> dict[str, ParticipantResourceMeasurementModel] | None:
     action_result = result.action_result
     requirements = {item.budget_state_ref: item for item in request.resource_measurement_requirements}
     measurements = {
@@ -112,26 +108,41 @@ def commit_activity_resources(
             for state_ref, measurement in measurements.items()
         )
     )
-    if not trusted:
-        released = release_participant_resource_reservation(
-            run.working,
-            operation_id=request.action_instance_id,
-            execution_generation=request.execution_generation or 0,
-            evidence_refs=(f"evidence:{request.action_instance_id}:resource-release",),
-        )
-        run.working = released.snapshot
-        run.diagnostics.extend(released.diagnostics)
-        if not protocol_failure:
-            run.diagnostics.append(
-                Diagnostic(
-                    code="runtime.participant-resource-measurement-untrusted",
-                    domain="participant-runtime",
-                    address=context.policy.address,
-                    message="native action did not return the exact trusted resource measurement vector",
-                )
+    return measurements if trusted else None
+
+
+def _release_untrusted_measurements(
+    context: _DueActionContext,
+    request: ParticipantActionAdmissionRequest,
+    protocol_failure: bool,
+    run: SchedulerRunState,
+) -> bool:
+    released = release_participant_resource_reservation(
+        run.working,
+        operation_id=request.action_instance_id,
+        execution_generation=request.execution_generation or 0,
+        evidence_refs=(f"evidence:{request.action_instance_id}:resource-release",),
+    )
+    run.working = released.snapshot
+    run.diagnostics.extend(released.diagnostics)
+    if not protocol_failure:
+        run.diagnostics.append(
+            Diagnostic(
+                code="runtime.participant-resource-measurement-untrusted",
+                domain="participant-runtime",
+                address=context.policy.address,
+                message="native action did not return the exact trusted resource measurement vector",
             )
-        _record_resource_failure(run)
-        return False
+        )
+    _record_resource_failure(run)
+    return False
+
+
+def _commit_trusted_measurements(
+    request: ParticipantActionAdmissionRequest,
+    measurements: dict[str, ParticipantResourceMeasurementModel],
+    run: SchedulerRunState,
+) -> bool:
     evidence_refs = tuple(
         dict.fromkeys(
             evidence_ref for measurement in measurements.values() for evidence_ref in measurement.evidence_refs
@@ -149,6 +160,24 @@ def commit_activity_resources(
     if not committed.success:
         _record_resource_failure(run)
     return committed.success
+
+
+def commit_activity_resources(
+    context: _DueActionContext,
+    request: ParticipantActionAdmissionRequest,
+    result: ParticipantActionApplyResult,
+    *,
+    protocol_failure: bool,
+    run: SchedulerRunState,
+) -> bool:
+    """Commit only a complete, trusted native measurement vector."""
+
+    if context.policy.profile != _RESOURCE_GOVERNED_PROFILE:
+        return True
+    measurements = _trusted_measurements(request, result, protocol_failure)
+    if measurements is None:
+        return _release_untrusted_measurements(context, request, protocol_failure, run)
+    return _commit_trusted_measurements(request, measurements, run)
 
 
 __all__ = [
