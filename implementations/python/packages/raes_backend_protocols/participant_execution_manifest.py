@@ -3,6 +3,10 @@
 from raes_contracts.contracts.participant_execution import ParticipantExecutionBindingModel
 
 from .participant_capabilities import ParticipantExecutionBinding, ParticipantRuntimeCapabilities
+from .participant_resource_budgets import (
+    participant_resource_budget_capability_from_model,
+    participant_resource_budget_capability_payload,
+)
 
 
 def participant_execution_capability_payload(
@@ -31,6 +35,11 @@ def participant_execution_capability_payload(
         "supports_bounded_concurrency": capability.supports_bounded_concurrency,
         "max_execution_services": capability.max_execution_services,
         "max_concurrent_actions": capability.max_concurrent_actions,
+        "resource_budgets": (
+            participant_resource_budget_capability_payload(capability.resource_budgets)
+            if capability.resource_budgets is not None
+            else None
+        ),
     }
 
 
@@ -58,6 +67,11 @@ def participant_execution_capability_kwargs(model: object) -> dict[str, object]:
         "supports_bounded_concurrency": model.supports_bounded_concurrency,
         "max_execution_services": model.max_execution_services,
         "max_concurrent_actions": model.max_concurrent_actions,
+        "resource_budgets": (
+            participant_resource_budget_capability_from_model(model.resource_budgets)
+            if model.resource_budgets is not None
+            else None
+        ),
     }
 
 

@@ -6542,6 +6542,157 @@
       "title": "ParticipantAutonomousExecutionPolicyV2",
       "type": "object"
     },
+    "ParticipantAutonomousExecutionPolicyV3": {
+      "additionalProperties": false,
+      "description": "V2 activity plus scoped multi-resource governance.",
+      "properties": {
+        "action_candidates": {
+          "maxProperties": 1024,
+          "minProperties": 1,
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/ParticipantActivityActionCandidate"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Action Candidates",
+          "type": "object"
+        },
+        "clock_ref": {
+          "minLength": 1,
+          "title": "Clock Ref",
+          "type": "string"
+        },
+        "empty_eligible_disposition": {
+          "enum": [
+            "complete",
+            "wait"
+          ],
+          "title": "Empty Eligible Disposition",
+          "type": "string"
+        },
+        "evaluation_authority": {
+          "$ref": "#/$defs/ParticipantEvaluationAuthority"
+        },
+        "failure_policy": {
+          "$ref": "#/$defs/ParticipantExecutionFailurePolicy",
+          "default": "stop"
+        },
+        "max_action_attempts": {
+          "maximum": 1000000,
+          "minimum": 1,
+          "title": "Max Action Attempts",
+          "type": "integer"
+        },
+        "max_burst_size": {
+          "default": 1,
+          "maximum": 1024,
+          "minimum": 1,
+          "title": "Max Burst Size",
+          "type": "integer"
+        },
+        "max_in_flight": {
+          "default": 1,
+          "maximum": 1024,
+          "minimum": 1,
+          "title": "Max In Flight",
+          "type": "integer"
+        },
+        "max_occurrences": {
+          "maximum": 1000000,
+          "minimum": 1,
+          "title": "Max Occurrences",
+          "type": "integer"
+        },
+        "observation_boundary_ref": {
+          "minLength": 1,
+          "title": "Observation Boundary Ref",
+          "type": "string"
+        },
+        "outside_window_disposition": {
+          "enum": [
+            "next_opening",
+            "skip"
+          ],
+          "title": "Outside Window Disposition",
+          "type": "string"
+        },
+        "participant_implementation_ref": {
+          "minLength": 1,
+          "title": "Participant Implementation Ref",
+          "type": "string"
+        },
+        "pause_window_refs": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 1024,
+          "title": "Pause Window Refs",
+          "type": "array"
+        },
+        "profile": {
+          "const": "participant-autonomous-execution/v3",
+          "title": "Profile",
+          "type": "string"
+        },
+        "progression_policy_ref": {
+          "minLength": 1,
+          "title": "Progression Policy Ref",
+          "type": "string"
+        },
+        "resource_budget": {
+          "$ref": "#/$defs/ParticipantResourceBudgetPolicy"
+        },
+        "selection_strategy": {
+          "const": "weighted",
+          "title": "Selection Strategy",
+          "type": "string"
+        },
+        "stochastic_control_ref": {
+          "minLength": 1,
+          "title": "Stochastic Control Ref",
+          "type": "string"
+        },
+        "timing": {
+          "$ref": "#/$defs/ParticipantActivityTiming"
+        },
+        "work_window_refs": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 1024,
+          "minItems": 1,
+          "title": "Work Window Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "profile",
+        "participant_implementation_ref",
+        "clock_ref",
+        "progression_policy_ref",
+        "work_window_refs",
+        "observation_boundary_ref",
+        "stochastic_control_ref",
+        "selection_strategy",
+        "timing",
+        "outside_window_disposition",
+        "empty_eligible_disposition",
+        "action_candidates",
+        "max_occurrences",
+        "max_action_attempts",
+        "evaluation_authority",
+        "resource_budget"
+      ],
+      "title": "ParticipantAutonomousExecutionPolicyV3",
+      "type": "object"
+    },
     "ParticipantBackendFailureMapping": {
       "additionalProperties": false,
       "description": "Mapping from a backend diagnostic code to a portable SEM-211 failure.",
@@ -6654,6 +6805,9 @@
             },
             {
               "$ref": "#/$defs/ParticipantAutonomousExecutionPolicyV2"
+            },
+            {
+              "$ref": "#/$defs/ParticipantAutonomousExecutionPolicyV3"
             },
             {
               "type": "null"
@@ -7401,6 +7555,293 @@
         "realization"
       ],
       "title": "ParticipantPreconditionClass",
+      "type": "string"
+    },
+    "ParticipantResourceAccountingMode": {
+      "enum": [
+        "windowed_counter",
+        "cumulative_counter",
+        "reservable_gauge",
+        "growth_counter",
+        "lease"
+      ],
+      "title": "ParticipantResourceAccountingMode",
+      "type": "string"
+    },
+    "ParticipantResourceBudgetDimension": {
+      "additionalProperties": false,
+      "properties": {
+        "accounting_mode": {
+          "$ref": "#/$defs/ParticipantResourceAccountingMode"
+        },
+        "evidence_refs": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 1024,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "limit": {
+          "maximum": 1000000000000000000,
+          "minimum": 1,
+          "title": "Limit",
+          "type": "integer"
+        },
+        "meter_profile_ref": {
+          "minLength": 1,
+          "title": "Meter Profile Ref",
+          "type": "string"
+        },
+        "owner_ref": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Owner Ref",
+          "type": "string"
+        },
+        "parent_budget_ref": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "minLength": 1,
+              "not": {
+                "pattern": "[^a-z0-9_-]"
+              },
+              "pattern": "^[a-z0-9]",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parent Budget Ref"
+        },
+        "pool_ref": {
+          "minLength": 1,
+          "title": "Pool Ref",
+          "type": "string"
+        },
+        "reservation": {
+          "maximum": 1000000000000000000,
+          "minimum": 1,
+          "title": "Reservation",
+          "type": "integer"
+        },
+        "reset": {
+          "$ref": "#/$defs/ParticipantResourceResetMode"
+        },
+        "resource_kind": {
+          "$ref": "#/$defs/ParticipantResourceKind"
+        },
+        "unit": {
+          "minLength": 1,
+          "title": "Unit",
+          "type": "string"
+        },
+        "window_ticks": {
+          "anyOf": [
+            {
+              "maximum": 1000000000,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Window Ticks"
+        }
+      },
+      "required": [
+        "owner_ref",
+        "pool_ref",
+        "resource_kind",
+        "unit",
+        "accounting_mode",
+        "meter_profile_ref",
+        "limit",
+        "reservation",
+        "reset"
+      ],
+      "title": "ParticipantResourceBudgetDimension",
+      "type": "object"
+    },
+    "ParticipantResourceBudgetPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "dimensions": {
+          "maxProperties": 4096,
+          "minProperties": 1,
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/ParticipantResourceBudgetDimension"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Dimensions",
+          "type": "object"
+        },
+        "fairness": {
+          "$ref": "#/$defs/ParticipantResourceFairness"
+        },
+        "owners": {
+          "maxProperties": 1024,
+          "minProperties": 1,
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/ParticipantResourceOwner"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Owners",
+          "type": "object"
+        },
+        "policy_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Policy Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "policy_id",
+        "owners",
+        "fairness",
+        "dimensions"
+      ],
+      "title": "ParticipantResourceBudgetPolicy",
+      "type": "object"
+    },
+    "ParticipantResourceFairness": {
+      "additionalProperties": false,
+      "properties": {
+        "borrowing": {
+          "minLength": 1,
+          "title": "Borrowing",
+          "type": "string"
+        },
+        "max_queue_ticks": {
+          "maximum": 1000000000,
+          "minimum": 0,
+          "title": "Max Queue Ticks",
+          "type": "integer"
+        },
+        "policy": {
+          "minLength": 1,
+          "title": "Policy",
+          "type": "string"
+        },
+        "priority_class": {
+          "minLength": 1,
+          "title": "Priority Class",
+          "type": "string"
+        },
+        "protected": {
+          "title": "Protected",
+          "type": "boolean"
+        },
+        "reclaim": {
+          "minLength": 1,
+          "title": "Reclaim",
+          "type": "string"
+        },
+        "starvation_bound_ticks": {
+          "maximum": 1000000000,
+          "minimum": 1,
+          "title": "Starvation Bound Ticks",
+          "type": "integer"
+        },
+        "weight": {
+          "maximum": 1000000,
+          "minimum": 1,
+          "title": "Weight",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "policy",
+        "priority_class",
+        "weight",
+        "protected",
+        "borrowing",
+        "reclaim",
+        "max_queue_ticks",
+        "starvation_bound_ticks"
+      ],
+      "title": "ParticipantResourceFairness",
+      "type": "object"
+    },
+    "ParticipantResourceKind": {
+      "enum": [
+        "action_rate",
+        "concurrent_actions",
+        "storage_growth",
+        "inference_tokens",
+        "image_generations",
+        "accelerator"
+      ],
+      "title": "ParticipantResourceKind",
+      "type": "string"
+    },
+    "ParticipantResourceOwner": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/ParticipantResourceOwnerKind"
+        },
+        "ref": {
+          "minLength": 1,
+          "title": "Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "ref"
+      ],
+      "title": "ParticipantResourceOwner",
+      "type": "object"
+    },
+    "ParticipantResourceOwnerKind": {
+      "enum": [
+        "participant",
+        "deployment_tenant",
+        "shared_service",
+        "fleet"
+      ],
+      "title": "ParticipantResourceOwnerKind",
+      "type": "string"
+    },
+    "ParticipantResourceResetMode": {
+      "enum": [
+        "episode",
+        "time_segment",
+        "run",
+        "reconciled"
+      ],
+      "title": "ParticipantResourceResetMode",
       "type": "string"
     },
     "ParticipantTemporalContract": {

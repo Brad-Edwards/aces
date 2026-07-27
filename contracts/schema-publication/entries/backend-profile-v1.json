@@ -2,9 +2,9 @@
   "contract_id": "backend-profile-v1",
   "schema_path": "contracts/schemas/profiles/backend-profile-v1.json",
   "stability": "draft",
-  "content_hash": "feeec868e943507ba5dbcf7e079a54fd24e14eccc6aedf2f098de64c15b6629c",
+  "content_hash": "982fe0c4737cc4921a711b9acecb65a326567bac44f19d4d356d5069b239b60b",
   "last_change": {
-    "summary": "Advertised the portable artifact requirement contract in backend contract profiles for issue #920.",
-    "content_hash": "feeec868e943507ba5dbcf7e079a54fd24e14eccc6aedf2f098de64c15b6629c"
+    "summary": "Advertised portable artifact requirements and participant resource-budget contracts for issues #920 and #899.",
+    "content_hash": "982fe0c4737cc4921a711b9acecb65a326567bac44f19d4d356d5069b239b60b"
   }
 }

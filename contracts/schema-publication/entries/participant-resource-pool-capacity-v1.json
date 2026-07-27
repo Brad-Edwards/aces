@@ -1,0 +1,10 @@
+{
+  "contract_id": "participant-resource-pool-capacity-v1",
+  "schema_path": "contracts/schemas/participant-runtime/participant-resource-pool-capacity-v1.json",
+  "stability": "draft",
+  "content_hash": "754e61686f6eab224e3ce605ff403e67797182b6e613deccdbbeaa0ca9d60022",
+  "last_change": {
+    "summary": "Published configuration-bound logical pool capacity, owner, meter, fairness, isolation, digest, and evidence claims for issue #899.",
+    "content_hash": "754e61686f6eab224e3ce605ff403e67797182b6e613deccdbbeaa0ca9d60022"
+  }
+}

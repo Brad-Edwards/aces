@@ -58,6 +58,12 @@ from .participant_manifests import (
     ParticipantImplementationManifestModel,
     ParticipantImplementationProvenanceModel,
 )
+from .participant_resource_budgets import (
+    ParticipantResourceBudgetEventModel,
+    ParticipantResourceBudgetPolicyModel,
+    ParticipantResourceBudgetStateModel,
+    ParticipantResourcePoolCapacityModel,
+)
 from .participant_runtime import (
     ParticipantBehaviorHistoryEventModel,
     ParticipantEpisodeHistoryEventModel,
@@ -198,6 +204,10 @@ def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
         "participant-execution-binding-v1": ParticipantExecutionBindingModel.model_json_schema(),
         "participant-execution-control-v1": ParticipantExecutionControlRequestModel.model_json_schema(),
         "participant-execution-service-state-v1": ParticipantExecutionServiceStateModel.model_json_schema(),
+        "participant-resource-budget-policy-v1": ParticipantResourceBudgetPolicyModel.model_json_schema(),
+        "participant-resource-pool-capacity-v1": ParticipantResourcePoolCapacityModel.model_json_schema(),
+        "participant-resource-budget-state-v1": ParticipantResourceBudgetStateModel.model_json_schema(),
+        "participant-resource-budget-event-v1": ParticipantResourceBudgetEventModel.model_json_schema(),
         "participant-lifecycle-event-v1": ParticipantLifecycleEventModel.model_json_schema(),
         "participant-observation-envelope-v1": ParticipantObservationEnvelopeModel.model_json_schema(),
         "participant-shared-state-record-v1": ParticipantSharedStateRecordModel.model_json_schema(),

@@ -34,6 +34,7 @@ from raes_contracts.contracts import (
     RuntimeSnapshotEnvelopeModel,
 )
 from raes_contracts.contracts.participant_execution import ParticipantExecutionServiceStateModel
+from raes_contracts.contracts.participant_resource_budgets import ParticipantResourceMeasurementModel
 from raes_contracts.contracts.random_stream import (
     GovernedEntropyRefModel,
     PublicSeedModel,
@@ -342,6 +343,19 @@ class _NativeParticipantRuntime(BaseParticipantRuntime):
                     action_contract_address=request.action_contract_address,
                     observation_point=request.temporal_contexts[0].observation_point,
                     observations=["customer portal responded"],
+                    resource_measurements=[
+                        ParticipantResourceMeasurementModel(
+                            budget_state_ref=requirement.budget_state_ref,
+                            operation_id=request.action_instance_id,
+                            execution_generation=request.execution_generation or 0,
+                            resource_kind=requirement.resource_kind,
+                            unit=requirement.unit,
+                            meter_profile_ref=requirement.meter_profile_ref,
+                            measured=requirement.reserved,
+                            evidence_refs=(f"evidence:{request.action_instance_id}:{requirement.budget_state_ref}",),
+                        )
+                        for requirement in request.resource_measurement_requirements
+                    ],
                     evidence_refs=[],
                 ),
             )

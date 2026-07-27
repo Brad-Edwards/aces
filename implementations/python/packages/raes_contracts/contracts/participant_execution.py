@@ -101,6 +101,7 @@ class ParticipantExecutionServiceStateModel(ContractModel):
     binding_digest: PrefixedDigestString
     time_declaration_digest: PrefixedDigestString
     scheduler_state_refs: tuple[NonEmptyString, ...] = ()
+    resource_budget_state_refs: tuple[NonEmptyString, ...] = ()
     capacity: int = Field(ge=1)
     reserved: int = Field(ge=0)
     in_flight: int = Field(ge=0)
@@ -143,6 +144,7 @@ class ParticipantExecutionServiceStateModel(ContractModel):
     def _validate_unique_references(self) -> None:
         for field_name in (
             "scheduler_state_refs",
+            "resource_budget_state_refs",
             "pacing_deviation_refs",
             "evidence_refs",
         ):

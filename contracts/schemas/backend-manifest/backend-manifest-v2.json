@@ -1114,6 +1114,299 @@
       "title": "ParticipantFeatureSupportModel",
       "type": "object"
     },
+    "ParticipantResourceBudgetCapabilitiesModel": {
+      "additionalProperties": false,
+      "description": "Declared support plus configuration-bound logical pool capacity.",
+      "properties": {
+        "configured_pools": {
+          "items": {
+            "$ref": "#/$defs/ParticipantResourcePoolCapacityModel"
+          },
+          "minItems": 1,
+          "title": "Configured Pools",
+          "type": "array"
+        },
+        "cross_range_pool_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Cross Range Pool Refs",
+          "type": "array"
+        },
+        "realization_contract_ids": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Realization Contract Ids",
+          "type": "array"
+        },
+        "support_strength": {
+          "enum": [
+            "unsupported",
+            "disclosed_weak",
+            "bounded",
+            "exact"
+          ],
+          "title": "Support Strength",
+          "type": "string"
+        },
+        "supported_accounting_modes": {
+          "items": {
+            "enum": [
+              "windowed_counter",
+              "cumulative_counter",
+              "reservable_gauge",
+              "growth_counter",
+              "lease"
+            ],
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Accounting Modes",
+          "type": "array"
+        },
+        "supported_fairness_policies": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Fairness Policies",
+          "type": "array"
+        },
+        "supported_isolation_strengths": {
+          "items": {
+            "enum": [
+              "none",
+              "stateless",
+              "tenant_partitioned"
+            ],
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Isolation Strengths",
+          "type": "array"
+        },
+        "supported_owner_kinds": {
+          "items": {
+            "enum": [
+              "participant",
+              "deployment_tenant",
+              "shared_service",
+              "fleet"
+            ],
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Owner Kinds",
+          "type": "array"
+        },
+        "supported_reset_modes": {
+          "items": {
+            "enum": [
+              "episode",
+              "time_segment",
+              "run",
+              "reconciled"
+            ],
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Reset Modes",
+          "type": "array"
+        },
+        "supported_resource_kinds": {
+          "items": {
+            "enum": [
+              "action_rate",
+              "concurrent_actions",
+              "storage_growth",
+              "inference_tokens",
+              "image_generations",
+              "accelerator"
+            ],
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Resource Kinds",
+          "type": "array"
+        }
+      },
+      "required": [
+        "support_strength",
+        "supported_owner_kinds",
+        "supported_resource_kinds",
+        "supported_accounting_modes",
+        "supported_reset_modes",
+        "supported_fairness_policies",
+        "supported_isolation_strengths",
+        "configured_pools",
+        "realization_contract_ids"
+      ],
+      "title": "ParticipantResourceBudgetCapabilitiesModel",
+      "type": "object"
+    },
+    "ParticipantResourcePoolCapacityModel": {
+      "additionalProperties": false,
+      "properties": {
+        "accounting_mode": {
+          "enum": [
+            "windowed_counter",
+            "cumulative_counter",
+            "reservable_gauge",
+            "growth_counter",
+            "lease"
+          ],
+          "title": "Accounting Mode",
+          "type": "string"
+        },
+        "borrowing": {
+          "minLength": 1,
+          "title": "Borrowing",
+          "type": "string"
+        },
+        "capacity": {
+          "maximum": 1000000000000000000,
+          "minimum": 1,
+          "title": "Capacity",
+          "type": "integer"
+        },
+        "configuration_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Configuration Digest",
+          "type": "string"
+        },
+        "evidence_contract_ids": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Contract Ids",
+          "type": "array"
+        },
+        "fairness_policy": {
+          "minLength": 1,
+          "title": "Fairness Policy",
+          "type": "string"
+        },
+        "max_queue_ticks": {
+          "maximum": 1000000000,
+          "minimum": 0,
+          "title": "Max Queue Ticks",
+          "type": "integer"
+        },
+        "meter_profile_ref": {
+          "minLength": 1,
+          "title": "Meter Profile Ref",
+          "type": "string"
+        },
+        "owner_kind": {
+          "enum": [
+            "participant",
+            "deployment_tenant",
+            "shared_service",
+            "fleet"
+          ],
+          "title": "Owner Kind",
+          "type": "string"
+        },
+        "owner_ref": {
+          "minLength": 1,
+          "title": "Owner Ref",
+          "type": "string"
+        },
+        "pool_ref": {
+          "minLength": 1,
+          "title": "Pool Ref",
+          "type": "string"
+        },
+        "priority_classes": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Priority Classes",
+          "type": "array"
+        },
+        "protected_capacity": {
+          "maximum": 1000000000000000000,
+          "minimum": 0,
+          "title": "Protected Capacity",
+          "type": "integer"
+        },
+        "reclaim": {
+          "minLength": 1,
+          "title": "Reclaim",
+          "type": "string"
+        },
+        "resource_kind": {
+          "enum": [
+            "action_rate",
+            "concurrent_actions",
+            "storage_growth",
+            "inference_tokens",
+            "image_generations",
+            "accelerator"
+          ],
+          "title": "Resource Kind",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "participant-resource-pool-capacity/v1",
+          "default": "participant-resource-pool-capacity/v1",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "starvation_bound_ticks": {
+          "maximum": 1000000000,
+          "minimum": 1,
+          "title": "Starvation Bound Ticks",
+          "type": "integer"
+        },
+        "tenant_isolation": {
+          "enum": [
+            "none",
+            "stateless",
+            "tenant_partitioned"
+          ],
+          "title": "Tenant Isolation",
+          "type": "string"
+        },
+        "unit": {
+          "minLength": 1,
+          "title": "Unit",
+          "type": "string"
+        }
+      },
+      "required": [
+        "pool_ref",
+        "owner_kind",
+        "owner_ref",
+        "resource_kind",
+        "unit",
+        "accounting_mode",
+        "meter_profile_ref",
+        "capacity",
+        "tenant_isolation",
+        "configuration_digest",
+        "fairness_policy",
+        "priority_classes",
+        "borrowing",
+        "reclaim",
+        "max_queue_ticks",
+        "starvation_bound_ticks",
+        "protected_capacity",
+        "evidence_contract_ids"
+      ],
+      "title": "ParticipantResourcePoolCapacityModel",
+      "type": "object"
+    },
     "ParticipantRuntimeCapabilitiesModel": {
       "additionalProperties": false,
       "description": "Participant-episode lifecycle capability block (RUN-311).\n\nA backend that declares this block advertises that it implements\nthe full participant episode control surface on the\n``ParticipantRuntime`` protocol: ``initialize`` / ``reset`` /\n``restart`` / ``terminate`` plus ``status`` / ``results`` /\n``history``. Consumers of the manifest can infer the\n``FULL_REMOTE_CONTROL_PLANE`` conformance profile from this block.\n\nAPI-405 support dimensions live here because they are backend apparatus\nclaims: which participant roles, behavior features, and interaction\nfeatures this participant runtime can actually realize.",
@@ -1248,6 +1541,17 @@
           "title": "Name",
           "type": "string"
         },
+        "resource_budgets": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ParticipantResourceBudgetCapabilitiesModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "supported_autonomous_action_contracts": {
           "items": {
             "minLength": 1,
@@ -1288,7 +1592,8 @@
           "items": {
             "enum": [
               "participant-autonomous-execution/v1",
-              "participant-autonomous-execution/v2"
+              "participant-autonomous-execution/v2",
+              "participant-autonomous-execution/v3"
             ],
             "type": "string"
           },
@@ -2094,6 +2399,10 @@
           "participant-execution-binding-v1",
           "participant-execution-control-v1",
           "participant-execution-service-state-v1",
+          "participant-resource-budget-policy-v1",
+          "participant-resource-pool-capacity-v1",
+          "participant-resource-budget-state-v1",
+          "participant-resource-budget-event-v1",
           "participant-control-occurrence-v1",
           "participant-crossing-occurrence-v1",
           "participant-lifecycle-event-v1",

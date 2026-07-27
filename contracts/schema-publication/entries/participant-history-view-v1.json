@@ -2,9 +2,9 @@
   "contract_id": "participant-history-view-v1",
   "schema_path": "contracts/schemas/control-plane/participant-history-view-v1.json",
   "stability": "draft",
-  "content_hash": "a76e3fabd050a42c46cb2459f93e02aa1b482b95c277fa166c4040a305b06320",
+  "content_hash": "483731937b2dbee8c5bc081f4348398a280a6ef28044c17395dcf635ba99c7c4",
   "last_change": {
-    "summary": "Projected safe autonomous activity occurrence provenance through API-408 participant history views for issue #897.",
-    "content_hash": "a76e3fabd050a42c46cb2459f93e02aa1b482b95c277fa166c4040a305b06320"
+    "summary": "Projected v3 native resource measurements and policy-scoped budget identity through history views for issue #899.",
+    "content_hash": "483731937b2dbee8c5bc081f4348398a280a6ef28044c17395dcf635ba99c7c4"
   }
 }

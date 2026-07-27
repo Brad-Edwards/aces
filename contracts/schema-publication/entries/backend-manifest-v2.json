@@ -2,9 +2,9 @@
   "contract_id": "backend-manifest-v2",
   "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
   "stability": "draft",
-  "content_hash": "95e0b07360d92eec0b930ca73762f3fa7646d38ab32c5f9d35e9acd38fd61cca",
+  "content_hash": "9cf0d750399b97c7d5eb9a988f6525898e10992567b724806e4ae9fbf9297154",
   "last_change": {
-    "summary": "Added mechanism-indexed portable artifact satisfaction capabilities without Cartesian acquisition and timing overclaims for issue #920.",
-    "content_hash": "95e0b07360d92eec0b930ca73762f3fa7646d38ab32c5f9d35e9acd38fd61cca"
+    "summary": "Added portable artifact satisfaction capabilities and participant resource-budget support for issues #920 and #899.",
+    "content_hash": "9cf0d750399b97c7d5eb9a988f6525898e10992567b724806e4ae9fbf9297154"
   }
 }

@@ -139,6 +139,15 @@
       "title": "Reserved",
       "type": "integer"
     },
+    "resource_budget_state_refs": {
+      "default": [],
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Resource Budget State Refs",
+      "type": "array"
+    },
     "resources_released": {
       "title": "Resources Released",
       "type": "boolean"

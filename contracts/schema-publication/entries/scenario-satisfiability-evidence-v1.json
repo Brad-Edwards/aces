@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-    "content_hash": "725d837a9f9f131192f138957c2970b3751aa196e75aeb5635828c1aa7996431",
+  "content_hash": "a6b8b78a64918a0a10b4e411b473f2dec3ccb518605231a3c69242a1e3754121",
   "last_change": {
-    "summary": "Carried portable Source artifact requirements through scenario satisfiability evidence definitions for issue #920.",
-    "content_hash": "725d837a9f9f131192f138957c2970b3751aa196e75aeb5635828c1aa7996431"
+    "summary": "Carried portable artifact requirements and scoped participant resource budgets through satisfiability evidence for issues #920 and #899.",
+    "content_hash": "a6b8b78a64918a0a10b4e411b473f2dec3ccb518605231a3c69242a1e3754121"
   }
 }

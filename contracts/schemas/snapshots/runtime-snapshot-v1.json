@@ -827,6 +827,13 @@
           "title": "Preconditions",
           "type": "array"
         },
+        "resource_measurements": {
+          "items": {
+            "$ref": "#/$defs/ParticipantResourceMeasurementModel"
+          },
+          "title": "Resource Measurements",
+          "type": "array"
+        },
         "status": {
           "enum": [
             "accepted",
@@ -890,7 +897,10 @@
           "type": "string"
         },
         "policy_profile": {
-          "const": "participant-autonomous-execution/v2",
+          "enum": [
+            "participant-autonomous-execution/v2",
+            "participant-autonomous-execution/v3"
+          ],
           "title": "Policy Profile",
           "type": "string"
         },
@@ -1532,7 +1542,8 @@
           "default": "participant-autonomous-execution/v1",
           "enum": [
             "participant-autonomous-execution/v1",
-            "participant-autonomous-execution/v2"
+            "participant-autonomous-execution/v2",
+            "participant-autonomous-execution/v3"
           ],
           "title": "Profile",
           "type": "string"
@@ -2950,6 +2961,15 @@
           "minimum": 0,
           "title": "Reserved",
           "type": "integer"
+        },
+        "resource_budget_state_refs": {
+          "default": [],
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Resource Budget State Refs",
+          "type": "array"
         },
         "resources_released": {
           "title": "Resources Released",
@@ -4830,6 +4850,654 @@
         "action_contract_ref"
       ],
       "title": "ParticipantProposalOccurrenceModel",
+      "type": "object"
+    },
+    "ParticipantResourceBudgetEventModel": {
+      "additionalProperties": false,
+      "properties": {
+        "budget_id": {
+          "minLength": 1,
+          "title": "Budget Id",
+          "type": "string"
+        },
+        "budget_state_ref": {
+          "minLength": 1,
+          "title": "Budget State Ref",
+          "type": "string"
+        },
+        "disposition": {
+          "enum": [
+            "reserved",
+            "committed",
+            "released",
+            "throttled",
+            "rejected",
+            "reconciled"
+          ],
+          "title": "Disposition",
+          "type": "string"
+        },
+        "event_id": {
+          "minLength": 1,
+          "title": "Event Id",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "default": [],
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "execution_generation": {
+          "minimum": 0,
+          "title": "Execution Generation",
+          "type": "integer"
+        },
+        "measured": {
+          "anyOf": [
+            {
+              "maximum": 1000000000000000000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Measured"
+        },
+        "meter_profile_ref": {
+          "minLength": 1,
+          "title": "Meter Profile Ref",
+          "type": "string"
+        },
+        "operation_id": {
+          "minLength": 1,
+          "title": "Operation Id",
+          "type": "string"
+        },
+        "owner_ref": {
+          "minLength": 1,
+          "title": "Owner Ref",
+          "type": "string"
+        },
+        "policy_address": {
+          "minLength": 1,
+          "title": "Policy Address",
+          "type": "string"
+        },
+        "pool_ref": {
+          "minLength": 1,
+          "title": "Pool Ref",
+          "type": "string"
+        },
+        "predecessor_event_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Predecessor Event Ref"
+        },
+        "requested": {
+          "maximum": 1000000000000000000,
+          "minimum": 0,
+          "title": "Requested",
+          "type": "integer"
+        },
+        "resource_kind": {
+          "enum": [
+            "action_rate",
+            "concurrent_actions",
+            "storage_growth",
+            "inference_tokens",
+            "image_generations",
+            "accelerator"
+          ],
+          "title": "Resource Kind",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "participant-resource-budget-event/v1",
+          "default": "participant-resource-budget-event/v1",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "transition": {
+          "enum": [
+            "reserve",
+            "commit",
+            "release",
+            "throttle",
+            "reject",
+            "reconcile"
+          ],
+          "title": "Transition",
+          "type": "string"
+        },
+        "unit": {
+          "minLength": 1,
+          "title": "Unit",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "operation_id",
+        "budget_state_ref",
+        "budget_id",
+        "policy_address",
+        "owner_ref",
+        "pool_ref",
+        "execution_generation",
+        "transition",
+        "disposition",
+        "requested",
+        "resource_kind",
+        "unit",
+        "meter_profile_ref"
+      ],
+      "title": "ParticipantResourceBudgetEventModel",
+      "type": "object"
+    },
+    "ParticipantResourceBudgetStateModel": {
+      "additionalProperties": false,
+      "properties": {
+        "accounting_mode": {
+          "enum": [
+            "windowed_counter",
+            "cumulative_counter",
+            "reservable_gauge",
+            "growth_counter",
+            "lease"
+          ],
+          "title": "Accounting Mode",
+          "type": "string"
+        },
+        "budget_id": {
+          "minLength": 1,
+          "title": "Budget Id",
+          "type": "string"
+        },
+        "configured_capacity": {
+          "maximum": 1000000000000000000,
+          "minimum": 1,
+          "title": "Configured Capacity",
+          "type": "integer"
+        },
+        "cumulative_use": {
+          "maximum": 1000000000000000000,
+          "minimum": 0,
+          "title": "Cumulative Use",
+          "type": "integer"
+        },
+        "current_use": {
+          "maximum": 1000000000000000000,
+          "minimum": 0,
+          "title": "Current Use",
+          "type": "integer"
+        },
+        "evidence_refs": {
+          "default": [],
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "generation": {
+          "minimum": 0,
+          "title": "Generation",
+          "type": "integer"
+        },
+        "last_event_ref": {
+          "minLength": 1,
+          "title": "Last Event Ref",
+          "type": "string"
+        },
+        "limit": {
+          "maximum": 1000000000000000000,
+          "minimum": 1,
+          "title": "Limit",
+          "type": "integer"
+        },
+        "meter_profile_ref": {
+          "minLength": 1,
+          "title": "Meter Profile Ref",
+          "type": "string"
+        },
+        "owner_kind": {
+          "enum": [
+            "participant",
+            "deployment_tenant",
+            "shared_service",
+            "fleet"
+          ],
+          "title": "Owner Kind",
+          "type": "string"
+        },
+        "owner_ref": {
+          "minLength": 1,
+          "title": "Owner Ref",
+          "type": "string"
+        },
+        "policy_address": {
+          "minLength": 1,
+          "title": "Policy Address",
+          "type": "string"
+        },
+        "pool_ref": {
+          "minLength": 1,
+          "title": "Pool Ref",
+          "type": "string"
+        },
+        "reconciliation_status": {
+          "enum": [
+            "reconciled",
+            "pending",
+            "unreconciled"
+          ],
+          "title": "Reconciliation Status",
+          "type": "string"
+        },
+        "rejected": {
+          "minimum": 0,
+          "title": "Rejected",
+          "type": "integer"
+        },
+        "reserved": {
+          "maximum": 1000000000000000000,
+          "minimum": 0,
+          "title": "Reserved",
+          "type": "integer"
+        },
+        "reset": {
+          "enum": [
+            "episode",
+            "time_segment",
+            "run",
+            "reconciled"
+          ],
+          "title": "Reset",
+          "type": "string"
+        },
+        "resource_kind": {
+          "enum": [
+            "action_rate",
+            "concurrent_actions",
+            "storage_growth",
+            "inference_tokens",
+            "image_generations",
+            "accelerator"
+          ],
+          "title": "Resource Kind",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "participant-resource-budget-state/v1",
+          "default": "participant-resource-budget-state/v1",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "state_ref": {
+          "minLength": 1,
+          "title": "State Ref",
+          "type": "string"
+        },
+        "throttled": {
+          "minimum": 0,
+          "title": "Throttled",
+          "type": "integer"
+        },
+        "unit": {
+          "minLength": 1,
+          "title": "Unit",
+          "type": "string"
+        }
+      },
+      "required": [
+        "state_ref",
+        "budget_id",
+        "policy_address",
+        "owner_kind",
+        "owner_ref",
+        "pool_ref",
+        "resource_kind",
+        "unit",
+        "accounting_mode",
+        "meter_profile_ref",
+        "reset",
+        "generation",
+        "limit",
+        "configured_capacity",
+        "reserved",
+        "current_use",
+        "cumulative_use",
+        "throttled",
+        "rejected",
+        "reconciliation_status",
+        "last_event_ref"
+      ],
+      "title": "ParticipantResourceBudgetStateModel",
+      "type": "object"
+    },
+    "ParticipantResourceMeasurementModel": {
+      "additionalProperties": false,
+      "properties": {
+        "budget_state_ref": {
+          "minLength": 1,
+          "title": "Budget State Ref",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "execution_generation": {
+          "minimum": 0,
+          "title": "Execution Generation",
+          "type": "integer"
+        },
+        "measured": {
+          "maximum": 1000000000000000000,
+          "minimum": 0,
+          "title": "Measured",
+          "type": "integer"
+        },
+        "meter_profile_ref": {
+          "minLength": 1,
+          "title": "Meter Profile Ref",
+          "type": "string"
+        },
+        "operation_id": {
+          "minLength": 1,
+          "title": "Operation Id",
+          "type": "string"
+        },
+        "resource_kind": {
+          "enum": [
+            "action_rate",
+            "concurrent_actions",
+            "storage_growth",
+            "inference_tokens",
+            "image_generations",
+            "accelerator"
+          ],
+          "title": "Resource Kind",
+          "type": "string"
+        },
+        "unit": {
+          "minLength": 1,
+          "title": "Unit",
+          "type": "string"
+        }
+      },
+      "required": [
+        "budget_state_ref",
+        "operation_id",
+        "execution_generation",
+        "resource_kind",
+        "unit",
+        "meter_profile_ref",
+        "measured",
+        "evidence_refs"
+      ],
+      "title": "ParticipantResourceMeasurementModel",
+      "type": "object"
+    },
+    "ParticipantResourcePoolAllocationModel": {
+      "additionalProperties": false,
+      "properties": {
+        "borrowing": {
+          "minLength": 1,
+          "title": "Borrowing",
+          "type": "string"
+        },
+        "budget_id": {
+          "minLength": 1,
+          "title": "Budget Id",
+          "type": "string"
+        },
+        "budget_state_ref": {
+          "minLength": 1,
+          "title": "Budget State Ref",
+          "type": "string"
+        },
+        "cumulative_use": {
+          "maximum": 1000000000000000000,
+          "minimum": 0,
+          "title": "Cumulative Use",
+          "type": "integer"
+        },
+        "current_use": {
+          "maximum": 1000000000000000000,
+          "minimum": 0,
+          "title": "Current Use",
+          "type": "integer"
+        },
+        "generation": {
+          "minimum": 0,
+          "title": "Generation",
+          "type": "integer"
+        },
+        "max_queue_ticks": {
+          "maximum": 1000000000,
+          "minimum": 0,
+          "title": "Max Queue Ticks",
+          "type": "integer"
+        },
+        "policy_address": {
+          "minLength": 1,
+          "title": "Policy Address",
+          "type": "string"
+        },
+        "priority_class": {
+          "minLength": 1,
+          "title": "Priority Class",
+          "type": "string"
+        },
+        "protected": {
+          "title": "Protected",
+          "type": "boolean"
+        },
+        "reclaim": {
+          "minLength": 1,
+          "title": "Reclaim",
+          "type": "string"
+        },
+        "reserved": {
+          "maximum": 1000000000000000000,
+          "minimum": 0,
+          "title": "Reserved",
+          "type": "integer"
+        },
+        "starvation_bound_ticks": {
+          "maximum": 1000000000,
+          "minimum": 1,
+          "title": "Starvation Bound Ticks",
+          "type": "integer"
+        },
+        "weight": {
+          "maximum": 1000000,
+          "minimum": 1,
+          "title": "Weight",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "budget_state_ref",
+        "policy_address",
+        "budget_id",
+        "generation",
+        "priority_class",
+        "weight",
+        "protected",
+        "borrowing",
+        "reclaim",
+        "max_queue_ticks",
+        "starvation_bound_ticks",
+        "reserved",
+        "current_use",
+        "cumulative_use"
+      ],
+      "title": "ParticipantResourcePoolAllocationModel",
+      "type": "object"
+    },
+    "ParticipantResourcePoolStateModel": {
+      "additionalProperties": false,
+      "description": "Authoritative allocation ledger for one exact physical resource pool.",
+      "properties": {
+        "accounting_mode": {
+          "enum": [
+            "windowed_counter",
+            "cumulative_counter",
+            "reservable_gauge",
+            "growth_counter",
+            "lease"
+          ],
+          "title": "Accounting Mode",
+          "type": "string"
+        },
+        "allocations": {
+          "additionalProperties": {
+            "$ref": "#/$defs/ParticipantResourcePoolAllocationModel"
+          },
+          "propertyNames": {
+            "minLength": 1
+          },
+          "title": "Allocations",
+          "type": "object"
+        },
+        "borrowing": {
+          "minLength": 1,
+          "title": "Borrowing",
+          "type": "string"
+        },
+        "capacity": {
+          "maximum": 1000000000000000000,
+          "minimum": 1,
+          "title": "Capacity",
+          "type": "integer"
+        },
+        "fairness_policy": {
+          "minLength": 1,
+          "title": "Fairness Policy",
+          "type": "string"
+        },
+        "max_queue_ticks": {
+          "maximum": 1000000000,
+          "minimum": 0,
+          "title": "Max Queue Ticks",
+          "type": "integer"
+        },
+        "meter_profile_ref": {
+          "minLength": 1,
+          "title": "Meter Profile Ref",
+          "type": "string"
+        },
+        "owner_kind": {
+          "enum": [
+            "participant",
+            "deployment_tenant",
+            "shared_service",
+            "fleet"
+          ],
+          "title": "Owner Kind",
+          "type": "string"
+        },
+        "owner_ref": {
+          "minLength": 1,
+          "title": "Owner Ref",
+          "type": "string"
+        },
+        "pool_ref": {
+          "minLength": 1,
+          "title": "Pool Ref",
+          "type": "string"
+        },
+        "pool_state_ref": {
+          "minLength": 1,
+          "title": "Pool State Ref",
+          "type": "string"
+        },
+        "priority_classes": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Priority Classes",
+          "type": "array"
+        },
+        "protected_capacity": {
+          "maximum": 1000000000000000000,
+          "minimum": 0,
+          "title": "Protected Capacity",
+          "type": "integer"
+        },
+        "reclaim": {
+          "minLength": 1,
+          "title": "Reclaim",
+          "type": "string"
+        },
+        "resource_kind": {
+          "enum": [
+            "action_rate",
+            "concurrent_actions",
+            "storage_growth",
+            "inference_tokens",
+            "image_generations",
+            "accelerator"
+          ],
+          "title": "Resource Kind",
+          "type": "string"
+        },
+        "starvation_bound_ticks": {
+          "maximum": 1000000000,
+          "minimum": 1,
+          "title": "Starvation Bound Ticks",
+          "type": "integer"
+        },
+        "unit": {
+          "minLength": 1,
+          "title": "Unit",
+          "type": "string"
+        }
+      },
+      "required": [
+        "pool_state_ref",
+        "pool_ref",
+        "owner_kind",
+        "owner_ref",
+        "resource_kind",
+        "unit",
+        "accounting_mode",
+        "meter_profile_ref",
+        "capacity",
+        "protected_capacity",
+        "fairness_policy",
+        "priority_classes",
+        "borrowing",
+        "reclaim",
+        "max_queue_ticks",
+        "starvation_bound_ticks"
+      ],
+      "title": "ParticipantResourcePoolStateModel",
       "type": "object"
     },
     "ParticipantRuntimeLifecyclePhase": {
@@ -7595,6 +8263,27 @@
         "$ref": "#/$defs/ParticipantExecutionServiceStateModel"
       },
       "title": "Participant Execution Services",
+      "type": "object"
+    },
+    "participant_resource_budget_events": {
+      "additionalProperties": {
+        "$ref": "#/$defs/ParticipantResourceBudgetEventModel"
+      },
+      "title": "Participant Resource Budget Events",
+      "type": "object"
+    },
+    "participant_resource_budget_states": {
+      "additionalProperties": {
+        "$ref": "#/$defs/ParticipantResourceBudgetStateModel"
+      },
+      "title": "Participant Resource Budget States",
+      "type": "object"
+    },
+    "participant_resource_pool_states": {
+      "additionalProperties": {
+        "$ref": "#/$defs/ParticipantResourcePoolStateModel"
+      },
+      "title": "Participant Resource Pool States",
       "type": "object"
     },
     "proposition_truth_results": {

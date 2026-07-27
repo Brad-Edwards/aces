@@ -4,7 +4,7 @@ Status: normative
 
 Requirement: #920
 
-Decision: [ADR-097](../../docs/decisions/adrs/adr-097-portable-artifact-requirement-satisfaction.md)
+Decision: [ADR-098](../../docs/decisions/adrs/adr-098-portable-artifact-requirement-satisfaction.md)
 
 This specification defines how a backend-neutral `Source` can require and
 prove a concrete artifact without conflating semantic identity, operational

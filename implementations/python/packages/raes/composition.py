@@ -105,6 +105,34 @@ def _rewrite_node_or_service_ref(name: str, node_map: Mapping[str, str]) -> str:
     return _rewrite_section_ref(name, "nodes", node_map)
 
 
+def _rewrite_participant_resource_budget(
+    payload: object,
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
+    """Rewrite kind-specific owner references in an autonomous budget policy."""
+
+    if not isinstance(payload, dict):
+        return
+    owners = payload.get("owners")
+    if not isinstance(owners, dict):
+        return
+    for owner in owners.values():
+        if not isinstance(owner, dict) or not owner.get("ref"):
+            continue
+        reference = str(owner["ref"])
+        owner_kind = owner.get("kind")
+        if owner_kind == "participant":
+            owner["ref"] = _rewrite_section_ref(reference, "agents", symbols["agents"])
+        elif owner_kind == "deployment_tenant":
+            owner["ref"] = _rewrite_section_ref(
+                reference,
+                "deployment_tenants",
+                symbols["deployment_tenants"],
+            )
+        elif owner_kind == "shared_service":
+            owner["ref"] = _rewrite_node_or_service_ref(reference, symbols["nodes"])
+
+
 def _rewrite_stateful_dependency_ref(
     reference: str,
     symbols: dict[str, dict[str, str] | set[str]],
@@ -820,6 +848,12 @@ def _namespace_payload(
             behavior_spec["authority_scope_refs"] = [
                 _maybe_rename(name, symbols["named"]) for name in behavior_spec.get("authority_scope_refs", [])
             ]
+            autonomous_execution = behavior_spec.get("autonomous_execution")
+            if isinstance(autonomous_execution, dict):
+                _rewrite_participant_resource_budget(
+                    autonomous_execution.get("resource_budget"),
+                    symbols,
+                )
             _rewrite_mixed_control(behavior_spec.get("mixed_control"), symbols)
             for binding in behavior_spec.get("tool_affordances", {}).values():
                 if isinstance(binding, dict):

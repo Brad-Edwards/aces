@@ -1,0 +1,160 @@
+{
+  "$id": "https://raes.dev/schemas/participant-resource-pool-capacity-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "accounting_mode": {
+      "enum": [
+        "windowed_counter",
+        "cumulative_counter",
+        "reservable_gauge",
+        "growth_counter",
+        "lease"
+      ],
+      "title": "Accounting Mode",
+      "type": "string"
+    },
+    "borrowing": {
+      "minLength": 1,
+      "title": "Borrowing",
+      "type": "string"
+    },
+    "capacity": {
+      "maximum": 1000000000000000000,
+      "minimum": 1,
+      "title": "Capacity",
+      "type": "integer"
+    },
+    "configuration_digest": {
+      "minLength": 1,
+      "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+      "title": "Configuration Digest",
+      "type": "string"
+    },
+    "evidence_contract_ids": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Evidence Contract Ids",
+      "type": "array"
+    },
+    "fairness_policy": {
+      "minLength": 1,
+      "title": "Fairness Policy",
+      "type": "string"
+    },
+    "max_queue_ticks": {
+      "maximum": 1000000000,
+      "minimum": 0,
+      "title": "Max Queue Ticks",
+      "type": "integer"
+    },
+    "meter_profile_ref": {
+      "minLength": 1,
+      "title": "Meter Profile Ref",
+      "type": "string"
+    },
+    "owner_kind": {
+      "enum": [
+        "participant",
+        "deployment_tenant",
+        "shared_service",
+        "fleet"
+      ],
+      "title": "Owner Kind",
+      "type": "string"
+    },
+    "owner_ref": {
+      "minLength": 1,
+      "title": "Owner Ref",
+      "type": "string"
+    },
+    "pool_ref": {
+      "minLength": 1,
+      "title": "Pool Ref",
+      "type": "string"
+    },
+    "priority_classes": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Priority Classes",
+      "type": "array"
+    },
+    "protected_capacity": {
+      "maximum": 1000000000000000000,
+      "minimum": 0,
+      "title": "Protected Capacity",
+      "type": "integer"
+    },
+    "reclaim": {
+      "minLength": 1,
+      "title": "Reclaim",
+      "type": "string"
+    },
+    "resource_kind": {
+      "enum": [
+        "action_rate",
+        "concurrent_actions",
+        "storage_growth",
+        "inference_tokens",
+        "image_generations",
+        "accelerator"
+      ],
+      "title": "Resource Kind",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "participant-resource-pool-capacity/v1",
+      "default": "participant-resource-pool-capacity/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "starvation_bound_ticks": {
+      "maximum": 1000000000,
+      "minimum": 1,
+      "title": "Starvation Bound Ticks",
+      "type": "integer"
+    },
+    "tenant_isolation": {
+      "enum": [
+        "none",
+        "stateless",
+        "tenant_partitioned"
+      ],
+      "title": "Tenant Isolation",
+      "type": "string"
+    },
+    "unit": {
+      "minLength": 1,
+      "title": "Unit",
+      "type": "string"
+    }
+  },
+  "required": [
+    "pool_ref",
+    "owner_kind",
+    "owner_ref",
+    "resource_kind",
+    "unit",
+    "accounting_mode",
+    "meter_profile_ref",
+    "capacity",
+    "tenant_isolation",
+    "configuration_digest",
+    "fairness_policy",
+    "priority_classes",
+    "borrowing",
+    "reclaim",
+    "max_queue_ticks",
+    "starvation_bound_ticks",
+    "protected_capacity",
+    "evidence_contract_ids"
+  ],
+  "title": "ParticipantResourcePoolCapacityModel",
+  "type": "object"
+}

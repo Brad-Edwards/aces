@@ -1,0 +1,10 @@
+{
+  "contract_id": "participant-resource-budget-policy-v1",
+  "schema_path": "contracts/schemas/participant-runtime/participant-resource-budget-policy-v1.json",
+  "stability": "draft",
+  "content_hash": "40280cca88f0aa01c60861cea70aa5f6fff9ded2fd85473c45e339194317fe1d",
+  "last_change": {
+    "summary": "Published canonical participant resource-budget owners, typed demands, meters, reset policy, and fairness obligations for issue #899.",
+    "content_hash": "40280cca88f0aa01c60861cea70aa5f6fff9ded2fd85473c45e339194317fe1d"
+  }
+}

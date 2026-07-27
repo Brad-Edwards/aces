@@ -29,8 +29,8 @@
       "path": "contracts/provenance/sdl-lineage-ledger-v1.json",
       "record_class": "provenance-record",
       "rationale": "Preserves append-only lineage observations recorded before the RAES identity cutover.",
-      "occurrences": 350,
-      "content_sha256": "2ded49472972eaeedf5753ff64e420020e0576e9d7753f0271046a7340d9ada9"
+      "occurrences": 346,
+      "content_sha256": "362f96df38c79d9d33f85e69a919b4f0e3732482e9589b26c932470bc6e7d82f"
     },
     {
       "path": "contracts/schema-publication/tombstones/\u0061ces-semantic-invariants-v1.json",
@@ -44,7 +44,7 @@
       "record_class": "historical-index",
       "rationale": "Indexes immutable pre-cutover ADR titles, paths, pins, and amendment summaries without making them current identity surf\u0061ces.",
       "occurrences": 4,
-      "content_sha256": "e0eda7d0e69151a1c46617469ec8ebe78202217bfae49247c6564c1949d802e6"
+      "content_sha256": "5dbb8fd47e1129ed93a8c39fb55a6a31764be0c415854935cd6cc2b892cc65e6"
     },
     {
       "path": "docs/decisions/adrs/adr-000-use-adrs.md",
@@ -499,7 +499,7 @@
       "record_class": "historical-index",
       "rationale": "Indexes immutable pre-cutover ADR titles, paths, pins, and amendment summaries without making them current identity surf\u0061ces.",
       "occurrences": 4,
-      "content_sha256": "597c105d8f011cbb4b1ee1f42f2fb38304d0dece69f54edf3c8fa418c3311271"
+      "content_sha256": "07647de85678b0bbc9b712a9af0ff61edddaa49955c44536a093f74a0898bba6"
     },
     {
       "path": "docs/decisions/cage-2-replication-design.md",
@@ -1577,7 +1577,7 @@
       "record_class": "research-record",
       "rationale": "Preserves preregistered, frozen, dated, or lineage-bearing research evidence from before the RAES identity cutover.",
       "occurrences": 24,
-      "content_sha256": "050e205672cf340fa167e2a2d7b3e2739f058794eb28d34b68612767249a511a"
+      "content_sha256": "89676790565dc970e4f07ff48dd705094124877bdd4f4aaa7e574c4cce4af9e9"
     },
     {
       "path": "docs/research/participant-backend-contracts/index.md",

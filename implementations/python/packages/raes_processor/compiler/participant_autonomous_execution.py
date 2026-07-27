@@ -5,16 +5,158 @@ from raes.scenario import InstantiatedScenario
 from ..models import (
     ParticipantAutonomousExecutionRuntime,
     ParticipantExecutionBindingRuntime,
+    ParticipantResourceDemandRuntime,
+    ParticipantResourceFairnessRuntime,
+    ParticipantResourceOwnerRuntime,
 )
 from .addresses import (
     _action_contract_address,
     _behavior_specification_address,
     _objective_address,
     _observation_boundary_address,
+    _resolve_node_service_ref,
     _section_ref_name,
 )
 from .alias_index import _runtime_addressable_ref_index, _runtime_addresses_for_refs
 from .support import _address, _dump
+
+
+def _resource_owner_address(
+    scenario: InstantiatedScenario,
+    *,
+    kind: str,
+    ref: str,
+    participant_addresses: tuple[str, ...],
+) -> str:
+    if kind == "participant":
+        matching = tuple(address for address in participant_addresses if address.endswith(f".{ref}"))
+        if len(matching) != 1:
+            raise ValueError("participant resource owner must resolve to one policy participant")
+        address = matching[0]
+    elif kind == "deployment_tenant":
+        name = _section_ref_name(ref, "deployment_tenants", scenario.deployment_tenants)
+        address = _address("deployment", "tenant", name)
+    elif kind == "shared_service":
+        resolved = _resolve_node_service_ref(scenario, ref)
+        if resolved is None:
+            raise ValueError("shared-service resource owner must resolve to one node service")
+        address = _address("provision", "node", resolved[0], "service", resolved[1])
+    else:
+        address = ref
+    return address
+
+
+def _legacy_resource_demands(
+    policy: object,
+    participant_addresses: tuple[str, ...],
+) -> tuple[
+    tuple[ParticipantResourceOwnerRuntime, ...],
+    tuple[ParticipantResourceDemandRuntime, ...],
+    ParticipantResourceFairnessRuntime,
+]:
+    owner_address = participant_addresses[0]
+    owner = ParticipantResourceOwnerRuntime(
+        owner_id="legacy-participant",
+        kind="participant",
+        address=owner_address,
+    )
+    demands = (
+        ParticipantResourceDemandRuntime(
+            budget_id="legacy-action-rate",
+            owner_id=owner.owner_id,
+            owner_kind=owner.kind,
+            owner_address=owner.address,
+            pool_ref="legacy-participant",
+            resource_kind="action_rate",
+            unit="actions",
+            accounting_mode="windowed_counter",
+            meter_profile_ref="raes.action-attempt/v1",
+            limit=policy.max_action_attempts,
+            reservation=1,
+            reset="time_segment",
+            window_ticks=policy.max_action_attempts,
+            provenance="legacy_maximum",
+        ),
+        ParticipantResourceDemandRuntime(
+            budget_id="legacy-concurrent-actions",
+            owner_id=owner.owner_id,
+            owner_kind=owner.kind,
+            owner_address=owner.address,
+            pool_ref="legacy-participant",
+            resource_kind="concurrent_actions",
+            unit="actions",
+            accounting_mode="reservable_gauge",
+            meter_profile_ref="raes.concurrent-action/v1",
+            limit=policy.max_in_flight,
+            reservation=1,
+            reset="reconciled",
+            provenance="legacy_maximum",
+        ),
+    )
+    return (owner,), demands, ParticipantResourceFairnessRuntime()
+
+
+def _compiled_resource_budget(
+    scenario: InstantiatedScenario,
+    policy: object,
+    participant_addresses: tuple[str, ...],
+) -> tuple[
+    tuple[ParticipantResourceOwnerRuntime, ...],
+    tuple[ParticipantResourceDemandRuntime, ...],
+    ParticipantResourceFairnessRuntime,
+]:
+    authored = getattr(policy, "resource_budget", None)
+    if authored is None:
+        return _legacy_resource_demands(policy, participant_addresses)
+    owners = tuple(
+        ParticipantResourceOwnerRuntime(
+            owner_id=str(owner_id),
+            kind=owner.kind.value,
+            address=_resource_owner_address(
+                scenario,
+                kind=owner.kind.value,
+                ref=owner.ref,
+                participant_addresses=participant_addresses,
+            ),
+        )
+        for owner_id, owner in sorted(authored.owners.items())
+    )
+    owner_by_id = {owner.owner_id: owner for owner in owners}
+    demands = tuple(
+        ParticipantResourceDemandRuntime(
+            budget_id=str(budget_id),
+            owner_id=str(dimension.owner_ref),
+            owner_kind=owner_by_id[str(dimension.owner_ref)].kind,
+            owner_address=owner_by_id[str(dimension.owner_ref)].address,
+            pool_ref=dimension.pool_ref,
+            resource_kind=dimension.resource_kind.value,
+            unit=dimension.unit,
+            accounting_mode=dimension.accounting_mode.value,
+            meter_profile_ref=dimension.meter_profile_ref,
+            limit=dimension.limit,
+            reservation=dimension.reservation,
+            reset=dimension.reset.value,
+            window_ticks=dimension.window_ticks,
+            parent_budget_ref=(str(dimension.parent_budget_ref) if dimension.parent_budget_ref is not None else None),
+            evidence_refs=tuple(dimension.evidence_refs),
+        )
+        for budget_id, dimension in sorted(authored.dimensions.items())
+    )
+    fairness = authored.fairness
+    return (
+        owners,
+        demands,
+        ParticipantResourceFairnessRuntime(
+            policy=fairness.policy,
+            priority_class=fairness.priority_class,
+            weight=fairness.weight,
+            protected=fairness.protected,
+            borrowing=fairness.borrowing,
+            reclaim=fairness.reclaim,
+            max_queue_ticks=fairness.max_queue_ticks,
+            starvation_bound_ticks=fairness.starvation_bound_ticks,
+        ),
+    )
 
 
 def _compile_autonomous_execution(
@@ -41,7 +183,7 @@ def _compile_autonomous_execution(
     pause_window_refs = list(getattr(policy, "pause_window_refs", ()))
     temporal_constraint_refs = (
         [*work_window_refs, *pause_window_refs]
-        if profile == "participant-autonomous-execution/v2"
+        if profile in {"participant-autonomous-execution/v2", "participant-autonomous-execution/v3"}
         else list(policy.temporal_constraint_refs)
     )
     addressable_ref_index = _runtime_addressable_ref_index(scenario)
@@ -75,6 +217,11 @@ def _compile_autonomous_execution(
     execution_bindings = tuple(execution_bindings_by_key.values())
     target_addresses = tuple(
         dict.fromkeys(target for binding in execution_bindings for target in binding.target_addresses)
+    )
+    resource_owners, resource_demands, resource_fairness = _compiled_resource_budget(
+        scenario,
+        policy,
+        participant_addresses,
     )
     return ParticipantAutonomousExecutionRuntime(
         address=address,
@@ -159,6 +306,9 @@ def _compile_autonomous_execution(
         action_candidate_cooldown_ticks=tuple(candidate.cooldown_ticks for _, candidate in ordered_candidates),
         max_occurrences=int(getattr(policy, "max_occurrences", 0)),
         max_burst_size=int(getattr(policy, "max_burst_size", 1)),
+        resource_owners=resource_owners,
+        resource_demands=resource_demands,
+        resource_fairness=resource_fairness,
         refresh_dependencies=(
             *participant_addresses,
             *tuple(

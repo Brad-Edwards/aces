@@ -309,6 +309,51 @@ Bounded concurrent native participant execution, coordinated drain/reset, and
 action-to-target evidence remain RAES-defined obligations under ADR-092,
 ADR-054/RUN-308, ADR-091, and issue #898.
 
+### Issue 899 scoped resource-governance review
+
+The participant execution and deployment-tenancy sources were re-reviewed on
+2026-07-27 for issue #899. The following primary sources add design criteria:
+
+- Kubernetes, *Resource Quotas*,
+  <https://kubernetes.io/docs/concepts/policy/resource-quotas/>, separates
+  namespace-scoped aggregate limits from individual workload declarations.
+- Kubernetes, *API Priority and Fairness*,
+  <https://kubernetes.io/docs/concepts/cluster-administration/flow-control/>,
+  separates classification, priority, queueing, and concurrency allocation.
+- Kueue, *Cluster Queue*,
+  <https://kueue.sigs.k8s.io/docs/concepts/cluster_queue/>, distinguishes
+  nominal quota, cohorts, borrowing/lending, and priority.
+- Ghodsi et al., *Dominant Resource Fairness: Fair Allocation of Multiple
+  Resource Types* (NSDI 2011),
+  <https://www.usenix.org/conference/nsdi11/dominant-resource-fairness-fair-allocation-multiple-resource-types>,
+  establishes a multi-resource fairness precedent rather than a single
+  scalar-cost reduction.
+- Open Container Initiative, *Linux Container Configuration*,
+  <https://github.com/opencontainers/runtime-spec/blob/main/config-linux.md>,
+  separates logical container configuration from cgroup and device
+  enforcement.
+- Kubernetes, *Dynamic Resource Allocation*,
+  <https://kubernetes.io/docs/concepts/scheduling-eviction/dynamic-resource-allocation/>,
+  separates workload demand, device classes, claims, allocation, and driver
+  realization.
+- OpenTelemetry, *Metrics semantic conventions* and *Generative AI metrics*,
+  <https://opentelemetry.io/docs/specs/semconv/general/metrics/> and
+  <https://github.com/open-telemetry/semantic-conventions/blob/main/docs/gen-ai/gen-ai-metrics.md>,
+  require explicit metric identity, units, and bounded attribute sets and
+  provide token-usage observation precedent.
+
+RAES adapts only the separation of authored demand, configured capacity,
+multi-resource fairness obligations, logical isolation claims, and measured
+realization. The v3 SDL shape, owner graph, resource kinds and units, meter
+profiles, exact atomic admission, generation-fenced accounting, reset rules,
+manifest carriers, runtime events, and evidence obligations are RAES-defined
+under ADR-097. RAES does not adopt Kubernetes, Kueue, OCI, or OpenTelemetry
+syntax, APIs, object identity, scheduler algorithms, device models, cgroup
+configuration, telemetry wire formats, or compatibility. Dominant Resource
+Fairness is precedent for keeping vectors comparable; v3 does not claim to
+implement the paper's allocator. No source code or schema was copied, and no
+additional license notice is required.
+
 ## CRACK Publications
 
 Two related works by Russo, Costa, and Armando are distinct and must not share

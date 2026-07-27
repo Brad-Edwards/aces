@@ -10,6 +10,11 @@ from raes_contracts.participant_behavior import ParticipantObservationStatus
 from raes_contracts.versions import WORKFLOW_STATE_SCHEMA_VERSION
 from raes_contracts.workflow import WorkflowExecutionContract, WorkflowResultContract, WorkflowStepOutcome
 
+from .participant_resources import (
+    ParticipantResourceDemandRuntime,
+    ParticipantResourceFairnessRuntime,
+    ParticipantResourceOwnerRuntime,
+)
 from .resources import ResolvedResource
 
 
@@ -133,6 +138,9 @@ class ParticipantAutonomousExecutionRuntime(ResolvedResource):
     action_candidate_cooldown_ticks: tuple[int, ...] = ()
     max_occurrences: int = 0
     max_burst_size: int = 1
+    resource_owners: tuple[ParticipantResourceOwnerRuntime, ...] = ()
+    resource_demands: tuple[ParticipantResourceDemandRuntime, ...] = ()
+    resource_fairness: ParticipantResourceFairnessRuntime = field(default_factory=ParticipantResourceFairnessRuntime)
 
 
 @dataclass(frozen=True)

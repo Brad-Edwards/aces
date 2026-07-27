@@ -17,4 +17,4 @@ here are authoritative independent of any reference implementation.
 - [`artifact-requirement-satisfaction.md`](artifact-requirement-satisfaction.md) —
   exact, constrained, and open `Source` artifact demand, backend capability,
   admission, and runtime satisfaction disclosure
-  (#920, [ADR-097](../../docs/decisions/adrs/adr-097-portable-artifact-requirement-satisfaction.md)).
+  (#920, [ADR-098](../../docs/decisions/adrs/adr-098-portable-artifact-requirement-satisfaction.md)).

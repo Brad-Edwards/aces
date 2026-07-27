@@ -13,6 +13,8 @@ from raes_contracts.manifest_authority import (
 )
 from raes_contracts.vocabulary import ParticipantFeatureSupportLevel
 
+from .participant_resource_budgets import ParticipantResourceBudgetCapabilities
+
 PARTICIPANT_EXECUTION_CONTROL_ACTIONS = frozenset({"start", "pause", "resume", "drain", "reset", "teardown"})
 
 
@@ -175,6 +177,7 @@ class ParticipantRuntimeCapabilities:
     supports_bounded_concurrency: bool = False
     max_execution_services: int | None = None
     max_concurrent_actions: int | None = None
+    resource_budgets: ParticipantResourceBudgetCapabilities | None = None
     constraints: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -271,16 +274,27 @@ class ParticipantRuntimeCapabilities:
             raise ValueError("autonomous execution requires exact supported observation boundaries")
         if not self.supported_autonomous_policy_profiles:
             raise ValueError("autonomous execution requires exact supported policy profiles")
-        if "participant-autonomous-execution/v2" in self.supported_autonomous_policy_profiles:
-            if not self.supported_autonomous_activity_features:
-                raise ValueError("autonomous execution v2 requires exact supported activity features")
-            if not self.supported_autonomous_random_stream_profiles:
-                raise ValueError("autonomous execution v2 requires exact supported random-stream profiles")
+        self._validate_activity_profiles()
         self._validate_autonomous_addresses()
         self._validate_execution_control()
         for label, value in self._autonomous_limits():
             if value is None or value < 1:
                 raise ValueError(f"autonomous execution requires positive {label}")
+
+    def _validate_activity_profiles(self) -> None:
+        if {
+            "participant-autonomous-execution/v2",
+            "participant-autonomous-execution/v3",
+        }.intersection(self.supported_autonomous_policy_profiles):
+            if not self.supported_autonomous_activity_features:
+                raise ValueError("autonomous execution v2/v3 requires exact supported activity features")
+            if not self.supported_autonomous_random_stream_profiles:
+                raise ValueError("autonomous execution v2/v3 requires exact supported random-stream profiles")
+        if (
+            "participant-autonomous-execution/v3" in self.supported_autonomous_policy_profiles
+            and self.resource_budgets is None
+        ):
+            raise ValueError("autonomous execution v3 requires participant resource-budget capabilities")
 
     def _validate_execution_control(self) -> None:
         self._validate_execution_control_actions()
@@ -355,6 +369,7 @@ class ParticipantRuntimeCapabilities:
             or self.supports_bounded_concurrency
             or self.max_execution_services is not None
             or self.max_concurrent_actions is not None
+            or self.resource_budgets is not None
             or any(value is not None for _, value in self._autonomous_limits())
         )
 
