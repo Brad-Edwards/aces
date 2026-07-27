@@ -2,9 +2,9 @@
   "contract_id": "participant-time-management-context-v1",
   "schema_path": "contracts/schemas/participant-runtime/participant-time-management-context-v1.json",
   "stability": "draft",
-  "content_hash": "f73a94028c86c301ea487b08ddf985b0badb03a91309e3028dfed05226614c3c",
+  "content_hash": "39389146e500fcbdde8518c4256e4825eb4592c3cb7cd59a006feb5304ad3d69",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "f73a94028c86c301ea487b08ddf985b0badb03a91309e3028dfed05226614c3c"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "39389146e500fcbdde8518c4256e4825eb4592c3cb7cd59a006feb5304ad3d69"
   }
 }

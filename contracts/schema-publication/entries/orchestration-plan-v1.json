@@ -2,9 +2,9 @@
   "contract_id": "orchestration-plan-v1",
   "schema_path": "contracts/schemas/plans/orchestration-plan-v1.json",
   "stability": "draft",
-  "content_hash": "b2fe219bb20fe8c30aa8e7cacced28e44671512a7f809d1ab5a1c980b0ab9fef",
+  "content_hash": "97116f459eba56d281a5c6ba33c7f632f8b683379bf4e1e3b9ab933f43b7e00a",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "b2fe219bb20fe8c30aa8e7cacced28e44671512a7f809d1ab5a1c980b0ab9fef"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "97116f459eba56d281a5c6ba33c7f632f8b683379bf4e1e3b9ab933f43b7e00a"
   }
 }

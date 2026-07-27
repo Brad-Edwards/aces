@@ -2,9 +2,9 @@
   "contract_id": "scheduler-isolation-proof-v1",
   "schema_path": "contracts/schemas/control-plane/scheduler-isolation-proof-v1.json",
   "stability": "draft",
-  "content_hash": "ebf37a997518da860d7e023aef431a2d7eb5c1ea9888d88d015ed29ab1a3fd72",
+  "content_hash": "619f426ef06aca930f668b77820fa522475d73eb241a47423461f565a347f65d",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "ebf37a997518da860d7e023aef431a2d7eb5c1ea9888d88d015ed29ab1a3fd72"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "619f426ef06aca930f668b77820fa522475d73eb241a47423461f565a347f65d"
   }
 }

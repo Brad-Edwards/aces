@@ -2,9 +2,9 @@
   "contract_id": "operation-receipt-v1",
   "schema_path": "contracts/schemas/control-plane/operation-receipt-v1.json",
   "stability": "draft",
-  "content_hash": "195b33906287ca5b04fdf1820c48b79f25e6279311f7c79bfbe4c43f1aa7aeba",
+  "content_hash": "e1f5d43c0303e20df01920b4b2c00482518f6efe3a12c6a40576ea477c7663bc",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "195b33906287ca5b04fdf1820c48b79f25e6279311f7c79bfbe4c43f1aa7aeba"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "e1f5d43c0303e20df01920b4b2c00482518f6efe3a12c6a40576ea477c7663bc"
   }
 }

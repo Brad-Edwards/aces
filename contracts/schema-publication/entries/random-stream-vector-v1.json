@@ -2,9 +2,9 @@
   "contract_id": "random-stream-vector-v1",
   "schema_path": "contracts/schemas/profiles/random-stream-vector-v1.json",
   "stability": "draft",
-  "content_hash": "32d04d87018c3ac25a85a3a27e3d7f9cbe27ab37477380c7c8d786257d80e883",
+  "content_hash": "65e838472c5d1ac7a0eb2ffa4bfe6f3a756c77d776158c6dba8510e2edbc9001",
   "last_change": {
-    "summary": "Added the closed participant-occurrence stream-address variant to canonical random-stream vectors for issue #897.",
-    "content_hash": "32d04d87018c3ac25a85a3a27e3d7f9cbe27ab37477380c7c8d786257d80e883"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "65e838472c5d1ac7a0eb2ffa4bfe6f3a756c77d776158c6dba8510e2edbc9001"
   }
 }

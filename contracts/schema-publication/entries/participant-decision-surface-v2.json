@@ -2,9 +2,9 @@
   "contract_id": "participant-decision-surface-v2",
   "schema_path": "contracts/schemas/control-plane/participant-decision-surface-v2.json",
   "stability": "draft",
-  "content_hash": "ec31e314da8d75c87924e2b4cf76945ef419eaf54d02d25ae7c2c20426c411f6",
+  "content_hash": "792bd595100d3bedcfae287391af40f6607d8d4792b434f72e28f5e74b89ea2d",
   "last_change": {
-    "summary": "Published decision-surface v2 with independent decision epochs and state cuts, participant-view and assurance separation, exact-cut exposure authorization, explicit memory scope and delivery state, and delivery-bound selection.",
-    "content_hash": "ec31e314da8d75c87924e2b4cf76945ef419eaf54d02d25ae7c2c20426c411f6"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "792bd595100d3bedcfae287391af40f6607d8d4792b434f72e28f5e74b89ea2d"
   }
 }

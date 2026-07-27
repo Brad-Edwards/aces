@@ -2,9 +2,9 @@
   "contract_id": "participant-execution-control-v1",
   "schema_path": "contracts/schemas/participant-runtime/participant-execution-control-v1.json",
   "stability": "draft",
-  "content_hash": "7aead7ff4a66d15a87fd4504e2fe5cb077f60e0667c274e7734d3b5ccc5357b8",
+  "content_hash": "bed3cf4d05f53154a3fb0de874a86ef7cc8da4750ed2a61e4d90784ad8e0222a",
   "last_change": {
-    "summary": "Published generation-fenced start, pause, resume, bounded drain, reset, and teardown requests for issue #898 under the RAES schema identity.",
-    "content_hash": "7aead7ff4a66d15a87fd4504e2fe5cb077f60e0667c274e7734d3b5ccc5357b8"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "bed3cf4d05f53154a3fb0de874a86ef7cc8da4750ed2a61e4d90784ad8e0222a"
   }
 }

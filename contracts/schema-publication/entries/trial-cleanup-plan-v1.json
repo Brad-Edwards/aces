@@ -2,9 +2,9 @@
   "contract_id": "trial-cleanup-plan-v1",
   "schema_path": "contracts/schemas/plans/trial-cleanup-plan-v1.json",
   "stability": "draft",
-  "content_hash": "4d0ced18dc531cd5e5619bfe5558b49ad5856b5b94afc3d6ca40a4475aedc032",
+  "content_hash": "79f389e54ad2ba55824d5311db65b59ea9cf33e92271dafcdc89ccefac0f9cd3",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "4d0ced18dc531cd5e5619bfe5558b49ad5856b5b94afc3d6ca40a4475aedc032"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "79f389e54ad2ba55824d5311db65b59ea9cf33e92271dafcdc89ccefac0f9cd3"
   }
 }

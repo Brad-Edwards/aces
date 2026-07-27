@@ -258,7 +258,7 @@ _VALID_UTC_LEAP_SECOND_DATES = frozenset(
 )
 
 
-_RAES_SEMANTIC_INVARIANT_PROFILE_URI = "https://raes.dev/schemas/semantic-invariants/v1"
+_RAES_SEMANTIC_INVARIANT_PROFILE_URI = "https://raesystem.github.io/rae/schemas/semantic-invariants/v1"
 
 
 def _canonical_digest(digest: str | None) -> str | None:

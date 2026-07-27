@@ -2,9 +2,9 @@
   "contract_id": "semantic-profile-v1",
   "schema_path": "contracts/schemas/profiles/semantic-profile-v1.json",
   "stability": "draft",
-  "content_hash": "a3d9fdfea509aad4ea13977457a6467771c33126d2a43cf553161065114d6b90",
+  "content_hash": "0c9cb1ea7a9e0aa061e2fd133b270f088dbf451520c02baf7133fa5568260568",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "a3d9fdfea509aad4ea13977457a6467771c33126d2a43cf553161065114d6b90"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "0c9cb1ea7a9e0aa061e2fd133b270f088dbf451520c02baf7133fa5568260568"
   }
 }

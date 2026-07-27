@@ -135,3 +135,4 @@ validation, or evidence semantics beyond their identity-bearing values.
 | Date | Commit/PR | Summary |
 |---|---|---|
 | 2026-07-26 | #908 | Retained the existing SonarCloud project key as an exact, content-bound external-service designation; it is not a current RAES product identity or a general compatibility allowance. |
+| 2026-07-27 | #908 | Corrected the canonical published-schema URI root. The root recorded above, `https://raes.dev/schemas/`, names a domain this project does not control, and neither did the retired-identity domain it replaced. The canonical root is now `https://raesystem.github.io/rae/schemas/`, which is bound to the repository's own GitHub organisation and is therefore uniquely ours to assign. `$id` remains an identifier and is not required to resolve, so no DNS or hosting obligation follows from it. |

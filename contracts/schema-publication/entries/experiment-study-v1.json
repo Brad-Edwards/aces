@@ -2,9 +2,9 @@
   "contract_id": "experiment-study-v1",
   "schema_path": "contracts/schemas/experiment-core/experiment-study-v1.json",
   "stability": "draft",
-  "content_hash": "e3968289f399d09a974dfb7ac04266d5e37f9ad68abaa73e49c3862c87f69a03",
+  "content_hash": "1accca3d930ce66005cd4a46400147271c111a287b2dd3760af91e403231f33a",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "e3968289f399d09a974dfb7ac04266d5e37f9ad68abaa73e49c3862c87f69a03"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "1accca3d930ce66005cd4a46400147271c111a287b2dd3760af91e403231f33a"
   }
 }

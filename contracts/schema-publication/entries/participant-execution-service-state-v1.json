@@ -2,9 +2,9 @@
   "contract_id": "participant-execution-service-state-v1",
   "schema_path": "contracts/schemas/participant-runtime/participant-execution-service-state-v1.json",
   "stability": "draft",
-  "content_hash": "9e1af40ed0e6c7be3766bb4219b23a3f5dd9f78d65d3faa82474f9b86299da46",
+  "content_hash": "9b3a688001e9ed6473121fa8e8861ca98a245218919233ce4bf75e0b1ef7fd16",
   "last_change": {
-    "summary": "Linked participant execution concurrency readback to authoritative resource-budget states for issue #899.",
-    "content_hash": "9e1af40ed0e6c7be3766bb4219b23a3f5dd9f78d65d3faa82474f9b86299da46"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "9b3a688001e9ed6473121fa8e8861ca98a245218919233ce4bf75e0b1ef7fd16"
   }
 }

@@ -2,9 +2,9 @@
   "contract_id": "participant-resource-budget-policy-v1",
   "schema_path": "contracts/schemas/participant-runtime/participant-resource-budget-policy-v1.json",
   "stability": "draft",
-  "content_hash": "40280cca88f0aa01c60861cea70aa5f6fff9ded2fd85473c45e339194317fe1d",
+  "content_hash": "0d3aa2919271d566df9b8d0bb9882cc56f78b4de298c38485c7775fbb34cd574",
   "last_change": {
-    "summary": "Published canonical participant resource-budget owners, typed demands, meters, reset policy, and fairness obligations for issue #899.",
-    "content_hash": "40280cca88f0aa01c60861cea70aa5f6fff9ded2fd85473c45e339194317fe1d"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "0d3aa2919271d566df9b8d0bb9882cc56f78b4de298c38485c7775fbb34cd574"
   }
 }

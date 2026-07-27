@@ -117,7 +117,7 @@ def test_native_family_rejects_authority_metadata():
             description="SDL scenarios.",
             provenance=ConceptProvenanceCategory.NATIVE,
             authority="RAES",
-            authority_reference="https://raes.dev/concepts",
+            authority_reference="https://raesystem.github.io/rae/concepts",
             extension_scope="SDL-native scenario authoring constructs.",
             relation_rules=["Must remain the scenario authoring layer."],
             non_ambiguity_constraints=["Must not redefine adopted cyber-domain families."],

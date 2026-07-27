@@ -2,9 +2,9 @@
   "contract_id": "scientific-completeness-assessment-v1",
   "schema_path": "contracts/schemas/profiles/scientific-completeness-assessment-v1.json",
   "stability": "draft",
-  "content_hash": "77d73cf5f338802afd8d3d62552148d45e22af0eac562b8d2aaa86a7043ef1de",
+  "content_hash": "5db146299d691116e445bed420387e0a221801194c4deabbdd50f022ff7de5ac",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "77d73cf5f338802afd8d3d62552148d45e22af0eac562b8d2aaa86a7043ef1de"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "5db146299d691116e445bed420387e0a221801194c4deabbdd50f022ff7de5ac"
   }
 }

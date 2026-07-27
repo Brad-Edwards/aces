@@ -2,9 +2,9 @@
   "contract_id": "realized-time-model-v1",
   "schema_path": "contracts/schemas/time/realized-time-model-v1.json",
   "stability": "draft",
-  "content_hash": "0034fe68c2981896e4c8e08743bd9e18ae20f9aa9bde91d92f1af1b2dc0537ba",
+  "content_hash": "3ce01b4927e0975c48d7398c013ab5624bf6d74dbc04b259d8a9529fd44cca48",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "0034fe68c2981896e4c8e08743bd9e18ae20f9aa9bde91d92f1af1b2dc0537ba"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "3ce01b4927e0975c48d7398c013ab5624bf6d74dbc04b259d8a9529fd44cca48"
   }
 }

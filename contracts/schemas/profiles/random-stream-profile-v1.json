@@ -148,7 +148,7 @@
       "type": "object"
     }
   },
-  "$id": "https://raes.dev/schemas/random-stream-profile-v1.json",
+  "$id": "https://raesystem.github.io/rae/schemas/random-stream-profile-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "Published random-stream profile: one closed, immutable compatibility unit.\n\nChanging any field mints a new ``profile_id`` (the EXP-718 preflight's \"One\nProfile And One Stateless API\" section). This model's JSON Schema is\ngenerated via ``schema_bundle()``, never hand-authored.",
@@ -235,6 +235,6 @@
     "id": "raes-semantic-invariants-v1",
     "keyword": "x-raes-invariants",
     "required": true,
-    "uri": "https://raes.dev/schemas/semantic-invariants/v1"
+    "uri": "https://raesystem.github.io/rae/schemas/semantic-invariants/v1"
   }
 }

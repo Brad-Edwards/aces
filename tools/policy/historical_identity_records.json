@@ -23,7 +23,7 @@
       "record_class": "release-history",
       "rationale": "Preserves immutable release notes and links published before the RAES identity cutover.",
       "occurrences": 297,
-      "content_sha256": "3a1154626ec846e91556113406701d22e69df203237c072adb2fa626ddc5c8f7"
+      "content_sha256": "6faabd84a6054d74f1778da8ed9d06696af72b95de9b5f26d29f7cb2af0cd50b"
     },
     {
       "path": "contracts/provenance/sdl-lineage-ledger-v1.json",
@@ -499,7 +499,7 @@
       "record_class": "historical-index",
       "rationale": "Indexes immutable pre-cutover ADR titles, paths, pins, and amendment summaries without making them current identity surf\u0061ces.",
       "occurrences": 4,
-      "content_sha256": "07647de85678b0bbc9b712a9af0ff61edddaa49955c44536a093f74a0898bba6"
+      "content_sha256": "8ed12d609d126d54a55342778e4a4007d6f49015298fa49fb3848d5f11d427f1"
     },
     {
       "path": "docs/decisions/cage-2-replication-design.md",
