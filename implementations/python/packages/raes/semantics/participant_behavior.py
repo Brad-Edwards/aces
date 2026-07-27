@@ -703,36 +703,47 @@ def _autonomous_progression_issues(
     return issues
 
 
+def _activity_timing_unreachable(
+    policy: object,
+    step_ticks: object,
+) -> bool:
+    minimum_ticks = policy.timing.minimum_ticks
+    maximum_ticks = policy.timing.maximum_ticks
+    return not (isinstance(step_ticks, int) and not minimum_ticks % step_ticks and not maximum_ticks % step_ticks)
+
+
+def _cadence_unreachable(bindings: _AutonomousTimeBindings, step_ticks: object) -> bool:
+    cadence_ticks = getattr(bindings.cadence, "cadence_ticks", None)
+    start = getattr(bindings.cadence, "start", None)
+    start_tick = getattr(start, "tick", 0) if start is not None else 0
+    return not (
+        isinstance(step_ticks, int)
+        and isinstance(cadence_ticks, int)
+        and start_tick >= 0
+        and not start_tick % step_ticks
+        and not cadence_ticks % step_ticks
+    )
+
+
 def _autonomous_stepped_issue_code(
     context: _AutonomousExecutionReferenceContext,
     bindings: _AutonomousTimeBindings,
 ) -> str | None:
-    issue_code = None
     step_ticks = getattr(bindings.progression, "step_ticks", None)
     activity_policy = getattr(context.policy, "profile", "participant-autonomous-execution/v1") in {
         "participant-autonomous-execution/v2",
         "participant-autonomous-execution/v3",
     }
-    if activity_policy:
-        minimum_ticks = context.policy.timing.minimum_ticks
-        maximum_ticks = context.policy.timing.maximum_ticks
-        reachable = isinstance(step_ticks, int) and not minimum_ticks % step_ticks and not maximum_ticks % step_ticks
-        if not reachable:
-            issue_code = "participant.autonomous-activity-timing-unreachable"
-    elif bindings.cadence_count == 1 and bindings.cadence is not None:
-        cadence_ticks = getattr(bindings.cadence, "cadence_ticks", None)
-        start = getattr(bindings.cadence, "start", None)
-        start_tick = getattr(start, "tick", 0) if start is not None else 0
-        reachable = (
-            isinstance(step_ticks, int)
-            and isinstance(cadence_ticks, int)
-            and start_tick >= 0
-            and not start_tick % step_ticks
-            and not cadence_ticks % step_ticks
-        )
-        if not reachable:
-            issue_code = "participant.autonomous-cadence-unreachable"
-    return issue_code
+    if activity_policy and _activity_timing_unreachable(context.policy, step_ticks):
+        return "participant.autonomous-activity-timing-unreachable"
+    if (
+        not activity_policy
+        and bindings.cadence_count == 1
+        and bindings.cadence is not None
+        and _cadence_unreachable(bindings, step_ticks)
+    ):
+        return "participant.autonomous-cadence-unreachable"
+    return None
 
 
 def _autonomous_stepped_cadence_issues(
