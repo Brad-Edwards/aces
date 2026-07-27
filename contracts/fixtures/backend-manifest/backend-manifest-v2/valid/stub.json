@@ -241,6 +241,7 @@
         "white"
       ],
       "supported_execution_control_actions": [],
+      "resource_budgets": null,
       "supports_autonomous_execution": false,
       "supports_bounded_concurrency": false,
       "supports_execution_control": false
@@ -395,6 +396,10 @@
     "participant-execution-binding-v1",
     "participant-execution-control-v1",
     "participant-execution-service-state-v1",
+    "participant-resource-budget-policy-v1",
+    "participant-resource-pool-capacity-v1",
+    "participant-resource-budget-state-v1",
+    "participant-resource-budget-event-v1",
     "participant-control-occurrence-v1",
     "participant-crossing-occurrence-v1",
     "participant-lifecycle-event-v1",

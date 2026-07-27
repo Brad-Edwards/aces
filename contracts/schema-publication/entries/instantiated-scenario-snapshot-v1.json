@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-snapshot-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "812a22bf742131ea7c255c1305bafd8b695a2ad0ef50535361bd0dbde58c7e68",
+  "content_hash": "67e529931bccbc9d5aed61008b947f4e00ecf42e3c85ffabef06d94f85a214bb",
   "last_change": {
-    "summary": "Published the explicit autonomous activity v2 policy union in immutable instantiated scenario snapshots for issue #897.",
-    "content_hash": "812a22bf742131ea7c255c1305bafd8b695a2ad0ef50535361bd0dbde58c7e68"
+    "summary": "Published the v3 scoped participant resource-budget policy in immutable instantiated scenario snapshots for issue #899.",
+    "content_hash": "67e529931bccbc9d5aed61008b947f4e00ecf42e3c85ffabef06d94f85a214bb"
   }
 }

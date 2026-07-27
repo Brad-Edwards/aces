@@ -2,9 +2,9 @@
   "contract_id": "runtime-snapshot-v1",
   "schema_path": "contracts/schemas/snapshots/runtime-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "eb09a73c33e562958bfb5dc606aa4ac52f8ffa9025cd6a4a0db206ffc3000f50",
+  "content_hash": "0a0504edc131b6f7b9d08fc47487d37223e8d389c7c1dcc11f4f76562b2cfe60",
   "last_change": {
-    "summary": "Combined autonomous activity v2 continuation and occurrence provenance with generation-fenced execution service health, readiness, capacity, shared-time provenance, and lifecycle evidence for issue #898.",
-    "content_hash": "eb09a73c33e562958bfb5dc606aa4ac52f8ffa9025cd6a4a0db206ffc3000f50"
+    "summary": "Added canonical participant budget states, authoritative physical-pool allocation ledgers, and evidence events for issue #899.",
+    "content_hash": "0a0504edc131b6f7b9d08fc47487d37223e8d389c7c1dcc11f4f76562b2cfe60"
   }
 }

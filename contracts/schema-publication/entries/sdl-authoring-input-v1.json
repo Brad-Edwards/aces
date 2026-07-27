@@ -2,9 +2,9 @@
   "contract_id": "sdl-authoring-input-v1",
   "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
   "stability": "draft",
-  "content_hash": "f1bc1cfb91a66b739f94ee34ff5ee13070a9a062f4071a2693e8639e09a5ba92",
+  "content_hash": "cd3e58a6fb92f0de031d3f51dcad963ba43892d41721cd3e5dcb5e74e021d72c",
   "last_change": {
-    "summary": "Published the explicit autonomous activity v2 authoring profile with governed windows, timing, weighted candidates, retries, cooldowns, and bursts for issue #897.",
-    "content_hash": "f1bc1cfb91a66b739f94ee34ff5ee13070a9a062f4071a2693e8639e09a5ba92"
+    "summary": "Published the v3 autonomous profile with scoped owners, complete typed resource budgets, aggregation, fairness, and reset policy for issue #899.",
+    "content_hash": "cd3e58a6fb92f0de031d3f51dcad963ba43892d41721cd3e5dcb5e74e021d72c"
   }
 }

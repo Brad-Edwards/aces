@@ -36,6 +36,7 @@ from ..participant_behavior import (
 )
 from ..versions import PARTICIPANT_EPISODE_STATE_SCHEMA_VERSION
 from .base import ContractModel, NonEmptyString
+from .participant_resource_budgets import ParticipantResourceMeasurementModel
 from .random_stream import ParticipantStreamAddressModel
 
 
@@ -103,8 +104,16 @@ class ParticipantActionResultModel(ContractModel):
     effects: list[ParticipantActionEffectResultModel] = Field(default_factory=list)
     failure_class: ParticipantFailureClass | None = None
     observations: list[NonEmptyString] = Field(default_factory=list)
+    resource_measurements: list[ParticipantResourceMeasurementModel] = Field(default_factory=list)
     evidence_refs: list[NonEmptyString] = Field(default_factory=list)
     diagnostics: list[NonEmptyString] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _validate_resource_measurements(self) -> ParticipantActionResultModel:
+        state_refs = [measurement.budget_state_ref for measurement in self.resource_measurements]
+        if len(state_refs) != len(set(state_refs)):
+            raise ValueError("participant action resource measurements must have unique budget_state_ref values")
+        return self
 
 
 class ParticipantTemporalRuntimeContextModel(ContractModel):
@@ -194,7 +203,10 @@ class ParticipantActivityOccurrenceProvenanceModel(ContractModel):
     """Safe within-run scheduler provenance for one native action attempt."""
 
     policy_address: NonEmptyString
-    policy_profile: Literal["participant-autonomous-execution/v2"]
+    policy_profile: Literal[
+        "participant-autonomous-execution/v2",
+        "participant-autonomous-execution/v3",
+    ]
     occurrence_id: NonEmptyString
     attempt_id: NonEmptyString
     predecessor_attempt_id: NonEmptyString | None = None
@@ -274,6 +286,7 @@ class ParticipantAutonomousExecutionStateModel(ContractModel):
     profile: Literal[
         "participant-autonomous-execution/v1",
         "participant-autonomous-execution/v2",
+        "participant-autonomous-execution/v3",
     ] = "participant-autonomous-execution/v1"
     occurrence_ordinal: StrictInt = Field(default=0, ge=0)
     current_retry: StrictInt = Field(default=0, ge=0)

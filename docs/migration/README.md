@@ -13,6 +13,10 @@ The explicit opt-in from fixed-cadence autonomous participant execution to the
 governed activity profile is documented in
 [Autonomous Execution V2 Migration](autonomous-execution-v2.md).
 
+Scoped participant, tenant, shared-service, and fleet resource governance is
+an explicit v3 opt-in documented in
+[Autonomous Execution V3 Migration](autonomous-execution-v3.md).
+
 Backends that declare autonomous participant execution must adopt the portable
 execution-service surface described in
 [Participant Execution Control Migration](participant-execution-control.md).

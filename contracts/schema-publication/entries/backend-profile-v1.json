@@ -2,9 +2,9 @@
   "contract_id": "backend-profile-v1",
   "schema_path": "contracts/schemas/profiles/backend-profile-v1.json",
   "stability": "draft",
-  "content_hash": "736ef55570ccbfa97b966cfdf121eea0b75e42d8a1e94e0897371aa6a6502a47",
+  "content_hash": "ac32e06e7b7f8de2cfab4e6feda9bac56ae8b0768f8fdc2764fc24e4d335a913",
   "last_change": {
-    "summary": "Combined participant control and crossing occurrence contracts with execution binding, lifecycle control, and service-state contracts for issue #898.",
-    "content_hash": "736ef55570ccbfa97b966cfdf121eea0b75e42d8a1e94e0897371aa6a6502a47"
+    "summary": "Authorized backend profiles to require the participant resource-budget policy, pool-capacity, state, and event contracts for issue #899.",
+    "content_hash": "ac32e06e7b7f8de2cfab4e6feda9bac56ae8b0768f8fdc2764fc24e4d335a913"
   }
 }

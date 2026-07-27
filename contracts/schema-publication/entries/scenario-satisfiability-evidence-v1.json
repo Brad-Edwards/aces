@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "b67869d52a1c78da43d56d01465e85f09023e348ffd185b71e276b20f3798765",
+  "content_hash": "a7a2b5c03e42e64b499e21d902e1bfe1fcc6d7052df9119c45a252f5538d63df",
   "last_change": {
-    "summary": "Carried the explicit autonomous activity v2 policy union through satisfiability evidence scenario definitions for issue #897.",
-    "content_hash": "b67869d52a1c78da43d56d01465e85f09023e348ffd185b71e276b20f3798765"
+    "summary": "Carried the v3 scoped participant resource-budget policy through satisfiability evidence scenario definitions for issue #899.",
+    "content_hash": "a7a2b5c03e42e64b499e21d902e1bfe1fcc6d7052df9119c45a252f5538d63df"
   }
 }

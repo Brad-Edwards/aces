@@ -566,7 +566,10 @@ def _autonomous_constraint_issues(
     cadence = None
     cadence_count = 0
     profile = getattr(context.policy, "profile", "participant-autonomous-execution/v1")
-    activity_policy = profile == "participant-autonomous-execution/v2"
+    activity_policy = profile in {
+        "participant-autonomous-execution/v2",
+        "participant-autonomous-execution/v3",
+    }
     constraint_refs = (
         [*context.policy.work_window_refs, *context.policy.pause_window_refs]
         if activity_policy
@@ -678,9 +681,10 @@ def _autonomous_stepped_cadence_issues(
     if progression_mode != "stepped":
         return []
     step_ticks = getattr(bindings.progression, "step_ticks", None)
-    if getattr(context.policy, "profile", "participant-autonomous-execution/v1") == (
-        "participant-autonomous-execution/v2"
-    ):
+    if getattr(context.policy, "profile", "participant-autonomous-execution/v1") in {
+        "participant-autonomous-execution/v2",
+        "participant-autonomous-execution/v3",
+    }:
         minimum_ticks = context.policy.timing.minimum_ticks
         maximum_ticks = context.policy.timing.maximum_ticks
         if isinstance(step_ticks, int) and not minimum_ticks % step_ticks and not maximum_ticks % step_ticks:

@@ -25,6 +25,11 @@ from .participant_envelopes import (
     ParticipantTimeManagementContextModel,
 )
 from .participant_execution import ParticipantExecutionServiceStateModel
+from .participant_resource_budgets import (
+    ParticipantResourceBudgetEventModel,
+    ParticipantResourceBudgetStateModel,
+    ParticipantResourcePoolStateModel,
+)
 from .participant_runtime import (
     ParticipantAutonomousExecutionStateModel,
     ParticipantBehaviorHistoryEventModel,
@@ -172,6 +177,9 @@ class RuntimeSnapshotEnvelopeModel(ContractModel):
         default_factory=dict
     )
     participant_execution_services: dict[str, ParticipantExecutionServiceStateModel] = Field(default_factory=dict)
+    participant_resource_budget_states: dict[str, ParticipantResourceBudgetStateModel] = Field(default_factory=dict)
+    participant_resource_pool_states: dict[str, ParticipantResourcePoolStateModel] = Field(default_factory=dict)
+    participant_resource_budget_events: dict[str, ParticipantResourceBudgetEventModel] = Field(default_factory=dict)
     shared_state_records: dict[str, ParticipantSharedStateRecordModel] = Field(default_factory=dict)
     shared_state_history: dict[str, list[ParticipantSharedStateRecordModel]] = Field(default_factory=dict)
     joint_action_records: dict[str, ParticipantJointActionRecordModel] = Field(default_factory=dict)
@@ -195,6 +203,42 @@ class RuntimeSnapshotEnvelopeModel(ContractModel):
         for map_key, state in self.participant_execution_services.items():
             if map_key != state.execution_scope_ref:
                 raise ValueError("Participant execution service map key must equal execution_scope_ref")
+        for map_key, state in self.participant_resource_budget_states.items():
+            if map_key != state.state_ref:
+                raise ValueError("Participant resource-budget state map key must equal state_ref")
+        for map_key, state in self.participant_resource_pool_states.items():
+            if map_key != state.pool_state_ref:
+                raise ValueError("Participant resource-pool state map key must equal pool_state_ref")
+        for map_key, event in self.participant_resource_budget_events.items():
+            if map_key != event.event_id:
+                raise ValueError("Participant resource-budget event map key must equal event_id")
+        budget_refs = set(self.participant_resource_budget_states)
+        for service in self.participant_execution_services.values():
+            missing = sorted(set(service.resource_budget_state_refs) - budget_refs)
+            if missing:
+                raise ValueError(
+                    "Participant execution service references missing resource-budget states: " + ", ".join(missing)
+                )
+            concurrency = [
+                self.participant_resource_budget_states[budget_id]
+                for budget_id in service.resource_budget_state_refs
+                if self.participant_resource_budget_states[budget_id].resource_kind == "concurrent_actions"
+            ]
+            if concurrency:
+                if len(concurrency) != 1:
+                    raise ValueError(
+                        "Participant execution service must reference exactly one authoritative concurrency budget"
+                    )
+                authoritative = concurrency[0]
+                if (
+                    service.capacity != authoritative.limit
+                    or service.reserved != authoritative.reserved
+                    or service.in_flight != authoritative.current_use
+                ):
+                    raise ValueError(
+                        "Participant execution service concurrency projection must "
+                        "equal its authoritative resource-budget state"
+                    )
         return self
 
 

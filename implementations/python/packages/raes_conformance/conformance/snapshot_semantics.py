@@ -80,6 +80,18 @@ def _snapshot_from_envelope(payload: dict[str, Any]) -> RuntimeSnapshot:
         participant_execution_services={
             scope: state.model_dump(mode="json") for scope, state in validated.participant_execution_services.items()
         },
+        participant_resource_budget_states={
+            state_ref: state.model_dump(mode="json")
+            for state_ref, state in validated.participant_resource_budget_states.items()
+        },
+        participant_resource_pool_states={
+            pool_state_ref: state.model_dump(mode="json")
+            for pool_state_ref, state in validated.participant_resource_pool_states.items()
+        },
+        participant_resource_budget_events={
+            event_id: event.model_dump(mode="json")
+            for event_id, event in validated.participant_resource_budget_events.items()
+        },
         shared_state_records={
             state_address: record.model_dump(mode="json")
             for state_address, record in validated.shared_state_records.items()

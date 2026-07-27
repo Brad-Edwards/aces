@@ -135,6 +135,9 @@ def _snapshot_payload(snapshot: RuntimeSnapshot) -> dict[str, Any]:
         },
         "participant_autonomous_execution_states": dict(snapshot.participant_autonomous_execution_states),
         "participant_execution_services": dict(snapshot.participant_execution_services),
+        "participant_resource_budget_states": dict(snapshot.participant_resource_budget_states),
+        "participant_resource_pool_states": dict(snapshot.participant_resource_pool_states),
+        "participant_resource_budget_events": dict(snapshot.participant_resource_budget_events),
         "shared_state_records": dict(snapshot.shared_state_records),
         "shared_state_history": {
             state_address: list(records) for state_address, records in snapshot.shared_state_history.items()
@@ -202,6 +205,9 @@ def _snapshot_from_payload(payload: dict[str, Any]) -> RuntimeSnapshot:
         },
         participant_autonomous_execution_states=dict(payload.get("participant_autonomous_execution_states", {})),
         participant_execution_services=dict(payload.get("participant_execution_services", {})),
+        participant_resource_budget_states=dict(payload.get("participant_resource_budget_states", {})),
+        participant_resource_pool_states=dict(payload.get("participant_resource_pool_states", {})),
+        participant_resource_budget_events=dict(payload.get("participant_resource_budget_events", {})),
         shared_state_records=dict(payload.get("shared_state_records", {})),
         shared_state_history={
             state_address: list(records) for state_address, records in payload.get("shared_state_history", {}).items()

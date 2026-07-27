@@ -2,9 +2,9 @@
   "contract_id": "participant-behavior-history-event-stream-v1",
   "schema_path": "contracts/schemas/control-plane/participant-behavior-history-event-stream-v1.json",
   "stability": "draft",
-  "content_hash": "d1baba6ec1967d08d28d8342ec526aa4041f8123e31d693cb744ad6a9351028a",
+  "content_hash": "46756a33b20550c709ecaacd41bb5621f291be9582c05b313b5076da0a9065f5",
   "last_change": {
-    "summary": "Added safe typed autonomous activity occurrence, attempt, timing, dependency, burst, and random-address provenance for issue #897.",
-    "content_hash": "d1baba6ec1967d08d28d8342ec526aa4041f8123e31d693cb744ad6a9351028a"
+    "summary": "Extended v3 activity history with native resource measurements and policy-scoped budget identity for issue #899.",
+    "content_hash": "46756a33b20550c709ecaacd41bb5621f291be9582c05b313b5076da0a9065f5"
   }
 }

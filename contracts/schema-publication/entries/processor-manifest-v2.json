@@ -2,9 +2,9 @@
   "contract_id": "processor-manifest-v2",
   "schema_path": "contracts/schemas/processor-manifest/processor-manifest-v2.json",
   "stability": "draft",
-  "content_hash": "a1afaba381dfec1a3e05467baee34335a15c3e8c6f9e2b6cd20fe99f0484a174",
+  "content_hash": "17335ec9416d0ec5d0e3d7bee409c6d1caabd6250f8cf4159243e4483ebd8897",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "a1afaba381dfec1a3e05467baee34335a15c3e8c6f9e2b6cd20fe99f0484a174"
+    "summary": "Authorized processor declarations for the participant resource-budget policy contract introduced by issue #899.",
+    "content_hash": "17335ec9416d0ec5d0e3d7bee409c6d1caabd6250f8cf4159243e4483ebd8897"
   }
 }

@@ -45,7 +45,10 @@ def _policy_digest(
         "resolved_progression_policy": asdict(progression),
         "resolved_temporal_constraints": constraints,
     }
-    if policy.profile == "participant-autonomous-execution/v2":
+    if policy.profile in {
+        "participant-autonomous-execution/v2",
+        "participant-autonomous-execution/v3",
+    }:
         payload.update(
             {
                 "profile": policy.profile,
@@ -64,6 +67,14 @@ def _policy_digest(
                 "action_candidate_cooldown_ticks": policy.action_candidate_cooldown_ticks,
                 "max_occurrences": policy.max_occurrences,
                 "max_burst_size": policy.max_burst_size,
+            }
+        )
+    if policy.profile == "participant-autonomous-execution/v3":
+        payload.update(
+            {
+                "resource_owners": tuple(asdict(owner) for owner in policy.resource_owners),
+                "resource_demands": tuple(asdict(demand) for demand in policy.resource_demands),
+                "resource_fairness": asdict(policy.resource_fairness),
             }
         )
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))

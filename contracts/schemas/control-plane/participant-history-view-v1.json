@@ -239,6 +239,13 @@
           "title": "Preconditions",
           "type": "array"
         },
+        "resource_measurements": {
+          "items": {
+            "$ref": "#/$defs/ParticipantResourceMeasurementModel"
+          },
+          "title": "Resource Measurements",
+          "type": "array"
+        },
         "status": {
           "enum": [
             "accepted",
@@ -302,7 +309,10 @@
           "type": "string"
         },
         "policy_profile": {
-          "const": "participant-autonomous-execution/v2",
+          "enum": [
+            "participant-autonomous-execution/v2",
+            "participant-autonomous-execution/v3"
+          ],
           "title": "Policy Profile",
           "type": "string"
         },
@@ -1298,6 +1308,75 @@
       ],
       "title": "ParticipantPreconditionClass",
       "type": "string"
+    },
+    "ParticipantResourceMeasurementModel": {
+      "additionalProperties": false,
+      "properties": {
+        "budget_state_ref": {
+          "minLength": 1,
+          "title": "Budget State Ref",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "execution_generation": {
+          "minimum": 0,
+          "title": "Execution Generation",
+          "type": "integer"
+        },
+        "measured": {
+          "maximum": 1000000000000000000,
+          "minimum": 0,
+          "title": "Measured",
+          "type": "integer"
+        },
+        "meter_profile_ref": {
+          "minLength": 1,
+          "title": "Meter Profile Ref",
+          "type": "string"
+        },
+        "operation_id": {
+          "minLength": 1,
+          "title": "Operation Id",
+          "type": "string"
+        },
+        "resource_kind": {
+          "enum": [
+            "action_rate",
+            "concurrent_actions",
+            "storage_growth",
+            "inference_tokens",
+            "image_generations",
+            "accelerator"
+          ],
+          "title": "Resource Kind",
+          "type": "string"
+        },
+        "unit": {
+          "minLength": 1,
+          "title": "Unit",
+          "type": "string"
+        }
+      },
+      "required": [
+        "budget_state_ref",
+        "operation_id",
+        "execution_generation",
+        "resource_kind",
+        "unit",
+        "meter_profile_ref",
+        "measured",
+        "evidence_refs"
+      ],
+      "title": "ParticipantResourceMeasurementModel",
+      "type": "object"
     },
     "ParticipantRuntimeLifecyclePhase": {
       "description": "RUN-306 observable participant runtime lifecycle phases.",

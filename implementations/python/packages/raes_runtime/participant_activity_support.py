@@ -100,7 +100,7 @@ def _activity_provenance(
     )
     return ParticipantActivityOccurrenceProvenanceModel(
         policy_address=context.policy.address,
-        policy_profile="participant-autonomous-execution/v2",
+        policy_profile=context.policy.profile,
         occurrence_id=occurrence_id,
         attempt_id=request.action_instance_id,
         predecessor_attempt_id=predecessor,

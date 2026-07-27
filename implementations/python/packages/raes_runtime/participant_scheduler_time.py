@@ -1,6 +1,8 @@
 """Shared-time helpers for autonomous participant scheduling."""
 
-from raes_contracts.runtime_state import RuntimeSnapshot
+from raes_contracts.contracts import ParticipantAutonomousExecutionStateModel
+from raes_contracts.diagnostics import Diagnostic
+from raes_contracts.runtime_state import ApplyResult, RuntimeSnapshot
 from raes_processor.models import CompiledTimeModel, ParticipantAutonomousExecutionRuntime
 
 
@@ -13,6 +15,31 @@ def clock_coordinate(snapshot: RuntimeSnapshot, clock_address: str) -> tuple[int
     if clock is None:
         raise ValueError(f"autonomous participant clock {clock_address!r} has no runtime state")
     return clock.coordinate.segment, clock.coordinate.tick
+
+
+def cadence_missed_result(
+    working: RuntimeSnapshot,
+    key: str,
+    current_tick: int,
+    state: ParticipantAutonomousExecutionStateModel,
+) -> ApplyResult:
+    """Reject a participant whose governed cadence boundary was missed."""
+
+    return ApplyResult(
+        success=False,
+        snapshot=working,
+        diagnostics=[
+            Diagnostic(
+                code="runtime.participant-autonomous-cadence-missed",
+                domain="participant",
+                address=key,
+                message=(
+                    f"Shared clock is at tick {current_tick}, after the next governed "
+                    f"participant cadence tick {state.next_tick}."
+                ),
+            )
+        ],
+    )
 
 
 def cadence(policy: ParticipantAutonomousExecutionRuntime, time_model: CompiledTimeModel) -> tuple[int, int]:
@@ -42,4 +69,9 @@ def participant_time_domain(
     }[domain.kind]
 
 
-__all__ = ["cadence", "clock_coordinate", "participant_time_domain"]
+__all__ = [
+    "cadence",
+    "cadence_missed_result",
+    "clock_coordinate",
+    "participant_time_domain",
+]

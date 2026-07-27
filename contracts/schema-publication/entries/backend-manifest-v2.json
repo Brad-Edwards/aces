@@ -2,9 +2,9 @@
   "contract_id": "backend-manifest-v2",
   "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
   "stability": "draft",
-  "content_hash": "4d842923928a9e80e92fa31559fd557a846c4854ac41c30e4d88fa53288c2b22",
+  "content_hash": "fdce66f526907a096c90b6e9ef8e4141ad908a181a52670083e43f3471405f66",
   "last_change": {
-    "summary": "Combined current autonomous activity and policy capabilities with exact action-to-target bindings, lifecycle control, and bounded concurrent participant-service declarations for issue #898.",
-    "content_hash": "4d842923928a9e80e92fa31559fd557a846c4854ac41c30e4d88fa53288c2b22"
+    "summary": "Added versioned participant resource-budget support, configured pool capacity, fairness, isolation, and realization declarations for issue #899.",
+    "content_hash": "fdce66f526907a096c90b6e9ef8e4141ad908a181a52670083e43f3471405f66"
   }
 }

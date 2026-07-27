@@ -16,6 +16,10 @@ from .participant_feature_admission import participant_feature_support_gaps as p
 from .participant_feature_admission import (
     resolve_participant_feature_support as resolve_participant_feature_support,
 )
+from .participant_resource_admission import (
+    ResourceGovernedPolicy,
+    participant_resource_budget_gaps,
+)
 
 if TYPE_CHECKING:
     from raes_contracts.contracts.time_model import TimeModelDeclarationModel
@@ -25,7 +29,7 @@ if TYPE_CHECKING:
     from .capabilities import ParticipantRuntimeCapabilities, TimeCapabilities
 
 
-class AutonomousExecutionPolicy(Protocol):
+class AutonomousExecutionPolicy(ResourceGovernedPolicy, Protocol):
     profile: str
     participant_addresses: tuple[str, ...]
     action_contract_addresses: tuple[str, ...]
@@ -156,7 +160,10 @@ def _unsupported_autonomous_value_gaps(
         for label, required, supported in requirements
         if (unsupported := sorted(required - supported))
     ]
-    if any(policy.profile == "participant-autonomous-execution/v2" for policy in policies):
+    if any(
+        policy.profile in {"participant-autonomous-execution/v2", "participant-autonomous-execution/v3"}
+        for policy in policies
+    ):
         missing_features = sorted(_V2_ACTIVITY_FEATURES - capability.supported_autonomous_activity_features)
         if missing_features:
             gaps.append(f"unsupported autonomous activity features: {', '.join(missing_features)}")
@@ -245,6 +252,7 @@ def participant_autonomous_execution_capability_gaps(
                 normalized_policies,
             )
         )
+        gaps.extend(participant_resource_budget_gaps(manifest, capability, normalized_policies))
         gaps.extend(_autonomous_reset_gaps(manifest, normalized_policies, time_model))
     return tuple(gaps)
 

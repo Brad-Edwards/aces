@@ -177,6 +177,21 @@ experiment-selection `blake3-xof-v1` address/profile, silently drop occurrence
 provenance, or treat an apparatus stochastic-control declaration as scenario
 variation. Missing exact support fails planning.
 
+The `participant-autonomous-execution/v3` profile additionally requires a
+closed `resource_budgets` capability under the existing participant-runtime
+root. Admission matches the complete compiled resource vector against
+declared owner/resource/accounting/reset/fairness support and
+configuration-bound pool entries. Owner, unit, meter, accounting mode, and
+capacity must match exactly; declared cross-range pools require
+`tenant_partitioned` isolation. Admission is atomic, so a backend cannot accept
+action/concurrency bounds while dropping storage, token, image, accelerator,
+ancestor, or fairness obligations. Runtime conformance then requires typed,
+generation-fenced, policy-scoped budget state; one canonical cross-policy pool
+allocation ledger; and append-only reserve, measured commit, release, throttle,
+and reconcile events. Native commits require a complete matching measurement
+vector and evidence. Manifest support and configured capacity do not count as
+measured-realization evidence.
+
 ## Gotchas And Anti-Patterns
 
 Avoid:

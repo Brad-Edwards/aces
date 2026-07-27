@@ -26,6 +26,10 @@ from .participant_execution_scheduler_state import (
     reset_execution_service,
     set_execution_clock_lifecycle,
 )
+from .participant_resource_accounting import (
+    reconcile_participant_resource_budgets,
+)
+from .participant_resource_budgets import initialize_participant_resource_budgets
 from .participant_scheduler_operations import (
     SchedulerRunState,
     run_participant_due,
@@ -91,7 +95,14 @@ def _initialize_participant(
     key = _state_key(policy.address, participant_address)
     segment, _ = clock_coordinate(working, policy.clock_address)
     activity_control = activity_control_for(policy, activity_controls)
-    if policy.profile == "participant-autonomous-execution/v2" and activity_control is None:
+    if (
+        policy.profile
+        in {
+            "participant-autonomous-execution/v2",
+            "participant-autonomous-execution/v3",
+        }
+        and activity_control is None
+    ):
         return ApplyResult(
             success=False,
             snapshot=working,
@@ -257,11 +268,39 @@ class ParticipantScheduler:
         participant_runtime: object,
         snapshot: RuntimeSnapshot,
         activity_controls: dict[str, ParticipantActivityRandomControl] | None = None,
+        resource_capabilities: object | None = None,
     ) -> ApplyResult:
         working = snapshot
         resolved_activity_controls = activity_controls or {}
         changed: list[str] = []
-        for policy in policies:
+        normalized_policies = tuple(policies)
+        governed_policies = tuple(
+            policy for policy in normalized_policies if policy.profile == "participant-autonomous-execution/v3"
+        )
+        if governed_policies:
+            if resource_capabilities is None:
+                return ApplyResult(
+                    success=False,
+                    snapshot=snapshot,
+                    diagnostics=[
+                        Diagnostic(
+                            code="runtime.participant-resource-capabilities-missing",
+                            domain="participant",
+                            address=governed_policies[0].address,
+                            message="Participant execution v3 requires admitted resource-budget capabilities.",
+                        )
+                    ],
+                )
+            initialized = initialize_participant_resource_budgets(
+                working,
+                governed_policies,
+                resource_capabilities,
+                execution_generation=0,
+            )
+            if not initialized.success:
+                return initialized
+            working = initialized.snapshot
+        for policy in normalized_policies:
             for participant_address in policy.participant_addresses:
                 result = _initialize_participant(
                     policy,
@@ -371,6 +410,26 @@ class ParticipantScheduler:
                     return result
                 working = result.snapshot
                 changed.extend(result.changed_addresses)
+            if policy.profile == "participant-autonomous-execution/v3":
+                service_payload = working.participant_execution_services.get(policy.address)
+                if service_payload is None:
+                    return _missing_execution_service_result(
+                        policy,
+                        SchedulerRunState(working=working, diagnostics=[], changed=changed),
+                    )
+                service = ParticipantExecutionServiceStateModel.model_validate(service_payload)
+                generation = service.generation + 1
+                budget_reset = reconcile_participant_resource_budgets(
+                    working,
+                    policy_address=policy.address,
+                    current_generation=service.generation,
+                    next_generation=generation,
+                    boundary="time_segment",
+                    evidence_refs=(f"evidence:{policy.address}:shared-time-reset:generation-{generation}",),
+                )
+                if not budget_reset.success:
+                    return budget_reset
+                working = budget_reset.snapshot
             working, service_changed = reset_execution_service(
                 working,
                 policy.address,
