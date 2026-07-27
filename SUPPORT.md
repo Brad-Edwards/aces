@@ -1,16 +1,14 @@
-# Support
+# Get support
 
 RAES SDL is community supported and maintained on a best-effort basis.
 
-## Where to Ask
+## Choose a route
 
 - Use GitHub issues for reproducible bugs, documentation problems, and focused
   feature requests.
-- Use GitHub discussions if they are enabled for design questions or broader
-  usage questions.
 - For security issues, do not open a public issue. See [SECURITY.md](SECURITY.md).
 
-## What to Include
+## Include a small example
 
 For a bug report, include:
 
@@ -28,7 +26,7 @@ For a language or contract proposal, include:
 - the affected SDL sections, schemas, contracts, or backend expectations
 - examples of documents that should become valid or invalid
 
-## Maintenance Expectations
+## Know what to expect
 
 The project is maintained by a sole maintainer. Issues and pull requests are
 handled as time permits. Well-scoped reports with runnable examples are the

@@ -49,7 +49,7 @@ guidance:
         start a live range.
       source_refs:
         - implementations/python/packages/raes_mcp/tools/operations.py
-        - docs/explain/getting-started.md
+        - docs/public/quickstart.md
         - docs/explain/sdl/language-service.md
 
     - id: reference-implementation-not-authority
@@ -202,7 +202,7 @@ guidance:
         controls.
       source_refs:
         - implementations/python/packages/raes_mcp/tools/operations.py
-        - docs/explain/getting-started.md
+        - docs/public/quickstart.md
 
     - id: do-not-carry-secrets
       audience: [contributor, operator]
@@ -224,4 +224,4 @@ guidance:
         backed.
       source_refs:
         - implementations/python/packages/raes_mcp/tools/operations.py
-        - docs/explain/getting-started.md
+        - docs/public/quickstart.md

@@ -24,7 +24,7 @@ page is an index, not a replacement for the linked artifacts.
 | Surface | Current reference |
 |---------|-------------------|
 | RAES and agentic-environment terminology | [`glossary.md`](glossary.md) |
-| Current system boundary and entrypoints | [`docs/explain/getting-started.md`](../getting-started.md) |
+| Current system boundary and entrypoints | [`docs/public/index.md`](../../public/index.md) |
 | Authored scenario language | [`docs/explain/sdl/index.md`](../sdl/index.md) |
 | Instantiation, planning, and realization path | [`docs/explain/sdl/runtime-architecture.md`](../sdl/runtime-architecture.md) |
 | Explicitness and realized-form semantics | [`explicitness-realization-semantics.md`](explicitness-realization-semantics.md), [`realization-envelopes.md`](realization-envelopes.md) |
@@ -48,7 +48,7 @@ page is an index, not a replacement for the linked artifacts.
 
 | Surface | Current reference |
 |---------|-------------------|
-| Getting started | [`docs/explain/getting-started.md`](../getting-started.md) |
+| Getting started | [`docs/public/quickstart.md`](../../public/quickstart.md) |
 | Worked examples | `examples/README.md`, `examples/scenarios/*.sdl.yaml` |
 | Template and pattern library | `examples/library/catalog.yaml`, `examples/library/templates/`, `examples/library/patterns/` |
 | SDL guide | [`docs/explain/sdl/index.md`](../sdl/index.md) |
@@ -69,9 +69,9 @@ page is an index, not a replacement for the linked artifacts.
 | Contract root | `contracts/README.md` |
 | Published schemas | `contracts/schemas/README.md` |
 | Schema inventory | [`contracts/schema-publication-manifest.json`](../../../contracts/schema-publication-manifest.json) |
-| Processor API | [`docs/api/processor.rst`](../../api/processor.rst) |
-| Processor semantics API | [`docs/api/processor-semantics.rst`](../../api/processor-semantics.rst) |
-| Runtime API | [`docs/api/runtime.rst`](../../api/runtime.rst) |
+| Processor API | [`docs/public/api/processor.rst`](../../public/api/processor.rst) |
+| Processor semantics API | [`docs/public/api/processor-semantics.rst`](../../public/api/processor-semantics.rst) |
+| Runtime API | [`docs/public/api/runtime.rst`](../../public/api/runtime.rst) |
 | Runtime architecture | [`docs/explain/sdl/runtime-architecture.md`](../sdl/runtime-architecture.md) |
 | Backend conformance | [`backend-conformance.md`](backend-conformance.md) |
 

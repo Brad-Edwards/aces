@@ -1,5 +1,7 @@
+import json
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _distribution_version
+from pathlib import Path
 
 # -- Project information -------------------------------------------------------
 
@@ -22,14 +24,15 @@ version = release.split("+", 1)[0]
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
-    "sphinx.ext.intersphinx",
     "sphinx.ext.autosummary",
     "myst_parser",
     "sphinx_copybutton",
+    "sphinx_reredirects",
 ]
 
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+redirects = json.loads((Path(__file__).parent / "redirects.json").read_text(encoding="utf-8"))
 
 # -- MyST (Markdown) settings --------------------------------------------------
 
@@ -50,7 +53,7 @@ html_static_path = ["_static"]
 html_theme_options = {
     "source_repository": "https://github.com/RAESystem/rae",
     "source_branch": "main",
-    "source_directory": "docs/",
+    "source_directory": "docs/public/",
     "navigation_with_keys": True,
 }
 
@@ -70,13 +73,6 @@ autodoc_class_signature = "separated"
 napoleon_google_docstring = True
 napoleon_numpy_docstring = True
 napoleon_include_init_with_doc = True
-
-# -- intersphinx ---------------------------------------------------------------
-
-intersphinx_mapping = {
-    "python": ("https://docs.python.org/3", None),
-    "pydantic": ("https://docs.pydantic.dev/latest/", None),
-}
 
 # -- autosummary ---------------------------------------------------------------
 
