@@ -197,7 +197,7 @@ def next_activity_timing(
     minimum = _timing_units(policy.timing_minimum_ticks, step_ticks)
     maximum = _timing_units(policy.timing_maximum_ticks, step_ticks)
     interval_units = draw_activity_integer(
-        ParticipantActivityDrawContext(
+        context=ParticipantActivityDrawContext(
             policy=policy,
             participant_address=participant_address,
             time_segment=time_segment,
@@ -295,7 +295,7 @@ def select_activity_candidate(
         return None
     total = sum(policy.action_candidate_weights[index] for index in eligible_indices)
     selected = draw_activity_integer(
-        ParticipantActivityDrawContext(
+        context=ParticipantActivityDrawContext(
             policy=policy,
             participant_address=participant_address,
             time_segment=time_segment,
