@@ -6,9 +6,10 @@ strings remain opaque; matching is exact membership plus support compatibility.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable
 from dataclasses import dataclass, replace
 
+from raes.artifact_requirements import ArtifactRequirement
 from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance
 from raes.realization_envelope import effective_constraints, subsumes, tokenize_path
 from raes_backend_protocols.capabilities import BackendManifest
@@ -17,6 +18,7 @@ from raes_contracts.apparatus import (
     DECLARED_CAPABILITY_MATCH_REQUIREMENT_KIND,
     RUNTIME_REALIZATION_DOMAIN,
 )
+from raes_contracts.artifact_requirements import ArtifactAvailabilityContext
 from raes_contracts.diagnostics import Diagnostic, Severity
 from raes_contracts.planning import ChangeAction, ProvisioningPlan, ProvisionOp
 from raes_contracts.realization_envelope import (
@@ -29,12 +31,23 @@ from raes_contracts.realization_envelope import (
 from raes_contracts.runtime_state import RealizationProvenanceEntry, RuntimeSnapshot
 from raes_contracts.vocabulary import Closure, RealizationSupportMode
 
+from .artifact_realization import (
+    artifact_requirement_diagnostics,
+    evaluate_artifact_realization,
+)
+from .realization_concerns import (
+    CONCERN_PAYLOAD_PATH,
+    registered_realization_concerns,
+    resolve_realization_concern,
+)
+
 __all__ = [
     "CONCERN_PAYLOAD_PATH",
     "EXACT_REQUIREMENT_KIND",
     "REALIZATION_DOMAIN",
     "ApparatusRealizationDefaultResolver",
     "CompiledRealizationRequirement",
+    "artifact_requirement_diagnostics",
     "materialize_realization_requirements",
     "realization_disclosure",
     "realization_envelope_diagnostics",
@@ -56,34 +69,6 @@ REALIZATION_DOMAIN = RUNTIME_REALIZATION_DOMAIN
 # ``supported_exact_requirement_kinds``; one that cannot must reject (I2).
 EXACT_REQUIREMENT_KIND = DECLARED_CAPABILITY_MATCH_REQUIREMENT_KIND
 
-# Authored realization concerns mapped onto the published constraint-kind
-# vocabulary, keyed by (head section, leaf field) of the classifier path. The
-# node/content instance name is the wildcard middle segment. This is the
-# realization-concern set the planner already validates against backend
-# capabilities — not a general per-field designation authority (that is staged
-# under the SEM-218 coverage row).
-_CONCERN_KIND_BY_PATH: dict[tuple[str, str], str] = {
-    ("nodes", "type"): "node-type",
-    ("nodes", "os"): "os-family",
-    ("content", "type"): "content-type",
-}
-
-# Where each realization concern's realized value lives inside the backend's
-# provisioning resource payload (``resource_payload``). The runtime
-# non-approximation gate uses this to locate the value the backend realized for
-# an exact concern and compare it against the author declaration. Mirrors the
-# concern set in ``_CONCERN_KIND_BY_PATH``; a concern absent here is not gated at
-# runtime (no published payload slot to compare).
-CONCERN_PAYLOAD_PATH: dict[str, tuple[str, ...]] = {
-    "os-family": ("os_family",),
-    "node-type": ("node_type",),
-    "content-type": ("spec", "type"),
-    "domain-topology": ("domain_topology",),
-    "generated-artifact": ("spec",),
-    "persistent-volume": ("spec",),
-    "service-content-materialization": ("service_materialization",),
-}
-
 
 @dataclass(frozen=True)
 class CompiledRealizationRequirement:
@@ -102,11 +87,17 @@ class CompiledRealizationRequirement:
     provenance: ExplicitnessProvenance
     governing_scope: str | None = None
     delegated: bool = False
+    artifact_requirement: ArtifactRequirement | None = None
 
     def __post_init__(self) -> None:
         require_compiled_address(self.address)
         if self.delegated != (self.explicitness is None):
             raise ValueError("delegated realization requirements must carry unresolved explicitness")
+        if self.artifact_requirement is not None:
+            if self.requirement_kind != "source-artifact":
+                raise ValueError("artifact_requirement requires requirement_kind='source-artifact'")
+            if self.explicitness is not self.artifact_requirement.explicitness:
+                raise ValueError("compiled artifact requirement explicitness must match its source contract")
 
 
 ApparatusRealizationDefaultResolver = Callable[
@@ -155,39 +146,6 @@ def materialize_realization_requirements(
             )
         materialized.append(requirement)
     return tuple(materialized)
-
-
-def registered_realization_concerns(
-    *,
-    declaration_names: Mapping[str, Iterable[str]],
-) -> tuple[tuple[str, str, str, str], ...]:
-    """Enumerate ``(section, declaration, leaf, kind)`` registrations."""
-
-    return tuple(
-        (section, declaration_name, leaf_field, concern_kind)
-        for (section, leaf_field), concern_kind in _CONCERN_KIND_BY_PATH.items()
-        for declaration_name in declaration_names.get(section, ())
-    )
-
-
-def resolve_realization_concern(
-    field_path: str,
-    *,
-    declaration_names: Mapping[str, Iterable[str]],
-) -> str | None:
-    """Return the realization concern kind for a classifier path, or ``None``.
-
-    Only the concerns the planner validates against backend capabilities map to
-    a kind today; every other authored field is not a realization concern with
-    a published kind and yields ``None``.
-    """
-
-    for section, declaration_name, leaf_field, concern_kind in registered_realization_concerns(
-        declaration_names=declaration_names
-    ):
-        if field_path == f"{section}.{declaration_name}.{leaf_field}":
-            return concern_kind
-    return None
 
 
 def realization_support_diagnostics(
@@ -370,6 +328,9 @@ def realization_disclosure(
     requirements: tuple[CompiledRealizationRequirement, ...],
     declared_plan: ProvisioningPlan,
     returned_snapshot: RuntimeSnapshot,
+    *,
+    manifest: BackendManifest | None = None,
+    artifact_availability: ArtifactAvailabilityContext | None = None,
 ) -> tuple[list[Diagnostic], tuple[RealizationProvenanceEntry, ...]]:
     """SEM-218 runtime non-approximation gate (I2) + provenance disclosure (I5).
 
@@ -405,7 +366,16 @@ def realization_disclosure(
     provenance: list[RealizationProvenanceEntry] = []
     declared_ops = {op.address: op for op in declared_plan.operations}
     for requirement in requirements:
-        diagnostic, entry = _evaluate_realization(requirement, declared_ops, returned_snapshot)
+        if requirement.artifact_requirement is not None:
+            diagnostic, entry = evaluate_artifact_realization(
+                requirement,
+                declared_ops,
+                returned_snapshot,
+                manifest=manifest,
+                availability=artifact_availability,
+            )
+        else:
+            diagnostic, entry = _evaluate_realization(requirement, declared_ops, returned_snapshot)
         if diagnostic is not None:
             diagnostics.append(diagnostic)
         if entry is not None:

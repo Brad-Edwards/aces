@@ -2,9 +2,9 @@
   "contract_id": "backend-profile-v1",
   "schema_path": "contracts/schemas/profiles/backend-profile-v1.json",
   "stability": "draft",
-  "content_hash": "ac32e06e7b7f8de2cfab4e6feda9bac56ae8b0768f8fdc2764fc24e4d335a913",
+  "content_hash": "96ee9545d16749f1a3f2c80150950517cbe738ea21d7420befc62cffda73c157",
   "last_change": {
-    "summary": "Authorized backend profiles to require the participant resource-budget policy, pool-capacity, state, and event contracts for issue #899.",
-    "content_hash": "ac32e06e7b7f8de2cfab4e6feda9bac56ae8b0768f8fdc2764fc24e4d335a913"
+    "summary": "Advertised portable artifact requirements and participant resource-budget contracts for issues #920 and #899.",
+    "content_hash": "96ee9545d16749f1a3f2c80150950517cbe738ea21d7420befc62cffda73c157"
   }
 }

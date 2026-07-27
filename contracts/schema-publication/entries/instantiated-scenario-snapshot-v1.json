@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-snapshot-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "67e529931bccbc9d5aed61008b947f4e00ecf42e3c85ffabef06d94f85a214bb",
+  "content_hash": "871d7c3f4cbb86a50caf28ec04c957e2624f893c9956ab1ee80880a8e41e2608",
   "last_change": {
-    "summary": "Published the v3 scoped participant resource-budget policy in immutable instantiated scenario snapshots for issue #899.",
-    "content_hash": "67e529931bccbc9d5aed61008b947f4e00ecf42e3c85ffabef06d94f85a214bb"
+    "summary": "Published portable artifact requirements and scoped participant resource budgets in immutable scenario snapshots for issues #920 and #899.",
+    "content_hash": "871d7c3f4cbb86a50caf28ec04c957e2624f893c9956ab1ee80880a8e41e2608"
   }
 }

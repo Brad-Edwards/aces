@@ -11,12 +11,14 @@ from raes_backend_protocols.capability_admission import (
 )
 from raes_backend_protocols.domain_topology import domain_topology_plan_diagnostics
 from raes_backend_protocols.service_materialization import service_materialization_plan_diagnostics
+from raes_contracts.artifact_requirements import ArtifactAvailabilityContext
 from raes_contracts.diagnostics import Diagnostic
 
 from ..compiler.time_model import time_model_contract_model
 from ..models import ExecutionPlan, RuntimeModel, RuntimeSnapshot
 from ..semantics.realization import (
     ApparatusRealizationDefaultResolver,
+    artifact_requirement_diagnostics,
     materialize_realization_requirements,
     realization_envelope_diagnostics,
     realization_support_diagnostics,
@@ -88,6 +90,7 @@ def plan(
     *,
     target_name: str | None = None,
     apparatus_realization_default: ApparatusRealizationDefaultResolver | None = None,
+    artifact_availability: ArtifactAvailabilityContext | None = None,
 ) -> ExecutionPlan:
     """Reconcile a compiled runtime model against the current snapshot."""
 
@@ -116,6 +119,11 @@ def plan(
         *realization_envelope_diagnostics(
             effective_requirements,
             manifest,
+        ),
+        *artifact_requirement_diagnostics(
+            effective_requirements,
+            manifest,
+            availability=artifact_availability,
         ),
         *envelope_diagnostics,
         *_ordering_cycle_diagnostics(resources),
@@ -150,4 +158,5 @@ def plan(
         orchestration=orchestration,
         evaluation=evaluation,
         diagnostics=diagnostics,
+        artifact_availability=artifact_availability or ArtifactAvailabilityContext(),
     )

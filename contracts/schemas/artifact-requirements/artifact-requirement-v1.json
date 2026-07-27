@@ -1,0 +1,1141 @@
+{
+  "$defs": {
+    "ArtifactCandidate": {
+      "additionalProperties": false,
+      "description": "One immutable candidate explicitly admitted by the author.",
+      "properties": {
+        "artifact": {
+          "$ref": "#/$defs/ArtifactIdentity"
+        },
+        "candidate_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:/@+-]*$",
+          "title": "Candidate Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "candidate_id",
+        "artifact"
+      ],
+      "title": "ArtifactCandidate",
+      "type": "object"
+    },
+    "ArtifactConstraint": {
+      "additionalProperties": false,
+      "description": "One typed, named bound on a constrained artifact selection.",
+      "properties": {
+        "allowed_values": {
+          "items": {
+            "maxLength": 1024,
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Allowed Values",
+          "type": "array"
+        },
+        "constraint_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:/@+-]*$",
+          "title": "Constraint Id",
+          "type": "string"
+        },
+        "kind": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:/@+-]*$",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "constraint_id",
+        "kind",
+        "allowed_values"
+      ],
+      "title": "ArtifactConstraint",
+      "type": "object"
+    },
+    "ArtifactIdentity": {
+      "additionalProperties": false,
+      "description": "Immutable provider-neutral identity for one artifact payload.",
+      "properties": {
+        "artifact_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:/@+-]*$",
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "digest": {
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "media_type": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Media Type",
+          "type": "string"
+        },
+        "version": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "version",
+        "digest",
+        "media_type"
+      ],
+      "title": "ArtifactIdentity",
+      "type": "object"
+    },
+    "ArtifactLockedInput": {
+      "additionalProperties": false,
+      "description": "One immutable materialization input joined to existing trust contracts.",
+      "properties": {
+        "artifact": {
+          "$ref": "#/$defs/ArtifactIdentity"
+        },
+        "associated_artifact_manifest_ref": {
+          "maxLength": 1024,
+          "minLength": 1,
+          "title": "Associated Artifact Manifest Ref",
+          "type": "string"
+        },
+        "input_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:/@+-]*$",
+          "title": "Input Id",
+          "type": "string"
+        },
+        "trust_policy_ref": {
+          "maxLength": 1024,
+          "minLength": 1,
+          "title": "Trust Policy Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "input_id",
+        "artifact",
+        "associated_artifact_manifest_ref",
+        "trust_policy_ref"
+      ],
+      "title": "ArtifactLockedInput",
+      "type": "object"
+    },
+    "ArtifactMaterializationSpecification": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "properties": {
+            "profile": {
+              "allOf": [
+                {
+                  "properties": {
+                    "mechanism": {
+                      "anyOf": [
+                        {
+                          "const": "materialization-specification"
+                        },
+                        {
+                          "pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "mechanism"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "description": "Reference to a closed executable materialization profile.\n\nThis is a digest-bound specification reference, not shell text, a\nDockerfile, an environment map, or a reinterpretation of ``Source.build``.",
+      "properties": {
+        "digest": {
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "locked_input_ids": {
+          "items": {
+            "maxLength": 256,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:/@+-]*$",
+            "type": "string"
+          },
+          "title": "Locked Input Ids",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "profile": {
+          "$ref": "#/$defs/ArtifactMechanismProfile"
+        },
+        "specification_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:/@+-]*$",
+          "title": "Specification Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "specification_id",
+        "profile",
+        "digest"
+      ],
+      "title": "ArtifactMaterializationSpecification",
+      "type": "object"
+    },
+    "ArtifactMechanismProfile": {
+      "additionalProperties": false,
+      "description": "Versioned portable mechanism profile.\n\nPortable mechanisms use the governed base names above or a namespaced\n``x-<authority>:<term>`` extension. The profile digest binds the exact\nmechanism contract without making the mechanism set a closed union.",
+      "properties": {
+        "digest": {
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "mechanism": {
+          "anyOf": [
+            {
+              "enum": [
+                "backend-owned-artifact",
+                "dynamic-composition",
+                "exact-artifact",
+                "materialization-specification",
+                "published-candidate"
+              ]
+            },
+            {
+              "pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$"
+            }
+          ],
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Mechanism",
+          "type": "string"
+        },
+        "profile": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:/@+-]*$",
+          "title": "Profile",
+          "type": "string"
+        },
+        "version": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "mechanism",
+        "profile",
+        "version",
+        "digest"
+      ],
+      "title": "ArtifactMechanismProfile",
+      "type": "object"
+    },
+    "ArtifactRequirement": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "explicitness": {
+                "const": "exact"
+              }
+            },
+            "required": [
+              "explicitness"
+            ]
+          },
+          "then": {
+            "properties": {
+              "candidates": {
+                "maxItems": 0
+              },
+              "constraints": {
+                "maxItems": 0
+              },
+              "exact_artifact": {
+                "not": {
+                  "type": "null"
+                }
+              },
+              "locked_inputs": {
+                "maxItems": 0
+              },
+              "materialization_specifications": {
+                "maxItems": 0
+              },
+              "permitted_routes": {
+                "items": {
+                  "properties": {
+                    "mechanism": {
+                      "properties": {
+                        "mechanism": {
+                          "const": "exact-artifact"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "required": [
+              "exact_artifact"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "explicitness": {
+                "const": "constrained"
+              }
+            },
+            "required": [
+              "explicitness"
+            ]
+          },
+          "then": {
+            "anyOf": [
+              {
+                "properties": {
+                  "constraints": {
+                    "minItems": 1
+                  }
+                },
+                "required": [
+                  "constraints"
+                ]
+              },
+              {
+                "properties": {
+                  "candidates": {
+                    "minItems": 1
+                  }
+                },
+                "required": [
+                  "candidates"
+                ]
+              },
+              {
+                "properties": {
+                  "locked_inputs": {
+                    "minItems": 1
+                  }
+                },
+                "required": [
+                  "locked_inputs"
+                ]
+              },
+              {
+                "properties": {
+                  "materialization_specifications": {
+                    "minItems": 1
+                  }
+                },
+                "required": [
+                  "materialization_specifications"
+                ]
+              }
+            ],
+            "properties": {
+              "exact_artifact": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "explicitness": {
+                "const": "open"
+              }
+            },
+            "required": [
+              "explicitness"
+            ]
+          },
+          "then": {
+            "properties": {
+              "candidates": {
+                "maxItems": 0
+              },
+              "constraints": {
+                "maxItems": 0
+              },
+              "exact_artifact": {
+                "type": "null"
+              },
+              "materialization_specifications": {
+                "maxItems": 0
+              }
+            }
+          }
+        }
+      ],
+      "description": "Author-owned artifact requirement attached to a ``Source`` selector.",
+      "properties": {
+        "associated_artifact_manifest_refs": {
+          "items": {
+            "maxLength": 1024,
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Associated Artifact Manifest Refs",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "candidates": {
+          "items": {
+            "$ref": "#/$defs/ArtifactCandidate"
+          },
+          "title": "Candidates",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "constraints": {
+          "items": {
+            "$ref": "#/$defs/ArtifactConstraint"
+          },
+          "title": "Constraints",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "exact_artifact": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ArtifactIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "explicitness": {
+          "$ref": "#/$defs/ExplicitnessClass"
+        },
+        "locked_inputs": {
+          "items": {
+            "$ref": "#/$defs/ArtifactLockedInput"
+          },
+          "title": "Locked Inputs",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "materialization_specifications": {
+          "items": {
+            "$ref": "#/$defs/ArtifactMaterializationSpecification"
+          },
+          "title": "Materialization Specifications",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "permitted_routes": {
+          "items": {
+            "$ref": "#/$defs/ArtifactSatisfactionRoute"
+          },
+          "minItems": 1,
+          "title": "Permitted Routes",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "requirement_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:/@+-]*$",
+          "title": "Requirement Id",
+          "type": "string"
+        },
+        "trust_policy_refs": {
+          "items": {
+            "maxLength": 1024,
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Trust Policy Refs",
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "requirement_id",
+        "explicitness",
+        "permitted_routes"
+      ],
+      "title": "ArtifactRequirement",
+      "type": "object"
+    },
+    "ArtifactRequirementSource": {
+      "additionalProperties": false,
+      "description": "Contract-specific source that cannot omit portable artifact demand.",
+      "properties": {
+        "artifact_requirement": {
+          "$ref": "#/$defs/ArtifactRequirement"
+        },
+        "build": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ContainerImageBuildProvenance"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "default": "*",
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "artifact_requirement"
+      ],
+      "title": "ArtifactRequirementSource",
+      "type": "object"
+    },
+    "ArtifactSatisfactionRoute": {
+      "additionalProperties": false,
+      "description": "One permitted mechanism/acquisition/timing combination.",
+      "properties": {
+        "acquisition": {
+          "enum": [
+            "pull",
+            "copy",
+            "import",
+            "local-lookup",
+            "none"
+          ],
+          "title": "Acquisition",
+          "type": "string"
+        },
+        "mechanism": {
+          "$ref": "#/$defs/ArtifactMechanismProfile"
+        },
+        "timing": {
+          "enum": [
+            "publication",
+            "pack-ingestion",
+            "backend-preparation",
+            "realization"
+          ],
+          "title": "Timing",
+          "type": "string"
+        }
+      },
+      "required": [
+        "mechanism",
+        "acquisition",
+        "timing"
+      ],
+      "title": "ArtifactSatisfactionRoute",
+      "type": "object"
+    },
+    "ContainerImageBuildProvenance": {
+      "additionalProperties": false,
+      "description": "Observed build/provenance facts for a custom container image artifact.",
+      "properties": {
+        "attestation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ImageAttestation"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "base_image": {
+          "default": "",
+          "title": "Base Image",
+          "type": "string"
+        },
+        "base_image_digest": {
+          "default": "",
+          "title": "Base Image Digest",
+          "type": "string"
+        },
+        "build_args": {
+          "items": {
+            "$ref": "#/$defs/ImageBuildArg"
+          },
+          "title": "Build Args",
+          "type": "array"
+        },
+        "config": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ImageConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "copied_sources": {
+          "items": {
+            "$ref": "#/$defs/ImageCopiedSource"
+          },
+          "title": "Copied Sources",
+          "type": "array"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "dockerfile_path": {
+          "default": "",
+          "title": "Dockerfile Path",
+          "type": "string"
+        },
+        "instructions": {
+          "items": {
+            "$ref": "#/$defs/DockerfileInstruction"
+          },
+          "title": "Instructions",
+          "type": "array"
+        },
+        "layers": {
+          "items": {
+            "$ref": "#/$defs/ImageLayer"
+          },
+          "title": "Layers",
+          "type": "array"
+        },
+        "source_inputs": {
+          "items": {
+            "$ref": "#/$defs/ImageSourceInput"
+          },
+          "title": "Source Inputs",
+          "type": "array"
+        }
+      },
+      "title": "ContainerImageBuildProvenance",
+      "type": "object"
+    },
+    "DockerfileInstruction": {
+      "additionalProperties": false,
+      "description": "A structured record of one container build-recipe instruction.\n\nThe instruction is kept as a typed kind plus tokenized ``arguments``\nrather than raw recipe text: raw Dockerfile/shell syntax can contain\n``${...}`` strings that collide with RAES variable substitution.",
+      "properties": {
+        "arguments": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Arguments",
+          "type": "array"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "instruction": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DockerfileInstructionKind"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Instruction"
+        }
+      },
+      "required": [
+        "instruction"
+      ],
+      "title": "DockerfileInstruction",
+      "type": "object"
+    },
+    "DockerfileInstructionKind": {
+      "description": "Observed kind of a structured container build-recipe instruction.",
+      "enum": [
+        "from",
+        "arg",
+        "env",
+        "run",
+        "copy",
+        "add",
+        "workdir",
+        "entrypoint",
+        "cmd",
+        "healthcheck",
+        "label",
+        "expose",
+        "user",
+        "volume",
+        "shell",
+        "stopsignal",
+        "onbuild",
+        "maintainer",
+        "other"
+      ],
+      "title": "DockerfileInstructionKind",
+      "type": "string"
+    },
+    "ExplicitnessClass": {
+      "description": "SEM-218 author-intent class for a declaration.",
+      "enum": [
+        "exact",
+        "constrained",
+        "open"
+      ],
+      "title": "ExplicitnessClass",
+      "type": "string"
+    },
+    "ImageAttestation": {
+      "additionalProperties": false,
+      "description": "Observed build-attestation availability and verification result.\n\nAttestation *availability* (``status``) and *verification result*\n(``verification``) are deliberately separate facts: a mutable local image\ntag with no registry-visible OCI/in-toto/SLSA attestation is not the same\nstate as a failed verification (ADR-023 \u00a75).",
+      "properties": {
+        "attestation_type": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ImageAttestationType"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Attestation Type"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "evidence_reference": {
+          "default": "",
+          "title": "Evidence Reference",
+          "type": "string"
+        },
+        "predicate_type": {
+          "default": "",
+          "title": "Predicate Type",
+          "type": "string"
+        },
+        "status": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ImageAttestationStatus"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Status"
+        },
+        "verification": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ImageVerificationStatus"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Verification"
+        }
+      },
+      "title": "ImageAttestation",
+      "type": "object"
+    },
+    "ImageAttestationStatus": {
+      "description": "Availability of a registry-visible build attestation for an image.",
+      "enum": [
+        "present",
+        "absent",
+        "unknown"
+      ],
+      "title": "ImageAttestationStatus",
+      "type": "string"
+    },
+    "ImageAttestationType": {
+      "description": "Format of an observed image build attestation.",
+      "enum": [
+        "oci",
+        "in_toto",
+        "slsa",
+        "other",
+        "none",
+        "unknown"
+      ],
+      "title": "ImageAttestationType",
+      "type": "string"
+    },
+    "ImageBuildArg": {
+      "additionalProperties": false,
+      "description": "An observed build argument with value-sensitivity classification.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "value": {
+          "default": "",
+          "title": "Value",
+          "type": "string"
+        },
+        "value_classification": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeEnvironmentValueClassification"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Value Classification"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "ImageBuildArg",
+      "type": "object"
+    },
+    "ImageConfig": {
+      "additionalProperties": false,
+      "description": "Observed image-default configuration baked into the image artifact.\n\nThese are image defaults, distinct from runtime-effective container facts\nrecorded under ``Node.runtime.container``.",
+      "properties": {
+        "command": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Command",
+          "type": "array"
+        },
+        "default_environment": {
+          "items": {
+            "$ref": "#/$defs/ImageEnvironmentDefault"
+          },
+          "title": "Default Environment",
+          "type": "array"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "entrypoint": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Entrypoint",
+          "type": "array"
+        },
+        "exposed_ports": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Exposed Ports",
+          "type": "array"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Labels",
+          "type": "object"
+        },
+        "working_directory": {
+          "default": "",
+          "title": "Working Directory",
+          "type": "string"
+        }
+      },
+      "title": "ImageConfig",
+      "type": "object"
+    },
+    "ImageCopiedSource": {
+      "additionalProperties": false,
+      "description": "A source path copied into the image and its in-image destination.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "destination_path": {
+          "title": "Destination Path",
+          "type": "string"
+        },
+        "from_stage": {
+          "default": "",
+          "title": "From Stage",
+          "type": "string"
+        },
+        "source_path": {
+          "title": "Source Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_path",
+        "destination_path"
+      ],
+      "title": "ImageCopiedSource",
+      "type": "object"
+    },
+    "ImageEnvironmentDefault": {
+      "additionalProperties": false,
+      "description": "An image-default environment variable with sensitivity classification.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "value": {
+          "default": "",
+          "title": "Value",
+          "type": "string"
+        },
+        "value_classification": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeEnvironmentValueClassification"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Value Classification"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "ImageEnvironmentDefault",
+      "type": "object"
+    },
+    "ImageLayer": {
+      "additionalProperties": false,
+      "description": "An observed layer in the image layer chain.\n\nEmpty/metadata-only layers (e.g. ``ENV`` instructions) legitimately carry\nno ``digest``; the layer is still recorded for build-history correlation.",
+      "properties": {
+        "created_by": {
+          "default": "",
+          "title": "Created By",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "digest": {
+          "default": "",
+          "title": "Digest",
+          "type": "string"
+        },
+        "empty": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Empty"
+        },
+        "size": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Size"
+        }
+      },
+      "title": "ImageLayer",
+      "type": "object"
+    },
+    "ImageSourceInput": {
+      "additionalProperties": false,
+      "description": "A source-package input and its source-to-runtime destination mapping.\n\n``source_path`` uses the same source-path dialect as\n``RuntimeFilesystemEntry.source_path`` so the build-time input and the\nrealized runtime entry can be correlated.",
+      "properties": {
+        "checksum": {
+          "default": "",
+          "title": "Checksum",
+          "type": "string"
+        },
+        "checksum_algorithm": {
+          "default": "",
+          "title": "Checksum Algorithm",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "destination_path": {
+          "default": "",
+          "title": "Destination Path",
+          "type": "string"
+        },
+        "identifier": {
+          "title": "Identifier",
+          "type": "string"
+        },
+        "source_path": {
+          "default": "",
+          "title": "Source Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "identifier"
+      ],
+      "title": "ImageSourceInput",
+      "type": "object"
+    },
+    "ImageVerificationStatus": {
+      "description": "Result of verifying an image's build attestation.",
+      "enum": [
+        "verified",
+        "failed",
+        "unverified",
+        "not_applicable",
+        "unknown"
+      ],
+      "title": "ImageVerificationStatus",
+      "type": "string"
+    },
+    "RuntimeEnvironmentValueClassification": {
+      "description": "Sensitivity classification for a required runtime environment value.",
+      "enum": [
+        "plain",
+        "redacted",
+        "secret_fixture",
+        "operator_secret",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeEnvironmentValueClassification",
+      "type": "string"
+    }
+  },
+  "$id": "https://raes.dev/schemas/artifact-requirement-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Published source-artifact requirement contract.",
+  "properties": {
+    "schema_version": {
+      "const": "artifact-requirement/v1",
+      "default": "artifact-requirement/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source": {
+      "$ref": "#/$defs/ArtifactRequirementSource"
+    }
+  },
+  "required": [
+    "source"
+  ],
+  "title": "ArtifactRequirementContractModel",
+  "type": "object",
+  "x-raes-invariants": [
+    {
+      "description": "An exact requirement's immutable artifact id must equal the enclosing Source selector name.",
+      "id": "exact-source-artifact-id-match",
+      "inputs": [
+        {
+          "contract_id": "artifact-requirement-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "raes_contracts.artifact_requirements.validate_artifact_requirement_invariants"
+    },
+    {
+      "description": "An exact requirement's immutable artifact version must equal the enclosing Source selector version.",
+      "id": "exact-source-version-match",
+      "inputs": [
+        {
+          "contract_id": "artifact-requirement-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "raes_contracts.artifact_requirements.validate_artifact_requirement_invariants"
+    },
+    {
+      "description": "Every materialization locked_input_id must resolve to a locked input declared by the same artifact requirement.",
+      "id": "materialization-locked-input-join",
+      "inputs": [
+        {
+          "contract_id": "artifact-requirement-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "raes_contracts.artifact_requirements.validate_artifact_requirement_invariants"
+    }
+  ],
+  "x-raes-semantic-profile": {
+    "contract_id": "artifact-requirement-v1",
+    "entry_schema_contract_id": "raes-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/RaesSemanticInvariantEntryModel",
+    "id": "raes-semantic-invariants-v1",
+    "keyword": "x-raes-invariants",
+    "required": true,
+    "uri": "https://raes.dev/schemas/semantic-invariants/v1"
+  }
+}

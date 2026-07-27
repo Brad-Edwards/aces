@@ -9,6 +9,8 @@ from typing import Any
 from raes.canonical import InstantiatedScenarioSnapshot
 from raes.scenario import InstantiatedScenario, Scenario
 
+from raes_contracts.artifact_requirements import ArtifactRequirementContractModel
+
 from .associated_artifacts import AssociatedArtifactManifestModel
 from .catalogs import (
     ConceptFamilyCatalogModel,
@@ -134,6 +136,7 @@ def _core_schema_bundle() -> dict[str, dict[str, Any]]:
         "instantiated-scenario-v1": InstantiatedScenario.model_json_schema(),
         "instantiated-scenario-snapshot-v1": InstantiatedScenarioSnapshot.model_json_schema(),
         "scenario-instantiation-request-v1": InstantiationRequestModel.model_json_schema(),
+        "artifact-requirement-v1": ArtifactRequirementContractModel.model_json_schema(),
         "exploit-path-analysis-evidence-v1": ExploitPathAnalysisEvidenceModel.model_json_schema(),
         "scenario-satisfiability-evidence-v1": ScenarioSatisfiabilityEvidenceModel.model_json_schema(),
         "backend-manifest-v2": BackendManifestV2Model.model_json_schema(),

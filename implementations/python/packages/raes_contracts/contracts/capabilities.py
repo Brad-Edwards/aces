@@ -6,6 +6,7 @@ from pydantic import Field, GetJsonSchemaHandler, model_validator
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema
 
+from ..artifact_requirements import ArtifactMechanismCapability
 from ..vocabulary import RealizationSupportMode, WorkflowFeature, WorkflowStatePredicateFeature
 from .base import ContractModel, NonEmptyString
 from .validators import _validate_controlled_vocabulary_terms
@@ -259,6 +260,7 @@ class RealizationSupportDeclarationModel(ContractModel):
     supported_constraint_kinds: list[NonEmptyString] = Field(default_factory=list)
     supported_exact_requirement_kinds: list[NonEmptyString] = Field(default_factory=list)
     disclosure_kinds: list[NonEmptyString] = Field(min_length=1)
+    artifact_mechanisms: list[ArtifactMechanismCapability] = Field(default_factory=list)
     constraints: dict[str, str] = Field(default_factory=dict)
 
     @model_validator(mode="after")
@@ -270,6 +272,17 @@ class RealizationSupportDeclarationModel(ContractModel):
             )
         if self.support_mode == RealizationSupportMode.EXACT_ONLY and self.supported_constraint_kinds:
             raise ValueError("exact-only realization support must not declare supported_constraint_kinds")
+        identities = [
+            (
+                capability.mechanism.mechanism,
+                capability.mechanism.profile,
+                capability.mechanism.version,
+                capability.mechanism.digest,
+            )
+            for capability in self.artifact_mechanisms
+        ]
+        if len(identities) != len(set(identities)):
+            raise ValueError("artifact_mechanisms must not contain duplicate mechanism profiles")
         return self
 
     @classmethod

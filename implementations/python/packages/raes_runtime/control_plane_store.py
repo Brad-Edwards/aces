@@ -6,6 +6,7 @@ import os
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Protocol
 
+from raes_contracts.artifact_requirements import ArtifactSatisfactionDisclosureModel
 from raes_contracts.contracts import RealizationEnvelopeIdentityModel
 from raes_contracts.contracts.time_model import TimeRuntimeStateModel
 from raes_contracts.diagnostics import Diagnostic, Severity
@@ -156,6 +157,11 @@ def _snapshot_payload(snapshot: RuntimeSnapshot) -> dict[str, Any]:
                 "explicitness": entry.explicitness.value,
                 "provenance": entry.provenance.value,
                 "governing_scope": entry.governing_scope,
+                "artifact_satisfaction": (
+                    entry.artifact_satisfaction.model_dump(mode="json")
+                    if entry.artifact_satisfaction is not None
+                    else None
+                ),
             }
             for entry in snapshot.realization_provenance
         ],
@@ -230,6 +236,11 @@ def _snapshot_from_payload(payload: dict[str, Any]) -> RuntimeSnapshot:
                     str(item.get("provenance", ExplicitnessProvenance.AUTHOR_DECLARED.value))
                 ),
                 governing_scope=(str(item["governing_scope"]) if item.get("governing_scope") is not None else None),
+                artifact_satisfaction=(
+                    ArtifactSatisfactionDisclosureModel.model_validate(item["artifact_satisfaction"])
+                    if item.get("artifact_satisfaction") is not None
+                    else None
+                ),
             )
             for item in payload.get("realization_provenance", [])
             if isinstance(item, dict)

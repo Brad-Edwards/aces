@@ -2,9 +2,9 @@
   "contract_id": "runtime-snapshot-v1",
   "schema_path": "contracts/schemas/snapshots/runtime-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "0a0504edc131b6f7b9d08fc47487d37223e8d389c7c1dcc11f4f76562b2cfe60",
+  "content_hash": "73b2b3eba4400777c380b1d532614d29c2eb83ec82da5fef127918768aa2f8d8",
   "last_change": {
-    "summary": "Added canonical participant budget states, authoritative physical-pool allocation ledgers, and evidence events for issue #899.",
-    "content_hash": "0a0504edc131b6f7b9d08fc47487d37223e8d389c7c1dcc11f4f76562b2cfe60"
+    "summary": "Added artifact satisfaction evidence and participant resource-budget state and allocation evidence for issues #920 and #899.",
+    "content_hash": "73b2b3eba4400777c380b1d532614d29c2eb83ec82da5fef127918768aa2f8d8"
   }
 }
