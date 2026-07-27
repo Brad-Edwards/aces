@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable
 from copy import deepcopy
+from dataclasses import dataclass
 
 from raes_backend_protocols.capabilities import BackendManifest
 from raes_contracts.addressing import require_compiled_address
@@ -25,6 +26,14 @@ from .proposition_truth_contracts import proposition_truth_contract_diagnostics
 from .workflow_result_contracts import workflow_result_contract_diagnostics
 
 _BACKEND_CONTRACT_INVALID = "runtime.backend-contract-invalid"
+
+
+@dataclass(frozen=True)
+class _RealizationApplyContext:
+    requirements: tuple[CompiledRealizationRequirement, ...] = ()
+    plan: ProvisioningPlan | None = None
+    manifest: BackendManifest | None = None
+    artifact_availability: ArtifactAvailabilityContext | None = None
 
 
 def _call_backend_diagnostics(
@@ -53,11 +62,9 @@ def _call_backend_apply(
     *args: object,
     address: str,
     snapshot: RuntimeSnapshot,
-    realization_requirements: tuple[CompiledRealizationRequirement, ...] = (),
-    realization_plan: ProvisioningPlan | None = None,
-    backend_manifest: BackendManifest | None = None,
-    artifact_availability: ArtifactAvailabilityContext | None = None,
+    realization: _RealizationApplyContext | None = None,
 ) -> ApplyResult:
+    realization_context = realization or _RealizationApplyContext()
     baseline_snapshot = deepcopy(snapshot)
     backend_snapshot = deepcopy(snapshot)
     backend_args = tuple(backend_snapshot if arg is snapshot else arg for arg in args)
@@ -74,10 +81,10 @@ def _call_backend_apply(
         result,
         address=address,
         baseline_snapshot=baseline_snapshot,
-        realization_requirements=realization_requirements,
-        realization_plan=realization_plan,
-        backend_manifest=backend_manifest,
-        artifact_availability=artifact_availability,
+        realization_requirements=realization_context.requirements,
+        realization_plan=realization_context.plan,
+        backend_manifest=realization_context.manifest,
+        artifact_availability=realization_context.artifact_availability,
     )
 
 

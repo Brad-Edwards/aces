@@ -60,6 +60,15 @@ def _append_source_artifact_requirements(
 ) -> None:
     """Lower every realized ``Source`` carrier into the existing demand graph."""
 
+    _append_resource_source_artifact_requirements(requirements, scenario)
+    _append_bound_source_artifact_requirements(requirements, scenario)
+    _append_action_source_artifact_requirements(requirements, scenario)
+
+
+def _append_resource_source_artifact_requirements(
+    requirements: list[CompiledRealizationRequirement],
+    scenario: InstantiatedScenario,
+) -> None:
     for name, node in scenario.nodes.items():
         if node.source is not None:
             _append_source_artifact_requirement(
@@ -78,27 +87,57 @@ def _append_source_artifact_requirements(
                 address=_content_address(name),
                 governing_scope=f"#/content/{name}/source/artifact_requirement",
             )
+
+
+def _append_bound_source_artifact_requirements(
+    requirements: list[CompiledRealizationRequirement],
+    scenario: InstantiatedScenario,
+) -> None:
     for node_name, node in scenario.nodes.items():
-        for feature_name in node.features:
-            feature = scenario.features.get(feature_name)
-            if feature is not None and feature.source is not None:
-                _append_source_artifact_requirement(
-                    requirements,
-                    source=feature.source,
-                    field_path=f"features.{feature_name}.source.artifact_requirement",
-                    address=_feature_binding_address(node_name, feature_name),
-                    governing_scope=f"#/features/{feature_name}/source/artifact_requirement",
-                )
-        for condition_name in node.conditions:
-            condition = scenario.conditions.get(condition_name)
-            if condition is not None and condition.source is not None:
-                _append_source_artifact_requirement(
-                    requirements,
-                    source=condition.source,
-                    field_path=f"conditions.{condition_name}.source.artifact_requirement",
-                    address=_condition_binding_address(node_name, condition_name),
-                    governing_scope=f"#/conditions/{condition_name}/source/artifact_requirement",
-                )
+        _append_feature_source_artifact_requirements(requirements, scenario, node_name, node.features)
+        _append_condition_source_artifact_requirements(requirements, scenario, node_name, node.conditions)
+
+
+def _append_feature_source_artifact_requirements(
+    requirements: list[CompiledRealizationRequirement],
+    scenario: InstantiatedScenario,
+    node_name: str,
+    feature_names: list[str],
+) -> None:
+    for feature_name in feature_names:
+        feature = scenario.features.get(feature_name)
+        if feature is not None and feature.source is not None:
+            _append_source_artifact_requirement(
+                requirements,
+                source=feature.source,
+                field_path=f"features.{feature_name}.source.artifact_requirement",
+                address=_feature_binding_address(node_name, feature_name),
+                governing_scope=f"#/features/{feature_name}/source/artifact_requirement",
+            )
+
+
+def _append_condition_source_artifact_requirements(
+    requirements: list[CompiledRealizationRequirement],
+    scenario: InstantiatedScenario,
+    node_name: str,
+    condition_names: list[str],
+) -> None:
+    for condition_name in condition_names:
+        condition = scenario.conditions.get(condition_name)
+        if condition is not None and condition.source is not None:
+            _append_source_artifact_requirement(
+                requirements,
+                source=condition.source,
+                field_path=f"conditions.{condition_name}.source.artifact_requirement",
+                address=_condition_binding_address(node_name, condition_name),
+                governing_scope=f"#/conditions/{condition_name}/source/artifact_requirement",
+            )
+
+
+def _append_action_source_artifact_requirements(
+    requirements: list[CompiledRealizationRequirement],
+    scenario: InstantiatedScenario,
+) -> None:
     for section, declarations, address_factory in (
         ("injects", scenario.injects, _inject_address),
         ("events", scenario.events, _event_address),

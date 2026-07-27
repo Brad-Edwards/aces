@@ -20,6 +20,7 @@ from .contracts.base import ContractModel, NonEmptyString
 from .versions import ARTIFACT_REQUIREMENT_SCHEMA_VERSION
 
 Sha256DigestString = Annotated[str, Field(pattern=r"^sha256:[a-f0-9]{64}$")]
+_INVARIANT_VALIDATOR = "raes_contracts.artifact_requirements.validate_artifact_requirement_invariants"
 
 
 def _require_unique(values: list[object], *, field_name: str) -> None:
@@ -31,26 +32,51 @@ def _require_unique(values: list[object], *, field_name: str) -> None:
 def artifact_requirement_invariant_violations(payload: object) -> tuple[str, ...]:
     """Evaluate the cross-object invariants published in ``x-raes-invariants``."""
 
+    source, requirement, structural_violation = _artifact_requirement_mappings(payload)
+    if structural_violation is not None:
+        return (structural_violation,)
+    assert source is not None
+    assert requirement is not None
+    violations = [
+        *_exact_identity_violations(source, requirement),
+        *_materialization_violations(requirement),
+    ]
+    return tuple(dict.fromkeys(violations))
+
+
+def _artifact_requirement_mappings(
+    payload: object,
+) -> tuple[Mapping[object, object] | None, Mapping[object, object] | None, str | None]:
     if not isinstance(payload, Mapping):
-        return ("artifact-requirement-document-object",)
+        return None, None, "artifact-requirement-document-object"
     source = payload.get("source")
     if not isinstance(source, Mapping):
-        return ("artifact-requirement-source-object",)
+        return None, None, "artifact-requirement-source-object"
     requirement = source.get("artifact_requirement")
     if not isinstance(requirement, Mapping):
-        return ("artifact-requirement-present",)
+        return None, None, "artifact-requirement-present"
+    return source, requirement, None
 
+
+def _exact_identity_violations(
+    source: Mapping[object, object],
+    requirement: Mapping[object, object],
+) -> list[str]:
+    if requirement.get("explicitness") != "exact":
+        return []
+    identity = requirement.get("exact_artifact")
+    if not isinstance(identity, Mapping):
+        return ["exact-artifact-present"]
     violations: list[str] = []
-    if requirement.get("explicitness") == "exact":
-        identity = requirement.get("exact_artifact")
-        if not isinstance(identity, Mapping):
-            violations.append("exact-artifact-present")
-        else:
-            if source.get("name") != identity.get("artifact_id"):
-                violations.append("exact-source-artifact-id-match")
-            if source.get("version", "*") != identity.get("version"):
-                violations.append("exact-source-version-match")
+    if source.get("name") != identity.get("artifact_id"):
+        violations.append("exact-source-artifact-id-match")
+    if source.get("version", "*") != identity.get("version"):
+        violations.append("exact-source-version-match")
+    return violations
 
+
+def _materialization_violations(requirement: Mapping[object, object]) -> list[str]:
+    violations: list[str] = []
     locked_inputs = requirement.get("locked_inputs", [])
     declared_input_ids = {
         item.get("input_id")
@@ -70,7 +96,7 @@ def artifact_requirement_invariant_violations(payload: object) -> tuple[str, ...
         referenced = specification.get("locked_input_ids", [])
         if isinstance(referenced, list) and not set(referenced).issubset(declared_input_ids):
             violations.append("materialization-locked-input-join")
-    return tuple(dict.fromkeys(violations))
+    return violations
 
 
 def validate_artifact_requirement_invariants(
@@ -110,7 +136,7 @@ class ArtifactRequirementContractModel(ContractModel):
                     "An exact requirement's immutable artifact id must equal the enclosing Source selector name."
                 ),
                 "level": "error",
-                "validator": ("raes_contracts.artifact_requirements.validate_artifact_requirement_invariants"),
+                "validator": _INVARIANT_VALIDATOR,
                 "inputs": [
                     {
                         "contract_id": "artifact-requirement-v1",
@@ -125,7 +151,7 @@ class ArtifactRequirementContractModel(ContractModel):
                     "equal the enclosing Source selector version."
                 ),
                 "level": "error",
-                "validator": ("raes_contracts.artifact_requirements.validate_artifact_requirement_invariants"),
+                "validator": _INVARIANT_VALIDATOR,
                 "inputs": [
                     {
                         "contract_id": "artifact-requirement-v1",
@@ -140,7 +166,7 @@ class ArtifactRequirementContractModel(ContractModel):
                     "locked input declared by the same artifact requirement."
                 ),
                 "level": "error",
-                "validator": ("raes_contracts.artifact_requirements.validate_artifact_requirement_invariants"),
+                "validator": _INVARIANT_VALIDATOR,
                 "inputs": [
                     {
                         "contract_id": "artifact-requirement-v1",

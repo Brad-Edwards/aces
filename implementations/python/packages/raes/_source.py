@@ -218,30 +218,38 @@ class ArtifactRequirement(SDLModel):
     def validate_authority(self) -> "ArtifactRequirement":
         self._validate_unique_identities()
         if self.explicitness is ExplicitnessClass.EXACT:
-            if self.exact_artifact is None:
-                raise ValueError("exact artifact requirements require one immutable exact_artifact identity")
-            if self.constraints or self.candidates or self.locked_inputs or self.materialization_specifications:
-                raise ValueError(
-                    "exact artifact requirements must not declare alternative constraints, "
-                    "candidates, locked inputs, or materialization specifications"
-                )
-            if any(route.mechanism.mechanism != "exact-artifact" for route in self.permitted_routes):
-                raise ValueError("exact artifact requirements permit only the exact-artifact mechanism")
+            self._validate_exact_authority()
         elif self.explicitness is ExplicitnessClass.CONSTRAINED:
-            if self.exact_artifact is not None:
-                raise ValueError("constrained artifact requirements must not declare exact_artifact")
-            if not (self.constraints or self.candidates or self.locked_inputs or self.materialization_specifications):
-                raise ValueError("constrained artifact requirements require a non-empty constraint domain")
+            self._validate_constrained_authority()
         else:
-            if self.exact_artifact is not None:
-                raise ValueError("open artifact requirements must not declare exact_artifact")
-            if self.constraints or self.candidates or self.materialization_specifications:
-                raise ValueError(
-                    "open artifact requirements must not declare constraints, "
-                    "candidates, or materialization specifications"
-                )
+            self._validate_open_authority()
         self._validate_materialization_input_joins()
         return self
+
+    def _validate_exact_authority(self) -> None:
+        if self.exact_artifact is None:
+            raise ValueError("exact artifact requirements require one immutable exact_artifact identity")
+        if self.constraints or self.candidates or self.locked_inputs or self.materialization_specifications:
+            raise ValueError(
+                "exact artifact requirements must not declare alternative constraints, "
+                "candidates, locked inputs, or materialization specifications"
+            )
+        if any(route.mechanism.mechanism != "exact-artifact" for route in self.permitted_routes):
+            raise ValueError("exact artifact requirements permit only the exact-artifact mechanism")
+
+    def _validate_constrained_authority(self) -> None:
+        if self.exact_artifact is not None:
+            raise ValueError("constrained artifact requirements must not declare exact_artifact")
+        if not (self.constraints or self.candidates or self.locked_inputs or self.materialization_specifications):
+            raise ValueError("constrained artifact requirements require a non-empty constraint domain")
+
+    def _validate_open_authority(self) -> None:
+        if self.exact_artifact is not None:
+            raise ValueError("open artifact requirements must not declare exact_artifact")
+        if self.constraints or self.candidates or self.materialization_specifications:
+            raise ValueError(
+                "open artifact requirements must not declare constraints, candidates, or materialization specifications"
+            )
 
     @classmethod
     def __get_pydantic_json_schema__(
@@ -367,7 +375,7 @@ class Source(SDLModel):
     artifact_requirement: ArtifactRequirement | None = None
 
     @model_validator(mode="after")
-    def validate_exact_requirement_selector(self) -> "Source":
+    def validate_exact_requirement_selector(self) -> "Source":  # NOSONAR - Pydantic requires returning self.
         requirement = self.artifact_requirement
         if requirement is None or requirement.explicitness is not ExplicitnessClass.EXACT:
             return self

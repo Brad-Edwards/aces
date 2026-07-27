@@ -194,25 +194,29 @@ def test_exact_requirement_requires_one_immutable_identity_and_no_alternatives()
     assert source.artifact_requirement is not None
     assert source.artifact_requirement.explicitness is ExplicitnessClass.EXACT
 
+    exact_routes = [_route()]
     with pytest.raises(ValidationError, match="immutable|exact"):
         ArtifactRequirement(
             requirement_id="bad-exact",
             explicitness=ExplicitnessClass.EXACT,
-            permitted_routes=[_route()],
+            permitted_routes=exact_routes,
         )
+    exact_identity = _identity()
+    fallback_candidate = ArtifactCandidate(candidate_id="fallback", artifact=_identity(digest=_DIGEST_B))
     with pytest.raises(ValidationError, match="alternative|candidate|exact"):
         ArtifactRequirement(
             requirement_id="bad-fallback",
             explicitness=ExplicitnessClass.EXACT,
-            exact_artifact=_identity(),
-            candidates=[ArtifactCandidate(candidate_id="fallback", artifact=_identity(digest=_DIGEST_B))],
-            permitted_routes=[_route()],
+            exact_artifact=exact_identity,
+            candidates=[fallback_candidate],
+            permitted_routes=exact_routes,
         )
+    exact_requirement = _exact_requirement()
     with pytest.raises(ValidationError, match="selector|identity|match"):
         Source(
             name="different-image",
             version="24.04.1",
-            artifact_requirement=_exact_requirement(),
+            artifact_requirement=exact_requirement,
         )
 
 
@@ -285,12 +289,13 @@ def test_materialization_and_locked_inputs_are_explicit_constrained_authority() 
     )
     assert requirement.materialization_specifications[0].locked_input_ids == ["rootfs"]
 
+    materialization_routes = [_route(mechanism=_mechanism("materialization-specification"))]
     with pytest.raises(ValidationError, match="locked input"):
         ArtifactRequirement(
             requirement_id="missing-input-ref",
             explicitness=ExplicitnessClass.CONSTRAINED,
             materialization_specifications=[specification],
-            permitted_routes=[_route(mechanism=_mechanism("materialization-specification"))],
+            permitted_routes=materialization_routes,
         )
 
 

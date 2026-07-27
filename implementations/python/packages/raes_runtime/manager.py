@@ -14,7 +14,7 @@ from raes_processor.models import ExecutionPlan
 from raes_processor.planner import plan, snapshot_delete_order
 
 from .apply_failure import maybe_synthesize_failure, rollback_services
-from .backend_calls import _call_backend_apply, _call_backend_diagnostics
+from .backend_calls import _call_backend_apply, _call_backend_diagnostics, _RealizationApplyContext
 from .diagnostics import _failure_diagnostic, _has_error_diagnostic
 from .participant_activity import resolve_participant_activity_controls
 from .participant_execution_control import RuntimeParticipantExecutionMixin
@@ -195,10 +195,12 @@ class RuntimeManager(RuntimeParticipantExecutionMixin, RuntimeTimeControlMixin):
             state.working_snapshot,
             address="runtime.apply.provisioning",
             snapshot=state.working_snapshot,
-            realization_requirements=execution_plan.model.realization_requirements,
-            realization_plan=execution_plan.provisioning,
-            backend_manifest=execution_plan.manifest,
-            artifact_availability=execution_plan.artifact_availability,
+            realization=_RealizationApplyContext(
+                requirements=execution_plan.model.realization_requirements,
+                plan=execution_plan.provisioning,
+                manifest=execution_plan.manifest,
+                artifact_availability=execution_plan.artifact_availability,
+            ),
         )
         self._record_phase_result(state, provision_result)
         if not provision_result.success:
