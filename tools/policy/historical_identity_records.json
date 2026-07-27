@@ -1286,6 +1286,13 @@
       "content_sha256": "3128021de32125f2d8ce6270e1386c2c8cc5dd3af45514fb8e335a17c9469940"
     },
     {
+      "path": "docs/decisions/issue-907-raes-env-packs-naming-preflight.md",
+      "record_class": "dated-design-record",
+      "rationale": "Preserves the dated issue preflight and its base-synchronization correction as historical identity-cutover evidence.",
+      "occurrences": 4,
+      "content_sha256": "82c441869cca975874236fa02946298bb4dbf70ecd04336550652193673e0022"
+    },
+    {
       "path": "docs/decisions/issue-97-asr-511-515-validation-strength-disclosure-preflight.md",
       "record_class": "dated-design-record",
       "rationale": "Preserves a completed, dated design or architecture-preflight record from before the RAES identity cutover.",
@@ -1795,6 +1802,13 @@
       "rationale": "Preserves preregistered, frozen, dated, or lineage-bearing research evidence from before the RAES identity cutover.",
       "occurrences": 4,
       "content_sha256": "778711fccb5b5912a6fd106d080b4eac9dd354e4ccd4574204274fea653fecbc"
+    },
+    {
+      "path": "specs/evolution/deprecation-records.yaml",
+      "record_class": "lifecycle-record",
+      "rationale": "Preserves the exact retired distribution identifier in its governed deprecation and removal record.",
+      "occurrences": 2,
+      "content_sha256": "eff30897103368c6583701e886078f810188bcc47f4d9183853faeb1739fbdcb"
     }
   ]
 }

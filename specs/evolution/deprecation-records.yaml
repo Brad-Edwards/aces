@@ -35,6 +35,19 @@ adr_refs:
 spec: specs/evolution/versioning-deprecation-and-migration.md
 
 records:
+  # The old PyPI project needs one final pointer release before archival. This
+  # is distribution lifecycle, not an import compatibility promise: the final
+  # release changes metadata and guidance only and does not restore old imports.
+  - id: legacy-python-distribution
+    surface_class: python-distribution
+    identifier: "the legacy `aces-sdl` PyPI distribution, with 0.23.1 as its latest published release before the EOL pointer"
+    status: deprecated
+    first_notice: "ADR-093 and issue #907 (RAES rename and environment-pack naming convergence)"
+    replacement: "the `raes` PyPI distribution and direct `raes` / `raes_*` imports"
+    migration_reference: "docs/migration/raes-rename.md"
+    notice_window: "Publish one final metadata-only 0.23.2 pointer release from the immutable 0.23.1 legacy lineage, verify it on PyPI, then archive the `aces-sdl` project. The archive is removal eligibility; no later fixes or releases are planned."
+    verification_evidence: "The current pyproject and release workflow publish only `raes`; version and packaging tests reject the old command/import surface. The final legacy artifact must be verified separately for its exact name, version, unchanged code payload, EOL description, and `raes` replacement link before archival."
+
   # The module-import `path:` field, superseded by `source:` in ADR-053. The
   # parser still accepts it as a backward-compatible alias, normalizing it to
   # the `local:{path}` source form.
