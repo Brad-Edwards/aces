@@ -451,4 +451,4 @@ adrs:
         summary: "Retained the existing SonarCloud project key as an exact, content-bound external-service designation rather than a current RAES product identity."
   - id: ADR-097
     path: docs/decisions/adrs/adr-097-portable-artifact-requirement-satisfaction.md
-    pin: 39a8c1b3865355cbd4612e1367b51f8b80a0977a7f5748b68a5165b1228dd417
+    pin: 4a69740d5600298ae1b8be29c1f974a7029a8cbabeb08caaca9d4544a9d7cba5

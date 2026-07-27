@@ -140,4 +140,5 @@ with authorized backend and trust-policy owners.
 - [ADR-070](adr-070-realization-envelope-semantics.md)
 - [ADR-071](adr-071-reusable-asset-trust-and-integrity-policy.md)
 - [ADR-077](adr-077-associated-artifact-manifest-boundary.md)
-- [Portable Artifact Requirement Satisfaction](../../../specs/supply-chain/artifact-requirement-satisfaction.md)
+- Portable Artifact Requirement Satisfaction:
+  `specs/supply-chain/artifact-requirement-satisfaction.md`
