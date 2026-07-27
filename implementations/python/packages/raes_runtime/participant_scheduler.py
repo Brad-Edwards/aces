@@ -203,6 +203,24 @@ def _execution_service_accepts_work(service: ParticipantExecutionServiceStateMod
     return service.observed_lifecycle == "running" and service.accepting_new_work and service.readiness == "ready"
 
 
+def _run_serial_due(
+    policy, time_model, participant_runtime, current_tick, cadence_ticks, activity_controls, run
+) -> None:
+    for participant_address in policy.participant_addresses:
+        run_participant_due(
+            policy,
+            time_model,
+            participant_runtime,
+            participant_address,
+            current_tick,
+            cadence_ticks,
+            run,
+            activity_controls,
+        )
+        if run.failure is not None:
+            break
+
+
 def _run_due_policy(
     policy: ParticipantAutonomousExecutionRuntime,
     time_model: CompiledTimeModel,
@@ -213,30 +231,14 @@ def _run_due_policy(
     service_payload = run.working.participant_execution_services.get(policy.address)
     if service_payload is None:
         run.failure = _missing_execution_service_result(policy, run)
-    else:
-        service = ParticipantExecutionServiceStateModel.model_validate(service_payload)
-        if _execution_service_accepts_work(service):
-            cadence_ticks = (
-                _cadence(policy, time_model)[1] if policy.profile == "participant-autonomous-execution/v1" else 0
-            )
-            current_tick = _clock_tick(run.working, policy.clock_address)
-            concurrent = run_policy_due_concurrently(
-                policy, time_model, participant_runtime, current_tick, cadence_ticks, run
-            )
-            if not concurrent:
-                for participant_address in policy.participant_addresses:
-                    run_participant_due(
-                        policy,
-                        time_model,
-                        participant_runtime,
-                        participant_address,
-                        current_tick,
-                        cadence_ticks,
-                        run,
-                        activity_controls,
-                    )
-                    if run.failure is not None:
-                        break
+        return
+    service = ParticipantExecutionServiceStateModel.model_validate(service_payload)
+    if not _execution_service_accepts_work(service):
+        return
+    cadence_ticks = _cadence(policy, time_model)[1] if policy.profile == "participant-autonomous-execution/v1" else 0
+    current_tick = _clock_tick(run.working, policy.clock_address)
+    if not run_policy_due_concurrently(policy, time_model, participant_runtime, current_tick, cadence_ticks, run):
+        _run_serial_due(policy, time_model, participant_runtime, current_tick, cadence_ticks, activity_controls, run)
 
 
 class ParticipantScheduler:

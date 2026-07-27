@@ -30,6 +30,20 @@ class ParticipantExecutionRuntimeMixin:
         return participant_execution_state(execution_scope_ref, snapshot)
 
     @staticmethod
+    def _execution_generation_changed(
+        state: ParticipantExecutionServiceStateModel,
+        request: ParticipantActionAdmissionRequest,
+    ) -> bool:
+        return (
+            state.generation != request.execution_generation
+            or state.observed_generation != request.execution_generation
+        )
+
+    @staticmethod
+    def _execution_service_accepts_work(state: ParticipantExecutionServiceStateModel) -> bool:
+        return state.observed_lifecycle == "running" and state.accepting_new_work and state.readiness == "ready"
+
+    @staticmethod
     def _execution_generation_failure_reason(
         request: ParticipantActionAdmissionRequest,
         snapshot: RuntimeSnapshot,
@@ -41,17 +55,12 @@ class ParticipantExecutionRuntimeMixin:
         reason = "execution-service state is missing" if payload is None else None
         if payload is not None:
             state = ParticipantExecutionServiceStateModel.model_validate(payload)
-            if (
-                state.generation != request.execution_generation
-                or state.observed_generation != request.execution_generation
-            ):
+            if ParticipantExecutionRuntimeMixin._execution_generation_changed(state, request):
                 reason = "execution generation changed"
             if (
                 reason is None
                 and not completion
-                and (
-                    state.observed_lifecycle != "running" or not state.accepting_new_work or state.readiness != "ready"
-                )
+                and not ParticipantExecutionRuntimeMixin._execution_service_accepts_work(state)
             ):
                 reason = "execution service is not accepting work"
         return reason
