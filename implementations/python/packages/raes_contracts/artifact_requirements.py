@@ -47,15 +47,23 @@ def artifact_requirement_invariant_violations(payload: object) -> tuple[str, ...
 def _artifact_requirement_mappings(
     payload: object,
 ) -> tuple[Mapping[object, object] | None, Mapping[object, object] | None, str | None]:
+    source: Mapping[object, object] | None = None
+    requirement: Mapping[object, object] | None = None
+    violation: str | None = None
     if not isinstance(payload, Mapping):
-        return None, None, "artifact-requirement-document-object"
-    source = payload.get("source")
-    if not isinstance(source, Mapping):
-        return None, None, "artifact-requirement-source-object"
-    requirement = source.get("artifact_requirement")
-    if not isinstance(requirement, Mapping):
-        return None, None, "artifact-requirement-present"
-    return source, requirement, None
+        violation = "artifact-requirement-document-object"
+    else:
+        source_payload = payload.get("source")
+        if not isinstance(source_payload, Mapping):
+            violation = "artifact-requirement-source-object"
+        else:
+            source = source_payload
+            requirement_payload = source.get("artifact_requirement")
+            if not isinstance(requirement_payload, Mapping):
+                violation = "artifact-requirement-present"
+            else:
+                requirement = requirement_payload
+    return source, requirement, violation
 
 
 def _exact_identity_violations(
@@ -76,7 +84,6 @@ def _exact_identity_violations(
 
 
 def _materialization_violations(requirement: Mapping[object, object]) -> list[str]:
-    violations: list[str] = []
     locked_inputs = requirement.get("locked_inputs", [])
     declared_input_ids = {
         item.get("input_id")
@@ -84,18 +91,27 @@ def _materialization_violations(requirement: Mapping[object, object]) -> list[st
         if isinstance(item, Mapping) and isinstance(item.get("input_id"), str)
     }
     specifications = requirement.get("materialization_specifications", [])
+    violations: list[str] = []
     for specification in specifications:
-        if not isinstance(specification, Mapping):
-            continue
-        profile = specification.get("profile")
-        mechanism = profile.get("mechanism") if isinstance(profile, Mapping) else None
-        if mechanism != "materialization-specification" and not (
-            isinstance(mechanism, str) and mechanism.startswith("x-")
-        ):
-            violations.append("materialization-profile-mechanism")
-        referenced = specification.get("locked_input_ids", [])
-        if isinstance(referenced, list) and not set(referenced).issubset(declared_input_ids):
-            violations.append("materialization-locked-input-join")
+        violations.extend(_materialization_specification_violations(specification, declared_input_ids))
+    return violations
+
+
+def _materialization_specification_violations(
+    specification: object,
+    declared_input_ids: set[object],
+) -> list[str]:
+    if not isinstance(specification, Mapping):
+        return []
+    violations: list[str] = []
+    profile = specification.get("profile")
+    mechanism = profile.get("mechanism") if isinstance(profile, Mapping) else None
+    governed_extension = isinstance(mechanism, str) and mechanism.startswith("x-")
+    if mechanism != "materialization-specification" and not governed_extension:
+        violations.append("materialization-profile-mechanism")
+    referenced = specification.get("locked_input_ids", [])
+    if isinstance(referenced, list) and not set(referenced).issubset(declared_input_ids):
+        violations.append("materialization-locked-input-join")
     return violations
 
 
