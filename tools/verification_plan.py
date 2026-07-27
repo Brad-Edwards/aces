@@ -35,7 +35,7 @@ FULL_PLAN = VerificationPlan(
     contracts=True,
     regression=True,
     fuzz=True,
-    docs=False,
+    docs=True,
     reason="full verification required",
 )
 

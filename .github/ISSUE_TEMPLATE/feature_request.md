@@ -1,6 +1,6 @@
 ---
-name: Feature Request
-about: Suggest a feature for RAES SDL
+name: Feature request
+about: Propose a focused improvement to RAES
 title: "[FEATURE] "
 labels: enhancement
 assignees: ''
@@ -10,18 +10,18 @@ assignees: ''
 
 <!-- Clear description of the proposed language, contract, implementation, or documentation change. -->
 
-## Use Case
+## Use case
 
 <!-- What scenario authoring, validation, conformance, or runtime problem does this solve? -->
 
-## Proposed Solution
+## Proposed solution
 
 <!-- How should this work? -->
 
-## Alternatives Considered
+## Alternatives considered
 
 <!-- Other approaches you've considered -->
 
-## Compatibility Notes
+## Compatibility notes
 
 <!-- Existing SDL, schemas, contracts, examples, or backend expectations that may be affected. -->

@@ -5,6 +5,7 @@ from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from time import perf_counter
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -22,6 +23,7 @@ from tools.osv_scanner_tool import (
     run_osv_scanner,
 )
 from tools.tool_versions import PRE_COMMIT_HOOKS_TOOL_SPEC, RUFF_TOOL_SPEC
+from tools.vale_tool import ensure_vale
 from tools.verification_plan import (
     collect_git_changes,
     plan_for_changes,
@@ -29,6 +31,21 @@ from tools.verification_plan import (
 )
 
 PROJECT_ROOT = REPO_ROOT / "implementations" / "python"
+PUBLIC_DOCS_ROOT = REPO_ROOT / "docs" / "public"
+DOCS_BUILD_ROOT = REPO_ROOT / "docs" / "_build"
+PUBLIC_DOCS_ENTRYPOINTS = (
+    "README.md",
+    "CONTRIBUTING.md",
+    "CODE_OF_CONDUCT.md",
+    "GOVERNANCE.md",
+    "MAINTAINERS.md",
+    "SECURITY.md",
+    "SUPPORT.md",
+)
+PUBLIC_DOCS_EXAMPLE_TESTS = (
+    "implementations/python/tests/test_public_docs_policy.py::test_checked_in_quickstart_scenario_parses",
+    "implementations/python/tests/test_public_docs_policy.py::test_readme_quickstart_matches_checked_in_scenario",
+)
 RUFF_CONFIG = PROJECT_ROOT / "pyproject.toml"
 OSV_LOCKFILE_PATH = PROJECT_ROOT / "uv.lock"
 OSV_REPORT_PATH = PROJECT_ROOT / "osv-scanner-report.json"
@@ -41,6 +58,9 @@ TARGETED_POLICY_TESTS = [
     "implementations/python/tests/test_concept_authority_governance.py",
     "implementations/python/tests/test_agent_guidance_policy.py",
     "implementations/python/tests/test_example_library_policy.py",
+    "implementations/python/tests/test_public_docs_policy.py",
+    "implementations/python/tests/test_public_project_readiness.py",
+    "implementations/python/tests/test_vale_tool.py",
     "implementations/python/tests/test_verification_plan.py",
 ]
 CONTRACT_TRIGGER_PREFIXES = (
@@ -858,11 +878,13 @@ def _run_osv_scan(session: nox.Session, reporter: SessionReporter, *, gating: bo
 
 def _run_docs(session: nox.Session, reporter: SessionReporter) -> None:
     _sync_project(session)
-    docs_dir = REPO_ROOT / "docs"
-    build_dir = docs_dir / "_build" / "html"
-    reporter.run(
-        "docs / sphinx-build",
-        lambda: _run(
+    html_dir = DOCS_BUILD_ROOT / "html"
+    linkcheck_dir = DOCS_BUILD_ROOT / "linkcheck"
+
+    def _build(builder: str, output_dir: Path, *, clean: bool = False) -> None:
+        if clean:
+            shutil.rmtree(output_dir, ignore_errors=True)
+        _run(
             session,
             "uv",
             "run",
@@ -870,12 +892,64 @@ def _run_docs(session: nox.Session, reporter: SessionReporter) -> None:
             str(PROJECT_ROOT),
             "--frozen",
             "sphinx-build",
+            "-W",
+            "--keep-going",
             "-b",
-            "html",
-            str(docs_dir),
-            str(build_dir),
+            builder,
+            str(PUBLIC_DOCS_ROOT),
+            str(output_dir),
+        )
+
+    reporter.run(
+        "docs / public source boundary",
+        lambda: _run_project_python(session, "tools/check_public_docs.py"),
+    )
+    reporter.run(
+        "docs / Vale reader style",
+        lambda: _run(
+            session,
+            str(ensure_vale(REPO_ROOT)),
+            "--config=.vale.ini",
+            "--glob=*.md",
+            *PUBLIC_DOCS_ENTRYPOINTS,
+            str(PUBLIC_DOCS_ROOT),
         ),
-        detail=f"{docs_dir.relative_to(REPO_ROOT)} -> {build_dir.relative_to(REPO_ROOT)}",
+        detail="Stripe-inspired RAES style",
+    )
+    reporter.run(
+        "docs / executable quickstart",
+        lambda: _run(
+            session,
+            "uv",
+            "run",
+            "--project",
+            str(PROJECT_ROOT),
+            "--frozen",
+            "python",
+            "-m",
+            "pytest",
+            "-q",
+            *PUBLIC_DOCS_EXAMPLE_TESTS,
+        ),
+    )
+    reporter.run(
+        "docs / Sphinx HTML",
+        lambda: _build("html", html_dir, clean=True),
+        detail=f"{PUBLIC_DOCS_ROOT.relative_to(REPO_ROOT)} -> {html_dir.relative_to(REPO_ROOT)}",
+    )
+    reporter.run(
+        "docs / public output inventory",
+        lambda: _run_project_python(
+            session,
+            "tools/check_public_docs.py",
+            "--output",
+            str(html_dir),
+        ),
+    )
+    reporter.run(
+        "docs / Sphinx link check",
+        lambda: _build("linkcheck", linkcheck_dir),
+        detail=str(PUBLIC_DOCS_ROOT.relative_to(REPO_ROOT)),
     )
 
 

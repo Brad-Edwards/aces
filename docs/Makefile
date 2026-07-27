@@ -2,7 +2,7 @@
 
 SPHINXOPTS    ?=
 SPHINXBUILD   ?= sphinx-build
-SOURCEDIR     = .
+SOURCEDIR     = public
 BUILDDIR      = _build
 
 .PHONY: help clean html livehtml

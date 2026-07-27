@@ -1,0 +1,44 @@
+# Development workflow
+
+Use this page to find the canonical local checks. Public contribution steps are
+in [`CONTRIBUTING.md`](../CONTRIBUTING.md).
+
+## Install the locked environment
+
+From the repository root:
+
+```shell
+uv sync --project implementations/python --all-extras --frozen
+```
+
+## Run verification
+
+The full pull-request gate is:
+
+```shell
+uv tool run --from 'nox[uv]==2026.4.10' nox -f noxfile.py -s verify
+```
+
+Use `verify-changed` while you work. It selects a fail-closed subset from the
+branch diff. Unknown, source, deleted, renamed, contract, and configuration
+changes run the full graph.
+
+The docs session checks the curated source boundary, the RAES Vale style,
+warning-strict Sphinx HTML, generated route and search inventories, and links:
+
+```shell
+uv tool run --from 'nox[uv]==2026.4.10' nox -f noxfile.py -s docs
+```
+
+## Release model
+
+Release Please owns `CHANGELOG.md`, package versions, GitHub releases, and the
+release pull request. A feature pull request uses a Conventional Commit title
+because its squash-merge title becomes the commit that Release Please reads.
+Do not edit the changelog or version by hand.
+
+## Review records
+
+Ground Control stores implementation plans, review findings, readiness, and
+traceability records for governed work. These developer records stay outside
+the hosted public documentation source.
