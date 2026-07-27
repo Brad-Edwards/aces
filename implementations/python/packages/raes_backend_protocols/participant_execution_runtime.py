@@ -38,19 +38,23 @@ class ParticipantExecutionRuntimeMixin:
     ) -> str | None:
         scope = request.execution_scope_ref
         payload = snapshot.participant_execution_services.get(scope) if scope is not None else None
-        if payload is None:
-            return "execution-service state is missing"
-        state = ParticipantExecutionServiceStateModel.model_validate(payload)
-        if (
-            state.generation != request.execution_generation
-            or state.observed_generation != request.execution_generation
-        ):
-            return "execution generation changed"
-        if not completion and (
-            state.observed_lifecycle != "running" or not state.accepting_new_work or state.readiness != "ready"
-        ):
-            return "execution service is not accepting work"
-        return None
+        reason = "execution-service state is missing" if payload is None else None
+        if payload is not None:
+            state = ParticipantExecutionServiceStateModel.model_validate(payload)
+            if (
+                state.generation != request.execution_generation
+                or state.observed_generation != request.execution_generation
+            ):
+                reason = "execution generation changed"
+            if (
+                reason is None
+                and not completion
+                and (
+                    state.observed_lifecycle != "running" or not state.accepting_new_work or state.readiness != "ready"
+                )
+            ):
+                reason = "execution service is not accepting work"
+        return reason
 
     @staticmethod
     def _execution_generation_failure(

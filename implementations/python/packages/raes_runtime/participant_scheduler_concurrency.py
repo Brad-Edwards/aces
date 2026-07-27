@@ -333,31 +333,33 @@ def run_policy_due_concurrently(
     if policy.profile != "participant-autonomous-execution/v1":
         return False
     contexts, states = _due_contexts(policy, time_model, participant_runtime, current_tick, cadence_ticks, run)
-    if run.failure is not None:
-        return True
-    if len(contexts) < 2 or policy.max_in_flight < 2:
+    enough_due_work = len(contexts) >= 2 and policy.max_in_flight >= 2
+    if run.failure is None and not enough_due_work:
         return False
-    batch_method = getattr(participant_runtime, "admit_actions_concurrently", None)
-    if not callable(batch_method):
-        _unsupported_concurrency_failure(policy, run)
-        return True
-    selected_contexts = tuple(contexts[: policy.max_in_flight])
-    selected_states = states[: policy.max_in_flight]
-    from .participant_scheduler_operations import _bound_action_request
+    if run.failure is None:
+        batch_method = getattr(participant_runtime, "admit_actions_concurrently", None)
+        if callable(batch_method):
+            selected_contexts = tuple(contexts[: policy.max_in_flight])
+            selected_states = states[: policy.max_in_flight]
+            from .participant_scheduler_operations import _bound_action_request
 
-    requests = tuple(
-        _bound_action_request(context, run.working, state)
-        for context, state in zip(selected_contexts, selected_states, strict=True)
-    )
-    _reserve_concurrent_actions(run, selected_contexts)
-    base = run.working
-    results = batch_method(requests, base, len(requests))
-    if len(results) != len(requests):
-        raise ValueError("concurrent participant result count must match requests")
-    for context, state, request, result in zip(selected_contexts, selected_states, requests, results, strict=True):
-        _commit_concurrent_result(context, state, request, result, base, run)
-        if run.failure is not None:
-            break
-    _finish_concurrent_service_state(run, policy.address)
-    _finish_due_policy(policy, time_model, participant_runtime, current_tick, cadence_ticks, run)
+            requests = tuple(
+                _bound_action_request(context, run.working, state)
+                for context, state in zip(selected_contexts, selected_states, strict=True)
+            )
+            _reserve_concurrent_actions(run, selected_contexts)
+            base = run.working
+            results = batch_method(requests, base, len(requests))
+            if len(results) != len(requests):
+                raise ValueError("concurrent participant result count must match requests")
+            for context, state, request, result in zip(
+                selected_contexts, selected_states, requests, results, strict=True
+            ):
+                _commit_concurrent_result(context, state, request, result, base, run)
+                if run.failure is not None:
+                    break
+            _finish_concurrent_service_state(run, policy.address)
+            _finish_due_policy(policy, time_model, participant_runtime, current_tick, cadence_ticks, run)
+        else:
+            _unsupported_concurrency_failure(policy, run)
     return True

@@ -145,10 +145,11 @@ def _validate_admission_request_basics(request: ParticipantActionAdmissionReques
 
 def _validate_admission_request_selection_and_execution(request: ParticipantActionAdmissionRequest) -> None:
     selection = request.validated_selection
-    if selection is not None and not isinstance(selection, ParticipantValidatedActionSelection):
-        raise TypeError("validated_selection must be a ParticipantValidatedActionSelection or None")
-    if selection is not None and selection.action_contract_address != request.action_contract_address:
-        raise ValueError("validated_selection action_contract_address must match the admission request")
+    if selection is not None:
+        if not isinstance(selection, ParticipantValidatedActionSelection):
+            raise TypeError("validated_selection must be a ParticipantValidatedActionSelection or None")
+        if selection.action_contract_address != request.action_contract_address:
+            raise ValueError("validated_selection action_contract_address must match the admission request")
     if not isinstance(request.requires_terminal_outcome, bool):
         raise TypeError("requires_terminal_outcome must be a bool")
     if (request.execution_scope_ref is None) != (request.execution_generation is None):

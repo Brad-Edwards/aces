@@ -213,27 +213,30 @@ def _run_due_policy(
     service_payload = run.working.participant_execution_services.get(policy.address)
     if service_payload is None:
         run.failure = _missing_execution_service_result(policy, run)
-        return
-    service = ParticipantExecutionServiceStateModel.model_validate(service_payload)
-    if not _execution_service_accepts_work(service):
-        return
-    cadence_ticks = _cadence(policy, time_model)[1] if policy.profile == "participant-autonomous-execution/v1" else 0
-    current_tick = _clock_tick(run.working, policy.clock_address)
-    if run_policy_due_concurrently(policy, time_model, participant_runtime, current_tick, cadence_ticks, run):
-        return
-    for participant_address in policy.participant_addresses:
-        run_participant_due(
-            policy,
-            time_model,
-            participant_runtime,
-            participant_address,
-            current_tick,
-            cadence_ticks,
-            run,
-            activity_controls,
-        )
-        if run.failure is not None:
-            return
+    else:
+        service = ParticipantExecutionServiceStateModel.model_validate(service_payload)
+        if _execution_service_accepts_work(service):
+            cadence_ticks = (
+                _cadence(policy, time_model)[1] if policy.profile == "participant-autonomous-execution/v1" else 0
+            )
+            current_tick = _clock_tick(run.working, policy.clock_address)
+            concurrent = run_policy_due_concurrently(
+                policy, time_model, participant_runtime, current_tick, cadence_ticks, run
+            )
+            if not concurrent:
+                for participant_address in policy.participant_addresses:
+                    run_participant_due(
+                        policy,
+                        time_model,
+                        participant_runtime,
+                        participant_address,
+                        current_tick,
+                        cadence_ticks,
+                        run,
+                        activity_controls,
+                    )
+                    if run.failure is not None:
+                        break
 
 
 class ParticipantScheduler:
