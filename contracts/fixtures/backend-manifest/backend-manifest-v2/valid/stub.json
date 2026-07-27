@@ -125,6 +125,7 @@
     },
     "participant_runtime": {
       "constraints": {},
+      "execution_bindings": [],
       "feature_support": [
         {
           "constraint_refs": [],
@@ -205,6 +206,8 @@
       "max_autonomous_occurrences": null,
       "max_autonomous_participants": null,
       "max_autonomous_retries_per_occurrence": null,
+      "max_concurrent_actions": null,
+      "max_execution_services": null,
       "name": "stub-participant-runtime",
       "supported_autonomous_action_contracts": [],
       "supported_autonomous_activity_features": [],
@@ -237,7 +240,10 @@
         "red",
         "white"
       ],
-      "supports_autonomous_execution": false
+      "supported_execution_control_actions": [],
+      "supports_autonomous_execution": false,
+      "supports_bounded_concurrency": false,
+      "supports_execution_control": false
     },
     "provisioner": {
       "constraints": {},
@@ -386,6 +392,9 @@
     "participant-episode-state-envelope-v1",
     "participant-episode-history-event-stream-v1",
     "participant-behavior-history-event-stream-v1",
+    "participant-execution-binding-v1",
+    "participant-execution-control-v1",
+    "participant-execution-service-state-v1",
     "participant-control-occurrence-v1",
     "participant-crossing-occurrence-v1",
     "participant-lifecycle-event-v1",

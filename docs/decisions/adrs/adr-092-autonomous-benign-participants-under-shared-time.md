@@ -165,6 +165,48 @@ or causality from timestamps. Backend admission is exact for profile, policy
 features, selection strategy, random-stream profile/transform support, time
 constraint kinds, and finite limits.
 
+### 8. Make native execution services portable and generation fenced
+
+An autonomous backend claim is relational. Each
+`participant-execution-binding/v1` record binds exactly one participant action
+contract to its native target-service addresses, selected participant
+implementation, constraints, evidence, timeout/retry policy, and finite
+attempt/in-flight bounds. Separate action and target sets are discovery
+indexes; they do not authorize their Cartesian product.
+
+The participant runtime exposes `participant-execution-control/v1` lifecycle
+requests for `start`, `pause`, `resume`, bounded `drain`, `reset`, and
+`teardown`. Requests carry the expected execution generation. Reset increments
+that generation; work admitted under a stale generation is rejected before
+native execution, and a native completion whose generation changed is
+discarded without committing its snapshot or portable history.
+The shared participant base supplies typed readback but does not synthesize
+control success. A backend-owned operation must perform scheduler/shared-time
+coordination and resource work; RAES accepts success only when changed
+readback and new evidence prove the requested observation.
+
+`participant-execution-service-state/v1` is the typed readback for desired and
+observed lifecycle, generation, health, readiness, admission state, finite
+capacity, reserved/in-flight work, resource release, policy/binding/shared-time
+digests, scheduler references, pacing deviations, and evidence. Health,
+readiness, lifecycle, participant episode state, and scheduler continuation
+remain distinct concepts.
+
+Multiple due participants may execute natively in parallel only within the
+admitted finite bound. Every worker receives one immutable predecessor;
+portable state and history commit serially with revision checks. Conflicting
+shared-state or history writes fail closed rather than selecting a last writer.
+Shared-clock pause/resume controls execution admission, shared-clock reset
+advances the generation, and loss of wall pacing degrades and pauses the
+execution service with an explicit deviation/evidence reference.
+
+Manifest support requires the complete lifecycle action set, exact execution
+bindings, and a concurrent capacity of at least two. Runtime-target
+registration requires executable binding, lifecycle/readback, and bounded
+batch methods. Conditional live conformance drives two native actions and the
+full lifecycle; a declaration with methods but no typed outcome or lifecycle
+evidence does not pass.
+
 ## Consequences
 
 - Human, AI, scripted, and benign simulated participants share one semantic and
@@ -201,3 +243,4 @@ constraint kinds, and finite limits.
 |------|-----------|---------|
 | 2026-07-24 | #861 | Required exact action provenance and capability-specific atomic participant batching. |
 | 2026-07-26 | #897 | Kept v1 stable and governed richer within-run timing, weighted selection, lifecycle state, and provenance as a versioned autonomous-execution profile. |
+| 2026-07-26 | #898 | Added exact native action-to-target bindings, bounded concurrent execution, generation-fenced lifecycle control, typed service readback, and conditional live conformance. |

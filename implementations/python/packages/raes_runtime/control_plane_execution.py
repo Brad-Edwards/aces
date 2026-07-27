@@ -28,6 +28,36 @@ def execute_participant_action(
     idempotency_key: str,
     request_fingerprint: str,
 ) -> OperationReceipt:
+    lock = getattr(control_plane, "_participant_control_lock", None)
+    if lock is not None:
+        with lock:
+            return _execute_participant_action_locked(
+                control_plane,
+                method=method,
+                request=request,
+                address=address,
+                idempotency_key=idempotency_key,
+                request_fingerprint=request_fingerprint,
+            )
+    return _execute_participant_action_locked(
+        control_plane,
+        method=method,
+        request=request,
+        address=address,
+        idempotency_key=idempotency_key,
+        request_fingerprint=request_fingerprint,
+    )
+
+
+def _execute_participant_action_locked(
+    control_plane: object,
+    *,
+    method: Callable[..., object],
+    request: object,
+    address: str,
+    idempotency_key: str,
+    request_fingerprint: str,
+) -> OperationReceipt:
     existing = control_plane._idempotent_receipt(
         idempotency_key=idempotency_key,
         request_fingerprint=request_fingerprint,

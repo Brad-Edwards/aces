@@ -142,9 +142,14 @@ capability. A backend that includes `autonomous_execution` in
 its supported selection strategies, exact action contracts, observation
 boundaries, target addresses, policy profiles, and positive finite limits for
 participants, attempts, in-flight actions, occurrences, retries per occurrence,
-and burst size. The planner also compares the parent behavior
+and burst size. It must also publish relational execution bindings, all six
+generation-fenced lifecycle controls, bounded-concurrency support, and finite
+execution-service and concurrent-action limits. The planner compares each
+compiled action-to-target relation rather than accepting the Cartesian product
+of separate action and target lists. The planner also compares the parent behavior
 specification's required feature set with the runtime capability. Runtime
-target registration requires the autonomous native-binding method. This is
+target registration requires the autonomous native-binding,
+execution-control/readback, and bounded-batch methods. This is
 admission evidence only: conformance also requires the backend participant
 runtime to invoke its native service adapter, return a typed terminal action
 outcome at the bound temporal coordinate distinct from control-operation
@@ -154,7 +159,13 @@ must be reachable. The portable runtime drives real-time and dilated participant
 cadence; externally paced autonomous execution is not admissible until a
 portable transition-notification contract is governed. Durable readback must
 agree across scheduler policy identity, clock segment/lifecycle, and live
-participant episode.
+participant episode. Conditional live conformance drives two bounded native
+actions plus start, pause, resume, bounded drain, reset, stale-generation
+fencing, and teardown; inert method implementations or missing transition
+evidence fail. The shared participant base exposes readback only; it cannot
+make a backend lifecycle claim pass. Each successful control operation must
+come from the backend handler and produce changed action-specific readback and
+new evidence.
 
 The explicit `participant-autonomous-execution/v2` profile additionally
 requires exact support for all governed activity features, `weighted`

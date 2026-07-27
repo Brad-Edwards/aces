@@ -38,6 +38,11 @@ from raes_contracts.contracts import (
     WorkflowExecutionStateModel,
     WorkflowHistoryEventModel,
 )
+from raes_contracts.contracts.participant_execution import (
+    ParticipantExecutionBindingModel,
+    ParticipantExecutionControlRequestModel,
+    ParticipantExecutionServiceStateModel,
+)
 from raes_contracts.diagnostics import Diagnostic
 from raes_contracts.realization_envelope import BackendRealizationEnvelopeModel
 from raes_contracts.scientific_completeness import (
@@ -64,6 +69,9 @@ _MODEL_VALIDATORS = {
     "workflow-result-envelope-v1": WorkflowExecutionStateModel.model_validate,
     "evaluation-result-envelope-v1": EvaluationResultStateModel.model_validate,
     "participant-episode-state-envelope-v1": ParticipantEpisodeStateModel.model_validate,
+    "participant-execution-binding-v1": ParticipantExecutionBindingModel.model_validate,
+    "participant-execution-control-v1": ParticipantExecutionControlRequestModel.model_validate,
+    "participant-execution-service-state-v1": ParticipantExecutionServiceStateModel.model_validate,
     "participant-lifecycle-event-v1": ParticipantLifecycleEventModel.model_validate,
     "participant-observation-envelope-v1": ParticipantObservationEnvelopeModel.model_validate,
     "participant-shared-state-record-v1": ParticipantSharedStateRecordModel.model_validate,

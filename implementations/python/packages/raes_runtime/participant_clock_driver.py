@@ -8,6 +8,7 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from fractions import Fraction
 
+from raes_contracts.contracts.participant_execution import ParticipantExecutionServiceStateModel
 from raes_contracts.diagnostics import Diagnostic
 from raes_contracts.runtime_state import ApplyResult, RuntimeSnapshot
 from raes_processor.models import CompiledTimeModel, ParticipantAutonomousExecutionRuntime
@@ -60,12 +61,15 @@ class ParticipantClockDriver:
         advance: Callable[[str, int], ApplyResult],
         service_due: Callable[[], ApplyResult],
         lock: threading.RLock,
+        publish_failure: Callable[[ApplyResult], None] | None = None,
     ) -> None:
         self._rates = _automatic_clock_rates(policies, time_model)
+        self._policy_clocks = {policy.address: policy.clock_address for policy in policies}
         self._snapshot = snapshot
         self._advance = advance
         self._service_due = service_due
         self._lock = lock
+        self._publish_failure = publish_failure
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
         self._failure: ApplyResult | None = None
@@ -136,9 +140,10 @@ class ParticipantClockDriver:
             return self._service_due() if ticks == 0 else self._advance(clock_address, ticks)
 
     def _record_unexpected_failure(self, exc: BaseException) -> None:
+        snapshot = self._pacing_failure_snapshot(self._snapshot(), exc)
         self._failure = ApplyResult(
             success=False,
-            snapshot=self._snapshot(),
+            snapshot=snapshot,
             diagnostics=[
                 Diagnostic(
                     code="runtime.participant-clock-driver-failed",
@@ -147,6 +152,38 @@ class ParticipantClockDriver:
                     message=f"Participant clock driver terminated unexpectedly: {exc}",
                 )
             ],
+        )
+        if self._publish_failure is not None:
+            self._publish_failure(self._failure)
+
+    def _pacing_failure_snapshot(
+        self,
+        snapshot: RuntimeSnapshot,
+        exc: BaseException,
+    ) -> RuntimeSnapshot:
+        del exc
+        services = dict(snapshot.participant_execution_services)
+        for policy_address, clock_address in self._policy_clocks.items():
+            payload = services.get(policy_address)
+            if payload is None:
+                continue
+            service = ParticipantExecutionServiceStateModel.model_validate(payload)
+            evidence_ref = f"evidence:{policy_address}:pacing-loss:{clock_address}:generation-{service.generation}"
+            services[policy_address] = service.model_copy(
+                update={
+                    "desired_lifecycle": "paused",
+                    "observed_lifecycle": "paused",
+                    "health": "degraded",
+                    "readiness": "not_ready",
+                    "accepting_new_work": False,
+                    "last_transition_ref": (f"operation:{policy_address}:pacing-loss:generation-{service.generation}"),
+                    "pacing_deviation_refs": tuple(dict.fromkeys([*service.pacing_deviation_refs, evidence_ref])),
+                    "evidence_refs": tuple(dict.fromkeys([*service.evidence_refs, evidence_ref])),
+                }
+            ).model_dump(mode="json")
+        return snapshot.with_entries(
+            dict(snapshot.entries),
+            participant_execution_services=services,
         )
 
     def _next_transition(self) -> tuple[str, int, float] | None:

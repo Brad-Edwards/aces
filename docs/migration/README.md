@@ -13,6 +13,10 @@ The explicit opt-in from fixed-cadence autonomous participant execution to the
 governed activity profile is documented in
 [Autonomous Execution V2 Migration](autonomous-execution-v2.md).
 
+Backends that declare autonomous participant execution must adopt the portable
+execution-service surface described in
+[Participant Execution Control Migration](participant-execution-control.md).
+
 The reorganization moved existing material into the current long-term buckets:
 
 - root `schemas/` -> `contracts/schemas/`

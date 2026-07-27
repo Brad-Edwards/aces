@@ -129,9 +129,16 @@ class RuntimeParticipantExecutionMixin:
             advance=lambda clock_address, ticks: self.advance_time(clock_address, ticks=ticks),
             service_due=self.run_due_participant_actions,
             lock=self._participant_execution_lock,
+            publish_failure=self._publish_participant_clock_driver_failure,
         )
         self._participant_clock_driver.start()
         return True
+
+    def _publish_participant_clock_driver_failure(
+        self,
+        result: ApplyResult,
+    ) -> None:
+        self._snapshot = result.snapshot
 
     def _stop_participant_clock_driver(self) -> bool:
         if self._participant_clock_driver is not None:

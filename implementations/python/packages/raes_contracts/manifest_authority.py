@@ -53,6 +53,9 @@ BACKEND_SUPPORTED_CONTRACT_IDS = (
     "participant-episode-state-envelope-v1",
     "participant-episode-history-event-stream-v1",
     "participant-behavior-history-event-stream-v1",
+    "participant-execution-binding-v1",
+    "participant-execution-control-v1",
+    "participant-execution-service-state-v1",
     "participant-control-occurrence-v1",
     "participant-crossing-occurrence-v1",
     "participant-lifecycle-event-v1",
@@ -109,6 +112,16 @@ _PARTICIPANT_INTERACTION_CONTRACTS = frozenset(
         "runtime-snapshot-v1",
     }
 )
+_PARTICIPANT_AUTONOMOUS_EXECUTION_CONTRACTS = frozenset(
+    {
+        *_PARTICIPANT_INTERACTION_CONTRACTS,
+        "participant-execution-binding-v1",
+        "participant-execution-control-v1",
+        "participant-execution-service-state-v1",
+        "operation-receipt-v1",
+        "operation-status-v1",
+    }
+)
 
 PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS = {
     PARTICIPANT_RUNTIME_ROLE_SCOPE: {
@@ -119,7 +132,7 @@ PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS = {
     },
     PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE: {
         "action_contracts": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-        "autonomous_execution": _PARTICIPANT_INTERACTION_CONTRACTS,
+        "autonomous_execution": _PARTICIPANT_AUTONOMOUS_EXECUTION_CONTRACTS,
         "attribution_support": _PARTICIPANT_BEHAVIOR_CONTRACTS,
         "behavior_history": _PARTICIPANT_BEHAVIOR_CONTRACTS,
         "effects": _PARTICIPANT_BEHAVIOR_CONTRACTS,

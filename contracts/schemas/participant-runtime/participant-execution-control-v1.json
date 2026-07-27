@@ -1,0 +1,56 @@
+{
+  "$id": "https://raes.dev/schemas/participant-execution-control-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Generation-fenced lifecycle mutation for one admitted execution scope.",
+  "properties": {
+    "action": {
+      "enum": [
+        "start",
+        "pause",
+        "resume",
+        "drain",
+        "reset",
+        "teardown"
+      ],
+      "title": "Action",
+      "type": "string"
+    },
+    "execution_scope_ref": {
+      "minLength": 1,
+      "title": "Execution Scope Ref",
+      "type": "string"
+    },
+    "expected_generation": {
+      "minimum": 0,
+      "title": "Expected Generation",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": "participant-execution-control/v1",
+      "default": "participant-execution-control/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "timeout_seconds": {
+      "anyOf": [
+        {
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Timeout Seconds"
+    }
+  },
+  "required": [
+    "execution_scope_ref",
+    "action",
+    "expected_generation"
+  ],
+  "title": "ParticipantExecutionControlRequestModel",
+  "type": "object"
+}

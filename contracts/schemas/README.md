@@ -23,6 +23,8 @@ Current published schemas cover:
 - evaluation result envelopes
 - evaluation history streams
 - operation receipts and statuses
+- exact participant action-to-target execution bindings, generation-fenced
+  execution lifecycle control, and typed execution-service readback
 - control-plane participant status/history/context views, including SEM-214
   context-view meaning and comparability semantics
 - experiment-core task, run, apparatus-context, study/collection, capture
@@ -53,6 +55,26 @@ These schemas enforce portable structure and scalar constraints. Cross-field
 provenance relations, reference resolution, and graph semantics remain the
 normative model/semantic-admission layer; schema validity alone does not assert
 that provenance is truthful or that an artifact is compiler-admitted.
+
+## Participant Execution Control
+
+The participant-runtime family publishes three issue #898 contracts:
+
+- `participant-execution-binding-v1` declares one exact native action,
+  target-service set, participant implementation, evidence/constraints, and
+  finite timeout, retry, attempt, and in-flight bounds.
+- `participant-execution-control-v1` carries generation-fenced `start`,
+  `pause`, `resume`, bounded `drain`, `reset`, and `teardown` requests.
+- `participant-execution-service-state-v1` separates lifecycle, generation,
+  health, readiness, work admission, capacity, quiescence/resource release,
+  policy/binding/shared-time digests, pacing deviations, and evidence.
+
+The service state is embedded under
+`runtime-snapshot-v1.participant_execution_services`; control mutations use
+the existing operation receipt/status contracts. Schema validity does not
+prove native execution. Autonomous capability conformance additionally
+requires executable bounded actions, typed outcomes, operation accounting,
+and lifecycle evidence.
 
 Current filenames still use `runtime` for some live-execution artifacts. That
 naming is preserved for compatibility while the repository migrates toward the

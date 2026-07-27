@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import replace
 from typing import cast
 
 from raes_contracts.contracts import (
     ParticipantAutonomousExecutionStateModel,
     ParticipantTemporalRuntimeContextModel,
 )
+from raes_contracts.contracts.participant_execution import ParticipantExecutionServiceStateModel
 from raes_contracts.diagnostics import Diagnostic
 from raes_contracts.participant_binding import ParticipantActionAdmissionRequest
 from raes_contracts.runtime_state import ApplyResult, RuntimeSnapshot
@@ -28,37 +29,9 @@ from .participant_activity_support import (
     annotate_activity_history,
     persist_activity_state,
 )
+from .participant_scheduler_concurrency import participant_generation_commit_diagnostic, run_policy_due_concurrently
 from .participant_scheduler_time import clock_coordinate, participant_time_domain
-
-
-@dataclass
-class SchedulerRunState:
-    """Mutable aggregate for one deterministic scheduler pass."""
-
-    working: RuntimeSnapshot
-    diagnostics: list[Diagnostic]
-    changed: list[str]
-    failure: ApplyResult | None = None
-
-    def result(self) -> ApplyResult:
-        return self.failure or ApplyResult(
-            success=True,
-            snapshot=self.working,
-            diagnostics=self.diagnostics,
-            changed_addresses=list(dict.fromkeys(self.changed)),
-        )
-
-
-@dataclass(frozen=True)
-class _DueActionContext:
-    policy: ParticipantAutonomousExecutionRuntime
-    time_model: CompiledTimeModel
-    participant_runtime: object
-    participant_address: str
-    key: str
-    current_tick: int
-    cadence_ticks: int
-    activity_control: ParticipantActivityRandomControl | None = None
+from .participant_scheduler_types import SchedulerRunState, _DueActionContext
 
 
 def _cadence_missed_result(
@@ -125,6 +98,15 @@ def _bound_action_request(
     )
     if request.implementation_selection.manifest_ref != policy.participant_implementation_ref:
         raise ValueError("participant implementation selection does not match the autonomous execution policy")
+    matching_bindings = tuple(
+        binding for binding in policy.execution_bindings if binding.action_contract_address == action_address
+    )
+    if len(matching_bindings) != 1:
+        raise ValueError("autonomous participant action must resolve exactly one execution binding")
+    service_payload = working.participant_execution_services.get(policy.address)
+    if service_payload is None:
+        raise ValueError("autonomous participant action requires execution-service state")
+    service = ParticipantExecutionServiceStateModel.model_validate(service_payload)
     return cast(
         ParticipantActionAdmissionRequest,
         replace(
@@ -137,6 +119,9 @@ def _bound_action_request(
             action_result=None,
             post_state_digest=None,
             requires_terminal_outcome=True,
+            target_addresses=matching_bindings[0].target_addresses,
+            execution_scope_ref=policy.address,
+            execution_generation=service.generation,
         ),
     )
 
@@ -201,6 +186,16 @@ def _run_one_due_action(
     request = _bound_action_request(context, run.working, state)
     predecessor = run.working
     result = context.participant_runtime.admit_action(request, predecessor)
+    stale_completion = participant_generation_commit_diagnostic(request, run.working)
+    if stale_completion is not None:
+        run.diagnostics.append(stale_completion)
+        run.failure = ApplyResult(
+            success=False,
+            snapshot=run.working,
+            diagnostics=run.diagnostics,
+            changed_addresses=list(dict.fromkeys(run.changed)),
+        )
+        return state
     protocol_violation = autonomous_action_result_violation(
         request,
         result,
@@ -497,4 +492,8 @@ def run_participant_due(
         )
 
 
-__all__ = ["SchedulerRunState", "run_participant_due"]
+__all__ = [
+    "SchedulerRunState",
+    "run_participant_due",
+    "run_policy_due_concurrently",
+]

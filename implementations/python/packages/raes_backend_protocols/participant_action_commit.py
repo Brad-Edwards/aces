@@ -19,6 +19,9 @@ def participant_binding_post_state_digest(request: ParticipantActionAdmissionReq
             request.action_contract_address,
             request.observation_boundary_address,
             request.action_instance_id,
+            *request.target_addresses,
+            request.execution_scope_ref or "",
+            (str(request.execution_generation) if request.execution_generation is not None else ""),
         )
     )
     return "sha256:" + sha256(digest_input.encode("utf-8")).hexdigest()

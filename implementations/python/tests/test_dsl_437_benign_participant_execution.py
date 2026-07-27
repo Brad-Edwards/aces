@@ -9,11 +9,17 @@ from pathlib import Path
 
 import pytest
 import yaml
+from implementations.python.tests.participant_execution_test_backend import (
+    NativeParticipantExecutionController,
+)
 from raes._errors import SDLValidationError
 from raes.parser import parse_sdl
 from raes.participant_behavior import ParticipantFailureClass
 from raes.participant_execution import ParticipantAutonomousExecutionPolicyV2
-from raes_backend_protocols.capabilities import ParticipantFeatureSupport
+from raes_backend_protocols.capabilities import (
+    ParticipantExecutionBinding,
+    ParticipantFeatureSupport,
+)
 from raes_backend_protocols.capability_admission import participant_autonomous_execution_capability_gaps
 from raes_backend_protocols.manifest import backend_manifest_from_v2_model, backend_manifest_v2_model
 from raes_backend_protocols.participant_runtime_base import BaseParticipantRuntime
@@ -27,6 +33,7 @@ from raes_contracts.contracts import (
     ParticipantImplementationSelectionModel,
     RuntimeSnapshotEnvelopeModel,
 )
+from raes_contracts.contracts.participant_execution import ParticipantExecutionServiceStateModel
 from raes_contracts.contracts.random_stream import (
     GovernedEntropyRefModel,
     PublicSeedModel,
@@ -304,6 +311,10 @@ class _NativeParticipantRuntime(BaseParticipantRuntime):
     def __init__(self) -> None:
         super().__init__()
         self.native_actions: list[str] = []
+        self._execution_controller = NativeParticipantExecutionController()
+
+    def control_execution(self, request, snapshot):
+        return self._execution_controller.control(request, snapshot)
 
     def _model_action(
         self,
@@ -312,26 +323,30 @@ class _NativeParticipantRuntime(BaseParticipantRuntime):
         *,
         episode_id: str,
     ) -> ParticipantNativeActionExecution:
-        self.native_actions.append(request.action_instance_id)
-        metadata = dict(snapshot.metadata)
-        metadata["last_native_action"] = request.action_instance_id
-        return ParticipantNativeActionExecution(
-            apply_result=ApplyResult(
-                success=True,
-                snapshot=snapshot.with_entries(dict(snapshot.entries), metadata=metadata),
-                changed_addresses=["native.service.customer-portal"],
-            ),
-            action_result=ParticipantActionResultModel(
-                status="succeeded",
-                participant_address=request.participant_address,
-                episode_id=episode_id,
-                action_instance_id=request.action_instance_id,
-                action_contract_address=request.action_contract_address,
-                observation_point=request.temporal_contexts[0].observation_point,
-                observations=["customer portal responded"],
-                evidence_refs=[],
-            ),
-        )
+        self._execution_controller.begin_action()
+        try:
+            self.native_actions.append(request.action_instance_id)
+            metadata = dict(snapshot.metadata)
+            metadata["last_native_action"] = request.action_instance_id
+            return ParticipantNativeActionExecution(
+                apply_result=ApplyResult(
+                    success=True,
+                    snapshot=snapshot.with_entries(dict(snapshot.entries), metadata=metadata),
+                    changed_addresses=["native.service.customer-portal"],
+                ),
+                action_result=ParticipantActionResultModel(
+                    status="succeeded",
+                    participant_address=request.participant_address,
+                    episode_id=episode_id,
+                    action_instance_id=request.action_instance_id,
+                    action_contract_address=request.action_contract_address,
+                    observation_point=request.temporal_contexts[0].observation_point,
+                    observations=["customer portal responded"],
+                    evidence_refs=[],
+                ),
+            )
+        finally:
+            self._execution_controller.finish_action()
 
     def bind_autonomous_action(
         self,
@@ -610,7 +625,7 @@ def _autonomous_manifest(runtime_model: object) -> object:
                 ),
                 max_autonomous_participants=8,
                 max_autonomous_action_attempts=max(policy.max_action_attempts for policy in policies),
-                max_autonomous_in_flight=1,
+                max_autonomous_in_flight=max(policy.max_in_flight for policy in policies),
                 max_autonomous_occurrences=max(
                     (policy.max_occurrences or policy.max_action_attempts for policy in policies),
                     default=1,
@@ -621,6 +636,32 @@ def _autonomous_manifest(runtime_model: object) -> object:
                 )
                 or 1,
                 max_autonomous_burst_size=max((policy.max_burst_size for policy in policies), default=1),
+                execution_bindings=tuple(
+                    ParticipantExecutionBinding(
+                        binding_id=(f"{policy.address}.binding.{binding.action_contract_address.rsplit('.', 1)[-1]}"),
+                        action_contract_address=binding.action_contract_address,
+                        target_addresses=binding.target_addresses,
+                        participant_implementation_ref=(binding.participant_implementation_ref),
+                        constraint_refs=policy.temporal_constraint_addresses,
+                        evidence_refs=(f"evidence:{policy.address}:native-execution",),
+                        max_action_attempts=binding.max_action_attempts,
+                        max_in_flight=binding.max_in_flight,
+                        timeout_seconds=30,
+                        max_retries=max(
+                            policy.action_candidate_max_retries,
+                            default=0,
+                        ),
+                    )
+                    for policy in policies
+                    for binding in policy.execution_bindings
+                ),
+                supports_execution_control=True,
+                supported_execution_control_actions=frozenset(
+                    {"start", "pause", "resume", "drain", "reset", "teardown"}
+                ),
+                supports_bounded_concurrency=True,
+                max_execution_services=8,
+                max_concurrent_actions=8,
             ),
         ),
     )
@@ -859,6 +900,11 @@ def test_planner_enforces_required_participant_features_and_exact_targets() -> N
     runtime_model, _ = _compiled()
     manifest = _autonomous_manifest(runtime_model)
     assert manifest.participant_runtime is not None
+    unsupported_target = "provision.node.unsupported.service.http"
+    unsupported_bindings = tuple(
+        replace(binding, target_addresses=(unsupported_target,))
+        for binding in manifest.participant_runtime.execution_bindings
+    )
     unsupported = replace(
         manifest,
         capabilities=replace(
@@ -866,7 +912,8 @@ def test_planner_enforces_required_participant_features_and_exact_targets() -> N
             participant_runtime=replace(
                 manifest.participant_runtime,
                 supported_behavior_features=frozenset({"autonomous_execution"}),
-                supported_autonomous_target_addresses=frozenset(),
+                supported_autonomous_target_addresses=frozenset({unsupported_target}),
+                execution_bindings=unsupported_bindings,
             ),
         ),
     )
@@ -1568,7 +1615,7 @@ def test_scheduler_executes_native_actions_and_persists_shared_time_readback() -
     )
     assert (state.attempted_actions, state.succeeded_actions, state.next_tick) == (1, 1, 10)
     assert state.time_segment == 0
-    assert state.policy_digest == "sha256:d7c496e43e5782f4459b4b74b62e8b15b4f6d1ddba0ab4044c7fa3f406f502ef"
+    assert state.policy_digest == "sha256:e89d1e56a9c09893581257b39a595634599b4d3a8140cfb9ecba1a6df889f35b"
     events = first.snapshot.participant_behavior_history[state.participant_address]
     assert [event["event_type"] for event in events] == [
         "action_attempted",
@@ -1596,6 +1643,19 @@ def test_scheduler_executes_native_actions_and_persists_shared_time_readback() -
         paused.participant_autonomous_execution_states[state_key]
     )
     assert paused_state.lifecycle_state == "paused"
+    paused_service = ParticipantExecutionServiceStateModel.model_validate(
+        paused.participant_execution_services[policy.address]
+    )
+    assert paused_service.observed_lifecycle == "paused"
+    assert paused_service.accepting_new_work is False
+    paused_due = scheduler.run_due(
+        [policy],
+        runtime_model.time_model,
+        participant_runtime,
+        paused,
+    )
+    assert paused_due.success
+    assert len(participant_runtime.native_actions) == 1
     resumed = scheduler.set_clock_lifecycle(paused, policy.clock_address, "running").snapshot
 
     advanced = coordinator.advance(resumed, policy.clock_address, ticks=10)
@@ -2097,6 +2157,13 @@ def test_wall_driver_records_an_unexpected_runtime_exception() -> None:
 
     assert driver.failure is not None
     assert driver.failure.diagnostics[0].code == "runtime.participant-clock-driver-failed"
+    execution_state = ParticipantExecutionServiceStateModel.model_validate(
+        driver.failure.snapshot.participant_execution_services[policy.address]
+    )
+    assert execution_state.health == "degraded"
+    assert execution_state.readiness == "not_ready"
+    assert execution_state.accepting_new_work is False
+    assert execution_state.pacing_deviation_refs
     assert driver.stop()
 
 

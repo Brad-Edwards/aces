@@ -121,6 +121,17 @@ compilation.
 
 ## Execution And Evidence
 
+Compilation derives an exact relation
+
+\[
+R_P \subseteq Q_P \times Targets \times Implementations
+\]
+
+from each action contract's effect and precondition support references. A
+backend execution binding must cover each required tuple in \(R_P\). Declaring
+all actions and all targets separately does not establish the Cartesian
+product and is insufficient for admission.
+
 An action may commit only in this order:
 
 1. resolve the run-selected participant implementation;
@@ -146,6 +157,21 @@ match the selected participant implementation.
 `stop` marks the scheduler failed; `continue` advances the bounded attempt
 counter and cadence.
 
+Every autonomous action request carries the resolved native target addresses,
+execution-service scope, and execution generation. The runtime checks that the
+service is running, ready, accepting work, and still at that generation before
+calling the native adapter. It checks the generation again on the returned
+snapshot before committing history. A stale work item or completion is
+rejected without committing native state.
+
+When at least two participants are due and the admitted policy and backend
+limits permit it, native calls execute concurrently against one immutable
+predecessor. Results commit one at a time. For every changed portable map
+entry, the commit requires the current value to equal either the predecessor
+or the incoming value; otherwise it reports a concurrent-commit conflict.
+Scheduler attempt/in-flight counters are reserved before dispatch and settled
+after each serialized commit.
+
 For v2, a retry is admitted only when the typed terminal failure class is in
 the selected candidate's declared retry set and the per-occurrence retry and
 global attempt bounds both remain. Each retry has a distinct attempt id and
@@ -162,6 +188,28 @@ the safe control/profile/address identity. It never carries root entropy,
 derived keys, raw blocks, or backend-private objects.
 
 ## Lifecycle
+
+One execution-service scope owns each autonomous policy. Its portable state
+separates desired/observed lifecycle, generation, health, readiness, work
+admission, finite capacity, reservation/in-flight counters, quiescence,
+resource release, shared-time provenance, and evidence. Legal control
+transitions are:
+
+```text
+stopped --start--> running --pause--> paused --resume--> running
+running|paused --drain(timeout)--> quiescent
+quiescent --reset(generation+1)--> running
+quiescent --teardown--> terminated
+```
+
+Drain rejects new work and succeeds only after reserved and in-flight work are
+zero within its finite timeout. Teardown is idempotent after termination.
+Every transition publishes an operation reference and evidence reference.
+Portable fields are readback, not an implementation of these operations.
+The backend owns the native transition, scheduler/shared-time coordination,
+bounded wait, and resource release. The control boundary rejects nominal
+success unless the backend returns the action-specific observed state, a
+changed operation reference, and new evidence.
 
 Pause changes non-terminal scheduler states on the governed clock to `paused`;
 resume returns them to `running`. Reset begins a new shared-time segment,
@@ -191,6 +239,14 @@ shared-time segment. The segment is part of every activity address, so reset
 generations cannot alias prior draws. Participant/service state changes remain
 owned by native action results and existing episode/reset contracts; scheduler
 timestamps alone make no causal or rollback claim.
+
+The service readback binds the policy, execution relation, and admitted
+shared-time declaration by digest and names its scheduler states. Shared-clock
+pause/resume changes both scheduler and execution-service readiness. A
+shared-clock reset advances the execution generation. Loss of runtime wall
+pacing marks the service degraded, not ready, and paused and appends an
+explicit pacing-deviation evidence reference; it is never silently treated as
+successful timing.
 
 ## Backend Admission
 
@@ -224,10 +280,21 @@ V_P \in K.observationBoundaries
 targets(Q_P) \subseteq K.targets
 \]
 
+\[
+R_P \subseteq K.executionBindings
+\]
+
 and every parent behavior feature required by \(P\) must be in the backend
 feature set. A reset-capable policy additionally requires the coordinated
 participant-reset capability and runtime method. Runtime state, typed native
 action outcome, history, and backend evidence establish what occurred.
+
+Autonomous admission also requires all six execution-control actions,
+`supports_bounded_concurrency`, positive execution-service capacity, and
+`max_concurrent_actions \ge 2`. Conditional live conformance executes two
+native actions and the lifecycle sequence. Schema-valid declarations without
+typed native outcomes, operation accounting, service readback, or transition
+evidence fail conformance.
 
 V2 additionally requires exact admission of:
 

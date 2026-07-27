@@ -19,6 +19,10 @@ from raes_contracts.contracts import (
     RuntimeSnapshotEnvelopeModel,
     WorkflowCancellationRequestModel,
 )
+from raes_contracts.contracts.participant_execution import (
+    ParticipantExecutionControlRequestModel,
+    ParticipantExecutionServiceStateModel,
+)
 from raes_contracts.participant_episode import ParticipantEpisodeTerminalReason
 from raes_contracts.runtime_state import OperationReceipt
 
@@ -28,6 +32,7 @@ from .control_plane_api_models import (
     _evaluation_plan,
     _operation_status_model,
     _orchestration_plan,
+    _ParticipantExecutionControlBody,
     _ParticipantInitializeBody,
     _ParticipantResetBody,
     _ParticipantRestartBody,
@@ -183,8 +188,71 @@ def create_control_plane_app(
     _register_workflow_routes(app, control_plane)
     _register_participant_episode_routes(app, control_plane)
     _register_participant_control_routes(app, control_plane)
+    _register_participant_execution_routes(app, control_plane)
     register_participant_retrieval_routes(app, control_plane)
     return app
+
+
+def _register_participant_execution_routes(
+    app: FastAPI,
+    control_plane: RuntimeControlPlane,
+) -> None:
+    @app.post(
+        "/participant-executions/{execution_scope_ref}/control",
+        responses=_CONFLICT_RESPONSES,
+    )
+    async def control_participant_execution(
+        execution_scope_ref: str,
+        request: Request,
+        identity: _MutatingIdentity,
+        body: _ParticipantExecutionControlBody,
+    ) -> OperationReceiptModel:
+        try:
+            control_request = ParticipantExecutionControlRequestModel(
+                execution_scope_ref=execution_scope_ref,
+                action=body.action,
+                expected_generation=body.expected_generation,
+                timeout_seconds=body.timeout_seconds,
+            )
+            receipt = control_plane.control_participant_execution(
+                control_request,
+                idempotency_key=request.headers.get("idempotency-key", ""),
+                request_fingerprint=_request_fingerprint(
+                    request,
+                    getattr(request.state, "raw_body", b""),
+                ),
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        control_plane.record_audit(
+            action=f"participant_execution_{body.action}",
+            identity=identity.identity,
+            allowed=True,
+            target=str(request.url.path),
+            operation_id=receipt.operation_id,
+        )
+        return _receipt_response(receipt)
+
+    @app.get(
+        "/participant-executions/{execution_scope_ref}",
+        responses=_NOT_FOUND_RESPONSES,
+    )
+    async def get_participant_execution_state(
+        execution_scope_ref: str,
+        request: Request,
+        identity: _ReadIdentity,
+    ) -> ParticipantExecutionServiceStateModel:
+        try:
+            state = control_plane.participant_execution_state(execution_scope_ref)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        control_plane.record_audit(
+            action="get_participant_execution_state",
+            identity=identity.identity,
+            allowed=True,
+            target=str(request.url.path),
+        )
+        return state
 
 
 def _install_request_guards(

@@ -84,6 +84,17 @@ class ParticipantBehaviorRuntime(ResolvedResource):
 
 
 @dataclass(frozen=True)
+class ParticipantExecutionBindingRuntime:
+    """Compiled action-to-target relation for native participant execution."""
+
+    action_contract_address: str
+    target_addresses: tuple[str, ...]
+    participant_implementation_ref: str
+    max_action_attempts: int
+    max_in_flight: int
+
+
+@dataclass(frozen=True)
 class ParticipantAutonomousExecutionRuntime(ResolvedResource):
     """Compiled deterministic execution policy for ordinary participants."""
 
@@ -95,6 +106,7 @@ class ParticipantAutonomousExecutionRuntime(ResolvedResource):
     temporal_constraint_addresses: tuple[str, ...] = ()
     action_contract_addresses: tuple[str, ...] = ()
     target_addresses: tuple[str, ...] = ()
+    execution_bindings: tuple[ParticipantExecutionBindingRuntime, ...] = ()
     observation_boundary_address: str = ""
     selection_strategy: str = ""
     max_action_attempts: int = 0

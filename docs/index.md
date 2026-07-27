@@ -161,6 +161,7 @@ specs/formal
 lessons/README
 migration/README
 migration/autonomous-execution-v2
+migration/participant-execution-control
 migration/raes-rename
 research/experiment-core/index
 research/realization-envelope/index

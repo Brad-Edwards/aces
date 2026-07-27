@@ -1,0 +1,192 @@
+{
+  "$id": "https://raes.dev/schemas/participant-execution-service-state-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Typed health, readiness, lifecycle, capacity, and evidence readback.",
+  "properties": {
+    "accepting_new_work": {
+      "title": "Accepting New Work",
+      "type": "boolean"
+    },
+    "binding_digest": {
+      "minLength": 1,
+      "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+      "title": "Binding Digest",
+      "type": "string"
+    },
+    "capacity": {
+      "minimum": 1,
+      "title": "Capacity",
+      "type": "integer"
+    },
+    "desired_lifecycle": {
+      "enum": [
+        "stopped",
+        "starting",
+        "running",
+        "pausing",
+        "paused",
+        "draining",
+        "quiescent",
+        "resetting",
+        "tearing_down",
+        "terminated",
+        "failed"
+      ],
+      "title": "Desired Lifecycle",
+      "type": "string"
+    },
+    "draining": {
+      "title": "Draining",
+      "type": "boolean"
+    },
+    "evidence_refs": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Evidence Refs",
+      "type": "array"
+    },
+    "execution_scope_ref": {
+      "minLength": 1,
+      "title": "Execution Scope Ref",
+      "type": "string"
+    },
+    "generation": {
+      "minimum": 0,
+      "title": "Generation",
+      "type": "integer"
+    },
+    "health": {
+      "enum": [
+        "healthy",
+        "degraded",
+        "unhealthy",
+        "unknown"
+      ],
+      "title": "Health",
+      "type": "string"
+    },
+    "in_flight": {
+      "minimum": 0,
+      "title": "In Flight",
+      "type": "integer"
+    },
+    "last_transition_ref": {
+      "minLength": 1,
+      "title": "Last Transition Ref",
+      "type": "string"
+    },
+    "observed_generation": {
+      "minimum": 0,
+      "title": "Observed Generation",
+      "type": "integer"
+    },
+    "observed_lifecycle": {
+      "enum": [
+        "stopped",
+        "starting",
+        "running",
+        "pausing",
+        "paused",
+        "draining",
+        "quiescent",
+        "resetting",
+        "tearing_down",
+        "terminated",
+        "failed"
+      ],
+      "title": "Observed Lifecycle",
+      "type": "string"
+    },
+    "pacing_deviation_refs": {
+      "default": [],
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Pacing Deviation Refs",
+      "type": "array"
+    },
+    "policy_address": {
+      "minLength": 1,
+      "title": "Policy Address",
+      "type": "string"
+    },
+    "policy_digest": {
+      "minLength": 1,
+      "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+      "title": "Policy Digest",
+      "type": "string"
+    },
+    "quiescent": {
+      "title": "Quiescent",
+      "type": "boolean"
+    },
+    "readiness": {
+      "enum": [
+        "ready",
+        "not_ready",
+        "unknown"
+      ],
+      "title": "Readiness",
+      "type": "string"
+    },
+    "reserved": {
+      "minimum": 0,
+      "title": "Reserved",
+      "type": "integer"
+    },
+    "resources_released": {
+      "title": "Resources Released",
+      "type": "boolean"
+    },
+    "scheduler_state_refs": {
+      "default": [],
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Scheduler State Refs",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "participant-execution-service-state/v1",
+      "default": "participant-execution-service-state/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "time_declaration_digest": {
+      "minLength": 1,
+      "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+      "title": "Time Declaration Digest",
+      "type": "string"
+    }
+  },
+  "required": [
+    "execution_scope_ref",
+    "policy_address",
+    "desired_lifecycle",
+    "observed_lifecycle",
+    "generation",
+    "observed_generation",
+    "health",
+    "readiness",
+    "accepting_new_work",
+    "draining",
+    "quiescent",
+    "resources_released",
+    "policy_digest",
+    "binding_digest",
+    "time_declaration_digest",
+    "capacity",
+    "reserved",
+    "in_flight",
+    "last_transition_ref",
+    "evidence_refs"
+  ],
+  "title": "ParticipantExecutionServiceStateModel",
+  "type": "object"
+}
