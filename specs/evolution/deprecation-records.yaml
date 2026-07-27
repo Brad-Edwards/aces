@@ -35,17 +35,18 @@ adr_refs:
 spec: specs/evolution/versioning-deprecation-and-migration.md
 
 records:
-  # The legacy `aces.*` re-export namespace was removed by the RAES hard cut.
-  - id: aces-compat-namespace
+  # The old PyPI project needs one final pointer release before archival. This
+  # is distribution lifecycle, not an import compatibility promise: the final
+  # release changes metadata and guidance only and does not restore old imports.
+  - id: legacy-python-distribution
     surface_class: python-distribution
-    identifier: "implementations/python/src/aces/ (the legacy `aces.*` re-export namespace)"
-    status: removed
-    first_notice: "ADR-010 (repository realignment order and compatibility policy)"
-    replacement: "the owning packages under implementations/python/packages/ (raes, raes_contracts, raes_cli, raes_runtime, and siblings)"
+    identifier: "the legacy `aces-sdl` PyPI distribution, with 0.23.1 as its latest published release before the EOL pointer"
+    status: deprecated
+    first_notice: "ADR-093 and issue #907 (RAES rename and environment-pack naming convergence)"
+    replacement: "the `raes` PyPI distribution and direct `raes` / `raes_*` imports"
     migration_reference: "docs/migration/raes-rename.md"
-    notice_window: "Removed at the 1.0 hard cut; no compatibility window or alias is provided."
-    verification_evidence: "The wheel excludes implementations/python/src/aces, and repo policy rejects reintroduction of the retired namespace or imports."
-    removal_record: "RAES 1.0 removes the deprecated aces and aces_* Python import surfaces in favor of raes and raes_* owners."
+    notice_window: "Publish one final metadata-only 0.23.2 pointer release from the immutable 0.23.1 legacy lineage, verify it on PyPI, then archive the `aces-sdl` project. The archive is removal eligibility; no later fixes or releases are planned."
+    verification_evidence: "The current pyproject and release workflow publish only `raes`; version and packaging tests reject the old command/import surface. The final legacy artifact must be verified separately for its exact name, version, unchanged code payload, EOL description, and `raes` replacement link before archival."
 
   # The module-import `path:` field, superseded by `source:` in ADR-053. The
   # parser still accepts it as a backward-compatible alias, normalizing it to

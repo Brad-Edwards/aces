@@ -89,7 +89,7 @@ class ValidationProfileDefinitionModel(ContractModel):
 
 class ValidationProfileCatalogModel(ContractModel):
     schema_version: Literal[VALIDATION_PROFILE_CATALOG_SCHEMA_VERSION] = VALIDATION_PROFILE_CATALOG_SCHEMA_VERSION
-    profile_family: Literal["aces-validation"] = "aces-validation"
+    profile_family: Literal["raes-validation"] = "raes-validation"
     catalog_version: CatalogVersion
     strengths: list[ValidationStrengthDefinitionModel] = Field(min_length=1)
     subject_kinds: list[ValidationSubjectKindDefinitionModel] = Field(min_length=1)

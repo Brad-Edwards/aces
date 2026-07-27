@@ -144,8 +144,8 @@ def test_account_placement_realizes_user_with_all_features():
     assert user.home == "/home/administrator"
     assert user.lock_passwd is True  # disabled and/or non-password auth
     paths = {f.path: f.content for f in cloud_init.write_files}
-    assert paths["/etc/aliases.d/aces-administrator"] == "administrator: admin@example.test\n"
-    assert paths["/etc/aces/spn/administrator"] == "HTTP/web.example.test\n"
+    assert paths["/etc/aliases.d/raes-administrator"] == "administrator: admin@example.test\n"
+    assert paths["/etc/raes/spn/administrator"] == "HTTP/web.example.test\n"
     assert ("newaliases",) in cloud_init.runcmd
 
 
@@ -220,7 +220,7 @@ def test_content_placement_directory_creates_dir_and_descriptor():
     cloud_init = _domain(realization).cloud_init
 
     assert ("mkdir", "-p", "/opt/data") in cloud_init.runcmd
-    assert any(f.path == "/etc/aces/content/data.json" for f in cloud_init.write_files)
+    assert any(f.path == "/etc/raes/content/data.json" for f in cloud_init.write_files)
 
 
 def test_feature_binding_service_installs_package_and_enables_service():
@@ -244,14 +244,14 @@ def test_feature_binding_service_installs_package_and_enables_service():
 
 def test_account_descriptor_path_cannot_escape_via_malicious_username():
     # A username crafted to traverse out of the descriptor directory must not let
-    # the cloud-init write_files target escape /etc/aces/spn/.
+    # the cloud-init write_files target escape /etc/raes/spn/.
     account = _resource(
         "account-placement",
         "provision.account.evil",
         {
             "name": "evil",
             "target_address": NODE_ADDRESS,
-            "spec": {"username": "../../etc/cron.d/aces", "spn": "HTTP/x", "ssh_authorized_keys": ["k"]},
+            "spec": {"username": "../../etc/cron.d/raes", "spn": "HTTP/x", "ssh_authorized_keys": ["k"]},
         },
     )
 
@@ -259,7 +259,7 @@ def test_account_descriptor_path_cannot_escape_via_malicious_username():
     paths = [f.path for f in _domain(realization).cloud_init.write_files]
 
     spn_paths = [p for p in paths if "/spn/" in p]
-    assert spn_paths == ["/etc/aces/spn/etc_cron.d_aces"]
+    assert spn_paths == ["/etc/raes/spn/etc_cron.d_raes"]
     assert not any(".." in p for p in paths)
 
 
@@ -277,7 +277,7 @@ def test_content_descriptor_path_cannot_escape_via_malicious_name():
     realization = interpret_provisioning_plan(_plan(_node(), content))
     paths = [f.path for f in _domain(realization).cloud_init.write_files]
 
-    assert all(p.startswith("/etc/aces/content/") and ".." not in p for p in paths)
+    assert all(p.startswith("/etc/raes/content/") and ".." not in p for p in paths)
 
 
 def test_runcmd_is_argv_form_so_malicious_paths_cannot_inject_shell():

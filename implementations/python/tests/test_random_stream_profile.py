@@ -24,6 +24,7 @@ from raes_contracts.random_stream_profiles import (
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PROFILE_PATH = REPO_ROOT / "contracts" / "profiles" / "random-stream" / "blake3-xof-v1.json"
+PARTICIPANT_PROFILE_PATH = REPO_ROOT / "contracts" / "profiles" / "random-stream" / "blake3-xof-participant-v1.json"
 FIXTURES_ROOT = REPO_ROOT / "contracts" / "fixtures" / "profiles" / "random-stream-profile-v1"
 VALID_DIR = FIXTURES_ROOT / "valid"
 INVALID_DIR = FIXTURES_ROOT / "invalid"
@@ -36,9 +37,15 @@ def test_load_reference_random_stream_profile() -> None:
     assert profile.generator.family == "blake3"
     assert "bounded-integer" in profile.transforms
 
+    participant_profile = load_random_stream_profile("blake3-xof-participant-v1")
+    assert participant_profile.profile_id == "blake3-xof-participant-v1"
+    assert participant_profile.generator.family == "blake3"
+    assert "bounded-integer" in participant_profile.transforms
+
 
 def test_reference_profile_path_resolves() -> None:
     assert random_stream_profile_path("blake3-xof-v1") == PROFILE_PATH
+    assert random_stream_profile_path("blake3-xof-participant-v1") == PARTICIPANT_PROFILE_PATH
 
 
 def test_reference_profile_matches_valid_fixture() -> None:
@@ -90,7 +97,11 @@ class TestLoaderHardening:
             random_stream_profile_path("nonexistent-profile-v1")
 
     def test_supported_profile_ids_contains_blake3_xof(self) -> None:
-        assert "blake3-xof-v1" in SUPPORTED_RANDOM_STREAM_PROFILE_IDS
+        expected_ids = {
+            "blake3-xof-participant-v1",
+            "blake3-xof-v1",
+        }
+        assert not SUPPORTED_RANDOM_STREAM_PROFILE_IDS.symmetric_difference(expected_ids)
 
     def test_load_unsupported_profile_fails_closed_without_file_probe(self) -> None:
         with pytest.raises(ValueError, match="unsupported"):

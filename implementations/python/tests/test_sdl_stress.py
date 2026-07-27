@@ -1,7 +1,7 @@
 """Stress-test the SDL against 10 real-world scenarios from different platforms.
 
 Each scenario attempts to faithfully represent a topology/exercise from
-a known cyber range platform in ACES SDL format. This tests the
+a known cyber range platform in RAES SDL format. This tests the
 expressiveness boundaries of the language.
 """
 
@@ -119,7 +119,7 @@ propositions:
     description: The governed service is ready for the event.
     subjects: [nodes.win-10]
     basis: observed_state
-    predicate: {kind: boolean, property: service-ready, semantic_ref: urn:aces:observable:service-ready, operator: equals, expected: true}
+    predicate: {kind: boolean, property: service-ready, semantic_ref: urn:raes:observable:service-ready, operator: equals, expected: true}
     evidence_requirements: [service-check-evidence]
 
 assertions:
@@ -1256,13 +1256,13 @@ propositions:
     description: The governed enterprise0 host is compromised.
     subjects: [nodes.enterprise0]
     basis: observed_state
-    predicate: {kind: boolean, property: compromised, semantic_ref: urn:aces:observable:compromised, operator: equals, expected: true}
+    predicate: {kind: boolean, property: compromised, semantic_ref: urn:raes:observable:compromised, operator: equals, expected: true}
     evidence_requirements: [enterprise0-state-evidence]
   enterprise0-detected:
     description: Compromise of the governed enterprise0 host was detected.
     subjects: [nodes.enterprise0]
     basis: observed_state
-    predicate: {kind: boolean, property: compromise-detected, semantic_ref: urn:aces:observable:compromise-detected, operator: equals, expected: true}
+    predicate: {kind: boolean, property: compromise-detected, semantic_ref: urn:raes:observable:compromise-detected, operator: equals, expected: true}
     evidence_requirements: [enterprise0-state-evidence]
 
 assertions:
@@ -1571,7 +1571,7 @@ propositions:
     description: The governed federation service is available.
     subjects: [nodes.adfs]
     basis: observed_state
-    predicate: {kind: boolean, property: federation-service-up, semantic_ref: urn:aces:observable:federation-service-up, operator: equals, expected: true}
+    predicate: {kind: boolean, property: federation-service-up, semantic_ref: urn:raes:observable:federation-service-up, operator: equals, expected: true}
     evidence_requirements: [federation-state-evidence]
 
 assertions:

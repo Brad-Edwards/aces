@@ -37,9 +37,9 @@
       "claims": [
         {
           "plane": "semantics",
-          "classification": "aces_native",
+          "classification": "raes_native",
           "source_refs": [],
-          "aces_boundaries": [
+          "raes_boundaries": [
             {
               "artifact": "contracts/example.json",
               "symbol_or_pointer": "#/properties/example"

@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "01e502976847abfed1d37f7b6e972971d9109fac34e4e94ef31b5971a0a93032",
+  "content_hash": "3ebaa6f78e03ebbdf06052cfc85abc4f1f40746ce0ea7a8eccc96637e1fcdace",
   "last_change": {
-    "summary": "Carried participant-directed inject deliveries and governed participant action-argument domains into satisfiability evidence on the RAES-only package surface.",
-    "content_hash": "01e502976847abfed1d37f7b6e972971d9109fac34e4e94ef31b5971a0a93032"
+    "summary": "Carried portable artifact requirements and scoped participant resource budgets through satisfiability evidence for issues #920 and #899.",
+    "content_hash": "3ebaa6f78e03ebbdf06052cfc85abc4f1f40746ce0ea7a8eccc96637e1fcdace"
   }
 }

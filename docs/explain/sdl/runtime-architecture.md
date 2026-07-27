@@ -35,6 +35,15 @@ honor. Those choices are not just incidental implementation details: they
 shape experiment validity and must be declared and preserved as part of run
 provenance when different realizations are compared.
 
+Autonomous participant execution follows the same separation. Compilation
+preserves exact action-to-target-service bindings; planning admits those
+relations against the backend manifest; and the runtime owns a typed,
+generation-fenced execution-service scope. Native calls may overlap within a
+finite admitted bound, but portable snapshot/history commits are serialized
+with revision checks. Shared-clock pause, resume, and reset coordinate service
+readiness and generation, while pacing loss is published as degraded,
+not-ready state with an explicit deviation reference.
+
 Under the repository's [coding standards](../reference/coding-standards.md),
 this layer is where `FM2` and `FM3` work becomes most relevant. The
 formalization target here is not raw YAML, but the typed runtime model,
@@ -403,7 +412,7 @@ Composition is registry-ready as well:
 - local imports remain supported through `path:` and `source: local:...`
 - reusable remote modules use `source: oci:...`
 - concrete resolved imports may be pinned via `source: locked:...`
-- `raes sdl resolve` writes `aces.lock.json`
+- `raes sdl resolve` writes `raes.lock.json`
 - `raes sdl verify-imports` verifies lockfile, trust, digests, and signatures
 - `raes sdl publish` packages a publishable SDL module as an OCI image layout
 

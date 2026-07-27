@@ -2,5 +2,9 @@
   "contract_id": "participant-implementation-manifest-v1",
   "schema_path": "contracts/schemas/participant-implementation-manifest/participant-implementation-manifest-v1.json",
   "stability": "draft",
-  "content_hash": "93e30291adbc08b1969adb9b938f888b004d317ac864e90151d0f43a395948e4"
+  "content_hash": "ea14b7737f13e08900758135825095bf12672b99cf7dd2665b0c6049b0d47a40",
+  "last_change": {
+    "summary": "Allowed participant implementations to declare exact-cut participant-decision-surface-v2 capability.",
+    "content_hash": "ea14b7737f13e08900758135825095bf12672b99cf7dd2665b0c6049b0d47a40"
+  }
 }

@@ -7,13 +7,16 @@ from pathlib import Path
 from typing import Any
 
 from raes_backend_protocols.capabilities import (
+    PARTICIPANT_RUNTIME_POLICY_FEATURES,
     BackendManifest,
     observation_capability_contract_gaps,
     participant_runtime_capability_contract_gaps,
+    resolve_participant_feature_support,
     time_capability_contract_gaps,
 )
 from raes_contracts.diagnostics import Diagnostic
 from raes_contracts.realization_envelope import BackendRealizationEnvelopeModel
+from raes_contracts.vocabulary import ParticipantFeatureSupportLevel
 from raes_processor.reference import ScenarioInput
 from raes_runtime.registry import RuntimeTarget
 
@@ -136,7 +139,7 @@ class _TargetConformanceOptions:
     realization_harness: RealizationConformanceHarness | None = None
     execution_basis: ExecutionBasis = ExecutionBasis.HERMETIC_LIVE
     realization_envelope: BackendRealizationEnvelopeModel | None = None
-    observer_version: str = "aces-realization-observer/v1"
+    observer_version: str = "raes-realization-observer/v1"
     native_conformance: bool = False
 
 
@@ -210,6 +213,67 @@ def _gap_diagnostics(
     return diagnostics
 
 
+def _participant_feature_cases(
+    target: RuntimeTarget,
+    profile: BackendProfileSelector,
+) -> tuple[ConformanceCaseResult, ...]:
+    """Project finite API-407 manifest declarations into the existing report."""
+
+    capability = target.manifest.participant_runtime
+    if capability is None:
+        return ()
+    profile_id = _to_profile_id(profile)
+    cases: list[ConformanceCaseResult] = []
+    for entry in capability.feature_support:
+        if entry.feature not in PARTICIPANT_RUNTIME_POLICY_FEATURES:
+            continue
+        diagnostics: tuple[Diagnostic, ...] = ()
+        effective_support_level: str | None = entry.support_level.value
+        if entry.support_level != ParticipantFeatureSupportLevel.UNSUPPORTED:
+            try:
+                resolve_participant_feature_support(
+                    target.manifest,
+                    entry.feature,
+                    required_level=entry.support_level,
+                )
+            except ValueError as exc:
+                effective_support_level = None
+                diagnostics = (
+                    _diagnostic(
+                        "conformance.participant-feature-support-invalid",
+                        entry.feature,
+                        str(exc),
+                    ),
+                )
+        cases.append(
+            ConformanceCaseResult(
+                name=f"participant-feature-support-{entry.feature}",
+                contract_name="backend-manifest-v2",
+                valid=True,
+                passed=not diagnostics,
+                diagnostics=diagnostics,
+                capability_feature=entry.feature,
+                declared_support_level=entry.support_level.value,
+                effective_support_level=effective_support_level,
+                finite_scope=(
+                    f"Static manifest declaration for target {target.name!r} under profile "
+                    f"{profile_id!r}; no unexecuted participant behavior is quantified."
+                ),
+                evidence_refs=entry.evidence_refs,
+                limitations=(
+                    *entry.limitation_refs,
+                    "Manifest validity and finite conformance do not establish runtime realization.",
+                ),
+                explicit_non_claims=(
+                    "Does not establish native participant-policy enforcement.",
+                    "Does not establish noninterference, trace equivalence, or bisimulation.",
+                    "Does not establish behavior outside the named target, profile, corpus, and cases.",
+                ),
+            )
+        )
+    return tuple(cases)
+
+
 def _known_profile_report(
     target: RuntimeTarget,
     profile: BackendProfileSelector,
@@ -235,6 +299,7 @@ def _known_profile_report(
     )
     if target.manifest.realization_envelope is not None:
         adapter_cases = adapter_cases[:1]
+    participant_feature_cases = _participant_feature_cases(target, profile)
     target_cases = tuple(replace(case, execution_basis=options.execution_basis.value) for case in adapter_cases)
     realization_run = run_realization_conformance(
         target,
@@ -245,12 +310,12 @@ def _known_profile_report(
         native_conformance=options.native_conformance,
     )
     realization_cases = tuple(_realization_case_result(case) for case in realization_run.cases)
-    cases = (*fixture_report.cases, *target_cases, *realization_cases)
+    cases = (*fixture_report.cases, *participant_feature_cases, *target_cases, *realization_cases)
     passed = (
         fixture_report.passed
         and not contract_gaps
         and not capability_gaps
-        and all(case.passed for case in (*target_cases, *realization_cases))
+        and all(case.passed for case in (*participant_feature_cases, *target_cases, *realization_cases))
     )
     profile_id = _to_profile_id(profile)
     return BackendConformanceReport(

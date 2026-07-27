@@ -18,6 +18,10 @@ from raes_runtime.control_plane import RuntimeControlPlane
 from raes_runtime.registry import RuntimeTarget
 
 from raes_conformance.conformance.diagnostics import _SEMANTIC_INVALID_DIAGNOSTIC_CODE, _diagnostic
+from raes_conformance.conformance.participant_execution_probes import (
+    _drive_participant_execution_probe,
+    _participant_execution_probe_snapshot,
+)
 from raes_conformance.conformance.profiles import (
     BackendCapabilityProfile,
     BackendProfileSelector,
@@ -60,7 +64,7 @@ _DEFAULT_CONFORMANCE_SCENARIO = dedent(
         predicate:
           kind: presence
           property: node
-          semantic_ref: urn:aces:declared-property:node
+          semantic_ref: urn:raes:declared-property:node
           operator: exists
     assertions:
       health:
@@ -311,6 +315,12 @@ def _hermetic_snapshot_payload(control_plane: RuntimeControlPlane) -> dict[str, 
             participant_address: list(events)
             for participant_address, events in control_plane.snapshot.participant_behavior_history.items()
         },
+        "participant_control_history": {
+            participant_address: list(events)
+            for participant_address, events in control_plane.snapshot.participant_control_history.items()
+        },
+        "participant_autonomous_execution_states": dict(control_plane.snapshot.participant_autonomous_execution_states),
+        "participant_execution_services": dict(control_plane.snapshot.participant_execution_services),
         "shared_state_records": dict(control_plane.snapshot.shared_state_records),
         "shared_state_history": {
             state_address: list(records)
@@ -407,7 +417,10 @@ def _target_adapter_cases(
 
     scenario = _DEFAULT_CONFORMANCE_SCENARIO if reference_scenario is None else reference_scenario
     execution_plan = run_reference_processor(scenario, target.manifest).execution_plan
-    control_plane = RuntimeControlPlane(target)
+    control_plane = RuntimeControlPlane(
+        target,
+        initial_snapshot=_participant_execution_probe_snapshot(target),
+    )
     cases.append(_provisioning_probe_case(control_plane, execution_plan.provisioning))
     if known != BackendCapabilityProfile.PROVISIONING_ONLY:
         if target.orchestrator is not None:
@@ -421,5 +434,8 @@ def _target_adapter_cases(
                     participant_address="participant.conformance",
                 )
             )
+            capability = target.manifest.participant_runtime
+            if capability is not None and capability.supports_autonomous_execution:
+                cases.extend(_drive_participant_execution_probe(target, control_plane))
     cases.append(_hermetic_snapshot_case(control_plane))
     return tuple(cases)

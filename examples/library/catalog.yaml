@@ -1,9 +1,9 @@
-library: aces-example-pattern-library
+library: raes-example-pattern-library
 version: 1
 requirement_refs: [AUT-806]
 source_refs:
   - examples/README.md
-  - docs/explain/getting-started.md
+  - docs/public/quickstart.md
   - docs/explain/reference/canonical-reference-map.md
 description: >
   Domain-neutral RAES agentic-environment authoring library for non-normative,

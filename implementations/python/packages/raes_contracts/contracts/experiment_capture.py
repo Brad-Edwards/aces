@@ -16,8 +16,15 @@ from .experiment_artifacts import (
     ExperimentMeasurementChannelReferenceModel,
 )
 from .experiment_references import ExperimentReferenceModel
-from .schema_invariants import _add_aces_invariant, _add_aces_plane
+from .schema_invariants import _add_raes_invariant, _add_raes_plane
 from .validators import _validate_unique_string_values
+
+__all__ = [
+    "ExperimentCaptureRequirementModel",
+    "ExperimentCaptureSpecModel",
+    "ExperimentCaptureWindowModel",
+    "ExperimentValidityNoteModel",
+]
 
 
 class ExperimentValidityNoteModel(ContractModel):
@@ -74,7 +81,7 @@ class ExperimentCaptureWindowModel(ContractModel):
                 {"required": ["trigger_ref"], "properties": {"trigger_ref": {"not": {"type": "null"}}}},
             ]
         )
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "capture-window-interval-valid",
             "Capture window ends_at must not precede starts_at when both timestamps are present.",
@@ -156,7 +163,7 @@ class ExperimentCaptureSpecModel(ContractModel):
     ) -> JsonSchemaValue:
         json_schema = handler(core_schema)
         json_schema = handler.resolve_ref_schema(json_schema)
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "capture-requirement-key-matches-requirement-id",
             "Every capture_requirements object key must match the embedded requirement_id value, and window_refs "
@@ -164,7 +171,7 @@ class ExperimentCaptureSpecModel(ContractModel):
             validator="raes_contracts.contracts.ExperimentCaptureSpecModel._validate_capture_spec",
             inputs=[{"contract_id": "experiment-capture-spec-v1", "instance_path": "#"}],
         )
-        _add_aces_plane(json_schema, "experiment-capture-spec-v1")
+        _add_raes_plane(json_schema, "experiment-capture-spec-v1")
         return json_schema
 
 

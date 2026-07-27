@@ -7,7 +7,7 @@ from pathlib import Path
 
 from raes_backend_libvirt.cloudinit import CloudInitSpec, CloudInitUser
 from raes_backend_libvirt.driver import DomainSpec, NetworkAcl, NetworkSpec
-from raes_backend_libvirt.drivers.libvirt import LibvirtDeploymentDriver, _aces_uuid
+from raes_backend_libvirt.drivers.libvirt import LibvirtDeploymentDriver, _raes_uuid
 from raes_backend_protocols.naming import provider_resource_name
 
 # Real libvirt reports a missing object with these stable VIR_ERR_NO_* codes via
@@ -23,7 +23,7 @@ _VIR_ERR_NO_NWFILTER = 620
 
 
 def _runtime_name(address: str) -> str:
-    return provider_resource_name(address, prefix="aces-test")
+    return provider_resource_name(address, prefix="raes-test")
 
 
 def _seed_dir(workspace: Path, address: str = "provision.node.web") -> Path:
@@ -137,7 +137,7 @@ def _uuid_from_xml(xml: str) -> str:
 
 def test_libvirt_driver_realize_defines_networks_and_domains_with_safe_names():
     connection = _FakeConnection()
-    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="aces-test")
+    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="raes-test")
 
     result = driver.realize(
         networks=(NetworkSpec(address="provision.network.lan", name="lan<>"),),
@@ -166,7 +166,7 @@ def test_libvirt_driver_realize_defines_networks_and_domains_with_safe_names():
 
 def test_libvirt_driver_diagnostics_do_not_leak_native_exception_or_image_path():
     connection = _FakeConnection(fail_define=True)
-    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="aces-test")
+    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="raes-test")
 
     result = driver.realize(
         networks=(),
@@ -205,7 +205,7 @@ def test_libvirt_driver_realizes_cloud_init_seed_as_readonly_cdrom(tmp_path):
     seed_builder = _FakeSeedBuilder()
     driver = LibvirtDeploymentDriver(
         connection=connection,
-        name_prefix="aces-test",
+        name_prefix="raes-test",
         workspace=tmp_path,
         seed_builder=seed_builder,
     )
@@ -250,7 +250,7 @@ def _realize_seed_domain(driver):
 def test_libvirt_seed_artifacts_use_private_modes(tmp_path):
     driver = LibvirtDeploymentDriver(
         connection=_FakeConnection(),
-        name_prefix="aces-test",
+        name_prefix="raes-test",
         workspace=tmp_path,
         seed_builder=_FakeSeedBuilder(),
     )
@@ -277,7 +277,7 @@ def test_libvirt_seed_write_neutralizes_pre_positioned_symlink(tmp_path):
     (seed_dir / "user-data").symlink_to(target)
     driver = LibvirtDeploymentDriver(
         connection=_FakeConnection(),
-        name_prefix="aces-test",
+        name_prefix="raes-test",
         workspace=tmp_path,
         seed_builder=_FakeSeedBuilder(),
     )
@@ -301,7 +301,7 @@ def test_libvirt_seed_write_clears_stale_seed_dir_for_clean_reapply(tmp_path):
     (seed_dir / "leftover").write_text("debris")
     driver = LibvirtDeploymentDriver(
         connection=_FakeConnection(),
-        name_prefix="aces-test",
+        name_prefix="raes-test",
         workspace=tmp_path,
         seed_builder=_FakeSeedBuilder(),
     )
@@ -317,7 +317,7 @@ def test_libvirt_driver_destroy_cleans_up_seed_media(tmp_path):
     connection = _FakeConnection()
     driver = LibvirtDeploymentDriver(
         connection=connection,
-        name_prefix="aces-test",
+        name_prefix="raes-test",
         workspace=tmp_path,
         seed_builder=_FakeSeedBuilder(),
     )
@@ -342,7 +342,7 @@ def test_libvirt_driver_destroy_cleans_up_seed_media(tmp_path):
 
 def test_libvirt_driver_converges_existing_objects_without_duplicating(tmp_path):
     connection = _FakeConnection()
-    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="aces-test", seed_builder=_FakeSeedBuilder())
+    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="raes-test", seed_builder=_FakeSeedBuilder())
     specs = dict(
         networks=(NetworkSpec(address="provision.network.lan", name="lan"),),
         domains=(DomainSpec(address="provision.node.web", name="web", image_ref=None),),
@@ -366,13 +366,13 @@ def test_libvirt_driver_converges_existing_objects_without_duplicating(tmp_path)
 
 
 def test_libvirt_convergence_refuses_to_replace_a_foreign_object(tmp_path):
-    # A pre-existing object that shares the runtime name but is NOT the ACES object
+    # A pre-existing object that shares the runtime name but is NOT the RAES object
     # for this address (different/unknown UUID) must never be destroyed: apply fails
     # closed with an ownership-conflict diagnostic and the foreign object survives.
     connection = _FakeConnection()
     foreign = _NativeObject(uuid="11111111-2222-3333-4444-555555555555")
     connection.domains[_runtime_name("provision.node.web")] = foreign
-    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="aces-test", seed_builder=_FakeSeedBuilder())
+    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="raes-test", seed_builder=_FakeSeedBuilder())
 
     result = driver.realize(
         networks=(),
@@ -391,9 +391,9 @@ def test_libvirt_convergence_fails_closed_when_stopping_owned_object_fails():
     # (permission/internal) must NOT be suppressed-then-undefined — the apply fails
     # closed and the still-running owned domain is left intact for retry.
     connection = _FakeConnection()
-    existing = _NativeObject(uuid=_aces_uuid("provision.node.web"), fail_destroy_code=_VIR_ERR_INTERNAL_ERROR)
+    existing = _NativeObject(uuid=_raes_uuid("provision.node.web"), fail_destroy_code=_VIR_ERR_INTERNAL_ERROR)
     connection.domains[_runtime_name("provision.node.web")] = existing
-    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="aces-test", seed_builder=_FakeSeedBuilder())
+    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="raes-test", seed_builder=_FakeSeedBuilder())
 
     result = driver.realize(
         networks=(), domains=(DomainSpec(address="provision.node.web", name="web", image_ref=None),)
@@ -408,9 +408,9 @@ def test_libvirt_convergence_tolerates_stopping_an_inactive_owned_object():
     # The benign side of the same path: converging an owned object that is already
     # inactive (stop raises VIR_ERR_OPERATION_INVALID) still undefines + redefines.
     connection = _FakeConnection()
-    existing = _NativeObject(uuid=_aces_uuid("provision.node.web"), fail_destroy_code=_VIR_ERR_OPERATION_INVALID)
+    existing = _NativeObject(uuid=_raes_uuid("provision.node.web"), fail_destroy_code=_VIR_ERR_OPERATION_INVALID)
     connection.domains[_runtime_name("provision.node.web")] = existing
-    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="aces-test", seed_builder=_FakeSeedBuilder())
+    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="raes-test", seed_builder=_FakeSeedBuilder())
 
     result = driver.realize(
         networks=(), domains=(DomainSpec(address="provision.node.web", name="web", image_ref=None),)
@@ -421,9 +421,9 @@ def test_libvirt_convergence_tolerates_stopping_an_inactive_owned_object():
     assert driver.realized_addresses() == {"provision.node.web"}
 
 
-def test_libvirt_domain_xml_carries_deterministic_aces_uuid():
+def test_libvirt_domain_xml_carries_stable_raes_ownership_uuid():
     connection = _FakeConnection()
-    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="aces-test", seed_builder=_FakeSeedBuilder())
+    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="raes-test", seed_builder=_FakeSeedBuilder())
 
     first = driver.realize(networks=(), domains=(DomainSpec(address="provision.node.web", name="web", image_ref=None),))
     uuid_first = _uuid_from_xml(connection.domain_xml[0])
@@ -434,12 +434,13 @@ def test_libvirt_domain_xml_carries_deterministic_aces_uuid():
     uuid_second = _uuid_from_xml(connection.domain_xml[1])
 
     assert not first.diagnostics
+    assert _raes_uuid("provision.node.web") == "19837e5e-7699-51af-8bd1-435e6ce85a5f"
     assert uuid_first and uuid_first == uuid_second
 
 
 def test_libvirt_network_xml_realizes_cidr_into_ip_and_dhcp_range():
     connection = _FakeConnection()
-    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="aces-test")
+    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="raes-test")
 
     driver.realize(
         networks=(
@@ -462,7 +463,7 @@ def test_libvirt_network_xml_realizes_cidr_into_ip_and_dhcp_range():
 
 def test_libvirt_driver_realizes_network_acls_as_nwfilter(tmp_path):
     connection = _FakeConnection()
-    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="aces-test")
+    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="raes-test")
     acl = NetworkAcl(
         name="allow-http",
         action="accept",
@@ -504,7 +505,7 @@ def test_libvirt_reapply_enforces_tightened_acl_via_redefined_nwfilter(tmp_path)
     # the new rule is genuinely enforced, not recorded-but-skipped behind a stale
     # filter the host still applies.
     connection = _FakeConnection()
-    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="aces-test")
+    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="raes-test")
     allow = NetworkAcl(name="allow-http", action="accept", direction="in", protocol="tcp", ports=(80,))
     deny = NetworkAcl(name="deny-http", action="drop", direction="in", protocol="tcp", ports=(80,))
 
@@ -527,7 +528,7 @@ def test_libvirt_reapply_enforces_tightened_acl_via_redefined_nwfilter(tmp_path)
 
 def test_libvirt_driver_destroy_undefines_nwfilter(tmp_path):
     connection = _FakeConnection()
-    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="aces-test")
+    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="raes-test")
     acl = NetworkAcl(name="deny", action="drop", direction="inout", protocol="all")
     driver.realize(
         networks=(),
@@ -542,14 +543,14 @@ def test_libvirt_driver_destroy_undefines_nwfilter(tmp_path):
 
 
 def test_libvirt_nwfilter_define_refuses_to_overwrite_a_foreign_filter():
-    # An ACL whose runtime filter name collides with a pre-existing, non-ACES
+    # An ACL whose runtime filter name collides with a pre-existing, non-RAES
     # filter must not redefine it: apply fails closed and the foreign filter is
     # left untouched (no redefine), so other domains' filtering is not weakened.
     connection = _FakeConnection()
     foreign = _NativeObject(uuid="99999999-8888-7777-6666-555555555555")
     filter_name = f"{_runtime_name('provision.node.web')}-acl"
     connection.nwfilters[filter_name] = foreign
-    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="aces-test")
+    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="raes-test")
     acl = NetworkAcl(name="allow-all", action="accept", direction="inout", protocol="all")
 
     result = driver.realize(
@@ -568,7 +569,7 @@ def test_libvirt_destroy_refuses_to_remove_a_foreign_object():
     connection = _FakeConnection()
     foreign = _NativeObject(uuid="11111111-2222-3333-4444-555555555555")
     connection.domains[_runtime_name("provision.node.web")] = foreign
-    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="aces-test")
+    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="raes-test")
 
     result = driver.destroy(networks=(), domains=("provision.node.web",))
 
@@ -579,7 +580,7 @@ def test_libvirt_destroy_refuses_to_remove_a_foreign_object():
 
 def test_libvirt_driver_destroy_uses_previously_realized_names():
     connection = _FakeConnection()
-    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="aces-test")
+    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="raes-test")
     driver.realize(
         networks=(NetworkSpec(address="provision.network.lan", name="lan"),),
         domains=(DomainSpec(address="provision.node.web", name="web", image_ref=None),),
@@ -602,7 +603,7 @@ def test_libvirt_driver_teardown_of_absent_domain_is_idempotent_success():
     # (never realized, or torn down by a prior run) succeeds as "not realized"
     # with no diagnostic — teardown is idempotent, not a hard failure.
     connection = _FakeConnection()
-    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="aces-test")
+    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="raes-test")
 
     result = driver.destroy(networks=(), domains=("provision.node.web",))
 
@@ -613,7 +614,7 @@ def test_libvirt_driver_teardown_of_absent_domain_is_idempotent_success():
 def test_libvirt_driver_teardown_of_absent_network_is_idempotent_success():
     # Issue #604: same idempotent-absence contract for networks.
     connection = _FakeConnection()
-    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="aces-test")
+    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="raes-test")
 
     result = driver.destroy(networks=("provision.network.lan",), domains=())
 
@@ -625,7 +626,7 @@ def test_libvirt_driver_teardown_is_idempotent_across_repeated_realize_and_destr
     # Issue #604: realize -> destroy -> destroy again. The second destroy sees an
     # absent object and still succeeds; the snapshot/realized set stays consistent.
     connection = _FakeConnection()
-    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="aces-test", seed_builder=_FakeSeedBuilder())
+    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="raes-test", seed_builder=_FakeSeedBuilder())
     specs = dict(
         networks=(NetworkSpec(address="provision.network.lan", name="lan"),),
         domains=(DomainSpec(address="provision.node.web", name="web", image_ref=None),),
@@ -656,7 +657,7 @@ def test_libvirt_driver_teardown_fails_closed_on_non_absence_lookup_error():
         def networkLookupByName(self, name: str):  # noqa: N802 - mirrors libvirt API
             raise _FakeLibvirtError(_VIR_ERR_INTERNAL_ERROR)
 
-    driver = LibvirtDeploymentDriver(connection=_ConnectionThatFailsLookup(), name_prefix="aces-test")
+    driver = LibvirtDeploymentDriver(connection=_ConnectionThatFailsLookup(), name_prefix="raes-test")
 
     result = driver.destroy(networks=(), domains=("provision.node.web",))
 
@@ -672,7 +673,7 @@ def test_libvirt_driver_realize_rolls_back_partially_defined_domain_on_create_fa
     connection = _FakeConnection(fail_create=True)
     driver = LibvirtDeploymentDriver(
         connection=connection,
-        name_prefix="aces-test",
+        name_prefix="raes-test",
         workspace=tmp_path,
         seed_builder=_FakeSeedBuilder(),
     )
@@ -705,11 +706,11 @@ def test_libvirt_realize_rollback_leaves_a_pre_existing_updated_object_intact():
     # second (foreign-named) domain fails; the updated domain must survive so the
     # preserved baseline snapshot that still claims it realized stays truthful.
     connection = _FakeConnection()
-    existing = _NativeObject(uuid=_aces_uuid("provision.node.web"))
+    existing = _NativeObject(uuid=_raes_uuid("provision.node.web"))
     connection.domains[_runtime_name("provision.node.web")] = existing
     foreign = _NativeObject(uuid="11111111-2222-3333-4444-555555555555")
     connection.domains[_runtime_name("provision.node.other")] = foreign
-    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="aces-test", seed_builder=_FakeSeedBuilder())
+    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="raes-test", seed_builder=_FakeSeedBuilder())
 
     result = driver.realize(
         networks=(),
@@ -735,7 +736,7 @@ def test_libvirt_driver_teardown_fails_closed_when_stop_fails_for_a_running_obje
     # fails closed (diagnostic + realized) and never undefines it, keeping the
     # snapshot entry for retry.
     connection = _FakeConnection()
-    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="aces-test")
+    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="raes-test")
     driver.realize(networks=(), domains=(DomainSpec(address="provision.node.web", name="web", image_ref=None),))
     runtime_name = _runtime_name("provision.node.web")
     connection.domains[runtime_name].fail_destroy_code = _VIR_ERR_INTERNAL_ERROR
@@ -752,7 +753,7 @@ def test_libvirt_driver_teardown_undefines_an_already_inactive_object():
     # (VIR_ERR_OPERATION_INVALID) is benign — teardown still undefines it and
     # succeeds.
     connection = _FakeConnection()
-    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="aces-test")
+    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="raes-test")
     driver.realize(networks=(), domains=(DomainSpec(address="provision.node.web", name="web", image_ref=None),))
     runtime_name = _runtime_name("provision.node.web")
     connection.domains[runtime_name].fail_destroy_code = _VIR_ERR_OPERATION_INVALID

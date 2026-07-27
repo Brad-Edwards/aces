@@ -68,7 +68,7 @@ def _write_objective_window_scenario(path: Path, *, namespace: str = "") -> None
     if not namespace:
         module_descriptor = """
 module:
-  id: aces/window
+  id: raes/window
   version: 1.0.0
   exports:
     propositions: [health-state]
@@ -96,7 +96,7 @@ propositions:
     predicate:
       kind: presence
       property: role
-      semantic_ref: urn:aces:declared-property:entity-role
+      semantic_ref: urn:raes:declared-property:entity-role
       operator: exists
 assertions:
   {prefix}health:

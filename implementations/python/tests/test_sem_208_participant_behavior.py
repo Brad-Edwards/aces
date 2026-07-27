@@ -185,7 +185,7 @@ def _scenario_yaml(*, actions: str = "[scan]", boundaries: str = "[red-view]") -
               - system: attack
                 identifier: T1046
                 loss_label: technique-to-contract
-                rationale: ATT&CK does not encode ACES observation or state-transition semantics
+                rationale: ATT&CK does not encode RAES observation or state-transition semantics
         observation_boundaries:
           red-view:
             projection_basis: participant-local projection over observed services
@@ -244,7 +244,7 @@ def _sem219_scenario_yaml(*, actions: str = "[scan]", boundaries: str = "[red-vi
           scanner-package:
             type: file
             target: web
-            path: /opt/aces/tools/scanner
+            path: /opt/raes/tools/scanner
         action_contracts:
         """
         ),
@@ -320,7 +320,7 @@ def _act607_authority_scope_scenario_yaml() -> str:
             description: The governed web host has declared beacon state.
             subjects: [nodes.web]
             basis: declared_state
-            predicate: {kind: boolean, property: beacon-online, semantic_ref: urn:aces:declared-property:beacon-online, operator: equals, expected: true}
+            predicate: {kind: boolean, property: beacon-online, semantic_ref: urn:raes:declared-property:beacon-online, operator: equals, expected: true}
         assertions:
           beacon-online: {proposition: beacon-online, role: precondition, polarity: positive}
         relationships:
@@ -428,7 +428,7 @@ def _act607_typed_ref_collision_scenario_yaml() -> str:
             description: The governed web host has declared beacon state.
             subjects: [nodes.web]
             basis: declared_state
-            predicate: {kind: boolean, property: beacon-online, semantic_ref: urn:aces:declared-property:beacon-online, operator: equals, expected: true}
+            predicate: {kind: boolean, property: beacon-online, semantic_ref: urn:raes:declared-property:beacon-online, operator: equals, expected: true}
         assertions:
           beacon-online: {proposition: beacon-online, role: precondition, polarity: positive}
         content:
@@ -929,7 +929,7 @@ def test_sem219_global_tool_identity_does_not_synthesize_participant_availabilit
               scanner-package:
                 type: file
                 target: web
-                path: /opt/aces/tools/scanner
+                path: /opt/raes/tools/scanner
             action_contracts:
             """
         ),
@@ -1115,7 +1115,7 @@ def test_behavior_specification_refs_are_namespaced_during_module_composition(tm
               scanner-package:
                 type: file
                 target: web
-                path: /opt/aces/tools/scanner
+                path: /opt/raes/tools/scanner
             nodes:
               web:
                 type: VM

@@ -77,7 +77,7 @@ raes libvirt techvault guest-certify \
   --project-dir . --run-id guest-proof-1 --yes
 ```
 
-It emits the `aces.libvirt.scenario-evidence-run/v1` artifact under
+It emits the `raes.libvirt.scenario-evidence-run/v1` artifact under
 `runs/<run-id>/scenario-evidence/libvirt-scenario-evidence-run.json`. The artifact
 is validated (source separation, binding, redaction) **before** it is written, so
 it contains no host paths, connection URIs, raw domain UUIDs, XML, or secrets; the
@@ -86,7 +86,7 @@ challenge, the selected envelope/configuration + appliance digests, and a
 `sha256:` native correlation. The equivalent gate also runs as an opt-in pytest:
 
 ```sh
-ACES_REAL_LIBVIRT_URI=qemu:///system \
+RAES_REAL_LIBVIRT_URI=qemu:///system \
   uv run pytest -m integration \
   implementations/python/tests/test_libvirt_backend_guest_certified_real_libvirt.py
 ```

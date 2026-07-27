@@ -98,7 +98,7 @@ class ReusableAssetEvidenceRequirementModel(ContractModel):
     """One evidence-class expectation an asset family must satisfy.
 
     ``mechanism_ref`` names the *existing* RAES mechanism that carries the
-    evidence (e.g. ``aces.lock.json`` digest pins, ``ExperimentChecksumModel``,
+    evidence (e.g. ``raes.lock.json`` digest pins, ``ExperimentChecksumModel``,
     ``controlled-vocabularies-v1.source``). GOV-913 declares policy over the
     incumbent mechanisms; it does not introduce a parallel evidence store, so
     this contract never carries the evidence payload itself — only the

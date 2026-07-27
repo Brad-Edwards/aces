@@ -9,7 +9,7 @@ from pathlib import Path
 
 
 def _schema_output_path(schemas_dir: Path, name: str) -> Path:
-    if name == "aces-semantic-invariants-v1":
+    if name == "raes-semantic-invariants-v1":
         return schemas_dir / "profiles" / f"{name}.json"
     if name in {
         "sdl-authoring-input-v1",
@@ -20,6 +20,8 @@ def _schema_output_path(schemas_dir: Path, name: str) -> Path:
         return schemas_dir / "sdl" / f"{name}.json"
     if name.startswith("scenario-satisfiability-evidence-v"):
         return schemas_dir / "satisfiability" / f"{name}.json"
+    if name.startswith("artifact-requirement-v"):
+        return schemas_dir / "artifact-requirements" / f"{name}.json"
     if name.startswith("exploit-path-analysis-evidence-v"):
         return schemas_dir / "exploit-path-analysis" / f"{name}.json"
     if name.startswith("backend-manifest-v"):
@@ -32,6 +34,8 @@ def _schema_output_path(schemas_dir: Path, name: str) -> Path:
         return schemas_dir / "participant-implementation-manifest" / f"{name}.json"
     if name.startswith("participant-implementation-provenance-v"):
         return schemas_dir / "participant-implementation-provenance" / f"{name}.json"
+    if name.startswith("participant-configuration-result-v"):
+        return schemas_dir / "participant-implementation-configuration" / f"{name}.json"
     if name in {"concept-families-v1", "behavioral-relations-v1"}:
         return schemas_dir / "concept-authority" / f"{name}.json"
     if name == "reference-models-v1":
@@ -71,6 +75,14 @@ def _schema_output_path(schemas_dir: Path, name: str) -> Path:
         "participant-joint-action-record-v1",
         "participant-time-management-context-v1",
         "participant-control-occurrence-v1",
+        "participant-crossing-occurrence-v1",
+        "participant-execution-binding-v1",
+        "participant-execution-control-v1",
+        "participant-execution-service-state-v1",
+        "participant-resource-budget-policy-v1",
+        "participant-resource-pool-capacity-v1",
+        "participant-resource-budget-state-v1",
+        "participant-resource-budget-event-v1",
         "participant-outcome-report-v1",
         "runtime-fact-binding-plane-v1",
     }:

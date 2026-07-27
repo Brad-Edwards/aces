@@ -55,7 +55,7 @@ class LibvirtProvisioner:
             raise ValueError("libvirt provisioner realization envelope does not match driver mode")
         self._provisioner_capabilities = expected_capabilities
         self._mode = mode
-        self._name_prefix = str(getattr(self._driver, "name_prefix", "aces-techvault"))
+        self._name_prefix = str(getattr(self._driver, "name_prefix", "raes-techvault"))
         self._backend_realization_envelope = load_libvirt_realization_envelope(mode)
         self._realization_envelope = expected_envelope
 

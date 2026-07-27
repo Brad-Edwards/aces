@@ -92,7 +92,7 @@ _FALSIFICATION_BACKED_REQUIRED_GATES = [
 
 def _structural_disclosure_payload(**overrides: Any) -> dict[str, Any]:
     payload: dict[str, Any] = {
-        "profile_id": "aces-structural-validation",
+        "profile_id": "raes-structural-validation",
         "profile_version": "v1",
         "subject_kind": "scenario",
         "subject_ref": {"ref_kind": "scenario", "ref_id": "scenario-1"},
@@ -106,7 +106,7 @@ def _structural_disclosure_payload(**overrides: Any) -> dict[str, Any]:
 
 def _semantic_disclosure_payload(**overrides: Any) -> dict[str, Any]:
     payload: dict[str, Any] = {
-        "profile_id": "aces-semantic-validation",
+        "profile_id": "raes-semantic-validation",
         "profile_version": "v1",
         "subject_kind": "scenario_snapshot",
         "subject_ref": {
@@ -124,7 +124,7 @@ def _semantic_disclosure_payload(**overrides: Any) -> dict[str, Any]:
 
 def _behavioral_disclosure_payload(**overrides: Any) -> dict[str, Any]:
     payload: dict[str, Any] = {
-        "profile_id": "aces-behavioral-validation",
+        "profile_id": "raes-behavioral-validation",
         "profile_version": "v1",
         "subject_kind": "experiment_task",
         "subject_ref": {"ref_kind": "task", "ref_id": "task-1", "ref_version": "v1"},
@@ -138,7 +138,7 @@ def _behavioral_disclosure_payload(**overrides: Any) -> dict[str, Any]:
 
 def _evidence_backed_disclosure_payload(**overrides: Any) -> dict[str, Any]:
     payload: dict[str, Any] = {
-        "profile_id": "aces-evidence-backed-validation",
+        "profile_id": "raes-evidence-backed-validation",
         "profile_version": "v1",
         "subject_kind": "experiment_run",
         "subject_ref": {"ref_kind": "run", "ref_id": "run-1", "ref_version": "v1"},
@@ -153,7 +153,7 @@ def _evidence_backed_disclosure_payload(**overrides: Any) -> dict[str, Any]:
 
 def _falsification_backed_disclosure_payload(**overrides: Any) -> dict[str, Any]:
     payload: dict[str, Any] = {
-        "profile_id": "aces-falsification-backed-validation",
+        "profile_id": "raes-falsification-backed-validation",
         "profile_version": "v1",
         "subject_kind": "published_claim",
         "subject_ref": {"ref_kind": "result", "ref_id": "claim-1"},
@@ -199,7 +199,7 @@ def test_document_wrapper_requires_schema_version_and_embeds_core() -> None:
             "disclosure": _structural_disclosure_payload(),
         }
     )
-    assert document.disclosure.profile_id == "aces-structural-validation"
+    assert document.disclosure.profile_id == "raes-structural-validation"
 
     invalid_document = {"schema_version": "wrong/v1", "disclosure": _structural_disclosure_payload()}
     with pytest.raises(ValidationError):
@@ -227,14 +227,14 @@ def test_gate_result_not_applicable_requires_detail() -> None:
 
 
 def test_disclosure_fails_closed_for_unknown_profile_identity() -> None:
-    payload = _structural_disclosure_payload(profile_id="aces-missing-validation")
+    payload = _structural_disclosure_payload(profile_id="raes-missing-validation")
     with pytest.raises(ValidationError, match="unknown validation profile"):
         ValidationBasisDisclosureModel.model_validate(payload)
 
 
 def test_disclosure_fails_closed_for_subject_kind_not_declared_by_profile() -> None:
     payload = _structural_disclosure_payload(
-        profile_id="aces-behavioral-validation",
+        profile_id="raes-behavioral-validation",
         subject_kind="published_claim",
         subject_ref={"ref_kind": "result", "ref_id": "claim-1"},
         gate_results=[_gate(kind) for kind in _BEHAVIORAL_REQUIRED_GATES],
@@ -269,7 +269,7 @@ def test_subject_kind_ref_kind_mapping_accepts_correct_pairing(subject_kind: str
     if ref_kind in {"task", "run", "study"}:
         subject_ref["ref_version"] = "v1"
     payload = _structural_disclosure_payload(
-        profile_id="aces-structural-validation",
+        profile_id="raes-structural-validation",
         subject_kind=subject_kind,
         subject_ref=subject_ref,
     )
@@ -561,12 +561,12 @@ def test_not_applicable_gate_requires_explicit_limitation() -> None:
 
 
 def test_sub_minimum_strength_is_legal_only_with_explicit_limitation() -> None:
-    payload = _structural_disclosure_payload(profile_id="aces-semantic-validation")
+    payload = _structural_disclosure_payload(profile_id="raes-semantic-validation")
     with pytest.raises(ValidationError, match="missing required"):
         ValidationBasisDisclosureModel.model_validate(payload)
 
     payload = _structural_disclosure_payload(
-        profile_id="aces-semantic-validation",
+        profile_id="raes-semantic-validation",
         gate_results=[_gate(kind) for kind in _SEMANTIC_REQUIRED_GATES],
         achieved_strength="structural",
     )
@@ -863,7 +863,7 @@ def test_disclosure_schema_is_published_with_governed_invariants() -> None:
         (REPO_ROOT / "contracts/schemas/profiles/validation-basis-disclosure-v1.json").read_text(encoding="utf-8")
     )
     assert published == schema
-    invariant_ids = {item["id"] for item in schema["$defs"]["ValidationBasisDisclosureModel"]["x-aces-invariants"]}
+    invariant_ids = {item["id"] for item in schema["$defs"]["ValidationBasisDisclosureModel"]["x-raes-invariants"]}
     assert "validation-basis-profile-join-resolves" in invariant_ids
 
 

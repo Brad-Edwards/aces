@@ -4,7 +4,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Protocol
 
-from raes_contracts.contracts import ParticipantTemporalRuntimeContextModel
+from raes_contracts.contracts import (
+    ParticipantTemporalRuntimeContextModel,
+)
+from raes_contracts.contracts.participant_execution import (
+    ParticipantExecutionControlRequestModel,
+    ParticipantExecutionServiceStateModel,
+)
 from raes_contracts.diagnostics import Diagnostic
 from raes_contracts.participant_binding import ParticipantActionAdmissionRequest, ParticipantActionApplyResult
 from raes_contracts.participant_episode import (
@@ -190,6 +196,39 @@ class AutonomousParticipantRuntime(ParticipantRuntime, Protocol):
         snapshot: RuntimeSnapshot,
     ) -> ParticipantActionAdmissionRequest:
         """Resolve run-selected apparatus and native target binding for one due action."""
+        ...
+
+
+class ControlledAutonomousParticipantRuntime(AutonomousParticipantRuntime, Protocol):
+    """Autonomous runtime with portable lifecycle, readback, and bounded overlap."""
+
+    def control_execution(
+        self,
+        request: ParticipantExecutionControlRequestModel,
+        snapshot: RuntimeSnapshot,
+    ) -> ApplyResult:
+        """Perform and observe one generation-fenced native lifecycle operation.
+
+        Implementations own scheduler and shared-time coordination for the
+        scope. Merely editing portable readback fields is non-conformant.
+        """
+        ...
+
+    def execution_state(
+        self,
+        execution_scope_ref: str,
+        snapshot: RuntimeSnapshot,
+    ) -> ParticipantExecutionServiceStateModel:
+        """Return typed execution-service health and readiness."""
+        ...
+
+    def admit_actions_concurrently(
+        self,
+        requests: tuple[ParticipantActionAdmissionRequest, ...],
+        snapshot: RuntimeSnapshot,
+        max_workers: int,
+    ) -> tuple[ParticipantActionApplyResult, ...]:
+        """Execute native actions with a finite overlap bound."""
         ...
 
 

@@ -1,7 +1,10 @@
 """Runtime manager for compiled SDL runtime plans."""
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 
+from raes_contracts.artifact_requirements import ArtifactAvailabilityContext
+from raes_contracts.contracts import ExperimentStochasticControlModel
 from raes_contracts.contracts.time_model import TimeModelDeclarationModel
 from raes_contracts.diagnostics import Diagnostic
 from raes_contracts.planning import ChangeAction, ProvisioningPlan, ProvisionOp, RuntimeDomain
@@ -11,8 +14,9 @@ from raes_processor.models import ExecutionPlan
 from raes_processor.planner import plan, snapshot_delete_order
 
 from .apply_failure import maybe_synthesize_failure, rollback_services
-from .backend_calls import _call_backend_apply, _call_backend_diagnostics
+from .backend_calls import _call_backend_apply, _call_backend_diagnostics, _RealizationApplyContext
 from .diagnostics import _failure_diagnostic, _has_error_diagnostic
+from .participant_activity import resolve_participant_activity_controls
 from .participant_execution_control import RuntimeParticipantExecutionMixin
 from .registry import RuntimeTarget, _validate_runtime_target_shape
 from .time_control import RuntimeTimeControlMixin
@@ -87,6 +91,7 @@ class RuntimeManager(RuntimeParticipantExecutionMixin, RuntimeTimeControlMixin):
         target: RuntimeTarget,
         *,
         initial_snapshot: RuntimeSnapshot | None = None,
+        stochastic_controls: Iterable[ExperimentStochasticControlModel] = (),
     ) -> None:
         _validate_runtime_target_shape(
             manifest=target.manifest,
@@ -98,6 +103,7 @@ class RuntimeManager(RuntimeParticipantExecutionMixin, RuntimeTimeControlMixin):
         )
         self._target = target
         self._snapshot = initial_snapshot if initial_snapshot is not None else RuntimeSnapshot()
+        self._participant_activity_controls = resolve_participant_activity_controls(stochastic_controls)
         self._time_declaration: TimeModelDeclarationModel | None = None
         self._initialize_participant_scheduler()
 
@@ -112,6 +118,7 @@ class RuntimeManager(RuntimeParticipantExecutionMixin, RuntimeTimeControlMixin):
         *,
         parameters: dict[str, object] | None = None,
         profile: str | None = None,
+        artifact_availability: ArtifactAvailabilityContext | None = None,
     ) -> ExecutionPlan:
         model = compile_scenario_runtime_model(scenario, parameters=parameters, profile=profile)
         effective_snapshot = snapshot if snapshot is not None else self._snapshot
@@ -120,6 +127,7 @@ class RuntimeManager(RuntimeParticipantExecutionMixin, RuntimeTimeControlMixin):
             self._target.manifest,
             effective_snapshot,
             target_name=self._target.name,
+            artifact_availability=artifact_availability,
         )
 
     def apply(self, execution_plan: ExecutionPlan) -> ApplyResult:
@@ -187,8 +195,12 @@ class RuntimeManager(RuntimeParticipantExecutionMixin, RuntimeTimeControlMixin):
             state.working_snapshot,
             address="runtime.apply.provisioning",
             snapshot=state.working_snapshot,
-            realization_requirements=execution_plan.model.realization_requirements,
-            realization_plan=execution_plan.provisioning,
+            realization=_RealizationApplyContext(
+                requirements=execution_plan.model.realization_requirements,
+                plan=execution_plan.provisioning,
+                manifest=execution_plan.manifest,
+                artifact_availability=execution_plan.artifact_availability,
+            ),
         )
         self._record_phase_result(state, provision_result)
         if not provision_result.success:

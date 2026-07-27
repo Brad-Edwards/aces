@@ -84,12 +84,12 @@ def _default_native_driver_factory(
             return GuestCertifiedLibvirtDriver(
                 state_dir=state_dir,
                 connection_uri=settings.connection_uri,
-                name_prefix="aces-evidence",
+                name_prefix="raes-evidence",
             )
         return TechVaultNativeLibvirtDriver(
             state_dir=state_dir,
             connection_uri=settings.connection_uri,
-            name_prefix="aces-evidence",
+            name_prefix="raes-evidence",
         )
 
     return factory

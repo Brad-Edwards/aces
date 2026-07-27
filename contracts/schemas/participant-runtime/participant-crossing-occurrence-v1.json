@@ -1,0 +1,2202 @@
+{
+  "$defs": {
+    "EventClassificationModel": {
+      "additionalProperties": false,
+      "description": "RAES-native normalized event classification tuple (ADR-054).",
+      "properties": {
+        "activity_id": {
+          "title": "Activity Id",
+          "type": "integer"
+        },
+        "activity_name": {
+          "minLength": 1,
+          "title": "Activity Name",
+          "type": "string"
+        },
+        "category_name": {
+          "minLength": 1,
+          "title": "Category Name",
+          "type": "string"
+        },
+        "category_uid": {
+          "title": "Category Uid",
+          "type": "integer"
+        },
+        "class_name": {
+          "minLength": 1,
+          "title": "Class Name",
+          "type": "string"
+        },
+        "class_uid": {
+          "title": "Class Uid",
+          "type": "integer"
+        },
+        "severity": {
+          "minLength": 1,
+          "title": "Severity",
+          "type": "string"
+        },
+        "severity_id": {
+          "title": "Severity Id",
+          "type": "integer"
+        },
+        "type_name": {
+          "minLength": 1,
+          "title": "Type Name",
+          "type": "string"
+        },
+        "type_uid": {
+          "title": "Type Uid",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "category_uid",
+        "category_name",
+        "class_uid",
+        "class_name",
+        "activity_id",
+        "activity_name",
+        "type_uid",
+        "type_name",
+        "severity_id",
+        "severity"
+      ],
+      "title": "EventClassificationModel",
+      "type": "object"
+    },
+    "ParticipantCrossingAuditModel": {
+      "additionalProperties": false,
+      "description": "Audit/evidence retention for a prior crossing fact, not participant egress.",
+      "properties": {
+        "audience_scope_ref": {
+          "minLength": 1,
+          "title": "Audience Scope Ref",
+          "type": "string"
+        },
+        "audit_record_ref": {
+          "minLength": 1,
+          "title": "Audit Record Ref",
+          "type": "string"
+        },
+        "audited_event_ref": {
+          "minLength": 1,
+          "title": "Audited Event Ref",
+          "type": "string"
+        },
+        "authority_basis_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Authority Basis Refs",
+          "type": "array"
+        },
+        "backend_posture": {
+          "$ref": "#/$defs/ParticipantCrossingBackendPosture"
+        },
+        "controller_ref": {
+          "minLength": 1,
+          "title": "Controller Ref",
+          "type": "string"
+        },
+        "direction": {
+          "$ref": "#/$defs/ParticipantCrossingDirection"
+        },
+        "effective_order": {
+          "minimum": 0,
+          "title": "Effective Order",
+          "type": "integer"
+        },
+        "interaction_kind": {
+          "$ref": "#/$defs/ParticipantCrossingInteractionKind"
+        },
+        "loss_and_limitations": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Loss And Limitations",
+          "type": "array"
+        },
+        "order_model": {
+          "enum": [
+            "total_order",
+            "partial_order",
+            "simultaneous",
+            "serialized_backend_order",
+            "simulation_tick",
+            "control_plane_order",
+            "logical_clock",
+            "vector_clock",
+            "wall_clock_only",
+            "unknown",
+            "unsupported"
+          ],
+          "title": "Order Model",
+          "type": "string"
+        },
+        "policy": {
+          "$ref": "#/$defs/ParticipantCrossingPolicyReferenceModel"
+        },
+        "retained_evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Retained Evidence Refs",
+          "type": "array"
+        },
+        "stage": {
+          "const": "audited",
+          "title": "Stage",
+          "type": "string"
+        },
+        "subject": {
+          "$ref": "#/$defs/ParticipantCrossingSubjectReferenceModel"
+        }
+      },
+      "required": [
+        "direction",
+        "interaction_kind",
+        "audience_scope_ref",
+        "subject",
+        "controller_ref",
+        "authority_basis_refs",
+        "policy",
+        "effective_order",
+        "order_model",
+        "backend_posture",
+        "loss_and_limitations",
+        "stage",
+        "audited_event_ref",
+        "audit_record_ref",
+        "retained_evidence_refs"
+      ],
+      "title": "ParticipantCrossingAuditModel",
+      "type": "object"
+    },
+    "ParticipantCrossingBackendPosture": {
+      "description": "Bounded backend-support posture without a realization claim.",
+      "enum": [
+        "exact",
+        "bounded",
+        "disclosed-weak",
+        "unsupported"
+      ],
+      "title": "ParticipantCrossingBackendPosture",
+      "type": "string"
+    },
+    "ParticipantCrossingDecisionDisposition": {
+      "description": "Overall policy disposition for one crossing request.",
+      "enum": [
+        "permit",
+        "deny",
+        "transform",
+        "withhold",
+        "unsupported"
+      ],
+      "title": "ParticipantCrossingDecisionDisposition",
+      "type": "string"
+    },
+    "ParticipantCrossingDecisionGatesModel": {
+      "additionalProperties": false,
+      "description": "Independent deny-first gates for one crossing decision.",
+      "properties": {
+        "action_admission": {
+          "$ref": "#/$defs/ParticipantCrossingGateDisposition"
+        },
+        "backend_support": {
+          "$ref": "#/$defs/ParticipantCrossingGateDisposition"
+        },
+        "caller_authorization": {
+          "$ref": "#/$defs/ParticipantCrossingGateDisposition"
+        },
+        "declassification": {
+          "$ref": "#/$defs/ParticipantCrossingGateDisposition"
+        },
+        "marking_authorization": {
+          "$ref": "#/$defs/ParticipantCrossingGateDisposition"
+        },
+        "participant_authority": {
+          "$ref": "#/$defs/ParticipantCrossingGateDisposition"
+        },
+        "target_authorization": {
+          "$ref": "#/$defs/ParticipantCrossingGateDisposition"
+        },
+        "transformation_validity": {
+          "$ref": "#/$defs/ParticipantCrossingGateDisposition"
+        },
+        "visibility": {
+          "$ref": "#/$defs/ParticipantCrossingGateDisposition"
+        }
+      },
+      "required": [
+        "caller_authorization",
+        "target_authorization",
+        "participant_authority",
+        "action_admission",
+        "visibility",
+        "marking_authorization",
+        "declassification",
+        "backend_support",
+        "transformation_validity"
+      ],
+      "title": "ParticipantCrossingDecisionGatesModel",
+      "type": "object"
+    },
+    "ParticipantCrossingDecisionModel": {
+      "additionalProperties": false,
+      "description": "The deny-first policy decision for one exact crossing request.",
+      "properties": {
+        "audience_scope_ref": {
+          "minLength": 1,
+          "title": "Audience Scope Ref",
+          "type": "string"
+        },
+        "authority_basis_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Authority Basis Refs",
+          "type": "array"
+        },
+        "backend_posture": {
+          "$ref": "#/$defs/ParticipantCrossingBackendPosture"
+        },
+        "controller_ref": {
+          "minLength": 1,
+          "title": "Controller Ref",
+          "type": "string"
+        },
+        "decision_id": {
+          "minLength": 1,
+          "title": "Decision Id",
+          "type": "string"
+        },
+        "decision_revision": {
+          "minimum": 1,
+          "title": "Decision Revision",
+          "type": "integer"
+        },
+        "direction": {
+          "$ref": "#/$defs/ParticipantCrossingDirection"
+        },
+        "disposition": {
+          "$ref": "#/$defs/ParticipantCrossingDecisionDisposition"
+        },
+        "effective_order": {
+          "minimum": 0,
+          "title": "Effective Order",
+          "type": "integer"
+        },
+        "gates": {
+          "$ref": "#/$defs/ParticipantCrossingDecisionGatesModel"
+        },
+        "interaction_kind": {
+          "$ref": "#/$defs/ParticipantCrossingInteractionKind"
+        },
+        "loss_and_limitations": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Loss And Limitations",
+          "type": "array"
+        },
+        "order_model": {
+          "enum": [
+            "total_order",
+            "partial_order",
+            "simultaneous",
+            "serialized_backend_order",
+            "simulation_tick",
+            "control_plane_order",
+            "logical_clock",
+            "vector_clock",
+            "wall_clock_only",
+            "unknown",
+            "unsupported"
+          ],
+          "title": "Order Model",
+          "type": "string"
+        },
+        "policy": {
+          "$ref": "#/$defs/ParticipantCrossingPolicyReferenceModel"
+        },
+        "reason_code": {
+          "minLength": 1,
+          "title": "Reason Code",
+          "type": "string"
+        },
+        "request_ref": {
+          "minLength": 1,
+          "title": "Request Ref",
+          "type": "string"
+        },
+        "required_evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Required Evidence Refs",
+          "type": "array"
+        },
+        "required_operation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ParticipantCrossingOperation"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "stage": {
+          "const": "decided",
+          "title": "Stage",
+          "type": "string"
+        },
+        "subject": {
+          "$ref": "#/$defs/ParticipantCrossingSubjectReferenceModel"
+        }
+      },
+      "required": [
+        "direction",
+        "interaction_kind",
+        "audience_scope_ref",
+        "subject",
+        "controller_ref",
+        "authority_basis_refs",
+        "policy",
+        "effective_order",
+        "order_model",
+        "backend_posture",
+        "loss_and_limitations",
+        "stage",
+        "request_ref",
+        "decision_id",
+        "decision_revision",
+        "gates",
+        "disposition",
+        "reason_code",
+        "required_evidence_refs"
+      ],
+      "title": "ParticipantCrossingDecisionModel",
+      "type": "object"
+    },
+    "ParticipantCrossingDeliveryAttemptModel": {
+      "additionalProperties": false,
+      "description": "An attempted participant delivery, distinct from scheduling and success.",
+      "properties": {
+        "attempt_id": {
+          "minLength": 1,
+          "title": "Attempt Id",
+          "type": "string"
+        },
+        "audience_scope_ref": {
+          "minLength": 1,
+          "title": "Audience Scope Ref",
+          "type": "string"
+        },
+        "authority_basis_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Authority Basis Refs",
+          "type": "array"
+        },
+        "backend_posture": {
+          "$ref": "#/$defs/ParticipantCrossingBackendPosture"
+        },
+        "controller_ref": {
+          "minLength": 1,
+          "title": "Controller Ref",
+          "type": "string"
+        },
+        "decision_ref": {
+          "minLength": 1,
+          "title": "Decision Ref",
+          "type": "string"
+        },
+        "direction": {
+          "$ref": "#/$defs/ParticipantCrossingDirection"
+        },
+        "disposition": {
+          "enum": [
+            "attempted",
+            "failed",
+            "withheld",
+            "unsupported"
+          ],
+          "title": "Disposition",
+          "type": "string"
+        },
+        "effective_order": {
+          "minimum": 0,
+          "title": "Effective Order",
+          "type": "integer"
+        },
+        "interaction_kind": {
+          "$ref": "#/$defs/ParticipantCrossingInteractionKind"
+        },
+        "loss_and_limitations": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Loss And Limitations",
+          "type": "array"
+        },
+        "order_model": {
+          "enum": [
+            "total_order",
+            "partial_order",
+            "simultaneous",
+            "serialized_backend_order",
+            "simulation_tick",
+            "control_plane_order",
+            "logical_clock",
+            "vector_clock",
+            "wall_clock_only",
+            "unknown",
+            "unsupported"
+          ],
+          "title": "Order Model",
+          "type": "string"
+        },
+        "owning_occurrence_ref": {
+          "minLength": 1,
+          "title": "Owning Occurrence Ref",
+          "type": "string"
+        },
+        "policy": {
+          "$ref": "#/$defs/ParticipantCrossingPolicyReferenceModel"
+        },
+        "stage": {
+          "const": "delivery-attempted",
+          "title": "Stage",
+          "type": "string"
+        },
+        "subject": {
+          "$ref": "#/$defs/ParticipantCrossingSubjectReferenceModel"
+        },
+        "transformation_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Transformation Ref"
+        }
+      },
+      "required": [
+        "direction",
+        "interaction_kind",
+        "audience_scope_ref",
+        "subject",
+        "controller_ref",
+        "authority_basis_refs",
+        "policy",
+        "effective_order",
+        "order_model",
+        "backend_posture",
+        "loss_and_limitations",
+        "stage",
+        "decision_ref",
+        "attempt_id",
+        "owning_occurrence_ref",
+        "disposition"
+      ],
+      "title": "ParticipantCrossingDeliveryAttemptModel",
+      "type": "object"
+    },
+    "ParticipantCrossingDeliveryModel": {
+      "additionalProperties": false,
+      "description": "A delivered participant-facing occurrence, distinct from observation.",
+      "properties": {
+        "attempt_ref": {
+          "minLength": 1,
+          "title": "Attempt Ref",
+          "type": "string"
+        },
+        "audience_scope_ref": {
+          "minLength": 1,
+          "title": "Audience Scope Ref",
+          "type": "string"
+        },
+        "authority_basis_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Authority Basis Refs",
+          "type": "array"
+        },
+        "backend_posture": {
+          "$ref": "#/$defs/ParticipantCrossingBackendPosture"
+        },
+        "controller_ref": {
+          "minLength": 1,
+          "title": "Controller Ref",
+          "type": "string"
+        },
+        "decision_ref": {
+          "minLength": 1,
+          "title": "Decision Ref",
+          "type": "string"
+        },
+        "delivery_id": {
+          "minLength": 1,
+          "title": "Delivery Id",
+          "type": "string"
+        },
+        "delivery_order": {
+          "minimum": 0,
+          "title": "Delivery Order",
+          "type": "integer"
+        },
+        "direction": {
+          "$ref": "#/$defs/ParticipantCrossingDirection"
+        },
+        "disposition": {
+          "enum": [
+            "delivered",
+            "failed",
+            "unknown",
+            "unsupported"
+          ],
+          "title": "Disposition",
+          "type": "string"
+        },
+        "effective_order": {
+          "minimum": 0,
+          "title": "Effective Order",
+          "type": "integer"
+        },
+        "interaction_kind": {
+          "$ref": "#/$defs/ParticipantCrossingInteractionKind"
+        },
+        "loss_and_limitations": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Loss And Limitations",
+          "type": "array"
+        },
+        "order_model": {
+          "enum": [
+            "total_order",
+            "partial_order",
+            "simultaneous",
+            "serialized_backend_order",
+            "simulation_tick",
+            "control_plane_order",
+            "logical_clock",
+            "vector_clock",
+            "wall_clock_only",
+            "unknown",
+            "unsupported"
+          ],
+          "title": "Order Model",
+          "type": "string"
+        },
+        "owning_occurrence_ref": {
+          "minLength": 1,
+          "title": "Owning Occurrence Ref",
+          "type": "string"
+        },
+        "policy": {
+          "$ref": "#/$defs/ParticipantCrossingPolicyReferenceModel"
+        },
+        "stage": {
+          "const": "delivered",
+          "title": "Stage",
+          "type": "string"
+        },
+        "subject": {
+          "$ref": "#/$defs/ParticipantCrossingSubjectReferenceModel"
+        }
+      },
+      "required": [
+        "direction",
+        "interaction_kind",
+        "audience_scope_ref",
+        "subject",
+        "controller_ref",
+        "authority_basis_refs",
+        "policy",
+        "effective_order",
+        "order_model",
+        "backend_posture",
+        "loss_and_limitations",
+        "stage",
+        "decision_ref",
+        "attempt_ref",
+        "delivery_id",
+        "owning_occurrence_ref",
+        "delivery_order",
+        "disposition"
+      ],
+      "title": "ParticipantCrossingDeliveryModel",
+      "type": "object"
+    },
+    "ParticipantCrossingDirection": {
+      "description": "Closed participant-boundary directions.",
+      "enum": [
+        "ingress",
+        "egress"
+      ],
+      "title": "ParticipantCrossingDirection",
+      "type": "string"
+    },
+    "ParticipantCrossingDisclosureModel": {
+      "additionalProperties": false,
+      "description": "An authorized disclosure or declassification decision, not delivery.",
+      "properties": {
+        "audience_scope_ref": {
+          "minLength": 1,
+          "title": "Audience Scope Ref",
+          "type": "string"
+        },
+        "authority_basis_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Authority Basis Refs",
+          "type": "array"
+        },
+        "backend_posture": {
+          "$ref": "#/$defs/ParticipantCrossingBackendPosture"
+        },
+        "controller_ref": {
+          "minLength": 1,
+          "title": "Controller Ref",
+          "type": "string"
+        },
+        "decision_ref": {
+          "minLength": 1,
+          "title": "Decision Ref",
+          "type": "string"
+        },
+        "declassification_basis_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Declassification Basis Ref"
+        },
+        "direction": {
+          "$ref": "#/$defs/ParticipantCrossingDirection"
+        },
+        "disclosure_id": {
+          "minLength": 1,
+          "title": "Disclosure Id",
+          "type": "string"
+        },
+        "effective_order": {
+          "minimum": 0,
+          "title": "Effective Order",
+          "type": "integer"
+        },
+        "interaction_kind": {
+          "$ref": "#/$defs/ParticipantCrossingInteractionKind"
+        },
+        "loss_and_limitations": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Loss And Limitations",
+          "type": "array"
+        },
+        "operation": {
+          "enum": [
+            "disclosure",
+            "declassification"
+          ],
+          "title": "Operation",
+          "type": "string"
+        },
+        "order_model": {
+          "enum": [
+            "total_order",
+            "partial_order",
+            "simultaneous",
+            "serialized_backend_order",
+            "simulation_tick",
+            "control_plane_order",
+            "logical_clock",
+            "vector_clock",
+            "wall_clock_only",
+            "unknown",
+            "unsupported"
+          ],
+          "title": "Order Model",
+          "type": "string"
+        },
+        "policy": {
+          "$ref": "#/$defs/ParticipantCrossingPolicyReferenceModel"
+        },
+        "result_marking_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Result Marking Refs",
+          "type": "array"
+        },
+        "source_marking_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Source Marking Refs",
+          "type": "array"
+        },
+        "stage": {
+          "const": "disclosed",
+          "title": "Stage",
+          "type": "string"
+        },
+        "subject": {
+          "$ref": "#/$defs/ParticipantCrossingSubjectReferenceModel"
+        },
+        "transformation_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Transformation Ref"
+        }
+      },
+      "required": [
+        "direction",
+        "interaction_kind",
+        "audience_scope_ref",
+        "subject",
+        "controller_ref",
+        "authority_basis_refs",
+        "policy",
+        "effective_order",
+        "order_model",
+        "backend_posture",
+        "loss_and_limitations",
+        "stage",
+        "decision_ref",
+        "disclosure_id",
+        "operation",
+        "source_marking_refs",
+        "result_marking_refs"
+      ],
+      "title": "ParticipantCrossingDisclosureModel",
+      "type": "object"
+    },
+    "ParticipantCrossingGateDisposition": {
+      "description": "One deny-first decision-gate result.",
+      "enum": [
+        "permit",
+        "deny",
+        "not-applicable",
+        "unknown",
+        "unsupported"
+      ],
+      "title": "ParticipantCrossingGateDisposition",
+      "type": "string"
+    },
+    "ParticipantCrossingInteractionKind": {
+      "description": "Closed incumbent carrier kinds that may cross a participant boundary.",
+      "enum": [
+        "action-proposal",
+        "constrained-form-submission",
+        "candidate-selection",
+        "approval",
+        "denial",
+        "external-direction",
+        "intervention",
+        "handoff",
+        "override",
+        "cancellation",
+        "participant-inject-delivery",
+        "observation",
+        "decision-surface-projection",
+        "redacted-output",
+        "disclosure",
+        "delivery-receipt",
+        "action-result",
+        "status-projection",
+        "history-projection"
+      ],
+      "title": "ParticipantCrossingInteractionKind",
+      "type": "string"
+    },
+    "ParticipantCrossingLossKind": {
+      "description": "Disclosed loss or guarantee weakening for a crossing fact.",
+      "enum": [
+        "none",
+        "fidelity-loss",
+        "guarantee-weakening",
+        "unknown",
+        "unsupported"
+      ],
+      "title": "ParticipantCrossingLossKind",
+      "type": "string"
+    },
+    "ParticipantCrossingLossModel": {
+      "additionalProperties": false,
+      "description": "One explicit fidelity loss or guarantee weakening.",
+      "properties": {
+        "affected_ref": {
+          "minLength": 1,
+          "title": "Affected Ref",
+          "type": "string"
+        },
+        "basis_ref": {
+          "minLength": 1,
+          "title": "Basis Ref",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/ParticipantCrossingLossKind"
+        },
+        "limitation_ref": {
+          "minLength": 1,
+          "title": "Limitation Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "basis_ref",
+        "affected_ref",
+        "limitation_ref"
+      ],
+      "title": "ParticipantCrossingLossModel",
+      "type": "object"
+    },
+    "ParticipantCrossingObservationModel": {
+      "additionalProperties": false,
+      "description": "Participant observation of a delivered fact through an incumbent carrier.",
+      "properties": {
+        "audience_scope_ref": {
+          "minLength": 1,
+          "title": "Audience Scope Ref",
+          "type": "string"
+        },
+        "authority_basis_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Authority Basis Refs",
+          "type": "array"
+        },
+        "backend_posture": {
+          "$ref": "#/$defs/ParticipantCrossingBackendPosture"
+        },
+        "controller_ref": {
+          "minLength": 1,
+          "title": "Controller Ref",
+          "type": "string"
+        },
+        "decision_ref": {
+          "minLength": 1,
+          "title": "Decision Ref",
+          "type": "string"
+        },
+        "delivery_ref": {
+          "minLength": 1,
+          "title": "Delivery Ref",
+          "type": "string"
+        },
+        "direction": {
+          "$ref": "#/$defs/ParticipantCrossingDirection"
+        },
+        "effective_order": {
+          "minimum": 0,
+          "title": "Effective Order",
+          "type": "integer"
+        },
+        "interaction_kind": {
+          "$ref": "#/$defs/ParticipantCrossingInteractionKind"
+        },
+        "loss_and_limitations": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Loss And Limitations",
+          "type": "array"
+        },
+        "observation_id": {
+          "minLength": 1,
+          "title": "Observation Id",
+          "type": "string"
+        },
+        "observation_order": {
+          "minimum": 0,
+          "title": "Observation Order",
+          "type": "integer"
+        },
+        "order_model": {
+          "enum": [
+            "total_order",
+            "partial_order",
+            "simultaneous",
+            "serialized_backend_order",
+            "simulation_tick",
+            "control_plane_order",
+            "logical_clock",
+            "vector_clock",
+            "wall_clock_only",
+            "unknown",
+            "unsupported"
+          ],
+          "title": "Order Model",
+          "type": "string"
+        },
+        "owning_observation_ref": {
+          "minLength": 1,
+          "title": "Owning Observation Ref",
+          "type": "string"
+        },
+        "policy": {
+          "$ref": "#/$defs/ParticipantCrossingPolicyReferenceModel"
+        },
+        "stage": {
+          "const": "observed",
+          "title": "Stage",
+          "type": "string"
+        },
+        "subject": {
+          "$ref": "#/$defs/ParticipantCrossingSubjectReferenceModel"
+        }
+      },
+      "required": [
+        "direction",
+        "interaction_kind",
+        "audience_scope_ref",
+        "subject",
+        "controller_ref",
+        "authority_basis_refs",
+        "policy",
+        "effective_order",
+        "order_model",
+        "backend_posture",
+        "loss_and_limitations",
+        "stage",
+        "decision_ref",
+        "delivery_ref",
+        "observation_id",
+        "owning_observation_ref",
+        "observation_order"
+      ],
+      "title": "ParticipantCrossingObservationModel",
+      "type": "object"
+    },
+    "ParticipantCrossingOperation": {
+      "description": "Semantically independent participant information-flow operations.",
+      "enum": [
+        "admission",
+        "withholding",
+        "projection",
+        "masking",
+        "redaction",
+        "transformation",
+        "declassification",
+        "disclosure",
+        "delivery",
+        "concealment",
+        "revocation",
+        "audit-retention"
+      ],
+      "title": "ParticipantCrossingOperation",
+      "type": "string"
+    },
+    "ParticipantCrossingPolicyReferenceModel": {
+      "additionalProperties": false,
+      "description": "Exact revision and order interval for the policy used at a crossing.",
+      "properties": {
+        "effective_order": {
+          "minimum": 0,
+          "title": "Effective Order",
+          "type": "integer"
+        },
+        "policy_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Policy Digest",
+          "type": "string"
+        },
+        "policy_id": {
+          "minLength": 1,
+          "title": "Policy Id",
+          "type": "string"
+        },
+        "policy_revision": {
+          "minLength": 1,
+          "title": "Policy Revision",
+          "type": "string"
+        },
+        "valid_from_order": {
+          "minimum": 0,
+          "title": "Valid From Order",
+          "type": "integer"
+        },
+        "valid_until_order": {
+          "minimum": 0,
+          "title": "Valid Until Order",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "policy_id",
+        "policy_revision",
+        "policy_digest",
+        "effective_order",
+        "valid_from_order",
+        "valid_until_order"
+      ],
+      "title": "ParticipantCrossingPolicyReferenceModel",
+      "type": "object"
+    },
+    "ParticipantCrossingRequestModel": {
+      "additionalProperties": false,
+      "description": "A requested crossing or produced egress candidate, not a decision.",
+      "properties": {
+        "action_or_projection_ref": {
+          "minLength": 1,
+          "title": "Action Or Projection Ref",
+          "type": "string"
+        },
+        "audience_scope_ref": {
+          "minLength": 1,
+          "title": "Audience Scope Ref",
+          "type": "string"
+        },
+        "authority_basis_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Authority Basis Refs",
+          "type": "array"
+        },
+        "backend_posture": {
+          "$ref": "#/$defs/ParticipantCrossingBackendPosture"
+        },
+        "controller_ref": {
+          "minLength": 1,
+          "title": "Controller Ref",
+          "type": "string"
+        },
+        "direction": {
+          "$ref": "#/$defs/ParticipantCrossingDirection"
+        },
+        "effective_order": {
+          "minimum": 0,
+          "title": "Effective Order",
+          "type": "integer"
+        },
+        "interaction_kind": {
+          "$ref": "#/$defs/ParticipantCrossingInteractionKind"
+        },
+        "loss_and_limitations": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Loss And Limitations",
+          "type": "array"
+        },
+        "order_model": {
+          "enum": [
+            "total_order",
+            "partial_order",
+            "simultaneous",
+            "serialized_backend_order",
+            "simulation_tick",
+            "control_plane_order",
+            "logical_clock",
+            "vector_clock",
+            "wall_clock_only",
+            "unknown",
+            "unsupported"
+          ],
+          "title": "Order Model",
+          "type": "string"
+        },
+        "policy": {
+          "$ref": "#/$defs/ParticipantCrossingPolicyReferenceModel"
+        },
+        "request_id": {
+          "minLength": 1,
+          "title": "Request Id",
+          "type": "string"
+        },
+        "requested_operation": {
+          "$ref": "#/$defs/ParticipantCrossingOperation"
+        },
+        "required_evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Required Evidence Refs",
+          "type": "array"
+        },
+        "stage": {
+          "const": "requested",
+          "title": "Stage",
+          "type": "string"
+        },
+        "subject": {
+          "$ref": "#/$defs/ParticipantCrossingSubjectReferenceModel"
+        }
+      },
+      "required": [
+        "direction",
+        "interaction_kind",
+        "audience_scope_ref",
+        "subject",
+        "controller_ref",
+        "authority_basis_refs",
+        "policy",
+        "effective_order",
+        "order_model",
+        "backend_posture",
+        "loss_and_limitations",
+        "stage",
+        "request_id",
+        "requested_operation",
+        "action_or_projection_ref",
+        "required_evidence_refs"
+      ],
+      "title": "ParticipantCrossingRequestModel",
+      "type": "object"
+    },
+    "ParticipantCrossingSubjectKind": {
+      "description": "Closed typed references to incumbent participant and evidence carriers.",
+      "enum": [
+        "participant-control-occurrence",
+        "participant-action-contract",
+        "participant-action-admission",
+        "participant-action-attempt",
+        "participant-action-result",
+        "participant-lifecycle-event",
+        "participant-observation",
+        "participant-decision-surface",
+        "participant-exposure",
+        "participant-inject-delivery",
+        "participant-context-view",
+        "participant-history-view",
+        "participant-status-view",
+        "experiment-evidence"
+      ],
+      "title": "ParticipantCrossingSubjectKind",
+      "type": "string"
+    },
+    "ParticipantCrossingSubjectReferenceModel": {
+      "additionalProperties": false,
+      "anyOf": [
+        {
+          "properties": {
+            "subject_revision": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "subject_revision"
+          ]
+        },
+        {
+          "properties": {
+            "subject_digest": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "subject_digest"
+          ]
+        }
+      ],
+      "description": "Typed identity for an existing carrier without copying its payload.",
+      "properties": {
+        "contract_id": {
+          "minLength": 1,
+          "title": "Contract Id",
+          "type": "string"
+        },
+        "episode_id": {
+          "minLength": 1,
+          "title": "Episode Id",
+          "type": "string"
+        },
+        "participant_address": {
+          "minLength": 1,
+          "title": "Participant Address",
+          "type": "string"
+        },
+        "subject_digest": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Subject Digest"
+        },
+        "subject_kind": {
+          "$ref": "#/$defs/ParticipantCrossingSubjectKind"
+        },
+        "subject_ref": {
+          "minLength": 1,
+          "title": "Subject Ref",
+          "type": "string"
+        },
+        "subject_revision": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Subject Revision"
+        }
+      },
+      "required": [
+        "subject_kind",
+        "contract_id",
+        "subject_ref",
+        "participant_address",
+        "episode_id"
+      ],
+      "title": "ParticipantCrossingSubjectReferenceModel",
+      "type": "object"
+    },
+    "ParticipantCrossingTransformationModel": {
+      "additionalProperties": false,
+      "description": "A non-mutating transformation from one typed subject to a new subject.",
+      "properties": {
+        "audience_scope_ref": {
+          "minLength": 1,
+          "title": "Audience Scope Ref",
+          "type": "string"
+        },
+        "authority_basis_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Authority Basis Refs",
+          "type": "array"
+        },
+        "backend_posture": {
+          "$ref": "#/$defs/ParticipantCrossingBackendPosture"
+        },
+        "controller_ref": {
+          "minLength": 1,
+          "title": "Controller Ref",
+          "type": "string"
+        },
+        "decision_ref": {
+          "minLength": 1,
+          "title": "Decision Ref",
+          "type": "string"
+        },
+        "declassification_basis_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Declassification Basis Ref"
+        },
+        "direction": {
+          "$ref": "#/$defs/ParticipantCrossingDirection"
+        },
+        "effective_order": {
+          "minimum": 0,
+          "title": "Effective Order",
+          "type": "integer"
+        },
+        "interaction_kind": {
+          "$ref": "#/$defs/ParticipantCrossingInteractionKind"
+        },
+        "loss_and_limitations": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Loss And Limitations",
+          "type": "array"
+        },
+        "losses": {
+          "items": {
+            "$ref": "#/$defs/ParticipantCrossingLossModel"
+          },
+          "title": "Losses",
+          "type": "array"
+        },
+        "operation": {
+          "enum": [
+            "projection",
+            "masking",
+            "redaction",
+            "transformation",
+            "declassification"
+          ],
+          "title": "Operation",
+          "type": "string"
+        },
+        "order_model": {
+          "enum": [
+            "total_order",
+            "partial_order",
+            "simultaneous",
+            "serialized_backend_order",
+            "simulation_tick",
+            "control_plane_order",
+            "logical_clock",
+            "vector_clock",
+            "wall_clock_only",
+            "unknown",
+            "unsupported"
+          ],
+          "title": "Order Model",
+          "type": "string"
+        },
+        "policy": {
+          "$ref": "#/$defs/ParticipantCrossingPolicyReferenceModel"
+        },
+        "result_marking_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Result Marking Refs",
+          "type": "array"
+        },
+        "result_subject": {
+          "$ref": "#/$defs/ParticipantCrossingSubjectReferenceModel"
+        },
+        "rule_ref": {
+          "minLength": 1,
+          "title": "Rule Ref",
+          "type": "string"
+        },
+        "rule_revision": {
+          "minLength": 1,
+          "title": "Rule Revision",
+          "type": "string"
+        },
+        "source_marking_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Source Marking Refs",
+          "type": "array"
+        },
+        "source_subject": {
+          "$ref": "#/$defs/ParticipantCrossingSubjectReferenceModel"
+        },
+        "stage": {
+          "const": "transformed",
+          "title": "Stage",
+          "type": "string"
+        },
+        "subject": {
+          "$ref": "#/$defs/ParticipantCrossingSubjectReferenceModel"
+        },
+        "transformation_id": {
+          "minLength": 1,
+          "title": "Transformation Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "direction",
+        "interaction_kind",
+        "audience_scope_ref",
+        "subject",
+        "controller_ref",
+        "authority_basis_refs",
+        "policy",
+        "effective_order",
+        "order_model",
+        "backend_posture",
+        "loss_and_limitations",
+        "stage",
+        "decision_ref",
+        "transformation_id",
+        "operation",
+        "source_subject",
+        "result_subject",
+        "rule_ref",
+        "rule_revision",
+        "source_marking_refs",
+        "result_marking_refs"
+      ],
+      "title": "ParticipantCrossingTransformationModel",
+      "type": "object"
+    },
+    "RawDataIntegrityModel": {
+      "additionalProperties": false,
+      "description": "Hash, size, and truncation facts for raw data behind a runtime claim.",
+      "properties": {
+        "raw_data_hash": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Raw Data Hash"
+        },
+        "raw_data_hash_algorithm": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Raw Data Hash Algorithm"
+        },
+        "raw_data_is_truncated": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Raw Data Is Truncated"
+        },
+        "raw_data_size": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Raw Data Size"
+        },
+        "raw_data_untruncated_size": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Raw Data Untruncated Size"
+        }
+      },
+      "title": "RawDataIntegrityModel",
+      "type": "object"
+    },
+    "SourcePipelineModel": {
+      "additionalProperties": false,
+      "description": "Source product, identity, and pipeline-time facts for a mapped record.",
+      "properties": {
+        "correlation_uid": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correlation Uid"
+        },
+        "log_name": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Log Name"
+        },
+        "log_provider": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Log Provider"
+        },
+        "log_source": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Log Source"
+        },
+        "logged_time": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "minLength": 1,
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Logged Time"
+        },
+        "original_event_uid": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Original Event Uid"
+        },
+        "original_time": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "minLength": 1,
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Original Time"
+        },
+        "processed_time": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "minLength": 1,
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Processed Time"
+        },
+        "product_ref": {
+          "minLength": 1,
+          "title": "Product Ref",
+          "type": "string"
+        },
+        "product_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Product Version"
+        },
+        "sequence": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sequence"
+        },
+        "transmit_time": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "minLength": 1,
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Transmit Time"
+        }
+      },
+      "required": [
+        "product_ref"
+      ],
+      "title": "SourcePipelineModel",
+      "type": "object"
+    },
+    "SourceStatusModel": {
+      "additionalProperties": false,
+      "description": "Normalized source status claim for one participant runtime record.",
+      "properties": {
+        "source_status_label": {
+          "minLength": 1,
+          "title": "Source Status Label",
+          "type": "string"
+        },
+        "source_status_mapping": {
+          "minLength": 1,
+          "title": "Source Status Mapping",
+          "type": "string"
+        },
+        "status": {
+          "minLength": 1,
+          "title": "Status",
+          "type": "string"
+        },
+        "status_code": {
+          "minLength": 1,
+          "title": "Status Code",
+          "type": "string"
+        },
+        "status_detail": {
+          "minLength": 1,
+          "title": "Status Detail",
+          "type": "string"
+        },
+        "status_id": {
+          "title": "Status Id",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "status_id",
+        "status",
+        "status_code",
+        "status_detail",
+        "source_status_label",
+        "source_status_mapping"
+      ],
+      "title": "SourceStatusModel",
+      "type": "object"
+    }
+  },
+  "$id": "https://raes.dev/schemas/participant-crossing-occurrence-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Closed participant-runtime carrier for one API-423 crossing fact.",
+  "properties": {
+    "actor_ref": {
+      "minLength": 1,
+      "title": "Actor Ref",
+      "type": "string"
+    },
+    "authorization_scope": {
+      "minLength": 1,
+      "title": "Authorization Scope",
+      "type": "string"
+    },
+    "clock_authority": {
+      "minLength": 1,
+      "title": "Clock Authority",
+      "type": "string"
+    },
+    "confidence": {
+      "anyOf": [
+        {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Confidence"
+    },
+    "episode_id": {
+      "minLength": 1,
+      "title": "Episode Id",
+      "type": "string"
+    },
+    "event_classification": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/EventClassificationModel"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "event_id": {
+      "minLength": 1,
+      "title": "Event Id",
+      "type": "string"
+    },
+    "event_type": {
+      "const": "participant-crossing-occurrence",
+      "title": "Event Type",
+      "type": "string"
+    },
+    "evidence_refs": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Evidence Refs",
+      "type": "array"
+    },
+    "extension_policy": {
+      "const": "closed",
+      "title": "Extension Policy",
+      "type": "string"
+    },
+    "granular_markings": {
+      "additionalProperties": {
+        "items": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "propertyNames": {
+        "minLength": 1
+      },
+      "title": "Granular Markings",
+      "type": "object"
+    },
+    "ingested_at": {
+      "format": "date-time",
+      "minLength": 1,
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+      "title": "Ingested At",
+      "type": "string"
+    },
+    "logical_order_ref": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Logical Order Ref"
+    },
+    "marking_definition_refs": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Marking Definition Refs",
+      "type": "array"
+    },
+    "markings": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Markings",
+      "type": "array"
+    },
+    "object_marking_refs": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Object Marking Refs",
+      "type": "array"
+    },
+    "occurred_at": {
+      "format": "date-time",
+      "minLength": 1,
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+      "title": "Occurred At",
+      "type": "string"
+    },
+    "occurrence": {
+      "discriminator": {
+        "mapping": {
+          "audited": "#/$defs/ParticipantCrossingAuditModel",
+          "decided": "#/$defs/ParticipantCrossingDecisionModel",
+          "delivered": "#/$defs/ParticipantCrossingDeliveryModel",
+          "delivery-attempted": "#/$defs/ParticipantCrossingDeliveryAttemptModel",
+          "disclosed": "#/$defs/ParticipantCrossingDisclosureModel",
+          "observed": "#/$defs/ParticipantCrossingObservationModel",
+          "requested": "#/$defs/ParticipantCrossingRequestModel",
+          "transformed": "#/$defs/ParticipantCrossingTransformationModel"
+        },
+        "propertyName": "stage"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/ParticipantCrossingRequestModel"
+        },
+        {
+          "$ref": "#/$defs/ParticipantCrossingDecisionModel"
+        },
+        {
+          "$ref": "#/$defs/ParticipantCrossingTransformationModel"
+        },
+        {
+          "$ref": "#/$defs/ParticipantCrossingDisclosureModel"
+        },
+        {
+          "$ref": "#/$defs/ParticipantCrossingDeliveryAttemptModel"
+        },
+        {
+          "$ref": "#/$defs/ParticipantCrossingDeliveryModel"
+        },
+        {
+          "$ref": "#/$defs/ParticipantCrossingObservationModel"
+        },
+        {
+          "$ref": "#/$defs/ParticipantCrossingAuditModel"
+        }
+      ],
+      "title": "Occurrence"
+    },
+    "ordering_basis": {
+      "enum": [
+        "total_order",
+        "partial_order",
+        "simultaneous",
+        "serialized_backend_order",
+        "simulation_tick",
+        "control_plane_order",
+        "logical_clock",
+        "vector_clock",
+        "wall_clock_only",
+        "unknown",
+        "unsupported"
+      ],
+      "title": "Ordering Basis",
+      "type": "string"
+    },
+    "participant_address": {
+      "minLength": 1,
+      "title": "Participant Address",
+      "type": "string"
+    },
+    "predecessor_event_refs": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Predecessor Event Refs",
+      "type": "array"
+    },
+    "producer_ref": {
+      "minLength": 1,
+      "title": "Producer Ref",
+      "type": "string"
+    },
+    "provenance_refs": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Provenance Refs",
+      "type": "array"
+    },
+    "raw_data_integrity": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RawDataIntegrityModel"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "recorded_at": {
+      "format": "date-time",
+      "minLength": 1,
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+      "title": "Recorded At",
+      "type": "string"
+    },
+    "redaction_policy_ref": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Redaction Policy Ref"
+    },
+    "schema_name": {
+      "const": "participant-crossing-occurrence",
+      "title": "Schema Name",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "sequence_number": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Sequence Number"
+    },
+    "source_pipeline": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SourcePipelineModel"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "source_raw_ref": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source Raw Ref"
+    },
+    "source_record_ref": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source Record Ref"
+    },
+    "source_status": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SourceStatusModel"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "source_system_ref": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source System Ref"
+    },
+    "temporal_context": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Temporal Context"
+    }
+  },
+  "required": [
+    "event_id",
+    "schema_name",
+    "schema_version",
+    "event_type",
+    "extension_policy",
+    "participant_address",
+    "episode_id",
+    "occurred_at",
+    "recorded_at",
+    "ingested_at",
+    "clock_authority",
+    "ordering_basis",
+    "actor_ref",
+    "producer_ref",
+    "provenance_refs",
+    "evidence_refs",
+    "object_marking_refs",
+    "authorization_scope",
+    "occurrence"
+  ],
+  "title": "ParticipantCrossingOccurrenceModel",
+  "type": "object",
+  "x-raes-invariants": [
+    {
+      "description": "Every crossing fact must resolve typed subjects, exact policy revisions, predecessor stages, evidence, markings, and order coordinates without retroactive authorization or identity reuse.",
+      "id": "participant-crossing-context-agreement",
+      "inputs": [
+        {
+          "contract_id": "participant-crossing-occurrence-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "raes_contracts.contracts.validate_participant_crossing_occurrence_context"
+    },
+    {
+      "description": "Requested, decided, transformed, disclosed, attempted, delivered, observed, and audited facts remain independently addressable and do not imply one another.",
+      "id": "participant-crossing-stage-separation",
+      "inputs": [
+        {
+          "contract_id": "participant-crossing-occurrence-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "raes_contracts.contracts.ParticipantCrossingOccurrenceModel"
+    }
+  ],
+  "x-raes-semantic-profile": {
+    "contract_id": "participant-crossing-occurrence-v1",
+    "entry_schema_contract_id": "raes-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/RaesSemanticInvariantEntryModel",
+    "id": "raes-semantic-invariants-v1",
+    "keyword": "x-raes-invariants",
+    "required": true,
+    "uri": "https://raes.dev/schemas/semantic-invariants/v1"
+  }
+}

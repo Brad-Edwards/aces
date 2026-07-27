@@ -111,7 +111,7 @@ def main() -> int:
         failure = [
             {
                 "rule_id": "requirement-context-missing",
-                "message": "requirement UID is missing; set ACES_REQUIREMENT_UID or include a UID like GOV-918 in the branch name",
+                "message": "requirement UID is missing; set RAES_REQUIREMENT_UID or include a UID like GOV-918 in the branch name",
                 "path": None,
             }
         ]
@@ -119,7 +119,7 @@ def main() -> int:
             print(json.dumps(failure, indent=2))
         else:
             print(
-                "[requirement-context-missing] requirement UID is missing; set ACES_REQUIREMENT_UID or include a UID like GOV-918 in the branch name",
+                "[requirement-context-missing] requirement UID is missing; set RAES_REQUIREMENT_UID or include a UID like GOV-918 in the branch name",
                 file=sys.stderr,
             )
         return 1

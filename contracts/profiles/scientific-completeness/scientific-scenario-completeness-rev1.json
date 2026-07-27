@@ -56,7 +56,7 @@
       "explicit_non_claims": ["Does not claim deployability, realization, experimental control, reproducibility, backend conformance, or behavioral equivalence."],
       "behavioral_claims": [
         {
-          "taxonomy_id": "aces-behavioral-relations", "taxonomy_revision": "rev2", "relation_id": "semantic-validity",
+          "taxonomy_id": "raes-behavioral-relations", "taxonomy_revision": "rev3", "relation_id": "semantic-validity",
           "subject": "An artifact admitted by the valid-sdl-fragment profile", "left_carrier_ref": "scientific-scenario-completeness@rev1:valid-sdl-fragment",
           "quantifier_scope": "single-artifact", "evidence_scope": "structural", "evidence_boundary": "Parser and semantic validator acceptance for the submitted SDL artifact under its declared profile.",
           "assurance_status": "tested", "evidence_refs": ["implementations/python/packages/raes/validator/", "implementations/python/tests/"],
@@ -87,7 +87,7 @@
       "explicit_non_claims": ["Does not claim that every backend can realize the scenario, that deployment succeeded, or that realized behavior is equivalent."],
       "behavioral_claims": [
         {
-          "taxonomy_id": "aces-behavioral-relations", "taxonomy_revision": "rev2", "relation_id": "profile-satisfaction",
+          "taxonomy_id": "raes-behavioral-relations", "taxonomy_revision": "rev3", "relation_id": "profile-satisfaction",
           "subject": "An artifact assessed against deployable-scenario-intent", "left_carrier_ref": "candidate-scenario", "right_carrier_ref": "scientific-scenario-completeness@rev1:deployable-scenario-intent",
           "quantifier_scope": "single-artifact", "evidence_scope": "structural", "evidence_boundary": "The required concern dispositions for one candidate artifact and its named external contract witnesses.",
           "assurance_status": "defined", "evidence_refs": ["tools/check_scientific_scenario_completeness.py"],
@@ -118,7 +118,7 @@
       "explicit_non_claims": ["Does not claim participant implementations are strategically equivalent, that hidden global state is visible, or that finite probes prove bisimulation."],
       "behavioral_claims": [
         {
-          "taxonomy_id": "aces-behavioral-relations", "taxonomy_revision": "rev2", "relation_id": "profile-satisfaction",
+          "taxonomy_id": "raes-behavioral-relations", "taxonomy_revision": "rev3", "relation_id": "profile-satisfaction",
           "subject": "An artifact assessed against participant-evaluation-scenario", "left_carrier_ref": "candidate-scenario-and-experiment-bindings", "right_carrier_ref": "scientific-scenario-completeness@rev1:participant-evaluation-scenario",
           "quantifier_scope": "single-artifact", "evidence_scope": "structural", "evidence_boundary": "The required concern dispositions and contract witnesses for one bound participant-evaluation scenario.",
           "assurance_status": "defined", "evidence_refs": ["tools/check_scientific_scenario_completeness.py"],
@@ -148,7 +148,7 @@
       "explicit_non_claims": ["Does not claim causal validity, successful execution, adequate power, reproducibility, or backend behavioral equivalence."],
       "behavioral_claims": [
         {
-          "taxonomy_id": "aces-behavioral-relations", "taxonomy_revision": "rev2", "relation_id": "profile-satisfaction",
+          "taxonomy_id": "raes-behavioral-relations", "taxonomy_revision": "rev3", "relation_id": "profile-satisfaction",
           "subject": "An artifact assessed against controlled-experiment-scenario", "left_carrier_ref": "candidate-scenario-and-study-design", "right_carrier_ref": "scientific-scenario-completeness@rev1:controlled-experiment-scenario",
           "quantifier_scope": "single-artifact", "evidence_scope": "structural", "evidence_boundary": "The pre-run design declarations and required concern witnesses for one controlled-experiment input.",
           "assurance_status": "defined", "evidence_refs": ["tools/check_scientific_scenario_completeness.py"],
@@ -178,7 +178,7 @@
       "explicit_non_claims": ["Does not guarantee bitwise replay, equal outcomes, scientific validity, generalizability, or behavioral equivalence across apparatuses."],
       "behavioral_claims": [
         {
-          "taxonomy_id": "aces-behavioral-relations", "taxonomy_revision": "rev2", "relation_id": "profile-satisfaction",
+          "taxonomy_id": "raes-behavioral-relations", "taxonomy_revision": "rev3", "relation_id": "profile-satisfaction",
           "subject": "An artifact assessed against reproducible-benchmark-study-input", "left_carrier_ref": "candidate-scenario-and-governed-experiment-bundle", "right_carrier_ref": "scientific-scenario-completeness@rev1:reproducible-benchmark-study-input",
           "quantifier_scope": "single-artifact", "evidence_scope": "structural", "evidence_boundary": "The preserved design, apparatus, participant, evidence, lineage, and analysis declarations for one benchmark or study input.",
           "assurance_status": "defined", "evidence_refs": ["tools/check_scientific_scenario_completeness.py"],

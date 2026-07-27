@@ -438,7 +438,7 @@ def run_realization_conformance(
     harness: RealizationConformanceHarness | None,
     execution_basis: ExecutionBasis,
     envelope: BackendRealizationEnvelopeModel | None = None,
-    observer_version: str = "aces-realization-observer/v1",
+    observer_version: str = "raes-realization-observer/v1",
     native_conformance: bool = False,
 ) -> RealizationConformanceRun:
     """Return realization-honesty cases for one exact target configuration."""

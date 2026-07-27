@@ -2,9 +2,9 @@
   "contract_id": "scenario-instantiation-request-v1",
   "schema_path": "contracts/schemas/sdl/scenario-instantiation-request-v1.json",
   "stability": "draft",
-  "content_hash": "130a103664dd69819c1dbe13437e94436dfb2b5db871f135e9f1750c741b412f",
+  "content_hash": "54a8cdf1108003f61b79b9d9c0f0a7321a4078a55cf81f604c6882dd420b6616",
   "last_change": {
-    "summary": "Constrained instantiation parameter names to portable local identifiers while leaving parameter values outside declaration identity for DSL-101.",
-    "content_hash": "130a103664dd69819c1dbe13437e94436dfb2b5db871f135e9f1750c741b412f"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "54a8cdf1108003f61b79b9d9c0f0a7321a4078a55cf81f604c6882dd420b6616"
   }
 }

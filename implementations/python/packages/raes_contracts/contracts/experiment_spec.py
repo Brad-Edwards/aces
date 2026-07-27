@@ -12,6 +12,7 @@ from ..versions import EXPERIMENT_AUTHORING_INPUT_SCHEMA_VERSION, EXPERIMENT_STU
 from .base import BehavioralClaimBindingModel, ContractModel, NonEmptyString, PositiveInteger
 from .experiment_apparatus import ExperimentClockContextModel, ExperimentStochasticControlModel
 from .experiment_artifacts import ExperimentArtifactRefModel
+from .experiment_bindings import ExperimentBindingDescriptorModel, ExperimentBindingDescriptorSetModel
 from .experiment_capture import ExperimentValidityNoteModel
 from .experiment_disclosure import ExperimentApparatusConstraintModel
 from .experiment_manifest_references import ExperimentCaptureSpecReferenceModel
@@ -26,7 +27,7 @@ from .experiment_study import (
     ExperimentStudyFactorModel,
     ExperimentStudyMembershipModel,
 )
-from .schema_invariants import _add_aces_invariant, _add_carrier_validation_basis_disclosure_invariant
+from .schema_invariants import _add_carrier_validation_basis_disclosure_invariant, _add_raes_invariant
 from .validation_disclosure import ValidationBasisDisclosureModel, validate_carrier_validation_basis_disclosures
 
 _STUDY_AGAINST_TASKS_AND_RUNS_VALIDATOR = "raes_contracts.contracts.validate_experiment_study_against_tasks_and_runs"
@@ -157,7 +158,7 @@ class ExperimentStudyModel(ContractModel):
                 },
             }
         )
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "claim-bearing-study-analysis-plan-required",
             "Study and benchmark records must include research questions, revisioned behavioral claim bindings, run "
@@ -165,7 +166,7 @@ class ExperimentStudyModel(ContractModel):
             validator="raes_contracts.contracts.ExperimentStudyModel._validate_claim_bearing_study",
             inputs=[{"contract_id": "experiment-study-v1", "instance_path": "#"}],
         )
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "study-analysis-metrics-grounded-in-task-protocols",
             "Study analysis_plan metrics must be declared by included experiment task protocols.",
@@ -176,7 +177,7 @@ class ExperimentStudyModel(ContractModel):
                 {"contract_id": "experiment-run-v1", "instance_path": "#"},
             ],
         )
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "study-analysis-metrics-covered-by-evaluation-run-results",
             "Study analysis_plan metrics must have result_summaries, including explicit missing/withheld "
@@ -188,7 +189,7 @@ class ExperimentStudyModel(ContractModel):
                 {"contract_id": "experiment-run-v1", "instance_path": "#"},
             ],
         )
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "study-analysis-runs-eligible",
             "Study analysis_plan evaluation-run members must resolve unambiguously and exclude invalidated, "
@@ -199,7 +200,7 @@ class ExperimentStudyModel(ContractModel):
                 {"contract_id": "experiment-run-v1", "instance_path": "#"},
             ],
         )
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "study-run-allocation-covered-by-evaluation-run-members",
             "Study run_allocation compared_conditions must be represented by eligible included evaluation-run "
@@ -215,7 +216,7 @@ class ExperimentStudyModel(ContractModel):
         _add_carrier_validation_basis_disclosure_invariant(
             json_schema, contract_id="experiment-study-v1", subject_kind="experiment_study"
         )
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "study-run-allocation-stochastic-control-consistency",
             "When run_allocation compares evaluation runs, every shared stochastic_controls control_id across "
@@ -306,7 +307,7 @@ class ExperimentRunPlanModel(ContractModel):
                 },
             ]
         )
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "run-plan-exactly-one-run-count-source",
             "A run plan must declare exactly one of allocation or target_run_count, and every red-variant "
@@ -315,6 +316,30 @@ class ExperimentRunPlanModel(ContractModel):
             inputs=[{"contract_id": "experiment-authoring-input-v1", "instance_path": "#/run_plan"}],
         )
         return json_schema
+
+
+def _validate_binding_descriptor_source(
+    descriptor: ExperimentBindingDescriptorModel,
+    factors: dict[NonEmptyString, ExperimentStudyFactorModel],
+    allocation: ExperimentRunAllocationPlanModel,
+) -> str:
+    factor = factors.get(descriptor.source_factor_id)
+    if factor is None:
+        raise ValueError(f"binding source factor {descriptor.source_factor_id!r} must reference a declared factor")
+    if descriptor.source_factor_level_id not in factor.levels:
+        raise ValueError(
+            f"binding source factor level {descriptor.source_factor_level_id!r} must be declared "
+            f"by factor {descriptor.source_factor_id!r}"
+        )
+    assignment = allocation.condition_assignments.get(descriptor.source_condition_id)
+    if assignment is None:
+        raise ValueError(
+            f"binding source condition {descriptor.source_condition_id!r} must reference an allocation condition"
+        )
+    assigned_level = assignment.factor_levels.get(descriptor.source_factor_id)
+    if assigned_level != descriptor.source_factor_level_id:
+        raise ValueError("binding source factor level must match its condition assignment")
+    return descriptor.source_condition_id
 
 
 class ExperimentSpecModel(ContractModel):
@@ -338,6 +363,8 @@ class ExperimentSpecModel(ContractModel):
     intended_scenario_ref: ExperimentScenarioReferenceModel | None = None
     apparatus_intent: ExperimentApparatusConstraintModel | None = None
     factors: dict[NonEmptyString, ExperimentStudyFactorModel] = Field(default_factory=dict)
+    binding_semantics: Literal["descriptive", "explicit-required"] = "descriptive"
+    binding_descriptors: ExperimentBindingDescriptorSetModel | None = None
     capture_spec_refs: list[ExperimentCaptureSpecReferenceModel] = Field(default_factory=list)
     validity_notes: list[ExperimentValidityNoteModel] = Field(default_factory=list)
     artifact_refs: list[ExperimentArtifactRefModel] = Field(default_factory=list)
@@ -352,7 +379,37 @@ class ExperimentSpecModel(ContractModel):
                     raise ValueError(
                         f"run_plan allocation blocking factor '{blocking_factor}' must be a declared factor"
                     )
+        self._validate_binding_descriptors()
         return self
+
+    def _validate_binding_descriptors(self) -> None:
+        if self.binding_semantics == "explicit-required" and self.binding_descriptors is None:
+            raise ValueError("binding_semantics explicit-required requires binding_descriptors")
+        if self.binding_descriptors is None:
+            return
+        if self.binding_semantics != "explicit-required":
+            raise ValueError("binding_descriptors require binding_semantics explicit-required")
+        allocation = self.run_plan.allocation
+        if allocation is None:
+            raise ValueError("explicit binding descriptors require condition-based run allocation")
+        legacy_conditions = sorted(
+            condition_id
+            for condition_id, assignment in allocation.condition_assignments.items()
+            if assignment.required_parameters
+        )
+        if legacy_conditions:
+            raise ValueError(
+                "explicit binding semantics reject legacy required_parameters: " + ", ".join(legacy_conditions)
+            )
+        covered_conditions = {
+            _validate_binding_descriptor_source(descriptor, self.factors, allocation)
+            for descriptor in self.binding_descriptors.descriptors
+        }
+        missing_conditions = sorted(set(allocation.compared_conditions) - covered_conditions)
+        if missing_conditions:
+            raise ValueError(
+                "explicit binding descriptors must cover every compared condition: " + ", ".join(missing_conditions)
+            )
 
     @classmethod
     def __get_pydantic_json_schema__(
@@ -362,12 +419,42 @@ class ExperimentSpecModel(ContractModel):
     ) -> JsonSchemaValue:
         json_schema = handler(core_schema)
         json_schema = handler.resolve_ref_schema(json_schema)
-        _add_aces_invariant(
+        json_schema.setdefault("allOf", []).extend(
+            [
+                {
+                    "if": {
+                        "properties": {"binding_semantics": {"const": "explicit-required"}},
+                        "required": ["binding_semantics"],
+                    },
+                    "then": {
+                        "required": ["binding_descriptors"],
+                        "properties": {"binding_descriptors": {"not": {"type": "null"}}},
+                    },
+                },
+                {
+                    "if": {
+                        "properties": {"binding_descriptors": {"not": {"type": "null"}}},
+                        "required": ["binding_descriptors"],
+                    },
+                    "then": {
+                        "properties": {"binding_semantics": {"const": "explicit-required"}},
+                    },
+                },
+            ]
+        )
+        _add_raes_invariant(
             json_schema,
             "experiment-spec-blocking-factors-declared",
             "When a run plan declares an allocation with blocking factors, every blocking factor must be a "
             "declared experiment-spec factor.",
             validator="raes_contracts.contracts.ExperimentSpecModel._validate_experiment_spec",
+            inputs=[{"contract_id": "experiment-authoring-input-v1", "instance_path": "#"}],
+        )
+        _add_raes_invariant(
+            json_schema,
+            "experiment-binding-source-joins-valid",
+            "Explicit bindings must cover every compared condition and resolve exact declared factor levels.",
+            validator="raes_contracts.contracts.ExperimentSpecModel._validate_binding_descriptors",
             inputs=[{"contract_id": "experiment-authoring-input-v1", "instance_path": "#"}],
         )
         return json_schema

@@ -45,7 +45,7 @@ def build(
     ),
 ) -> None:
     """Build the cross-backend evidence corpus and write it to ``--output``."""
-    project_dir = work_dir or Path(tempfile.mkdtemp(prefix="aces-cross-backend-corpus-"))
+    project_dir = work_dir or Path(tempfile.mkdtemp(prefix="raes-cross-backend-corpus-"))
     report = build_cross_backend_corpus(
         scenario_path=scenario.resolve(),
         project_dir=project_dir.resolve(),

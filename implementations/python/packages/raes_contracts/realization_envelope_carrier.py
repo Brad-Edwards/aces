@@ -278,7 +278,7 @@ class BackendRealizationEnvelopeModel(ContractModel):
             }
             for concern in RealizationConcern
         ]
-        json_schema["x-aces-invariants"] = [
+        json_schema["x-raes-invariants"] = [
             {
                 "id": "realization-envelope-canonical-semantics-valid",
                 "description": (

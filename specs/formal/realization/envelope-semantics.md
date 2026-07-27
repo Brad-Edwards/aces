@@ -133,7 +133,7 @@ The shape above is semantic, not yet a published JSON schema.
 
 The relation operates on the **realization projection** of an admitted scenario,
 not on every member of its exchange artifact. The projection excludes fields
-annotated `x-aces-realization-dimension: false`. In
+annotated `x-raes-realization-dimension: false`. In
 `instantiated-scenario-v1`, `instantiation_provenance` is such artifact metadata:
 it remains mandatory for admission and participates in canonical snapshot
 identity, but a backend neither chooses nor realizes it. Closed-world envelope

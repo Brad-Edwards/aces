@@ -4,7 +4,7 @@ Classification: FM3.
 
 Requirement: `SEM-230`.
 
-Authority revision: `sem-230/rev1`.
+Authority revision: `sem-230/rev2`.
 
 ## Scope And Authority
 
@@ -14,7 +14,7 @@ runtime objects; it does not add another carrier family, policy engine, gateway,
 transport, store, logger, or audit stream.
 
 The machine-readable relation binding is
-`policy-noninterference` in taxonomy `aces-behavioral-relations`, revision
+`policy-noninterference` in taxonomy `raes-behavioral-relations`, revision
 `rev2`, published by
 `contracts/concept-authority/behavioral-relations-v1.json`. The contract name
 remains `behavioral-relations/v1` because the closed JSON shape is unchanged;
@@ -24,6 +24,13 @@ This document is definition authority. The executable cases in
 `implementations/python/tests/test_sem_230_information_flow_control.py` are
 bounded falsification evidence. Neither artifact is production enforcement or
 a universal proof.
+
+Revision `sem-230/rev2`, adopted by ADR-095, makes decision-surface output a
+first-class low observation, binds policy decisions to exact state cuts, and
+quantifies the baseline over adaptive participant strategies. Revision
+`sem-230/rev1` remains the historical open-loop formulation; its
+`observation/order` scalar must not be reused as a v2 decision epoch or
+state-cut identity.
 
 ## Prior-Art Adaptation Rule
 
@@ -35,12 +42,12 @@ by participant/runtime governance.
 
 | Semantic element | Formal lineage reused | RAES adaptation | Necessary extension, not reinvention |
 | --- | --- | --- | --- |
-| participant-relative information state and low equivalence | Fagin, Halpern, Moses, and Vardi's interpreted-systems construction: points in runs are indistinguishable when the agent-local state agrees | local state is the existing `V_p,o` plus occurrence-preserving `H_{tr,rho}(p,e,o)` and every projection-visible control/policy coordinate | policy revision, audience, marking, and declared order are included because they can change the RAES projection |
-| noninterference and purge | Goguen and Meseguer's policy-relative noninterference and purge treatment of high actions | high variation is evaluated against RAES crossings, and low observations are participant-projected history support sets | policy changes are evaluated at each occurrence's effective order; the baseline composes an explicit declassification schedule |
-| declassification | Sabelfeld and Sands' dimensions and principles for what may be released, by whom, where, and when | release records bind source dimensions, participant/audience, actor/controller/authority, policy revision, order, markings, evidence, and provenance | RAES adds stable carrier/evidence coordinates and deny-first intersection with admission and marking; it does not redefine declassification as redaction |
-| labelled transition and hidden-action treatment | Milner's labelled transition/`tau` discipline and van Glabbeek's separation of trace and branching-time relations | the SEM-230 alphabet maps each label to an existing RAES action, lifecycle, visibility, control, delivery, or evidence owner | observability is indexed by participant, audience, policy revision, and order; this definition does not claim weak or strong bisimulation |
+| participant-relative information state and low equivalence | Fagin, Halpern, Moses, and Vardi's interpreted-systems construction: points in runs are indistinguishable when the agent-local state agrees | local state is the existing `V_p,c` plus occurrence-preserving `H_{tr,rho}(p,e,c)` and every projection-visible control/policy coordinate | policy decision, audience, marking, memory scope, and declared cut/order model are included because they can change the RAES projection |
+| noninterference and purge | Goguen and Meseguer's policy-relative noninterference and purge treatment of high actions, extended by reactive noninterference over strategies | high variation is evaluated against RAES crossings, and low observations are participant-projected history support sets under adaptive low strategies | policy changes are evaluated at each occurrence's exact state cut; the baseline composes an explicit declassification schedule and strategy class |
+| declassification | Sabelfeld and Sands' dimensions and principles for what may be released, by whom, where, and when | release records bind source dimensions, participant/audience, actor/controller/authority, policy decision, state cut, markings, evidence, and provenance | RAES adds stable carrier/evidence coordinates and deny-first intersection with admission and marking; it does not redefine declassification as redaction |
+| labelled transition and hidden-action treatment | Milner's labelled transition/`tau` discipline and van Glabbeek's separation of trace and branching-time relations | the SEM-230 alphabet maps each label to an existing RAES action, lifecycle, visibility, control, delivery, or evidence owner | observability is indexed by participant, audience, exact-cut policy decision, and declared order model; this definition does not claim weak or strong bisimulation |
 | visible history and knowledge persistence | interpreted systems and the existing ADR-054 constructive visible-history/perfect-recall treatment | disclosure appends a stable visible occurrence to `H`; later concealment or revocation changes future projection | RAES preserves evidence/provenance and visible-order identity across rollback and supersession |
-| causal and partial ordering | Lamport happened-before plus the Winskel event-structure and Mazurkiewicz trace-theory lineage already adopted by ADR-054 | SEM-230 reuses the existing `R_o`, visible partial order, and simultaneity groups | policy revisions and declassification events are located in that order; no new clock or concurrency formalism is introduced |
+| causal and partial ordering | Lamport happened-before plus the Winskel event-structure and Mazurkiewicz trace-theory lineage already adopted by ADR-054 | SEM-230 reuses the existing `R_c`, visible partial order, and simultaneity groups | policy decisions and declassification events are located at exact cuts; no new clock or concurrency formalism is introduced |
 
 The indirect derivations in the final two rows are intentional: SEM-230 reuses
 the accepted participant-runtime authority and its formal sources instead of
@@ -50,32 +57,32 @@ art and stronger evidence rather than silently strengthening this baseline.
 
 ## Existing Objects And State
 
-For participant `p`, episode `e`, trace `tr`, policy sequence `rho`, and order
-point `o`, SEM-230 reuses:
+For participant `p`, episode `e`, trace `tr`, policy sequence `rho`, and exact
+state cut `c`, SEM-230 reuses:
 
-- `W_o`: world, backend, and evaluator truth;
-- `V_p,o`: the participant view relation from ADR-022;
-- `H_{tr,rho}(p,e,o)`: the occurrence-preserving participant-visible local
+- `W_c`: world, backend, and evaluator truth;
+- `V_p,c`: the participant view relation from ADR-022;
+- `H_{tr,rho}(p,e,c)`: the occurrence-preserving participant-visible local
   history under the effective projection, marking/redaction rules, and visible
   order relation;
-- `X_o`: archival evidence and authorized audit state;
+- `X_c`: archival evidence and authorized audit state;
 - existing action proposals, admission records, results, observation
   envelopes, lifecycle histories, and evidence/provenance references;
-- `R_o`: the declared total, partial, causal, simultaneous, or
+- `R_c`: the declared total, partial, causal, simultaneous, or
   backend-serialized order relation; and
-- `C_o` and `A_o`: controller coordinates and participant/actor authority
-  coordinates at `o`.
+- `C_c` and `A_c`: controller coordinates and participant/actor authority
+  coordinates at `c`.
 
 The SEM-230 policy state is:
 
 ```text
-Q_o = (W_o, V_p,o, H_{tr,rho}(p,e,o), X_o,
-       R_o, C_o, A_o, M_o, rho_o)
+Q_c = (W_c, V_p,c, H_{tr,rho}(p,e,c), X_c,
+       R_c, C_c, A_c, M_c, rho_c)
 ```
 
-where `M_o` is the governed marking state and `rho_o` is the effective policy
-revision. These coordinates remain distinct. In particular, `W_o` is not a
-participant observation, `X_o` is not participant egress, and control-plane
+where `M_c` is the governed marking state and `rho_c` is the exact-cut policy
+decision. These coordinates remain distinct. In particular, `W_c` is not a
+participant observation, `X_c` is not participant egress, and control-plane
 caller authorization is not participant authority.
 
 ## Revisioned Crossing Relation
@@ -85,7 +92,7 @@ A crossing decision is evaluated over:
 ```text
 C = (participant, episode, audience, direction, interaction_kind,
      source_ref, actor, controller, authority_basis,
-     action_or_projection_ref, observation_point, order_point,
+     action_or_projection_ref, decision_epoch, state_cut_ref,
      order_model, policy_id, policy_revision,
      markings, authorization, admission, visibility,
      declassification, redaction_or_transformation,
@@ -98,31 +105,32 @@ a payload bag. Unknown required coordinates fail closed. An owning vocabulary
 may represent an optional coordinate as `not-applicable`, `unknown`,
 `unsupported`, or disclosed loss; none of those states is implicit success.
 
-For an attempted crossing `c` at order point `o`, let:
+For an attempted crossing `x` at exact state cut `c`, let:
 
 ```text
-Effective(rho, o) = the unique revision r whose effective order is
-                    maximal among revisions not later than o
+Effective(rho, c) = the unique authoritative policy decision r_c
+                    returned for exactly c
 ```
 
-The policy sequence is valid only when revision identity and effective order
-are explicit and unambiguous. A revision cannot authorize a crossing earlier
-than its effective order. Receipt order, timestamp equality, last-writer-wins,
-or a later final-state snapshot cannot substitute for `R_o`.
+The policy sequence is valid only when decision, revision, state-cut identity,
+and applicable order model are explicit and unambiguous. A later or
+incomparable decision cannot authorize `c`. Decision epoch, receipt order,
+timestamp equality, last-writer-wins, or a later final-state snapshot cannot
+substitute for state-cut resolution.
 
 The deny-first admission predicate is:
 
 ```text
-MayCross(c, Q_o) =
-  AuthenticatedActor(c.actor)
-  and TargetAuthorized(c.actor, c.source_ref)
-  and ParticipantAuthority(c.participant, c.controller, c.authority_basis, o)
-  and ApplicableAndAdmitted(c.action_or_projection_ref, o)
-  and VisibleTo(c.source_ref, c.participant, c.audience, V_p,o)
-  and MarkingAuthorized(c.markings, c.participant, c.audience, o)
-  and DeclassificationOK(c.declassification, Effective(rho, o))
-  and BackendSupports(c, o)
-  and TransformationResultValid(c.redaction_or_transformation, o)
+MayCross(x, Q_c) =
+  AuthenticatedActor(x.actor)
+  and TargetAuthorized(x.actor, x.source_ref)
+  and ParticipantAuthority(x.participant, x.controller, x.authority_basis, c)
+  and ApplicableAndAdmitted(x.action_or_projection_ref, c)
+  and VisibleTo(x.source_ref, x.participant, x.audience, V_p,c)
+  and MarkingAuthorized(x.markings, x.participant, x.audience, c)
+  and DeclassificationOK(x.declassification, Effective(rho, c))
+  and BackendSupports(x, c)
+  and TransformationResultValid(x.redaction_or_transformation, c)
 ```
 
 Each conjunct has its existing owner and evidence. No successful conjunct can
@@ -162,7 +170,7 @@ audience, not participant egress.
 
 ## Labelled Transitions
 
-The closed semantic alphabet for revision `sem-230/rev1` is:
+The closed semantic alphabet for revision `sem-230/rev2` is:
 
 | Label class | State owner or incumbent | Visibility rule |
 | --- | --- | --- |
@@ -177,7 +185,7 @@ The closed semantic alphabet for revision `sem-230/rev1` is:
 | delivery / observation | runtime occurrence and observation envelopes | Delivery order, observation, and acknowledgement remain distinct. |
 | concealment / revocation | view transition and future authority | Cannot erase an earlier visible occurrence. |
 | policy change | revisioned policy state | Never applies retroactively. |
-| evidence / audit | archival state `X_o` | Visible only to its authorized evidence audience. |
+| evidence / audit | archival state `X_c` | Visible only to its authorized evidence audience. |
 
 Let `Q -l-> Q'` mean a valid transition carrying one label from this table and
 its owned evidence. Labels are semantic classes; they do not authorize a new
@@ -185,14 +193,14 @@ implementation-local enum or wire field in issue #796.
 
 ## Participant-Relative Projection And Hiding
 
-For participant `p`, audience `a`, policy revision `r`, and order point `o`,
+For participant `p`, audience `a`, policy decision `r_c`, and state cut `c`,
 define a revisioned projection:
 
 ```text
-Pi[p,a,r,o] : labelled occurrence history -> visible occurrence history
+Pi[p,a,r_c,c] : labelled occurrence history -> visible occurrence history
 ```
 
-An occurrence is retained only when the effective `V_p,o`, audience scope,
+An occurrence is retained only when the effective `V_p,c`, audience scope,
 marking/declassification intersection, delivery basis, and order model retain
 it. Retained occurrences preserve stable occurrence identity, visible order,
 and simultaneity. Equal payload values never collapse repeated occurrences.
@@ -200,7 +208,7 @@ and simultaneity. Equal payload values never collapse repeated occurrences.
 The hidden set is:
 
 ```text
-Tau[p,a,r,o] = { l | Pi[p,a,r,o](l) = epsilon }
+Tau[p,a,r_c,c] = { l | Pi[p,a,r_c,c](l) = epsilon }
 ```
 
 Membership is participant-, audience-, policy-, and order-relative. It is not
@@ -212,31 +220,32 @@ must select another governed relation and evidence it.
 
 Concealment, revocation, rollback, supersession, redaction, and later policy
 change alter future projection or append new visible occurrences. They never
-delete or mutate an occurrence already present in `H_{tr,rho}(p,e,o)`.
+delete or mutate an occurrence already present in `H_{tr,rho}(p,e,c)`.
 
 ## Low Equivalence, Dynamic Purge, And Declassification
 
 Fix participant `p`, episode scope `e`, audience `a`, policy sequence `rho`,
-and initial order point `o0`.
+and initial state cut `c0`.
 
 Two initial states are low-equivalent,
-`q1 ~=_{p,e,a,rho,o0} q2`, exactly when these participant-policy coordinates
+`q1 ~=_{p,e,a,rho,c0} q2`, exactly when these participant-policy coordinates
 are equal:
 
 - participant and episode identity;
-- `V_p,o0`, participant-visible local history, and visible occurrence order;
+- `V_p,c0`, participant-visible local history, delivered decision-surface
+  views, and visible occurrence order;
 - controller identity and participant/actor authority visible to `p`;
-- effective policy identity/revision and its effective order;
+- exact policy-decision identity/revision and its state-cut ref;
 - public markings, declassification authority visible to `p`, and declared
   loss/weakening state; and
-- every other state coordinate that `Pi[p,a,rho,o0]` retains.
+- every other state coordinate that `Pi[p,a,rho,c0]` retains.
 
-`W_o0` and `X_o0` may differ only in coordinates classified high for this
+`W_c0` and `X_c0` may differ only in coordinates classified high for this
 participant-policy comparison. Equality of hidden backend state is not
 required. Conversely, calling two states low-equivalent without naming all
 projection-affecting coordinates is invalid.
 
-For an input/action history `alpha`, dynamic purge is:
+For a run prefix `alpha`, dynamic purge is:
 
 ```text
 purge[p,e,a,rho](alpha) =
@@ -244,21 +253,22 @@ purge[p,e,a,rho](alpha) =
     admitted low inputs,
     policy-change events,
     and permitted declassification events,
-  while removing unauthorized high inputs at the policy/order point where
+  while removing unauthorized high inputs at the exact state cut where
   each input was evaluated
 ```
 
-Purge is dynamic: each occurrence is evaluated against the effective revision
-at its own order point. A later policy revision cannot cause an earlier high
-input to be retained. A permitted declassification event records at least the
-released dimensions, participant/audience, actor/controller/authority basis,
-policy identity/revision, effective order, markings, evidence, and provenance.
+Purge is dynamic: each occurrence is evaluated against the authoritative
+policy decision at its exact state cut. A later or incomparable policy decision
+cannot cause an earlier high input to be retained. A permitted declassification
+event records at least the released dimensions, participant/audience,
+actor/controller/authority basis, policy identity/revision/decision, exact
+state-cut ref, markings, evidence, and provenance.
 
 Two declassification schedules are equal only when those governed coordinates
 and their visible order are equal. Merely releasing equal values is
 insufficient.
 
-## Baseline Policy-Noninterference Obligation
+## Baseline Reactive Policy-Noninterference Obligation
 
 Fix:
 
@@ -266,15 +276,21 @@ Fix:
 - model `M` and valid-transition predicate;
 - environment class `Env`, scheduler class `Sched`, and order model `Ord`;
 - policy sequence `rho` and permitted declassification schedule `D`; and
-- initial order point `o0`.
+- initial state cut `c0`;
+- participant-memory scope `Mem` (`episode_local_reset` only with
+  authoritative reset of every visible memory channel, otherwise
+  `persistent_across_episodes`); and
+- a class `Sigma_L` of low participant strategies mapping delivered local
+  histories to proposal choices or nondeterministic choice sets.
 
-Let `Runs(M, q, alpha, Env, Sched, Ord, rho, D)` be every valid run admitted by
-those fixed parameters. Let:
+Let `Runs(M, q, sigma, Env, Sched, Ord, rho, D, Mem)` be every valid run
+generated when strategy `sigma` reacts only to its participant-visible local
+history under those fixed parameters. Let:
 
 ```text
-LowHist(M, q, alpha, ...) =
+LowHist(M, q, sigma, ...) =
   { Pi[p,a,rho](tr) |
-      tr in Runs(M, q, alpha, Env, Sched, Ord, rho, D) }
+      tr in Runs(M, q, sigma, Env, Sched, Ord, rho, D, Mem) }
 ```
 
 For total order, each element is an occurrence-preserving sequence. For partial
@@ -284,22 +300,30 @@ simultaneity groups—not one convenient linearization.
 The baseline obligation is:
 
 ```text
-forall q1, q2, alpha1, alpha2:
+forall q1, q2, sigma in Sigma_L:
   ValidInitial(q1) and ValidInitial(q2)
-  and q1 ~=_{p,e,a,rho,o0} q2
-  and AdmittedLowInputs(alpha1) = AdmittedLowInputs(alpha2)
-  and purge[p,e,a,rho](alpha1) = purge[p,e,a,rho](alpha2)
-  and DeclassificationSchedule(alpha1) = D
-  and DeclassificationSchedule(alpha2) = D
-  => LowHist(M, q1, alpha1, Env, Sched, Ord, rho, D)
+  and q1 ~=_{p,e,a,rho,c0} q2
+  and StrategyIsLow(sigma, p, a, rho, Mem)
+  and DeclassificationSchedule(q1) = D
+  and DeclassificationSchedule(q2) = D
+  => LowHist(M, q1, sigma, Env, Sched, Ord, rho, D, Mem)
      =
-     LowHist(M, q2, alpha2, Env, Sched, Ord, rho, D)
+     LowHist(M, q2, sigma, Env, Sched, Ord, rho, D, Mem)
 ```
 
-The quantifiers over states, traces/runs, inputs, environments, schedulers, and
-observations are explicit above. `M`, `Env`, `Sched`, `Ord`, `rho`, and `D` are
-fixed parameters of one claim; changing any of them defines another claim
-instance.
+The same strategy is run against both low-equivalent initial states, but its
+future choices may differ when the delivered low histories differ. The
+obligation requires those complete projected support sets not to differ due
+only to unauthorized high variation. Fixed open-loop input histories remain a
+useful special case and falsification model, not the complete claim for an
+adaptive human or agent.
+
+The quantifiers over states, strategies, traces/runs, environments, schedulers,
+and observations are explicit above. `M`, `Env`, `Sched`, `Ord`, `rho`, `D`,
+`Mem`, and `Sigma_L` are fixed parameters of one claim; changing any of them
+defines another claim instance. A probabilistic strategy requires a governed
+probability kernel and measure-sensitive relation; support-set equality alone
+does not establish probabilistic noninterference.
 
 ### Assumption Boundary
 
@@ -327,18 +351,22 @@ The test-local model exercises these falsification cases:
 
 1. unauthorized high variations are purged and leave the same projected
    support set;
-2. authorized declassification changes visible history only at its governed
-   effective order;
-3. a future policy revision cannot authorize a past crossing;
+2. authorized declassification changes visible history only at its exact
+   governed state cut;
+3. a future or incomparable policy decision cannot authorize another cut;
 4. hiding varies by participant and audience;
 5. authorization, admission, visibility, marking, backend support, and
    transformation validity compose deny-first;
 6. redaction does not grant authority and a transformation requires fresh
    admission;
 7. concealment and revocation do not erase prior participant knowledge;
-8. nondeterministic support-set differences are detected; and
-9. positive noninterference prose must bind the governed relation and an
-   evidence boundary.
+8. nondeterministic support-set differences are detected;
+9. adaptive low strategies cannot react to undelivered high variation but do
+   react when that variation leaks;
+10. reset preserves persistent participant information unless an
+    authoritative episode-local memory reset is declared; and
+11. positive noninterference prose must bind the governed relation and an
+    evidence boundary.
 
 These are finite counterexamples and mutation/property checks. They can refute
 the bounded model when an invariant is broken. They do not establish the
@@ -350,10 +378,10 @@ realization.
 | SEM-230 clause | Normative / machine-readable artifact | Executable or policy evidence | Assurance status and nonclaim |
 | --- | --- | --- | --- |
 | participant-relative world, view, local history, archival evidence, controller, authority, and order coordinates | this specification, “Existing Objects And State” | existing participant/runtime validators plus the bounded model | defined; existing adjacent carriers are partly implemented; no complete runtime policy path claimed |
-| revisioned crossings, policy changes, labels, transitions, hidden actions, and projection | this specification, crossing/label/projection sections | policy-order, audience-relative hiding, and append-only-history tests | defined and bounded-tested; no wire contract or runtime mediation claimed |
+| revisioned crossings, exact-cut policy decisions, labels, transitions, hidden actions, and projection | this specification, crossing/label/projection sections | exact-cut resolution, audience-relative hiding, append-only-history, memory-scope, and adaptive-strategy tests | defined and bounded-tested; no wire contract or universal runtime enforcement claimed |
 | authorization, admission, withholding, projection, redaction, declassification, disclosure, concealment, revocation, transformation, loss, and weakening remain distinct | this specification, “Distinct Operations” | deny-first, redaction, transformation, concealment, and revocation tests | defined and bounded-tested; no production enforcement claimed |
-| exact noninterference relation, low equivalence, purge, declassification, quantifiers, scheduler/environment, order, termination/progress/timing, nondeterminism, and probability | this specification plus catalog relation `policy-noninterference` | finite support-set/property cases | definition complete; test status bounded; proof deliberately unproved |
-| claims bind through the relation catalog with evidence status and nonclaims | behavioral-relation catalog revision `rev2` and claim surface `participant-information-flow-policy` | `tools/check_behavioral_relation_claims.py` and catalog/claim tests | catalog implemented and tested; no claim truth inferred from a valid binding |
+| exact reactive noninterference relation, low equivalence, purge, declassification, participant memory, strategy quantifiers, scheduler/environment, order, termination/progress/timing, nondeterminism, and probability | this specification plus catalog relation `policy-noninterference` | finite support-set, adaptive-strategy, exact-cut, and memory-scope cases | definition complete; test status bounded; proof deliberately unproved |
+| claims bind through the relation catalog with evidence status and nonclaims | behavioral-relation catalog revision `rev3` and claim surface `participant-information-flow-policy` | `tools/check_behavioral_relation_claims.py` and catalog/claim tests | catalog implemented and tested; no claim truth inferred from a valid binding |
 | intellectual lineage and exact RAES mappings | `docs/explain/sdl/lineage.md`, lineage ledger, and source audit | SDL-lineage policy gate | reviewed derivation record; no source syntax or compatibility claim |
 
 ## Follow-On Ownership And Nonclaims

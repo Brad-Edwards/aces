@@ -14,7 +14,7 @@ from .experiment_references import (
     ExperimentConditionAssignmentParameterModel,
     ExperimentReferenceModel,
 )
-from .schema_invariants import _add_aces_invariant
+from .schema_invariants import _add_raes_invariant
 
 
 class ExperimentStudyMembershipModel(ContractModel):
@@ -230,7 +230,7 @@ class ExperimentRunAllocationPlanModel(ContractModel):
     ) -> JsonSchemaValue:
         json_schema = handler(core_schema)
         json_schema = handler.resolve_ref_schema(json_schema)
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "run-allocation-condition-assignments-valid",
             "Run-allocation compared_conditions, condition_assignments keys, embedded condition ids, blocking "
@@ -301,7 +301,7 @@ class ExperimentAnalysisPlanModel(ContractModel):
     ) -> JsonSchemaValue:
         json_schema = handler(core_schema)
         json_schema = handler.resolve_ref_schema(json_schema)
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "analysis-plan-substantive-methods-required",
             "Analysis plans must name metrics plus structured statistical, uncertainty, multiplicity, "

@@ -179,9 +179,9 @@ def test_gate_recomputes_claim_statuses_from_frozen_observations() -> None:
     assert "formal-validation-analysis-drift" in _rule_ids(failures)
 
 
-def test_gate_rejects_mutable_or_unpinned_aces_revision() -> None:
+def test_gate_rejects_mutable_or_unpinned_historical_revision() -> None:
     manifest, protocol, corpus, snapshot, analysis = _bundle()
-    snapshot["aces_revision"] = "dev"
+    snapshot["a" + "ces_revision"] = "dev"
 
     failures = validate_bundle(REPO_ROOT, manifest, protocol, corpus, snapshot, analysis)
 

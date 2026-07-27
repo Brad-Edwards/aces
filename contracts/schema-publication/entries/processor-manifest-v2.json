@@ -2,9 +2,9 @@
   "contract_id": "processor-manifest-v2",
   "schema_path": "contracts/schemas/processor-manifest/processor-manifest-v2.json",
   "stability": "draft",
-  "content_hash": "504f5dee2028bbcd49c023c1c57c8ad664f6ea57f51e8c2431e8a185ae275e87",
+  "content_hash": "17335ec9416d0ec5d0e3d7bee409c6d1caabd6250f8cf4159243e4483ebd8897",
   "last_change": {
-    "summary": "Added API-421 time-model-v1 to the processor contract surface.",
-    "content_hash": "504f5dee2028bbcd49c023c1c57c8ad664f6ea57f51e8c2431e8a185ae275e87"
+    "summary": "Authorized processor declarations for the participant resource-budget policy contract introduced by issue #899.",
+    "content_hash": "17335ec9416d0ec5d0e3d7bee409c6d1caabd6250f8cf4159243e4483ebd8897"
   }
 }

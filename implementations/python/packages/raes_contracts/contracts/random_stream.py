@@ -33,7 +33,7 @@ from raes.identifiers import PortableIdentifier
 from ..versions import RANDOM_STREAM_PROFILE_SCHEMA_VERSION, RANDOM_STREAM_VECTOR_SCHEMA_VERSION
 from .base import ContractModel, NonEmptyString, NonNegativeInteger, PositiveInteger, SemanticProfileId
 from .experiment_references import ExperimentReferenceModel
-from .schema_invariants import _add_aces_invariant
+from .schema_invariants import _add_raes_invariant
 from .validators import _validate_controlled_vocabulary_terms
 
 RANDOM_STREAM_DRAW_PURPOSE_SCOPE = "random_streams.draw_purpose"
@@ -147,11 +147,52 @@ class StreamAddressModel(ContractModel):
     ) -> JsonSchemaValue:
         json_schema = handler(core_schema)
         json_schema = handler.resolve_ref_schema(json_schema)
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "random-stream-address-draw-purpose-governed",
             "draw_purpose must be a term from the random_streams.draw_purpose controlled vocabulary.",
             validator="raes_contracts.contracts.random_stream.StreamAddressModel._validate_draw_purpose",
+            inputs=[{"contract_id": "controlled-vocabularies-v1", "instance_path": "#"}],
+        )
+        return json_schema
+
+
+class ParticipantStreamAddressModel(ContractModel):
+    """Closed within-run address for one participant-policy draw."""
+
+    namespace: PortableIdentifier
+    policy_address: NonEmptyString
+    participant_address: NonEmptyString
+    time_segment: NonNegativeInteger
+    occurrence_ordinal: NonNegativeInteger
+    draw_purpose: PortableIdentifier
+    local_coordinate: NonNegativeInteger
+
+    @model_validator(mode="after")
+    def _validate_address(self) -> ParticipantStreamAddressModel:
+        _validate_controlled_vocabulary_terms(RANDOM_STREAM_DRAW_PURPOSE_SCOPE, [self.draw_purpose])
+        if not self.policy_address.startswith("participant.autonomous-execution."):
+            raise ValueError("participant stream policy_address must be a compiled autonomous-execution address")
+        if not self.participant_address.startswith("participant.behavior."):
+            raise ValueError("participant stream participant_address must be a compiled participant address")
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        _add_raes_invariant(
+            json_schema,
+            "participant-random-stream-address-governed",
+            (
+                "draw_purpose must be governed and policy_address/participant_address must be compiled "
+                "autonomous participant addresses."
+            ),
+            validator=("raes_contracts.contracts.random_stream.ParticipantStreamAddressModel._validate_address"),
             inputs=[{"contract_id": "controlled-vocabularies-v1", "instance_path": "#"}],
         )
         return json_schema
@@ -249,7 +290,7 @@ class RandomStreamProfileModel(ContractModel):
     ) -> JsonSchemaValue:
         json_schema = handler(core_schema)
         json_schema = handler.resolve_ref_schema(json_schema)
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "random-stream-profile-transform-keys-match",
             "transforms dict keys must match each entry's embedded transform_id.",
@@ -298,7 +339,7 @@ class RandomStreamDrawRecordModel(ContractModel):
     ) -> JsonSchemaValue:
         json_schema = handler(core_schema)
         json_schema = handler.resolve_ref_schema(json_schema)
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "random-stream-draw-record-local-coordinate-matches-address",
             "local_coordinate must match address.local_coordinate.",
@@ -308,7 +349,7 @@ class RandomStreamDrawRecordModel(ContractModel):
             ),
             inputs=[{"contract_id": "experiment-run-v1", "instance_path": "#/stochastic_draws"}],
         )
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "random-stream-draw-record-outcome-matches-exhaustion",
             "outcome must be present exactly when rejection_exhausted is false, and absent when true.",
@@ -358,7 +399,7 @@ class RandomStreamVectorModel(ContractModel):
     profile_id: SemanticProfileId
     root_entropy: PublicSeedModel
     stream_key_hex: NonEmptyString = Field(pattern=_PUBLIC_SEED_HEX_PATTERN)
-    address: StreamAddressModel
+    address: StreamAddressModel | ParticipantStreamAddressModel
     address_canonical_bytes_hex: NonEmptyString
     raw_block_hex: NonEmptyString
     transform: RandomStreamBoundedIntegerVectorCaseModel | None = None

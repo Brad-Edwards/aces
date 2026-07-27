@@ -381,7 +381,7 @@
       ],
       "title": "ExperimentCaptureWindowModel",
       "type": "object",
-      "x-aces-invariants": [
+      "x-raes-invariants": [
         {
           "description": "Capture window ends_at must not precede starts_at when both timestamps are present.",
           "id": "capture-window-interval-valid",
@@ -704,7 +704,7 @@
       "type": "object"
     }
   },
-  "$id": "https://aces.dev/schemas/experiment-capture-spec-v1.json",
+  "$id": "https://raes.dev/schemas/experiment-capture-spec-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "Declarative EXP-707 specification of what experiment evidence to capture.",
@@ -788,7 +788,7 @@
   ],
   "title": "ExperimentCaptureSpecModel",
   "type": "object",
-  "x-aces-invariants": [
+  "x-raes-invariants": [
     {
       "description": "Every capture_requirements object key must match the embedded requirement_id value, and window_refs must resolve to declared capture_windows.",
       "id": "capture-requirement-key-matches-requirement-id",
@@ -802,14 +802,14 @@
       "validator": "raes_contracts.contracts.ExperimentCaptureSpecModel._validate_capture_spec"
     }
   ],
-  "x-aces-plane": "authored_evidence_requirement",
-  "x-aces-semantic-profile": {
+  "x-raes-plane": "authored_evidence_requirement",
+  "x-raes-semantic-profile": {
     "contract_id": "experiment-capture-spec-v1",
-    "entry_schema_contract_id": "aces-semantic-invariants-v1",
-    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
-    "id": "aces-semantic-invariants-v1",
-    "keyword": "x-aces-invariants",
+    "entry_schema_contract_id": "raes-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/RaesSemanticInvariantEntryModel",
+    "id": "raes-semantic-invariants-v1",
+    "keyword": "x-raes-invariants",
     "required": true,
-    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+    "uri": "https://raes.dev/schemas/semantic-invariants/v1"
   }
 }

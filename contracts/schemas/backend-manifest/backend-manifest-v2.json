@@ -21,6 +21,125 @@
       "title": "ApparatusIdentityModel",
       "type": "object"
     },
+    "ArtifactAcquisitionTimingModel": {
+      "additionalProperties": false,
+      "description": "One exact acquisition/timing combination supported by a backend.",
+      "properties": {
+        "acquisition": {
+          "enum": [
+            "pull",
+            "copy",
+            "import",
+            "local-lookup",
+            "none"
+          ],
+          "title": "Acquisition",
+          "type": "string"
+        },
+        "timing": {
+          "enum": [
+            "publication",
+            "pack-ingestion",
+            "backend-preparation",
+            "realization"
+          ],
+          "title": "Timing",
+          "type": "string"
+        }
+      },
+      "required": [
+        "acquisition",
+        "timing"
+      ],
+      "title": "ArtifactAcquisitionTimingModel",
+      "type": "object"
+    },
+    "ArtifactMechanismCapability": {
+      "additionalProperties": false,
+      "description": "Mechanism-indexed backend support without Cartesian-product overclaim.",
+      "properties": {
+        "mechanism": {
+          "$ref": "#/$defs/ArtifactMechanismProfile"
+        },
+        "supported_requirement_kinds": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Requirement Kinds",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supported_routes": {
+          "items": {
+            "$ref": "#/$defs/ArtifactAcquisitionTimingModel"
+          },
+          "minItems": 1,
+          "title": "Supported Routes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "mechanism",
+        "supported_requirement_kinds",
+        "supported_routes"
+      ],
+      "title": "ArtifactMechanismCapability",
+      "type": "object"
+    },
+    "ArtifactMechanismProfile": {
+      "additionalProperties": false,
+      "description": "Versioned portable mechanism profile.\n\nPortable mechanisms use the governed base names above or a namespaced\n``x-<authority>:<term>`` extension. The profile digest binds the exact\nmechanism contract without making the mechanism set a closed union.",
+      "properties": {
+        "digest": {
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "mechanism": {
+          "anyOf": [
+            {
+              "enum": [
+                "backend-owned-artifact",
+                "dynamic-composition",
+                "exact-artifact",
+                "materialization-specification",
+                "published-candidate"
+              ]
+            },
+            {
+              "pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$"
+            }
+          ],
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Mechanism",
+          "type": "string"
+        },
+        "profile": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:/@+-]*$",
+          "title": "Profile",
+          "type": "string"
+        },
+        "version": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "mechanism",
+        "profile",
+        "version",
+        "digest"
+      ],
+      "title": "ArtifactMechanismProfile",
+      "type": "object"
+    },
     "BackendCapabilitiesV2Model": {
       "additionalProperties": false,
       "properties": {
@@ -119,6 +238,52 @@
       "title": "BackendCompatibilityModel",
       "type": "object"
     },
+    "BindingOwnerModel": {
+      "additionalProperties": false,
+      "description": "Governed contract and validator profile that owns one binding.",
+      "properties": {
+        "contract_id": {
+          "minLength": 1,
+          "title": "Contract Id",
+          "type": "string"
+        },
+        "contract_version": {
+          "minLength": 1,
+          "title": "Contract Version",
+          "type": "string"
+        },
+        "validator_id": {
+          "minLength": 1,
+          "title": "Validator Id",
+          "type": "string"
+        },
+        "validator_version": {
+          "minLength": 1,
+          "title": "Validator Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "contract_id",
+        "contract_version",
+        "validator_id",
+        "validator_version"
+      ],
+      "title": "BindingOwnerModel",
+      "type": "object"
+    },
+    "BindingScalarType": {
+      "description": "Exact JSON scalar type declared by a binding owner.",
+      "enum": [
+        "string",
+        "integer",
+        "number",
+        "boolean",
+        "null"
+      ],
+      "title": "BindingScalarType",
+      "type": "string"
+    },
     "CleanupCapabilitiesModel": {
       "additionalProperties": false,
       "description": "Backend support for the portable SCE-007 cleanup contract family.",
@@ -207,6 +372,95 @@
         "family"
       ],
       "title": "ConceptBindingEntryModel",
+      "type": "object"
+    },
+    "ConfigurationTargetDeclarationModel": {
+      "additionalProperties": false,
+      "description": "One scalar target admitted by an owning portable manifest.",
+      "properties": {
+        "aliases": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Aliases",
+          "type": "array"
+        },
+        "allowed_value_kinds": {
+          "items": {
+            "enum": [
+              "literal",
+              "secret-reference"
+            ],
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Allowed Value Kinds",
+          "type": "array"
+        },
+        "default": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LiteralBindingValueModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "sensitivity": {
+          "enum": [
+            "public",
+            "internal",
+            "restricted",
+            "secret"
+          ],
+          "title": "Sensitivity",
+          "type": "string"
+        },
+        "target_id": {
+          "minLength": 1,
+          "title": "Target Id",
+          "type": "string"
+        },
+        "value_type": {
+          "$ref": "#/$defs/BindingScalarType"
+        }
+      },
+      "required": [
+        "target_id",
+        "value_type",
+        "allowed_value_kinds",
+        "sensitivity"
+      ],
+      "title": "ConfigurationTargetDeclarationModel",
+      "type": "object"
+    },
+    "ConfigurationTargetRegistryModel": {
+      "additionalProperties": false,
+      "description": "Collision-free target registry published by one manifest owner.",
+      "properties": {
+        "owner": {
+          "$ref": "#/$defs/BindingOwnerModel"
+        },
+        "targets": {
+          "additionalProperties": {
+            "$ref": "#/$defs/ConfigurationTargetDeclarationModel"
+          },
+          "minProperties": 1,
+          "propertyNames": {
+            "minLength": 1
+          },
+          "title": "Targets",
+          "type": "object"
+        }
+      },
+      "required": [
+        "owner",
+        "targets"
+      ],
+      "title": "ConfigurationTargetRegistryModel",
       "type": "object"
     },
     "EvaluatorCapabilitiesModel": {
@@ -322,6 +576,43 @@
         "supported_sections"
       ],
       "title": "EvaluatorCapabilitiesModel",
+      "type": "object"
+    },
+    "LiteralBindingValueModel": {
+      "additionalProperties": false,
+      "description": "Portable literal value; strict type validation occurs at its descriptor.",
+      "properties": {
+        "kind": {
+          "const": "literal",
+          "title": "Kind",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "kind",
+        "value"
+      ],
+      "title": "LiteralBindingValueModel",
       "type": "object"
     },
     "ObservationCapabilitiesModel": {
@@ -537,6 +828,94 @@
       "title": "OrchestratorCapabilitiesModel",
       "type": "object"
     },
+    "ParticipantExecutionBindingModel": {
+      "additionalProperties": false,
+      "description": "Exact executable relation between one action and its native targets.",
+      "properties": {
+        "action_contract_address": {
+          "minLength": 1,
+          "title": "Action Contract Address",
+          "type": "string"
+        },
+        "binding_id": {
+          "minLength": 1,
+          "title": "Binding Id",
+          "type": "string"
+        },
+        "constraint_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Constraint Refs",
+          "type": "array"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "max_action_attempts": {
+          "minimum": 1,
+          "title": "Max Action Attempts",
+          "type": "integer"
+        },
+        "max_in_flight": {
+          "minimum": 1,
+          "title": "Max In Flight",
+          "type": "integer"
+        },
+        "max_retries": {
+          "minimum": 0,
+          "title": "Max Retries",
+          "type": "integer"
+        },
+        "participant_implementation_ref": {
+          "minLength": 1,
+          "title": "Participant Implementation Ref",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "participant-execution-binding/v1",
+          "default": "participant-execution-binding/v1",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "target_addresses": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Target Addresses",
+          "type": "array"
+        },
+        "timeout_seconds": {
+          "minimum": 1,
+          "title": "Timeout Seconds",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "binding_id",
+        "action_contract_address",
+        "target_addresses",
+        "participant_implementation_ref",
+        "constraint_refs",
+        "evidence_refs",
+        "max_action_attempts",
+        "max_in_flight",
+        "timeout_seconds",
+        "max_retries"
+      ],
+      "title": "ParticipantExecutionBindingModel",
+      "type": "object"
+    },
     "ParticipantFeatureSupportLevel": {
       "description": "ADR-054 guarantee-strength scale for per-feature participant runtime support.",
       "enum": [
@@ -576,6 +955,113 @@
               "disclosure_refs"
             ]
           }
+        },
+        {
+          "if": {
+            "properties": {
+              "feature": {
+                "enum": [
+                  "participant_declassification",
+                  "participant_directed_inject_delivery",
+                  "participant_egress_projection",
+                  "participant_ingress_admission",
+                  "participant_intervention",
+                  "participant_transformation"
+                ]
+              },
+              "support_level": {
+                "enum": [
+                  "unsupported",
+                  "disclosed_weak",
+                  "bounded"
+                ]
+              }
+            },
+            "required": [
+              "feature",
+              "support_level"
+            ]
+          },
+          "then": {
+            "properties": {
+              "limitation_refs": {
+                "minItems": 1
+              }
+            },
+            "required": [
+              "limitation_refs"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "feature": {
+                "enum": [
+                  "participant_declassification",
+                  "participant_directed_inject_delivery",
+                  "participant_egress_projection",
+                  "participant_ingress_admission",
+                  "participant_intervention",
+                  "participant_transformation"
+                ]
+              },
+              "support_level": {
+                "const": "bounded"
+              }
+            },
+            "required": [
+              "feature",
+              "support_level"
+            ]
+          },
+          "then": {
+            "properties": {
+              "constraint_refs": {
+                "minItems": 1
+              }
+            },
+            "required": [
+              "constraint_refs"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "feature": {
+                "enum": [
+                  "participant_declassification",
+                  "participant_directed_inject_delivery",
+                  "participant_egress_projection",
+                  "participant_ingress_admission",
+                  "participant_intervention",
+                  "participant_transformation"
+                ]
+              },
+              "support_level": {
+                "enum": [
+                  "disclosed_weak",
+                  "bounded",
+                  "exact"
+                ]
+              }
+            },
+            "required": [
+              "feature",
+              "support_level"
+            ]
+          },
+          "then": {
+            "properties": {
+              "evidence_refs": {
+                "minItems": 1
+              }
+            },
+            "required": [
+              "evidence_refs"
+            ]
+          }
         }
       ],
       "description": "API-407 per-feature participant runtime support declaration.",
@@ -596,10 +1082,26 @@
           "title": "Disclosure Refs",
           "type": "array"
         },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
         "feature": {
           "minLength": 1,
           "title": "Feature",
           "type": "string"
+        },
+        "limitation_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Limitation Refs",
+          "type": "array"
         },
         "support_level": {
           "$ref": "#/$defs/ParticipantFeatureSupportLevel"
@@ -612,6 +1114,299 @@
       "title": "ParticipantFeatureSupportModel",
       "type": "object"
     },
+    "ParticipantResourceBudgetCapabilitiesModel": {
+      "additionalProperties": false,
+      "description": "Declared support plus configuration-bound logical pool capacity.",
+      "properties": {
+        "configured_pools": {
+          "items": {
+            "$ref": "#/$defs/ParticipantResourcePoolCapacityModel"
+          },
+          "minItems": 1,
+          "title": "Configured Pools",
+          "type": "array"
+        },
+        "cross_range_pool_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Cross Range Pool Refs",
+          "type": "array"
+        },
+        "realization_contract_ids": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Realization Contract Ids",
+          "type": "array"
+        },
+        "support_strength": {
+          "enum": [
+            "unsupported",
+            "disclosed_weak",
+            "bounded",
+            "exact"
+          ],
+          "title": "Support Strength",
+          "type": "string"
+        },
+        "supported_accounting_modes": {
+          "items": {
+            "enum": [
+              "windowed_counter",
+              "cumulative_counter",
+              "reservable_gauge",
+              "growth_counter",
+              "lease"
+            ],
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Accounting Modes",
+          "type": "array"
+        },
+        "supported_fairness_policies": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Fairness Policies",
+          "type": "array"
+        },
+        "supported_isolation_strengths": {
+          "items": {
+            "enum": [
+              "none",
+              "stateless",
+              "tenant_partitioned"
+            ],
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Isolation Strengths",
+          "type": "array"
+        },
+        "supported_owner_kinds": {
+          "items": {
+            "enum": [
+              "participant",
+              "deployment_tenant",
+              "shared_service",
+              "fleet"
+            ],
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Owner Kinds",
+          "type": "array"
+        },
+        "supported_reset_modes": {
+          "items": {
+            "enum": [
+              "episode",
+              "time_segment",
+              "run",
+              "reconciled"
+            ],
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Reset Modes",
+          "type": "array"
+        },
+        "supported_resource_kinds": {
+          "items": {
+            "enum": [
+              "action_rate",
+              "concurrent_actions",
+              "storage_growth",
+              "inference_tokens",
+              "image_generations",
+              "accelerator"
+            ],
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Resource Kinds",
+          "type": "array"
+        }
+      },
+      "required": [
+        "support_strength",
+        "supported_owner_kinds",
+        "supported_resource_kinds",
+        "supported_accounting_modes",
+        "supported_reset_modes",
+        "supported_fairness_policies",
+        "supported_isolation_strengths",
+        "configured_pools",
+        "realization_contract_ids"
+      ],
+      "title": "ParticipantResourceBudgetCapabilitiesModel",
+      "type": "object"
+    },
+    "ParticipantResourcePoolCapacityModel": {
+      "additionalProperties": false,
+      "properties": {
+        "accounting_mode": {
+          "enum": [
+            "windowed_counter",
+            "cumulative_counter",
+            "reservable_gauge",
+            "growth_counter",
+            "lease"
+          ],
+          "title": "Accounting Mode",
+          "type": "string"
+        },
+        "borrowing": {
+          "minLength": 1,
+          "title": "Borrowing",
+          "type": "string"
+        },
+        "capacity": {
+          "maximum": 1000000000000000000,
+          "minimum": 1,
+          "title": "Capacity",
+          "type": "integer"
+        },
+        "configuration_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Configuration Digest",
+          "type": "string"
+        },
+        "evidence_contract_ids": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Contract Ids",
+          "type": "array"
+        },
+        "fairness_policy": {
+          "minLength": 1,
+          "title": "Fairness Policy",
+          "type": "string"
+        },
+        "max_queue_ticks": {
+          "maximum": 1000000000,
+          "minimum": 0,
+          "title": "Max Queue Ticks",
+          "type": "integer"
+        },
+        "meter_profile_ref": {
+          "minLength": 1,
+          "title": "Meter Profile Ref",
+          "type": "string"
+        },
+        "owner_kind": {
+          "enum": [
+            "participant",
+            "deployment_tenant",
+            "shared_service",
+            "fleet"
+          ],
+          "title": "Owner Kind",
+          "type": "string"
+        },
+        "owner_ref": {
+          "minLength": 1,
+          "title": "Owner Ref",
+          "type": "string"
+        },
+        "pool_ref": {
+          "minLength": 1,
+          "title": "Pool Ref",
+          "type": "string"
+        },
+        "priority_classes": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Priority Classes",
+          "type": "array"
+        },
+        "protected_capacity": {
+          "maximum": 1000000000000000000,
+          "minimum": 0,
+          "title": "Protected Capacity",
+          "type": "integer"
+        },
+        "reclaim": {
+          "minLength": 1,
+          "title": "Reclaim",
+          "type": "string"
+        },
+        "resource_kind": {
+          "enum": [
+            "action_rate",
+            "concurrent_actions",
+            "storage_growth",
+            "inference_tokens",
+            "image_generations",
+            "accelerator"
+          ],
+          "title": "Resource Kind",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "participant-resource-pool-capacity/v1",
+          "default": "participant-resource-pool-capacity/v1",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "starvation_bound_ticks": {
+          "maximum": 1000000000,
+          "minimum": 1,
+          "title": "Starvation Bound Ticks",
+          "type": "integer"
+        },
+        "tenant_isolation": {
+          "enum": [
+            "none",
+            "stateless",
+            "tenant_partitioned"
+          ],
+          "title": "Tenant Isolation",
+          "type": "string"
+        },
+        "unit": {
+          "minLength": 1,
+          "title": "Unit",
+          "type": "string"
+        }
+      },
+      "required": [
+        "pool_ref",
+        "owner_kind",
+        "owner_ref",
+        "resource_kind",
+        "unit",
+        "accounting_mode",
+        "meter_profile_ref",
+        "capacity",
+        "tenant_isolation",
+        "configuration_digest",
+        "fairness_policy",
+        "priority_classes",
+        "borrowing",
+        "reclaim",
+        "max_queue_ticks",
+        "starvation_bound_ticks",
+        "protected_capacity",
+        "evidence_contract_ids"
+      ],
+      "title": "ParticipantResourcePoolCapacityModel",
+      "type": "object"
+    },
     "ParticipantRuntimeCapabilitiesModel": {
       "additionalProperties": false,
       "description": "Participant-episode lifecycle capability block (RUN-311).\n\nA backend that declares this block advertises that it implements\nthe full participant episode control surface on the\n``ParticipantRuntime`` protocol: ``initialize`` / ``reset`` /\n``restart`` / ``terminate`` plus ``status`` / ``results`` /\n``history``. Consumers of the manifest can infer the\n``FULL_REMOTE_CONTROL_PLANE`` conformance profile from this block.\n\nAPI-405 support dimensions live here because they are backend apparatus\nclaims: which participant roles, behavior features, and interaction\nfeatures this participant runtime can actually realize.",
@@ -622,6 +1417,13 @@
           },
           "title": "Constraints",
           "type": "object"
+        },
+        "execution_bindings": {
+          "items": {
+            "$ref": "#/$defs/ParticipantExecutionBindingModel"
+          },
+          "title": "Execution Bindings",
+          "type": "array"
         },
         "feature_support": {
           "items": {
@@ -643,6 +1445,19 @@
           "default": null,
           "title": "Max Autonomous Action Attempts"
         },
+        "max_autonomous_burst_size": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Autonomous Burst Size"
+        },
         "max_autonomous_in_flight": {
           "anyOf": [
             {
@@ -655,6 +1470,19 @@
           ],
           "default": null,
           "title": "Max Autonomous In Flight"
+        },
+        "max_autonomous_occurrences": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Autonomous Occurrences"
         },
         "max_autonomous_participants": {
           "anyOf": [
@@ -669,10 +1497,60 @@
           "default": null,
           "title": "Max Autonomous Participants"
         },
+        "max_autonomous_retries_per_occurrence": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Autonomous Retries Per Occurrence"
+        },
+        "max_concurrent_actions": {
+          "anyOf": [
+            {
+              "minimum": 2,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Concurrent Actions"
+        },
+        "max_execution_services": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Execution Services"
+        },
         "name": {
           "minLength": 1,
           "title": "Name",
           "type": "string"
+        },
+        "resource_budgets": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ParticipantResourceBudgetCapabilitiesModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "supported_autonomous_action_contracts": {
           "items": {
@@ -680,6 +1558,24 @@
             "type": "string"
           },
           "title": "Supported Autonomous Action Contracts",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supported_autonomous_activity_features": {
+          "items": {
+            "enum": [
+              "work-windows",
+              "timing-variation",
+              "weighted-selection",
+              "dependencies",
+              "bounded-retries",
+              "cooldowns",
+              "limited-bursts",
+              "occurrence-provenance"
+            ],
+            "type": "string"
+          },
+          "title": "Supported Autonomous Activity Features",
           "type": "array",
           "uniqueItems": true
         },
@@ -692,9 +1588,34 @@
           "type": "array",
           "uniqueItems": true
         },
+        "supported_autonomous_policy_profiles": {
+          "items": {
+            "enum": [
+              "participant-autonomous-execution/v1",
+              "participant-autonomous-execution/v2",
+              "participant-autonomous-execution/v3"
+            ],
+            "type": "string"
+          },
+          "title": "Supported Autonomous Policy Profiles",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supported_autonomous_random_stream_profiles": {
+          "items": {
+            "const": "blake3-xof-participant-v1",
+            "type": "string"
+          },
+          "title": "Supported Autonomous Random Stream Profiles",
+          "type": "array",
+          "uniqueItems": true
+        },
         "supported_autonomous_selection_strategies": {
           "items": {
-            "const": "ordered_cycle",
+            "enum": [
+              "ordered_cycle",
+              "weighted"
+            ],
             "type": "string"
           },
           "title": "Supported Autonomous Selection Strategies",
@@ -717,6 +1638,22 @@
           },
           "minItems": 1,
           "title": "Supported Behavior Features",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supported_execution_control_actions": {
+          "items": {
+            "enum": [
+              "start",
+              "pause",
+              "resume",
+              "drain",
+              "reset",
+              "teardown"
+            ],
+            "type": "string"
+          },
+          "title": "Supported Execution Control Actions",
           "type": "array",
           "uniqueItems": true
         },
@@ -743,6 +1680,16 @@
         "supports_autonomous_execution": {
           "default": false,
           "title": "Supports Autonomous Execution",
+          "type": "boolean"
+        },
+        "supports_bounded_concurrency": {
+          "default": false,
+          "title": "Supports Bounded Concurrency",
+          "type": "boolean"
+        },
+        "supports_execution_control": {
+          "default": false,
+          "title": "Supports Execution Control",
           "type": "boolean"
         }
       },
@@ -999,6 +1946,13 @@
         }
       ],
       "properties": {
+        "artifact_mechanisms": {
+          "items": {
+            "$ref": "#/$defs/ArtifactMechanismCapability"
+          },
+          "title": "Artifact Mechanisms",
+          "type": "array"
+        },
         "constraints": {
           "additionalProperties": {
             "type": "string"
@@ -1260,7 +2214,7 @@
       "type": "string"
     }
   },
-  "$id": "https://aces.dev/schemas/backend-manifest-v2.json",
+  "$id": "https://raes.dev/schemas/backend-manifest-v2.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "allOf": [
@@ -1375,6 +2329,17 @@
       "title": "Concept Bindings",
       "type": "array"
     },
+    "configuration_registry": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ConfigurationTargetRegistryModel"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
     "constraints": {
       "additionalProperties": {
         "type": "string"
@@ -1414,6 +2379,8 @@
       "items": {
         "enum": [
           "backend-manifest-v2",
+          "artifact-requirement-v1",
+          "experiment-binding-descriptors-v1",
           "realization-envelope-v1",
           "provisioning-plan-v1",
           "orchestration-plan-v1",
@@ -1429,6 +2396,15 @@
           "participant-episode-state-envelope-v1",
           "participant-episode-history-event-stream-v1",
           "participant-behavior-history-event-stream-v1",
+          "participant-execution-binding-v1",
+          "participant-execution-control-v1",
+          "participant-execution-service-state-v1",
+          "participant-resource-budget-policy-v1",
+          "participant-resource-pool-capacity-v1",
+          "participant-resource-budget-state-v1",
+          "participant-resource-budget-event-v1",
+          "participant-control-occurrence-v1",
+          "participant-crossing-occurrence-v1",
           "participant-lifecycle-event-v1",
           "participant-observation-envelope-v1",
           "participant-shared-state-record-v1",

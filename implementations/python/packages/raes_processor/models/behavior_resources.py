@@ -10,6 +10,11 @@ from raes_contracts.participant_behavior import ParticipantObservationStatus
 from raes_contracts.versions import WORKFLOW_STATE_SCHEMA_VERSION
 from raes_contracts.workflow import WorkflowExecutionContract, WorkflowResultContract, WorkflowStepOutcome
 
+from .participant_resources import (
+    ParticipantResourceDemandRuntime,
+    ParticipantResourceFairnessRuntime,
+    ParticipantResourceOwnerRuntime,
+)
 from .resources import ResolvedResource
 
 
@@ -84,6 +89,17 @@ class ParticipantBehaviorRuntime(ResolvedResource):
 
 
 @dataclass(frozen=True)
+class ParticipantExecutionBindingRuntime:
+    """Compiled action-to-target relation for native participant execution."""
+
+    action_contract_address: str
+    target_addresses: tuple[str, ...]
+    participant_implementation_ref: str
+    max_action_attempts: int
+    max_in_flight: int
+
+
+@dataclass(frozen=True)
 class ParticipantAutonomousExecutionRuntime(ResolvedResource):
     """Compiled deterministic execution policy for ordinary participants."""
 
@@ -95,6 +111,7 @@ class ParticipantAutonomousExecutionRuntime(ResolvedResource):
     temporal_constraint_addresses: tuple[str, ...] = ()
     action_contract_addresses: tuple[str, ...] = ()
     target_addresses: tuple[str, ...] = ()
+    execution_bindings: tuple[ParticipantExecutionBindingRuntime, ...] = ()
     observation_boundary_address: str = ""
     selection_strategy: str = ""
     max_action_attempts: int = 0
@@ -105,6 +122,25 @@ class ParticipantAutonomousExecutionRuntime(ResolvedResource):
     proof_producer_refs: tuple[str, ...] = ()
     score_authority_refs: tuple[str, ...] = ()
     receipt_authority_refs: tuple[str, ...] = ()
+    profile: str = "participant-autonomous-execution/v1"
+    work_window_addresses: tuple[str, ...] = ()
+    pause_window_addresses: tuple[str, ...] = ()
+    stochastic_control_ref: str = ""
+    timing_minimum_ticks: int = 0
+    timing_maximum_ticks: int = 0
+    outside_window_disposition: str = ""
+    empty_eligible_disposition: str = ""
+    action_candidate_ids: tuple[str, ...] = ()
+    action_candidate_weights: tuple[int, ...] = ()
+    action_candidate_dependencies: tuple[tuple[str, ...], ...] = ()
+    action_candidate_retry_failure_classes: tuple[tuple[str, ...], ...] = ()
+    action_candidate_max_retries: tuple[int, ...] = ()
+    action_candidate_cooldown_ticks: tuple[int, ...] = ()
+    max_occurrences: int = 0
+    max_burst_size: int = 1
+    resource_owners: tuple[ParticipantResourceOwnerRuntime, ...] = ()
+    resource_demands: tuple[ParticipantResourceDemandRuntime, ...] = ()
+    resource_fairness: ParticipantResourceFairnessRuntime = field(default_factory=ParticipantResourceFairnessRuntime)
 
 
 @dataclass(frozen=True)

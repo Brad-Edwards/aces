@@ -38,6 +38,7 @@ from .participant_action_commit import (
     participant_binding_post_state_digest,
     reject_participant_action_outcome,
 )
+from .participant_execution_runtime import ParticipantExecutionRuntimeMixin
 from .participant_reset import reset_many_atomically
 
 _EMPTY_ADDRESS_MSG = "participant_address must be non-empty"
@@ -54,7 +55,7 @@ def _now_iso() -> str:
     return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
 
-class BaseParticipantRuntime:
+class BaseParticipantRuntime(ParticipantExecutionRuntimeMixin):
     """Shared RUN-311 episode lifecycle base for RAES participant runtimes.
 
     Implements the full episode state machine (initialize, reset, restart,
@@ -266,6 +267,12 @@ class BaseParticipantRuntime:
             "cannot admit participant action for {address!r}: no live episode",
         )
         failure = self._action_precondition_failure(predecessor, snapshot, address)
+        if failure is None:
+            failure = self._execution_generation_failure(
+                request,
+                snapshot,
+                completion=False,
+            )
         native = None
         if failure is None:
             current_state = predecessor

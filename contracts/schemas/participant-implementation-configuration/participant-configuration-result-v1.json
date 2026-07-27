@@ -1,0 +1,282 @@
+{
+  "$defs": {
+    "ApparatusIdentityModel": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "title": "ApparatusIdentityModel",
+      "type": "object"
+    },
+    "BindingOwnerModel": {
+      "additionalProperties": false,
+      "description": "Governed contract and validator profile that owns one binding.",
+      "properties": {
+        "contract_id": {
+          "minLength": 1,
+          "title": "Contract Id",
+          "type": "string"
+        },
+        "contract_version": {
+          "minLength": 1,
+          "title": "Contract Version",
+          "type": "string"
+        },
+        "validator_id": {
+          "minLength": 1,
+          "title": "Validator Id",
+          "type": "string"
+        },
+        "validator_version": {
+          "minLength": 1,
+          "title": "Validator Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "contract_id",
+        "contract_version",
+        "validator_id",
+        "validator_version"
+      ],
+      "title": "BindingOwnerModel",
+      "type": "object"
+    },
+    "BindingScalarType": {
+      "description": "Exact JSON scalar type declared by a binding owner.",
+      "enum": [
+        "string",
+        "integer",
+        "number",
+        "boolean",
+        "null"
+      ],
+      "title": "BindingScalarType",
+      "type": "string"
+    },
+    "LiteralBindingValueModel": {
+      "additionalProperties": false,
+      "description": "Portable literal value; strict type validation occurs at its descriptor.",
+      "properties": {
+        "kind": {
+          "const": "literal",
+          "title": "Kind",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "kind",
+        "value"
+      ],
+      "title": "LiteralBindingValueModel",
+      "type": "object"
+    },
+    "ParticipantConfigurationModel": {
+      "additionalProperties": false,
+      "description": "Canonical digest payload for one complete participant configuration.",
+      "properties": {
+        "implementation_identity": {
+          "$ref": "#/$defs/ApparatusIdentityModel"
+        },
+        "manifest_version": {
+          "minLength": 1,
+          "title": "Manifest Version",
+          "type": "string"
+        },
+        "owner": {
+          "$ref": "#/$defs/BindingOwnerModel"
+        },
+        "values": {
+          "items": {
+            "$ref": "#/$defs/RealizedConfigurationValueModel"
+          },
+          "minItems": 1,
+          "title": "Values",
+          "type": "array"
+        }
+      },
+      "required": [
+        "implementation_identity",
+        "manifest_version",
+        "owner",
+        "values"
+      ],
+      "title": "ParticipantConfigurationModel",
+      "type": "object"
+    },
+    "RealizedConfigurationValueModel": {
+      "additionalProperties": false,
+      "description": "One normalized value in a complete participant configuration.",
+      "properties": {
+        "origin": {
+          "enum": [
+            "default",
+            "override"
+          ],
+          "title": "Origin",
+          "type": "string"
+        },
+        "target_id": {
+          "minLength": 1,
+          "title": "Target Id",
+          "type": "string"
+        },
+        "value": {
+          "discriminator": {
+            "mapping": {
+              "literal": "#/$defs/LiteralBindingValueModel",
+              "secret-reference": "#/$defs/SecretReferenceBindingValueModel"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/LiteralBindingValueModel"
+            },
+            {
+              "$ref": "#/$defs/SecretReferenceBindingValueModel"
+            }
+          ],
+          "title": "Value"
+        },
+        "value_type": {
+          "$ref": "#/$defs/BindingScalarType"
+        }
+      },
+      "required": [
+        "target_id",
+        "value_type",
+        "origin",
+        "value"
+      ],
+      "title": "RealizedConfigurationValueModel",
+      "type": "object"
+    },
+    "SecretReferenceBindingValueModel": {
+      "additionalProperties": false,
+      "description": "Non-sensitive identity of a secret resolved only at an authorized sink.",
+      "properties": {
+        "kind": {
+          "const": "secret-reference",
+          "title": "Kind",
+          "type": "string"
+        },
+        "reference_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$",
+          "title": "Reference Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "reference_id"
+      ],
+      "title": "SecretReferenceBindingValueModel",
+      "type": "object"
+    }
+  },
+  "$id": "https://raes.dev/schemas/participant-configuration-result-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Portable result of one complete, atomic participant configuration validation.",
+  "properties": {
+    "configuration": {
+      "$ref": "#/$defs/ParticipantConfigurationModel"
+    },
+    "configuration_digest": {
+      "minLength": 1,
+      "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+      "title": "Configuration Digest",
+      "type": "string"
+    },
+    "manifest_digest": {
+      "minLength": 1,
+      "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+      "title": "Manifest Digest",
+      "type": "string"
+    },
+    "manifest_ref": {
+      "minLength": 1,
+      "title": "Manifest Ref",
+      "type": "string"
+    },
+    "participant_address": {
+      "minLength": 1,
+      "title": "Participant Address",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "participant-configuration-result/v1",
+      "default": "participant-configuration-result/v1",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "participant_address",
+    "manifest_ref",
+    "manifest_digest",
+    "configuration",
+    "configuration_digest"
+  ],
+  "title": "ParticipantConfigurationResultModel",
+  "type": "object",
+  "x-raes-invariants": [
+    {
+      "description": "The configuration digest must be the RFC 8785/JCS digest of the complete normalized configuration.",
+      "id": "participant-configuration-digest-valid",
+      "inputs": [
+        {
+          "contract_id": "participant-configuration-result-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "raes_contracts.contracts.ParticipantConfigurationResultModel._validate_configuration_digest"
+    }
+  ],
+  "x-raes-semantic-profile": {
+    "contract_id": "participant-configuration-result-v1",
+    "entry_schema_contract_id": "raes-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/RaesSemanticInvariantEntryModel",
+    "id": "raes-semantic-invariants-v1",
+    "keyword": "x-raes-invariants",
+    "required": true,
+    "uri": "https://raes.dev/schemas/semantic-invariants/v1"
+  }
+}

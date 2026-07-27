@@ -11,7 +11,7 @@ module proves the *unifying* obligations #334 owns:
 - OE-11: a bare string (``log``, ``trace``, ``telemetry``, ``observation``,
   ``evidence``) never decides plane ownership -- the carrier role does;
 - the three claim-bearing experiment-core contracts publish their plane as a
-  portable ``x-aces-plane`` annotation; and
+  portable ``x-raes-plane`` annotation; and
 - the five distinctions hold end-to-end (reusing the EXP-707/708/709 structural
   rules and the SEM-216 boundary fixtures where they already cover a probe).
 """
@@ -205,4 +205,4 @@ def test_claim_bearing_contracts_publish_their_plane_annotation():
         "experiment-derived-measure-v1": ObservabilityEvidencePlane.DERIVED_ANALYSIS.value,
     }
     for contract_id, plane_value in expected.items():
-        assert bundle[contract_id].get("x-aces-plane") == plane_value, contract_id
+        assert bundle[contract_id].get("x-raes-plane") == plane_value, contract_id

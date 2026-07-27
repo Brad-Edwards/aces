@@ -5,10 +5,21 @@ established the current layout. The paths below describe historical moves, not
 current uncertainty about where authoritative material lives.
 
 The current project identity migration is recorded separately in
-[RAES Rename Migration Map](raes-rename.md). That map records the hard cutover
-to RAES names and identifies the narrow ACES identifiers that remain only as
-source import paths, governed contract identifiers, historical records, or
-external references.
+[RAES Identity Cutover](raes-rename.md). That note records the final hard
+cutover across repository-owned live surfaces and the exact historical-record
+boundary.
+
+The explicit opt-in from fixed-cadence autonomous participant execution to the
+governed activity profile is documented in
+[Autonomous Execution V2 Migration](autonomous-execution-v2.md).
+
+Scoped participant, tenant, shared-service, and fleet resource governance is
+an explicit v3 opt-in documented in
+[Autonomous Execution V3 Migration](autonomous-execution-v3.md).
+
+Backends that declare autonomous participant execution must adopt the portable
+execution-service surface described in
+[Participant Execution Control Migration](participant-execution-control.md).
 
 The reorganization moved existing material into the current long-term buckets:
 

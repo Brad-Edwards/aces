@@ -4,7 +4,7 @@ This specification defines DSL-437 execution as a composition of existing
 participant semantics and the shared time model. It introduces no background
 actor, inject, or private clock.
 
-## Authored Policy
+## V1 Authored Policy
 
 For behavior specification \(B\), autonomous policy \(P\) contains:
 
@@ -30,6 +30,67 @@ policies only when the bound clock declares runtime authority. Backend,
 system, and external clock authorities are never advanced by the participant
 driver. Stepped and event-driven clocks advance only through shared-time
 control.
+
+## V2 Activity Policy
+
+`participant-autonomous-execution/v2` preserves the same participant, action,
+observation, implementation, clock, progression, authority, and native
+execution boundaries. It replaces v1 cadence/order fields with:
+
+- a non-empty work-window set \(W_P\) and optional pause-window set \(H_P\);
+- inclusive positive timing bounds \([d_{min}, d_{max}]\);
+- stable keyed candidates \(q_i=(action_i, weight_i, dependencies_i,
+  retryClasses_i, maxRetries_i, cooldown_i)\);
+- an `agent-policy` stochastic-control reference; and
+- positive finite occurrence, attempt, burst, and in-flight bounds.
+
+Every availability reference is a finite shared-time `window` on \(C_P\) that
+names the governed behavior specification or every governed participant.
+Eligibility at tick \(t\) is:
+
+\[
+eligibleTime(P,t) =
+  (\exists [s,e) \in W_P : s \le t < e)
+  \land
+  \neg(\exists [s,e) \in H_P : s \le t < e)
+\]
+
+Declaration order is not semantic. For stepped progression, both timing bounds
+are integer multiples of `step_ticks`. A drawn tick outside eligibility follows
+the authored disposition exactly: `skip` terminates that scheduling path;
+`next_opening` performs a finite forward search over declared work windows. It
+never clamps, redraws, sleeps on wall time, or consults host calendar state.
+
+## V3 Scoped Resource Policy
+
+`participant-autonomous-execution/v3` preserves all v2 activity semantics and
+adds one required `resource_budget`. A policy declares a finite owner table,
+one fairness obligation, and a complete typed demand vector containing:
+
+- action-rate (`actions`, windowed counter);
+- concurrent-action (`actions`, reservable gauge);
+- storage-growth (`bytes`, growth counter);
+- inference-token (`tokens`, windowed or cumulative counter);
+- image-generation (`images`, windowed or cumulative counter); and
+- accelerator (`accelerator_milliseconds`, lease).
+
+Each demand binds exactly one owner, logical pool, unit, accounting mode,
+meter profile, limit, reservation quantity, and reset owner. Owner kinds are
+participant, deployment tenant, shared service, and fleet. Participant,
+deployment-tenant, and shared-service refs resolve to their existing canonical
+addresses; a resource owner grants no participant authority or cross-tenant
+access. Deployment-tenant ownership must match an authorized execution target,
+and shared-service ownership must match both the exact target and an explicit
+tenant `uses_shared_service` edge. The optional parent relation is acyclic,
+preserves resource kind, unit, accounting mode, and meter, and cannot increase
+or overcommit its parent limit. Two budget ids cannot alias one canonical pool.
+Storage growth resets only through evidence-backed reconciliation. The single
+participant-owned concurrent-action limit equals `max_in_flight`, so execution
+service and budget readback cannot become independent authorities.
+
+V1 and v2 limits compile into the same canonical demand representation with
+`legacy_maximum` provenance. They do not acquire v3 capacity, fairness,
+isolation, or runtime-accounting requirements.
 
 ## Non-Evaluated Authority Invariant
 
@@ -63,7 +124,44 @@ apparatus contracts; it does not change this selection relation.
 The digest covers the resolved clock, time domain, progression policy, and
 temporal constraints, not only their addresses.
 
+For v2, let \(E(S,t)\) be candidate ids whose dependencies are present in the
+typed completed-candidate set and whose cooldown is not later than \(t\).
+Candidate ids are sorted canonically before compilation. With exact positive
+integer weights and an addressed bounded draw:
+
+\[
+r \in [0,\sum_{i \in E} weight_i - 1]
+\]
+
+the selected candidate is the first canonical prefix interval containing
+\(r\). Dependency filtering precedes the draw. An empty set follows the
+authored `complete` or `wait` disposition and never falls back to all
+candidates. Timing, selection, and burst-size draws use the immutable
+`blake3-xof-participant-v1` profile and the closed address:
+
+\[
+(namespace, policyAddress, participantAddress, segment,
+ occurrenceOrdinal, purpose, localCoordinate)
+\]
+
+Retries retain the occurrence ordinal, selected candidate, timing tick, and
+selection draw. Retry number, worker identity, call order, wall time, and
+backend availability are not stream coordinates. Activity draws are within-run
+policy execution and are separate from scenario-family variation and trial
+compilation.
+
 ## Execution And Evidence
+
+Compilation derives an exact relation
+
+\[
+R_P \subseteq Q_P \times Targets \times Implementations
+\]
+
+from each action contract's effect and precondition support references. A
+backend execution binding must cover each required tuple in \(R_P\). Declaring
+all actions and all targets separately does not establish the Cartesian
+product and is insufficient for admission.
 
 An action may commit only in this order:
 
@@ -75,6 +173,18 @@ An action may commit only in this order:
 5. require a typed native outcome distinct from control-operation success;
 6. append action, state-transition, and observation events; and
 7. update typed scheduler readback.
+
+V3 inserts an atomic reservation of the complete resource vector before step
+4. Physical capacity is owned by one canonical pool ledger shared across
+policies. An exactly-once commit occurs only after the native result supplies
+the complete matching operation/generation/resource/unit/meter measurement
+vector with evidence; protocol failure or an absent/untrusted vector releases
+or rolls back the reservation.
+If any dimension or ancestor pool cannot reserve, no dimension reserves and
+the native action is not invoked. Stable action identity makes reservation and
+settlement idempotent. Every throttle, reservation, commit, release, or reset
+reconciliation is a typed, generation-fenced event; metadata and log text are
+not authoritative accounting.
 
 The scheduler applies these checks to every participant-runtime implementation,
 not only implementations derived from the reference base class. If the result
@@ -90,7 +200,59 @@ match the selected participant implementation.
 `stop` marks the scheduler failed; `continue` advances the bounded attempt
 counter and cadence.
 
+Every autonomous action request carries the resolved native target addresses,
+execution-service scope, and execution generation. The runtime checks that the
+service is running, ready, accepting work, and still at that generation before
+calling the native adapter. It checks the generation again on the returned
+snapshot before committing history. A stale work item or completion is
+rejected without committing native state.
+
+When at least two participants are due and the admitted policy and backend
+limits permit it, native calls execute concurrently against one immutable
+predecessor. Results commit one at a time. For every changed portable map
+entry, the commit requires the current value to equal either the predecessor
+or the incoming value; otherwise it reports a concurrent-commit conflict.
+Scheduler attempt/in-flight counters are reserved before dispatch and settled
+after each serialized commit.
+
+For v2, a retry is admitted only when the typed terminal failure class is in
+the selected candidate's declared retry set and the per-occurrence retry and
+global attempt bounds both remain. Each retry has a distinct attempt id and
+names its predecessor. Protocol-invalid or indeterminate work is not retried.
+A terminal occurrence updates dependency completion and cooldown state before
+the next selection. A burst performs at most `max_burst_size` serialized
+occurrences at one due tick; each remains a distinct occurrence and action
+attempt.
+
+Every committed v2 behavior-history event carries safe occurrence provenance:
+policy/profile, occurrence and attempt identity, predecessor and dependency
+ids, candidate, timing tick/disposition, burst position, terminal outcome, and
+the safe control/profile/address identity. It never carries root entropy,
+derived keys, raw blocks, or backend-private objects.
+
 ## Lifecycle
+
+One execution-service scope owns each autonomous policy. Its portable state
+separates desired/observed lifecycle, generation, health, readiness, work
+admission, finite capacity, reservation/in-flight counters, quiescence,
+resource release, shared-time provenance, and evidence. Legal control
+transitions are:
+
+```text
+stopped --start--> running --pause--> paused --resume--> running
+running|paused --drain(timeout)--> quiescent
+quiescent --reset(generation+1)--> running
+quiescent --teardown--> terminated
+```
+
+Drain rejects new work and succeeds only after reserved and in-flight work are
+zero within its finite timeout. Teardown is idempotent after termination.
+Every transition publishes an operation reference and evidence reference.
+Portable fields are readback, not an implementation of these operations.
+The backend owns the native transition, scheduler/shared-time coordination,
+bounded wait, and resource release. The control boundary rejects nominal
+success unless the backend returns the action-specific observed state, a
+changed operation reference, and new evidence.
 
 Pause changes non-terminal scheduler states on the governed clock to `paused`;
 resume returns them to `running`. Reset begins a new shared-time segment,
@@ -114,6 +276,28 @@ atomic batch implementation rather than inherit the reference in-memory
 transaction.
 Durable and conformance validation require scheduler segment/lifecycle and
 episode identity to agree with the bound shared clock and live episode.
+V2 reset also clears occurrence, retry, dependency, cooldown, and burst
+continuation, then derives the next timing and burst values under the new
+shared-time segment. The segment is part of every activity address, so reset
+generations cannot alias prior draws. Participant/service state changes remain
+owned by native action results and existing episode/reset contracts; scheduler
+timestamps alone make no causal or rollback claim.
+
+The service readback binds the policy, execution relation, and admitted
+shared-time declaration by digest and names its scheduler states. Shared-clock
+pause/resume changes both scheduler and execution-service readiness. A
+shared-clock reset advances the execution generation. Loss of runtime wall
+pacing marks the service degraded, not ready, and paused and appends an
+explicit pacing-deviation evidence reference; it is never silently treated as
+successful timing.
+
+V3 reset reconciles outstanding reservations before advancing the execution
+generation. A `time_segment` boundary clears only dimensions owned by that
+boundary. Tenant, shared-service, fleet, and persistent storage use survive
+participant or segment reset unless their own declared reset/reconciliation
+rule applies. Execution-service resource refs name the authoritative budget
+states; its concurrency capacity, reservation, and in-flight projection must
+equal the referenced concurrent-action state.
 
 ## Backend Admission
 
@@ -147,10 +331,52 @@ V_P \in K.observationBoundaries
 targets(Q_P) \subseteq K.targets
 \]
 
+\[
+R_P \subseteq K.executionBindings
+\]
+
 and every parent behavior feature required by \(P\) must be in the backend
 feature set. A reset-capable policy additionally requires the coordinated
 participant-reset capability and runtime method. Runtime state, typed native
 action outcome, history, and backend evidence establish what occurred.
+
+Autonomous admission also requires all six execution-control actions,
+`supports_bounded_concurrency`, positive execution-service capacity, and
+`max_concurrent_actions \ge 2`. Conditional live conformance executes two
+native actions and the lifecycle sequence. Schema-valid declarations without
+typed native outcomes, operation accounting, service readback, or transition
+evidence fail conformance.
+
+V2 additionally requires exact admission of:
+
+- `participant-autonomous-execution/v2`;
+- all governed activity features;
+- `weighted`;
+- `blake3-xof-participant-v1`;
+- shared-time `window`; and
+- occurrence, retry-per-occurrence, and burst-size maxima.
+
+Missing or differently named support fails admission; no compatible-profile,
+transform, or strategy fallback is inferred.
+
+V3 additionally requires exact, all-or-nothing admission of:
+
+- the complete six-kind demand vector and owner/parent graph;
+- bounded or exact backend support for every owner, kind, accounting mode,
+  reset mode, and fairness policy;
+- one configuration-bound pool entry matching each demand's canonical owner,
+  pool, kind, unit, accounting mode, and meter;
+- configured capacity at least equal to the admitted limit;
+- tenant-partitioned isolation for every declared cross-range pool; and
+- the budget state and event realization contracts.
+
+Manifest support, configured capacity, and measured realization are distinct
+authorities. A capability declaration is not utilization evidence; a runtime
+sample cannot enlarge configured capacity. Fairness is explicit and
+role-independent: priority class, weight, protected posture, borrowing,
+reclaim, queue bound, and starvation bound are admitted as one obligation.
+Backends may not infer priority from participant color or evaluation
+authority.
 
 ## Nonclaims
 
@@ -173,4 +399,7 @@ execution remains rejected because no portable transition-notification
 contract is yet governed. This establishes the portable protocol behavior only. A
 production backend still must prove that its selected participant
 implementation, native adapter, targets, evidence, and readback faithfully
-materialize a scenario.
+materialize a scenario. V3 additionally covers canonical legacy projection,
+atomic multi-resource admission and reservation, typed runtime state/events,
+generation-fenced settlement and reset reconciliation, durable/control-plane
+projection, and cross-range isolation rejection.

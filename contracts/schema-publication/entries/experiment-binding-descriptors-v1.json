@@ -1,0 +1,10 @@
+{
+  "contract_id": "experiment-binding-descriptors-v1",
+  "schema_path": "contracts/schemas/experiment-core/experiment-binding-descriptors-v1.json",
+  "stability": "draft",
+  "content_hash": "fe1e2308c9c101f1b115a5b673b369eab68431a5c3befc41cba9cf5169475f97",
+  "last_change": {
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "fe1e2308c9c101f1b115a5b673b369eab68431a5c3befc41cba9cf5169475f97"
+  }
+}

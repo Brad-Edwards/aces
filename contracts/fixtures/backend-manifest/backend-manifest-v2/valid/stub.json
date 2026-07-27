@@ -125,13 +125,95 @@
     },
     "participant_runtime": {
       "constraints": {},
-      "feature_support": [],
+      "execution_bindings": [],
+      "feature_support": [
+        {
+          "constraint_refs": [],
+          "disclosure_refs": [
+            "disclosure:participant_declassification:unsupported"
+          ],
+          "evidence_refs": [],
+          "feature": "participant_declassification",
+          "limitation_refs": [
+            "limitation:participant_declassification:not-realized"
+          ],
+          "support_level": "unsupported"
+        },
+        {
+          "constraint_refs": [],
+          "disclosure_refs": [
+            "disclosure:participant_directed_inject_delivery:unsupported"
+          ],
+          "evidence_refs": [],
+          "feature": "participant_directed_inject_delivery",
+          "limitation_refs": [
+            "limitation:participant_directed_inject_delivery:not-realized"
+          ],
+          "support_level": "unsupported"
+        },
+        {
+          "constraint_refs": [],
+          "disclosure_refs": [
+            "disclosure:participant_egress_projection:unsupported"
+          ],
+          "evidence_refs": [],
+          "feature": "participant_egress_projection",
+          "limitation_refs": [
+            "limitation:participant_egress_projection:not-realized"
+          ],
+          "support_level": "unsupported"
+        },
+        {
+          "constraint_refs": [],
+          "disclosure_refs": [
+            "disclosure:participant_ingress_admission:unsupported"
+          ],
+          "evidence_refs": [],
+          "feature": "participant_ingress_admission",
+          "limitation_refs": [
+            "limitation:participant_ingress_admission:not-realized"
+          ],
+          "support_level": "unsupported"
+        },
+        {
+          "constraint_refs": [],
+          "disclosure_refs": [
+            "disclosure:participant_intervention:unsupported"
+          ],
+          "evidence_refs": [],
+          "feature": "participant_intervention",
+          "limitation_refs": [
+            "limitation:participant_intervention:not-realized"
+          ],
+          "support_level": "unsupported"
+        },
+        {
+          "constraint_refs": [],
+          "disclosure_refs": [
+            "disclosure:participant_transformation:unsupported"
+          ],
+          "evidence_refs": [],
+          "feature": "participant_transformation",
+          "limitation_refs": [
+            "limitation:participant_transformation:not-realized"
+          ],
+          "support_level": "unsupported"
+        }
+      ],
       "max_autonomous_action_attempts": null,
+      "max_autonomous_burst_size": null,
       "max_autonomous_in_flight": null,
+      "max_autonomous_occurrences": null,
       "max_autonomous_participants": null,
+      "max_autonomous_retries_per_occurrence": null,
+      "max_concurrent_actions": null,
+      "max_execution_services": null,
       "name": "stub-participant-runtime",
       "supported_autonomous_action_contracts": [],
+      "supported_autonomous_activity_features": [],
       "supported_autonomous_observation_boundaries": [],
+      "supported_autonomous_policy_profiles": [],
+      "supported_autonomous_random_stream_profiles": [],
       "supported_autonomous_selection_strategies": [],
       "supported_autonomous_target_addresses": [],
       "supported_behavior_features": [
@@ -158,7 +240,11 @@
         "red",
         "white"
       ],
-      "supports_autonomous_execution": false
+      "supported_execution_control_actions": [],
+      "resource_budgets": null,
+      "supports_autonomous_execution": false,
+      "supports_bounded_concurrency": false,
+      "supports_execution_control": false
     },
     "provisioner": {
       "constraints": {},
@@ -201,7 +287,7 @@
   },
   "compatibility": {
     "processors": [
-      "aces-reference-processor"
+      "raes-reference-processor"
     ]
   },
   "concept_bindings": [
@@ -269,6 +355,7 @@
   },
   "realization_support": [
     {
+      "artifact_mechanisms": [],
       "constraints": {},
       "disclosure_kinds": [
         "backend-manifest-v2",
@@ -293,6 +380,7 @@
   "schema_version": "backend-manifest/v2",
   "supported_contract_versions": [
     "backend-manifest-v2",
+    "artifact-requirement-v1",
     "provisioning-plan-v1",
     "orchestration-plan-v1",
     "evaluation-plan-v1",
@@ -307,6 +395,15 @@
     "participant-episode-state-envelope-v1",
     "participant-episode-history-event-stream-v1",
     "participant-behavior-history-event-stream-v1",
+    "participant-execution-binding-v1",
+    "participant-execution-control-v1",
+    "participant-execution-service-state-v1",
+    "participant-resource-budget-policy-v1",
+    "participant-resource-pool-capacity-v1",
+    "participant-resource-budget-state-v1",
+    "participant-resource-budget-event-v1",
+    "participant-control-occurrence-v1",
+    "participant-crossing-occurrence-v1",
     "participant-lifecycle-event-v1",
     "participant-observation-envelope-v1",
     "participant-shared-state-record-v1",

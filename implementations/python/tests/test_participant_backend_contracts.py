@@ -12,6 +12,7 @@ from raes_contracts.contracts import (
     VIEW_SCOPE_PROJECTED_FIELDS,
     ParticipantBehaviorHistoryEventModel,
     ParticipantContextViewModel,
+    ParticipantCrossingOccurrenceModel,
     ParticipantEpisodeHistoryEventModel,
     ParticipantEpisodeStateModel,
     ParticipantHistoryViewBehaviorEventModel,
@@ -37,6 +38,7 @@ PARTICIPANT_RUNTIME_FIXTURE_MODELS = {
     "participant-shared-state-record-v1": ParticipantSharedStateRecordModel,
     "participant-joint-action-record-v1": ParticipantJointActionRecordModel,
     "participant-time-management-context-v1": ParticipantTimeManagementContextModel,
+    "participant-crossing-occurrence-v1": ParticipantCrossingOccurrenceModel,
     "participant-outcome-report-v1": ParticipantOutcomeReportModel,
 }
 CONTROL_PLANE_VIEW_FIXTURE_MODELS = {
@@ -77,7 +79,7 @@ def test_participant_backend_contracts_are_published_closed_world():
         assert contract_id in generated
         schema = generated[contract_id]
         assert schema["$schema"] == "https://json-schema.org/draft/2020-12/schema"
-        assert schema["$id"] == f"https://aces.dev/schemas/{contract_id}.json"
+        assert schema["$id"] == f"https://raes.dev/schemas/{contract_id}.json"
         assert schema["additionalProperties"] is False
 
 

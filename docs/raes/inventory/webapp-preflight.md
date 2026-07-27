@@ -35,8 +35,8 @@ methodology.
 
 - Inventory methodology and ledger validator:
   `docs/raes/inventory/asset-inventory-methodology.md`,
-  `src/aptl/core/aces_inventory.py`, and
-  `tests/test_aces_inventory_methodology.py`.
+  `src/aptl/core/raes_inventory.py`, and
+  `tests/test_raes_inventory_methodology.py`.
 - Existing evidence-bundle shape:
   `docs/raes/inventory/shuffle-backend/README.md`,
   `docs/raes/inventory/shuffle-backend/mapping-ledger.yaml`, and the
@@ -45,7 +45,7 @@ methodology.
   `docker-compose.yml` service `webapp`, `containers/webapp/Dockerfile`,
   `containers/webapp/entrypoint.sh`, `containers/webapp/supervisord.conf`,
   `containers/webapp/requirements.txt`, and `containers/webapp/app/`.
-- RAES SDL authority: sibling `../aces-sdl` parser/model documentation and
+- RAES SDL authority: sibling `../raes-sdl` parser/model documentation and
   the closed RAES #354 runtime-surface gap. Do not parse
   `techvault.sdl.yaml` with `aptl.core.sdl`.
 - Secret and evidence safety: ADR-057, ADR-029, `aptl.utils.redaction`, the
@@ -61,7 +61,7 @@ methodology.
 - Runtime evidence must cite the command/source that produced each claim:
   Docker inspect/history/network/volume/top, in-container runtime baseline,
   package manifests, filesystem hashes, and scanner output when available.
-- `mapping-ledger.yaml` must validate through `aptl aces-inventory validate`
+- `mapping-ledger.yaml` must validate through `aptl raes-inventory validate`
   with every captured fact assigned an RAES/APTL disposition and no temporary
   `needs_gap_triage` rows.
 - Tests must fail if the webapp bundle omits required evidence, if evidence

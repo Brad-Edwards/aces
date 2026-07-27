@@ -1,4 +1,4 @@
-template: aces-library-template
+template: raes-library-template
 version: 1
 id: action-contract-observation-boundary
 surface: participant_behavior

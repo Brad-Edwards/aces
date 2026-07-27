@@ -2,9 +2,9 @@
   "contract_id": "random-stream-vector-v1",
   "schema_path": "contracts/schemas/profiles/random-stream-vector-v1.json",
   "stability": "draft",
-  "content_hash": "211900771cefa8c7e21b6194850d776a367a32afa9b270bc4f9a71798c58476e",
+  "content_hash": "32d04d87018c3ac25a85a3a27e3d7f9cbe27ab37477380c7c8d786257d80e883",
   "last_change": {
-    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
-    "content_hash": "211900771cefa8c7e21b6194850d776a367a32afa9b270bc4f9a71798c58476e"
+    "summary": "Added the closed participant-occurrence stream-address variant to canonical random-stream vectors for issue #897.",
+    "content_hash": "32d04d87018c3ac25a85a3a27e3d7f9cbe27ab37477380c7c8d786257d80e883"
   }
 }

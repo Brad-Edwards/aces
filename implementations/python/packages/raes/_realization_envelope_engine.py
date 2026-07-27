@@ -148,7 +148,7 @@ def _model_present_children(model: BaseModel) -> set[str]:
     present: set[str] = set()
     for name, info in type(model).model_fields.items():
         schema_extra = info.json_schema_extra
-        if isinstance(schema_extra, Mapping) and schema_extra.get("x-aces-realization-dimension") is False:
+        if isinstance(schema_extra, Mapping) and schema_extra.get("x-raes-realization-dimension") is False:
             continue
         child = getattr(model, name)
         if not _is_nonempty(child):

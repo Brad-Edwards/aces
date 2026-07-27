@@ -109,8 +109,8 @@ def test_control_plane_api_default_security_does_not_trust_builtin_headers_or_to
         header_response = client.get(
             "/snapshot",
             headers={
-                "x-aces-client-verified": "true",
-                "x-aces-client-identity": "backend-service",
+                "x-raes-client-verified": "true",
+                "x-raes-client-identity": "backend-service",
             },
         )
         token_response = client.get(
@@ -170,7 +170,7 @@ propositions:
     description: The governed VM has declared runtime state.
     subjects: [nodes.vm]
     basis: declared_state
-    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:raes:declared-property:runtime, operator: exists}
 assertions:
   health: {proposition: health, role: postcondition, polarity: positive}
 entities:
@@ -198,8 +198,8 @@ workflows:
         security=_test_security(target.name),
     )
     headers = {
-        "x-aces-client-verified": "true",
-        "x-aces-client-identity": "backend-service",
+        "x-raes-client-verified": "true",
+        "x-raes-client-identity": "backend-service",
     }
 
     with TestClient(app) as client:
@@ -253,7 +253,7 @@ propositions:
     description: The governed VM has declared runtime state.
     subjects: [nodes.vm]
     basis: declared_state
-    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:raes:declared-property:runtime, operator: exists}
 assertions:
   health: {proposition: health, role: postcondition, polarity: positive}
 entities:
@@ -281,8 +281,8 @@ workflows:
         security=_test_security(target.name),
     )
     backend_headers = {
-        "x-aces-client-verified": "true",
-        "x-aces-client-identity": "backend-service",
+        "x-raes-client-verified": "true",
+        "x-raes-client-identity": "backend-service",
     }
     auditor_headers = {"authorization": "Bearer test-auditor-token"}
 
@@ -369,8 +369,8 @@ def test_control_plane_api_supports_idempotent_retries():
         security=_test_security(target.name),
     )
     headers = {
-        "x-aces-client-verified": "true",
-        "x-aces-client-identity": "backend-service",
+        "x-raes-client-verified": "true",
+        "x-raes-client-identity": "backend-service",
         "idempotency-key": "same-request",
     }
 
@@ -409,8 +409,8 @@ nodes:
         security=_test_security(target.name),
     )
     headers = {
-        "x-aces-client-verified": "true",
-        "x-aces-client-identity": "backend-service",
+        "x-raes-client-verified": "true",
+        "x-raes-client-identity": "backend-service",
     }
 
     with TestClient(app) as client:
@@ -504,8 +504,8 @@ def test_control_plane_api_enforces_request_size_limit():
     security = _test_security(target.name, max_request_bytes=32)
     app = create_control_plane_app(control_plane, security=security)
     headers = {
-        "x-aces-client-verified": "true",
-        "x-aces-client-identity": "backend-service",
+        "x-raes-client-verified": "true",
+        "x-raes-client-identity": "backend-service",
     }
 
     with TestClient(app) as client:
@@ -526,8 +526,8 @@ def test_control_plane_api_rejects_invalid_content_length_header():
         security=_test_security(target.name),
     )
     headers = {
-        "x-aces-client-verified": "true",
-        "x-aces-client-identity": "backend-service",
+        "x-raes-client-verified": "true",
+        "x-raes-client-identity": "backend-service",
         "content-type": "application/json",
         "content-length": "not-a-number",
     }
@@ -602,7 +602,7 @@ propositions:
     description: The governed VM has declared runtime state.
     subjects: [nodes.vm]
     basis: declared_state
-    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:raes:declared-property:runtime, operator: exists}
 assertions:
   health: {proposition: health, role: postcondition, polarity: positive}
 entities:
@@ -630,8 +630,8 @@ workflows:
         security=_test_security(target.name),
     )
     headers = {
-        "x-aces-client-verified": "true",
-        "x-aces-client-identity": "backend-service",
+        "x-raes-client-verified": "true",
+        "x-raes-client-identity": "backend-service",
     }
 
     with TestClient(app) as client:
@@ -684,7 +684,7 @@ propositions:
     description: The governed VM has declared runtime state.
     subjects: [nodes.vm]
     basis: declared_state
-    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:raes:declared-property:runtime, operator: exists}
 assertions:
   health: {proposition: health, role: postcondition, polarity: positive}
 entities:
@@ -713,8 +713,8 @@ workflows:
         security=_test_security(target.name),
     )
     headers = {
-        "x-aces-client-verified": "true",
-        "x-aces-client-identity": "backend-service",
+        "x-raes-client-verified": "true",
+        "x-raes-client-identity": "backend-service",
     }
 
     with TestClient(app) as client:
@@ -777,7 +777,7 @@ propositions:
     description: The governed VM has declared runtime state.
     subjects: [nodes.vm]
     basis: declared_state
-    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:raes:declared-property:runtime, operator: exists}
 assertions:
   health: {proposition: health, role: postcondition, polarity: positive}
 entities:
@@ -814,8 +814,8 @@ workflows:
         security=_test_security(target.name),
     )
     headers = {
-        "x-aces-client-verified": "true",
-        "x-aces-client-identity": "backend-service",
+        "x-raes-client-verified": "true",
+        "x-raes-client-identity": "backend-service",
     }
 
     with TestClient(app) as client:
@@ -903,7 +903,7 @@ propositions:
     description: The governed VM has declared runtime state.
     subjects: [nodes.vm]
     basis: declared_state
-    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:raes:declared-property:runtime, operator: exists}
 assertions:
   health: {proposition: health, role: postcondition, polarity: positive}
 entities:
@@ -941,8 +941,8 @@ workflows:
         security=_test_security(target.name),
     )
     headers = {
-        "x-aces-client-verified": "true",
-        "x-aces-client-identity": "backend-service",
+        "x-raes-client-verified": "true",
+        "x-raes-client-identity": "backend-service",
     }
 
     with TestClient(app) as client:
@@ -1026,8 +1026,8 @@ class TestParticipantEpisodeHttpRoutes:
     @property
     def _headers(self) -> dict[str, str]:
         return {
-            "x-aces-client-verified": "true",
-            "x-aces-client-identity": "backend-service",
+            "x-raes-client-verified": "true",
+            "x-raes-client-identity": "backend-service",
         }
 
     def test_initialize_route_creates_first_episode(self):

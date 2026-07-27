@@ -19,6 +19,7 @@ from raes_backend_protocols.capabilities import (
     PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE,
     PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS,
     PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE,
+    PARTICIPANT_RUNTIME_POLICY_FEATURES,
     PARTICIPANT_RUNTIME_ROLE_SCOPE,
     TIME_CAPABILITY_REQUIRED_CONTRACTS,
     BackendCapabilitySet,
@@ -27,6 +28,7 @@ from raes_backend_protocols.capabilities import (
     EvaluatorCapabilities,
     ObservationCapabilities,
     OrchestratorCapabilities,
+    ParticipantFeatureSupport,
     ParticipantRuntimeCapabilities,
     ProvisionerCapabilities,
     TimeCapabilities,
@@ -35,18 +37,22 @@ from raes_backend_protocols.capabilities import (
 )
 from raes_contracts.apparatus import ConceptBinding, RealizationSupportDeclaration
 from raes_contracts.manifest_authority import BACKEND_SUPPORTED_CONTRACT_IDS
-from raes_contracts.vocabulary import RealizationSupportMode
+from raes_contracts.vocabulary import ParticipantFeatureSupportLevel, RealizationSupportMode
 
 REFERENCE_BACKEND_NAME = "reference-emulation"
 REFERENCE_BACKEND_SUPPORTED_CONTRACT_VERSIONS = frozenset(
-    contract_id for contract_id in BACKEND_SUPPORTED_CONTRACT_IDS if contract_id != "realization-envelope-v1"
+    contract_id
+    for contract_id in BACKEND_SUPPORTED_CONTRACT_IDS
+    if contract_id not in {"experiment-binding-descriptors-v1", "realization-envelope-v1"}
 )
 _TIME_DEDICATED_CONTRACT_VERSIONS = frozenset({"time-model-v1", "time-runtime-state-v1", "realized-time-model-v1"})
 
 _PARTICIPANT_ROLES = frozenset(PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_ROLE_SCOPE])
-_PARTICIPANT_BEHAVIOR_FEATURES = frozenset(
-    PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE]
-) - {"autonomous_execution"}
+_PARTICIPANT_BEHAVIOR_FEATURES = (
+    frozenset(PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE])
+    - {"autonomous_execution"}
+    - PARTICIPANT_RUNTIME_POLICY_FEATURES
+)
 _PARTICIPANT_INTERACTION_FEATURES = frozenset(
     PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE]
 )
@@ -158,6 +164,65 @@ def _time_capabilities(*, enabled: bool) -> TimeCapabilities | None:
     )
 
 
+def _participant_runtime_capabilities() -> ParticipantRuntimeCapabilities:
+    return ParticipantRuntimeCapabilities(
+        name="reference-emulation-participant-runtime",
+        supported_participant_roles=_PARTICIPANT_ROLES,
+        supported_behavior_features=_PARTICIPANT_BEHAVIOR_FEATURES,
+        supported_interaction_features=_PARTICIPANT_INTERACTION_FEATURES,
+        feature_support=tuple(
+            ParticipantFeatureSupport(
+                feature=feature,
+                support_level=ParticipantFeatureSupportLevel.UNSUPPORTED,
+                limitation_refs=(f"limitation:{feature}:not-realized",),
+                disclosure_refs=(f"disclosure:{feature}:unsupported",),
+            )
+            for feature in sorted(PARTICIPANT_RUNTIME_POLICY_FEATURES)
+        ),
+    )
+
+
+def _observation_capabilities() -> ObservationCapabilities:
+    return ObservationCapabilities(
+        name="reference-emulation-observation",
+        supported_capture_kinds=frozenset({"artifact", "log", "observation", "telemetry", "trace"}),
+        supported_channel_kinds=frozenset(
+            {
+                "backend-log",
+                "evaluation-history",
+                "file-artifact",
+                "participant-observation",
+                "runtime-snapshot",
+                "workflow-history",
+            }
+        ),
+        supported_evidence_contracts=frozenset(
+            {
+                "experiment-capture-spec-v1",
+                "experiment-evidence-record-v1",
+                "experiment-derived-measure-v1",
+                "experiment-run-v1",
+            }
+        ),
+        supported_media_types=frozenset({"application/json", "text/plain"}),
+        supported_sealing_modes=frozenset({"digest", "immutable-store"}),
+        supports_redaction=True,
+        supports_loss_disclosure=True,
+        supports_chain_of_custody=False,
+    )
+
+
+def _cleanup_capabilities() -> CleanupCapabilities:
+    return CleanupCapabilities(
+        name="reference-emulation-cleanup",
+        supported_contract_versions=CLEANUP_CAPABILITY_REQUIRED_CONTRACTS,
+        supported_action_kinds=frozenset({"destroy", "reset", "restore", "compensate", "verify"}),
+        supported_verification_methods=frozenset({"probe", "receipt"}),
+        supports_reusable_state=True,
+        supports_residual_state_disclosure=True,
+    )
+
+
 def _capabilities(*, with_time: bool) -> BackendCapabilitySet:
     return BackendCapabilitySet(
         provisioner=ProvisionerCapabilities(
@@ -209,47 +274,9 @@ def _capabilities(*, with_time: bool) -> BackendCapabilitySet:
             supported_time_domains=frozenset({"scenario_time"}),
             preserves_binding_provenance=True,
         ),
-        participant_runtime=ParticipantRuntimeCapabilities(
-            name="reference-emulation-participant-runtime",
-            supported_participant_roles=_PARTICIPANT_ROLES,
-            supported_behavior_features=_PARTICIPANT_BEHAVIOR_FEATURES,
-            supported_interaction_features=_PARTICIPANT_INTERACTION_FEATURES,
-        ),
-        observation=ObservationCapabilities(
-            name="reference-emulation-observation",
-            supported_capture_kinds=frozenset({"artifact", "log", "observation", "telemetry", "trace"}),
-            supported_channel_kinds=frozenset(
-                {
-                    "backend-log",
-                    "evaluation-history",
-                    "file-artifact",
-                    "participant-observation",
-                    "runtime-snapshot",
-                    "workflow-history",
-                }
-            ),
-            supported_evidence_contracts=frozenset(
-                {
-                    "experiment-capture-spec-v1",
-                    "experiment-evidence-record-v1",
-                    "experiment-derived-measure-v1",
-                    "experiment-run-v1",
-                }
-            ),
-            supported_media_types=frozenset({"application/json", "text/plain"}),
-            supported_sealing_modes=frozenset({"digest", "immutable-store"}),
-            supports_redaction=True,
-            supports_loss_disclosure=True,
-            supports_chain_of_custody=False,
-        ),
-        cleanup=CleanupCapabilities(
-            name="reference-emulation-cleanup",
-            supported_contract_versions=CLEANUP_CAPABILITY_REQUIRED_CONTRACTS,
-            supported_action_kinds=frozenset({"destroy", "reset", "restore", "compensate", "verify"}),
-            supported_verification_methods=frozenset({"probe", "receipt"}),
-            supports_reusable_state=True,
-            supports_residual_state_disclosure=True,
-        ),
+        participant_runtime=_participant_runtime_capabilities(),
+        observation=_observation_capabilities(),
+        cleanup=_cleanup_capabilities(),
         time=_time_capabilities(enabled=with_time),
     )
 
@@ -271,7 +298,7 @@ def create_reference_backend_manifest(*, with_time: bool = False, **config) -> B
             if with_time
             else REFERENCE_BACKEND_SUPPORTED_CONTRACT_VERSIONS - _TIME_DEDICATED_CONTRACT_VERSIONS
         ),
-        compatible_processors=frozenset({"aces-reference-processor"}),
+        compatible_processors=frozenset({"raes-reference-processor"}),
         concept_bindings=_concept_bindings(with_time=with_time),
         realization_support=_realization_support(),
         capabilities=_capabilities(with_time=with_time),

@@ -2,9 +2,9 @@
   "contract_id": "participant-decision-surface-v1",
   "schema_path": "contracts/schemas/control-plane/participant-decision-surface-v1.json",
   "stability": "draft",
-  "content_hash": "77920c1edfa6fe1785d50d6d33a194acd59fdc41845c016eedbf88af342bd2e2",
+  "content_hash": "de312b4eaa535e16bbfa5d5d59081a6dd86ec41936d8c2c402cbe4ca62ff0748",
   "last_change": {
-    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
-    "content_hash": "77920c1edfa6fe1785d50d6d33a194acd59fdc41845c016eedbf88af342bd2e2"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "de312b4eaa535e16bbfa5d5d59081a6dd86ec41936d8c2c402cbe4ca62ff0748"
   }
 }

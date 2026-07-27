@@ -53,11 +53,11 @@ def load_noxfile_with_fake_nox(monkeypatch: pytest.MonkeyPatch) -> types.ModuleT
     fake_nox = types.SimpleNamespace(options=FakeOptions(), Session=object, session=session)
     monkeypatch.setitem(sys.modules, "nox", fake_nox)
 
-    spec = importlib.util.spec_from_file_location("_aces_test_noxfile", REPO_ROOT / "noxfile.py")
+    spec = importlib.util.spec_from_file_location("_raes_test_noxfile", REPO_ROOT / "noxfile.py")
     assert spec is not None
     assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
-    monkeypatch.setitem(sys.modules, "_aces_test_noxfile", module)
+    monkeypatch.setitem(sys.modules, "_raes_test_noxfile", module)
     spec.loader.exec_module(module)
     return module
 
@@ -137,6 +137,59 @@ def test_canonical_verify_does_not_use_change_aware_selection(monkeypatch: pytes
     assert "_run_tests" in source
     assert "_run_integration_tests" in source
     assert "_run_docs" in source
+
+
+def test_docs_graph_uses_curated_root_and_reader_style_gate(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    noxfile = load_noxfile_with_fake_nox(monkeypatch)
+    commands: list[tuple[str, ...]] = []
+
+    class FakeSession:
+        def log(self, _message: str) -> None:
+            pass
+
+        def run(self, *args: str, **_kwargs: Any) -> None:
+            commands.append(args)
+
+    fake_vale = tmp_path / "vale"
+    fake_vale.write_text("", encoding="utf-8")
+    monkeypatch.setattr(noxfile, "ensure_vale", lambda _repo_root: fake_vale)
+    monkeypatch.setattr(noxfile, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(noxfile, "PROJECT_ROOT", tmp_path / "implementations" / "python")
+    public_root = tmp_path / "docs" / "public"
+    monkeypatch.setattr(noxfile, "PUBLIC_DOCS_ROOT", public_root)
+    monkeypatch.setattr(noxfile, "DOCS_BUILD_ROOT", tmp_path / "docs" / "_build")
+    reporter = noxfile.SessionReporter(FakeSession(), "docs")
+
+    noxfile._run_docs(reporter.session, reporter)
+
+    assert [result.name for result in reporter.results] == [
+        "docs / public source boundary",
+        "docs / Vale reader style",
+        "docs / executable quickstart",
+        "docs / Sphinx HTML",
+        "docs / public output inventory",
+        "docs / Sphinx link check",
+    ]
+    sphinx_commands = [command for command in commands if "sphinx-build" in command]
+    assert len(sphinx_commands) == 2
+    assert all(str(public_root) in command for command in sphinx_commands)
+    assert all("-W" in command and "--keep-going" in command for command in sphinx_commands)
+    vale_command = next(command for command in commands if command and command[0] == str(fake_vale))
+    assert "--config=.vale.ini" in vale_command
+    assert "README.md" in vale_command
+    assert str(public_root) in vale_command
+    pytest_command = next(command for command in commands if "pytest" in command)
+    assert (
+        "implementations/python/tests/test_public_docs_policy.py::test_checked_in_quickstart_scenario_parses"
+        in pytest_command
+    )
+    assert (
+        "implementations/python/tests/test_public_docs_policy.py::test_readme_quickstart_matches_checked_in_scenario"
+        in pytest_command
+    )
 
 
 def write_text(path: Path, content: str) -> None:
@@ -322,40 +375,6 @@ def test_conftest_policy_runner_parses_and_sorts_failures(
     ]
 
 
-def test_package_import_direction_blocks_retired_aces_imports(tmp_path: Path) -> None:
-    repo_root = setup_policy_repo(tmp_path)
-    write_text(
-        repo_root / "implementations" / "python" / "packages" / "raes_processor" / "planner.py",
-        "from aces.runtime import legacy\n",
-    )
-
-    failures = evaluate_repo_policy(
-        repo_root,
-        ["implementations/python/packages/raes_processor/planner.py"],
-        check_set="file-local",
-        structural_runner=structural_runner_stub,
-    )
-
-    assert [failure.rule_id for failure in failures] == ["retired-namespace-import"]
-
-
-def test_retired_aces_namespace_rejects_any_file(tmp_path: Path) -> None:
-    repo_root = setup_policy_repo(tmp_path)
-    write_text(
-        repo_root / "implementations" / "python" / "src" / "aces" / "runtime.py",
-        "def build_runtime():\n    return 1\n",
-    )
-
-    failures = evaluate_repo_policy(
-        repo_root,
-        ["implementations/python/src/aces/runtime.py"],
-        check_set="file-local",
-        structural_runner=structural_runner_stub,
-    )
-
-    assert [failure.rule_id for failure in failures] == ["retired-namespace-path"]
-
-
 def test_adr_readme_must_match_adr_documents(tmp_path: Path) -> None:
     repo_root = setup_policy_repo(tmp_path)
     write_text(
@@ -419,7 +438,7 @@ def test_adr_template_requires_alternatives_considered(tmp_path: Path) -> None:
 # ── ADR-015: SDL→processor layering rule ────────────────────────────────
 
 
-def _aces_sdl_file(repo_root: Path, name: str, content: str) -> str:
+def _raes_file(repo_root: Path, name: str, content: str) -> str:
     """Write a synthetic file under raes/ and return its repo-relative path."""
     rel = f"implementations/python/packages/raes/{name}"
     write_text(repo_root / rel, content)
@@ -437,7 +456,7 @@ def _aces_sdl_file(repo_root: Path, name: str, content: str) -> str:
 )
 def test_layering_rule_rejects_raes_processor_imports(tmp_path: Path, import_line: str) -> None:
     repo_root = setup_policy_repo(tmp_path)
-    rel = _aces_sdl_file(repo_root, "_uses_processor.py", import_line + "\n")
+    rel = _raes_file(repo_root, "_uses_processor.py", import_line + "\n")
 
     failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
 
@@ -450,16 +469,16 @@ def test_layering_rule_does_not_match_prefix_only_package(tmp_path: Path) -> Non
     """A package merely starting with `raes_processor` (e.g. a
     hypothetical `raes_processor_extra`) is not the forbidden package."""
     repo_root = setup_policy_repo(tmp_path)
-    rel = _aces_sdl_file(repo_root, "_uses_other.py", "from raes_processor_extra import thing\n")
+    rel = _raes_file(repo_root, "_uses_other.py", "from raes_processor_extra import thing\n")
 
     failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
 
     assert failures == []
 
 
-def test_layering_rule_allows_aces_sdl_importing_other_packages(tmp_path: Path) -> None:
+def test_layering_rule_allows_raes_importing_other_packages(tmp_path: Path) -> None:
     repo_root = setup_policy_repo(tmp_path)
-    rel = _aces_sdl_file(
+    rel = _raes_file(
         repo_root,
         "_normal.py",
         "from raes_contracts.contracts import Scenario\nfrom raes.semantics.objectives import analyze_objective_window\n",
@@ -622,7 +641,7 @@ def test_module_boundaries_config_is_required_even_without_changed_paths(tmp_pat
 def test_module_boundaries_reject_missing_module_root(tmp_path: Path) -> None:
     repo_root = setup_policy_repo(tmp_path)
     policy = _load_test_policy(repo_root)
-    policy["module_boundaries"]["modules"][0]["root"] = "implementations/python/packages/aces_typo"
+    policy["module_boundaries"]["modules"][0]["root"] = "implementations/python/packages/raes_typo"
     _write_test_policy(repo_root, policy)
 
     failures = evaluate_repo_policy(
@@ -638,7 +657,7 @@ def test_module_boundaries_reject_missing_module_root(tmp_path: Path) -> None:
 
 def test_module_boundaries_reject_uncovered_package_root(tmp_path: Path) -> None:
     repo_root = setup_policy_repo(tmp_path)
-    write_text(repo_root / "implementations/python/packages/aces_new_package/__init__.py", "")
+    write_text(repo_root / "implementations/python/packages/raes_new_package/__init__.py", "")
 
     failures = evaluate_repo_policy(
         repo_root,
@@ -648,7 +667,7 @@ def test_module_boundaries_reject_uncovered_package_root(tmp_path: Path) -> None
     )
 
     assert [f.rule_id for f in failures] == ["policy-config-malformed"]
-    assert "aces_new_package" in failures[0].message
+    assert "raes_new_package" in failures[0].message
     assert "missing from module_boundaries.modules" in failures[0].message
 
 
@@ -838,8 +857,8 @@ def test_unsafe_locked_allowlist_entry_is_rejected(tmp_path: Path) -> None:
 def test_malformed_policy_config_produces_structured_failure(tmp_path: Path, mutation: str, marker: str) -> None:
     repo_root = setup_policy_repo(tmp_path)
     # Replace the whole adr_policy.yaml with a minimal-but-malformed config.
-    # Keep the keys other parts of the policy need (retired_namespace,
-    # adr_index, source_roots, generated_contracts, concept_authority) by
+    # Keep the keys other parts of the policy need (adr_index, source_roots,
+    # generated_contracts, concept_authority) by
     # appending the mutation onto the real config.
     base = (REPO_ROOT / "tools" / "policy" / "adr_policy.yaml").read_text()
     # Drop the real layering_rules / oversized_source_files blocks so the
@@ -1952,7 +1971,7 @@ def test_gitleaks_release_asset_names_match_platform_conventions(monkeypatch) ->
 
 def test_gitleaks_binary_path_uses_repo_local_cache(tmp_path: Path) -> None:
     assert gitleaks_binary_path(tmp_path, version="8.30.1") == (
-        tmp_path / ".cache" / "aces-sdl" / "tooling" / "gitleaks" / "8.30.1" / "gitleaks"
+        tmp_path / ".cache" / "raes-sdl" / "tooling" / "gitleaks" / "8.30.1" / "gitleaks"
     )
 
 
@@ -1988,7 +2007,7 @@ def test_osv_scanner_release_asset_name_rejects_unsupported_platform(
 
 def test_osv_scanner_binary_path_uses_repo_local_cache(tmp_path: Path) -> None:
     assert osv_scanner_tool.osv_scanner_binary_path(tmp_path, version="2.4.0") == (
-        tmp_path / ".cache" / "aces-sdl" / "tooling" / "osv-scanner" / "2.4.0" / "osv-scanner"
+        tmp_path / ".cache" / "raes-sdl" / "tooling" / "osv-scanner" / "2.4.0" / "osv-scanner"
     )
 
 

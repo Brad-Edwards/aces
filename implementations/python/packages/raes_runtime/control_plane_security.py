@@ -15,12 +15,25 @@ class ControlPlaneRole(str, Enum):
 
 
 @dataclass(frozen=True)
+class ParticipantControlSubjectBinding:
+    """One authenticated principal-to-participant/controller binding."""
+
+    participant_address: str
+    controller_ref: str
+
+    def __post_init__(self) -> None:
+        if not self.participant_address or not self.controller_ref:
+            raise ValueError("participant control subject binding fields must be non-empty")
+
+
+@dataclass(frozen=True)
 class ControlPlaneIdentity:
     """Authenticated control-plane principal."""
 
     identity: str
     roles: frozenset[ControlPlaneRole] = field(default_factory=frozenset)
     target_name: str | None = None
+    participant_control_subjects: tuple[ParticipantControlSubjectBinding, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -32,8 +45,8 @@ class ControlPlaneSecurityConfig:
     """
 
     require_verified_identity: bool = True
-    verified_header: str = "x-aces-client-verified"
-    identity_header: str = "x-aces-client-identity"
+    verified_header: str = "x-raes-client-verified"
+    identity_header: str = "x-raes-client-identity"
     trust_proxy_identity_headers: bool = False
     max_request_bytes: int = 1_000_000
     trusted_identities: dict[str, ControlPlaneIdentity] = field(default_factory=dict)

@@ -227,7 +227,7 @@ issues:
 
 ### Governed scenario satisfiability
 
-ADR-086 adds `aces-finite-domain-satisfiability-v1` as a concrete
+ADR-086 adds `raes-finite-domain-satisfiability-v1` as a concrete
 falsification-backed analysis boundary for its explicitly bounded SDL fragment.
 Its `scenario-satisfiability-evidence/v1` envelope records the exact source,
 normalized constraint model, pinned solver configuration, completed outcome,
@@ -241,7 +241,7 @@ backend realization and runtime behavior remain separate gates.
 
 ### Typed exploit-path analysis
 
-Issue #827 adds `aces-exploit-path-analysis-v1` as a concrete typed
+Issue #827 adds `raes-exploit-path-analysis-v1` as a concrete typed
 attack-transition graph/query boundary for an admitted instantiated scenario
 snapshot. Its `exploit-path-analysis-evidence/v1` envelope records the exact
 input source, authored digest, snapshot digest, normalized attack graph, query,

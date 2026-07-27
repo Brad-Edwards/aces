@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 from .vocabulary import RealizationSupportMode
+
+if TYPE_CHECKING:
+    from .artifact_requirements import ArtifactMechanismCapability
 
 DECLARED_CAPABILITY_MATCH_REQUIREMENT_KIND = "declared-capability-match"
 RUNTIME_REALIZATION_DOMAIN = "runtime-realization"
@@ -52,6 +56,7 @@ class RealizationSupportDeclaration:
     supported_constraint_kinds: frozenset[str] = frozenset()
     supported_exact_requirement_kinds: frozenset[str] = frozenset()
     disclosure_kinds: frozenset[str] = frozenset()
+    artifact_mechanisms: tuple[ArtifactMechanismCapability, ...] = ()
     constraints: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -72,3 +77,14 @@ class RealizationSupportDeclaration:
             )
         if self.support_mode == RealizationSupportMode.EXACT_ONLY and self.supported_constraint_kinds:
             raise ValueError("exact-only realization support must not declare supported_constraint_kinds")
+        identities = [
+            (
+                capability.mechanism.mechanism,
+                capability.mechanism.profile,
+                capability.mechanism.version,
+                capability.mechanism.digest,
+            )
+            for capability in self.artifact_mechanisms
+        ]
+        if len(identities) != len(set(identities)):
+            raise ValueError("artifact_mechanisms must not contain duplicate mechanism profiles")

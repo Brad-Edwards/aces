@@ -4,62 +4,18 @@ from dataclasses import dataclass, field
 
 from raes_contracts.addressing import require_compiled_address
 from raes_contracts.controlled_vocabularies import validate_controlled_vocabulary_scope_values
+from raes_contracts.manifest_authority import (
+    PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE,
+    PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS,
+    PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE,
+    PARTICIPANT_RUNTIME_POLICY_FEATURES,
+    PARTICIPANT_RUNTIME_ROLE_SCOPE,
+)
 from raes_contracts.vocabulary import ParticipantFeatureSupportLevel
 
-PARTICIPANT_RUNTIME_ROLE_SCOPE = "capabilities.participant_runtime.supported_participant_roles"
-PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE = "capabilities.participant_runtime.supported_behavior_features"
-PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE = "capabilities.participant_runtime.supported_interaction_features"
+from .participant_resource_budgets import ParticipantResourceBudgetCapabilities
 
-_PARTICIPANT_EPISODE_CONTRACTS = frozenset(
-    {
-        "participant-episode-state-envelope-v1",
-        "participant-episode-history-event-stream-v1",
-        "runtime-snapshot-v1",
-    }
-)
-_PARTICIPANT_BEHAVIOR_CONTRACTS = frozenset(
-    {
-        "participant-behavior-history-event-stream-v1",
-        "runtime-snapshot-v1",
-    }
-)
-_PARTICIPANT_INTERACTION_CONTRACTS = frozenset(
-    {
-        "participant-behavior-history-event-stream-v1",
-        "participant-shared-state-record-v1",
-        "participant-joint-action-record-v1",
-        "participant-time-management-context-v1",
-        "runtime-snapshot-v1",
-    }
-)
-
-PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS = {
-    PARTICIPANT_RUNTIME_ROLE_SCOPE: {
-        "blue": _PARTICIPANT_EPISODE_CONTRACTS,
-        "green": _PARTICIPANT_EPISODE_CONTRACTS,
-        "red": _PARTICIPANT_EPISODE_CONTRACTS,
-        "white": _PARTICIPANT_EPISODE_CONTRACTS,
-    },
-    PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE: {
-        "action_contracts": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-        "autonomous_execution": _PARTICIPANT_INTERACTION_CONTRACTS,
-        "attribution_support": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-        "behavior_history": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-        "effects": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-        "failure_classes": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-        "observation_boundaries": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-        "outcome_interpretation": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-        "preconditions": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-        "state_transitions": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-        "temporal_contracts": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-    },
-    PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE: {
-        "contention": _PARTICIPANT_INTERACTION_CONTRACTS,
-        "coordination": _PARTICIPANT_INTERACTION_CONTRACTS,
-        "interference": _PARTICIPANT_INTERACTION_CONTRACTS,
-        "shared_state_change": _PARTICIPANT_INTERACTION_CONTRACTS,
-    },
-}
+PARTICIPANT_EXECUTION_CONTROL_ACTIONS = frozenset({"start", "pause", "resume", "drain", "reset", "teardown"})
 
 
 def _validate_unique_non_empty_strings(field_name: str, values: tuple[str, ...]) -> None:
@@ -85,6 +41,46 @@ def _validate_participant_feature_support_term(feature: str) -> None:
     )
 
 
+def _participant_feature_support_level(
+    value: ParticipantFeatureSupportLevel | str,
+) -> ParticipantFeatureSupportLevel:
+    try:
+        if isinstance(value, ParticipantFeatureSupportLevel):
+            return value
+        return ParticipantFeatureSupportLevel(str(value))
+    except ValueError as exc:
+        raise ValueError("ParticipantFeatureSupport.support_level must be a valid support level") from exc
+
+
+def _participant_feature_refs(field_name: str, values: tuple[str, ...]) -> tuple[str, ...]:
+    normalized = tuple(values)
+    _validate_unique_non_empty_strings(f"ParticipantFeatureSupport.{field_name}", normalized)
+    return normalized
+
+
+def _validate_participant_feature_evidence(
+    *,
+    feature: str,
+    support_level: ParticipantFeatureSupportLevel,
+    constraint_refs: tuple[str, ...],
+    limitation_refs: tuple[str, ...],
+    disclosure_refs: tuple[str, ...],
+    evidence_refs: tuple[str, ...],
+) -> None:
+    if support_level != ParticipantFeatureSupportLevel.EXACT and not disclosure_refs:
+        raise ValueError(
+            "ParticipantFeatureSupport disclosure_refs must be non-empty when support_level is below exact"
+        )
+    if feature not in PARTICIPANT_RUNTIME_POLICY_FEATURES:
+        return
+    if support_level != ParticipantFeatureSupportLevel.EXACT and not limitation_refs:
+        raise ValueError("ParticipantFeatureSupport limitation_refs must be non-empty for below-exact policy support")
+    if support_level == ParticipantFeatureSupportLevel.BOUNDED and not constraint_refs:
+        raise ValueError("ParticipantFeatureSupport constraint_refs must be non-empty for bounded policy support")
+    if support_level != ParticipantFeatureSupportLevel.UNSUPPORTED and not evidence_refs:
+        raise ValueError("ParticipantFeatureSupport evidence_refs must be non-empty for positive policy support")
+
+
 @dataclass(frozen=True)
 class ParticipantFeatureSupport:
     """API-407 per-feature participant runtime support declaration."""
@@ -92,31 +88,84 @@ class ParticipantFeatureSupport:
     feature: str
     support_level: ParticipantFeatureSupportLevel | str
     constraint_refs: tuple[str, ...] = ()
+    limitation_refs: tuple[str, ...] = ()
     disclosure_refs: tuple[str, ...] = ()
+    evidence_refs: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.feature.strip():
             raise ValueError("ParticipantFeatureSupport.feature must be non-empty")
         _validate_participant_feature_support_term(self.feature)
-        try:
-            support_level = (
-                self.support_level
-                if isinstance(self.support_level, ParticipantFeatureSupportLevel)
-                else ParticipantFeatureSupportLevel(str(self.support_level))
-            )
-        except ValueError as exc:
-            raise ValueError("ParticipantFeatureSupport.support_level must be a valid support level") from exc
-        constraint_refs = tuple(self.constraint_refs)
-        disclosure_refs = tuple(self.disclosure_refs)
-        _validate_unique_non_empty_strings("ParticipantFeatureSupport.constraint_refs", constraint_refs)
-        _validate_unique_non_empty_strings("ParticipantFeatureSupport.disclosure_refs", disclosure_refs)
-        if support_level != ParticipantFeatureSupportLevel.EXACT and not disclosure_refs:
-            raise ValueError(
-                "ParticipantFeatureSupport disclosure_refs must be non-empty when support_level is below exact"
-            )
+        support_level = _participant_feature_support_level(self.support_level)
+        constraint_refs = _participant_feature_refs("constraint_refs", self.constraint_refs)
+        limitation_refs = _participant_feature_refs("limitation_refs", self.limitation_refs)
+        disclosure_refs = _participant_feature_refs("disclosure_refs", self.disclosure_refs)
+        evidence_refs = _participant_feature_refs("evidence_refs", self.evidence_refs)
+        _validate_participant_feature_evidence(
+            feature=self.feature,
+            support_level=support_level,
+            constraint_refs=constraint_refs,
+            limitation_refs=limitation_refs,
+            disclosure_refs=disclosure_refs,
+            evidence_refs=evidence_refs,
+        )
         object.__setattr__(self, "support_level", support_level)
         object.__setattr__(self, "constraint_refs", constraint_refs)
+        object.__setattr__(self, "limitation_refs", limitation_refs)
         object.__setattr__(self, "disclosure_refs", disclosure_refs)
+        object.__setattr__(self, "evidence_refs", evidence_refs)
+
+
+@dataclass(frozen=True)
+class ParticipantExecutionBinding:
+    """Manifest claim for one exact action-to-target native binding."""
+
+    binding_id: str
+    action_contract_address: str
+    target_addresses: tuple[str, ...]
+    participant_implementation_ref: str
+    constraint_refs: tuple[str, ...]
+    evidence_refs: tuple[str, ...]
+    max_action_attempts: int
+    max_in_flight: int
+    timeout_seconds: int
+    max_retries: int
+
+    def __post_init__(self) -> None:
+        for field_name in (
+            "binding_id",
+            "action_contract_address",
+            "participant_implementation_ref",
+        ):
+            if not str(getattr(self, field_name)).strip():
+                raise ValueError(f"ParticipantExecutionBinding.{field_name} must be non-empty")
+        for field_name in ("target_addresses", "constraint_refs", "evidence_refs"):
+            values = tuple(getattr(self, field_name))
+            if not values:
+                raise ValueError(f"ParticipantExecutionBinding.{field_name} must not be empty")
+            _validate_unique_non_empty_strings(
+                f"ParticipantExecutionBinding.{field_name}",
+                values,
+            )
+            object.__setattr__(self, field_name, values)
+        require_compiled_address(
+            self.action_contract_address,
+            field_name="action_contract_address",
+        )
+        for target_address in self.target_addresses:
+            require_compiled_address(
+                target_address,
+                field_name="target_addresses",
+            )
+        for field_name in (
+            "max_action_attempts",
+            "max_in_flight",
+            "timeout_seconds",
+        ):
+            if getattr(self, field_name) < 1:
+                raise ValueError(f"ParticipantExecutionBinding.{field_name} must be positive")
+        if self.max_retries < 0:
+            raise ValueError("ParticipantExecutionBinding.max_retries must be non-negative")
 
 
 @dataclass(frozen=True)
@@ -133,9 +182,22 @@ class ParticipantRuntimeCapabilities:
     supported_autonomous_action_contracts: frozenset[str] = frozenset()
     supported_autonomous_observation_boundaries: frozenset[str] = frozenset()
     supported_autonomous_target_addresses: frozenset[str] = frozenset()
+    supported_autonomous_policy_profiles: frozenset[str] = frozenset()
+    supported_autonomous_activity_features: frozenset[str] = frozenset()
+    supported_autonomous_random_stream_profiles: frozenset[str] = frozenset()
     max_autonomous_participants: int | None = None
     max_autonomous_action_attempts: int | None = None
     max_autonomous_in_flight: int | None = None
+    max_autonomous_occurrences: int | None = None
+    max_autonomous_retries_per_occurrence: int | None = None
+    max_autonomous_burst_size: int | None = None
+    execution_bindings: tuple[ParticipantExecutionBinding, ...] = ()
+    supports_execution_control: bool = False
+    supported_execution_control_actions: frozenset[str] = frozenset()
+    supports_bounded_concurrency: bool = False
+    max_execution_services: int | None = None
+    max_concurrent_actions: int | None = None
+    resource_budgets: ParticipantResourceBudgetCapabilities | None = None
     constraints: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -144,6 +206,11 @@ class ParticipantRuntimeCapabilities:
         self._validate_required_vocabularies()
         feature_support = self._normalize_feature_support()
         self._validate_feature_support(feature_support)
+        execution_bindings = tuple(
+            binding if isinstance(binding, ParticipantExecutionBinding) else ParticipantExecutionBinding(**binding)
+            for binding in self.execution_bindings
+        )
+        object.__setattr__(self, "execution_bindings", execution_bindings)
         self._validate_autonomous_execution()
         object.__setattr__(self, "feature_support", feature_support)
 
@@ -180,6 +247,14 @@ class ParticipantRuntimeCapabilities:
         feature_names = tuple(entry.feature for entry in feature_support)
         _validate_unique_non_empty_strings("ParticipantRuntimeCapabilities.feature_support", feature_names)
         supported_features = self.supported_behavior_features | self.supported_interaction_features
+        missing_policy_declarations = sorted(
+            (supported_features & PARTICIPANT_RUNTIME_POLICY_FEATURES) - set(feature_names)
+        )
+        if missing_policy_declarations:
+            raise ValueError(
+                "ParticipantRuntimeCapabilities supported participant policy features require explicit "
+                f"feature_support declarations: {', '.join(missing_policy_declarations)}"
+            )
         for entry in feature_support:
             if (
                 entry.support_level == ParticipantFeatureSupportLevel.UNSUPPORTED
@@ -187,6 +262,15 @@ class ParticipantRuntimeCapabilities:
             ):
                 raise ValueError(
                     "ParticipantRuntimeCapabilities.feature_support cannot declare a supported feature unsupported"
+                )
+            if (
+                entry.feature in PARTICIPANT_RUNTIME_POLICY_FEATURES
+                and entry.support_level != ParticipantFeatureSupportLevel.UNSUPPORTED
+                and entry.feature not in supported_features
+            ):
+                raise ValueError(
+                    "ParticipantRuntimeCapabilities positive support for a participant policy feature "
+                    "requires the feature in supported_behavior_features"
                 )
 
     def _validate_autonomous_execution(self) -> None:
@@ -201,17 +285,75 @@ class ParticipantRuntimeCapabilities:
     def _validate_enabled_autonomous_execution(self) -> None:
         if not self.supported_autonomous_selection_strategies:
             raise ValueError("autonomous execution requires supported selection strategies")
-        unknown_strategies = sorted(self.supported_autonomous_selection_strategies - {"ordered_cycle"})
+        unknown_strategies = sorted(self.supported_autonomous_selection_strategies - {"ordered_cycle", "weighted"})
         if unknown_strategies:
             raise ValueError("unsupported autonomous selection strategies: " + ", ".join(unknown_strategies))
         if not self.supported_autonomous_action_contracts:
             raise ValueError("autonomous execution requires exact supported action contracts")
         if not self.supported_autonomous_observation_boundaries:
             raise ValueError("autonomous execution requires exact supported observation boundaries")
+        if not self.supported_autonomous_policy_profiles:
+            raise ValueError("autonomous execution requires exact supported policy profiles")
+        self._validate_activity_profiles()
         self._validate_autonomous_addresses()
+        self._validate_execution_control()
         for label, value in self._autonomous_limits():
             if value is None or value < 1:
                 raise ValueError(f"autonomous execution requires positive {label}")
+
+    def _validate_activity_profiles(self) -> None:
+        if {
+            "participant-autonomous-execution/v2",
+            "participant-autonomous-execution/v3",
+        }.intersection(self.supported_autonomous_policy_profiles):
+            if not self.supported_autonomous_activity_features:
+                raise ValueError("autonomous execution v2/v3 requires exact supported activity features")
+            if not self.supported_autonomous_random_stream_profiles:
+                raise ValueError("autonomous execution v2/v3 requires exact supported random-stream profiles")
+        if (
+            "participant-autonomous-execution/v3" in self.supported_autonomous_policy_profiles
+            and self.resource_budgets is None
+        ):
+            raise ValueError("autonomous execution v3 requires participant resource-budget capabilities")
+
+    def _validate_execution_control(self) -> None:
+        self._validate_execution_control_actions()
+        self._validate_execution_capacity()
+        self._validate_execution_bindings()
+
+    def _validate_execution_control_actions(self) -> None:
+        if not self.supports_execution_control:
+            raise ValueError("autonomous execution requires execution control support")
+        missing_actions = PARTICIPANT_EXECUTION_CONTROL_ACTIONS - self.supported_execution_control_actions
+        if missing_actions:
+            raise ValueError("execution control is missing required actions: " + ", ".join(sorted(missing_actions)))
+        unknown_actions = self.supported_execution_control_actions - PARTICIPANT_EXECUTION_CONTROL_ACTIONS
+        if unknown_actions:
+            raise ValueError("unsupported execution control actions: " + ", ".join(sorted(unknown_actions)))
+
+    def _validate_execution_capacity(self) -> None:
+        if not self.supports_bounded_concurrency:
+            raise ValueError("autonomous execution requires bounded concurrency support")
+        if self.max_execution_services is None or self.max_execution_services < 1:
+            raise ValueError("autonomous execution requires positive max_execution_services")
+        if self.max_concurrent_actions is None or self.max_concurrent_actions < 2:
+            raise ValueError("bounded concurrency requires max_concurrent_actions of at least 2")
+
+    def _validate_execution_bindings(self) -> None:
+        if not self.execution_bindings:
+            raise ValueError("autonomous execution requires relational execution_bindings")
+        binding_ids = tuple(binding.binding_id for binding in self.execution_bindings)
+        _validate_unique_non_empty_strings(
+            "ParticipantRuntimeCapabilities.execution_bindings",
+            binding_ids,
+        )
+        for binding in self.execution_bindings:
+            if binding.action_contract_address not in self.supported_autonomous_action_contracts:
+                raise ValueError("execution binding action is not declared supported")
+            if not set(binding.target_addresses).issubset(self.supported_autonomous_target_addresses):
+                raise ValueError("execution binding target is not declared supported")
+            if binding.max_in_flight > self.max_concurrent_actions:
+                raise ValueError("execution binding exceeds max_concurrent_actions")
 
     def _validate_autonomous_addresses(self) -> None:
         for field_name, addresses in (
@@ -227,23 +369,42 @@ class ParticipantRuntimeCapabilities:
             ("max_autonomous_participants", self.max_autonomous_participants),
             ("max_autonomous_action_attempts", self.max_autonomous_action_attempts),
             ("max_autonomous_in_flight", self.max_autonomous_in_flight),
+            ("max_autonomous_occurrences", self.max_autonomous_occurrences),
+            ("max_autonomous_retries_per_occurrence", self.max_autonomous_retries_per_occurrence),
+            ("max_autonomous_burst_size", self.max_autonomous_burst_size),
         )
 
     def _has_autonomous_configuration(self) -> bool:
-        return bool(
-            self.supported_autonomous_selection_strategies
-            or self.supported_autonomous_action_contracts
-            or self.supported_autonomous_observation_boundaries
-            or self.supported_autonomous_target_addresses
-            or any(value is not None for _, value in self._autonomous_limits())
+        limits_configured = any(value is not None for _, value in self._autonomous_limits())
+        return any(
+            (
+                self.supported_autonomous_selection_strategies,
+                self.supported_autonomous_action_contracts,
+                self.supported_autonomous_observation_boundaries,
+                self.supported_autonomous_target_addresses,
+                self.supported_autonomous_policy_profiles,
+                self.supported_autonomous_activity_features,
+                self.supported_autonomous_random_stream_profiles,
+                self.execution_bindings,
+                self.supports_execution_control,
+                self.supported_execution_control_actions,
+                self.supports_bounded_concurrency,
+                self.max_execution_services is not None,
+                self.max_concurrent_actions is not None,
+                self.resource_budgets is not None,
+                limits_configured,
+            )
         )
 
 
 __all__ = [
+    "PARTICIPANT_EXECUTION_CONTROL_ACTIONS",
     "PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE",
     "PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS",
     "PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE",
+    "PARTICIPANT_RUNTIME_POLICY_FEATURES",
     "PARTICIPANT_RUNTIME_ROLE_SCOPE",
     "ParticipantFeatureSupport",
+    "ParticipantExecutionBinding",
     "ParticipantRuntimeCapabilities",
 ]

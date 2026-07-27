@@ -85,6 +85,10 @@
           "title": "Participant Behavior History Event Stream V1",
           "description": "Participant behavior history event stream contract."
         },
+        "participant-decision-surface-v2": {
+          "title": "Participant Decision Surface V2",
+          "description": "Exact-cut participant decision view, assurance, delivery, and selection contract."
+        },
         "participant-episode-history-event-stream-v1": {
           "title": "Participant Episode History Event Stream V1",
           "description": "Participant episode history event stream contract."
@@ -146,7 +150,7 @@
     },
     "participant-defensive-behavior-activities": {
       "title": "Participant Defensive Behavior Activities",
-      "description": "ACES adaptations of NIST CSF 2.0 Detect, Respond, and Recover categories as governed defensive behavior classifications for behavior specifications.",
+      "description": "RAES adaptations of NIST CSF 2.0 Detect, Respond, and Recover categories as governed defensive behavior classifications for behavior specifications.",
       "source": {
         "provenance": "adapted",
         "authority": "NIST Cybersecurity Framework",
@@ -673,11 +677,11 @@
         },
         "adapted": {
           "title": "Adapted",
-          "description": "Concept family adapts an external authority for ACES use."
+          "description": "Concept family adapts an external authority for RAES use."
         },
         "native": {
           "title": "Native",
-          "description": "Concept family is native to ACES."
+          "description": "Concept family is native to RAES."
         }
       }
     },
@@ -933,7 +937,7 @@
         },
         "autonomous_execution": {
           "title": "Autonomous Execution",
-          "description": "Backend supports ACES-clock-governed autonomous execution of ordinary participant actions."
+          "description": "Backend supports RAES-clock-governed autonomous execution of ordinary participant actions."
         },
         "attribution_support": {
           "title": "Attribution Support",
@@ -958,6 +962,30 @@
         "outcome_interpretation": {
           "title": "Outcome Interpretation",
           "description": "Backend supports participant-local outcome interpretation records."
+        },
+        "participant_declassification": {
+          "title": "Participant Declassification",
+          "description": "Backend supports governed participant-relative declassification decisions and evidence."
+        },
+        "participant_directed_inject_delivery": {
+          "title": "Participant-Directed Inject Delivery",
+          "description": "Backend supports governed delivery of participant-directed injects without conflating environment injects."
+        },
+        "participant_egress_projection": {
+          "title": "Participant Egress Projection",
+          "description": "Backend supports governed participant-relative projection at the egress boundary."
+        },
+        "participant_ingress_admission": {
+          "title": "Participant Ingress Admission",
+          "description": "Backend supports governed participant action or control admission at the ingress boundary."
+        },
+        "participant_intervention": {
+          "title": "Participant Intervention",
+          "description": "Backend supports governed participant intervention and supervisory control occurrences."
+        },
+        "participant_transformation": {
+          "title": "Participant Transformation",
+          "description": "Backend supports governed non-mutating participant-boundary transformations with fresh result identity."
         },
         "preconditions": {
           "title": "Preconditions",
@@ -998,6 +1026,401 @@
         "shared_state_change": {
           "title": "Shared State Change",
           "description": "Backend supports declared shared-state interaction semantics."
+        }
+      }
+    },
+    "participant-crossing-directions": {
+      "title": "Participant Crossing Directions",
+      "description": "Closed directions for participant-boundary crossing facts.",
+      "kind": "enumeration",
+      "governed_scopes": [
+        "participant-crossing-occurrence.direction"
+      ],
+      "extension_policy": "closed",
+      "terms": {
+        "egress": {
+          "title": "Egress",
+          "description": "A governed fact crossing toward a participant-facing audience."
+        },
+        "ingress": {
+          "title": "Ingress",
+          "description": "A governed fact crossing from a participant-facing source toward runtime control."
+        }
+      }
+    },
+    "participant-crossing-interaction-kinds": {
+      "title": "Participant Crossing Interaction Kinds",
+      "description": "Closed incumbent carrier meanings that may participate in a governed crossing.",
+      "kind": "enumeration",
+      "governed_scopes": [
+        "participant-crossing-occurrence.interaction_kind"
+      ],
+      "extension_policy": "closed",
+      "terms": {
+        "action-proposal": {
+          "title": "Action Proposal",
+          "description": "An action proposal crossing fact."
+        },
+        "constrained-form-submission": {
+          "title": "Constrained Form Submission",
+          "description": "A constrained decision-surface form submission."
+        },
+        "candidate-selection": {
+          "title": "Candidate Selection",
+          "description": "A candidate selected from a governed decision surface."
+        },
+        "approval": {
+          "title": "Approval",
+          "description": "An approval occurrence that remains distinct from admission."
+        },
+        "denial": {
+          "title": "Denial",
+          "description": "A denial occurrence."
+        },
+        "external-direction": {
+          "title": "External Direction",
+          "description": "An externally directed control occurrence."
+        },
+        "intervention": {
+          "title": "Intervention",
+          "description": "An intervention occurrence."
+        },
+        "handoff": {
+          "title": "Handoff",
+          "description": "A controller handoff occurrence."
+        },
+        "override": {
+          "title": "Override",
+          "description": "A non-retroactive override occurrence."
+        },
+        "cancellation": {
+          "title": "Cancellation",
+          "description": "A non-retroactive cancellation occurrence."
+        },
+        "participant-inject-delivery": {
+          "title": "Participant Inject Delivery",
+          "description": "A participant-directed inject delivery binding."
+        },
+        "observation": {
+          "title": "Observation",
+          "description": "A participant observation carrier."
+        },
+        "decision-surface-projection": {
+          "title": "Decision Surface Projection",
+          "description": "A participant decision-surface projection."
+        },
+        "redacted-output": {
+          "title": "Redacted Output",
+          "description": "A redacted participant-facing result with distinct source identity."
+        },
+        "disclosure": {
+          "title": "Disclosure",
+          "description": "An authorized disclosure fact that is not delivery."
+        },
+        "delivery-receipt": {
+          "title": "Delivery Receipt",
+          "description": "A delivery occurrence or receipt that is not observation."
+        },
+        "action-result": {
+          "title": "Action Result",
+          "description": "An incumbent participant action-result carrier."
+        },
+        "status-projection": {
+          "title": "Status Projection",
+          "description": "A bounded participant status projection."
+        },
+        "history-projection": {
+          "title": "History Projection",
+          "description": "A bounded participant history projection."
+        }
+      }
+    },
+    "participant-crossing-subject-kinds": {
+      "title": "Participant Crossing Subject Kinds",
+      "description": "Closed typed subject references to incumbent participant and evidence carriers.",
+      "kind": "enumeration",
+      "governed_scopes": [
+        "participant-crossing-occurrence.subject.subject_kind"
+      ],
+      "extension_policy": "closed",
+      "terms": {
+        "participant-control-occurrence": {
+          "title": "Participant Control Occurrence",
+          "description": "An API-409 control occurrence."
+        },
+        "participant-action-contract": {
+          "title": "Participant Action Contract",
+          "description": "A SEM-211 participant action contract."
+        },
+        "participant-action-admission": {
+          "title": "Participant Action Admission",
+          "description": "A participant action admission decision."
+        },
+        "participant-action-attempt": {
+          "title": "Participant Action Attempt",
+          "description": "A participant action attempt fact."
+        },
+        "participant-action-result": {
+          "title": "Participant Action Result",
+          "description": "A participant action-result fact."
+        },
+        "participant-lifecycle-event": {
+          "title": "Participant Lifecycle Event",
+          "description": "An API-406 participant lifecycle event."
+        },
+        "participant-observation": {
+          "title": "Participant Observation",
+          "description": "An API-406 participant observation."
+        },
+        "participant-decision-surface": {
+          "title": "Participant Decision Surface",
+          "description": "A SEM-220 participant decision surface."
+        },
+        "participant-exposure": {
+          "title": "Participant Exposure",
+          "description": "A SEM-226 exposure authorization or realization."
+        },
+        "participant-inject-delivery": {
+          "title": "Participant Inject Delivery",
+          "description": "A DSL-142 participant inject delivery binding."
+        },
+        "participant-context-view": {
+          "title": "Participant Context View",
+          "description": "An API-406 participant context view."
+        },
+        "participant-history-view": {
+          "title": "Participant History View",
+          "description": "An API-406 participant history view."
+        },
+        "participant-status-view": {
+          "title": "Participant Status View",
+          "description": "An API-406 participant status view."
+        },
+        "experiment-evidence": {
+          "title": "Experiment Evidence",
+          "description": "An experiment evidence record used only by reference."
+        }
+      }
+    },
+    "participant-crossing-operations": {
+      "title": "Participant Crossing Operations",
+      "description": "Closed information-flow operations whose semantic effects remain independent.",
+      "kind": "enumeration",
+      "governed_scopes": [
+        "participant-crossing-occurrence.operation"
+      ],
+      "extension_policy": "closed",
+      "terms": {
+        "admission": {
+          "title": "Admission",
+          "description": "Decide whether one crossing may proceed at the current order point."
+        },
+        "withholding": {
+          "title": "Withholding",
+          "description": "Record intentional non-release."
+        },
+        "projection": {
+          "title": "Projection",
+          "description": "Select a participant-relative view without granting authority."
+        },
+        "masking": {
+          "title": "Masking",
+          "description": "Mask an authorized representation without declassifying it."
+        },
+        "redaction": {
+          "title": "Redaction",
+          "description": "Transform an authorized representation without granting access."
+        },
+        "transformation": {
+          "title": "Transformation",
+          "description": "Create a new typed subject identity under a governed rule."
+        },
+        "declassification": {
+          "title": "Declassification",
+          "description": "Change release authority under an explicit governed basis."
+        },
+        "disclosure": {
+          "title": "Disclosure",
+          "description": "Record an authorized release decision without implying delivery."
+        },
+        "delivery": {
+          "title": "Delivery",
+          "description": "Record participant-facing delivery without implying observation."
+        },
+        "concealment": {
+          "title": "Concealment",
+          "description": "Change future projection without erasing prior knowledge."
+        },
+        "revocation": {
+          "title": "Revocation",
+          "description": "Withdraw future authority without retroactive effect."
+        },
+        "audit-retention": {
+          "title": "Audit Retention",
+          "description": "Retain a crossing fact for an authorized audit audience."
+        }
+      }
+    },
+    "participant-crossing-gate-dispositions": {
+      "title": "Participant Crossing Gate Dispositions",
+      "description": "Closed results for independently evaluated deny-first crossing gates.",
+      "kind": "enumeration",
+      "governed_scopes": [
+        "participant-crossing-occurrence.gates"
+      ],
+      "extension_policy": "closed",
+      "terms": {
+        "permit": {
+          "title": "Permit",
+          "description": "The owning gate permits the exact crossing coordinates."
+        },
+        "deny": {
+          "title": "Deny",
+          "description": "The owning gate denies the exact crossing coordinates."
+        },
+        "not-applicable": {
+          "title": "Not Applicable",
+          "description": "The owning gate factually does not apply."
+        },
+        "unknown": {
+          "title": "Unknown",
+          "description": "The required gate result is unresolved and therefore not permission."
+        },
+        "unsupported": {
+          "title": "Unsupported",
+          "description": "The owning gate cannot evaluate or realize the required semantics."
+        }
+      }
+    },
+    "participant-crossing-decision-dispositions": {
+      "title": "Participant Crossing Decision Dispositions",
+      "description": "Closed overall outcomes of deny-first crossing policy composition.",
+      "kind": "enumeration",
+      "governed_scopes": [
+        "participant-crossing-occurrence.decision.disposition"
+      ],
+      "extension_policy": "closed",
+      "terms": {
+        "permit": {
+          "title": "Permit",
+          "description": "All applicable required gates permit the untransformed crossing."
+        },
+        "deny": {
+          "title": "Deny",
+          "description": "At least one required gate denies the crossing."
+        },
+        "transform": {
+          "title": "Transform",
+          "description": "The crossing requires a named non-mutating transformation before realization."
+        },
+        "withhold": {
+          "title": "Withhold",
+          "description": "The fact is intentionally not released."
+        },
+        "unsupported": {
+          "title": "Unsupported",
+          "description": "One or more required coordinates cannot be supported or resolved."
+        }
+      }
+    },
+    "participant-crossing-backend-postures": {
+      "title": "Participant Crossing Backend Postures",
+      "description": "Closed support postures that do not imply authorization or realization.",
+      "kind": "enumeration",
+      "governed_scopes": [
+        "participant-crossing-occurrence.backend_posture"
+      ],
+      "extension_policy": "closed",
+      "terms": {
+        "exact": {
+          "title": "Exact",
+          "description": "The declared portable semantics are supported exactly within the named scope."
+        },
+        "bounded": {
+          "title": "Bounded",
+          "description": "Support is bounded by explicit limitations."
+        },
+        "disclosed-weak": {
+          "title": "Disclosed Weak",
+          "description": "Only a disclosed weaker posture is available."
+        },
+        "unsupported": {
+          "title": "Unsupported",
+          "description": "The required portable semantics are unsupported."
+        }
+      }
+    },
+    "participant-crossing-loss-kinds": {
+      "title": "Participant Crossing Loss Kinds",
+      "description": "Closed loss and weakening disclosures that never count as successful enforcement.",
+      "kind": "enumeration",
+      "governed_scopes": [
+        "participant-crossing-occurrence.losses.kind"
+      ],
+      "extension_policy": "closed",
+      "terms": {
+        "none": {
+          "title": "None",
+          "description": "No declared fidelity loss or guarantee weakening."
+        },
+        "fidelity-loss": {
+          "title": "Fidelity Loss",
+          "description": "Some source fidelity is unavailable in the result."
+        },
+        "guarantee-weakening": {
+          "title": "Guarantee Weakening",
+          "description": "A stronger guarantee is unavailable and the weaker posture is explicit."
+        },
+        "unknown": {
+          "title": "Unknown",
+          "description": "The loss or weakening state is unresolved."
+        },
+        "unsupported": {
+          "title": "Unsupported",
+          "description": "The requested fidelity or guarantee cannot be supported."
+        }
+      }
+    },
+    "participant-crossing-stages": {
+      "title": "Participant Crossing Stages",
+      "description": "Closed independently addressable API-423 fact stages.",
+      "kind": "enumeration",
+      "governed_scopes": [
+        "participant-crossing-occurrence.stage"
+      ],
+      "extension_policy": "closed",
+      "terms": {
+        "requested": {
+          "title": "Requested",
+          "description": "A requested crossing or produced candidate, not a decision."
+        },
+        "decided": {
+          "title": "Decided",
+          "description": "A policy decision at one exact order point."
+        },
+        "transformed": {
+          "title": "Transformed",
+          "description": "A non-mutating transformation into a new typed subject."
+        },
+        "disclosed": {
+          "title": "Disclosed",
+          "description": "An authorized disclosure or declassification, not delivery."
+        },
+        "delivery-attempted": {
+          "title": "Delivery Attempted",
+          "description": "An attempted delivery, distinct from scheduling and success."
+        },
+        "delivered": {
+          "title": "Delivered",
+          "description": "A delivered occurrence, distinct from participant observation."
+        },
+        "observed": {
+          "title": "Observed",
+          "description": "An observation fact backed by an incumbent observation carrier."
+        },
+        "audited": {
+          "title": "Audited",
+          "description": "Audit or evidence retention for a prior crossing fact."
         }
       }
     },

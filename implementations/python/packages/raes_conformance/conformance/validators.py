@@ -10,6 +10,7 @@ from raes_contracts.contracts import (
     EvaluationPlanModel,
     EvaluationResultStateModel,
     ExperimentApparatusContextModel,
+    ExperimentBindingDescriptorSetModel,
     ExperimentCaptureSpecModel,
     ExperimentDerivedMeasureModel,
     ExperimentEvidenceRecordModel,
@@ -20,6 +21,9 @@ from raes_contracts.contracts import (
     OperationStatusModel,
     OrchestrationPlanModel,
     ParticipantBehaviorHistoryEventModel,
+    ParticipantConfigurationResultModel,
+    ParticipantControlOccurrenceModel,
+    ParticipantCrossingOccurrenceModel,
     ParticipantEpisodeHistoryEventModel,
     ParticipantEpisodeStateModel,
     ParticipantImplementationManifestModel,
@@ -33,6 +37,11 @@ from raes_contracts.contracts import (
     ValidationBasisDisclosureDocumentModel,
     WorkflowExecutionStateModel,
     WorkflowHistoryEventModel,
+)
+from raes_contracts.contracts.participant_execution import (
+    ParticipantExecutionBindingModel,
+    ParticipantExecutionControlRequestModel,
+    ParticipantExecutionServiceStateModel,
 )
 from raes_contracts.diagnostics import Diagnostic
 from raes_contracts.realization_envelope import BackendRealizationEnvelopeModel
@@ -60,13 +69,20 @@ _MODEL_VALIDATORS = {
     "workflow-result-envelope-v1": WorkflowExecutionStateModel.model_validate,
     "evaluation-result-envelope-v1": EvaluationResultStateModel.model_validate,
     "participant-episode-state-envelope-v1": ParticipantEpisodeStateModel.model_validate,
+    "participant-execution-binding-v1": ParticipantExecutionBindingModel.model_validate,
+    "participant-execution-control-v1": ParticipantExecutionControlRequestModel.model_validate,
+    "participant-execution-service-state-v1": ParticipantExecutionServiceStateModel.model_validate,
     "participant-lifecycle-event-v1": ParticipantLifecycleEventModel.model_validate,
     "participant-observation-envelope-v1": ParticipantObservationEnvelopeModel.model_validate,
     "participant-shared-state-record-v1": ParticipantSharedStateRecordModel.model_validate,
+    "participant-control-occurrence-v1": ParticipantControlOccurrenceModel.model_validate,
+    "participant-crossing-occurrence-v1": ParticipantCrossingOccurrenceModel.model_validate,
     "experiment-capture-spec-v1": ExperimentCaptureSpecModel.model_validate,
     "experiment-evidence-record-v1": ExperimentEvidenceRecordModel.model_validate,
     "experiment-derived-measure-v1": ExperimentDerivedMeasureModel.model_validate,
     "experiment-run-v1": ExperimentRunModel.model_validate,
+    "experiment-binding-descriptors-v1": ExperimentBindingDescriptorSetModel.model_validate,
+    "participant-configuration-result-v1": ParticipantConfigurationResultModel.model_validate,
 }
 
 

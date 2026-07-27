@@ -2,9 +2,9 @@
   "contract_id": "participant-history-view-v1",
   "schema_path": "contracts/schemas/control-plane/participant-history-view-v1.json",
   "stability": "draft",
-  "content_hash": "380257f288c098c0b94e343dbeb6d51c5216c6b14d91543cc2c147dd06633435",
+  "content_hash": "483731937b2dbee8c5bc081f4348398a280a6ef28044c17395dcf635ba99c7c4",
   "last_change": {
-    "summary": "Initial publication of the participant history-view control-plane contract: the participant-local interaction-history projection in the backend-facing contract family (ADR-060, issue #76).",
-    "content_hash": "380257f288c098c0b94e343dbeb6d51c5216c6b14d91543cc2c147dd06633435"
+    "summary": "Projected v3 native resource measurements and policy-scoped budget identity through history views for issue #899.",
+    "content_hash": "483731937b2dbee8c5bc081f4348398a280a6ef28044c17395dcf635ba99c7c4"
   }
 }

@@ -1,4 +1,4 @@
-"""Tests for the ``aces conformance backend`` Typer subcommand."""
+"""Tests for the ``raes conformance backend`` Typer subcommand."""
 
 from __future__ import annotations
 
@@ -49,8 +49,8 @@ def test_backend_conformance_cli_passes_for_provisioning_only_profile():
     assert payload["profile"] == "provisioning-only"
     assert payload["passed"] is True
     claim = payload["claim"]
-    assert claim["taxonomy_id"] == "aces-behavioral-relations"
-    assert claim["taxonomy_revision"] == "rev2"
+    assert claim["taxonomy_id"] == "raes-behavioral-relations"
+    assert claim["taxonomy_revision"] == "rev3"
     assert claim["relation_id"] == "bounded-probe-success"
     assert claim["quantifier_scope"] == "finite-cases"
     assert claim["evidence_scope"] == "finite"
@@ -90,7 +90,7 @@ def test_backend_conformance_cli_passes_for_full_remote_control_plane_profile():
 def test_backend_conformance_cli_exits_non_zero_when_fixtures_missing(tmp_path: Path):
     """Pointing the CLI at an empty fixtures root must surface the failure
     via exit code and the JSON report's ``conformance.fixture-missing``
-    diagnostics — so CI gates wired up to ``aces conformance backend`` can
+    diagnostics — so CI gates wired up to ``raes conformance backend`` can
     catch the regression directly."""
 
     runner = CliRunner()

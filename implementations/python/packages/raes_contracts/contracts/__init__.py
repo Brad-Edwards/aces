@@ -1,8 +1,21 @@
 """Schema-first external contract models for RAES artifact boundaries."""
 
-from __future__ import annotations
+# This module is an intentional re-export facade governed by PUBLIC_EXPORTS.
+# ruff: noqa: F401, F403
 
+from ..artifact_requirements import (
+    ArtifactAcquisitionTimingModel,
+    ArtifactAvailabilityContext,
+    ArtifactMechanismCapability,
+    ArtifactRequirementAvailability,
+    ArtifactRequirementContractModel,
+    ArtifactRequirementSource,
+    ArtifactSatisfactionDisclosureModel,
+    artifact_requirement_invariant_violations,
+    validate_artifact_requirement_invariants,
+)
 from ..versions import (
+    ARTIFACT_REQUIREMENT_SCHEMA_VERSION,
     ASSOCIATED_ARTIFACT_MANIFEST_SCHEMA_VERSION,
     ATLAS_TACTICS_SOURCE_SCHEMA_VERSION,
     ATTACK_ENTERPRISE_TACTICS_SOURCE_SCHEMA_VERSION,
@@ -45,6 +58,7 @@ from ..vocabulary import (
     WorkflowFeature,
     WorkflowStatePredicateFeature,
 )
+from ._exports import PUBLIC_EXPORTS as __all__
 from .associated_artifacts import AssociatedArtifactManifestModel, AssociatedArtifactSetDigestString
 from .base import (
     BehavioralClaimBindingModel,
@@ -115,19 +129,9 @@ from .experiment_artifacts import (
     ExperimentDerivedMeasureReferenceModel,
     ExperimentMeasurementChannelReferenceModel,
 )
-from .experiment_capture import (
-    ExperimentCaptureRequirementModel,
-    ExperimentCaptureSpecModel,
-    ExperimentCaptureWindowModel,
-    ExperimentValidityNoteModel,
-)
-from .experiment_disclosure import (
-    ExperimentApparatusConstraintModel,
-    ExperimentAugmentationDisclosureModel,
-    ExperimentEvaluationProtocolModel,
-    ExperimentMetricDefinitionModel,
-    ExperimentSplitAndLeakageControlsModel,
-)
+from .experiment_bindings import *
+from .experiment_capture import *
+from .experiment_disclosure import *
 from .experiment_evidence import (
     ExperimentDerivedMeasureMethodModel,
     ExperimentDerivedMeasureModel,
@@ -188,8 +192,6 @@ from .manifests import (
 )
 from .manifests import CleanupCapabilitiesModel as CleanupCapabilitiesModel
 from .participant_context import ParticipantContextViewModel
-from .participant_control import ParticipantControlDeclarationModel, ParticipantControlOccurrenceModel
-from .participant_control_validation import validate_participant_control_occurrence_context
 from .participant_decision_surface import (
     ParticipantDecisionSurfaceActionEntryModel,
     ParticipantDecisionSurfaceCandidateSetFormModel,
@@ -203,6 +205,8 @@ from .participant_decision_surface_exposure import (
     ParticipantDecisionSurfaceExposureBindingModel,
     ParticipantDecisionSurfaceExposureRealizationModel,
 )
+from .participant_decision_surface_exposure_v2 import *
+from .participant_decision_surface_v2 import *
 from .participant_envelopes import (
     EventClassificationModel,
     ParticipantJointActionAccessSetModel,
@@ -228,10 +232,18 @@ from .participant_manifests import (
     ParticipantImplementationProvenanceModel,
     ParticipantImplementationSelectionModel,
 )
+from .participant_occurrences import (
+    ParticipantControlDeclarationModel,
+    ParticipantControlOccurrenceModel,
+    ParticipantCrossingOccurrenceModel,
+    validate_participant_control_occurrence_context,
+    validate_participant_crossing_occurrence_context,
+)
 from .participant_runtime import (
     ParticipantActionEffectResultModel,
     ParticipantActionPreconditionResultModel,
     ParticipantActionResultModel,
+    ParticipantActivityOccurrenceProvenanceModel,
     ParticipantAttributionCandidateModel,
     ParticipantAttributionEdgeModel,
     ParticipantAttributionEvidenceBasisModel,
@@ -320,50 +332,28 @@ from .runtime_facts import (
     RuntimeFactVisibilityModel,
 )
 from .schema_constraints import (
-    AcesSemanticInvariantEntryModel,
-    AcesSemanticInvariantInputModel,
-    AcesSemanticInvariantProfileModel,
-    AcesSemanticInvariantProfileReferenceModel,
-    validate_aces_semantic_invariant_annotations,
+    RaesSemanticInvariantEntryModel,
+    RaesSemanticInvariantInputModel,
+    RaesSemanticInvariantProfileModel,
+    RaesSemanticInvariantProfileReferenceModel,
+    validate_raes_semantic_invariant_annotations,
 )
 from .semantic_profiles import (
     SemanticBehaviorAssumptionModel,
     SemanticProfileModel,
     SemanticProfilePhaseModel,
 )
-from .trial_cleanup import (
-    CleanStateClaimModel as CleanStateClaimModel,
-)
-from .trial_cleanup import (
-    CleanStateRequirementModel as CleanStateRequirementModel,
-)
-from .trial_cleanup import (
-    CleanupObligationModel as CleanupObligationModel,
-)
-from .trial_cleanup import (
-    CleanupObligationResultModel as CleanupObligationResultModel,
-)
-from .trial_cleanup import (
-    CleanupResourceBoundaryModel as CleanupResourceBoundaryModel,
-)
-from .trial_cleanup import (
-    ExecutionRetryPolicyModel as ExecutionRetryPolicyModel,
-)
-from .trial_cleanup import (
-    IsolationDimensionEvidenceModel as IsolationDimensionEvidenceModel,
-)
-from .trial_cleanup import (
-    SchedulerIsolationProofModel as SchedulerIsolationProofModel,
-)
-from .trial_cleanup import (
-    TrialCleanupPlanModel as TrialCleanupPlanModel,
-)
-from .trial_cleanup import (
-    TrialCleanupReceiptModel as TrialCleanupReceiptModel,
-)
-from .trial_cleanup import (
-    validate_trial_cleanup_receipt as validate_trial_cleanup_receipt,
-)
+from .trial_cleanup import CleanStateClaimModel as CleanStateClaimModel
+from .trial_cleanup import CleanStateRequirementModel as CleanStateRequirementModel
+from .trial_cleanup import CleanupObligationModel as CleanupObligationModel
+from .trial_cleanup import CleanupObligationResultModel as CleanupObligationResultModel
+from .trial_cleanup import CleanupResourceBoundaryModel as CleanupResourceBoundaryModel
+from .trial_cleanup import ExecutionRetryPolicyModel as ExecutionRetryPolicyModel
+from .trial_cleanup import IsolationDimensionEvidenceModel as IsolationDimensionEvidenceModel
+from .trial_cleanup import SchedulerIsolationProofModel as SchedulerIsolationProofModel
+from .trial_cleanup import TrialCleanupPlanModel as TrialCleanupPlanModel
+from .trial_cleanup import TrialCleanupReceiptModel as TrialCleanupReceiptModel
+from .trial_cleanup import validate_trial_cleanup_receipt as validate_trial_cleanup_receipt
 from .validation_disclosure import ValidationBasisDisclosureDocumentModel
 from .validators import _collapse_nullable_optional_schema as _collapse_nullable_optional_schema
 from .validators import _resolve_instance_path_schema as _resolve_instance_path_schema
@@ -382,119 +372,3 @@ from .vocabulary_sources import (
     NistCsfDefensiveCategorySourceModel,
     NistCsfDefensiveCategorySourceTermModel,
 )
-
-# fmt: off
-__all__ = [
-    "AcesSemanticInvariantEntryModel", "AcesSemanticInvariantInputModel", "AcesSemanticInvariantProfileModel",
-    "AcesSemanticInvariantProfileReferenceModel", "ATTACK_ENTERPRISE_TACTICS_SOURCE_SCHEMA_VERSION",
-    "ATLAS_TACTICS_SOURCE_SCHEMA_VERSION", "AttackEnterpriseTacticSourceTermModel",
-    "AttackEnterpriseTacticsSourceModel", "AtlasTacticSourceTermModel", "AtlasTacticsSourceModel",
-    "ASSOCIATED_ARTIFACT_MANIFEST_SCHEMA_VERSION", "AssociatedArtifactManifestModel",
-    "AssociatedArtifactParentReferenceModel", "AssociatedArtifactSetDigestString",
-    "BACKEND_MANIFEST_V2_SCHEMA_VERSION", "ApparatusIdentityModel", "BackendCompatibilityModel",
-    "BackendManifestV2Model", "BackendCapabilitiesV2Model", "BehavioralClaimBindingModel", "BehavioralRelationId",
-    "BehavioralTaxonomyRevision", "CONCEPT_FAMILIES_SCHEMA_VERSION", "ConceptBindingEntryModel",
-    "ConceptFamilyCatalogModel", "ConceptFamilyDefinitionModel", "ConceptFamilyId", "ConceptProvenanceCategory",
-    "CONTROLLED_VOCABULARIES_SCHEMA_VERSION", "ControlledVocabularyCatalogModel",
-    "ControlledVocabularyDefinitionModel", "ControlledVocabularySourceModel", "ControlledVocabularyTermId",
-    "ControlledVocabularyTermModel", "ContractModel", "ExperimentAnalysisPlanModel",
-    "NIST_CSF_DEFENSIVE_CATEGORIES_SOURCE_SCHEMA_VERSION", "NistCsfDefensiveCategorySourceModel",
-    "NistCsfDefensiveCategorySourceTermModel",
-    "ExperimentApparatusCompatibilityReferenceModel", "ExperimentApparatusComponentModel",
-    "ExperimentApparatusConstraintModel", "ExperimentApparatusContextModel", "ExperimentArtifactRefModel",
-    "ExperimentAugmentationDisclosureModel", "ExperimentBackendReferenceModel",
-    "ExperimentCaptureRequirementModel", "ExperimentCaptureSpecModel", "ExperimentCaptureSpecReferenceModel",
-    "ExperimentCaptureWindowModel", "ExperimentChecksumModel", "ExperimentClockContextModel",
-    "ExperimentConditionAssignmentParameterModel", "ExperimentConditionAssignmentReferenceModel",
-    "ExperimentDerivedMeasureMethodModel", "ExperimentDerivedMeasureModel",
-    "ExperimentDerivedMeasureReferenceModel", "ExperimentEpisodeControlModel", "ExperimentEvidenceRecordModel",
-    "ExperimentEvidenceRecordReferenceModel", "ExperimentEvidenceReferenceModel",
-    "ExperimentEvaluationProtocolModel", "ExperimentInvalidationModel", "ExperimentManifestReferenceModel",
-    "ExperimentMeasurementChannelReferenceModel", "ExperimentMetricDefinitionModel",
-    "ExperimentMissingDataPolicyModel", "ExperimentMultipleComparisonPolicyModel", "ExperimentParameterModel",
-    "ExperimentProcessorReferenceModel", "ExperimentRealizedFormDisclosureModel",
-    "ExperimentRedVariantSelectionModel", "ExperimentReferenceModel", "ExperimentResultSummaryModel",
-    "ExperimentRunAllocationPlanModel", "ExperimentRunModel", "ExperimentRunPlanModel",
-    "ExperimentRunTraceabilityModel", "ExperimentScenarioReferenceModel",
-    "ExperimentScenarioSnapshotReferenceModel", "ExperimentSpecModel", "ExperimentSplitAndLeakageControlsModel",
-    "ExperimentStatisticalMethodModel", "ExperimentStochasticControlModel", "ExperimentStudyFactorModel",
-    "ExperimentStudyMembershipModel", "ExperimentStudyModel", "ExperimentTaskReferenceModel",
-    "ExperimentTaskModel", "ExperimentUncertaintyMethodModel", "ExperimentValidityNoteModel",
-    "EXPERIMENT_APPARATUS_CONTEXT_SCHEMA_VERSION", "EXPERIMENT_AUTHORING_INPUT_SCHEMA_VERSION",
-    "EXPERIMENT_CAPTURE_SPEC_SCHEMA_VERSION", "EXPERIMENT_DERIVED_MEASURE_SCHEMA_VERSION",
-    "EXPERIMENT_EVIDENCE_RECORD_SCHEMA_VERSION", "EXPERIMENT_RUN_SCHEMA_VERSION",
-    "EXPERIMENT_STUDY_SCHEMA_VERSION", "EXPERIMENT_TASK_SCHEMA_VERSION", "EvaluationHistoryEventModel",
-    "EvaluationPlanModel", "EvaluationResultStateModel", "PropositionAssertionPolarity",
-    "PropositionEvaluationBasis", "PropositionIndeterminacyReason", "PropositionLossDisclosureModel",
-    "PropositionLossKind", "PropositionProbeBindingModel", "PropositionTemporalContextModel",
-    "PropositionTruthOutcome", "PropositionTruthResultModel", "EVALUATION_STATE_SCHEMA_VERSION",
-    "EvaluatorCapabilitiesModel", "EventClassificationModel", "InstantiationRequestModel",
-    "OPERATION_SCHEMA_VERSION", "OperationReceiptModel", "OperationStatusModel", "ObservationCapabilitiesModel",
-    "OrchestrationPlanModel", "OrchestratorCapabilitiesModel", "PARTICIPANT_EPISODE_STATE_SCHEMA_VERSION",
-    "PARTICIPANT_IMPLEMENTATION_MANIFEST_V1_SCHEMA_VERSION",
-    "PARTICIPANT_IMPLEMENTATION_PROVENANCE_V1_SCHEMA_VERSION", "ParticipantActionEffectResultModel",
-    "ParticipantActionPreconditionResultModel", "ParticipantActionResultModel",
-    "ParticipantAttributionCandidateModel", "ParticipantAttributionEdgeModel",
-    "ParticipantAttributionEvidenceBasisModel", "ParticipantAttributionOrderingBasisModel",
-    "ParticipantAutonomousExecutionStateModel", "ParticipantBehaviorHistoryEventModel",
-    "ParticipantContextViewModel", "ParticipantControlDeclarationModel",
-    "ParticipantControlOccurrenceModel", "validate_participant_control_occurrence_context",
-    "ParticipantDecisionSurfaceActionEntryModel", "ParticipantDecisionSurfaceCandidateSetFormModel",
-    "ParticipantDecisionSurfaceConstrainedFormModel", "ParticipantDecisionSurfaceExposureBindingModel",
-    "ParticipantDecisionSurfaceExposureRealizationModel", "ParticipantDecisionSurfaceModel",
-    "ParticipantDecisionSurfaceOpenEndedFormModel", "ParticipantDecisionSurfaceSelectionModel",
-    "validate_participant_decision_surface_context", "ParticipantEpisodeHistoryEventModel",
-    "ParticipantEpisodeStateModel", "ParticipantExposurePolicyModel", "ParticipantFeatureSupportLevel",
-    "ParticipantFeatureSupportModel", "ParticipantHistoryViewBehaviorEventModel",
-    "ParticipantHistoryViewEpisodeEventModel", "ParticipantHistoryViewModel",
-    "ParticipantImplementationCapabilitiesModel", "ParticipantImplementationCompatibilityModel",
-    "ParticipantImplementationManifestModel", "ParticipantImplementationProvenanceModel",
-    "ParticipantImplementationSelectionModel", "ParticipantJointActionAccessSetModel",
-    "ParticipantJointActionRecordModel", "ParticipantLifecycleEventModel", "ParticipantObservationEnvelopeModel",
-    "ParticipantObservationLossDescriptorModel", "ParticipantObservationStochasticContextModel",
-    "ParticipantOutcomeInterpretationRecordModel", "ParticipantOutcomeReportModel",
-    "ParticipantOutcomeReportSourceModel", "ParticipantOutcomeReportStateRelationshipModel",
-    "ParticipantOutcomeSourceRecordModel", "ParticipantOutcomeTargetRecordModel",
-    "ParticipantRuntimeBaseEnvelopeModel", "ParticipantRuntimeCapabilitiesModel",
-    "ParticipantSharedStateAccessModel", "ParticipantSharedStateRecordModel",
-    "ParticipantStatusViewEpisodeStateModel", "ParticipantStatusViewModel",
-    "ParticipantTemporalRuntimeContextModel", "ParticipantTimeManagementContextModel",
-    "VIEW_SCOPE_PROJECTED_FIELDS", "PlanOperationModel", "ProcessorFeature",
-    "PROCESSOR_MANIFEST_V2_SCHEMA_VERSION", "ProcessorManifestV2Model", "ProcessorCompatibilityModel",
-    "ProcessorCapabilitiesV2Model", "ProvisionerCapabilitiesModel", "ProvisioningPlanModel",
-    "RANDOM_STREAM_DRAW_PURPOSE_SCOPE", "RANDOM_STREAM_PROFILE_SCHEMA_VERSION",
-    "RANDOM_STREAM_VECTOR_SCHEMA_VERSION", "GovernedEntropyRefModel", "GovernedRandomOutcomeRefModel",
-    "PublicRandomOutcomeModel", "PublicSeedModel", "RandomDrawOutcomeModel",
-    "RandomStreamAddressEncodingSpecModel", "RandomStreamBlockEncodingSpecModel",
-    "RandomStreamBoundedIntegerVectorCaseModel", "RandomStreamControlBindingModel",
-    "RandomStreamDerivationSpecModel", "RandomStreamDrawRecordModel", "RandomStreamGeneratorModel",
-    "RandomStreamProfileModel", "RandomStreamProfileReferenceModel", "RandomStreamRootEntropySpecModel",
-    "RandomStreamTransformSpecModel", "RandomStreamVectorModel", "RootEntropyModel", "StreamAddressModel",
-    "TrialCoordinateModel",
-    "RealizationEnvelopeIdentityModel", "RawDataIntegrityModel", "RealizationProvenanceEntryModel",
-    "RealizationSupportDeclarationModel", "RealizationSupportMode", "ReferenceModelCatalogModel",
-    "ReferenceModelDefinitionModel", "ReferenceModelSchemaBindingModel", "REFERENCE_MODELS_SCHEMA_VERSION",
-    "REUSABLE_ASSET_EVIDENCE_CLASSES", "REUSABLE_ASSET_FAMILIES", "REUSABLE_ASSET_TRUST_POLICY_SCHEMA_VERSION",
-    "RUNTIME_SNAPSHOT_SCHEMA_VERSION", "ReusableAssetAuthenticityPolicyModel",
-    "ReusableAssetEvidenceRequirementModel", "ReusableAssetFamilyTrustPolicyModel",
-    "ReusableAssetTrustPolicyModel", "RUNTIME_FACT_BINDING_PLANE_V1_SCHEMA_VERSION",
-    "RuntimeFactAbsenceDisposition", "RuntimeFactAudience", "RuntimeFactBindingDisposition",
-    "RuntimeFactBindingEventModel", "RuntimeFactBindingPlaneModel", "RuntimeFactBindingRequestModel",
-    "RuntimeFactBindingSelectionModel", "RuntimeFactDeclarationModel", "RuntimeFactProjectionModel",
-    "RuntimeFactScopeKind", "RuntimeFactScopeModel", "RuntimeFactSensitivity", "RuntimeFactSinkModel",
-    "RuntimeFactSourceKind", "RuntimeFactValueType", "RuntimeFactVersionModel", "RuntimeFactVisibilityModel",
-    "RuntimeSnapshotEnvelopeModel",
-    "SCENARIO_INSTANTIATION_REQUEST_SCHEMA_VERSION", "SEMANTIC_PROFILE_SCHEMA_VERSION", "schema_bundle",
-    "SemanticBehaviorAssumptionModel", "SemanticProfileModel", "SemanticProfilePhaseModel", "SnapshotEntryModel",
-    "SourcePipelineModel", "SourceStatusModel", "UcoAlignmentCatalogModel", "UcoAlignmentTypeModel",
-    "UcoFamilyAlignmentModel", "UCO_ALIGNMENT_SCHEMA_VERSION", "WorkflowCancellationRequestModel",
-    "WORKFLOW_CANCELLATION_REQUEST_SCHEMA_VERSION", "WorkflowExecutionStateModel", "WorkflowFeature",
-    "WorkflowHistoryEventModel", "WorkflowStatePredicateFeature", "WorkflowStepStateModel",
-    "WORKFLOW_STATE_SCHEMA_VERSION", "validate_aces_semantic_invariant_annotations",
-    "validate_experiment_apparatus_context_against_manifests",
-    "validate_experiment_apparatus_context_archival_datetimes", "validate_experiment_run_against_task",
-    "validate_experiment_run_archival_datetimes", "validate_experiment_study_against_tasks_and_runs",
-    "validate_experiment_study_archival_datetimes", "validate_experiment_task_archival_datetimes",
-    "ValidationBasisDisclosureDocumentModel", "validate_experiment_run_time_model", "TimeCapabilitiesModel",
-]
-# fmt: on

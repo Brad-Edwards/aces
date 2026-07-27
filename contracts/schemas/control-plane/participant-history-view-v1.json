@@ -239,6 +239,13 @@
           "title": "Preconditions",
           "type": "array"
         },
+        "resource_measurements": {
+          "items": {
+            "$ref": "#/$defs/ParticipantResourceMeasurementModel"
+          },
+          "title": "Resource Measurements",
+          "type": "array"
+        },
         "status": {
           "enum": [
             "accepted",
@@ -262,6 +269,115 @@
         "observation_point"
       ],
       "title": "ParticipantActionResultModel",
+      "type": "object"
+    },
+    "ParticipantActivityOccurrenceProvenanceModel": {
+      "additionalProperties": false,
+      "description": "Safe within-run scheduler provenance for one native action attempt.",
+      "properties": {
+        "attempt_id": {
+          "minLength": 1,
+          "title": "Attempt Id",
+          "type": "string"
+        },
+        "burst_position": {
+          "minimum": 0,
+          "title": "Burst Position",
+          "type": "integer"
+        },
+        "candidate_id": {
+          "minLength": 1,
+          "title": "Candidate Id",
+          "type": "string"
+        },
+        "dependency_candidate_ids": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Dependency Candidate Ids",
+          "type": "array"
+        },
+        "occurrence_id": {
+          "minLength": 1,
+          "title": "Occurrence Id",
+          "type": "string"
+        },
+        "policy_address": {
+          "minLength": 1,
+          "title": "Policy Address",
+          "type": "string"
+        },
+        "policy_profile": {
+          "enum": [
+            "participant-autonomous-execution/v2",
+            "participant-autonomous-execution/v3"
+          ],
+          "title": "Policy Profile",
+          "type": "string"
+        },
+        "predecessor_attempt_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Predecessor Attempt Id"
+        },
+        "random_address": {
+          "$ref": "#/$defs/ParticipantStreamAddressModel"
+        },
+        "random_control_id": {
+          "minLength": 1,
+          "title": "Random Control Id",
+          "type": "string"
+        },
+        "random_profile_id": {
+          "minLength": 1,
+          "title": "Random Profile Id",
+          "type": "string"
+        },
+        "terminal_outcome": {
+          "minLength": 1,
+          "title": "Terminal Outcome",
+          "type": "string"
+        },
+        "timing_disposition": {
+          "enum": [
+            "drawn",
+            "next_opening",
+            "retry",
+            "burst"
+          ],
+          "title": "Timing Disposition",
+          "type": "string"
+        },
+        "timing_tick": {
+          "minimum": 0,
+          "title": "Timing Tick",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "policy_address",
+        "policy_profile",
+        "occurrence_id",
+        "attempt_id",
+        "candidate_id",
+        "timing_tick",
+        "timing_disposition",
+        "burst_position",
+        "random_control_id",
+        "random_profile_id",
+        "random_address",
+        "terminal_outcome"
+      ],
+      "title": "ParticipantActivityOccurrenceProvenanceModel",
       "type": "object"
     },
     "ParticipantAdmissionDisposition": {
@@ -592,6 +708,17 @@
           "anyOf": [
             {
               "$ref": "#/$defs/ParticipantActionResultModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "activity_provenance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ParticipantActivityOccurrenceProvenanceModel"
             },
             {
               "type": "null"
@@ -1182,6 +1309,75 @@
       "title": "ParticipantPreconditionClass",
       "type": "string"
     },
+    "ParticipantResourceMeasurementModel": {
+      "additionalProperties": false,
+      "properties": {
+        "budget_state_ref": {
+          "minLength": 1,
+          "title": "Budget State Ref",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "execution_generation": {
+          "minimum": 0,
+          "title": "Execution Generation",
+          "type": "integer"
+        },
+        "measured": {
+          "maximum": 1000000000000000000,
+          "minimum": 0,
+          "title": "Measured",
+          "type": "integer"
+        },
+        "meter_profile_ref": {
+          "minLength": 1,
+          "title": "Meter Profile Ref",
+          "type": "string"
+        },
+        "operation_id": {
+          "minLength": 1,
+          "title": "Operation Id",
+          "type": "string"
+        },
+        "resource_kind": {
+          "enum": [
+            "action_rate",
+            "concurrent_actions",
+            "storage_growth",
+            "inference_tokens",
+            "image_generations",
+            "accelerator"
+          ],
+          "title": "Resource Kind",
+          "type": "string"
+        },
+        "unit": {
+          "minLength": 1,
+          "title": "Unit",
+          "type": "string"
+        }
+      },
+      "required": [
+        "budget_state_ref",
+        "operation_id",
+        "execution_generation",
+        "resource_kind",
+        "unit",
+        "meter_profile_ref",
+        "measured",
+        "evidence_refs"
+      ],
+      "title": "ParticipantResourceMeasurementModel",
+      "type": "object"
+    },
     "ParticipantRuntimeLifecyclePhase": {
       "description": "RUN-306 observable participant runtime lifecycle phases.",
       "enum": [
@@ -1193,6 +1389,82 @@
       ],
       "title": "ParticipantRuntimeLifecyclePhase",
       "type": "string"
+    },
+    "ParticipantStreamAddressModel": {
+      "additionalProperties": false,
+      "description": "Closed within-run address for one participant-policy draw.",
+      "properties": {
+        "draw_purpose": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Draw Purpose",
+          "type": "string"
+        },
+        "local_coordinate": {
+          "minimum": 0,
+          "title": "Local Coordinate",
+          "type": "integer"
+        },
+        "namespace": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Namespace",
+          "type": "string"
+        },
+        "occurrence_ordinal": {
+          "minimum": 0,
+          "title": "Occurrence Ordinal",
+          "type": "integer"
+        },
+        "participant_address": {
+          "minLength": 1,
+          "title": "Participant Address",
+          "type": "string"
+        },
+        "policy_address": {
+          "minLength": 1,
+          "title": "Policy Address",
+          "type": "string"
+        },
+        "time_segment": {
+          "minimum": 0,
+          "title": "Time Segment",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "namespace",
+        "policy_address",
+        "participant_address",
+        "time_segment",
+        "occurrence_ordinal",
+        "draw_purpose",
+        "local_coordinate"
+      ],
+      "title": "ParticipantStreamAddressModel",
+      "type": "object",
+      "x-raes-invariants": [
+        {
+          "description": "draw_purpose must be governed and policy_address/participant_address must be compiled autonomous participant addresses.",
+          "id": "participant-random-stream-address-governed",
+          "inputs": [
+            {
+              "contract_id": "controlled-vocabularies-v1",
+              "instance_path": "#"
+            }
+          ],
+          "level": "error",
+          "validator": "raes_contracts.contracts.random_stream.ParticipantStreamAddressModel._validate_address"
+        }
+      ]
     },
     "ParticipantTemporalEventPoint": {
       "description": "Named participant event points used by temporal contracts.",
@@ -1298,7 +1570,7 @@
       "type": "string"
     }
   },
-  "$id": "https://aces.dev/schemas/participant-history-view-v1.json",
+  "$id": "https://raes.dev/schemas/participant-history-view-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "allOf": [
@@ -1431,5 +1703,14 @@
     "completeness"
   ],
   "title": "ParticipantHistoryViewModel",
-  "type": "object"
+  "type": "object",
+  "x-raes-semantic-profile": {
+    "contract_id": "participant-history-view-v1",
+    "entry_schema_contract_id": "raes-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/RaesSemanticInvariantEntryModel",
+    "id": "raes-semantic-invariants-v1",
+    "keyword": "x-raes-invariants",
+    "required": true,
+    "uri": "https://raes.dev/schemas/semantic-invariants/v1"
+  }
 }

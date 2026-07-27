@@ -1,0 +1,10 @@
+{
+  "contract_id": "raes-semantic-invariants-v1",
+  "schema_path": "contracts/schemas/profiles/raes-semantic-invariants-v1.json",
+  "stability": "draft",
+  "content_hash": "cfe89c457ff1ac21334768ab82b30ce2b1e28eb165bb64a91d1b222e05ece943",
+  "last_change": {
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "cfe89c457ff1ac21334768ab82b30ce2b1e28eb165bb64a91d1b222e05ece943"
+  }
+}

@@ -140,10 +140,16 @@ DSL-437 autonomous execution is an additional fail-closed participant
 capability. A backend that includes `autonomous_execution` in
 `supported_behavior_features` must set `supports_autonomous_execution`, list
 its supported selection strategies, exact action contracts, observation
-boundaries, target addresses, and positive finite limits for participants,
-attempts, and in-flight actions. The planner also compares the parent behavior
+boundaries, target addresses, policy profiles, and positive finite limits for
+participants, attempts, in-flight actions, occurrences, retries per occurrence,
+and burst size. It must also publish relational execution bindings, all six
+generation-fenced lifecycle controls, bounded-concurrency support, and finite
+execution-service and concurrent-action limits. The planner compares each
+compiled action-to-target relation rather than accepting the Cartesian product
+of separate action and target lists. The planner also compares the parent behavior
 specification's required feature set with the runtime capability. Runtime
-target registration requires the autonomous native-binding method. This is
+target registration requires the autonomous native-binding,
+execution-control/readback, and bounded-batch methods. This is
 admission evidence only: conformance also requires the backend participant
 runtime to invoke its native service adapter, return a typed terminal action
 outcome at the bound temporal coordinate distinct from control-operation
@@ -153,7 +159,38 @@ must be reachable. The portable runtime drives real-time and dilated participant
 cadence; externally paced autonomous execution is not admissible until a
 portable transition-notification contract is governed. Durable readback must
 agree across scheduler policy identity, clock segment/lifecycle, and live
-participant episode.
+participant episode. Conditional live conformance drives two bounded native
+actions plus start, pause, resume, bounded drain, reset, stale-generation
+fencing, and teardown; inert method implementations or missing transition
+evidence fail. The shared participant base exposes readback only; it cannot
+make a backend lifecycle claim pass. Each successful control operation must
+come from the backend handler and produce changed action-specific readback and
+new evidence.
+
+The explicit `participant-autonomous-execution/v2` profile additionally
+requires exact support for all governed activity features, `weighted`
+selection, shared-time `window` constraints, and
+`blake3-xof-participant-v1`. The runtime records dependency, retry, cooldown,
+burst, timing-disposition, and safe random-address facts in typed continuation
+and participant behavior history. A backend must not substitute the
+experiment-selection `blake3-xof-v1` address/profile, silently drop occurrence
+provenance, or treat an apparatus stochastic-control declaration as scenario
+variation. Missing exact support fails planning.
+
+The `participant-autonomous-execution/v3` profile additionally requires a
+closed `resource_budgets` capability under the existing participant-runtime
+root. Admission matches the complete compiled resource vector against
+declared owner/resource/accounting/reset/fairness support and
+configuration-bound pool entries. Owner, unit, meter, accounting mode, and
+capacity must match exactly; declared cross-range pools require
+`tenant_partitioned` isolation. Admission is atomic, so a backend cannot accept
+action/concurrency bounds while dropping storage, token, image, accelerator,
+ancestor, or fairness obligations. Runtime conformance then requires typed,
+generation-fenced, policy-scoped budget state; one canonical cross-policy pool
+allocation ledger; and append-only reserve, measured commit, release, throttle,
+and reconcile events. Native commits require a complete matching measurement
+vector and evidence. Manifest support and configured capacity do not count as
+measured-realization evidence.
 
 ## Gotchas And Anti-Patterns
 

@@ -1,0 +1,10 @@
+{
+  "contract_id": "participant-resource-budget-state-v1",
+  "schema_path": "contracts/schemas/participant-runtime/participant-resource-budget-state-v1.json",
+  "stability": "draft",
+  "content_hash": "6fddd2ea39a2df27846c35e8c88e9985d64e12b78151f4fc23978d0820d49d8d",
+  "last_change": {
+    "summary": "Published canonical policy-scoped budget state for generation-fenced reservations, measured use, and reconciliation for issue #899.",
+    "content_hash": "6fddd2ea39a2df27846c35e8c88e9985d64e12b78151f4fc23978d0820d49d8d"
+  }
+}

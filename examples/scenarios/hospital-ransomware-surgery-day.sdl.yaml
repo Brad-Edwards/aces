@@ -713,7 +713,7 @@ propositions:
     predicate:
       kind: boolean
       property: backup-catalog-intact
-      semantic_ref: urn:aces:observable:backup-catalog-intact
+      semantic_ref: urn:raes:observable:backup-catalog-intact
       operator: equals
       expected: true
     quantifier: all
@@ -727,7 +727,7 @@ propositions:
     predicate:
       kind: boolean
       property: clinical-disruption-observed
-      semantic_ref: urn:aces:observable:clinical-disruption-observed
+      semantic_ref: urn:raes:observable:clinical-disruption-observed
       operator: equals
       expected: true
     quantifier: all
@@ -741,7 +741,7 @@ propositions:
     predicate:
       kind: boolean
       property: ehr-api-healthy
-      semantic_ref: urn:aces:observable:ehr-api-healthy
+      semantic_ref: urn:raes:observable:ehr-api-healthy
       operator: equals
       expected: true
     quantifier: all
@@ -755,7 +755,7 @@ propositions:
     predicate:
       kind: boolean
       property: pacs-archive-healthy
-      semantic_ref: urn:aces:observable:pacs-archive-healthy
+      semantic_ref: urn:raes:observable:pacs-archive-healthy
       operator: equals
       expected: true
     quantifier: all
@@ -769,7 +769,7 @@ propositions:
     predicate:
       kind: boolean
       property: phi-staging-observed
-      semantic_ref: urn:aces:observable:phi-staging-observed
+      semantic_ref: urn:raes:observable:phi-staging-observed
       operator: equals
       expected: true
     quantifier: all
@@ -783,7 +783,7 @@ propositions:
     predicate:
       kind: boolean
       property: phish-mail-delivered
-      semantic_ref: urn:aces:observable:phish-mail-delivered
+      semantic_ref: urn:raes:observable:phish-mail-delivered
       operator: equals
       expected: true
     quantifier: all
@@ -797,7 +797,7 @@ propositions:
     predicate:
       kind: boolean
       property: radiology-workflow-delayed
-      semantic_ref: urn:aces:observable:radiology-workflow-delayed
+      semantic_ref: urn:raes:observable:radiology-workflow-delayed
       operator: equals
       expected: true
     quantifier: all
@@ -811,7 +811,7 @@ propositions:
     predicate:
       kind: boolean
       property: soc-pipeline-up
-      semantic_ref: urn:aces:observable:soc-pipeline-up
+      semantic_ref: urn:raes:observable:soc-pipeline-up
       operator: equals
       expected: true
     quantifier: all
@@ -825,7 +825,7 @@ propositions:
     predicate:
       kind: boolean
       property: triage-case-submitted
-      semantic_ref: urn:aces:observable:triage-case-submitted
+      semantic_ref: urn:raes:observable:triage-case-submitted
       operator: equals
       expected: true
     quantifier: all
@@ -839,7 +839,7 @@ propositions:
     predicate:
       kind: boolean
       property: vendor-session-established
-      semantic_ref: urn:aces:observable:vendor-session-established
+      semantic_ref: urn:raes:observable:vendor-session-established
       operator: equals
       expected: true
     quantifier: all

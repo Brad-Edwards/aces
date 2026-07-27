@@ -2,6 +2,8 @@
 
 from collections.abc import Iterable
 
+from .contracts.participant_resource_budgets import ParticipantResourceMeasurementRequirementModel
+
 ACTION_CONTRACT_PREFIX = "participant.action-contract."
 OBSERVATION_BOUNDARY_PREFIX = "participant.observation-boundary."
 
@@ -26,3 +28,16 @@ def string_tuple(value: Iterable[str], field_name: str) -> tuple[str, ...]:
     if len(set(values)) != len(values):
         raise ValueError(f"{field_name} entries must be unique")
     return values
+
+
+def validate_resource_measurement_requirements(
+    requirements: Iterable[object],
+) -> None:
+    values = tuple(requirements)
+    if any(not isinstance(item, ParticipantResourceMeasurementRequirementModel) for item in values):
+        raise TypeError(
+            "resource_measurement_requirements entries must be ParticipantResourceMeasurementRequirementModel"
+        )
+    state_refs = [item.budget_state_ref for item in values]
+    if len(state_refs) != len(set(state_refs)):
+        raise ValueError("resource measurement requirement budget_state_ref values must be unique")

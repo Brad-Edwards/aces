@@ -113,7 +113,7 @@ class _GuestFacts:
 
     def render(self) -> str:
         lines = [
-            "ACES-GUEST-FACTS v1",
+            "RAES-GUEST-FACTS v1",
             f"challenge {self.challenge}",
             f"architecture {self.architecture}",
             f"vcpus {self.vcpus}",
@@ -157,10 +157,10 @@ def _domain() -> DomainSpec:
         cloud_init=CloudInitSpec(
             users=(
                 CloudInitUser(  # noqa: S604 - `shell` is a CloudInitUser account field, not a subprocess shell
-                    name="analyst", groups=("aces",), shell="/bin/sh", home="/home/analyst", lock_passwd=True
+                    name="analyst", groups=("raes",), shell="/bin/sh", home="/home/analyst", lock_passwd=True
                 ),
             ),
-            write_files=(CloudInitFile(path="/etc/aces/marker", content="hello", permissions="0644"),),
+            write_files=(CloudInitFile(path="/etc/raes/marker", content="hello", permissions="0644"),),
         ),
     )
 
@@ -169,8 +169,8 @@ def _matching_facts() -> _GuestFacts:
     mac = mac_address("scn.vm", "scn.net")
     return _GuestFacts(
         interfaces=[(mac, "10.9.0.10", 1)],
-        content=[("/etc/aces/marker", _sha("hello"), "644")],
-        accounts=[("analyst", 1000, "/home/analyst", "/bin/sh", 1, "aces")],
+        content=[("/etc/raes/marker", _sha("hello"), "644")],
+        accounts=[("analyst", 1000, "/home/analyst", "/bin/sh", 1, "raes")],
         services=[("beacon", 9000, 1, 1)],
     )
 
@@ -181,7 +181,7 @@ def _driver(tmp_path: Path, connection: _FakeConnection, transport: _StubTranspo
     return GuestCertifiedLibvirtDriver(
         state_dir=tmp_path / "state",
         connection=connection,
-        name_prefix="aces-gc",
+        name_prefix="raes-gc",
         kernel_path=kernel,
         initramfs_builder=GuestObservingInitramfsBuilder(busybox_path=Path("/usr/bin/busybox")),
         guest_transport=transport,
@@ -269,9 +269,9 @@ def test_concern_mismatches_are_falsified(tmp_path: Path, mutate: str) -> None:
     elif mutate == "memory":
         facts.memory_mib = 8  # below the corroboration floor
     elif mutate == "content":
-        facts.content = [("/etc/aces/marker", _sha("tampered"), "644")]
+        facts.content = [("/etc/raes/marker", _sha("tampered"), "644")]
     elif mutate == "account":
-        facts.accounts = [("analyst", 1000, "/home/analyst", "/bin/bash", 1, "aces")]
+        facts.accounts = [("analyst", 1000, "/home/analyst", "/bin/bash", 1, "raes")]
     elif mutate == "service":
         facts.services = [("beacon", 9000, 0, 1)]
     elif mutate == "missing_content":
@@ -392,7 +392,7 @@ def _facts_from_matrix(matrix, challenge: str) -> dict[str, str]:
     facts: dict[str, str] = {}
     for domain in matrix["domains"]:
         lines = [
-            "ACES-GUEST-FACTS v1",
+            "RAES-GUEST-FACTS v1",
             f"challenge {challenge}",
             "architecture x86_64",
             f"vcpus {domain['vcpus']}",

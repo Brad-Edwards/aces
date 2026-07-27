@@ -4,8 +4,11 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable
 from copy import deepcopy
+from dataclasses import dataclass
 
+from raes_backend_protocols.capabilities import BackendManifest
 from raes_contracts.addressing import require_compiled_address
+from raes_contracts.artifact_requirements import ArtifactAvailabilityContext
 from raes_contracts.contracts.time_model import validate_time_runtime_transition
 from raes_contracts.diagnostics import Diagnostic
 from raes_contracts.planning import ProvisioningPlan
@@ -23,6 +26,14 @@ from .proposition_truth_contracts import proposition_truth_contract_diagnostics
 from .workflow_result_contracts import workflow_result_contract_diagnostics
 
 _BACKEND_CONTRACT_INVALID = "runtime.backend-contract-invalid"
+
+
+@dataclass(frozen=True)
+class _RealizationApplyContext:
+    requirements: tuple[CompiledRealizationRequirement, ...] = ()
+    plan: ProvisioningPlan | None = None
+    manifest: BackendManifest | None = None
+    artifact_availability: ArtifactAvailabilityContext | None = None
 
 
 def _call_backend_diagnostics(
@@ -51,9 +62,9 @@ def _call_backend_apply(
     *args: object,
     address: str,
     snapshot: RuntimeSnapshot,
-    realization_requirements: tuple[CompiledRealizationRequirement, ...] = (),
-    realization_plan: ProvisioningPlan | None = None,
+    realization: _RealizationApplyContext | None = None,
 ) -> ApplyResult:
+    realization_context = realization or _RealizationApplyContext()
     baseline_snapshot = deepcopy(snapshot)
     backend_snapshot = deepcopy(snapshot)
     backend_args = tuple(backend_snapshot if arg is snapshot else arg for arg in args)
@@ -70,8 +81,10 @@ def _call_backend_apply(
         result,
         address=address,
         baseline_snapshot=baseline_snapshot,
-        realization_requirements=realization_requirements,
-        realization_plan=realization_plan,
+        realization_requirements=realization_context.requirements,
+        realization_plan=realization_context.plan,
+        backend_manifest=realization_context.manifest,
+        artifact_availability=realization_context.artifact_availability,
     )
 
 
@@ -82,6 +95,8 @@ def _finalize_backend_apply(
     baseline_snapshot: RuntimeSnapshot,
     realization_requirements: tuple[CompiledRealizationRequirement, ...],
     realization_plan: ProvisioningPlan | None,
+    backend_manifest: BackendManifest | None,
+    artifact_availability: ArtifactAvailabilityContext | None,
 ) -> ApplyResult:
     """Validate a backend's apply result and gate its realized snapshot.
 
@@ -112,6 +127,8 @@ def _finalize_backend_apply(
             realization_requirements,
             realization_plan,
             result.snapshot,
+            manifest=backend_manifest,
+            artifact_availability=artifact_availability,
         )
     if contract_diagnostics:
         return ApplyResult(success=False, snapshot=baseline_snapshot, diagnostics=contract_diagnostics)
@@ -282,6 +299,9 @@ def _snapshot_carrier_addresses(snapshot: RuntimeSnapshot) -> set[str]:
         snapshot.participant_episode_results,
         snapshot.participant_episode_history,
         snapshot.participant_behavior_history,
+        snapshot.participant_control_history,
+        snapshot.participant_autonomous_execution_states,
+        snapshot.participant_execution_services,
         snapshot.shared_state_records,
         snapshot.shared_state_history,
         snapshot.joint_action_records,

@@ -2,9 +2,9 @@
   "contract_id": "trial-cleanup-receipt-v1",
   "schema_path": "contracts/schemas/control-plane/trial-cleanup-receipt-v1.json",
   "stability": "draft",
-  "content_hash": "5714bdc219d2f19fb4c69ce64076b671ba85332462d63ac4c7e31f863fb3f8cd",
+  "content_hash": "90462009caf9c41e35f764ac9be4e5777d7745994d7d04195ac6a08851a2d690",
   "last_change": {
-    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
-    "content_hash": "5714bdc219d2f19fb4c69ce64076b671ba85332462d63ac4c7e31f863fb3f8cd"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "90462009caf9c41e35f764ac9be4e5777d7745994d7d04195ac6a08851a2d690"
   }
 }

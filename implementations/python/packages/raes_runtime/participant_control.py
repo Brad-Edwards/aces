@@ -2,7 +2,14 @@
 
 from __future__ import annotations
 
-from raes_contracts.contracts import ParticipantDecisionSurfaceModel, ParticipantDecisionSurfaceSelectionModel
+from raes_contracts.contracts import (
+    ParticipantDecisionSurfaceModel,
+    ParticipantDecisionSurfaceSelectionModel,
+)
+from raes_contracts.contracts.participant_execution import (
+    ParticipantExecutionControlRequestModel,
+    ParticipantExecutionServiceStateModel,
+)
 from raes_contracts.diagnostics import Diagnostic
 from raes_contracts.participant_binding import (
     ParticipantActionAdmissionRequest,
@@ -21,23 +28,25 @@ from raes_contracts.runtime_state import OperationReceipt
 from raes_processor.models import ParticipantBehaviorRuntime
 
 from .control_plane_execution import execute_participant_action
-
-_NO_PARTICIPANT_RUNTIME_MESSAGE = "Target does not provide a participant runtime."
-_PARTICIPANT_BINDING_REJECTED = "runtime.participant-binding.rejected"
-
-
-def _participant_binding_address(participant_behavior: object) -> str:
-    address = getattr(participant_behavior, "address", None)
-    return address if isinstance(address, str) and address else "runtime.control-plane.participant-binding"
-
-
-def _participant_binding_diagnostic(address: str, message: str) -> Diagnostic:
-    return Diagnostic(
-        code=_PARTICIPANT_BINDING_REJECTED,
-        domain="runtime",
-        address=address,
-        message=message,
-    )
+from .participant_control_diagnostics import (
+    _NO_PARTICIPANT_RUNTIME_MESSAGE,
+    _participant_binding_address,
+    _participant_binding_diagnostic,
+)
+from .participant_control_intents import (
+    ParticipantApprovalControlIntent,
+    ParticipantCancellationControlIntent,
+    ParticipantControlIntent,
+    ParticipantDenialControlIntent,
+    ParticipantExternalDirectionControlIntent,
+    ParticipantHandoffControlIntent,
+    ParticipantInterventionControlIntent,
+    ParticipantOverrideControlIntent,
+    ParticipantProposalControlIntent,
+)
+from .participant_control_mediation import record_participant_control
+from .participant_decision_surface_control_v2 import ParticipantDecisionSurfaceV2ControlMixin
+from .participant_execution_control_boundary import backend_execution_control_method
 
 
 def _participant_binding_diagnostics(
@@ -202,8 +211,65 @@ def _participant_binding_request_diagnostics(
     return diagnostics
 
 
-class ParticipantControlMixin:
+class ParticipantControlMixin(ParticipantDecisionSurfaceV2ControlMixin):
     """Participant runtime methods for the shared runtime control plane."""
+
+    def record_participant_control(
+        self,
+        participant_address: str,
+        intent: ParticipantControlIntent,
+        *,
+        identity: object,
+        idempotency_key: str = "",
+    ) -> OperationReceipt:
+        """Mediate and durably append one supervisory control occurrence."""
+
+        return record_participant_control(
+            self,
+            participant_address=participant_address,
+            intent=intent,
+            identity=identity,
+            idempotency_key=idempotency_key,
+        )
+
+    def control_participant_execution(
+        self,
+        request: ParticipantExecutionControlRequestModel,
+        *,
+        idempotency_key: str = "",
+        request_fingerprint: str = "",
+    ) -> OperationReceipt:
+        """Submit one generation-fenced execution-service lifecycle mutation."""
+
+        participant_runtime = self._target.participant_runtime
+        method = getattr(participant_runtime, "control_execution", None)
+        if participant_runtime is None or not callable(method):
+            return self._reject_submission(
+                domain=RuntimeDomain.PARTICIPANT,
+                message=("Participant runtime does not expose portable execution control."),
+                idempotency_key=idempotency_key,
+                request_fingerprint=request_fingerprint,
+            )
+        return execute_participant_action(
+            self,
+            method=backend_execution_control_method(method),
+            request=request,
+            address=(f"runtime.control-plane.participant-execution.{request.execution_scope_ref}.{request.action}"),
+            idempotency_key=idempotency_key,
+            request_fingerprint=request_fingerprint,
+        )
+
+    def participant_execution_state(
+        self,
+        execution_scope_ref: str,
+    ) -> ParticipantExecutionServiceStateModel:
+        """Read typed lifecycle, health, readiness, capacity, and evidence state."""
+
+        participant_runtime = self._target.participant_runtime
+        method = getattr(participant_runtime, "execution_state", None)
+        if participant_runtime is None or not callable(method):
+            raise ValueError("participant runtime does not expose execution-service readback")
+        return method(execution_scope_ref, self._snapshot)
 
     def initialize_participant_episode(
         self,
@@ -404,3 +470,17 @@ class ParticipantControlMixin:
             idempotency_key=idempotency_key,
             request_fingerprint=request_fingerprint,
         )
+
+
+__all__ = (
+    "ParticipantApprovalControlIntent",
+    "ParticipantCancellationControlIntent",
+    "ParticipantControlIntent",
+    "ParticipantControlMixin",
+    "ParticipantDenialControlIntent",
+    "ParticipantExternalDirectionControlIntent",
+    "ParticipantHandoffControlIntent",
+    "ParticipantInterventionControlIntent",
+    "ParticipantOverrideControlIntent",
+    "ParticipantProposalControlIntent",
+)

@@ -2,9 +2,9 @@
   "contract_id": "backend-manifest-v2",
   "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
   "stability": "draft",
-  "content_hash": "178db9d22d522e069bcad2bc91cfb985e58a22e01ee5dc2b8de506373c1952f0",
+  "content_hash": "8f140797bd697fb49969fcf61a50c6b658f9b7e002d46f3a63cd566109436e83",
   "last_change": {
-    "summary": "Published service materialization, portable shared-time, and autonomous participant capability controls.",
-    "content_hash": "178db9d22d522e069bcad2bc91cfb985e58a22e01ee5dc2b8de506373c1952f0"
+    "summary": "Added portable artifact satisfaction capabilities and participant resource-budget support for issues #920 and #899.",
+    "content_hash": "8f140797bd697fb49969fcf61a50c6b658f9b7e002d46f3a63cd566109436e83"
   }
 }

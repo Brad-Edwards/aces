@@ -391,9 +391,12 @@ adrs:
     pin: e4be391affc09e1f0db3c5004fb2dfa0c4138c5c2f98086b3a6b8d341b4fd9d8
   - id: ADR-085
     path: docs/decisions/adrs/adr-085-participant-information-flow-and-control.md
-    pin: 75143315eba5f4e71d5f8c4bfa3468e46060e4ad95a593c21e8d100387500245
+    pin: e31c5926696581e4af0115b7ba2a28e5ae23d04481baa4a60d73fd5cef5e7cd3
     amendments:
       - ref: "#831"
+      - date: 2026-07-26
+        ref: "#909"
+        summary: "Adopted ADR-095 exact-cut policy, reactive-strategy, and explicit participant-memory semantics and advanced the behavioral taxonomy to revision 3."
   - id: ADR-086
     path: docs/decisions/adrs/adr-086-governed-whole-scenario-satisfiability.md
     pin: c34101fb3b5ddeba1e11f02666fb7747a38f52784087514ec76867df152aefa0
@@ -422,16 +425,30 @@ adrs:
     pin: c2a0e6ac9fb87aa10fbb571b0f70efe0b99520b806f6ffe706f1556b0ec7e84b
   - id: ADR-092
     path: docs/decisions/adrs/adr-092-autonomous-benign-participants-under-shared-time.md
-    pin: f813aebad329c94ad78bd97f945c683ec1426e781666b7136a5dd2904476acd5
+    pin: adf8a99f99a941a2a24b781df017f03e155b601ded2ecd170dd605549456521b
     amendments:
       - date: 2026-07-24
         ref: "#861"
         summary: "Required exact action provenance and capability-specific atomic participant batching."
-  - id: ADR-093
-    path: docs/decisions/adrs/adr-093-raes-rename-and-compatibility-boundaries.md
-    pin: 72725b8f09063b0b1d8ec65c4fda58e5648113035588ee4effbece5e0b1c3436
+      - date: 2026-07-26
+        ref: "#897"
+        summary: "Kept v1 stable and governed richer within-run timing, weighted selection, lifecycle state, and provenance as a versioned autonomous-execution profile."
+      - date: 2026-07-26
+        ref: "#898"
+        summary: "Added exact native action-to-target bindings, bounded concurrent execution, generation-fenced lifecycle control, typed service readback, and conditional live conformance."
+  - id: ADR-094
+    path: docs/decisions/adrs/adr-094-authoritative-cross-plane-experiment-bindings.md
+    pin: 90578754323795ca8775c47dd6095752ccb5a769a0f932ebe60abbe1d8954246
+  - id: ADR-095
+    path: docs/decisions/adrs/adr-095-participant-decision-epoch-state-cut-and-delivery-semantics.md
+    pin: a37f5897755d573a1665641abb4a3695765e657b68018dde2b956fe99fe38edb
+  - id: ADR-096
+    path: docs/decisions/adrs/adr-096-identity-cutover-and-historical-record-boundary.md
+    pin: 4d3ccdf376fd6eee58da0831d1215cf0a55ae25d2666d6bf3452978a3d0b3997
     amendments:
-      - ref: "#866"
-      - ref: "#866-pypi-name-correction"
-      - ref: "#884"
-      - ref: "#894"
+      - date: 2026-07-26
+        ref: "#908"
+        summary: "Retained the existing SonarCloud project key as an exact, content-bound external-service designation rather than a current RAES product identity."
+  - id: ADR-098
+    path: docs/decisions/adrs/adr-098-portable-artifact-requirement-satisfaction.md
+    pin: cabc306d07b60b7d1c62cf85750a57025651e69f55946261e315d772644309e3

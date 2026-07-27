@@ -32,7 +32,7 @@ propositions:
     predicate:
       kind: presence
       property: runtime
-      semantic_ref: urn:aces:declared-property:runtime
+      semantic_ref: urn:raes:declared-property:runtime
       operator: exists
 assertions:
   health:

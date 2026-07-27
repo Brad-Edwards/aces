@@ -57,7 +57,7 @@ _SCENARIO = dedent(
         description: The admitted scenario declares the VM used by this test.
         subjects: [nodes.vm1]
         basis: declared_state
-        predicate: {kind: presence, property: node, semantic_ref: "urn:aces:declared-property:node", operator: exists}
+        predicate: {kind: presence, property: node, semantic_ref: "urn:raes:declared-property:node", operator: exists}
     assertions:
       health: {proposition: health-state, role: postcondition}
     objectives:
@@ -96,7 +96,7 @@ _PARAM_SCENARIO = dedent(
         description: The admitted scenario declares the VM used by this test.
         subjects: [nodes.vm1]
         basis: declared_state
-        predicate: {kind: presence, property: node, semantic_ref: "urn:aces:declared-property:node", operator: exists}
+        predicate: {kind: presence, property: node, semantic_ref: "urn:raes:declared-property:node", operator: exists}
     assertions:
       health: {proposition: health-state, role: postcondition}
     objectives:
@@ -193,7 +193,7 @@ class TestReferenceProcessorManifest:
     def test_manifest_payload_validates_against_contract_model(self):
         model = ProcessorManifestV2Model.model_validate(ReferenceProcessor.manifest_payload())
 
-        assert model.identity.name == "aces-reference-processor"
+        assert model.identity.name == "raes-reference-processor"
         assert set(model.supported_contract_versions) == set(REFERENCE_SUPPORTED_CONTRACT_VERSIONS_V2)
 
 

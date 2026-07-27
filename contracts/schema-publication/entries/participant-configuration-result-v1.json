@@ -1,0 +1,10 @@
+{
+  "contract_id": "participant-configuration-result-v1",
+  "schema_path": "contracts/schemas/participant-implementation-configuration/participant-configuration-result-v1.json",
+  "stability": "draft",
+  "content_hash": "4a591f8bf253fc7caa2a30edc05a665f1ffa64c4764d3fb14f440fa559c03743",
+  "last_change": {
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "4a591f8bf253fc7caa2a30edc05a665f1ffa64c4764d3fb14f440fa559c03743"
+  }
+}

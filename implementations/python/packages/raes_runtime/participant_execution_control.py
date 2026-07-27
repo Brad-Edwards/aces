@@ -80,6 +80,12 @@ class RuntimeParticipantExecutionMixin:
             execution_plan.model.time_model,
             self._target.participant_runtime,
             state.working_snapshot,
+            self._participant_activity_controls,
+            (
+                self._target.manifest.participant_runtime.resource_budgets
+                if self._target.manifest.participant_runtime is not None
+                else None
+            ),
         )
         self._record_phase_result(state, result)
         if not result.success:
@@ -97,6 +103,7 @@ class RuntimeParticipantExecutionMixin:
             execution_plan.model.time_model,
             self._target.participant_runtime,
             state.working_snapshot,
+            self._participant_activity_controls,
         )
         self._record_phase_result(state, due)
         return due.success
@@ -110,6 +117,7 @@ class RuntimeParticipantExecutionMixin:
                 self._participant_execution_time_model,
                 self._target.participant_runtime,
                 self._snapshot,
+                self._participant_activity_controls,
             )
             self._snapshot = result.snapshot
             return result
@@ -126,9 +134,16 @@ class RuntimeParticipantExecutionMixin:
             advance=lambda clock_address, ticks: self.advance_time(clock_address, ticks=ticks),
             service_due=self.run_due_participant_actions,
             lock=self._participant_execution_lock,
+            publish_failure=self._publish_participant_clock_driver_failure,
         )
         self._participant_clock_driver.start()
         return True
+
+    def _publish_participant_clock_driver_failure(
+        self,
+        result: ApplyResult,
+    ) -> None:
+        self._snapshot = result.snapshot
 
     def _stop_participant_clock_driver(self) -> bool:
         if self._participant_clock_driver is not None:
@@ -181,6 +196,7 @@ class RuntimeParticipantExecutionMixin:
             self._snapshot,
             clock_address,
             reset_participants=False,
+            activity_controls=self._participant_activity_controls,
         )
         self._snapshot = result.snapshot
         return result

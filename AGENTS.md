@@ -10,7 +10,7 @@ plan rules set under `.gc/plan-rules.md`). Agents read it via the
 `gc_get_repo_ground_control_context` MCP tool, which returns the full
 workflow config in a single call.
 
-Set `ACES_REQUIREMENT_UID` when the branch name does not already
+Set `RAES_REQUIREMENT_UID` when the branch name does not already
 contain a UID such as `GOV-918`.
 
 The required repo-policy checks and hard rules are enforced by the

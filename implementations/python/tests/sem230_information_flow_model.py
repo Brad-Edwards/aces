@@ -6,6 +6,7 @@ and not a proof of universal noninterference.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
 
@@ -45,11 +46,17 @@ class Decision(str, Enum):
     WITHHELD = "withheld"
 
 
+class ParticipantMemoryScope(str, Enum):
+    EPISODE_LOCAL_RESET = "episode_local_reset"
+    PERSISTENT_ACROSS_EPISODES = "persistent_across_episodes"
+
+
 @dataclass(frozen=True)
-class PolicyRevision:
+class ProjectionPolicyDecision:
     policy_id: str
     revision: str
-    effective_order: int
+    decision_ref: str
+    decision_cut_ref: str
     visible_low_refs: frozenset[str]
     permitted_declassifications: frozenset[str]
 
@@ -64,6 +71,8 @@ class Crossing:
     source_ref: str
     value: str
     policy_revision: str
+    policy_decision_ref: str
+    decision_cut_ref: str
     authorized: bool
     admitted: bool
     visible: bool
@@ -73,22 +82,30 @@ class Crossing:
     transformation_valid: bool
 
 
-def _effective_policy(
-    order: int,
-    policies: tuple[PolicyRevision, ...],
-) -> PolicyRevision | None:
-    eligible = [policy for policy in policies if policy.effective_order <= order]
-    return max(eligible, key=lambda policy: policy.effective_order, default=None)
+def _exact_policy_decision(
+    crossing: Crossing,
+    policy_decisions: tuple[ProjectionPolicyDecision, ...],
+) -> ProjectionPolicyDecision | None:
+    matches = [
+        decision
+        for decision in policy_decisions
+        if decision.decision_cut_ref == crossing.decision_cut_ref
+        and decision.decision_ref == crossing.policy_decision_ref
+        and decision.revision == crossing.policy_revision
+    ]
+    if len(matches) > 1:
+        raise ValueError("policy authority returned multiple decisions for one exact state cut")
+    return matches[0] if matches else None
 
 
 def decide_crossing(
     crossing: Crossing,
-    policies: tuple[PolicyRevision, ...],
+    policy_decisions: tuple[ProjectionPolicyDecision, ...],
 ) -> Decision:
     """Apply the bounded model's independent, deny-first crossing gates."""
 
-    policy = _effective_policy(crossing.order, policies)
-    if policy is None or crossing.policy_revision != policy.revision:
+    policy = _exact_policy_decision(crossing, policy_decisions)
+    if policy is None:
         return Decision.WITHHELD
     if crossing.kind in {CrossingKind.CONCEALMENT, CrossingKind.REVOCATION}:
         return Decision.WITHHELD
@@ -111,7 +128,7 @@ def decide_crossing(
 
 def project_history(
     crossings: tuple[Crossing, ...],
-    policies: tuple[PolicyRevision, ...],
+    policy_decisions: tuple[ProjectionPolicyDecision, ...],
     *,
     participant: str,
     audience: str,
@@ -122,7 +139,7 @@ def project_history(
     for crossing in sorted(crossings, key=lambda candidate: candidate.order):
         if crossing.participant != participant or crossing.audience != audience:
             continue
-        if decide_crossing(crossing, policies) is Decision.DISCLOSED:
+        if decide_crossing(crossing, policy_decisions) is Decision.DISCLOSED:
             visible.append((crossing.order, crossing.source_ref, crossing.value))
     return tuple(visible)
 
@@ -131,7 +148,7 @@ def policy_noninterference_holds(
     *,
     left_runs: tuple[tuple[Crossing, ...], ...],
     right_runs: tuple[tuple[Crossing, ...], ...],
-    policies: tuple[PolicyRevision, ...],
+    policy_decisions: tuple[ProjectionPolicyDecision, ...],
     participant: str,
     audience: str,
 ) -> bool:
@@ -145,7 +162,7 @@ def policy_noninterference_holds(
     left_support = {
         project_history(
             run,
-            policies,
+            policy_decisions,
             participant=participant,
             audience=audience,
         )
@@ -154,10 +171,71 @@ def policy_noninterference_holds(
     right_support = {
         project_history(
             run,
-            policies,
+            policy_decisions,
             participant=participant,
             audience=audience,
         )
         for run in right_runs
     }
     return left_support == right_support
+
+
+ProjectedHistory = tuple[tuple[int, str, str], ...]
+ParticipantStrategy = Callable[[ProjectedHistory], str]
+
+
+def participant_information_state(
+    current_episode_history: ProjectedHistory,
+    *,
+    prior_delivered_history: ProjectedHistory,
+    memory_scope: ParticipantMemoryScope,
+    memory_reset_authority_ref: str | None,
+) -> ProjectedHistory:
+    """Apply the declared memory scope without equating reset with forgetting."""
+
+    if memory_scope is ParticipantMemoryScope.EPISODE_LOCAL_RESET:
+        if memory_reset_authority_ref is None:
+            raise ValueError("episode_local_reset requires authoritative reset of every visible memory channel")
+        return current_episode_history
+    if memory_reset_authority_ref is not None:
+        raise ValueError("persistent memory scope must not claim a reset authority")
+    return (*prior_delivered_history, *current_episode_history)
+
+
+def reactive_policy_noninterference_holds(
+    *,
+    left_runs: tuple[tuple[Crossing, ...], ...],
+    right_runs: tuple[tuple[Crossing, ...], ...],
+    policy_decisions: tuple[ProjectionPolicyDecision, ...],
+    participant: str,
+    audience: str,
+    strategies: tuple[ParticipantStrategy, ...],
+    prior_delivered_history: ProjectedHistory = (),
+    memory_scope: ParticipantMemoryScope,
+    memory_reset_authority_ref: str | None,
+) -> bool:
+    """Compare finite projected-history/choice supports for adaptive strategies.
+
+    This quantifies only over the supplied finite run and strategy classes. It
+    is bounded falsification evidence, not a universal proof.
+    """
+
+    def support(runs: tuple[tuple[Crossing, ...], ...], strategy: ParticipantStrategy):
+        outcomes: set[tuple[ProjectedHistory, str]] = set()
+        for run in runs:
+            projected = project_history(
+                run,
+                policy_decisions,
+                participant=participant,
+                audience=audience,
+            )
+            information_state = participant_information_state(
+                projected,
+                prior_delivered_history=prior_delivered_history,
+                memory_scope=memory_scope,
+                memory_reset_authority_ref=memory_reset_authority_ref,
+            )
+            outcomes.add((information_state, strategy(information_state)))
+        return outcomes
+
+    return all(support(left_runs, strategy) == support(right_runs, strategy) for strategy in strategies)

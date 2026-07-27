@@ -18,7 +18,7 @@ from .base import (
     PrefixedDigestString,
 )
 from .participant_envelopes import ParticipantRuntimeBaseEnvelopeModel
-from .schema_invariants import _add_aces_invariant
+from .schema_invariants import _add_raes_invariant
 
 
 class ParticipantControlDisposition(str, Enum):
@@ -293,7 +293,7 @@ class ParticipantControlOccurrenceModel(ParticipantRuntimeBaseEnvelopeModel):
     ) -> JsonSchemaValue:
         json_schema = handler(core_schema)
         json_schema = handler.resolve_ref_schema(json_schema)
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "participant-control-occurrence-context-agreement",
             "Every occurrence must resolve one matching compiled ACT-617 declaration and preserve participant, "
@@ -301,7 +301,7 @@ class ParticipantControlOccurrenceModel(ParticipantRuntimeBaseEnvelopeModel):
             validator="raes_contracts.contracts.validate_participant_control_occurrence_context",
             inputs=[{"contract_id": "participant-control-occurrence-v1", "instance_path": "#"}],
         )
-        _add_aces_invariant(
+        _add_raes_invariant(
             json_schema,
             "participant-control-occurrence-not-lifecycle-evidence",
             "Proposal, approval, denial, direction, intervention, handoff, override, and cancellation remain "

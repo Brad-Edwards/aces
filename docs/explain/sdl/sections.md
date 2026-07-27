@@ -1387,7 +1387,7 @@ propositions:
     predicate:
       kind: boolean
       property: service-alive
-      semantic_ref: urn:aces:observable:service-alive
+      semantic_ref: urn:raes:observable:service-alive
       operator: equals
       expected: true
     evidence_requirements: [web-health-evidence]

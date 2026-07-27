@@ -118,6 +118,95 @@ and experiment apparatus contracts; the deterministic `ordered_cycle`
 scheduler needs no seed field. Historical files remain ordinary initial service
 state. Exercise injects remain orchestration, not simulated users.
 
+### 7. Extend autonomous execution through a versioned activity policy
+
+The fixed-cadence `participant-autonomous-execution/v1` profile remains
+unchanged. Richer admitted behavior is a new profile variant under the same
+`ParticipantBehaviorSpecification.autonomous_execution` authority, not
+optional fields that silently change v1 meaning and not a second activity
+root.
+
+The richer profile composes:
+
+- inclusion and pause windows that resolve existing shared-time `window`
+  constraints on the policy clock;
+- positive bounded logical-tick timing intervals and cooldowns;
+- stable keyed action candidates with exact integer weights, explicit
+  dependency guards, portable failure-class retry rules, and finite burst,
+  retry, attempt, and in-flight bounds; and
+- a reference to an admitted run/apparatus stochastic control whose role is
+  `agent-policy`.
+
+It reuses the governed random-stream engine and publishes a new immutable
+profile/address variant when participant-runtime coordinates or transforms are
+needed. A participant draw address is based on the run randomness namespace,
+policy and participant addresses, shared-time segment/reset generation,
+occurrence ordinal, governed draw purpose, and stable local draw coordinate.
+It does not relabel experiment selection-policy or variation-point fields, use
+the aggregate scenario/experiment digest, or include worker, thread, host,
+wall-time, retry, or call-order coordinates. Exact weighted choice and bounded
+timing reuse the admitted bounded-integer transform. Their canonical range and
+prefix-interval mappings are policy semantics with conformance vectors; they
+are not new random transforms or library RNG behavior.
+
+Within-run activity draws are not scenario-family selection, factor
+allocation, or trial compilation. SDL declares the activity policy and a
+stochastic-control reference; admitted run apparatus supplies the exact
+profile, namespace, and public seed or governed entropy reference. Raw entropy
+never enters SDL, compiled addresses, snapshots, behavior history, diagnostics,
+logs, argv, or telemetry.
+
+Scheduler continuation remains typed autonomous participant state. Append-only
+behavior history carries occurrence, selection, timing, dependency, attempt,
+terminal outcome, and safe random-draw provenance. Reset creates a new
+shared-time segment and participant episode, starts a new scheduler generation,
+and preserves predecessor lineage; it does not infer rollback of service state
+or causality from timestamps. Backend admission is exact for profile, policy
+features, selection strategy, random-stream profile/transform support, time
+constraint kinds, and finite limits.
+
+### 8. Make native execution services portable and generation fenced
+
+An autonomous backend claim is relational. Each
+`participant-execution-binding/v1` record binds exactly one participant action
+contract to its native target-service addresses, selected participant
+implementation, constraints, evidence, timeout/retry policy, and finite
+attempt/in-flight bounds. Separate action and target sets are discovery
+indexes; they do not authorize their Cartesian product.
+
+The participant runtime exposes `participant-execution-control/v1` lifecycle
+requests for `start`, `pause`, `resume`, bounded `drain`, `reset`, and
+`teardown`. Requests carry the expected execution generation. Reset increments
+that generation; work admitted under a stale generation is rejected before
+native execution, and a native completion whose generation changed is
+discarded without committing its snapshot or portable history.
+The shared participant base supplies typed readback but does not synthesize
+control success. A backend-owned operation must perform scheduler/shared-time
+coordination and resource work; RAES accepts success only when changed
+readback and new evidence prove the requested observation.
+
+`participant-execution-service-state/v1` is the typed readback for desired and
+observed lifecycle, generation, health, readiness, admission state, finite
+capacity, reserved/in-flight work, resource release, policy/binding/shared-time
+digests, scheduler references, pacing deviations, and evidence. Health,
+readiness, lifecycle, participant episode state, and scheduler continuation
+remain distinct concepts.
+
+Multiple due participants may execute natively in parallel only within the
+admitted finite bound. Every worker receives one immutable predecessor;
+portable state and history commit serially with revision checks. Conflicting
+shared-state or history writes fail closed rather than selecting a last writer.
+Shared-clock pause/resume controls execution admission, shared-clock reset
+advances the generation, and loss of wall pacing degrades and pauses the
+execution service with an explicit deviation/evidence reference.
+
+Manifest support requires the complete lifecycle action set, exact execution
+bindings, and a concurrent capacity of at least two. Runtime-target
+registration requires executable binding, lifecycle/readback, and bounded
+batch methods. Conditional live conformance drives two native actions and the
+full lifecycle; a declaration with methods but no typed outcome or lifecycle
+evidence does not pass.
+
 ## Consequences
 
 - Human, AI, scripted, and benign simulated participants share one semantic and
@@ -127,6 +216,9 @@ state. Exercise injects remain orchestration, not simulated users.
   declared controls and observable contracts.
 - The reference implementation proves protocol behavior, not production
   backend fidelity or throughput.
+- Existing v1 policies retain fixed-cadence `ordered_cycle` semantics. Consumers
+  opt into the richer profile explicitly and fail closed when any activity
+  feature or governed random-stream profile is unsupported.
 
 ## Rejected Alternatives
 
@@ -137,9 +229,18 @@ state. Exercise injects remain orchestration, not simulated users.
 - Adding a seed field to a deterministic scheduler that performs no random
   draws.
 - Inferring native execution from a backend capability boolean.
+- Adding activity-policy fields to v1 and changing its existing meaning.
+- Reusing experiment variation-point address fields as participant occurrence
+  coordinates.
+- Adding a weighted-choice random transform when the governed bounded-integer
+  transform plus a canonical policy mapping already expresses the choice.
+- A mutable or process-global RNG, host-local calendar, cron expression, or
+  wall-clock sleep as participant semantic authority.
 
 ## Amendments
 
 | Date | Commit/PR | Summary |
 |------|-----------|---------|
 | 2026-07-24 | #861 | Required exact action provenance and capability-specific atomic participant batching. |
+| 2026-07-26 | #897 | Kept v1 stable and governed richer within-run timing, weighted selection, lifecycle state, and provenance as a versioned autonomous-execution profile. |
+| 2026-07-26 | #898 | Added exact native action-to-target bindings, bounded concurrent execution, generation-fenced lifecycle control, typed service readback, and conditional live conformance. |

@@ -196,6 +196,15 @@ _CONTROLLED_VOCABULARY_GOVERNED_SCOPES = frozenset(
         "capabilities.orchestrator.supported_workflow_state_predicates",
         "workflows.steps.fact_binding_refs",
         "random_streams.draw_purpose",
+        "participant-crossing-occurrence.direction",
+        "participant-crossing-occurrence.interaction_kind",
+        "participant-crossing-occurrence.subject.subject_kind",
+        "participant-crossing-occurrence.operation",
+        "participant-crossing-occurrence.gates",
+        "participant-crossing-occurrence.decision.disposition",
+        "participant-crossing-occurrence.backend_posture",
+        "participant-crossing-occurrence.losses.kind",
+        "participant-crossing-occurrence.stage",
         *_BACKEND_CONCEPT_BINDING_SCOPES,
         *_PARTICIPANT_IMPLEMENTATION_CONCEPT_BINDING_SCOPES,
     }
@@ -249,7 +258,7 @@ _VALID_UTC_LEAP_SECOND_DATES = frozenset(
 )
 
 
-_ACES_SEMANTIC_INVARIANT_PROFILE_URI = "https://aces.dev/schemas/semantic-invariants/v1"
+_RAES_SEMANTIC_INVARIANT_PROFILE_URI = "https://raes.dev/schemas/semantic-invariants/v1"
 
 
 def _canonical_digest(digest: str | None) -> str | None:

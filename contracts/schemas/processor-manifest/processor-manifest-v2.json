@@ -21,6 +21,52 @@
       "title": "ApparatusIdentityModel",
       "type": "object"
     },
+    "BindingOwnerModel": {
+      "additionalProperties": false,
+      "description": "Governed contract and validator profile that owns one binding.",
+      "properties": {
+        "contract_id": {
+          "minLength": 1,
+          "title": "Contract Id",
+          "type": "string"
+        },
+        "contract_version": {
+          "minLength": 1,
+          "title": "Contract Version",
+          "type": "string"
+        },
+        "validator_id": {
+          "minLength": 1,
+          "title": "Validator Id",
+          "type": "string"
+        },
+        "validator_version": {
+          "minLength": 1,
+          "title": "Validator Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "contract_id",
+        "contract_version",
+        "validator_id",
+        "validator_version"
+      ],
+      "title": "BindingOwnerModel",
+      "type": "object"
+    },
+    "BindingScalarType": {
+      "description": "Exact JSON scalar type declared by a binding owner.",
+      "enum": [
+        "string",
+        "integer",
+        "number",
+        "boolean",
+        "null"
+      ],
+      "title": "BindingScalarType",
+      "type": "string"
+    },
     "ConceptBindingEntryModel": {
       "additionalProperties": false,
       "description": "Binds a vocabulary surface in an artifact to a canonical concept family.",
@@ -43,6 +89,132 @@
         "family"
       ],
       "title": "ConceptBindingEntryModel",
+      "type": "object"
+    },
+    "ConfigurationTargetDeclarationModel": {
+      "additionalProperties": false,
+      "description": "One scalar target admitted by an owning portable manifest.",
+      "properties": {
+        "aliases": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Aliases",
+          "type": "array"
+        },
+        "allowed_value_kinds": {
+          "items": {
+            "enum": [
+              "literal",
+              "secret-reference"
+            ],
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Allowed Value Kinds",
+          "type": "array"
+        },
+        "default": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LiteralBindingValueModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "sensitivity": {
+          "enum": [
+            "public",
+            "internal",
+            "restricted",
+            "secret"
+          ],
+          "title": "Sensitivity",
+          "type": "string"
+        },
+        "target_id": {
+          "minLength": 1,
+          "title": "Target Id",
+          "type": "string"
+        },
+        "value_type": {
+          "$ref": "#/$defs/BindingScalarType"
+        }
+      },
+      "required": [
+        "target_id",
+        "value_type",
+        "allowed_value_kinds",
+        "sensitivity"
+      ],
+      "title": "ConfigurationTargetDeclarationModel",
+      "type": "object"
+    },
+    "ConfigurationTargetRegistryModel": {
+      "additionalProperties": false,
+      "description": "Collision-free target registry published by one manifest owner.",
+      "properties": {
+        "owner": {
+          "$ref": "#/$defs/BindingOwnerModel"
+        },
+        "targets": {
+          "additionalProperties": {
+            "$ref": "#/$defs/ConfigurationTargetDeclarationModel"
+          },
+          "minProperties": 1,
+          "propertyNames": {
+            "minLength": 1
+          },
+          "title": "Targets",
+          "type": "object"
+        }
+      },
+      "required": [
+        "owner",
+        "targets"
+      ],
+      "title": "ConfigurationTargetRegistryModel",
+      "type": "object"
+    },
+    "LiteralBindingValueModel": {
+      "additionalProperties": false,
+      "description": "Portable literal value; strict type validation occurs at its descriptor.",
+      "properties": {
+        "kind": {
+          "const": "literal",
+          "title": "Kind",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "kind",
+        "value"
+      ],
+      "title": "LiteralBindingValueModel",
       "type": "object"
     },
     "ProcessorCapabilitiesV2Model": {
@@ -111,7 +283,7 @@
       "type": "string"
     }
   },
-  "$id": "https://aces.dev/schemas/processor-manifest-v2.json",
+  "$id": "https://raes.dev/schemas/processor-manifest-v2.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
@@ -128,6 +300,17 @@
       "minItems": 1,
       "title": "Concept Bindings",
       "type": "array"
+    },
+    "configuration_registry": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ConfigurationTargetRegistryModel"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     },
     "constraints": {
       "additionalProperties": {
@@ -149,6 +332,7 @@
       "items": {
         "enum": [
           "processor-manifest-v2",
+          "experiment-binding-descriptors-v1",
           "provisioning-plan-v1",
           "orchestration-plan-v1",
           "evaluation-plan-v1",
@@ -164,6 +348,7 @@
           "participant-episode-state-envelope-v1",
           "participant-episode-history-event-stream-v1",
           "participant-behavior-history-event-stream-v1",
+          "participant-resource-budget-policy-v1",
           "time-model-v1"
         ],
         "minLength": 1,

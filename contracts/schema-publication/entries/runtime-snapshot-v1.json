@@ -2,9 +2,9 @@
   "contract_id": "runtime-snapshot-v1",
   "schema_path": "contracts/schemas/snapshots/runtime-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "8117be2036ef71aa51cbd5529121ec50d5354ef688d1cc54134f768ce7524df8",
+  "content_hash": "73b2b3eba4400777c380b1d532614d29c2eb83ec82da5fef127918768aa2f8d8",
   "last_change": {
-    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
-    "content_hash": "8117be2036ef71aa51cbd5529121ec50d5354ef688d1cc54134f768ce7524df8"
+    "summary": "Added artifact satisfaction evidence and participant resource-budget state and allocation evidence for issues #920 and #899.",
+    "content_hash": "73b2b3eba4400777c380b1d532614d29c2eb83ec82da5fef127918768aa2f8d8"
   }
 }

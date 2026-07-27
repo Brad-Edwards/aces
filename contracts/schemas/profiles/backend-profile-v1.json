@@ -1,5 +1,5 @@
 {
-  "$id": "https://aces.dev/schemas/backend-profile-v1.json",
+  "$id": "https://raes.dev/schemas/backend-profile-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "Published backend capability profile (closed-world).",
@@ -13,6 +13,8 @@
       "items": {
         "enum": [
           "backend-manifest-v2",
+          "artifact-requirement-v1",
+          "experiment-binding-descriptors-v1",
           "realization-envelope-v1",
           "provisioning-plan-v1",
           "orchestration-plan-v1",
@@ -28,6 +30,15 @@
           "participant-episode-state-envelope-v1",
           "participant-episode-history-event-stream-v1",
           "participant-behavior-history-event-stream-v1",
+          "participant-execution-binding-v1",
+          "participant-execution-control-v1",
+          "participant-execution-service-state-v1",
+          "participant-resource-budget-policy-v1",
+          "participant-resource-pool-capacity-v1",
+          "participant-resource-budget-state-v1",
+          "participant-resource-budget-event-v1",
+          "participant-control-occurrence-v1",
+          "participant-crossing-occurrence-v1",
           "participant-lifecycle-event-v1",
           "participant-observation-envelope-v1",
           "participant-shared-state-record-v1",

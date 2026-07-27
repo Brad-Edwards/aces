@@ -32,12 +32,12 @@ _CODE_OPERATION_FAILED = "libvirt-backend.driver.operation-failed"
 _CODE_UNAVAILABLE = "libvirt-backend.driver.unavailable"
 _CODE_OWNERSHIP_CONFLICT = "libvirt-backend.driver.ownership-conflict"
 _DEFAULT_CONNECTION_URI = "qemu:///system"
-_WORKSPACE_PREFIX = "aces-libvirt-"
+_WORKSPACE_PREFIX = "raes-libvirt-"
 _SAFE_NAME_RE = re.compile(r"[^a-zA-Z0-9_.-]+")
 # Fixed namespace for deriving a per-address libvirt UUID. The UUID proves an
 # existing host object was realized by RAES for *this* address, so convergence
 # never destroys a foreign or another-address object that merely shares a name.
-_ACES_UUID_NAMESPACE = uuid.UUID("ace50000-0000-5000-8000-000000000001")
+_RAES_UUID_NAMESPACE = uuid.UUID("af20aedd-47bd-5870-b3f8-2f1baebde508")
 
 # libvirt signals a missing object with a stable VIR_ERR_NO_* code (part of its
 # public C ABI) on ``libvirtError.get_error_code()``. Idempotent teardown treats
@@ -89,14 +89,14 @@ def _is_absence_error(exc: BaseException) -> bool:
     return _error_code(exc) in _ABSENCE_ERROR_CODES
 
 
-def _aces_uuid(address: str) -> str:
-    return str(uuid.uuid5(_ACES_UUID_NAMESPACE, address))
+def _raes_uuid(address: str) -> str:
+    return str(uuid.uuid5(_RAES_UUID_NAMESPACE, address))
 
 
 def _filter_owner_uuid(address: str) -> str:
     """Owner UUID for a domain's nwfilter (namespaced so it never equals the domain UUID)."""
 
-    return str(uuid.uuid5(_ACES_UUID_NAMESPACE, f"nwfilter:{address}"))
+    return str(uuid.uuid5(_RAES_UUID_NAMESPACE, f"nwfilter:{address}"))
 
 
 class _NativeResource(Protocol):
@@ -141,7 +141,7 @@ class LibvirtDeploymentDriver:
         connection: object | None = None,
         connection_uri: str = _DEFAULT_CONNECTION_URI,
         connector: Connector | None = None,
-        name_prefix: str = "aces",
+        name_prefix: str = "raes",
         workspace: str | Path | None = None,
         seed_builder: SeedBuilder | None = None,
     ) -> None:
@@ -152,7 +152,7 @@ class LibvirtDeploymentDriver:
         self._connection = connection
         self._connection_uri = connection_uri
         self._connector = connector or _default_connector
-        self._name_prefix = _safe_name(name_prefix, fallback="aces", prefix="")
+        self._name_prefix = _safe_name(name_prefix, fallback="raes", prefix="")
         self._workspace = Path(workspace) if workspace is not None else None
         self._seed_builder = seed_builder if seed_builder is not None else GenisoimageSeedBuilder()
         self._names: dict[str, str] = {}
@@ -226,7 +226,7 @@ class LibvirtDeploymentDriver:
             pre_existing = self._converge_existing(connection, "networkLookupByName", name, spec.address)
             if not pre_existing:
                 created.append(spec.address)
-            network_xml = _network_xml(spec, name, _aces_uuid(spec.address))
+            network_xml = _network_xml(spec, name, _raes_uuid(spec.address))
             native = _call_libvirt(connection, "networkDefineXML", network_xml)
             native.create()
         except _OwnershipConflict:
@@ -255,7 +255,7 @@ class LibvirtDeploymentDriver:
                 created.append(spec.address)
             seed_path = self._build_seed(spec, name)
             filter_name = self._define_nwfilter(connection, spec, name)
-            xml = _domain_xml(spec, name, network_names, seed_path, _aces_uuid(spec.address), filter_name)
+            xml = _domain_xml(spec, name, network_names, seed_path, _raes_uuid(spec.address), filter_name)
             native = _call_libvirt(connection, "defineXML", xml)
             native.create()
         except _OwnershipConflict:
@@ -413,7 +413,7 @@ class LibvirtDeploymentDriver:
         native = _lookup(connection, lookup_method, name)
         if native is None:
             return False
-        if _existing_uuid(native) != _aces_uuid(address):
+        if _existing_uuid(native) != _raes_uuid(address):
             raise _OwnershipConflict(name)
         _stop_native(native)
         cast(_NativeResource, native).undefine()
@@ -445,7 +445,7 @@ class LibvirtDeploymentDriver:
         # A present object is torn down only when its UUID proves RAES ownership
         # (the same invariant as convergence), never a foreign name collision.
         if native is not None:
-            if _existing_uuid(native) != _aces_uuid(address):
+            if _existing_uuid(native) != _raes_uuid(address):
                 raise _OwnershipConflict(address)
             try:
                 _stop_native(native)

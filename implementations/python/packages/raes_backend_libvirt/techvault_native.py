@@ -44,7 +44,7 @@ from .driver import (
     NetworkSpec,
     RealizationObservation,
 )
-from .drivers.libvirt import Connector, _aces_uuid, _existing_uuid
+from .drivers.libvirt import Connector, _existing_uuid, _raes_uuid
 from .envelopes import load_libvirt_realization_envelope
 from .techvault_appliance import (
     BusyboxInitramfsBuilder,
@@ -116,7 +116,7 @@ class TechVaultNativeLibvirtDriver:
     connection: object | None = None
     connection_uri: str = _DEFAULT_CONNECTION_URI
     connector: Connector | None = None
-    name_prefix: str = "aces-techvault"
+    name_prefix: str = "raes-techvault"
     kernel_path: Path | None = None
     initramfs_builder: InitramfsBuilder = field(default_factory=BusyboxInitramfsBuilder)
     define_only: bool = False
@@ -147,7 +147,7 @@ class TechVaultNativeLibvirtDriver:
             raise ValueError("TechVaultNativeLibvirtDriver define-only mode cannot make realization claims.")
         if self.clean_existing:
             raise ValueError("TechVaultNativeLibvirtDriver refuses unsafe prefix-wide cleanup.")
-        safe_prefix = _safe_name(self.name_prefix, fallback="aces-techvault", prefix="")
+        safe_prefix = _safe_name(self.name_prefix, fallback="raes-techvault", prefix="")
         if safe_prefix != self.name_prefix:
             raise ValueError("TechVaultNativeLibvirtDriver name_prefix must already be libvirt-safe.")
 
@@ -486,7 +486,7 @@ class TechVaultNativeLibvirtDriver:
             if resolved.native is None:
                 cleaned = True
             else:
-                if _existing_uuid(resolved.native) != _aces_uuid(address):
+                if _existing_uuid(resolved.native) != _raes_uuid(address):
                     raise _OwnershipConflict(address)
                 removed = _deactivate_and_undefine(resolved.native)
                 cleaned = removed and _verify_native_removed(

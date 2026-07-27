@@ -8,6 +8,7 @@ from .participant_control import (
     ParticipantApprovalOccurrenceModel,
     ParticipantCancellationOccurrenceModel,
     ParticipantControlDeclarationModel,
+    ParticipantControlDisposition,
     ParticipantControlOccurrenceModel,
     ParticipantControlTargetContextModel,
     ParticipantControlTargetKind,
@@ -20,6 +21,7 @@ from .participant_control import (
 )
 
 TargetIndex = dict[tuple[ParticipantControlTargetKind, str], ParticipantControlTargetContextModel]
+DeclarationIndex = dict[tuple[str, str, str], ParticipantControlDeclarationModel]
 
 
 def validate_participant_control_occurrence_context(
@@ -43,10 +45,15 @@ def validate_participant_control_occurrence_context(
 
 def _index_declarations(
     declarations: Sequence[ParticipantControlDeclarationModel],
-) -> dict[str, ParticipantControlDeclarationModel]:
-    declarations_by_ref: dict[str, ParticipantControlDeclarationModel] = {}
+) -> DeclarationIndex:
+    declarations_by_ref: DeclarationIndex = {}
     for declaration in declarations:
-        existing = declarations_by_ref.setdefault(declaration.declaration_ref, declaration)
+        key = (
+            declaration.declaration_ref,
+            declaration.participant_address,
+            declaration.episode_id,
+        )
+        existing = declarations_by_ref.setdefault(key, declaration)
         if existing != declaration:
             raise ValueError("declaration identity was reused with different semantics")
     return declarations_by_ref
@@ -86,6 +93,8 @@ def _register_record_targets(
     target_contexts: TargetIndex,
 ) -> None:
     occurrence = record.occurrence
+    if occurrence.disposition is ParticipantControlDisposition.REJECTED:
+        return
     _register_target(
         target_contexts,
         ParticipantControlTargetContextModel(
@@ -125,16 +134,24 @@ def _register_record_targets(
 def _validate_record(
     record: ParticipantControlOccurrenceModel,
     *,
-    declarations_by_ref: dict[str, ParticipantControlDeclarationModel],
+    declarations_by_ref: DeclarationIndex,
     proposal_records: dict[str, ParticipantControlOccurrenceModel],
     target_contexts: TargetIndex,
 ) -> None:
     occurrence = record.occurrence
-    declaration = declarations_by_ref.get(occurrence.declaration_ref)
+    declaration = declarations_by_ref.get(
+        (
+            occurrence.declaration_ref,
+            record.participant_address,
+            record.episode_id,
+        )
+    )
     if declaration is None:
         raise ValueError("declaration reference must resolve")
     if not _declaration_agrees(record, declaration):
         raise ValueError("occurrence and declaration coordinates disagree")
+    if occurrence.disposition is ParticipantControlDisposition.REJECTED:
+        return
     if isinstance(occurrence, ParticipantProposalOccurrenceModel):
         _validate_transformed_proposal(record, proposal_records)
     elif isinstance(occurrence, (ParticipantApprovalOccurrenceModel, ParticipantDenialOccurrenceModel)):

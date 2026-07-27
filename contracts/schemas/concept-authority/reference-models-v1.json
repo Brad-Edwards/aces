@@ -77,7 +77,7 @@
       "type": "object"
     }
   },
-  "$id": "https://aces.dev/schemas/reference-models-v1.json",
+  "$id": "https://raes.dev/schemas/reference-models-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {

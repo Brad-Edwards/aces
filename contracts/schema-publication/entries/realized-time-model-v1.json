@@ -2,9 +2,9 @@
   "contract_id": "realized-time-model-v1",
   "schema_path": "contracts/schemas/time/realized-time-model-v1.json",
   "stability": "draft",
-  "content_hash": "7b87524b4a23b981270b2501264c3911aaf1075280e3da136ab0b38393e895ed",
+  "content_hash": "0034fe68c2981896e4c8e08743bd9e18ae20f9aa9bde91d92f1af1b2dc0537ba",
   "last_change": {
-    "summary": "Published the EXP-734 run-scoped time realization and apparatus provenance contract.",
-    "content_hash": "7b87524b4a23b981270b2501264c3911aaf1075280e3da136ab0b38393e895ed"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "0034fe68c2981896e4c8e08743bd9e18ae20f9aa9bde91d92f1af1b2dc0537ba"
   }
 }

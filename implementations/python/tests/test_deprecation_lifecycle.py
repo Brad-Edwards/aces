@@ -34,7 +34,7 @@ from tools.check_deprecation_lifecycle import (  # noqa: E402
 
 
 def _good_ledger() -> dict:
-    # Includes both canonical (retention-floor) records so the positive case and
+    # Includes all canonical (retention-floor) records so the positive case and
     # every mutation starting point satisfies CANONICAL_DEPRECATION_RECORD_IDS.
     # records[0] is a canonical record; mutation tests operate on it.
     return {
@@ -44,16 +44,16 @@ def _good_ledger() -> dict:
         "spec": SPEC_RELATIVE_PATH,
         "records": [
             {
-                "id": "aces-compat-namespace",
+                "id": "obsolete-example-surface",
                 "surface_class": "python-distribution",
-                "identifier": "implementations/python/src/aces/ (legacy aces.* namespace)",
+                "identifier": "example package alias",
                 "status": "removed",
                 "first_notice": "ADR-010 (example)",
-                "replacement": "the owning packages under implementations/python/packages/",
+                "replacement": "the canonical example package",
                 "migration_reference": "docs/migration/raes-rename.md",
-                "notice_window": "removed at the 1.0 hard cut",
-                "verification_evidence": "the wheel excludes src/aces and policy rejects its reintroduction",
-                "removal_record": "RAES 1.0 removes the aces compatibility namespace.",
+                "notice_window": "removed after the documented test window",
+                "verification_evidence": "the test fixture models a completed removal",
+                "removal_record": "The example alias is no longer published.",
             },
             {
                 "id": "sdl-import-path-field",
@@ -65,6 +65,17 @@ def _good_ledger() -> dict:
                 "migration_reference": "docs/explain/sdl/parser.md",
                 "notice_window": "supported indefinitely as a backward-compatible alias",
                 "verification_evidence": "parser normalises the legacy field; tests exercise both forms",
+            },
+            {
+                "id": "legacy-python-distribution",
+                "surface_class": "python-distribution",
+                "identifier": "the legacy PyPI distribution",
+                "status": "deprecated",
+                "first_notice": "ADR-093 and issue #907",
+                "replacement": "the raes PyPI distribution",
+                "migration_reference": "docs/migration/raes-rename.md",
+                "notice_window": "publish the final pointer release, verify it, then archive the project",
+                "verification_evidence": "the current release path publishes only raes",
             },
         ],
     }
@@ -342,11 +353,11 @@ def test_empty_ledger_is_rejected(tmp_path: Path) -> None:
 
 
 def test_dropping_a_canonical_record_is_rejected(tmp_path: Path) -> None:
-    # Deleting an established record (leaving the other) must fail: an existing
+    # Deleting an established record (leaving the others) must fail: an existing
     # deprecation is permanent lifecycle history, not something a later diff can
     # silently remove.
     ledger = _good_ledger()
-    dropped = ledger["records"].pop()  # remove sdl-import-path-field
+    dropped = ledger["records"].pop()  # remove the legacy distribution record
     _write_repo(tmp_path, ledger)
     failures = evaluate_deprecation_records(tmp_path)
     assert any(f.rule_id == "deprecation-records-canonical-record-missing" for f in failures)
@@ -361,7 +372,12 @@ def test_dropping_a_canonical_record_is_rejected(tmp_path: Path) -> None:
 
 
 def test_canonical_record_ids_are_pinned() -> None:
-    assert {"aces-compat-namespace", "sdl-import-path-field"} == CANONICAL_DEPRECATION_RECORD_IDS
+    expected = {
+        "legacy-python-distribution",
+        "sdl-import-path-field",
+    }
+    actual = CANONICAL_DEPRECATION_RECORD_IDS
+    assert actual == expected
 
 
 def test_surface_classes_cover_known_matrix_rows() -> None:

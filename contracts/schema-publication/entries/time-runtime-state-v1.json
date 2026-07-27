@@ -2,9 +2,9 @@
   "contract_id": "time-runtime-state-v1",
   "schema_path": "contracts/schemas/time/time-runtime-state-v1.json",
   "stability": "draft",
-  "content_hash": "69206696ef491df49037dcbaaf25a7b7a7766f87f142b743ca69d2b073cc9f57",
+  "content_hash": "f5092734db63333c6ffd1120730bc5b3343c90fa2ae6056d2e9a51194e4bca1f",
   "last_change": {
-    "summary": "Published the ASR-528 typed clock readback and append-only transition history contract.",
-    "content_hash": "69206696ef491df49037dcbaaf25a7b7a7766f87f142b743ca69d2b073cc9f57"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "f5092734db63333c6ffd1120730bc5b3343c90fa2ae6056d2e9a51194e4bca1f"
   }
 }

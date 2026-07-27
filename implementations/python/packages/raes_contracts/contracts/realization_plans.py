@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Annotated, Any, Literal
 
 from pydantic import Field, model_validator
 from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance
 
 from ..addressing import CompiledAddress
+from ..artifact_requirements import ArtifactSatisfactionDisclosureModel
 from ..planning import RuntimeDomain, require_plan_operation_identity
 from ..versions import OPERATION_SCHEMA_VERSION, RUNTIME_SNAPSHOT_SCHEMA_VERSION
 from .base import ContractModel, NonEmptyString
@@ -18,10 +20,17 @@ from .execution_state import (
     WorkflowExecutionStateModel,
     WorkflowHistoryEventModel,
 )
+from .participant_control import ParticipantControlOccurrenceModel
 from .participant_envelopes import (
     ParticipantJointActionRecordModel,
     ParticipantSharedStateRecordModel,
     ParticipantTimeManagementContextModel,
+)
+from .participant_execution import ParticipantExecutionServiceStateModel
+from .participant_resource_budgets import (
+    ParticipantResourceBudgetEventModel,
+    ParticipantResourceBudgetStateModel,
+    ParticipantResourcePoolStateModel,
 )
 from .participant_runtime import (
     ParticipantAutonomousExecutionStateModel,
@@ -139,6 +148,52 @@ class RealizationProvenanceEntryModel(ContractModel):
     explicitness: ExplicitnessClass
     provenance: ExplicitnessProvenance
     governing_scope: NonEmptyString | None = None
+    artifact_satisfaction: ArtifactSatisfactionDisclosureModel | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+    )
+
+
+def _require_embedded_map_keys(
+    values: Mapping[str, object],
+    attribute: str,
+    message: str,
+) -> None:
+    for map_key, value in values.items():
+        if map_key != getattr(value, attribute):
+            raise ValueError(message)
+
+
+def _validate_execution_service_budget_projection(
+    services: Mapping[str, ParticipantExecutionServiceStateModel],
+    budget_states: Mapping[str, ParticipantResourceBudgetStateModel],
+) -> None:
+    budget_refs = set(budget_states)
+    for service in services.values():
+        missing = sorted(set(service.resource_budget_state_refs) - budget_refs)
+        if missing:
+            raise ValueError(
+                "Participant execution service references missing resource-budget states: " + ", ".join(missing)
+            )
+        concurrency = [
+            budget_states[budget_ref]
+            for budget_ref in service.resource_budget_state_refs
+            if budget_states[budget_ref].resource_kind == "concurrent_actions"
+        ]
+        if not concurrency:
+            continue
+        if len(concurrency) != 1:
+            raise ValueError(
+                "Participant execution service must reference exactly one authoritative concurrency budget"
+            )
+        authoritative = concurrency[0]
+        projection = (service.capacity, service.reserved, service.in_flight)
+        authority = (authoritative.limit, authoritative.reserved, authoritative.current_use)
+        if projection != authority:
+            raise ValueError(
+                "Participant execution service concurrency projection must "
+                "equal its authoritative resource-budget state"
+            )
 
 
 class RuntimeSnapshotEnvelopeModel(ContractModel):
@@ -165,9 +220,14 @@ class RuntimeSnapshotEnvelopeModel(ContractModel):
     participant_episode_results: dict[str, ParticipantEpisodeStateModel] = Field(default_factory=dict)
     participant_episode_history: dict[str, list[ParticipantEpisodeHistoryEventModel]] = Field(default_factory=dict)
     participant_behavior_history: dict[str, list[ParticipantBehaviorHistoryEventModel]] = Field(default_factory=dict)
+    participant_control_history: dict[str, list[ParticipantControlOccurrenceModel]] = Field(default_factory=dict)
     participant_autonomous_execution_states: dict[str, ParticipantAutonomousExecutionStateModel] = Field(
         default_factory=dict
     )
+    participant_execution_services: dict[str, ParticipantExecutionServiceStateModel] = Field(default_factory=dict)
+    participant_resource_budget_states: dict[str, ParticipantResourceBudgetStateModel] = Field(default_factory=dict)
+    participant_resource_pool_states: dict[str, ParticipantResourcePoolStateModel] = Field(default_factory=dict)
+    participant_resource_budget_events: dict[str, ParticipantResourceBudgetEventModel] = Field(default_factory=dict)
     shared_state_records: dict[str, ParticipantSharedStateRecordModel] = Field(default_factory=dict)
     shared_state_history: dict[str, list[ParticipantSharedStateRecordModel]] = Field(default_factory=dict)
     joint_action_records: dict[str, ParticipantJointActionRecordModel] = Field(default_factory=dict)
@@ -179,15 +239,45 @@ class RuntimeSnapshotEnvelopeModel(ContractModel):
 
     @model_validator(mode="after")
     def _validate_entry_addresses(self) -> RuntimeSnapshotEnvelopeModel:
-        for map_key, entry in self.entries.items():
-            if map_key != entry.address:
-                raise ValueError("Runtime snapshot entries map key must equal embedded address")
+        _require_embedded_map_keys(
+            self.entries,
+            "address",
+            "Runtime snapshot entries map key must equal embedded address",
+        )
         for map_key, state in self.participant_autonomous_execution_states.items():
             expected = f"{state.policy_address}.state.{state.participant_address}"
             if map_key != expected:
                 raise ValueError(
                     "Autonomous participant state map key must equal the embedded policy and participant address"
                 )
+        key_checks = (
+            (
+                self.participant_execution_services,
+                "execution_scope_ref",
+                "Participant execution service map key must equal execution_scope_ref",
+            ),
+            (
+                self.participant_resource_budget_states,
+                "state_ref",
+                "Participant resource-budget state map key must equal state_ref",
+            ),
+            (
+                self.participant_resource_pool_states,
+                "pool_state_ref",
+                "Participant resource-pool state map key must equal pool_state_ref",
+            ),
+            (
+                self.participant_resource_budget_events,
+                "event_id",
+                "Participant resource-budget event map key must equal event_id",
+            ),
+        )
+        for values, attribute, message in key_checks:
+            _require_embedded_map_keys(values, attribute, message)
+        _validate_execution_service_budget_projection(
+            self.participant_execution_services,
+            self.participant_resource_budget_states,
+        )
         return self
 
 

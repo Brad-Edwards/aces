@@ -9,7 +9,7 @@ process-global RNG, worker-local singleton, or cursor-style ``next()``.
 Construction, verbatim from ``docs/decisions/issue-274-exp-718-controlled-randomness-preflight.md``
 and the implementation plan:
 
-* ``stream_key = blake3.derive_key(context=f"aces-random-stream-v1|profile={profile_id}",
+* ``stream_key = blake3.derive_key(context=f"raes-random-stream-v1|profile={profile_id}",
   key_material=root_entropy_bytes)`` -- one call per (profile, root entropy)
   pair; pure function, no shared state. (This binding's Python API exposes
   the same key-derivation mode via ``blake3.blake3(derive_key_context=...)``.)
@@ -22,9 +22,10 @@ and the implementation plan:
   bias, recording ``rejection_attempts`` and enforcing a bounded max-attempt
   budget: deterministic exhaustion failure, never fallback or clamping.
 
-Only the ``blake3-xof-v1`` profile id is dispatched. An unknown/unsupported
-profile id fails closed (``ValueError``) rather than falling back to a
-library default or a dynamic plugin lookup.
+Only the published ``blake3-xof-v1`` and ``blake3-xof-participant-v1``
+profile ids are dispatched. An unknown/unsupported profile id fails closed
+(``ValueError``) rather than falling back to a library default or a dynamic
+plugin lookup.
 """
 
 from __future__ import annotations
@@ -34,7 +35,7 @@ from dataclasses import dataclass
 import blake3
 import rfc8785
 
-from .contracts.random_stream import PublicSeedModel, StreamAddressModel
+from .contracts.random_stream import ParticipantStreamAddressModel, PublicSeedModel, StreamAddressModel
 from .diagnostics import Diagnostic, Severity
 from .random_stream_profiles import SUPPORTED_RANDOM_STREAM_PROFILE_IDS
 
@@ -50,7 +51,7 @@ ROOT_ENTROPY_BYTE_LENGTH = 32
 #: Key-derivation domain-separation context template fixed by the
 #: ``blake3-xof-v1`` profile. ``{profile_id}`` is substituted with the exact
 #: requested profile id -- changing this template mints a new profile id.
-DERIVATION_CONTEXT_TEMPLATE = "aces-random-stream-v1|profile={profile_id}"
+DERIVATION_CONTEXT_TEMPLATE = "raes-random-stream-v1|profile={profile_id}"
 
 BOUNDED_INTEGER_TRANSFORM_ID = "bounded-integer"
 BOUNDED_INTEGER_TRANSFORM_VERSION = "1"
@@ -85,7 +86,7 @@ def derive_stream_key(*, profile_id: str, root_entropy: bytes) -> bytes:
     return hasher.digest()
 
 
-def canonical_stream_address_bytes(address: StreamAddressModel) -> bytes:
+def canonical_stream_address_bytes(address: StreamAddressModel | ParticipantStreamAddressModel) -> bytes:
     """Return the RFC 8785/JCS canonical bytes for one closed ``StreamAddressModel``.
 
     Uses ``exclude_none=True`` rather than ``exclude_unset=True``: the
@@ -107,7 +108,7 @@ def raw_block(
     *,
     profile_id: str,
     stream_key: bytes,
-    address: StreamAddressModel,
+    address: StreamAddressModel | ParticipantStreamAddressModel,
     byte_length: int = BLOCK_BYTES,
     byte_offset: int = 0,
 ) -> bytes:
@@ -149,7 +150,7 @@ def draw_bounded_integer(
     *,
     profile_id: str,
     stream_key: bytes,
-    address: StreamAddressModel,
+    address: StreamAddressModel | ParticipantStreamAddressModel,
     minimum: int,
     maximum: int,
     max_rejection_attempts: int,

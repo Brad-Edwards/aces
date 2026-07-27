@@ -68,7 +68,7 @@ Body sections (use the ones that apply, omit the rest):
   claim, or the conformance suite's assumption going in.
 - **What we found** — the actual behavior or shape from the integrating
   backend.
-- **Decision** — what landed in the current PR. Use one of: `fix-in-aces`,
+- **Decision** — what landed in the current PR. Use one of: `fix-in-raes`,
   `fix-in-backend`, `cross-repo-coordination`, `accept`, `escalate`. Do
   not use `defer` — record a `follow_ups` issue instead.
 - **Why this side** — when fix could have landed on either repo, why we

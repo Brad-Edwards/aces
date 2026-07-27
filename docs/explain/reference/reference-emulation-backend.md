@@ -77,7 +77,7 @@ and diagnostic surfaces and provide evidence for the runtime effect it claims.
 from raes_reference_backend import create_reference_backend_target
 from raes_reference_backend.drivers.oci import OciDeploymentDriver
 
-driver = OciDeploymentDriver(runtime="docker", workspace="aces-ref")
+driver = OciDeploymentDriver(runtime="docker", workspace="raes-ref")
 target = create_reference_backend_target(driver=driver)
 ```
 

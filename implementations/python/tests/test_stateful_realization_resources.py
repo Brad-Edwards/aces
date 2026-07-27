@@ -392,11 +392,11 @@ def test_stateful_collection_schema_rejects_exact_duplicates():
 
 def test_stateful_schema_discloses_model_only_semantic_invariants():
     schema = schema_bundle()["sdl-authoring-input-v1"]
-    invariant_ids = {entry["id"] for entry in schema["x-aces-invariants"]}
+    invariant_ids = {entry["id"] for entry in schema["x-raes-invariants"]}
 
     assert {
         "stateful-generated-artifact-semantics",
         "stateful-persistent-volume-semantics",
         "stateful-cross-resource-semantics",
     } <= invariant_ids
-    assert schema["x-aces-semantic-profile"]["required"] is True
+    assert schema["x-raes-semantic-profile"]["required"] is True

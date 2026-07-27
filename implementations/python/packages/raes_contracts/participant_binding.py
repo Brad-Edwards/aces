@@ -6,6 +6,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from typing import Protocol, cast
 
+from . import participant_binding_validation as _binding_validation
 from .contracts import (
     ParticipantActionResultModel,
     ParticipantBehaviorHistoryEventModel,
@@ -20,6 +21,7 @@ from .contracts import (
     ParticipantObservationDetailsModel,
     ParticipantTemporalRuntimeContextModel,
 )
+from .contracts.participant_resource_budgets import ParticipantResourceMeasurementRequirementModel
 from .participant_action_arguments import (
     ParticipantActionArgumentScalar,
     ParticipantActionArgumentValue,
@@ -39,21 +41,7 @@ from .participant_binding_events import (
     participant_behavior_event_payload,
     participant_implementation_actor_provenance,
 )
-from .participant_binding_validation import (
-    ACTION_CONTRACT_PREFIX as _ACTION_CONTRACT_PREFIX,
-)
-from .participant_binding_validation import (
-    OBSERVATION_BOUNDARY_PREFIX as _OBSERVATION_BOUNDARY_PREFIX,
-)
-from .participant_binding_validation import (
-    require_non_empty as _require_non_empty,
-)
-from .participant_binding_validation import (
-    require_prefixed as _require_prefixed,
-)
-from .participant_binding_validation import (
-    string_tuple as _string_tuple,
-)
+from .participant_native_execution import ParticipantNativeActionExecution
 from .runtime_state import ApplyResult
 
 
@@ -109,51 +97,81 @@ class ParticipantActionAdmissionRequest:
     state_transition_kind: str = "participant_action_admitted"
     post_state_digest: str | None = None
     requires_terminal_outcome: bool = False
+    target_addresses: tuple[str, ...] = ()
+    execution_scope_ref: str | None = None
+    execution_generation: int | None = None
+    resource_measurement_requirements: tuple[ParticipantResourceMeasurementRequirementModel, ...] = ()
 
     def __post_init__(self) -> None:
-        _require_non_empty(self.participant_address, "participant_address")
-        _require_prefixed(
-            self.action_contract_address,
-            _ACTION_CONTRACT_PREFIX,
-            "action_contract_address",
-        )
-        _require_prefixed(
-            self.observation_boundary_address,
-            _OBSERVATION_BOUNDARY_PREFIX,
-            "observation_boundary_address",
-        )
-        _require_non_empty(self.action_instance_id, "action_instance_id")
-        _require_non_empty(self.state_transition_kind, "state_transition_kind")
-        if self.post_state_digest is not None:
-            _require_non_empty(self.post_state_digest, "post_state_digest")
-        if not isinstance(self.implementation_manifest, ParticipantImplementationManifestModel):
-            raise TypeError("implementation_manifest must be a ParticipantImplementationManifestModel")
-        if not isinstance(self.implementation_selection, ParticipantImplementationSelectionModel):
-            raise TypeError("implementation_selection must be a ParticipantImplementationSelectionModel")
-        if self.action_result is not None and not isinstance(self.action_result, ParticipantActionResultModel):
-            raise TypeError("action_result must be a ParticipantActionResultModel or None")
-        if self.validated_selection is not None:
-            if not isinstance(self.validated_selection, ParticipantValidatedActionSelection):
-                raise TypeError("validated_selection must be a ParticipantValidatedActionSelection or None")
-            if self.validated_selection.action_contract_address != self.action_contract_address:
-                raise ValueError("validated_selection action_contract_address must match the admission request")
-        if not isinstance(self.requires_terminal_outcome, bool):
-            raise TypeError("requires_terminal_outcome must be a bool")
-        if any(not isinstance(item, ParticipantTemporalRuntimeContextModel) for item in self.temporal_contexts):
-            raise TypeError("temporal_contexts entries must be ParticipantTemporalRuntimeContextModel")
-        if len({item.temporal_contract_id for item in self.temporal_contexts}) != len(self.temporal_contexts):
-            raise ValueError("temporal_contexts temporal_contract_id values must be unique")
-        object.__setattr__(self, "evidence_refs", _string_tuple(self.evidence_refs, "evidence_refs"))
-        object.__setattr__(self, "visible_refs", _string_tuple(self.visible_refs, "visible_refs"))
-        object.__setattr__(self, "disclosed_refs", _string_tuple(self.disclosed_refs, "disclosed_refs"))
-        object.__setattr__(
-            self,
-            "observation_boundary_evidence_refs",
-            _string_tuple(self.observation_boundary_evidence_refs, "observation_boundary_evidence_refs"),
-        )
+        _validate_admission_request_basics(self)
+        _validate_admission_request_selection_and_execution(self)
+        _validate_and_normalize_admission_request_contexts(self)
         violations = participant_action_admission_request_violations(self)
         if violations:
             raise ValueError(violations[0])
+
+
+def _validate_admission_request_basics(request: ParticipantActionAdmissionRequest) -> None:
+    _binding_validation.require_non_empty(request.participant_address, "participant_address")
+    _binding_validation.require_prefixed(
+        request.action_contract_address,
+        _binding_validation.ACTION_CONTRACT_PREFIX,
+        "action_contract_address",
+    )
+    _binding_validation.require_prefixed(
+        request.observation_boundary_address,
+        _binding_validation.OBSERVATION_BOUNDARY_PREFIX,
+        "observation_boundary_address",
+    )
+    _binding_validation.require_non_empty(request.action_instance_id, "action_instance_id")
+    _binding_validation.require_non_empty(request.state_transition_kind, "state_transition_kind")
+    if request.post_state_digest is not None:
+        _binding_validation.require_non_empty(request.post_state_digest, "post_state_digest")
+    if not isinstance(request.implementation_manifest, ParticipantImplementationManifestModel):
+        raise TypeError("implementation_manifest must be a ParticipantImplementationManifestModel")
+    if not isinstance(request.implementation_selection, ParticipantImplementationSelectionModel):
+        raise TypeError("implementation_selection must be a ParticipantImplementationSelectionModel")
+    if request.action_result is not None and not isinstance(request.action_result, ParticipantActionResultModel):
+        raise TypeError("action_result must be a ParticipantActionResultModel or None")
+
+
+def _validate_admission_request_selection_and_execution(request: ParticipantActionAdmissionRequest) -> None:
+    selection = request.validated_selection
+    if selection is not None:
+        if not isinstance(selection, ParticipantValidatedActionSelection):
+            raise TypeError("validated_selection must be a ParticipantValidatedActionSelection or None")
+        if selection.action_contract_address != request.action_contract_address:
+            raise ValueError("validated_selection action_contract_address must match the admission request")
+    if not isinstance(request.requires_terminal_outcome, bool):
+        raise TypeError("requires_terminal_outcome must be a bool")
+    if (request.execution_scope_ref is None) != (request.execution_generation is None):
+        raise ValueError("execution_scope_ref and execution_generation must be provided together")
+    if request.execution_scope_ref is not None:
+        _binding_validation.require_non_empty(request.execution_scope_ref, "execution_scope_ref")
+        if request.execution_generation is None or request.execution_generation < 0:
+            raise ValueError("execution_generation must be non-negative")
+        if not request.target_addresses:
+            raise ValueError("generation-bound participant actions require target_addresses")
+    _binding_validation.validate_resource_measurement_requirements(request.resource_measurement_requirements)
+
+
+def _validate_and_normalize_admission_request_contexts(request: ParticipantActionAdmissionRequest) -> None:
+    if any(not isinstance(item, ParticipantTemporalRuntimeContextModel) for item in request.temporal_contexts):
+        raise TypeError("temporal_contexts entries must be ParticipantTemporalRuntimeContextModel")
+    if len({item.temporal_contract_id for item in request.temporal_contexts}) != len(request.temporal_contexts):
+        raise ValueError("temporal_contexts temporal_contract_id values must be unique")
+    for field_name in (
+        "evidence_refs",
+        "visible_refs",
+        "disclosed_refs",
+        "observation_boundary_evidence_refs",
+        "target_addresses",
+    ):
+        object.__setattr__(
+            request,
+            field_name,
+            _binding_validation.string_tuple(getattr(request, field_name), field_name),
+        )
 
 
 @dataclass
@@ -163,26 +181,7 @@ class ParticipantActionApplyResult(ApplyResult):
     action_result: ParticipantActionResultModel | None = None
 
 
-@dataclass(frozen=True)
-class ParticipantNativeActionExecution:
-    """Backend-native execution output used to commit portable action history."""
-
-    apply_result: ApplyResult
-    action_result: ParticipantActionResultModel | None = None
-    post_state_digest: str | None = None
-
-    def __post_init__(self) -> None:
-        if not isinstance(self.apply_result, ApplyResult):
-            raise TypeError("apply_result must be an ApplyResult")
-        if self.action_result is not None and not isinstance(self.action_result, ParticipantActionResultModel):
-            raise TypeError("action_result must be a ParticipantActionResultModel or None")
-        if self.post_state_digest is not None:
-            _require_non_empty(self.post_state_digest, "post_state_digest")
-
-
-def participant_action_admission_request_violations(
-    request: ParticipantActionAdmissionRequest,
-) -> tuple[str, ...]:
+def participant_action_admission_request_violations(request: ParticipantActionAdmissionRequest) -> tuple[str, ...]:
     """Return manifest/selection compatibility violations for a binding request."""
 
     return (

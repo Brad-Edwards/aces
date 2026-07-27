@@ -12,7 +12,7 @@ relationships, observables, actions or events, and tools or artifacts.
 
 ## Decision Record
 
-[ADR-012](../../docs/decisions/adrs/adr-012-shared-concept-authority-and-aces-extension-discipline.md)
+[ADR-012](../../docs/decisions/adrs/adr-012-shared-concept-authority-and-raes-extension-discipline.md)
 governs this specification.
 
 ## Reference Model Catalog
@@ -111,7 +111,7 @@ separately as machine-checkable evidence in
 `contracts/concept-authority/uco-alignment-v1.json` (schema `uco-alignment/v1`).
 That artifact pins the reviewed UCO version and maps each adopted and adapted
 family to the UCO object types it aligns to, enumerating adapted-family
-divergences explicitly. See [ADR-012](../../docs/decisions/adrs/adr-012-shared-concept-authority-and-aces-extension-discipline.md).
+divergences explicitly. See [ADR-012](../../docs/decisions/adrs/adr-012-shared-concept-authority-and-raes-extension-discipline.md).
 
 ## Relationship To Other Requirements
 

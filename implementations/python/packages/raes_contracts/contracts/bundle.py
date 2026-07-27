@@ -9,6 +9,8 @@ from typing import Any
 from raes.canonical import InstantiatedScenarioSnapshot
 from raes.scenario import InstantiatedScenario, Scenario
 
+from raes_contracts.artifact_requirements import ArtifactRequirementContractModel
+
 from .associated_artifacts import AssociatedArtifactManifestModel
 from .catalogs import (
     ConceptFamilyCatalogModel,
@@ -25,6 +27,10 @@ from .execution_state import (
     WorkflowHistoryEventModel,
 )
 from .experiment_apparatus import ExperimentApparatusContextModel, ExperimentTaskModel
+from .experiment_bindings import (
+    ExperimentBindingDescriptorSetModel,
+    ParticipantConfigurationResultModel,
+)
 from .experiment_capture import ExperimentCaptureSpecModel
 from .experiment_evidence import ExperimentDerivedMeasureModel, ExperimentEvidenceRecordModel
 from .experiment_run import ExperimentRunModel
@@ -32,7 +38,9 @@ from .experiment_spec import ExperimentSpecModel, ExperimentStudyModel
 from .manifests import ProcessorManifestV2Model
 from .participant_context import ParticipantContextViewModel
 from .participant_control import ParticipantControlOccurrenceModel
+from .participant_crossing import ParticipantCrossingOccurrenceModel
 from .participant_decision_surface import ParticipantDecisionSurfaceModel
+from .participant_decision_surface_v2 import ParticipantDecisionSurfaceV2Model
 from .participant_envelopes import (
     ParticipantJointActionRecordModel,
     ParticipantLifecycleEventModel,
@@ -40,10 +48,21 @@ from .participant_envelopes import (
     ParticipantSharedStateRecordModel,
     ParticipantTimeManagementContextModel,
 )
+from .participant_execution import (
+    ParticipantExecutionBindingModel,
+    ParticipantExecutionControlRequestModel,
+    ParticipantExecutionServiceStateModel,
+)
 from .participant_manifests import (
     BackendManifestV2Model,
     ParticipantImplementationManifestModel,
     ParticipantImplementationProvenanceModel,
+)
+from .participant_resource_budgets import (
+    ParticipantResourceBudgetEventModel,
+    ParticipantResourceBudgetPolicyModel,
+    ParticipantResourceBudgetStateModel,
+    ParticipantResourcePoolCapacityModel,
 )
 from .participant_runtime import (
     ParticipantBehaviorHistoryEventModel,
@@ -71,19 +90,19 @@ from .reusable_assets import (
 )
 from .runtime_facts import RuntimeFactBindingPlaneModel
 from .schema_constraints import (
-    _aces_semantic_invariant_profile_schema_for_bundle,
     _attach_compiled_address_map_constraints,
     _attach_instantiation_invariants,
     _attach_json_schema_metadata,
     _attach_plan_identity_constraints,
     _attach_sdl_identifier_constraints,
-    _validate_aces_semantic_invariant_annotations,
+    _raes_semantic_invariant_profile_schema_for_bundle,
+    _validate_raes_semantic_invariant_annotations,
 )
 from .schema_invariants import (
-    _add_aces_invariant,
-    _attach_aces_semantic_profile,
+    _add_raes_invariant,
     _attach_experiment_datetime_invariants,
     _attach_initial_service_state_invariants,
+    _attach_raes_semantic_profile,
     _attach_stateful_resource_invariants,
 )
 from .semantic_profiles import SemanticProfileModel
@@ -98,7 +117,7 @@ from .vocabulary_sources import (
 )
 
 
-def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
+def _core_schema_bundle() -> dict[str, dict[str, Any]]:
     from raes_contracts.realization_envelope import BackendRealizationEnvelopeModel
 
     from ..behavioral_relations import BehavioralRelationCatalogModel
@@ -112,11 +131,12 @@ def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
     from ..validation_profiles import ValidationProfileCatalogModel
 
     return {
-        "aces-semantic-invariants-v1": _aces_semantic_invariant_profile_schema_for_bundle(),
+        "raes-semantic-invariants-v1": _raes_semantic_invariant_profile_schema_for_bundle(),
         "sdl-authoring-input-v1": Scenario.model_json_schema(),
         "instantiated-scenario-v1": InstantiatedScenario.model_json_schema(),
         "instantiated-scenario-snapshot-v1": InstantiatedScenarioSnapshot.model_json_schema(),
         "scenario-instantiation-request-v1": InstantiationRequestModel.model_json_schema(),
+        "artifact-requirement-v1": ArtifactRequirementContractModel.model_json_schema(),
         "exploit-path-analysis-evidence-v1": ExploitPathAnalysisEvidenceModel.model_json_schema(),
         "scenario-satisfiability-evidence-v1": ScenarioSatisfiabilityEvidenceModel.model_json_schema(),
         "backend-manifest-v2": BackendManifestV2Model.model_json_schema(),
@@ -138,6 +158,7 @@ def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
         "random-stream-vector-v1": RandomStreamVectorModel.model_json_schema(),
         "experiment-apparatus-context-v1": ExperimentApparatusContextModel.model_json_schema(),
         "experiment-authoring-input-v1": ExperimentSpecModel.model_json_schema(),
+        "experiment-binding-descriptors-v1": ExperimentBindingDescriptorSetModel.model_json_schema(),
         "experiment-capture-spec-v1": ExperimentCaptureSpecModel.model_json_schema(),
         "experiment-derived-measure-v1": ExperimentDerivedMeasureModel.model_json_schema(),
         "experiment-evidence-record-v1": ExperimentEvidenceRecordModel.model_json_schema(),
@@ -167,6 +188,11 @@ def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
         "scientific-completeness-assessment-v1": ScientificCompletenessAssessmentModel.model_json_schema(),
         "validation-profile-catalog-v1": ValidationProfileCatalogModel.model_json_schema(),
         "validation-basis-disclosure-v1": ValidationBasisDisclosureDocumentModel.model_json_schema(),
+    }
+
+
+def _runtime_schema_bundle() -> dict[str, dict[str, Any]]:
+    return {
         "evaluation-history-event-stream-v1": _event_stream_schema(
             "EvaluationHistoryEventStream",
             EvaluationHistoryEventModel.model_json_schema(),
@@ -180,18 +206,28 @@ def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
             "ParticipantBehaviorHistoryEventStream",
             ParticipantBehaviorHistoryEventModel.model_json_schema(),
         ),
+        "participant-execution-binding-v1": ParticipantExecutionBindingModel.model_json_schema(),
+        "participant-execution-control-v1": ParticipantExecutionControlRequestModel.model_json_schema(),
+        "participant-execution-service-state-v1": ParticipantExecutionServiceStateModel.model_json_schema(),
+        "participant-resource-budget-policy-v1": ParticipantResourceBudgetPolicyModel.model_json_schema(),
+        "participant-resource-pool-capacity-v1": ParticipantResourcePoolCapacityModel.model_json_schema(),
+        "participant-resource-budget-state-v1": ParticipantResourceBudgetStateModel.model_json_schema(),
+        "participant-resource-budget-event-v1": ParticipantResourceBudgetEventModel.model_json_schema(),
         "participant-lifecycle-event-v1": ParticipantLifecycleEventModel.model_json_schema(),
         "participant-observation-envelope-v1": ParticipantObservationEnvelopeModel.model_json_schema(),
         "participant-shared-state-record-v1": ParticipantSharedStateRecordModel.model_json_schema(),
         "participant-joint-action-record-v1": ParticipantJointActionRecordModel.model_json_schema(),
         "participant-time-management-context-v1": ParticipantTimeManagementContextModel.model_json_schema(),
         "participant-control-occurrence-v1": ParticipantControlOccurrenceModel.model_json_schema(),
+        "participant-crossing-occurrence-v1": ParticipantCrossingOccurrenceModel.model_json_schema(),
         "participant-outcome-report-v1": ParticipantOutcomeReportModel.model_json_schema(),
         "participant-status-view-v1": ParticipantStatusViewModel.model_json_schema(),
         "participant-history-view-v1": ParticipantHistoryViewModel.model_json_schema(),
         "participant-context-view-v1": ParticipantContextViewModel.model_json_schema(),
         "runtime-fact-binding-plane-v1": RuntimeFactBindingPlaneModel.model_json_schema(),
         "participant-decision-surface-v1": ParticipantDecisionSurfaceModel.model_json_schema(),
+        "participant-decision-surface-v2": ParticipantDecisionSurfaceV2Model.model_json_schema(),
+        "participant-configuration-result-v1": ParticipantConfigurationResultModel.model_json_schema(),
         "operation-receipt-v1": OperationReceiptModel.model_json_schema(),
         "operation-status-v1": OperationStatusModel.model_json_schema(),
         "associated-artifact-manifest-v1": AssociatedArtifactManifestModel.model_json_schema(),
@@ -199,12 +235,16 @@ def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
     }
 
 
+def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
+    return {**_core_schema_bundle(), **_runtime_schema_bundle()}
+
+
 @cache
 def _schema_bundle_template() -> dict[str, dict[str, Any]]:
     """Build the immutable-in-practice template used by :func:`schema_bundle`."""
 
     bundle = _raw_schema_bundle()
-    _add_aces_invariant(
+    _add_raes_invariant(
         bundle["behavioral-relations-v1"],
         "behavioral-relations-reference-resolution",
         "Relation map keys, bibliography references, claim-surface relation references, and worked-example keys "
@@ -212,7 +252,7 @@ def _schema_bundle_template() -> dict[str, dict[str, Any]]:
         validator="raes_contracts.behavioral_relations.BehavioralRelationCatalogModel",
         inputs=[{"contract_id": "behavioral-relations-v1", "instance_path": "#"}],
     )
-    _add_aces_invariant(
+    _add_raes_invariant(
         bundle["experiment-study-v1"],
         "study-behavioral-claim-catalog-resolution",
         "Every study behavioral claim must resolve against the canonical taxonomy revision, include a required "
@@ -223,7 +263,7 @@ def _schema_bundle_template() -> dict[str, dict[str, Any]]:
             {"contract_id": "behavioral-relations-v1", "instance_path": "#"},
         ],
     )
-    _add_aces_invariant(
+    _add_raes_invariant(
         bundle["scientific-completeness-taxonomy-v1"],
         "scientific-completeness-taxonomy-rectangular",
         "Concern and profile ids must be unique, and every profile disposition "
@@ -231,7 +271,7 @@ def _schema_bundle_template() -> dict[str, dict[str, Any]]:
         validator="raes_contracts.scientific_completeness.ScientificCompletenessTaxonomyModel",
         inputs=[{"contract_id": "scientific-completeness-taxonomy-v1", "instance_path": "#"}],
     )
-    _add_aces_invariant(
+    _add_raes_invariant(
         bundle["scientific-completeness-taxonomy-v1"],
         "scientific-completeness-behavioral-claim-resolution",
         "Each profile must carry resolved behavioral claim bindings and disjoint, catalog-resolved nonclaimed "
@@ -242,7 +282,7 @@ def _schema_bundle_template() -> dict[str, dict[str, Any]]:
             {"contract_id": "behavioral-relations-v1", "instance_path": "#"},
         ],
     )
-    _add_aces_invariant(
+    _add_raes_invariant(
         bundle["scientific-completeness-assessment-v1"],
         "scientific-completeness-assessment-status-evidence",
         "Concern ids must be unique and each delivery status must carry its "
@@ -251,7 +291,7 @@ def _schema_bundle_template() -> dict[str, dict[str, Any]]:
         validator="raes_contracts.scientific_completeness.ScientificCompletenessAssessmentModel",
         inputs=[{"contract_id": "scientific-completeness-assessment-v1", "instance_path": "#"}],
     )
-    _add_aces_invariant(
+    _add_raes_invariant(
         bundle["runtime-fact-binding-plane-v1"],
         "runtime-fact-binding-references-resolve",
         "Every fact version resolves to a declaration, every binding event resolves to its compiled sink and "
@@ -260,7 +300,7 @@ def _schema_bundle_template() -> dict[str, dict[str, Any]]:
         validator="raes_contracts.contracts.runtime_facts.RuntimeFactBindingPlaneModel._validate_references",
         inputs=[{"contract_id": "runtime-fact-binding-plane-v1", "instance_path": "#"}],
     )
-    _add_aces_invariant(
+    _add_raes_invariant(
         bundle["scientific-completeness-assessment-v1"],
         "scientific-completeness-taxonomy-assessment-join",
         "Assessment family, taxonomy revision, and concern ids must exactly "
@@ -271,7 +311,7 @@ def _schema_bundle_template() -> dict[str, dict[str, Any]]:
             {"contract_id": "scientific-completeness-assessment-v1", "instance_path": "#"},
         ],
     )
-    _add_aces_invariant(
+    _add_raes_invariant(
         bundle["validation-profile-catalog-v1"],
         "validation-profile-catalog-reference-integrity",
         "Strength ranks and term ids must be unique, profile identities must "
@@ -294,10 +334,10 @@ def _schema_bundle_template() -> dict[str, dict[str, Any]]:
         _attach_json_schema_metadata(contract_id, json_schema)
         _attach_compiled_address_map_constraints(contract_id, json_schema)
         _attach_plan_identity_constraints(contract_id, json_schema)
-        _attach_aces_semantic_profile(contract_id, json_schema)
+        _attach_raes_semantic_profile(contract_id, json_schema)
     known_contract_ids = frozenset(bundle)
     for contract_id, json_schema in bundle.items():
-        _validate_aces_semantic_invariant_annotations(
+        _validate_raes_semantic_invariant_annotations(
             contract_id=contract_id,
             json_schema=json_schema,
             known_contract_ids=known_contract_ids,

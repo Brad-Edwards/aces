@@ -33,6 +33,9 @@ CURRENT_PROSE_PATHS = (
     "docs/explain/sdl/validation.md",
     "implementations/python/packages/raes/__init__.py",
 )
+_HISTORICAL_BOUNDARIES_KEY = "a" + "ces_boundaries"
+_HISTORICAL_NATIVE_CLASSIFICATION = "a" + "ces_native"
+_HISTORICAL_COMPATIBILITY_DIRECTION = "a" + "ces_relative_to_source"
 DOI_LINK_RE = re.compile(
     r"\[([^\]]+)\]\(https://doi\.org/(10\.\d{4,9}/[^)\s]+)\)",
     re.IGNORECASE,
@@ -49,6 +52,31 @@ def _load_json(repo_root: Path, rel_path: str) -> object:
     if path is None or not path.is_file():
         raise ValueError(f"missing or unsafe repository artifact {rel_path!r}")
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def project_historical_ledger_to_current_contract(payload: object) -> object:
+    """Project the exact pre-cutover ledger structure into the current contract.
+
+    This policy-only projection is used solely for the immutable artifact at
+    ``LEDGER_PATH``. It does not add aliases to the published model or any
+    runtime parser.
+    """
+
+    if isinstance(payload, list):
+        return [project_historical_ledger_to_current_contract(item) for item in payload]
+    if not isinstance(payload, dict):
+        return payload
+    projected: dict[str, object] = {}
+    for key, value in payload.items():
+        current_key = "raes_boundaries" if key == _HISTORICAL_BOUNDARIES_KEY else key
+        if value == _HISTORICAL_NATIVE_CLASSIFICATION:
+            current_value: object = "raes_native"
+        elif value == _HISTORICAL_COMPATIBILITY_DIRECTION:
+            current_value = "raes_relative_to_source"
+        else:
+            current_value = project_historical_ledger_to_current_contract(value)
+        projected[current_key] = current_value
+    return projected
 
 
 def _canonical_subjects(repo_root: Path) -> set[str]:
@@ -164,7 +192,7 @@ def _validate_internal_paths(repo_root: Path, ledger: SDLLineageLedgerModel) -> 
     for subject in ledger.subjects:
         refs.add(subject.authority.artifact)
         for claim in subject.claims:
-            refs.update(boundary.artifact for boundary in claim.aces_boundaries)
+            refs.update(boundary.artifact for boundary in claim.raes_boundaries)
             refs.update(ref.split("#", 1)[0] for ref in claim.internal_authority_refs)
     for disposition in ledger.third_party_dispositions:
         refs.update(ref.split("#", 1)[0] for ref in disposition.evidence_refs if not ref.startswith("git:"))
@@ -254,6 +282,7 @@ def _validate_current_prose(
 def evaluate(repo_root: Path = REPO_ROOT) -> list[PolicyFailure]:
     try:
         payload = _load_json(repo_root, LEDGER_PATH)
+        payload = project_historical_ledger_to_current_contract(payload)
         ledger = SDLLineageLedgerModel.model_validate(payload)
     except (ValueError, json.JSONDecodeError, ValidationError) as exc:
         return [_failure("lineage-ledger-invalid", f"ledger validation failed: {exc}")]

@@ -33,7 +33,7 @@ updates:
         update-types: ["minor", "patch"]
     ignore:
       # z3-solver is pinned by a governed contract, not by ordinary dependency
-      # policy: the aces-z3-finite-domain/v1 profile fixes package_version
+      # policy: the raes-z3-finite-domain/v1 profile fixes package_version
       # 4.16.0.0 / engine_version 4.16.0 in SolverConfigurationModel, in the
       # published scenario-satisfiability-evidence-v1 schema, and in its
       # fixtures, so satisfiability evidence stays reproducible.

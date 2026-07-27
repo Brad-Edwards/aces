@@ -267,6 +267,529 @@
       "title": "Agent",
       "type": "object"
     },
+    "ArtifactCandidate": {
+      "additionalProperties": false,
+      "description": "One immutable candidate explicitly admitted by the author.",
+      "properties": {
+        "artifact": {
+          "$ref": "#/$defs/ArtifactIdentity"
+        },
+        "candidate_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:/@+-]*$",
+          "title": "Candidate Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "candidate_id",
+        "artifact"
+      ],
+      "title": "ArtifactCandidate",
+      "type": "object"
+    },
+    "ArtifactConstraint": {
+      "additionalProperties": false,
+      "description": "One typed, named bound on a constrained artifact selection.",
+      "properties": {
+        "allowed_values": {
+          "items": {
+            "maxLength": 1024,
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Allowed Values",
+          "type": "array"
+        },
+        "constraint_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:/@+-]*$",
+          "title": "Constraint Id",
+          "type": "string"
+        },
+        "kind": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:/@+-]*$",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "constraint_id",
+        "kind",
+        "allowed_values"
+      ],
+      "title": "ArtifactConstraint",
+      "type": "object"
+    },
+    "ArtifactIdentity": {
+      "additionalProperties": false,
+      "description": "Immutable provider-neutral identity for one artifact payload.",
+      "properties": {
+        "artifact_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:/@+-]*$",
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "digest": {
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "media_type": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Media Type",
+          "type": "string"
+        },
+        "version": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "version",
+        "digest",
+        "media_type"
+      ],
+      "title": "ArtifactIdentity",
+      "type": "object"
+    },
+    "ArtifactLockedInput": {
+      "additionalProperties": false,
+      "description": "One immutable materialization input joined to existing trust contracts.",
+      "properties": {
+        "artifact": {
+          "$ref": "#/$defs/ArtifactIdentity"
+        },
+        "associated_artifact_manifest_ref": {
+          "maxLength": 1024,
+          "minLength": 1,
+          "title": "Associated Artifact Manifest Ref",
+          "type": "string"
+        },
+        "input_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:/@+-]*$",
+          "title": "Input Id",
+          "type": "string"
+        },
+        "trust_policy_ref": {
+          "maxLength": 1024,
+          "minLength": 1,
+          "title": "Trust Policy Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "input_id",
+        "artifact",
+        "associated_artifact_manifest_ref",
+        "trust_policy_ref"
+      ],
+      "title": "ArtifactLockedInput",
+      "type": "object"
+    },
+    "ArtifactMaterializationSpecification": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "properties": {
+            "profile": {
+              "allOf": [
+                {
+                  "properties": {
+                    "mechanism": {
+                      "anyOf": [
+                        {
+                          "const": "materialization-specification"
+                        },
+                        {
+                          "pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "mechanism"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "description": "Reference to a closed executable materialization profile.\n\nThis is a digest-bound specification reference, not shell text, a\nDockerfile, an environment map, or a reinterpretation of ``Source.build``.",
+      "properties": {
+        "digest": {
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "locked_input_ids": {
+          "items": {
+            "maxLength": 256,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:/@+-]*$",
+            "type": "string"
+          },
+          "title": "Locked Input Ids",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "profile": {
+          "$ref": "#/$defs/ArtifactMechanismProfile"
+        },
+        "specification_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:/@+-]*$",
+          "title": "Specification Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "specification_id",
+        "profile",
+        "digest"
+      ],
+      "title": "ArtifactMaterializationSpecification",
+      "type": "object"
+    },
+    "ArtifactMechanismProfile": {
+      "additionalProperties": false,
+      "description": "Versioned portable mechanism profile.\n\nPortable mechanisms use the governed base names above or a namespaced\n``x-<authority>:<term>`` extension. The profile digest binds the exact\nmechanism contract without making the mechanism set a closed union.",
+      "properties": {
+        "digest": {
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "mechanism": {
+          "anyOf": [
+            {
+              "enum": [
+                "backend-owned-artifact",
+                "dynamic-composition",
+                "exact-artifact",
+                "materialization-specification",
+                "published-candidate"
+              ]
+            },
+            {
+              "pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$"
+            }
+          ],
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Mechanism",
+          "type": "string"
+        },
+        "profile": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:/@+-]*$",
+          "title": "Profile",
+          "type": "string"
+        },
+        "version": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "mechanism",
+        "profile",
+        "version",
+        "digest"
+      ],
+      "title": "ArtifactMechanismProfile",
+      "type": "object"
+    },
+    "ArtifactRequirement": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "explicitness": {
+                "const": "exact"
+              }
+            },
+            "required": [
+              "explicitness"
+            ]
+          },
+          "then": {
+            "properties": {
+              "candidates": {
+                "maxItems": 0
+              },
+              "constraints": {
+                "maxItems": 0
+              },
+              "exact_artifact": {
+                "not": {
+                  "type": "null"
+                }
+              },
+              "locked_inputs": {
+                "maxItems": 0
+              },
+              "materialization_specifications": {
+                "maxItems": 0
+              },
+              "permitted_routes": {
+                "items": {
+                  "properties": {
+                    "mechanism": {
+                      "properties": {
+                        "mechanism": {
+                          "const": "exact-artifact"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "required": [
+              "exact_artifact"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "explicitness": {
+                "const": "constrained"
+              }
+            },
+            "required": [
+              "explicitness"
+            ]
+          },
+          "then": {
+            "anyOf": [
+              {
+                "properties": {
+                  "constraints": {
+                    "minItems": 1
+                  }
+                },
+                "required": [
+                  "constraints"
+                ]
+              },
+              {
+                "properties": {
+                  "candidates": {
+                    "minItems": 1
+                  }
+                },
+                "required": [
+                  "candidates"
+                ]
+              },
+              {
+                "properties": {
+                  "locked_inputs": {
+                    "minItems": 1
+                  }
+                },
+                "required": [
+                  "locked_inputs"
+                ]
+              },
+              {
+                "properties": {
+                  "materialization_specifications": {
+                    "minItems": 1
+                  }
+                },
+                "required": [
+                  "materialization_specifications"
+                ]
+              }
+            ],
+            "properties": {
+              "exact_artifact": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "explicitness": {
+                "const": "open"
+              }
+            },
+            "required": [
+              "explicitness"
+            ]
+          },
+          "then": {
+            "properties": {
+              "candidates": {
+                "maxItems": 0
+              },
+              "constraints": {
+                "maxItems": 0
+              },
+              "exact_artifact": {
+                "type": "null"
+              },
+              "materialization_specifications": {
+                "maxItems": 0
+              }
+            }
+          }
+        }
+      ],
+      "description": "Author-owned artifact requirement attached to a ``Source`` selector.",
+      "properties": {
+        "associated_artifact_manifest_refs": {
+          "items": {
+            "maxLength": 1024,
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Associated Artifact Manifest Refs",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "candidates": {
+          "items": {
+            "$ref": "#/$defs/ArtifactCandidate"
+          },
+          "title": "Candidates",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "constraints": {
+          "items": {
+            "$ref": "#/$defs/ArtifactConstraint"
+          },
+          "title": "Constraints",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "exact_artifact": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ArtifactIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "explicitness": {
+          "$ref": "#/$defs/ExplicitnessClass"
+        },
+        "locked_inputs": {
+          "items": {
+            "$ref": "#/$defs/ArtifactLockedInput"
+          },
+          "title": "Locked Inputs",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "materialization_specifications": {
+          "items": {
+            "$ref": "#/$defs/ArtifactMaterializationSpecification"
+          },
+          "title": "Materialization Specifications",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "permitted_routes": {
+          "items": {
+            "$ref": "#/$defs/ArtifactSatisfactionRoute"
+          },
+          "minItems": 1,
+          "title": "Permitted Routes",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "requirement_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:/@+-]*$",
+          "title": "Requirement Id",
+          "type": "string"
+        },
+        "trust_policy_refs": {
+          "items": {
+            "maxLength": 1024,
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Trust Policy Refs",
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "requirement_id",
+        "explicitness",
+        "permitted_routes"
+      ],
+      "title": "ArtifactRequirement",
+      "type": "object"
+    },
+    "ArtifactSatisfactionRoute": {
+      "additionalProperties": false,
+      "description": "One permitted mechanism/acquisition/timing combination.",
+      "properties": {
+        "acquisition": {
+          "enum": [
+            "pull",
+            "copy",
+            "import",
+            "local-lookup",
+            "none"
+          ],
+          "title": "Acquisition",
+          "type": "string"
+        },
+        "mechanism": {
+          "$ref": "#/$defs/ArtifactMechanismProfile"
+        },
+        "timing": {
+          "enum": [
+            "publication",
+            "pack-ingestion",
+            "backend-preparation",
+            "realization"
+          ],
+          "title": "Timing",
+          "type": "string"
+        }
+      },
+      "required": [
+        "mechanism",
+        "acquisition",
+        "timing"
+      ],
+      "title": "ArtifactSatisfactionRoute",
+      "type": "object"
+    },
     "Assertion": {
       "additionalProperties": false,
       "description": "A typed use of one proposition at a governed semantic boundary.",
@@ -1512,7 +2035,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Cross Tenant Isolation"
@@ -3334,7 +3857,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Profile"
@@ -3372,7 +3895,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Protocol"
@@ -4076,7 +4599,7 @@
         },
         "instantiation_provenance": {
           "$ref": "#/$defs/InstantiationProvenance",
-          "x-aces-realization-dimension": false
+          "x-raes-realization-dimension": false
         },
         "name": {
           "maxLength": 64,
@@ -4205,15 +4728,15 @@
       ],
       "title": "SDL Instantiated Scenario v1",
       "type": "object",
-      "x-aces-authored-identity-profile": "aces-sdl-semantic/v1",
-      "x-aces-document-phase": "instantiated-scenario"
+      "x-raes-authored-identity-profile": "raes-sdl-semantic/v1",
+      "x-raes-document-phase": "instantiated-scenario"
     },
     "InstantiatedScenarioSnapshot": {
       "additionalProperties": false,
       "description": "Sealed canonical envelope for one portable instantiated artifact.",
       "properties": {
         "profile": {
-          "const": "aces-sdl-instantiated-snapshot/v1",
+          "const": "raes-sdl-instantiated-snapshot/v1",
           "title": "Profile",
           "type": "string"
         },
@@ -4227,7 +4750,7 @@
       ],
       "title": "SDL Instantiated Scenario Snapshot v1",
       "type": "object",
-      "x-aces-document-phase": "canonical-instantiated-snapshot"
+      "x-raes-document-phase": "canonical-instantiated-snapshot"
     },
     "InstantiationProvenance": {
       "additionalProperties": false,
@@ -4819,7 +5342,7 @@
           "type": "array"
         },
         "profile": {
-          "const": "aces-finite-domain-constraints/v1",
+          "const": "raes-finite-domain-constraints/v1",
           "title": "Profile",
           "type": "string"
         },
@@ -4838,12 +5361,12 @@
           "type": "array"
         },
         "theory_profile": {
-          "const": "aces-finite-domain-theory/v1",
+          "const": "raes-finite-domain-theory/v1",
           "title": "Theory Profile",
           "type": "string"
         },
         "translation_profile": {
-          "const": "aces-sdl-authoring-translation/v1",
+          "const": "raes-sdl-authoring-translation/v1",
           "title": "Translation Profile",
           "type": "string"
         }
@@ -5837,9 +6360,92 @@
       "title": "ParticipantActionPrecondition",
       "type": "object"
     },
-    "ParticipantAutonomousExecutionPolicy": {
+    "ParticipantActivityActionCandidate": {
       "additionalProperties": false,
-      "description": "Deterministic scheduler binding over existing participant semantics.",
+      "description": "Stable weighted action candidate and its bounded recovery policy.",
+      "properties": {
+        "action_ref": {
+          "minLength": 1,
+          "title": "Action Ref",
+          "type": "string"
+        },
+        "cooldown_ticks": {
+          "default": 0,
+          "maximum": 1000000000,
+          "minimum": 0,
+          "title": "Cooldown Ticks",
+          "type": "integer"
+        },
+        "depends_on": {
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            },
+            "pattern": "^[a-z0-9]",
+            "type": "string"
+          },
+          "maxItems": 1024,
+          "title": "Depends On",
+          "type": "array"
+        },
+        "max_retries": {
+          "default": 0,
+          "maximum": 1024,
+          "minimum": 0,
+          "title": "Max Retries",
+          "type": "integer"
+        },
+        "retryable_failure_classes": {
+          "items": {
+            "$ref": "#/$defs/ParticipantFailureClass"
+          },
+          "maxItems": 32,
+          "title": "Retryable Failure Classes",
+          "type": "array"
+        },
+        "weight": {
+          "maximum": 1000000000,
+          "minimum": 1,
+          "title": "Weight",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "action_ref",
+        "weight"
+      ],
+      "title": "ParticipantActivityActionCandidate",
+      "type": "object"
+    },
+    "ParticipantActivityTiming": {
+      "additionalProperties": false,
+      "description": "Inclusive bounded interval for the next occurrence on the shared clock.",
+      "properties": {
+        "maximum_ticks": {
+          "maximum": 1000000000,
+          "minimum": 1,
+          "title": "Maximum Ticks",
+          "type": "integer"
+        },
+        "minimum_ticks": {
+          "maximum": 1000000000,
+          "minimum": 1,
+          "title": "Minimum Ticks",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "minimum_ticks",
+        "maximum_ticks"
+      ],
+      "title": "ParticipantActivityTiming",
+      "type": "object"
+    },
+    "ParticipantAutonomousExecutionPolicyV1": {
+      "additionalProperties": false,
+      "description": "Fixed-cadence deterministic scheduler binding.",
       "properties": {
         "action_order": {
           "items": {
@@ -5920,7 +6526,305 @@
         "max_action_attempts",
         "evaluation_authority"
       ],
-      "title": "ParticipantAutonomousExecutionPolicy",
+      "title": "ParticipantAutonomousExecutionPolicyV1",
+      "type": "object"
+    },
+    "ParticipantAutonomousExecutionPolicyV2": {
+      "additionalProperties": false,
+      "description": "Governed within-run activity policy for ordinary participants.",
+      "properties": {
+        "action_candidates": {
+          "maxProperties": 1024,
+          "minProperties": 1,
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/ParticipantActivityActionCandidate"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Action Candidates",
+          "type": "object"
+        },
+        "clock_ref": {
+          "minLength": 1,
+          "title": "Clock Ref",
+          "type": "string"
+        },
+        "empty_eligible_disposition": {
+          "enum": [
+            "complete",
+            "wait"
+          ],
+          "title": "Empty Eligible Disposition",
+          "type": "string"
+        },
+        "evaluation_authority": {
+          "$ref": "#/$defs/ParticipantEvaluationAuthority"
+        },
+        "failure_policy": {
+          "$ref": "#/$defs/ParticipantExecutionFailurePolicy",
+          "default": "stop"
+        },
+        "max_action_attempts": {
+          "maximum": 1000000,
+          "minimum": 1,
+          "title": "Max Action Attempts",
+          "type": "integer"
+        },
+        "max_burst_size": {
+          "default": 1,
+          "maximum": 1024,
+          "minimum": 1,
+          "title": "Max Burst Size",
+          "type": "integer"
+        },
+        "max_in_flight": {
+          "default": 1,
+          "maximum": 1024,
+          "minimum": 1,
+          "title": "Max In Flight",
+          "type": "integer"
+        },
+        "max_occurrences": {
+          "maximum": 1000000,
+          "minimum": 1,
+          "title": "Max Occurrences",
+          "type": "integer"
+        },
+        "observation_boundary_ref": {
+          "minLength": 1,
+          "title": "Observation Boundary Ref",
+          "type": "string"
+        },
+        "outside_window_disposition": {
+          "enum": [
+            "next_opening",
+            "skip"
+          ],
+          "title": "Outside Window Disposition",
+          "type": "string"
+        },
+        "participant_implementation_ref": {
+          "minLength": 1,
+          "title": "Participant Implementation Ref",
+          "type": "string"
+        },
+        "pause_window_refs": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 1024,
+          "title": "Pause Window Refs",
+          "type": "array"
+        },
+        "profile": {
+          "const": "participant-autonomous-execution/v2",
+          "title": "Profile",
+          "type": "string"
+        },
+        "progression_policy_ref": {
+          "minLength": 1,
+          "title": "Progression Policy Ref",
+          "type": "string"
+        },
+        "selection_strategy": {
+          "const": "weighted",
+          "title": "Selection Strategy",
+          "type": "string"
+        },
+        "stochastic_control_ref": {
+          "minLength": 1,
+          "title": "Stochastic Control Ref",
+          "type": "string"
+        },
+        "timing": {
+          "$ref": "#/$defs/ParticipantActivityTiming"
+        },
+        "work_window_refs": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 1024,
+          "minItems": 1,
+          "title": "Work Window Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "profile",
+        "participant_implementation_ref",
+        "clock_ref",
+        "progression_policy_ref",
+        "work_window_refs",
+        "observation_boundary_ref",
+        "stochastic_control_ref",
+        "selection_strategy",
+        "timing",
+        "outside_window_disposition",
+        "empty_eligible_disposition",
+        "action_candidates",
+        "max_occurrences",
+        "max_action_attempts",
+        "evaluation_authority"
+      ],
+      "title": "ParticipantAutonomousExecutionPolicyV2",
+      "type": "object"
+    },
+    "ParticipantAutonomousExecutionPolicyV3": {
+      "additionalProperties": false,
+      "description": "V2 activity plus scoped multi-resource governance.",
+      "properties": {
+        "action_candidates": {
+          "maxProperties": 1024,
+          "minProperties": 1,
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/ParticipantActivityActionCandidate"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Action Candidates",
+          "type": "object"
+        },
+        "clock_ref": {
+          "minLength": 1,
+          "title": "Clock Ref",
+          "type": "string"
+        },
+        "empty_eligible_disposition": {
+          "enum": [
+            "complete",
+            "wait"
+          ],
+          "title": "Empty Eligible Disposition",
+          "type": "string"
+        },
+        "evaluation_authority": {
+          "$ref": "#/$defs/ParticipantEvaluationAuthority"
+        },
+        "failure_policy": {
+          "$ref": "#/$defs/ParticipantExecutionFailurePolicy",
+          "default": "stop"
+        },
+        "max_action_attempts": {
+          "maximum": 1000000,
+          "minimum": 1,
+          "title": "Max Action Attempts",
+          "type": "integer"
+        },
+        "max_burst_size": {
+          "default": 1,
+          "maximum": 1024,
+          "minimum": 1,
+          "title": "Max Burst Size",
+          "type": "integer"
+        },
+        "max_in_flight": {
+          "default": 1,
+          "maximum": 1024,
+          "minimum": 1,
+          "title": "Max In Flight",
+          "type": "integer"
+        },
+        "max_occurrences": {
+          "maximum": 1000000,
+          "minimum": 1,
+          "title": "Max Occurrences",
+          "type": "integer"
+        },
+        "observation_boundary_ref": {
+          "minLength": 1,
+          "title": "Observation Boundary Ref",
+          "type": "string"
+        },
+        "outside_window_disposition": {
+          "enum": [
+            "next_opening",
+            "skip"
+          ],
+          "title": "Outside Window Disposition",
+          "type": "string"
+        },
+        "participant_implementation_ref": {
+          "minLength": 1,
+          "title": "Participant Implementation Ref",
+          "type": "string"
+        },
+        "pause_window_refs": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 1024,
+          "title": "Pause Window Refs",
+          "type": "array"
+        },
+        "profile": {
+          "const": "participant-autonomous-execution/v3",
+          "title": "Profile",
+          "type": "string"
+        },
+        "progression_policy_ref": {
+          "minLength": 1,
+          "title": "Progression Policy Ref",
+          "type": "string"
+        },
+        "resource_budget": {
+          "$ref": "#/$defs/ParticipantResourceBudgetPolicy"
+        },
+        "selection_strategy": {
+          "const": "weighted",
+          "title": "Selection Strategy",
+          "type": "string"
+        },
+        "stochastic_control_ref": {
+          "minLength": 1,
+          "title": "Stochastic Control Ref",
+          "type": "string"
+        },
+        "timing": {
+          "$ref": "#/$defs/ParticipantActivityTiming"
+        },
+        "work_window_refs": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 1024,
+          "minItems": 1,
+          "title": "Work Window Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "profile",
+        "participant_implementation_ref",
+        "clock_ref",
+        "progression_policy_ref",
+        "work_window_refs",
+        "observation_boundary_ref",
+        "stochastic_control_ref",
+        "selection_strategy",
+        "timing",
+        "outside_window_disposition",
+        "empty_eligible_disposition",
+        "action_candidates",
+        "max_occurrences",
+        "max_action_attempts",
+        "evaluation_authority",
+        "resource_budget"
+      ],
+      "title": "ParticipantAutonomousExecutionPolicyV3",
       "type": "object"
     },
     "ParticipantBackendFailureMapping": {
@@ -6031,13 +6935,20 @@
         "autonomous_execution": {
           "anyOf": [
             {
-              "$ref": "#/$defs/ParticipantAutonomousExecutionPolicy"
+              "$ref": "#/$defs/ParticipantAutonomousExecutionPolicyV1"
+            },
+            {
+              "$ref": "#/$defs/ParticipantAutonomousExecutionPolicyV2"
+            },
+            {
+              "$ref": "#/$defs/ParticipantAutonomousExecutionPolicyV3"
             },
             {
               "type": "null"
             }
           ],
-          "default": null
+          "default": null,
+          "title": "Autonomous Execution"
         },
         "backend_feature_support_refs": {
           "items": {
@@ -6659,7 +7570,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Channel"
@@ -6778,6 +7689,293 @@
         "realization"
       ],
       "title": "ParticipantPreconditionClass",
+      "type": "string"
+    },
+    "ParticipantResourceAccountingMode": {
+      "enum": [
+        "windowed_counter",
+        "cumulative_counter",
+        "reservable_gauge",
+        "growth_counter",
+        "lease"
+      ],
+      "title": "ParticipantResourceAccountingMode",
+      "type": "string"
+    },
+    "ParticipantResourceBudgetDimension": {
+      "additionalProperties": false,
+      "properties": {
+        "accounting_mode": {
+          "$ref": "#/$defs/ParticipantResourceAccountingMode"
+        },
+        "evidence_refs": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 1024,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "limit": {
+          "maximum": 1000000000000000000,
+          "minimum": 1,
+          "title": "Limit",
+          "type": "integer"
+        },
+        "meter_profile_ref": {
+          "minLength": 1,
+          "title": "Meter Profile Ref",
+          "type": "string"
+        },
+        "owner_ref": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Owner Ref",
+          "type": "string"
+        },
+        "parent_budget_ref": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "minLength": 1,
+              "not": {
+                "pattern": "[^a-z0-9_-]"
+              },
+              "pattern": "^[a-z0-9]",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parent Budget Ref"
+        },
+        "pool_ref": {
+          "minLength": 1,
+          "title": "Pool Ref",
+          "type": "string"
+        },
+        "reservation": {
+          "maximum": 1000000000000000000,
+          "minimum": 1,
+          "title": "Reservation",
+          "type": "integer"
+        },
+        "reset": {
+          "$ref": "#/$defs/ParticipantResourceResetMode"
+        },
+        "resource_kind": {
+          "$ref": "#/$defs/ParticipantResourceKind"
+        },
+        "unit": {
+          "minLength": 1,
+          "title": "Unit",
+          "type": "string"
+        },
+        "window_ticks": {
+          "anyOf": [
+            {
+              "maximum": 1000000000,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Window Ticks"
+        }
+      },
+      "required": [
+        "owner_ref",
+        "pool_ref",
+        "resource_kind",
+        "unit",
+        "accounting_mode",
+        "meter_profile_ref",
+        "limit",
+        "reservation",
+        "reset"
+      ],
+      "title": "ParticipantResourceBudgetDimension",
+      "type": "object"
+    },
+    "ParticipantResourceBudgetPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "dimensions": {
+          "maxProperties": 4096,
+          "minProperties": 1,
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/ParticipantResourceBudgetDimension"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Dimensions",
+          "type": "object"
+        },
+        "fairness": {
+          "$ref": "#/$defs/ParticipantResourceFairness"
+        },
+        "owners": {
+          "maxProperties": 1024,
+          "minProperties": 1,
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/ParticipantResourceOwner"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Owners",
+          "type": "object"
+        },
+        "policy_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Policy Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "policy_id",
+        "owners",
+        "fairness",
+        "dimensions"
+      ],
+      "title": "ParticipantResourceBudgetPolicy",
+      "type": "object"
+    },
+    "ParticipantResourceFairness": {
+      "additionalProperties": false,
+      "properties": {
+        "borrowing": {
+          "minLength": 1,
+          "title": "Borrowing",
+          "type": "string"
+        },
+        "max_queue_ticks": {
+          "maximum": 1000000000,
+          "minimum": 0,
+          "title": "Max Queue Ticks",
+          "type": "integer"
+        },
+        "policy": {
+          "minLength": 1,
+          "title": "Policy",
+          "type": "string"
+        },
+        "priority_class": {
+          "minLength": 1,
+          "title": "Priority Class",
+          "type": "string"
+        },
+        "protected": {
+          "title": "Protected",
+          "type": "boolean"
+        },
+        "reclaim": {
+          "minLength": 1,
+          "title": "Reclaim",
+          "type": "string"
+        },
+        "starvation_bound_ticks": {
+          "maximum": 1000000000,
+          "minimum": 1,
+          "title": "Starvation Bound Ticks",
+          "type": "integer"
+        },
+        "weight": {
+          "maximum": 1000000,
+          "minimum": 1,
+          "title": "Weight",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "policy",
+        "priority_class",
+        "weight",
+        "protected",
+        "borrowing",
+        "reclaim",
+        "max_queue_ticks",
+        "starvation_bound_ticks"
+      ],
+      "title": "ParticipantResourceFairness",
+      "type": "object"
+    },
+    "ParticipantResourceKind": {
+      "enum": [
+        "action_rate",
+        "concurrent_actions",
+        "storage_growth",
+        "inference_tokens",
+        "image_generations",
+        "accelerator"
+      ],
+      "title": "ParticipantResourceKind",
+      "type": "string"
+    },
+    "ParticipantResourceOwner": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/ParticipantResourceOwnerKind"
+        },
+        "ref": {
+          "minLength": 1,
+          "title": "Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "ref"
+      ],
+      "title": "ParticipantResourceOwner",
+      "type": "object"
+    },
+    "ParticipantResourceOwnerKind": {
+      "enum": [
+        "participant",
+        "deployment_tenant",
+        "shared_service",
+        "fleet"
+      ],
+      "title": "ParticipantResourceOwnerKind",
+      "type": "string"
+    },
+    "ParticipantResourceResetMode": {
+      "enum": [
+        "episode",
+        "time_segment",
+        "run",
+        "reconciled"
+      ],
+      "title": "ParticipantResourceResetMode",
       "type": "string"
     },
     "ParticipantTemporalContract": {
@@ -7624,7 +8822,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Kernel Boundary"
@@ -7707,7 +8905,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Direction"
@@ -7723,7 +8921,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Trust Type"
@@ -7822,7 +9020,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Direction"
@@ -7838,7 +9036,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Mapping Intent"
@@ -7854,7 +9052,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Protocol"
@@ -7875,7 +9073,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Tenant Claim Owner"
@@ -8126,7 +9324,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Mutable State Owner"
@@ -8149,7 +9347,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Reset Generation Owner"
@@ -8165,7 +9363,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Tenant Isolation"
@@ -8181,7 +9379,7 @@
               },
               "pattern": "^\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}$",
               "type": "string",
-              "x-aces-variable-reference": true
+              "x-raes-variable-reference": true
             }
           ],
           "title": "Workload Authentication"
@@ -18930,7 +20128,7 @@
       "description": "Independently admitted canonical instantiation witness.",
       "properties": {
         "profile": {
-          "const": "aces-satisfiability-witness/v1",
+          "const": "raes-satisfiability-witness/v1",
           "title": "Profile",
           "type": "string"
         },
@@ -19034,7 +20232,7 @@
           "type": "string"
         },
         "profile": {
-          "const": "aces-sdl-semantic/v1",
+          "const": "raes-sdl-semantic/v1",
           "title": "Profile",
           "type": "string"
         },
@@ -19593,7 +20791,7 @@
           "type": "string"
         },
         "profile": {
-          "const": "aces-z3-finite-domain/v1",
+          "const": "raes-z3-finite-domain/v1",
           "title": "Profile",
           "type": "string"
         },
@@ -19646,6 +20844,17 @@
       "additionalProperties": false,
       "description": "Provider-neutral artifact reference.\n\nShorthand: ``source: \"package-name\"`` (version defaults to ``\"*\"``).\nLonghand: ``source: {name: \"package-name\", version: \"1.2.3\"}``.",
       "properties": {
+        "artifact_requirement": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ArtifactRequirement"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "build": {
           "anyOf": [
             {
@@ -20452,7 +21661,7 @@
           "type": "string"
         },
         "profile": {
-          "const": "aces-unsatisfiable-core/v1",
+          "const": "raes-unsatisfiable-core/v1",
           "title": "Profile",
           "type": "string"
         }
@@ -20470,7 +21679,7 @@
       "description": "Stable fail-closed reason set for an unsupported analysis.",
       "properties": {
         "profile": {
-          "const": "aces-satisfiability-unsupported/v1",
+          "const": "raes-satisfiability-unsupported/v1",
           "title": "Profile",
           "type": "string"
         },
@@ -20980,13 +22189,13 @@
       "type": "string"
     }
   },
-  "$id": "https://aces.dev/schemas/scenario-satisfiability-evidence-v1.json",
+  "$id": "https://raes.dev/schemas/scenario-satisfiability-evidence-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "Closed evidence envelope binding source, model, solver, and result.",
   "properties": {
     "analysis_profile": {
-      "const": "aces-finite-domain-satisfiability-v1",
+      "const": "raes-finite-domain-satisfiability-v1",
       "title": "Analysis Profile",
       "type": "string"
     },
@@ -21086,7 +22295,7 @@
   ],
   "title": "ScenarioSatisfiabilityEvidenceModel",
   "type": "object",
-  "x-aces-invariants": [
+  "x-raes-invariants": [
     {
       "description": "Service-target content must resolve to one named service, retain exact tenant/reset ownership and content ordering, and bind observed-state postconditions to participant observation boundaries.",
       "id": "initial-service-state-semantics",
@@ -21100,13 +22309,13 @@
       "validator": "raes.validator.SemanticValidator._verify_service_materialization"
     }
   ],
-  "x-aces-semantic-profile": {
+  "x-raes-semantic-profile": {
     "contract_id": "scenario-satisfiability-evidence-v1",
-    "entry_schema_contract_id": "aces-semantic-invariants-v1",
-    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
-    "id": "aces-semantic-invariants-v1",
-    "keyword": "x-aces-invariants",
+    "entry_schema_contract_id": "raes-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/RaesSemanticInvariantEntryModel",
+    "id": "raes-semantic-invariants-v1",
+    "keyword": "x-raes-invariants",
     "required": true,
-    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+    "uri": "https://raes.dev/schemas/semantic-invariants/v1"
   }
 }

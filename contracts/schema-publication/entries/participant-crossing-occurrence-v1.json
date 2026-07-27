@@ -1,0 +1,10 @@
+{
+  "contract_id": "participant-crossing-occurrence-v1",
+  "schema_path": "contracts/schemas/participant-runtime/participant-crossing-occurrence-v1.json",
+  "stability": "draft",
+  "content_hash": "34f79eaed648530dbf7b2c948a1cb8e33320caea5f1b0586776f8f28d2b38c10",
+  "last_change": {
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "34f79eaed648530dbf7b2c948a1cb8e33320caea5f1b0586776f8f28d2b38c10"
+  }
+}

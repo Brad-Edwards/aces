@@ -13,7 +13,7 @@ from typing import cast
 from raes_backend_protocols.naming import provider_resource_name
 
 from .driver import DomainSpec, NetworkSpec
-from .drivers.libvirt import _aces_uuid
+from .drivers.libvirt import _raes_uuid
 
 _SAFE_NAME_RE = re.compile(r"[^a-zA-Z0-9_.-]+")
 _SUBSTRATE = "libvirt-qemu-initramfs"
@@ -144,7 +144,7 @@ def domain_placements(spec: DomainSpec) -> dict[str, object]:
 def network_xml(network: Mapping[str, object]) -> str:
     root = ET.Element("network")
     ET.SubElement(root, "name").text = str(network.get("runtime_name", ""))
-    ET.SubElement(root, "uuid").text = _aces_uuid(str(network.get("address", "")))
+    ET.SubElement(root, "uuid").text = _raes_uuid(str(network.get("address", "")))
     if not network.get("internal"):
         ET.SubElement(root, "forward", {"mode": "nat"})
     ip_node = ET.SubElement(
@@ -174,7 +174,7 @@ def domain_xml(
 ) -> str:
     root = ET.Element("domain", {"type": "qemu"})
     ET.SubElement(root, "name").text = str(domain.get("runtime_name", ""))
-    ET.SubElement(root, "uuid").text = _aces_uuid(str(domain.get("address", "")))
+    ET.SubElement(root, "uuid").text = _raes_uuid(str(domain.get("address", "")))
     ET.SubElement(root, "memory", {"unit": "MiB"}).text = str(domain.get("memory_mib", 128))
     ET.SubElement(root, "vcpu").text = str(domain.get("vcpus", 1))
     os_node = ET.SubElement(root, "os")
@@ -228,9 +228,9 @@ def as_sequence(value: object) -> Sequence[object]:
 
 
 def _domain_cmdline(appliance: str, challenge: str | None) -> str:
-    parts = ["console=ttyS0", "panic=-1", f"aces.appliance={appliance}"]
+    parts = ["console=ttyS0", "panic=-1", f"raes.appliance={appliance}"]
     if challenge:
-        parts.append(f"aces.challenge={challenge}")
+        parts.append(f"raes.challenge={challenge}")
     return " ".join(parts)
 
 

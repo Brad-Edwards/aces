@@ -82,7 +82,7 @@ but it still passes through these gates:
   (`schema_bundle()`) still generates an identical bundle (into a throwaway
   directory — it never overwrites the published authority).
 - Requirement governance: changed governed paths must carry the `ASR-517`
-  context through the branch name or `ACES_REQUIREMENT_UID`, and Ground Control
+  context through the branch name or `RAES_REQUIREMENT_UID`, and Ground Control
   traceability must stay aligned.
 - Secret and host exposure: authority docs, fixtures, diagnostics, command-line
   examples, and generated artifacts must not include bearer tokens,
@@ -129,7 +129,6 @@ Avoid:
   artifacts). `docs/`, `implementations/`, `examples/`, `research/`,
   `notes/`, and `tools/` are non-normative roots per the
   authority manifest and may not host authority artifacts
-- recreating the retired `implementations/python/src/aces/` namespace
 - preserving legacy or transitional path names as current authority when
   `ADR-009` already defines the target model
 - making invalid fixtures multi-concern when one focused fixture can prove the

@@ -1,0 +1,23 @@
+name: first-scenario
+description: A small network with one Linux host.
+
+nodes:
+  lab-network:
+    type: Switch
+  web:
+    type: VM
+    os: linux
+    resources:
+      ram: 2 GiB
+      cpu: 1
+
+infrastructure:
+  lab-network:
+    count: 1
+    properties:
+      cidr: 10.0.0.0/24
+      gateway: 10.0.0.1
+  web:
+    count: 1
+    links:
+      - lab-network

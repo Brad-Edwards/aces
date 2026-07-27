@@ -1,0 +1,4 @@
+{
+  "schema_path": "contracts/schemas/profiles/aces-semantic-invariants-v1.json",
+  "summary": "Removed the retired semantic-invariant profile path during the ecosystem-wide RAES hard cut in issue #908. The replacement is contracts/schemas/profiles/raes-semantic-invariants-v1.json; no compatibility alias is published."
+}

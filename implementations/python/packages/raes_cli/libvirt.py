@@ -76,7 +76,7 @@ def validate_live(
         if not typer.confirm("Continue?", default=False):
             typer.echo("Aborted.")
             raise typer.Exit(code=0)
-    resolved_run_id = run_id or datetime.now(UTC).strftime("aces_libvirt_techvault_%Y%m%dT%H%M%SZ")
+    resolved_run_id = run_id or datetime.now(UTC).strftime("raes_libvirt_techvault_%Y%m%dT%H%M%SZ")
     report = validate_techvault_live(
         scenario_path=scenario.resolve(),
         project_dir=project_dir.resolve(),
@@ -119,7 +119,7 @@ def guest_certify(
         if not typer.confirm("Continue?", default=False):
             typer.echo("Aborted.")
             raise typer.Exit(code=0)
-    resolved_run_id = run_id or datetime.now(UTC).strftime("aces_libvirt_guest_%Y%m%dT%H%M%SZ")
+    resolved_run_id = run_id or datetime.now(UTC).strftime("raes_libvirt_guest_%Y%m%dT%H%M%SZ")
     report = run_libvirt_evidence_run(
         scenario_path=scenario.resolve(),
         project_dir=project_dir.resolve(),
@@ -166,7 +166,7 @@ def validate_evidence(
 ) -> None:
     """Produce the libvirt evidence-run evaluator-evidence artifact for a scenario."""
 
-    resolved_run_id = run_id or datetime.now(UTC).strftime("aces_libvirt_evidence_%Y%m%dT%H%M%SZ")
+    resolved_run_id = run_id or datetime.now(UTC).strftime("raes_libvirt_evidence_%Y%m%dT%H%M%SZ")
     report = run_libvirt_evidence_run(
         scenario_path=scenario.resolve(),
         project_dir=project_dir.resolve(),

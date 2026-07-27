@@ -36,6 +36,10 @@ from .capabilities import (
     ProvisionerCapabilities,
     TimeCapabilities,
 )
+from .participant_execution_manifest import (
+    participant_execution_capability_kwargs,
+    participant_execution_capability_payload,
+)
 
 
 class BackendManifestEnvelopeUnsupportedError(ValueError):
@@ -95,6 +99,7 @@ def backend_manifest_v2_model(manifest: BackendManifest) -> BackendManifestV2Mod
                 supported_constraint_kinds=sorted(declaration.supported_constraint_kinds),
                 supported_exact_requirement_kinds=sorted(declaration.supported_exact_requirement_kinds),
                 disclosure_kinds=sorted(declaration.disclosure_kinds),
+                artifact_mechanisms=list(declaration.artifact_mechanisms),
                 constraints=dict(declaration.constraints),
             )
             for declaration in manifest.realization_support
@@ -159,7 +164,9 @@ def backend_manifest_v2_model(manifest: BackendManifest) -> BackendManifestV2Mod
                             feature=entry.feature,
                             support_level=entry.support_level,
                             constraint_refs=list(entry.constraint_refs),
+                            limitation_refs=list(entry.limitation_refs),
                             disclosure_refs=list(entry.disclosure_refs),
+                            evidence_refs=list(entry.evidence_refs),
                         )
                         for entry in manifest.participant_runtime.feature_support
                     ],
@@ -176,9 +183,24 @@ def backend_manifest_v2_model(manifest: BackendManifest) -> BackendManifestV2Mod
                     "supported_autonomous_target_addresses": sorted(
                         manifest.participant_runtime.supported_autonomous_target_addresses
                     ),
+                    "supported_autonomous_policy_profiles": sorted(
+                        manifest.participant_runtime.supported_autonomous_policy_profiles
+                    ),
+                    "supported_autonomous_activity_features": sorted(
+                        manifest.participant_runtime.supported_autonomous_activity_features
+                    ),
+                    "supported_autonomous_random_stream_profiles": sorted(
+                        manifest.participant_runtime.supported_autonomous_random_stream_profiles
+                    ),
                     "max_autonomous_participants": manifest.participant_runtime.max_autonomous_participants,
                     "max_autonomous_action_attempts": (manifest.participant_runtime.max_autonomous_action_attempts),
                     "max_autonomous_in_flight": manifest.participant_runtime.max_autonomous_in_flight,
+                    "max_autonomous_occurrences": manifest.participant_runtime.max_autonomous_occurrences,
+                    "max_autonomous_retries_per_occurrence": (
+                        manifest.participant_runtime.max_autonomous_retries_per_occurrence
+                    ),
+                    "max_autonomous_burst_size": manifest.participant_runtime.max_autonomous_burst_size,
+                    **participant_execution_capability_payload(manifest.participant_runtime),
                     "constraints": dict(manifest.participant_runtime.constraints),
                 }
                 if manifest.participant_runtime is not None
@@ -259,6 +281,7 @@ def _realization_support_from_model(model: RealizationSupportDeclarationModel) -
         supported_constraint_kinds=frozenset(model.supported_constraint_kinds),
         supported_exact_requirement_kinds=frozenset(model.supported_exact_requirement_kinds),
         disclosure_kinds=frozenset(model.disclosure_kinds),
+        artifact_mechanisms=tuple(model.artifact_mechanisms),
         constraints=dict(model.constraints),
     )
 
@@ -319,7 +342,9 @@ def _participant_feature_support_from_model(model: ParticipantFeatureSupportMode
         feature=model.feature,
         support_level=model.support_level,
         constraint_refs=tuple(model.constraint_refs),
+        limitation_refs=tuple(model.limitation_refs),
         disclosure_refs=tuple(model.disclosure_refs),
+        evidence_refs=tuple(model.evidence_refs),
     )
 
 
@@ -339,9 +364,16 @@ def _participant_runtime_from_model(
         supported_autonomous_action_contracts=frozenset(model.supported_autonomous_action_contracts),
         supported_autonomous_observation_boundaries=frozenset(model.supported_autonomous_observation_boundaries),
         supported_autonomous_target_addresses=frozenset(model.supported_autonomous_target_addresses),
+        supported_autonomous_policy_profiles=frozenset(model.supported_autonomous_policy_profiles),
+        supported_autonomous_activity_features=frozenset(model.supported_autonomous_activity_features),
+        supported_autonomous_random_stream_profiles=frozenset(model.supported_autonomous_random_stream_profiles),
         max_autonomous_participants=model.max_autonomous_participants,
         max_autonomous_action_attempts=model.max_autonomous_action_attempts,
         max_autonomous_in_flight=model.max_autonomous_in_flight,
+        max_autonomous_occurrences=model.max_autonomous_occurrences,
+        max_autonomous_retries_per_occurrence=model.max_autonomous_retries_per_occurrence,
+        max_autonomous_burst_size=model.max_autonomous_burst_size,
+        **participant_execution_capability_kwargs(model),
         constraints=dict(model.constraints),
     )
 

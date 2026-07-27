@@ -163,7 +163,6 @@ ambiguous or lossy cases, and fail closed rather than drop unknown fields.
 
 Compatibility adapters stay at the owning boundary:
 
-- retired `aces`, `aces_sdl`, and `aces_*` imports remain absent;
 - SDL normalization and module composition stay in `raes`;
 - contract readers stay in `raes_contracts`;
 - CLI presentation stays in `raes_cli`; and

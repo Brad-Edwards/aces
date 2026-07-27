@@ -1,0 +1,10 @@
+{
+  "contract_id": "participant-execution-service-state-v1",
+  "schema_path": "contracts/schemas/participant-runtime/participant-execution-service-state-v1.json",
+  "stability": "draft",
+  "content_hash": "9e1af40ed0e6c7be3766bb4219b23a3f5dd9f78d65d3faa82474f9b86299da46",
+  "last_change": {
+    "summary": "Linked participant execution concurrency readback to authoritative resource-budget states for issue #899.",
+    "content_hash": "9e1af40ed0e6c7be3766bb4219b23a3f5dd9f78d65d3faa82474f9b86299da46"
+  }
+}

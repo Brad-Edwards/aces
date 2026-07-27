@@ -1,6 +1,6 @@
 """Artifact assembly for the libvirt scenario-evidence producer.
 
-Builds the ``aces.libvirt.scenario-evidence-run/v1`` payload from the compiled runtime
+Builds the ``raes.libvirt.scenario-evidence-run/v1`` payload from the compiled runtime
 model, the backend manifest, the participant-proof result, and (optionally) the
 native substrate snapshot. Section builders only read duck-typed runtime-layer
 objects and copy allowlisted, bounded fields, so no raw libvirt/backend internals
@@ -42,7 +42,7 @@ from raes_operations._evidence_run_types import (
 )
 from raes_operations.run_artifacts import portable_artifact_ref
 
-EVIDENCE_RUN_SCHEMA = "aces.libvirt.scenario-evidence-run/v1"
+EVIDENCE_RUN_SCHEMA = "raes.libvirt.scenario-evidence-run/v1"
 _LIBVIRT_BACKEND_NAME = "libvirt-qemu"
 
 # Internal/evaluator-only surfaces the participant must never observe. Derived from
@@ -175,7 +175,7 @@ def _compiled_artifact_section(model: CompiledModel) -> dict[str, Any]:
     }
     fingerprint = hashlib.sha256(json.dumps(addresses, sort_keys=True).encode("utf-8")).hexdigest()
     return {
-        "processor": "aces-reference-processor",
+        "processor": "raes-reference-processor",
         "compiled_address_sets": addresses,
         "compiled_model_fingerprint": "sha256:" + fingerprint,
     }
@@ -355,8 +355,8 @@ def _terminal_observation_section(snapshot: TerminalSnapshot) -> dict[str, Any]:
     return {
         "form": "participant-projected-history",
         "taxonomy": {
-            "taxonomy_id": "aces-behavioral-relations",
-            "taxonomy_revision": "rev2",
+            "taxonomy_id": "raes-behavioral-relations",
+            "taxonomy_revision": "rev3",
             "non_claimed_relation_ids": [
                 "participant-projected-history-equivalence",
                 "epistemic-indistinguishability",

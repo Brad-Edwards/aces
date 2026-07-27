@@ -6,12 +6,16 @@ workflow:
   completion_command: uv tool run --from 'nox[uv]==2026.4.10' nox -f noxfile.py -s verify
   lint_command: uv tool run --from 'nox[uv]==2026.4.10' nox -f noxfile.py -s lint
   format_command: uv tool run --from 'nox[uv]==2026.4.10' nox -f noxfile.py -s hygiene
+  codex_review:
+    pre_push_cap: 1
+  test_quality_review:
+    pre_push_cap: 1
   review_disposition:
-    enabled: true
-    mode: authoritative
-    max_auto_overrides: 1
+    enabled: false
+    mode: shadow
+    max_auto_overrides: 0
     judge:
-      enabled: true
+      enabled: false
 docs:
   adr_dir: docs/decisions/adrs/
 example_paths:
@@ -25,10 +29,9 @@ requirements:
 routing:
   enabled: true
   default_provider: claude
-  default_fallback: parent
   stages: {}
 sonarcloud:
-  project_key: Brad-Edwards_aces
+  project_key: Brad-Edwards_raes
   organization: brad-edwards
 rules:
   plan_rules: .gc/plan-rules.md

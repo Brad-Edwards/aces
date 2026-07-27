@@ -623,7 +623,7 @@
       ],
       "title": "ExperimentManifestReferenceModel",
       "type": "object",
-      "x-aces-invariants": [
+      "x-raes-invariants": [
         {
           "description": "Manifest digest qualifiers are limited to processor/backend manifest refs that can be checked against concrete manifest payload digests; manifest path qualifiers are not accepted in v1.",
           "id": "manifest-reference-digest-scope-valid",
@@ -1127,7 +1127,7 @@
       "type": "object"
     }
   },
-  "$id": "https://aces.dev/schemas/experiment-apparatus-context-v1.json",
+  "$id": "https://raes.dev/schemas/experiment-apparatus-context-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "Run-scoped apparatus context for interpreting experiment evidence.",
@@ -1291,7 +1291,7 @@
   ],
   "title": "ExperimentApparatusContextModel",
   "type": "object",
-  "x-aces-invariants": [
+  "x-raes-invariants": [
     {
       "description": "The canonical processor and backend component manifest_ref values must be present in selected_manifests; digest-qualified selected manifests must be canonical component manifests.",
       "id": "canonical-apparatus-manifest-selected",
@@ -1341,13 +1341,13 @@
       "validator": "raes_contracts.contracts.validate_experiment_apparatus_context_archival_datetimes"
     }
   ],
-  "x-aces-semantic-profile": {
+  "x-raes-semantic-profile": {
     "contract_id": "experiment-apparatus-context-v1",
-    "entry_schema_contract_id": "aces-semantic-invariants-v1",
-    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
-    "id": "aces-semantic-invariants-v1",
-    "keyword": "x-aces-invariants",
+    "entry_schema_contract_id": "raes-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/RaesSemanticInvariantEntryModel",
+    "id": "raes-semantic-invariants-v1",
+    "keyword": "x-raes-invariants",
     "required": true,
-    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+    "uri": "https://raes.dev/schemas/semantic-invariants/v1"
   }
 }

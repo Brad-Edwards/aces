@@ -123,7 +123,7 @@ def test_tool_affordance_constraint_must_resolve() -> None:
             description: The service is restored.
             subjects: [entities.operator]
             basis: declared_state
-            predicate: {kind: presence, property: service, semantic_ref: urn:aces:declared-property:service, operator: exists}
+            predicate: {kind: presence, property: service, semantic_ref: urn:raes:declared-property:service, operator: exists}
         assertions:
           restored: {proposition: restored, role: postcondition, polarity: positive}
         objectives:
@@ -190,7 +190,7 @@ def _governed_goal_scenario() -> str:
                 predicate:
                   kind: presence
                   property: service
-                  semantic_ref: urn:aces:declared-property:service
+                  semantic_ref: urn:raes:declared-property:service
                   operator: exists
             assertions:
               restored: {proposition: restored, role: postcondition, polarity: positive}
@@ -211,7 +211,7 @@ def _governed_goal_scenario() -> str:
                     scaffold_refs: [restore-hints]
                     allowed_action_families: [service-recovery]
                     capability_refs: [action_contracts]
-                    fact_binding_refs: [x-aces:service-endpoint]
+                    fact_binding_refs: [x-raes:service-endpoint]
                   done: {type: end}
         """
     )
@@ -228,7 +228,7 @@ def test_compiler_preserves_goal_realization_contract() -> None:
     assert step.scaffold_refs == ("restore-hints",)
     assert step.allowed_action_families == ("service-recovery",)
     assert step.capability_refs == ("action_contracts",)
-    assert step.fact_binding_refs == ("x-aces:service-endpoint",)
+    assert step.fact_binding_refs == ("x-raes:service-endpoint",)
     assert WorkflowFeature.SCAFFOLDED_STEPS in model.workflows["orchestration.workflow.response"].required_features
 
 
@@ -247,7 +247,7 @@ def test_compiler_preserves_goal_realization_contract() -> None:
             "ungoverned participant capability",
         ),
         (
-            "fact_binding_refs: [x-aces:service-endpoint]",
+            "fact_binding_refs: [x-raes:service-endpoint]",
             "fact_binding_refs: [bindings.service-endpoint]",
             "ungoverned runtime-fact binding",
         ),
@@ -265,7 +265,7 @@ def test_scripted_procedure_must_resolve_to_a_procedure_action_contract() -> Non
         "        scaffold_refs: [restore-hints]\n",
         "        allowed_action_families: [service-recovery]\n",
         "        capability_refs: [action_contracts]\n",
-        "        fact_binding_refs: [x-aces:service-endpoint]\n",
+        "        fact_binding_refs: [x-raes:service-endpoint]\n",
     ):
         source = source.replace(line, "")
     source = source.replace(

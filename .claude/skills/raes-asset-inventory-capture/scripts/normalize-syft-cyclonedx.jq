@@ -1,4 +1,4 @@
-# Deterministic ACES inventory Syft CycloneDX normalization.
+# Deterministic RAES inventory Syft CycloneDX normalization.
 # Allowed transform: remove Syft file-location component properties only.
 def strip_syft_location_properties:
   walk(

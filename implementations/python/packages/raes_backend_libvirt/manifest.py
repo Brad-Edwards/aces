@@ -6,6 +6,7 @@ from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as distribution_version
 
 from raes_backend_protocols.capabilities import (
+    PARTICIPANT_RUNTIME_POLICY_FEATURES,
     BackendCapabilitySet,
     BackendManifest,
     ParticipantFeatureSupport,
@@ -125,6 +126,15 @@ def _participant_runtime_capabilities() -> ParticipantRuntimeCapabilities:
                 support_level=ParticipantFeatureSupportLevel.DISCLOSED_WEAK,
                 disclosure_refs=(disclosure_ref,),
             ),
+            *(
+                ParticipantFeatureSupport(
+                    feature=feature,
+                    support_level=ParticipantFeatureSupportLevel.UNSUPPORTED,
+                    limitation_refs=(f"limitation:{feature}:not-realized",),
+                    disclosure_refs=(disclosure_ref,),
+                )
+                for feature in sorted(PARTICIPANT_RUNTIME_POLICY_FEATURES)
+            ),
         ),
         constraints={
             "simulation_disclosure": (
@@ -162,7 +172,7 @@ def create_libvirt_manifest(**config: object) -> BackendManifest:
         name=LIBVIRT_BACKEND_NAME,
         version=_current_backend_version(),
         supported_contract_versions=supported_contract_versions,
-        compatible_processors=frozenset({"aces-reference-processor"}),
+        compatible_processors=frozenset({"raes-reference-processor"}),
         concept_bindings=(
             ConceptBinding(scope="capabilities.provisioner.supported_node_types", family="assets"),
             ConceptBinding(scope="capabilities.provisioner.supported_os_families", family="assets"),

@@ -4,7 +4,7 @@
   "study_version": "1.0.0",
   "study_kind": "study",
   "title": "TechVault baseline study",
-  "owner": "aces-experiment-core",
+  "owner": "raes-experiment-core",
   "description": "Archival baseline study for TechVault red-team runs.",
   "purpose": "Estimate baseline participant policy outcomes for the fixed task protocol.",
   "research_questions": [
@@ -12,8 +12,8 @@
   ],
   "behavioral_claims": [
     {
-      "taxonomy_id": "aces-behavioral-relations",
-      "taxonomy_revision": "rev2",
+      "taxonomy_id": "raes-behavioral-relations",
+      "taxonomy_revision": "rev3",
       "relation_id": "empirical-adequacy",
       "subject": "TechVault baseline study",
       "left_carrier_ref": "study-techvault-baseline@1.0.0",

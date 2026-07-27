@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
   "stability": "draft",
-  "content_hash": "1017a5db698151a50081675174b6c0f3cfb3eb2f22ec0532cd7334f7ee3ec76a",
+  "content_hash": "91fc70f7f34b378304d125aed4729a6d20048a2539ff00abc3729af2be7cfbfe",
   "last_change": {
-    "summary": "Published participant-directed inject deliveries and governed participant action-argument domains in instantiated scenarios on the RAES-only package surface.",
-    "content_hash": "1017a5db698151a50081675174b6c0f3cfb3eb2f22ec0532cd7334f7ee3ec76a"
+    "summary": "Published portable artifact requirements and scoped participant resource budgets in instantiated scenarios for issues #920 and #899.",
+    "content_hash": "91fc70f7f34b378304d125aed4729a6d20048a2539ff00abc3729af2be7cfbfe"
   }
 }

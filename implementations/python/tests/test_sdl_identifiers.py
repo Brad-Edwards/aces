@@ -65,7 +65,7 @@ _portable_identifier_strategy = st.builds(
 def _minimal_instantiation_provenance() -> dict[str, object]:
     return {
         "authored_digest": {
-            "profile": "aces-sdl-semantic/v1",
+            "profile": "raes-sdl-semantic/v1",
             "algorithm": "sha256",
             "value": f"sha256:{'0' * 64}",
         }
@@ -848,20 +848,20 @@ def test_published_plan_rejects_duplicate_operation_addresses() -> None:
 def test_provider_name_is_bounded_and_collision_resistant_for_full_address() -> None:
     first = provider_resource_name(
         "provision.node.first.shared",
-        prefix="aces",
+        prefix="raes",
         maximum_length=63,
     )
     second = provider_resource_name(
         "provision.node.second.shared",
-        prefix="aces",
+        prefix="raes",
         maximum_length=63,
     )
 
     assert first != second
     assert first == provider_resource_name(
         "provision.node.first.shared",
-        prefix="aces",
+        prefix="raes",
         maximum_length=63,
     )
     assert len(first) <= 63
-    assert first.startswith("aces-")
+    assert first.startswith("raes-")

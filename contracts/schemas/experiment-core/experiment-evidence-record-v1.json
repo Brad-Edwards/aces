@@ -548,7 +548,7 @@
       "type": "object"
     }
   },
-  "$id": "https://aces.dev/schemas/experiment-evidence-record-v1.json",
+  "$id": "https://raes.dev/schemas/experiment-evidence-record-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "allOf": [
@@ -716,7 +716,7 @@
   ],
   "title": "ExperimentEvidenceRecordModel",
   "type": "object",
-  "x-aces-invariants": [
+  "x-raes-invariants": [
     {
       "description": "Evidence records must carry raw content as an artifact reference, content URI with checksum, or bounded payload summary; redacted/withheld records must disclose loss.",
       "id": "evidence-record-raw-content-present",
@@ -742,14 +742,14 @@
       "validator": "raes_contracts.contracts.ExperimentEvidenceRecordModel._validate_evidence_record"
     }
   ],
-  "x-aces-plane": "captured_evidence",
-  "x-aces-semantic-profile": {
+  "x-raes-plane": "captured_evidence",
+  "x-raes-semantic-profile": {
     "contract_id": "experiment-evidence-record-v1",
-    "entry_schema_contract_id": "aces-semantic-invariants-v1",
-    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
-    "id": "aces-semantic-invariants-v1",
-    "keyword": "x-aces-invariants",
+    "entry_schema_contract_id": "raes-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/RaesSemanticInvariantEntryModel",
+    "id": "raes-semantic-invariants-v1",
+    "keyword": "x-raes-invariants",
     "required": true,
-    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+    "uri": "https://raes.dev/schemas/semantic-invariants/v1"
   }
 }

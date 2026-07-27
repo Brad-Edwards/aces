@@ -11,3 +11,10 @@ here are authoritative independent of any reference implementation.
   (GOV-913, [ADR-071](../../docs/decisions/adrs/adr-071-reusable-asset-trust-and-integrity-policy.md)).
   Its machine-checkable surface is the published `reusable-asset-trust-policy-v1`
   contract under `contracts/schemas/asset-trust/`.
+- [`associated-artifact-manifests.md`](associated-artifact-manifests.md) —
+  portable attachment identities and byte-binding conformance
+  ([ADR-077](../../docs/decisions/adrs/adr-077-associated-artifact-manifest-boundary.md)).
+- [`artifact-requirement-satisfaction.md`](artifact-requirement-satisfaction.md) —
+  exact, constrained, and open `Source` artifact demand, backend capability,
+  admission, and runtime satisfaction disclosure
+  (#920, [ADR-098](../../docs/decisions/adrs/adr-098-portable-artifact-requirement-satisfaction.md)).

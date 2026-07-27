@@ -114,10 +114,14 @@ from .behavior_resources import (
     ParticipantAutonomousExecutionRuntime,
     ParticipantBehaviorRuntime,
     ParticipantBehaviorSpecificationRuntime,
+    ParticipantExecutionBindingRuntime,
     ParticipantInjectDeliveryRuntime,
     ParticipantInteractiveAccessRuntime,
     ParticipantObservationBoundaryRuntime,
     ParticipantOutcomeInterpretationRuleRuntime,
+    ParticipantResourceDemandRuntime,
+    ParticipantResourceFairnessRuntime,
+    ParticipantResourceOwnerRuntime,
     ParticipantToolAffordanceRuntime,
     ScriptRuntime,
     StoryRuntime,
@@ -131,6 +135,16 @@ from .decision_surface import (
     ParticipantDecisionSurfaceActionAssessment,
     ParticipantDecisionSurfaceProjectionInput,
     project_participant_decision_surface,
+)
+from .decision_surface_anchor_v2 import (
+    ParticipantBehaviorProjectionAnchorRequestV2,
+    resolve_participant_behavior_projection_anchor_v2,
+    resolve_participant_episode_readiness_anchor_v2,
+    validate_participant_decision_surface_v2_anchor,
+)
+from .decision_surface_v2 import (
+    ParticipantDecisionSurfaceProjectionInputV2,
+    project_participant_decision_surface_v2,
 )
 from .history_event import (
     ParticipantBehaviorHistoryEvent,
@@ -149,6 +163,11 @@ from .participant_exposure_authority import (
     ParticipantExposurePolicyRevision,
     ParticipantExposureRealizationAssessment,
     ParticipantExposureResolvers,
+)
+from .participant_exposure_authority_v2 import (
+    ParticipantExposureAuthorizationRecordV2,
+    ParticipantExposurePolicyDecisionV2,
+    ParticipantExposureResolversV2,
 )
 from .resources import (
     AccountPlacement,
@@ -262,9 +281,14 @@ __all__ = [
     "ParticipantExposureRealizationAssessment",
     "ParticipantExposureResolvers",
     "ParticipantBehaviorRuntime",
+    "ParticipantBehaviorProjectionAnchorRequestV2",
     "ParticipantBehaviorSpecificationRuntime",
     "ParticipantInjectDeliveryRuntime",
     "ParticipantAutonomousExecutionRuntime",
+    "ParticipantExecutionBindingRuntime",
+    "ParticipantResourceDemandRuntime",
+    "ParticipantResourceFairnessRuntime",
+    "ParticipantResourceOwnerRuntime",
     "ParticipantInteractiveAccessRuntime",
     "ParticipantEpisodeControlAction",
     "ParticipantEpisodeExecutionState",
@@ -288,6 +312,13 @@ __all__ = [
     "ParticipantPhaseRealization",
     "ParticipantRuntimeLifecyclePhase",
     "project_participant_decision_surface",
+    "project_participant_decision_surface_v2",
+    "resolve_participant_behavior_projection_anchor_v2",
+    "resolve_participant_episode_readiness_anchor_v2",
+    "ParticipantDecisionSurfaceProjectionInputV2",
+    "ParticipantExposureAuthorizationRecordV2",
+    "ParticipantExposurePolicyDecisionV2",
+    "ParticipantExposureResolversV2",
     "ParticipantTemporalRuntimeContext",
     "ParticipantTemporalState",
     "ParticipantTemporalStateTransition",
@@ -303,6 +334,7 @@ __all__ = [
     "RuntimeModel",
     "RuntimeSnapshot",
     "RuntimeSnapshotEnvelope",
+    "validate_participant_decision_surface_v2_anchor",
     "RuntimeTemplate",
     "ScriptRuntime",
     "Severity",

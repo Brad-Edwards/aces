@@ -1,4 +1,4 @@
-project: aces-sdl
+project: raes-sdl
 
 phases:
   - id: gov-concept-authority
@@ -62,6 +62,7 @@ phases:
       - AUT-807
       - AUT-809
       - ASR-516
+      - DOC-928
     blocked_until:
       - gov-concept-authority
   - id: project-identity-migration
@@ -186,11 +187,43 @@ ownership:
     - specs/formal
     - CHANGELOG.md
   documentation-surfaces:
+    - .bestpractices.json
+    - .readthedocs.yaml
+    - .vale.ini
+    - .github/ISSUE_TEMPLATE
+    - .github/PULL_REQUEST_TEMPLATE.md
+    - .github/workflows/docs.yml
+    - .github/workflows/scorecard.yml
+    - CODE_OF_CONDUCT.md
+    - CONTRIBUTING.md
+    - GOVERNANCE.md
+    - MAINTAINERS.md
+    - README.md
+    - SECURITY.md
+    - SUPPORT.md
     - docs
+    - examples/library/catalog.yaml
     - implementations/python/pyproject.toml
     - implementations/python/uv.lock
     - implementations/python/packages/raes_mcp
+    - implementations/python/tests/test_project_positioning.py
+    - implementations/python/tests/test_public_docs_policy.py
+    - implementations/python/tests/test_public_project_readiness.py
+    - implementations/python/tests/test_repo_policy_tools.py
+    - implementations/python/tests/test_vale_tool.py
+    - implementations/python/tests/test_verification_plan.py
     - implementations/python/tests/test_mcp_server.py
+    - noxfile.py
+    - specs/agent-guidance
+    - specs/authority/authority-boundary.yaml
+    - styles/RAES
+    - styles/config/vocabularies/RAES
+    - tools/check_project_positioning.py
+    - tools/check_public_docs.py
+    - tools/policy/requirement_order.yaml
+    - tools/tool_versions.py
+    - tools/vale_tool.py
+    - tools/verification_plan.py
     - CHANGELOG.md
   project-identity-migration:
     - .github

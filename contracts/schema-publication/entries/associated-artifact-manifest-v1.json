@@ -2,9 +2,9 @@
   "contract_id": "associated-artifact-manifest-v1",
   "schema_path": "contracts/schemas/associated-artifacts/associated-artifact-manifest-v1.json",
   "stability": "draft",
-  "content_hash": "238a1351cf24d33e885a373c4472bad7637e689d984ce04b3f906e0f20c7611b",
+  "content_hash": "6b9db0d57e9163a0554bc456b425924121438640e1bc052c722e6cd1f4f300f3",
   "last_change": {
-    "summary": "Retargeted qualified Python validator references and current project descriptions from the retired ACES package identity to RAES as part of the #884 hard cut; schema identifiers and validation semantics are unchanged.",
-    "content_hash": "238a1351cf24d33e885a373c4472bad7637e689d984ce04b3f906e0f20c7611b"
+    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
+    "content_hash": "6b9db0d57e9163a0554bc456b425924121438640e1bc052c722e6cd1f4f300f3"
   }
 }

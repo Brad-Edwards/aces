@@ -1175,7 +1175,7 @@ Boundary obligations (each is exercised by an adversarial negative fixture):
   `evidence_record` source layer must declare a `derivation_basis_ref` view rule
   and a `redaction_policy_ref` (published `allOf`), the evidence source must
   appear in `transformation.input_source_ids`, and `payload_ref` must not alias
-  the raw evidence ref (both relational rules published as `x-aces-invariants`).
+  the raw evidence ref (both relational rules published as `x-raes-invariants`).
 - **B2** - hidden adjudication / derived-evaluation outputs must not reach a
   participant view without redaction governance. A `participant_visible` view
   that draws on a `derived_measure` source layer must additionally declare a
@@ -1186,7 +1186,7 @@ The required-ref clauses of B1/B2 (and B4) are enforced both by the closed-world
 model and by the published JSON Schema `allOf`, so schema-only consumers reject
 them. The relational clauses that standard JSON Schema cannot express - archival
 source mediation and `payload_ref` non-aliasing - are enforced by the model and
-published as `x-aces-invariants` on `participant-context-view-v1` (the RAES
+published as `x-raes-invariants` on `participant-context-view-v1` (the RAES
 semantic-invariant profile, per ADR-009 §7 and the experiment-core convention),
 so the portable contract advertises every obligation and names its validator.
 - **B3** - derived analysis is never captured evidence. An
@@ -1221,7 +1221,7 @@ Current implementation artifacts for the `SEM-216` slice:
 - `implementations/python/packages/raes_contracts/contracts/` adds
   `ParticipantContextViewModel._validate_sem216_audience_boundary` with its
   published `allOf` (required view rule + redaction policy) and
-  `x-aces-invariants` (archival source mediation, `payload_ref` non-aliasing)
+  `x-raes-invariants` (archival source mediation, `payload_ref` non-aliasing)
   for the B1/B2/B5 view boundary, and publishes the evidence
   redaction/loss-disclosure rule as a portable schema constraint on
   `ExperimentEvidenceRecordModel` (B4);
@@ -1406,38 +1406,86 @@ values cannot enter an instantiated scenario. The executable oracle is
 `SEM-220` requires explicit semantics for open-ended action generation,
 constrained action forms, candidate-action sets, and their selection meaning.
 
-For participant `p`, episode `e`, and observation/order point `o`, define
-the decision surface as the participant-local projection:
+ADR-095 revises the executable coordinate system without changing the three
+selection forms. For participant `p`, episode `e`, decision epoch `k`, runtime
+state `q`, participant/audience `a`, exact policy decision `r_c`, and state cut
+`c`, define:
 
 ```text
-D(p, e, o) = Project(
+D(p, e, k) = Pi[p, a, r_c, c](
+  q,
   behavior and action-contract refs,
-  V(p, o) and observation-boundary state,
-  participant context and audience scope,
+  V(p, c) and observation-boundary state,
+  participant context,
   participant-implementation selection and decision-control mode,
-  exposure policy,
   SEM-211 eligibility state,
-  realized affordance/support disclosures,
-  evidence, provenance, marking, redaction, and limitations
+  affordance/support disclosures,
+  marking, redaction, and participant-visible limitations
 )
 ```
 
-The projection carries stable references and relation state. It does not copy
-world truth, raw policy bodies, hidden prompts, evaluator state, credentials,
-or backend-native objects into a participant-visible payload.
+`k` is the zero-based participant choice opportunity. `c` is the exact total
+prefix or causal frontier from which the view is derived. Lifecycle generation,
+behavior-history index, policy-effective cut, derivation anchor, disclosure
+decision, delivery occurrence, and participant observation are independently
+typed coordinates. Equality of integer values never merges their meanings.
 
-Every surface has:
+`participant-decision-surface-v1` retains its historical meaning:
+`observation_order` indexes the supplied time-indexed participant behavior
+history. It remains valid for historical data and is not relabelled or admitted
+through the v2 path. `participant-decision-surface-v2` is the actionable
+contract and has no `observation_order`.
 
-- participant address, episode id, and observation/order point;
-- surface form and its selection interpretation;
-- behavior, action-contract, observation-boundary, context-view,
-  implementation-selection, and exposure-policy refs;
-- visible context refs and their source/transformation/disclosure bases;
-- action entries with presentation or generation basis, visibility,
-  eligibility, constraint, and support/realization disclosures;
-- affordance refs bound to action contracts and observation effects;
-- evidence/provenance, markings, redaction, limitations, and weakening; and
-- the event/order/evidence anchor from which the surface was derived.
+V2 separates three trust planes:
+
+- `participant_view` is the complete low payload actually eligible for
+  participant delivery: surface/participant/episode identity, `decision_epoch`,
+  information-state/context refs, visible context, action entries,
+  affordances, form, markings, redaction, and disclosed limitations;
+- `assurance` carries the exact derivation state cut, lifecycle or terminal
+  observation anchor, policy decision, apparatus/boundary refs, per-item
+  authorization, participant-memory scope and reset authority when applicable,
+  evidence, provenance, and canonical RFC 8785 digest of the participant view;
+  and
+- `delivery` records the trusted occurrence by which that exact digest became
+  available to the participant, including delivery basis, delivery cut,
+  delivery authorization/policy decision, observation ref, evidence,
+  provenance, and limitations.
+
+Assurance metadata is not participant-visible merely because it accompanies
+the same surface artifact. Event ids, anchor order, prefix length, policy
+decision ids, authorization records, evidence topology, provenance, rejection
+detail, entry ordering, refresh behavior, and surface identity can convey
+information and must be included in the participant projection only when an
+independent SEM-226 decision authorizes them.
+
+The reactive sequential baseline is:
+
+```text
+episode_running
+  -> derive and authorize projected D(p,e,0) from V(p,initial-cut)
+  -> disclose -> deliver -> participant observes
+  -> participant selects/proposes from the delivered digest
+  -> validate -> admit -> action_attempted
+  -> state_transition_recorded -> terminal observation_emitted
+  -> derive D(p,e,1) from that exact behavior cut
+```
+
+Projection is not disclosure; disclosure is not delivery; delivery is not
+acknowledgement or interpretation; presentation is not selection; selection is
+not admission; admission is not attempt, result, or outcome. A projected
+surface is valid assurance data but cannot be selected. A v2 selection binds
+surface id, decision epoch, participant-view digest, and delivery ref.
+Admission re-resolves both derivation and delivery before behavior can be
+written.
+
+`episode_running` grounds epoch zero while current-episode behavior history is
+empty. Later epochs equal the number of completed terminal participant
+observations, but their state cuts retain the complete behavior prefix and its
+own anchor order. Reset and restart create a new episode and epoch zero. They
+do not erase a persistent human, agent, controller, or shared-memory
+participant history unless an explicit `episode_local_reset` memory authority
+resets every participant-visible channel.
 
 The three surface forms have distinct selection meaning:
 
@@ -1482,16 +1530,17 @@ This requirement refines the existing time-indexed `V_p,t`, view-rule,
 view-transition, observation-boundary, context-view, and audience-view
 semantics. It introduces no parallel visibility taxonomy.
 
-For item `x`, participant `p`, episode `e`, and order point `o`:
+For item `x`, participant `p`, episode `e`, audience `a`, and exact state cut
+`c`:
 
 ```text
-Exposed(x, p, e, o) only if
-  x is admitted by V(p, o)
+Exposed(x, p, e, a, c) only if
+  x is admitted by V(p, c)
   and its source layer and transformation are participant-facing
-  and its audience/role scope includes p
+  and its audience/role scope includes (p, a)
   and its marking, redaction, withholding, and loss rules are satisfied
-  and the selected exposure policy authorizes the disclosure class
-  and any visibility change has an event/order/evidence anchor at or before o
+  and the exact policy decision at c authorizes the disclosure class
+  and the item authorization is bound to c
 ```
 
 The conjunction is fail closed. Backend reachability, operating scope,
@@ -1514,11 +1563,14 @@ Augmentation names its source, transformation, audience, visibility basis,
 evidence/provenance, marking/redaction, and limitations. A generic metadata or
 context map is not an exposure authority.
 
-Exposure is participant-local and time-indexed. A visibility transition
-changes surfaces at or after its effective order; future disclosure cannot
-justify an earlier surface. When participants have different boundaries,
-roles, or transition histories, they may receive different surfaces for the
-same world event without semantic inconsistency.
+Exposure is participant-local and state-cut-indexed. A future or incomparable
+policy decision cannot authorize an earlier cut. A decision epoch is not a
+policy order. Delivery authority is resolved again at the delivery cut; a
+derivation-time authorization cannot be carried forward merely because
+delivery occurs in the same epoch. Unknown, stale, cross-cut, cross-policy, or
+incomparable authority fails closed. When participants have different
+boundaries, roles, policy cuts, or transition histories, they may receive
+different surfaces for the same world event without semantic inconsistency.
 
 Realized exposure is separately evidenced. A manifest capability, selected
 mode, or exposure-policy ref can explain intent and apparatus support, but
@@ -1536,13 +1588,13 @@ The joint model preserves meaning across stages:
   ambiguous selection meaning, incomplete constraints, or conflicting
   visibility bases;
 - **compilation** emits canonical participant/action/observation addresses and
-  the inputs required to derive `D(p,e,o)`;
+  the inputs required to derive `D(p,e,k)` from an exact state cut;
 - **planning** validates selected implementation/backend support and records
   declared weakening before execution;
 - **execution** applies existing SEM-211 admission and records behavior history,
   results, and visibility transitions;
 - **observation/retrieval** derives participant-local surfaces from the
-  applicable `V_p,o` snapshot rather than global or final state; and
+  applicable `V_p,c` state cut rather than global or final state; and
 - **conformance** compares authored, compiled, selected, realized, and evidenced
   facts and reports disagreement through existing diagnostics.
 
@@ -1566,18 +1618,18 @@ must preserve or strengthen its rows.
 | SEM-219 E: constraints fail closed | affordance action refs plus unchanged SEM-211 preconditions/failure classes | semantic validation and existing planner/admission/result gates | complete action constraints remain reachable through the compiled action address | binding copies, drops, or overrides exhausted/unknown constraints | I4, I7 / #294 |
 | SEM-219 F: support is apparatus metadata | authored affordance IR remains separate from manifest/selection support | absence-preserving compilation plus existing apparatus validation | support can be joined later without changing authored meaning | installed content or backend support creates an affordance grant | I11, I12 / #294 |
 | SEM-219 G: side effects and observations are explicit | affordance observation addresses plus action effects/evidence expectations | boundary classification, compiler IR, existing result/snapshot/conformance gates | tool output remains governed by referenced observation/effect contracts | tool output lacks a view rule or leaks hidden truth | I5, I13 / #294 |
-| SEM-220 A: surface has participant/episode/order identity | `ParticipantContextViewModel` envelope plus typed `D(p,e,o)` payload/ref | retrieval and context-view validation | surface resolves to one participant, episode, and observation point | cumulative/global context substitutes for participant-local state | I1, I3, I15 / #295 |
+| SEM-220 A: decision epoch and derivation cut remain distinct | `ParticipantDecisionSurfaceV2Model`, typed readiness/behavior anchor, and sequence/causal state cut | trusted snapshot/history resolution at projection and admission | `episode_running` grounds epoch zero with empty behavior; epoch one carries behavior anchor order two after one three-occurrence action | lifecycle, behavior, policy, delivery, or decision coordinates are collapsed into one scalar | I1, I3, I15 / #295, #909 |
 | SEM-220 B: candidate membership is not eligibility | action-entry contract ref plus explicit SEM-211 eligibility state/reason refs | surface derivation followed by independent admission | visible candidate is marked ineligible with a typed reason | every presented candidate is implicitly executable | I4 / #295 |
 | SEM-220 C: open-ended proposals bind before admission | compiled `ParticipantActionContractRuntime.argument_shape_ref`, `ParticipantValidatedActionSelection`, and SEM-211 admission helper | proposal resolution, concrete argument validation/normalization, immutable carrier binding, then runtime admission | generated proposal resolves and validates before an attempt | free-form generation bypasses applicability or invents backend-local meaning | I4, I11 / #295, #303 |
 | SEM-220 D: constrained forms preserve mapping meaning | `ParticipantActionArgumentDefinition`, canonical compiled shape identity, and explicit default/normalization/omission/loss disclosure | closed authoring validation, compiler mapping, `resolve_participant_action_arguments()`, and conformance comparison | form values map deterministically to validated action arguments | omitted/defaulted field changes meaning without disclosure | I12, I14, I16 / #295, #303 |
-| SEM-220 E: selection is separate from attempt and outcome | decision record, behavior-history attempt, action result, outcome interpretation | execution history and result/outcome validators | chosen candidate links to one admitted attempt and later result | surface appearance is recorded as selection or success | I10 / #295 |
-| SEM-220 F: implementation kind does not change semantics | participant implementation manifest/selection and stable surface refs | apparatus validation and cross-run conformance | human proxy and autonomous implementation realize equivalent refs with disclosed differences | implementation type silently changes action or selection meaning | I1, I11, I12, I15 / #295 |
-| SEM-226 A: exposure is scoped by `V_p,o` | compiled view-relation timeline, observation boundary, resolved policy history, and `ParticipantDecisionSurfaceExposureBindingModel` | `project_participant_decision_surface()` resolves the effective revision and evaluates the compiled relation at the exact history order | disclosed item appears only from its effective order | caller-supplied, stale, or future policy/visibility state enters an earlier surface | I2, I3 / #296 |
+| SEM-220 E: delivery, selection, admission, attempt, and outcome are separate | projected/delivered lifecycle, canonical participant-view digest, delivery record, v2 selection, behavior history, action result, outcome interpretation | delivery-time authority, admission-time anchor/delivery re-resolution, then existing execution validators | exact delivered digest is selected and admitted once before attempt/result | projected, stale, reset, replayed, forged, or undelivered surface creates behavior | I10 / #295, #909 |
+| SEM-220 F: implementation kind does not change semantics | participant implementation manifest/selection, explicit `participant-decision-surface-v2` support, and stable surface refs | capability declaration plus exact-cut apparatus validation and cross-run conformance | human proxy and autonomous implementation realize equivalent refs with disclosed differences | implementation type or undeclared v2 consumption silently changes action or selection meaning | I1, I11, I12, I15 / #295, #909 |
+| SEM-226 A: exposure is scoped by `V_p,c` | compiled view relation, observation boundary, exact-cut policy decision, and `ParticipantDecisionSurfaceExposureBindingV2Model` | `project_participant_decision_surface_v2()` resolves policy and item authority at the derivation cut | disclosed item is authorized at the exact cut independently of decision epoch | caller-supplied, stale, future, cross-cut, or incomparable policy state enters a view | I2, I3 / #296, #909 |
 | SEM-226 B: source strata remain distinct | `ParticipantContextViewModel.source_layers` plus resolved authorization-record source/result, transformation, marking, and provenance refs | trusted item-authorization resolution followed by the deny-first exposure selector | archival evidence is mediated through an authorized participant-facing transformation with inherited markings and provenance | truth/adjudication/evidence payload or a self-attested transform aliases the visible context payload | I2, I3, I13 / #296 |
 | SEM-226 C: role/audience scope is explicit | context-view audience fields plus resolved authorization participant, episode, audience, order, apparatus, and policy coordinates | exact authorization/surface agreement and separately resolved implementation-selection checks before serialization | role-scoped context reaches only the intended participant audience | private or role-specific context appears through a synthetic selection or another participant's authorization | I2, I17 / #296 |
 | SEM-226 D: augmentation is governed exposure | resolved authorization source layer, transformation, visibility basis, backend-support ref, evidence/provenance, and limitations | authorization resolver, deny-first item exposure selector, and context-view validation | augmentation records source, authorized transformation, disclosure basis, and limits | scaffold guidance or augmentation metadata enters through caller-owned gate booleans | I3, I13, I17 / #296 |
-| SEM-226 E: exposure changes are anchored | `ParticipantViewTransition`, resolved policy-revision effective order, immutable exposure-policy version/digest, behavior-history anchor, and authorization evidence refs | compiler ordering plus authoritative policy and exact observation-occurrence resolution at both surface and delivery order | disclosure transition changes later surfaces with evidence while revocation leaves prior surfaces intact | a stale authorization is replayed under a replaced same-id policy or exposure changes without a history event, order, or evidence anchor | I2, I8, I9 / #296 |
-| SEM-226 F: realized exposure is not inferred from policy | resolved exposure-policy coordinates plus optional `ParticipantDecisionSurfaceExposureRealizationModel` item, authorization-record, and occurrence binding | semantic occurrence-identity resolution, independent of sequence position, followed by exact item/authorization and participant/episode/action/boundary/order/evidence/provenance agreement with observation history and delivery-time authority | selected policy and the exact authorized item occurrence agree, with limitations | an unrelated observation, positional list entry, or later authorization is attached to another item's realization | I11, I13, I15 / #296 |
+| SEM-226 E: exposure changes are cut-anchored | exact state cut, policy-decision ref, immutable exposure-policy version/digest, derivation anchor, and authorization evidence | exact-cut policy/authorization resolution at derivation plus fresh delivery-cut authority | revocation prevents later delivery without retroactively erasing an earlier delivery | decision epoch or a later policy revision is used as authorization order | I2, I8, I9 / #296, #909 |
+| SEM-226 F: delivery is not inferred from projection or disclosure | `ParticipantDecisionSurfaceDeliveryV2Model` and delivered lifecycle state | delivery resolver at transition and again at admission, bound to participant-view digest | trusted emission-is-delivery or transport occurrence makes the exact view actionable | projection, policy selection, or an unrelated observation is treated as delivery | I11, I13, I15 / #296, #909 |
 
 ### Adversarial counterexamples
 
@@ -1621,7 +1673,7 @@ and order-relative label projection, independent control and information-flow
 operations, dynamic purge and declassification semantics, and the exact
 baseline `policy-noninterference` obligation.
 
-The relation is bound through taxonomy revision `rev2` rather than a local
+The relation is bound through taxonomy revision `rev3` rather than a local
 registry. Its current assurance is definition-complete and bounded-tested but
 deliberately unproved. The test-local model can falsify finite cases; it is not
 runtime mediation, backend realization, or a universal information-flow proof.

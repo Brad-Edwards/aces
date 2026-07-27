@@ -15,7 +15,7 @@ from raes_processor.compiler import compile_runtime_model
 
 _INSTANTIATION_PROVENANCE = {
     "authored_digest": {
-        "profile": "aces-sdl-semantic/v1",
+        "profile": "raes-sdl-semantic/v1",
         "algorithm": "sha256",
         "value": "sha256:" + "a" * 64,
     }
@@ -481,7 +481,7 @@ def test_shared_service_isolation_and_state_modes_remain_independent() -> None:
 def test_module_composition_rewrites_all_enterprise_references(tmp_path: Path) -> None:
     payload = _valid_payload()
     payload["module"] = {
-        "id": "aces/enterprise",
+        "id": "raes/enterprise",
         "version": "1.0.0",
         "exports": {
             section: list(values)
@@ -569,7 +569,7 @@ def test_published_phase_schemas_carry_closed_enterprise_shape() -> None:
     snapshot = Draft202012Validator(bundle["instantiated-scenario-snapshot-v1"])
     assert snapshot.is_valid(
         {
-            "profile": "aces-sdl-instantiated-snapshot/v1",
+            "profile": "raes-sdl-instantiated-snapshot/v1",
             "scenario": instantiated_payload,
         }
     )

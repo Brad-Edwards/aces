@@ -1,0 +1,10 @@
+{
+  "contract_id": "participant-execution-binding-v1",
+  "schema_path": "contracts/schemas/participant-runtime/participant-execution-binding-v1.json",
+  "stability": "draft",
+  "content_hash": "fa935e3d933584be0f569db57f692a9f8dbff6877af5b711a3bdc9a5917bd105",
+  "last_change": {
+    "summary": "Published the exact native participant action-to-target execution relation and finite execution bounds for issue #898 under the RAES schema identity.",
+    "content_hash": "fa935e3d933584be0f569db57f692a9f8dbff6877af5b711a3bdc9a5917bd105"
+  }
+}

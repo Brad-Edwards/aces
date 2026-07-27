@@ -12,7 +12,7 @@ command lines, host paths; APTL container ids, Compose service names, Docker
 inspect payloads, upstream Wazuh rule bodies) never enter a descriptor -- see the
 issue #600 preflight redaction gate.
 
-The libvirt descriptor is extracted from the real ``aces.libvirt.scenario-evidence-run/v1``
+The libvirt descriptor is extracted from the real ``raes.libvirt.scenario-evidence-run/v1``
 artifact (issue #615) and marked ``generated-in-repo``. The APTL descriptor is a
 bounded summary of the publicly documented APTL realization
 (``examples/scenarios/enterprise-participant-evidence-loop.README.md`` + Brad-Edwards/aptl#558) marked
@@ -108,7 +108,7 @@ def build_libvirt_backend_run(artifact: Mapping[str, Any]) -> dict[str, Any]:
 
     Copies only portable, timestamp-free fields so the descriptor (and therefore the
     corpus) is byte-stable across runs; the full timestamped evidence stays in the
-    regenerable ``aces.libvirt.scenario-evidence-run/v1`` artifact.
+    regenerable ``raes.libvirt.scenario-evidence-run/v1`` artifact.
     """
     backend = _mapping(artifact.get("backend"))
     compiled = _mapping(artifact.get("compiled_artifact"))
@@ -116,7 +116,7 @@ def build_libvirt_backend_run(artifact: Mapping[str, Any]) -> dict[str, Any]:
     proof = _mapping(artifact.get("participant_action_proof"))
     return {
         "backend_id": "libvirt-reference",
-        "realization": "aces-libvirt-reference-backend",
+        "realization": "raes-libvirt-reference-backend",
         "evidence_source_mode": str(artifact.get("evidence_source_mode", "deterministic")),
         "evidence_provenance": "generated-in-repo",
         "evidence_locator": {
@@ -213,13 +213,13 @@ def _apply_export_addresses(
     export_addresses = export.get("compiled_address_sets")
     if not isinstance(export_addresses, Mapping):
         return []
-    aces_sets = {cls: sorted(str(a) for a in _sequence(values)) for cls, values in address_sets.items()}
-    export_sets = {cls: sorted(str(a) for a in _sequence(export_addresses.get(cls))) for cls in aces_sets}
+    raes_sets = {cls: sorted(str(a) for a in _sequence(values)) for cls, values in address_sets.items()}
+    export_sets = {cls: sorted(str(a) for a in _sequence(export_addresses.get(cls))) for cls in raes_sets}
     descriptor["compiled_address_sets"] = export_sets
     return [
         f"APTL export compiled_address_sets[{cls}] differs from the compiled RAES address set"
-        for cls in aces_sets
-        if export_sets[cls] != aces_sets[cls]
+        for cls in raes_sets
+        if export_sets[cls] != raes_sets[cls]
     ]
 
 
