@@ -755,25 +755,28 @@ def test_activity_policy_v2_rejects_non_window_availability_constraint() -> None
     payload["behavior_specifications"]["participant-behavior"]["autonomous_execution"]["work_window_refs"] = [
         "green-cadence"
     ]
+    rendered = yaml.safe_dump(payload, sort_keys=False)
 
     with pytest.raises(SDLValidationError, match="work and pause refs must resolve to window constraints"):
-        parse_sdl(yaml.safe_dump(payload, sort_keys=False))
+        parse_sdl(rendered)
 
 
 def test_activity_policy_v2_rejects_timing_bounds_unreachable_by_stepped_progression() -> None:
     payload = yaml.safe_load(_activity_policy_yaml())
     payload["behavior_specifications"]["participant-behavior"]["autonomous_execution"]["timing"]["minimum_ticks"] = 15
+    rendered = yaml.safe_dump(payload, sort_keys=False)
 
     with pytest.raises(SDLValidationError, match="activity timing bounds are unreachable by stepped progression"):
-        parse_sdl(yaml.safe_dump(payload, sort_keys=False))
+        parse_sdl(rendered)
 
 
 def test_activity_policy_v2_rejects_window_for_unrelated_subject() -> None:
     payload = yaml.safe_load(_activity_policy_yaml())
     payload["temporal_constraints"]["work-window"]["subject_refs"] = ["nodes.customer-portal"]
+    rendered = yaml.safe_dump(payload, sort_keys=False)
 
     with pytest.raises(SDLValidationError, match="must name the behavior specification or every governed participant"):
-        parse_sdl(yaml.safe_dump(payload, sort_keys=False))
+        parse_sdl(rendered)
 
 
 def test_non_evaluated_autonomous_participant_must_be_green() -> None:
@@ -1488,8 +1491,9 @@ def test_runtime_manager_fails_closed_for_unresolved_governed_activity_entropy()
         }
     )
 
+    target = create_stub_target()
     with pytest.raises(ValueError, match="governed entropy without a resolver"):
-        RuntimeManager(create_stub_target(), stochastic_controls=[governed])
+        RuntimeManager(target, stochastic_controls=[governed])
 
 
 def test_runtime_manager_rolls_back_clock_when_participant_reset_fails() -> None:

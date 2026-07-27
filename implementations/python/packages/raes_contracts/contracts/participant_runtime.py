@@ -39,6 +39,8 @@ from .base import ContractModel, NonEmptyString
 from .participant_resource_budgets import ParticipantResourceMeasurementModel
 from .random_stream import ParticipantStreamAddressModel
 
+_AUTONOMOUS_EXECUTION_V1 = "participant-autonomous-execution/v1"
+
 
 class ParticipantEpisodeStateModel(ContractModel):
     state_schema_version: Literal[PARTICIPANT_EPISODE_STATE_SCHEMA_VERSION] = PARTICIPANT_EPISODE_STATE_SCHEMA_VERSION
@@ -287,7 +289,7 @@ class ParticipantAutonomousExecutionStateModel(ContractModel):
         "participant-autonomous-execution/v1",
         "participant-autonomous-execution/v2",
         "participant-autonomous-execution/v3",
-    ] = "participant-autonomous-execution/v1"
+    ] = _AUTONOMOUS_EXECUTION_V1
     occurrence_ordinal: StrictInt = Field(default=0, ge=0)
     current_retry: StrictInt = Field(default=0, ge=0)
     burst_position: StrictInt = Field(default=0, ge=0)
@@ -306,7 +308,7 @@ class ParticipantAutonomousExecutionStateModel(ContractModel):
         handler: SerializerFunctionWrapHandler,
     ) -> dict[str, Any]:
         payload = handler(self)
-        if self.profile == "participant-autonomous-execution/v1":
+        if self.profile == _AUTONOMOUS_EXECUTION_V1:
             for field_name in (
                 "profile",
                 "occurrence_ordinal",
@@ -328,7 +330,7 @@ class ParticipantAutonomousExecutionStateModel(ContractModel):
     def _validate_counters(self) -> ParticipantAutonomousExecutionStateModel:
         if self.succeeded_actions + self.failed_actions > self.attempted_actions:
             raise ValueError("terminal autonomous action counts cannot exceed attempted actions")
-        if self.profile == "participant-autonomous-execution/v1":
+        if self.profile == _AUTONOMOUS_EXECUTION_V1:
             if any((self.random_control_id, self.random_profile_id, self.random_namespace)):
                 raise ValueError("v1 autonomous execution state cannot carry participant random-control identity")
         elif not all((self.random_control_id, self.random_profile_id, self.random_namespace)):

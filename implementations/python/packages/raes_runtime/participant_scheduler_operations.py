@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from typing import cast
 
 from raes_contracts.contracts import (
@@ -17,6 +17,7 @@ from raes_processor.models import CompiledTimeModel, ParticipantAutonomousExecut
 
 from .participant_action_validation import autonomous_action_result_violation
 from .participant_activity import (
+    ParticipantActivityDrawContext,
     ParticipantActivityRandomControl,
     activity_control_for,
     draw_activity_integer,
@@ -222,42 +223,45 @@ def _run_one_due_action(
     return next_state
 
 
-def _next_activity_occurrence_state(
+def _activity_attempt_is_retryable(
     context: _DueActionContext,
     state: ParticipantAutonomousExecutionStateModel,
-    request: ParticipantActionAdmissionRequest,
     *,
     action_succeeded: bool,
     failure_class: str | None,
     protocol_failure: bool,
-) -> ParticipantAutonomousExecutionStateModel:
-    policy = context.policy
-    control = context.activity_control
-    if control is None:
-        raise ValueError("participant activity execution requires a random control")
+    attempted: int,
+) -> bool:
     index = state.next_action_index
-    candidate_id = policy.action_candidate_ids[index]
-    attempted = state.attempted_actions + 1
-    failed = state.failed_actions + (0 if action_succeeded else 1)
-    retryable = (
+    return (
         not protocol_failure
         and not action_succeeded
-        and failure_class in policy.action_candidate_retry_failure_classes[index]
-        and state.current_retry < policy.action_candidate_max_retries[index]
-        and attempted < policy.max_action_attempts
+        and failure_class in context.policy.action_candidate_retry_failure_classes[index]
+        and state.current_retry < context.policy.action_candidate_max_retries[index]
+        and attempted < context.policy.max_action_attempts
     )
-    if retryable:
-        return state.model_copy(
-            update={
-                "next_tick": context.current_tick,
-                "attempted_actions": attempted,
-                "failed_actions": failed,
-                "current_retry": state.current_retry + 1,
-                "last_candidate_id": candidate_id,
-                "last_action_instance_id": request.action_instance_id,
-            }
-        )
 
+
+@dataclass(frozen=True)
+class _ActivityProgress:
+    candidate_id: str
+    completed: list[str]
+    cooldowns: dict[str, int]
+    occurrence: int
+    lifecycle: str
+
+
+def _completed_activity_progress(
+    context: _DueActionContext,
+    state: ParticipantAutonomousExecutionStateModel,
+    *,
+    action_succeeded: bool,
+    protocol_failure: bool,
+    attempted: int,
+) -> _ActivityProgress:
+    policy = context.policy
+    index = state.next_action_index
+    candidate_id = policy.action_candidate_ids[index]
     completed = list(state.completed_candidate_ids)
     if action_succeeded and candidate_id not in completed:
         completed.append(candidate_id)
@@ -269,57 +273,148 @@ def _next_activity_occurrence_state(
         lifecycle = "failed"
     elif occurrence >= policy.max_occurrences or attempted >= policy.max_action_attempts:
         lifecycle = "completed"
+    return _ActivityProgress(
+        candidate_id=candidate_id,
+        completed=completed,
+        cooldowns=cooldowns,
+        occurrence=occurrence,
+        lifecycle=lifecycle,
+    )
 
+
+@dataclass(frozen=True)
+class _ActivitySchedule:
+    lifecycle: str
+    next_tick: int
+    burst_position: int
+    burst_size: int
+    timing_disposition: str
+
+
+def _next_activity_schedule(
+    context: _DueActionContext,
+    state: ParticipantAutonomousExecutionStateModel,
+    control: ParticipantActivityRandomControl,
+    progress: _ActivityProgress,
+) -> _ActivitySchedule:
+    lifecycle = progress.lifecycle
     burst_position = state.burst_position
     burst_size = state.burst_size
     next_tick = context.current_tick
-    if lifecycle == "running":
-        if burst_position + 1 < burst_size:
-            burst_position += 1
+    timing_disposition = state.next_timing_disposition
+    if lifecycle == "running" and burst_position + 1 < burst_size:
+        burst_position += 1
+    elif lifecycle == "running":
+        burst_position = 0
+        burst_size = draw_activity_integer(
+            ParticipantActivityDrawContext(
+                policy=context.policy,
+                participant_address=context.participant_address,
+                time_segment=state.time_segment,
+                occurrence_ordinal=progress.occurrence,
+                control=control,
+            ),
+            local_coordinate=2,
+            minimum=1,
+            maximum=context.policy.max_burst_size,
+        )
+        timing = next_activity_timing(
+            policy=context.policy,
+            time_model=context.time_model,
+            participant_address=context.participant_address,
+            time_segment=state.time_segment,
+            occurrence_ordinal=progress.occurrence,
+            current_tick=context.current_tick,
+            control=control,
+        )
+        timing_disposition = timing.disposition
+        if timing.tick is None:
+            lifecycle = "completed"
         else:
-            burst_position = 0
-            burst_size = draw_activity_integer(
-                policy=policy,
-                participant_address=context.participant_address,
-                time_segment=state.time_segment,
-                occurrence_ordinal=occurrence,
-                control=control,
-                local_coordinate=2,
-                minimum=1,
-                maximum=policy.max_burst_size,
-            )
-            timing = next_activity_timing(
-                policy=policy,
-                time_model=context.time_model,
-                participant_address=context.participant_address,
-                time_segment=state.time_segment,
-                occurrence_ordinal=occurrence,
-                current_tick=context.current_tick,
-                control=control,
-            )
-            selected_tick = timing.tick
-            if selected_tick is None:
-                lifecycle = "completed"
-            else:
-                next_tick = selected_tick
+            next_tick = timing.tick
+    return _ActivitySchedule(
+        lifecycle=lifecycle,
+        next_tick=next_tick,
+        burst_position=burst_position,
+        burst_size=burst_size,
+        timing_disposition=timing_disposition,
+    )
+
+
+def _activity_retry_state(
+    context: _DueActionContext,
+    state: ParticipantAutonomousExecutionStateModel,
+    request: ParticipantActionAdmissionRequest,
+    *,
+    attempted: int,
+    failed: int,
+) -> ParticipantAutonomousExecutionStateModel:
+    candidate_id = context.policy.action_candidate_ids[state.next_action_index]
     return state.model_copy(
         update={
-            "lifecycle_state": lifecycle,
-            "next_tick": next_tick,
+            "next_tick": context.current_tick,
+            "attempted_actions": attempted,
+            "failed_actions": failed,
+            "current_retry": state.current_retry + 1,
+            "last_candidate_id": candidate_id,
+            "last_action_instance_id": request.action_instance_id,
+        }
+    )
+
+
+def _next_activity_occurrence_state(
+    context: _DueActionContext,
+    state: ParticipantAutonomousExecutionStateModel,
+    request: ParticipantActionAdmissionRequest,
+    *,
+    action_succeeded: bool,
+    failure_class: str | None,
+    protocol_failure: bool,
+) -> ParticipantAutonomousExecutionStateModel:
+    control = context.activity_control
+    if control is None:
+        raise ValueError("participant activity execution requires a random control")
+    attempted = state.attempted_actions + 1
+    failed = state.failed_actions + (0 if action_succeeded else 1)
+    if _activity_attempt_is_retryable(
+        context,
+        state,
+        action_succeeded=action_succeeded,
+        failure_class=failure_class,
+        protocol_failure=protocol_failure,
+        attempted=attempted,
+    ):
+        return _activity_retry_state(
+            context,
+            state,
+            request,
+            attempted=attempted,
+            failed=failed,
+        )
+    progress = _completed_activity_progress(
+        context,
+        state,
+        action_succeeded=action_succeeded,
+        protocol_failure=protocol_failure,
+        attempted=attempted,
+    )
+    schedule = _next_activity_schedule(context, state, control, progress)
+    return state.model_copy(
+        update={
+            "lifecycle_state": schedule.lifecycle,
+            "next_tick": schedule.next_tick,
             "attempted_actions": attempted,
             "succeeded_actions": state.succeeded_actions + (1 if action_succeeded else 0),
             "failed_actions": failed,
-            "occurrence_ordinal": occurrence,
+            "occurrence_ordinal": progress.occurrence,
             "current_retry": 0,
-            "burst_position": burst_position,
-            "burst_size": burst_size,
-            "last_candidate_id": candidate_id,
-            "completed_candidate_ids": completed,
-            "candidate_cooldown_until": cooldowns,
+            "burst_position": schedule.burst_position,
+            "burst_size": schedule.burst_size,
+            "last_candidate_id": progress.candidate_id,
+            "completed_candidate_ids": progress.completed,
+            "candidate_cooldown_until": progress.cooldowns,
             "last_action_instance_id": request.action_instance_id,
-            "next_timing_disposition": (
-                timing.disposition if lifecycle == "running" and burst_position == 0 else state.next_timing_disposition
-            ),
+            "next_timing_disposition": schedule.timing_disposition,
         }
     )
 
@@ -386,82 +481,95 @@ def _run_one_activity_action(
     return next_state
 
 
+def _activity_action_is_due(
+    context: _DueActionContext,
+    state: ParticipantAutonomousExecutionStateModel,
+    run: SchedulerRunState,
+) -> bool:
+    return all(
+        (
+            state.lifecycle_state == "running",
+            state.next_tick == context.current_tick,
+            state.attempted_actions < context.policy.max_action_attempts,
+            run.failure is None,
+        )
+    )
+
+
+def _selected_activity_index(
+    context: _DueActionContext,
+    state: ParticipantAutonomousExecutionStateModel,
+) -> int | None:
+    if state.current_retry:
+        return state.next_action_index
+    control = context.activity_control
+    if control is None:
+        raise ValueError("participant activity execution requires a random control")
+    return select_activity_candidate(
+        policy=context.policy,
+        participant_address=context.participant_address,
+        time_segment=state.time_segment,
+        occurrence_ordinal=state.occurrence_ordinal,
+        control=control,
+        eligible_indices=activity_eligible_indices(context.policy, state, context.current_tick),
+    )
+
+
+def _empty_activity_state(
+    context: _DueActionContext,
+    state: ParticipantAutonomousExecutionStateModel,
+) -> ParticipantAutonomousExecutionStateModel:
+    lifecycle = "completed" if context.policy.empty_eligible_disposition == "complete" else "running"
+    selected_tick = None
+    if lifecycle == "running":
+        control = context.activity_control
+        if control is None:
+            raise ValueError("participant activity execution requires a random control")
+        selected_tick = next_activity_timing(
+            policy=context.policy,
+            time_model=context.time_model,
+            participant_address=context.participant_address,
+            time_segment=state.time_segment,
+            occurrence_ordinal=state.occurrence_ordinal,
+            current_tick=context.current_tick,
+            control=control,
+        ).tick
+    if selected_tick is None:
+        lifecycle = "completed"
+    return state.model_copy(
+        update={
+            "lifecycle_state": lifecycle,
+            "next_tick": selected_tick if selected_tick is not None else context.current_tick,
+        }
+    )
+
+
 def _run_participant_activity_due(
     context: _DueActionContext,
     state: ParticipantAutonomousExecutionStateModel,
     run: SchedulerRunState,
 ) -> None:
-    while (
-        state.lifecycle_state == "running"
-        and state.next_tick == context.current_tick
-        and state.attempted_actions < context.policy.max_action_attempts
-        and run.failure is None
-    ):
-        eligible = activity_eligible_indices(context.policy, state, context.current_tick)
-        control = context.activity_control
-        if control is None:
-            raise ValueError("participant activity execution requires a random control")
-        selected = (
-            state.next_action_index
-            if state.current_retry
-            else select_activity_candidate(
-                policy=context.policy,
-                participant_address=context.participant_address,
-                time_segment=state.time_segment,
-                occurrence_ordinal=state.occurrence_ordinal,
-                control=control,
-                eligible_indices=eligible,
-            )
-        )
+    while _activity_action_is_due(context, state, run):
+        selected = _selected_activity_index(context, state)
         if selected is None:
-            lifecycle = "completed" if context.policy.empty_eligible_disposition == "complete" else "running"
-            selected_tick = (
-                None
-                if lifecycle == "completed"
-                else next_activity_timing(
-                    policy=context.policy,
-                    time_model=context.time_model,
-                    participant_address=context.participant_address,
-                    time_segment=state.time_segment,
-                    occurrence_ordinal=state.occurrence_ordinal,
-                    current_tick=context.current_tick,
-                    control=control,
-                ).tick
-            )
-            if selected_tick is None:
-                lifecycle = "completed"
-            state = state.model_copy(
-                update={
-                    "lifecycle_state": lifecycle,
-                    "next_tick": selected_tick if selected_tick is not None else context.current_tick,
-                }
-            )
+            state = _empty_activity_state(context, state)
             persist_activity_state(run, context.key, state)
             return
         state = state.model_copy(update={"next_action_index": selected})
         state = _run_one_activity_action(context, state, run)
 
 
-def run_participant_due(
+def participant_due_context(
     policy: ParticipantAutonomousExecutionRuntime,
     time_model: CompiledTimeModel,
     participant_runtime: object,
     participant_address: str,
     current_tick: int,
     cadence_ticks: int,
-    run: SchedulerRunState,
     activity_controls: dict[str, ParticipantActivityRandomControl] | None = None,
-) -> None:
-    """Run one participant at the current governed cadence boundary."""
-
+) -> _DueActionContext:
     key = f"{policy.address}.state.{participant_address}"
-    state = ParticipantAutonomousExecutionStateModel.model_validate(
-        run.working.participant_autonomous_execution_states[key]
-    )
-    if state.lifecycle_state == "running" and state.next_tick < current_tick:
-        run.failure = cadence_missed_result(run.working, key, current_tick, state)
-        return
-    action_context = _DueActionContext(
+    return _DueActionContext(
         policy=policy,
         time_model=time_model,
         participant_runtime=participant_runtime,
@@ -471,28 +579,55 @@ def run_participant_due(
         cadence_ticks=cadence_ticks,
         activity_control=activity_control_for(policy, activity_controls or {}),
     )
-    if policy.profile in {
+
+
+def _legacy_action_is_due(
+    context: _DueActionContext,
+    state: ParticipantAutonomousExecutionStateModel,
+    run: SchedulerRunState,
+) -> bool:
+    return all(
+        (
+            state.lifecycle_state == "running",
+            state.next_tick == context.current_tick,
+            state.attempted_actions < context.policy.max_action_attempts,
+            run.failure is None,
+        )
+    )
+
+
+def _run_legacy_participant_due(
+    context: _DueActionContext,
+    state: ParticipantAutonomousExecutionStateModel,
+    run: SchedulerRunState,
+) -> None:
+    while _legacy_action_is_due(context, state, run):
+        state = _run_one_due_action(context, state, run)
+
+
+def run_participant_due(
+    context: _DueActionContext,
+    run: SchedulerRunState,
+) -> None:
+    """Run one participant at the current governed cadence boundary."""
+
+    state = ParticipantAutonomousExecutionStateModel.model_validate(
+        run.working.participant_autonomous_execution_states[context.key]
+    )
+    if state.lifecycle_state == "running" and state.next_tick < context.current_tick:
+        run.failure = cadence_missed_result(run.working, context.key, context.current_tick, state)
+    elif context.policy.profile in {
         "participant-autonomous-execution/v2",
         "participant-autonomous-execution/v3",
     }:
-        _run_participant_activity_due(action_context, state, run)
-        return
-    action_is_due = (
-        state.lifecycle_state == "running"
-        and state.next_tick == current_tick
-        and state.attempted_actions < policy.max_action_attempts
-    )
-    while action_is_due and run.failure is None:
-        state = _run_one_due_action(action_context, state, run)
-        action_is_due = (
-            state.lifecycle_state == "running"
-            and state.next_tick == current_tick
-            and state.attempted_actions < policy.max_action_attempts
-        )
+        _run_participant_activity_due(context, state, run)
+    else:
+        _run_legacy_participant_due(context, state, run)
 
 
 __all__ = [
     "SchedulerRunState",
+    "participant_due_context",
     "run_participant_due",
     "run_policy_due_concurrently",
 ]

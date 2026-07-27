@@ -97,10 +97,11 @@ class TestLoaderHardening:
             random_stream_profile_path("nonexistent-profile-v1")
 
     def test_supported_profile_ids_contains_blake3_xof(self) -> None:
-        assert {
+        expected_ids = {
             "blake3-xof-participant-v1",
             "blake3-xof-v1",
-        } == SUPPORTED_RANDOM_STREAM_PROFILE_IDS
+        }
+        assert not SUPPORTED_RANDOM_STREAM_PROFILE_IDS.symmetric_difference(expected_ids)
 
     def test_load_unsupported_profile_fails_closed_without_file_probe(self) -> None:
         with pytest.raises(ValueError, match="unsupported"):

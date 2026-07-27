@@ -95,9 +95,11 @@ def _activity_provenance(
             occurrence_ordinal=state.occurrence_ordinal,
             retry_ordinal=state.current_retry - 1,
         )
-    disposition = (
-        "retry" if state.current_retry else ("burst" if state.burst_position else state.next_timing_disposition)
-    )
+    disposition = state.next_timing_disposition
+    if state.burst_position:
+        disposition = "burst"
+    if state.current_retry:
+        disposition = "retry"
     return ParticipantActivityOccurrenceProvenanceModel(
         policy_address=context.policy.address,
         policy_profile=context.policy.profile,

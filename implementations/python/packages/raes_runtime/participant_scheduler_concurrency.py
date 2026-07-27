@@ -301,7 +301,7 @@ def _finish_due_policy(
     cadence_ticks: int,
     run: SchedulerRunState,
 ) -> None:
-    from .participant_scheduler_operations import run_participant_due
+    from .participant_scheduler_operations import participant_due_context, run_participant_due
 
     if run.failure is not None:
         return
@@ -309,12 +309,14 @@ def _finish_due_policy(
         return
     for participant_address in policy.participant_addresses:
         run_participant_due(
-            policy,
-            time_model,
-            participant_runtime,
-            participant_address,
-            current_tick,
-            cadence_ticks,
+            participant_due_context(
+                policy,
+                time_model,
+                participant_runtime,
+                participant_address,
+                current_tick,
+                cadence_ticks,
+            ),
             run,
         )
         if run.failure is not None:

@@ -125,107 +125,131 @@ class RuntimeSnapshot:
         **updates: object,
     ) -> RuntimeSnapshot:
         _validate_snapshot_update_keys(updates)
-        return RuntimeSnapshot(
-            entries=entries,
-            orchestration_results=_mapping_update(
-                updates,
-                "orchestration_results",
-                self.orchestration_results,
-            ),
-            orchestration_history=_history_update(
-                updates,
-                "orchestration_history",
-                self.orchestration_history,
-            ),
-            evaluation_results=_mapping_update(updates, "evaluation_results", self.evaluation_results),
-            evaluation_history=_history_update(updates, "evaluation_history", self.evaluation_history),
-            proposition_truth_results=_mapping_update(
-                updates,
-                "proposition_truth_results",
-                self.proposition_truth_results,
-            ),
-            participant_episode_results=_mapping_update(
-                updates,
-                "participant_episode_results",
-                self.participant_episode_results,
-            ),
-            participant_episode_history=_history_update(
-                updates,
-                "participant_episode_history",
-                self.participant_episode_history,
-            ),
-            participant_behavior_history=_history_update(
-                updates,
-                "participant_behavior_history",
-                self.participant_behavior_history,
-            ),
-            participant_control_history=_history_update(
-                updates,
-                "participant_control_history",
-                self.participant_control_history,
-            ),
-            participant_autonomous_execution_states=_mapping_update(
-                updates,
-                "participant_autonomous_execution_states",
-                self.participant_autonomous_execution_states,
-            ),
-            participant_execution_services=_mapping_update(
-                updates,
-                "participant_execution_services",
-                self.participant_execution_services,
-            ),
-            participant_resource_budget_states=_mapping_update(
-                updates,
-                "participant_resource_budget_states",
-                self.participant_resource_budget_states,
-            ),
-            participant_resource_pool_states=_mapping_update(
-                updates,
-                "participant_resource_pool_states",
-                self.participant_resource_pool_states,
-            ),
-            participant_resource_budget_events=_mapping_update(
-                updates,
-                "participant_resource_budget_events",
-                self.participant_resource_budget_events,
-            ),
-            shared_state_records=_mapping_update(
-                updates,
-                "shared_state_records",
-                self.shared_state_records,
-            ),
-            shared_state_history=_history_update(
-                updates,
-                "shared_state_history",
-                self.shared_state_history,
-            ),
-            joint_action_records=_mapping_update(
-                updates,
-                "joint_action_records",
-                self.joint_action_records,
-            ),
-            time_management_contexts=_mapping_update(
-                updates,
-                "time_management_contexts",
-                self.time_management_contexts,
-            ),
-            time_model_state=_time_model_state_update(
-                updates,
-                "time_model_state",
-                self.time_model_state,
-            ),
-            realization_provenance=_provenance_update(
-                updates,
-                "realization_provenance",
-                self.realization_provenance,
-            ),
-            realization_envelope=_identity_update(
-                updates,
-                "realization_envelope",
-                self.realization_envelope,
-            ),
-            metadata=_mapping_update(updates, "metadata", self.metadata),
-        )
+        return RuntimeSnapshot(entries=entries, **_snapshot_updates(self, updates))
+
+
+def _snapshot_result_updates(
+    snapshot: RuntimeSnapshot,
+    updates: Mapping[str, object],
+) -> dict[str, Any]:
+    return {
+        "orchestration_results": _mapping_update(
+            updates,
+            "orchestration_results",
+            snapshot.orchestration_results,
+        ),
+        "orchestration_history": _history_update(
+            updates,
+            "orchestration_history",
+            snapshot.orchestration_history,
+        ),
+        "evaluation_results": _mapping_update(updates, "evaluation_results", snapshot.evaluation_results),
+        "evaluation_history": _history_update(updates, "evaluation_history", snapshot.evaluation_history),
+        "proposition_truth_results": _mapping_update(
+            updates,
+            "proposition_truth_results",
+            snapshot.proposition_truth_results,
+        ),
+        "participant_episode_results": _mapping_update(
+            updates,
+            "participant_episode_results",
+            snapshot.participant_episode_results,
+        ),
+        "participant_episode_history": _history_update(
+            updates,
+            "participant_episode_history",
+            snapshot.participant_episode_history,
+        ),
+        "participant_behavior_history": _history_update(
+            updates,
+            "participant_behavior_history",
+            snapshot.participant_behavior_history,
+        ),
+        "participant_control_history": _history_update(
+            updates,
+            "participant_control_history",
+            snapshot.participant_control_history,
+        ),
+    }
+
+
+def _snapshot_participant_updates(
+    snapshot: RuntimeSnapshot,
+    updates: Mapping[str, object],
+) -> dict[str, Any]:
+    return {
+        "participant_autonomous_execution_states": _mapping_update(
+            updates,
+            "participant_autonomous_execution_states",
+            snapshot.participant_autonomous_execution_states,
+        ),
+        "participant_execution_services": _mapping_update(
+            updates,
+            "participant_execution_services",
+            snapshot.participant_execution_services,
+        ),
+        "participant_resource_budget_states": _mapping_update(
+            updates,
+            "participant_resource_budget_states",
+            snapshot.participant_resource_budget_states,
+        ),
+        "participant_resource_pool_states": _mapping_update(
+            updates,
+            "participant_resource_pool_states",
+            snapshot.participant_resource_pool_states,
+        ),
+        "participant_resource_budget_events": _mapping_update(
+            updates,
+            "participant_resource_budget_events",
+            snapshot.participant_resource_budget_events,
+        ),
+        "shared_state_records": _mapping_update(
+            updates,
+            "shared_state_records",
+            snapshot.shared_state_records,
+        ),
+        "shared_state_history": _history_update(
+            updates,
+            "shared_state_history",
+            snapshot.shared_state_history,
+        ),
+        "joint_action_records": _mapping_update(
+            updates,
+            "joint_action_records",
+            snapshot.joint_action_records,
+        ),
+        "time_management_contexts": _mapping_update(
+            updates,
+            "time_management_contexts",
+            snapshot.time_management_contexts,
+        ),
+    }
+
+
+def _snapshot_updates(
+    snapshot: RuntimeSnapshot,
+    updates: Mapping[str, object],
+) -> dict[str, Any]:
+    return {
+        **_snapshot_result_updates(snapshot, updates),
+        **_snapshot_participant_updates(snapshot, updates),
+        "time_model_state": _time_model_state_update(
+            updates,
+            "time_model_state",
+            snapshot.time_model_state,
+        ),
+        "realization_provenance": _provenance_update(
+            updates,
+            "realization_provenance",
+            snapshot.realization_provenance,
+        ),
+        "realization_envelope": _identity_update(
+            updates,
+            "realization_envelope",
+            snapshot.realization_envelope,
+        ),
+        "metadata": _mapping_update(updates, "metadata", snapshot.metadata),
+    }
 
 
 _SNAPSHOT_UPDATE_KEYS = {

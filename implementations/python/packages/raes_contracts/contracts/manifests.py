@@ -217,32 +217,36 @@ class ParticipantRuntimeCapabilitiesModel(ContractModel):
         declares_autonomous = "autonomous_execution" in self.supported_behavior_features
         if declares_autonomous != self.supports_autonomous_execution:
             raise ValueError("autonomous_execution feature and support flag must agree")
-        if self.supports_autonomous_execution and not self._has_complete_autonomous_configuration():
+        if self.supports_autonomous_execution:
+            self._validate_enabled_autonomous_configuration()
+        elif self._has_any_autonomous_configuration():
+            raise ValueError("autonomous execution limits require autonomous execution support")
+
+    def _validate_enabled_autonomous_configuration(self) -> None:
+        if not self._has_complete_autonomous_configuration():
             raise ValueError(
                 "autonomous execution requires selection strategies, exact action, observation, and policy-profile "
                 "support, and finite limits"
             )
-        if (
-            self.supports_autonomous_execution
-            and {
-                "participant-autonomous-execution/v2",
-                "participant-autonomous-execution/v3",
-            }.intersection(self.supported_autonomous_policy_profiles)
-            and (
-                not self.supported_autonomous_activity_features or not self.supported_autonomous_random_stream_profiles
-            )
-        ):
+        self._validate_activity_profile_configuration()
+
+    def _validate_activity_profile_configuration(self) -> None:
+        activity_profiles = {
+            "participant-autonomous-execution/v2",
+            "participant-autonomous-execution/v3",
+        }.intersection(self.supported_autonomous_policy_profiles)
+        missing_activity_support = (
+            not self.supported_autonomous_activity_features or not self.supported_autonomous_random_stream_profiles
+        )
+        if activity_profiles and missing_activity_support:
             raise ValueError(
                 "autonomous execution v2 requires exact activity-feature and random-stream-profile support"
             )
         if (
-            self.supports_autonomous_execution
-            and "participant-autonomous-execution/v3" in self.supported_autonomous_policy_profiles
+            "participant-autonomous-execution/v3" in self.supported_autonomous_policy_profiles
             and self.resource_budgets is None
         ):
             raise ValueError("autonomous execution v3 requires participant resource-budget capabilities")
-        if not self.supports_autonomous_execution and self._has_any_autonomous_configuration():
-            raise ValueError("autonomous execution limits require autonomous execution support")
 
     def _has_complete_autonomous_configuration(self) -> bool:
         return bool(
@@ -259,22 +263,25 @@ class ParticipantRuntimeCapabilitiesModel(ContractModel):
         )
 
     def _has_any_autonomous_configuration(self) -> bool:
-        return bool(
-            self.supported_autonomous_selection_strategies
-            or self.supported_autonomous_action_contracts
-            or self.supported_autonomous_observation_boundaries
-            or self.supported_autonomous_target_addresses
-            or self.supported_autonomous_policy_profiles
-            or self.supported_autonomous_activity_features
-            or self.supported_autonomous_random_stream_profiles
-            or any(value is not None for value in self._autonomous_limits())
-            or self.execution_bindings
-            or self.supports_execution_control
-            or self.supported_execution_control_actions
-            or self.supports_bounded_concurrency
-            or self.max_execution_services is not None
-            or self.max_concurrent_actions is not None
-            or self.resource_budgets is not None
+        limits_configured = any(value is not None for value in self._autonomous_limits())
+        return any(
+            (
+                self.supported_autonomous_selection_strategies,
+                self.supported_autonomous_action_contracts,
+                self.supported_autonomous_observation_boundaries,
+                self.supported_autonomous_target_addresses,
+                self.supported_autonomous_policy_profiles,
+                self.supported_autonomous_activity_features,
+                self.supported_autonomous_random_stream_profiles,
+                limits_configured,
+                self.execution_bindings,
+                self.supports_execution_control,
+                self.supported_execution_control_actions,
+                self.supports_bounded_concurrency,
+                self.max_execution_services is not None,
+                self.max_concurrent_actions is not None,
+                self.resource_budgets is not None,
+            )
         )
 
     def _validate_execution_control(self) -> None:

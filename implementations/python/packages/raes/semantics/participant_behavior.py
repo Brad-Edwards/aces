@@ -559,66 +559,96 @@ def _autonomous_clock_binding_issues(
     return issues, clock, progression
 
 
+def _autonomous_constraint_refs(
+    context: _AutonomousExecutionReferenceContext,
+    *,
+    activity_policy: bool,
+) -> list[str]:
+    if activity_policy:
+        return [*context.policy.work_window_refs, *context.policy.pause_window_refs]
+    return list(context.policy.temporal_constraint_refs)
+
+
+def _autonomous_window_subject_issues(
+    context: _AutonomousExecutionReferenceContext,
+    constraint_ref: str,
+    constraint: object,
+) -> list[ParticipantBehaviorIssue]:
+    subjects = {str(ref) for ref in getattr(constraint, "subject_refs", ())}
+    if context.spec_name in subjects or context.participants.issubset(subjects):
+        return []
+    return [
+        _autonomous_issue(
+            context,
+            "participant.autonomous-activity-window-subject-mismatch",
+            constraint_ref,
+        )
+    ]
+
+
+def _autonomous_constraint_reference_issues(
+    context: _AutonomousExecutionReferenceContext,
+    constraint_ref: str,
+    *,
+    activity_policy: bool,
+) -> tuple[list[ParticipantBehaviorIssue], object | None]:
+    if context.is_unresolved(constraint_ref):
+        return [], None
+    constraint_name = _resolve_section_ref(
+        constraint_ref,
+        "temporal_constraints",
+        context.references.temporal_constraints,
+    )
+    constraint = context.references.temporal_constraints.get(constraint_name) if constraint_name is not None else None
+    if constraint is None:
+        return [_autonomous_issue(context, "participant.autonomous-constraint-unbound", constraint_ref)], None
+
+    issues: list[ParticipantBehaviorIssue] = []
+    kind = getattr(getattr(constraint, "constraint_kind", None), "value", "")
+    if activity_policy and kind != "window":
+        issues.append(
+            _autonomous_issue(
+                context,
+                "participant.autonomous-activity-window-kind-invalid",
+                constraint_ref,
+            )
+        )
+    if activity_policy and kind == "window":
+        issues.extend(_autonomous_window_subject_issues(context, constraint_ref, constraint))
+    if getattr(constraint, "clock_ref", None) != context.policy.clock_ref:
+        issues.append(
+            _autonomous_issue(
+                context,
+                "participant.autonomous-constraint-clock-mismatch",
+                constraint_ref,
+            )
+        )
+    return issues, constraint
+
+
 def _autonomous_constraint_issues(
     context: _AutonomousExecutionReferenceContext,
 ) -> tuple[list[ParticipantBehaviorIssue], object | None, int]:
     issues: list[ParticipantBehaviorIssue] = []
     cadence = None
     cadence_count = 0
-    profile = getattr(context.policy, "profile", "participant-autonomous-execution/v1")
-    activity_policy = profile in {
+    activity_policy = getattr(context.policy, "profile", "participant-autonomous-execution/v1") in {
         "participant-autonomous-execution/v2",
         "participant-autonomous-execution/v3",
     }
-    constraint_refs = (
-        [*context.policy.work_window_refs, *context.policy.pause_window_refs]
-        if activity_policy
-        else list(context.policy.temporal_constraint_refs)
-    )
-    for constraint_ref in constraint_refs:
-        if context.is_unresolved(constraint_ref):
-            continue
-        constraint_name = _resolve_section_ref(
+    for constraint_ref in _autonomous_constraint_refs(context, activity_policy=activity_policy):
+        reference_issues, constraint = _autonomous_constraint_reference_issues(
+            context,
             constraint_ref,
-            "temporal_constraints",
-            context.references.temporal_constraints,
+            activity_policy=activity_policy,
         )
-        constraint = (
-            context.references.temporal_constraints.get(constraint_name) if constraint_name is not None else None
-        )
+        issues.extend(reference_issues)
         if constraint is None:
-            issues.append(_autonomous_issue(context, "participant.autonomous-constraint-unbound", constraint_ref))
             continue
         kind = getattr(getattr(constraint, "constraint_kind", None), "value", "")
         cadence_count += int(kind == "cadence")
         if kind == "cadence":
             cadence = constraint
-        if activity_policy and kind != "window":
-            issues.append(
-                _autonomous_issue(
-                    context,
-                    "participant.autonomous-activity-window-kind-invalid",
-                    constraint_ref,
-                )
-            )
-        if activity_policy and kind == "window":
-            subjects = {str(ref) for ref in getattr(constraint, "subject_refs", ())}
-            if context.spec_name not in subjects and not context.participants.issubset(subjects):
-                issues.append(
-                    _autonomous_issue(
-                        context,
-                        "participant.autonomous-activity-window-subject-mismatch",
-                        constraint_ref,
-                    )
-                )
-        if getattr(constraint, "clock_ref", None) != context.policy.clock_ref:
-            issues.append(
-                _autonomous_issue(
-                    context,
-                    "participant.autonomous-constraint-clock-mismatch",
-                    constraint_ref,
-                )
-            )
     if not activity_policy and cadence_count != 1:
         issues.append(_autonomous_issue(context, "participant.autonomous-cadence-missing", context.policy.clock_ref))
     return issues, cadence, cadence_count
@@ -673,50 +703,58 @@ def _autonomous_progression_issues(
     return issues
 
 
+def _autonomous_stepped_issue_code(
+    context: _AutonomousExecutionReferenceContext,
+    bindings: _AutonomousTimeBindings,
+) -> str | None:
+    issue_code = None
+    step_ticks = getattr(bindings.progression, "step_ticks", None)
+    activity_policy = getattr(context.policy, "profile", "participant-autonomous-execution/v1") in {
+        "participant-autonomous-execution/v2",
+        "participant-autonomous-execution/v3",
+    }
+    if activity_policy:
+        minimum_ticks = context.policy.timing.minimum_ticks
+        maximum_ticks = context.policy.timing.maximum_ticks
+        reachable = isinstance(step_ticks, int) and not minimum_ticks % step_ticks and not maximum_ticks % step_ticks
+        if not reachable:
+            issue_code = "participant.autonomous-activity-timing-unreachable"
+    elif bindings.cadence_count == 1 and bindings.cadence is not None:
+        cadence_ticks = getattr(bindings.cadence, "cadence_ticks", None)
+        start = getattr(bindings.cadence, "start", None)
+        start_tick = getattr(start, "tick", 0) if start is not None else 0
+        reachable = (
+            isinstance(step_ticks, int)
+            and isinstance(cadence_ticks, int)
+            and start_tick >= 0
+            and not start_tick % step_ticks
+            and not cadence_ticks % step_ticks
+        )
+        if not reachable:
+            issue_code = "participant.autonomous-cadence-unreachable"
+    return issue_code
+
+
 def _autonomous_stepped_cadence_issues(
     context: _AutonomousExecutionReferenceContext,
     bindings: _AutonomousTimeBindings,
     progression_mode: str,
 ) -> list[ParticipantBehaviorIssue]:
-    if progression_mode != "stepped":
-        return []
-    step_ticks = getattr(bindings.progression, "step_ticks", None)
-    if getattr(context.policy, "profile", "participant-autonomous-execution/v1") in {
-        "participant-autonomous-execution/v2",
-        "participant-autonomous-execution/v3",
-    }:
-        minimum_ticks = context.policy.timing.minimum_ticks
-        maximum_ticks = context.policy.timing.maximum_ticks
-        if isinstance(step_ticks, int) and not minimum_ticks % step_ticks and not maximum_ticks % step_ticks:
-            return []
-        return [
-            _autonomous_issue(
-                context,
-                "participant.autonomous-activity-timing-unreachable",
-                context.policy.progression_policy_ref,
-            )
-        ]
-    if bindings.cadence_count != 1 or bindings.cadence is None:
-        return []
-    cadence_ticks = getattr(bindings.cadence, "cadence_ticks", None)
-    start = getattr(bindings.cadence, "start", None)
-    start_tick = getattr(start, "tick", 0) if start is not None else 0
-    reachable = (
-        isinstance(step_ticks, int)
-        and isinstance(cadence_ticks, int)
-        and start_tick >= 0
-        and not start_tick % step_ticks
-        and not cadence_ticks % step_ticks
-    )
-    if reachable:
-        return []
-    return [
-        _autonomous_issue(
+    issues: list[ParticipantBehaviorIssue] = []
+    if progression_mode == "stepped":
+        issue_code = _autonomous_stepped_issue_code(
             context,
-            "participant.autonomous-cadence-unreachable",
-            context.policy.progression_policy_ref,
+            bindings,
         )
-    ]
+        if issue_code is not None:
+            issues.append(
+                _autonomous_issue(
+                    context,
+                    issue_code,
+                    context.policy.progression_policy_ref,
+                )
+            )
+    return issues
 
 
 def _autonomous_non_evaluated_issues(

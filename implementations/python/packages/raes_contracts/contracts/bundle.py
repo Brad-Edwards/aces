@@ -115,7 +115,7 @@ from .vocabulary_sources import (
 )
 
 
-def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
+def _core_schema_bundle() -> dict[str, dict[str, Any]]:
     from raes_contracts.realization_envelope import BackendRealizationEnvelopeModel
 
     from ..behavioral_relations import BehavioralRelationCatalogModel
@@ -185,6 +185,11 @@ def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
         "scientific-completeness-assessment-v1": ScientificCompletenessAssessmentModel.model_json_schema(),
         "validation-profile-catalog-v1": ValidationProfileCatalogModel.model_json_schema(),
         "validation-basis-disclosure-v1": ValidationBasisDisclosureDocumentModel.model_json_schema(),
+    }
+
+
+def _runtime_schema_bundle() -> dict[str, dict[str, Any]]:
+    return {
         "evaluation-history-event-stream-v1": _event_stream_schema(
             "EvaluationHistoryEventStream",
             EvaluationHistoryEventModel.model_json_schema(),
@@ -225,6 +230,10 @@ def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
         "associated-artifact-manifest-v1": AssociatedArtifactManifestModel.model_json_schema(),
         "reusable-asset-trust-policy-v1": ReusableAssetTrustPolicyModel.model_json_schema(),
     }
+
+
+def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
+    return {**_core_schema_bundle(), **_runtime_schema_bundle()}
 
 
 @cache

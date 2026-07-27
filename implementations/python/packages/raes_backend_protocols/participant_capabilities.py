@@ -41,6 +41,46 @@ def _validate_participant_feature_support_term(feature: str) -> None:
     )
 
 
+def _participant_feature_support_level(
+    value: ParticipantFeatureSupportLevel | str,
+) -> ParticipantFeatureSupportLevel:
+    try:
+        if isinstance(value, ParticipantFeatureSupportLevel):
+            return value
+        return ParticipantFeatureSupportLevel(str(value))
+    except ValueError as exc:
+        raise ValueError("ParticipantFeatureSupport.support_level must be a valid support level") from exc
+
+
+def _participant_feature_refs(field_name: str, values: tuple[str, ...]) -> tuple[str, ...]:
+    normalized = tuple(values)
+    _validate_unique_non_empty_strings(f"ParticipantFeatureSupport.{field_name}", normalized)
+    return normalized
+
+
+def _validate_participant_feature_evidence(
+    *,
+    feature: str,
+    support_level: ParticipantFeatureSupportLevel,
+    constraint_refs: tuple[str, ...],
+    limitation_refs: tuple[str, ...],
+    disclosure_refs: tuple[str, ...],
+    evidence_refs: tuple[str, ...],
+) -> None:
+    if support_level != ParticipantFeatureSupportLevel.EXACT and not disclosure_refs:
+        raise ValueError(
+            "ParticipantFeatureSupport disclosure_refs must be non-empty when support_level is below exact"
+        )
+    if feature not in PARTICIPANT_RUNTIME_POLICY_FEATURES:
+        return
+    if support_level != ParticipantFeatureSupportLevel.EXACT and not limitation_refs:
+        raise ValueError("ParticipantFeatureSupport limitation_refs must be non-empty for below-exact policy support")
+    if support_level == ParticipantFeatureSupportLevel.BOUNDED and not constraint_refs:
+        raise ValueError("ParticipantFeatureSupport constraint_refs must be non-empty for bounded policy support")
+    if support_level != ParticipantFeatureSupportLevel.UNSUPPORTED and not evidence_refs:
+        raise ValueError("ParticipantFeatureSupport evidence_refs must be non-empty for positive policy support")
+
+
 @dataclass(frozen=True)
 class ParticipantFeatureSupport:
     """API-407 per-feature participant runtime support declaration."""
@@ -56,39 +96,19 @@ class ParticipantFeatureSupport:
         if not self.feature.strip():
             raise ValueError("ParticipantFeatureSupport.feature must be non-empty")
         _validate_participant_feature_support_term(self.feature)
-        try:
-            support_level = (
-                self.support_level
-                if isinstance(self.support_level, ParticipantFeatureSupportLevel)
-                else ParticipantFeatureSupportLevel(str(self.support_level))
-            )
-        except ValueError as exc:
-            raise ValueError("ParticipantFeatureSupport.support_level must be a valid support level") from exc
-        constraint_refs = tuple(self.constraint_refs)
-        limitation_refs = tuple(self.limitation_refs)
-        disclosure_refs = tuple(self.disclosure_refs)
-        evidence_refs = tuple(self.evidence_refs)
-        _validate_unique_non_empty_strings("ParticipantFeatureSupport.constraint_refs", constraint_refs)
-        _validate_unique_non_empty_strings("ParticipantFeatureSupport.limitation_refs", limitation_refs)
-        _validate_unique_non_empty_strings("ParticipantFeatureSupport.disclosure_refs", disclosure_refs)
-        _validate_unique_non_empty_strings("ParticipantFeatureSupport.evidence_refs", evidence_refs)
-        if support_level != ParticipantFeatureSupportLevel.EXACT and not disclosure_refs:
-            raise ValueError(
-                "ParticipantFeatureSupport disclosure_refs must be non-empty when support_level is below exact"
-            )
-        if self.feature in PARTICIPANT_RUNTIME_POLICY_FEATURES:
-            if support_level != ParticipantFeatureSupportLevel.EXACT and not limitation_refs:
-                raise ValueError(
-                    "ParticipantFeatureSupport limitation_refs must be non-empty for below-exact policy support"
-                )
-            if support_level == ParticipantFeatureSupportLevel.BOUNDED and not constraint_refs:
-                raise ValueError(
-                    "ParticipantFeatureSupport constraint_refs must be non-empty for bounded policy support"
-                )
-            if support_level != ParticipantFeatureSupportLevel.UNSUPPORTED and not evidence_refs:
-                raise ValueError(
-                    "ParticipantFeatureSupport evidence_refs must be non-empty for positive policy support"
-                )
+        support_level = _participant_feature_support_level(self.support_level)
+        constraint_refs = _participant_feature_refs("constraint_refs", self.constraint_refs)
+        limitation_refs = _participant_feature_refs("limitation_refs", self.limitation_refs)
+        disclosure_refs = _participant_feature_refs("disclosure_refs", self.disclosure_refs)
+        evidence_refs = _participant_feature_refs("evidence_refs", self.evidence_refs)
+        _validate_participant_feature_evidence(
+            feature=self.feature,
+            support_level=support_level,
+            constraint_refs=constraint_refs,
+            limitation_refs=limitation_refs,
+            disclosure_refs=disclosure_refs,
+            evidence_refs=evidence_refs,
+        )
         object.__setattr__(self, "support_level", support_level)
         object.__setattr__(self, "constraint_refs", constraint_refs)
         object.__setattr__(self, "limitation_refs", limitation_refs)
@@ -355,22 +375,25 @@ class ParticipantRuntimeCapabilities:
         )
 
     def _has_autonomous_configuration(self) -> bool:
-        return bool(
-            self.supported_autonomous_selection_strategies
-            or self.supported_autonomous_action_contracts
-            or self.supported_autonomous_observation_boundaries
-            or self.supported_autonomous_target_addresses
-            or self.supported_autonomous_policy_profiles
-            or self.supported_autonomous_activity_features
-            or self.supported_autonomous_random_stream_profiles
-            or self.execution_bindings
-            or self.supports_execution_control
-            or self.supported_execution_control_actions
-            or self.supports_bounded_concurrency
-            or self.max_execution_services is not None
-            or self.max_concurrent_actions is not None
-            or self.resource_budgets is not None
-            or any(value is not None for _, value in self._autonomous_limits())
+        limits_configured = any(value is not None for _, value in self._autonomous_limits())
+        return any(
+            (
+                self.supported_autonomous_selection_strategies,
+                self.supported_autonomous_action_contracts,
+                self.supported_autonomous_observation_boundaries,
+                self.supported_autonomous_target_addresses,
+                self.supported_autonomous_policy_profiles,
+                self.supported_autonomous_activity_features,
+                self.supported_autonomous_random_stream_profiles,
+                self.execution_bindings,
+                self.supports_execution_control,
+                self.supported_execution_control_actions,
+                self.supports_bounded_concurrency,
+                self.max_execution_services is not None,
+                self.max_concurrent_actions is not None,
+                self.resource_budgets is not None,
+                limits_configured,
+            )
         )
 
 

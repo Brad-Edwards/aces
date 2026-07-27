@@ -1,5 +1,7 @@
 """Compilation of autonomous participant execution policies."""
 
+from typing import Any
+
 from raes.scenario import InstantiatedScenario
 
 from ..models import (
@@ -159,6 +161,109 @@ def _compiled_resource_budget(
     )
 
 
+def _compiled_execution_bindings(
+    scenario: InstantiatedScenario,
+    policy: object,
+    action_refs: list[str],
+) -> tuple[tuple[ParticipantExecutionBindingRuntime, ...], tuple[str, ...]]:
+    addressable_ref_index = _runtime_addressable_ref_index(scenario)
+    bindings_by_key: dict[tuple[str, tuple[str, ...]], ParticipantExecutionBindingRuntime] = {}
+    for action_ref in action_refs:
+        action_name = _section_ref_name(
+            action_ref,
+            "action_contracts",
+            scenario.action_contracts,
+        )
+        action = scenario.action_contracts[action_name]
+        target_refs = [
+            *(str(ref) for effect in action.effects for ref in effect.target_refs),
+            *(str(ref) for precondition in action.preconditions for ref in precondition.support_refs),
+        ]
+        action_contract_address = _action_contract_address(action_name)
+        target_addresses = _runtime_addresses_for_refs(
+            list(dict.fromkeys(target_refs)),
+            addressable_ref_index=addressable_ref_index,
+        )
+        bindings_by_key.setdefault(
+            (action_contract_address, target_addresses),
+            ParticipantExecutionBindingRuntime(
+                action_contract_address=action_contract_address,
+                target_addresses=target_addresses,
+                participant_implementation_ref=policy.participant_implementation_ref,
+                max_action_attempts=policy.max_action_attempts,
+                max_in_flight=policy.max_in_flight,
+            ),
+        )
+    bindings = tuple(bindings_by_key.values())
+    targets = tuple(dict.fromkeys(target for binding in bindings for target in binding.target_addresses))
+    return bindings, targets
+
+
+def _temporal_constraint_addresses(
+    scenario: InstantiatedScenario,
+    refs: list[str],
+) -> tuple[str, ...]:
+    return tuple(
+        _address(
+            "time",
+            "constraint",
+            _section_ref_name(ref, "temporal_constraints", scenario.temporal_constraints),
+        )
+        for ref in refs
+    )
+
+
+def _activity_runtime_fields(
+    scenario: InstantiatedScenario,
+    policy: object,
+    *,
+    profile: str,
+    work_window_refs: list[str],
+    pause_window_refs: list[str],
+    ordered_candidates: list[tuple[str, Any]],
+) -> dict[str, object]:
+    return {
+        "profile": profile,
+        "work_window_addresses": _temporal_constraint_addresses(scenario, work_window_refs),
+        "pause_window_addresses": _temporal_constraint_addresses(scenario, pause_window_refs),
+        "stochastic_control_ref": str(getattr(policy, "stochastic_control_ref", "")),
+        "timing_minimum_ticks": int(getattr(getattr(policy, "timing", None), "minimum_ticks", 0)),
+        "timing_maximum_ticks": int(getattr(getattr(policy, "timing", None), "maximum_ticks", 0)),
+        "outside_window_disposition": str(getattr(policy, "outside_window_disposition", "")),
+        "empty_eligible_disposition": str(getattr(policy, "empty_eligible_disposition", "")),
+        "action_candidate_ids": tuple(str(candidate_id) for candidate_id, _ in ordered_candidates),
+        "action_candidate_weights": tuple(candidate.weight for _, candidate in ordered_candidates),
+        "action_candidate_dependencies": tuple(
+            tuple(str(ref) for ref in candidate.depends_on) for _, candidate in ordered_candidates
+        ),
+        "action_candidate_retry_failure_classes": tuple(
+            tuple(value.value for value in candidate.retryable_failure_classes) for _, candidate in ordered_candidates
+        ),
+        "action_candidate_max_retries": tuple(candidate.max_retries for _, candidate in ordered_candidates),
+        "action_candidate_cooldown_ticks": tuple(candidate.cooldown_ticks for _, candidate in ordered_candidates),
+        "max_occurrences": int(getattr(policy, "max_occurrences", 0)),
+        "max_burst_size": int(getattr(policy, "max_burst_size", 1)),
+    }
+
+
+def _runtime_refresh_dependencies(
+    scenario: InstantiatedScenario,
+    participant_addresses: tuple[str, ...],
+    action_refs: list[str],
+    objective_refs: tuple[str, ...],
+    target_addresses: tuple[str, ...],
+) -> tuple[str, ...]:
+    return (
+        *participant_addresses,
+        *tuple(
+            _action_contract_address(_section_ref_name(ref, "action_contracts", scenario.action_contracts))
+            for ref in action_refs
+        ),
+        *tuple(_objective_address(_section_ref_name(ref, "objectives", scenario.objectives)) for ref in objective_refs),
+        *target_addresses,
+    )
+
+
 def _compile_autonomous_execution(
     *,
     scenario: InstantiatedScenario,
@@ -186,38 +291,7 @@ def _compile_autonomous_execution(
         if profile in {"participant-autonomous-execution/v2", "participant-autonomous-execution/v3"}
         else list(policy.temporal_constraint_refs)
     )
-    addressable_ref_index = _runtime_addressable_ref_index(scenario)
-    execution_bindings_by_key: dict[tuple[str, tuple[str, ...]], ParticipantExecutionBindingRuntime] = {}
-    for action_ref in action_refs:
-        action_name = _section_ref_name(
-            action_ref,
-            "action_contracts",
-            scenario.action_contracts,
-        )
-        action = scenario.action_contracts[action_name]
-        target_refs = [
-            *(str(ref) for effect in action.effects for ref in effect.target_refs),
-            *(str(ref) for precondition in action.preconditions for ref in precondition.support_refs),
-        ]
-        action_contract_address = _action_contract_address(action_name)
-        target_addresses = _runtime_addresses_for_refs(
-            list(dict.fromkeys(target_refs)),
-            addressable_ref_index=addressable_ref_index,
-        )
-        execution_bindings_by_key.setdefault(
-            (action_contract_address, target_addresses),
-            ParticipantExecutionBindingRuntime(
-                action_contract_address=action_contract_address,
-                target_addresses=target_addresses,
-                participant_implementation_ref=policy.participant_implementation_ref,
-                max_action_attempts=policy.max_action_attempts,
-                max_in_flight=policy.max_in_flight,
-            ),
-        )
-    execution_bindings = tuple(execution_bindings_by_key.values())
-    target_addresses = tuple(
-        dict.fromkeys(target for binding in execution_bindings for target in binding.target_addresses)
-    )
+    execution_bindings, target_addresses = _compiled_execution_bindings(scenario, policy, action_refs)
     resource_owners, resource_demands, resource_fairness = _compiled_resource_budget(
         scenario,
         policy,
@@ -239,14 +313,7 @@ def _compile_autonomous_execution(
                 scenario.time_progression_policies,
             ),
         ),
-        temporal_constraint_addresses=tuple(
-            _address(
-                "time",
-                "constraint",
-                _section_ref_name(ref, "temporal_constraints", scenario.temporal_constraints),
-            )
-            for ref in temporal_constraint_refs
-        ),
+        temporal_constraint_addresses=_temporal_constraint_addresses(scenario, temporal_constraint_refs),
         action_contract_addresses=tuple(
             _action_contract_address(_section_ref_name(ref, "action_contracts", scenario.action_contracts))
             for ref in action_refs
@@ -272,54 +339,23 @@ def _compile_autonomous_execution(
         proof_producer_refs=tuple(authority.proof_producer_refs),
         score_authority_refs=tuple(authority.score_authority_refs),
         receipt_authority_refs=tuple(authority.receipt_authority_refs),
-        profile=profile,
-        work_window_addresses=tuple(
-            _address(
-                "time",
-                "constraint",
-                _section_ref_name(ref, "temporal_constraints", scenario.temporal_constraints),
-            )
-            for ref in work_window_refs
+        **_activity_runtime_fields(
+            scenario,
+            policy,
+            profile=profile,
+            work_window_refs=work_window_refs,
+            pause_window_refs=pause_window_refs,
+            ordered_candidates=ordered_candidates,
         ),
-        pause_window_addresses=tuple(
-            _address(
-                "time",
-                "constraint",
-                _section_ref_name(ref, "temporal_constraints", scenario.temporal_constraints),
-            )
-            for ref in pause_window_refs
-        ),
-        stochastic_control_ref=str(getattr(policy, "stochastic_control_ref", "")),
-        timing_minimum_ticks=int(getattr(getattr(policy, "timing", None), "minimum_ticks", 0)),
-        timing_maximum_ticks=int(getattr(getattr(policy, "timing", None), "maximum_ticks", 0)),
-        outside_window_disposition=str(getattr(policy, "outside_window_disposition", "")),
-        empty_eligible_disposition=str(getattr(policy, "empty_eligible_disposition", "")),
-        action_candidate_ids=tuple(str(candidate_id) for candidate_id, _ in ordered_candidates),
-        action_candidate_weights=tuple(candidate.weight for _, candidate in ordered_candidates),
-        action_candidate_dependencies=tuple(
-            tuple(str(ref) for ref in candidate.depends_on) for _, candidate in ordered_candidates
-        ),
-        action_candidate_retry_failure_classes=tuple(
-            tuple(value.value for value in candidate.retryable_failure_classes) for _, candidate in ordered_candidates
-        ),
-        action_candidate_max_retries=tuple(candidate.max_retries for _, candidate in ordered_candidates),
-        action_candidate_cooldown_ticks=tuple(candidate.cooldown_ticks for _, candidate in ordered_candidates),
-        max_occurrences=int(getattr(policy, "max_occurrences", 0)),
-        max_burst_size=int(getattr(policy, "max_burst_size", 1)),
         resource_owners=resource_owners,
         resource_demands=resource_demands,
         resource_fairness=resource_fairness,
-        refresh_dependencies=(
-            *participant_addresses,
-            *tuple(
-                _action_contract_address(_section_ref_name(ref, "action_contracts", scenario.action_contracts))
-                for ref in action_refs
-            ),
-            *tuple(
-                _objective_address(_section_ref_name(ref, "objectives", scenario.objectives))
-                for ref in authority.objective_refs
-            ),
-            *target_addresses,
+        refresh_dependencies=_runtime_refresh_dependencies(
+            scenario,
+            participant_addresses,
+            action_refs,
+            tuple(authority.objective_refs),
+            target_addresses,
         ),
         spec=_dump(policy),
     )
