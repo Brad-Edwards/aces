@@ -8,6 +8,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 PRs do **not** edit this file directly. release-please maintains it from the
 Conventional Commit history on `main` (#684).
 
+## [2.0.0](https://github.com/RAESystem/rae/compare/v1.1.0...v2.0.0) (2026-07-27)
+
+
+### ⚠ BREAKING CHANGES
+
+* define exact-cut participant decision surfaces
+
+### Features
+
+* add autonomous participant activity policy ([b1ab49f](https://github.com/RAESystem/rae/commit/b1ab49fcc774aee8632770ea4457bd970d121d9f))
+* add participant crossing policy contracts ([94fd223](https://github.com/RAESystem/rae/commit/94fd223a5e14e38ddb5a0d14b0f7623575cccd88))
+* add scoped participant resource budgets ([6d194db](https://github.com/RAESystem/rae/commit/6d194db9a3b3d55a7eb6b3bac96d07b7d7f977e1))
+* add supervisory participant lifecycle ([bdd8c43](https://github.com/RAESystem/rae/commit/bdd8c43351ca9e04f42e24b52209ba129e1edd47))
+* **contracts:** define authoritative experiment bindings ([957155f](https://github.com/RAESystem/rae/commit/957155f13cc5eecc06481483bf89604a08e6173a))
+* declare participant policy capabilities ([4694ada](https://github.com/RAESystem/rae/commit/4694adafae755900cfb7ce89cfa3dc0c001e58ac))
+* define exact-cut participant decision surfaces ([ecac57d](https://github.com/RAESystem/rae/commit/ecac57dd5331ea9e80ee010ee6fcce403102f269))
+* define portable artifact requirement satisfaction ([a439a99](https://github.com/RAESystem/rae/commit/a439a99ae3723dba827239f2284c567dea75aa39))
+* define portable artifact requirement satisfaction ([6cd4cef](https://github.com/RAESystem/rae/commit/6cd4cef7c693c8647cf2375143f149dae6b412c4))
+* **participant:** add portable execution lifecycle control ([d8937cb](https://github.com/RAESystem/rae/commit/d8937cbf7e92356ca8678bb6a01ff88baa050531))
+* **participant:** add portable execution lifecycle control ([4fcc205](https://github.com/RAESystem/rae/commit/4fcc205c0e910e43c6ca728e7e32fa5751613036))
+
+
+### Bug Fixes
+
+* correct scheduler lint errors ([848de13](https://github.com/RAESystem/rae/commit/848de13dc3385239299e8200306989657c0a55ca))
+* **participant:** reconcile execution contracts with RAES cutover ([6ea3457](https://github.com/RAESystem/rae/commit/6ea34570c75d2f739eae219e45bab1cefef8aa35))
+* preserve activity draw call semantics ([2f71517](https://github.com/RAESystem/rae/commit/2f7151702e0ab2446cb4ffdbfc477b9602fc040c))
+* record canonical schema publication hashes ([66a86f2](https://github.com/RAESystem/rae/commit/66a86f24181976ceb5b1d6b7d9d02a1cd0fca5ae))
+* reduce participant behavior complexity ([13b2375](https://github.com/RAESystem/rae/commit/13b23753ecc46da686151a3eb587e18254926257))
+* reduce remaining Sonar complexity for PR 932 ([530a6b1](https://github.com/RAESystem/rae/commit/530a6b18ce5b5c9f9d2ef69e0e8121196d038362))
+* refresh ADR index identity pin ([e73800a](https://github.com/RAESystem/rae/commit/e73800a30ec5827b27a4d86758a27772c814dbf3))
+* refresh ADR-097 content pin ([03783c5](https://github.com/RAESystem/rae/commit/03783c5455b329eebd9e7ed4b29175e6cf13414f))
+* resolve Sonar quality gate findings ([3248d68](https://github.com/RAESystem/rae/commit/3248d68faef300ad69f79d70745024bf74e35f11))
+* resolve Sonar quality gate findings ([298937b](https://github.com/RAESystem/rae/commit/298937bd2817cfa402c4de269ea11f5e976f9baf))
+* restore contracts facade source-size compliance ([932a447](https://github.com/RAESystem/rae/commit/932a447a9ed7f804f325a3025266642e128c0ae0))
+* restore Ground Control project binding ([e40274e](https://github.com/RAESystem/rae/commit/e40274e41e2bae82e0c98d8b84afd1a933e65033))
+* restore Ground Control project binding ([9b2f0dc](https://github.com/RAESystem/rae/commit/9b2f0dcf18c87585efc43848812382e3a62a6937))
+* split scheduler helper modules ([18c9ab5](https://github.com/RAESystem/rae/commit/18c9ab54abab8c66f33d7582b6209c02496296fc))
+
+
+### Documentation
+
+* clarify RAES ecosystem naming boundaries ([469c93f](https://github.com/RAESystem/rae/commit/469c93fefe5a0372721662623399e7b2ff12ddf2))
+* establish reader-first public documentation ([b11bc5d](https://github.com/RAESystem/rae/commit/b11bc5da8cec2d8a898a6a964c21d7bf3b4a6993))
+* fix ADR-097 specification reference ([6390f4e](https://github.com/RAESystem/rae/commit/6390f4e4e994224be3f5e81947071e0f5fa188b9))
+* integrate decision surface v2 references ([717ae89](https://github.com/RAESystem/rae/commit/717ae8978867e4ef4ac9fc7824d4cbea43f0210d))
+
 ## [1.1.0](https://github.com/RAESystem/rae/compare/v1.0.0...v1.1.0) (2026-07-26)
 
 
