@@ -236,6 +236,33 @@ def test_retired_identity_pattern_matches_the_identity_cutover_gate() -> None:
         assert text_matches == byte_matches, sample
 
 
+def test_cli_checks_commit_messages_file(tmp_path: Path) -> None:
+    """Squash uses COMMIT_MESSAGES, so commit footers are the changelog-bound text."""
+    messages = tmp_path / "commits.txt"
+    messages.write_text(
+        f"fix: something\n\nBREAKING CHANGE: {_RETIRED_LOWER}-invariants is removed.\n",
+        encoding="utf-8",
+    )
+
+    assert main(["--title", "fix: a clean title", "--commit-messages-file", str(messages)]) == 1
+
+
+def test_cli_commit_messages_prose_is_allowed(tmp_path: Path) -> None:
+    messages = tmp_path / "commits.txt"
+    messages.write_text(
+        f"fix: something\n\nExplains the move away from {_RETIRED_UPPER} naming.\n",
+        encoding="utf-8",
+    )
+
+    assert main(["--title", "fix: a clean title", "--commit-messages-file", str(messages)]) == 0
+
+
+def test_cli_unreadable_commit_messages_file_fails_closed(tmp_path: Path) -> None:
+    missing = tmp_path / "absent.txt"
+
+    assert main(["--title", "fix: a clean title", "--commit-messages-file", str(missing)]) == 2
+
+
 def test_body_is_optional() -> None:
     assert validate_pr_title("fix: a clean title") == []
     assert validate_pr_title("fix: a clean title", None) == []

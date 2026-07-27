@@ -21,9 +21,15 @@ Policy:
     footer becomes a changelog entry. ``check_identity_cutover`` holds the
     generated head of ``CHANGELOG.md`` to zero retired identity occurrences,
     so without this rule a retired name in a title surfaces as a red release
-    PR days later instead of on the PR that introduced it. The PR *body* is
-    otherwise unchecked: discussing the retired name is legitimate, and only
-    the title and breaking-change footers reach the changelog.
+    PR days later instead of on the PR that introduced it.
+
+    This repository squashes with ``squash_merge_commit_title=PR_TITLE`` and
+    ``squash_merge_commit_message=COMMIT_MESSAGES``, so the changelog-bound
+    text is the PR title plus the *commit messages* -- not the PR body. The
+    workflow supplies the commit messages via ``--commit-messages-file``; the
+    PR body is checked too, so the rule still holds if that setting changes.
+    Prose outside a breaking-change footer is never checked: discussing the
+    retired name is legitimate and does not reach the changelog.
 
 Security: the PR title is untrusted GitHub event data. The CLI reads it from
 ``$GITHUB_EVENT_PATH`` (parsed as JSON) or the ``PR_TITLE`` env var, never from
@@ -153,10 +159,10 @@ def _retired_identity_violations(title: str, body: str | None) -> list[TitleViol
         violations.append(
             TitleViolation(
                 RULE_RETIRED_IDENTITY,
-                "PR body BREAKING CHANGE footer must not contain retired "
-                f"project naming ({found}); release-please copies breaking-"
-                "change footers into CHANGELOG.md. Prose elsewhere in the body "
-                "is not checked.",
+                "BREAKING CHANGE footer must not contain retired project "
+                f"naming ({found}); release-please copies breaking-change "
+                "footers from the squashed commit messages into CHANGELOG.md. "
+                "Prose outside a footer is not checked.",
             )
         )
         break
@@ -289,6 +295,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         help="PR body to validate alongside --title (local/testing only).",
     )
     parser.add_argument(
+        "--commit-messages-file",
+        default=None,
+        help=(
+            "Path to a file holding the PR's commit messages. This repository "
+            "squashes with squash_merge_commit_message=COMMIT_MESSAGES, so "
+            "those messages -- not the PR body -- become the squash commit "
+            "body release-please reads for BREAKING CHANGE footers."
+        ),
+    )
+    parser.add_argument(
         "--event-path",
         default=None,
         help="Path to the GitHub event JSON (defaults to $GITHUB_EVENT_PATH).",
@@ -296,6 +312,19 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     title, body = _resolve_title(args)
+    if args.commit_messages_file:
+        try:
+            with open(args.commit_messages_file, encoding="utf-8") as handle:
+                commit_messages = handle.read()
+        except OSError as exc:
+            # Fail closed: the caller asked for commit messages to be checked.
+            print(
+                f"pr-title-guard: could not read commit messages from {args.commit_messages_file}: {exc}",
+                file=sys.stderr,
+            )
+            return 2
+        body = f"{body}\n\n{commit_messages}" if body else commit_messages
+
     if title is None:
         # Fail closed: a pull_request event should always carry a title.
         print(
