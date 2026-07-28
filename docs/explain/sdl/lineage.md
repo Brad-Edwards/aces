@@ -1134,6 +1134,32 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   participant-internal-reasoning claim. The lineage ledger and source audit
   remain unchanged because RUN-310 adds no normative derivation or
   compatibility claim.
+- RUN-319 composes the existing SEM-230/ADR-085 and ADR-095 information-flow
+  semantics with API-423 crossing facts, API-407 feature-strength resolution,
+  RUN-310 authenticated participant/controller binding and atomic control
+  storage, SEM-211 admission, and SEM-226 exposure decisions. The exact runtime
+  mapping is the closed `ParticipantCrossingIntent`, a trusted exact-cut
+  `ParticipantCrossingPolicyResolver`, separate controller and audience
+  bindings on `ControlPlaneIdentity`, deny-first independent API-423 gates,
+  `RuntimeSnapshot.participant_crossing_history`, and
+  `ControlPlaneStore.commit_participant_transition()`. Configured action and
+  supervisory-control ingress cannot dispatch around the shared crossing
+  mediator; transformed ingress receives a new typed subject and a fresh full
+  admission decision.
+- RUN-319 delivery evidence is the evolved
+  `participant-crossing-occurrence-v1` exact-cut policy reference, the
+  `runtime-snapshot-v1` crossing-history carrier and publication entries, the
+  in-memory and local-store atomic restart/replay implementation, and
+  `implementations/python/tests/test_run_319_participant_flow_policy.py`.
+  The reference backend keeps its six participant-policy features
+  `unsupported`; stronger behavior is exercised only with explicit test
+  manifests and evidence. This does not claim a new policy engine, participant
+  gateway or endpoint family, backend-native enforcement, delivery or
+  observation from a decision alone, multi-process CAS, distributed
+  linearizability, universal noninterference, refinement, simulation,
+  bisimulation, epistemic equivalence, or proof. No normative external
+  derivation or compatibility claim changes, so the lineage ledger and source
+  audit remain unchanged.
 - CALDERA adversary-emulation research informs the action semantics: cyber
   actions can change foothold, knowledge, observations, detection surface, and
   downstream outcomes under uncertainty.

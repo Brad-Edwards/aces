@@ -27,6 +27,18 @@ class ParticipantControlSubjectBinding:
 
 
 @dataclass(frozen=True)
+class ParticipantAudienceSubjectBinding:
+    """One authenticated principal-to-participant/audience binding."""
+
+    participant_address: str
+    audience_scope_ref: str
+
+    def __post_init__(self) -> None:
+        if not self.participant_address or not self.audience_scope_ref:
+            raise ValueError("participant audience subject binding fields must be non-empty")
+
+
+@dataclass(frozen=True)
 class ControlPlaneIdentity:
     """Authenticated control-plane principal."""
 
@@ -34,6 +46,7 @@ class ControlPlaneIdentity:
     roles: frozenset[ControlPlaneRole] = field(default_factory=frozenset)
     target_name: str | None = None
     participant_control_subjects: tuple[ParticipantControlSubjectBinding, ...] = ()
+    participant_audience_subjects: tuple[ParticipantAudienceSubjectBinding, ...] = ()
 
 
 @dataclass(frozen=True)

@@ -3,16 +3,19 @@
 from __future__ import annotations
 
 from textwrap import dedent
+from types import SimpleNamespace
 from typing import Any
 
 from raes_backend_protocols.manifest import backend_manifest_payload
 from raes_contracts.diagnostics import Diagnostic
+from raes_contracts.manifest_authority import PARTICIPANT_RUNTIME_POLICY_FEATURES
 from raes_contracts.participant_episode import (
     ParticipantEpisodeTerminalReason,
     iter_participant_episode_snapshot_violations,
 )
 from raes_contracts.planning import ProvisioningPlan, RuntimeDomain
-from raes_contracts.runtime_state import RuntimeSnapshotEnvelope
+from raes_contracts.runtime_state import RuntimeSnapshot, RuntimeSnapshotEnvelope
+from raes_contracts.vocabulary import ParticipantFeatureSupportLevel
 from raes_processor.reference import ScenarioInput, run_reference_processor
 from raes_runtime.control_plane import RuntimeControlPlane
 from raes_runtime.registry import RuntimeTarget
@@ -85,6 +88,46 @@ _DEFAULT_CONFORMANCE_SCENARIO = dedent(
           finish: {type: end}
     """
 )
+
+
+class _UnavailableConformanceCrossingPolicyResolver:
+    """Explicitly fail closed if an unrelated adapter probe reaches crossing policy."""
+
+    def resolve(
+        self,
+        intent: object,
+        snapshot: RuntimeSnapshot,
+    ) -> object:
+        del intent, snapshot
+        raise ValueError("target adapter conformance does not supply a crossing policy")
+
+    def validation_context(
+        self,
+        snapshot: RuntimeSnapshot,
+        participant_address: str,
+    ) -> object:
+        del snapshot, participant_address
+        return SimpleNamespace(
+            known_subjects=(),
+            policies=(),
+            known_evidence_refs=frozenset(),
+            known_authority_basis_refs=frozenset(),
+        )
+
+
+def _conformance_crossing_policy_resolver(
+    target: RuntimeTarget,
+) -> _UnavailableConformanceCrossingPolicyResolver | None:
+    capabilities = target.manifest.participant_runtime
+    if capabilities is None:
+        return None
+    if any(
+        declaration.feature in PARTICIPANT_RUNTIME_POLICY_FEATURES
+        and declaration.support_level != ParticipantFeatureSupportLevel.UNSUPPORTED
+        for declaration in capabilities.feature_support
+    ):
+        return _UnavailableConformanceCrossingPolicyResolver()
+    return None
 
 
 def _participant_snapshot_consistency_case(
@@ -420,6 +463,7 @@ def _target_adapter_cases(
     control_plane = RuntimeControlPlane(
         target,
         initial_snapshot=_participant_execution_probe_snapshot(target),
+        crossing_policy_resolver=_conformance_crossing_policy_resolver(target),
     )
     cases.append(_provisioning_probe_case(control_plane, execution_plan.provisioning))
     if known != BackendCapabilityProfile.PROVISIONING_ONLY:

@@ -10,10 +10,16 @@ from raes_contracts.contracts import (
     ParticipantHistoryViewModel,
     ParticipantStatusViewModel,
 )
+from raes_contracts.contracts.participant_crossing import (
+    ParticipantCrossingInteractionKind,
+    ParticipantCrossingSubjectKind,
+)
 from raes_contracts.planning import RuntimeDomain
 from raes_contracts.runtime_state import OperationState, RuntimeSnapshot
 
 from .control_plane_store import ControlPlaneOperationRecord
+from .participant_crossing_egress import serialize_participant_view
+from .participant_crossing_mediation import ParticipantCrossingEvidence
 
 _CURRENT_SNAPSHOT_REF = "runtime.snapshot.current"
 
@@ -24,12 +30,19 @@ class ParticipantRetrievalMixin:
     _snapshot: RuntimeSnapshot
     _operations: dict[str, ControlPlaneOperationRecord]
 
-    def get_participant_status_view(self, participant_address: str) -> ParticipantStatusViewModel | None:
+    def get_participant_status_view(
+        self,
+        participant_address: str,
+        *,
+        identity: object | None = None,
+        crossing_evidence: ParticipantCrossingEvidence | None = None,
+        idempotency_key: str = "",
+    ) -> ParticipantStatusViewModel | None:
         if not _participant_exists(self._snapshot, participant_address):
             return None
         episode_state = self._snapshot.participant_episode_results.get(participant_address)
         episode_id = _string_value(episode_state, "episode_id") if episode_state is not None else None
-        return ParticipantStatusViewModel.model_validate(
+        view = ParticipantStatusViewModel.model_validate(
             {
                 "view_id": _view_id("status", participant_address, episode_id),
                 "participant_address": participant_address,
@@ -43,11 +56,31 @@ class ParticipantRetrievalMixin:
                 "redaction_policy_ref": None,
             }
         )
+        if getattr(self, "_crossing_policy_resolver", None) is None:
+            if crossing_evidence is not None:
+                raise ValueError("participant crossing policy resolver is required")
+            return view
+        return serialize_participant_view(
+            self,
+            view,
+            participant_address=participant_address,
+            episode_id=_required_episode_id(episode_id),
+            subject_kind=ParticipantCrossingSubjectKind.PARTICIPANT_STATUS_VIEW,
+            interaction_kind=ParticipantCrossingInteractionKind.STATUS_PROJECTION,
+            projection_ref=view.visibility_projection_ref,
+            identity=identity,
+            crossing_evidence=crossing_evidence,
+            idempotency_key=idempotency_key,
+        )
 
     def get_participant_history_view(
         self,
         participant_address: str,
         episode_id: str,
+        *,
+        identity: object | None = None,
+        crossing_evidence: ParticipantCrossingEvidence | None = None,
+        idempotency_key: str = "",
     ) -> ParticipantHistoryViewModel | None:
         if not _participant_episode_exists(self._snapshot, participant_address, episode_id):
             return None
@@ -61,7 +94,7 @@ class ParticipantRetrievalMixin:
             for event in self._snapshot.participant_behavior_history.get(participant_address, [])
             if event.get("episode_id") == episode_id
         ]
-        return ParticipantHistoryViewModel.model_validate(
+        view = ParticipantHistoryViewModel.model_validate(
             {
                 "view_id": _view_id("history", participant_address, episode_id),
                 "participant_address": participant_address,
@@ -77,6 +110,22 @@ class ParticipantRetrievalMixin:
                 "marking_definition_refs": [],
             }
         )
+        if getattr(self, "_crossing_policy_resolver", None) is None:
+            if crossing_evidence is not None:
+                raise ValueError("participant crossing policy resolver is required")
+            return view
+        return serialize_participant_view(
+            self,
+            view,
+            participant_address=participant_address,
+            episode_id=episode_id,
+            subject_kind=ParticipantCrossingSubjectKind.PARTICIPANT_HISTORY_VIEW,
+            interaction_kind=ParticipantCrossingInteractionKind.HISTORY_PROJECTION,
+            projection_ref=view.visibility_projection_ref,
+            identity=identity,
+            crossing_evidence=crossing_evidence,
+            idempotency_key=idempotency_key,
+        )
 
     def get_participant_context_view(
         self,
@@ -87,6 +136,9 @@ class ParticipantRetrievalMixin:
         derivation_basis_ref: str | None = None,
         payload_ref: str | None = None,
         derived_from_refs: tuple[str, ...] = (),
+        identity: object | None = None,
+        crossing_evidence: ParticipantCrossingEvidence | None = None,
+        idempotency_key: str = "",
     ) -> ParticipantContextViewModel | None:
         if episode_id is not None:
             if not _participant_episode_exists(self._snapshot, participant_address, episode_id):
@@ -98,7 +150,7 @@ class ParticipantRetrievalMixin:
         source_id = "source-snapshot"
         resolved_observation_point = episode_id or _CURRENT_SNAPSHOT_REF
         resolved_derivation_basis_ref = derivation_basis_ref or view_ref
-        return ParticipantContextViewModel.model_validate(
+        view = ParticipantContextViewModel.model_validate(
             {
                 "view_id": _view_id("context", participant_address, episode_id or view_ref),
                 "participant_address": participant_address,
@@ -148,6 +200,26 @@ class ParticipantRetrievalMixin:
                 "redaction_policy_ref": None,
             }
         )
+        if getattr(self, "_crossing_policy_resolver", None) is None:
+            if crossing_evidence is not None:
+                raise ValueError("participant crossing policy resolver is required")
+            return view
+        resolved_episode_id = episode_id or _string_value(
+            self._snapshot.participant_episode_results.get(participant_address),
+            "episode_id",
+        )
+        return serialize_participant_view(
+            self,
+            view,
+            participant_address=participant_address,
+            episode_id=_required_episode_id(resolved_episode_id),
+            subject_kind=ParticipantCrossingSubjectKind.PARTICIPANT_CONTEXT_VIEW,
+            interaction_kind=ParticipantCrossingInteractionKind.DECISION_SURFACE_PROJECTION,
+            projection_ref=view.visibility_projection_ref,
+            identity=identity,
+            crossing_evidence=crossing_evidence,
+            idempotency_key=idempotency_key,
+        )
 
 
 def _string_value(payload: dict[str, object] | None, key: str) -> str | None:
@@ -155,6 +227,12 @@ def _string_value(payload: dict[str, object] | None, key: str) -> str | None:
         return None
     value = payload.get(key)
     return value if isinstance(value, str) and value else None
+
+
+def _required_episode_id(value: str | None) -> str:
+    if value is None:
+        raise ValueError("participant projection requires an exact episode identity")
+    return value
 
 
 def _utc_now() -> str:

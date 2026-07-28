@@ -44,7 +44,11 @@ from .participant_control_intents import (
     ParticipantOverrideControlIntent,
     ParticipantProposalControlIntent,
 )
-from .participant_control_mediation import record_participant_control
+from .participant_crossing_boundary import (
+    ParticipantCrossingControlIngressMixin,
+    ParticipantCrossingEvidence,
+    execute_action_ingress_crossing,
+)
 from .participant_decision_surface_control_v2 import ParticipantDecisionSurfaceV2ControlMixin
 from .participant_execution_control_boundary import backend_execution_control_method
 
@@ -211,26 +215,11 @@ def _participant_binding_request_diagnostics(
     return diagnostics
 
 
-class ParticipantControlMixin(ParticipantDecisionSurfaceV2ControlMixin):
+class ParticipantControlMixin(
+    ParticipantCrossingControlIngressMixin,
+    ParticipantDecisionSurfaceV2ControlMixin,
+):
     """Participant runtime methods for the shared runtime control plane."""
-
-    def record_participant_control(
-        self,
-        participant_address: str,
-        intent: ParticipantControlIntent,
-        *,
-        identity: object,
-        idempotency_key: str = "",
-    ) -> OperationReceipt:
-        """Mediate and durably append one supervisory control occurrence."""
-
-        return record_participant_control(
-            self,
-            participant_address=participant_address,
-            intent=intent,
-            identity=identity,
-            idempotency_key=idempotency_key,
-        )
 
     def control_participant_execution(
         self,
@@ -396,6 +385,8 @@ class ParticipantControlMixin(ParticipantDecisionSurfaceV2ControlMixin):
         *,
         idempotency_key: str = "",
         request_fingerprint: str = "",
+        identity: object | None = None,
+        crossing_evidence: ParticipantCrossingEvidence | None = None,
         **admission_fields: object,
     ) -> OperationReceipt:
         if self._target.participant_runtime is None:
@@ -418,6 +409,19 @@ class ParticipantControlMixin(ParticipantDecisionSurfaceV2ControlMixin):
                 request_fingerprint=request_fingerprint,
             )
         assert request is not None
+        if getattr(self, "_crossing_policy_resolver", None) is not None:
+            return execute_action_ingress_crossing(
+                self,
+                participant_behavior=participant_behavior,
+                request=request,
+                crossing_evidence=crossing_evidence,
+                identity=identity,
+                idempotency_key=idempotency_key,
+                method=self._target.participant_runtime.admit_action,
+                address=f"runtime.control-plane.participant.{request.participant_address}.admit-action",
+            )
+        if crossing_evidence is not None:
+            raise ValueError("participant crossing policy resolver is required")
         return execute_participant_action(
             self,
             method=self._target.participant_runtime.admit_action,
@@ -437,6 +441,8 @@ class ParticipantControlMixin(ParticipantDecisionSurfaceV2ControlMixin):
         resolvers: ParticipantDecisionSurfaceBindingResolvers,
         idempotency_key: str = "",
         request_fingerprint: str = "",
+        identity: object | None = None,
+        crossing_evidence: ParticipantCrossingEvidence | None = None,
     ) -> OperationReceipt:
         """Validate a SEM-220 selection before reusing normal action admission."""
 
@@ -469,6 +475,8 @@ class ParticipantControlMixin(ParticipantDecisionSurfaceV2ControlMixin):
             request,
             idempotency_key=idempotency_key,
             request_fingerprint=request_fingerprint,
+            identity=identity,
+            crossing_evidence=crossing_evidence,
         )
 
 

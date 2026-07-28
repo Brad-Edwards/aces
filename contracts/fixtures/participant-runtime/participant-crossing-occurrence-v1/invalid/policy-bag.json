@@ -43,6 +43,8 @@
       "policy_id": "participant-crossing-policy:red",
       "policy_revision": "revision-3",
       "policy_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "policy_decision_ref": "participant-crossing-policy-decision:red:episode-1:8",
+      "decision_cut_ref": "participant-policy-cut:red:episode-1:8",
       "effective_order": 8,
       "valid_from_order": 8,
       "valid_until_order": 20

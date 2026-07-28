@@ -1,0 +1,481 @@
+"""Operation-bound RUN-319 participant ingress mediation."""
+
+from __future__ import annotations
+
+import hashlib
+import json
+from collections.abc import Callable
+from dataclasses import asdict, replace
+
+from raes_contracts.contracts.participant_crossing import (
+    ParticipantCrossingDirection,
+    ParticipantCrossingInteractionKind,
+    ParticipantCrossingOperation,
+    ParticipantCrossingSubjectKind,
+    ParticipantCrossingSubjectReferenceModel,
+)
+from raes_contracts.participant_binding import ParticipantActionAdmissionRequest
+from raes_contracts.runtime_state import OperationReceipt, OperationState, OperationStatus
+from raes_processor.models import ParticipantBehaviorRuntime
+
+from .control_plane_execution import apply_authorized_participant_action
+from .control_plane_security import ControlPlaneIdentity
+from .control_plane_store import AuditEvent, ControlPlaneOperationRecord
+from .participant_control_intents import ParticipantControlIntent, ParticipantControlIntentBase
+from .participant_control_mediation import (
+    bind_participant_control_request,
+    prepare_participant_control_transition,
+    record_participant_control,
+)
+from .participant_crossing_mediation import (
+    ParticipantCrossingEvidence,
+    ParticipantCrossingIntent,
+    PreparedParticipantCrossing,
+    commit_prepared_crossing,
+    prepare_participant_crossing,
+)
+from .participant_crossing_records import _expected_history_heads
+
+_CONTROL_INTERACTIONS = {
+    "proposal": ParticipantCrossingInteractionKind.ACTION_PROPOSAL,
+    "approval": ParticipantCrossingInteractionKind.APPROVAL,
+    "denial": ParticipantCrossingInteractionKind.DENIAL,
+    "external-direction": ParticipantCrossingInteractionKind.EXTERNAL_DIRECTION,
+    "intervention": ParticipantCrossingInteractionKind.INTERVENTION,
+    "handoff": ParticipantCrossingInteractionKind.HANDOFF,
+    "override": ParticipantCrossingInteractionKind.OVERRIDE,
+    "cancellation": ParticipantCrossingInteractionKind.CANCELLATION,
+}
+
+
+class ParticipantCrossingControlIngressMixin:
+    """Own one RUN-319 decision and RUN-310 transition under one state cut."""
+
+    def record_participant_control(
+        self,
+        participant_address: str,
+        intent: ParticipantControlIntent,
+        *,
+        identity: object,
+        idempotency_key: str = "",
+        crossing_evidence: ParticipantCrossingEvidence | None = None,
+    ) -> OperationReceipt:
+        if getattr(self, "_crossing_policy_resolver", None) is None:
+            if crossing_evidence is not None:
+                raise ValueError("participant crossing policy resolver is required")
+            return record_participant_control(
+                self,
+                participant_address=participant_address,
+                intent=intent,
+                identity=identity,
+                idempotency_key=idempotency_key,
+            )
+        if crossing_evidence is None:
+            raise ValueError("configured participant ingress requires crossing evidence")
+        if not isinstance(identity, ControlPlaneIdentity):
+            raise PermissionError("participant control requires an authenticated identity")
+        with self._participant_control_lock:
+            bound = bind_participant_control_request(
+                self,
+                participant_address,
+                intent,
+                identity,
+                idempotency_key,
+            )
+            canonical = _control_crossing_intent(
+                participant_address,
+                intent,
+                crossing_evidence,
+                controller_ref=bound.state.controller_address,
+                authority_basis_refs=tuple(bound.state.authority_basis_addresses or bound.state.authority_basis_refs),
+                effective_order=bound.transition.effective_order,
+            )
+            crossing = prepare_participant_crossing(
+                self,
+                canonical,
+                identity=identity,
+                idempotency_key=idempotency_key,
+                incumbent_carrier=intent,
+            )
+            if crossing.existing_receipt is not None:
+                return crossing.existing_receipt
+            if not crossing.record.receipt.accepted:
+                return commit_prepared_crossing(self, crossing)
+
+            governed_intent = _governed_control_intent(self, crossing, intent)
+            governed_bound = bind_participant_control_request(
+                self,
+                participant_address,
+                governed_intent,
+                identity,
+                idempotency_key,
+            )
+            _require_governed_subject(
+                crossing,
+                _control_subject(participant_address, governed_intent),
+            )
+            transition = prepare_participant_control_transition(
+                self,
+                participant_address,
+                governed_intent,
+                identity,
+                governed_bound,
+            )
+            next_snapshot = transition.next_snapshot.with_entries(
+                dict(transition.next_snapshot.entries),
+                participant_crossing_history=crossing.next_snapshot.participant_crossing_history,
+            )
+            record = replace(
+                transition.record,
+                request_fingerprint=crossing.record.request_fingerprint,
+                idempotency_key=crossing.record.idempotency_key,
+                decision_history_heads=crossing.record.decision_history_heads,
+                result_history_heads=_expected_history_heads(next_snapshot, participant_address),
+            )
+            audit = _combined_audit(
+                transition.audit_event,
+                crossing,
+                action="record_participant_control",
+                allowed=record.receipt.accepted,
+            )
+            self._store.commit_participant_transition(
+                expected_history_heads=crossing.expected_history_heads,
+                snapshot=next_snapshot,
+                record=record,
+                audit_event=audit,
+            )
+            self._snapshot = next_snapshot
+            self._operations[record.receipt.operation_id] = record
+            return record.receipt
+
+
+def execute_action_ingress_crossing(
+    control_plane: object,
+    *,
+    participant_behavior: ParticipantBehaviorRuntime,
+    request: ParticipantActionAdmissionRequest,
+    crossing_evidence: ParticipantCrossingEvidence | None,
+    identity: object,
+    idempotency_key: str,
+    method: Callable[..., object],
+    address: str,
+) -> OperationReceipt:
+    """Durably authorize, execute, and finalize one action admission."""
+
+    if crossing_evidence is None:
+        raise ValueError("configured participant ingress requires crossing evidence")
+    if not isinstance(identity, ControlPlaneIdentity):
+        raise PermissionError("participant crossing requires an authenticated identity")
+    with control_plane._participant_control_lock:
+        canonical = _action_crossing_intent(
+            control_plane,
+            participant_behavior,
+            request,
+            crossing_evidence,
+            identity,
+        )
+        crossing = prepare_participant_crossing(
+            control_plane,
+            canonical,
+            identity=identity,
+            idempotency_key=idempotency_key,
+            incumbent_carrier=request,
+        )
+        if crossing.existing_receipt is not None:
+            return crossing.existing_receipt
+        if not crossing.record.receipt.accepted:
+            return commit_prepared_crossing(control_plane, crossing)
+
+        governed_request = _governed_action_request(control_plane, crossing, request)
+        _require_action_binding(participant_behavior, governed_request)
+        _require_governed_subject(crossing, _action_subject(control_plane, governed_request))
+        authorization_record = replace(
+            crossing.record,
+            status=replace(crossing.record.status, state=OperationState.RUNNING),
+        )
+        authorization_audit = _combined_audit(
+            crossing.audit_event,
+            crossing,
+            action="authorize_participant_action",
+            allowed=True,
+            reason="authorized",
+        )
+        control_plane._store.commit_participant_transition(
+            expected_history_heads=crossing.expected_history_heads,
+            snapshot=crossing.next_snapshot,
+            record=authorization_record,
+            audit_event=authorization_audit,
+        )
+        control_plane._snapshot = crossing.next_snapshot
+        control_plane._operations[authorization_record.receipt.operation_id] = authorization_record
+
+        result = apply_authorized_participant_action(
+            method=method,
+            request=governed_request,
+            snapshot=control_plane._snapshot,
+            address=address,
+        )
+        next_snapshot = result.snapshot.with_entries(
+            dict(result.snapshot.entries),
+            participant_crossing_history=crossing.next_snapshot.participant_crossing_history,
+        )
+        record = replace(
+            _action_operation_record(crossing, result),
+            result_history_heads=_expected_history_heads(next_snapshot, request.participant_address),
+        )
+        audit = _combined_audit(
+            crossing.audit_event,
+            crossing,
+            action="admit_participant_action",
+            allowed=result.success,
+            reason="accepted" if result.success else "backend-admission-failed",
+        )
+        control_plane._store.commit_participant_transition(
+            expected_history_heads=crossing.record.result_history_heads,
+            snapshot=next_snapshot,
+            record=record,
+            audit_event=audit,
+        )
+        control_plane._snapshot = next_snapshot
+        control_plane._operations[record.receipt.operation_id] = record
+        return record.receipt
+
+
+def _control_crossing_intent(
+    participant_address: str,
+    control_intent: ParticipantControlIntent,
+    evidence: ParticipantCrossingEvidence,
+    *,
+    controller_ref: str,
+    authority_basis_refs: tuple[str, ...],
+    effective_order: int,
+) -> ParticipantCrossingIntent:
+    return ParticipantCrossingIntent.model_validate(
+        {
+            **evidence.model_dump(mode="json"),
+            "participant_address": participant_address,
+            "episode_id": control_intent.episode_id,
+            "direction": ParticipantCrossingDirection.INGRESS,
+            "interaction_kind": _CONTROL_INTERACTIONS[control_intent.kind],
+            "subject": _control_subject(participant_address, control_intent),
+            "controller_ref": controller_ref,
+            "authority_basis_refs": list(authority_basis_refs),
+            "requested_operation": ParticipantCrossingOperation.ADMISSION,
+            "action_or_projection_ref": _control_operation_ref(participant_address, control_intent),
+            "effective_order": effective_order,
+            "order_model": "logical_clock",
+        },
+    )
+
+
+def _action_crossing_intent(
+    control_plane: object,
+    behavior: ParticipantBehaviorRuntime,
+    request: ParticipantActionAdmissionRequest,
+    evidence: ParticipantCrossingEvidence,
+    identity: ControlPlaneIdentity,
+) -> ParticipantCrossingIntent:
+    episode_id = _action_episode_id(control_plane, request)
+    controller_refs = {
+        binding.controller_ref
+        for binding in identity.participant_control_subjects
+        if binding.participant_address == request.participant_address
+    }
+    if len(controller_refs) > 1:
+        raise PermissionError("participant action requires one exact controller binding")
+    controller_ref = next(iter(controller_refs), "runtime.unbound-participant-controller")
+    interaction = (
+        ParticipantCrossingInteractionKind.CANDIDATE_SELECTION
+        if request.validated_selection is not None
+        else ParticipantCrossingInteractionKind.ACTION_PROPOSAL
+    )
+    authority_basis_refs = tuple(behavior.authority_anchor_addresses or behavior.authority_anchor_refs)
+    if not authority_basis_refs:
+        raise ValueError("participant action crossing requires compiled authority anchors")
+    return ParticipantCrossingIntent.model_validate(
+        {
+            **evidence.model_dump(mode="json"),
+            "participant_address": request.participant_address,
+            "episode_id": episode_id,
+            "direction": ParticipantCrossingDirection.INGRESS,
+            "interaction_kind": interaction,
+            "subject": _action_subject(control_plane, request),
+            "controller_ref": controller_ref,
+            "authority_basis_refs": list(authority_basis_refs),
+            "requested_operation": ParticipantCrossingOperation.ADMISSION,
+            "action_or_projection_ref": request.action_contract_address,
+            "effective_order": _next_effective_order(control_plane, request.participant_address),
+            "order_model": "logical_clock",
+        },
+    )
+
+
+def _control_subject(
+    participant_address: str,
+    intent: ParticipantControlIntent,
+) -> ParticipantCrossingSubjectReferenceModel:
+    payload = intent.model_dump(mode="json")
+    return ParticipantCrossingSubjectReferenceModel(
+        subject_kind=ParticipantCrossingSubjectKind.PARTICIPANT_CONTROL_OCCURRENCE,
+        contract_id="participant-control-intent-v1",
+        subject_ref=f"participant-control-intent:{participant_address}:{intent.client_correlation_id}",
+        subject_digest=_digest(payload),
+        participant_address=participant_address,
+        episode_id=intent.episode_id,
+    )
+
+
+def _action_subject(
+    control_plane: object,
+    request: ParticipantActionAdmissionRequest,
+) -> ParticipantCrossingSubjectReferenceModel:
+    episode_id = _action_episode_id(control_plane, request)
+    return ParticipantCrossingSubjectReferenceModel(
+        subject_kind=ParticipantCrossingSubjectKind.PARTICIPANT_ACTION_ADMISSION,
+        contract_id="participant-action-admission-v1",
+        subject_ref=(
+            f"participant-action-admission:{request.participant_address}:{episode_id}:{request.action_instance_id}"
+        ),
+        subject_digest=_digest(asdict(request)),
+        participant_address=request.participant_address,
+        episode_id=episode_id,
+    )
+
+
+def _action_episode_id(control_plane: object, request: ParticipantActionAdmissionRequest) -> str:
+    if request.action_result is not None:
+        return request.action_result.episode_id
+    state = control_plane._snapshot.participant_episode_results.get(request.participant_address, {})
+    value = state.get("episode_id")
+    if not isinstance(value, str) or not value:
+        raise ValueError("participant action crossing requires an active episode identity")
+    return value
+
+
+def _control_operation_ref(participant_address: str, intent: ParticipantControlIntent) -> str:
+    if intent.kind == "proposal":
+        return intent.action_contract_ref
+    return _control_subject(participant_address, intent).subject_ref
+
+
+def _next_effective_order(control_plane: object, participant_address: str) -> int:
+    histories = (
+        control_plane._snapshot.participant_behavior_history,
+        control_plane._snapshot.participant_control_history,
+        control_plane._snapshot.participant_crossing_history,
+    )
+    return sum(len(history.get(participant_address, ())) for history in histories) + 1
+
+
+def _digest(payload: object) -> str:
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode()
+    return f"sha256:{hashlib.sha256(encoded).hexdigest()}"
+
+
+def _governed_control_intent(
+    control_plane: object,
+    crossing: PreparedParticipantCrossing,
+    incumbent: ParticipantControlIntent,
+) -> ParticipantControlIntent:
+    if crossing.governed_subject == crossing.intent.subject:
+        return incumbent
+    transformer = getattr(control_plane._crossing_policy_resolver, "transform_ingress", None)
+    if not callable(transformer):
+        raise ValueError("transformed participant ingress requires a trusted carrier transformer")
+    governed = transformer(crossing.intent, crossing.governed_subject, incumbent)
+    if not isinstance(governed, ParticipantControlIntentBase):
+        raise ValueError("participant control transformation returned an invalid governed carrier")
+    return governed
+
+
+def _governed_action_request(
+    control_plane: object,
+    crossing: PreparedParticipantCrossing,
+    incumbent: ParticipantActionAdmissionRequest,
+) -> ParticipantActionAdmissionRequest:
+    if crossing.governed_subject == crossing.intent.subject:
+        return incumbent
+    transformer = getattr(control_plane._crossing_policy_resolver, "transform_ingress", None)
+    if not callable(transformer):
+        raise ValueError("transformed participant ingress requires a trusted carrier transformer")
+    governed = transformer(crossing.intent, crossing.governed_subject, incumbent)
+    if not isinstance(governed, ParticipantActionAdmissionRequest):
+        raise ValueError("participant action transformation returned an invalid governed carrier")
+    return governed
+
+
+def _require_governed_subject(
+    crossing: PreparedParticipantCrossing,
+    actual: ParticipantCrossingSubjectReferenceModel,
+) -> None:
+    if actual != crossing.governed_subject:
+        raise ValueError("trusted transformation result does not match the governed carrier identity")
+
+
+def _require_action_binding(
+    behavior: ParticipantBehaviorRuntime,
+    request: ParticipantActionAdmissionRequest,
+) -> None:
+    if request.participant_address != behavior.address:
+        raise ValueError("governed action participant does not match the compiled behavior")
+    if request.action_contract_address not in behavior.action_contract_addresses:
+        raise ValueError("governed action is not declared by the compiled participant behavior")
+    if request.observation_boundary_address not in behavior.observation_boundary_addresses:
+        raise ValueError("governed observation boundary is not declared by the compiled participant behavior")
+
+
+def _action_operation_record(
+    crossing: PreparedParticipantCrossing,
+    result: object,
+) -> ControlPlaneOperationRecord:
+    diagnostics = list(result.diagnostics)
+    receipt = replace(
+        crossing.record.receipt,
+        accepted=bool(result.success),
+        diagnostics=diagnostics,
+    )
+    status = OperationStatus(
+        operation_id=receipt.operation_id,
+        domain=receipt.domain,
+        state=OperationState.SUCCEEDED if result.success else OperationState.FAILED,
+        submitted_at=receipt.submitted_at,
+        updated_at=crossing.audit_event.timestamp,
+        diagnostics=diagnostics,
+        changed_addresses=list(result.changed_addresses),
+    )
+    return replace(crossing.record, receipt=receipt, status=status)
+
+
+def _combined_audit(
+    base: AuditEvent,
+    crossing: PreparedParticipantCrossing,
+    *,
+    action: str,
+    allowed: bool,
+    reason: str | None = None,
+) -> AuditEvent:
+    decision = crossing.decision
+    details = dict(base.details)
+    if decision is not None:
+        details.update(
+            {
+                "crossing_decision_id": decision.occurrence.decision_id,
+                "crossing_decision_cut_ref": decision.occurrence.policy.decision_cut_ref,
+                "crossing_disposition": decision.occurrence.disposition.value,
+            }
+        )
+    return replace(
+        base,
+        action=action,
+        allowed=allowed,
+        reason=reason or base.reason,
+        details=details,
+    )
+
+
+__all__ = (
+    "ParticipantCrossingControlIngressMixin",
+    "ParticipantCrossingEvidence",
+    "ParticipantCrossingIntent",
+    "execute_action_ingress_crossing",
+)

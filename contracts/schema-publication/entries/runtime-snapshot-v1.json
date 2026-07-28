@@ -2,9 +2,9 @@
   "contract_id": "runtime-snapshot-v1",
   "schema_path": "contracts/schemas/snapshots/runtime-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "42201288da8990fe0214a5f02fb53de7d2500dca86f42663ffbddd6823f03ffa",
+  "content_hash": "e6b06f8859f4343fd77803f5c92ffdae2c7d163137ee5348fa4ab914f1e927c2",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "42201288da8990fe0214a5f02fb53de7d2500dca86f42663ffbddd6823f03ffa"
+    "summary": "Added first-class append-only participant crossing history for RUN-319 enforcement evidence under #799, retaining the repository-owned schema namespace.",
+    "content_hash": "e6b06f8859f4343fd77803f5c92ffdae2c7d163137ee5348fa4ab914f1e927c2"
   }
 }
