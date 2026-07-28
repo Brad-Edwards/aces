@@ -1055,10 +1055,20 @@
       "additionalProperties": false,
       "description": "Exact revision and order interval for the policy used at a crossing.",
       "properties": {
+        "decision_cut_ref": {
+          "minLength": 1,
+          "title": "Decision Cut Ref",
+          "type": "string"
+        },
         "effective_order": {
           "minimum": 0,
           "title": "Effective Order",
           "type": "integer"
+        },
+        "policy_decision_ref": {
+          "minLength": 1,
+          "title": "Policy Decision Ref",
+          "type": "string"
         },
         "policy_digest": {
           "minLength": 1,
@@ -1091,6 +1101,8 @@
         "policy_id",
         "policy_revision",
         "policy_digest",
+        "policy_decision_ref",
+        "decision_cut_ref",
         "effective_order",
         "valid_from_order",
         "valid_until_order"

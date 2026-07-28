@@ -2,9 +2,9 @@
   "contract_id": "participant-crossing-occurrence-v1",
   "schema_path": "contracts/schemas/participant-runtime/participant-crossing-occurrence-v1.json",
   "stability": "draft",
-  "content_hash": "61b5963daceb11e2fe21d47d4c174db1bbfbdfafa3cd96fe263c4f0c4a88d7ff",
+  "content_hash": "ee1e52f8a680dd74d409adff6d8a28832774c83c4338e02ef505d4b64b3deffb",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "61b5963daceb11e2fe21d47d4c174db1bbfbdfafa3cd96fe263c4f0c4a88d7ff"
+    "summary": "Added exact policy-decision and participant-state-cut references required for RUN-319 policy resolution under #799, retaining the repository-owned schema namespace.",
+    "content_hash": "ee1e52f8a680dd74d409adff6d8a28832774c83c4338e02ef505d4b64b3deffb"
   }
 }

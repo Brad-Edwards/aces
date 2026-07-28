@@ -9,14 +9,12 @@ from typing import TYPE_CHECKING, Any, Protocol
 from raes_contracts.artifact_requirements import ArtifactSatisfactionDisclosureModel
 from raes_contracts.contracts import RealizationEnvelopeIdentityModel
 from raes_contracts.contracts.time_model import TimeRuntimeStateModel
-from raes_contracts.diagnostics import Diagnostic, Severity
 from raes_contracts.participant_autonomous_state import require_participant_autonomous_runtime_snapshot
 from raes_contracts.planning import RuntimeDomain
 from raes_contracts.runtime_state import (
     ExplicitnessClass,
     ExplicitnessProvenance,
     OperationReceipt,
-    OperationState,
     OperationStatus,
     RealizationProvenanceEntry,
     RuntimeSnapshot,
@@ -50,6 +48,9 @@ class ControlPlaneOperationRecord:
     status: OperationStatus
     request_fingerprint: str = ""
     idempotency_key: str = ""
+    result_payload: dict[str, Any] | None = None
+    decision_history_heads: dict[str, str | None] = field(default_factory=dict)
+    result_history_heads: dict[str, str | None] = field(default_factory=dict)
 
 
 class ControlPlaneStore(Protocol):
@@ -82,6 +83,15 @@ class ControlPlaneStore(Protocol):
         audit_event: AuditEvent,
     ) -> None: ...
 
+    def commit_participant_transition(
+        self,
+        *,
+        expected_history_heads: dict[str, str | None],
+        snapshot: RuntimeSnapshot,
+        record: ControlPlaneOperationRecord,
+        audit_event: AuditEvent,
+    ) -> None: ...
+
 
 def _control_history_head(snapshot: RuntimeSnapshot, participant_address: str) -> str | None:
     events = snapshot.participant_control_history.get(participant_address, ())
@@ -98,6 +108,32 @@ def _require_expected_control_head(
 ) -> None:
     if _control_history_head(snapshot, participant_address) != expected_head:
         raise ValueError("expected control history head does not match durable state")
+
+
+def _participant_history_head(snapshot: RuntimeSnapshot, history_key: str) -> str | None:
+    history_name, separator, participant_address = history_key.partition(":")
+    histories = {
+        "participant_behavior_history": snapshot.participant_behavior_history,
+        "participant_control_history": snapshot.participant_control_history,
+        "participant_crossing_history": snapshot.participant_crossing_history,
+    }
+    history = histories.get(history_name)
+    if not separator or not participant_address or history is None:
+        raise ValueError("participant transition history key is not supported")
+    events = history.get(participant_address, ())
+    if not events:
+        return None
+    event_id = events[-1].get("event_id")
+    return event_id if isinstance(event_id, str) and event_id else None
+
+
+def _require_expected_history_heads(
+    snapshot: RuntimeSnapshot,
+    expected_history_heads: dict[str, str | None],
+) -> None:
+    for history_key, expected_head in expected_history_heads.items():
+        if _participant_history_head(snapshot, history_key) != expected_head:
+            raise ValueError("expected participant history head does not match durable state")
 
 
 def _snapshot_payload(snapshot: RuntimeSnapshot) -> dict[str, Any]:
@@ -133,6 +169,10 @@ def _snapshot_payload(snapshot: RuntimeSnapshot) -> dict[str, Any]:
         "participant_control_history": {
             participant_address: list(events)
             for participant_address, events in snapshot.participant_control_history.items()
+        },
+        "participant_crossing_history": {
+            participant_address: list(events)
+            for participant_address, events in snapshot.participant_crossing_history.items()
         },
         "participant_autonomous_execution_states": dict(snapshot.participant_autonomous_execution_states),
         "participant_execution_services": dict(snapshot.participant_execution_services),
@@ -209,6 +249,10 @@ def _snapshot_from_payload(payload: dict[str, Any]) -> RuntimeSnapshot:
             participant_address: list(events)
             for participant_address, events in payload.get("participant_control_history", {}).items()
         },
+        participant_crossing_history={
+            participant_address: list(events)
+            for participant_address, events in payload.get("participant_crossing_history", {}).items()
+        },
         participant_autonomous_execution_states=dict(payload.get("participant_autonomous_execution_states", {})),
         participant_execution_services=dict(payload.get("participant_execution_services", {})),
         participant_resource_budget_states=dict(payload.get("participant_resource_budget_states", {})),
@@ -254,99 +298,6 @@ def _snapshot_from_payload(payload: dict[str, Any]) -> RuntimeSnapshot:
     )
     require_participant_autonomous_runtime_snapshot(snapshot)
     return snapshot
-
-
-def _diagnostics_payload(diagnostics: list[Diagnostic]) -> list[dict[str, Any]]:
-    return [
-        {
-            "code": diagnostic.code,
-            "domain": diagnostic.domain,
-            "address": diagnostic.address,
-            "message": diagnostic.message,
-            "severity": diagnostic.severity.value,
-        }
-        for diagnostic in diagnostics
-    ]
-
-
-def _diagnostics_from_payload(payload: list[dict[str, Any]]) -> list[Diagnostic]:
-    return [
-        Diagnostic(
-            code=str(item.get("code", "runtime.control-plane")),
-            domain=str(item.get("domain", "runtime")),
-            address=str(item.get("address", "runtime.control-plane")),
-            message=str(item.get("message", "")),
-            severity=Severity(str(item.get("severity", "error"))),
-        )
-        for item in payload
-    ]
-
-
-def _record_payload(record: ControlPlaneOperationRecord) -> dict[str, Any]:
-    return {
-        "receipt": {
-            "schema_version": record.receipt.schema_version,
-            "operation_id": record.receipt.operation_id,
-            "domain": record.receipt.domain.value,
-            "submitted_at": record.receipt.submitted_at,
-            "accepted": record.receipt.accepted,
-            "diagnostics": _diagnostics_payload(record.receipt.diagnostics),
-        },
-        "status": {
-            "schema_version": record.status.schema_version,
-            "operation_id": record.status.operation_id,
-            "domain": record.status.domain.value,
-            "state": record.status.state.value,
-            "submitted_at": record.status.submitted_at,
-            "updated_at": record.status.updated_at,
-            "diagnostics": _diagnostics_payload(record.status.diagnostics),
-            "changed_addresses": list(record.status.changed_addresses),
-        },
-        "request_fingerprint": record.request_fingerprint,
-        "idempotency_key": record.idempotency_key,
-    }
-
-
-def _record_from_payload(payload: dict[str, Any]) -> ControlPlaneOperationRecord:
-    receipt_payload = dict(payload.get("receipt", {}))
-    status_payload = dict(payload.get("status", {}))
-    receipt = OperationReceipt(
-        schema_version=str(receipt_payload.get("schema_version", "runtime-operation/v1")),
-        operation_id=str(receipt_payload.get("operation_id", "")),
-        domain=RuntimeDomain(str(receipt_payload.get("domain", "provisioning"))),
-        submitted_at=str(receipt_payload.get("submitted_at", "")),
-        accepted=bool(receipt_payload.get("accepted", False)),
-        diagnostics=_diagnostics_from_payload(list(receipt_payload.get("diagnostics", []))),
-    )
-    status = OperationStatus(
-        schema_version=str(status_payload.get("schema_version", "runtime-operation/v1")),
-        operation_id=str(status_payload.get("operation_id", "")),
-        domain=RuntimeDomain(str(status_payload.get("domain", "provisioning"))),
-        state=OperationState(str(status_payload.get("state", "accepted"))),
-        submitted_at=str(status_payload.get("submitted_at", "")),
-        updated_at=str(status_payload.get("updated_at", "")),
-        diagnostics=_diagnostics_from_payload(list(status_payload.get("diagnostics", []))),
-        changed_addresses=list(status_payload.get("changed_addresses", [])),
-    )
-    return ControlPlaneOperationRecord(
-        receipt=receipt,
-        status=status,
-        request_fingerprint=str(payload.get("request_fingerprint", "")),
-        idempotency_key=str(payload.get("idempotency_key", "")),
-    )
-
-
-def _audit_event_from_payload(payload: dict[str, Any]) -> AuditEvent:
-    return AuditEvent(
-        timestamp=str(payload.get("timestamp", "")),
-        action=str(payload.get("action", "")),
-        identity=str(payload.get("identity", "")),
-        allowed=bool(payload.get("allowed", False)),
-        target=str(payload.get("target", "")),
-        operation_id=str(payload.get("operation_id", "")),
-        reason=str(payload.get("reason", "")),
-        details=dict(payload.get("details", {})),
-    )
 
 
 class InMemoryControlPlaneStore:
@@ -398,6 +349,24 @@ class InMemoryControlPlaneStore:
         audit_event: AuditEvent,
     ) -> None:
         _require_expected_control_head(self._snapshot, participant_address, expected_head)
+        self.commit_participant_transition(
+            expected_history_heads={
+                f"participant_control_history:{participant_address}": expected_head,
+            },
+            snapshot=snapshot,
+            record=record,
+            audit_event=audit_event,
+        )
+
+    def commit_participant_transition(
+        self,
+        *,
+        expected_history_heads: dict[str, str | None],
+        snapshot: RuntimeSnapshot,
+        record: ControlPlaneOperationRecord,
+        audit_event: AuditEvent,
+    ) -> None:
+        _require_expected_history_heads(self._snapshot, expected_history_heads)
         require_participant_autonomous_runtime_snapshot(snapshot)
         records = {**self._records, record.receipt.operation_id: record}
         idempotency = dict(self._idempotency)
