@@ -1673,7 +1673,7 @@ and order-relative label projection, independent control and information-flow
 operations, dynamic purge and declassification semantics, and the exact
 baseline `policy-noninterference` obligation.
 
-The relation is bound through taxonomy revision `rev3` rather than a local
+The relation is bound through taxonomy revision `rev4` rather than a local
 registry. Its current assurance is definition-complete and bounded-tested but
 deliberately unproved. The test-local model can falsify finite cases; it is not
 runtime mediation, backend realization, or a universal information-flow proof.

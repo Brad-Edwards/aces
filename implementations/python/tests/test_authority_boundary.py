@@ -730,6 +730,17 @@ def test_dotfiles_and_hidden_dirs_are_not_unclassified(tmp_path: Path) -> None:
     )
 
 
+def test_ignored_build_dir_is_not_unclassified(tmp_path: Path) -> None:
+    seeded = _seed_repo(tmp_path)
+    measurement = seeded / "build" / "gc-measurement"
+    measurement.mkdir(parents=True)
+    (measurement / "attempt.marker").write_text("", encoding="utf-8")
+    failures = evaluate_authority_boundary(seeded)
+    assert not _flagged(failures, "authority-boundary-unclassified-top-level"), (
+        f"ignored operational build output must not be flagged; got: {[failure.render() for failure in failures]}"
+    )
+
+
 def test_schema_outside_normative_root_is_flagged(tmp_path: Path) -> None:
     seeded = _seed_repo(
         tmp_path,

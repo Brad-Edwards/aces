@@ -1085,9 +1085,10 @@ def _check_unclassified_top_level(
             # authority artifacts; don't fail the gate on them.
             continue
         name = child.name
-        if name.startswith(".") or name == "__pycache__":
+        if name.startswith(".") or name in _PRUNE_DIR_NAMES:
             # Hidden directories (.github, .codex, .gc, .pytest_cache, etc.)
-            # and Python bytecode caches are operational, not authority-bearing.
+            # and ignored build/cache directories are operational, not
+            # authority-bearing.
             continue
         if name in classified:
             continue

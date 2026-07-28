@@ -12,17 +12,18 @@ weaker observation from being reported as a stronger behavioral result.
 The machine-readable authority is
 `contracts/concept-authority/behavioral-relations-v1.json`, contract
 `behavioral-relations/v1`, taxonomy `raes-behavioral-relations`, revision
-`rev3`. Relation identifiers, formal dimensions, claim-surface defaults,
+`rev4`. Relation identifiers, formal dimensions, claim-surface defaults,
 bibliography coordinates, assurance status, and worked transition systems are
 normative there. ADR-081 and ADR-095 govern the architecture. This document is the
 normative reader-facing formalization of that catalog.
 
-Revision `rev3` makes SEM-230 `policy-noninterference` reactive over adaptive
-low participant strategies and exact state cuts, and adds
-`io-alternating-refinement` for actionable backend participant semantics. The
-JSON contract remains `behavioral-relations/v1` because its closed shape is
-unchanged. Revisions `rev1` and `rev2` are historical taxonomy identities;
-current in-repository producers bind `rev3`.
+Revision `rev4` adds `bounded-but-for-necessity` for finite, matched,
+intervention-backed counterfactual comparison. Revision `rev3` made SEM-230
+`policy-noninterference` reactive over adaptive low participant strategies and
+exact state cuts, and added `io-alternating-refinement` for actionable backend
+participant semantics. The JSON contract remains `behavioral-relations/v1`
+because its closed shape is unchanged. Revisions `rev1` through `rev3` are
+historical taxonomy identities; current in-repository producers bind `rev4`.
 
 The taxonomy defines claim vocabulary and proof obligations. It does not add a
 model checker, theorem prover, stochastic simulator, game solver, scheduler,
@@ -71,6 +72,7 @@ identifier rather than an artifact-local synonym.
 | `capability-declaration` | predicate | What an apparatus declares, without proving that declaration true. |
 | `profile-satisfaction` | predicate | Satisfaction of every obligation in one named profile. |
 | `bounded-probe-success` | predicate | Expected results for an enumerated finite case set. |
+| `bounded-but-for-necessity` | empirical | A finite matched baseline/intervention pair supports a named candidate as necessary for a named outcome under one binary criterion. |
 | `canonical-artifact-identity` | predicate | Equality of canonical bytes or digest under one canonicalization profile. |
 | `realization-envelope-membership` | set relation | A request lies inside one backend realization envelope. |
 | `realization-envelope-subsumption` | set relation | Every request admitted by one envelope is admitted by another. |
@@ -175,7 +177,7 @@ universal soundness obligation is projection-bound `trace-inclusion`.
 Actionable participant interaction also requires declared input/output
 ownership and action-availability obligations, represented by
 `io-alternating-refinement`; trace inclusion alone permits refusal of required
-inputs. Both remain deliberately unproved in revision `rev3`. Current
+inputs. Both remain deliberately unproved in revision `rev4`. Current
 conformance reports establish only `bounded-probe-success` for named fixture
 and target-probe cases. Provisioning success, snapshots, witnesses, and
 negative probes do not establish reverse inclusion, equivalence, simulation,
@@ -222,7 +224,24 @@ provide structural and finite evidence only. A future strategic claim MUST use
 availability, opponent quantification, information sets, schedulers, objectives,
 and preserved abilities. A probabilistic claim MUST use
 `probabilistic-bisimulation` and supply the probability kernel and equivalence
-classes. Neither relation is implemented or proved in revision `rev3`.
+classes. Neither relation is implemented or proved in revision `rev4`.
+
+### Counterfactual necessity validation
+
+The ASR-513 claim surface uses `bounded-but-for-necessity` only for one exact
+candidate and outcome, one immutable baseline/intervention-world pair, one
+typed and verified intervention, one revisioned binary criterion, and one
+declared matching policy. A supported comparison requires baseline truth,
+counterfactual falsehood, admitted per-world evidence, no undeclared semantic
+difference, and independently verified reset and cleanup. Both-worlds-true
+refutes the finite claim. Baseline false, unknown or unsupported truth,
+unverified or collateral intervention, incomparable worlds, and residual state
+cannot support it.
+
+The comparison is finite empirical evidence. It does not establish actual,
+sufficient, probabilistic, or universal causation; replay, temporal order,
+correlation, shared seeds, or a failed execution are not substitutes for its
+gates.
 
 ### Independent adequacy studies
 
@@ -269,13 +288,15 @@ visible trace can weakly match while strong bisimulation fails. Neither finite
 case proves `io-alternating-refinement`; each can falsify an incorrect
 implication used in a backend claim.
 
-## Assurance Boundary For Revision 3
+## Assurance Boundary For Revision 4
 
 Implemented and tested now:
 
 - structural and semantic validity;
 - capability declarations and profile satisfaction;
 - bounded conformance probes;
+- bounded binary but-for necessity comparison over admitted truth, intervention,
+  matching, reset, and cleanup evidence;
 - canonical artifact identity;
 - realization-envelope membership and subsumption; and
 - participant projection machinery and bounded projected-history comparisons;
@@ -307,7 +328,7 @@ artifacts:
 
 The catalog records the complete title, authors, publication year and venue,
 edition/version, and immutable DOI, ISBN, or primary publication URL for each
-source. Revision `rev3`
+source. Revision `rev4`
 uses, among others:
 
 - Milner, *A Calculus of Communicating Systems* (1980),
@@ -339,7 +360,9 @@ uses, among others:
 - Clarkson and Schneider, “Hyperproperties” (2010), *Journal of Computer
   Security* 18(6), 1157-1210; and
 - Bohannon, Pierce, Sjöberg, Weirich, and Zdancewic, “Reactive
-  Noninterference” (2009), DOI `10.1145/1653662.1653673`.
+  Noninterference” (2009), DOI `10.1145/1653662.1653673`; and
+- Halpern and Pearl, “Causes and Explanations: A Structural-Model Approach.
+  Part I: Causes” (2005), DOI `10.1093/bjps/axi147`.
 
 Bibliographic prose here is an aid. The machine-readable catalog is the
 revision-pinned identity surface.
