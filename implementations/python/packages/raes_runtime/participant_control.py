@@ -44,9 +44,13 @@ from .participant_control_intents import (
     ParticipantOverrideControlIntent,
     ParticipantProposalControlIntent,
 )
-from .participant_control_mediation import record_participant_control
+from .participant_crossing_boundary import (
+    ParticipantCrossingControlIngressMixin,
+    ParticipantCrossingEvidence,
+)
 from .participant_decision_surface_control_v2 import ParticipantDecisionSurfaceV2ControlMixin
 from .participant_execution_control_boundary import backend_execution_control_method
+from .participant_submission_options import ParticipantSubmissionOptions, submit_bound_participant_action
 
 
 def _participant_binding_diagnostics(
@@ -211,26 +215,11 @@ def _participant_binding_request_diagnostics(
     return diagnostics
 
 
-class ParticipantControlMixin(ParticipantDecisionSurfaceV2ControlMixin):
+class ParticipantControlMixin(
+    ParticipantCrossingControlIngressMixin,
+    ParticipantDecisionSurfaceV2ControlMixin,
+):
     """Participant runtime methods for the shared runtime control plane."""
-
-    def record_participant_control(
-        self,
-        participant_address: str,
-        intent: ParticipantControlIntent,
-        *,
-        identity: object,
-        idempotency_key: str = "",
-    ) -> OperationReceipt:
-        """Mediate and durably append one supervisory control occurrence."""
-
-        return record_participant_control(
-            self,
-            participant_address=participant_address,
-            intent=intent,
-            identity=identity,
-            idempotency_key=idempotency_key,
-        )
 
     def control_participant_execution(
         self,
@@ -396,6 +385,8 @@ class ParticipantControlMixin(ParticipantDecisionSurfaceV2ControlMixin):
         *,
         idempotency_key: str = "",
         request_fingerprint: str = "",
+        identity: object | None = None,
+        crossing_evidence: ParticipantCrossingEvidence | None = None,
         **admission_fields: object,
     ) -> OperationReceipt:
         if self._target.participant_runtime is None:
@@ -418,14 +409,13 @@ class ParticipantControlMixin(ParticipantDecisionSurfaceV2ControlMixin):
                 request_fingerprint=request_fingerprint,
             )
         assert request is not None
-        return execute_participant_action(
-            self,
-            method=self._target.participant_runtime.admit_action,
-            request=request,
-            address=f"runtime.control-plane.participant.{request.participant_address}.admit-action",
+        options = ParticipantSubmissionOptions(
             idempotency_key=idempotency_key,
             request_fingerprint=request_fingerprint,
+            identity=identity,
+            crossing_evidence=crossing_evidence,
         )
+        return submit_bound_participant_action(self, participant_behavior, request, options)
 
     def admit_participant_decision_surface_selection(
         self,
@@ -435,17 +425,17 @@ class ParticipantControlMixin(ParticipantDecisionSurfaceV2ControlMixin):
         selection: ParticipantDecisionSurfaceSelectionModel,
         admission_request: ParticipantActionAdmissionRequest,
         resolvers: ParticipantDecisionSurfaceBindingResolvers,
-        idempotency_key: str = "",
-        request_fingerprint: str = "",
+        **submission_options: object,
     ) -> OperationReceipt:
         """Validate a SEM-220 selection before reusing normal action admission."""
 
+        options = ParticipantSubmissionOptions.from_fields(submission_options)
         if self._target.participant_runtime is None:
             return self._reject_submission(
                 domain=RuntimeDomain.PARTICIPANT,
                 message=_NO_PARTICIPANT_RUNTIME_MESSAGE,
-                idempotency_key=idempotency_key,
-                request_fingerprint=request_fingerprint,
+                idempotency_key=options.idempotency_key,
+                request_fingerprint=options.request_fingerprint,
             )
         try:
             request = bind_participant_decision_surface_selection(
@@ -461,14 +451,16 @@ class ParticipantControlMixin(ParticipantDecisionSurfaceV2ControlMixin):
                 diagnostics=[
                     _participant_binding_diagnostic(_participant_binding_address(participant_behavior), str(exc))
                 ],
-                idempotency_key=idempotency_key,
-                request_fingerprint=request_fingerprint,
+                idempotency_key=options.idempotency_key,
+                request_fingerprint=options.request_fingerprint,
             )
         return self.admit_participant_action(
             participant_behavior,
             request,
-            idempotency_key=idempotency_key,
-            request_fingerprint=request_fingerprint,
+            idempotency_key=options.idempotency_key,
+            request_fingerprint=options.request_fingerprint,
+            identity=options.identity,
+            crossing_evidence=options.crossing_evidence,
         )
 
 

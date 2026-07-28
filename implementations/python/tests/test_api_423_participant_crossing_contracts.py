@@ -62,6 +62,8 @@ def _policy() -> dict[str, object]:
         "policy_id": "participant-crossing-policy:red",
         "policy_revision": "revision-3",
         "policy_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "policy_decision_ref": "participant-crossing-policy-decision:red:episode-1:8",
+        "decision_cut_ref": "participant-policy-cut:red:episode-1:8",
         "effective_order": 8,
         "valid_from_order": 8,
         "valid_until_order": 20,
@@ -229,6 +231,24 @@ def test_crossing_request_is_a_closed_participant_runtime_fact() -> None:
     assert record.occurrence.stage == "requested"
     assert record.participant_address == "participants.red.operator"
     assert record.occurrence.subject.subject_ref == "control-occurrence.proposal.1"
+    assert record.occurrence.policy.policy_decision_ref == "participant-crossing-policy-decision:red:episode-1:8"
+    assert record.occurrence.policy.decision_cut_ref == "participant-policy-cut:red:episode-1:8"
+
+
+def test_crossing_policy_requires_an_exact_policy_decision_identity() -> None:
+    policy = _policy()
+    del policy["policy_decision_ref"]
+
+    with pytest.raises(ValidationError, match="policy_decision_ref"):
+        ParticipantCrossingPolicyReferenceModel.model_validate(policy)
+
+
+def test_crossing_policy_requires_an_exact_decision_cut() -> None:
+    policy = _policy()
+    del policy["decision_cut_ref"]
+
+    with pytest.raises(ValidationError, match="decision_cut_ref"):
+        ParticipantCrossingPolicyReferenceModel.model_validate(policy)
 
 
 def test_crossing_request_rejects_payload_policy_and_secret_bags() -> None:
