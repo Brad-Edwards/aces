@@ -362,8 +362,9 @@ def test_serialized_key_order_does_not_change_plan_identity() -> None:
 
 def test_entry_run_id_must_differ_from_plan_id() -> None:
     entry = _entry(entry_id="entry-a", run_id="plan-a", provenance_plan_id="plan-a")
+    cleanup = {"cleanup-a": _cleanup_plan("cleanup-a", "entry-a", "plan-a")}
     with pytest.raises(ValidationError, match="plan_id must be distinct from every entry run_id"):
-        _plan(entries={"entry-a": entry}, cleanup_plans={"cleanup-a": _cleanup_plan("cleanup-a", "entry-a", "plan-a")})
+        _plan(entries={"entry-a": entry}, cleanup_plans=cleanup)
 
 
 def test_entry_run_id_must_differ_from_plan_entry_id() -> None:
@@ -404,18 +405,21 @@ def test_entries_must_have_unique_logical_coordinates() -> None:
 
 
 def test_stochastic_draw_must_resolve_to_a_control_with_executable_binding() -> None:
+    controls = {"control-a": _control(executable=False)}
     with pytest.raises(ValidationError, match="executable binding"):
-        _plan(stochastic_controls={"control-a": _control(executable=False)})
+        _plan(stochastic_controls=controls)
 
 
 def test_stochastic_draw_control_must_be_declared() -> None:
+    controls = {"other-control": _control("other-control")}
     with pytest.raises(ValidationError, match="does not resolve to a plan control"):
-        _plan(stochastic_controls={"other-control": _control("other-control")})
+        _plan(stochastic_controls=controls)
 
 
 def test_cleanup_reference_must_bind_same_entry_and_run() -> None:
+    cleanup = {"cleanup-a": _cleanup_plan("cleanup-a", "entry-a", "run-other")}
     with pytest.raises(ValidationError, match="same plan_entry_id and run_id"):
-        _plan(cleanup_plans={"cleanup-a": _cleanup_plan("cleanup-a", "entry-a", "run-other")})
+        _plan(cleanup_plans=cleanup)
 
 
 def test_cleanup_plans_must_not_be_orphaned() -> None:
@@ -438,8 +442,9 @@ def test_isolation_proof_entries_must_resolve() -> None:
 
 
 def test_admission_entry_count_must_match_entries() -> None:
+    admission = AdmittedTrialPlanAdmissionModel(admitted_at_stage="admitted-sealed", entry_count=5)
     with pytest.raises(ValidationError, match="entry_count must equal the number of admitted entries"):
-        _plan(admission=AdmittedTrialPlanAdmissionModel(admitted_at_stage="admitted-sealed", entry_count=5))
+        _plan(admission=admission)
 
 
 # --- integrity / tamper-evidence ---------------------------------------------
@@ -503,12 +508,9 @@ def test_parallel_isolation_rejects_shared_resources() -> None:
         "cleanup-a": _cleanup_plan("cleanup-a", "entry-a", "run-a", resource="a"),
         "cleanup-b": _cleanup_plan("cleanup-b", "entry-b", "run-b", resource="a"),
     }
+    proof = _parallel_proof(["entry-a", "entry-b"])
     with pytest.raises(ValidationError, match="parallel entries that share resources"):
-        _plan(
-            entries=entries,
-            cleanup_plans=shared_resource_cleanup,
-            isolation_proof=_parallel_proof(["entry-a", "entry-b"]),
-        )
+        _plan(entries=entries, cleanup_plans=shared_resource_cleanup, isolation_proof=proof)
 
 
 def test_parallel_isolation_accepts_disjoint_resources() -> None:
@@ -532,8 +534,9 @@ def test_parallel_isolation_accepts_disjoint_resources() -> None:
 def test_random_stream_profile_must_match_control_binding() -> None:
     # C2-F1: the plan-declared random-stream profile must not contradict the
     # executable control's profile_ref.
+    controls = {"control-a": _control(profile_ref_id="some-other-profile-v1")}
     with pytest.raises(ValidationError, match="must equal the plan random_stream_profile"):
-        _plan(stochastic_controls={"control-a": _control(profile_ref_id="some-other-profile-v1")})
+        _plan(stochastic_controls=controls)
 
 
 def test_binding_condition_must_match_entry_coordinate() -> None:
@@ -620,18 +623,21 @@ def test_cross_entry_run_id_plan_entry_id_collision() -> None:
 
 
 def test_provenance_plan_id_must_equal_plan_id() -> None:
+    entries = {"entry-a": _entry(provenance_plan_id="other-plan")}
     with pytest.raises(ValidationError, match="instantiation_provenance plan_id must equal the admitted plan_id"):
-        _plan(entries={"entry-a": _entry(provenance_plan_id="other-plan")})
+        _plan(entries=entries)
 
 
 def test_provenance_family_id_must_equal_pinned_family() -> None:
+    entries = {"entry-a": _entry(provenance_family_id="other-family")}
     with pytest.raises(ValidationError, match="scenario_family_id must equal the pinned family ref"):
-        _plan(entries={"entry-a": _entry(provenance_family_id="other-family")})
+        _plan(entries=entries)
 
 
 def test_dangling_cleanup_plan_ref_is_rejected() -> None:
+    entries = {"entry-a": _entry(cleanup_ref="ghost-cleanup")}
     with pytest.raises(ValidationError, match="does not resolve to a plan cleanup block"):
-        _plan(entries={"entry-a": _entry(cleanup_ref="ghost-cleanup")})
+        _plan(entries=entries)
 
 
 def test_stochastic_draw_namespace_must_match_control_binding() -> None:
@@ -673,12 +679,11 @@ def test_rejection_exhausted_draw_is_rejected() -> None:
 
 
 def test_entry_level_provenance_mismatch_is_rejected() -> None:
+    provenance = AdmittedInstantiationProvenanceModel(
+        plan_id="plan-a", plan_entry_id="mismatch", run_id="run-a", scenario_family_id="family-a"
+    )
     with pytest.raises(ValidationError, match="instantiation_provenance must match the entry plan_entry_id and run_id"):
-        _seal_entry(
-            instantiation_provenance=AdmittedInstantiationProvenanceModel(
-                plan_id="plan-a", plan_entry_id="mismatch", run_id="run-a", scenario_family_id="family-a"
-            )
-        )
+        _seal_entry(instantiation_provenance=provenance)
 
 
 @pytest.mark.parametrize(

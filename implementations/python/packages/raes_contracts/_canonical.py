@@ -10,18 +10,21 @@ chain both route through here, keeping RFC 8785 canonicalization and the
 from __future__ import annotations
 
 import hashlib
-from typing import Any
 
 import rfc8785
 
+#: A JSON value produced by ``model_dump(mode="json")`` — the only input these
+#: canonicalizers accept.
+JsonValue = str | int | float | bool | None | list["JsonValue"] | dict[str, "JsonValue"]
 
-def canonical_json_bytes(payload: Any) -> bytes:
+
+def canonical_json_bytes(payload: JsonValue) -> bytes:
     """Return the RFC 8785 (JCS) canonical byte encoding of a JSON-able payload."""
 
     return rfc8785.dumps(payload)
 
 
-def canonical_json_digest(payload: Any) -> str:
+def canonical_json_digest(payload: JsonValue) -> str:
     """Return the ``sha256:``-prefixed JCS SHA-256 digest of a JSON-able payload.
 
     The payload must already be JSON-compatible (e.g. ``model_dump(mode="json")``).

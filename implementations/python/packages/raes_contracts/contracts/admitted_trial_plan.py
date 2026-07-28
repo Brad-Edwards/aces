@@ -298,69 +298,38 @@ class AdmittedTrialPlanModel(ContractModel):
             json_schema,
             "admitted-trial-plan-identity-joins-and-integrity",
             "An admitted trial plan keeps map keys equal to embedded ids, keeps plan/entry/run identities distinct, "
-            "gives every entry a unique logical coordinate and archival run_id, resolves cleanup and stochastic-control "
-            "joins (with each draw addressed to its entry coordinate) and isolation-proof entries within the sealed "
-            "plan, requires values duplicated from incumbent authorities (random-stream profile, binding "
-            "condition/family) to agree, forbids bounded-parallel entries from sharing resources, matches admission "
-            "cardinality, and binds the complete plan with a recomputed plan_digest over the entry set.",
+            "gives every entry a unique logical coordinate and archival run_id, resolves cleanup and "
+            "stochastic-control joins (with each draw addressed to its entry coordinate) and isolation-proof entries "
+            "within the sealed plan, requires values duplicated from incumbent authorities (random-stream profile, "
+            "binding condition/family) to agree, forbids bounded-parallel entries from sharing resources, matches "
+            "admission cardinality, and binds the complete plan with a recomputed plan_digest over the entry set.",
             validator="raes_contracts.contracts.admitted_trial_plan.AdmittedTrialPlanModel._validate_plan",
             inputs=[{"contract_id": "admitted-trial-plan-v1", "instance_path": "#"}],
         )
         return json_schema
 
 
-def seal_admitted_trial_entry(
-    *,
-    plan_entry_id: str,
-    coordinate: TrialCoordinateModel,
-    run_id: str,
-    apparatus: AdmittedApparatusBindingModel,
-    execution_controls: AdmittedExecutionControlModel,
-    instantiation_provenance: AdmittedInstantiationProvenanceModel,
-    selections: list[AdmittedSelectionRecordModel] | None = None,
-    bindings: list[AdmittedBindingModel] | None = None,
-    stochastic_draws: list[RandomStreamDrawRecordModel] | None = None,
-) -> AdmittedTrialEntryModel:
-    """Return a validated entry whose ``entry_digest`` binds its own content."""
+def seal_admitted_trial_entry(**fields: object) -> AdmittedTrialEntryModel:
+    """Return a validated entry whose ``entry_digest`` binds its own content.
 
-    fields: dict[str, object] = {
-        "plan_entry_id": plan_entry_id,
-        "coordinate": coordinate,
-        "run_id": run_id,
-        "selections": selections or [],
-        "bindings": bindings or [],
-        "stochastic_draws": stochastic_draws or [],
-        "apparatus": apparatus,
-        "execution_controls": execution_controls,
-        "instantiation_provenance": instantiation_provenance,
-    }
+    Accepts every :class:`AdmittedTrialEntryModel` field except ``entry_digest``
+    (``plan_entry_id``, ``coordinate``, ``run_id``, ``apparatus``,
+    ``execution_controls``, ``instantiation_provenance``, and the optional
+    ``selections`` / ``bindings`` / ``stochastic_draws``). The closed model
+    validates required, unknown, and mistyped fields on construction.
+    """
+
     return _seal(AdmittedTrialEntryModel, "entry_digest", fields)  # type: ignore[return-value]
 
 
-def seal_admitted_trial_plan(
-    *,
-    plan_id: str,
-    profiles: AdmittedTrialPlanProfilesModel,
-    input_refs: AdmittedTrialPlanInputRefsModel,
-    cleanup_plans: dict[str, TrialCleanupPlanModel],
-    entries: dict[str, AdmittedTrialEntryModel],
-    admission: AdmittedTrialPlanAdmissionModel,
-    stochastic_controls: dict[str, ExperimentStochasticControlModel] | None = None,
-    isolation_proof: SchedulerIsolationProofModel | None = None,
-) -> AdmittedTrialPlanModel:
-    """Return a validated plan whose ``plan_digest`` binds the complete entry set."""
+def seal_admitted_trial_plan(**fields: object) -> AdmittedTrialPlanModel:
+    """Return a validated plan whose ``plan_digest`` binds the complete entry set.
 
-    fields: dict[str, object] = {
-        "schema_version": ADMITTED_TRIAL_PLAN_SCHEMA_VERSION,
-        "plan_id": plan_id,
-        "profiles": profiles,
-        "input_refs": input_refs,
-        "stochastic_controls": stochastic_controls or {},
-        "cleanup_plans": cleanup_plans,
-        "isolation_proof": isolation_proof,
-        "entries": entries,
-        "admission": admission,
-    }
+    Accepts every :class:`AdmittedTrialPlanModel` field except ``plan_digest``.
+    ``schema_version`` defaults to the contract version; the closed model
+    validates required, unknown, and mistyped fields on construction.
+    """
+
     return _seal(AdmittedTrialPlanModel, "plan_digest", fields)  # type: ignore[return-value]
 
 
