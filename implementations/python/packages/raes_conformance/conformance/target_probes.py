@@ -20,7 +20,11 @@ from raes_processor.reference import ScenarioInput, run_reference_processor
 from raes_runtime.control_plane import RuntimeControlPlane
 from raes_runtime.registry import RuntimeTarget
 
-from raes_conformance.conformance.diagnostics import _SEMANTIC_INVALID_DIAGNOSTIC_CODE, _diagnostic
+from raes_conformance.conformance.diagnostics import (
+    _SEMANTIC_INVALID_DIAGNOSTIC_CODE,
+    _diagnostic,
+    sanitized_failure_message,
+)
 from raes_conformance.conformance.participant_execution_probes import (
     _drive_participant_execution_probe,
     _participant_execution_probe_snapshot,
@@ -231,7 +235,7 @@ def _drive_participant_episode_probe(
                         _diagnostic(
                             "conformance.participant-runtime-failed",
                             f"runtime.control-plane.participant.{participant_address}",
-                            f"{case_name} raised {type(exc).__name__}: {exc}",
+                            f"{case_name} failed: {sanitized_failure_message(exc)}",
                         ),
                     ),
                 )

@@ -313,15 +313,21 @@ entries:
           model exists; #486 tracks the executable invariant oracle.
 
   - subsystem: participant-semantics
-    # SEM-230 adds an executable bounded policy model while runtime-wide typed
-    # contract coverage remains incomplete for the broader participant surface.
+    # SEM-230 adds an executable bounded policy model and ASR-535 adds bounded
+    # enforcement and backend-conformance falsification over it, while
+    # runtime-wide typed contract coverage remains incomplete for the broader
+    # participant surface. ASR-535 makes no model-check or proof claim.
     delivered_artifacts:
       - kind: invariant_list
         path: specs/formal/participant-semantics/README.md
       - kind: unit_tests
         path: implementations/python/tests/test_sem_230_information_flow_control.py
+      - kind: unit_tests
+        path: implementations/python/tests/test_asr_535_participant_flow_assurance.py
       - kind: property_based_or_differential_tests
         path: implementations/python/tests/test_sem_230_information_flow_control.py
+      - kind: property_based_or_differential_tests
+        path: implementations/python/tests/test_asr_535_participant_flow_assurance.py
       - kind: abstract_state_machine_model
         path: specs/formal/participant-semantics/information-flow-control.md
     waived_artifacts:

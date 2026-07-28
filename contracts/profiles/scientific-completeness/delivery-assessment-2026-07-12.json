@@ -137,8 +137,13 @@
       ]
     },
     {
-      "concern_id": "participant-action-observation", "status": "partial", "limitation": "Action contracts and observation boundaries exist, but participant-relative information-flow admission is not complete.", "issue_refs": ["#747"],
-      "evidence": [{"kind": "implementation", "path": "implementations/python/packages/raes/participant_behavior.py", "claim": "Current action-contract and observation-boundary models."}]
+      "concern_id": "participant-action-observation", "status": "partial", "limitation": "Action contracts, observation boundaries, and reference-runtime participant information-flow admission exist with bounded falsification evidence; native-backend realization and universal noninterference remain unestablished.", "issue_refs": ["#747", "#800"],
+      "evidence": [
+        {"kind": "implementation", "path": "implementations/python/packages/raes/participant_behavior.py", "claim": "Current action-contract and observation-boundary models."},
+        {"kind": "implementation", "path": "implementations/python/packages/raes_runtime/participant_crossing_policy.py", "claim": "Deny-first crossing gates for authority, admission, visibility, marking, declassification, transformation, and backend support."},
+        {"kind": "conformance", "path": "implementations/python/packages/raes_conformance/conformance/participant_policy_probes.py", "claim": "Finite participant-policy probes that record a declared capability no harness executed as unsupported rather than passing."},
+        {"kind": "test", "path": "implementations/python/tests/test_asr_535_participant_flow_assurance.py", "claim": "Bounded denial, withholding, redaction, governed declassification, transformation, stale-policy, cross-participant-leakage, inject-delivery, weakening, unsupported-capability, and overclaim cases."}
+      ]
     },
     {
       "concern_id": "participant-episode-reset", "status": "partial", "limitation": "Runtime episode lifecycle is implemented, while complete authored episode/reset semantics and conformance remain open.", "issue_refs": ["#305", "#307", "#311", "#314"],
@@ -204,8 +209,11 @@
       "evidence": [{"kind": "implementation", "path": "implementations/python/packages/raes/orchestration.py", "claim": "Current script and workflow step surfaces."}]
     },
     {
-      "concern_id": "portable-behavior-contracts", "status": "partial", "limitation": "Behavior specifications and action contracts exist, but portable participant affordance and realization coverage is incomplete.", "issue_refs": ["#653"],
-      "evidence": [{"kind": "implementation", "path": "implementations/python/packages/raes/participant_behavior_specification.py", "claim": "Current behavior specification surface."}]
+      "concern_id": "portable-behavior-contracts", "status": "partial", "limitation": "Behavior specifications and action contracts exist, but portable participant affordance and realization coverage is incomplete.", "issue_refs": ["#653", "#800"],
+      "evidence": [
+        {"kind": "implementation", "path": "implementations/python/packages/raes/participant_behavior_specification.py", "claim": "Current behavior specification surface."},
+        {"kind": "test", "path": "implementations/python/tests/test_asr_535_participant_flow_assurance.py", "claim": "Finite adversarial cases showing a declared participant-policy capability does not by itself establish portable realization."}
+      ]
     },
     {
       "concern_id": "behavioral-relation-taxonomy", "status": "implemented", "limitation": "The revisioned taxonomy, bindings, finite-evidence gate, and counterexamples are implemented; universal simulation, refinement, equivalence, bisimulation, epistemic, strategic, probabilistic, timed, and partial-order proofs remain deliberately unproved or future.", "issue_refs": [],
@@ -215,6 +223,7 @@
         {"kind": "implementation", "path": "tools/check_behavioral_relation_claims.py", "claim": "Semantic claim-binding and overclaim gate."},
         {"kind": "conformance", "path": "implementations/python/packages/raes_conformance/conformance/__init__.py", "claim": "Backend conformance reports disclose bounded-probe relation, projection, case boundary, and nonclaims."},
         {"kind": "test", "path": "implementations/python/tests/test_behavioral_relations.py", "claim": "Catalog, binding, counterexample, and property-based relation tests."},
+        {"kind": "conformance", "path": "implementations/python/packages/raes_conformance/conformance/report.py", "claim": "Cross-field report validation binding relation, quantifier, evidence scope, claimed case set, and execution basis before serialization or persistence."},
         {"kind": "documentation", "path": "docs/research/behavioral-relations/conflation-audit-2026-07-13.md", "claim": "Claim-surface conflation audit and remediation record."}
       ]
     },

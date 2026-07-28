@@ -16,7 +16,7 @@ from raes_contracts.backend_profiles import (
 from raes_contracts.corpus import FIXTURES, corpus_family_root
 from raes_contracts.diagnostics import Diagnostic
 
-from raes_conformance.conformance.diagnostics import _diagnostic
+from raes_conformance.conformance.diagnostics import _diagnostic, sanitized_failure_message
 
 
 class BackendCapabilityProfile(str, Enum):
@@ -104,9 +104,12 @@ def _load_backend_profile(
         root = profiles_root.resolve()
         candidate = (root / f"{profile_id}.json").resolve()
         if not _path_is_within(candidate, root):
+            # The resolved and root paths are deliberately not interpolated:
+            # this message reaches persisted conformance reports, which must not
+            # carry host paths. The grammar-validated profile id identifies the
+            # rejected request on its own.
             raise ValueError(
-                f"backend profile id {profile_id!r} resolves to {candidate} "
-                f"which is outside the configured profiles root {root}; refusing to load."
+                f"backend profile id {profile_id!r} resolves outside the configured profiles root; refusing to load."
             )
         path = candidate
     return load_backend_profile_from_path(profile_id, path)
@@ -185,11 +188,15 @@ def _sanitize_load_error(exc: Exception) -> str:
     """
 
     if isinstance(exc, FileNotFoundError):
-        message = "profile artifact not found"
-    elif isinstance(exc, json.JSONDecodeError):
-        message = "profile artifact is not valid JSON"
-    elif isinstance(exc, ValidationError):
-        message = f"profile artifact failed closed-world validation ({exc.error_count()} error(s))"
-    else:
-        message = f"{type(exc).__name__}: {exc}"
-    return message
+        return "profile artifact not found"
+    if isinstance(exc, json.JSONDecodeError):
+        return "profile artifact is not valid JSON"
+    if isinstance(exc, ValidationError):
+        return f"profile artifact failed closed-world validation ({exc.error_count()} error(s))"
+    if type(exc) is ValueError:
+        # The profile loader's own identity-mismatch error, whose text is built
+        # only from grammar-validated profile ids. Any other exception type may
+        # carry payloads, host paths, or object representations, so it is
+        # described by the shared sanitizer instead of quoted.
+        return str(exc)
+    return sanitized_failure_message(exc)

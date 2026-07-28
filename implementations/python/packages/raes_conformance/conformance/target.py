@@ -20,8 +20,12 @@ from raes_contracts.vocabulary import ParticipantFeatureSupportLevel
 from raes_processor.reference import ScenarioInput
 from raes_runtime.registry import RuntimeTarget
 
-from raes_conformance.conformance.diagnostics import _diagnostic
+from raes_conformance.conformance.diagnostics import _diagnostic, sanitized_failure_message
 from raes_conformance.conformance.fixture_suite import run_fixture_suite
+from raes_conformance.conformance.participant_policy_probes import (
+    ParticipantPolicyProbeHarness,
+    participant_policy_cases,
+)
 from raes_conformance.conformance.profiles import (
     BackendCapabilityProfile,
     BackendProfileSelector,
@@ -141,6 +145,7 @@ class _TargetConformanceOptions:
     realization_envelope: BackendRealizationEnvelopeModel | None = None
     observer_version: str = "raes-realization-observer/v1"
     native_conformance: bool = False
+    participant_policy_harness: ParticipantPolicyProbeHarness | None = None
 
 
 def _unknown_profile_report(
@@ -242,7 +247,7 @@ def _participant_feature_cases(
                     _diagnostic(
                         "conformance.participant-feature-support-invalid",
                         entry.feature,
-                        str(exc),
+                        sanitized_failure_message(exc),
                     ),
                 )
         cases.append(
@@ -300,6 +305,7 @@ def _known_profile_report(
     if target.manifest.realization_envelope is not None:
         adapter_cases = adapter_cases[:1]
     participant_feature_cases = _participant_feature_cases(target, profile)
+    policy_cases = participant_policy_cases(target, profile, options.participant_policy_harness)
     target_cases = tuple(replace(case, execution_basis=options.execution_basis.value) for case in adapter_cases)
     realization_run = run_realization_conformance(
         target,
@@ -310,12 +316,18 @@ def _known_profile_report(
         native_conformance=options.native_conformance,
     )
     realization_cases = tuple(_realization_case_result(case) for case in realization_run.cases)
-    cases = (*fixture_report.cases, *participant_feature_cases, *target_cases, *realization_cases)
+    cases = (
+        *fixture_report.cases,
+        *participant_feature_cases,
+        *policy_cases,
+        *target_cases,
+        *realization_cases,
+    )
     passed = (
         fixture_report.passed
         and not contract_gaps
         and not capability_gaps
-        and all(case.passed for case in (*participant_feature_cases, *target_cases, *realization_cases))
+        and all(case.passed for case in (*participant_feature_cases, *policy_cases, *target_cases, *realization_cases))
     )
     profile_id = _to_profile_id(profile)
     return BackendConformanceReport(

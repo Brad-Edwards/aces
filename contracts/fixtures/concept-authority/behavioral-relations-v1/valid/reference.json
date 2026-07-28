@@ -1653,12 +1653,14 @@
         "proof_obligation": "Prove support-set equality for every quantified low-equivalent pair and low strategy under the fixed participant, memory scope, exact-cut policy decisions, declassification schedule, model, scheduler, environment, and order assumptions, or report only the bounded counterexamples actually checked."
       },
       "bounded_evidence": [
-        "implementations/python/tests/test_sem_230_information_flow_control.py checks finite unauthorized-high, declassification-order, policy-revision, participant-relative hiding, deny-first, append-only-history, transformation-admission, and support-set counterexamples."
+        "implementations/python/tests/test_sem_230_information_flow_control.py checks finite unauthorized-high, declassification-order, policy-revision, participant-relative hiding, deny-first, append-only-history, transformation-admission, and support-set counterexamples.",
+        "implementations/python/tests/test_asr_535_participant_flow_assurance.py exhausts a declared finite crossing domain for unauthorized-high purge and exact-cut declassification, and drives the shipped RUN-319 boundary for denial, withholding, redaction, governed declassification, transformation, stale or revoked policy, cross-participant leakage, participant-directed inject delivery, backend weakening, unsupported capability, and adversarial overclaim."
       ],
       "explicit_non_claims": [
         "The finite SEM-230 executable cases do not establish universal noninterference.",
         "Projected-history equality does not establish policy noninterference without the stated low-equivalence, adaptive-strategy, memory, exact-cut policy, purge, declassification, scheduler, environment, and quantifier obligations.",
-        "No trace equivalence, simulation, refinement, strong or weak bisimulation, epistemic indistinguishability, timing security, probabilistic security, or backend realization is claimed."
+        "No trace equivalence, simulation, refinement, strong or weak bisimulation, epistemic indistinguishability, timing security, probabilistic security, or backend realization is claimed.",
+        "The ASR-535 finite enumeration, runtime probes, and backend conformance cases are bounded falsification evidence and are not a model check or a proof; issues #810 to #813 own any stronger opacity, bisimulation, adversarial-control, or cross-backend status."
       ],
       "incompatible_claim_surfaces": [
         "Unrevisioned participant projection",
@@ -1668,12 +1670,16 @@
       ],
       "assurance": {
         "definition_status": "defined",
-        "implementation_status": "not-implemented",
+        "implementation_status": "implemented",
         "test_status": "bounded",
         "proof_status": "deliberately-unproved",
         "evidence_refs": [
           "specs/formal/participant-semantics/information-flow-control.md",
-          "implementations/python/tests/test_sem_230_information_flow_control.py"
+          "implementations/python/tests/test_sem_230_information_flow_control.py",
+          "implementations/python/packages/raes_runtime/participant_crossing_policy.py",
+          "implementations/python/packages/raes_conformance/conformance/participant_policy_probes.py",
+          "implementations/python/tests/test_run_319_participant_flow_policy.py",
+          "implementations/python/tests/test_asr_535_participant_flow_assurance.py"
         ]
       },
       "source_refs": [
@@ -1762,11 +1768,11 @@
         "implementation_status": "not-implemented",
         "test_status": "bounded",
         "proof_status": "deliberately-unproved",
-      "evidence_refs": [
-        "docs/decisions/adrs/adr-095-participant-decision-epoch-state-cut-and-delivery-semantics.md",
-        "implementations/python/tests/test_sem_220_participant_decision_surface_v2_runtime.py",
-        "implementations/python/tests/test_behavioral_relations.py"
-      ]
+        "evidence_refs": [
+          "docs/decisions/adrs/adr-095-participant-decision-epoch-state-cut-and-delivery-semantics.md",
+          "implementations/python/tests/test_sem_220_participant_decision_surface_v2_runtime.py",
+          "implementations/python/tests/test_behavioral_relations.py"
+        ]
       },
       "source_refs": [
         "alur-henzinger-kupferman-vardi-1998",
@@ -2343,7 +2349,7 @@
       "intended_relation_ids": [
         "policy-noninterference"
       ],
-      "evidence_boundary": "The SEM-230 relation is defined over named participant, audience, memory scope, exact-cut policy-decision sequence, low-equivalence, adaptive low-strategy class, dynamic purge, permitted declassification schedule, scheduler/environment classes, order model, and support-set semantics. Current executable evidence is limited to finite models.",
+      "evidence_boundary": "The SEM-230 relation is defined over named participant, audience, memory scope, exact-cut policy-decision sequence, low-equivalence, adaptive low-strategy class, dynamic purge, permitted declassification schedule, scheduler/environment classes, order model, and support-set semantics. Current executable evidence is limited to finite models, finite reference-runtime enforcement probes, and finite backend-conformance cases.",
       "prohibited_relation_ids": [
         "participant-projected-history-equivalence",
         "trace-equivalence",
@@ -2356,7 +2362,8 @@
         "probabilistic-bisimulation"
       ],
       "explicit_non_claims": [
-        "Definition, catalog validation, claim-policy checks, and finite counterexamples do not prove universal noninterference or runtime/backend realization."
+        "Definition, catalog validation, claim-policy checks, and finite counterexamples do not prove universal noninterference or runtime/backend realization.",
+        "Reference-runtime enforcement and passing backend-conformance probes establish neither universal noninterference nor native-backend realization."
       ]
     },
     {

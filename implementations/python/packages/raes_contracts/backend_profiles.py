@@ -101,9 +101,13 @@ def load_backend_profile_from_path(profile_id: str, path: Path) -> BackendProfil
     payload = json.loads(path.read_text(encoding="utf-8"))
     model = BackendProfileModel.model_validate(payload)
     if model.profile != profile_id:
+        # Both ids are grammar-validated, so this message is bounded and safe to
+        # surface in a conformance diagnostic. The resolved filesystem path is
+        # deliberately omitted: these failures are reported into persisted
+        # backend-conformance artifacts, which must not carry host paths.
         raise ValueError(
-            f"backend profile artifact at {path} declares profile "
-            f"{model.profile!r} but was requested as {profile_id!r}; "
+            f"backend profile artifact declares profile {model.profile!r} "
+            f"but was requested as {profile_id!r}; "
             "the published profile id and request id must match."
         )
     return model

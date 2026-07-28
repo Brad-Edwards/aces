@@ -79,6 +79,46 @@ class ParticipantRetrievalMixin:
     _snapshot: RuntimeSnapshot
     _operations: dict[str, ControlPlaneOperationRecord]
 
+    def deliver_participant_directed_view(
+        self,
+        participant_address: str,
+        view: ParticipantStatusViewModel,
+        *,
+        identity: object | None = None,
+        crossing_evidence: ParticipantCrossingEvidence | None = None,
+        idempotency_key: str = "",
+    ) -> ParticipantStatusViewModel:
+        """Deliver an already-projected carrier as a participant-directed crossing.
+
+        ADR-085 governs a participant-directed inject as disclosure/observation
+        *at delivery*, and RUN-319's capability mapping already requires
+        ``participant_directed_inject_delivery`` for that interaction kind — but
+        there was no public way to perform one, so callers had to reach into the
+        egress module directly. Disclosure and delivery stay separate governed
+        transition facts: this records the delivery crossing for a carrier whose
+        projection was already decided, and it proves neither consumption nor
+        participant observation.
+        """
+
+        if getattr(self, "_crossing_policy_resolver", None) is None:
+            raise ValueError(_CROSSING_RESOLVER_REQUIRED)
+        episode_state = self._snapshot.participant_episode_results.get(participant_address)
+        episode_id = _string_value(episode_state, "episode_id") if episode_state is not None else None
+        return serialize_participant_view(
+            self,
+            view,
+            ParticipantViewSerialization(
+                participant_address=participant_address,
+                episode_id=_required_episode_id(episode_id),
+                subject_kind=ParticipantCrossingSubjectKind.PARTICIPANT_STATUS_VIEW,
+                interaction_kind=ParticipantCrossingInteractionKind.PARTICIPANT_INJECT_DELIVERY,
+                projection_ref=view.visibility_projection_ref,
+                identity=identity,
+                crossing_evidence=crossing_evidence,
+                idempotency_key=idempotency_key,
+            ),
+        )
+
     def get_participant_status_view(
         self,
         participant_address: str,
