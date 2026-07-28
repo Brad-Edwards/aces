@@ -15,7 +15,6 @@ files:
   - implementations/python/packages/raes_mcp/tools/inspection.py
   - implementations/python/packages/raes_operations/_evidence_run_artifact.py
   - implementations/python/packages/raes_runtime/control_plane_api.py
-  - implementations/python/packages/raes_runtime/control_plane.py
   - implementations/python/packages/raes_runtime/workflow_result_contract_checks.py
   - implementations/python/packages/raes/composition.py
   - implementations/python/packages/raes/module_registry.py
