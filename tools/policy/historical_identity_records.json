@@ -15,9 +15,9 @@
     {
       "path": ".ground-control.yaml",
       "binding_class": "external-service-project-key",
-      "rationale": "Retains the existing service-owned Ground Control project designation without treating it as current RAES product identity.",
-      "occurrences": 1,
-      "content_sha256": "e0596809035a079630de05e4d350ed27fac0675526b247c3b069627ca4abe267"
+      "rationale": "Retains the existing service-owned Ground Control and SonarCloud project designations without treating them as current RAES product identity.",
+      "occurrences": 2,
+      "content_sha256": "b14a2788739afd43e5301dda391979a0922b729af0a3cabacba822a2d97d98e8"
     },
     {
       "path": "sonar-project.properties",

@@ -31,7 +31,7 @@ routing:
   default_provider: claude
   stages: {}
 sonarcloud:
-  project_key: Brad-Edwards_raes
+  project_key: Brad-Edwards_aces
   organization: brad-edwards
 rules:
   plan_rules: .gc/plan-rules.md
