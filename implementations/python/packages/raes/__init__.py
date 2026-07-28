@@ -45,6 +45,7 @@ __all__ = [
     "SDLSourcePosition",
     "SDLSourceRange",
     "SDLValidationError",
+    "validate_experiment_selection_against_family",
     "VARIABLE_TOKEN_PATTERN",
 ]
 
@@ -85,6 +86,8 @@ def __getattr__(name: str):
         module = import_module("raes._declarations")
     elif name in {"admit_instantiated_scenario", "instantiate_scenario"}:
         module = import_module("raes.instantiate")
+    elif name == "validate_experiment_selection_against_family":
+        module = import_module("raes.experiment_selection")
     elif name in {"load_sdl_fragment", "parse_sdl", "parse_sdl_file"}:
         module = import_module("raes.parser")
     elif name in {"InstantiatedScenario", "Scenario"}:

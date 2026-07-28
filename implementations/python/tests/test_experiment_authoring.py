@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 from paths import EXPERIMENTS_DIR, REPO_ROOT
+from raes_conformance.conformance import _validate_payload
 from raes_contracts.contracts import ExperimentSpecModel
 from raes_contracts.experiment_spec import (
     ExperimentSpecValidationError,
@@ -127,6 +128,84 @@ def test_target_run_count_path_is_valid() -> None:
     assert spec.run_plan.target_run_count == 5
 
 
+def test_deterministic_run_plan_requires_no_synthetic_stochastic_control() -> None:
+    payload = _valid_payload()
+    payload["run_plan"]["stochastic_controls"] = []
+
+    spec = ExperimentSpecModel.model_validate(payload)
+
+    assert spec.run_plan.stochastic_controls == []
+
+
+def test_parser_rejects_duplicate_keys_without_disclosing_values() -> None:
+    duplicate = """\
+schema_version: experiment-authoring-input/v1
+spec_id: safe-id
+spec_id: do-not-disclose
+"""
+
+    with pytest.raises(ExperimentSpecValidationError) as caught:
+        parse_experiment_spec(duplicate)
+
+    assert caught.value.code == "duplicate-key"
+    assert "do-not-disclose" not in caught.value.details
+
+
+def test_parser_enforces_the_authoring_input_size_bound() -> None:
+    with pytest.raises(ExperimentSpecValidationError) as caught:
+        parse_experiment_spec("x" * (_MAX_INPUT_BYTES + 1))
+
+    assert caught.value.code == "input-too-large"
+
+
+def test_file_loader_checks_size_before_reading(tmp_path: Path) -> None:
+    path = tmp_path / "oversized.exp.yaml"
+    path.write_text("x" * (_MAX_INPUT_BYTES + 1), encoding="utf-8")
+
+    with pytest.raises(ExperimentSpecValidationError) as caught:
+        load_experiment_spec(path)
+
+    assert caught.value.code == "input-too-large"
+    assert str(tmp_path) not in str(caught.value)
+
+
+def test_parser_redacts_rejected_values_from_validation_diagnostics() -> None:
+    payload = _valid_payload()
+    payload["title"] = "do-not-disclose"
+    payload["run_plan"]["target_run_count"] = payload["run_plan"].pop("allocation")
+    serialized = json.dumps(payload)
+
+    with pytest.raises(ExperimentSpecValidationError) as caught:
+        parse_experiment_spec(serialized)
+
+    assert "do-not-disclose" not in caught.value.details
+    assert "input_value" not in caught.value.details
+
+
+def test_parser_rejects_aliases_and_non_finite_numbers() -> None:
+    with pytest.raises(ExperimentSpecValidationError) as alias_error:
+        parse_experiment_spec("spec_id: &id safe\ncopy: *id\n")
+    assert alias_error.value.code == "invalid-yaml"
+
+    with pytest.raises(ExperimentSpecValidationError) as numeric_error:
+        parse_experiment_spec("schema_version: experiment-authoring-input/v1\nspec_id: .nan\n")
+    assert numeric_error.value.code == "invalid-json-value"
+
+
+def test_mcp_and_conformance_diagnostics_do_not_echo_rejected_values() -> None:
+    payload = _valid_payload()
+    payload["title"] = "do-not-disclose"
+    payload["run_plan"]["target_run_count"] = payload["run_plan"].pop("allocation")
+    rendered = _run_experiment_validate(json.dumps(payload))
+    assert "do-not-disclose" not in rendered
+    assert "input_value" not in rendered
+
+    diagnostics = _validate_payload("experiment-authoring-input-v1", payload)
+    assert diagnostics
+    assert "do-not-disclose" not in diagnostics[0].message
+    assert "input_value" not in diagnostics[0].message
+
+
 # --- MCP tool helpers -----------------------------------------------------
 
 
@@ -146,21 +225,33 @@ def test_tool_validate_too_large() -> None:
     assert "INPUT TOO LARGE" in out
 
 
-@pytest.mark.parametrize("complexity", ["minimal", "sweep"])
+@pytest.mark.parametrize("complexity", ["minimal", "sweep", "variation"])
 def test_tool_scaffold_outputs_are_valid(complexity: str) -> None:
     out = _run_experiment_scaffold(complexity, "demo-spec", "task-demo-v1")
     spec = parse_experiment_spec(out)
     assert spec.spec_id == "demo-spec"
+    if complexity == "minimal":
+        assert spec.run_plan.stochastic_controls == []
+    if complexity == "variation":
+        assert spec.run_plan.selection_policies
 
 
 def test_tool_scaffold_rejects_unknown_complexity() -> None:
     assert "Invalid complexity" in _run_experiment_scaffold("ultra", "x", "y")
 
 
-@pytest.mark.parametrize("name", ["sweep", "smoke"])
+@pytest.mark.parametrize("name", ["sweep", "smoke", "variation"])
 def test_tool_get_example_returns_shipped(name: str) -> None:
     out = _run_experiment_get_example(name)
     assert "schema_version: experiment-authoring-input/v1" in out
+
+
+def test_tool_validate_reports_selection_policy_count() -> None:
+    out = _run_experiment_scaffold("variation", "demo-spec", "task-demo-v1")
+
+    rendered = _run_experiment_validate(out)
+
+    assert "selection policies: 2" in rendered
 
 
 def test_tool_get_example_unknown() -> None:

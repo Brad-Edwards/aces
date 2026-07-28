@@ -74,7 +74,9 @@ def sanitized_failure_message(exc: BaseException) -> str:
     if isinstance(exc, json.JSONDecodeError):
         return "payload is not valid JSON"
     if isinstance(exc, ValidationError):
-        errors = exc.errors()
+        # Suppress the rejected input, the error context, and the docs URL at the
+        # source rather than relying on this helper never touching them.
+        errors = exc.errors(include_url=False, include_context=False, include_input=False)
         listed = ", ".join(
             f"{_safe_location(error.get('loc', ()), error_type=str(error.get('type', 'unknown')))} "
             f"({error.get('type', 'unknown')})"

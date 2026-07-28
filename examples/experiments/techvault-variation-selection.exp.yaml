@@ -1,0 +1,44 @@
+# TechVault scenario-family variation selection.
+#
+# SDL declares the bounded variation domains. This experiment declares how
+# those domains are used before trial compilation; it does not copy SDL
+# targets/domains and it does not produce trial entries.
+schema_version: experiment-authoring-input/v1
+spec_id: spec-techvault-variation-selection-v1
+spec_version: 1.0.0
+title: TechVault deterministic variation selection
+description: >-
+  Deterministically fixes the payload path and exhaustively enumerates the
+  declared payload-host alternatives without requiring a synthetic seed.
+
+task_ref:
+  ref_kind: task
+  ref_id: task-techvault-red-team-v1
+  ref_version: 1.0.0
+
+intended_scenario_ref:
+  ref_kind: scenario
+  ref_id: scenario-techvault-family
+
+run_plan:
+  episode_control:
+    turn_order: sequential
+    max_steps: 100
+    termination_rule: Terminate each episode after 100 logical steps.
+  target_run_count: 2
+  selection_policies:
+    fixed-payload-path:
+      kind: fixed
+      policy_id: fixed-payload-path
+      purpose: fixed-configuration
+      point_ref: payload-path
+      outcome:
+        kind: literal
+        value: /opt/payload
+      output_bound: 1
+    enumerate-payload-host:
+      kind: enumerate
+      policy_id: enumerate-payload-host
+      purpose: nuisance-variation
+      point_ref: payload-host
+      output_bound: 2
