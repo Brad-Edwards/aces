@@ -96,6 +96,14 @@ def _safe_validation_details(exc: ValidationError) -> str:
     return "Experiment spec contract validation failed:\n" + "\n".join(diagnostics)
 
 
+def _load_yaml(raw: str) -> object:
+    loader = _ExperimentSpecLoader(raw)
+    try:
+        return loader.get_single_data()
+    finally:
+        loader.dispose()
+
+
 def parse_experiment_spec(text: str, *, path: Path | None = None) -> ExperimentSpecModel:
     """Parse and validate an experiment specification from YAML text."""
     if len(text.encode("utf-8", errors="replace")) > MAX_EXPERIMENT_SPEC_BYTES:
@@ -109,7 +117,7 @@ def parse_experiment_spec(text: str, *, path: Path | None = None) -> ExperimentS
         raise ExperimentSpecValidationError("empty-input", "Experiment spec is empty.", path=path)
 
     try:
-        payload = yaml.load(raw, Loader=_ExperimentSpecLoader)  # noqa: S506 - strict SafeLoader subclass
+        payload = _load_yaml(raw)
     except ConstructorError as exc:
         code = "duplicate-key" if "duplicate mapping key" in str(exc) else "invalid-yaml"
         raise ExperimentSpecValidationError(code, "Experiment spec YAML is invalid.", path=path) from exc

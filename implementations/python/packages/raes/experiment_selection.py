@@ -50,32 +50,43 @@ def validate_experiment_selection_against_family(
     semantics, and the experiment/family identity join owned by issue #787.
     """
 
-    if not isinstance(family, ExpandedScenario) or not family.semantic_validated:
-        raise ValueError("experiment selection requires a semantically admitted ExpandedScenario")
+    family_id = _admitted_family_id(family)
     policies = spec.run_plan.selection_policies
     if not policies:
         return spec
     intended = spec.intended_scenario_ref
-    family_id = family.name
     if intended is None or intended.ref_kind != "scenario" or intended.ref_id != family_id:
         raise ValueError("experiment selection family identity must match intended_scenario_ref")
     _validate_binding_family_identity(spec, family_id)
     for policy in policies.values():
-        if isinstance(policy, ExperimentProductSelectionPolicyModel):
-            continue
-        point = _resolve_point(family, policy.point_ref)
-        if isinstance(policy, ExperimentFixedSelectionPolicyModel):
-            _validate_outcome(point, policy.outcome)
-        elif isinstance(policy, ExperimentEnumerateSelectionPolicyModel):
-            cardinality = _finite_policy_population(point)
-            if cardinality != policy.output_bound:
-                raise ValueError("enumerate policy output_bound must equal the finite point domain cardinality")
-        elif isinstance(policy, ExperimentSampleSelectionPolicyModel):
-            _finite_policy_population(point)
-        elif isinstance(policy, ExperimentStratifiedSelectionPolicyModel):
-            for outcome in policy.outcomes.values():
-                _validate_outcome(point, outcome)
+        _validate_policy_against_family(policy, family)
     return spec
+
+
+def _admitted_family_id(family: ExpandedScenario) -> str:
+    if not isinstance(family, ExpandedScenario) or not family.semantic_validated:
+        raise ValueError("experiment selection requires a semantically admitted ExpandedScenario")
+    return family.name
+
+
+def _validate_policy_against_family(policy: object, family: ExpandedScenario) -> None:
+    if isinstance(policy, ExperimentProductSelectionPolicyModel):
+        return
+    point = _resolve_point(family, policy.point_ref)
+    if isinstance(policy, ExperimentFixedSelectionPolicyModel):
+        _validate_outcome(point, policy.outcome)
+    elif isinstance(policy, ExperimentEnumerateSelectionPolicyModel):
+        _validate_enumeration_bound(point, policy.output_bound)
+    elif isinstance(policy, ExperimentSampleSelectionPolicyModel):
+        _finite_policy_population(point)
+    elif isinstance(policy, ExperimentStratifiedSelectionPolicyModel):
+        for outcome in policy.outcomes.values():
+            _validate_outcome(point, outcome)
+
+
+def _validate_enumeration_bound(point: VariationPoint, output_bound: int) -> None:
+    if _finite_policy_population(point) != output_bound:
+        raise ValueError("enumerate policy output_bound must equal the finite point domain cardinality")
 
 
 def _validate_binding_family_identity(spec: ExperimentSpecModel, family_id: str) -> None:
@@ -111,11 +122,17 @@ def _finite_policy_population(point: VariationPoint) -> int:
 
 def _scalar_domain_cardinality(domain: object) -> int:
     if isinstance(domain, ExactDomain):
-        return 1
-    if isinstance(domain, EnumDomain):
-        return len(domain.values)
-    if isinstance(domain, BooleanDomain):
-        return 1 if domain.value is not None else 2
+        cardinality = 1
+    elif isinstance(domain, EnumDomain):
+        cardinality = len(domain.values)
+    elif isinstance(domain, BooleanDomain):
+        cardinality = 1 if domain.value is not None else 2
+    else:
+        cardinality = _integer_interval_cardinality(domain)
+    return cardinality
+
+
+def _integer_interval_cardinality(domain: object) -> int:
     if not isinstance(domain, NumericIntervalDomain) or domain.numeric_type is not NumericType.INTEGER:
         raise ValueError("continuous or unsupported domains cannot be enumerated or sampled")
     lower = math.ceil(domain.lower)
@@ -132,30 +149,38 @@ def _scalar_domain_cardinality(domain: object) -> int:
 
 def _validate_outcome(point: VariationPoint, outcome: object) -> None:
     if isinstance(point, (ParameterVariationPoint, LogicalTimingVariationPoint)):
-        if not isinstance(outcome, LiteralBindingValueModel) or not scalar_in_domain(outcome.value, point.domain):
-            raise ValueError("fixed selection literal is outside the declared point domain")
-        return
-    if isinstance(point, GovernedReferenceVariationPoint):
-        if (
-            not isinstance(outcome, ExperimentSelectionReferenceOutcomeModel)
-            or outcome.reference_id not in point.domain.allowed_refs
-        ):
-            raise ValueError("fixed selection reference is outside the declared point domain")
-        return
-    if isinstance(point, AlternativeVariationPoint):
-        if (
-            not isinstance(outcome, ExperimentSelectionMemberOutcomeModel)
-            or outcome.member_id not in point.alternatives
-        ):
-            raise ValueError("fixed selection member is outside the declared point domain")
-        return
-    if isinstance(point, SubsetVariationPoint):
+        _validate_literal_outcome(point, outcome)
+    elif isinstance(point, GovernedReferenceVariationPoint):
+        _validate_reference_outcome(point, outcome)
+    elif isinstance(point, AlternativeVariationPoint):
+        _validate_member_outcome(point, outcome)
+    elif isinstance(point, SubsetVariationPoint):
         _validate_subset_outcome(point, outcome)
-        return
-    if isinstance(point, OrderVariationPoint):
+    elif isinstance(point, OrderVariationPoint):
         _validate_order_outcome(point, outcome)
-        return
-    raise ValueError("unsupported variation point kind")
+    else:
+        raise ValueError("unsupported variation point kind")
+
+
+def _validate_literal_outcome(
+    point: ParameterVariationPoint | LogicalTimingVariationPoint,
+    outcome: object,
+) -> None:
+    if not isinstance(outcome, LiteralBindingValueModel) or not scalar_in_domain(outcome.value, point.domain):
+        raise ValueError("fixed selection literal is outside the declared point domain")
+
+
+def _validate_reference_outcome(point: GovernedReferenceVariationPoint, outcome: object) -> None:
+    if (
+        not isinstance(outcome, ExperimentSelectionReferenceOutcomeModel)
+        or outcome.reference_id not in point.domain.allowed_refs
+    ):
+        raise ValueError("fixed selection reference is outside the declared point domain")
+
+
+def _validate_member_outcome(point: AlternativeVariationPoint, outcome: object) -> None:
+    if not isinstance(outcome, ExperimentSelectionMemberOutcomeModel) or outcome.member_id not in point.alternatives:
+        raise ValueError("fixed selection member is outside the declared point domain")
 
 
 def _validate_subset_outcome(point: SubsetVariationPoint, outcome: object) -> None:

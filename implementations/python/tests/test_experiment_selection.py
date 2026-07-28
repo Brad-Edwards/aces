@@ -569,10 +569,11 @@ def test_contextual_admission_rejects_unknown_points_and_out_of_domain_values() 
         "fixed-path": _fixed_policy(value="/secret/not-in-domain"),
     }
     spec = ExperimentSpecModel.model_validate(payload)
+    family = _expanded_family()
     with pytest.raises(ValueError, match="domain"):
         validate_experiment_selection_against_family(
             spec,
-            family=_expanded_family(),
+            family=family,
         )
 
     payload = _base_payload()
@@ -586,7 +587,7 @@ def test_contextual_admission_rejects_unknown_points_and_out_of_domain_values() 
     with pytest.raises(ValueError, match="variation point"):
         validate_experiment_selection_against_family(
             spec,
-            family=_expanded_family(),
+            family=family,
         )
 
 
@@ -640,11 +641,12 @@ def test_reference_and_member_outcomes_reject_out_of_domain_ids(
     policy["outcome"] = outcome
     payload["run_plan"]["selection_policies"] = {"fixed-path": policy}
     spec = ExperimentSpecModel.model_validate(payload)
+    family = _all_kinds_expanded_family()
 
     with pytest.raises(ValueError, match="domain"):
         validate_experiment_selection_against_family(
             spec,
-            family=_all_kinds_expanded_family(),
+            family=family,
         )
 
 
@@ -778,10 +780,11 @@ def test_contextual_admission_requires_trusted_expanded_family_identity() -> Non
 
     mismatched = deepcopy(spec)
     mismatched.intended_scenario_ref.ref_id = "other-family"
+    family = _expanded_family()
     with pytest.raises(ValueError, match="family identity"):
         validate_experiment_selection_against_family(
             mismatched,
-            family=_expanded_family(),
+            family=family,
         )
 
 
@@ -796,10 +799,11 @@ def test_contextual_admission_joins_binding_descriptors_to_family_identity() -> 
     assert admitted is matching
 
     mismatched = _spec_with_binding_family("other-family")
+    family = _expanded_family()
     with pytest.raises(ValueError, match="binding target family identity"):
         validate_experiment_selection_against_family(
             mismatched,
-            family=_expanded_family(),
+            family=family,
         )
 
 

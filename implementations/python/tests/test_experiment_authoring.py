@@ -173,9 +173,10 @@ def test_parser_redacts_rejected_values_from_validation_diagnostics() -> None:
     payload = _valid_payload()
     payload["title"] = "do-not-disclose"
     payload["run_plan"]["target_run_count"] = payload["run_plan"].pop("allocation")
+    serialized = json.dumps(payload)
 
     with pytest.raises(ExperimentSpecValidationError) as caught:
-        parse_experiment_spec(json.dumps(payload))
+        parse_experiment_spec(serialized)
 
     assert "do-not-disclose" not in caught.value.details
     assert "input_value" not in caught.value.details
