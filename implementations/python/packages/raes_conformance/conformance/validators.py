@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from pydantic import ValidationError
 from raes_contracts.behavioral_relations import BehavioralRelationCatalogModel
 from raes_contracts.contracts import (
     AssociatedArtifactManifestModel,
@@ -52,27 +51,9 @@ from raes_contracts.scientific_completeness import (
 )
 from raes_contracts.validation_profiles import ValidationProfileCatalogModel
 
-from raes_conformance.conformance.diagnostics import _diagnostic
+from raes_conformance.conformance.diagnostics import _diagnostic, sanitized_failure_message
 
 _SCHEMA_INVALID_DIAGNOSTIC_CODE = "conformance.schema-invalid"
-_MAX_VALIDATION_LOCATIONS = 16
-
-
-def _safe_validation_summary(exc: Exception) -> str:
-    """Render validation shape without rejected values or exception context."""
-
-    if not isinstance(exc, ValidationError):
-        return type(exc).__name__
-    locations = []
-    for error in exc.errors(include_url=False, include_context=False, include_input=False)[:_MAX_VALIDATION_LOCATIONS]:
-        location = "/" + "/".join(str(part) for part in error["loc"])
-        locations.append(f"{location or '/'}:{error['type']}")
-    omitted = exc.error_count() - len(locations)
-    if omitted > 0:
-        locations.append(f"{omitted}-additional")
-    return ", ".join(locations)
-
-
 _MODEL_VALIDATORS = {
     "backend-manifest-v2": BackendManifestV2Model.model_validate,
     "participant-implementation-manifest-v1": ParticipantImplementationManifestModel.model_validate,
@@ -166,7 +147,7 @@ def _validate_event_stream(
                 _diagnostic(
                     _SCHEMA_INVALID_DIAGNOSTIC_CODE,
                     f"{contract_name}[{index}]",
-                    f"{event_label} history event is invalid: {_safe_validation_summary(exc)}",
+                    f"{event_label} history event is invalid: {sanitized_failure_message(exc)}",
                 )
             )
     return diagnostics
@@ -183,7 +164,7 @@ def _validate_payload(contract_name: str, payload: object) -> list[Diagnostic]:
                 _diagnostic(
                     _SCHEMA_INVALID_DIAGNOSTIC_CODE,
                     contract_name,
-                    f"{contract_name} failed contract validation: {_safe_validation_summary(exc)}",
+                    f"{contract_name} failed contract validation: {sanitized_failure_message(exc)}",
                 )
             )
             return diagnostics

@@ -1160,6 +1160,53 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   bisimulation, epistemic equivalence, or proof. No normative external
   derivation or compatibility claim changes, so the lineage ledger and source
   audit remain unchanged.
+- ASR-535 adopts the falsification-first assurance lineage already cited by the
+  participant information-flow work rather than a new external source:
+  Goguen and Meseguer's noninterference formulation, Sabelfeld and Sands's
+  declassification dimensions and principles, and Clarkson and Schneider's
+  hyperproperty separation between a property of one trace and a property of a
+  set of traces. The adopted reading is that a security obligation quantified
+  over sets of runs cannot be discharged by observing individual runs, so
+  executable participant-policy evidence is organized as attempted refutation
+  within a declared bound. Backend conformance testing practice contributes the
+  separation between a declared capability and an executed probe.
+- The exact RAES artifact mapping is the SEM-230 test-local bounded model and
+  `policy_noninterference_holds()` for the semantic lane; the shipped RUN-319
+  `ParticipantCrossingIntent`, `ParticipantCrossingPolicyResolver`,
+  deny-first API-423 gates, `RuntimeSnapshot.participant_crossing_history`, and
+  `ControlPlaneStore.commit_participant_transition()` for the runtime lane; the
+  existing `run_target_conformance()` runner extended with an injected
+  participant-policy probe harness, `ConformanceCaseResult`, and
+  `BackendConformanceReport` for the backend lane; and the
+  `raes-behavioral-relations` `rev3` catalog with `BehavioralClaimBindingModel`
+  for claim identity. The four lanes stay separately statused; none promotes
+  another.
+- ASR-535 delivery status is bounded-tested and bounded-conformance-implemented.
+  Evidence is
+  `implementations/python/packages/raes_conformance/conformance/participant_policy_probes.py`,
+  the cross-field report validation in
+  `implementations/python/packages/raes_conformance/conformance/report.py`, the
+  shared conformance diagnostic sanitizer, and
+  `implementations/python/tests/test_asr_535_participant_flow_assurance.py`,
+  which exhausts a declared finite crossing domain and drives the shipped
+  runtime boundary for denial, withholding, redaction, governed
+  declassification, transformation, stale or revoked policy, cross-participant
+  leakage, participant-directed inject delivery, backend weakening, unsupported
+  capability, and adversarial overclaim. A declared API-407 participant-policy
+  feature that no harness executed is now recorded as unsupported instead of
+  conforming.
+- ASR-535 explicitly makes no model-check and no proof claim. The relation
+  `policy-noninterference` keeps its deliberately unproved status, and its
+  evidence boundary is the finite enumerated domain, the named probe cases, and
+  the named target, profile, and execution environment. Exhausting a declared
+  bound is not model checking; a passing probe set does not establish universal
+  noninterference, trace inclusion or equivalence, simulation, refinement,
+  strong or weak bisimulation, epistemic indistinguishability, timed or
+  probabilistic security, opacity, or native-backend realization. Issues #810,
+  #811, #812, and #813 own opacity, a proof-bearing bisimulation target,
+  adversarial-control evaluation, and cross-backend demonstration respectively.
+  ASR-535 adds evidence rather than a normative derivation or compatibility
+  claim, so the lineage ledger and source audit remain unchanged.
 - CALDERA adversary-emulation research informs the action semantics: cyber
   actions can change foothold, knowledge, observations, detection surface, and
   downstream outcomes under uncertainty.

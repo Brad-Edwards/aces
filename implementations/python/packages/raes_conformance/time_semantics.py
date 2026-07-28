@@ -13,6 +13,8 @@ from raes_contracts.contracts.time_model import (
 )
 from raes_contracts.diagnostics import Diagnostic
 
+from raes_conformance.conformance.diagnostics import sanitized_failure_message
+
 
 def _time_diagnostic(code: str, address: str, message: str) -> Diagnostic:
     return Diagnostic(code=code, domain="time-conformance", address=address, message=message)
@@ -48,7 +50,7 @@ def time_model_conformance_diagnostics(
                 _time_diagnostic(
                     "conformance.time-runtime-state-invalid",
                     "runtime.snapshot.time-model-state",
-                    str(exc),
+                    sanitized_failure_message(exc),
                 )
             )
     if provenance is None:
@@ -67,7 +69,7 @@ def time_model_conformance_diagnostics(
                 _time_diagnostic(
                     "conformance.realized-time-provenance-invalid",
                     "experiment.run.realized-time-model",
-                    str(exc),
+                    sanitized_failure_message(exc),
                 )
             )
     return tuple(diagnostics)
