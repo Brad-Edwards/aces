@@ -184,20 +184,25 @@ def _drive(case: ParticipantPolicyProbeCase, plane: RuntimeControlPlane) -> tupl
     return _DRIVERS[case.operation](case, plane)
 
 
+def _iter_occurrences(plane: RuntimeControlPlane):
+    """Yield every committed crossing occurrence in deterministic order."""
+
+    for participant in sorted(plane.snapshot.participant_crossing_history):
+        for entry in plane.snapshot.participant_crossing_history[participant]:
+            yield entry.get("occurrence") or {}
+
+
 def _committed_facts(plane: RuntimeControlPlane) -> tuple[tuple[str, ...], str | None]:
     """Read evidence refs and the last recorded backend posture off the records."""
 
     evidence_refs: list[str] = []
     effective: str | None = None
-    for participant in sorted(plane.snapshot.participant_crossing_history):
-        for entry in plane.snapshot.participant_crossing_history[participant]:
-            occurrence = entry.get("occurrence") or {}
-            posture = occurrence.get("backend_posture")
-            if isinstance(posture, str):
-                effective = posture
-            for ref in occurrence.get("required_evidence_refs") or ():
-                if isinstance(ref, str) and ref not in evidence_refs:
-                    evidence_refs.append(ref)
+    for occurrence in _iter_occurrences(plane):
+        posture = occurrence.get("backend_posture")
+        if isinstance(posture, str):
+            effective = posture
+        refs = occurrence.get("required_evidence_refs") or ()
+        evidence_refs.extend(ref for ref in refs if isinstance(ref, str) and ref not in evidence_refs)
     return tuple(evidence_refs), effective
 
 

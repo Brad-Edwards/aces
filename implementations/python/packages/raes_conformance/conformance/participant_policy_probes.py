@@ -175,7 +175,7 @@ def _violations(case: ParticipantPolicyProbeCase, observed: _Outcome) -> tuple[s
     expectation_failures = (
         _refusal_failures(case, observed) if case.expectation in _REFUSAL_EXPECTATIONS else _release_failures(observed)
     )
-    return tuple([*_record_integrity_failures(case, observed), *expectation_failures])
+    return (*_record_integrity_failures(case, observed), *expectation_failures)
 
 
 def _case_result(

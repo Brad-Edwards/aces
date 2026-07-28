@@ -175,6 +175,13 @@ def _resolve_required_contracts(
         )
 
 
+# Ordered because ``json.JSONDecodeError`` is a ``ValueError``.
+_PROFILE_LOAD_DESCRIPTIONS: tuple[tuple[type[BaseException], str], ...] = (
+    (FileNotFoundError, "profile artifact not found"),
+    (json.JSONDecodeError, "profile artifact is not valid JSON"),
+)
+
+
 def _sanitize_load_error(exc: Exception) -> str:
     """Render a profile-load exception without echoing rejected file contents.
 
@@ -187,12 +194,11 @@ def _sanitize_load_error(exc: Exception) -> str:
     boundary.
     """
 
-    if isinstance(exc, FileNotFoundError):
-        return "profile artifact not found"
-    if isinstance(exc, json.JSONDecodeError):
-        return "profile artifact is not valid JSON"
     if isinstance(exc, ValidationError):
         return f"profile artifact failed closed-world validation ({exc.error_count()} error(s))"
+    for kind, description in _PROFILE_LOAD_DESCRIPTIONS:
+        if isinstance(exc, kind):
+            return description
     # An exact ValueError is the profile loader's own identity-mismatch error,
     # whose text is built only from grammar-validated profile ids. Any other
     # exception type may carry payloads, host paths, or object representations,
