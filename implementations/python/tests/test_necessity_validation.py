@@ -12,6 +12,8 @@ from raes_conformance.necessity_evidence import (
     CleanupVerificationRecord,
     InterventionVerificationRecord,
     MatchingVerificationRecord,
+    NecessityRunPair,
+    NecessityVerificationRecords,
     VerificationBinding,
     VerificationDisposition,
     assemble_bounded_but_for_evidence,
@@ -346,14 +348,18 @@ def _evidence(
     )
     return assemble_bounded_but_for_evidence(
         case,
-        baseline_task=baseline_task,
-        baseline_run=baseline_run,
-        counterfactual_task=counterfactual_task,
-        counterfactual_run=counterfactual_run,
+        runs=NecessityRunPair(
+            baseline_task=baseline_task,
+            baseline_run=baseline_run,
+            counterfactual_task=counterfactual_task,
+            counterfactual_run=counterfactual_run,
+        ),
         evidence_records=(baseline_record, counterfactual_record),
-        intervention=intervention,
-        matching=matching,
-        cleanup=cleanup,
+        verification_records=NecessityVerificationRecords(
+            intervention=intervention,
+            matching=matching,
+            cleanup=cleanup,
+        ),
         validator=validator,
     )
 

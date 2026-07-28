@@ -111,32 +111,37 @@ class BoundedButForEvidence:
 
 
 def _new_bounded_but_for_evidence(
-    *,
-    case_digest: str,
-    baseline_world_id: str,
-    baseline_run_ref: str,
-    baseline_truth: PropositionTruthResultModel,
-    counterfactual_world_id: str,
-    counterfactual_run_ref: str,
-    counterfactual_truth: PropositionTruthResultModel,
-    intervention_disposition: VerificationDisposition,
-    intervention_evidence_refs: tuple[str, ...],
-    matching_disposition: VerificationDisposition,
-    unmatched_dimension_refs: tuple[str, ...],
-    cleanup_disposition: VerificationDisposition,
-    cleanup_evidence_refs: tuple[str, ...],
-    residual_state: tuple[str, ...],
-    verification_binding: VerificationBinding,
-    verification_identities: tuple[VerificationRecordIdentity, ...],
+    parts: _BoundedButForEvidenceParts,
 ) -> BoundedButForEvidence:
     """Construct one module-sealed evidence value for the trusted assembler."""
 
     instance = object.__new__(BoundedButForEvidence)
-    values = locals()
     for field_name in BoundedButForEvidence.__dataclass_fields__:
-        value = _ASSEMBLY_TOKEN if field_name == "_assembly_token" else values[field_name]
+        value = _ASSEMBLY_TOKEN if field_name == "_assembly_token" else getattr(parts, field_name)
         object.__setattr__(instance, field_name, value)
     return instance
+
+
+@dataclass(frozen=True)
+class _BoundedButForEvidenceParts:
+    """Typed content passed across the private assembly boundary."""
+
+    case_digest: str
+    baseline_world_id: str
+    baseline_run_ref: str
+    baseline_truth: PropositionTruthResultModel
+    counterfactual_world_id: str
+    counterfactual_run_ref: str
+    counterfactual_truth: PropositionTruthResultModel
+    intervention_disposition: VerificationDisposition
+    intervention_evidence_refs: tuple[str, ...]
+    matching_disposition: VerificationDisposition
+    unmatched_dimension_refs: tuple[str, ...]
+    cleanup_disposition: VerificationDisposition
+    cleanup_evidence_refs: tuple[str, ...]
+    residual_state: tuple[str, ...]
+    verification_binding: VerificationBinding
+    verification_identities: tuple[VerificationRecordIdentity, ...]
 
 
 __all__ = (

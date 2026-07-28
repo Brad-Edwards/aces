@@ -1,5 +1,3 @@
-"""Bounded counterfactual comparison for one finite but-for necessity claim."""
-
 from __future__ import annotations
 
 import hashlib
@@ -30,8 +28,6 @@ NecessityVerificationAuthority = VerificationBinding
 
 
 class InterventionKind(str, Enum):
-    """Closed intervention kinds supported by the finite binary criterion."""
-
     REMOVE = "remove"
     DISABLE = "disable"
     REPLACE = "replace"
@@ -39,8 +35,6 @@ class InterventionKind(str, Enum):
 
 
 class NecessityComparisonOutcome(str, Enum):
-    """Result vocabulary distinct from execution and proposition truth."""
-
     SUPPORTED = "supported"
     REFUTED = "refuted"
     INCONCLUSIVE = "inconclusive"
@@ -184,8 +178,8 @@ class BoundedButForCase:
             "candidate_ref": self.candidate_ref,
             "outcome_proposition_address": self.outcome_proposition_address,
             "outcome_assertion_address": self.outcome_assertion_address,
-            "baseline_world": _world_payload(self.baseline_world),
-            "counterfactual_world": _world_payload(self.counterfactual_world),
+            "baseline_world": asdict(self.baseline_world),
+            "counterfactual_world": asdict(self.counterfactual_world),
             "intervention_kind": self.intervention_kind.value,
             "intervention_ref": self.intervention_ref,
             "intervention_version": self.intervention_version,
@@ -206,10 +200,6 @@ class BoundedButForCase:
         return "sha256:" + hashlib.sha256(encoded).hexdigest()
 
 
-def _world_payload(world: NecessityWorldRef) -> dict[str, str]:
-    return asdict(world)
-
-
 @dataclass(frozen=True)
 class BoundedButForResult:
     """Finite comparison result whose identities come only from the case."""
@@ -226,8 +216,6 @@ class BoundedButForResult:
 
     @property
     def supported(self) -> bool:
-        """Return whether the admitted evidence supports this finite claim."""
-
         return self.outcome is NecessityComparisonOutcome.SUPPORTED
 
 
@@ -270,94 +258,122 @@ def _result(
     )
 
 
+def _claim_catalog_diagnostic(case: BoundedButForCase) -> Diagnostic | None:
+    diagnostic = None
+    try:
+        validate_behavioral_claim_binding(case.claim)
+    except ValueError:
+        diagnostic = _diagnostic(
+            case,
+            "conformance.necessity-claim-invalid",
+            "The claim does not resolve against the canonical behavioral-relation catalog.",
+        )
+    return diagnostic
+
+
+def _claim_admission_diagnostic(case: BoundedButForCase) -> Diagnostic | None:
+    diagnostic = None
+    if case.claim.relation_id != BOUNDED_BUT_FOR_RELATION_ID:
+        diagnostic = _diagnostic(
+            case,
+            "conformance.necessity-claim-relation-invalid",
+            "The claim does not use the bounded but-for necessity relation.",
+        )
+    elif (catalog_diagnostic := _claim_catalog_diagnostic(case)) is not None:
+        diagnostic = catalog_diagnostic
+    elif case.claim.quantifier_scope != "finite-cases" or case.claim.evidence_scope != "finite":
+        diagnostic = _diagnostic(
+            case,
+            "conformance.necessity-claim-boundary-invalid",
+            "The binary comparator accepts only finite-case claims with finite evidence.",
+        )
+    elif (
+        case.claim.left_carrier_ref != case.candidate_ref
+        or case.claim.right_carrier_ref != case.outcome_proposition_address
+    ):
+        diagnostic = _diagnostic(
+            case,
+            "conformance.necessity-claim-case-mismatch",
+            "The claim carriers do not identify the admitted candidate and outcome.",
+        )
+    elif (case.criterion_id, case.criterion_version) != (_CRITERION_ID, _CRITERION_VERSION):
+        diagnostic = _diagnostic(
+            case,
+            "conformance.necessity-criterion-unsupported",
+            "The requested necessity criterion is not supported by this comparator.",
+        )
+    return diagnostic
+
+
+def _evidence_admission_diagnostic(
+    case: BoundedButForCase,
+    evidence: BoundedButForEvidence,
+) -> Diagnostic | None:
+    diagnostic = None
+    world_mismatch = (
+        evidence.baseline_world_id != case.baseline_world.world_id
+        or evidence.baseline_run_ref != case.baseline_world.run_ref
+        or evidence.counterfactual_world_id != case.counterfactual_world.world_id
+        or evidence.counterfactual_run_ref != case.counterfactual_world.run_ref
+    )
+    authority_mismatch = evidence.verification_binding != case.verification_authority or any(
+        identity.binding != case.verification_authority for identity in evidence.verification_identities
+    )
+    truth_mismatch = any(
+        truth.proposition_address != case.outcome_proposition_address
+        or truth.assertion_address != case.outcome_assertion_address
+        for truth in (evidence.baseline_truth, evidence.counterfactual_truth)
+    )
+    if world_mismatch:
+        diagnostic = _diagnostic(
+            case,
+            "conformance.necessity-world-evidence-mismatch",
+            "The evidence does not identify the admitted worlds and immutable run references.",
+        )
+    elif authority_mismatch:
+        diagnostic = _diagnostic(
+            case,
+            "conformance.necessity-verification-authority-mismatch",
+            "The verification identities do not match the authority admitted by the case.",
+        )
+    elif truth_mismatch:
+        diagnostic = _diagnostic(
+            case,
+            "conformance.necessity-world-evidence-mismatch",
+            "A world truth result does not identify the admitted outcome.",
+        )
+    return diagnostic
+
+
 def _admission_diagnostic(
     case: BoundedButForCase,
     evidence: BoundedButForEvidence,
     available_capability_refs: frozenset[str],
 ) -> Diagnostic | None:
+    diagnostic = None
     if not evidence._has_authentic_assembly():
-        return _diagnostic(
+        diagnostic = _diagnostic(
             case,
             "conformance.necessity-evidence-unauthenticated",
             "The comparison evidence was not produced by the trusted necessity assembler.",
         )
-    if evidence.case_digest != case.digest:
-        return _diagnostic(
+    elif evidence.case_digest != case.digest:
+        diagnostic = _diagnostic(
             case,
             "conformance.necessity-case-evidence-mismatch",
             "The assembled evidence does not belong to the admitted comparison case.",
         )
-    if case.claim.relation_id != BOUNDED_BUT_FOR_RELATION_ID:
-        return _diagnostic(
-            case,
-            "conformance.necessity-claim-relation-invalid",
-            "The claim does not use the bounded but-for necessity relation.",
-        )
-    try:
-        validate_behavioral_claim_binding(case.claim)
-    except ValueError:
-        return _diagnostic(
-            case,
-            "conformance.necessity-claim-invalid",
-            "The claim does not resolve against the canonical behavioral-relation catalog.",
-        )
-    if case.claim.quantifier_scope != "finite-cases" or case.claim.evidence_scope != "finite":
-        return _diagnostic(
-            case,
-            "conformance.necessity-claim-boundary-invalid",
-            "The binary comparator accepts only finite-case claims with finite evidence.",
-        )
-    if (
-        case.claim.left_carrier_ref != case.candidate_ref
-        or case.claim.right_carrier_ref != case.outcome_proposition_address
-    ):
-        return _diagnostic(
-            case,
-            "conformance.necessity-claim-case-mismatch",
-            "The claim carriers do not identify the admitted candidate and outcome.",
-        )
-    if (case.criterion_id, case.criterion_version) != (_CRITERION_ID, _CRITERION_VERSION):
-        return _diagnostic(
-            case,
-            "conformance.necessity-criterion-unsupported",
-            "The requested necessity criterion is not supported by this comparator.",
-        )
-    if set(case.required_capability_refs) - set(available_capability_refs):
-        return _diagnostic(
+    elif (claim_diagnostic := _claim_admission_diagnostic(case)) is not None:
+        diagnostic = claim_diagnostic
+    elif set(case.required_capability_refs) - set(available_capability_refs):
+        diagnostic = _diagnostic(
             case,
             "conformance.necessity-capability-unsupported",
             "The comparator does not have every capability required by the admitted case.",
         )
-    if (
-        evidence.baseline_world_id != case.baseline_world.world_id
-        or evidence.baseline_run_ref != case.baseline_world.run_ref
-        or evidence.counterfactual_world_id != case.counterfactual_world.world_id
-        or evidence.counterfactual_run_ref != case.counterfactual_world.run_ref
-    ):
-        return _diagnostic(
-            case,
-            "conformance.necessity-world-evidence-mismatch",
-            "The evidence does not identify the admitted worlds and immutable run references.",
-        )
-    if evidence.verification_binding != case.verification_authority or any(
-        identity.binding != case.verification_authority for identity in evidence.verification_identities
-    ):
-        return _diagnostic(
-            case,
-            "conformance.necessity-verification-authority-mismatch",
-            "The verification identities do not match the authority admitted by the case.",
-        )
-    for truth in (evidence.baseline_truth, evidence.counterfactual_truth):
-        if (
-            truth.proposition_address != case.outcome_proposition_address
-            or truth.assertion_address != case.outcome_assertion_address
-        ):
-            return _diagnostic(
-                case,
-                "conformance.necessity-world-evidence-mismatch",
-                "A world truth result does not identify the admitted outcome.",
-            )
-    return None
+    else:
+        diagnostic = _evidence_admission_diagnostic(case, evidence)
+    return diagnostic
 
 
 def _gate_diagnostics(
@@ -403,6 +419,65 @@ def _gate_diagnostics(
     return tuple(diagnostics)
 
 
+def _comparison_disposition(
+    case: BoundedButForCase,
+    evidence: BoundedButForEvidence,
+) -> tuple[NecessityComparisonOutcome, tuple[Diagnostic, ...]]:
+    outcome = NecessityComparisonOutcome.SUPPORTED
+    diagnostics: tuple[Diagnostic, ...] = ()
+    truth_outcomes = (
+        evidence.baseline_truth.proposition_outcome,
+        evidence.counterfactual_truth.proposition_outcome,
+    )
+    verification_dispositions = (
+        evidence.intervention_disposition,
+        evidence.matching_disposition,
+        evidence.cleanup_disposition,
+    )
+    if PropositionTruthOutcome.UNSUPPORTED in truth_outcomes:
+        outcome = NecessityComparisonOutcome.UNSUPPORTED
+        diagnostics = (
+            _diagnostic(
+                case,
+                "conformance.necessity-outcome-unsupported",
+                "At least one world outcome is unsupported by the admitted apparatus.",
+            ),
+        )
+    elif PropositionTruthOutcome.UNKNOWN in truth_outcomes:
+        outcome = NecessityComparisonOutcome.INCONCLUSIVE
+        diagnostics = (
+            _diagnostic(
+                case,
+                "conformance.necessity-outcome-inconclusive",
+                "At least one world outcome is indeterminate.",
+            ),
+        )
+    elif VerificationDisposition.UNSUPPORTED in verification_dispositions:
+        outcome = NecessityComparisonOutcome.UNSUPPORTED
+        diagnostics = (
+            _diagnostic(
+                case,
+                "conformance.necessity-verification-unsupported",
+                "At least one required verification fact is unsupported by the admitted validator.",
+            ),
+        )
+    elif evidence.baseline_truth.proposition_outcome is PropositionTruthOutcome.FALSE:
+        outcome = NecessityComparisonOutcome.INCONCLUSIVE
+        diagnostics = (
+            _diagnostic(
+                case,
+                "conformance.necessity-baseline-nonvacuity-failed",
+                "The baseline outcome is false, so the necessity comparison is non-vacuous only as inconclusive.",
+            ),
+        )
+    elif gate_diagnostics := _gate_diagnostics(case, evidence):
+        outcome = NecessityComparisonOutcome.INCONCLUSIVE
+        diagnostics = gate_diagnostics
+    elif evidence.counterfactual_truth.proposition_outcome is PropositionTruthOutcome.TRUE:
+        outcome = NecessityComparisonOutcome.REFUTED
+    return outcome, diagnostics
+
+
 def compare_bounded_but_for(
     case: BoundedButForCase,
     evidence: BoundedButForEvidence,
@@ -410,77 +485,13 @@ def compare_bounded_but_for(
     available_capability_refs: frozenset[str],
 ) -> BoundedButForResult:
     """Evaluate one admitted finite binary but-for necessity comparison."""
-
     admission_diagnostic = _admission_diagnostic(case, evidence, available_capability_refs)
     if admission_diagnostic is not None:
-        return _result(
-            case,
-            evidence,
-            NecessityComparisonOutcome.UNSUPPORTED,
-            (admission_diagnostic,),
-        )
-
-    truth_outcomes = (
-        evidence.baseline_truth.proposition_outcome,
-        evidence.counterfactual_truth.proposition_outcome,
-    )
-    if PropositionTruthOutcome.UNSUPPORTED in truth_outcomes:
-        diagnostic = _diagnostic(
-            case,
-            "conformance.necessity-outcome-unsupported",
-            "At least one world outcome is unsupported by the admitted apparatus.",
-        )
-        return _result(case, evidence, NecessityComparisonOutcome.UNSUPPORTED, (diagnostic,))
-    if PropositionTruthOutcome.UNKNOWN in truth_outcomes:
-        diagnostic = _diagnostic(
-            case,
-            "conformance.necessity-outcome-inconclusive",
-            "At least one world outcome is indeterminate.",
-        )
-        return _result(case, evidence, NecessityComparisonOutcome.INCONCLUSIVE, (diagnostic,))
-    verification_dispositions = (
-        evidence.intervention_disposition,
-        evidence.matching_disposition,
-        evidence.cleanup_disposition,
-    )
-    if VerificationDisposition.UNSUPPORTED in verification_dispositions:
-        diagnostic = _diagnostic(
-            case,
-            "conformance.necessity-verification-unsupported",
-            "At least one required verification fact is unsupported by the admitted validator.",
-        )
-        return _result(case, evidence, NecessityComparisonOutcome.UNSUPPORTED, (diagnostic,))
-    if evidence.baseline_truth.proposition_outcome is PropositionTruthOutcome.FALSE:
-        diagnostic = _diagnostic(
-            case,
-            "conformance.necessity-baseline-nonvacuity-failed",
-            "The baseline outcome is false, so the necessity comparison is non-vacuous only as inconclusive.",
-        )
-        return _result(case, evidence, NecessityComparisonOutcome.INCONCLUSIVE, (diagnostic,))
-
-    gate_diagnostics = _gate_diagnostics(case, evidence)
-    if gate_diagnostics:
-        return _result(
-            case,
-            evidence,
-            NecessityComparisonOutcome.INCONCLUSIVE,
-            gate_diagnostics,
-        )
-    if evidence.counterfactual_truth.proposition_outcome is PropositionTruthOutcome.TRUE:
-        return _result(case, evidence, NecessityComparisonOutcome.REFUTED)
-    return _result(case, evidence, NecessityComparisonOutcome.SUPPORTED)
+        outcome = NecessityComparisonOutcome.UNSUPPORTED
+        diagnostics = (admission_diagnostic,)
+    else:
+        outcome, diagnostics = _comparison_disposition(case, evidence)
+    return _result(case, evidence, outcome, diagnostics)
 
 
-__all__ = (
-    "BOUNDED_BUT_FOR_RELATION_ID",
-    "BoundedButForCase",
-    "BoundedButForEvidence",
-    "BoundedButForResult",
-    "InterventionKind",
-    "NecessityComparisonOutcome",
-    "NecessityMatchingPolicy",
-    "NecessityVerificationAuthority",
-    "NecessityWorldRef",
-    "VerificationRecordIdentity",
-    "compare_bounded_but_for",
-)
+__all__ = ("BOUNDED_BUT_FOR_RELATION_ID", "BoundedButForCase", "BoundedButForEvidence", "BoundedButForResult", "InterventionKind", "NecessityComparisonOutcome", "NecessityMatchingPolicy", "NecessityVerificationAuthority", "NecessityWorldRef", "VerificationRecordIdentity", "compare_bounded_but_for")  # fmt: skip

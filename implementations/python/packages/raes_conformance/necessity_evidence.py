@@ -21,6 +21,7 @@ from .necessity_types import (
     VerificationBinding,
     VerificationDisposition,
     VerificationRecordIdentity,
+    _BoundedButForEvidenceParts,
     _new_bounded_but_for_evidence,
 )
 from .necessity_validation import (
@@ -114,6 +115,32 @@ class CleanupVerificationRecord:
         for field_name in ("world_id", "run_ref", "subject_ref"):
             _require_text(getattr(self, field_name), field_name)
         _require_unique_text(self.residual_state, "residual_state")
+
+
+@dataclass(frozen=True)
+class NecessityRunPair:
+    """Typed baseline and counterfactual task/run inputs."""
+
+    baseline_task: ExperimentTaskModel
+    baseline_run: ExperimentRunModel
+    counterfactual_task: ExperimentTaskModel
+    counterfactual_run: ExperimentRunModel
+
+
+@dataclass(frozen=True)
+class NecessityVerificationRecords:
+    """The three run-bound verification inputs for one comparison."""
+
+    intervention: InterventionVerificationRecord
+    matching: MatchingVerificationRecord
+    cleanup: CleanupVerificationRecord
+
+    def as_tuple(
+        self,
+    ) -> tuple[InterventionVerificationRecord, MatchingVerificationRecord, CleanupVerificationRecord]:
+        """Return the records in canonical comparison order."""
+
+        return (self.intervention, self.matching, self.cleanup)
 
 
 class NecessityEvidenceValidator(Protocol):
@@ -222,34 +249,41 @@ def _validate_verification_evidence(
             raise ValueError(f"{label} evidence must resolve through the counterfactual run and traceability")
 
 
-def _validate_verification_joins(
-    case: BoundedButForCase,
-    intervention: InterventionVerificationRecord,
-    matching: MatchingVerificationRecord,
-    cleanup: CleanupVerificationRecord,
-) -> None:
-    if (
-        intervention.world_id != case.counterfactual_world.world_id
-        or intervention.run_ref != case.counterfactual_world.run_ref
-        or intervention.intervention_ref != case.intervention_ref
-        or intervention.intervention_version != case.intervention_version
-    ):
-        raise ValueError("intervention verification does not match the admitted case")
-    if (
-        matching.baseline_world_id != case.baseline_world.world_id
-        or matching.baseline_run_ref != case.baseline_world.run_ref
-        or matching.counterfactual_world_id != case.counterfactual_world.world_id
-        or matching.counterfactual_run_ref != case.counterfactual_world.run_ref
-        or matching.policy_id != case.matching_policy.policy_id
-        or matching.policy_version != case.matching_policy.policy_version
-    ):
-        raise ValueError("matching verification does not match the admitted case")
-    if (
-        cleanup.world_id != case.counterfactual_world.world_id
-        or cleanup.run_ref != case.counterfactual_world.run_ref
-        or cleanup.subject_ref != case.counterfactual_world.subject_ref
-    ):
-        raise ValueError("cleanup verification does not match the admitted case")
+def _require_join(label: str, joins: tuple[tuple[str, str], ...]) -> None:
+    if any(actual != expected for actual, expected in joins):
+        raise ValueError(f"{label} verification does not match the admitted case")
+
+
+def _validate_verification_joins(case: BoundedButForCase, records: NecessityVerificationRecords) -> None:
+    intervention, matching, cleanup = records.as_tuple()
+    _require_join(
+        "intervention",
+        (
+            (intervention.world_id, case.counterfactual_world.world_id),
+            (intervention.run_ref, case.counterfactual_world.run_ref),
+            (intervention.intervention_ref, case.intervention_ref),
+            (intervention.intervention_version, case.intervention_version),
+        ),
+    )
+    _require_join(
+        "matching",
+        (
+            (matching.baseline_world_id, case.baseline_world.world_id),
+            (matching.baseline_run_ref, case.baseline_world.run_ref),
+            (matching.counterfactual_world_id, case.counterfactual_world.world_id),
+            (matching.counterfactual_run_ref, case.counterfactual_world.run_ref),
+            (matching.policy_id, case.matching_policy.policy_id),
+            (matching.policy_version, case.matching_policy.policy_version),
+        ),
+    )
+    _require_join(
+        "cleanup",
+        (
+            (cleanup.world_id, case.counterfactual_world.world_id),
+            (cleanup.run_ref, case.counterfactual_world.run_ref),
+            (cleanup.subject_ref, case.counterfactual_world.subject_ref),
+        ),
+    )
 
 
 def _record_digest(
@@ -283,20 +317,15 @@ def _identity(
 def assemble_bounded_but_for_evidence(
     case: BoundedButForCase,
     *,
-    baseline_task: ExperimentTaskModel,
-    baseline_run: ExperimentRunModel,
-    counterfactual_task: ExperimentTaskModel,
-    counterfactual_run: ExperimentRunModel,
+    runs: NecessityRunPair,
     evidence_records: tuple[ExperimentEvidenceRecordModel, ...],
-    intervention: InterventionVerificationRecord,
-    matching: MatchingVerificationRecord,
-    cleanup: CleanupVerificationRecord,
+    verification_records: NecessityVerificationRecords,
     validator: NecessityEvidenceValidator,
 ) -> BoundedButForEvidence:
     """Invoke the admitted adapter and assemble evidence after every join passes."""
 
-    _validate_world(case, "baseline", baseline_task, baseline_run)
-    _validate_world(case, "counterfactual", counterfactual_task, counterfactual_run)
+    _validate_world(case, "baseline", runs.baseline_task, runs.baseline_run)
+    _validate_world(case, "counterfactual", runs.counterfactual_task, runs.counterfactual_run)
     binding = getattr(validator, "binding", None)
     if not isinstance(binding, VerificationBinding) or binding != case.verification_authority:
         raise ValueError("validator binding does not match the authority admitted by the case")
@@ -306,47 +335,47 @@ def assemble_bounded_but_for_evidence(
     baseline_truth = validator.derive_truth(
         role="baseline",
         case=case,
-        run=baseline_run,
+        run=runs.baseline_run,
         evidence_records=evidence_records,
     )
     counterfactual_truth = validator.derive_truth(
         role="counterfactual",
         case=case,
-        run=counterfactual_run,
+        run=runs.counterfactual_run,
         evidence_records=evidence_records,
     )
     if not isinstance(baseline_truth, PropositionTruthResultModel) or not isinstance(
         counterfactual_truth, PropositionTruthResultModel
     ):
         raise ValueError("validator must derive typed PropositionTruthResultModel values")
-    _validate_truth_evidence("baseline", baseline_truth, baseline_run, evidence_by_id)
-    _validate_truth_evidence("counterfactual", counterfactual_truth, counterfactual_run, evidence_by_id)
-    _validate_verification_joins(case, intervention, matching, cleanup)
-    for label, record in (
-        ("intervention verification", intervention),
-        ("matching verification", matching),
-        ("cleanup verification", cleanup),
+    _validate_truth_evidence("baseline", baseline_truth, runs.baseline_run, evidence_by_id)
+    _validate_truth_evidence("counterfactual", counterfactual_truth, runs.counterfactual_run, evidence_by_id)
+    _validate_verification_joins(case, verification_records)
+    for label, record in zip(
+        ("intervention verification", "matching verification", "cleanup verification"),
+        verification_records.as_tuple(),
+        strict=True,
     ):
         _validate_verification_evidence(
             label,
             record.evidence_record_refs,
-            counterfactual_run,
+            runs.counterfactual_run,
             evidence_by_id,
         )
 
     intervention_disposition = validator.verify_intervention(
         case=case,
-        record=intervention,
+        record=verification_records.intervention,
         evidence_records=evidence_records,
     )
     matching_disposition = validator.verify_matching(
         case=case,
-        record=matching,
+        record=verification_records.matching,
         evidence_records=evidence_records,
     )
     cleanup_disposition = validator.verify_cleanup(
         case=case,
-        record=cleanup,
+        record=verification_records.cleanup,
         evidence_records=evidence_records,
     )
     dispositions = (
@@ -358,29 +387,31 @@ def assemble_bounded_but_for_evidence(
         raise ValueError("validator methods must return VerificationDisposition values")
 
     permitted = set(case.matching_policy.permitted_difference_refs)
-    observed = set(matching.observed_difference_refs)
+    observed = set(verification_records.matching.observed_difference_refs)
     unmatched = tuple(sorted(observed.symmetric_difference(permitted)))
-    records = (intervention, matching, cleanup)
+    records = verification_records.as_tuple()
     record_ids = [record.record_id for record in records]
     if len(record_ids) != len(set(record_ids)):
         raise ValueError("verification records must use unique record_id values")
     return _new_bounded_but_for_evidence(
-        case_digest=case.digest,
-        baseline_world_id=case.baseline_world.world_id,
-        baseline_run_ref=case.baseline_world.run_ref,
-        baseline_truth=baseline_truth,
-        counterfactual_world_id=case.counterfactual_world.world_id,
-        counterfactual_run_ref=case.counterfactual_world.run_ref,
-        counterfactual_truth=counterfactual_truth,
-        intervention_disposition=intervention_disposition,
-        intervention_evidence_refs=intervention.evidence_record_refs,
-        matching_disposition=matching_disposition,
-        unmatched_dimension_refs=unmatched,
-        cleanup_disposition=cleanup_disposition,
-        cleanup_evidence_refs=cleanup.evidence_record_refs,
-        residual_state=cleanup.residual_state,
-        verification_binding=binding,
-        verification_identities=tuple(_identity(record, binding) for record in records),
+        _BoundedButForEvidenceParts(
+            case_digest=case.digest,
+            baseline_world_id=case.baseline_world.world_id,
+            baseline_run_ref=case.baseline_world.run_ref,
+            baseline_truth=baseline_truth,
+            counterfactual_world_id=case.counterfactual_world.world_id,
+            counterfactual_run_ref=case.counterfactual_world.run_ref,
+            counterfactual_truth=counterfactual_truth,
+            intervention_disposition=intervention_disposition,
+            intervention_evidence_refs=verification_records.intervention.evidence_record_refs,
+            matching_disposition=matching_disposition,
+            unmatched_dimension_refs=unmatched,
+            cleanup_disposition=cleanup_disposition,
+            cleanup_evidence_refs=verification_records.cleanup.evidence_record_refs,
+            residual_state=verification_records.cleanup.residual_state,
+            verification_binding=binding,
+            verification_identities=tuple(_identity(record, binding) for record in records),
+        )
     )
 
 
@@ -389,6 +420,8 @@ __all__ = (
     "InterventionVerificationRecord",
     "MatchingVerificationRecord",
     "NecessityEvidenceValidator",
+    "NecessityRunPair",
+    "NecessityVerificationRecords",
     "VerificationBinding",
     "VerificationDisposition",
     "assemble_bounded_but_for_evidence",
