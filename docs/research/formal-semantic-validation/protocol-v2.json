@@ -1,0 +1,228 @@
+{
+  "amendment_log": [
+    {
+      "date": "2026-07-27",
+      "revision": "2.0.0",
+      "summary": "Retained every v1 case and added governed production satisfiability and exploit-path controls under issue 828."
+    }
+  ],
+  "analysis_rules": {
+    "case_coverage": "Every claim class has a positive and negative case, including unsupported classes.",
+    "failure_policy": "A required supported positive failure, accepted single-defect negative, failed evidence replay, or missing join refutes that bounded claim class.",
+    "immutability_policy": "A product correction creates a new execution snapshot; it never overwrites a failed observation.",
+    "participant_coverage": "Every participant obligation has distinct positive and negative executable fixture references.",
+    "unsupported_policy": "A class remains untested only when no governed production entrypoint runs; historical unsupported controls do not erase distinct supported controls added by a later protocol revision."
+  },
+  "claim_classes": [
+    {
+      "allowed_evidence": [
+        "production parser result",
+        "closed Pydantic model validation",
+        "published schema parity tests"
+      ],
+      "artifact_stage": "authored",
+      "boundary": "Closed SDL source shape, field, type, vocabulary, and local constraint validation only.",
+      "claim_class_id": "schema-validity",
+      "disallowed_evidence": [
+        "semantic consistency claims",
+        "solver claims",
+        "maintainer confidence"
+      ],
+      "entrypoint_id": "parse-sdl-file",
+      "expected_evidence_status": "demonstrated",
+      "label": "Schema validity",
+      "objective_fail_criteria": "The negative case is accepted, the positive control is rejected, or the result is inferred from a generated schema rather than the published production path.",
+      "objective_pass_criteria": "The positive control is accepted and the single-defect unknown-field case is rejected by the production source/model boundary."
+    },
+    {
+      "allowed_evidence": [
+        "SemanticValidator results",
+        "participant contract validation",
+        "instantiation revalidation",
+        "targeted regression tests"
+      ],
+      "artifact_stage": "validated",
+      "boundary": "Static fail-closed cross-reference, ambiguity, cycle, participant-boundary, and related domain invariants over parsed or instantiated SDL.",
+      "claim_class_id": "semantic-consistency",
+      "disallowed_evidence": [
+        "schema acceptance alone",
+        "direct Scenario construction",
+        "universal semantic correctness"
+      ],
+      "entrypoint_id": "semantic-validator",
+      "expected_evidence_status": "partial",
+      "label": "Semantic consistency",
+      "objective_fail_criteria": "A named negative passes, a positive control fails, or a test-local oracle is promoted to universal semantic correctness.",
+      "objective_pass_criteria": "The named positive controls pass and the single-defect dangling-reference and participant-semantics negatives are rejected through production semantic or contract entrypoints."
+    },
+    {
+      "allowed_evidence": [
+        "workflow graph validation",
+        "planner dependency property tests"
+      ],
+      "artifact_stage": "validated",
+      "boundary": "Reachability in one named graph with declared node and edge semantics; this protocol exercises workflow control flow only.",
+      "claim_class_id": "graph-reachability",
+      "disallowed_evidence": [
+        "network topology declarations",
+        "successful deployment",
+        "exploit-path claims"
+      ],
+      "entrypoint_id": "workflow-semantic-validator",
+      "expected_evidence_status": "partial",
+      "label": "Graph reachability",
+      "objective_fail_criteria": "The unreachable step passes or the workflow witness is promoted to network, participant, service, or exploit reachability.",
+      "objective_pass_criteria": "A reachable workflow passes and a single unreachable step is rejected by the production semantic validator."
+    },
+    {
+      "allowed_evidence": [
+        "pinned solver result",
+        "declared theory and domain",
+        "reproducible model or unsat certificate"
+      ],
+      "artifact_stage": "analyzed",
+      "boundary": "Existence or non-existence of a model for an explicitly named whole-scenario constraint system and domain.",
+      "claim_class_id": "constraint-satisfiability",
+      "disallowed_evidence": [
+        "Pydantic predicates",
+        "bounded envelope membership alone",
+        "topological sort"
+      ],
+      "entrypoint_id": "whole-scenario-constraint-solver",
+      "expected_evidence_status": "demonstrated",
+      "label": "Constraint satisfiability",
+      "objective_fail_criteria": "Local predicates, finite envelope membership, witness generation, or topological acyclicity are presented as whole-scenario satisfiability.",
+      "objective_pass_criteria": "A governed solver proves the satisfiable control and rejects the unsatisfiable control under a pinned theory and domain."
+    },
+    {
+      "allowed_evidence": [
+        "typed attack graph",
+        "executable path query",
+        "reproducible proof or counterexample"
+      ],
+      "artifact_stage": "analyzed",
+      "boundary": "A typed attack transition graph with prerequisites, effects, observations, and an executable path query or proof.",
+      "claim_class_id": "exploit-path-validity",
+      "disallowed_evidence": [
+        "vulnerability labels",
+        "service declarations",
+        "topology links",
+        "deployment success"
+      ],
+      "entrypoint_id": "exploit-path-analyzer",
+      "expected_evidence_status": "demonstrated",
+      "label": "Exploit-path validity",
+      "objective_fail_criteria": "Vulnerability references, network links, ACLs, objectives, or successful deployment are presented as exploit-path proof.",
+      "objective_pass_criteria": "A governed analyzer accepts the valid path and rejects the invalid path over a pinned attack-graph contract."
+    },
+    {
+      "allowed_evidence": [
+        "canonical compiled digest",
+        "two-pass execution",
+        "hash-seed integration tests"
+      ],
+      "artifact_stage": "compiled",
+      "boundary": "Repeatability under named inputs, stage, environment variation, serializer, and equivalence relation; this protocol covers parse-to-compile output only.",
+      "claim_class_id": "determinism-stability",
+      "disallowed_evidence": [
+        "one successful run",
+        "sorted empty output",
+        "full runtime determinism claims"
+      ],
+      "entrypoint_id": "parse-instantiate-compile",
+      "expected_evidence_status": "partial",
+      "label": "Determinism and stability",
+      "objective_fail_criteria": "The same input drifts, the comparison is vacuous, or parse-to-compile stability is promoted to runtime, replay, backend, or study stability.",
+      "objective_pass_criteria": "The same fixture compiles to the same canonical digest twice and a distinct fixture produces a distinct digest."
+    },
+    {
+      "allowed_evidence": [
+        "intervention protocol",
+        "named causal model",
+        "ablation observations",
+        "necessity criterion"
+      ],
+      "artifact_stage": "analyzed",
+      "boundary": "A governed intervention or ablation comparison under a named causal model and necessity criterion.",
+      "claim_class_id": "counterfactual-necessity",
+      "disallowed_evidence": [
+        "timestamp order",
+        "attribution label",
+        "negative validation case",
+        "maintainer interpretation"
+      ],
+      "entrypoint_id": "counterfactual-protocol",
+      "expected_evidence_status": "untested",
+      "label": "Counterfactual necessity",
+      "objective_fail_criteria": "Attribution vocabulary, temporal order, replay labels, or ordinary negative fixtures are presented as counterfactual proof.",
+      "objective_pass_criteria": "A pinned protocol distinguishes a necessity witness from a non-necessity control across governed worlds."
+    }
+  ],
+  "evidence_status_values": [
+    "untested",
+    "partial",
+    "demonstrated",
+    "refuted"
+  ],
+  "gate_outcome_values": [
+    "passed",
+    "failed",
+    "partial",
+    "not_run",
+    "not_applicable",
+    "unknown",
+    "unsupported",
+    "withheld"
+  ],
+  "issue_number": 828,
+  "participant_obligations": [
+    {
+      "label": "Hidden world versus participant-visible projection",
+      "negative_test_ref": "implementations/python/tests/test_sem_208_participant_behavior.py::test_hidden_truth_cannot_be_observed_without_explicit_disclosure_rule",
+      "obligation_id": "hidden-vs-visible-projection",
+      "positive_test_ref": "implementations/python/tests/test_sem_208_participant_behavior.py::test_hidden_truth_disclosure_is_separate_from_observable_projection"
+    },
+    {
+      "label": "Action-contract applicability and fail-closed failure",
+      "negative_test_ref": "implementations/python/tests/test_sem_211_participant_action_semantics.py::test_action_result_rejects_success_when_preconditions_are_unresolved",
+      "obligation_id": "fail-closed-action-applicability",
+      "positive_test_ref": "implementations/python/tests/test_sem_211_participant_action_semantics.py::test_action_contract_declares_sem_211_classes_and_compiles_them"
+    },
+    {
+      "label": "Multi-participant shared-state effects",
+      "negative_test_ref": "implementations/python/tests/test_run_308_concurrent_participant_execution.py::test_joint_action_record_contract_rejects_unordered_conflicting_writes",
+      "obligation_id": "shared-state-effects",
+      "positive_test_ref": "implementations/python/tests/test_run_308_concurrent_participant_execution.py::test_runtime_snapshot_publishes_joint_action_and_time_context_records"
+    },
+    {
+      "label": "Temporal ordering before causality claims",
+      "negative_test_ref": "implementations/python/tests/test_participant_runtime_invariants.py::test_order_discipline_rejects_wall_clock_causality",
+      "obligation_id": "ordering-before-causality",
+      "positive_test_ref": "implementations/python/tests/test_participant_runtime_invariants.py::test_order_discipline_accepts_supported_order_claim_strengths"
+    },
+    {
+      "label": "Evidence-labeled attribution",
+      "negative_test_ref": "implementations/python/tests/test_sem_212_participant_attribution_semantics.py::test_timestamp_adjacency_cannot_be_reported_as_strong_causality",
+      "obligation_id": "evidence-labeled-attribution",
+      "positive_test_ref": "implementations/python/tests/test_sem_212_participant_attribution_semantics.py::test_attribution_edge_round_trips_on_terminal_observation"
+    },
+    {
+      "label": "Participant-local outcomes separated from objective, evaluation, and reward layers",
+      "negative_test_ref": "implementations/python/tests/test_sem_215_participant_outcome_interpretation.py::test_local_action_success_does_not_imply_objective_success_without_rule_record",
+      "obligation_id": "participant-local-outcome-separation",
+      "positive_test_ref": "implementations/python/tests/test_sem_215_participant_outcome_interpretation.py::test_outcome_interpretation_rule_parses_and_compiles_explicit_layers"
+    },
+    {
+      "label": "Simulation and emulation realization-profile differences",
+      "negative_test_ref": "implementations/python/tests/test_realization_honesty_conformance.py::test_only_native_live_can_support_native_conformance",
+      "obligation_id": "realization-profile-honesty",
+      "positive_test_ref": "implementations/python/tests/test_realization_honesty_conformance.py::test_constructive_envelope_runs_positive_and_negative_honesty_probes"
+    }
+  ],
+  "protocol_id": "raes-formal-semantic-validation",
+  "registered_at": "2026-07-27",
+  "requirement_uid": "ASR-530",
+  "research_question": "Which bounded RAES validation claims reproduce at the pinned revision, including the governed finite-domain satisfiability and typed exploit-path production entrypoints?",
+  "revision": "2.0.0",
+  "title": "RAES formal semantic-validation, satisfiability, and exploit-path retest"
+}

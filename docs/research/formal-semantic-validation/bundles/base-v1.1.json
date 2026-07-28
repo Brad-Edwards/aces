@@ -1,8 +1,13 @@
 {
-  "part_kind": "base",
-  "revision": "1.1.0",
-  "protocol_path": "docs/research/formal-semantic-validation/protocol-v1.json",
+  "analysis_path": "docs/research/formal-semantic-validation/analysis-v1.1.json",
+  "analysis_sha256": "91c83666ee9099d8c8484a1ce6e3ce30f858d050a066cfb2bb342375fcbb6642",
+  "artifacts": [],
+  "bundle_id": "raes-formal-semantic-validation",
   "corpus_path": "docs/research/formal-semantic-validation/corpus/manifest-v1.json",
+  "corpus_sha256": "89019de409f23f20f6136e305da0cef618ec3add6a3372628fe610008ead9b31",
+  "protocol_path": "docs/research/formal-semantic-validation/protocol-v1.json",
+  "protocol_sha256": "cda5d300dfb9ec553cbc86538eaaf4a8ef43dfa59a14c1dcc113a56cfac8d826",
+  "revision": "1.1.0",
   "snapshot_path": "docs/research/formal-semantic-validation/execution-snapshot-v1.1.json",
-  "analysis_path": "docs/research/formal-semantic-validation/analysis-v1.1.json"
+  "snapshot_sha256": "815ad32527478e1e9056c8e64419f83b0086ab1509c7df21cf5863b2d565cd46"
 }
