@@ -2,9 +2,9 @@
   "contract_id": "runtime-fact-binding-plane-v1",
   "schema_path": "contracts/schemas/participant-runtime/runtime-fact-binding-plane-v1.json",
   "stability": "draft",
-  "content_hash": "4ebbf42cc283ad2419d0bbb8724f30e437bec1b1cf1058b4c580475eb83f1699",
+  "content_hash": "ee6c288abf762b601ca0b181a6df5797f172dcff2b7bd5713edfe06f7aedbb4a",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "4ebbf42cc283ad2419d0bbb8724f30e437bec1b1cf1058b4c580475eb83f1699"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "ee6c288abf762b601ca0b181a6df5797f172dcff2b7bd5713edfe06f7aedbb4a"
   }
 }

@@ -2,9 +2,9 @@
   "contract_id": "workflow-history-event-stream-v1",
   "schema_path": "contracts/schemas/control-plane/workflow-history-event-stream-v1.json",
   "stability": "draft",
-  "content_hash": "32f8eb4cd8800a93374f1f76e497b1b96f08e583f4aa2d34775e915c1112a68b",
+  "content_hash": "22737796b0903c109e718cdb2b14d1a05832019a121437c45f153a9a76caf916",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "32f8eb4cd8800a93374f1f76e497b1b96f08e583f4aa2d34775e915c1112a68b"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "22737796b0903c109e718cdb2b14d1a05832019a121437c45f153a9a76caf916"
   }
 }

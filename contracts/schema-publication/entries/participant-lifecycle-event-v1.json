@@ -2,9 +2,9 @@
   "contract_id": "participant-lifecycle-event-v1",
   "schema_path": "contracts/schemas/participant-runtime/participant-lifecycle-event-v1.json",
   "stability": "draft",
-  "content_hash": "3bdfd98d46e24c93a9659550f870c8e7c146255e627e74117ccf7b246dcb2afe",
+  "content_hash": "65840259111cd740022530b80c28a67be71f65d8d4c5ed298742ce13c3fd2b28",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "3bdfd98d46e24c93a9659550f870c8e7c146255e627e74117ccf7b246dcb2afe"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "65840259111cd740022530b80c28a67be71f65d8d4c5ed298742ce13c3fd2b28"
   }
 }

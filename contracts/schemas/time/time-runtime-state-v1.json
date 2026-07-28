@@ -175,7 +175,7 @@
       "type": "object"
     }
   },
-  "$id": "https://raes.dev/schemas/time-runtime-state-v1.json",
+  "$id": "https://raesystem.github.io/rae/schemas/time-runtime-state-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "Typed observable state for all clocks governed by one declaration.",

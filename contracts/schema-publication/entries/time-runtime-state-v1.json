@@ -2,9 +2,9 @@
   "contract_id": "time-runtime-state-v1",
   "schema_path": "contracts/schemas/time/time-runtime-state-v1.json",
   "stability": "draft",
-  "content_hash": "f5092734db63333c6ffd1120730bc5b3343c90fa2ae6056d2e9a51194e4bca1f",
+  "content_hash": "a5806e28394dc8722100f3cc6277e8f3ccbcc943724824f204fcfed1f2413bd3",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "f5092734db63333c6ffd1120730bc5b3343c90fa2ae6056d2e9a51194e4bca1f"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "a5806e28394dc8722100f3cc6277e8f3ccbcc943724824f204fcfed1f2413bd3"
   }
 }

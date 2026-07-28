@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
   "stability": "draft",
-  "content_hash": "91fc70f7f34b378304d125aed4729a6d20048a2539ff00abc3729af2be7cfbfe",
+  "content_hash": "e48a8fae49b47e70ad14eb750f865d2211d03fccbf91e824a562cc62772cc3da",
   "last_change": {
-    "summary": "Published portable artifact requirements and scoped participant resource budgets in instantiated scenarios for issues #920 and #899.",
-    "content_hash": "91fc70f7f34b378304d125aed4729a6d20048a2539ff00abc3729af2be7cfbfe"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "e48a8fae49b47e70ad14eb750f865d2211d03fccbf91e824a562cc62772cc3da"
   }
 }

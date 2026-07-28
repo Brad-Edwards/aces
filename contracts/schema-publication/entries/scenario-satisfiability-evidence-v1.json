@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "3ebaa6f78e03ebbdf06052cfc85abc4f1f40746ce0ea7a8eccc96637e1fcdace",
+  "content_hash": "51e4814898fd1457cb999020332554596f715540ecbd22078e1936ad5468daf0",
   "last_change": {
-    "summary": "Carried portable artifact requirements and scoped participant resource budgets through satisfiability evidence for issues #920 and #899.",
-    "content_hash": "3ebaa6f78e03ebbdf06052cfc85abc4f1f40746ce0ea7a8eccc96637e1fcdace"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "51e4814898fd1457cb999020332554596f715540ecbd22078e1936ad5468daf0"
   }
 }

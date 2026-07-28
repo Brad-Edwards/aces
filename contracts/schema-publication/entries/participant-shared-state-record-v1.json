@@ -2,9 +2,9 @@
   "contract_id": "participant-shared-state-record-v1",
   "schema_path": "contracts/schemas/participant-runtime/participant-shared-state-record-v1.json",
   "stability": "draft",
-  "content_hash": "525cb514917251807cb5c1cdf52dca0118663416e59f36da35045e8cfed8d31b",
+  "content_hash": "d66c4fd7c34abc68fdd48af3cfea9b7f576c0a62cd5275c0f7305be4100b8b53",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "525cb514917251807cb5c1cdf52dca0118663416e59f36da35045e8cfed8d31b"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "d66c4fd7c34abc68fdd48af3cfea9b7f576c0a62cd5275c0f7305be4100b8b53"
   }
 }

@@ -2,9 +2,9 @@
   "contract_id": "nist-csf-defensive-categories-source-v1",
   "schema_path": "contracts/schemas/concept-authority/nist-csf-defensive-categories-source-v1.json",
   "stability": "draft",
-  "content_hash": "f5aa81e3c9c0cac489bc1ff89eb65a94b751d50f73c58baedb82371faf72c14f",
+  "content_hash": "93e71d0a86591f26ef8fe899aa5a476d4bdb4e948942ae704b61020ce4b326e7",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "f5aa81e3c9c0cac489bc1ff89eb65a94b751d50f73c58baedb82371faf72c14f"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "93e71d0a86591f26ef8fe899aa5a476d4bdb4e948942ae704b61020ce4b326e7"
   }
 }

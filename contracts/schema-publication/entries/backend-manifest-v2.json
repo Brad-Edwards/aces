@@ -2,9 +2,9 @@
   "contract_id": "backend-manifest-v2",
   "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
   "stability": "draft",
-  "content_hash": "8f140797bd697fb49969fcf61a50c6b658f9b7e002d46f3a63cd566109436e83",
+  "content_hash": "5408003b0a05176661342b87b9f17116b4f1a4fd687153a3813dce33f8dec064",
   "last_change": {
-    "summary": "Added portable artifact satisfaction capabilities and participant resource-budget support for issues #920 and #899.",
-    "content_hash": "8f140797bd697fb49969fcf61a50c6b658f9b7e002d46f3a63cd566109436e83"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "5408003b0a05176661342b87b9f17116b4f1a4fd687153a3813dce33f8dec064"
   }
 }

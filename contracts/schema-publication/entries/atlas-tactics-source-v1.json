@@ -2,9 +2,9 @@
   "contract_id": "atlas-tactics-source-v1",
   "schema_path": "contracts/schemas/concept-authority/atlas-tactics-source-v1.json",
   "stability": "draft",
-  "content_hash": "25303bd3579d95cb16dc97d45ccd6de9915fac21345cf7dea7f2b317b70612b9",
+  "content_hash": "e1aec25898402152581fe442453858dbe0e9398bb6ddb157273c4ce298f9ebee",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "25303bd3579d95cb16dc97d45ccd6de9915fac21345cf7dea7f2b317b70612b9"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "e1aec25898402152581fe442453858dbe0e9398bb6ddb157273c4ce298f9ebee"
   }
 }

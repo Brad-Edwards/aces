@@ -2,9 +2,9 @@
   "contract_id": "validation-basis-disclosure-v1",
   "schema_path": "contracts/schemas/profiles/validation-basis-disclosure-v1.json",
   "stability": "draft",
-  "content_hash": "df23116b3c073e6db1c00ef2cbe419eb63af44a938095616ebfa799b39f59f69",
+  "content_hash": "cbd474c289d9519baf339ce22eea1613b41e9166ad3ac350f40e1955b434edd3",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "df23116b3c073e6db1c00ef2cbe419eb63af44a938095616ebfa799b39f59f69"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "cbd474c289d9519baf339ce22eea1613b41e9166ad3ac350f40e1955b434edd3"
   }
 }

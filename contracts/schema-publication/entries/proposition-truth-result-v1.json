@@ -2,9 +2,9 @@
   "contract_id": "proposition-truth-result-v1",
   "schema_path": "contracts/schemas/control-plane/proposition-truth-result-v1.json",
   "stability": "draft",
-  "content_hash": "36ead895c2f3be5c975077ccaf4e75e8026fd0a9243c5a67a894999e4f424ac2",
+  "content_hash": "25f6100c931dcd7e7eeace7f3900763cd9f283987be542f81d8b11beb601cae4",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "36ead895c2f3be5c975077ccaf4e75e8026fd0a9243c5a67a894999e4f424ac2"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "25f6100c931dcd7e7eeace7f3900763cd9f283987be542f81d8b11beb601cae4"
   }
 }

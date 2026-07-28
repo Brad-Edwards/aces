@@ -22376,7 +22376,7 @@
       "type": "string"
     }
   },
-  "$id": "https://raes.dev/schemas/sdl-authoring-input-v1.json",
+  "$id": "https://raesystem.github.io/rae/schemas/sdl-authoring-input-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "Normalized SDL authoring object.\n\nThis model applies after ``sdl-yaml/v1`` source-profile checks, structural\nkey canonicalization, shorthand expansion, enum normalization, and typed\nconstruction, but before module expansion and instantiation. Its JSON\nSchema does not validate YAML presentation details.",
@@ -23145,7 +23145,7 @@
     "id": "raes-semantic-invariants-v1",
     "keyword": "x-raes-invariants",
     "required": true,
-    "uri": "https://raes.dev/schemas/semantic-invariants/v1"
+    "uri": "https://raesystem.github.io/rae/schemas/semantic-invariants/v1"
   },
   "x-raes-source-profile": "sdl-yaml/v1",
   "x-raes-validates-raw-source": false

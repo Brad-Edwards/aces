@@ -1,5 +1,5 @@
 {
-  "$id": "https://raes.dev/schemas/workflow-history-event-stream-v1.json",
+  "$id": "https://raesystem.github.io/rae/schemas/workflow-history-event-stream-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "items": {
     "additionalProperties": false,

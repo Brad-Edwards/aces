@@ -2,9 +2,9 @@
   "contract_id": "concept-families-v1",
   "schema_path": "contracts/schemas/concept-authority/concept-families-v1.json",
   "stability": "draft",
-  "content_hash": "196b00f05a7100ecda790a05114c6bb47423a5ad4bbc8cf693fd30c9acd6f945",
+  "content_hash": "1a949b8d328d488ca7b71ef16d5803b7c1f4168b75eab64540988b537ed55fb0",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "196b00f05a7100ecda790a05114c6bb47423a5ad4bbc8cf693fd30c9acd6f945"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "1a949b8d328d488ca7b71ef16d5803b7c1f4168b75eab64540988b537ed55fb0"
   }
 }

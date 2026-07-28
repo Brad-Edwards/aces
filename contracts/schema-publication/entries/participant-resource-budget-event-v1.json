@@ -2,9 +2,9 @@
   "contract_id": "participant-resource-budget-event-v1",
   "schema_path": "contracts/schemas/participant-runtime/participant-resource-budget-event-v1.json",
   "stability": "draft",
-  "content_hash": "b71b0880a3751dac2a51fa34621fdd1b8a1ff6e37ddd6c7a6c52b5ff3938d56b",
+  "content_hash": "c4e20416e89dd165993176df9e4c7615604335ccb6bab817607e0cb8c6e395ae",
   "last_change": {
-    "summary": "Published policy-scoped, transition-consistent resource evidence events with measured-use commits for issue #899.",
-    "content_hash": "b71b0880a3751dac2a51fa34621fdd1b8a1ff6e37ddd6c7a6c52b5ff3938d56b"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "c4e20416e89dd165993176df9e4c7615604335ccb6bab817607e0cb8c6e395ae"
   }
 }

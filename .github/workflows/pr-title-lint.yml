@@ -20,6 +20,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: pr-title-lint-${{ github.event.pull_request.number }}
@@ -40,12 +41,41 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
+      - name: Collect PR commit messages
+        # This repo squashes with squash_merge_commit_message=COMMIT_MESSAGES,
+        # so these messages -- not the PR body -- become the squash commit body
+        # release-please reads for BREAKING CHANGE footers (#908). Written to a
+        # file rather than an argument: the messages are untrusted PR data and
+        # must never be shell-interpolated.
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          gh api --paginate \
+            "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/commits" \
+            --jq '.[].commit.message' > "${RUNNER_TEMP}/pr-commit-messages.txt"
+
       - name: Validate PR title
-        # The checker reads the title from $GITHUB_EVENT_PATH (set automatically
-        # by the runner). It is stdlib-only, so no dependency install is needed.
+        # The checker reads the title and body from $GITHUB_EVENT_PATH (set
+        # automatically by the runner). It is stdlib-only, so no dependency
+        # install is needed. Body and commit messages are read only for
+        # `BREAKING CHANGE:` footers, which release-please copies into
+        # CHANGELOG.md along with the squashed title (#908); prose elsewhere is
+        # not inspected.
         run: |
           if [ ! -f tools/check_pr_title.py ]; then
             echo "::notice::tools/check_pr_title.py is not on the base ref yet; skipping (bootstrap for the PR that introduces the guard). Enforcement is active for every subsequent PR."
             exit 0
           fi
-          python tools/check_pr_title.py
+          # The checker comes from the base ref, but this workflow file comes
+          # from the PR head, so on the PR that introduces --commit-messages-file
+          # the base copy does not accept it yet. Probe before passing it, the
+          # same bootstrap shape as the missing-file case above. Enforcement of
+          # commit-message footers is active from the next PR onward.
+          guard_args=()
+          if python tools/check_pr_title.py --help 2>/dev/null | grep -q -- '--commit-messages-file'; then
+            guard_args+=(--commit-messages-file "${RUNNER_TEMP}/pr-commit-messages.txt")
+          else
+            echo "::notice::base-ref tools/check_pr_title.py predates --commit-messages-file; title-only enforcement for this PR."
+          fi
+          python tools/check_pr_title.py "${guard_args[@]}"

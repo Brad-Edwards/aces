@@ -2,9 +2,9 @@
   "contract_id": "participant-execution-binding-v1",
   "schema_path": "contracts/schemas/participant-runtime/participant-execution-binding-v1.json",
   "stability": "draft",
-  "content_hash": "fa935e3d933584be0f569db57f692a9f8dbff6877af5b711a3bdc9a5917bd105",
+  "content_hash": "94e19bb76d962427c4b1a5d86ee3c1eac2a732b1a4e78435a412331e51322bb6",
   "last_change": {
-    "summary": "Published the exact native participant action-to-target execution relation and finite execution bounds for issue #898 under the RAES schema identity.",
-    "content_hash": "fa935e3d933584be0f569db57f692a9f8dbff6877af5b711a3bdc9a5917bd105"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "94e19bb76d962427c4b1a5d86ee3c1eac2a732b1a4e78435a412331e51322bb6"
   }
 }

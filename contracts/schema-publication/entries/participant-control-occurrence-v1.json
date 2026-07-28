@@ -2,9 +2,9 @@
   "contract_id": "participant-control-occurrence-v1",
   "schema_path": "contracts/schemas/participant-runtime/participant-control-occurrence-v1.json",
   "stability": "draft",
-  "content_hash": "b9ead3b36df6c998df60f2b328ac3433f547d135fc9526d36b54e8c335a3489f",
+  "content_hash": "c0330853c6c668fa2ad22afafc968160a0d91776ccab3c4ae6a11ff4cf84d1d0",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "b9ead3b36df6c998df60f2b328ac3433f547d135fc9526d36b54e8c335a3489f"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "c0330853c6c668fa2ad22afafc968160a0d91776ccab3c4ae6a11ff4cf84d1d0"
   }
 }

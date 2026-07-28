@@ -13,7 +13,7 @@ does not retain public aliases or dual-name compatibility.
 | Python distribution and imports | `raes` and the owning `raes_*` packages | installed wheel and source-boundary tests |
 | CLI and MCP commands | `raes`, `raes-mcp` | CLI and MCP construction tests |
 | MCP server and tools | RAES server metadata and `raes_*` tool identifiers | advertised-tool and guidance tests |
-| Published schema namespace | `https://raes.dev/schemas/` | generated parity and schema-publication checks |
+| Published schema namespace | `https://raesystem.github.io/rae/schemas/` | generated parity and schema-publication checks |
 | Contract/profile identities | RAES contract, profile, annotation, and wire identifiers | contract models, fixtures, JSON Schema validation |
 | Module artifacts | `raes.lock.json`, `raes-trust.yaml`, `.raes/module-cache`, RAES OCI media types and labels | registry, digest, signature, archive, and CLI tests |
 | Runtime and evidence artifacts | RAES schema names, event/status values, evidence ids, and resource names | DTO, fixture, persistence, and backend tests |
