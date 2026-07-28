@@ -492,6 +492,3 @@ def compare_bounded_but_for(
     else:
         outcome, diagnostics = _comparison_disposition(case, evidence)
     return _result(case, evidence, outcome, diagnostics)
-
-
-__all__ = ("BOUNDED_BUT_FOR_RELATION_ID", "BoundedButForCase", "BoundedButForEvidence", "BoundedButForResult", "InterventionKind", "NecessityComparisonOutcome", "NecessityMatchingPolicy", "NecessityVerificationAuthority", "NecessityWorldRef", "VerificationRecordIdentity", "compare_bounded_but_for")  # fmt: skip
