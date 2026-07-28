@@ -1,10 +1,10 @@
 # Formal Semantic Validation And Reachability Evidence
 
-This directory is the falsification/evidence gate for issue #168 and
-requirement ASR-530. It records exactly what the current ACES parser,
-semantic validator, compiler, participant contracts, and existing regression
-fixtures demonstrate—and preserves the stronger claims they do not
-demonstrate.
+This directory is the falsification/evidence gate for issues #168 and #828 and
+requirement ASR-530. It records exactly what the pinned RAES parser, semantic
+validator, compiler, participant contracts, finite-domain satisfiability
+analyzer, typed exploit-path analyzer, and existing regression fixtures
+demonstrate. It also preserves the stronger claims they do not demonstrate.
 
 The bundle keeps seven literature validation calls separate: schema validity,
 semantic consistency, graph reachability, constraint satisfiability,
@@ -13,42 +13,51 @@ Schema evidence is bounded to the structural cases. Semantic, participant,
 workflow-reachability, and parse-to-compile determinism evidence is partial.
 The immutable issue-168 v1 record keeps whole-scenario satisfiability,
 exploit-path validity, and counterfactual necessity `untested` at its pinned
-revision. ADR-086 and issue #826 add a revisioned satisfiability supplement:
-the exact finite-domain profile is now `demonstrated` by production
-satisfiable, unsatisfiable, and fail-closed unsupported controls. Issue #827
-adds a bounded typed exploit-path analyzer and published evidence contract for
-`aces-exploit-path-analysis-v1`; that result is valid only for its admitted
-snapshot, normalized attack graph, query, and search profile. It does not
-demonstrate arbitrary-SDL or real-world exploit validity, and counterfactual
-necessity remains `untested`.
+revision. The issue-828 v2 protocol retains every v1 case and adds distinct
+production satisfiable, unsatisfiable, valid-path, and invalid-path controls.
+The exact `raes-finite-domain-satisfiability-v1` and
+`raes-exploit-path-analysis-v1` profiles are `demonstrated` at the v2
+revision. Semantic consistency, workflow reachability, and parse-to-compile
+stability remain `partial`; counterfactual necessity remains `untested`.
 
 ## Bundle
 
 - [`bundle-manifest.json`](bundle-manifest.json) is a stable index over
-  immutable records in `bundles/`. Base evidence and supplements advance in
-  separate files, then the checker composes their highest revisions
-  deterministically. Adding a supplement no longer rewrites the base bundle.
+  immutable atomic releases in `bundles/`. Every release binds its exact
+  protocol, corpus, execution snapshot, analysis, and selected evidence
+  artifacts by repository path and SHA-256. The checker validates every
+  indexed historical release; it does not independently combine the newest
+  parts.
 - [`protocol-v1.json`](protocol-v1.json) freezes the claim boundaries,
   entrypoints, allowed evidence, objective pass/fail rules, and participant
-  obligations before interpretation.
+  obligations for the issue-168 baseline.
 - [`corpus/manifest-v1.json`](corpus/manifest-v1.json) carries positive and
   single-defect negative cases for every claim class. Unsupported classes have
   explicit cases with no invented research-only model or fixture semantics.
-- [`execution-snapshot-v1.1.json`](execution-snapshot-v1.1.json) pins ACES commit
-  `9347f64b26e3bb71d5459759c3d4bd473c76b446`, fixed-argv commands, replay
-  digests, structured diagnostic kinds, participant fixture outcomes, and
-  limitations.
-- [`analysis-v1.1.json`](analysis-v1.1.json) derives ADR-021 evidence status from
-  the frozen observations and states the bounded result in plain language.
+- [`protocol-v2.json`](protocol-v2.json) and
+  [`corpus/manifest-v2.json`](corpus/manifest-v2.json) preserve those cases and
+  add the four governed production controls without reinterpreting the
+  historical unsupported requests.
+- [`execution-snapshot-v2.json`](execution-snapshot-v2.json) pins the RAES
+  revision, Python/RAES/Z3 versions, fixed offline commands, all retained
+  observations, complete production evidence joins, participant outcomes,
+  digests, and limitations. It also pins the original issue-168 release as its
+  comparison baseline and records an exact accepted disposition for each
+  changed outcome, diagnostic, or result digest. The five current deviations
+  are representation-only digest changes from the project identity cutover to
+  RAES; their governed outcomes and diagnostics are unchanged.
+- [`analysis-v2.json`](analysis-v2.json) derives the ADR-021 status of each
+  claim from the v2 observations and protocol ceilings.
 - [`satisfiability-analysis-v1.json`](satisfiability-analysis-v1.json) is the
-  issue-826 supplement. It binds positive, negative, and unsupported source
-  controls to production outcomes and normalized-model digests. The checker
-  recomputes and replays each full evidence envelope; checked-in outcome labels
-  alone cannot satisfy the gate.
+  preserved issue-826 historical supplement. It remains selected atomically in
+  release 2.0 and is not independently combined with newer evidence.
 - [`satisfiability-execution-snapshot-v1.json`](satisfiability-execution-snapshot-v1.json)
   records fixed-argv, network-disabled commands and source/model/configuration
-  digest observations for those controls. The supplement analysis joins this
-  execution id and revision rather than rewriting the issue-168 v1 snapshot.
+  digest observations for that historical supplement.
+- [`evidence/`](evidence/) stores the complete published satisfiability and
+  exploit-path evidence envelopes for the four v2 production controls. The
+  exploit analyzer input retains the admitted snapshot separately in the
+  versioned corpus; the result envelope binds it by digest.
 
 The participant matrix includes positive and negative fixtures for hidden
 world versus participant-visible projection, fail-closed action applicability,
@@ -66,17 +75,33 @@ implementations/python/.venv/bin/python tools/check_formal_semantic_validation.p
 ```
 
 The checker uses bounded duplicate-safe JSON loading, repository-containment
-checks, closed shapes, stable ids, complete joins, and production SDL
-entrypoints. It reruns supported corpus cases and compares them to the immutable
-snapshot. It separately executes the governed satisfiability analyzer, verifies
-the complete three-control matrix and digest pins, and replays each envelope.
-It also binds each participant observation to its declared positive
-and negative pytest node ids and executes the complete participant fixture set;
-checked-in `passed` labels alone cannot satisfy the gate. The checker prevents
-unsupported classes from being promoted by weaker evidence. It performs no
-network access, backend deployment, shell evaluation, credential lookup, or
-environment-selected corpus loading.
+checks, closed shapes, stable IDs, complete joins, and SHA-256 pins. It
+validates historical releases for immutable shape and digest integrity without
+misstating them as current-code observations. It then joins every retained
+case in the current retest to its pinned baseline observation, requires an
+exact structured disposition for every drift, and replays the current schema,
+semantic, workflow, participant, and compile cases. For every new capability
+case it parses the stored envelope through the published contract model, calls
+the production analysis and replay APIs, invokes the fixed production CLI, and
+requires all results and source/configuration/evidence digests to agree.
+Checked-in labels, CLI exit status alone, mocks, or test-local analyzers cannot
+satisfy the gate. It performs no network access, backend deployment, shell
+evaluation, credential lookup, or environment-selected artifact loading.
 
-Failed observations are evidence. A later product correction or ACES revision
+Failed observations are evidence. A later product correction or RAES revision
 creates a new execution snapshot and analysis; it does not overwrite this
 record.
+
+## Bounded conclusions
+
+The satisfiable witness and subset-minimal unsatisfiable core establish results
+only for the declared finite-domain theory, translation, source, and pinned Z3
+configuration. The core is not a general proof certificate. The exploit-path
+witness and structured invalid-path evidence establish results only for the
+admitted snapshot, normalized graph, query, transition semantics, and bounded
+search profile. They do not establish backend execution, real-world
+exploitability, or real-world non-exploitability.
+
+The production exploit-path JSON loader currently accepts duplicate keys. The
+research loader rejects duplicate keys at the artifact boundary, but this
+release does not claim that the production input boundary is stronger.

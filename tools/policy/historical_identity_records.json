@@ -23,7 +23,7 @@
       "record_class": "release-history",
       "rationale": "Preserves immutable release notes and links published before the RAES identity cutover.",
       "occurrences": 297,
-      "content_sha256": "3a1154626ec846e91556113406701d22e69df203237c072adb2fa626ddc5c8f7"
+      "content_sha256": "6faabd84a6054d74f1778da8ed9d06696af72b95de9b5f26d29f7cb2af0cd50b"
     },
     {
       "path": "contracts/provenance/sdl-lineage-ledger-v1.json",
@@ -1536,13 +1536,6 @@
       "rationale": "Preserves preregistered, frozen, dated, or lineage-bearing research evidence from before the RAES identity cutover.",
       "occurrences": 19,
       "content_sha256": "e061530e05ed00a2ae68ce3c5760c1011223e48e7c2e8a1b8e2068718674e2bc"
-    },
-    {
-      "path": "docs/research/formal-semantic-validation/index.md",
-      "record_class": "research-record",
-      "rationale": "Preserves preregistered, frozen, dated, or lineage-bearing research evidence from before the RAES identity cutover.",
-      "occurrences": 4,
-      "content_sha256": "3bcb125e5fac91f3827edfbf139ae1f53dcf21c686ea0a6ee790241853850369"
     },
     {
       "path": "docs/research/formal-semantic-validation/protocol-v1.json",

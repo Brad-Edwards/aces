@@ -1,4 +1,4 @@
 {
-  "schema_version": "formal-semantic-validation-bundle-index/v1",
-  "parts_directory": "docs/research/formal-semantic-validation/bundles"
+  "bundles_directory": "docs/research/formal-semantic-validation/bundles",
+  "schema_version": "formal-semantic-validation-bundle-index/v2"
 }

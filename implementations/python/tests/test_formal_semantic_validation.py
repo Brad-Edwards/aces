@@ -8,14 +8,19 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+import tools.check_formal_semantic_validation as formal_validation
 from tools.check_formal_semantic_validation import (
     REQUIRED_CLAIM_CLASS_IDS,
     REQUIRED_PARTICIPANT_OBLIGATION_IDS,
     _replay_participant_tests,
     evaluate,
     load_bundle,
+    load_release_bundles,
+    load_retest_bundle,
     load_satisfiability_analysis,
     validate_bundle,
+    validate_release_bundle,
+    validate_retest_bundle,
     validate_satisfiability_analysis,
 )
 
@@ -34,13 +39,182 @@ def test_current_bundle_is_clean() -> None:
     assert validate_bundle(REPO_ROOT, *_bundle()) == []
 
 
+def test_atomic_release_index_validates_every_historical_bundle() -> None:
+    releases = load_release_bundles(REPO_ROOT)
+
+    assert [release.manifest["revision"] for release in releases] == [
+        "1.0.0",
+        "1.1.0",
+        "1.2.0",
+        "2.0.0",
+        "3.0.0",
+    ]
+    assert all(validate_release_bundle(REPO_ROOT, release) == [] for release in releases)
+
+
+def test_current_retest_bundle_is_coherent_and_clean() -> None:
+    release, protocol, corpus, snapshot, analysis = load_retest_bundle(REPO_ROOT)
+
+    assert release.manifest["revision"] == "3.0.0"
+    assert protocol["revision"] == corpus["revision"] == "2.0.0"
+    assert snapshot["baseline"]["release_revision"] == "1.0.0"
+    assert {item["case_id"] for item in snapshot["deviations"]} == {
+        "schema-valid-control",
+        "semantic-resolved-objective",
+        "workflow-reachable-control",
+        "compile-repeatability-control",
+        "compile-non-vacuity-control",
+    }
+    assert validate_retest_bundle(REPO_ROOT, release, protocol, corpus, snapshot, analysis) == []
+
+
+def test_historical_release_validation_does_not_replay_current_code(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    release = deepcopy(load_release_bundles(REPO_ROOT)[2])
+
+    def fail_if_replayed(*_args: object, **_kwargs: object) -> dict[str, object]:
+        raise AssertionError("historical evidence must not replay current code")
+
+    monkeypatch.setattr(formal_validation, "replay_case", fail_if_replayed)
+
+    assert validate_release_bundle(REPO_ROOT, release) == []
+
+
+def test_retest_gate_requires_explicit_baseline_drift_disposition() -> None:
+    release, protocol, corpus, snapshot, analysis = load_retest_bundle(REPO_ROOT)
+    snapshot = deepcopy(snapshot)
+    snapshot["deviations"] = snapshot["deviations"][1:]
+
+    failures = validate_retest_bundle(REPO_ROOT, release, protocol, corpus, snapshot, analysis)
+
+    assert "formal-validation-baseline-drift" in _rule_ids(failures)
+
+
+def test_retest_gate_rejects_stale_baseline_observation_value() -> None:
+    release, protocol, corpus, snapshot, analysis = load_retest_bundle(REPO_ROOT)
+    snapshot = deepcopy(snapshot)
+    snapshot["deviations"][0]["baseline"]["result_digest"] = "0" * 64
+
+    failures = validate_retest_bundle(REPO_ROOT, release, protocol, corpus, snapshot, analysis)
+
+    assert "formal-validation-baseline-drift" in _rule_ids(failures)
+
+
+def test_retest_gate_rejects_changed_baseline_release_digest() -> None:
+    release, protocol, corpus, snapshot, analysis = load_retest_bundle(REPO_ROOT)
+    snapshot = deepcopy(snapshot)
+    snapshot["baseline"]["release_sha256"] = "0" * 64
+
+    failures = validate_retest_bundle(REPO_ROOT, release, protocol, corpus, snapshot, analysis)
+
+    assert "formal-validation-baseline-selection" in _rule_ids(failures)
+
+
+def test_retest_production_evidence_contains_governed_payloads() -> None:
+    from raes_contracts.exploit_path import ExploitPathAnalysisEvidenceModel
+    from raes_contracts.satisfiability import ScenarioSatisfiabilityEvidenceModel
+
+    evidence_root = REPO_ROOT / "docs/research/formal-semantic-validation/evidence"
+    satisfiable = ScenarioSatisfiabilityEvidenceModel.model_validate_json(
+        (evidence_root / "finite-domain-satisfiable-v2.json").read_text(encoding="utf-8")
+    )
+    unsatisfiable = ScenarioSatisfiabilityEvidenceModel.model_validate_json(
+        (evidence_root / "finite-domain-unsatisfiable-v2.json").read_text(encoding="utf-8")
+    )
+    valid_path = ExploitPathAnalysisEvidenceModel.model_validate_json(
+        (evidence_root / "typed-exploit-path-valid-v2.json").read_text(encoding="utf-8")
+    )
+    invalid_path = ExploitPathAnalysisEvidenceModel.model_validate_json(
+        (evidence_root / "typed-exploit-path-invalid-v2.json").read_text(encoding="utf-8")
+    )
+
+    assert satisfiable.witness is not None
+    assert unsatisfiable.unsat_core is not None
+    assert unsatisfiable.unsat_core.minimality == "subset-minimal"
+    assert valid_path.witness is not None and valid_path.witness.steps
+    assert invalid_path.failure is not None
+    assert invalid_path.failure.unsatisfied_goal
+
+
+def test_atomic_release_rejects_changed_snapshot_digest() -> None:
+    release = deepcopy(load_release_bundles(REPO_ROOT)[0])
+    release.manifest["snapshot_sha256"] = "0" * 64
+
+    failures = validate_release_bundle(REPO_ROOT, release)
+
+    assert "formal-validation-release-digest" in _rule_ids(failures)
+
+
+def test_retest_gate_rejects_missing_production_evidence_join() -> None:
+    release, protocol, corpus, snapshot, analysis = load_retest_bundle(REPO_ROOT)
+    snapshot = deepcopy(snapshot)
+    observation = next(item for item in snapshot["observations"] if item["case_id"] == "finite-domain-satisfiable-v2")
+    observation["evidence_artifact_path"] = None
+
+    failures = validate_retest_bundle(REPO_ROOT, release, protocol, corpus, snapshot, analysis)
+
+    assert "formal-validation-production-evidence-join" in _rule_ids(failures)
+
+
+def test_retest_gate_rejects_forged_production_configuration_digest() -> None:
+    release, protocol, corpus, snapshot, analysis = load_retest_bundle(REPO_ROOT)
+    snapshot = deepcopy(snapshot)
+    observation = next(item for item in snapshot["observations"] if item["case_id"] == "finite-domain-satisfiable-v2")
+    observation["configuration_digest"] = f"sha256:{'0' * 64}"
+
+    failures = validate_retest_bundle(REPO_ROOT, release, protocol, corpus, snapshot, analysis)
+
+    assert "formal-validation-production-evidence-join" in _rule_ids(failures)
+
+
+def test_retest_gate_rejects_test_local_substitute_command() -> None:
+    release, protocol, corpus, snapshot, analysis = load_retest_bundle(REPO_ROOT)
+    snapshot = deepcopy(snapshot)
+    command = next(item for item in snapshot["commands"] if item["command_id"] == "finite-domain-satisfiable-v2")
+    command["argv"][0] = "implementations/python/tests/fake-analyzer.py"
+
+    failures = validate_retest_bundle(REPO_ROOT, release, protocol, corpus, snapshot, analysis)
+
+    assert "formal-validation-production-command" in _rule_ids(failures)
+
+
+def test_retest_analysis_status_is_derived_not_copied_from_ceiling() -> None:
+    release, protocol, corpus, snapshot, analysis = load_retest_bundle(REPO_ROOT)
+    snapshot = deepcopy(snapshot)
+    analysis = deepcopy(analysis)
+    observation = next(item for item in snapshot["observations"] if item["case_id"] == "finite-domain-unsatisfiable-v2")
+    observation["actual_outcome"] = "satisfiable"
+    result = next(item for item in analysis["claim_results"] if item["claim_class_id"] == "constraint-satisfiability")
+    result["evidence_status"] = "demonstrated"
+
+    failures = validate_retest_bundle(REPO_ROOT, release, protocol, corpus, snapshot, analysis)
+
+    assert "formal-validation-analysis-drift" in _rule_ids(failures)
+    assert "formal-validation-unsupported-overclaim" in _rule_ids(failures)
+
+
+def test_retest_gate_rejects_promotion_from_historical_unsupported_cases() -> None:
+    release, protocol, corpus, snapshot, analysis = load_retest_bundle(REPO_ROOT)
+    corpus = deepcopy(corpus)
+    snapshot = deepcopy(snapshot)
+    removed_ids = {"typed-exploit-path-valid-v2", "typed-exploit-path-invalid-v2"}
+    corpus["cases"] = [item for item in corpus["cases"] if item["case_id"] not in removed_ids]
+    snapshot["observations"] = [item for item in snapshot["observations"] if item["case_id"] not in removed_ids]
+    snapshot["commands"] = [item for item in snapshot["commands"] if item["command_id"] not in removed_ids]
+
+    failures = validate_retest_bundle(REPO_ROOT, release, protocol, corpus, snapshot, analysis)
+
+    assert "formal-validation-unsupported-overclaim" in _rule_ids(failures)
+
+
 def test_protocol_keeps_all_literature_claim_classes_distinct() -> None:
     _, protocol, _, _, _ = _bundle()
 
     assert {item["claim_class_id"] for item in protocol["claim_classes"]} == REQUIRED_CLAIM_CLASS_IDS
 
 
-def test_sharded_manifest_composes_latest_base_with_independent_supplement() -> None:
+def test_historical_satisfiability_release_remains_atomically_selected() -> None:
     manifest, _protocol, _corpus, _snapshot, _analysis = _bundle()
     assert manifest["revision"] == "2.0.0"
     assert manifest["snapshot_path"].endswith("execution-snapshot-v1.2.json")

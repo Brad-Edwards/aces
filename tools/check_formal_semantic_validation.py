@@ -26,11 +26,12 @@ from tools.policy.common import (  # noqa: E402
 )
 
 MANIFEST_PATH = "docs/research/formal-semantic-validation/bundle-manifest.json"
-MANIFEST_SCHEMA_VERSION = "formal-semantic-validation-bundle-index/v1"
+MANIFEST_SCHEMA_VERSION = "formal-semantic-validation-bundle-index/v2"
 _MAX_FILE_BYTES = 512 * 1024
 _MAX_CASES = 128
 _COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
 _ID_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 REQUIRED_CLAIM_CLASS_IDS = {
     "schema-validity",
@@ -52,6 +53,19 @@ REQUIRED_PARTICIPANT_OBLIGATION_IDS = {
 }
 EVIDENCE_STATUSES = {"untested", "partial", "demonstrated", "refuted"}
 REPLAY_MODES = {"parse", "compile-stability", "compile-distinguish", "unsupported"}
+PRODUCTION_EVIDENCE_REPLAY_MODES = {"satisfiability", "exploit-path"}
+
+
+@dataclasses.dataclass
+class EvidenceRelease:
+    """One atomically selected and digest-pinned evidence release."""
+
+    manifest_path: str
+    manifest: dict[str, object]
+    protocol: dict[str, object]
+    corpus: dict[str, object]
+    snapshot: dict[str, object]
+    analysis: dict[str, object]
 
 
 class ParticipantTestRunner(Protocol):
@@ -70,6 +84,20 @@ _MANIFEST_KEYS = {
     "satisfiability_snapshot_path",
     "satisfiability_analysis_path",
 }
+_RELEASE_MANIFEST_KEYS = {
+    "bundle_id",
+    "revision",
+    "protocol_path",
+    "protocol_sha256",
+    "corpus_path",
+    "corpus_sha256",
+    "snapshot_path",
+    "snapshot_sha256",
+    "analysis_path",
+    "analysis_sha256",
+    "artifacts",
+}
+_RELEASE_ARTIFACT_PIN_KEYS = {"artifact_id", "kind", "path", "sha256"}
 _PROTOCOL_KEYS = {
     "protocol_id",
     "revision",
@@ -131,16 +159,6 @@ _HISTORICAL_SATISFIABILITY_EXECUTION_PROFILE = "a" + "ces-formal-satisfiability-
 _HISTORICAL_SATISFIABILITY_PROFILE = "a" + "ces-finite-domain-satisfiability-v1"
 _HISTORICAL_CLI = "implementations/python/.venv/bin/" + "a" + "ces"
 _CURRENT_SATISFIABILITY_PROFILE = "raes-finite-domain-satisfiability-v1"
-_RENAMED_RESULT_DIGESTS = {
-    "compile-repeatability-control": (
-        "918862c521a9c5a282b7cbd20ba6fcddd20eb90817ed5bcebacdf3270f91d7ac",
-        "a5a1840cf01683dc60a87e91a15b99cd0bdcdf5c181b1aedc8f505065a820514",
-    ),
-    "compile-non-vacuity-control": (
-        "c310cf5424ab404673093e5c95801d00e5583947dbcac68c47d4d8c1eb8b6766",
-        "50558f4eebab0685559cec27be46f0b0602ef512f42eb7a3471b2001100988a9",
-    ),
-}
 _RENAMED_SATISFIABILITY_MODEL_DIGESTS = {
     "finite-domain-satisfiable": (
         "sha256:32ac029d9279e6c7ea4cd9082435eb6fa455122bba57498923b8371818ef708c",
@@ -159,6 +177,11 @@ _RENAMED_SOLVER_CONFIGURATION_DIGEST = (
     "sha256:63e58f4637dbd8328d84a286e1e5af1f3a69557e5209f683909ce22f39838e7d",
     "sha256:1204635e17e759e9ad3bd6be2ecb28c6de05c07ead6dfdd15936ed5d3d5b81b2",
 )
+_RETAINED_CASE_TEXT_REPLACEMENTS = {
+    "A" + "CES has no governed whole-scenario constraint theory or solver entrypoint.": (
+        "The issue-168 baseline has no governed whole-scenario constraint theory or solver entrypoint."
+    ),
+}
 
 _SNAPSHOT_KEYS = {
     "execution_id",
@@ -185,6 +208,15 @@ _OBSERVATION_KEYS = {
     "evidence_refs",
     "limitations",
 }
+_OBSERVATION_V2_KEYS = _OBSERVATION_KEYS | {
+    "evidence_profile",
+    "analysis_profile",
+    "configuration_digest",
+    "evidence_digest",
+    "evidence_artifact_path",
+    "evidence_artifact_sha256",
+    "source_digest",
+}
 _PARTICIPANT_OBSERVATION_KEYS = {
     "obligation_id",
     "execution_id",
@@ -204,6 +236,27 @@ _ANALYSIS_KEYS = {
     "claim",
     "plain_language_outcome",
     "limitations",
+}
+_SNAPSHOT_V2_KEYS = (_SNAPSHOT_KEYS - {_HISTORICAL_REVISION_FIELD}) | {
+    "baseline",
+    "raes_revision",
+    "versions",
+}
+_VERSION_KEYS = {"python", "raes", "z3_solver", "z3_engine"}
+_BASELINE_KEYS = {
+    "release_path",
+    "release_sha256",
+    "release_revision",
+    "execution_id",
+}
+_DEVIATION_KEYS = {
+    "case_id",
+    "changed_fields",
+    "baseline",
+    "retest",
+    "disposition",
+    "category",
+    "rationale",
 }
 _CLAIM_RESULT_KEYS = {
     "claim_class_id",
@@ -341,6 +394,10 @@ def _digest(value: object) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
+def _sha256_file(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
 def _diagnostic_payload(exc: Exception, repo_root: Path) -> object:
     errors = getattr(exc, "errors", None)
     payload: object = errors if errors is not None else str(exc)
@@ -413,7 +470,12 @@ def _validate_test_ref(repo_root: Path, value: object) -> bool:
         return False
     function_name = node_id.rsplit("::", 1)[-1]
     return (
-        re.search(rf"^def {re.escape(function_name)}\s*\(", path.read_text(encoding="utf-8"), re.MULTILINE) is not None
+        re.search(
+            rf"^def {re.escape(function_name)}\s*\(",
+            path.read_text(encoding="utf-8"),
+            re.MULTILINE,
+        )
+        is not None
     )
 
 
@@ -443,7 +505,10 @@ def _replay_participant_tests(repo_root: Path, test_refs: list[str]) -> tuple[bo
     except (OSError, subprocess.TimeoutExpired) as exc:
         return False, f"participant fixture replay could not complete: {exc}"
     if completed.returncode != 0:
-        return False, f"participant fixture replay exited with status {completed.returncode}"
+        return (
+            False,
+            f"participant fixture replay exited with status {completed.returncode}",
+        )
     return True, ""
 
 
@@ -462,6 +527,8 @@ def recompute_claim_results(
     observations_by_case = {item.get("case_id"): item for item in observations if isinstance(item, Mapping)}
     participant_count = len(participant_observations)
     results: list[dict[str, object]] = []
+    derive_from_supported_controls = protocol.get("revision") == "2.0.0"
+    status_rank = {"untested": 0, "partial": 1, "demonstrated": 2}
     for declaration in claim_classes:
         if not isinstance(declaration, Mapping):
             continue
@@ -476,14 +543,32 @@ def recompute_claim_results(
             and observations_by_case[case.get("case_id")].get("actual_outcome") == case.get("expected_outcome")
         )
         expected_status = declaration.get("expected_evidence_status")
-        status = expected_status if matching == len(class_cases) and class_cases else "refuted"
+        supported_cases = [item for item in class_cases if item.get("replay_mode") != "unsupported"]
+        supported_matching = sum(
+            1
+            for case in supported_cases
+            if isinstance(observations_by_case.get(case.get("case_id")), Mapping)
+            and observations_by_case[case.get("case_id")].get("actual_outcome") == case.get("expected_outcome")
+        )
+        if not derive_from_supported_controls:
+            status = expected_status if matching == len(class_cases) and class_cases else "refuted"
+        elif matching != len(class_cases) or supported_matching != len(supported_cases):
+            status = "refuted"
+        elif not supported_cases:
+            status = "untested"
+        else:
+            observed_status = "demonstrated"
+            status = min(
+                (observed_status, str(expected_status)),
+                key=lambda value: status_rank.get(value, -1),
+            )
         results.append(
             {
                 "claim_class_id": claim_class_id,
                 "evidence_status": status,
                 "case_count": len(class_cases),
                 "matching_case_count": matching,
-                "replayable_case_count": sum(1 for item in class_cases if item.get("replay_mode") != "unsupported"),
+                "replayable_case_count": len(supported_cases),
                 "unsupported_case_count": sum(1 for item in class_cases if item.get("replay_mode") == "unsupported"),
                 "participant_obligation_count": participant_count if claim_class_id == "semantic-consistency" else 0,
             }
@@ -501,13 +586,26 @@ def _validate_protocol(repo_root: Path, protocol: dict, failures: list[PolicyFai
         path=path,
     ):
         return
-    if protocol.get("issue_number") != 168 or protocol.get("requirement_uid") != "ASR-530":
+    expected_issue = {"1.0.0": 168, "2.0.0": 828}.get(protocol.get("revision"))
+    if (
+        expected_issue is None
+        or protocol.get("issue_number") != expected_issue
+        or protocol.get("requirement_uid") != "ASR-530"
+    ):
         failures.append(
-            _failure("formal-validation-protocol-scope", "protocol must remain anchored to issue 168 and ASR-530", path)
+            _failure(
+                "formal-validation-protocol-scope",
+                "protocol must bind a supported revision to its issue and ASR-530",
+                path,
+            )
         )
     if set(protocol.get("evidence_status_values", [])) != EVIDENCE_STATUSES:
         failures.append(
-            _failure("formal-validation-evidence-status", "protocol must use the ADR-021 evidence statuses", path)
+            _failure(
+                "formal-validation-evidence-status",
+                "protocol must use the ADR-021 evidence statuses",
+                path,
+            )
         )
     if not _closed_object(
         protocol.get("analysis_rules"),
@@ -523,7 +621,9 @@ def _validate_protocol(repo_root: Path, protocol: dict, failures: list[PolicyFai
     if claim_ids != REQUIRED_CLAIM_CLASS_IDS or not unique_claim_ids:
         failures.append(
             _failure(
-                "formal-validation-claim-coverage", "protocol must contain each required claim class exactly once", path
+                "formal-validation-claim-coverage",
+                "protocol must contain each required claim class exactly once",
+                path,
             )
         )
     for item in protocol.get("claim_classes", []):
@@ -608,7 +708,11 @@ def _validate_corpus(
     cases = corpus.get("cases")
     if not _is_sequence(cases) or not cases or len(cases) > _MAX_CASES:
         failures.append(
-            _failure("formal-validation-case-count", f"corpus cases must contain 1..{_MAX_CASES} entries", path)
+            _failure(
+                "formal-validation-case-count",
+                f"corpus cases must contain 1..{_MAX_CASES} entries",
+                path,
+            )
         )
         return {}
     case_ids, unique_case_ids = _stable_ids(cases, "case_id")
@@ -633,16 +737,30 @@ def _validate_corpus(
         claim_id = item.get("claim_class_id")
         if claim_id not in claim_ids:
             failures.append(
-                _failure("formal-validation-case-claim", f"case {case_id!r} references unknown claim class", path)
+                _failure(
+                    "formal-validation-case-claim",
+                    f"case {case_id!r} references unknown claim class",
+                    path,
+                )
             )
         else:
             polarities[claim_id].add(item.get("polarity"))
         if item.get("polarity") not in {"positive", "negative"}:
-            failures.append(_failure("formal-validation-case-polarity", f"case {case_id!r} has invalid polarity", path))
-        replay_mode = item.get("replay_mode")
-        if replay_mode not in REPLAY_MODES:
             failures.append(
-                _failure("formal-validation-replay-mode", f"case {case_id!r} has invalid replay mode", path)
+                _failure(
+                    "formal-validation-case-polarity",
+                    f"case {case_id!r} has invalid polarity",
+                    path,
+                )
+            )
+        replay_mode = item.get("replay_mode")
+        if replay_mode not in REPLAY_MODES | PRODUCTION_EVIDENCE_REPLAY_MODES:
+            failures.append(
+                _failure(
+                    "formal-validation-replay-mode",
+                    f"case {case_id!r} has invalid replay mode",
+                    path,
+                )
             )
         fixture_value = item.get("fixture_path")
         comparison_value = item.get("comparison_fixture_path")
@@ -663,7 +781,11 @@ def _validate_corpus(
             fixture = safe_repo_path(repo_root, str(fixture_value)) if _nonempty_string(fixture_value) else None
             if fixture is None or not fixture.is_file():
                 failures.append(
-                    _failure("formal-validation-case-path", f"case {case_id!r} has a missing or unsafe fixture", path)
+                    _failure(
+                        "formal-validation-case-path",
+                        f"case {case_id!r} has a missing or unsafe fixture",
+                        path,
+                    )
                 )
             if replay_mode == "compile-distinguish":
                 comparison = (
@@ -680,12 +802,18 @@ def _validate_corpus(
             elif comparison_value is not None:
                 failures.append(
                     _failure(
-                        "formal-validation-case-path", f"case {case_id!r} has an unexpected comparison fixture", path
+                        "formal-validation-case-path",
+                        f"case {case_id!r} has an unexpected comparison fixture",
+                        path,
                     )
                 )
         if not _nonempty_string(item.get("limitation")):
             failures.append(
-                _failure("formal-validation-case-limit", f"case {case_id!r} must record a limitation", path)
+                _failure(
+                    "formal-validation-case-limit",
+                    f"case {case_id!r} must record a limitation",
+                    path,
+                )
             )
     for claim_id, values in polarities.items():
         if values != {"positive", "negative"}:
@@ -709,6 +837,8 @@ def _validate_snapshot(
     cases_by_id: dict[str, Mapping[str, object]],
     failures: list[PolicyFailure],
     path: str,
+    *,
+    replay_cases: bool = True,
 ) -> None:
     if not _closed_object(
         snapshot,
@@ -731,23 +861,41 @@ def _validate_snapshot(
         )
     if snapshot.get("execution_status") != "complete":
         failures.append(
-            _failure("formal-validation-execution-status", "snapshot must preserve a complete execution", path)
+            _failure(
+                "formal-validation-execution-status",
+                "snapshot must preserve a complete execution",
+                path,
+            )
         )
     historical_revision = snapshot.get(_HISTORICAL_REVISION_FIELD)
     if not isinstance(historical_revision, str) or not _COMMIT_RE.fullmatch(historical_revision):
         failures.append(
-            _failure("formal-validation-revision-pin", "historical revision must be a full immutable Git commit", path)
+            _failure(
+                "formal-validation-revision-pin",
+                "historical revision must be a full immutable Git commit",
+                path,
+            )
         )
 
     commands = snapshot.get("commands")
     if not _is_sequence(commands) or not commands:
         failures.append(
-            _failure("formal-validation-commands", "snapshot must record fixed-argv reproduction commands", path)
+            _failure(
+                "formal-validation-commands",
+                "snapshot must record fixed-argv reproduction commands",
+                path,
+            )
         )
     else:
         command_ids, unique_command_ids = _stable_ids(commands, "command_id")
         if not command_ids or not unique_command_ids:
-            failures.append(_failure("formal-validation-commands", "command ids must be unique stable ids", path))
+            failures.append(
+                _failure(
+                    "formal-validation-commands",
+                    "command ids must be unique stable ids",
+                    path,
+                )
+            )
         for item in commands:
             if not _closed_object(
                 item,
@@ -786,7 +934,13 @@ def _validate_snapshot(
 
     observations = snapshot.get("observations")
     if not _is_sequence(observations):
-        failures.append(_failure("formal-validation-observations", "snapshot observations must be a list", path))
+        failures.append(
+            _failure(
+                "formal-validation-observations",
+                "snapshot observations must be a list",
+                path,
+            )
+        )
         observations = []
     observation_ids: list[object] = []
     for item in observations:
@@ -804,7 +958,11 @@ def _validate_snapshot(
         case = cases_by_id.get(str(case_id))
         if case is None:
             failures.append(
-                _failure("formal-validation-observation-case", f"observation references unknown case {case_id!r}", path)
+                _failure(
+                    "formal-validation-observation-case",
+                    f"observation references unknown case {case_id!r}",
+                    path,
+                )
             )
             continue
         if item.get("execution_id") != snapshot.get("execution_id") or item.get("configuration_id") != snapshot.get(
@@ -821,7 +979,9 @@ def _validate_snapshot(
         if item.get("replayable") is not expected_replayable:
             failures.append(
                 _failure(
-                    "formal-validation-observation-replayable", f"observation {case_id!r} misstates replayability", path
+                    "formal-validation-observation-replayable",
+                    f"observation {case_id!r} misstates replayability",
+                    path,
                 )
             )
         if not _string_list(item.get("evidence_refs")) or not _string_list(item.get("limitations")):
@@ -833,29 +993,28 @@ def _validate_snapshot(
                 )
             )
         if expected_replayable:
-            try:
-                replayed = replay_case(repo_root, case)
-            except (ValueError, OSError) as exc:
-                failures.append(
-                    _failure("formal-validation-replay-error", f"could not replay {case_id!r}: {exc}", path)
-                )
-            else:
-                for key in ("actual_outcome", "diagnostic_kind", "result_digest"):
-                    value_matches = item.get(key) == replayed[key]
-                    if key == "result_digest":
-                        value_matches = value_matches or _RENAMED_RESULT_DIGESTS.get(str(case_id)) == (
-                            item.get(key),
-                            replayed[key],
+            if replay_cases:
+                try:
+                    replayed = replay_case(repo_root, case)
+                except (ValueError, OSError) as exc:
+                    failures.append(
+                        _failure(
+                            "formal-validation-replay-error",
+                            f"could not replay {case_id!r}: {exc}",
+                            path,
                         )
-                    if not value_matches:
-                        failures.append(
-                            _failure(
-                                "formal-validation-replay-drift",
-                                f"observation {case_id!r} field {key} drifted from replay",
-                                path,
+                    )
+                else:
+                    for key in ("actual_outcome", "diagnostic_kind", "result_digest"):
+                        if item.get(key) != replayed[key]:
+                            failures.append(
+                                _failure(
+                                    "formal-validation-replay-drift",
+                                    f"observation {case_id!r} field {key} drifted from replay",
+                                    path,
+                                )
                             )
-                        )
-                        break
+                            break
         elif (
             item.get("actual_outcome") != "unsupported"
             or item.get("diagnostic_kind") is not None
@@ -880,7 +1039,11 @@ def _validate_snapshot(
     participant_observations = snapshot.get("participant_observations")
     if not _is_sequence(participant_observations):
         failures.append(
-            _failure("formal-validation-participant-observations", "participant observations must be a list", path)
+            _failure(
+                "formal-validation-participant-observations",
+                "participant observations must be a list",
+                path,
+            )
         )
         participant_observations = []
     obligation_ids = {
@@ -997,7 +1160,13 @@ def _validate_analysis(
     expected_by_id = {item["claim_class_id"]: item for item in recomputed}
     results = analysis.get("claim_results")
     if not _is_sequence(results):
-        failures.append(_failure("formal-validation-analysis-results", "claim_results must be a list", path))
+        failures.append(
+            _failure(
+                "formal-validation-analysis-results",
+                "claim_results must be a list",
+                path,
+            )
+        )
         results = []
     result_ids: list[object] = []
     for item in results:
@@ -1015,7 +1184,11 @@ def _validate_analysis(
         expected = expected_by_id.get(claim_class_id)
         if expected is None:
             failures.append(
-                _failure("formal-validation-analysis-result-join", f"unknown claim result {claim_class_id!r}", path)
+                _failure(
+                    "formal-validation-analysis-result-join",
+                    f"unknown claim result {claim_class_id!r}",
+                    path,
+                )
             )
             continue
         for key in (
@@ -1035,18 +1208,23 @@ def _validate_analysis(
                     )
                 )
                 break
-        if expected["evidence_status"] == "untested" and item.get("evidence_status") in {"partial", "demonstrated"}:
+        if expected["evidence_status"] in {"untested", "refuted"} and item.get("evidence_status") in {
+            "partial",
+            "demonstrated",
+        }:
             failures.append(
                 _failure(
                     "formal-validation-unsupported-overclaim",
-                    f"unsupported class {claim_class_id!r} cannot be promoted",
+                    f"unproven or refuted class {claim_class_id!r} cannot be promoted",
                     path,
                 )
             )
         if not _string_list(item.get("limitations")):
             failures.append(
                 _failure(
-                    "formal-validation-claim-limitations", f"claim result {claim_class_id!r} needs limitations", path
+                    "formal-validation-claim-limitations",
+                    f"claim result {claim_class_id!r} needs limitations",
+                    path,
                 )
             )
     if set(result_ids) != set(expected_by_id) or len(result_ids) != len(set(result_ids)):
@@ -1064,7 +1242,11 @@ def _validate_analysis(
     )
     if analysis.get("evidence_status") != overall:
         failures.append(
-            _failure("formal-validation-analysis-drift", "overall evidence status does not match claim results", path)
+            _failure(
+                "formal-validation-analysis-drift",
+                "overall evidence status does not match claim results",
+                path,
+            )
         )
     if not _closed_object(
         analysis.get("claim"),
@@ -1076,9 +1258,20 @@ def _validate_analysis(
     ):
         return
     claim = analysis["claim"]
-    for key in ("threats_to_validity", "allowed_evidence", "disallowed_evidence", "evidence_artifacts"):
+    for key in (
+        "threats_to_validity",
+        "allowed_evidence",
+        "disallowed_evidence",
+        "evidence_artifacts",
+    ):
         if not _string_list(claim.get(key)):
-            failures.append(_failure("formal-validation-claim-record", f"claim needs non-empty {key}", path))
+            failures.append(
+                _failure(
+                    "formal-validation-claim-record",
+                    f"claim needs non-empty {key}",
+                    path,
+                )
+            )
     for artifact in claim.get("evidence_artifacts", []):
         resolved = safe_repo_path(repo_root, artifact) if isinstance(artifact, str) else None
         if resolved is None or not resolved.is_file():
@@ -1092,9 +1285,1024 @@ def _validate_analysis(
     if not _string_list(analysis.get("limitations")) or not _nonempty_string(analysis.get("plain_language_outcome")):
         failures.append(
             _failure(
-                "formal-validation-analysis-disclosure", "analysis needs a plain-language outcome and limitations", path
+                "formal-validation-analysis-disclosure",
+                "analysis needs a plain-language outcome and limitations",
+                path,
             )
         )
+
+
+def load_release_bundles(repo_root: Path = REPO_ROOT) -> list[EvidenceRelease]:
+    """Load every atomically indexed evidence release in semantic order."""
+
+    records = load_index_records(
+        repo_root,
+        index_path=MANIFEST_PATH,
+        schema_version=MANIFEST_SCHEMA_VERSION,
+        directory_key="bundles_directory",
+        max_bytes=_MAX_FILE_BYTES,
+    )
+    releases: list[EvidenceRelease] = []
+    for manifest_path, manifest in records:
+        revision_key(manifest.get("revision"))
+        loaded: list[dict[str, object]] = []
+        for label in ("protocol", "corpus", "snapshot", "analysis"):
+            path_value = manifest.get(f"{label}_path")
+            path = safe_repo_path(repo_root, path_value) if isinstance(path_value, str) else None
+            if path is None or not path.is_file():
+                raise ValueError(f"{manifest_path!r} contains unsafe or missing {label}_path")
+            loaded.append(load_bounded_json_object(repo_root, path_value, max_bytes=_MAX_FILE_BYTES))
+        releases.append(
+            EvidenceRelease(
+                manifest_path=manifest_path,
+                manifest=manifest,
+                protocol=loaded[0],
+                corpus=loaded[1],
+                snapshot=loaded[2],
+                analysis=loaded[3],
+            )
+        )
+    return sorted(
+        releases,
+        key=lambda item: (
+            revision_key(item.manifest.get("revision")),
+            item.manifest_path,
+        ),
+    )
+
+
+def load_retest_bundle(
+    repo_root: Path = REPO_ROOT,
+) -> tuple[
+    EvidenceRelease,
+    dict[str, object],
+    dict[str, object],
+    dict[str, object],
+    dict[str, object],
+]:
+    """Load the latest coherent issue-828 retest release."""
+
+    releases = [item for item in load_release_bundles(repo_root) if item.protocol.get("revision") == "2.0.0"]
+    if not releases:
+        raise ValueError("the formal semantic-validation index selects no v2 retest release")
+    release = max(releases, key=lambda item: revision_key(item.manifest.get("revision")))
+    return release, release.protocol, release.corpus, release.snapshot, release.analysis
+
+
+def validate_release_bundle(repo_root: Path, release: EvidenceRelease) -> list[PolicyFailure]:
+    """Validate one atomic release record, all digest pins, and its evidence."""
+
+    failures: list[PolicyFailure] = []
+    manifest = release.manifest
+    path = release.manifest_path
+    if not _closed_object(
+        manifest,
+        _RELEASE_MANIFEST_KEYS,
+        rule_id="formal-validation-release-shape",
+        label="release manifest",
+        failures=failures,
+        path=path,
+    ):
+        return failures
+    try:
+        revision_key(manifest.get("revision"))
+    except ValueError:
+        failures.append(
+            _failure(
+                "formal-validation-release-revision",
+                "release revision must be semantic",
+                path,
+            )
+        )
+
+    for label in ("protocol", "corpus", "snapshot", "analysis"):
+        path_value = manifest.get(f"{label}_path")
+        digest_value = manifest.get(f"{label}_sha256")
+        resolved = safe_repo_path(repo_root, path_value) if isinstance(path_value, str) else None
+        if (
+            resolved is None
+            or not resolved.is_file()
+            or not isinstance(digest_value, str)
+            or not _SHA256_RE.fullmatch(digest_value)
+            or _sha256_file(resolved) != digest_value
+        ):
+            failures.append(
+                _failure(
+                    "formal-validation-release-digest",
+                    f"release {label} path or SHA-256 pin is stale",
+                    path,
+                )
+            )
+
+    artifacts = manifest.get("artifacts")
+    if not _is_sequence(artifacts):
+        failures.append(
+            _failure(
+                "formal-validation-release-artifacts",
+                "release artifacts must be a bounded list",
+                path,
+            )
+        )
+        artifacts = []
+    artifact_ids, unique_artifact_ids = _stable_ids(artifacts, "artifact_id")
+    artifact_paths: list[str] = []
+    for artifact in artifacts:
+        if not _closed_object(
+            artifact,
+            _RELEASE_ARTIFACT_PIN_KEYS,
+            rule_id="formal-validation-release-artifact-shape",
+            label="release artifact",
+            failures=failures,
+            path=path,
+        ):
+            continue
+        artifact_path = artifact.get("path")
+        artifact_digest = artifact.get("sha256")
+        resolved = safe_repo_path(repo_root, artifact_path) if isinstance(artifact_path, str) else None
+        if isinstance(artifact_path, str):
+            artifact_paths.append(artifact_path)
+        if (
+            resolved is None
+            or not resolved.is_file()
+            or not isinstance(artifact_digest, str)
+            or not _SHA256_RE.fullmatch(artifact_digest)
+            or _sha256_file(resolved) != artifact_digest
+        ):
+            failures.append(
+                _failure(
+                    "formal-validation-release-digest",
+                    f"release artifact {artifact.get('artifact_id')!r} path or SHA-256 pin is stale",
+                    path,
+                )
+            )
+    if not unique_artifact_ids or len(artifact_paths) != len(set(artifact_paths)):
+        failures.append(
+            _failure(
+                "formal-validation-release-artifacts",
+                "release artifact ids and paths must be unique",
+                path,
+            )
+        )
+
+    if release.protocol.get("revision") == "2.0.0":
+        failures.extend(
+            validate_retest_bundle(
+                repo_root,
+                release,
+                release.protocol,
+                release.corpus,
+                release.snapshot,
+                release.analysis,
+            )
+        )
+    else:
+        legacy_manifest = {
+            "bundle_id": manifest.get("bundle_id"),
+            "revision": manifest.get("revision"),
+            "protocol_path": manifest.get("protocol_path"),
+            "corpus_path": manifest.get("corpus_path"),
+            "snapshot_path": manifest.get("snapshot_path"),
+            "analysis_path": manifest.get("analysis_path"),
+            "satisfiability_snapshot_path": None,
+            "satisfiability_analysis_path": None,
+        }
+        failures.extend(
+            validate_bundle(
+                repo_root,
+                legacy_manifest,
+                release.protocol,
+                release.corpus,
+                release.snapshot,
+                release.analysis,
+                replay_cases=False,
+            )
+        )
+        artifact_by_kind = {item.get("kind"): item for item in artifacts if isinstance(item, Mapping)}
+        sat_snapshot_pin = artifact_by_kind.get("satisfiability-snapshot")
+        sat_analysis_pin = artifact_by_kind.get("satisfiability-analysis")
+        if sat_snapshot_pin is not None or sat_analysis_pin is not None:
+            if sat_snapshot_pin is None or sat_analysis_pin is None:
+                failures.append(
+                    _failure(
+                        "formal-validation-release-artifacts",
+                        "historical satisfiability evidence must be selected atomically",
+                        path,
+                    )
+                )
+            else:
+                legacy_manifest["revision"] = "2.0.0"
+                legacy_manifest["satisfiability_snapshot_path"] = sat_snapshot_pin.get("path")
+                legacy_manifest["satisfiability_analysis_path"] = sat_analysis_pin.get("path")
+                snapshot = load_bounded_json_object(
+                    repo_root,
+                    str(sat_snapshot_pin.get("path")),
+                    max_bytes=_MAX_FILE_BYTES,
+                )
+                analysis = load_bounded_json_object(
+                    repo_root,
+                    str(sat_analysis_pin.get("path")),
+                    max_bytes=_MAX_FILE_BYTES,
+                )
+                failures.extend(validate_satisfiability_analysis(repo_root, legacy_manifest, snapshot, analysis))
+    return failures
+
+
+def validate_retest_bundle(
+    repo_root: Path,
+    release: EvidenceRelease,
+    protocol: dict[str, object],
+    corpus: dict[str, object],
+    snapshot: dict[str, object],
+    analysis: dict[str, object],
+) -> list[PolicyFailure]:
+    """Validate the integrated issue-828 evidence release."""
+
+    failures: list[PolicyFailure] = []
+    protocol_path = str(release.manifest.get("protocol_path"))
+    corpus_path = str(release.manifest.get("corpus_path"))
+    snapshot_path = str(release.manifest.get("snapshot_path"))
+    analysis_path = str(release.manifest.get("analysis_path"))
+    if release.manifest.get("revision") != "3.0.0":
+        failures.append(
+            _failure(
+                "formal-validation-retest-release",
+                "the integrated issue-828 retest must be release 3.0.0",
+                release.manifest_path,
+            )
+        )
+    if protocol.get("revision") != "2.0.0" or corpus.get("revision") != "2.0.0":
+        failures.append(
+            _failure(
+                "formal-validation-retest-revision",
+                "the integrated retest must bind protocol and corpus revision 2.0.0",
+                release.manifest_path,
+            )
+        )
+
+    _validate_protocol(repo_root, protocol, failures, protocol_path)
+    cases_by_id = _validate_corpus(repo_root, protocol, corpus, failures, corpus_path)
+    try:
+        historical_corpus = load_bounded_json_object(
+            repo_root,
+            "docs/research/formal-semantic-validation/corpus/manifest-v1.json",
+            max_bytes=_MAX_FILE_BYTES,
+        )
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        failures.append(
+            _failure(
+                "formal-validation-historical-retention",
+                f"could not load the immutable v1 corpus ({type(exc).__name__})",
+                corpus_path,
+            )
+        )
+        historical_corpus = {}
+    historical_cases = {
+        item.get("case_id"): item for item in historical_corpus.get("cases", []) if isinstance(item, Mapping)
+    }
+    retained_cases_match = all(
+        cases_by_id.get(str(case_id))
+        == {
+            **case,
+            "limitation": _RETAINED_CASE_TEXT_REPLACEMENTS.get(
+                str(case.get("limitation")),
+                case.get("limitation"),
+            ),
+        }
+        for case_id, case in historical_cases.items()
+    )
+    if not historical_cases or not retained_cases_match:
+        failures.append(
+            _failure(
+                "formal-validation-historical-retention",
+                "the v2 corpus must retain every v1 case semantically unchanged, allowing only the governed identity wording",
+                corpus_path,
+            )
+        )
+
+    _validate_retest_snapshot(
+        repo_root,
+        release,
+        protocol,
+        corpus,
+        snapshot,
+        cases_by_id,
+        failures,
+        snapshot_path,
+    )
+    _validate_baseline_drift(
+        repo_root,
+        snapshot,
+        historical_cases,
+        failures,
+        snapshot_path,
+    )
+    _validate_analysis(repo_root, protocol, corpus, snapshot, analysis, failures, analysis_path)
+    return failures
+
+
+def _validate_baseline_drift(
+    repo_root: Path,
+    snapshot: Mapping[str, object],
+    historical_cases: Mapping[object, Mapping[str, object]],
+    failures: list[PolicyFailure],
+    path: str,
+) -> None:
+    """Join retained retest observations to one immutable baseline release."""
+
+    baseline = snapshot.get("baseline")
+    if not _closed_object(
+        baseline,
+        _BASELINE_KEYS,
+        rule_id="formal-validation-baseline-selection",
+        label="retest baseline",
+        failures=failures,
+        path=path,
+    ):
+        return
+    baseline_path = baseline.get("release_path")
+    baseline_digest = baseline.get("release_sha256")
+    if (
+        not isinstance(baseline_path, str)
+        or not isinstance(baseline_digest, str)
+        or not _SHA256_RE.fullmatch(baseline_digest)
+        or not _nonempty_string(baseline.get("release_revision"))
+        or not _nonempty_string(baseline.get("execution_id"))
+    ):
+        failures.append(
+            _failure(
+                "formal-validation-baseline-selection",
+                "retest baseline must pin a release path, digest, revision, and execution",
+                path,
+            )
+        )
+        return
+
+    try:
+        indexed_records = dict(
+            load_index_records(
+                repo_root,
+                index_path=MANIFEST_PATH,
+                schema_version=MANIFEST_SCHEMA_VERSION,
+                directory_key="bundles_directory",
+                max_bytes=_MAX_FILE_BYTES,
+            )
+        )
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        failures.append(
+            _failure(
+                "formal-validation-baseline-selection",
+                f"could not load the indexed baseline release ({type(exc).__name__})",
+                path,
+            )
+        )
+        return
+    baseline_manifest = indexed_records.get(baseline_path)
+    resolved_baseline_path = safe_repo_path(repo_root, baseline_path)
+    if (
+        not isinstance(baseline_manifest, Mapping)
+        or resolved_baseline_path is None
+        or not resolved_baseline_path.is_file()
+        or _sha256_file(resolved_baseline_path) != baseline_digest
+        or baseline_manifest.get("revision") != baseline.get("release_revision")
+        or baseline_manifest.get("protocol_path") != "docs/research/formal-semantic-validation/protocol-v1.json"
+        or baseline_manifest.get("corpus_path") != "docs/research/formal-semantic-validation/corpus/manifest-v1.json"
+    ):
+        failures.append(
+            _failure(
+                "formal-validation-baseline-selection",
+                "retest baseline must select one indexed historical release with an exact digest and revision",
+                path,
+            )
+        )
+        return
+
+    baseline_snapshot_path = baseline_manifest.get("snapshot_path")
+    baseline_snapshot_digest = baseline_manifest.get("snapshot_sha256")
+    resolved_snapshot_path = (
+        safe_repo_path(repo_root, baseline_snapshot_path) if isinstance(baseline_snapshot_path, str) else None
+    )
+    if (
+        resolved_snapshot_path is None
+        or not resolved_snapshot_path.is_file()
+        or not isinstance(baseline_snapshot_digest, str)
+        or _sha256_file(resolved_snapshot_path) != baseline_snapshot_digest
+    ):
+        failures.append(
+            _failure(
+                "formal-validation-baseline-selection",
+                "selected baseline release has a stale execution-snapshot pin",
+                path,
+            )
+        )
+        return
+    try:
+        baseline_snapshot = load_bounded_json_object(
+            repo_root,
+            str(baseline_snapshot_path),
+            max_bytes=_MAX_FILE_BYTES,
+        )
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        failures.append(
+            _failure(
+                "formal-validation-baseline-selection",
+                f"could not load the selected baseline snapshot ({type(exc).__name__})",
+                path,
+            )
+        )
+        return
+    if baseline_snapshot.get("execution_id") != baseline.get("execution_id"):
+        failures.append(
+            _failure(
+                "formal-validation-baseline-selection",
+                "selected baseline execution id does not match its pinned snapshot",
+                path,
+            )
+        )
+
+    baseline_observations = baseline_snapshot.get("observations")
+    retest_observations = snapshot.get("observations")
+    baseline_ids, baseline_unique = _stable_ids(baseline_observations, "case_id")
+    retest_ids, retest_unique = _stable_ids(retest_observations, "case_id")
+    retained_ids = {str(case_id) for case_id in historical_cases}
+    if (
+        not _is_sequence(baseline_observations)
+        or not _is_sequence(retest_observations)
+        or not baseline_unique
+        or not retest_unique
+        or not retained_ids.issubset(baseline_ids)
+        or not retained_ids.issubset(retest_ids)
+    ):
+        failures.append(
+            _failure(
+                "formal-validation-baseline-drift",
+                "every retained case must join uniquely to baseline and retest observations",
+                path,
+            )
+        )
+        return
+    baseline_by_id = {str(item.get("case_id")): item for item in baseline_observations if isinstance(item, Mapping)}
+    retest_by_id = {str(item.get("case_id")): item for item in retest_observations if isinstance(item, Mapping)}
+
+    deviations = snapshot.get("deviations")
+    deviation_ids, deviations_unique = _stable_ids(deviations, "case_id")
+    if not _is_sequence(deviations) or not deviations_unique:
+        failures.append(
+            _failure(
+                "formal-validation-baseline-drift",
+                "baseline deviations must be a unique bounded list",
+                path,
+            )
+        )
+        deviations = []
+    deviations_by_id = {str(item.get("case_id")): item for item in deviations if isinstance(item, Mapping)}
+
+    expected_deviation_ids: set[str] = set()
+    comparison_keys = ("actual_outcome", "diagnostic_kind", "result_digest")
+    for case_id in sorted(retained_ids):
+        baseline_observation = baseline_by_id[case_id]
+        retest_observation = retest_by_id[case_id]
+        changed_fields = [
+            key for key in comparison_keys if baseline_observation.get(key) != retest_observation.get(key)
+        ]
+        if not changed_fields:
+            continue
+        expected_deviation_ids.add(case_id)
+        deviation = deviations_by_id.get(case_id)
+        if not _closed_object(
+            deviation,
+            _DEVIATION_KEYS,
+            rule_id="formal-validation-baseline-drift",
+            label=f"baseline deviation {case_id!r}",
+            failures=failures,
+            path=path,
+        ):
+            continue
+        expected_baseline = {key: baseline_observation.get(key) for key in comparison_keys}
+        expected_retest = {key: retest_observation.get(key) for key in comparison_keys}
+        if (
+            deviation.get("changed_fields") != changed_fields
+            or deviation.get("baseline") != expected_baseline
+            or deviation.get("retest") != expected_retest
+            or deviation.get("disposition") != "accepted"
+            or not _nonempty_string(deviation.get("category"))
+            or not _nonempty_string(deviation.get("rationale"))
+        ):
+            failures.append(
+                _failure(
+                    "formal-validation-baseline-drift",
+                    f"retained case {case_id!r} needs an exact accepted drift disposition",
+                    path,
+                )
+            )
+    if deviation_ids != expected_deviation_ids:
+        failures.append(
+            _failure(
+                "formal-validation-baseline-drift",
+                "deviations must cover exactly the retained cases whose governed observations changed",
+                path,
+            )
+        )
+
+
+def _validate_retest_snapshot(
+    repo_root: Path,
+    release: EvidenceRelease,
+    protocol: dict[str, object],
+    corpus: dict[str, object],
+    snapshot: dict[str, object],
+    cases_by_id: dict[str, Mapping[str, object]],
+    failures: list[PolicyFailure],
+    path: str,
+) -> None:
+    if not _closed_object(
+        snapshot,
+        _SNAPSHOT_V2_KEYS,
+        rule_id="formal-validation-snapshot-shape",
+        label="retest snapshot",
+        failures=failures,
+        path=path,
+    ):
+        return
+    if (
+        snapshot.get("protocol_revision") != protocol.get("revision")
+        or snapshot.get("corpus_revision") != corpus.get("revision")
+        or snapshot.get("execution_status") != "complete"
+    ):
+        failures.append(
+            _failure(
+                "formal-validation-snapshot-revision",
+                "retest snapshot must bind the selected revisions and a complete execution",
+                path,
+            )
+        )
+    revision = snapshot.get("raes_revision")
+    if not isinstance(revision, str) or not _COMMIT_RE.fullmatch(revision):
+        failures.append(
+            _failure(
+                "formal-validation-revision-pin",
+                "retest snapshot must pin a full RAES commit",
+                path,
+            )
+        )
+    versions = snapshot.get("versions")
+    if (
+        not isinstance(versions, Mapping)
+        or set(versions) != _VERSION_KEYS
+        or not all(_nonempty_string(value) for value in versions.values())
+    ):
+        failures.append(
+            _failure(
+                "formal-validation-version-disclosure",
+                "retest snapshot must record the bounded output-affecting versions",
+                path,
+            )
+        )
+
+    commands = snapshot.get("commands")
+    command_ids, unique_command_ids = _stable_ids(commands, "command_id")
+    commands_by_id = (
+        {item.get("command_id"): item for item in commands if isinstance(item, Mapping)}
+        if _is_sequence(commands)
+        else {}
+    )
+    if not _is_sequence(commands) or not unique_command_ids:
+        failures.append(
+            _failure(
+                "formal-validation-commands",
+                "retest command ids must be a unique bounded list",
+                path,
+            )
+        )
+        commands = []
+    for command in commands:
+        if not _closed_object(
+            command,
+            _COMMAND_KEYS,
+            rule_id="formal-validation-command-shape",
+            label="retest command",
+            failures=failures,
+            path=path,
+        ):
+            continue
+        if not _string_list(command.get("argv")) or command.get("network") != "disabled":
+            failures.append(
+                _failure(
+                    "formal-validation-commands",
+                    f"command {command.get('command_id')!r} must use fixed argv with network disabled",
+                    path,
+                )
+            )
+    participant_refs = _participant_test_refs(protocol)
+    participant_command = commands_by_id.get("participant-fixtures")
+    if not isinstance(participant_command, Mapping) or participant_command.get("argv") != [
+        "implementations/python/.venv/bin/pytest",
+        "-q",
+        *participant_refs,
+    ]:
+        failures.append(
+            _failure(
+                "formal-validation-participant-command",
+                "retest snapshot must retain the complete participant fixture command",
+                path,
+            )
+        )
+
+    release_artifacts = [item for item in release.manifest.get("artifacts", []) if isinstance(item, Mapping)]
+    release_artifacts_by_path = {
+        item.get("path"): item for item in release_artifacts if isinstance(item.get("path"), str)
+    }
+    expected_release_paths: set[str] = set()
+    observations = snapshot.get("observations")
+    observation_ids, unique_observation_ids = _stable_ids(observations, "case_id")
+    if not _is_sequence(observations) or not unique_observation_ids:
+        failures.append(
+            _failure(
+                "formal-validation-observation-coverage",
+                "retest observations must have unique case ids",
+                path,
+            )
+        )
+        observations = []
+    for observation in observations:
+        if not _closed_object(
+            observation,
+            _OBSERVATION_V2_KEYS,
+            rule_id="formal-validation-observation-shape",
+            label="retest observation",
+            failures=failures,
+            path=path,
+        ):
+            continue
+        case_id = observation.get("case_id")
+        case = cases_by_id.get(str(case_id))
+        if case is None:
+            failures.append(
+                _failure(
+                    "formal-validation-observation-case",
+                    f"observation references unknown case {case_id!r}",
+                    path,
+                )
+            )
+            continue
+        if observation.get("execution_id") != snapshot.get("execution_id") or observation.get(
+            "configuration_id"
+        ) != snapshot.get("configuration_id"):
+            failures.append(
+                _failure(
+                    "formal-validation-observation-join",
+                    f"observation {case_id!r} must bind the retest execution and configuration",
+                    path,
+                )
+            )
+        replay_mode = case.get("replay_mode")
+        expected_replayable = replay_mode != "unsupported"
+        if observation.get("replayable") is not expected_replayable:
+            failures.append(
+                _failure(
+                    "formal-validation-observation-replayable",
+                    f"observation {case_id!r} misstates replayability",
+                    path,
+                )
+            )
+        if not _string_list(observation.get("evidence_refs")) or not _string_list(observation.get("limitations")):
+            failures.append(
+                _failure(
+                    "formal-validation-observation-evidence",
+                    f"observation {case_id!r} needs evidence refs and explicit limitations",
+                    path,
+                )
+            )
+        if replay_mode in PRODUCTION_EVIDENCE_REPLAY_MODES:
+            fixture_path = case.get("fixture_path")
+            evidence_path = observation.get("evidence_artifact_path")
+            if isinstance(fixture_path, str):
+                expected_release_paths.add(fixture_path)
+            if isinstance(evidence_path, str):
+                expected_release_paths.add(evidence_path)
+            _validate_production_evidence_observation(
+                repo_root,
+                release_artifacts_by_path,
+                case,
+                observation,
+                commands_by_id.get(case_id),
+                failures,
+                path,
+            )
+        else:
+            evidence_fields = (
+                "evidence_profile",
+                "analysis_profile",
+                "configuration_digest",
+                "evidence_digest",
+                "evidence_artifact_path",
+                "evidence_artifact_sha256",
+                "source_digest",
+            )
+            if any(observation.get(key) is not None for key in evidence_fields):
+                failures.append(
+                    _failure(
+                        "formal-validation-production-evidence-join",
+                        f"retained case {case_id!r} must not synthesize a production envelope",
+                        path,
+                    )
+                )
+            if replay_mode == "unsupported":
+                if (
+                    observation.get("actual_outcome") != "unsupported"
+                    or observation.get("diagnostic_kind") is not None
+                    or observation.get("result_digest") is not None
+                ):
+                    failures.append(
+                        _failure(
+                            "formal-validation-unsupported-observation",
+                            f"historical unsupported case {case_id!r} must remain unsupported",
+                            path,
+                        )
+                    )
+            else:
+                try:
+                    replayed = replay_case(repo_root, case)
+                except (OSError, ValueError) as exc:
+                    failures.append(
+                        _failure(
+                            "formal-validation-replay-error",
+                            f"retained case {case_id!r} could not replay ({type(exc).__name__})",
+                            path,
+                        )
+                    )
+                else:
+                    if any(
+                        observation.get(key) != replayed[key]
+                        for key in (
+                            "actual_outcome",
+                            "diagnostic_kind",
+                            "result_digest",
+                        )
+                    ):
+                        failures.append(
+                            _failure(
+                                "formal-validation-replay-drift",
+                                f"retained case {case_id!r} drifted without a matching observation",
+                                path,
+                            )
+                        )
+    if observation_ids != set(cases_by_id) or len(observation_ids) != len(cases_by_id):
+        failures.append(
+            _failure(
+                "formal-validation-observation-coverage",
+                "retest snapshot must contain exactly one observation per v2 corpus case",
+                path,
+            )
+        )
+    if (
+        command_ids.issuperset(
+            {
+                case_id
+                for case_id, case in cases_by_id.items()
+                if case.get("replay_mode") in PRODUCTION_EVIDENCE_REPLAY_MODES
+            }
+        )
+        is False
+    ):
+        failures.append(
+            _failure(
+                "formal-validation-production-command",
+                "every production evidence case needs one fixed command",
+                path,
+            )
+        )
+    selected_release_paths = {
+        str(item.get("path"))
+        for item in release_artifacts
+        if item.get("kind") in {"corpus-input", "production-evidence"}
+    }
+    if selected_release_paths != expected_release_paths:
+        failures.append(
+            _failure(
+                "formal-validation-production-evidence-join",
+                "the atomic release must select exactly every production input and evidence artifact",
+                release.manifest_path,
+            )
+        )
+
+    _validate_retest_participant_observations(protocol, snapshot, failures, path)
+
+
+def _validate_retest_participant_observations(
+    protocol: Mapping[str, object],
+    snapshot: Mapping[str, object],
+    failures: list[PolicyFailure],
+    path: str,
+) -> None:
+    obligations = {
+        item.get("obligation_id"): item
+        for item in protocol.get("participant_obligations", [])
+        if isinstance(item, Mapping)
+    }
+    observations = snapshot.get("participant_observations")
+    observation_ids, unique = _stable_ids(observations, "obligation_id")
+    if not _is_sequence(observations) or not unique or observation_ids != set(obligations):
+        failures.append(
+            _failure(
+                "formal-validation-participant-observation-coverage",
+                "retest snapshot must retain every participant obligation exactly once",
+                path,
+            )
+        )
+        return
+    for observation in observations:
+        if not _closed_object(
+            observation,
+            _PARTICIPANT_OBSERVATION_KEYS,
+            rule_id="formal-validation-participant-observation-shape",
+            label="participant observation",
+            failures=failures,
+            path=path,
+        ):
+            continue
+        obligation = obligations.get(observation.get("obligation_id"))
+        expected_refs = (
+            [
+                obligation.get("positive_test_ref"),
+                obligation.get("negative_test_ref"),
+            ]
+            if isinstance(obligation, Mapping)
+            else []
+        )
+        if (
+            observation.get("execution_id") != snapshot.get("execution_id")
+            or observation.get("evidence_refs") != expected_refs
+            or observation.get("positive_outcome") != "passed"
+            or observation.get("negative_outcome") != "passed"
+            or not _string_list(observation.get("limitations"))
+        ):
+            failures.append(
+                _failure(
+                    "formal-validation-participant-observation-join",
+                    f"participant observation {observation.get('obligation_id')!r} is stale",
+                    path,
+                )
+            )
+
+
+def _validate_production_evidence_observation(
+    repo_root: Path,
+    release_artifacts_by_path: Mapping[object, Mapping[str, object]],
+    case: Mapping[str, object],
+    observation: Mapping[str, object],
+    command: object,
+    failures: list[PolicyFailure],
+    path: str,
+) -> None:
+    case_id = case.get("case_id")
+    replay_mode = case.get("replay_mode")
+    fixture_value = case.get("fixture_path")
+    evidence_value = observation.get("evidence_artifact_path")
+    fixture = safe_repo_path(repo_root, fixture_value) if isinstance(fixture_value, str) else None
+    evidence_path = safe_repo_path(repo_root, evidence_value) if isinstance(evidence_value, str) else None
+    fixture_pin = release_artifacts_by_path.get(fixture_value)
+    evidence_pin = release_artifacts_by_path.get(evidence_value)
+    if (
+        fixture is None
+        or not fixture.is_file()
+        or evidence_path is None
+        or not evidence_path.is_file()
+        or fixture_pin is None
+        or fixture_pin.get("kind") != "corpus-input"
+        or evidence_pin is None
+        or evidence_pin.get("kind") != "production-evidence"
+    ):
+        failures.append(
+            _failure(
+                "formal-validation-production-evidence-join",
+                f"case {case_id!r} lacks an atomically selected input or evidence artifact",
+                path,
+            )
+        )
+        return
+    if observation.get("evidence_artifact_sha256") != _sha256_file(evidence_path) or evidence_pin.get(
+        "sha256"
+    ) != observation.get("evidence_artifact_sha256"):
+        failures.append(
+            _failure(
+                "formal-validation-production-evidence-join",
+                f"case {case_id!r} evidence artifact SHA-256 is stale",
+                path,
+            )
+        )
+    expected_argv = [
+        "implementations/python/.venv/bin/raes",
+        "processor",
+        "satisfiability" if replay_mode == "satisfiability" else "exploit-path",
+        fixture_value,
+        "--profile",
+        (_CURRENT_SATISFIABILITY_PROFILE if replay_mode == "satisfiability" else "raes-exploit-path-analysis-v1"),
+    ]
+    if not isinstance(command, Mapping) or command.get("argv") != expected_argv or command.get("network") != "disabled":
+        failures.append(
+            _failure(
+                "formal-validation-production-command",
+                f"case {case_id!r} must use its production CLI with fixed offline argv",
+                path,
+            )
+        )
+    try:
+        if replay_mode == "exploit-path":
+            load_bounded_json_object(repo_root, str(fixture_value), max_bytes=2 * 1024 * 1024)
+        stored_payload = load_bounded_json_object(
+            repo_root,
+            str(evidence_value),
+            max_bytes=_MAX_FILE_BYTES,
+        )
+        if replay_mode == "satisfiability":
+            from raes_contracts.satisfiability import (
+                ScenarioSatisfiabilityEvidenceModel,
+            )
+            from raes_processor.satisfiability import (
+                analyze_scenario_file,
+                replay_satisfiability_evidence,
+            )
+
+            stored = ScenarioSatisfiabilityEvidenceModel.model_validate(stored_payload)
+            direct = analyze_scenario_file(fixture, profile=_CURRENT_SATISFIABILITY_PROFILE)
+            replay_satisfiability_evidence(fixture, stored)
+            configuration_digest = direct.solver_configuration_digest
+        else:
+            from raes_contracts.exploit_path import ExploitPathAnalysisEvidenceModel
+            from raes_processor.exploit_path import (
+                analyze_exploit_path_file,
+                replay_exploit_path_evidence,
+            )
+
+            stored = ExploitPathAnalysisEvidenceModel.model_validate(stored_payload)
+            direct = analyze_exploit_path_file(fixture, profile="raes-exploit-path-analysis-v1")
+            replay_exploit_path_evidence(fixture, stored)
+            configuration_digest = direct.search_configuration_digest
+        from raes_contracts.satisfiability import canonical_contract_digest
+
+        direct_digest = canonical_contract_digest(direct)
+        stored_digest = canonical_contract_digest(stored)
+        cli_payload = _run_production_evidence_cli(repo_root, expected_argv)
+        cli = type(stored).model_validate(cli_payload)
+        cli_digest = canonical_contract_digest(cli)
+    except (
+        OSError,
+        ValueError,
+        RuntimeError,
+        subprocess.SubprocessError,
+        json.JSONDecodeError,
+    ) as exc:
+        failures.append(
+            _failure(
+                "formal-validation-production-replay",
+                f"case {case_id!r} production replay failed ({type(exc).__name__})",
+                path,
+            )
+        )
+        return
+    if not (
+        stored_digest == direct_digest == cli_digest
+        and observation.get("actual_outcome") == direct.outcome.value == case.get("expected_outcome")
+        and observation.get("diagnostic_kind") == direct.profile
+        and observation.get("result_digest") == direct_digest
+        and observation.get("evidence_profile") == direct.profile
+        and observation.get("analysis_profile") == direct.analysis_profile
+        and observation.get("configuration_digest") == configuration_digest
+        and observation.get("evidence_digest") == direct_digest
+        and observation.get("source_digest") == direct.source.byte_digest
+    ):
+        failures.append(
+            _failure(
+                "formal-validation-production-evidence-join",
+                f"case {case_id!r} source, configuration, outcome, CLI, replay, or evidence joins drifted",
+                path,
+            )
+        )
+
+
+def _run_production_evidence_cli(repo_root: Path, argv: list[object]) -> dict[str, object]:
+    if not all(isinstance(value, str) for value in argv):
+        raise ValueError("production evidence argv must contain only strings")
+    executable = safe_repo_path(repo_root, str(argv[0]))
+    if executable is None or not executable.is_file():
+        raise ValueError("production evidence executable is missing")
+    completed = subprocess.run(
+        [str(executable), *(str(value) for value in argv[1:])],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+        env={},
+    )
+    if len(completed.stdout.encode("utf-8")) > _MAX_FILE_BYTES or len(completed.stderr.encode("utf-8")) > 16 * 1024:
+        raise ValueError("production evidence command exceeded its output bound")
+    if completed.returncode != 0 or completed.stderr:
+        raise ValueError(f"production evidence command exited with status {completed.returncode}")
+    payload = json.loads(completed.stdout)
+    if not isinstance(payload, dict):
+        raise ValueError("production evidence command did not emit an object")
+    return payload
 
 
 def load_bundle(repo_root: Path = REPO_ROOT) -> tuple[dict, dict, dict, dict, dict]:
@@ -1111,7 +2319,9 @@ def load_bundle(repo_root: Path = REPO_ROOT) -> tuple[dict, dict, dict, dict, di
     return manifest, protocol, corpus, snapshot, analysis
 
 
-def load_satisfiability_analysis(repo_root: Path = REPO_ROOT) -> tuple[dict, dict, dict]:
+def load_satisfiability_analysis(
+    repo_root: Path = REPO_ROOT,
+) -> tuple[dict, dict, dict]:
     """Load the revisioned issue-826 supplement selected by the bundle."""
 
     manifest = _assembled_manifest(repo_root)
@@ -1134,62 +2344,35 @@ def load_satisfiability_analysis(repo_root: Path = REPO_ROOT) -> tuple[dict, dic
 
 
 def _assembled_manifest(repo_root: Path) -> dict[str, object]:
-    records = load_index_records(
-        repo_root,
-        index_path=MANIFEST_PATH,
-        schema_version=MANIFEST_SCHEMA_VERSION,
-        directory_key="parts_directory",
-        max_bytes=_MAX_FILE_BYTES,
-    )
-    base_parts: list[tuple[str, dict[str, object]]] = []
-    supplement_parts: list[tuple[str, dict[str, object]]] = []
-    for path, record in records:
-        kind = record.get("part_kind")
-        revision_key(record.get("revision"))
-        if kind == "base":
-            expected = {
-                "part_kind",
-                "revision",
-                "protocol_path",
-                "corpus_path",
-                "snapshot_path",
-                "analysis_path",
-            }
-            base_parts.append((path, record))
-        elif kind == "satisfiability":
-            expected = {
-                "part_kind",
-                "revision",
-                "satisfiability_snapshot_path",
-                "satisfiability_analysis_path",
-            }
-            supplement_parts.append((path, record))
-        else:
-            raise ValueError(f"{path!r} has unknown formal evidence part_kind {kind!r}")
-        if set(record) != expected:
-            raise ValueError(f"{path!r} fields must exactly match {sorted(expected)}")
-        for key, value in record.items():
-            if not key.endswith("_path"):
-                continue
-            resolved = safe_repo_path(repo_root, value) if isinstance(value, str) else None
-            if resolved is None or not resolved.is_file():
-                raise ValueError(f"{path!r} contains unsafe or missing {key}")
-    if not base_parts or not supplement_parts:
-        raise ValueError(f"{MANIFEST_PATH!r} must select base and satisfiability evidence parts")
-    _base_path, base = max(base_parts, key=lambda item: (revision_key(item[1]["revision"]), item[0]))
-    _supplement_path, supplement = max(
-        supplement_parts,
-        key=lambda item: (revision_key(item[1]["revision"]), item[0]),
-    )
+    releases = load_release_bundles(repo_root)
+    historical = [
+        item
+        for item in releases
+        if item.protocol.get("revision") == "1.0.0"
+        and any(
+            isinstance(artifact, Mapping) and artifact.get("kind") == "satisfiability-analysis"
+            for artifact in item.manifest.get("artifacts", [])
+        )
+    ]
+    if not historical:
+        raise ValueError(f"{MANIFEST_PATH!r} must select an atomic historical satisfiability release")
+    release = max(historical, key=lambda item: revision_key(item.manifest.get("revision")))
+    artifact_by_kind = {
+        artifact.get("kind"): artifact
+        for artifact in release.manifest.get("artifacts", [])
+        if isinstance(artifact, Mapping)
+    }
+    supplement_snapshot = artifact_by_kind["satisfiability-snapshot"]
+    supplement_analysis = artifact_by_kind["satisfiability-analysis"]
     return {
         "bundle_id": _HISTORICAL_BUNDLE_ID,
-        "revision": supplement["revision"],
-        "protocol_path": base["protocol_path"],
-        "corpus_path": base["corpus_path"],
-        "snapshot_path": base["snapshot_path"],
-        "analysis_path": base["analysis_path"],
-        "satisfiability_snapshot_path": supplement["satisfiability_snapshot_path"],
-        "satisfiability_analysis_path": supplement["satisfiability_analysis_path"],
+        "revision": release.manifest["revision"],
+        "protocol_path": release.manifest["protocol_path"],
+        "corpus_path": release.manifest["corpus_path"],
+        "snapshot_path": release.manifest["snapshot_path"],
+        "analysis_path": release.manifest["analysis_path"],
+        "satisfiability_snapshot_path": supplement_snapshot["path"],
+        "satisfiability_analysis_path": supplement_analysis["path"],
     }
 
 
@@ -1458,7 +2641,10 @@ def validate_satisfiability_analysis(
         observation_normalized_digest_matches = observation is not None and (
             observation.get("normalized_model_digest") == evidence.normalized_model_digest
             or _RENAMED_SATISFIABILITY_MODEL_DIGESTS.get(str(case_id))
-            == (observation.get("normalized_model_digest"), evidence.normalized_model_digest)
+            == (
+                observation.get("normalized_model_digest"),
+                evidence.normalized_model_digest,
+            )
         )
         solver_digest_matches = (
             snapshot.get("solver_configuration_digest") == evidence.solver_configuration_digest
@@ -1482,9 +2668,21 @@ def validate_satisfiability_analysis(
                 )
             )
         if control == "positive" and evidence.witness is None:
-            failures.append(_failure("formal-satisfiability-evidence-shape", "positive control lacks a witness", path))
+            failures.append(
+                _failure(
+                    "formal-satisfiability-evidence-shape",
+                    "positive control lacks a witness",
+                    path,
+                )
+            )
         elif control == "negative" and evidence.unsat_core is None:
-            failures.append(_failure("formal-satisfiability-evidence-shape", "negative control lacks a core", path))
+            failures.append(
+                _failure(
+                    "formal-satisfiability-evidence-shape",
+                    "negative control lacks a core",
+                    path,
+                )
+            )
         elif control == "unsupported" and (evidence.unsupported is None or not evidence.diagnostics):
             failures.append(
                 _failure(
@@ -1503,6 +2701,8 @@ def validate_bundle(
     corpus: dict,
     snapshot: dict,
     analysis: dict,
+    *,
+    replay_cases: bool = True,
 ) -> list[PolicyFailure]:
     failures: list[PolicyFailure] = []
     if not _closed_object(
@@ -1520,7 +2720,16 @@ def validate_bundle(
     analysis_path = str(manifest.get("analysis_path"))
     _validate_protocol(repo_root, protocol, failures, protocol_path)
     cases_by_id = _validate_corpus(repo_root, protocol, corpus, failures, corpus_path)
-    _validate_snapshot(repo_root, protocol, corpus, snapshot, cases_by_id, failures, snapshot_path)
+    _validate_snapshot(
+        repo_root,
+        protocol,
+        corpus,
+        snapshot,
+        cases_by_id,
+        failures,
+        snapshot_path,
+        replay_cases=replay_cases,
+    )
     _validate_analysis(repo_root, protocol, corpus, snapshot, analysis, failures, analysis_path)
     return failures
 
@@ -1531,20 +2740,15 @@ def evaluate(
     participant_test_runner: ParticipantTestRunner = _replay_participant_tests,
 ) -> list[PolicyFailure]:
     try:
-        bundle = load_bundle(repo_root)
+        releases = load_release_bundles(repo_root)
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         return [_failure("formal-validation-bundle-load", str(exc), MANIFEST_PATH)]
-    failures = validate_bundle(repo_root, *bundle)
+    failures: list[PolicyFailure] = []
+    for release in releases:
+        failures.extend(validate_release_bundle(repo_root, release))
     if failures:
         return failures
-    try:
-        satisfiability_bundle = load_satisfiability_analysis(repo_root)
-    except (OSError, ValueError, json.JSONDecodeError) as exc:
-        return [_failure("formal-satisfiability-bundle-load", str(exc), MANIFEST_PATH)]
-    failures = validate_satisfiability_analysis(repo_root, *satisfiability_bundle)
-    if failures:
-        return failures
-    protocol = bundle[1]
+    protocol = max(releases, key=lambda item: revision_key(item.manifest.get("revision"))).protocol
     test_refs = _participant_test_refs(protocol)
     replayed, detail = participant_test_runner(repo_root, test_refs)
     if not replayed:
@@ -1552,7 +2756,12 @@ def evaluate(
             _failure(
                 "formal-validation-participant-replay",
                 detail,
-                str(bundle[0].get("snapshot_path")),
+                str(
+                    max(
+                        releases,
+                        key=lambda item: revision_key(item.manifest.get("revision")),
+                    ).manifest.get("snapshot_path")
+                ),
             )
         ]
     return []
