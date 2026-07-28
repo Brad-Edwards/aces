@@ -1085,9 +1085,13 @@ def _check_unclassified_top_level(
             # authority artifacts; don't fail the gate on them.
             continue
         name = child.name
-        if name.startswith(".") or name == "__pycache__":
-            # Hidden directories (.github, .codex, .gc, .pytest_cache, etc.)
-            # and Python bytecode caches are operational, not authority-bearing.
+        if name.startswith(".") or name in _PRUNE_DIR_NAMES:
+            # Hidden directories (.github, .codex, .gc, ...) and operational
+            # build/cache artifacts (build/, dist/, node_modules/, venv/,
+            # __pycache__/, ...) are git-ignored and never authority-bearing.
+            # The schema-misplaced scan prunes this same set, so a
+            # developer-local build artifact does not trip a gate that CI's
+            # clean checkout would never see.
             continue
         if name in classified:
             continue
@@ -1108,9 +1112,10 @@ import os
 
 # Directory names that are operational/build artifacts (developer-local
 # virtualenvs, caches, dependency caches, test caches, VCS metadata, etc.).
-# The schema-misplaced scan prunes these so the gate is deterministic over
-# tracked repository contents rather than over whichever third-party
-# packages happen to be installed under `implementations/python/.venv/`.
+# Both the schema-misplaced scan and the unclassified-top-level scan prune
+# these so the gate is deterministic over tracked repository contents rather
+# than over whichever third-party packages or local build artifacts happen to
+# be present in a developer's checkout.
 _PRUNE_DIR_NAMES: frozenset[str] = frozenset(
     {
         ".git",
