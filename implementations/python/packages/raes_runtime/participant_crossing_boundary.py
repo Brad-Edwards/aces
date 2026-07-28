@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import Callable
 from dataclasses import asdict, replace
 
 from raes_contracts.contracts.participant_crossing import (
@@ -15,17 +14,21 @@ from raes_contracts.contracts.participant_crossing import (
     ParticipantCrossingSubjectReferenceModel,
 )
 from raes_contracts.participant_binding import ParticipantActionAdmissionRequest
-from raes_contracts.runtime_state import OperationReceipt, OperationState, OperationStatus
+from raes_contracts.runtime_state import OperationReceipt, OperationState
 from raes_processor.models import ParticipantBehaviorRuntime
 
 from .control_plane_execution import apply_authorized_participant_action
 from .control_plane_security import ControlPlaneIdentity
-from .control_plane_store import AuditEvent, ControlPlaneOperationRecord
 from .participant_control_intents import ParticipantControlIntent, ParticipantControlIntentBase
 from .participant_control_mediation import (
     bind_participant_control_request,
     prepare_participant_control_transition,
     record_participant_control,
+)
+from .participant_crossing_action import (
+    ActionIngressExecution,
+    action_operation_record,
+    combined_crossing_audit,
 )
 from .participant_crossing_mediation import (
     ParticipantCrossingEvidence,
@@ -63,13 +66,32 @@ class ParticipantCrossingControlIngressMixin:
         if getattr(self, "_crossing_policy_resolver", None) is None:
             if crossing_evidence is not None:
                 raise ValueError("participant crossing policy resolver is required")
-            return record_participant_control(
+            receipt = record_participant_control(
                 self,
                 participant_address=participant_address,
                 intent=intent,
                 identity=identity,
                 idempotency_key=idempotency_key,
             )
+        else:
+            receipt = self._record_governed_participant_control(
+                participant_address,
+                intent,
+                identity=identity,
+                idempotency_key=idempotency_key,
+                crossing_evidence=crossing_evidence,
+            )
+        return receipt
+
+    def _record_governed_participant_control(
+        self,
+        participant_address: str,
+        intent: ParticipantControlIntent,
+        *,
+        identity: object,
+        idempotency_key: str,
+        crossing_evidence: ParticipantCrossingEvidence | None,
+    ) -> OperationReceipt:
         if crossing_evidence is None:
             raise ValueError("configured participant ingress requires crossing evidence")
         if not isinstance(identity, ControlPlaneIdentity):
@@ -132,7 +154,7 @@ class ParticipantCrossingControlIngressMixin:
                 decision_history_heads=crossing.record.decision_history_heads,
                 result_history_heads=_expected_history_heads(next_snapshot, participant_address),
             )
-            audit = _combined_audit(
+            audit = combined_crossing_audit(
                 transition.audit_event,
                 crossing,
                 action="record_participant_control",
@@ -151,34 +173,29 @@ class ParticipantCrossingControlIngressMixin:
 
 def execute_action_ingress_crossing(
     control_plane: object,
-    *,
     participant_behavior: ParticipantBehaviorRuntime,
     request: ParticipantActionAdmissionRequest,
-    crossing_evidence: ParticipantCrossingEvidence | None,
-    identity: object,
-    idempotency_key: str,
-    method: Callable[..., object],
-    address: str,
+    execution: ActionIngressExecution,
 ) -> OperationReceipt:
     """Durably authorize, execute, and finalize one action admission."""
 
-    if crossing_evidence is None:
+    if execution.crossing_evidence is None:
         raise ValueError("configured participant ingress requires crossing evidence")
-    if not isinstance(identity, ControlPlaneIdentity):
+    if not isinstance(execution.identity, ControlPlaneIdentity):
         raise PermissionError("participant crossing requires an authenticated identity")
     with control_plane._participant_control_lock:
         canonical = _action_crossing_intent(
             control_plane,
             participant_behavior,
             request,
-            crossing_evidence,
-            identity,
+            execution.crossing_evidence,
+            execution.identity,
         )
         crossing = prepare_participant_crossing(
             control_plane,
             canonical,
-            identity=identity,
-            idempotency_key=idempotency_key,
+            identity=execution.identity,
+            idempotency_key=execution.idempotency_key,
             incumbent_carrier=request,
         )
         if crossing.existing_receipt is not None:
@@ -193,7 +210,7 @@ def execute_action_ingress_crossing(
             crossing.record,
             status=replace(crossing.record.status, state=OperationState.RUNNING),
         )
-        authorization_audit = _combined_audit(
+        authorization_audit = combined_crossing_audit(
             crossing.audit_event,
             crossing,
             action="authorize_participant_action",
@@ -210,20 +227,20 @@ def execute_action_ingress_crossing(
         control_plane._operations[authorization_record.receipt.operation_id] = authorization_record
 
         result = apply_authorized_participant_action(
-            method=method,
+            method=execution.method,
             request=governed_request,
             snapshot=control_plane._snapshot,
-            address=address,
+            address=execution.address,
         )
         next_snapshot = result.snapshot.with_entries(
             dict(result.snapshot.entries),
             participant_crossing_history=crossing.next_snapshot.participant_crossing_history,
         )
         record = replace(
-            _action_operation_record(crossing, result),
+            action_operation_record(crossing, result),
             result_history_heads=_expected_history_heads(next_snapshot, request.participant_address),
         )
-        audit = _combined_audit(
+        audit = combined_crossing_audit(
             crossing.audit_event,
             crossing,
             action="admit_participant_action",
@@ -422,55 +439,6 @@ def _require_action_binding(
         raise ValueError("governed action is not declared by the compiled participant behavior")
     if request.observation_boundary_address not in behavior.observation_boundary_addresses:
         raise ValueError("governed observation boundary is not declared by the compiled participant behavior")
-
-
-def _action_operation_record(
-    crossing: PreparedParticipantCrossing,
-    result: object,
-) -> ControlPlaneOperationRecord:
-    diagnostics = list(result.diagnostics)
-    receipt = replace(
-        crossing.record.receipt,
-        accepted=bool(result.success),
-        diagnostics=diagnostics,
-    )
-    status = OperationStatus(
-        operation_id=receipt.operation_id,
-        domain=receipt.domain,
-        state=OperationState.SUCCEEDED if result.success else OperationState.FAILED,
-        submitted_at=receipt.submitted_at,
-        updated_at=crossing.audit_event.timestamp,
-        diagnostics=diagnostics,
-        changed_addresses=list(result.changed_addresses),
-    )
-    return replace(crossing.record, receipt=receipt, status=status)
-
-
-def _combined_audit(
-    base: AuditEvent,
-    crossing: PreparedParticipantCrossing,
-    *,
-    action: str,
-    allowed: bool,
-    reason: str | None = None,
-) -> AuditEvent:
-    decision = crossing.decision
-    details = dict(base.details)
-    if decision is not None:
-        details.update(
-            {
-                "crossing_decision_id": decision.occurrence.decision_id,
-                "crossing_decision_cut_ref": decision.occurrence.policy.decision_cut_ref,
-                "crossing_disposition": decision.occurrence.disposition.value,
-            }
-        )
-    return replace(
-        base,
-        action=action,
-        allowed=allowed,
-        reason=reason or base.reason,
-        details=details,
-    )
 
 
 __all__ = (

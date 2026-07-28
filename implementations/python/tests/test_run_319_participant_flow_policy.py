@@ -379,14 +379,13 @@ def test_crossing_history_is_preserved_and_append_only() -> None:
 
 
 def test_caller_evidence_cannot_describe_the_protected_operation() -> None:
+    payload = {
+        **_evidence().model_dump(mode="json"),
+        "interaction_kind": "denial",
+        "participant_address": "participant.attacker",
+    }
     with pytest.raises(ValidationError, match="interaction_kind"):
-        ParticipantCrossingEvidence.model_validate(
-            {
-                **_evidence().model_dump(mode="json"),
-                "interaction_kind": "denial",
-                "participant_address": "participant.attacker",
-            }
-        )
+        ParticipantCrossingEvidence.model_validate(payload)
 
 
 def test_action_boundary_authorizes_and_finalizes_one_operation() -> None:
@@ -423,12 +422,15 @@ def test_action_boundary_derives_exact_subject_and_semantics_from_request() -> N
 
 def test_configured_action_ingress_cannot_bypass_crossing_mediation() -> None:
     plane = _action_plane(_StaticCrossingResolver())
+    behavior = _behavior()
+    request = _admission_request()
+    identity = _identity()
 
     with pytest.raises(ValueError, match="requires crossing evidence"):
         plane.admit_participant_action(
-            _behavior(),
-            _admission_request(),
-            identity=_identity(),
+            behavior,
+            request,
+            identity=identity,
         )
 
     assert plane.snapshot.participant_behavior_history == {}
@@ -436,8 +438,9 @@ def test_configured_action_ingress_cannot_bypass_crossing_mediation() -> None:
 
 
 def test_policy_capable_target_requires_crossing_resolver_at_startup() -> None:
+    target = _policy_capable_target()
     with pytest.raises(ValueError, match="policy capabilities require a crossing policy resolver"):
-        RuntimeControlPlane(_policy_capable_target())
+        RuntimeControlPlane(target)
 
 
 def test_unsupported_backend_never_executes_the_incumbent_action() -> None:
@@ -471,9 +474,10 @@ def test_independent_ingress_gate_denials_do_not_execute_action(gate: str) -> No
 
 def test_identity_denials_are_security_audited_without_participant_facts() -> None:
     plane = _action_plane(_StaticCrossingResolver())
+    identity = _identity(bound=False)
 
     with pytest.raises(PermissionError, match="subject"):
-        _admit(plane, identity=_identity(bound=False))
+        _admit(plane, identity=identity)
 
     assert plane.snapshot.participant_crossing_history == {}
     assert plane.snapshot.participant_behavior_history == {}
@@ -491,10 +495,11 @@ def test_operation_bound_idempotency_replays_neither_decision_nor_action() -> No
     assert len(plane.snapshot.participant_crossing_history[_PARTICIPANT]) == 2
     behavior_count = len(plane.snapshot.participant_behavior_history[_PARTICIPANT])
     assert behavior_count >= 2
+    different_request = _admission_request(action_instance_id="different")
     with pytest.raises(ValueError, match="different semantics"):
         _admit(
             plane,
-            request=_admission_request(action_instance_id="different"),
+            request=different_request,
             idempotency_key="same-operation",
         )
     assert len(plane.snapshot.participant_behavior_history[_PARTICIPANT]) == behavior_count
@@ -651,9 +656,10 @@ def test_egress_requires_separate_audience_authority_and_commits_before_return()
             "participant_transformation",
         ),
     )
+    unbound_identity = _identity()
 
     with pytest.raises(PermissionError, match="audience"):
-        _status_evidence_call(plane, identity=_identity(), idempotency_key="egress-unbound")
+        _status_evidence_call(plane, identity=unbound_identity, idempotency_key="egress-unbound")
     assert plane.snapshot.participant_crossing_history == {}
 
     view = _status_evidence_call(
@@ -763,11 +769,12 @@ def test_missing_visibility_gate_fails_closed_without_serializing_output() -> No
             "participant_transformation",
         ),
     )
+    audience_identity = _identity(audience_bound=True)
 
     with pytest.raises(PermissionError, match="not permitted"):
         _status_evidence_call(
             plane,
-            identity=_identity(audience_bound=True),
+            identity=audience_identity,
             idempotency_key="egress-no-visibility",
         )
 

@@ -143,6 +143,16 @@ def _require_crossing_identity(
             identity=identity.identity,
         )
         raise PermissionError("participant crossing identity is not authorized for this target")
+    _require_crossing_role(control_plane, intent, identity)
+    _require_crossing_subject_binding(control_plane, intent, identity)
+    return identity
+
+
+def _require_crossing_role(
+    control_plane: object,
+    intent: ParticipantCrossingIntent,
+    identity: ControlPlaneIdentity,
+) -> None:
     allowed_roles = {
         ControlPlaneRole.BACKEND,
         ControlPlaneRole.OPERATOR,
@@ -157,6 +167,13 @@ def _require_crossing_identity(
             identity=identity.identity,
         )
         raise PermissionError("participant crossing identity is not authorized for this operation")
+
+
+def _require_crossing_subject_binding(
+    control_plane: object,
+    intent: ParticipantCrossingIntent,
+    identity: ControlPlaneIdentity,
+) -> None:
     if intent.direction is ParticipantCrossingDirection.INGRESS:
         bound = any(
             binding.participant_address == intent.participant_address
@@ -185,7 +202,6 @@ def _require_crossing_identity(
                 identity=identity.identity,
             )
             raise PermissionError("participant crossing identity is not authorized for this audience")
-    return identity
 
 
 def _record_identity_denial(
@@ -258,15 +274,17 @@ def _decision_disposition(
 ) -> ParticipantCrossingDecisionDisposition:
     values = set(gates.dispositions())
     if ParticipantCrossingGateDisposition.DENY in values:
-        return ParticipantCrossingDecisionDisposition.DENY
-    if values & {
+        disposition = ParticipantCrossingDecisionDisposition.DENY
+    elif values & {
         ParticipantCrossingGateDisposition.UNKNOWN,
         ParticipantCrossingGateDisposition.UNSUPPORTED,
     }:
-        return ParticipantCrossingDecisionDisposition.UNSUPPORTED
-    if resolution.required_operation is not None:
-        return ParticipantCrossingDecisionDisposition.TRANSFORM
-    return ParticipantCrossingDecisionDisposition.PERMIT
+        disposition = ParticipantCrossingDecisionDisposition.UNSUPPORTED
+    elif resolution.required_operation is not None:
+        disposition = ParticipantCrossingDecisionDisposition.TRANSFORM
+    else:
+        disposition = ParticipantCrossingDecisionDisposition.PERMIT
+    return disposition
 
 
 __all__ = (

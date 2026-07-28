@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from uuid import uuid4
 
@@ -44,18 +44,28 @@ def _utc_now() -> str:
     return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
 
+@dataclass(frozen=True)
+class _CrossingDecisionPreparation:
+    identity: ControlPlaneIdentity
+    resolution: ParticipantCrossingPolicyResolution
+    support: _BackendSupport
+    gates: ParticipantCrossingDecisionGatesModel
+    disposition: ParticipantCrossingDecisionDisposition
+    expected_heads: dict[str, str | None]
+    semantic_fingerprint: str
+    scoped_key: str
+
+
 def _prepare_crossing_decision(
     control_plane: object,
     intent: ParticipantCrossingIntent,
-    identity: ControlPlaneIdentity,
-    resolution: ParticipantCrossingPolicyResolution,
-    support: _BackendSupport,
-    gates: ParticipantCrossingDecisionGatesModel,
-    disposition: ParticipantCrossingDecisionDisposition,
-    expected_heads: dict[str, str | None],
-    semantic_fingerprint: str,
-    scoped_key: str,
+    preparation: _CrossingDecisionPreparation,
 ) -> PreparedParticipantCrossing:
+    identity = preparation.identity
+    resolution = preparation.resolution
+    support = preparation.support
+    gates = preparation.gates
+    disposition = preparation.disposition
     history = list(control_plane._snapshot.participant_crossing_history.get(intent.participant_address, ()))
     request, decision = _crossing_records(intent, identity, resolution, support, gates, disposition)
     records = [request, decision]
@@ -117,13 +127,12 @@ def _prepare_crossing_decision(
         known_authority_basis_refs=context.known_authority_basis_refs,
     )
     record, audit_event = _operation_artifacts(
-        control_plane,
         intent,
         identity,
         final_decision,
         final_disposition,
-        semantic_fingerprint,
-        scoped_key,
+        preparation.semantic_fingerprint,
+        preparation.scoped_key,
     )
     record = ControlPlaneOperationRecord(
         receipt=record.receipt,
@@ -131,7 +140,7 @@ def _prepare_crossing_decision(
         request_fingerprint=record.request_fingerprint,
         idempotency_key=record.idempotency_key,
         result_payload=record.result_payload,
-        decision_history_heads=expected_heads,
+        decision_history_heads=preparation.expected_heads,
         result_history_heads=_expected_history_heads(next_snapshot, intent.participant_address),
     )
     governed_subject = (
@@ -143,7 +152,7 @@ def _prepare_crossing_decision(
         intent=intent,
         identity=identity,
         next_snapshot=next_snapshot,
-        expected_history_heads=expected_heads,
+        expected_history_heads=preparation.expected_heads,
         record=record,
         audit_event=audit_event,
         decision=final_decision,
@@ -334,7 +343,6 @@ def _base_envelope(
 
 
 def _operation_artifacts(
-    control_plane: object,
     intent: ParticipantCrossingIntent,
     identity: ControlPlaneIdentity,
     decision: ParticipantCrossingOccurrenceModel,

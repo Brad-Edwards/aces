@@ -93,16 +93,16 @@ _DEFAULT_CONFORMANCE_SCENARIO = dedent(
 class _UnavailableConformanceCrossingPolicyResolver:
     """Explicitly fail closed if an unrelated adapter probe reaches crossing policy."""
 
+    @staticmethod
     def resolve(
-        self,
         intent: object,
         snapshot: RuntimeSnapshot,
     ) -> object:
         del intent, snapshot
         raise ValueError("target adapter conformance does not supply a crossing policy")
 
+    @staticmethod
     def validation_context(
-        self,
         snapshot: RuntimeSnapshot,
         participant_address: str,
     ) -> object:

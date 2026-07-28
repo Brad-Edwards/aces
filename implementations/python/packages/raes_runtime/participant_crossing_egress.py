@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import replace
-from typing import TypeVar
+from dataclasses import dataclass, replace
+from typing import TypeVar, cast
 
 from raes_contracts.contracts.base import ContractModel
 from raes_contracts.contracts.participant_crossing import (
@@ -19,6 +19,7 @@ from raes_contracts.contracts.participant_crossing import (
 from .participant_crossing_mediation import (
     ParticipantCrossingEvidence,
     ParticipantCrossingIntent,
+    PreparedParticipantCrossing,
     commit_prepared_crossing,
     prepare_participant_crossing,
 )
@@ -26,51 +27,57 @@ from .participant_crossing_mediation import (
 _ViewT = TypeVar("_ViewT", bound=ContractModel)
 
 
+@dataclass(frozen=True)
+class ParticipantViewSerialization:
+    """Exact projection and authorization context for one egress operation."""
+
+    participant_address: str
+    episode_id: str
+    subject_kind: ParticipantCrossingSubjectKind
+    interaction_kind: ParticipantCrossingInteractionKind
+    projection_ref: str
+    identity: object
+    crossing_evidence: ParticipantCrossingEvidence | None
+    idempotency_key: str
+
+
 def serialize_participant_view(
     control_plane: object,
     view: _ViewT,
-    *,
-    participant_address: str,
-    episode_id: str,
-    subject_kind: ParticipantCrossingSubjectKind,
-    interaction_kind: ParticipantCrossingInteractionKind,
-    projection_ref: str,
-    identity: object,
-    crossing_evidence: ParticipantCrossingEvidence | None,
-    idempotency_key: str,
+    serialization: ParticipantViewSerialization,
 ) -> _ViewT:
     """Return a view only after its exact governed projection is committed."""
 
-    if crossing_evidence is None:
+    if serialization.crossing_evidence is None:
         raise ValueError("configured participant egress requires crossing evidence")
     with control_plane._participant_control_lock:
         subject = _view_subject(
             view,
-            participant_address=participant_address,
-            episode_id=episode_id,
-            subject_kind=subject_kind,
+            participant_address=serialization.participant_address,
+            episode_id=serialization.episode_id,
+            subject_kind=serialization.subject_kind,
         )
         canonical = ParticipantCrossingIntent.model_validate(
             {
-                **crossing_evidence.model_dump(mode="json"),
-                "participant_address": participant_address,
-                "episode_id": episode_id,
+                **serialization.crossing_evidence.model_dump(mode="json"),
+                "participant_address": serialization.participant_address,
+                "episode_id": serialization.episode_id,
                 "direction": ParticipantCrossingDirection.EGRESS,
-                "interaction_kind": interaction_kind,
+                "interaction_kind": serialization.interaction_kind,
                 "subject": subject,
                 "controller_ref": "runtime.control-plane.participant-retrieval",
                 "authority_basis_refs": ["runtime.authority:participant-projection"],
                 "requested_operation": ParticipantCrossingOperation.PROJECTION,
-                "action_or_projection_ref": projection_ref,
-                "effective_order": _next_effective_order(control_plane, participant_address),
+                "action_or_projection_ref": serialization.projection_ref,
+                "effective_order": _next_effective_order(control_plane, serialization.participant_address),
                 "order_model": "logical_clock",
             },
         )
         prepared = prepare_participant_crossing(
             control_plane,
             canonical,
-            identity=identity,
-            idempotency_key=idempotency_key,
+            identity=serialization.identity,
+            idempotency_key=serialization.idempotency_key,
             incumbent_carrier=view,
         )
         if prepared.existing_receipt is not None:
@@ -94,17 +101,20 @@ def serialize_participant_view(
             governed = candidate
             actual = _view_subject(
                 governed,
-                participant_address=participant_address,
-                episode_id=episode_id,
+                participant_address=serialization.participant_address,
+                episode_id=serialization.episode_id,
                 subject_kind=prepared.governed_subject.subject_kind,
             )
             if actual != prepared.governed_subject:
                 raise ValueError("trusted egress transformation does not match its governed identity")
-        prepared = replace(
-            prepared,
-            record=replace(
-                prepared.record,
-                result_payload=governed.model_dump(mode="json"),
+        prepared = cast(
+            PreparedParticipantCrossing,
+            replace(
+                prepared,
+                record=replace(
+                    prepared.record,
+                    result_payload=governed.model_dump(mode="json"),
+                ),
             ),
         )
         commit_prepared_crossing(control_plane, prepared)
@@ -143,4 +153,4 @@ def _next_effective_order(control_plane: object, participant_address: str) -> in
     return sum(len(history.get(participant_address, ())) for history in histories) + 1
 
 
-__all__ = ("serialize_participant_view",)
+__all__ = ("ParticipantViewSerialization", "serialize_participant_view")

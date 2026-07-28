@@ -172,6 +172,7 @@ def prepare_participant_crossing(
         _resolve_backend_support,
     )
     from .participant_crossing_records import (
+        _CrossingDecisionPreparation,
         _expected_history_heads,
         _prepare_crossing_decision,
         _scoped_idempotency_key,
@@ -236,14 +237,16 @@ def prepare_participant_crossing(
     return _prepare_crossing_decision(
         control_plane,
         intent,
-        authenticated,
-        resolution,
-        support,
-        gates,
-        disposition,
-        expected_heads,
-        semantic_fingerprint,
-        scoped_key,
+        _CrossingDecisionPreparation(
+            identity=authenticated,
+            resolution=resolution,
+            support=support,
+            gates=gates,
+            disposition=disposition,
+            expected_heads=expected_heads,
+            semantic_fingerprint=semantic_fingerprint,
+            scoped_key=scoped_key,
+        ),
     )
 
 
