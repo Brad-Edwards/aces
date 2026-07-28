@@ -2,9 +2,9 @@
   "contract_id": "evaluation-history-event-stream-v1",
   "schema_path": "contracts/schemas/control-plane/evaluation-history-event-stream-v1.json",
   "stability": "draft",
-  "content_hash": "b55ce200b8ef69dd0fd5a892611e40c50b497ea424dcbbbd11aa35c7edf10970",
+  "content_hash": "800ebef43a7d79d1c76e959bb2563cd1fac8845199eea012bc8816522a0bed0c",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "b55ce200b8ef69dd0fd5a892611e40c50b497ea424dcbbbd11aa35c7edf10970"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "800ebef43a7d79d1c76e959bb2563cd1fac8845199eea012bc8816522a0bed0c"
   }
 }

@@ -2,9 +2,9 @@
   "contract_id": "behavioral-relations-v1",
   "schema_path": "contracts/schemas/concept-authority/behavioral-relations-v1.json",
   "stability": "draft",
-  "content_hash": "e6486c4411ac0f63724558f0556b3fc2b1dc866045dcadfd5d1a88ecd7e3aa5e",
+  "content_hash": "c97938fe6cf5b96fb09db413661ad4acb6bc7cb90b4385e9ccd308cfa4dd0755",
   "last_change": {
-    "summary": "Added an immutable report locator for the revision-3 I/O-automata lineage used by exact-cut reactive information flow and I/O alternating refinement.",
-    "content_hash": "e6486c4411ac0f63724558f0556b3fc2b1dc866045dcadfd5d1a88ecd7e3aa5e"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "c97938fe6cf5b96fb09db413661ad4acb6bc7cb90b4385e9ccd308cfa4dd0755"
   }
 }

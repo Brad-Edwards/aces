@@ -2,9 +2,9 @@
   "contract_id": "participant-implementation-manifest-v1",
   "schema_path": "contracts/schemas/participant-implementation-manifest/participant-implementation-manifest-v1.json",
   "stability": "draft",
-  "content_hash": "ea14b7737f13e08900758135825095bf12672b99cf7dd2665b0c6049b0d47a40",
+  "content_hash": "b4ef963347b98da9a5542f3ebdaa612a5e9396f9d18d15aab6c7528b89b6318c",
   "last_change": {
-    "summary": "Allowed participant implementations to declare exact-cut participant-decision-surface-v2 capability.",
-    "content_hash": "ea14b7737f13e08900758135825095bf12672b99cf7dd2665b0c6049b0d47a40"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "b4ef963347b98da9a5542f3ebdaa612a5e9396f9d18d15aab6c7528b89b6318c"
   }
 }

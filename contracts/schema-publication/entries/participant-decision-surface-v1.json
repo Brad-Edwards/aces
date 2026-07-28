@@ -2,9 +2,9 @@
   "contract_id": "participant-decision-surface-v1",
   "schema_path": "contracts/schemas/control-plane/participant-decision-surface-v1.json",
   "stability": "draft",
-  "content_hash": "de312b4eaa535e16bbfa5d5d59081a6dd86ec41936d8c2c402cbe4ca62ff0748",
+  "content_hash": "5bb921281db72519b486ecc4dcd90e232c39b8bf664bbe73b0c768c07c968f6d",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "de312b4eaa535e16bbfa5d5d59081a6dd86ec41936d8c2c402cbe4ca62ff0748"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "5bb921281db72519b486ecc4dcd90e232c39b8bf664bbe73b0c768c07c968f6d"
   }
 }

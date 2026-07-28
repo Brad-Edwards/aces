@@ -2,9 +2,9 @@
   "contract_id": "processor-manifest-v2",
   "schema_path": "contracts/schemas/processor-manifest/processor-manifest-v2.json",
   "stability": "draft",
-  "content_hash": "17335ec9416d0ec5d0e3d7bee409c6d1caabd6250f8cf4159243e4483ebd8897",
+  "content_hash": "35278440a89aee708a6527b5e66bc14c3ad200491ba121dd0b48bb9a03ce52d8",
   "last_change": {
-    "summary": "Authorized processor declarations for the participant resource-budget policy contract introduced by issue #899.",
-    "content_hash": "17335ec9416d0ec5d0e3d7bee409c6d1caabd6250f8cf4159243e4483ebd8897"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "35278440a89aee708a6527b5e66bc14c3ad200491ba121dd0b48bb9a03ce52d8"
   }
 }

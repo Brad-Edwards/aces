@@ -59,18 +59,36 @@ def _binding(path: str, content: bytes, *, occurrences: int = 1) -> dict[str, ob
     }
 
 
+def _generated_record(
+    path: str,
+    tail: bytes,
+    *,
+    occurrences: int = 1,
+) -> dict[str, object]:
+    return {
+        "path": path,
+        "record_class": "generated-release-history",
+        "rationale": "Pins the classified tail of a bot-maintained release history.",
+        "occurrences": occurrences,
+        "content_sha256": hashlib.sha256(tail).hexdigest(),
+        "classified_suffix_bytes": len(tail),
+    }
+
+
 def _seed_repo(
     repo_root: Path,
     *,
     files: dict[str, str | bytes],
     records: list[dict[str, object]] | None = None,
     bindings: list[dict[str, object]] | None = None,
+    generated: list[dict[str, object]] | None = None,
 ) -> None:
     for relative_path, content in files.items():
         _write(repo_root / relative_path, content)
     manifest = {
-        "schema_version": "historical-identity-records/v2",
+        "schema_version": "historical-identity-records/v3",
         "hash_algorithm": "sha256",
+        "generated_history_records": generated or [],
         "operational_bindings": bindings or [],
         "records": records or [],
     }
@@ -330,6 +348,98 @@ def test_unsafe_operational_binding_path_fails_closed(tmp_path: Path) -> None:
     _write_manifest(tmp_path, manifest)
 
     assert "identity-cutover-manifest-path" in _manifest_rule_ids(tmp_path)
+
+
+_GENERATED_PATH = "CHANGELOG.md"
+_GENERATED_TAIL = f"## [1.0.0]\n\n* retained {RETIRED_UPPER} release note\n".encode()
+_GENERATED_HEAD = b"# Changelog\n\n## [2.0.0]\n\n* a released feature\n\n"
+
+
+def _seed_generated_history(repo_root: Path, content: bytes, tail: bytes = _GENERATED_TAIL) -> None:
+    _seed_repo(
+        repo_root,
+        files={_GENERATED_PATH: content},
+        generated=[_generated_record(_GENERATED_PATH, tail)],
+    )
+
+
+def test_generated_release_history_tolerates_new_sections_above_the_classified_tail(tmp_path: Path) -> None:
+    """A release bot prepending a section must not turn the gate red."""
+    _seed_generated_history(tmp_path, _GENERATED_HEAD + _GENERATED_TAIL)
+
+    assert evaluate_identity_cutover(tmp_path) == []
+
+
+def test_generated_release_history_rejects_retired_identity_in_generated_head(tmp_path: Path) -> None:
+    head = f"# Changelog\n\n## [2.0.0]\n\n* revive the {RETIRED_LOWER}-invariants profile\n\n".encode()
+    _seed_generated_history(tmp_path, head + _GENERATED_TAIL)
+
+    assert "identity-cutover-generated-head" in _manifest_rule_ids(tmp_path)
+
+
+def test_generated_release_history_rejects_edited_tail(tmp_path: Path) -> None:
+    edited_tail = _GENERATED_TAIL.replace(b"1.0.0", b"1.0.1")
+    _seed_generated_history(tmp_path, _GENERATED_HEAD + edited_tail)
+
+    assert "identity-cutover-generated-content" in _manifest_rule_ids(tmp_path)
+
+
+def test_generated_release_history_rejects_truncated_tail(tmp_path: Path) -> None:
+    _seed_generated_history(tmp_path, _GENERATED_TAIL[:4])
+
+    assert "identity-cutover-generated-content" in _manifest_rule_ids(tmp_path)
+
+
+def test_generated_release_history_verifies_tail_occurrence_count(tmp_path: Path) -> None:
+    _seed_repo(
+        tmp_path,
+        files={_GENERATED_PATH: _GENERATED_HEAD + _GENERATED_TAIL},
+        generated=[_generated_record(_GENERATED_PATH, _GENERATED_TAIL, occurrences=2)],
+    )
+
+    assert "identity-cutover-generated-count" in _manifest_rule_ids(tmp_path)
+
+
+def test_generated_release_history_path_must_be_tracked(tmp_path: Path) -> None:
+    _seed_generated_history(tmp_path, _GENERATED_HEAD + _GENERATED_TAIL)
+    (tmp_path / _GENERATED_PATH).unlink()
+    _git(tmp_path, "rm", "--cached", "-q", _GENERATED_PATH)
+
+    assert "identity-cutover-manifest-path" in _manifest_rule_ids(tmp_path)
+
+
+def test_generated_release_history_rejects_non_positive_suffix_bytes(tmp_path: Path) -> None:
+    record = _generated_record(_GENERATED_PATH, _GENERATED_TAIL)
+    record["classified_suffix_bytes"] = 0
+    _seed_repo(
+        tmp_path,
+        files={_GENERATED_PATH: _GENERATED_HEAD + _GENERATED_TAIL},
+        generated=[record],
+    )
+
+    assert "identity-cutover-manifest" in _manifest_rule_ids(tmp_path)
+
+
+def test_generated_release_history_rejects_duplicate_content_bound_path(tmp_path: Path) -> None:
+    content = _GENERATED_HEAD + _GENERATED_TAIL
+    _seed_repo(
+        tmp_path,
+        files={_GENERATED_PATH: content},
+        records=[_record(_GENERATED_PATH, content, record_class="release-history")],
+        generated=[_generated_record(_GENERATED_PATH, _GENERATED_TAIL)],
+    )
+
+    assert "identity-cutover-manifest" in _manifest_rule_ids(tmp_path)
+
+
+def test_repository_changelog_is_bound_as_generated_release_history() -> None:
+    """The real CHANGELOG must stay on the append-tolerant class, not a whole-file pin."""
+    manifest = json.loads((REPO_ROOT / MANIFEST_PATH).read_text(encoding="utf-8"))
+    generated = {entry["path"] for entry in manifest["generated_history_records"]}
+    pinned = {entry["path"] for entry in manifest["records"]}
+
+    assert "CHANGELOG.md" in generated
+    assert "CHANGELOG.md" not in pinned
 
 
 def test_identity_cutover_check_is_registered_in_canonical_policy_graph() -> None:

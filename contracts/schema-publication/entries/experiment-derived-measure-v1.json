@@ -2,9 +2,9 @@
   "contract_id": "experiment-derived-measure-v1",
   "schema_path": "contracts/schemas/experiment-core/experiment-derived-measure-v1.json",
   "stability": "draft",
-  "content_hash": "99668f7dd86d118944dc3c4c90998a042bbbf00fad0d34d0fb9e78c9a95e3e30",
+  "content_hash": "3ff95c83a82d4cb6c9a9200dcb51331dc7dc553c3914b7800c05ecf3ba9d4fa3",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "99668f7dd86d118944dc3c4c90998a042bbbf00fad0d34d0fb9e78c9a95e3e30"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "3ff95c83a82d4cb6c9a9200dcb51331dc7dc553c3914b7800c05ecf3ba9d4fa3"
   }
 }

@@ -2,9 +2,9 @@
   "contract_id": "experiment-capture-spec-v1",
   "schema_path": "contracts/schemas/experiment-core/experiment-capture-spec-v1.json",
   "stability": "draft",
-  "content_hash": "59a5a2fc7c28eb5d27725916def11b11af919e13be7942ded83df30c05be833d",
+  "content_hash": "812f8314c76208d588b459cfc99637e9fba1c9f7519602c3b8ea6f7a62a4475c",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "59a5a2fc7c28eb5d27725916def11b11af919e13be7942ded83df30c05be833d"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "812f8314c76208d588b459cfc99637e9fba1c9f7519602c3b8ea6f7a62a4475c"
   }
 }

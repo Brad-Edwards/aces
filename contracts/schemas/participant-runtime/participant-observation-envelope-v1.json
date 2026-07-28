@@ -409,7 +409,7 @@
       "type": "object"
     }
   },
-  "$id": "https://raes.dev/schemas/participant-observation-envelope-v1.json",
+  "$id": "https://raesystem.github.io/rae/schemas/participant-observation-envelope-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "SEM-210 participant-visible observation record with explicit guarantees.",

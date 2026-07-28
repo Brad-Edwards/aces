@@ -2,9 +2,9 @@
   "contract_id": "workflow-result-envelope-v1",
   "schema_path": "contracts/schemas/control-plane/workflow-result-envelope-v1.json",
   "stability": "draft",
-  "content_hash": "0a0db3f0da692b83f72a312eb75ffecc25fb74b56600c7ecb64a759f8a3b4c28",
+  "content_hash": "ca40953f53b3f13a0bcf1e6bf9d631c9a94544278cef6882b3fa140a35022612",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "0a0db3f0da692b83f72a312eb75ffecc25fb74b56600c7ecb64a759f8a3b4c28"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "ca40953f53b3f13a0bcf1e6bf9d631c9a94544278cef6882b3fa140a35022612"
   }
 }

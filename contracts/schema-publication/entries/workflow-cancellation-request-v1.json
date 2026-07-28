@@ -2,9 +2,9 @@
   "contract_id": "workflow-cancellation-request-v1",
   "schema_path": "contracts/schemas/control-plane/workflow-cancellation-request-v1.json",
   "stability": "draft",
-  "content_hash": "32f9286d95c824af920799fcac005851a46d93b437ec3ece04da2a58b7641178",
+  "content_hash": "83d992309d63b159214f8580d58366ccd408b5720163771269a810cff40f955d",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "32f9286d95c824af920799fcac005851a46d93b437ec3ece04da2a58b7641178"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "83d992309d63b159214f8580d58366ccd408b5720163771269a810cff40f955d"
   }
 }

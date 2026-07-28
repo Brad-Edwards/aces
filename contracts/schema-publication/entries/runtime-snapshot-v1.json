@@ -2,9 +2,9 @@
   "contract_id": "runtime-snapshot-v1",
   "schema_path": "contracts/schemas/snapshots/runtime-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "73b2b3eba4400777c380b1d532614d29c2eb83ec82da5fef127918768aa2f8d8",
+  "content_hash": "42201288da8990fe0214a5f02fb53de7d2500dca86f42663ffbddd6823f03ffa",
   "last_change": {
-    "summary": "Added artifact satisfaction evidence and participant resource-budget state and allocation evidence for issues #920 and #899.",
-    "content_hash": "73b2b3eba4400777c380b1d532614d29c2eb83ec82da5fef127918768aa2f8d8"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "42201288da8990fe0214a5f02fb53de7d2500dca86f42663ffbddd6823f03ffa"
   }
 }

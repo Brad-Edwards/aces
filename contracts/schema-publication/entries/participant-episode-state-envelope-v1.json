@@ -2,9 +2,9 @@
   "contract_id": "participant-episode-state-envelope-v1",
   "schema_path": "contracts/schemas/control-plane/participant-episode-state-envelope-v1.json",
   "stability": "draft",
-  "content_hash": "506a10360067ddd75e086c3e1c6cc031201dfb7ba163220d1ef2d7c53c78e3ed",
+  "content_hash": "63de32ef14bd0309cec32c3794e3a7c98ac926710e05e457e8f11f6612d89813",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "506a10360067ddd75e086c3e1c6cc031201dfb7ba163220d1ef2d7c53c78e3ed"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "63de32ef14bd0309cec32c3794e3a7c98ac926710e05e457e8f11f6612d89813"
   }
 }

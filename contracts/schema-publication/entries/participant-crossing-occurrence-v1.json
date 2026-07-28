@@ -2,9 +2,9 @@
   "contract_id": "participant-crossing-occurrence-v1",
   "schema_path": "contracts/schemas/participant-runtime/participant-crossing-occurrence-v1.json",
   "stability": "draft",
-  "content_hash": "34f79eaed648530dbf7b2c948a1cb8e33320caea5f1b0586776f8f28d2b38c10",
+  "content_hash": "61b5963daceb11e2fe21d47d4c174db1bbfbdfafa3cd96fe263c4f0c4a88d7ff",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "34f79eaed648530dbf7b2c948a1cb8e33320caea5f1b0586776f8f28d2b38c10"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "61b5963daceb11e2fe21d47d4c174db1bbfbdfafa3cd96fe263c4f0c4a88d7ff"
   }
 }

@@ -1,6 +1,16 @@
 {
-  "schema_version": "historical-identity-records/v2",
+  "schema_version": "historical-identity-records/v3",
   "hash_algorithm": "sha256",
+  "generated_history_records": [
+    {
+      "path": "CHANGELOG.md",
+      "record_class": "generated-release-history",
+      "rationale": "release-please rewrites this file on every release, inserting each new section above the existing ones, so a whole-file pin cannot hold. The classified tail carries the release notes published before the RAES identity cutover and is pinned exactly; everything release-please writes above it is held to the live-tree rule of zero retired identity occurrences.",
+      "occurrences": 297,
+      "content_sha256": "b3106e6e633e4045124ca19307c57c10efbfc87ccbb4048f415f0c4acbefcb3f",
+      "classified_suffix_bytes": 150639
+    }
+  ],
   "operational_bindings": [
     {
       "path": ".ground-control.yaml",
@@ -18,13 +28,6 @@
     }
   ],
   "records": [
-    {
-      "path": "CHANGELOG.md",
-      "record_class": "release-history",
-      "rationale": "Preserves immutable release notes and links published before the RAES identity cutover.",
-      "occurrences": 297,
-      "content_sha256": "6faabd84a6054d74f1778da8ed9d06696af72b95de9b5f26d29f7cb2af0cd50b"
-    },
     {
       "path": "contracts/provenance/sdl-lineage-ledger-v1.json",
       "record_class": "provenance-record",
@@ -499,7 +502,7 @@
       "record_class": "historical-index",
       "rationale": "Indexes immutable pre-cutover ADR titles, paths, pins, and amendment summaries without making them current identity surf\u0061ces.",
       "occurrences": 4,
-      "content_sha256": "07647de85678b0bbc9b712a9af0ff61edddaa49955c44536a093f74a0898bba6"
+      "content_sha256": "bf67dc26ef70cd1ff977cc75caad187e76ec894267595d347c374abc0bb0647d"
     },
     {
       "path": "docs/decisions/cage-2-replication-design.md",

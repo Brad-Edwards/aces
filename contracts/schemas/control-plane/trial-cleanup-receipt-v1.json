@@ -90,7 +90,7 @@
       "type": "object"
     }
   },
-  "$id": "https://raes.dev/schemas/trial-cleanup-receipt-v1.json",
+  "$id": "https://raesystem.github.io/rae/schemas/trial-cleanup-receipt-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "allOf": [
@@ -230,6 +230,6 @@
     "id": "raes-semantic-invariants-v1",
     "keyword": "x-raes-invariants",
     "required": true,
-    "uri": "https://raes.dev/schemas/semantic-invariants/v1"
+    "uri": "https://raesystem.github.io/rae/schemas/semantic-invariants/v1"
   }
 }

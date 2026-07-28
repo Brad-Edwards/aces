@@ -2,9 +2,9 @@
   "contract_id": "provisioning-plan-v1",
   "schema_path": "contracts/schemas/plans/provisioning-plan-v1.json",
   "stability": "draft",
-  "content_hash": "70af50f87d61eb5337ca6658b5e9e9d227a99f38fc66dead05bca5122200f003",
+  "content_hash": "d4e85ac33f2f2add86c240c617a0d291404604cb3c8631dded6ea0ee766dd487",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "70af50f87d61eb5337ca6658b5e9e9d227a99f38fc66dead05bca5122200f003"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "d4e85ac33f2f2add86c240c617a0d291404604cb3c8631dded6ea0ee766dd487"
   }
 }

@@ -312,7 +312,7 @@
       "type": "object"
     }
   },
-  "$id": "https://raes.dev/schemas/reusable-asset-trust-policy-v1.json",
+  "$id": "https://raesystem.github.io/rae/schemas/reusable-asset-trust-policy-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "Ecosystem trust/authenticity/integrity policy over reusable assets (GOV-913).\n\nA declarative, expectation-based policy: it declares, per asset family, the\nintegrity/authenticity/provenance/governance evidence the ecosystem requires,\nreferencing the existing RAES mechanisms that carry that evidence. It is not a\nper-asset trust record and it invents no cryptography. See\n``specs/authority/reusable-asset-trust-integrity.md`` (normative) and ADR-071.",
