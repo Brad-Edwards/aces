@@ -59,6 +59,18 @@ from ..vocabulary import (
     WorkflowStatePredicateFeature,
 )
 from ._exports import PUBLIC_EXPORTS as __all__
+from .admitted_trial_plan import AdmittedApparatusBindingModel as AdmittedApparatusBindingModel
+from .admitted_trial_plan import AdmittedBindingModel as AdmittedBindingModel
+from .admitted_trial_plan import AdmittedExecutionControlModel as AdmittedExecutionControlModel
+from .admitted_trial_plan import AdmittedInstantiationProvenanceModel as AdmittedInstantiationProvenanceModel
+from .admitted_trial_plan import AdmittedSelectionRecordModel as AdmittedSelectionRecordModel
+from .admitted_trial_plan import AdmittedTrialEntryModel as AdmittedTrialEntryModel
+from .admitted_trial_plan import AdmittedTrialPlanAdmissionModel as AdmittedTrialPlanAdmissionModel
+from .admitted_trial_plan import AdmittedTrialPlanInputRefsModel as AdmittedTrialPlanInputRefsModel
+from .admitted_trial_plan import AdmittedTrialPlanModel as AdmittedTrialPlanModel
+from .admitted_trial_plan import AdmittedTrialPlanProfilesModel as AdmittedTrialPlanProfilesModel
+from .admitted_trial_plan import seal_admitted_trial_entry as seal_admitted_trial_entry
+from .admitted_trial_plan import seal_admitted_trial_plan as seal_admitted_trial_plan
 from .associated_artifacts import AssociatedArtifactManifestModel, AssociatedArtifactSetDigestString
 from .base import (
     BehavioralClaimBindingModel,

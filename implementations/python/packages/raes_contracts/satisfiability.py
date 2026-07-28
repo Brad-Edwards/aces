@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-import hashlib
 import re
 from enum import Enum
 from typing import Annotated, Literal
 
-import rfc8785
 from pydantic import Field, model_validator
 from raes.canonical import (
     INSTANTIATED_SNAPSHOT_PROFILE,
@@ -16,6 +14,7 @@ from raes.canonical import (
 )
 from raes.phase_contracts import ResolvedImportProvenance, SemanticDigest
 
+from ._canonical import canonical_json_bytes, canonical_json_digest
 from .contracts.base import ContractModel, PrefixedDigestString
 from .diagnostics import DiagnosticModel
 
@@ -266,12 +265,11 @@ def _validate_unsupported_reasons(evidence: ScenarioSatisfiabilityEvidenceModel)
 def canonical_contract_digest(model: ContractModel) -> str:
     """Return a JCS SHA-256 digest for one closed contract model."""
 
-    payload = rfc8785.dumps(model.model_dump(mode="json"))
-    return "sha256:" + hashlib.sha256(payload).hexdigest()
+    return canonical_json_digest(model.model_dump(mode="json"))
 
 
 def _scalar_key(value: JSONScalar) -> bytes:
-    return rfc8785.dumps(value)
+    return canonical_json_bytes(value)
 
 
 __all__ = (

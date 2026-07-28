@@ -1089,6 +1089,14 @@ def _check_unclassified_top_level(
             # Hidden directories (.github, .codex, .gc, .pytest_cache, etc.)
             # and Python bytecode caches are operational, not authority-bearing.
             continue
+        if name in _PRUNE_DIR_NAMES:
+            # Gitignored operational/build artifacts (build/, dist/,
+            # node_modules/, venv, dependency and test caches) are never
+            # authority-bearing. Prune the same set the schema-misplaced scan
+            # already prunes so a transient build/ — for example the one the
+            # Ground Control mechanical measurement writes under build/ — cannot
+            # false-positive this gate.
+            continue
         if name in classified:
             continue
         failures.append(

@@ -730,6 +730,23 @@ def test_dotfiles_and_hidden_dirs_are_not_unclassified(tmp_path: Path) -> None:
     )
 
 
+def test_operational_build_and_cache_dirs_are_not_unclassified(tmp_path: Path) -> None:
+    # build/, dist/, and node_modules/ are gitignored operational artifacts,
+    # never authority-bearing. Tools such as the Ground Control mechanical
+    # measurement legitimately write under build/, so the gate must prune the
+    # same operational directory names it already prunes in its schema-misplaced
+    # scan rather than false-positive on a transient artifact.
+    seeded = _seed_repo(tmp_path)
+    for name in ("build", "dist", "node_modules"):
+        artifact = seeded / name
+        artifact.mkdir()
+        (artifact / "artifact.txt").write_text("x", encoding="utf-8")
+    failures = evaluate_authority_boundary(seeded)
+    assert not _flagged(failures, "authority-boundary-unclassified-top-level"), (
+        f"operational/build dirs must not be flagged; got: {[failure.render() for failure in failures]}"
+    )
+
+
 def test_schema_outside_normative_root_is_flagged(tmp_path: Path) -> None:
     seeded = _seed_repo(
         tmp_path,
