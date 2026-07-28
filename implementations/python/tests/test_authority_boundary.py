@@ -730,14 +730,21 @@ def test_dotfiles_and_hidden_dirs_are_not_unclassified(tmp_path: Path) -> None:
     )
 
 
-def test_ignored_build_dir_is_not_unclassified(tmp_path: Path) -> None:
+def test_build_artifacts_are_not_unclassified(tmp_path: Path) -> None:
+    # Operational build/cache artifacts (build/, dist/, node_modules/, venv/)
+    # are git-ignored and never authority-bearing. They must not trip the gate
+    # when they linger in a developer's checkout; CI's clean checkout never
+    # sees them.
     seeded = _seed_repo(tmp_path)
+    for artifact in ("build", "dist", "node_modules", "venv"):
+        (seeded / artifact).mkdir()
+        (seeded / artifact / "artifact.txt").write_text("x", encoding="utf-8")
     measurement = seeded / "build" / "gc-measurement"
-    measurement.mkdir(parents=True)
+    measurement.mkdir()
     (measurement / "attempt.marker").write_text("", encoding="utf-8")
     failures = evaluate_authority_boundary(seeded)
     assert not _flagged(failures, "authority-boundary-unclassified-top-level"), (
-        f"ignored operational build output must not be flagged; got: {[failure.render() for failure in failures]}"
+        f"build artifacts must not be flagged; got: {[failure.render() for failure in failures]}"
     )
 
 
