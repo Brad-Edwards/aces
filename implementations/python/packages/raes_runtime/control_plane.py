@@ -21,6 +21,7 @@ from raes_contracts.apparatus import (
     RUNTIME_REALIZATION_DOMAIN,
 )
 from raes_contracts.diagnostics import Diagnostic
+from raes_contracts.manifest_authority import PARTICIPANT_RUNTIME_POLICY_FEATURES
 from raes_contracts.planning import (
     EvaluationPlan,
     OrchestrationPlan,
@@ -36,6 +37,7 @@ from raes_contracts.runtime_state import (
     RuntimeSnapshot,
     RuntimeSnapshotEnvelope,
 )
+from raes_contracts.vocabulary import ParticipantFeatureSupportLevel
 from raes_contracts.workflow import (
     WorkflowCompensationStatus,
     WorkflowExecutionState,
@@ -62,6 +64,10 @@ from .control_plane_timeouts import workflow_timeout_update
 from .control_plane_workflows import maybe_apply_compensation
 from .operational_apparatus import operational_apparatus_summary
 from .participant_control import ParticipantControlMixin
+from .participant_crossing_mediation import (
+    ParticipantCrossingPolicyResolver,
+    validate_persisted_crossing_history,
+)
 from .participant_retrieval import ParticipantRetrievalMixin
 from .registry import RuntimeTarget
 
@@ -203,6 +209,24 @@ def _submitted_operation_diagnostic(
     return diagnostic
 
 
+def _require_crossing_policy_configuration(
+    target: RuntimeTarget,
+    resolver: ParticipantCrossingPolicyResolver | None,
+) -> None:
+    capabilities = target.manifest.participant_runtime
+    if capabilities is None:
+        return
+    enabled_policy_features = {
+        declaration.feature
+        for declaration in capabilities.feature_support
+        if declaration.feature in PARTICIPANT_RUNTIME_POLICY_FEATURES
+        and declaration.support_level != ParticipantFeatureSupportLevel.UNSUPPORTED
+    }
+    if enabled_policy_features and resolver is None:
+        features = ", ".join(sorted(enabled_policy_features))
+        raise ValueError(f"participant policy capabilities require a crossing policy resolver: {features}")
+
+
 class RuntimeControlPlane(ParticipantControlMixin, ParticipantRetrievalMixin):
     """Reference control plane for async runtime submission and observation."""
 
@@ -213,13 +237,20 @@ class RuntimeControlPlane(ParticipantControlMixin, ParticipantRetrievalMixin):
         initial_snapshot: RuntimeSnapshot | None = None,
         store: ControlPlaneStore | None = None,
         behavior_specifications: Mapping[str, ParticipantBehaviorSpecificationRuntime] | None = None,
+        crossing_policy_resolver: ParticipantCrossingPolicyResolver | None = None,
     ) -> None:
+        _require_crossing_policy_configuration(target, crossing_policy_resolver)
         self._target = target
         self._store = store or InMemoryControlPlaneStore(initial_snapshot)
         self._snapshot = initial_snapshot if initial_snapshot is not None else self._store.load_snapshot()
         self._operations: dict[str, ControlPlaneOperationRecord] = self._store.load_records()
         self._behavior_specifications = dict(behavior_specifications or {})
+        self._crossing_policy_resolver = crossing_policy_resolver
         self._participant_control_lock = RLock()
+        if self._snapshot.participant_crossing_history:
+            if crossing_policy_resolver is None:
+                raise ValueError("persisted participant crossing history requires a policy resolver")
+            validate_persisted_crossing_history(self._snapshot, crossing_policy_resolver)
 
     @property
     def snapshot(self) -> RuntimeSnapshot:

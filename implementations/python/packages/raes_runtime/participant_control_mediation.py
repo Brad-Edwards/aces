@@ -18,7 +18,7 @@ from raes_contracts.contracts.participant_control import (
 )
 from raes_contracts.diagnostics import Diagnostic
 from raes_contracts.planning import RuntimeDomain
-from raes_contracts.runtime_state import OperationReceipt, OperationState, OperationStatus
+from raes_contracts.runtime_state import OperationReceipt, OperationState, OperationStatus, RuntimeSnapshot
 from raes_processor.models import (
     MixedControlControllerStateRuntime,
     MixedControlTransitionRuntime,
@@ -48,6 +48,17 @@ class _BoundControlRequest:
     scoped_key: str
 
 
+@dataclass(frozen=True)
+class PreparedParticipantControlTransition:
+    """Uncommitted RUN-310 transition for composition with RUN-319."""
+
+    next_snapshot: RuntimeSnapshot
+    record: ControlPlaneOperationRecord
+    audit_event: AuditEvent
+    expected_control_head: str | None
+    bound: _BoundControlRequest
+
+
 def record_participant_control(
     control_plane: object,
     *,
@@ -63,31 +74,40 @@ def record_participant_control(
     if identity.target_name is not None and identity.target_name != control_plane.target_name:
         raise PermissionError("participant control identity is not authorized for this target")
     _require_participant_binding(identity, participant_address)
-    bound = _bind_control_request(
-        control_plane,
-        participant_address,
-        intent,
-        identity,
-        idempotency_key,
-    )
-
     with control_plane._participant_control_lock:
+        bound = bind_participant_control_request(
+            control_plane,
+            participant_address,
+            intent,
+            identity,
+            idempotency_key,
+        )
         existing = control_plane._store.find_by_idempotency(bound.scoped_key) if bound.scoped_key else None
         if existing is not None:
             if existing.request_fingerprint != bound.semantic_fingerprint:
                 raise ValueError("Idempotency-Key was reused with different semantics.")
             control_plane._operations[existing.receipt.operation_id] = existing
             return existing.receipt
-        return _record_new_participant_control(
+        prepared = prepare_participant_control_transition(
             control_plane,
             participant_address,
             intent,
             identity,
             bound,
         )
+        control_plane._store.commit_control_transition(
+            participant_address=participant_address,
+            expected_head=prepared.expected_control_head,
+            snapshot=prepared.next_snapshot,
+            record=prepared.record,
+            audit_event=prepared.audit_event,
+        )
+        control_plane._snapshot = prepared.next_snapshot
+        control_plane._operations[prepared.record.receipt.operation_id] = prepared.record
+        return prepared.record.receipt
 
 
-def _bind_control_request(
+def bind_participant_control_request(
     control_plane: object,
     participant_address: str,
     intent: ParticipantControlIntent,
@@ -119,13 +139,13 @@ def _bind_control_request(
     )
 
 
-def _record_new_participant_control(
+def prepare_participant_control_transition(
     control_plane: object,
     participant_address: str,
     intent: ParticipantControlIntent,
     identity: ControlPlaneIdentity,
     bound: _BoundControlRequest,
-) -> OperationReceipt:
+) -> PreparedParticipantControlTransition:
     history = list(control_plane._snapshot.participant_control_history.get(participant_address, ()))
     current_state, current_revision = _fold_controller_state(
         bound.specification,
@@ -183,16 +203,13 @@ def _record_new_participant_control(
         accepted,
         rejection_reason,
     )
-    control_plane._store.commit_control_transition(
-        participant_address=participant_address,
-        expected_head=_history_head(history),
-        snapshot=next_snapshot,
+    return PreparedParticipantControlTransition(
+        next_snapshot=next_snapshot,
         record=record,
         audit_event=audit_event,
+        expected_control_head=_history_head(history),
+        bound=bound,
     )
-    control_plane._snapshot = next_snapshot
-    control_plane._operations[record.receipt.operation_id] = record
-    return record.receipt
 
 
 def _operation_artifacts(
@@ -446,4 +463,9 @@ def _rejection_diagnostic(participant_address: str, reason: str | None) -> Diagn
     )
 
 
-__all__ = ("record_participant_control",)
+__all__ = (
+    "PreparedParticipantControlTransition",
+    "bind_participant_control_request",
+    "prepare_participant_control_transition",
+    "record_participant_control",
+)

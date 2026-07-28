@@ -9,7 +9,7 @@ from uuid import uuid4
 
 from raes_contracts.diagnostics import Diagnostic
 from raes_contracts.planning import RuntimeDomain
-from raes_contracts.runtime_state import OperationReceipt, OperationState, OperationStatus, RuntimeSnapshot
+from raes_contracts.runtime_state import ApplyResult, OperationReceipt, OperationState, OperationStatus, RuntimeSnapshot
 
 from .backend_calls import _call_backend_apply
 from .control_plane_store import ControlPlaneOperationRecord
@@ -17,6 +17,24 @@ from .control_plane_store import ControlPlaneOperationRecord
 
 def _utc_now() -> str:
     return datetime.now(UTC).isoformat().replace("+00:00", "Z")
+
+
+def apply_authorized_participant_action(
+    *,
+    method: Callable[..., object],
+    request: object,
+    snapshot: RuntimeSnapshot,
+    address: str,
+) -> ApplyResult:
+    """Invoke and validate a participant backend after durable authorization."""
+
+    return _call_backend_apply(
+        method,
+        request,
+        snapshot,
+        address=address,
+        snapshot=snapshot,
+    )
 
 
 def execute_participant_action(

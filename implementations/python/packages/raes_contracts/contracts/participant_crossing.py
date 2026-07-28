@@ -126,6 +126,8 @@ class ParticipantCrossingPolicyReferenceModel(ContractModel):
     policy_id: NonEmptyString
     policy_revision: NonEmptyString
     policy_digest: PrefixedDigestString
+    policy_decision_ref: NonEmptyString
+    decision_cut_ref: NonEmptyString
     effective_order: NonNegativeInteger
     valid_from_order: NonNegativeInteger
     valid_until_order: NonNegativeInteger

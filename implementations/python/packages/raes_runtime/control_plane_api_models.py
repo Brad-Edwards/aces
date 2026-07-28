@@ -164,6 +164,7 @@ def _snapshot_model(envelope: RuntimeSnapshotEnvelope) -> RuntimeSnapshotEnvelop
             "participant_episode_history": dict(snapshot.participant_episode_history),
             "participant_behavior_history": dict(snapshot.participant_behavior_history),
             "participant_control_history": dict(snapshot.participant_control_history),
+            "participant_crossing_history": dict(snapshot.participant_crossing_history),
             "participant_autonomous_execution_states": dict(snapshot.participant_autonomous_execution_states),
             "participant_execution_services": dict(snapshot.participant_execution_services),
             "participant_resource_budget_states": dict(snapshot.participant_resource_budget_states),

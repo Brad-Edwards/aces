@@ -17,7 +17,7 @@
       "binding_class": "external-service-project-key",
       "rationale": "Retains the existing service-owned Ground Control and SonarCloud project designations without treating them as current RAES product identity.",
       "occurrences": 2,
-      "content_sha256": "b14a2788739afd43e5301dda391979a0922b729af0a3cabacba822a2d97d98e8"
+      "content_sha256": "c56a0e9194d21c490e797363b5701d2839195329acf70d110a6eb6ae7069a5e2"
     },
     {
       "path": "sonar-project.properties",
