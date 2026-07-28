@@ -256,8 +256,9 @@ def test_serialization_runs_the_validation_seam_before_the_payload_is_produced()
     policy_payloads = [case["policy_binding"] for case in payload["cases"] if case["policy_binding"]]
     assert policy_payloads
     assert all(entry["assumptions"]["scheduler_class"] for entry in policy_payloads)
+    inflated = replace(report, native_conformance=True)
     with pytest.raises(ValueError):
-        backend_conformance_report_payload(replace(report, native_conformance=True))
+        backend_conformance_report_payload(inflated)
 
 
 # --- semantic falsification lane -------------------------------------------
@@ -479,8 +480,9 @@ def test_every_case_binding_is_validated_against_the_relation_catalog() -> None:
         ),
     )
 
+    forged_report = replace(report, cases=(forged,))
     with pytest.raises(ValueError):
-        validate_backend_conformance_report(replace(report, cases=(forged,)))
+        validate_backend_conformance_report(forged_report)
 
 
 def test_the_probe_ledger_is_derived_by_the_runner_not_self_reported() -> None:

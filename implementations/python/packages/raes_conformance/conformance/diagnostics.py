@@ -13,6 +13,14 @@ _SEMANTIC_INVALID_DIAGNOSTIC_CODE = "conformance.semantic-invalid"
 _OBSERVABILITY_EVIDENCE_INVALID_DIAGNOSTIC_CODE = "conformance.observability-evidence-invalid"
 
 _MAX_REPORTED_VALIDATION_ERRORS = 5
+
+# Failure classes whose *shape* is safe to name. Ordered because
+# ``json.JSONDecodeError`` is a ``ValueError`` and must not be described as one.
+_FAILURE_DESCRIPTIONS: tuple[tuple[type[BaseException], str], ...] = (
+    (FileNotFoundError, "artifact not found"),
+    (UnicodeDecodeError, "payload is not valid UTF-8"),
+    (json.JSONDecodeError, "payload is not valid JSON"),
+)
 _SAFE_LOCATION_SEGMENT = re.compile(r"^[A-Za-z0-9_.-]{1,64}$")
 _REDACTED_LOCATION_SEGMENT = "<field>"
 
@@ -67,25 +75,28 @@ def sanitized_failure_message(exc: BaseException) -> str:
     of routing it through here.
     """
 
-    if isinstance(exc, FileNotFoundError):
-        return "artifact not found"
-    if isinstance(exc, UnicodeDecodeError):
-        return "payload is not valid UTF-8"
-    if isinstance(exc, json.JSONDecodeError):
-        return "payload is not valid JSON"
     if isinstance(exc, ValidationError):
-        # Suppress the rejected input, the error context, and the docs URL at the
-        # source rather than relying on this helper never touching them.
-        errors = exc.errors(include_url=False, include_context=False, include_input=False)
-        listed = ", ".join(
-            f"{_safe_location(error.get('loc', ()), error_type=str(error.get('type', 'unknown')))} "
-            f"({error.get('type', 'unknown')})"
-            for error in errors[:_MAX_REPORTED_VALIDATION_ERRORS]
-        )
-        remainder = len(errors) - _MAX_REPORTED_VALIDATION_ERRORS
-        suffix = f", and {remainder} more" if remainder > 0 else ""
-        return f"failed closed-world validation ({len(errors)} error(s)): {listed}{suffix}"
+        return _validation_summary(exc)
+    for kind, description in _FAILURE_DESCRIPTIONS:
+        if isinstance(exc, kind):
+            return description
     return f"rejected by {type(exc).__name__}"
+
+
+def _validation_summary(exc: ValidationError) -> str:
+    """Summarize a validation failure by rejected location and error type."""
+
+    # Suppress the rejected input, the error context, and the docs URL at the
+    # source rather than relying on the caller never touching them.
+    errors = exc.errors(include_url=False, include_context=False, include_input=False)
+    listed = ", ".join(
+        f"{_safe_location(error.get('loc', ()), error_type=str(error.get('type', 'unknown')))} "
+        f"({error.get('type', 'unknown')})"
+        for error in errors[:_MAX_REPORTED_VALIDATION_ERRORS]
+    )
+    remainder = len(errors) - _MAX_REPORTED_VALIDATION_ERRORS
+    suffix = f", and {remainder} more" if remainder > 0 else ""
+    return f"failed closed-world validation ({len(errors)} error(s)): {listed}{suffix}"
 
 
 def _diagnostic_payload(diag: Diagnostic) -> dict[str, object]:

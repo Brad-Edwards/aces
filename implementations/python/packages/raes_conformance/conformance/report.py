@@ -144,35 +144,55 @@ def validate_backend_conformance_report(report: BackendConformanceReport) -> Bac
     run into an apparently clean one.
     """
 
+    _validate_catalog_bindings(report)
+    _validate_claim_strength(report)
+    _validate_case_evidence(report)
+    return report
+
+
+def _validate_catalog_bindings(report: BackendConformanceReport) -> None:
+    """Send the report claim and every case binding through the catalog.
+
+    Publishing a case binding the taxonomy does not define would let a durable
+    report name a relation nobody governs.
+    """
+
     validate_behavioral_claim_binding(report.claim)
     for case in report.cases:
         if case.policy_binding is not None:
-            # Every per-case relation coordinate goes through the same catalog
-            # authority as the report claim. Publishing a case binding the
-            # taxonomy does not define would let a durable report name a
-            # relation nobody governs.
             validate_behavioral_claim_binding(case.policy_binding.claim)
+
+
+def _validate_claim_strength(report: BackendConformanceReport) -> None:
+    """Refuse a claim stronger than the evidence behind it."""
+
     claim = report.claim
-    if claim.quantifier_scope in _UNIVERSAL_QUANTIFIER_SCOPES and claim.evidence_scope not in (
-        _UNIVERSAL_EVIDENCE_SCOPES
-    ):
+    universal = claim.quantifier_scope in _UNIVERSAL_QUANTIFIER_SCOPES
+    if universal and claim.evidence_scope not in _UNIVERSAL_EVIDENCE_SCOPES:
         raise ValueError(
             "backend conformance report states a universal quantifier "
             f"({claim.quantifier_scope!r}) with {claim.evidence_scope!r} evidence; "
             "universal quantification requires model-check or proof evidence"
         )
-    if report.native_conformance and not any(case.execution_basis in _NATIVE_EXECUTION_BASES for case in report.cases):
+    natively_executed = any(case.execution_basis in _NATIVE_EXECUTION_BASES for case in report.cases)
+    if report.native_conformance and not natively_executed:
         raise ValueError(
             "backend conformance report claims native conformance but no case executed "
             "on a native basis; fixture-only and hermetic evidence do not establish it"
         )
+
+
+def _validate_case_evidence(report: BackendConformanceReport) -> None:
+    """Require every cited case to be present, and a pass to carry no failure."""
+
     present = {f"conformance-case:{case.contract_name}:{case.name}" for case in report.cases}
-    missing = sorted(ref for ref in claim.evidence_refs if ref.startswith("conformance-case:") and ref not in present)
+    missing = sorted(
+        ref for ref in report.claim.evidence_refs if ref.startswith("conformance-case:") and ref not in present
+    )
     if missing:
         raise ValueError(f"backend conformance report claimed case evidence that is absent: {missing}")
     if report.passed and any(not case.passed for case in report.cases):
         raise ValueError("backend conformance report is marked passed while carrying a non-passing case")
-    return report
 
 
 def _policy_binding_payload(

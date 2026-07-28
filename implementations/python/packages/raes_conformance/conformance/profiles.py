@@ -193,10 +193,8 @@ def _sanitize_load_error(exc: Exception) -> str:
         return "profile artifact is not valid JSON"
     if isinstance(exc, ValidationError):
         return f"profile artifact failed closed-world validation ({exc.error_count()} error(s))"
-    if type(exc) is ValueError:
-        # The profile loader's own identity-mismatch error, whose text is built
-        # only from grammar-validated profile ids. Any other exception type may
-        # carry payloads, host paths, or object representations, so it is
-        # described by the shared sanitizer instead of quoted.
-        return str(exc)
-    return sanitized_failure_message(exc)
+    # An exact ValueError is the profile loader's own identity-mismatch error,
+    # whose text is built only from grammar-validated profile ids. Any other
+    # exception type may carry payloads, host paths, or object representations,
+    # so it is described by the shared sanitizer instead of quoted.
+    return str(exc) if type(exc) is ValueError else sanitized_failure_message(exc)

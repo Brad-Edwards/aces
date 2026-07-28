@@ -112,7 +112,7 @@ def _validate_records(plane: RuntimeControlPlane) -> tuple[tuple[str, ...], str 
                 # The published model covers the whole event record, not just
                 # its nested occurrence, so validate the record as committed.
                 record = ParticipantCrossingOccurrenceModel.model_validate(entry)
-            except Exception as exc:  # noqa: BLE001 - an invalid record is a report value
+            except Exception as exc:
                 return tuple(dispositions), sanitized_failure_message(exc)
             # ``occurrence`` is a union over crossing stages; only the decision
             # stage carries a disposition, and that is the stage an obligation's
@@ -123,27 +123,35 @@ def _validate_records(plane: RuntimeControlPlane) -> tuple[tuple[str, ...], str 
     return tuple(dispositions), None
 
 
-def _drive(case: ParticipantPolicyProbeCase, plane: RuntimeControlPlane) -> tuple[bool, bool]:
-    """Invoke the typed boundary and return ``(released, refused)`` from its raw result."""
+def _drive_ingress(case: ParticipantPolicyProbeCase, plane: RuntimeControlPlane) -> tuple[bool, bool]:
+    receipt = plane.admit_participant_action(
+        case.behavior,
+        case.admission_request,
+        identity=case.identity,
+        crossing_evidence=case.crossing_evidence,
+        idempotency_key=case.idempotency_key,
+    )
+    return receipt.accepted, not receipt.accepted
 
-    if case.operation is ParticipantPolicyOperation.ACTION_INGRESS:
-        receipt = plane.admit_participant_action(
-            case.behavior,
-            case.admission_request,
-            identity=case.identity,
-            crossing_evidence=case.crossing_evidence,
-            idempotency_key=case.idempotency_key,
-        )
-        return receipt.accepted, not receipt.accepted
-    if case.operation is ParticipantPolicyOperation.SUPERVISORY_CONTROL:
-        receipt = plane.record_participant_control(
-            case.participant_address,
-            case.control_intent,
-            identity=case.identity,
-            crossing_evidence=case.crossing_evidence,
-            idempotency_key=case.idempotency_key,
-        )
-        return receipt.accepted, not receipt.accepted
+
+def _drive_supervisory_control(case: ParticipantPolicyProbeCase, plane: RuntimeControlPlane) -> tuple[bool, bool]:
+    receipt = plane.record_participant_control(
+        case.participant_address,
+        case.control_intent,
+        identity=case.identity,
+        crossing_evidence=case.crossing_evidence,
+        idempotency_key=case.idempotency_key,
+    )
+    return receipt.accepted, not receipt.accepted
+
+
+def _drive_egress(case: ParticipantPolicyProbeCase, plane: RuntimeControlPlane) -> tuple[bool, bool]:
+    """Project the participant view, then optionally deliver it.
+
+    Projection and participant-directed delivery are separate governed
+    transition facts, so a delivery case performs both crossings in order.
+    """
+
     view = plane.get_participant_status_view(
         case.participant_address,
         identity=case.identity,
@@ -162,8 +170,42 @@ def _drive(case: ParticipantPolicyProbeCase, plane: RuntimeControlPlane) -> tupl
     return delivered is not None, delivered is None
 
 
-def _run_case(case: ParticipantPolicyProbeCase, target: RuntimeTarget) -> _Outcome:
-    """Build the plane on the target, drive the boundary, and measure the result."""
+_DRIVERS = {
+    ParticipantPolicyOperation.ACTION_INGRESS: _drive_ingress,
+    ParticipantPolicyOperation.SUPERVISORY_CONTROL: _drive_supervisory_control,
+    ParticipantPolicyOperation.STATUS_PROJECTION: _drive_egress,
+    ParticipantPolicyOperation.INJECT_DELIVERY: _drive_egress,
+}
+
+
+def _drive(case: ParticipantPolicyProbeCase, plane: RuntimeControlPlane) -> tuple[bool, bool]:
+    """Invoke the typed boundary and return ``(released, refused)`` from its raw result."""
+
+    return _DRIVERS[case.operation](case, plane)
+
+
+def _committed_facts(plane: RuntimeControlPlane) -> tuple[tuple[str, ...], str | None]:
+    """Read evidence refs and the last recorded backend posture off the records."""
+
+    evidence_refs: list[str] = []
+    effective: str | None = None
+    for participant in sorted(plane.snapshot.participant_crossing_history):
+        for entry in plane.snapshot.participant_crossing_history[participant]:
+            occurrence = entry.get("occurrence") or {}
+            posture = occurrence.get("backend_posture")
+            if isinstance(posture, str):
+                effective = posture
+            for ref in occurrence.get("required_evidence_refs") or ():
+                if isinstance(ref, str) and ref not in evidence_refs:
+                    evidence_refs.append(ref)
+    return tuple(evidence_refs), effective
+
+
+def _prepared_plane(
+    case: ParticipantPolicyProbeCase,
+    target: RuntimeTarget,
+) -> tuple[RuntimeControlPlane, _CallCounter | None]:
+    """Build the plane on the target under evaluation and run the case's setup."""
 
     instrumented, counter = _instrumented_target(target)
     plane = RuntimeControlPlane(
@@ -181,9 +223,21 @@ def _run_case(case: ParticipantPolicyProbeCase, target: RuntimeTarget) -> _Outco
             idempotency_key=key,
         )
     if counter is not None:
+        # Setup admissions are not the obligation, so they must not count as
+        # the case's own backend invocations.
         counter.calls = 0
         counter.called_methods.clear()
+    return plane, counter
 
+
+def _run_case(case: ParticipantPolicyProbeCase, target: RuntimeTarget) -> _Outcome:
+    """Build the plane on the target, drive the boundary, and measure the result."""
+
+    declared = _declared_level(target, case.feature)
+    if declared is None:
+        raise ValueError("participant-policy probe names a feature the target does not declare")
+
+    plane, counter = _prepared_plane(case, target)
     before = _ledger(plane)
     try:
         released, refused = _drive(case, plane)
@@ -195,36 +249,20 @@ def _run_case(case: ParticipantPolicyProbeCase, target: RuntimeTarget) -> _Outco
         released, refused = False, True
     after = _ledger(plane)
 
-    prefix = after.crossing_records[: len(before.crossing_records)]
     appended_count = len(after.crossing_records) - len(before.crossing_records)
     dispositions, invalid_reason = _validate_records(plane)
-
-    evidence_refs: list[str] = []
-    effective: str | None = None
-    for participant in sorted(plane.snapshot.participant_crossing_history):
-        for entry in plane.snapshot.participant_crossing_history[participant]:
-            occurrence = entry.get("occurrence") or {}
-            posture = occurrence.get("backend_posture")
-            if isinstance(posture, str):
-                effective = posture
-            for ref in occurrence.get("required_evidence_refs") or ():
-                if isinstance(ref, str) and ref not in evidence_refs:
-                    evidence_refs.append(ref)
-
-    declared = _declared_level(target, case.feature)
-    if declared is None:
-        raise ValueError("participant-policy probe names a feature the target does not declare")
+    evidence_refs, effective = _committed_facts(plane)
     return _Outcome(
         released=released,
         refused=refused,
         backend_calls=counter.calls if counter is not None else 0,
         appended_dispositions=dispositions[-appended_count:] if appended_count > 0 else (),
         invalid_reason=invalid_reason,
-        mutated_existing=prefix != before.crossing_records,
+        mutated_existing=after.crossing_records[: len(before.crossing_records)] != before.crossing_records,
         audited=after.audit_events > before.audit_events,
         declared_support_level=declared,
         effective_support_level=effective if effective is not None else declared,
-        evidence_refs=tuple(evidence_refs),
+        evidence_refs=evidence_refs,
         counterexample_ref=f"crossing-disposition:{dispositions[-1]}" if dispositions else None,
     )
 

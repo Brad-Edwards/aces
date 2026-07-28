@@ -113,51 +113,69 @@ def _unsupported_case(
     )
 
 
-def _violations(case: ParticipantPolicyProbeCase, observed: _Outcome) -> tuple[str, ...]:
-    """Return the obligation breaches this outcome exhibits.
-
-    Every negative obligation asserts semantic refusal *and* the side-effect
-    boundary. Checking only the final disposition would pass a target that
-    denied the crossing after already calling the backend or serializing a
-    participant-visible value.
-    """
+def _record_integrity_failures(case: ParticipantPolicyProbeCase, observed: _Outcome) -> list[str]:
+    """Breaches of record validity, append-only integrity, and disposition."""
 
     failures: list[str] = []
     if observed.invalid_reason is not None:
         failures.append(f"a committed crossing record failed contract validation ({observed.invalid_reason})")
     if observed.mutated_existing:
         failures.append("an existing append-only crossing record was mutated")
-
     permitted = _EXPECTED_DISPOSITIONS[case.expectation]
     if observed.appended_dispositions and not (set(observed.appended_dispositions) & permitted):
         failures.append(
             f"the recorded disposition {observed.appended_dispositions[-1]!r} is not one the "
             f"{case.expectation.value!r} obligation permits"
         )
+    return failures
 
-    if case.expectation in _REFUSAL_EXPECTATIONS:
-        if not observed.refused:
-            failures.append("the prohibited crossing was not refused")
-        if observed.released:
-            failures.append("a participant-visible value was released despite refusal")
-        if observed.backend_calls:
-            failures.append("the backend participant runtime was invoked despite refusal")
-        if case.expect_audit and not observed.audited:
-            failures.append("the refusal recorded no safe audit evidence")
-        if case.expectation is ParticipantPolicyExpectation.WITHHELD and not observed.appended_dispositions:
-            failures.append("intentional withholding recorded no decision, so it is indistinguishable from failure")
-    else:
-        if observed.refused:
-            failures.append("an authorized crossing was refused")
-        if not observed.released:
-            failures.append("the authorized crossing released nothing")
-        if not observed.evidence_refs:
-            failures.append("the permitted crossing recorded no evidence refs")
-        if observed.effective_support_level != observed.declared_support_level:
-            failures.append(
-                "effective backend strength is weaker than the declared strength without an authorized downgrade"
-            )
-    return tuple(failures)
+
+def _refusal_failures(case: ParticipantPolicyProbeCase, observed: _Outcome) -> list[str]:
+    """Breaches of a refusal obligation, including its side-effect boundary.
+
+    Checking only the final disposition would pass a target that denied the
+    crossing after already invoking the backend or serializing a
+    participant-visible value.
+    """
+
+    failures: list[str] = []
+    if not observed.refused:
+        failures.append("the prohibited crossing was not refused")
+    if observed.released:
+        failures.append("a participant-visible value was released despite refusal")
+    if observed.backend_calls:
+        failures.append("the backend participant runtime was invoked despite refusal")
+    if case.expect_audit and not observed.audited:
+        failures.append("the refusal recorded no safe audit evidence")
+    if case.expectation is ParticipantPolicyExpectation.WITHHELD and not observed.appended_dispositions:
+        failures.append("intentional withholding recorded no decision, so it is indistinguishable from failure")
+    return failures
+
+
+def _release_failures(observed: _Outcome) -> list[str]:
+    """Breaches of an authorized-release obligation."""
+
+    failures: list[str] = []
+    if observed.refused:
+        failures.append("an authorized crossing was refused")
+    if not observed.released:
+        failures.append("the authorized crossing released nothing")
+    if not observed.evidence_refs:
+        failures.append("the permitted crossing recorded no evidence refs")
+    if observed.effective_support_level != observed.declared_support_level:
+        failures.append(
+            "effective backend strength is weaker than the declared strength without an authorized downgrade"
+        )
+    return failures
+
+
+def _violations(case: ParticipantPolicyProbeCase, observed: _Outcome) -> tuple[str, ...]:
+    """Return the obligation breaches this outcome exhibits."""
+
+    expectation_failures = (
+        _refusal_failures(case, observed) if case.expectation in _REFUSAL_EXPECTATIONS else _release_failures(observed)
+    )
+    return tuple([*_record_integrity_failures(case, observed), *expectation_failures])
 
 
 def _case_result(
@@ -168,7 +186,7 @@ def _case_result(
 ) -> ConformanceCaseResult:
     try:
         observed = _run_case(case, target)
-    except Exception as exc:  # noqa: BLE001 - a probe failure is a report value, not a raise
+    except Exception as exc:
         return ConformanceCaseResult(
             name=f"participant-policy-{case.obligation}",
             contract_name=_CONTRACT_NAME,
