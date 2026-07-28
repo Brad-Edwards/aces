@@ -3,22 +3,32 @@
 An experiment specification is the pre-run authoring/input counterpart to the
 archival experiment-core outputs (run/study/apparatus-context). Unlike SDL,
 the authoring input is a single nested contract document with no shorthand,
-key normalization, or cross-file resolution, so loading is a thin
-``yaml.safe_load`` followed by ``ExperimentSpecModel`` validation — mirroring
-how the JSON fixtures under ``contracts/fixtures/experiment-core`` are checked.
+key normalization, or cross-file resolution, so loading is a bounded,
+duplicate-key/alias-rejecting safe YAML parse followed by
+``ExperimentSpecModel`` validation — mirroring how the JSON fixtures under
+``contracts/fixtures/experiment-core`` are checked.
 """
 
 from __future__ import annotations
 
 import logging
+import math
 from pathlib import Path
+from typing import Any
 
 import yaml
 from pydantic import ValidationError
+from yaml.composer import ComposerError
+from yaml.constructor import ConstructorError
+from yaml.events import AliasEvent
+from yaml.nodes import MappingNode
 
 from .contracts import ExperimentSpecModel
 
 log = logging.getLogger("raes.experiment_spec")
+
+MAX_EXPERIMENT_SPEC_BYTES = 64 * 1024
+_MAX_VALIDATION_DIAGNOSTICS = 32
 
 
 class ExperimentSpecError(Exception):
@@ -28,40 +38,118 @@ class ExperimentSpecError(Exception):
 class ExperimentSpecValidationError(ExperimentSpecError):
     """An experiment specification failed to parse or validate."""
 
-    def __init__(self, message: str, path: Path | None = None) -> None:
+    def __init__(self, code: str, message: str, path: Path | None = None) -> None:
+        self.code = code
         self.path = path
         self.details = message
-        prefix = f"{path}: " if path else ""
+        prefix = f"{path.name}: " if path else ""
         super().__init__(f"{prefix}{message}")
+
+
+class _ExperimentSpecLoader(yaml.SafeLoader):
+    """Bounded authoring loader with duplicate-key and alias rejection."""
+
+    def compose_node(self, parent: Any, index: Any) -> Any:
+        if self.check_event(AliasEvent):
+            raise ComposerError(None, None, "YAML aliases are not supported", self.peek_event().start_mark)
+        return super().compose_node(parent, index)
+
+    def construct_mapping(self, node: MappingNode, deep: bool = False) -> dict[object, object]:
+        if not isinstance(node, MappingNode):
+            raise ConstructorError(None, None, "expected a mapping node", node.start_mark)
+        keys: set[object] = set()
+        for key_node, _ in node.value:
+            key = self.construct_object(key_node, deep=deep)
+            try:
+                duplicate = key in keys
+            except TypeError as exc:
+                raise ConstructorError(None, None, "mapping keys must be scalar", key_node.start_mark) from exc
+            if duplicate:
+                raise ConstructorError(None, None, "duplicate mapping key", key_node.start_mark)
+            keys.add(key)
+        return super().construct_mapping(node, deep=deep)
+
+
+def _validate_finite_json(value: object) -> None:
+    if isinstance(value, float) and not math.isfinite(value):
+        raise ValueError("non-finite numeric values are not supported")
+    if isinstance(value, dict):
+        for key, child in value.items():
+            if not isinstance(key, str):
+                raise ValueError("mapping keys must be strings")
+            _validate_finite_json(child)
+    elif isinstance(value, list):
+        for child in value:
+            _validate_finite_json(child)
+
+
+def _safe_validation_details(exc: ValidationError) -> str:
+    diagnostics: list[str] = []
+    for error in exc.errors(include_url=False, include_context=False, include_input=False)[
+        :_MAX_VALIDATION_DIAGNOSTICS
+    ]:
+        location = "/" + "/".join(str(part) for part in error["loc"])
+        diagnostics.append(f"{location or '/'}: {error['type']}")
+    remaining = exc.error_count() - len(diagnostics)
+    if remaining > 0:
+        diagnostics.append(f"{remaining} additional validation error(s) omitted")
+    return "Experiment spec contract validation failed:\n" + "\n".join(diagnostics)
 
 
 def parse_experiment_spec(text: str, *, path: Path | None = None) -> ExperimentSpecModel:
     """Parse and validate an experiment specification from YAML text."""
+    if len(text.encode("utf-8", errors="replace")) > MAX_EXPERIMENT_SPEC_BYTES:
+        raise ExperimentSpecValidationError(
+            "input-too-large",
+            f"Experiment spec exceeds the {MAX_EXPERIMENT_SPEC_BYTES}-byte input limit.",
+            path=path,
+        )
     raw = text.strip()
     if not raw:
-        raise ExperimentSpecValidationError("Experiment spec is empty", path=path)
+        raise ExperimentSpecValidationError("empty-input", "Experiment spec is empty.", path=path)
 
     try:
-        payload = yaml.safe_load(raw)
+        payload = yaml.load(raw, Loader=_ExperimentSpecLoader)  # noqa: S506 - strict SafeLoader subclass
+    except ConstructorError as exc:
+        code = "duplicate-key" if "duplicate mapping key" in str(exc) else "invalid-yaml"
+        raise ExperimentSpecValidationError(code, "Experiment spec YAML is invalid.", path=path) from exc
     except yaml.YAMLError as exc:
-        raise ExperimentSpecValidationError(f"YAML parse error: {exc}", path=path) from exc
+        raise ExperimentSpecValidationError("invalid-yaml", "Experiment spec YAML is invalid.", path=path) from exc
 
     if not isinstance(payload, dict):
-        raise ExperimentSpecValidationError("Experiment spec must be a YAML mapping", path=path)
+        raise ExperimentSpecValidationError(
+            "invalid-root",
+            "Experiment spec must be a YAML mapping.",
+            path=path,
+        )
+    try:
+        _validate_finite_json(payload)
+    except ValueError as exc:
+        raise ExperimentSpecValidationError("invalid-json-value", str(exc), path=path) from exc
 
     try:
         return ExperimentSpecModel.model_validate(payload)
     except ValidationError as exc:
-        raise ExperimentSpecValidationError(str(exc), path=path) from exc
+        raise ExperimentSpecValidationError(
+            "contract-invalid",
+            _safe_validation_details(exc),
+            path=path,
+        ) from exc
 
 
 def load_experiment_spec(path: Path) -> ExperimentSpecModel:
     """Load and validate an authored experiment specification from a YAML file."""
     if not path.exists():
-        raise FileNotFoundError(f"Experiment spec file not found: {path}")
+        raise FileNotFoundError(f"Experiment spec file not found: {path.name}")
+    if path.stat().st_size > MAX_EXPERIMENT_SPEC_BYTES:
+        raise ExperimentSpecValidationError(
+            "input-too-large",
+            f"Experiment spec exceeds the {MAX_EXPERIMENT_SPEC_BYTES}-byte input limit.",
+            path=path,
+        )
 
     spec = parse_experiment_spec(path.read_text(encoding="utf-8"), path=path)
-    log.info("Loaded experiment spec '%s' from %s", spec.spec_id, path)
+    log.info("Loaded experiment spec '%s' from %s", spec.spec_id, path.name)
     return spec
 
 

@@ -2,9 +2,9 @@
   "contract_id": "experiment-authoring-input-v1",
   "schema_path": "contracts/schemas/experiment-core/experiment-authoring-input-v1.json",
   "stability": "draft",
-  "content_hash": "c80602d78f2f2bff4d516107bb323ee95c51c31773c89215fc998cc8fa603232",
+  "content_hash": "ed858991667adaaf817118d0ae985a9c01884eb32673717da1f2e25c8082ea72",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "c80602d78f2f2bff4d516107bb323ee95c51c31773c89215fc998cc8fa603232"
+    "summary": "Added bounded experiment selection policies, deterministic no-seed authoring, factor/allocation joins, and fail-closed stochastic profile binding for issue #787.",
+    "content_hash": "ed858991667adaaf817118d0ae985a9c01884eb32673717da1f2e25c8082ea72"
   }
 }

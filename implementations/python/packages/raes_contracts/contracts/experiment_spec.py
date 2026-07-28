@@ -21,6 +21,12 @@ from .experiment_references import (
     ExperimentScenarioReferenceModel,
     ExperimentTaskReferenceModel,
 )
+from .experiment_selection import (
+    MAX_SELECTION_POLICIES,
+    ExperimentSelectionPolicyModel,
+    _validate_selection_factor_joins,
+    _validate_selection_policy_registry,
+)
 from .experiment_study import (
     ExperimentAnalysisPlanModel,
     ExperimentRunAllocationPlanModel,
@@ -268,10 +274,14 @@ class ExperimentRunPlanModel(ContractModel):
     or ``target_run_count`` (simple, no-condition) declares the run count.
     """
 
-    stochastic_controls: list[ExperimentStochasticControlModel] = Field(min_length=1)
+    stochastic_controls: list[ExperimentStochasticControlModel] = Field(default_factory=list)
     episode_control: ExperimentEpisodeControlModel
     allocation: ExperimentRunAllocationPlanModel | None = None
     target_run_count: PositiveInteger | None = None
+    selection_policies: dict[NonEmptyString, ExperimentSelectionPolicyModel] = Field(
+        default_factory=dict,
+        max_length=MAX_SELECTION_POLICIES,
+    )
     red_variant_selections: dict[NonEmptyString, ExperimentRedVariantSelectionModel] = Field(default_factory=dict)
     clock_intent: ExperimentClockContextModel | None = None
 
@@ -285,7 +295,11 @@ class ExperimentRunPlanModel(ContractModel):
                     f"run_plan red_variant_selections key '{key}' must match embedded variant_id "
                     f"'{selection.variant_id}'"
                 )
+        self._validate_selection_policies()
         return self
+
+    def _validate_selection_policies(self) -> None:
+        _validate_selection_policy_registry(self)
 
     @classmethod
     def __get_pydantic_json_schema__(
@@ -380,7 +394,11 @@ class ExperimentSpecModel(ContractModel):
                         f"run_plan allocation blocking factor '{blocking_factor}' must be a declared factor"
                     )
         self._validate_binding_descriptors()
+        self._validate_selection_factor_joins()
         return self
+
+    def _validate_selection_factor_joins(self) -> None:
+        _validate_selection_factor_joins(self)
 
     def _validate_binding_descriptors(self) -> None:
         if self.binding_semantics == "explicit-required" and self.binding_descriptors is None:
@@ -455,6 +473,27 @@ class ExperimentSpecModel(ContractModel):
             "experiment-binding-source-joins-valid",
             "Explicit bindings must cover every compared condition and resolve exact declared factor levels.",
             validator="raes_contracts.contracts.ExperimentSpecModel._validate_binding_descriptors",
+            inputs=[{"contract_id": "experiment-authoring-input-v1", "instance_path": "#"}],
+        )
+        _add_raes_invariant(
+            json_schema,
+            "experiment-selection-policies-valid",
+            "Selection policy ids, bounds, references, stochastic controls, and supported exact profiles must "
+            "form one finite, acyclic, fail-closed authoring registry.",
+            validator="raes_contracts.contracts.ExperimentRunPlanModel._validate_selection_policies",
+            inputs=[
+                {
+                    "contract_id": "experiment-authoring-input-v1",
+                    "instance_path": "#/run_plan/selection_policies",
+                }
+            ],
+        )
+        _add_raes_invariant(
+            json_schema,
+            "experiment-selection-factor-joins-valid",
+            "Selection strata and binding references must resolve declared factors, levels, conditions, "
+            "variation points, and allocation counts.",
+            validator="raes_contracts.contracts.ExperimentSpecModel._validate_selection_factor_joins",
             inputs=[{"contract_id": "experiment-authoring-input-v1", "instance_path": "#"}],
         )
         return json_schema

@@ -163,6 +163,7 @@ from .experiment_run import (
     validate_experiment_run_against_task,
     validate_experiment_run_time_model,
 )
+from .experiment_selection import *
 from .experiment_spec import (
     ExperimentEpisodeControlModel,
     ExperimentRedVariantSelectionModel,
