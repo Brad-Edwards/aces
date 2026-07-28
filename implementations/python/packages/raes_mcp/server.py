@@ -43,7 +43,7 @@ workflows. Use `sdl_validate`, `sdl_design_assessment`, `sdl_plan`, and \
 scenario or dry run can prove.
 
 To author an *experiment* (the pre-run specification that binds a task to a \
-run plan — seeds, episode controls, red-variant selection, and replication — \
+run plan — selection policies, stochastic controls, episode controls, and replication — \
 distinct from the archival run/study records), use `experiment_scaffold` to \
 start, `experiment_get_example` to see a worked design, and `experiment_validate` \
 to check it.\

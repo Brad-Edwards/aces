@@ -1,14 +1,14 @@
 # TechVault smoke run — a minimal single-condition experiment specification.
 #
-# The simplest authored design: no compared conditions, just a small seeded
-# replication count via target_run_count. Useful as a pre-run smoke check
+# The simplest authored design: no compared conditions or random selection,
+# just a small replication count via target_run_count. Useful as a pre-run smoke check
 # before committing to a full sweep. See ADR-074.
 schema_version: experiment-authoring-input/v1
 spec_id: spec-techvault-smoke-run-v1
 spec_version: 1.0.0
 title: TechVault smoke run
 description: >-
-  Minimal single-condition design: five seeded runs of the TechVault task to
+  Minimal deterministic design: five runs of the TechVault task to
   smoke-test the apparatus before a full comparison sweep.
 
 task_ref:
@@ -17,11 +17,6 @@ task_ref:
   ref_version: 1.0.0
 
 run_plan:
-  stochastic_controls:
-    - control_id: episode-seed
-      role: seed
-      value: 7
-      description: Base RNG seed for the smoke runs.
   episode_control:
     turn_order: sequential
     max_steps: 100

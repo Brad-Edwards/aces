@@ -307,10 +307,10 @@ produce. It binds:
   `intended_scenario_ref` to a scenario snapshot;
 - declared apparatus intent (the input-shaped apparatus constraints), distinct
   from the run-scoped observed apparatus context;
-- a run plan: stochastic controls (seeds), an episode control (turn order,
+- a run plan: optional stochastic controls, an episode control (turn order,
   logical step count, termination), either a condition `allocation` plan or a
-  scalar `target_run_count`, red-variant selections keyed by variant id, and an
-  optional clock intent;
+  scalar `target_run_count`, a closed keyed selection-policy registry,
+  red-variant selections keyed by variant id, and an optional clock intent;
 - study factors keyed by factor id;
 - capture-specification references, validity notes, and supporting artifacts.
 
@@ -424,6 +424,28 @@ validator runs regardless of the embedding contract.
     `experiment-apparatus-context-v1` record. Its declared apparatus intent uses
     the input-shaped apparatus constraints, not the run-scoped observed
     apparatus context.
+27. Selection-policy map keys MUST match their embedded `policy_id`. Every
+    policy MUST declare one of the closed purposes `controlled-factor`,
+    `nuisance-variation`, or `fixed-configuration` as admitted by its policy
+    kind, and its `output_bound` MUST be positive, finite, and no greater than
+    the declared run count.
+28. Version 1 selection policy kinds are `fixed`, `enumerate`, `product`,
+    `stratified`, and `sample`. Products MUST reference at least two declared
+    policies, form an acyclic graph, and declare the exact checked product
+    bound. Equal stratification MUST join every compared allocation condition
+    to one declared factor level with the allocation's exact per-condition run
+    count.
+29. Deterministic selection policies MUST NOT require a synthetic seed.
+    `sample` MUST use uniform sampling with replacement, declare a sample count
+    equal to the run allocation, and resolve exactly one executable sampling or
+    randomization control whose accepted profile supplies bounded-integer
+    transform version 1. Weighted, without-replacement, permutation, and t-way
+    policies fail closed until their exact accepted transform semantics exist.
+30. Policy point references and outcomes MUST be admitted against a trusted,
+    semantically validated expanded scenario family. Fixed outcomes MUST be
+    members of their declared scalar, governed-reference, alternative, subset,
+    order, or logical-timing domain. Exhaustive and sampled populations MUST be
+    finite and exactly bounded.
 
 ### Provenance
 

@@ -272,15 +272,24 @@ declares which valid points form the study.
 
 Every executable selection policy has:
 
-- a stable policy id and versioned kind;
-- one or more qualified variation-point targets;
-- a finite output count or an independently enforced compilation budget;
-- explicit semantics such as enumerate, explicit values, zip, Cartesian
-  product, sample-without-replacement, stratified sample, block, or declared
-  t-way coverage;
+- a stable policy id and closed kind;
+- a declared purpose: controlled factor, nuisance variation, or fixed
+  configuration, as admitted by the policy kind;
+- one qualified variation-point target, or named policy dimensions for a
+  Cartesian product;
+- a positive finite output bound checked against the run allocation;
 - factor/condition mappings where selections are experimental treatments;
-- a logical-coordinate profile; and
+- exact balance semantics when allocation is stratified; and
 - a stochastic profile reference when the policy makes random choices.
+
+The current authoring contract admits fixed selection, exhaustive enumeration,
+Cartesian product, equal stratification, and bounded uniform sampling with
+replacement. Deterministic policies need no stochastic control. Uniform
+sampling resolves exactly one executable sampling/randomization control and
+uses the accepted profile's bounded-integer transform. Weighted choice,
+sampling without replacement, permutation, and t-way coverage fail closed
+until versioned exact transforms for those operations are accepted; neither a
+free-form seed nor a library default supplies those semantics.
 
 Scenario validity domains and experiment selection policies never collapse into
 one object. A domain can be reused by many experiments. Two experiments can
@@ -919,5 +928,9 @@ The implementation issues inherit these minimum evidence obligations:
 - scheduler conformance proving that dispatch order and bounded parallelism do
   not change plan entries or selection provenance.
 
-Until those artifacts land, this document and the formal invariant list are
-design coverage only. SCE-002 remains DRAFT.
+Issues #786 and #787 now provide executable family-declaration and
+selection-authoring coverage: published schemas, contextual family admission,
+positive/negative fixtures, and unit tests. Trial-coordinate compilation,
+selected-scenario instantiation/provenance, runtime fact binding, and the
+property/differential witnesses above remain assigned to their follow-on
+issues. SCE-002 remains DRAFT until that remaining evidence lands.
