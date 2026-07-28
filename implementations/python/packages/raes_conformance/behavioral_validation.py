@@ -204,69 +204,40 @@ def _result(
     )
 
 
-def run_behavioral_validation_probe(
+def _admission_diagnostic(
     case: BehavioralProbeCase,
     executor: BehavioralProbeExecutor,
-) -> BehavioralProbeResult:
-    """Validate and execute one exact subject/property/probe join."""
-
+) -> Diagnostic | None:
+    diagnostic = None
     try:
         validate_behavioral_claim_binding(case.claim)
     except ValueError:
-        return _result(
+        diagnostic = _diagnostic(
             case,
-            outcome=BehavioralProbeOutcome.UNSUPPORTED,
-            diagnostics=(
-                _diagnostic(
-                    case,
-                    "conformance.behavioral-probe-claim-invalid",
-                    "The behavioral probe claim does not resolve against the canonical relation catalog.",
-                ),
-            ),
+            "conformance.behavioral-probe-claim-invalid",
+            "The behavioral probe claim does not resolve against the canonical relation catalog.",
         )
-
-    if case.claim.left_carrier_ref != case.subject_ref:
-        return _result(
+    if diagnostic is None and case.claim.left_carrier_ref != case.subject_ref:
+        diagnostic = _diagnostic(
             case,
-            outcome=BehavioralProbeOutcome.UNSUPPORTED,
-            diagnostics=(
-                _diagnostic(
-                    case,
-                    "conformance.behavioral-probe-subject-claim-mismatch",
-                    "The behavioral claim left carrier does not identify the admitted probe subject.",
-                ),
-            ),
+            "conformance.behavioral-probe-subject-claim-mismatch",
+            "The behavioral claim left carrier does not identify the admitted probe subject.",
         )
+    if diagnostic is None:
+        missing_capabilities = set(case.probe_binding.capability_refs) - set(executor.capability_refs)
+        if missing_capabilities:
+            diagnostic = _diagnostic(
+                case,
+                "conformance.behavioral-probe-capability-unsupported",
+                "The injected executor does not support every capability required by the probe binding.",
+            )
+    return diagnostic
 
-    missing_capabilities = sorted(set(case.probe_binding.capability_refs) - set(executor.capability_refs))
-    if missing_capabilities:
-        return _result(
-            case,
-            outcome=BehavioralProbeOutcome.UNSUPPORTED,
-            diagnostics=(
-                _diagnostic(
-                    case,
-                    "conformance.behavioral-probe-capability-unsupported",
-                    "The injected executor does not support every capability required by the probe binding.",
-                ),
-            ),
-        )
 
-    try:
-        evidence = executor.execute(case)
-    except Exception as exc:
-        return _result(
-            case,
-            outcome=BehavioralProbeOutcome.FAILED,
-            diagnostics=(
-                _diagnostic(
-                    case,
-                    "conformance.behavioral-probe-execution-failed",
-                    f"Behavioral probe executor raised {type(exc).__name__}.",
-                ),
-            ),
-        )
-
+def _evidence_diagnostics(
+    case: BehavioralProbeCase,
+    evidence: BehavioralProbeEvidence,
+) -> tuple[Diagnostic, ...]:
     diagnostics = list(evidence.diagnostics)
     if evidence.outcome is BehavioralProbeOutcome.PASSED:
         if not evidence.evidence_refs:
@@ -301,7 +272,14 @@ def run_behavioral_validation_probe(
                 "A mutating behavioral probe left residual owned state.",
             )
         )
+    return tuple(diagnostics)
 
+
+def _result_from_evidence(
+    case: BehavioralProbeCase,
+    evidence: BehavioralProbeEvidence,
+) -> BehavioralProbeResult:
+    diagnostics = _evidence_diagnostics(case, evidence)
     outcome = evidence.outcome
     if diagnostics and outcome is BehavioralProbeOutcome.PASSED:
         outcome = BehavioralProbeOutcome.FAILED
@@ -309,10 +287,41 @@ def run_behavioral_validation_probe(
         case,
         outcome=outcome,
         evidence_refs=evidence.evidence_refs,
-        diagnostics=tuple(diagnostics),
+        diagnostics=diagnostics,
         cleanup_verified=evidence.cleanup_verified,
         residual_state=evidence.residual_state,
     )
+
+
+def run_behavioral_validation_probe(
+    case: BehavioralProbeCase,
+    executor: BehavioralProbeExecutor,
+) -> BehavioralProbeResult:
+    """Validate and execute one exact subject/property/probe join."""
+
+    admission_diagnostic = _admission_diagnostic(case, executor)
+    if admission_diagnostic is not None:
+        return _result(
+            case,
+            outcome=BehavioralProbeOutcome.UNSUPPORTED,
+            diagnostics=(admission_diagnostic,),
+        )
+
+    try:
+        evidence = executor.execute(case)
+    except Exception as exc:
+        return _result(
+            case,
+            outcome=BehavioralProbeOutcome.FAILED,
+            diagnostics=(
+                _diagnostic(
+                    case,
+                    "conformance.behavioral-probe-execution-failed",
+                    f"Behavioral probe executor raised {type(exc).__name__}.",
+                ),
+            ),
+        )
+    return _result_from_evidence(case, evidence)
 
 
 __all__ = (
