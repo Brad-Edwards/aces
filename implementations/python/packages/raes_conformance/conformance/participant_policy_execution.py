@@ -10,6 +10,7 @@ runtime's own state.
 
 from __future__ import annotations
 
+from collections.abc import Iterator, Mapping
 from dataclasses import dataclass, field, replace
 
 from raes_contracts.contracts.participant_crossing import ParticipantCrossingOccurrenceModel
@@ -184,7 +185,7 @@ def _drive(case: ParticipantPolicyProbeCase, plane: RuntimeControlPlane) -> tupl
     return _DRIVERS[case.operation](case, plane)
 
 
-def _iter_occurrences(plane: RuntimeControlPlane):
+def _iter_occurrences(plane: RuntimeControlPlane) -> Iterator[Mapping[str, object]]:
     """Yield every committed crossing occurrence in deterministic order."""
 
     for participant in sorted(plane.snapshot.participant_crossing_history):
