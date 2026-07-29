@@ -16,6 +16,18 @@ BehavioralRelationId = Annotated[str, Field(pattern=r"^[a-z][a-z0-9-]*$")]
 
 BehavioralTaxonomyRevision = Annotated[str, Field(pattern=r"^[a-z0-9][a-z0-9.-]*$")]
 
+_ASSURANCE_AXIS_RULES: dict[str, tuple[str, frozenset[str]]] = {
+    "definition": ("defined", frozenset({"structural"})),
+    "checker": ("implemented", frozenset({"structural", "finite"})),
+    "bounded-test": ("tested", frozenset({"finite"})),
+    "model-check": ("model-checked", frozenset({"model-check"})),
+    "proof": ("proved", frozenset({"proof"})),
+    "runtime-enforcement": ("enforced", frozenset({"structural", "finite"})),
+    "backend-declaration": ("declared", frozenset({"structural"})),
+    "backend-realization": ("realized", frozenset({"structural", "finite"})),
+    "backend-conformance": ("conformant", frozenset({"finite", "statistical"})),
+}
+
 
 class BehavioralClaimBindingModel(ContractModel):
     """A bounded claim tied to one revisioned behavioral-relation definition.
@@ -76,53 +88,61 @@ class BehavioralClaimBindingModel(ContractModel):
     limitations: list[NonEmptyString] = Field(min_length=1)
     explicit_non_claims: list[NonEmptyString] = Field(min_length=1)
 
-    @model_validator(mode="after")
-    def _validate_claim_strength(self) -> BehavioralClaimBindingModel:
+    def _validate_quantifier_evidence(self) -> None:
         universal_scopes = {"all-admitted-inputs", "all-traces", "all-strategies"}
         if self.quantifier_scope in universal_scopes and self.evidence_scope not in {"model-check", "proof"}:
             raise ValueError("universal quantification requires model-check or proof evidence")
-        axis_rules = {
-            "definition": ("defined", {"structural"}),
-            "checker": ("implemented", {"structural", "finite"}),
-            "bounded-test": ("tested", {"finite"}),
-            "model-check": ("model-checked", {"model-check"}),
-            "proof": ("proved", {"proof"}),
-            "runtime-enforcement": ("enforced", {"structural", "finite"}),
-            "backend-declaration": ("declared", {"structural"}),
-            "backend-realization": ("realized", {"structural", "finite"}),
-            "backend-conformance": ("conformant", {"finite", "statistical"}),
-        }
-        if self.assurance_axis is not None:
-            expected_status, allowed_evidence = axis_rules[self.assurance_axis]
-            negative_axis_state = self.assurance_status == "future" or (
-                self.assurance_axis == "proof" and self.assurance_status == "deliberately-unproved"
-            )
-            if negative_axis_state:
-                if self.evidence_scope != "structural":
-                    raise ValueError(
-                        f"assurance axis {self.assurance_axis!r} with status {self.assurance_status!r} "
-                        "requires structural evidence"
-                    )
-            elif self.assurance_status != expected_status or self.evidence_scope not in allowed_evidence:
+
+    def _validate_explicit_assurance_axis(self) -> None:
+        if self.assurance_axis is None:
+            return
+        expected_status, allowed_evidence = _ASSURANCE_AXIS_RULES[self.assurance_axis]
+        negative_axis_state = self.assurance_status == "future" or (
+            self.assurance_axis == "proof" and self.assurance_status == "deliberately-unproved"
+        )
+        if negative_axis_state:
+            if self.evidence_scope != "structural":
                 raise ValueError(
-                    f"assurance axis {self.assurance_axis!r} requires status {expected_status!r} "
-                    f"and evidence scope in {sorted(allowed_evidence)!r}"
+                    f"assurance axis {self.assurance_axis!r} with status {self.assurance_status!r} "
+                    "requires structural evidence"
                 )
-        elif self.assurance_status in {"enforced", "declared", "realized", "conformant"}:
+            return
+        if self.assurance_status != expected_status or self.evidence_scope not in allowed_evidence:
+            raise ValueError(
+                f"assurance axis {self.assurance_axis!r} requires status {expected_status!r} "
+                f"and evidence scope in {sorted(allowed_evidence)!r}"
+            )
+
+    def _validate_unscoped_assurance(self) -> None:
+        if self.assurance_axis is not None:
+            return
+        if self.assurance_status in {"enforced", "declared", "realized", "conformant"}:
             raise ValueError(f"assurance status {self.assurance_status!r} requires an explicit assurance axis")
-        elif self.assurance_status == "proved" and self.evidence_scope != "proof":
+        if self.assurance_status == "proved" and self.evidence_scope != "proof":
             raise ValueError("proved assurance requires proof evidence")
-        elif self.assurance_status == "model-checked" and self.evidence_scope != "model-check":
+        if self.assurance_status == "model-checked" and self.evidence_scope != "model-check":
             raise ValueError("model-checked assurance requires model-check evidence")
-        projection_values = (self.observation_projection_ref, self.observation_projection_revision)
-        if (projection_values[0] is None) != (projection_values[1] is None):
-            raise ValueError("observation projection ref and revision must be supplied together")
-        profile_values = (
+
+    @staticmethod
+    def _validate_coordinate_pair(ref: str | None, revision: str | None, label: str) -> None:
+        if (ref is None) != (revision is None):
+            raise ValueError(f"{label} ref and revision must be supplied together")
+
+    @model_validator(mode="after")
+    def _validate_claim_strength(self) -> BehavioralClaimBindingModel:
+        self._validate_quantifier_evidence()
+        self._validate_explicit_assurance_axis()
+        self._validate_unscoped_assurance()
+        self._validate_coordinate_pair(
+            self.observation_projection_ref,
+            self.observation_projection_revision,
+            "observation projection",
+        )
+        self._validate_coordinate_pair(
             self.relation_parameter_profile_ref,
             self.relation_parameter_profile_revision,
+            "relation parameter profile",
         )
-        if (profile_values[0] is None) != (profile_values[1] is None):
-            raise ValueError("relation parameter profile ref and revision must be supplied together")
         return self
 
 

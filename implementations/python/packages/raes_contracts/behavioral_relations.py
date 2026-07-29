@@ -108,8 +108,7 @@ class RelationAssuranceModel(ContractModel):
     )
     evidence_refs: list[NonEmptyString] = Field(default_factory=list)
 
-    @model_validator(mode="after")
-    def _validate_axis_consistency(self) -> RelationAssuranceModel:
+    def _validate_implementation_aggregate(self) -> None:
         implementation_axes = (
             self.checker_status,
             self.runtime_enforcement_status,
@@ -137,6 +136,7 @@ class RelationAssuranceModel(ContractModel):
                     "checker, runtime, and backend-realization axis is negative"
                 )
 
+    def _validate_model_check_aggregate(self) -> None:
         if self.proof_status == "model-checked" and self.model_check_status != "model-checked":
             raise ValueError(
                 "relation assurance proof aggregate reports model checking but the model-check axis does not"
@@ -146,24 +146,33 @@ class RelationAssuranceModel(ContractModel):
                 "relation assurance model-check axis is positive but the legacy proof aggregate does not record it"
             )
 
+    def _validate_backend_conformance(self) -> None:
         if self.backend_conformance_status in {"conformant", "bounded"} and self.backend_realization_status not in {
             "realized",
             "partial",
         }:
             raise ValueError("relation assurance backend conformance requires a realized or partially realized backend")
 
-        positive_axes = (
-            self.implementation_status in {"implemented", "partial"}
-            or self.test_status in {"tested", "bounded"}
-            or self.proof_status in {"proved", "model-checked"}
-            or self.checker_status in {"implemented", "partial"}
-            or self.model_check_status == "model-checked"
-            or self.runtime_enforcement_status in {"enforced", "partial"}
-            or self.backend_declaration_status == "declared"
-            or self.backend_realization_status in {"realized", "partial"}
-            or self.backend_conformance_status in {"conformant", "bounded"}
+    def _has_positive_axis(self) -> bool:
+        positive_axis_states = (
+            self.implementation_status in {"implemented", "partial"},
+            self.test_status in {"tested", "bounded"},
+            self.proof_status in {"proved", "model-checked"},
+            self.checker_status in {"implemented", "partial"},
+            self.model_check_status == "model-checked",
+            self.runtime_enforcement_status in {"enforced", "partial"},
+            self.backend_declaration_status == "declared",
+            self.backend_realization_status in {"realized", "partial"},
+            self.backend_conformance_status in {"conformant", "bounded"},
         )
-        if self.definition_status == "future" and positive_axes:
+        return any(positive_axis_states)
+
+    @model_validator(mode="after")
+    def _validate_axis_consistency(self) -> RelationAssuranceModel:
+        self._validate_implementation_aggregate()
+        self._validate_model_check_aggregate()
+        self._validate_backend_conformance()
+        if self.definition_status == "future" and self._has_positive_axis():
             raise ValueError("relation assurance cannot report positive axes for a future definition")
         return self
 

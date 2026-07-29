@@ -103,13 +103,13 @@ def test_child_program_is_bounded_requirement_backed_and_acyclic() -> None:
     program = _load_program()
     issues = {entry["key"]: entry for entry in program["implementation_issues"]}
 
-    assert {
+    assert set(issues) == {
         "bounded-falsification",
         "finite-state-model-checking",
         "mathematical-proof",
         "runtime-enforcement",
         "backend-realization",
-    } == set(issues)
+    }
 
     issue_numbers: set[int] = set()
     for key, entry in issues.items():
