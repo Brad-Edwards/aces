@@ -85,6 +85,7 @@ _CLAIM_PATTERNS: tuple[tuple[re.Pattern[str], frozenset[str]], ...] = (
                 "trace-equivalence",
                 "strong-bisimulation",
                 "weak-bisimulation",
+                "divergence-preserving-branching-bisimulation",
                 "participant-projected-history-equivalence",
                 "probabilistic-bisimulation",
             }
@@ -128,7 +129,14 @@ _CLAIM_PATTERNS: tuple[tuple[re.Pattern[str], frozenset[str]], ...] = (
             r"(?:\s+[a-z-]+){0,5}\s+(?:bisimulation|bisimilar(?:ity)?)\b",
             re.IGNORECASE,
         ),
-        frozenset({"strong-bisimulation", "weak-bisimulation", "probabilistic-bisimulation"}),
+        frozenset(
+            {
+                "strong-bisimulation",
+                "weak-bisimulation",
+                "divergence-preserving-branching-bisimulation",
+                "probabilistic-bisimulation",
+            }
+        ),
     ),
     (
         re.compile(

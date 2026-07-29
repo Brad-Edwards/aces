@@ -8,6 +8,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 PRs do **not** edit this file directly. release-please maintains it from the
 Conventional Commit history on `main` (#684).
 
+## [3.0.0](https://github.com/RAESystem/rae/compare/v2.0.0...v3.0.0) (2026-07-29)
+
+
+### ⚠ BREAKING CHANGES
+
+* published schema `$id` values move from `https://raes.dev/schemas/` to `https://raesystem.github.io/rae/schemas/`. Consumers pinning or caching schema identifiers must update them.
+
+### Features
+
+* add bounded counterfactual necessity validation ([bde2f1c](https://github.com/RAESystem/rae/commit/bde2f1c0fd6f28833ad0380a354aa7c410274f64))
+* add bounded determinism and replay-consistency verification (ASR-514) ([fa8b143](https://github.com/RAESystem/rae/commit/fa8b143de7a6b9816bef47bde6331a77b7e9fe5c))
+* add bounded determinism and replay-consistency verification (ASR-514) ([cbf2b2f](https://github.com/RAESystem/rae/commit/cbf2b2f84b628ea6bf6f406ad80362d590fc2c9b))
+* add deterministic trial compilation ([b2d5b1f](https://github.com/RAESystem/rae/commit/b2d5b1fc9ad4b2574adca01b3ae95aa53ee9e178))
+* add executable behavioral validation probes ([84ff9b3](https://github.com/RAESystem/rae/commit/84ff9b3492d857e56743556473ca9c4e0f7176df))
+* add executable behavioral validation probes ([c02cbaa](https://github.com/RAESystem/rae/commit/c02cbaa038f49d48015c85641fa28fccec663fc3))
+* add experiment variation selection policies ([9738462](https://github.com/RAESystem/rae/commit/97384623834091b470596fb680539757bf4b3f10))
+* add experiment variation selection policies ([3b51332](https://github.com/RAESystem/rae/commit/3b5133201c4702a1fa20f476125a9fec5c209135))
+* add participant information-flow assurance probes ([8f68ee0](https://github.com/RAESystem/rae/commit/8f68ee0dad22d40886cd16e12508b688fe40e553))
+* add participant information-flow assurance probes ([bb5b625](https://github.com/RAESystem/rae/commit/bb5b625aa831e113a40c6220c1cac5149fd0f23a))
+* enforce participant information-flow policy ([5a36f4c](https://github.com/RAESystem/rae/commit/5a36f4c906c2ed3af98ba5690bae0e4a4bd39b58))
+* enforce participant information-flow policy ([96f9cb2](https://github.com/RAESystem/rae/commit/96f9cb2f5beeea3953648ebf8fcf8f23c99d2980))
+* migrate participant control compatibility ([6c7a28c](https://github.com/RAESystem/rae/commit/6c7a28c0c0baf32f97164a09755a9147ca983224))
+* migrate participant control compatibility ([8bccd0d](https://github.com/RAESystem/rae/commit/8bccd0d44d764498813d3caab276cee4b01fb5b3))
+* publish admitted experiment trial-plan contract (SCE-002/SCE-006) ([3e69aea](https://github.com/RAESystem/rae/commit/3e69aeae45817ef5ae9fca56eefa5f8ac625a866))
+* publish admitted experiment trial-plan contract (SCE-002/SCE-006) ([ff35cf2](https://github.com/RAESystem/rae/commit/ff35cf21450b4e3cea0bd65c77b6ba77690565c8))
+
+
+### Bug Fixes
+
+* address SonarCloud findings ([d5a6a69](https://github.com/RAESystem/rae/commit/d5a6a690d2b46666ce975a5047c245229bfacdba))
+* align Sonar project binding ([76edc5b](https://github.com/RAESystem/rae/commit/76edc5b85131a4efa7c2c56a8b4e9b18d43970b3))
+* check commit messages, not the PR body, for breaking-change footers ([1d50049](https://github.com/RAESystem/rae/commit/1d500496a3606cb05b10d0d25d383c3d84172b3f)), closes [#908](https://github.com/RAESystem/rae/issues/908)
+* construct participant evidence context explicitly ([c62310a](https://github.com/RAESystem/rae/commit/c62310aaaeb091c51118f827d33f7d75f58ae70e))
+* pin bot-maintained release history by classified tail ([f9da4f7](https://github.com/RAESystem/rae/commit/f9da4f79b91bbc4f68cad97c7aa816db69ee192e)), closes [#908](https://github.com/RAESystem/rae/issues/908)
+* preserve typed participant evidence context ([9b8b0c0](https://github.com/RAESystem/rae/commit/9b8b0c0430401cb87d018b6126a2e4a7d5275096))
+* publish Python version classifiers for the raes distribution ([ba66ce2](https://github.com/RAESystem/rae/commit/ba66ce2b9d09df280d35ba31aec0de1bb824cfcb))
+* publish Python version classifiers for the raes distribution ([9a951ad](https://github.com/RAESystem/rae/commit/9a951adbef069fa61cf272449265501d1737daaa))
+* reduce behavioral relation validation complexity ([90e001b](https://github.com/RAESystem/rae/commit/90e001be04b18e2d326bb98733567b4041f958de))
+* reduce behavioral relation validation complexity ([6d58475](https://github.com/RAESystem/rae/commit/6d5847560d50d5332874f904edf0db1c50b778fd))
+* reduce claim binding validation complexity ([6c582f2](https://github.com/RAESystem/rae/commit/6c582f297454cda06934996b9ff0ea404a762f01))
+* reduce claim binding validation complexity ([a760062](https://github.com/RAESystem/rae/commit/a760062f522040d6e3bf529b87c3ecbd11f00176))
+* reject retired naming in changelog-bound PR text ([b9daa5f](https://github.com/RAESystem/rae/commit/b9daa5fa356738b1c9b6931783a48908b43a2b85)), closes [#908](https://github.com/RAESystem/rae/issues/908)
+* repair PR guard bootstrap and reformat a renamed test ([1a82d14](https://github.com/RAESystem/rae/commit/1a82d14c5bf510493a06986a5a011ed148706842)), closes [#908](https://github.com/RAESystem/rae/issues/908)
+* replace platform profiles with composable capabilities ([9f53baf](https://github.com/RAESystem/rae/commit/9f53bafd7f51bf6d732e683182f5c525395cad1d))
+* repoint published schema namespace to a controlled URI root ([e8ae819](https://github.com/RAESystem/rae/commit/e8ae8191e8005f5f6c461cba59bdf8420c755b26)), closes [#908](https://github.com/RAESystem/rae/issues/908)
+* upgrade dependencies with known vulnerabilities ([2d7c0c4](https://github.com/RAESystem/rae/commit/2d7c0c4a635c47709c9ad7453a5689d3c2693802))
+* upgrade dependencies with known vulnerabilities ([e2431fa](https://github.com/RAESystem/rae/commit/e2431fa9a645b882081fd99e68ed6109c0790f4f)), closes [#941](https://github.com/RAESystem/rae/issues/941)
+
+
+### Documentation
+
+* document participant input and output control ([5bbccb9](https://github.com/RAESystem/rae/commit/5bbccb9491a9d257b2ad16ca0cfcc3b6a245409b))
+* document participant input and output control ([f318ee6](https://github.com/RAESystem/rae/commit/f318ee6aad4ce3a5ef42d1b57b9f0b801c0c8ca2))
+
 ## [2.0.0](https://github.com/RAESystem/rae/compare/v1.1.0...v2.0.0) (2026-07-27)
 
 

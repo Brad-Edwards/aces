@@ -42,6 +42,7 @@ REQUIRED_RELATION_IDS = {
     "data-refinement",
     "strong-bisimulation",
     "weak-bisimulation",
+    "divergence-preserving-branching-bisimulation",
     "participant-predicate-opacity",
     "participant-projected-history-equivalence",
     "policy-noninterference",
@@ -58,7 +59,7 @@ REQUIRED_RELATION_IDS = {
 def _bounded_empirical_claim() -> dict[str, object]:
     return {
         "taxonomy_id": "raes-behavioral-relations",
-        "taxonomy_revision": "rev5",
+        "taxonomy_revision": "rev6",
         "relation_id": "empirical-adequacy",
         "subject": "TechVault baseline study",
         "left_carrier_ref": "study-techvault-baseline@1.0.0",
@@ -149,7 +150,7 @@ def test_authoritative_catalog_covers_required_relation_classes_and_dimensions()
 
     assert catalog.schema_version == "behavioral-relations/v1"
     assert catalog.taxonomy_id == "raes-behavioral-relations"
-    assert catalog.taxonomy_revision == "rev5"
+    assert catalog.taxonomy_revision == "rev6"
     assert set(catalog.relations) >= REQUIRED_RELATION_IDS
     for relation_id, relation in catalog.relations.items():
         assert relation.left_carrier
@@ -178,6 +179,8 @@ def test_catalog_bibliography_claim_surfaces_and_relation_references_resolve():
         "park-1981",
         "milner-1980",
         "van-glabbeek-1990",
+        "van-glabbeek-weijland-1996",
+        "van-glabbeek-luttik-trcka-2009",
         "abadi-lamport-1991",
         "lynch-vaandrager-1995",
         "fagin-halpern-moses-vardi-1995",
@@ -203,6 +206,7 @@ def test_catalog_bibliography_claim_surfaces_and_relation_references_resolve():
         "participant-visible-behavior",
         "participant-information-flow-policy",
         "participant-opacity",
+        "participant-crossing-bisimulation",
         "multi-agent-interaction",
         "counterfactual-necessity-validation",
         "independent-adequacy-study",
@@ -346,7 +350,7 @@ def test_claim_binding_rejects_bounded_evidence_promoted_to_universal_claim():
     with pytest.raises(ValidationError, match="universal quantification requires model-check or proof evidence"):
         BehavioralClaimBindingModel(
             taxonomy_id="raes-behavioral-relations",
-            taxonomy_revision="rev5",
+            taxonomy_revision="rev6",
             relation_id="trace-equivalence",
             subject="two finite backend runs",
             left_carrier_ref="backend-run:left",

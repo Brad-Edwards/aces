@@ -14,7 +14,7 @@ from tools.check_behavioral_relation_claims import (
 def _valid_binding() -> dict[str, object]:
     return {
         "taxonomy_id": "raes-behavioral-relations",
-        "taxonomy_revision": "rev5",
+        "taxonomy_revision": "rev6",
         "relation_id": "bounded-probe-success",
         "subject": "Named backend fixture cases",
         "left_carrier_ref": "backend-target:stub",
@@ -52,6 +52,15 @@ def test_relation_identity_and_evidence_boundary_permit_a_scoped_claim():
         "Relation: `participant-projected-history-equivalence`. The two histories are equivalent only under "
         "observation projection `participant-observation-boundary/v1`; the evidence boundary is the named "
         "terminal observations in run-7.",
+        "docs/conformance/example.md",
+    )
+
+
+def test_divergence_preserving_branching_claim_requires_and_accepts_exact_binding():
+    assert not _validate_claim_text(
+        "Relation id: `divergence-preserving-branching-bisimulation`. The two systems are "
+        "divergence-preserving branching bisimilar only under profile "
+        "`participant-crossing-dpbb-finite-v1@rev1`; the evidence boundary is its complete finite carrier.",
         "docs/conformance/example.md",
     )
 

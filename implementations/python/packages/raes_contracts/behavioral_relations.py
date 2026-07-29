@@ -256,31 +256,56 @@ class BehavioralRelationCatalogModel(ContractModel):
 
     @model_validator(mode="after")
     def _validate_catalog_references(self) -> BehavioralRelationCatalogModel:
-        source_ids = [source.source_id for source in self.bibliography]
-        if len(source_ids) != len(set(source_ids)):
-            raise ValueError("behavioral-relation bibliography source ids must be unique")
+        source_ids = _bibliography_source_ids(self.bibliography)
         relation_ids = set(self.relations)
-        for key, relation in self.relations.items():
-            if key != relation.relation_id:
-                raise ValueError("behavioral-relation map keys must match embedded relation ids")
-            missing_sources = sorted(set(relation.source_refs) - set(source_ids))
-            if missing_sources:
-                raise ValueError(f"relation {key!r} references unknown bibliography sources: {missing_sources}")
-        surface_ids = [surface.surface_id for surface in self.claim_surfaces]
-        if len(surface_ids) != len(set(surface_ids)):
-            raise ValueError("behavioral claim-surface ids must be unique")
-        for surface in self.claim_surfaces:
-            missing_relations = sorted(
-                (set(surface.intended_relation_ids) | set(surface.prohibited_relation_ids)) - relation_ids
-            )
-            if missing_relations:
-                raise ValueError(
-                    f"claim surface {surface.surface_id!r} references unknown relations: {missing_relations}"
-                )
-        for key, example in self.worked_examples.items():
-            if key != example.example_id:
-                raise ValueError("worked-example map keys must match embedded example ids")
+        _validate_relation_references(self.relations, source_ids)
+        _validate_claim_surface_references(self.claim_surfaces, relation_ids)
+        _validate_worked_example_references(self.worked_examples)
         return self
+
+
+def _bibliography_source_ids(
+    bibliography: list[BehavioralBibliographySourceModel],
+) -> set[str]:
+    source_ids = [source.source_id for source in bibliography]
+    if len(source_ids) != len(set(source_ids)):
+        raise ValueError("behavioral-relation bibliography source ids must be unique")
+    return set(source_ids)
+
+
+def _validate_relation_references(
+    relations: dict[BehavioralRelationId, BehavioralRelationDefinitionModel],
+    source_ids: set[str],
+) -> None:
+    for key, relation in relations.items():
+        if key != relation.relation_id:
+            raise ValueError("behavioral-relation map keys must match embedded relation ids")
+        missing_sources = sorted(set(relation.source_refs) - source_ids)
+        if missing_sources:
+            raise ValueError(f"relation {key!r} references unknown bibliography sources: {missing_sources}")
+
+
+def _validate_claim_surface_references(
+    claim_surfaces: list[BehavioralClaimSurfaceModel],
+    relation_ids: set[BehavioralRelationId],
+) -> None:
+    surface_ids = [surface.surface_id for surface in claim_surfaces]
+    if len(surface_ids) != len(set(surface_ids)):
+        raise ValueError("behavioral claim-surface ids must be unique")
+    for surface in claim_surfaces:
+        missing_relations = sorted(
+            (set(surface.intended_relation_ids) | set(surface.prohibited_relation_ids)) - relation_ids
+        )
+        if missing_relations:
+            raise ValueError(f"claim surface {surface.surface_id!r} references unknown relations: {missing_relations}")
+
+
+def _validate_worked_example_references(
+    worked_examples: dict[BehavioralRelationId, BehavioralWorkedExampleModel],
+) -> None:
+    for key, example in worked_examples.items():
+        if key != example.example_id:
+            raise ValueError("worked-example map keys must match embedded example ids")
 
 
 def behavioral_relation_catalog_path() -> Path:
@@ -294,6 +319,46 @@ def load_behavioral_relation_catalog() -> BehavioralRelationCatalogModel:
     )
 
 
+def _resolve_binding_relation(
+    binding: BehavioralClaimBindingModel,
+    catalog: BehavioralRelationCatalogModel,
+) -> BehavioralRelationDefinitionModel:
+    if binding.taxonomy_id != catalog.taxonomy_id:
+        raise ValueError("behavioral claim binding taxonomy coordinates do not match the canonical catalog")
+    if binding.taxonomy_revision != catalog.taxonomy_revision:
+        raise ValueError("behavioral claim binding taxonomy coordinates do not match the canonical catalog")
+    relation = catalog.relations.get(binding.relation_id)
+    if relation is None:
+        raise ValueError(f"behavioral claim binding references unknown relation {binding.relation_id!r}")
+    return relation
+
+
+def _validate_binding_requirements(
+    binding: BehavioralClaimBindingModel,
+    relation: BehavioralRelationDefinitionModel,
+) -> None:
+    required_bindings = (
+        (
+            relation.projection_required,
+            binding.observation_projection_ref,
+            "an observation projection binding",
+        ),
+        (
+            relation.relation_parameter_profile_required,
+            binding.relation_parameter_profile_ref,
+            "a relation parameter profile binding",
+        ),
+        (
+            relation.relation_parameter_profile_required,
+            binding.assurance_axis,
+            "an assurance axis",
+        ),
+    )
+    for required, value, description in required_bindings:
+        if required and value is None:
+            raise ValueError(f"relation {binding.relation_id!r} requires {description}")
+
+
 def validate_behavioral_claim_binding(
     binding: BehavioralClaimBindingModel,
     catalog: BehavioralRelationCatalogModel | None = None,
@@ -301,17 +366,8 @@ def validate_behavioral_claim_binding(
     """Resolve a consumer binding against the canonical catalog."""
 
     catalog = load_behavioral_relation_catalog() if catalog is None else catalog
-    if binding.taxonomy_id != catalog.taxonomy_id or binding.taxonomy_revision != catalog.taxonomy_revision:
-        raise ValueError("behavioral claim binding taxonomy coordinates do not match the canonical catalog")
-    relation = catalog.relations.get(binding.relation_id)
-    if relation is None:
-        raise ValueError(f"behavioral claim binding references unknown relation {binding.relation_id!r}")
-    if relation.projection_required and binding.observation_projection_ref is None:
-        raise ValueError(f"relation {binding.relation_id!r} requires an observation projection binding")
-    if relation.relation_parameter_profile_required and binding.relation_parameter_profile_ref is None:
-        raise ValueError(f"relation {binding.relation_id!r} requires a relation parameter profile binding")
-    if relation.relation_parameter_profile_required and binding.assurance_axis is None:
-        raise ValueError(f"relation {binding.relation_id!r} requires an assurance axis")
+    relation = _resolve_binding_relation(binding, catalog)
+    _validate_binding_requirements(binding, relation)
     return binding
 
 

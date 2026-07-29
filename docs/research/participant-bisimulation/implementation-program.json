@@ -1,0 +1,461 @@
+{
+  "schema_version": "participant-bisimulation-program/v1",
+  "assessment_date": "2026-07-29",
+  "parent_issue": 811,
+  "milestone": "Participant Information-Flow & Behavioral Equivalence",
+  "deliverables": [
+    "docs/decisions/issue-811-participant-bisimulation-preflight.md",
+    "docs/decisions/adrs/adr-100-participant-crossing-bisimulation.md",
+    "docs/research/participant-bisimulation/index.md",
+    "docs/research/participant-bisimulation/current-state-assessment.md",
+    "docs/research/participant-bisimulation/candidate-comparison.md",
+    "docs/research/participant-bisimulation/theorem-selection.md",
+    "docs/research/participant-bisimulation/proof-tool-decision.md",
+    "docs/research/participant-bisimulation/worked-evidence.md",
+    "docs/research/participant-bisimulation/requirement-disposition.md",
+    "docs/research/participant-bisimulation/implementation-program.md",
+    "docs/research/participant-bisimulation/implementation-program.json",
+    "specs/formal/participant-semantics/participant-crossing-bisimulation.md",
+    "specs/formal/behavioral-relations/README.md",
+    "contracts/concept-authority/behavioral-relations-v1.json"
+  ],
+  "selected_candidate": "abstract-crossing-vs-concrete-crossing-kernel",
+  "candidate_surfaces": [
+    {
+      "id": "abstract-semantics-vs-complete-reference-runtime",
+      "left_carrier": "Complete SEM-230 participant-control state.",
+      "right_carrier": "Complete live reference-runtime operational state, including HTTP, persistence, scheduling, audit, backend, error, and retry behavior.",
+      "state_space": "Unbounded until every participant-relevant runtime and operational path is inventoried.",
+      "initial_relation": "Would require matching participant, audience, memory, exact cut, runtime snapshot, backend state, scheduler, and error surface.",
+      "transitions_and_enabledness": "Every semantic and runtime operation, persistence path, backend interaction, refusal, error, retry, and schedule must be included.",
+      "label_and_projection_boundary": "UUID, timestamp, HTTP, audit, persistence, and backend facts need a governed observer disposition and cannot be hidden by default.",
+      "exact_relation": "Divergence-preserving branching bisimulation only after the complete runtime carrier exists.",
+      "dimensions": "Concurrent, timed, scheduler-sensitive, persistence-sensitive, and backend-sensitive unless explicitly restricted.",
+      "tau_and_divergence": "Every live wait, retry, worker, persistence, and backend loop must be classified and matched.",
+      "disposition": "future",
+      "rationale": "A crossing-kernel model cannot support a claim about the complete runtime."
+    },
+    {
+      "id": "two-policy-configurations",
+      "left_carrier": "One closed revisioned policy realization over participant crossings.",
+      "right_carrier": "A second closed revisioned policy realization over the same crossing semantics.",
+      "state_space": "Policy, participant memory, supervisor visibility, release, exact cut, strategy, scheduler, environment, and order coordinates.",
+      "initial_relation": "Matching participant/audience state and declared policy-low-equivalent initial cuts.",
+      "transitions_and_enabledness": "Every decision, release, transformation, policy change, retry, observation, and memory effect in both configurations.",
+      "label_and_projection_boundary": "One revisioned participant/audience observation profile; matching projected histories alone is insufficient.",
+      "exact_relation": "Must be selected from branching, divergence-preserving, trace, or information-flow relations after the intended property is fixed.",
+      "dimensions": "Policy change, memory, strategy, scheduler, supervisor, order, time, probability, and concurrency remain profile coordinates.",
+      "tau_and_divergence": "Hidden policy or supervisor loops require explicit divergence treatment.",
+      "disposition": "future",
+      "rationale": "Issue 811 does not select and close a second policy carrier."
+    },
+    {
+      "id": "abstract-crossing-vs-concrete-crossing-kernel",
+      "left_carrier": "Complete reachable finite sem-230-participant-crossing-abstract@rev1 LTS.",
+      "right_carrier": "Independently derived complete reachable finite api-423-run-319-crossing-kernel@rev1 LTS.",
+      "state_space": "Closed singleton participant, audience, controller, episode, and request domains; two policy cuts; five input classes; finite decision, delivery, history, replay, and stage coordinates.",
+      "initial_relation": "The profile idle p0 states are related; the candidate witness family is induced by the concrete-to-abstract semantic abstraction.",
+      "transitions_and_enabledness": "Closed request, policy decision, transform/declassify, delivery/observation, cut-advance, and replay schemas plus finite concrete mediation stages.",
+      "label_and_projection_boundary": "participant-crossing-projection@rev1 with a closed visible alphabet and exactly five semantic internal classes mapped to checker action internal.",
+      "exact_relation": "divergence-preserving-branching-bisimulation",
+      "dimensions": "Finite possibilistic branching; sequential total order; untimed; non-probabilistic; no fairness; no partial order; fixed controller; finite visible exact-cut advance.",
+      "tau_and_divergence": "Concrete internal progress has a decreasing rank; structural deadlock, termination, and any infinite internal path remain explicit.",
+      "disposition": "selected",
+      "rationale": "It is the smallest existing surface with independent semantic, contract, runtime, and evidence authorities and a complete useful finite carrier."
+    },
+    {
+      "id": "two-backend-realizations",
+      "left_carrier": "Complete operational state of one controlled backend realization.",
+      "right_carrier": "Complete operational state of a second controlled backend realization.",
+      "state_space": "Backend-native state, declared/effective capabilities, participant history, environment, scheduler, resource, time, and failure coordinates.",
+      "initial_relation": "Matching governed profiles, provisioned state, capability support, environment, scheduler, and participant history.",
+      "transitions_and_enabledness": "Every backend-native input, output, refusal, failure, retry, wait, and externally visible effect.",
+      "label_and_projection_boundary": "Backend internals require governed hiding; declarations and probes do not expose a complete transition carrier.",
+      "exact_relation": "Could require I/O alternating, divergence-preserving branching, probabilistic, timed, or failure-aware semantics.",
+      "dimensions": "Concurrency, time, probability, resource scheduling, partial order, and input ownership cannot be assumed away.",
+      "tau_and_divergence": "Uncontrolled backend wait and retry loops cannot be declared tau without evidence.",
+      "disposition": "rejected-first-target",
+      "rationale": "Current backend evidence is bounded declaration and conformance evidence, not a complete carrier."
+    },
+    {
+      "id": "high-action-hidden-vs-purge-restriction",
+      "left_carrier": "A high-action system under one explicit hiding projection.",
+      "right_carrier": "Its policy-purged or restricted counterpart.",
+      "state_space": "High/low world state, participant memory, exact cut, release schedule, low strategy, scheduler, environment, and order.",
+      "initial_relation": "Matching policy-low-equivalent states, memory, cut, release, strategy, and environment.",
+      "transitions_and_enabledness": "Every high/low action, supervisor decision, declassification, purge, retry, policy change, and observation.",
+      "label_and_projection_boundary": "SEM-230 low observation; hidden high behavior still requires explicit divergence treatment.",
+      "exact_relation": "A named branching relation may support but cannot define a policy-noninterference lemma.",
+      "dimensions": "Adaptive strategy, scheduler, memory, release, order, time, probability, and concurrency must match SEM-230.",
+      "tau_and_divergence": "High-only divergence can leak progress or termination and must not be erased.",
+      "disposition": "future-supporting-lemma",
+      "rationale": "It needs a separate preservation theorem and must not conflate bisimulation with noninterference."
+    }
+  ],
+  "theorem_profile": {
+    "profile_id": "participant-crossing-dpbb-finite-v1",
+    "profile_revision": "rev1",
+    "relation_id": "divergence-preserving-branching-bisimulation",
+    "taxonomy_ref": "raes-behavioral-relations@rev6",
+    "projection_ref": "participant-crossing-projection@rev1",
+    "quantifier_scope": "complete-finite-carrier",
+    "finite_carrier_is_complete": true,
+    "depth_or_sample_bound": null,
+    "domains": {
+      "participant": ["participant-0"],
+      "audience": ["audience-0"],
+      "controller": ["controller-0"],
+      "episode": ["episode-0"],
+      "request_id": ["request-0"],
+      "policy_cut": ["p0", "p1"],
+      "input_class": ["plain", "transform", "declassify", "unsupported", "forbidden"],
+      "decision": ["none", "permit", "deny", "unsupported", "transform", "declassify"],
+      "replay": ["fresh", "same-cut", "later-cut"],
+      "delivery": ["none", "pending", "delivered", "withheld"]
+    },
+    "left_model": {
+      "model_id": "sem-230-participant-crossing-abstract",
+      "revision": "rev1",
+      "authority": "specs/formal/participant-semantics/participant-crossing-bisimulation.md#abstract-states",
+      "transition_source": "SEM-230 abstract crossing transition schemas",
+      "independent_construction": true,
+      "state_coordinates": ["phase", "policy_cut", "pending_request", "decision", "delivery", "last_result"],
+      "initial_state": "(idle,p0,none,none,none,none)",
+      "complete_reachable_fixed_point_required": true,
+      "source_and_generated_digest_required": true
+    },
+    "right_model": {
+      "model_id": "api-423-run-319-crossing-kernel",
+      "revision": "rev1",
+      "authority": "specs/formal/participant-semantics/participant-crossing-bisimulation.md#concrete-states",
+      "transition_source": "independently reviewed API-423/RUN-319 crossing-stage transition schemas",
+      "independent_construction": true,
+      "state_coordinates": ["phase", "policy_cut", "intent", "gate", "capability", "decision", "delivery", "history_head", "last_result"],
+      "initial_state": "(idle,p0,none,unresolved,unresolved,none,none,h0,none)",
+      "complete_reachable_fixed_point_required": true,
+      "source_and_generated_digest_required": true
+    },
+    "initial_relation": [
+      {
+        "left_state": "(idle,p0,none,none,none,none)",
+        "right_state": "(idle,p0,none,unresolved,unresolved,none,none,h0,none)"
+      }
+    ],
+    "witness_family": "All reachable concrete states paired with their semantic abstraction, plus the converse; membership must be validated as the greatest fixed point rather than assumed.",
+    "state_runtime_mapping": {
+      "authority": "API-423 crossing contracts and RUN-319 reference crossing mediation",
+      "claim_axis": "runtime-realization",
+      "separate_from_formal_equivalence": true,
+      "coordinates": [
+        "ParticipantCrossingIntent",
+        "authenticated caller/target/participant/controller/audience binding",
+        "exact policy resolution and independent gate results",
+        "API-407 effective capability support",
+        "API-423 predecessor/order/context and typed occurrences",
+        "RuntimeSnapshot crossing/control/behavior history heads",
+        "expected-head atomic commit and refusal side effects",
+        "same-cut idempotency and later-cut replay rejection",
+        "safe UUID/timestamp/audit-only projection"
+      ],
+      "evidence_required": [
+        "differential boundary tests",
+        "mapping/profile/source digests",
+        "typed state and transition coverage",
+        "negative gate, replay, persistence, and projection cases",
+        "separate runtime-realization claim binding"
+      ]
+    },
+    "dimensions": {
+      "nondeterminism": "finite-possibilistic-branching",
+      "concurrency": "sequential-per-participant-total-order",
+      "probability": "excluded",
+      "time": "untimed",
+      "partial_order": "excluded",
+      "fairness": "none-assumed",
+      "controller_handoff": "excluded-fixed-controller",
+      "policy_change": "finite-visible-exact-cut-advance"
+    },
+    "label_partition": {
+      "closed": true,
+      "visible": [
+        "crossing.request",
+        "crossing.decision.permit",
+        "crossing.decision.deny",
+        "crossing.decision.unsupported",
+        "crossing.transform",
+        "crossing.declassify",
+        "crossing.delivery",
+        "crossing.observation",
+        "crossing.replay.reject",
+        "policy.cut.advance"
+      ],
+      "tau": [
+        "internal.validate",
+        "internal.resolve-policy-cut",
+        "internal.resolve-capability",
+        "internal.prepare-record",
+        "internal.atomic-commit"
+      ],
+      "checker_tau_action": "internal",
+      "redacted_occurrence_is_not_tau": true,
+      "excluded": [
+        "wall-clock timestamps",
+        "host paths",
+        "raw UUID identity",
+        "audit-only content",
+        "backend-native internals"
+      ]
+    },
+    "transition_semantics": {
+      "enabledness": "Exactly the least reachable closure of the normative abstract and concrete transition schemas over the complete finite domains.",
+      "branching": "Visible decision, delivery, observation, replay, and cut choices are matched while intermediate tau states remain related to the same abstract branching point.",
+      "deadlock": "structural-and-observable",
+      "termination": "explicit-success-or-refusal-terminal-state",
+      "divergence": "explicit-infinite-tau-path-must-be-related",
+      "stuttering": "finite-tau-stuttering-only",
+      "progress": "No progress property beyond the finite internal rank and explicit terminal states.",
+      "fairness": "No fairness assumption.",
+      "same_cut_replay": "visible-request-with-idempotent-matched-result",
+      "later_cut_replay": "visible-rejection",
+      "declassification": "visible governed decision and crossing.declassify label",
+      "transformation": "visible governed decision and crossing.transform label",
+      "policy_change": "visible p0-to-p1 policy.cut.advance when no request is in flight",
+      "controller_handoff": "outside profile because controller domain is singleton"
+    },
+    "preservation": {
+      "preserves": [
+        "visible branching structure",
+        "enabled visible choices",
+        "finite governed tau stuttering",
+        "visible decision/change/delivery/observation order",
+        "explicit success and refusal termination",
+        "structural deadlock",
+        "explicit internal divergence"
+      ],
+      "separate_theorems_required": [
+        "policy-noninterference",
+        "participant-predicate-opacity",
+        "timed behavior",
+        "probabilistic behavior",
+        "true concurrency and partial order",
+        "controller handoff"
+      ],
+      "nonclaims": [
+        "No whole-runtime or backend equivalence.",
+        "No live-runtime realization until differential mapping evidence exists.",
+        "No result outside the exact complete finite carrier."
+      ]
+    }
+  },
+  "proof_tool_decision": {
+    "selected_tool": "mcrl2",
+    "selected_version": "202607.0",
+    "assurance_axis": "model-check",
+    "positive_exit_is_certificate": false,
+    "fixed_command": [
+      "ltscompare",
+      "--equivalence=dpbranching-bisim",
+      "--tau=internal",
+      "abstract.aut",
+      "concrete.aut"
+    ],
+    "independent_input_generation": true,
+    "no_shell": true,
+    "verification_time_network": false,
+    "tool_archive_checksum_or_container_digest_required": true,
+    "complete_domain_counts_required": true,
+    "drift_gate": "Block when normative semantics, abstract model, concrete model, runtime mapping, profile, projection, source, or generated digests disagree.",
+    "ci_gate": "Run a fixed allowlisted offline command with bounded CPU, memory, time, output, safe repository-relative paths, all mutations, and canonical bounded artifact publication.",
+    "independent_reproduction": "A clean reviewer recomputes tool, source, model, profile, count, mutation, result, and artifact identities without reusing the producer result directory.",
+    "safe_artifacts": [
+      "tool version and verified archive checksum or immutable container digest",
+      "canonical input, source, profile, projection, mapping, result, mutation, and bundle digests",
+      "complete finite domain, state, and transition counts",
+      "bounded safe result or counterexample summary",
+      "claim binding, limitations, explicit nonclaims, and reproduction decision"
+    ],
+    "evaluated_tools": [
+      {
+        "id": "mcrl2",
+        "exact_relation_fit": "Direct ltscompare support for divergence-preserving branching bisimulation and explicit action hiding.",
+        "counterexample_behavior": "Supported relation failures can emit diagnostic formulas; divergence-only failures require an independent negative check if the exact mode emits no formula.",
+        "ci_viability": "Deterministic noninteractive CLI and explicit LTS formats fit fixed offline resource-bounded CI.",
+        "reproduction": "Pin 202607.0 plus verified archive checksum or immutable container digest, inputs, commands, counts, and digests.",
+        "disposition": "selected"
+      },
+      {
+        "id": "tlc",
+        "exact_relation_fit": "Finite temporal property checking is useful but property agreement is not a direct bisimulation decision without a relational product and checked invariant.",
+        "counterexample_behavior": "Counterexample traces support deadlock, replay, atomicity, and progress checks.",
+        "ci_viability": "Mature deterministic finite-state command line with explicit model configuration.",
+        "reproduction": "Pinned tool/model/configuration and state statistics are independently replayable.",
+        "disposition": "auxiliary-properties-only"
+      },
+      {
+        "id": "isabelle-hol",
+        "exact_relation_fit": "Kernel-checked coinductive greatest-fixed-point definitions can support a parameterized or unbounded relation theorem.",
+        "counterexample_behavior": "Failed proof obligations localize missing cases but are not primarily a counterexample generator.",
+        "ci_viability": "Reproducible but materially higher formalization and maintenance cost for the first finite carrier.",
+        "reproduction": "Pinned Isabelle session and checked theory artifacts support independent replay.",
+        "disposition": "future-parameterized-proof"
+      }
+    ]
+  },
+  "worked_evidence": [
+    {
+      "id": "positive-relation-witness",
+      "kind": "design-witness",
+      "result_claimed": false,
+      "relation_shape": "Pair each abstract offered/decided/delivery state with the finite sequence of related concrete validation/resolution/capability/record/commit states around the same visible request, decision, delivery, and observation.",
+      "evidence_boundary": "One design-scale permit path demonstrates the candidate witness family but neither enumerates the carrier nor validates the greatest fixed point.",
+      "nonclaim": "No positive equivalence result."
+    }
+  ],
+  "negative_mutations": [
+    {
+      "id": "visible-denial-hidden",
+      "mutation": "Rename concrete crossing.decision.deny to internal.",
+      "expected_relation_result": "not-equivalent",
+      "safe_counterexample_obligation": "Publish only bounded state ids, label class, profile/tool/input digests, and a sanitized diagnostic formula when supported."
+    },
+    {
+      "id": "hidden-divergence-added",
+      "mutation": "Add an internal self-loop at concrete policy resolution while the related abstract state remains nondivergent.",
+      "expected_relation_result": "not-equivalent",
+      "safe_counterexample_obligation": "Bind an independently checked explicit-divergence failure when no exact diagnostic formula is emitted."
+    },
+    {
+      "id": "delivery-branch-removed",
+      "mutation": "Remove the concrete crossing.delivery branch after a permitted transformation.",
+      "expected_relation_result": "not-equivalent",
+      "safe_counterexample_obligation": "Record the unmatched visible branch without raw payload or host details."
+    },
+    {
+      "id": "later-cut-replay-permitted",
+      "mutation": "Reuse the p0 result after policy.cut.advance instead of emitting crossing.replay.reject.",
+      "expected_relation_result": "not-equivalent",
+      "safe_counterexample_obligation": "Record only synthetic request/cut ids, visible label sequence, and bound digests."
+    }
+  ],
+  "requirement_dispositions": [
+    {
+      "uid": "SEM-232",
+      "ground_control_id": "860b0b1e-55cc-42e6-9da8-b7eeeab7172c",
+      "status": "DRAFT",
+      "disposition": "new",
+      "scope": "Exact participant-crossing model pair, closed projection and relation profile, complete carrier, machine-check result, counterexamples, drift evidence, and independent reproduction.",
+      "rationale": "No existing authority owns a proof-bearing bisimulation result or its exact model and evidence boundary."
+    },
+    {
+      "uid": "SEM-230",
+      "status": "ACTIVE",
+      "disposition": "reuse",
+      "scope": "Participant/audience projection, exact-cut policy, labels, memory, order, declassification, and policy-noninterference boundary.",
+      "rationale": "The abstract crossing model reuses SEM-230 without claiming that bisimulation proves noninterference."
+    },
+    {
+      "uid": "SEM-231",
+      "status": "ACTIVE",
+      "disposition": "coordinate",
+      "scope": "Revisioned observer-relative relation profiles and opacity claim separation.",
+      "rationale": "The theorem profile must compose the shared profile seam and must not create a bisimulation-only registry or imply opacity."
+    },
+    {
+      "uid": "ASR-535",
+      "status": "ACTIVE",
+      "disposition": "reuse",
+      "scope": "Relation claim bindings, bounded evidence, model-check/proof classification, counterexamples, mapping, and conformance separation.",
+      "rationale": "ASR-535 supplies the assurance discipline but no positive bisimulation result."
+    },
+    {
+      "uid": "API-423",
+      "status": "ACTIVE",
+      "disposition": "reuse",
+      "scope": "Portable crossing requests, decisions, transformations, delivery, observation, audit, order, and context.",
+      "rationale": "The concrete formal model maps existing crossing carriers; contract validity is not equivalence."
+    },
+    {
+      "uid": "RUN-319",
+      "status": "ACTIVE",
+      "disposition": "reuse",
+      "scope": "Reference mediation, authenticated binding, gates, exact cuts, idempotency, replay, histories, and atomic persistence.",
+      "rationale": "Live runtime realization is a separate mapping claim and requires no second policy engine or store."
+    }
+  ],
+  "implementation_issues": [
+    {
+      "key": "formal-models",
+      "issue_number": 971,
+      "milestone": "Participant Information-Flow & Behavioral Equivalence",
+      "requirements": ["SEM-232", "SEM-230", "API-423", "RUN-319"],
+      "dependencies": [],
+      "bounded_outcome": "Complete independently derived abstract and concrete finite LTSs plus deterministic exporters, counts, digests, and drift checks.",
+      "negative_cases": ["incomplete carrier", "depth/sample truncation", "overlapping labels", "shared transition table", "unsafe model path", "digest drift"],
+      "evidence_required": ["revision-pinned sources", "canonical .aut artifacts", "complete counts", "independent construction review", "valid and invalid fixtures"],
+      "explicit_nonclaims": ["No bisimulation result, runtime realization, backend conformance, noninterference, or opacity."]
+    },
+    {
+      "key": "runtime-mapping",
+      "issue_number": 972,
+      "milestone": "Participant Information-Flow & Behavioral Equivalence",
+      "requirements": ["SEM-232", "SEM-230", "API-423", "RUN-319", "ASR-535"],
+      "dependencies": ["formal-models"],
+      "bounded_outcome": "Differential realization mapping from the live crossing boundary to the concrete formal model.",
+      "negative_cases": ["identity mismatch", "unresolved gate", "unsupported capability", "order/context mismatch", "partial persistence", "later-cut replay", "unjustified projection"],
+      "evidence_required": ["differential tests", "mapping matrix", "mapping/profile/source digests", "safe diagnostics", "runtime-realization claim binding"],
+      "explicit_nonclaims": ["Mapping is not the formal equivalence result or backend conformance."]
+    },
+    {
+      "key": "counterexample-corpus",
+      "issue_number": 973,
+      "milestone": "Participant Information-Flow & Behavioral Equivalence",
+      "requirements": ["SEM-232", "ASR-535", "SEM-230"],
+      "dependencies": ["formal-models", "runtime-mapping"],
+      "bounded_outcome": "Deterministic mutation and safe counterexample corpus for every required relation-breaking shape.",
+      "negative_cases": ["visible denial hidden", "hidden divergence", "delivery branch removed", "later-cut replay accepted", "deadlock/termination hidden", "unsafe diagnostic leakage"],
+      "evidence_required": ["independently reviewed mutations", "expected negative results", "safe formulas where supported", "independent divergence check", "canonical artifact digests"],
+      "explicit_nonclaims": ["Counterexamples do not establish the positive relation."]
+    },
+    {
+      "key": "finite-equivalence-check",
+      "issue_number": 974,
+      "milestone": "Participant Information-Flow & Behavioral Equivalence",
+      "requirements": ["SEM-232", "ASR-535", "SEM-230", "API-423", "RUN-319"],
+      "dependencies": ["formal-models", "runtime-mapping", "counterexample-corpus"],
+      "bounded_outcome": "Pinned mCRL2 divergence-preserving branching equivalence decision over the complete selected carrier.",
+      "negative_cases": ["carrier truncation", "floating tool pin", "shared model authority", "tau drift", "exit-as-certificate", "accepted mutation"],
+      "evidence_required": ["mCRL2 202607.0 provenance", "verified archive/container digest", "fixed offline command", "complete counts", "result or safe counterexample", "all mutation outcomes", "model-check claim binding"],
+      "explicit_nonclaims": ["No unbounded proof, runtime realization, backend conformance, noninterference, or opacity."]
+    },
+    {
+      "key": "independent-reproduction",
+      "issue_number": 975,
+      "milestone": "Participant Information-Flow & Behavioral Equivalence",
+      "requirements": ["SEM-232", "ASR-535"],
+      "dependencies": ["counterexample-corpus", "finite-equivalence-check"],
+      "bounded_outcome": "Clean independent reproduction of every input, tool, count, mutation, result, and artifact identity.",
+      "negative_cases": ["digest mismatch", "tool identity mismatch", "count mismatch", "mutation mismatch", "network/environment dependence", "missing limitation"],
+      "evidence_required": ["independent identity", "clean command/environment", "recomputed digests", "recomputed counts and mutations", "reproduction decision"],
+      "explicit_nonclaims": ["Reproduction does not widen the theorem or establish runtime/backend/information-flow claims."]
+    },
+    {
+      "key": "scientific-documentation",
+      "issue_number": 976,
+      "milestone": "Participant Information-Flow & Behavioral Equivalence",
+      "requirements": ["SEM-232", "ASR-535"],
+      "dependencies": ["finite-equivalence-check", "independent-reproduction"],
+      "bounded_outcome": "Scientific-completeness, assurance, lineage, and public documentation for the exact reproduced result.",
+      "negative_cases": ["publication before reproduction", "model check called unbounded proof", "whole-runtime promotion", "noninterference/opacity inference", "dimension promotion", "missing digest or limitation"],
+      "evidence_required": ["exact reproduced result", "scientific-completeness update", "assurance-fulfillment update", "lineage and traceability", "documentation drift checks"],
+      "explicit_nonclaims": ["No claim outside participant-crossing-dpbb-finite-v1 or its independently supported axes."],
+      "completion_gate": "independently reproduced positive equivalence result"
+    }
+  ],
+  "claim_boundaries": {
+    "formal_equivalence": "not-established-by-issue-811",
+    "runtime_realization": "separate-downstream-claim",
+    "backend_conformance": "separate-downstream-claim",
+    "policy_noninterference": "separate-preservation-theorem-required",
+    "predicate_opacity": "separate-preservation-theorem-required"
+  }
+}
