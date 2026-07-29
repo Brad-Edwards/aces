@@ -94,7 +94,87 @@ class RelationAssuranceModel(ContractModel):
     implementation_status: Literal["implemented", "partial", "not-implemented", "not-applicable"]
     test_status: Literal["tested", "bounded", "not-tested", "not-applicable"]
     proof_status: Literal["proved", "model-checked", "deliberately-unproved", "future", "not-applicable"]
+    checker_status: Literal["implemented", "partial", "not-implemented", "not-applicable"] = "not-applicable"
+    model_check_status: Literal["model-checked", "not-model-checked", "future", "not-applicable"] = "not-applicable"
+    runtime_enforcement_status: Literal["enforced", "partial", "not-enforced", "future", "not-applicable"] = (
+        "not-applicable"
+    )
+    backend_declaration_status: Literal["declared", "not-declared", "future", "not-applicable"] = "not-applicable"
+    backend_realization_status: Literal["realized", "partial", "not-realized", "future", "not-applicable"] = (
+        "not-applicable"
+    )
+    backend_conformance_status: Literal["conformant", "bounded", "not-tested", "future", "not-applicable"] = (
+        "not-applicable"
+    )
     evidence_refs: list[NonEmptyString] = Field(default_factory=list)
+
+    def _validate_implementation_aggregate(self) -> None:
+        implementation_axes = (
+            self.checker_status,
+            self.runtime_enforcement_status,
+            self.backend_realization_status,
+        )
+        explicit_implementation_axes = [status for status in implementation_axes if status != "not-applicable"]
+        positive_implementation_states = {
+            "implemented",
+            "partial",
+            "enforced",
+            "realized",
+        }
+        has_positive_implementation = any(
+            status in positive_implementation_states for status in explicit_implementation_axes
+        )
+        if explicit_implementation_axes:
+            if has_positive_implementation and self.implementation_status not in {"implemented", "partial"}:
+                raise ValueError(
+                    "relation assurance implementation aggregate contradicts a positive checker, runtime, "
+                    "or backend-realization axis"
+                )
+            if not has_positive_implementation and self.implementation_status != "not-implemented":
+                raise ValueError(
+                    "relation assurance implementation aggregate must be not-implemented when every explicit "
+                    "checker, runtime, and backend-realization axis is negative"
+                )
+
+    def _validate_model_check_aggregate(self) -> None:
+        if self.proof_status == "model-checked" and self.model_check_status != "model-checked":
+            raise ValueError(
+                "relation assurance proof aggregate reports model checking but the model-check axis does not"
+            )
+        if self.model_check_status == "model-checked" and self.proof_status not in {"model-checked", "proved"}:
+            raise ValueError(
+                "relation assurance model-check axis is positive but the legacy proof aggregate does not record it"
+            )
+
+    def _validate_backend_conformance(self) -> None:
+        if self.backend_conformance_status in {"conformant", "bounded"} and self.backend_realization_status not in {
+            "realized",
+            "partial",
+        }:
+            raise ValueError("relation assurance backend conformance requires a realized or partially realized backend")
+
+    def _has_positive_axis(self) -> bool:
+        positive_axis_states = (
+            self.implementation_status in {"implemented", "partial"},
+            self.test_status in {"tested", "bounded"},
+            self.proof_status in {"proved", "model-checked"},
+            self.checker_status in {"implemented", "partial"},
+            self.model_check_status == "model-checked",
+            self.runtime_enforcement_status in {"enforced", "partial"},
+            self.backend_declaration_status == "declared",
+            self.backend_realization_status in {"realized", "partial"},
+            self.backend_conformance_status in {"conformant", "bounded"},
+        )
+        return any(positive_axis_states)
+
+    @model_validator(mode="after")
+    def _validate_axis_consistency(self) -> RelationAssuranceModel:
+        self._validate_implementation_aggregate()
+        self._validate_model_check_aggregate()
+        self._validate_backend_conformance()
+        if self.definition_status == "future" and self._has_positive_axis():
+            raise ValueError("relation assurance cannot report positive axes for a future definition")
+        return self
 
 
 class BehavioralRelationDefinitionModel(ContractModel):
@@ -108,6 +188,7 @@ class BehavioralRelationDefinitionModel(ContractModel):
     transition_signature: TransitionSignatureModel
     observation_projection: ObservationProjectionModel
     projection_required: bool
+    relation_parameter_profile_required: bool = False
     direction: Literal["unary", "left-to-right", "right-to-left", "symmetric"]
     quantification: RelationQuantificationModel
     dimensions: RelationDimensionsModel
@@ -227,6 +308,10 @@ def validate_behavioral_claim_binding(
         raise ValueError(f"behavioral claim binding references unknown relation {binding.relation_id!r}")
     if relation.projection_required and binding.observation_projection_ref is None:
         raise ValueError(f"relation {binding.relation_id!r} requires an observation projection binding")
+    if relation.relation_parameter_profile_required and binding.relation_parameter_profile_ref is None:
+        raise ValueError(f"relation {binding.relation_id!r} requires a relation parameter profile binding")
+    if relation.relation_parameter_profile_required and binding.assurance_axis is None:
+        raise ValueError(f"relation {binding.relation_id!r} requires an assurance axis")
     return binding
 
 

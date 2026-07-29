@@ -1,7 +1,7 @@
 {
   "schema_version": "behavioral-relations/v1",
   "taxonomy_id": "raes-behavioral-relations",
-  "taxonomy_revision": "rev4",
+  "taxonomy_revision": "rev5",
   "bibliography": [
     {
       "source_id": "park-1981",
@@ -259,6 +259,198 @@
       "immutable_locator": {
         "kind": "doi",
         "value": "10.1093/bjps/axi147"
+      }
+    },
+    {
+      "source_id": "bryans-koutny-mazare-ryan-2008",
+      "title": "Opacity Generalised to Transition Systems",
+      "authors": [
+        "Jeremy W. Bryans",
+        "Maciej Koutny",
+        "Laurent Mazaré",
+        "Peter Y. A. Ryan"
+      ],
+      "publication_year": 2008,
+      "publication_venue": "International Journal of Information Security 7(6), 421-435",
+      "edition_or_version": "version of record",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.1007/s10207-008-0058-x"
+      }
+    },
+    {
+      "source_id": "schoepe-sabelfeld-2015",
+      "title": "Understanding and Enforcing Opacity",
+      "authors": [
+        "Daniel Schoepe",
+        "Andrei Sabelfeld"
+      ],
+      "publication_year": 2015,
+      "publication_venue": "2015 IEEE Computer Security Foundations Symposium, 539-553",
+      "edition_or_version": "version of record",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.1109/CSF.2015.41"
+      }
+    },
+    {
+      "source_id": "lin-2011",
+      "title": "Opacity of Discrete Event Systems and its Applications",
+      "authors": [
+        "Feng Lin"
+      ],
+      "publication_year": 2011,
+      "publication_venue": "Automatica 47(3), 496-503",
+      "edition_or_version": "version of record",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.1016/j.automatica.2011.01.002"
+      }
+    },
+    {
+      "source_id": "saboori-hadjicostis-2012",
+      "title": "Verification of Infinite-Step Opacity and Complexity Considerations",
+      "authors": [
+        "Anooshiravan Saboori",
+        "Christoforos N. Hadjicostis"
+      ],
+      "publication_year": 2012,
+      "publication_venue": "IEEE Transactions on Automatic Control 57(5), 1265-1269",
+      "edition_or_version": "version of record",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.1109/TAC.2011.2173774"
+      }
+    },
+    {
+      "source_id": "badouel-bednarczyk-borzyszkowski-caillaud-darondeau-2007",
+      "title": "Concurrent Secrets",
+      "authors": [
+        "Éric Badouel",
+        "Marek A. Bednarczyk",
+        "Andrzej M. Borzyszkowski",
+        "Benoît Caillaud",
+        "Philippe Darondeau"
+      ],
+      "publication_year": 2007,
+      "publication_venue": "Discrete Event Dynamic Systems 17(4), 425-446",
+      "edition_or_version": "version of record",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.1007/s10626-007-0020-5"
+      }
+    },
+    {
+      "source_id": "yin-lafortune-2016",
+      "title": "A Uniform Approach for Synthesizing Property-Enforcing Supervisors for Partially-Observed Discrete-Event Systems",
+      "authors": [
+        "Xiang Yin",
+        "Stéphane Lafortune"
+      ],
+      "publication_year": 2016,
+      "publication_venue": "IEEE Transactions on Automatic Control 61(8), 2140-2154",
+      "edition_or_version": "version of record",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.1109/TAC.2015.2484359"
+      }
+    },
+    {
+      "source_id": "xie-yin-li-2022",
+      "title": "Opacity Enforcing Supervisory Control Using Nondeterministic Supervisors",
+      "authors": [
+        "Yifan Xie",
+        "Xiang Yin",
+        "Shaoyuan Li"
+      ],
+      "publication_year": 2022,
+      "publication_venue": "IEEE Transactions on Automatic Control 67(12), 6567-6582",
+      "edition_or_version": "version of record",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.1109/TAC.2021.3131125"
+      }
+    },
+    {
+      "source_id": "cui-ma-giua-yin-2026",
+      "title": "Opacity Enforcing Supervisory Control with a Priori Unknown Supervisors",
+      "authors": [
+        "Juntang Cui",
+        "Ziyue Ma",
+        "Alessandro Giua",
+        "Xiang Yin"
+      ],
+      "publication_year": 2026,
+      "publication_venue": "arXiv preprint arXiv:2604.04070",
+      "edition_or_version": "preprint version 1",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.48550/arXiv.2604.04070"
+      }
+    },
+    {
+      "source_id": "partovi-jung-hai-2020",
+      "title": "Opacity of Discrete Event Systems with Active Intruder",
+      "authors": [
+        "Alireza Partovi",
+        "Taeho Jung",
+        "Lin Hai"
+      ],
+      "publication_year": 2020,
+      "publication_venue": "arXiv preprint arXiv:2007.14960",
+      "edition_or_version": "preprint version 1",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.48550/arXiv.2007.14960"
+      }
+    },
+    {
+      "source_id": "berard-mullins-sassolas-2015",
+      "title": "Quantifying Opacity",
+      "authors": [
+        "Béatrice Bérard",
+        "John Mullins",
+        "Mathieu Sassolas"
+      ],
+      "publication_year": 2015,
+      "publication_venue": "Mathematical Structures in Computer Science 25(2), 361-403",
+      "edition_or_version": "version of record",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.1017/S0960129513000637"
+      }
+    },
+    {
+      "source_id": "andre-lime-marinho-sun-2022",
+      "title": "Guaranteeing Timed Opacity using Parametric Timed Model Checking",
+      "authors": [
+        "Étienne André",
+        "Didier Lime",
+        "Dylan Marinho",
+        "Jun Sun"
+      ],
+      "publication_year": 2022,
+      "publication_venue": "ACM Transactions on Software Engineering and Methodology 31(4), 64:1-64:36",
+      "edition_or_version": "version of record",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.1145/3502851"
+      }
+    },
+    {
+      "source_id": "broberg-van-delft-sands-2015",
+      "title": "The Anatomy and Facets of Dynamic Policies",
+      "authors": [
+        "Niklas Broberg",
+        "Bart van Delft",
+        "David Sands"
+      ],
+      "publication_year": 2015,
+      "publication_venue": "2015 IEEE Computer Security Foundations Symposium, 122-137",
+      "edition_or_version": "version of record",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.1109/CSF.2015.16"
       }
     }
   ],
@@ -1611,6 +1803,116 @@
         "van-glabbeek-1990"
       ]
     },
+    "participant-predicate-opacity": {
+      "relation_id": "participant-predicate-opacity",
+      "display_name": "Participant-relative predicate opacity",
+      "relation_class": "epistemic",
+      "definition": "For every actual possible point at which the selected secret predicate is true, the named participant, audience, or coalition information cell induced by equal declared initial information and accumulated observations contains at least one possible point at which the predicate is false. The baseline is one-sided and possibilistic.",
+      "left_carrier": "One declared possible-point system whose points compose model or supervisor realization, run, evaluation cut, observer-local state and retained memory, exact-cut policy realization, and scheduler, environment, and order context.",
+      "right_carrier": "Not applicable; opacity is a unary property of the declared possible-point system and relation-parameter profile. A nonsecret point is a witness inside the same carrier, not a second system.",
+      "initial_states": "The profile fixes observer or coalition initial information, participant and audience identity, retained memory, policy and supervisor visibility, environment and scheduler classes, and the initial cut or horizon.",
+      "transition_signature": {
+        "applicability": "applicable",
+        "labels": "SEM-230 and participant-runtime occurrences, including proposal and control decisions, admission, attempt and result, disclosure and withholding, transformation, delivery and observation, policy or supervisor change, evidence, and audit when retained by the selected observation profile.",
+        "transition_relation": "Valid runs over existing participant world, view, local-history, archival-evidence, controller, authority, marking, exact-cut policy, crossing, delivery, observation, scheduler, environment, and order carriers.",
+        "observable_actions": "Exactly the content, occurrence, omission, decision, failure, delivery, retry, order, timing, policy-change, retrieval, evidence, or audit coordinates retained for the named observer by the revisioned relation-parameter profile.",
+        "hidden_actions": "Only occurrences removed by that observer-, policy-, supervisor-visibility-, cut-, memory-, time-, and order-relative observation function; hidden implementation does not imply hidden behavior.",
+        "stuttering_actions": "The untimed baseline removes finite unobserved stuttering and is progress- and termination-insensitive. Omission is observable only when the profile supplies an opportunity, deadline, acknowledgement, progress, or clock model."
+      },
+      "observation_projection": {
+        "applicability": "required",
+        "subject": "Named participant, audience, or explicit coalition",
+        "policy_ref": "SEM-231 participant-predicate-opacity observation profile",
+        "policy_revision": "The revisioned relation-parameter profile bound by the claim",
+        "redaction_scope": "Projection, redaction, declassification, decision disclosure, concealment, revocation, loss, and prior knowledge remain distinct; the profile states which resulting facts are observations.",
+        "order_treatment": "The profile selects total, participant-local, causal partial, simultaneous, or backend-serialized order. One linearization cannot establish a partial-order claim.",
+        "simultaneity_treatment": "Only declared simultaneity and visible causal frontiers are retained; timestamp equality is not simultaneity."
+      },
+      "projection_required": true,
+      "relation_parameter_profile_required": true,
+      "direction": "unary",
+      "quantification": {
+        "states": "For every actual point in the declared carrier at which the revisioned secret predicate is true, there exists a point in the same observer information cell at which it is false.",
+        "traces": "Over every run and cut admitted by the selected current-, initial-, K-step, infinite-step, language, or other declared horizon profile.",
+        "schedulers": "Over the fixed declared scheduler class and admitted order contexts; scheduler-sensitive variants state their quantifier order.",
+        "strategies": "Passive profiles quantify over observations only. Active profiles quantify universally over the declared allowed adaptive participant strategies, with actual and witness runs possible under the same strategy.",
+        "environments": "Over the fixed declared model and environment class, including only supervisor or policy realizations admitted by the selected visibility posture.",
+        "observations": "Equality of declared initial information and accumulated observer-local observations, including memory across retries, replay, episodes, policy revisions, controller handoffs, and coalition sharing when selected."
+      },
+      "dimensions": {
+        "nondeterminism": {
+          "status": "supported",
+          "treatment": "The baseline is possibilistic over the declared support. Nondeterministic or randomized supervision changes possible points but is not itself opacity evidence."
+        },
+        "concurrency": {
+          "status": "parameterized",
+          "treatment": "The profile fixes interleaving, step, simultaneous, causal, or other declared concurrent semantics and observer-visible order."
+        },
+        "probability": {
+          "status": "outside-scope",
+          "treatment": "The baseline compares possibility support, not probability mass, posterior belief, entropy, leakage probability, or differential privacy. Quantitative opacity requires a separately governed relation."
+        },
+        "time": {
+          "status": "parameterized",
+          "treatment": "The baseline is untimed and progress-insensitive. A timed profile requires a governed clock, duration and progress observation model and separately scoped evidence."
+        },
+        "partial_order": {
+          "status": "parameterized",
+          "treatment": "A partial-order claim compares declared visible causal frontiers and admitted schedules; a witness from one convenient linearization is insufficient."
+        }
+      },
+      "preservation": {
+        "property": "The named observer never knows that the selected one-sided secret predicate is true at a protected cut because every actual secret information cell retains a possible nonsecret point.",
+        "proof_obligation": "For every quantified actual secret point and, for active profiles, every allowed adaptive strategy, exhibit or prove the existence of a nonsecret point with equal declared initial information and accumulated observation under the same profile, strategy, release schedule, supervisor visibility, memory, scheduler, environment, time, and order assumptions."
+      },
+      "bounded_evidence": [
+        "The SEM-231 formal specification gives four finite counterexamples covering an incomplete equal-history witness, supervisor-decision leakage, opacity without noninterference, and declassification-induced knowledge change.",
+        "implementations/python/tests/test_sem_231_participant_predicate_opacity.py validates the catalog and shared claim-binding constraints; it does not decide opacity."
+      ],
+      "explicit_non_claims": [
+        "Relation definition, catalog validation, claim-profile binding, and worked examples do not establish opacity of RAES, RUN-319, or any backend.",
+        "No checker, finite-state model check, mathematical proof, runtime enforcement, supervisor synthesis, backend declaration, backend realization, or backend conformance is delivered by taxonomy revision rev5.",
+        "Opacity of one predicate does not imply SEM-230 policy noninterference, projected-history equivalence, epistemic indistinguishability of two selected worlds, trace inclusion or equivalence, simulation, refinement, or strong or weak bisimulation.",
+        "The possibilistic baseline makes no posterior-risk, entropy, probabilistic, differential-privacy, timed, progress-sensitive, or universal partial-order claim."
+      ],
+      "incompatible_claim_surfaces": [
+        "Unrevisioned or untyped secret, observer, supervisor-visibility, memory, strategy, time, order, or release coordinates",
+        "Single equal-history pairs, finite probes, randomized behavior, runtime filters, or backend declarations promoted to universal opacity",
+        "Claims that erase prior knowledge through concealment, revocation, reset, rollback, or supersession"
+      ],
+      "assurance": {
+        "definition_status": "defined",
+        "implementation_status": "not-implemented",
+        "test_status": "bounded",
+        "proof_status": "deliberately-unproved",
+        "checker_status": "not-implemented",
+        "model_check_status": "not-model-checked",
+        "runtime_enforcement_status": "not-enforced",
+        "backend_declaration_status": "not-declared",
+        "backend_realization_status": "not-realized",
+        "backend_conformance_status": "not-tested",
+        "evidence_refs": [
+          "docs/decisions/adrs/adr-099-participant-relative-predicate-opacity.md",
+          "specs/formal/participant-semantics/participant-predicate-opacity.md",
+          "implementations/python/tests/test_sem_231_participant_predicate_opacity.py"
+        ]
+      },
+      "source_refs": [
+        "andre-lime-marinho-sun-2022",
+        "badouel-bednarczyk-borzyszkowski-caillaud-darondeau-2007",
+        "berard-mullins-sassolas-2015",
+        "broberg-van-delft-sands-2015",
+        "bryans-koutny-mazare-ryan-2008",
+        "cui-ma-giua-yin-2026",
+        "fagin-halpern-moses-vardi-1995",
+        "lin-2011",
+        "partovi-jung-hai-2020",
+        "saboori-hadjicostis-2012",
+        "schoepe-sabelfeld-2015",
+        "xie-yin-li-2022",
+        "yin-lafortune-2016"
+      ]
+    },
     "participant-projected-history-equivalence": {
       "relation_id": "participant-projected-history-equivalence",
       "display_name": "Participant-projected history equivalence",
@@ -2469,6 +2771,30 @@
       "explicit_non_claims": [
         "Definition, catalog validation, claim-policy checks, and finite counterexamples do not prove universal noninterference or runtime/backend realization.",
         "Reference-runtime enforcement and passing backend-conformance probes establish neither universal noninterference nor native-backend realization."
+      ]
+    },
+    {
+      "surface_id": "participant-opacity",
+      "intended_relation_ids": [
+        "participant-predicate-opacity"
+      ],
+      "evidence_boundary": "Every claim binds a revisioned observer, secret predicate, possible-point carrier, initial-information and observation functions, memory and horizon, supervisor visibility, passive or active strategy domain, release schedule, scheduler and environment classes, time and order, nondeterminism and probability support, assurance axis, and evidence boundary.",
+      "prohibited_relation_ids": [
+        "participant-projected-history-equivalence",
+        "policy-noninterference",
+        "trace-inclusion",
+        "trace-equivalence",
+        "forward-simulation",
+        "backward-simulation",
+        "data-refinement",
+        "strong-bisimulation",
+        "weak-bisimulation",
+        "epistemic-indistinguishability",
+        "probabilistic-bisimulation"
+      ],
+      "explicit_non_claims": [
+        "A profile, finite witness, bounded probe, random choice, model check, runtime decision, or backend declaration establishes only its named assurance axis and evidence scope.",
+        "No current RAES runtime or backend is claimed opaque."
       ]
     },
     {

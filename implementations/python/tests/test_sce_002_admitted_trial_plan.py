@@ -26,6 +26,7 @@ from raes_contracts.contracts.admitted_trial_plan import (
     AdmittedTrialPlanInputRefsModel,
     AdmittedTrialPlanModel,
     AdmittedTrialPlanProfilesModel,
+    ExperimentScenarioFamilyReferenceModel,
     seal_admitted_trial_entry,
     seal_admitted_trial_plan,
 )
@@ -42,7 +43,6 @@ from raes_contracts.contracts.experiment_manifest_references import (
 )
 from raes_contracts.contracts.experiment_references import (
     ExperimentReferenceModel,
-    ExperimentScenarioSnapshotReferenceModel,
     ExperimentTaskReferenceModel,
 )
 from raes_contracts.contracts.random_stream import (
@@ -121,8 +121,11 @@ def _input_refs(**overrides: object) -> AdmittedTrialPlanInputRefsModel:
             ref_kind="authoring-input", ref_id="exp-a", ref_version="1", ref_digest=_digest("ab")
         ),
         "task_ref": ExperimentTaskReferenceModel(ref_kind="task", ref_id="task-a", ref_version="1"),
-        "scenario_family_ref": ExperimentScenarioSnapshotReferenceModel(
-            ref_kind="scenario-snapshot", ref_id="family-a", ref_version="1", ref_digest=_digest("cd")
+        "scenario_family_ref": ExperimentScenarioFamilyReferenceModel(
+            ref_kind="scenario-family",
+            ref_id="family-a",
+            ref_version="expanded-scenario-family/v1",
+            ref_digest=_digest("cd"),
         ),
         "binding_descriptor_set_ref": ExperimentReferenceModel(
             ref_kind="other", ref_id="bindings-a", ref_version="1", ref_digest=_digest("ef")
@@ -711,11 +714,13 @@ def test_entry_level_provenance_mismatch_is_rejected() -> None:
         ),
         (
             {
-                "scenario_family_ref": ExperimentScenarioSnapshotReferenceModel(
-                    ref_kind="scenario-snapshot", ref_id="family-a"
-                )
+                "scenario_family_ref": {
+                    "ref_kind": "scenario-family",
+                    "ref_id": "family-a",
+                    "ref_version": "expanded-scenario-family/v1",
+                }
             },
-            "scenario_family_ref must pin a scenario-snapshot ref_digest",
+            "ref_digest",
         ),
         ({"study_ref": ExperimentReferenceModel(ref_kind="other", ref_id="s")}, "study_ref must have ref_kind"),
         (
