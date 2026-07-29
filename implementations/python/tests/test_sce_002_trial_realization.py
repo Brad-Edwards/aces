@@ -218,17 +218,19 @@ def test_trial_realization_rejects_task_or_manifest_substitution() -> None:
     request, plan, entry = _plan_and_entry()
     task = ExperimentTaskModel.model_validate_json(_TASK_FIXTURE.read_text(encoding="utf-8"))
     wrong_task = task.model_copy(update={"task_id": "other-task"})
+    wrong_task_inputs = _realization_inputs(request, plan, wrong_task)
 
     with pytest.raises(ValueError, match="task identity"):
         realize_admitted_trial_entry(
-            inputs=_realization_inputs(request, plan, wrong_task),
+            inputs=wrong_task_inputs,
             plan_entry_id=entry.plan_entry_id,
         )
 
     substituted_task = task.model_copy(update={"title": "Substituted task content"})
+    substituted_task_inputs = _realization_inputs(request, plan, substituted_task)
     with pytest.raises(ValueError, match="task identity"):
         realize_admitted_trial_entry(
-            inputs=_realization_inputs(request, plan, substituted_task),
+            inputs=substituted_task_inputs,
             plan_entry_id=entry.plan_entry_id,
         )
 
@@ -236,9 +238,10 @@ def test_trial_realization_rejects_task_or_manifest_substitution() -> None:
     manifests[("backend", "backend-a", "1", "backend-manifest/v2")] = manifests[
         ("backend", "backend-a", "1", "backend-manifest/v2")
     ].model_copy(update={"constraints": {"substituted": "true"}})
+    substituted_manifest_inputs = _realization_inputs(request, plan, task, apparatus_manifests=manifests)
     with pytest.raises(ValueError, match="manifest"):
         realize_admitted_trial_entry(
-            inputs=_realization_inputs(request, plan, task, apparatus_manifests=manifests),
+            inputs=substituted_manifest_inputs,
             plan_entry_id=entry.plan_entry_id,
         )
 
