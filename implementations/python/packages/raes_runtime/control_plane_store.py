@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import TYPE_CHECKING, Any, Protocol
 
 from raes_contracts.artifact_requirements import ArtifactSatisfactionDisclosureModel
@@ -24,6 +25,29 @@ from raes_contracts.runtime_state import (
 
 if TYPE_CHECKING:
     from .control_plane_store_local import LocalControlPlaneStore
+
+
+class ParticipantCrossingHistoryPresence(str, Enum):
+    """Source-level API-423 history presence before snapshot defaults apply."""
+
+    ABSENT = "absent"
+    PRESENT_EMPTY = "present-empty"
+    PRESENT = "present"
+
+
+def participant_crossing_history_presence(
+    payload: dict[str, Any],
+) -> ParticipantCrossingHistoryPresence:
+    """Classify raw runtime-snapshot input without inventing historical meaning."""
+
+    if "participant_crossing_history" not in payload:
+        return ParticipantCrossingHistoryPresence.ABSENT
+    history = payload["participant_crossing_history"]
+    if not isinstance(history, dict):
+        raise ValueError("participant_crossing_history must be an object")
+    if not history:
+        return ParticipantCrossingHistoryPresence.PRESENT_EMPTY
+    return ParticipantCrossingHistoryPresence.PRESENT
 
 
 @dataclass(frozen=True)
@@ -394,5 +418,7 @@ __all__ = (
     "ControlPlaneStore",
     "InMemoryControlPlaneStore",
     "LocalControlPlaneStore",
+    "ParticipantCrossingHistoryPresence",
     "os",
+    "participant_crossing_history_presence",
 )
