@@ -1,0 +1,362 @@
+"""Local, locked, and OCI import resolution orchestration."""
+
+from __future__ import annotations
+
+import json
+import os
+from pathlib import Path
+from urllib.parse import quote
+
+from packaging.version import InvalidVersion, Version
+from pydantic import ValidationError
+
+from .._errors import SDLParseDiagnostic, SDLParseError
+from .._source_profile import DEFAULT_SOURCE_PARSE_OPTIONS, SDLSourceParseOptions
+from ..scenario import ImportDecl, ModuleDescriptor, Scenario
+from ._constants import LOCKFILE_NAME, OCI_BUNDLE_MEDIA_TYPE, OCI_LAYOUT_MEDIA_TYPE
+from ._digests import _descriptor_digest, _normalize_exact_or_range, _satisfies_version
+from .models import (
+    Lockfile,
+    LockRecord,
+    ResolvedModule,
+    TrustPolicy,
+    _scenario_module_descriptor,
+    load_trust_policy,
+)
+
+
+def _parse_oci_source(source: str) -> tuple[str, str]:
+    ref = source.removeprefix("oci:")
+    if "://" in ref:
+        ref = ref.split("://", 1)[1]
+    if "/" not in ref:
+        raise SDLParseError(f"Invalid OCI source '{source}'")
+    registry, repository = ref.split("/", 1)
+    if not registry or not repository:
+        raise SDLParseError(f"Invalid OCI source '{source}'")
+    return registry, repository
+
+
+def _registry_base_url(registry: str, *, allow_insecure_http: bool) -> str:
+    if registry.startswith("http://") or registry.startswith("https://"):
+        return registry.rstrip("/")
+    if allow_insecure_http or registry.startswith(("localhost:", "127.0.0.1:", "localhost/", "127.0.0.1/")):
+        return f"http://{registry}".rstrip("/")
+    return f"https://{registry}".rstrip("/")
+
+
+def _select_tag(tags: list[str], requested_version: str) -> str:
+    spec = _normalize_exact_or_range(requested_version)
+    if spec is None:
+        versions = []
+        for tag in tags:
+            try:
+                versions.append((Version(tag), tag))
+            except InvalidVersion:
+                continue
+        if versions:
+            return max(versions)[1]
+        if tags:
+            return sorted(tags)[-1]
+        raise SDLParseError("OCI module has no published tags")
+    matching: list[tuple[Version, str]] = []
+    for tag in tags:
+        try:
+            version = Version(tag)
+        except InvalidVersion:
+            continue
+        if version in spec:
+            matching.append((version, tag))
+    if matching:
+        return max(matching)[1]
+    raise SDLParseError(f"No OCI module tag satisfies requested version '{requested_version}'")
+
+
+def _lock_record_for(lockfile: Lockfile | None, import_decl: ImportDecl) -> LockRecord | None:
+    if lockfile is None:
+        return None
+    for record in lockfile.imports:
+        if (
+            record.source == import_decl.normalized_source
+            and record.namespace == import_decl.namespace
+            and record.requested_version == (import_decl.version or "*")
+        ):
+            return record
+    return None
+
+
+def _verify_allowed_parameters(
+    import_decl: ImportDecl,
+    descriptor: ModuleDescriptor,
+) -> None:
+    allowed = set(descriptor.parameters)
+    disallowed = sorted(name for name in import_decl.parameters if name not in allowed)
+    if disallowed:
+        raise SDLParseError(f"Import parameters not allowed by module '{descriptor.id}': " + ", ".join(disallowed))
+
+
+def _validate_digest_pin(actual_digest: str, expected_digest: str, *, source: str) -> None:
+    if not expected_digest:
+        return
+    normalized_actual = actual_digest.removeprefix("sha256:")
+    normalized_expected = expected_digest.removeprefix("sha256:")
+    if normalized_actual != normalized_expected:
+        raise SDLParseError(f"Digest mismatch for import '{source}': {expected_digest!r} != {actual_digest!r}")
+
+
+def _local_resolved_source(import_path: Path, base_dir: Path) -> str:
+    """Persisted lock identity for a ``local:`` import (issue #551).
+
+    The lockfile is committed and verified across machines and CI, so a local
+    import's ``resolved_source`` must be a checkout-independent identity rather
+    than an absolute, machine-specific path. Express it relative to the SDL base
+    directory using POSIX separators so the same lockfile verifies on any
+    checkout. ``ResolvedModule.root_file`` remains the absolute runtime ``Path``
+    used for reads, digesting, parsing, and cycle detection; this is the single
+    normalization seam for persisted local lock identity (OCI imports keep their
+    registry/digest identity).
+    """
+    relative = os.path.relpath(import_path, base_dir.resolve())
+    return Path(relative).as_posix()
+
+
+def resolve_import(
+    import_decl: ImportDecl,
+    *,
+    base_dir: Path,
+    lockfile: Lockfile | None = None,
+    trust_policy: TrustPolicy | None = None,
+    source_options: SDLSourceParseOptions = DEFAULT_SOURCE_PARSE_OPTIONS,
+    source_diagnostics: list[SDLParseDiagnostic] | None = None,
+) -> ResolvedModule:
+    trust_policy = trust_policy or TrustPolicy()
+    source = import_decl.normalized_source
+    # Resolve the private digest/signature seams through the package facade (rather
+    # than binding them from the submodules directly) so a test that patches
+    # raes.module_registry._sha256_digest / _verify_signatures replaces the binding
+    # these production calls use, exactly as the pre-split single-file module did.
+    from . import _sha256_digest
+
+    if source.startswith("locked:"):
+        locked_ref = source.removeprefix("locked:")
+        if lockfile is None:
+            raise SDLParseError(f"Locked import '{source}' requires {LOCKFILE_NAME}")
+        record = next(
+            (
+                candidate
+                for candidate in lockfile.imports
+                if candidate.resolved_source == locked_ref or candidate.source == locked_ref
+            ),
+            None,
+        )
+        if record is None:
+            raise SDLParseError(f"Locked import '{source}' is not present in {LOCKFILE_NAME}")
+        delegated = ImportDecl(
+            source=record.source,
+            namespace=import_decl.namespace or record.namespace,
+            version=record.requested_version,
+            parameters=dict(import_decl.parameters),
+            digest=import_decl.digest or record.content_digest,
+        )
+        return resolve_import(
+            delegated,
+            base_dir=base_dir,
+            lockfile=lockfile,
+            trust_policy=trust_policy,
+            source_options=source_options,
+            source_diagnostics=source_diagnostics,
+        )
+    if source.startswith("local:"):
+        relative = source.removeprefix("local:")
+        import_path = (base_dir / relative).resolve()
+        if not import_path.is_relative_to(base_dir.resolve()):
+            raise SDLParseError(f"Local import path escapes base directory: {relative!r}")
+        if not import_path.exists():
+            raise SDLParseError(f"Imported SDL file not found: {relative}")
+        from ..parser import _load_normalized_data, read_sdl_source
+
+        imported_source = read_sdl_source(import_path, limits=source_options.limits)
+        imported_raw = _load_normalized_data(
+            imported_source.text,
+            path=import_path,
+            source_format=source_options.source_format,
+            migration_policy=source_options.migration_policy,
+            limits=source_options.limits,
+            source_diagnostics=source_diagnostics,
+        )
+        imported_scenario = Scenario.model_validate(imported_raw)
+        descriptor = _scenario_module_descriptor(
+            imported_scenario,
+            source_id=relative.replace("\\", "/"),
+        )
+        content_digest = f"sha256:{_sha256_digest(imported_source.raw_bytes)}"
+        if not _satisfies_version(descriptor.version, import_decl.version):
+            raise SDLParseError(
+                f"Import '{relative}' requested version {import_decl.version!r} "
+                f"but module declares {descriptor.version!r}"
+            )
+        if not trust_policy.allow_unsigned_local_sources:
+            raise SDLParseError(
+                "Local SDL imports are disabled by trust policy because unsigned local sources are not allowed"
+            )
+        _validate_digest_pin(content_digest, import_decl.digest, source=source)
+        locked = _lock_record_for(lockfile, import_decl)
+        if locked is not None and locked.content_digest:
+            _validate_digest_pin(content_digest, locked.content_digest, source=source)
+        _verify_allowed_parameters(import_decl, descriptor)
+        return ResolvedModule(
+            import_decl=import_decl,
+            module_descriptor=descriptor,
+            root_file=import_path,
+            source_document=imported_source,
+            resolved_source=_local_resolved_source(import_path, base_dir),
+            content_digest=content_digest,
+            export_hash=_descriptor_digest(descriptor.exports),
+        )
+
+    if not source.startswith("oci:"):
+        raise SDLParseError(f"Unsupported import source '{source}'")
+
+    from . import _OCI_LIMITS, _bytes_request, _extract_bundle_to_cache, _json_request, _verify_signatures
+
+    registry, repository = _parse_oci_source(source)
+    registry_policy = trust_policy.registries.get(registry)
+    if registry_policy is None:
+        raise SDLParseError(f"Registry '{registry}' is not allowed by trust policy")
+    base_url = _registry_base_url(
+        registry,
+        allow_insecure_http=registry_policy.allow_insecure_http,
+    )
+    locked = _lock_record_for(lockfile, import_decl)
+    manifest_ref = locked.manifest_digest if locked is not None else None
+    if manifest_ref is None:
+        tags_payload = _json_request(f"{base_url}/v2/{quote(repository, safe='/')}/tags/list")
+        tags = list(tags_payload.get("tags") or [])
+        manifest_ref = _select_tag(tags, import_decl.version)
+    manifest_bytes = _bytes_request(
+        f"{base_url}/v2/{quote(repository, safe='/')}/manifests/{quote(str(manifest_ref), safe=':@/')}",
+        headers={"Accept": OCI_LAYOUT_MEDIA_TYPE},
+    )
+    manifest_digest = f"sha256:{_sha256_digest(manifest_bytes)}"
+    manifest = json.loads(manifest_bytes.decode("utf-8"))
+    if locked is not None and locked.manifest_digest != manifest_digest:
+        raise SDLParseError(
+            f"Lockfile digest mismatch for import '{source}': {locked.manifest_digest!r} != {manifest_digest!r}"
+        )
+    config = manifest.get("config", {})
+    layer = next(
+        (candidate for candidate in manifest.get("layers", []) if candidate.get("mediaType") == OCI_BUNDLE_MEDIA_TYPE),
+        None,
+    )
+    if not config or not layer:
+        raise SDLParseError(f"OCI module '{source}' is missing config or bundle layer")
+    config_digest = str(config.get("digest", ""))
+    layer_digest = str(layer.get("digest", ""))
+    # Verify the config blob bytes hash to the manifest's config.digest BEFORE
+    # decoding the JSON (issue #14). Fetching by digest is not integrity: a
+    # compromised registry can serve arbitrary bytes for the config endpoint, and
+    # those bytes carry the unsigned-by-default root_file that selects the module
+    # entrypoint. Hash the exact bytes received - never a reserialized object -
+    # and reuse the bundle's digest spelling.
+    config_bytes = _bytes_request(
+        f"{base_url}/v2/{quote(repository, safe='/')}/blobs/{quote(config_digest, safe=':@/')}"
+    )
+    if f"sha256:{_sha256_digest(config_bytes)}" != config_digest:
+        raise SDLParseError(f"OCI module '{source}' config digest verification failed")
+    config_payload = json.loads(config_bytes.decode("utf-8"))
+    bundle_bytes = _bytes_request(
+        f"{base_url}/v2/{quote(repository, safe='/')}/blobs/{quote(layer_digest, safe=':@/')}",
+        max_bytes=_OCI_LIMITS.max_bundle_bytes,
+    )
+    if f"sha256:{_sha256_digest(bundle_bytes)}" != layer_digest:
+        raise SDLParseError(f"OCI module '{source}' bundle digest verification failed")
+    try:
+        descriptor = ModuleDescriptor.model_validate(config_payload.get("module", {}))
+    except ValidationError as exc:
+        raise SDLParseError(f"OCI module '{source}' has invalid module descriptor: {exc}") from exc
+    if locked is not None and locked.module_id != descriptor.id:
+        raise SDLParseError(
+            f"Lockfile module id mismatch for import '{source}': {locked.module_id!r} != {descriptor.id!r}"
+        )
+    if not _satisfies_version(descriptor.version, import_decl.version):
+        raise SDLParseError(
+            f"OCI import '{source}' requested version {import_decl.version!r} "
+            f"but resolved module declares {descriptor.version!r}"
+        )
+    content_digest = layer_digest
+    _validate_digest_pin(content_digest, import_decl.digest, source=source)
+    # Resolve the config-declared root_file as a single string before it reaches
+    # the signature payload or extraction (issue #14). Signing and extracting the
+    # SAME value closes the gap where a signature verified over a default root_file
+    # while a different attacker-declared root_file was extracted.
+    raw_root_file = config_payload.get("root_file", "module.yaml")
+    if not isinstance(raw_root_file, str):
+        raise SDLParseError(f"OCI module '{source}' declares a non-string root_file")
+    root_file = raw_root_file
+    signer_id = ""
+    if registry_policy.require_signatures:
+        signer_id = _verify_signatures(
+            signatures=list(config_payload.get("signatures", [])),
+            trust_policy=registry_policy,
+            module_descriptor=descriptor,
+            content_digest=content_digest,
+            root_file=root_file,
+        )
+    resolved_root = _extract_bundle_to_cache(
+        bundle_bytes=bundle_bytes,
+        manifest_digest=manifest_digest.replace("sha256:", ""),
+        root_file=root_file,
+        base_dir=base_dir,
+    )
+    from ..parser import read_sdl_source
+
+    resolved_source_document = read_sdl_source(resolved_root, limits=source_options.limits)
+    _verify_allowed_parameters(import_decl, descriptor)
+    export_hash = _descriptor_digest(descriptor.exports)
+    if locked is not None and locked.export_hash != export_hash:
+        raise SDLParseError(f"Lockfile export hash mismatch for import '{source}'")
+    return ResolvedModule(
+        import_decl=import_decl,
+        module_descriptor=descriptor,
+        root_file=resolved_root,
+        source_document=resolved_source_document,
+        resolved_source=f"{registry}/{repository}@{manifest_digest}",
+        manifest_digest=manifest_digest,
+        content_digest=content_digest,
+        export_hash=export_hash,
+        signer_id=signer_id,
+    )
+
+
+def resolve_lock_records(
+    root_path: Path,
+    *,
+    trust_policy: TrustPolicy | None = None,
+) -> Lockfile:
+    from ..parser import _load_normalized_data, read_sdl_source
+
+    trust_policy = trust_policy or load_trust_policy(root_path.parent)
+    root_data = _load_normalized_data(read_sdl_source(root_path).text, path=root_path)
+    imports = [ImportDecl.model_validate(item) for item in root_data.get("imports", [])]
+    records: list[LockRecord] = []
+    for import_decl in imports:
+        resolved = resolve_import(
+            import_decl,
+            base_dir=root_path.parent,
+            trust_policy=trust_policy,
+        )
+        records.append(
+            LockRecord(
+                source=import_decl.normalized_source,
+                namespace=import_decl.namespace,
+                requested_version=import_decl.version or "*",
+                resolved_source=resolved.resolved_source,
+                module_id=resolved.module_descriptor.id,
+                module_version=resolved.module_descriptor.version,
+                manifest_digest=resolved.manifest_digest,
+                content_digest=resolved.content_digest,
+                export_hash=resolved.export_hash,
+                signer_id=resolved.signer_id,
+            )
+        )
+    return Lockfile(imports=records)

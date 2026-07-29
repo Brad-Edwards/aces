@@ -179,5 +179,5 @@ ignore = [
 "packages/raes_cli/**" = ["B008"]      # typer requires function calls in defaults
 "packages/raes_runtime/control_plane_api.py" = ["B008"]  # fastapi Depends() pattern
 "packages/raes_runtime/control_plane.py" = ["S112"]      # intentional exception suppression
-"packages/raes/module_registry.py" = ["S310", "S202"]  # explicit OCI URL fetch and tarball extract
+"packages/raes/module_registry/__init__.py" = ["S310", "S202", "F401"]  # S310/S202: explicit OCI URL fetch + tar extract; F401: intentional facade re-exports
 "packages/raes_contracts/realization_envelope.py" = ["E402"]  # late import breaks a carrier dependency cycle
