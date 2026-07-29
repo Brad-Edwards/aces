@@ -14,7 +14,7 @@ from raes_contracts.diagnostics import Diagnostic
 from raes_contracts.planning import ProvisioningPlan
 from raes_contracts.runtime_state import ApplyResult, RealizationProvenanceEntry, RuntimeSnapshot
 from raes_processor.models import CompiledRealizationRequirement
-from raes_processor.planner import realization_disclosure
+from raes_processor.planner import realization_disclosure, sanitize_realization_snapshot
 
 from .diagnostics import _failure_diagnostic
 from .evaluation_result_contracts import evaluation_result_contract_diagnostics
@@ -132,7 +132,35 @@ def _finalize_backend_apply(
         )
     if contract_diagnostics:
         return ApplyResult(success=False, snapshot=baseline_snapshot, diagnostics=contract_diagnostics)
+    if realization_requirements and realization_plan is not None:
+        try:
+            safe_snapshot = sanitize_realization_snapshot(
+                realization_requirements,
+                result.snapshot,
+            )
+        except (TypeError, ValueError):
+            return _failed_apply_result(
+                baseline_snapshot,
+                _backend_contract_invalid(
+                    address,
+                    "Backend returned an invalid realization concern observation.",
+                ),
+            )
+        result = _with_snapshot(result, safe_snapshot)
     return _with_realization_provenance(result, realization_provenance) if realization_provenance else result
+
+
+def _with_snapshot(
+    result: ApplyResult,
+    snapshot: RuntimeSnapshot,
+) -> ApplyResult:
+    return ApplyResult(
+        success=result.success,
+        snapshot=snapshot,
+        diagnostics=result.diagnostics,
+        changed_addresses=result.changed_addresses,
+        details=result.details,
+    )
 
 
 def _with_realization_provenance(

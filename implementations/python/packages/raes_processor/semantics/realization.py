@@ -37,8 +37,14 @@ from .artifact_realization import (
 )
 from .realization_concerns import (
     CONCERN_PAYLOAD_PATH,
+    project_realization_concern,
+    registered_realization_concern_descriptors,
     registered_realization_concerns,
     resolve_realization_concern,
+)
+from .realization_snapshot_sanitization import (
+    invalid_observation_diagnostic,
+    sanitize_realization_snapshot,
 )
 
 __all__ = [
@@ -49,11 +55,14 @@ __all__ = [
     "CompiledRealizationRequirement",
     "artifact_requirement_diagnostics",
     "materialize_realization_requirements",
+    "project_realization_concern",
     "realization_disclosure",
     "realization_envelope_diagnostics",
     "realization_support_diagnostics",
+    "registered_realization_concern_descriptors",
     "registered_realization_concerns",
     "resolve_realization_concern",
+    "sanitize_realization_snapshot",
 ]
 
 _BACKEND_CONTRACT_INVALID = "runtime.backend-contract-invalid"
@@ -409,11 +418,37 @@ def _evaluate_realization(
     )
     if requirement.explicitness is ExplicitnessClass.OPEN:
         if realized_value is not _MISSING_CONCERN_VALUE:
+            try:
+                project_realization_concern(
+                    requirement.requirement_kind,
+                    realized_value,
+                    observed=True,
+                )
+            except (TypeError, ValueError):
+                return invalid_observation_diagnostic(requirement), entry
             entry = _realization_provenance_entry(requirement, False)
         return diagnostic, entry
     declared_value = _concern_value(op.payload, path)
     if declared_value is not _MISSING_CONCERN_VALUE:
-        honoured = realized_value == declared_value
+        try:
+            declared_projection = project_realization_concern(
+                requirement.requirement_kind,
+                declared_value,
+            )
+        except (TypeError, ValueError):
+            declared_projection = _MISSING_CONCERN_VALUE
+        if realized_value is not _MISSING_CONCERN_VALUE:
+            try:
+                realized_projection = project_realization_concern(
+                    requirement.requirement_kind,
+                    realized_value,
+                    observed=True,
+                )
+            except (TypeError, ValueError):
+                return invalid_observation_diagnostic(requirement), entry
+        else:
+            realized_projection = _MISSING_CONCERN_VALUE
+        honoured = realized_projection == declared_projection
         if requirement.explicitness is ExplicitnessClass.EXACT and not honoured:
             # The backend realized the exact concern with a different value or omitted
             # it entirely; both are forbidden silent approximation (I2).

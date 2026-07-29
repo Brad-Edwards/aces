@@ -12,7 +12,7 @@ from raes.semantics.domain_topology import (
 from ..semantics.realization import (
     REALIZATION_DOMAIN,
     CompiledRealizationRequirement,
-    registered_realization_concerns,
+    registered_realization_concern_descriptors,
 )
 from .addresses import (
     _account_address,
@@ -169,6 +169,15 @@ def _realization_requirement_address(
     raise ValueError("realization concern must resolve to one compiled resource address")
 
 
+def _nested_authored_value(source: object, path: tuple[str, ...]) -> object:
+    current = source
+    for token in path:
+        if current is None:
+            return None
+        current = getattr(current, token, None)
+    return current
+
+
 def _append_domain_topology_requirements(
     requirements: list[CompiledRealizationRequirement],
     domain_analysis: DomainTopologyAnalysis,
@@ -271,14 +280,25 @@ def _compile_realization_requirements(
 
     requirements: list[CompiledRealizationRequirement] = []
     explicitness = scenario.explicitness
-    for section_name, declaration_name, field_name, concern_kind in registered_realization_concerns(
+    for registered in registered_realization_concern_descriptors(
         declaration_names={"nodes": scenario.nodes, "content": scenario.content}
     ):
-        field_path = f"{section_name}.{declaration_name}.{field_name}"
+        descriptor = registered.descriptor
+        section_name = descriptor.section
+        declaration_name = registered.declaration_name
+        field_path = registered.field_path
         encoded_name = declaration_name.replace("~", "~0").replace("/", "~1")
-        field_pointer = f"/{section_name}/{encoded_name}/{field_name}"
+        pointer_suffix = "/".join(descriptor.authored_path)
+        field_pointer = f"/{section_name}/{encoded_name}/{pointer_suffix}"
         owner_namespace = QualifiedName.parse(declaration_name).parts[:-1]
         record = explicitness.get(field_path)
+        declarations = getattr(scenario, section_name)
+        authored_value = _nested_authored_value(
+            declarations[declaration_name],
+            descriptor.authored_path,
+        )
+        if record is not None and not descriptor.includes_authored_value(authored_value):
+            continue
         if record is None:
             resolution = resolve_realization_designation(
                 scenario.instantiation_provenance.realization_designations,
@@ -313,7 +333,7 @@ def _compile_realization_requirements(
                     declaration_name=declaration_name,
                 ),
                 domain=REALIZATION_DOMAIN,
-                requirement_kind=concern_kind,
+                requirement_kind=descriptor.concern_kind,
                 explicitness=requirement_explicitness,
                 provenance=provenance,
                 governing_scope=governing_scope,
