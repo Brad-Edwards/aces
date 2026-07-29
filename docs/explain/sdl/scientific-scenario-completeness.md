@@ -15,7 +15,7 @@ The current assessment is deliberately conservative. Only
 blocking concerns directly, including authored/observed-state binding,
 specificity, teardown, credentials, time and clocks, participant budgets,
 verifiers, hidden assets, and trajectories. Behavioral-relation semantics are
-now implemented as `raes-behavioral-relations@rev5`, while the stronger formal
+now implemented as `raes-behavioral-relations@rev6`, while the stronger formal
 relations it defines retain their honest unproved or future assurance states.
 
 These profiles are scope contracts, not validators that silently strengthen

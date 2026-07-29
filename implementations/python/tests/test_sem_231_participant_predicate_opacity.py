@@ -16,7 +16,7 @@ from raes_contracts.contracts import BehavioralClaimBindingModel
 def _opacity_binding(**overrides: object) -> BehavioralClaimBindingModel:
     payload: dict[str, object] = {
         "taxonomy_id": "raes-behavioral-relations",
-        "taxonomy_revision": "rev5",
+        "taxonomy_revision": "rev6",
         "relation_id": "participant-predicate-opacity",
         "subject": "Participant p at the declared exact cut",
         "left_carrier_ref": "possible-point-system:finite-example",
@@ -41,7 +41,7 @@ def test_catalog_defines_one_sided_participant_predicate_opacity() -> None:
     catalog = load_behavioral_relation_catalog()
     relation = catalog.relations["participant-predicate-opacity"]
 
-    assert catalog.taxonomy_revision == "rev5"
+    assert catalog.taxonomy_revision == "rev6"
     assert relation.relation_class == "epistemic"
     assert relation.direction == "unary"
     assert relation.relation_parameter_profile_required is True
