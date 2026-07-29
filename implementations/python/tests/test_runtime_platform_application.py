@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import pytest
 from pydantic import ValidationError
+from raes._runtime_service_families import RUNTIME_SERVICE_FAMILIES
 from raes.runtime_platform_application import (
     RelationshipServiceIntegration,
     RelationshipServiceIntegrationDirection,
     RelationshipServiceIntegrationKind,
     RuntimePlatformApplication,
+    RuntimePlatformApplicationCapability,
+    RuntimePlatformApplicationCapabilityKind,
     RuntimePlatformApplicationConnector,
     RuntimePlatformApplicationConnectorKind,
     RuntimePlatformApplicationContentObject,
@@ -25,9 +28,12 @@ from raes.runtime_platform_application import (
     RuntimePlatformApplicationUpstreamBinding,
     RuntimePlatformApplicationUpstreamBindingRole,
 )
+from raes.scenario import Scenario
+from raes.validator import SemanticValidator
+from raes_contracts.contracts import schema_bundle
 
 # --------------------------------------------------------------------------- #
-# Per-platform_kind valid fixtures (each carries its required profile)
+# Legacy per-platform_kind fixtures retained as compatibility examples
 # --------------------------------------------------------------------------- #
 
 
@@ -133,6 +139,28 @@ def _analytics_dashboard(**overrides) -> dict:
     return application
 
 
+def _opencti(**overrides) -> dict:
+    application = {
+        "platform_application_id": "opencti",
+        "service": "opencti-api",
+        "product": "OpenCTI",
+        "capabilities": [
+            {
+                "capability_id": "intelligence",
+                "kind": "threat_intelligence_management",
+                "evidence_refs": ["/evidence/opencti-capabilities.json"],
+            },
+            {"capability_id": "exchange", "kind": "intelligence_exchange"},
+            {"capability_id": "cases", "kind": "case_management"},
+            {"capability_id": "analysis", "kind": "analysis_execution"},
+            {"capability_id": "automation", "kind": "workflow_automation"},
+            {"capability_id": "presentation", "kind": "analytics_presentation"},
+        ],
+    }
+    application.update(overrides)
+    return application
+
+
 _ALL_FIXTURES = {
     "threat_intel": _threat_intel,
     "soar": _soar,
@@ -170,6 +198,20 @@ def test_analytics_dashboard_binding_and_references() -> None:
     assert application.tenants[0].tenant_id == "global"
 
 
+def test_one_application_can_declare_multiple_provider_neutral_capabilities() -> None:
+    application = RuntimePlatformApplication(**_opencti())
+
+    assert [capability.kind for capability in application.capabilities] == [
+        RuntimePlatformApplicationCapabilityKind.THREAT_INTELLIGENCE_MANAGEMENT,
+        RuntimePlatformApplicationCapabilityKind.INTELLIGENCE_EXCHANGE,
+        RuntimePlatformApplicationCapabilityKind.CASE_MANAGEMENT,
+        RuntimePlatformApplicationCapabilityKind.ANALYSIS_EXECUTION,
+        RuntimePlatformApplicationCapabilityKind.WORKFLOW_AUTOMATION,
+        RuntimePlatformApplicationCapabilityKind.ANALYTICS_PRESENTATION,
+    ]
+    assert application.capabilities[0].evidence_refs == ["/evidence/opencti-capabilities.json"]
+
+
 # --------------------------------------------------------------------------- #
 # Stable-id rejection (empty / variable placeholder)
 # --------------------------------------------------------------------------- #
@@ -197,6 +239,12 @@ def test_tenant_id_rejects_empty_or_variable(bad_id: str) -> None:
 def test_content_object_id_rejects_empty_or_variable(bad_id: str) -> None:
     with pytest.raises(ValidationError, match="content_object_id"):
         RuntimePlatformApplicationContentObject(content_object_id=bad_id)
+
+
+@pytest.mark.parametrize("bad_id", ["", "${capability}"])
+def test_capability_id_rejects_empty_or_variable(bad_id: str) -> None:
+    with pytest.raises(ValidationError, match="capability_id"):
+        RuntimePlatformApplicationCapability(capability_id=bad_id)
 
 
 @pytest.mark.parametrize("bad_id", ["", "${marking}"])
@@ -244,20 +292,30 @@ def test_enum_normalization_is_case_and_separator_insensitive() -> None:
     setting = RuntimePlatformApplicationSetting(setting_id="s", provenance="CONFIG-FILE")
     assert setting.provenance == RuntimePlatformApplicationSettingProvenance.CONFIG_FILE
 
+    capability = RuntimePlatformApplicationCapability(capability_id="intel", kind="THREAT-INTELLIGENCE-MANAGEMENT")
+    assert capability.kind == RuntimePlatformApplicationCapabilityKind.THREAT_INTELLIGENCE_MANAGEMENT
+
 
 def test_variable_placeholder_enums_pass_through() -> None:
     obj = RuntimePlatformApplicationContentObject(content_object_id="o", kind="${kind}")
     assert obj.kind == "${kind}"
+
+    capability = RuntimePlatformApplicationCapability(capability_id="c", kind="${kind}")
+    assert capability.kind == "${kind}"
 
 
 def test_unknown_enum_member_is_rejected() -> None:
     with pytest.raises(ValidationError, match="platform_kind must be one of"):
         RuntimePlatformApplication(platform_application_id="p", platform_kind="bogus")
 
+    with pytest.raises(ValidationError, match="kind must be one of"):
+        RuntimePlatformApplicationCapability(capability_id="c", kind="bogus")
+
 
 def test_open_taxonomies_carry_unknown_and_other() -> None:
     for enum_cls in (
         RuntimePlatformApplicationKind,
+        RuntimePlatformApplicationCapabilityKind,
         RuntimePlatformApplicationContentObjectKind,
         RuntimePlatformApplicationUpstreamBindingRole,
         RuntimePlatformApplicationConnectorKind,
@@ -288,9 +346,23 @@ def test_rejects_duplicate_local_stable_ids_across_child_kinds() -> None:
         )
 
 
+def test_capability_ids_share_the_application_local_stable_id_namespace() -> None:
+    with pytest.raises(ValidationError, match="Duplicate runtime platform application stable id 'shared-id'"):
+        RuntimePlatformApplication(
+            platform_application_id="p",
+            capabilities=[{"capability_id": "shared-id", "kind": "case_management"}],
+            content_objects=[{"content_object_id": "shared-id"}],
+        )
+
+
 def test_rejects_duplicate_content_object_references() -> None:
     with pytest.raises(ValidationError, match="Duplicate runtime platform application references entry on 'o'"):
         RuntimePlatformApplicationContentObject(content_object_id="o", references=["a", "a"])
+
+
+def test_rejects_duplicate_capability_evidence_references() -> None:
+    with pytest.raises(ValidationError, match="Duplicate runtime platform application evidence_refs entry on 'c'"):
+        RuntimePlatformApplicationCapability(capability_id="c", evidence_refs=["/evidence.json", "/evidence.json"])
 
 
 def test_scalar_ref_lists_coerce_to_single_element_lists() -> None:
@@ -300,6 +372,9 @@ def test_scalar_ref_lists_coerce_to_single_element_lists() -> None:
     assert obj.references == ["ip-1"]
     assert obj.marking_refs == ["tlp-red"]
     assert obj.evidence_refs == ["/evidence.json"]
+
+    capability = RuntimePlatformApplicationCapability(capability_id="c", evidence_refs="/capability.json")
+    assert capability.evidence_refs == ["/capability.json"]
 
 
 def test_extra_fields_are_forbidden() -> None:
@@ -362,7 +437,7 @@ def test_plain_non_secret_setting_keeps_value() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# require_profile_for_platform_kind guard — exemptions
+# Legacy platform categories do not imply configuration completeness
 # --------------------------------------------------------------------------- #
 
 
@@ -386,127 +461,81 @@ def test_variable_placeholder_platform_kind_is_exempt() -> None:
     assert application.platform_kind == "${kind}"
 
 
-# --------------------------------------------------------------------------- #
-# require_profile_for_platform_kind guard — threat_intel
-# --------------------------------------------------------------------------- #
-
-
 @pytest.mark.parametrize(
-    "missing_id",
-    ["tax-tlp", "gc-mitre", "wl-cidr", "feed-ct", "sg-trusted"],
+    "platform_kind",
+    ["threat_intel", "soar", "analyzer_engine", "case_management", "analytics_dashboard"],
 )
-def test_threat_intel_requires_each_corpus_kind(missing_id: str) -> None:
-    fixture = _threat_intel()
-    fixture["content_objects"] = [o for o in fixture["content_objects"] if o["content_object_id"] != missing_id]
-    with pytest.raises(ValidationError, match="platform_kind 'threat_intel' requires"):
-        RuntimePlatformApplication(**fixture)
+def test_legacy_platform_kind_does_not_require_product_specific_content(platform_kind: str) -> None:
+    application = RuntimePlatformApplication(platform_application_id="platform", platform_kind=platform_kind)
+
+    assert application.platform_kind == RuntimePlatformApplicationKind(platform_kind)
+    assert application.capabilities == []
 
 
-def test_threat_intel_with_no_content_is_rejected() -> None:
-    with pytest.raises(ValidationError, match="platform_kind 'threat_intel' requires"):
-        RuntimePlatformApplication(platform_application_id="misp", platform_kind="threat_intel")
+def test_capabilities_are_registered_as_qualified_reference_children() -> None:
+    family = next(family for family in RUNTIME_SERVICE_FAMILIES if family.collection_name == "platform_applications")
+
+    assert ("capabilities", "capability_id") in {(child.collection_name, child.id_field) for child in family.child_refs}
 
 
-# --------------------------------------------------------------------------- #
-# require_profile_for_platform_kind guard — soar
-# --------------------------------------------------------------------------- #
-
-
-def test_soar_requires_workflow_content_object() -> None:
-    with pytest.raises(ValidationError, match="platform_kind 'soar' requires .*'workflow'"):
-        RuntimePlatformApplication(
-            platform_application_id="shuffle",
-            platform_kind="soar",
-            content_objects=[{"content_object_id": "app-x", "kind": "app"}],
-        )
-
-
-def test_soar_with_workflow_is_valid() -> None:
-    application = RuntimePlatformApplication(**_soar())
-    assert application.platform_kind == RuntimePlatformApplicationKind.SOAR
-
-
-# --------------------------------------------------------------------------- #
-# require_profile_for_platform_kind guard — analyzer_engine
-# --------------------------------------------------------------------------- #
-
-
-def test_analyzer_engine_requires_analyzer_or_responder() -> None:
-    with pytest.raises(ValidationError, match="requires >=1 analyzer or responder content_object"):
-        RuntimePlatformApplication(
-            platform_application_id="cortex",
-            platform_kind="analyzer_engine",
-            content_objects=[{"content_object_id": "app-x", "kind": "app"}],
-            execution_policy={"policy_id": "default"},
-        )
-
-
-def test_analyzer_engine_requires_execution_policy() -> None:
-    with pytest.raises(ValidationError, match="requires an execution_policy"):
-        RuntimePlatformApplication(
-            platform_application_id="cortex",
-            platform_kind="analyzer_engine",
-            content_objects=[{"content_object_id": "an-x", "kind": "analyzer"}],
-        )
-
-
-def test_analyzer_engine_with_responder_only_is_valid() -> None:
-    application = RuntimePlatformApplication(
-        platform_application_id="cortex",
-        platform_kind="analyzer_engine",
-        content_objects=[{"content_object_id": "re-x", "kind": "responder"}],
-        execution_policy={"policy_id": "default"},
+def test_qualified_capability_reference_resolves_in_a_relationship() -> None:
+    scenario = Scenario(
+        name="platform-capability-reference",
+        nodes={
+            "tip": {
+                "type": "vm",
+                "runtime": {
+                    "platform_applications": [
+                        {
+                            "platform_application_id": "opencti",
+                            "capabilities": [
+                                {
+                                    "capability_id": "intelligence",
+                                    "kind": "threat_intelligence_management",
+                                }
+                            ],
+                        }
+                    ]
+                },
+            }
+        },
+        relationships={
+            "uses-intelligence": {
+                "type": "depends_on",
+                "source": "nodes.tip",
+                "target": "nodes.tip.runtime.platform_applications.opencti.capabilities.intelligence",
+            }
+        },
     )
-    assert application.execution_policy is not None
+
+    SemanticValidator(scenario).validate()
 
 
-# --------------------------------------------------------------------------- #
-# require_profile_for_platform_kind guard — case_management
-# --------------------------------------------------------------------------- #
+def test_legacy_fields_are_marked_deprecated_in_the_model_schema() -> None:
+    properties = RuntimePlatformApplication.model_json_schema()["properties"]
+
+    assert properties["platform_kind"]["deprecated"] is True
+    assert properties["content_objects"]["deprecated"] is True
+    assert properties["capabilities"].get("deprecated") is not True
 
 
-@pytest.mark.parametrize("missing_kind", ["case_template", "custom_field"])
-def test_case_management_requires_template_and_custom_field(missing_kind: str) -> None:
-    fixture = _case_management()
-    fixture["content_objects"] = [o for o in fixture["content_objects"] if o["kind"] != missing_kind]
-    with pytest.raises(ValidationError, match="platform_kind 'case_management' requires"):
-        RuntimePlatformApplication(**fixture)
+def test_published_scenario_contract_exposes_capabilities_and_legacy_deprecations() -> None:
+    definitions = schema_bundle()["sdl-authoring-input-v1"]["$defs"]
+    application_properties = definitions["RuntimePlatformApplication"]["properties"]
 
-
-# --------------------------------------------------------------------------- #
-# require_profile_for_platform_kind guard — analytics_dashboard
-# --------------------------------------------------------------------------- #
-
-
-def test_analytics_dashboard_requires_saved_object() -> None:
-    with pytest.raises(ValidationError, match="requires >=1 saved-object content_object"):
-        RuntimePlatformApplication(
-            platform_application_id="dash",
-            platform_kind="analytics_dashboard",
-            content_objects=[{"content_object_id": "wf-x", "kind": "workflow"}],
-            upstream_bindings=[{"binding_id": "b", "role": "index_backend"}],
-        )
-
-
-def test_analytics_dashboard_saved_object_requires_references() -> None:
-    fixture = _analytics_dashboard()
-    fixture["content_objects"] = [{"content_object_id": "ip-alerts", "kind": "index_pattern"}]
-    with pytest.raises(ValidationError, match="saved-object content_object that carries references"):
-        RuntimePlatformApplication(**fixture)
-
-
-def test_analytics_dashboard_requires_backing_upstream_binding() -> None:
-    fixture = _analytics_dashboard()
-    fixture["upstream_bindings"] = [{"binding_id": "b", "role": "sync_peer"}]
-    with pytest.raises(ValidationError, match="requires >=1 upstream_binding with role"):
-        RuntimePlatformApplication(**fixture)
-
-
-def test_analytics_dashboard_with_data_source_binding_is_valid() -> None:
-    fixture = _analytics_dashboard()
-    fixture["upstream_bindings"] = [{"binding_id": "b", "role": "data_source", "target_node_ref": "n"}]
-    application = RuntimePlatformApplication(**fixture)
-    assert application.upstream_bindings[0].role == RuntimePlatformApplicationUpstreamBindingRole.DATA_SOURCE
+    assert application_properties["capabilities"]["items"] == {"$ref": "#/$defs/RuntimePlatformApplicationCapability"}
+    assert application_properties["platform_kind"]["deprecated"] is True
+    assert application_properties["content_objects"]["deprecated"] is True
+    assert definitions["RuntimePlatformApplicationCapabilityKind"]["enum"] == [
+        "threat_intelligence_management",
+        "intelligence_exchange",
+        "case_management",
+        "analysis_execution",
+        "workflow_automation",
+        "analytics_presentation",
+        "unknown",
+        "other",
+    ]
 
 
 def test_execution_policy_parses_nested_fields() -> None:
