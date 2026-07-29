@@ -102,20 +102,17 @@ def _write_oci_layout(
     *,
     output_dir: Path,
     descriptor: ModuleDescriptor,
-    config_bytes: bytes,
-    config_digest: str,
-    bundle_bytes: bytes,
-    content_digest: str,
-    manifest_bytes: bytes,
+    blobs: dict[str, bytes],
     manifest_digest: str,
 ) -> Path:
+    # ``blobs`` maps each blob's ``sha256:`` digest to its bytes (config, bundle,
+    # manifest); ``manifest_digest`` selects which one the index references.
     layout_dir = output_dir / f"{descriptor.id.replace('/', '_')}-{descriptor.version}.oci"
     blobs_dir = layout_dir / "blobs" / "sha256"
     blobs_dir.mkdir(parents=True, exist_ok=True)
     (layout_dir / "oci-layout").write_text('{"imageLayoutVersion":"1.0.0"}\n', encoding="utf-8")
-    (blobs_dir / config_digest.removeprefix(_SHA256_PREFIX)).write_bytes(config_bytes)
-    (blobs_dir / content_digest.removeprefix(_SHA256_PREFIX)).write_bytes(bundle_bytes)
-    (blobs_dir / manifest_digest.removeprefix(_SHA256_PREFIX)).write_bytes(manifest_bytes)
+    for digest, payload in blobs.items():
+        (blobs_dir / digest.removeprefix(_SHA256_PREFIX)).write_bytes(payload)
     (layout_dir / "index.json").write_text(
         json.dumps(
             {
@@ -124,7 +121,7 @@ def _write_oci_layout(
                     {
                         "mediaType": OCI_LAYOUT_MEDIA_TYPE,
                         "digest": manifest_digest,
-                        "size": len(manifest_bytes),
+                        "size": len(blobs[manifest_digest]),
                         "annotations": {
                             "org.opencontainers.image.ref.name": descriptor.version,
                             "io.raes.module.id": descriptor.id,
@@ -198,11 +195,7 @@ def publish_module_to_oci_layout(
     layout_dir = _write_oci_layout(
         output_dir=output_dir,
         descriptor=descriptor,
-        config_bytes=config_bytes,
-        config_digest=config_digest,
-        bundle_bytes=bundle_bytes,
-        content_digest=content_digest,
-        manifest_bytes=manifest_bytes,
+        blobs={config_digest: config_bytes, content_digest: bundle_bytes, manifest_digest: manifest_bytes},
         manifest_digest=manifest_digest,
     )
     return {
