@@ -27,7 +27,7 @@ def _claim(
 ) -> BehavioralClaimBindingModel:
     return BehavioralClaimBindingModel(
         taxonomy_id="raes-behavioral-relations",
-        taxonomy_revision="rev3",
+        taxonomy_revision="rev4",
         relation_id=relation_id,
         subject="The named subject satisfies its bounded validation property.",
         left_carrier_ref=left_carrier_ref,

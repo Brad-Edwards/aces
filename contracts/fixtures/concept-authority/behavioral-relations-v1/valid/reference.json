@@ -1,7 +1,7 @@
 {
   "schema_version": "behavioral-relations/v1",
   "taxonomy_id": "raes-behavioral-relations",
-  "taxonomy_revision": "rev3",
+  "taxonomy_revision": "rev4",
   "bibliography": [
     {
       "source_id": "park-1981",
@@ -244,6 +244,21 @@
       "immutable_locator": {
         "kind": "doi",
         "value": "10.1016/S0039-3681(97)00012-5"
+      }
+    },
+    {
+      "source_id": "halpern-pearl-2005",
+      "title": "Causes and Explanations: A Structural-Model Approach. Part I: Causes",
+      "authors": [
+        "Joseph Y. Halpern",
+        "Judea Pearl"
+      ],
+      "publication_year": 2005,
+      "publication_venue": "The British Journal for the Philosophy of Science 56(4)",
+      "edition_or_version": "version of record",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.1093/bjps/axi147"
       }
     }
   ],
@@ -671,6 +686,96 @@
       "source_refs": [
         "park-1981",
         "van-glabbeek-1990"
+      ]
+    },
+    "bounded-but-for-necessity": {
+      "relation_id": "bounded-but-for-necessity",
+      "display_name": "Bounded but-for necessity",
+      "relation_class": "empirical",
+      "definition": "Within one declared finite causal boundary, a named candidate is supported as necessary for a named outcome when the admitted baseline outcome is true, a verified intervention removes or disables only that candidate, the matched counterfactual outcome is false, and evidence, reset, and cleanup gates pass.",
+      "left_carrier": "A named condition, weakness, control, or behavior present in the admitted baseline world.",
+      "right_carrier": "A governed outcome proposition evaluated independently in the baseline and intervention worlds.",
+      "initial_states": "The exact admitted baseline lineage and matching policy for the finite world pair.",
+      "transition_signature": {
+        "applicability": "applicable",
+        "labels": "The admitted baseline execution, typed candidate intervention, counterfactual execution, observation, reset, and cleanup actions.",
+        "transition_relation": "Only the two immutable runs and the one declared intervention admitted by the comparison case.",
+        "observable_actions": "Governed outcome truth, intervention evidence, matching checks, and reset or cleanup evidence.",
+        "hidden_actions": "No hidden action may change a held-fixed dimension; any permitted nuisance variation must be declared by the matching policy.",
+        "stuttering_actions": "Stuttering is relevant only when the declared time and observation models admit it."
+      },
+      "observation_projection": {
+        "applicability": "parameterized",
+        "subject": "Bounded necessity comparison audience",
+        "policy_ref": "behavioral-relations/bounded-but-for-necessity-projection",
+        "policy_revision": "rev1",
+        "redaction_scope": "Only governed evidence references and stable redacted diagnostics cross the comparison boundary.",
+        "order_treatment": "World executions are distinct immutable runs; their declared matching policy, not wall-clock order, governs comparison.",
+        "simultaneity_treatment": "Simultaneity is outside the binary criterion unless the matching policy and time model explicitly preserve it."
+      },
+      "projection_required": true,
+      "direction": "left-to-right",
+      "quantification": {
+        "states": "Only the admitted baseline and intervention-world initial states and reached states.",
+        "traces": "Only the two named finite executions.",
+        "schedulers": "Only schedulers admitted and matched by the declared policy.",
+        "strategies": "Only participant strategies represented and matched in the two runs.",
+        "environments": "Only the named apparatus, backend, scenario family, and permitted nuisance variation.",
+        "observations": "Only governed outcome, intervention, comparability, reset, and cleanup evidence for the named case."
+      },
+      "dimensions": {
+        "nondeterminism": {
+          "status": "parameterized",
+          "treatment": "Random streams, seeds, draws, and uncertainty are governed by the matching policy; a shared seed alone is insufficient."
+        },
+        "concurrency": {
+          "status": "parameterized",
+          "treatment": "Scheduling and participant concurrency must be held fixed or declared as permitted nuisance variation."
+        },
+        "probability": {
+          "status": "outside-scope",
+          "treatment": "The binary criterion does not establish probabilistic necessity; statistical criteria require a separate governed relation or adapter."
+        },
+        "time": {
+          "status": "parameterized",
+          "treatment": "Both worlds bind an explicit time model and comparison boundary; wall-clock proximity is not comparability."
+        },
+        "partial_order": {
+          "status": "parameterized",
+          "treatment": "Causal or partial-order differences must be held fixed or explicitly admitted by the matching policy."
+        }
+      },
+      "preservation": {
+        "property": "A finite binary but-for result for the exact candidate, outcome, worlds, intervention, apparatus, and matching policy.",
+        "proof_obligation": "Admit a true baseline outcome, verify the candidate intervention, admit a false counterfactual outcome, prove the declared matching checks for every other semantic dimension, and independently verify reset and cleanup."
+      },
+      "bounded_evidence": [
+        "Immutable experiment-run identities, proposition-truth results, intervention evidence, matching-policy checks, and reset or cleanup evidence for one named comparison case."
+      ],
+      "explicit_non_claims": [
+        "Does not establish universal, actual, sufficient, probabilistic, or model-identified causation.",
+        "Does not treat replay, temporal order, correlation, failed execution, a no-op intervention, or incomparable outcome differences as necessity evidence.",
+        "Does not promote a supported finite comparison to proof or falsification-backed validation strength."
+      ],
+      "incompatible_claim_surfaces": [
+        "Universal causal proof",
+        "Unbounded actual-cause attribution",
+        "Statistical or probabilistic necessity without a separate criterion"
+      ],
+      "assurance": {
+        "definition_status": "defined",
+        "implementation_status": "implemented",
+        "test_status": "tested",
+        "proof_status": "deliberately-unproved",
+        "evidence_refs": [
+          "implementations/python/packages/raes_conformance/necessity_evidence.py",
+          "implementations/python/packages/raes_conformance/necessity_types.py",
+          "implementations/python/packages/raes_conformance/necessity_validation.py",
+          "implementations/python/tests/test_necessity_validation.py"
+        ]
+      },
+      "source_refs": [
+        "halpern-pearl-2005"
       ]
     },
     "canonical-artifact-identity": {
@@ -2380,6 +2485,23 @@
       ],
       "explicit_non_claims": [
         "Current joint-action, chance, simultaneous-move, and mean-field records do not prove strategic equivalence."
+      ]
+    },
+    {
+      "surface_id": "counterfactual-necessity-validation",
+      "intended_relation_ids": [
+        "bounded-but-for-necessity",
+        "bounded-probe-success"
+      ],
+      "evidence_boundary": "One revisioned claim, one immutable baseline/intervention-world pair, one typed and verified intervention, admitted proposition-truth evidence, a declared matching policy, and independently verified reset and cleanup.",
+      "prohibited_relation_ids": [
+        "trace-equivalence",
+        "strong-bisimulation",
+        "empirical-adequacy",
+        "statistical-equivalence"
+      ],
+      "explicit_non_claims": [
+        "A supported finite but-for comparison is not universal causal proof, actual-cause attribution, sufficiency, determinism, or statistical necessity."
       ]
     },
     {

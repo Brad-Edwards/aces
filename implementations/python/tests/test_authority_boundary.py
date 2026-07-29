@@ -739,6 +739,9 @@ def test_build_artifacts_are_not_unclassified(tmp_path: Path) -> None:
     for artifact in ("build", "dist", "node_modules", "venv"):
         (seeded / artifact).mkdir()
         (seeded / artifact / "artifact.txt").write_text("x", encoding="utf-8")
+    measurement = seeded / "build" / "gc-measurement"
+    measurement.mkdir()
+    (measurement / "attempt.marker").write_text("", encoding="utf-8")
     failures = evaluate_authority_boundary(seeded)
     assert not _flagged(failures, "authority-boundary-unclassified-top-level"), (
         f"build artifacts must not be flagged; got: {[failure.render() for failure in failures]}"

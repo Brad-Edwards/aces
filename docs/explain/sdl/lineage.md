@@ -794,7 +794,7 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   syntax or wire compatibility. The normative participant-policy model is
   `specs/formal/participant-semantics/information-flow-control.md`; the
   machine-readable relation is `policy-noninterference` in behavioral taxonomy
-  revision `rev3`; and the claim surface is
+  revision `rev4`; and the claim surface is
   `participant-information-flow-policy`. Existing `W`, `V`, qualified `H`,
   `X`, participant action/admission, visibility transition, ordering, marking,
   controller, authority, evidence, and provenance objects remain the mapped
@@ -1178,7 +1178,7 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   existing `run_target_conformance()` runner extended with an injected
   participant-policy probe harness, `ConformanceCaseResult`, and
   `BackendConformanceReport` for the backend lane; and the
-  `raes-behavioral-relations` `rev3` catalog with `BehavioralClaimBindingModel`
+  `raes-behavioral-relations` `rev4` catalog with `BehavioralClaimBindingModel`
   for claim identity. The four lanes stay separately statused; none promotes
   another.
 - ASR-535 delivery status is bounded-tested and bounded-conformance-implemented.

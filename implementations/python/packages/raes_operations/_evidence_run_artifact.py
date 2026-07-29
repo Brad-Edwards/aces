@@ -356,7 +356,7 @@ def _terminal_observation_section(snapshot: TerminalSnapshot) -> dict[str, Any]:
         "form": "participant-projected-history",
         "taxonomy": {
             "taxonomy_id": "raes-behavioral-relations",
-            "taxonomy_revision": "rev3",
+            "taxonomy_revision": "rev4",
             "non_claimed_relation_ids": [
                 "participant-projected-history-equivalence",
                 "epistemic-indistinguishability",
