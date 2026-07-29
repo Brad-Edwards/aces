@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from raes_contracts.contracts import (
@@ -176,7 +176,7 @@ class ParticipantRetrievalMixin:
         return serialize_participant_view(
             self,
             view,
-            replace(serialization, crossing_evidence=crossing_evidence),
+            serialization.with_crossing_evidence(crossing_evidence),
         )
 
     def get_participant_history_view(
@@ -239,7 +239,7 @@ class ParticipantRetrievalMixin:
         return serialize_participant_view(
             self,
             view,
-            replace(serialization, crossing_evidence=crossing_evidence),
+            serialization.with_crossing_evidence(crossing_evidence),
         )
 
     def get_participant_context_view(
@@ -334,7 +334,7 @@ class ParticipantRetrievalMixin:
             result = serialize_participant_view(
                 self,
                 view,
-                replace(serialization, crossing_evidence=crossing_evidence),
+                serialization.with_crossing_evidence(crossing_evidence),
             )
         return result
 

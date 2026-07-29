@@ -40,6 +40,14 @@ class ParticipantViewSerialization:
     crossing_evidence: ParticipantCrossingEvidence | None
     idempotency_key: str
 
+    def with_crossing_evidence(
+        self,
+        crossing_evidence: ParticipantCrossingEvidence,
+    ) -> ParticipantViewSerialization:
+        """Return this immutable context with trusted evidence attached."""
+
+        return replace(self, crossing_evidence=crossing_evidence)
+
 
 def serialize_participant_view(
     control_plane: object,
