@@ -15,6 +15,8 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from raes import parse_sdl_file  # noqa: E402
+from raes_contracts.behavioral_relations import validate_behavioral_claim_binding  # noqa: E402
+from raes_contracts.contracts import BehavioralClaimBindingModel  # noqa: E402
 from tools.check_public_docs import (  # noqa: E402
     REQUIRED_PUBLIC_PAGES,
     REQUIRED_PUBLIC_REDIRECTS,
@@ -169,3 +171,38 @@ def test_readme_quickstart_matches_checked_in_scenario() -> None:
     )
 
     assert readme_scenario == checked_in_scenario
+
+
+def test_participant_control_claim_example_is_bounded() -> None:
+    guide = (REPO_ROOT / "docs" / "public" / "participant-control.md").read_text(encoding="utf-8")
+    match = re.search(
+        r"<!-- participant-control-claim:start -->\s*```json\s*(.*?)\s*```"
+        r"\s*<!-- participant-control-claim:end -->",
+        guide,
+        re.DOTALL,
+    )
+    assert match is not None
+
+    binding = BehavioralClaimBindingModel.model_validate_json(match.group(1))
+    validated = validate_behavioral_claim_binding(binding)
+
+    assert validated.relation_id == "bounded-probe-success"
+    assert validated.quantifier_scope == "finite-cases"
+    assert validated.evidence_scope == "finite"
+    assert validated.assurance_status == "tested"
+    assert validated.observation_projection_ref == "participant-policy-probe-projection"
+    assert validated.observation_projection_revision == "rev1"
+    required_cases = {
+        "denial",
+        "withholding",
+        "redaction",
+        "governed declassification",
+        "transformation",
+        "participant-directed inject delivery",
+        "unsupported-capability",
+    }
+    assert all(case in validated.evidence_boundary for case in required_cases)
+    assert validated.evidence_refs
+    assert validated.limitations
+    assert any("noninterference" in nonclaim for nonclaim in validated.explicit_non_claims)
+    assert any("bisimulation" in nonclaim for nonclaim in validated.explicit_non_claims)

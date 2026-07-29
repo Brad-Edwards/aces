@@ -1228,6 +1228,33 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   refinement, bisimulation, epistemic, timed, or probabilistic security.
   Because the work adds compatibility evidence without changing normative
   external derivation, the lineage ledger and source audit remain unchanged.
+- Issue #803 re-expresses the already adopted SEM-230/API-423/RUN-319 and
+  ASR-535 lineage for scenario authors, participant-implementation authors,
+  runtime operators, backend implementors, and researchers. It adds no
+  external source, semantic rule, contract meaning, runtime behavior,
+  compatibility claim, or behavioral-relation definition.
+- The exact issue #803 artifact mapping is the hosted
+  `docs/public/participant-control.md` role routes and bounded examples,
+  `docs/public/index.md` navigation,
+  `docs/research/participant-io-control/index.md` adoption status,
+  `docs/explain/sdl/scientific-scenario-completeness.md` delivery explanation,
+  the issue #803 architecture preflight, and the executable public-guide
+  `BehavioralClaimBindingModel` example in
+  `implementations/python/tests/test_public_docs_policy.py`. The example
+  resolves `bounded-probe-success` against
+  `raes-behavioral-relations@rev4`; it does not define a documentation claim
+  schema or a second relation catalog.
+- Issue #803 delivery status is published explanatory guidance over shipped
+  bounded evidence. The reference backend still declares the six
+  participant-policy features unsupported. The current runtime does not emit
+  a distinct API-423 `withhold` decision, the finite declassification case
+  drives projection, and inject delivery does not bind the compiled
+  DSL-142/DSL-111 identity end to end. No native-backend realization,
+  universal noninterference, projected-history equality, trace inclusion or
+  equivalence, simulation, refinement, strong or weak bisimulation,
+  model-check, or proof is claimed. The lineage ledger and source audit remain
+  unchanged because the documentation adds neither a normative derivation nor
+  a compatibility claim.
 - CALDERA adversary-emulation research informs the action semantics: cyber
   actions can change foothold, knowledge, observations, detection surface, and
   downstream outcomes under uncertainty.
