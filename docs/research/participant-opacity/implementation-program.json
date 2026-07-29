@@ -1,0 +1,349 @@
+{
+  "schema_version": "participant-opacity-program/v1",
+  "assessment_date": "2026-07-29",
+  "parent_issue": 810,
+  "milestone": "Participant Information-Flow & Behavioral Equivalence",
+  "deliverables": [
+    "docs/decisions/issue-810-participant-opacity-preflight.md",
+    "docs/decisions/adrs/adr-099-participant-relative-predicate-opacity.md",
+    "docs/research/participant-opacity/index.md",
+    "docs/research/participant-opacity/prior-art-and-design-criteria.md",
+    "docs/research/participant-opacity/current-state-assessment.md",
+    "docs/research/participant-opacity/requirement-disposition.md",
+    "docs/research/participant-opacity/implementation-program.md",
+    "docs/research/participant-opacity/implementation-program.json",
+    "specs/formal/participant-semantics/participant-predicate-opacity.md",
+    "specs/formal/behavioral-relations/README.md",
+    "contracts/concept-authority/behavioral-relations-v1.json"
+  ],
+  "requirement_dispositions": [
+    {
+      "uid": "SEM-230",
+      "status": "ACTIVE",
+      "disposition": "reuse",
+      "scope": "Participant-policy noninterference, exact-cut policy and release, adaptive low strategies, memory, projection, scheduler/environment, and order coordinates remain canonical.",
+      "rationale": "Predicate opacity composes the incumbent participant information-flow carrier but is neither an amendment nor an alias of policy noninterference."
+    },
+    {
+      "uid": "SEM-231",
+      "status": "DRAFT",
+      "disposition": "new",
+      "scope": "One-sided participant-relative predicate opacity, observer information cells, supervisor visibility, relation profiles, exact relation boundaries, and independent assurance states.",
+      "rationale": "No existing requirement owns selected-secret opacity or the knowledge leakage caused by supervisor decisions and behavior."
+    },
+    {
+      "uid": "ASR-535",
+      "status": "ACTIVE",
+      "disposition": "reuse",
+      "scope": "Bounded falsification, finite-state model-checking and proof evidence, relation claim bindings, adversarial cases, and backend conformance.",
+      "rationale": "ASR-535 already owns participant information-flow assurance and prevents finite evidence from becoming a universal claim."
+    },
+    {
+      "uid": "RUN-319",
+      "status": "ACTIVE",
+      "disposition": "reuse",
+      "scope": "Fail-closed reference-runtime mediation, append-only decisions and evidence, and explicit realization boundaries for supported opacity profiles.",
+      "rationale": "Opacity enforcement is a participant information-flow crossing concern; a second runtime policy engine or store is unnecessary."
+    },
+    {
+      "uid": "API-407",
+      "status": "ACTIVE",
+      "disposition": "reuse",
+      "scope": "Backend feature strength, required contracts, limitations, disclosure, and evidence for actually supported opacity profiles.",
+      "rationale": "The existing participant-feature support vector can express opacity support without an opacity boolean or parallel manifest."
+    }
+  ],
+  "worked_examples": [
+    {
+      "id": "equal-pair-does-not-prove-opacity",
+      "actual_secret_points": [
+        "a",
+        "c"
+      ],
+      "observation_basis": "Secret point a and nonsecret point b have equal projected histories; secret point c has a unique history.",
+      "expected_result": "Opacity fails at c although the bounded pair a,b supplies one valid witness.",
+      "nonclaim": "One equal-history pair does not discharge the universal actual-secret-point quantifier."
+    },
+    {
+      "id": "supervisor-decision-leak",
+      "actual_secret_points": [
+        "secret-policy-world"
+      ],
+      "observation_basis": "Payload projections agree, but the supervisor denies in the secret world and approves in the nonsecret world.",
+      "expected_result": "Opacity fails when decision occurrence or outcome is retained by the observer profile.",
+      "nonclaim": "Redacting decision content does not hide its occurrence, ordering, delivery, or latency."
+    },
+    {
+      "id": "opacity-without-noninterference",
+      "actual_secret_points": [
+        "selected-secret-world"
+      ],
+      "observation_basis": "Every selected-secret point has a nonsecret alternative, but two policy-low-equivalent worlds reveal a different unprotected low fact.",
+      "expected_result": "The selected predicate is opaque while SEM-230 policy noninterference fails.",
+      "nonclaim": "Opacity of one predicate does not imply equality of every policy-low observation."
+    },
+    {
+      "id": "declassification-changes-knowledge",
+      "actual_secret_points": [
+        "pre-release-secret-world",
+        "post-release-secret-world"
+      ],
+      "observation_basis": "Before release the cell has secret and nonsecret points; the authorized release splits the cell and reveals the predicate.",
+      "expected_result": "Post-release opacity fails unless the policy no longer protects the predicate or a nonsecret alternative remains.",
+      "nonclaim": "Later concealment or revocation does not reconstruct the earlier information cell for a remembering observer."
+    }
+  ],
+  "baseline_dimensions": {
+    "nondeterminism": "possibilistic-support",
+    "concurrency": "profile-required",
+    "probability": "outside-baseline",
+    "time": "untimed-progress-insensitive-baseline",
+    "partial_order": "profile-required"
+  },
+  "relation_boundaries": [
+    {
+      "relation_id": "participant-predicate-opacity",
+      "distinction": "A unary one-sided condition requiring one nonsecret point in every actual secret information cell.",
+      "conditional_implication": "is implied for eligible predicates by matching policy-noninterference",
+      "reverse_implication": "does not imply policy-noninterference",
+      "nonclaim": "A definition or finite witness does not establish opacity of RAES or a backend."
+    },
+    {
+      "relation_id": "policy-noninterference",
+      "distinction": "A symmetric support-set hyperproperty over all selected low-equivalent variations and adaptive low strategies.",
+      "conditional_implication": "implies opacity for every eligible predicate only under matching profiles",
+      "reverse_implication": "is not implied by opacity of one predicate",
+      "nonclaim": "Existing SEM-230 bounded evidence is not an opacity proof."
+    },
+    {
+      "relation_id": "participant-projected-history-equivalence",
+      "distinction": "Equality of two named projected histories can supply one witness but lacks the opacity information-cell quantifier.",
+      "conditional_implication": "may witness one alternative under a matching profile",
+      "reverse_implication": "is not implied for arbitrary pairs by opacity",
+      "nonclaim": "One pair cannot establish opacity."
+    },
+    {
+      "relation_id": "epistemic-indistinguishability",
+      "distinction": "A binary same-information relation defines membership in a cell; opacity constrains secret labels across the complete cell.",
+      "conditional_implication": "supplies the observer equivalence used by opacity",
+      "reverse_implication": "does not follow between every pair from opacity",
+      "nonclaim": "Indistinguishability alone does not name or protect a secret."
+    },
+    {
+      "relation_id": "trace-equivalence",
+      "distinction": "A bidirectional trace-set relation does not preserve a selected secret or observer projection without an explicit theorem.",
+      "conditional_implication": "may imply opacity only with secret and observation preservation",
+      "reverse_implication": "is not implied by opacity",
+      "nonclaim": "No trace-equivalence result is claimed."
+    },
+    {
+      "relation_id": "strong-bisimulation",
+      "distinction": "A bidirectional step relation has different carriers and proof obligations from an information-cell secrecy condition.",
+      "conditional_implication": "may imply opacity only with a secret-preserving observer mapping",
+      "reverse_implication": "is not implied by opacity",
+      "nonclaim": "No strong, weak, or branching bisimulation result is claimed."
+    }
+  ],
+  "assurance_lanes": [
+    {
+      "id": "definition",
+      "evidence_required": "Accepted ADR, SEM-231 formal authority, rev5 catalog, primary sources, and shared binding validation.",
+      "does_not_establish": "Any system satisfies or enforces opacity."
+    },
+    {
+      "id": "bounded-testing",
+      "evidence_required": "Named finite cases, complete declared bounds, profile/model digests, safe counterexamples, and finite claim binding.",
+      "does_not_establish": "Model checking, proof, runtime enforcement, or backend realization."
+    },
+    {
+      "id": "model-checking",
+      "evidence_required": "Pinned finite model, explored state/strategy bound, tool/version, digest, result or counterexample, and model-check binding.",
+      "does_not_establish": "A theorem outside the exact finite model or runtime/backend behavior."
+    },
+    {
+      "id": "mathematical-proof",
+      "evidence_required": "Explicit theorem, assumptions, proof artifact, checker/version when mechanized, digest, and reproduction.",
+      "does_not_establish": "Runtime enforcement or backend realization."
+    },
+    {
+      "id": "runtime-enforcement",
+      "evidence_required": "Complete supported observation-channel inventory, boundary security tests, durable decisions, limitations, and runtime claim binding.",
+      "does_not_establish": "General opacity, mathematical proof, or backend-native realization."
+    },
+    {
+      "id": "backend-declaration",
+      "evidence_required": "API-407 feature strength, required contracts, limitations, disclosures, and evidence references.",
+      "does_not_establish": "Native realization or observed conformance."
+    },
+    {
+      "id": "backend-realization",
+      "evidence_required": "Native implementation identity, supported profile, exact contract mapping, environment, provenance, and realization evidence.",
+      "does_not_establish": "Universal opacity or conformance outside the named realization."
+    },
+    {
+      "id": "bounded-backend-conformance",
+      "evidence_required": "Named adversarial cases, backend/profile/environment digests, sanitized failures, result records, and finite evidence boundary.",
+      "does_not_establish": "Model checking, proof, cross-backend equivalence, or universal opacity."
+    }
+  ],
+  "implementation_issues": [
+    {
+      "key": "bounded-falsification",
+      "issue_number": 961,
+      "milestone": "Participant Information-Flow & Behavioral Equivalence",
+      "requirements": [
+        "SEM-231",
+        "ASR-535"
+      ],
+      "dependencies": [],
+      "bounded_outcome": "Closed opacity profiles, cross-reference resolution, and finite falsification harness.",
+      "negative_cases": [
+        "incomplete equal-history witness",
+        "supervisor decision leak",
+        "active probe leak",
+        "unsupported omission inference",
+        "coalition fusion",
+        "declassification and retained knowledge"
+      ],
+      "evidence_required": [
+        "valid and invalid fixtures",
+        "finite domain and strategy bounds",
+        "tool/version and digests",
+        "safe counterexamples",
+        "bounded-test claim binding"
+      ],
+      "explicit_nonclaims": [
+        "No model check, proof, runtime enforcement, or backend realization."
+      ]
+    },
+    {
+      "key": "finite-state-model-checking",
+      "issue_number": 962,
+      "milestone": "Participant Information-Flow & Behavioral Equivalence",
+      "requirements": [
+        "SEM-231",
+        "ASR-535"
+      ],
+      "dependencies": [
+        "bounded-falsification"
+      ],
+      "bounded_outcome": "Finite-state model checking over closed SEM-231 profiles and exact strategy/order bounds.",
+      "negative_cases": [
+        "reachable secret-only information cell",
+        "decision and timing leak",
+        "active-strategy leak",
+        "memory and coalition leak",
+        "single-linearization promotion",
+        "probability-bound promotion"
+      ],
+      "evidence_required": [
+        "complete finite model",
+        "explored bounds",
+        "pinned tool/version",
+        "input digests",
+        "counterexample or result",
+        "model-check claim binding"
+      ],
+      "explicit_nonclaims": [
+        "No unbounded proof, runtime enforcement, or backend realization."
+      ]
+    },
+    {
+      "key": "mathematical-proof",
+      "issue_number": 963,
+      "milestone": "Participant Information-Flow & Behavioral Equivalence",
+      "requirements": [
+        "SEM-231",
+        "ASR-535"
+      ],
+      "dependencies": [
+        "bounded-falsification",
+        "finite-state-model-checking"
+      ],
+      "bounded_outcome": "Proof-bearing opacity kernel, knowledge characterization, and matching-profile SEM-230 implication.",
+      "negative_cases": [
+        "invalid reverse implication",
+        "pair witness promoted to universal",
+        "unpreserved relation substitution",
+        "knowledge erasure by revocation",
+        "untimed result lifted to stronger variants"
+      ],
+      "evidence_required": [
+        "theorem and assumptions",
+        "independently checkable proof",
+        "pinned proof tool when mechanized",
+        "artifact digest",
+        "reproduction",
+        "proof claim binding"
+      ],
+      "explicit_nonclaims": [
+        "No runtime enforcement, supervisor synthesis, or backend realization."
+      ]
+    },
+    {
+      "key": "runtime-enforcement",
+      "issue_number": 964,
+      "milestone": "Participant Information-Flow & Behavioral Equivalence",
+      "requirements": [
+        "SEM-231",
+        "RUN-319"
+      ],
+      "dependencies": [
+        "bounded-falsification"
+      ],
+      "bounded_outcome": "Fail-closed reference-runtime enforcement for an explicitly supported subset of SEM-231 profiles.",
+      "negative_cases": [
+        "payload filter with decision leak",
+        "active-probe bypass",
+        "stale retry or policy state",
+        "unmodeled audit observer",
+        "reset treated as forgetting",
+        "randomization treated as assurance"
+      ],
+      "evidence_required": [
+        "boundary security tests",
+        "observation-channel inventory",
+        "atomic append-only decisions",
+        "supported-profile limitations",
+        "runtime-enforcement claim binding"
+      ],
+      "explicit_nonclaims": [
+        "No general opacity, proof, supervisor synthesis, or backend-native realization."
+      ]
+    },
+    {
+      "key": "backend-realization",
+      "issue_number": 965,
+      "milestone": "Participant Information-Flow & Behavioral Equivalence",
+      "requirements": [
+        "SEM-231",
+        "API-407",
+        "ASR-535"
+      ],
+      "dependencies": [
+        "bounded-falsification",
+        "finite-state-model-checking",
+        "runtime-enforcement"
+      ],
+      "bounded_outcome": "API-407 declaration, native realization evidence, and bounded adversarial backend conformance for named opacity profiles.",
+      "negative_cases": [
+        "boolean or method-presence overclaim",
+        "unmediated decision and timing leak",
+        "untested declaration reported conformant",
+        "runtime mediation reported as backend native",
+        "conformance promoted to proof",
+        "secret material in reports or process surfaces"
+      ],
+      "evidence_required": [
+        "manifest and required-contract mapping",
+        "native realization provenance",
+        "adversarial target cases",
+        "backend/profile/environment digests",
+        "separate declaration, realization, and conformance claim bindings"
+      ],
+      "explicit_nonclaims": [
+        "No universal backend opacity, proof, cross-backend equivalence, or unnamed profile support."
+      ]
+    }
+  ]
+}

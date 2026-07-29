@@ -134,7 +134,7 @@ def _repetition_ref(index: int) -> RepetitionRef:
 def _claim(
     relation_id: str = "canonical-artifact-identity",
     *,
-    taxonomy_revision: str = "rev4",
+    taxonomy_revision: str = "rev5",
     left_index: int = 0,
     right_index: int = 1,
 ) -> BehavioralClaimBindingModel:
@@ -534,7 +534,7 @@ def test_unpermitted_observed_variation_makes_the_pair_incomparable() -> None:
     ("claim", "expected_code"),
     [
         (_claim("bounded-probe-success"), "conformance.repeatability-claim-relation-invalid"),
-        (_claim(taxonomy_revision="rev5"), "conformance.repeatability-claim-invalid"),
+        (_claim(taxonomy_revision="rev4"), "conformance.repeatability-claim-invalid"),
     ],
 )
 def test_wrong_relation_or_stale_catalog_coordinate_fails_before_comparison(

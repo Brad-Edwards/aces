@@ -2,9 +2,9 @@
   "contract_id": "scientific-completeness-taxonomy-v1",
   "schema_path": "contracts/schemas/profiles/scientific-completeness-taxonomy-v1.json",
   "stability": "draft",
-  "content_hash": "02fe8159e45d134c69b7d6b5bd05964bd87349d7bdfab7da14dd9974e444323b",
+  "content_hash": "97b2632026044434a0aaacec6b45e6cfe7a5bc445d83e0c57bb5a589745495b2",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "02fe8159e45d134c69b7d6b5bd05964bd87349d7bdfab7da14dd9974e444323b"
+    "summary": "Published the shared relation-parameter profile and assurance-axis claim-binding coordinates for issue #810.",
+    "content_hash": "97b2632026044434a0aaacec6b45e6cfe7a5bc445d83e0c57bb5a589745495b2"
   }
 }
