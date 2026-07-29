@@ -1625,13 +1625,6 @@
       "content_sha256": "53c30870282bd09b493abddf2f96d966137be04f8af880d1965ad90d655a048e"
     },
     {
-      "path": "docs/research/participant-io-control/index.md",
-      "record_class": "research-record",
-      "rationale": "Preserves preregistered, frozen, dated, or lineage-bearing research evidence from before the RAES identity cutover.",
-      "occurrences": 1,
-      "content_sha256": "d12d66ff4b97231ac253700baa3e4b8754906e07cc0621e1c96d2e1987069b08"
-    },
-    {
       "path": "docs/research/participant-io-control/requirement-disposition.md",
       "record_class": "research-record",
       "rationale": "Preserves preregistered, frozen, dated, or lineage-bearing research evidence from before the RAES identity cutover.",

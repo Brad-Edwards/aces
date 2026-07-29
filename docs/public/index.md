@@ -13,6 +13,8 @@ about five minutes and uses the Python package.
   [first-scenario tutorial](tutorials/first-scenario.md).
 - **Writing a scenario?** Use the [SDL guide](sdl/index.md) and
   [examples](https://github.com/RAESystem/rae/tree/main/examples/scenarios).
+- **Controlling participant input or output?** Use the
+  [participant-control guide](participant-control.md).
 - **Integrating RAES?** Choose the [Python API](guides/python.md) or
   [command-line interface](guides/cli.md).
 - **Building a backend?** Read the [backend and conformance guide](backends.md).
@@ -30,6 +32,7 @@ quickstart
 concepts
 tutorials/first-scenario
 sdl/index
+participant-control
 guides/python
 guides/cli
 backends
