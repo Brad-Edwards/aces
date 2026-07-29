@@ -30,7 +30,7 @@ from raes_contracts.planning import RuntimeDomain
 from raes_contracts.runtime_state import OperationReceipt, OperationState, OperationStatus, RuntimeSnapshot
 from raes_contracts.vocabulary import ParticipantFeatureSupportLevel
 
-from .control_plane_security import ControlPlaneIdentity
+from .control_plane_security import ControlPlaneIdentity, ParticipantAudienceSubjectBinding
 from .control_plane_store import AuditEvent, ControlPlaneOperationRecord
 
 
@@ -136,6 +136,20 @@ class ParticipantCrossingPolicyResolver(Protocol):
         snapshot: RuntimeSnapshot,
         participant_address: str,
     ) -> ParticipantCrossingValidationContext: ...
+
+    def resolve_participant_view_evidence(
+        self,
+        *,
+        snapshot: RuntimeSnapshot,
+        participant_address: str,
+        episode_id: str,
+        interaction_kind: ParticipantCrossingInteractionKind,
+        projection_ref: str,
+        audience_binding: ParticipantAudienceSubjectBinding,
+    ) -> ParticipantCrossingEvidence:
+        """Resolve trusted egress evidence for an authenticated API adapter."""
+
+        ...
 
 
 @dataclass(frozen=True)
