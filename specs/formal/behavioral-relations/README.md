@@ -12,12 +12,15 @@ weaker observation from being reported as a stronger behavioral result.
 The machine-readable authority is
 `contracts/concept-authority/behavioral-relations-v1.json`, contract
 `behavioral-relations/v1`, taxonomy `raes-behavioral-relations`, revision
-`rev5`. Relation identifiers, formal dimensions, claim-surface defaults,
+`rev6`. Relation identifiers, formal dimensions, claim-surface defaults,
 bibliography coordinates, assurance status, and worked transition systems are
-normative there. ADR-081, ADR-095, and ADR-099 govern the architecture. This
-document is the normative reader-facing formalization of that catalog.
+normative there. ADR-081, ADR-095, ADR-099, and ADR-100 govern the
+architecture. This document is the normative reader-facing formalization of
+that catalog.
 
-Revision `rev5` adds one-sided possibilistic
+Revision `rev6` adds
+`divergence-preserving-branching-bisimulation` and the bounded
+participant-crossing claim surface. Revision `rev5` added one-sided possibilistic
 `participant-predicate-opacity`, mandatory revisioned relation-parameter
 profiles for that relation, and independent checker, model-check, runtime,
 backend-declaration, backend-realization, and backend-conformance assurance
@@ -27,8 +30,8 @@ intervention-backed counterfactual comparison. Revision `rev3` made SEM-230
 exact state cuts, and added `io-alternating-refinement` for actionable backend
 participant semantics. The JSON contract remains `behavioral-relations/v1`
 because the revisioned catalog identity governs the additive vocabulary.
-Revisions `rev1` through `rev4` are historical taxonomy identities; current
-in-repository producers bind `rev5`.
+Revisions `rev1` through `rev5` are historical taxonomy identities; current
+in-repository producers bind `rev6`.
 
 The taxonomy defines claim vocabulary and proof obligations. It does not add a
 model checker, theorem prover, stochastic simulator, game solver, scheduler,
@@ -88,6 +91,7 @@ identifier rather than an artifact-local synonym.
 | `data-refinement` | behavioral | Concrete operations preserve an abstract data-type relation and observations. |
 | `strong-bisimulation` | behavioral | Every labelled step is matched in both directions without hiding actions. |
 | `weak-bisimulation` | behavioral | Both directions match visible steps while admitting governed hidden-action closure. |
+| `divergence-preserving-branching-bisimulation` | behavioral | Both directions preserve visible branching points through finite governed tau closure and preserve explicit infinite tau behavior. |
 | `participant-projected-history-equivalence` | behavioral | Two histories are equal after the same named participant projection. |
 | `policy-noninterference` | behavioral | Unauthorized high variation preserves participant-visible history support sets for every adaptive low strategy under fixed memory, low-equivalence, exact-cut policy, declassification, scheduler/environment, and order assumptions. |
 | `io-alternating-refinement` | behavioral | A concrete backend preserves abstract participant inputs/outputs, ownership, and declared availability obligations against quantified environment choices. |
@@ -215,7 +219,7 @@ universal soundness obligation is projection-bound `trace-inclusion`.
 Actionable participant interaction also requires declared input/output
 ownership and action-availability obligations, represented by
 `io-alternating-refinement`; trace inclusion alone permits refusal of required
-inputs. Both remain deliberately unproved in revision `rev5`. Current
+inputs. Both remain deliberately unproved in revision `rev6`. Current
 conformance reports establish only `bounded-probe-success` for named fixture
 and target-probe cases. Provisioning success, snapshots, witnesses, and
 negative probes do not establish reverse inclusion, equivalence, simulation,
@@ -273,9 +277,41 @@ profile exposes them.
 Under matching profiles, `policy-noninterference` implies opacity for every
 eligible predicate. Opacity of one predicate does not imply noninterference.
 One equal projected-history pair may witness one alternative but does not
-discharge the opacity quantifier. Revision `rev5` defines and bounded-tests
-this relation; it supplies no checker, model check, proof, runtime enforcement,
+discharge the opacity quantifier. Revision `rev5` introduced and bounded-tests
+this relation; revision `rev6` retains its deliberately unproved assurance
+state and supplies no checker, model check, proof, runtime enforcement,
 backend declaration, realization, or conformance.
+
+### Participant-crossing bisimulation
+
+The SEM-232 design surface uses
+`divergence-preserving-branching-bisimulation` only with a revisioned closed
+relation-parameter profile. The profile binds independently derived left and
+right LTS sources and digests, initial states, a complete quantified carrier,
+the participant/audience projection, the exact visible and tau partitions,
+deadlock, termination, divergence, order and model dimensions, a witness
+family, assurance axis, tool and result provenance, limitations, and
+nonclaims.
+
+The first target is
+`participant-crossing-dpbb-finite-v1@rev1`: the complete finite abstract
+SEM-230 crossing operation versus the independently formalized API-423/RUN-319
+crossing kernel. Only validation, exact-cut resolution, effective-capability
+resolution, record preparation, and atomic commit are hidden. Redacted
+occurrences, decisions, transformations, declassification, delivery,
+observation, replay rejection, policy-cut advance, deadlock, termination, and
+divergence remain visible or explicit.
+
+Revision `rev6` defines the relation, profile, and proof program. It does not
+run the model check. A future positive finite result uses the `model-check`
+assurance axis only when the carrier is the complete quantified finite domain,
+both model constructions are independent, all mutations fail as expected, and
+the exact pinned result is independently reproduced.
+
+Formal equivalence does not establish live-runtime realization, backend
+conformance, whole-runtime equivalence, policy noninterference, or predicate
+opacity. The latter two require separate preservation theorems with matching
+information-flow profiles.
 
 ### Multi-agent interaction
 
@@ -285,7 +321,7 @@ provide structural and finite evidence only. A future strategic claim MUST use
 availability, opponent quantification, information sets, schedulers, objectives,
 and preserved abilities. A probabilistic claim MUST use
 `probabilistic-bisimulation` and supply the probability kernel and equivalence
-classes. Neither relation is implemented or proved in revision `rev5`.
+classes. Neither relation is implemented or proved in revision `rev6`.
 
 ### Counterfactual necessity validation
 
@@ -422,7 +458,7 @@ artifacts:
 
 The catalog records the complete title, authors, publication year and venue,
 edition/version, and immutable DOI, ISBN, or primary publication URL for each
-source. Revision `rev5`
+source. Revision `rev6`
 uses, among others:
 
 - Milner, *A Calculus of Communicating Systems* (1980),
@@ -431,6 +467,10 @@ uses, among others:
   DOI `10.1007/BFb0017309`;
 - van Glabbeek, “The Linear Time–Branching Time Spectrum” (1990),
   DOI `10.1007/BFb0039066`;
+- van Glabbeek and Weijland, “Branching Time and Abstraction in Bisimulation
+  Semantics” (1996), DOI `10.1145/233551.233556`;
+- van Glabbeek, Luttik, and Trčka, “Branching Bisimilarity with Explicit
+  Divergence” (2009), DOI `10.3233/FI-2009-109`;
 - Abadi and Lamport, “The Existence of Refinement Mappings” (1991),
   DOI `10.1016/0304-3975(91)90224-P`;
 - Lynch and Vaandrager, “Forward and Backward Simulations” (1995),

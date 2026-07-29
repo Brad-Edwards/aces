@@ -8,7 +8,8 @@ Decision: [ADR-099](../../../docs/decisions/adrs/adr-099-participant-relative-pr
 
 Machine-readable relation authority:
 `contracts/concept-authority/behavioral-relations-v1.json`,
-`participant-predicate-opacity`, taxonomy revision `rev5`.
+`participant-predicate-opacity`, introduced in taxonomy revision `rev5` and
+carried by current revision `rev6`.
 
 ## Scope
 

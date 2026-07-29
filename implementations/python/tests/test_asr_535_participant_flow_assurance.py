@@ -168,7 +168,7 @@ def test_policy_cases_bind_exact_coordinates_rather_than_prose_in_a_case_name() 
 
     for case in (case for case in report.cases if case.policy_binding is not None):
         binding = case.policy_binding
-        assert binding.claim.taxonomy_revision == "rev5"
+        assert binding.claim.taxonomy_revision == "rev6"
         assert binding.claim.relation_id == "policy-noninterference"
         assert binding.claim.quantifier_scope == "finite-cases"
         assert binding.claim.evidence_scope == "finite"

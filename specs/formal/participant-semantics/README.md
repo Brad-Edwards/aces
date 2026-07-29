@@ -14,6 +14,7 @@ This document is the issue #71 formal design artifact for:
 - `SEM-226` - Participant Exposure And Visibility-Boundary Semantics
 - `SEM-230` - Participant Information-Flow And Control Semantics
 - `SEM-231` - Participant-Relative Predicate Opacity Semantics
+- `SEM-232` - Proof-Bearing Participant-Crossing Bisimulation
 - `DSL-437` - Benign Participant Autonomous Execution
 
 It is a design artifact, not an implementation artifact. It establishes the
@@ -37,6 +38,15 @@ normative model is
 reuses SEM-230 policy, release, memory, strategy, supervisor, exact-cut,
 scheduler, and order coordinates while keeping selected-predicate opacity
 distinct from policy noninterference and projected-history equality.
+
+Issue #811 and ADR-100 add the focused SEM-232 theorem and proof-program
+boundary. Its normative design is
+[`participant-crossing-bisimulation.md`](participant-crossing-bisimulation.md).
+It selects a complete finite abstract crossing LTS and an independently
+derived formal API-423/RUN-319 crossing-kernel LTS under one closed
+participant/audience projection. It does not report the downstream
+model-check, runtime mapping, backend conformance, noninterference, or opacity
+result.
 
 Issue #861 and ADR-092 add deterministic autonomous execution for ordinary
 participants. The focused normative composition is
@@ -1681,7 +1691,7 @@ and order-relative label projection, independent control and information-flow
 operations, dynamic purge and declassification semantics, and the exact
 baseline `policy-noninterference` obligation.
 
-The relation is bound through taxonomy revision `rev5` rather than a local
+The relation is bound through current taxonomy revision `rev6` rather than a local
 registry. Its current assurance is definition-complete and bounded-tested but
 deliberately unproved. The test-local model can falsify finite cases; it is not
 runtime mediation, backend realization, or a universal information-flow proof.
@@ -1697,10 +1707,29 @@ memory, explicit time/order/probability boundaries, and exact distinctions
 from SEM-230 noninterference, projected-history equality, epistemic
 indistinguishability, trace equivalence, and bisimulation.
 
-Taxonomy revision `rev5` records only definition and bounded-test assurance.
-No opacity checker, model check, mathematical proof, runtime enforcement,
-backend declaration, backend realization, or backend conformance is claimed.
-Issues #961 through #965 own those independent future lanes.
+Taxonomy revision `rev5` introduced the relation and bounded-test assurance;
+current revision `rev6` leaves those assurance states unchanged. No opacity
+checker, model check, mathematical proof, runtime enforcement, backend
+declaration, backend realization, or backend conformance is claimed. Issues
+#961 through #965 own those independent future lanes.
+
+## SEM-232 - Proof-Bearing Participant-Crossing Bisimulation
+
+SEM-232 is defined in
+[`participant-crossing-bisimulation.md`](participant-crossing-bisimulation.md).
+The design selects
+`divergence-preserving-branching-bisimulation` between the complete finite
+abstract SEM-230 crossing operation and an independently formalized
+API-423/RUN-319 crossing kernel under
+`participant-crossing-dpbb-finite-v1@rev1`.
+
+Taxonomy revision `rev6` defines the exact relation and claim surface. Issue
+#811 supplies the closed carrier, label projection, relation clauses, witness
+family, mapping boundary, proof-tool contract, counterexample design, DRAFT
+SEM-232 authority, and child program. It does not run the model check. Issues
+#971 through #976 own independent model construction, live-runtime mapping,
+negative mutations, finite equivalence checking, independent reproduction,
+and reproduction-gated scientific documentation.
 
 ## Required Future Verification
 
