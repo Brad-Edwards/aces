@@ -21,6 +21,10 @@ Backends that declare autonomous participant execution must adopt the portable
 execution-service surface described in
 [Participant Execution Control Migration](participant-execution-control.md).
 
+The staged legacy, opt-in, and required adoption of participant
+information-flow control is documented in
+[Participant Information-Flow Control Migration](participant-information-flow-control.md).
+
 The reorganization moved existing material into the current long-term buckets:
 
 - root `schemas/` -> `contracts/schemas/`
