@@ -70,7 +70,7 @@ RENAMED_ARTIFACT_DIGESTS = {
     ),
     "docs/explain/sdl/limitations.md": (
         "4a673316b341fd5beca10e3dd87aa35ba762e4668d78d1b48cb706074f0c720c",
-        "91d7d69129ccdba03a5211314376f4047e3723ff57430680ec8aba39a2732a38",
+        "d74ac3b63a859b03b11b408cfd61ad7fd496a8d1ce781c220873f6478f9292e8",
     ),
 }
 
@@ -511,11 +511,19 @@ def _validate_protocol(
             resolved = safe_repo_path(repo_root, artifact_path) if isinstance(artifact_path, str) else None
             if resolved is None or not resolved.is_file():
                 failures.append(
-                    _failure("specification-coverage-source-path", "source path is unsafe or missing", path)
+                    _failure(
+                        "specification-coverage-source-path",
+                        "source path is unsafe or missing",
+                        path,
+                    )
                 )
             elif isinstance(sha, str) and _SHA256_RE.fullmatch(sha) and _sha256(resolved) != sha:
                 failures.append(
-                    _failure("specification-coverage-source-digest", "source digest is stale", artifact_path)
+                    _failure(
+                        "specification-coverage-source-digest",
+                        "source digest is stale",
+                        artifact_path,
+                    )
                 )
     source_ids = _record_ids(
         sources,
@@ -558,13 +566,34 @@ def _validate_protocol(
             continue
         refs = request.get("source_refs")
         if not isinstance(refs, list) or not refs or not all(ref in source_ids for ref in refs):
-            failures.append(_failure("specification-coverage-requests", "request source refs are invalid", path))
+            failures.append(
+                _failure(
+                    "specification-coverage-requests",
+                    "request source refs are invalid",
+                    path,
+                )
+            )
         if request.get("stratum_id") not in stratum_ids:
-            failures.append(_failure("specification-coverage-requests", "request has unknown stratum", path))
+            failures.append(
+                _failure(
+                    "specification-coverage-requests",
+                    "request has unknown stratum",
+                    path,
+                )
+            )
         for ref in refs if isinstance(refs, list) else []:
-            source = next((item for item in sources if isinstance(item, dict) and item.get("source_id") == ref), None)
+            source = next(
+                (item for item in sources if isinstance(item, dict) and item.get("source_id") == ref),
+                None,
+            )
             if source is not None and source.get("stratum_id") != request.get("stratum_id"):
-                failures.append(_failure("specification-coverage-requests", "request/source stratum mismatch", path))
+                failures.append(
+                    _failure(
+                        "specification-coverage-requests",
+                        "request/source stratum mismatch",
+                        path,
+                    )
+                )
     request_ids = _record_ids(
         requests,
         "request_id",
@@ -628,15 +657,30 @@ def _validate_protocol(
                 )
             )
         if concept.get("request_id") not in request_ids:
-            failures.append(_failure("specification-coverage-concepts", "concept has unknown request", path))
+            failures.append(
+                _failure(
+                    "specification-coverage-concepts",
+                    "concept has unknown request",
+                    path,
+                )
+            )
         if concept.get("expected_carrier_id") not in carrier_ids:
-            failures.append(_failure("specification-coverage-concepts", "concept has unknown carrier", path))
+            failures.append(
+                _failure(
+                    "specification-coverage-concepts",
+                    "concept has unknown carrier",
+                    path,
+                )
+            )
         expected_classification = concept.get("expected_classification")
         carrier = carriers_by_id.get(concept.get("expected_carrier_id"))
         allowed_by_kind = {
             "sdl": {"directly-expressible"},
             "contract": {"directly-expressible", "profile-or-manifest-constraint"},
-            "profile": {"profile-or-manifest-constraint", "deliberately-backend-specific"},
+            "profile": {
+                "profile-or-manifest-constraint",
+                "deliberately-backend-specific",
+            },
             "missing": {"missing"},
         }
         if expected_classification not in EXPECTED_CLASSIFICATIONS:
@@ -683,9 +727,21 @@ def _validate_protocol(
             or len(concept_stages) != len(set(concept_stages))
             or any(stage not in stage_ids for stage in concept_stages)
         ):
-            failures.append(_failure("specification-coverage-concepts", "concept stages are invalid", path))
+            failures.append(
+                _failure(
+                    "specification-coverage-concepts",
+                    "concept stages are invalid",
+                    path,
+                )
+            )
         if not isinstance(concept.get("load_bearing"), bool):
-            failures.append(_failure("specification-coverage-concepts", "load_bearing must be boolean", path))
+            failures.append(
+                _failure(
+                    "specification-coverage-concepts",
+                    "load_bearing must be boolean",
+                    path,
+                )
+            )
     concept_ids = _record_ids(
         concepts,
         "concept_id",
@@ -705,9 +761,21 @@ def _validate_protocol(
                 None,
             )
             if concept is None or concept.get("request_id") != request.get("request_id"):
-                failures.append(_failure("specification-coverage-concepts", "request/concept join is invalid", path))
+                failures.append(
+                    _failure(
+                        "specification-coverage-concepts",
+                        "request/concept join is invalid",
+                        path,
+                    )
+                )
     if len(declared) != len(set(declared)) or set(declared) != concept_ids:
-        failures.append(_failure("specification-coverage-concepts", "request concept coverage is not exact", path))
+        failures.append(
+            _failure(
+                "specification-coverage-concepts",
+                "request concept coverage is not exact",
+                path,
+            )
+        )
 
     rules = protocol.get("execution_rules")
     if (
@@ -721,7 +789,13 @@ def _validate_protocol(
         )
         and rules.get("normal_execution_network_access") is not False
     ):
-        failures.append(_failure("specification-coverage-execution-rules", "normal execution must be offline", path))
+        failures.append(
+            _failure(
+                "specification-coverage-execution-rules",
+                "normal execution must be offline",
+                path,
+            )
+        )
 
     return {
         "stratum_ids": stratum_ids,
@@ -912,18 +986,35 @@ def _validate_artifacts(
         expected_sha = artifact.get("sha256")
         if not isinstance(expected_sha, str) or not _SHA256_RE.fullmatch(expected_sha):
             failures.append(
-                _failure("specification-coverage-artifact-digest", "artifact digest is invalid", artifact_path)
+                _failure(
+                    "specification-coverage-artifact-digest",
+                    "artifact digest is invalid",
+                    artifact_path,
+                )
             )
         else:
             actual_sha = _sha256(resolved)
             renamed_digests = RENAMED_ARTIFACT_DIGESTS.get(artifact_path)
-            if actual_sha != expected_sha and renamed_digests != (expected_sha, actual_sha):
+            if actual_sha != expected_sha and renamed_digests != (
+                expected_sha,
+                actual_sha,
+            ):
                 failures.append(
-                    _failure("specification-coverage-artifact-digest", "artifact digest is stale", artifact_path)
+                    _failure(
+                        "specification-coverage-artifact-digest",
+                        "artifact digest is stale",
+                        artifact_path,
+                    )
                 )
         kind = artifact.get("kind")
         if not isinstance(kind, str):
-            failures.append(_failure("specification-coverage-artifacts", "artifact kind is invalid", artifact_path))
+            failures.append(
+                _failure(
+                    "specification-coverage-artifacts",
+                    "artifact kind is invalid",
+                    artifact_path,
+                )
+            )
             continue
         try:
             executed[artifact_path] = _execute_artifact(repo_root, kind, resolved)
@@ -938,7 +1029,8 @@ def _validate_artifacts(
     return (
         {
             artifact_id: next(
-                (item for item in artifacts if isinstance(item, dict) and item.get("artifact_id") == artifact_id), {}
+                (item for item in artifacts if isinstance(item, dict) and item.get("artifact_id") == artifact_id),
+                {},
             )
             for artifact_id in artifact_ids
         },
@@ -964,15 +1056,39 @@ def _validate_snapshot(
     ):
         return
     if snapshot.get("protocol_revision") != protocol.get("revision"):
-        failures.append(_failure("specification-coverage-snapshot-join", "snapshot protocol revision is stale", path))
+        failures.append(
+            _failure(
+                "specification-coverage-snapshot-join",
+                "snapshot protocol revision is stale",
+                path,
+            )
+        )
     protocol_path = safe_repo_path(repo_root, PROTOCOL_PATH)
     if protocol_path is None or snapshot.get("protocol_sha256") != _sha256(protocol_path):
-        failures.append(_failure("specification-coverage-snapshot-join", "snapshot protocol digest is stale", path))
+        failures.append(
+            _failure(
+                "specification-coverage-snapshot-join",
+                "snapshot protocol digest is stale",
+                path,
+            )
+        )
     if snapshot.get("execution_status") != "complete":
-        failures.append(_failure("specification-coverage-snapshot-status", "execution snapshot must be complete", path))
+        failures.append(
+            _failure(
+                "specification-coverage-snapshot-status",
+                "execution snapshot must be complete",
+                path,
+            )
+        )
     revision = snapshot.get(_HISTORICAL_REVISION_FIELD)
     if not isinstance(revision, str) or not re.fullmatch(r"[0-9a-f]{40}", revision):
-        failures.append(_failure("specification-coverage-snapshot-shape", "historical revision is invalid", path))
+        failures.append(
+            _failure(
+                "specification-coverage-snapshot-shape",
+                "historical revision is invalid",
+                path,
+            )
+        )
 
     _validate_implementation_surfaces(repo_root, snapshot, failures)
 
@@ -983,7 +1099,13 @@ def _validate_snapshot(
         if isinstance(item, dict) and item.get("artifact_id") is not None
     }
     if not carrier_artifacts.issubset(artifacts_by_id):
-        failures.append(_failure("specification-coverage-carriers", "carrier artifact is absent from snapshot", path))
+        failures.append(
+            _failure(
+                "specification-coverage-carriers",
+                "carrier artifact is absent from snapshot",
+                path,
+            )
+        )
 
     results = _bounded_list(
         snapshot.get("concept_results"),
@@ -1029,7 +1151,11 @@ def _validate_snapshot(
         classification = result.get("classification")
         if classification not in EXPECTED_CLASSIFICATIONS:
             failures.append(
-                _failure("specification-coverage-classifications", "result classification is invalid", path)
+                _failure(
+                    "specification-coverage-classifications",
+                    "result classification is invalid",
+                    path,
+                )
             )
         if classification != concept.get("expected_classification"):
             failures.append(
@@ -1040,9 +1166,10 @@ def _validate_snapshot(
                 )
             )
         pointer = result.get("typed_pointer")
-        if classification in {"directly-expressible", "profile-or-manifest-constraint"} and (
-            not isinstance(pointer, str) or not pointer.startswith("/")
-        ):
+        if classification in {
+            "directly-expressible",
+            "profile-or-manifest-constraint",
+        } and (not isinstance(pointer, str) or not pointer.startswith("/")):
             failures.append(
                 _failure(
                     "specification-coverage-typed-evidence",
@@ -1052,7 +1179,11 @@ def _validate_snapshot(
             )
         if classification == "missing" and pointer is not None:
             failures.append(
-                _failure("specification-coverage-typed-evidence", "missing concept has a typed pointer", path)
+                _failure(
+                    "specification-coverage-typed-evidence",
+                    "missing concept has a typed pointer",
+                    path,
+                )
             )
 
         stages = _bounded_list(
@@ -1077,10 +1208,20 @@ def _validate_snapshot(
             stage_ids.append(stage_id)
             outcome = stage.get("outcome")
             if outcome not in valid_outcomes:
-                failures.append(_failure("specification-coverage-stage-coverage", "stage outcome is invalid", path))
+                failures.append(
+                    _failure(
+                        "specification-coverage-stage-coverage",
+                        "stage outcome is invalid",
+                        path,
+                    )
+                )
             if stage.get("validation_strength") not in valid_strengths:
                 failures.append(
-                    _failure("specification-coverage-stage-coverage", "validation strength is invalid", path)
+                    _failure(
+                        "specification-coverage-stage-coverage",
+                        "validation strength is invalid",
+                        path,
+                    )
                 )
             artifact_path = stage.get("artifact_path")
             if not isinstance(artifact_path, str) or artifact_path not in executed:
@@ -1110,9 +1251,16 @@ def _validate_snapshot(
                         path,
                     )
                 )
-            if classification == "missing" and outcome not in {"unsupported", "not_run"}:
+            if classification == "missing" and outcome not in {
+                "unsupported",
+                "not_run",
+            }:
                 failures.append(
-                    _failure("specification-coverage-stage-coverage", "missing concept outcome is dishonest", path)
+                    _failure(
+                        "specification-coverage-stage-coverage",
+                        "missing concept outcome is dishonest",
+                        path,
+                    )
                 )
             if concept.get("load_bearing") is True and outcome != "passed":
                 failures.append(
@@ -1166,7 +1314,11 @@ def _validate_snapshot(
                 resolved = safe_repo_path(repo_root, occurrence_path)
                 if resolved is None:
                     failures.append(
-                        _failure("specification-coverage-artifact-path", "backend occurrence path is unsafe", path)
+                        _failure(
+                            "specification-coverage-artifact-path",
+                            "backend occurrence path is unsafe",
+                            path,
+                        )
                     )
 
 
@@ -1313,13 +1465,36 @@ def _validate_analysis(
         )
     counts = analysis.get("classification_counts")
     if not isinstance(counts, dict) or set(counts) != EXPECTED_CLASSIFICATIONS:
-        failures.append(_failure("specification-coverage-analysis-shape", "classification_counts is invalid", path))
+        failures.append(
+            _failure(
+                "specification-coverage-analysis-shape",
+                "classification_counts is invalid",
+                path,
+            )
+        )
     load_results = analysis.get("load_bearing_results")
-    if not isinstance(load_results, dict) or set(load_results) != {"total", "passed", "failed", "missing"}:
-        failures.append(_failure("specification-coverage-analysis-shape", "load_bearing_results is invalid", path))
+    if not isinstance(load_results, dict) or set(load_results) != {
+        "total",
+        "passed",
+        "failed",
+        "missing",
+    }:
+        failures.append(
+            _failure(
+                "specification-coverage-analysis-shape",
+                "load_bearing_results is invalid",
+                path,
+            )
+        )
     request_results = analysis.get("request_results")
     if not isinstance(request_results, list):
-        failures.append(_failure("specification-coverage-analysis-shape", "request_results must be a list", path))
+        failures.append(
+            _failure(
+                "specification-coverage-analysis-shape",
+                "request_results must be a list",
+                path,
+            )
+        )
     else:
         for index, request_result in enumerate(request_results):
             _exact_keys(
@@ -1367,7 +1542,13 @@ def load_bundle(
     repo_root: Path = REPO_ROOT,
 ) -> tuple[dict[str, object], dict[str, object], dict[str, object], dict[str, object]]:
     bundles = load_bundles(repo_root)
-    return max(bundles, key=lambda item: (revision_key(item[0].get("revision")), item[0]["snapshot_path"]))
+    return max(
+        bundles,
+        key=lambda item: (
+            revision_key(item[0].get("revision")),
+            item[0]["snapshot_path"],
+        ),
+    )
 
 
 def load_bundles(
@@ -1431,7 +1612,11 @@ def main() -> int:
         print(
             json.dumps(
                 [
-                    {"rule_id": failure.rule_id, "message": failure.message, "path": failure.path}
+                    {
+                        "rule_id": failure.rule_id,
+                        "message": failure.message,
+                        "path": failure.path,
+                    }
                     for failure in failures
                 ],
                 indent=2,

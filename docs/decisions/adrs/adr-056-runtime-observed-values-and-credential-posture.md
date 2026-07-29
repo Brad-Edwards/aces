@@ -62,7 +62,7 @@ vocabulary choices.
 | `runtime.identity_authorities.subjects.attributes` and policy settings | identity attribute or bounded policy setting | shared secret-name and raw-values omission helper | values are multi-valued; origin and provenance must align; identity refs are authority-local stable ids |
 | `runtime.security_monitoring_managers.settings` | manager setting | shared secret-name and raw-value omission helper | stable `setting_id`, component refs, source path, content/detection/agent refs, and manager-specific provenance remain local |
 | `runtime.datastore_services.settings` | scoped datastore setting | shared secret-name and raw-value omission helper | `scope`, datastore provenance, data-model profile guard, cluster/persistence/transport posture, and datastore refs remain local |
-| `runtime.platform_applications.settings` | platform setting | shared secret-name and raw-value omission helper | closed platform setting classification, platform kind profile guard, content objects, markings, connectors, and upstream bindings remain local |
+| `runtime.platform_applications.settings` | platform setting | shared secret-name and raw-value omission helper | closed platform setting classification; capability, legacy category/content, marking, connector, and upstream-binding semantics remain local |
 | `runtime.forwarding_agents.settings` | forwarding agent setting | shared secret-name and raw-value omission helper | forwarding source/transform/ship-target/buffer/reload profile guards remain local |
 | `runtime.mounts` and `runtime.local_control_interfaces` | path and option sensitivity | redacted/operator-secret path or option classifications omit raw path/option values | source kind, propagation, backend-generated flag, control interface kind, and named-pipe validation remain path/control-specific |
 | `runtime.filesystem_inventory` | observed filesystem entry | sensitivity classification and provenance are explicit | presence, digest pairs, mode/owner/size constraints, and present-only fields remain filesystem-specific |
@@ -137,3 +137,4 @@ Rejected alternatives:
 | Date | Commit/PR | Summary |
 |------|-----------|---------|
 | 2026-07-13 | #417 | Narrowed the authored SDL boundary: health results, generated network identity, scanner-derived package findings, and scanner capture provenance use evidence/derived carriers rather than `Node.runtime`; the shared redaction invariant continues to govern the remaining declarative runtime fields. |
+| 2026-07-29 | #956 | Removed the obsolete platform-kind profile-guard claim; platform capability and legacy category/content semantics remain family-local while shared explicit-redaction handling is unchanged. |

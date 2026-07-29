@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "51e4814898fd1457cb999020332554596f715540ecbd22078e1936ad5468daf0",
+  "content_hash": "ae00cca1cd31a30b8f0cb7e6b74b4092526f0e688039b3ac73dbef804f853f10",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "51e4814898fd1457cb999020332554596f715540ecbd22078e1936ad5468daf0"
+    "summary": "Added composable provider-neutral platform capabilities and marked legacy platform categories and content manifests deprecated for issue #956.",
+    "content_hash": "ae00cca1cd31a30b8f0cb7e6b74b4092526f0e688039b3ac73dbef804f853f10"
   }
 }

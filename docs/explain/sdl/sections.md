@@ -596,12 +596,16 @@ nodes:
             - setting_id: keystore-pw   # explicit redaction omits value
               name: bootstrap.password
               classification: redacted
-      platform_applications:            # observed security platform application state
+      platform_applications:            # declared participant-visible application state
         - platform_application_id: misp-tip
           service: misp                 # owning same-node Node.services[].name
-          platform_kind: threat_intel   # OPEN discriminator selects the profile
           product: MISP
           version: "2.4"
+          capabilities:                 # functional roles, not completeness claims
+            - capability_id: intelligence-management
+              kind: threat_intelligence_management
+            - capability_id: intelligence-exchange
+              kind: intelligence_exchange
           organizations:
             - organization_id: home-org
               name: TechVault CTI
@@ -609,19 +613,6 @@ nodes:
             - marking_id: tlp-amber
               scheme: tlp
               level: amber
-          content_objects:              # bounded parsed manifests, never raw bodies
-            - content_object_id: misp-taxonomy
-              kind: taxonomy
-              name: tlp
-              marking_refs: [tlp-amber]
-            - content_object_id: misp-galaxy
-              kind: galaxy_cluster
-            - content_object_id: misp-warninglist
-              kind: warninglist
-            - content_object_id: misp-feed
-              kind: feed
-            - content_object_id: misp-sharing
-              kind: sharing_group
           authorization_ref: misp-rbac  # same-node runtime.app_authorizations id
       forwarding_agents:                # observed log-shipping / intel-sync state
         - forwarding_agent_id: wazuh-sidecar-suricata
@@ -1173,29 +1164,27 @@ participate in relationships, generic reference validation, and module import
 rewriting (see
 [ADR-048](../../decisions/adrs/adr-048-datastore-service-runtime-inventory.md)).
 
-`runtime.platform_applications` records the participant-observable runtime state
-of a node's security platform application — the threat-intelligence platform,
-SOAR, analyzer engine, case-management application, and analytics dashboard.
-Each entry is a `RuntimePlatformApplication` with a stable
-`platform_application_id`, an optional same-node `service` ref, and an open
-`platform_kind` spine discriminator (`threat_intel`, `soar`, `analyzer_engine`,
-`case_management`, `analytics_dashboard`, `unknown`, `other`). The discriminator
-drives a required-profile guard: `threat_intel` requires taxonomy, galaxy
-cluster, warninglist, feed, and sharing-group content objects; `soar` requires a
-workflow content object; `analyzer_engine` requires analyzer/responder content
-objects plus an `execution_policy`; `case_management` requires case-template and
-custom-field content objects; and `analytics_dashboard` requires at least one
-saved-object content object (`index_pattern`/`visualization`/`dashboard`/`search`)
-carrying references plus at least one `upstream_binding` with role
-`index_backend`/`data_source`. `content_objects` are bounded parsed manifests —
-typed `kind` (open enum), bounded typed `attributes`, typed `references`,
-`marking_refs`, and `evidence_refs` — structurally never a raw object body.
-`markings` carry a closed releasability `scheme` (`tlp`/`pap`/`distribution`).
-Within an application, content-object `references` resolve to sibling
-`content_object_id` values and `marking_refs` to sibling `marking_id` values, and
-the string `authorization_ref` resolves to a same-node `app_authorization_id`.
-Fully qualified refs such as
-`nodes.tip.runtime.platform_applications.misp-tip.content_objects.misp-feed`
+`runtime.platform_applications` records the declared logical state of a node's
+participant-visible platform application. Each entry has a stable
+`platform_application_id`, an optional same-node `service` ref, product
+metadata, and composable provider-neutral `capabilities`. Capability kinds are
+`threat_intelligence_management`, `intelligence_exchange`, `case_management`,
+`analysis_execution`, `workflow_automation`, `analytics_presentation`,
+`unknown`, and `other`. One application may declare several capabilities. A
+capability describes a functional role only; it does not imply a product,
+configuration profile, loaded content, policy, transport binding, execution,
+or completeness.
+
+`platform_kind` and `content_objects` remain accepted as deprecated compatible
+input. The former is classification only and the latter remains a bounded
+manifest—typed `kind`, bounded `attributes`, typed `references`,
+`marking_refs`, and `evidence_refs`, never a raw object body. Neither field
+implies a capability. Within an application, all child stable ids share one
+namespace; legacy content-object `references` resolve to sibling
+`content_object_id` values and `marking_refs` to sibling `marking_id` values.
+The string `authorization_ref` resolves to a same-node
+`app_authorization_id`. Fully qualified refs such as
+`nodes.tip.runtime.platform_applications.opencti.capabilities.exchange`
 participate in relationships, generic reference validation, and module import
 rewriting (see
 [ADR-049](../../decisions/adrs/adr-049-platform-application-runtime-inventory.md)).
@@ -1710,7 +1699,8 @@ service refs
 `.nodes.<node_id>`, `.partitions.<partition_id>`, or `.settings.<setting_id>`
 refs), named platform application refs
 (`nodes.<node>.runtime.platform_applications.<platform_application_id>` and
-nested `.organizations.<organization_id>`, `.tenants.<tenant_id>`,
+nested `.capabilities.<capability_id>`, `.organizations.<organization_id>`,
+`.tenants.<tenant_id>`,
 `.content_objects.<content_object_id>`, `.markings.<marking_id>`,
 `.upstream_bindings.<binding_id>`, `.connectors.<connector_id>`, or
 `.settings.<setting_id>` refs), and named ACL

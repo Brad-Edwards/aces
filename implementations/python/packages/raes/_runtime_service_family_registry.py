@@ -214,6 +214,7 @@ RUNTIME_SERVICE_FAMILIES: tuple[RuntimeServiceFamily, ...] = (
         collection_name="platform_applications",
         id_field="platform_application_id",
         child_refs=(
+            RuntimeReferenceChild("capabilities", "capability_id"),
             RuntimeReferenceChild("organizations", "organization_id"),
             RuntimeReferenceChild("tenants", "tenant_id"),
             RuntimeReferenceChild("content_objects", "content_object_id"),
