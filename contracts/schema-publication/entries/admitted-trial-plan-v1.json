@@ -1,0 +1,10 @@
+{
+  "contract_id": "admitted-trial-plan-v1",
+  "schema_path": "contracts/schemas/plans/admitted-trial-plan-v1.json",
+  "stability": "draft",
+  "content_hash": "ebbe6c309f9598de139c67a2ef8e02927c9ec839bd3084f1ea1e9723759ec855",
+  "last_change": {
+    "summary": "Published the admitted experiment trial-plan contract: the immutable, schedule-independent handoff between experiment design/admission and orchestration (SCE-002/SCE-006, ADR-084, issue #788). Profiles and admission state are closed literals in the published schema, apparatus manifests are digest-pinned, stochastic draws join their entry coordinate, values duplicated from incumbent authorities (random-stream profile, binding condition/family) must agree, and bounded parallelism requires resource-disjoint entries.",
+    "content_hash": "ebbe6c309f9598de139c67a2ef8e02927c9ec839bd3084f1ea1e9723759ec855"
+  }
+}
