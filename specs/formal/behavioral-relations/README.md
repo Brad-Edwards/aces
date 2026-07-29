@@ -243,6 +243,34 @@ sufficient, probabilistic, or universal causation; replay, temporal order,
 correlation, shared seeds, or a failed execution are not substitutes for its
 gates.
 
+### Determinism, stability, and replay-consistency verification
+
+The ASR-514 claim surface verifies a producer's explicit repeatability claim as
+a single binary baseline-to-repetition comparison of one held-fixed subject. It
+adds no relation: a determinism or replay-consistency claim over exact canonical
+outputs binds the existing `canonical-artifact-identity` relation, whose two
+carriers name the compared baseline and repetition artifacts, and the comparator
+only decides whether the two projected outcomes are identical under one declared
+observation projection, variation policy, and versioned equality criterion. A
+larger set of repeated runs composes as several such pairwise cases; the binary
+relation is never reinterpreted as an n-ary one. The evidence boundary is
+bounded to the named pair, subject, projection, variation policy, and criterion.
+A pair is admitted only when the baseline and repetition carry distinct run
+identities of the same digest-held-fixed subject (ADR-068), the declared
+held-fixed dimensions are held fixed with only permitted variation, and reset,
+isolation, and cleanup are independently verified with no residual state.
+Unequal projected outcomes refute the finite claim; indeterminate, unsupported,
+withheld, incomparable, unverified, or residual evidence is inconclusive or
+unsupported, never a match.
+
+The result is finite empirical evidence for the named cohort only. It does not
+establish universal determinism, statistical equivalence, trace equivalence,
+bisimulation, backend equivalence, or necessity; a shared seed, a reused task
+identifier, wall-clock proximity, an exit status, or a completed replay is not
+substitutable for its gates. Statistical stability under controlled variation
+and participant-history replay remain separate criteria bound to
+`statistical-equivalence` or `participant-projected-history-equivalence`.
+
 ### Independent adequacy studies
 
 Study and benchmark contracts bind their conclusions to
