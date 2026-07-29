@@ -2,9 +2,9 @@
   "contract_id": "behavioral-relations-v1",
   "schema_path": "contracts/schemas/concept-authority/behavioral-relations-v1.json",
   "stability": "draft",
-  "content_hash": "c97938fe6cf5b96fb09db413661ad4acb6bc7cb90b4385e9ccd308cfa4dd0755",
+  "content_hash": "1385035093e46ffdcca1bd30ce26895e38777493793ee2c7615085c25783be27",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "c97938fe6cf5b96fb09db413661ad4acb6bc7cb90b4385e9ccd308cfa4dd0755"
+    "summary": "Added revisioned relation-parameter profiles, assurance-axis binding, and independent opacity assurance states for issue #810.",
+    "content_hash": "1385035093e46ffdcca1bd30ce26895e38777493793ee2c7615085c25783be27"
   }
 }

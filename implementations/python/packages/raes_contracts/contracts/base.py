@@ -33,6 +33,8 @@ class BehavioralClaimBindingModel(ContractModel):
     right_carrier_ref: NonEmptyString | None = None
     observation_projection_ref: NonEmptyString | None = None
     observation_projection_revision: NonEmptyString | None = None
+    relation_parameter_profile_ref: NonEmptyString | None = None
+    relation_parameter_profile_revision: NonEmptyString | None = None
     quantifier_scope: Literal[
         "single-artifact",
         "finite-cases",
@@ -42,6 +44,20 @@ class BehavioralClaimBindingModel(ContractModel):
         "all-strategies",
     ]
     evidence_scope: Literal["structural", "finite", "statistical", "model-check", "proof"]
+    assurance_axis: (
+        Literal[
+            "definition",
+            "checker",
+            "bounded-test",
+            "model-check",
+            "proof",
+            "runtime-enforcement",
+            "backend-declaration",
+            "backend-realization",
+            "backend-conformance",
+        ]
+        | None
+    ) = None
     evidence_boundary: NonEmptyString
     assurance_status: Literal[
         "defined",
@@ -51,6 +67,10 @@ class BehavioralClaimBindingModel(ContractModel):
         "proved",
         "deliberately-unproved",
         "future",
+        "enforced",
+        "declared",
+        "realized",
+        "conformant",
     ]
     evidence_refs: list[NonEmptyString] = Field(default_factory=list)
     limitations: list[NonEmptyString] = Field(min_length=1)
@@ -61,13 +81,48 @@ class BehavioralClaimBindingModel(ContractModel):
         universal_scopes = {"all-admitted-inputs", "all-traces", "all-strategies"}
         if self.quantifier_scope in universal_scopes and self.evidence_scope not in {"model-check", "proof"}:
             raise ValueError("universal quantification requires model-check or proof evidence")
-        if self.assurance_status == "proved" and self.evidence_scope != "proof":
+        axis_rules = {
+            "definition": ("defined", {"structural"}),
+            "checker": ("implemented", {"structural", "finite"}),
+            "bounded-test": ("tested", {"finite"}),
+            "model-check": ("model-checked", {"model-check"}),
+            "proof": ("proved", {"proof"}),
+            "runtime-enforcement": ("enforced", {"structural", "finite"}),
+            "backend-declaration": ("declared", {"structural"}),
+            "backend-realization": ("realized", {"structural", "finite"}),
+            "backend-conformance": ("conformant", {"finite", "statistical"}),
+        }
+        if self.assurance_axis is not None:
+            expected_status, allowed_evidence = axis_rules[self.assurance_axis]
+            negative_axis_state = self.assurance_status == "future" or (
+                self.assurance_axis == "proof" and self.assurance_status == "deliberately-unproved"
+            )
+            if negative_axis_state:
+                if self.evidence_scope != "structural":
+                    raise ValueError(
+                        f"assurance axis {self.assurance_axis!r} with status {self.assurance_status!r} "
+                        "requires structural evidence"
+                    )
+            elif self.assurance_status != expected_status or self.evidence_scope not in allowed_evidence:
+                raise ValueError(
+                    f"assurance axis {self.assurance_axis!r} requires status {expected_status!r} "
+                    f"and evidence scope in {sorted(allowed_evidence)!r}"
+                )
+        elif self.assurance_status in {"enforced", "declared", "realized", "conformant"}:
+            raise ValueError(f"assurance status {self.assurance_status!r} requires an explicit assurance axis")
+        elif self.assurance_status == "proved" and self.evidence_scope != "proof":
             raise ValueError("proved assurance requires proof evidence")
-        if self.assurance_status == "model-checked" and self.evidence_scope != "model-check":
+        elif self.assurance_status == "model-checked" and self.evidence_scope != "model-check":
             raise ValueError("model-checked assurance requires model-check evidence")
         projection_values = (self.observation_projection_ref, self.observation_projection_revision)
         if (projection_values[0] is None) != (projection_values[1] is None):
             raise ValueError("observation projection ref and revision must be supplied together")
+        profile_values = (
+            self.relation_parameter_profile_ref,
+            self.relation_parameter_profile_revision,
+        )
+        if (profile_values[0] is None) != (profile_values[1] is None):
+            raise ValueError("relation parameter profile ref and revision must be supplied together")
         return self
 
 

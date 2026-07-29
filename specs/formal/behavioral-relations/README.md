@@ -12,18 +12,23 @@ weaker observation from being reported as a stronger behavioral result.
 The machine-readable authority is
 `contracts/concept-authority/behavioral-relations-v1.json`, contract
 `behavioral-relations/v1`, taxonomy `raes-behavioral-relations`, revision
-`rev4`. Relation identifiers, formal dimensions, claim-surface defaults,
+`rev5`. Relation identifiers, formal dimensions, claim-surface defaults,
 bibliography coordinates, assurance status, and worked transition systems are
-normative there. ADR-081 and ADR-095 govern the architecture. This document is the
-normative reader-facing formalization of that catalog.
+normative there. ADR-081, ADR-095, and ADR-099 govern the architecture. This
+document is the normative reader-facing formalization of that catalog.
 
-Revision `rev4` adds `bounded-but-for-necessity` for finite, matched,
+Revision `rev5` adds one-sided possibilistic
+`participant-predicate-opacity`, mandatory revisioned relation-parameter
+profiles for that relation, and independent checker, model-check, runtime,
+backend-declaration, backend-realization, and backend-conformance assurance
+states. Revision `rev4` added `bounded-but-for-necessity` for finite, matched,
 intervention-backed counterfactual comparison. Revision `rev3` made SEM-230
 `policy-noninterference` reactive over adaptive low participant strategies and
 exact state cuts, and added `io-alternating-refinement` for actionable backend
 participant semantics. The JSON contract remains `behavioral-relations/v1`
-because its closed shape is unchanged. Revisions `rev1` through `rev3` are
-historical taxonomy identities; current in-repository producers bind `rev4`.
+because the revisioned catalog identity governs the additive vocabulary.
+Revisions `rev1` through `rev4` are historical taxonomy identities; current
+in-repository producers bind `rev5`.
 
 The taxonomy defines claim vocabulary and proof obligations. It does not add a
 model checker, theorem prover, stochastic simulator, game solver, scheduler,
@@ -87,6 +92,7 @@ identifier rather than an artifact-local synonym.
 | `policy-noninterference` | behavioral | Unauthorized high variation preserves participant-visible history support sets for every adaptive low strategy under fixed memory, low-equivalence, exact-cut policy, declassification, scheduler/environment, and order assumptions. |
 | `io-alternating-refinement` | behavioral | A concrete backend preserves abstract participant inputs/outputs, ownership, and declared availability obligations against quantified environment choices. |
 | `epistemic-indistinguishability` | epistemic | Two worlds are indistinguishable to a named participant under an information model. |
+| `participant-predicate-opacity` | epistemic | Every actual point satisfying one selected predicate has a nonsecret alternative in the named observer's information cell under one revisioned profile. |
 | `alternating-strategic-equivalence` | strategic | Named coalitions preserve abilities against quantified opponent choices. |
 | `probabilistic-bisimulation` | behavioral | Related states assign equal probability mass to related equivalence classes. |
 | `statistical-similarity` | empirical | A declared sample-level similarity result under a named metric and uncertainty procedure. |
@@ -104,6 +110,9 @@ None of these rows is an implication ladder. For example:
   `alternating-strategic-equivalence`;
 - finite leakage cases or equal sampled projections do not establish
   `policy-noninterference`;
+- one equal projected-history pair does not establish
+  `participant-predicate-opacity`, and opacity of one predicate does not
+  establish `policy-noninterference`;
 - `statistical-equivalence` does not establish any behavioral equivalence;
 - `profile-satisfaction` does not establish `empirical-adequacy`.
 
@@ -122,7 +131,9 @@ outside scope:
    order;
 6. the preserved property and the proof obligation;
 7. evidence that may support the relation and explicit nonclaims;
-8. definition, implementation, test, and proof assurance states; and
+8. definition, checker, implementation, bounded-test, model-check, proof,
+   runtime-enforcement, backend-declaration, backend-realization, and
+   backend-conformance assurance states; and
 9. revision-pinned primary-source references.
 
 Missing dimensions are not defaults. They are an incomplete claim.
@@ -135,8 +146,10 @@ A consumer claim is a `BehavioralClaimBindingModel`. It MUST carry:
 (taxonomy_id, taxonomy_revision, relation_id,
  subject, left_carrier_ref?, right_carrier_ref?,
  observation_projection_ref?, observation_projection_revision?,
+ relation_parameter_profile_ref?, relation_parameter_profile_revision?,
  quantifier_scope, evidence_scope, evidence_boundary,
- assurance_status, evidence_refs[], limitations[], explicit_non_claims[])
+ assurance_axis?, assurance_status, evidence_refs[], limitations[],
+ explicit_non_claims[])
 ```
 
 The relation meaning remains in the catalog; the binding identifies the actual
@@ -144,16 +157,41 @@ subject and evidence. Projection coordinates are mandatory for a relation whose
 catalog entry has `projection_required: true`. Universal scopes
 `all-admitted-inputs`, `all-traces`, and `all-strategies` require model-check or
 proof evidence. A finite or statistical record cannot carry one of those
-universal scopes.
+universal scopes. A relation that declares
+`relation_parameter_profile_required: true` requires the paired revisioned
+profile coordinates and one explicit assurance axis.
 
 Assurance axes are independent:
 
 | Axis | Question |
 | --- | --- |
 | definition | Is the relation defined precisely? |
-| implementation | Does RAES implement a checker or realization? |
-| test | What executable cases exercise it? |
-| proof | Is a universal obligation proved, model-checked, deliberately unproved, or future? |
+| checker | Does RAES implement a deciding or falsifying checker? |
+| bounded test | What named finite cases exercise it? |
+| model check | Was a pinned finite model exhaustively explored within declared bounds? |
+| proof | Is a universal obligation independently proved? |
+| runtime enforcement | Does the reference runtime mediate every declared observation channel? |
+| backend declaration | Does a backend declare support with contracts and limitations? |
+| backend realization | Is the named feature natively realized with provenance? |
+| backend conformance | Did the named realization pass bounded adversarial cases? |
+
+Positive bindings use axis-native assurance statuses. Definition is `defined`,
+checker is `implemented`, bounded test is `tested`, model check is
+`model-checked`, proof is `proved`, runtime enforcement is `enforced`, backend
+declaration is `declared`, backend realization is `realized`, and backend
+conformance is `conformant`. Their evidence scope must match the axis:
+structural for definition/declaration, finite for bounded tests, the
+same-named model-check/proof scopes, structural or finite for
+checker/runtime/realization, and finite or statistical for backend
+conformance. Future axes and deliberately unproved proof axes are structural
+records, not positive results.
+
+The legacy implementation aggregate must agree with explicit checker,
+runtime-enforcement, and backend-realization states. The legacy proof aggregate
+must agree with model checking; positive backend conformance requires a
+realized or partially realized backend; and a future definition cannot carry a
+positive assurance result. Catalog and claim validators reject contradictory
+combinations.
 
 “Defined” is not “implemented”, “implemented” is not “tested”, and “tested” is
 not “proved”. The report truth value or study result remains separate from the
@@ -177,7 +215,7 @@ universal soundness obligation is projection-bound `trace-inclusion`.
 Actionable participant interaction also requires declared input/output
 ownership and action-availability obligations, represented by
 `io-alternating-refinement`; trace inclusion alone permits refusal of required
-inputs. Both remain deliberately unproved in revision `rev4`. Current
+inputs. Both remain deliberately unproved in revision `rev5`. Current
 conformance reports establish only `bounded-probe-success` for named fixture
 and target-probe cases. Provisioning success, snapshots, witnesses, and
 negative probes do not establish reverse inclusion, equivalence, simulation,
@@ -216,6 +254,29 @@ establish the universal hyperproperty, runtime enforcement, backend
 realization, projected trace equivalence, simulation, refinement, bisimulation,
 or epistemic indistinguishability.
 
+### Participant predicate opacity
+
+The SEM-231 claim surface uses `participant-predicate-opacity` only with a
+revisioned relation-parameter profile. The profile fixes the observer or
+coalition, selected predicate, possible-point and cut scope, complete
+observation and delivery projection, retained memory, allowed adaptive
+strategies, supervisor visibility, exact-cut policy and release behavior,
+scheduler/environment, concurrency, partial order, time/progress, and
+probability treatment.
+
+The baseline is one-sided, possibilistic, untimed, and progress-insensitive.
+It requires a nonsecret alternative in every actual secret information cell.
+Supervisor approvals, denials, omissions, timing, delivery, action
+availability, and changed external behavior are observations whenever the
+profile exposes them.
+
+Under matching profiles, `policy-noninterference` implies opacity for every
+eligible predicate. Opacity of one predicate does not imply noninterference.
+One equal projected-history pair may witness one alternative but does not
+discharge the opacity quantifier. Revision `rev5` defines and bounded-tests
+this relation; it supplies no checker, model check, proof, runtime enforcement,
+backend declaration, realization, or conformance.
+
 ### Multi-agent interaction
 
 Current joint-action, simultaneous-move, chance, and mean-field contracts
@@ -224,7 +285,7 @@ provide structural and finite evidence only. A future strategic claim MUST use
 availability, opponent quantification, information sets, schedulers, objectives,
 and preserved abilities. A probabilistic claim MUST use
 `probabilistic-bisimulation` and supply the probability kernel and equivalence
-classes. Neither relation is implemented or proved in revision `rev4`.
+classes. Neither relation is implemented or proved in revision `rev5`.
 
 ### Counterfactual necessity validation
 
@@ -288,7 +349,7 @@ visible trace can weakly match while strong bisimulation fails. Neither finite
 case proves `io-alternating-refinement`; each can falsify an incorrect
 implication used in a backend claim.
 
-## Assurance Boundary For Revision 4
+## Assurance Boundary For Revision 5
 
 Implemented and tested now:
 
@@ -302,6 +363,8 @@ Implemented and tested now:
 - participant projection machinery and bounded projected-history comparisons;
 - the SEM-230 relation definition, catalog/claim-policy validation, and bounded
   reactive-strategy counterexamples; and
+- the SEM-231 opacity definition, mandatory profile and assurance-axis binding
+  validation, and four finite falsification examples; and
 - bounded decision-epoch-zero step-matching and participant-input-availability
   counterexamples for `io-alternating-refinement`.
 
@@ -312,7 +375,10 @@ Defined but deliberately unproved or only partially implemented:
 - `trace-equivalence`, forward/backward simulation, and data refinement;
 - strong and weak bisimulation; and
 - universal `policy-noninterference`, production policy enforcement, and
-  backend realization of the SEM-230 relation.
+  backend realization of the SEM-230 relation; and
+- any opacity checker, universal participant-predicate-opacity result,
+  finite-state model check, mathematical proof, runtime enforcement, backend
+  declaration, backend realization, or backend conformance.
 
 Defined for future governed work and inappropriate to claim from current
 artifacts:
@@ -328,7 +394,7 @@ artifacts:
 
 The catalog records the complete title, authors, publication year and venue,
 edition/version, and immutable DOI, ISBN, or primary publication URL for each
-source. Revision `rev4`
+source. Revision `rev5`
 uses, among others:
 
 - Milner, *A Calculus of Communicating Systems* (1980),
@@ -362,7 +428,17 @@ uses, among others:
 - Bohannon, Pierce, Sjöberg, Weirich, and Zdancewic, “Reactive
   Noninterference” (2009), DOI `10.1145/1653662.1653673`; and
 - Halpern and Pearl, “Causes and Explanations: A Structural-Model Approach.
-  Part I: Causes” (2005), DOI `10.1093/bjps/axi147`.
+  Part I: Causes” (2005), DOI `10.1093/bjps/axi147`;
+- Bryans, Koutny, Mazaré, and Ryan, “Opacity Generalised to Transition
+  Systems” (2008), DOI `10.1007/s10207-008-0058-x`;
+- Lin, “Opacity of Discrete Event Systems and its Applications” (2011), DOI
+  `10.1016/j.automatica.2011.01.002`;
+- Saboori and Hadjicostis, “Verification of Infinite-Step Opacity and
+  Complexity Considerations” (2012), DOI `10.1109/TAC.2011.2173774`;
+- Schoepe and Sabelfeld, “Understanding and Enforcing Opacity” (2015), DOI
+  `10.1109/CSF.2015.41`; and
+- Xie, Yin, and Li, “Opacity Enforcing Supervisory Control Using
+  Nondeterministic Supervisors” (2022), DOI `10.1109/TAC.2021.3131125`.
 
 Bibliographic prose here is an aid. The machine-readable catalog is the
 revision-pinned identity surface.

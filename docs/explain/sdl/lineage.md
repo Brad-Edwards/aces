@@ -794,7 +794,7 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   syntax or wire compatibility. The normative participant-policy model is
   `specs/formal/participant-semantics/information-flow-control.md`; the
   machine-readable relation is `policy-noninterference` in behavioral taxonomy
-  revision `rev4`; and the claim surface is
+  revision `rev5`; and the claim surface is
   `participant-information-flow-policy`. Existing `W`, `V`, qualified `H`,
   `X`, participant action/admission, visibility transition, ordering, marking,
   controller, authority, evidence, and provenance objects remain the mapped
@@ -824,6 +824,34 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   cases do not establish universal noninterference, trace equivalence,
   simulation, refinement, bisimulation, epistemic indistinguishability, timed
   security, or probabilistic security.
+- Issue #810 and SEM-231 adapt the predicate-opacity literature through
+  RAES-native possible-point and relation-profile coordinates. Bryans et al.
+  supply the predicate/observation kernel; Schoepe and Sabelfeld supply its
+  one-sided knowledge characterization, symmetric variant, and exact
+  noninterference boundary; Lin and Saboori-Hadjicostis supply current,
+  historical, and infinite-step scope distinctions; Badouel et al. and Xie et
+  al. expose supervisory visibility and nondeterministic control; Broberg et
+  al. supply dynamic release and replay distinctions. The active-intruder work
+  of Partovi et al. and the unknown-supervisor work of Cui et al. are explicitly
+  preprints used as design criteria, not sole authority.
+- The exact issue #810 mapping is
+  `specs/formal/participant-semantics/participant-predicate-opacity.md`,
+  ADR-099, the `participant-predicate-opacity` relation and
+  `participant-opacity` claim surface in
+  `contracts/concept-authority/behavioral-relations-v1.json`, the shared
+  revisioned relation-parameter profile and assurance-axis binding, the
+  literature/current-state/requirement/program artifacts under
+  `docs/research/participant-opacity/`, and the four bounded structural cases
+  in `test_sem_231_participant_predicate_opacity.py` and
+  `test_issue_810_participant_opacity_design.py`.
+- RAES keeps opacity distinct from SEM-230 policy noninterference,
+  participant-projected-history equality, epistemic indistinguishability,
+  trace equivalence, and bisimulation. Current assurance is definition plus
+  bounded tests only. No checker, model check, proof, runtime enforcement,
+  supervisor synthesis, backend declaration, backend realization, bounded
+  backend conformance, probabilistic security, timed security, or all-schedule
+  result is delivered. Issues #961 through #965 own those independent future
+  lanes.
 - ACT-617 applies the already adopted SEM-230/ADR-085 control and ordering
   lineage to authored mixed-control behavior without introducing another
   external derivation. The exact RAES mapping is
@@ -919,12 +947,14 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   RUN-308 concurrency evidence, existing operation receipts/statuses, and
   existing time-state/provenance. It claims no wire, API, lifecycle-token, or
   behavioral compatibility with those sources.
-- Issues #810 through #813 own the opacity/supervisor-visibility,
-  proof-bearing bisimulation, adversarial threat-model, and
-  simulation/federation extensions. SEM-230 preserves their participant,
-  audience, policy revision, declassification, controller/authority,
-  scheduler/environment, timing/probability, order, and evidence coordinates;
-  that extension seam is not evidence those properties are already delivered.
+- Issues #811 through #813 own proof-bearing bisimulation, adversarial
+  threat-model, and simulation/federation extensions. Issue #810 now defines
+  opacity and supervisor-visibility architecture only; issues #961 through
+  #965 own its checker, model-check, proof, runtime, and backend lanes. SEM-230
+  preserves their participant, audience, policy revision, declassification,
+  controller/authority, scheduler/environment, timing/probability, order, and
+  evidence coordinates; that extension seam is not evidence those properties
+  are already realized.
 - [STRIPS](https://doi.org/10.1016/0004-3702(71)90010-5),
   [PDDL](https://doi.org/10.2200/S00900ED2V01Y201902AIM042),
   [PDDL2.1](https://doi.org/10.1613/jair.1129), and the probabilistic planning
@@ -1178,7 +1208,7 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   existing `run_target_conformance()` runner extended with an injected
   participant-policy probe harness, `ConformanceCaseResult`, and
   `BackendConformanceReport` for the backend lane; and the
-  `raes-behavioral-relations` `rev4` catalog with `BehavioralClaimBindingModel`
+  `raes-behavioral-relations` `rev5` catalog with `BehavioralClaimBindingModel`
   for claim identity. The four lanes stay separately statused; none promotes
   another.
 - ASR-535 delivery status is bounded-tested and bounded-conformance-implemented.
@@ -1242,7 +1272,7 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   `BehavioralClaimBindingModel` example in
   `implementations/python/tests/test_public_docs_policy.py`. The example
   resolves `bounded-probe-success` against
-  `raes-behavioral-relations@rev4`; it does not define a documentation claim
+  `raes-behavioral-relations@rev5`; it does not define a documentation claim
   schema or a second relation catalog.
 - Issue #803 delivery status is published explanatory guidance over shipped
   bounded evidence. The reference backend still declares the six
