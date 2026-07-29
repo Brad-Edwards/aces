@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "51e4814898fd1457cb999020332554596f715540ecbd22078e1936ad5468daf0",
+  "content_hash": "2516ffb812146f3fc97e178d57dc292ffcaf8fa9b3cd145c4b34b3d50c54f355",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "51e4814898fd1457cb999020332554596f715540ecbd22078e1936ad5468daf0"
+    "summary": "Propagated admitted trial instantiation provenance through embedded instantiated scenarios for issue #790.",
+    "content_hash": "2516ffb812146f3fc97e178d57dc292ffcaf8fa9b3cd145c4b34b3d50c54f355"
   }
 }

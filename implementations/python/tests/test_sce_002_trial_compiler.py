@@ -31,6 +31,7 @@ from raes_contracts.contracts import (
     ExperimentReferenceModel,
     ExperimentScenarioFamilyReferenceModel,
     ExperimentSpecModel,
+    ExperimentTaskModel,
     ParticipantImplementationManifestModel,
     TrialCleanupTemplateModel,
     TrialCompilationLimitsModel,
@@ -57,6 +58,9 @@ _EXPERIMENT_FIXTURE = (
     / "experiment-authoring-input-v1"
     / "valid"
     / "reference.json"
+)
+_TASK_FIXTURE = (
+    REPO_ROOT / "contracts" / "fixtures" / "experiment-core" / "experiment-task-v1" / "valid" / "reference.json"
 )
 _ENVELOPE_FIXTURE = (
     REPO_ROOT / "contracts" / "fixtures" / "realization-envelope" / "realization-envelope-v1" / "valid" / "generic.json"
@@ -330,6 +334,7 @@ def _request(*, run_count: int = 2, sample: bool = False) -> TrialCompilationReq
     family = _family()
     family_digest = canonical_sdl_digest(family).value
     experiment = _spec(run_count=run_count, sample=sample)
+    task = ExperimentTaskModel.model_validate_json(_TASK_FIXTURE.read_text(encoding="utf-8"))
     authoring_digest = canonical_json_digest(experiment.model_dump(mode="json"))
     envelope = BackendRealizationEnvelopeModel.model_validate_json(_ENVELOPE_FIXTURE.read_text(encoding="utf-8"))
     manifest_payload = json.loads(_BACKEND_MANIFEST_FIXTURE.read_text(encoding="utf-8"))
@@ -359,6 +364,7 @@ def _request(*, run_count: int = 2, sample: bool = False) -> TrialCompilationReq
             ref_digest=authoring_digest,
         ),
         task_ref=experiment.task_ref,
+        task_digest=canonical_json_digest(task.model_dump(mode="json")),
         scenario_family_ref=ExperimentScenarioFamilyReferenceModel(
             ref_kind="scenario-family",
             ref_id=family.name,
@@ -369,6 +375,7 @@ def _request(*, run_count: int = 2, sample: bool = False) -> TrialCompilationReq
     return TrialCompilationRequest(
         family=family,
         experiment=experiment,
+        task=task,
         input_refs=refs,
         apparatus=apparatus,
         realization_envelope=envelope,

@@ -27,6 +27,7 @@ from .phase_contracts import (
     InstantiationProvenance,
     ParameterBinding,
     SemanticDigest,
+    TrialInstantiationProvenance,
 )
 from .realization_designation import RealizationDesignationRecord, designation_records
 from .scenario import ExpandedScenario, InstantiatedScenario, Scenario, ScenarioContent
@@ -417,6 +418,8 @@ def instantiate_scenario(
     raw_scenario: Scenario | ExpandedScenario,
     parameters: Mapping[str, JSONLike] | None = None,
     profile: str | None = None,
+    *,
+    trial_provenance: TrialInstantiationProvenance | None = None,
 ) -> InstantiatedScenario:
     """Return a fully concrete scenario ready for compilation.
 
@@ -444,6 +447,7 @@ def instantiate_scenario(
         capability_constraints=bound.capability_constraints,
         explicitness=bound.explicitness,
         realization_designations=bound.realization_designations,
+        trial=trial_provenance,
     )
     payload = bound.content.model_dump(mode="python", by_alias=True)
     payload.pop("variables", None)

@@ -20,6 +20,7 @@ from ._declarations import build_declaration_index
 from ._errors import SDLInstantiationError
 from .experiment_selection import validate_selection_outcome
 from .instantiate import instantiate_scenario
+from .phase_contracts import TrialInstantiationProvenance
 from .scenario import ExpandedScenario, InstantiatedScenario
 from .variation import (
     COLLECTION_TARGET_SPECS,
@@ -328,6 +329,8 @@ def _validate_target_writes(
 def select_scenario_family(
     family: ExpandedScenario,
     outcomes: Mapping[str, object],
+    *,
+    trial_provenance: TrialInstantiationProvenance | None = None,
 ) -> InstantiatedScenario:
     """Construct and semantically admit the exact concrete scenario selected from *family*."""
 
@@ -358,7 +361,11 @@ def select_scenario_family(
     payload["variation_points"] = {}
     try:
         selected_family = ExpandedScenario.model_validate(payload)
-        return instantiate_scenario(selected_family, parameters=parameters)
+        return instantiate_scenario(
+            selected_family,
+            parameters=parameters,
+            trial_provenance=trial_provenance,
+        )
     except (SDLInstantiationError, ValidationError) as exc:
         raise ValueError("selected scenario failed whole-scenario semantic admission") from exc
 

@@ -413,6 +413,12 @@
           ],
           "default": null
         },
+        "task_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Task Digest",
+          "type": "string"
+        },
         "task_ref": {
           "$ref": "#/$defs/ExperimentTaskReferenceModel"
         }
@@ -420,6 +426,7 @@
       "required": [
         "authoring_input_ref",
         "task_ref",
+        "task_digest",
         "scenario_family_ref"
       ],
       "title": "AdmittedTrialPlanInputRefsModel",

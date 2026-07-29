@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
   "stability": "draft",
-  "content_hash": "e48a8fae49b47e70ad14eb750f865d2211d03fccbf91e824a562cc62772cc3da",
+  "content_hash": "b6bafa7c5ea4ddff518f6295bf625fae769be85344f27785ca0c99f93f26f5a3",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "e48a8fae49b47e70ad14eb750f865d2211d03fccbf91e824a562cc62772cc3da"
+    "summary": "Added sealed admitted trial selection and binding lineage to instantiation provenance for issue #790.",
+    "content_hash": "b6bafa7c5ea4ddff518f6295bf625fae769be85344f27785ca0c99f93f26f5a3"
   }
 }

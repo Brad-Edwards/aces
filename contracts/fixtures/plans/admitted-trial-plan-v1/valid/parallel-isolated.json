@@ -376,6 +376,7 @@
       "ref_version": "expanded-scenario-family/v1"
     },
     "study_ref": null,
+    "task_digest": "sha256:bcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbc",
     "task_ref": {
       "ref_id": "task-a",
       "ref_kind": "task",
@@ -435,7 +436,7 @@
     "requested_parallelism": 2,
     "schema_version": "scheduler-isolation-proof/v1"
   },
-  "plan_digest": "sha256:d2abefdd8f704063f7558f8feee5a20d7cf9ba75c8bac29664b3e7156bbc23ee",
+  "plan_digest": "sha256:96cc9d14b3cd1b35adc6ed3e1007027bd967cdcfe870dbf6eded6b5212d9f7e6",
   "plan_id": "plan-a",
   "profiles": {
     "canonicalization_profile": "jcs-sha256-v1",

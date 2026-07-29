@@ -14,6 +14,11 @@ from pathlib import Path
 import pytest
 from jsonschema import Draft202012Validator
 from pydantic import ValidationError
+from raes_contracts.admitted_trial_plan_ingress import (
+    MAX_ADMITTED_TRIAL_PLAN_BYTES,
+    AdmittedTrialPlanIngressError,
+    parse_admitted_trial_plan_json,
+)
 from raes_contracts.contracts import schema_bundle
 from raes_contracts.contracts.admitted_trial_plan import (
     AdmittedApparatusBindingModel,
@@ -121,6 +126,7 @@ def _input_refs(**overrides: object) -> AdmittedTrialPlanInputRefsModel:
             ref_kind="authoring-input", ref_id="exp-a", ref_version="1", ref_digest=_digest("ab")
         ),
         "task_ref": ExperimentTaskReferenceModel(ref_kind="task", ref_id="task-a", ref_version="1"),
+        "task_digest": _digest("bc"),
         "scenario_family_ref": ExperimentScenarioFamilyReferenceModel(
             ref_kind="scenario-family",
             ref_id="family-a",
@@ -751,6 +757,40 @@ def test_schema_bundle_publishes_admitted_trial_plan_contract() -> None:
         invariant["validator"].endswith("AdmittedTrialPlanModel._validate_plan")
         for invariant in bundle[CONTRACT_ID]["x-raes-invariants"]
     )
+
+
+def test_admitted_plan_ingress_reconstructs_and_revalidates_complete_plan() -> None:
+    fixture = FIXTURES_ROOT / "plans" / CONTRACT_ID / "valid" / "minimal.json"
+
+    admitted = parse_admitted_trial_plan_json(fixture.read_bytes())
+
+    assert admitted.plan_id == "plan-a"
+    assert tuple(admitted.entries) == ("entry-a",)
+
+
+@pytest.mark.parametrize(
+    ("raw", "code"),
+    [
+        (b'{"plan_id":"first","plan_id":"second"}', "duplicate-member"),
+        (b"[]", "invalid-root"),
+        (b'{"value":NaN}', "non-finite-number"),
+        (b"", "empty-input"),
+    ],
+)
+def test_admitted_plan_ingress_rejects_ambiguous_or_non_contract_json(raw: bytes, code: str) -> None:
+    with pytest.raises(AdmittedTrialPlanIngressError) as error:
+        parse_admitted_trial_plan_json(raw)
+
+    assert error.value.code == code
+
+
+def test_admitted_plan_ingress_rejects_oversized_input_before_parsing() -> None:
+    raw = b"{" + b" " * MAX_ADMITTED_TRIAL_PLAN_BYTES + b"}"
+
+    with pytest.raises(AdmittedTrialPlanIngressError) as error:
+        parse_admitted_trial_plan_json(raw)
+
+    assert error.value.code == "input-too-large"
 
 
 def test_admitted_trial_plan_fixture_corpora_validate() -> None:

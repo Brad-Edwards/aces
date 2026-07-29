@@ -61,10 +61,13 @@ from .time_model import (
     TimeModelDeclarationModel,
     validate_realized_time_model,
 )
+from .trial_provenance import (
+    TrialRunProvenanceModel,
+    add_trial_run_provenance_invariant,
+    validate_trial_run_provenance_binding,
+)
 from .validation_disclosure import ValidationBasisDisclosureModel, validate_carrier_validation_basis_disclosures
 from .validators import _validate_unique_string_values
-
-_ARCHIVAL_RUN_VALIDATOR = "raes_contracts.contracts.ExperimentRunModel._validate_archival_run"
 
 
 class ExperimentResultSummaryModel(ContractModel):
@@ -120,6 +123,7 @@ class ExperimentRunModel(ContractModel):
     run_version: NonEmptyString
     task_ref: ExperimentTaskReferenceModel
     scenario_snapshot_ref: ExperimentScenarioSnapshotReferenceModel
+    trial_provenance: TrialRunProvenanceModel | None = None
     apparatus_context: ExperimentApparatusContextModel
     participant_implementation_provenance: ParticipantImplementationProvenanceModel | None = None
     parameter_set: list[ExperimentParameterModel] = Field(min_length=1)
@@ -155,6 +159,9 @@ class ExperimentRunModel(ContractModel):
         _validate_run_realized_form_disclosures(self)
         _validate_run_augmentation_disclosures(self)
         _validate_realized_bindings(self.realized_bindings)
+        validate_trial_run_provenance_binding(
+            self.trial_provenance, run_id=self.run_id, scenario_digest=self.scenario_snapshot_ref.ref_digest
+        )
         validate_carrier_validation_basis_disclosures(self, subject_kind="experiment_run")
         if self.realized_time_model is not None:
             validate_realized_time_model(
@@ -184,32 +191,33 @@ class ExperimentRunModel(ContractModel):
                 },
             }
         )
+        add_trial_run_provenance_invariant(json_schema)
         _add_raes_invariant(
             json_schema,
             "ended-at-not-before-started-at",
             "ended_at must be greater than or equal to started_at.",
-            validator=_ARCHIVAL_RUN_VALIDATOR,
+            validator="raes_contracts.contracts.ExperimentRunModel._validate_archival_run",
             inputs=[{"contract_id": "experiment-run-v1", "instance_path": "#"}],
         )
         _add_raes_invariant(
             json_schema,
             "result-evidence-ref-resolves",
             "Every result_summaries evidence_refs ref_id must match an evidence_artifacts artifact_id.",
-            validator=_ARCHIVAL_RUN_VALIDATOR,
+            validator="raes_contracts.contracts.ExperimentRunModel._validate_archival_run",
             inputs=[{"contract_id": "experiment-run-v1", "instance_path": "#"}],
         )
         _add_raes_invariant(
             json_schema,
             "participant-implementation-provenance-resolves",
             "Participant implementation apparatus components must resolve to run-level participant provenance.",
-            validator=_ARCHIVAL_RUN_VALIDATOR,
+            validator="raes_contracts.contracts.ExperimentRunModel._validate_archival_run",
             inputs=[{"contract_id": "experiment-run-v1", "instance_path": "#"}],
         )
         _add_raes_invariant(
             json_schema,
             "realized-form-evidence-refs-traced",
             "Every realized-form disclosure evidence ref must also appear in the run traceability evidence refs.",
-            validator=_ARCHIVAL_RUN_VALIDATOR,
+            validator="raes_contracts.contracts.ExperimentRunModel._validate_archival_run",
             inputs=[{"contract_id": "experiment-run-v1", "instance_path": "#"}],
         )
         _add_raes_invariant(
@@ -217,7 +225,7 @@ class ExperimentRunModel(ContractModel):
             "augmentation-disclosure-evidence-refs-traced",
             "Every augmentation disclosure evidence ref must also appear in the run traceability evidence refs, "
             "and augmentation_id values must be unique within the run.",
-            validator=_ARCHIVAL_RUN_VALIDATOR,
+            validator="raes_contracts.contracts.ExperimentRunModel._validate_archival_run",
             inputs=[{"contract_id": "experiment-run-v1", "instance_path": "#"}],
         )
         _add_carrier_validation_basis_disclosure_invariant(
@@ -236,7 +244,7 @@ class ExperimentRunModel(ContractModel):
             json_schema,
             "realized-time-model-bound-to-run",
             "When present, realized-time provenance must match the run id and its declared model digest.",
-            validator=_ARCHIVAL_RUN_VALIDATOR,
+            validator="raes_contracts.contracts.ExperimentRunModel._validate_archival_run",
             inputs=[{"contract_id": "experiment-run-v1", "instance_path": "#/realized_time_model"}],
         )
         _add_raes_invariant(

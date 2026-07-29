@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-snapshot-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "de78a77ae1d67b7349e557d42ca5a8afad6d30f1003af5eb3009c5eb2783bf1d",
+  "content_hash": "813e2912f647d9cd2b232f9e718ed5a2d4c80f05e356186c1a20f8624f95be1b",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "de78a77ae1d67b7349e557d42ca5a8afad6d30f1003af5eb3009c5eb2783bf1d"
+    "summary": "Bound canonical instantiated snapshots to sealed admitted trial provenance for issue #790.",
+    "content_hash": "813e2912f647d9cd2b232f9e718ed5a2d4c80f05e356186c1a20f8624f95be1b"
   }
 }

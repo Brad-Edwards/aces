@@ -23,7 +23,9 @@ issue #658. No new ADR is required.
   contract. #790 must identify the public one-entry realization/execution path
   that preserves SDL instantiation and existing run provenance. Scheduling
   behavior must not land by guessing those interfaces, parsing experiment
-  authoring input, or copying private compiler/runtime steps.
+  authoring input, or copying private compiler/runtime steps. The #790
+  boundary is fixed in
+  `issue-790-sce-002-trial-realization-provenance-preflight.md`.
 - APTL is an outer coordinator over that one-entry path. It may choose when and
   where an already admitted entry runs, but it does not compose SDL, select a
   variation, draw randomness, bind a scenario through a private path, allocate

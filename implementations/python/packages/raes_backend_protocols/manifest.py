@@ -22,6 +22,7 @@ from raes_contracts.contracts import (
     TimeCapabilitiesModel,
 )
 from raes_contracts.manifest_authority import BACKEND_SUPPORTED_CONTRACT_IDS
+from raes_contracts.realization_envelope import BackendRealizationEnvelopeModel
 
 from .capabilities import (
     BackendCapabilitySet,
@@ -43,14 +44,7 @@ from .participant_execution_manifest import (
 
 
 class BackendManifestEnvelopeUnsupportedError(ValueError):
-    """A backend-manifest-v2 payload declares a realization envelope that cannot be resolved.
-
-    A ``backend-manifest-v2`` payload carries only the realization-envelope
-    *identity*, not the full digest-checked declaration the planner needs for
-    envelope-membership checks. :func:`backend_manifest_from_v2_model` raises this
-    (a ``ValueError`` subclass, so existing ``except ValueError`` handlers still
-    catch it) so callers can render a stable, input-free message for this case.
-    """
+    """A backend manifest declares an envelope that cannot be resolved."""
 
 
 def _evaluator_capability_payload(manifest: BackendManifest) -> dict[str, Any] | None:
@@ -469,6 +463,27 @@ def backend_manifest_from_v2_model(model: BackendManifestV2Model) -> BackendMani
             "requires. Supply an envelope-free manifest or omit it to use the default reference "
             "dry-run manifest."
         )
+    return _backend_manifest_from_v2_model(model, realization_envelope=None)
+
+
+def backend_manifest_from_v2_model_with_envelope(
+    model: BackendManifestV2Model,
+    realization_envelope: BackendRealizationEnvelopeModel,
+) -> BackendManifest:
+    """Reconstruct a runtime manifest after joining its full pinned envelope."""
+
+    if model.realization_envelope != realization_envelope.identity:
+        raise BackendManifestEnvelopeUnsupportedError(
+            "backend manifest realization-envelope identity does not match the supplied declaration"
+        )
+    return _backend_manifest_from_v2_model(model, realization_envelope=realization_envelope)
+
+
+def _backend_manifest_from_v2_model(
+    model: BackendManifestV2Model,
+    *,
+    realization_envelope: BackendRealizationEnvelopeModel | None,
+) -> BackendManifest:
     return BackendManifest(
         identity=ApparatusIdentity(name=model.identity.name, version=model.identity.version),
         supported_contract_versions=frozenset(model.supported_contract_versions),
@@ -481,4 +496,5 @@ def backend_manifest_from_v2_model(model: BackendManifestV2Model) -> BackendMani
         ),
         constraints=dict(model.constraints),
         capabilities=_capability_set_from_model(model.capabilities),
+        realization_envelope=realization_envelope,
     )
