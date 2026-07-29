@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 
 from raes_contracts.contracts import (
@@ -25,6 +25,7 @@ from .participant_crossing_mediation import ParticipantCrossingEvidence
 
 _CURRENT_SNAPSHOT_REF = "runtime.snapshot.current"
 _CROSSING_RESOLVER_REQUIRED = "participant crossing policy resolver is required"
+_VIEW_AUDIENCE_BINDING_UNAVAILABLE = "participant view audience binding is unavailable"
 
 
 @dataclass(frozen=True)
@@ -157,29 +158,25 @@ class ParticipantRetrievalMixin:
             if crossing_evidence is not None:
                 raise ValueError(_CROSSING_RESOLVER_REQUIRED)
             return view
-        crossing_evidence = _resolve_trusted_view_evidence(
-            self,
+        serialization = ParticipantViewSerialization(
             participant_address=participant_address,
             episode_id=_required_episode_id(episode_id),
+            subject_kind=ParticipantCrossingSubjectKind.PARTICIPANT_STATUS_VIEW,
             interaction_kind=ParticipantCrossingInteractionKind.STATUS_PROJECTION,
             projection_ref=view.visibility_projection_ref,
             identity=identity,
+            crossing_evidence=crossing_evidence,
+            idempotency_key=idempotency_key,
+        )
+        crossing_evidence = _resolve_trusted_view_evidence(
+            self,
+            serialization=serialization,
             audience_binding=audience_binding,
-            supplied=crossing_evidence,
         )
         return serialize_participant_view(
             self,
             view,
-            ParticipantViewSerialization(
-                participant_address=participant_address,
-                episode_id=_required_episode_id(episode_id),
-                subject_kind=ParticipantCrossingSubjectKind.PARTICIPANT_STATUS_VIEW,
-                interaction_kind=ParticipantCrossingInteractionKind.STATUS_PROJECTION,
-                projection_ref=view.visibility_projection_ref,
-                identity=identity,
-                crossing_evidence=crossing_evidence,
-                idempotency_key=idempotency_key,
-            ),
+            replace(serialization, crossing_evidence=crossing_evidence),
         )
 
     def get_participant_history_view(
@@ -224,29 +221,25 @@ class ParticipantRetrievalMixin:
             if crossing_evidence is not None:
                 raise ValueError(_CROSSING_RESOLVER_REQUIRED)
             return view
-        crossing_evidence = _resolve_trusted_view_evidence(
-            self,
+        serialization = ParticipantViewSerialization(
             participant_address=participant_address,
             episode_id=episode_id,
+            subject_kind=ParticipantCrossingSubjectKind.PARTICIPANT_HISTORY_VIEW,
             interaction_kind=ParticipantCrossingInteractionKind.HISTORY_PROJECTION,
             projection_ref=view.visibility_projection_ref,
             identity=identity,
+            crossing_evidence=crossing_evidence,
+            idempotency_key=idempotency_key,
+        )
+        crossing_evidence = _resolve_trusted_view_evidence(
+            self,
+            serialization=serialization,
             audience_binding=audience_binding,
-            supplied=crossing_evidence,
         )
         return serialize_participant_view(
             self,
             view,
-            ParticipantViewSerialization(
-                participant_address=participant_address,
-                episode_id=episode_id,
-                subject_kind=ParticipantCrossingSubjectKind.PARTICIPANT_HISTORY_VIEW,
-                interaction_kind=ParticipantCrossingInteractionKind.HISTORY_PROJECTION,
-                projection_ref=view.visibility_projection_ref,
-                identity=identity,
-                crossing_evidence=crossing_evidence,
-                idempotency_key=idempotency_key,
-            ),
+            replace(serialization, crossing_evidence=crossing_evidence),
         )
 
     def get_participant_context_view(
@@ -323,29 +316,25 @@ class ParticipantRetrievalMixin:
                 self._snapshot.participant_episode_results.get(participant_address),
                 "episode_id",
             )
-            crossing_evidence = _resolve_trusted_view_evidence(
-                self,
+            serialization = ParticipantViewSerialization(
                 participant_address=participant_address,
                 episode_id=_required_episode_id(resolved_episode_id),
+                subject_kind=ParticipantCrossingSubjectKind.PARTICIPANT_CONTEXT_VIEW,
                 interaction_kind=ParticipantCrossingInteractionKind.DECISION_SURFACE_PROJECTION,
                 projection_ref=view.visibility_projection_ref,
                 identity=options.identity,
+                crossing_evidence=options.crossing_evidence,
+                idempotency_key=options.idempotency_key,
+            )
+            crossing_evidence = _resolve_trusted_view_evidence(
+                self,
+                serialization=serialization,
                 audience_binding=options.audience_binding,
-                supplied=options.crossing_evidence,
             )
             result = serialize_participant_view(
                 self,
                 view,
-                ParticipantViewSerialization(
-                    participant_address=participant_address,
-                    episode_id=_required_episode_id(resolved_episode_id),
-                    subject_kind=ParticipantCrossingSubjectKind.PARTICIPANT_CONTEXT_VIEW,
-                    interaction_kind=ParticipantCrossingInteractionKind.DECISION_SURFACE_PROJECTION,
-                    projection_ref=view.visibility_projection_ref,
-                    identity=options.identity,
-                    crossing_evidence=crossing_evidence,
-                    idempotency_key=options.idempotency_key,
-                ),
+                replace(serialization, crossing_evidence=crossing_evidence),
             )
         return result
 
@@ -353,31 +342,26 @@ class ParticipantRetrievalMixin:
 def _resolve_trusted_view_evidence(
     control_plane: object,
     *,
-    participant_address: str,
-    episode_id: str,
-    interaction_kind: ParticipantCrossingInteractionKind,
-    projection_ref: str,
-    identity: object | None,
+    serialization: ParticipantViewSerialization,
     audience_binding: ParticipantAudienceSubjectBinding | None,
-    supplied: ParticipantCrossingEvidence | None,
 ) -> ParticipantCrossingEvidence:
-    if supplied is not None:
-        return supplied
+    if serialization.crossing_evidence is not None:
+        return serialization.crossing_evidence
     resolver = getattr(control_plane, "_crossing_policy_resolver", None)
     provider = getattr(resolver, "resolve_participant_view_evidence", None)
     if not callable(provider):
         raise ValueError("participant view crossing evidence is unavailable")
     binding = _trusted_audience_binding(
-        identity,
-        participant_address=participant_address,
+        serialization.identity,
+        participant_address=serialization.participant_address,
         supplied=audience_binding,
     )
     resolved = provider(
         snapshot=control_plane._snapshot,
-        participant_address=participant_address,
-        episode_id=episode_id,
-        interaction_kind=interaction_kind,
-        projection_ref=projection_ref,
+        participant_address=serialization.participant_address,
+        episode_id=serialization.episode_id,
+        interaction_kind=serialization.interaction_kind,
+        projection_ref=serialization.projection_ref,
         audience_binding=binding,
     )
     if not isinstance(resolved, ParticipantCrossingEvidence):
@@ -392,7 +376,7 @@ def _trusted_audience_binding(
     supplied: ParticipantAudienceSubjectBinding | None,
 ) -> ParticipantAudienceSubjectBinding:
     if not isinstance(identity, ControlPlaneIdentity):
-        raise ValueError("participant view audience binding is unavailable")
+        raise ValueError(_VIEW_AUDIENCE_BINDING_UNAVAILABLE)
     matches = tuple(
         binding
         for binding in identity.participant_audience_subjects
@@ -400,10 +384,10 @@ def _trusted_audience_binding(
     )
     if supplied is not None:
         if supplied not in matches:
-            raise ValueError("participant view audience binding is unavailable")
+            raise ValueError(_VIEW_AUDIENCE_BINDING_UNAVAILABLE)
         return supplied
     if len(matches) != 1:
-        raise ValueError("participant view audience binding is unavailable")
+        raise ValueError(_VIEW_AUDIENCE_BINDING_UNAVAILABLE)
     return matches[0]
 
 
