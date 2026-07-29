@@ -44,16 +44,10 @@ class RealizationConcernDescriptor:
     def includes_authored_value(self, value: object) -> bool:
         """Return whether an authored value belongs to this concern."""
 
-        if not self.non_stateful_mounts_only:
-            return True
-        if not isinstance(value, list) or not value:
-            return True
-        for item in value:
-            source_kind = item.get("source_kind") if isinstance(item, Mapping) else getattr(item, "source_kind", None)
-            source_kind = getattr(source_kind, "value", source_kind)
-            if source_kind in {"bind", "tmpfs"}:
-                return True
-        return False
+        includes = True
+        if self.non_stateful_mounts_only and isinstance(value, list) and value:
+            includes = any(_mount_source_kind(item) in {"bind", "tmpfs"} for item in value)
+        return includes
 
     def project(self, value: object, *, observed: bool = False) -> object:
         if observed and self.observed_validator is not None:
@@ -80,6 +74,11 @@ class RegisteredRealizationConcern:
     @property
     def field_path(self) -> str:
         return f"{self.descriptor.section}.{self.declaration_name}.{self.descriptor.authored_suffix}"
+
+
+def _mount_source_kind(item: object) -> object:
+    source_kind = item.get("source_kind") if isinstance(item, Mapping) else getattr(item, "source_kind", None)
+    return getattr(source_kind, "value", source_kind)
 
 
 _REALIZATION_CONCERNS: tuple[RealizationConcernDescriptor, ...] = (

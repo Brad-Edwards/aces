@@ -108,46 +108,83 @@ def _finalize_backend_apply(
 
     invalid_message = _apply_result_contract_violation(result, address)
     if invalid_message is not None:
-        return _failed_apply_result(baseline_snapshot, _backend_contract_invalid(address, invalid_message))
-    assert isinstance(result, ApplyResult)
-    contract_diagnostics = _snapshot_address_contract_diagnostics(result.snapshot)
-    if not contract_diagnostics:
-        contract_diagnostics = _changed_address_transition_diagnostics(
+        finalized = _failed_apply_result(
+            baseline_snapshot,
+            _backend_contract_invalid(address, invalid_message),
+        )
+    else:
+        assert isinstance(result, ApplyResult)
+        contract_diagnostics = _backend_snapshot_contract_diagnostics(
             result,
             baseline_snapshot,
         )
-    if not contract_diagnostics:
-        contract_diagnostics = _snapshot_contract_diagnostics(result.snapshot)
-    if not contract_diagnostics:
-        contract_diagnostics = _snapshot_transition_contract_diagnostics(baseline_snapshot, result.snapshot)
-    realization_provenance: tuple[RealizationProvenanceEntry, ...] = ()
-    if not contract_diagnostics and realization_requirements and realization_plan is not None:
-        # SEM-218 I2 non-approximation gate + I5 provenance disclosure.
-        contract_diagnostics, realization_provenance = realization_disclosure(
-            realization_requirements,
-            realization_plan,
-            result.snapshot,
-            manifest=backend_manifest,
-            artifact_availability=artifact_availability,
-        )
-    if contract_diagnostics:
-        return ApplyResult(success=False, snapshot=baseline_snapshot, diagnostics=contract_diagnostics)
-    if realization_requirements and realization_plan is not None:
-        try:
-            safe_snapshot = sanitize_realization_snapshot(
+        realization_provenance: tuple[RealizationProvenanceEntry, ...] = ()
+        if not contract_diagnostics and realization_requirements and realization_plan is not None:
+            # SEM-218 I2 non-approximation gate + I5 provenance disclosure.
+            contract_diagnostics, realization_provenance = realization_disclosure(
                 realization_requirements,
+                realization_plan,
                 result.snapshot,
+                manifest=backend_manifest,
+                artifact_availability=artifact_availability,
             )
-        except (TypeError, ValueError):
-            return _failed_apply_result(
-                baseline_snapshot,
-                _backend_contract_invalid(
-                    address,
-                    "Backend returned an invalid realization concern observation.",
-                ),
+        if contract_diagnostics:
+            finalized = ApplyResult(
+                success=False,
+                snapshot=baseline_snapshot,
+                diagnostics=contract_diagnostics,
             )
-        result = _with_snapshot(result, safe_snapshot)
-    return _with_realization_provenance(result, realization_provenance) if realization_provenance else result
+        else:
+            finalized = _sanitize_backend_realization(
+                result,
+                address=address,
+                baseline_snapshot=baseline_snapshot,
+                realization_requirements=realization_requirements,
+                realization_plan=realization_plan,
+            )
+            if realization_provenance and finalized.success:
+                finalized = _with_realization_provenance(finalized, realization_provenance)
+    return finalized
+
+
+def _backend_snapshot_contract_diagnostics(
+    result: ApplyResult,
+    baseline_snapshot: RuntimeSnapshot,
+) -> list[Diagnostic]:
+    diagnostics = _snapshot_address_contract_diagnostics(result.snapshot)
+    if not diagnostics:
+        diagnostics = _changed_address_transition_diagnostics(result, baseline_snapshot)
+    if not diagnostics:
+        diagnostics = _snapshot_contract_diagnostics(result.snapshot)
+    if not diagnostics:
+        diagnostics = _snapshot_transition_contract_diagnostics(baseline_snapshot, result.snapshot)
+    return diagnostics
+
+
+def _sanitize_backend_realization(
+    result: ApplyResult,
+    *,
+    address: str,
+    baseline_snapshot: RuntimeSnapshot,
+    realization_requirements: tuple[CompiledRealizationRequirement, ...],
+    realization_plan: ProvisioningPlan | None,
+) -> ApplyResult:
+    if not realization_requirements or realization_plan is None:
+        return result
+    try:
+        safe_snapshot = sanitize_realization_snapshot(
+            realization_requirements,
+            result.snapshot,
+        )
+    except (TypeError, ValueError):
+        return _failed_apply_result(
+            baseline_snapshot,
+            _backend_contract_invalid(
+                address,
+                "Backend returned an invalid realization concern observation.",
+            ),
+        )
+    return _with_snapshot(result, safe_snapshot)
 
 
 def _with_snapshot(

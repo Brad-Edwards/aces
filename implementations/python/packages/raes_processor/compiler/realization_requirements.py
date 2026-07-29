@@ -14,6 +14,7 @@ from ..semantics.realization import (
     CompiledRealizationRequirement,
     registered_realization_concern_descriptors,
 )
+from ..semantics.realization_concerns import RegisteredRealizationConcern
 from .addresses import (
     _account_address,
     _condition_binding_address,
@@ -266,6 +267,61 @@ def _append_service_materialization_requirements(
         )
 
 
+def _compiled_registered_requirement(
+    scenario: InstantiatedScenario,
+    registered: RegisteredRealizationConcern,
+) -> CompiledRealizationRequirement | None:
+    descriptor = registered.descriptor
+    section_name = descriptor.section
+    declaration_name = registered.declaration_name
+    encoded_name = declaration_name.replace("~", "~0").replace("/", "~1")
+    field_pointer = f"/{section_name}/{encoded_name}/{'/'.join(descriptor.authored_path)}"
+    record = scenario.explicitness.get(registered.field_path)
+    declarations = getattr(scenario, section_name)
+    authored_value = _nested_authored_value(
+        declarations[declaration_name],
+        descriptor.authored_path,
+    )
+    if record is not None and not descriptor.includes_authored_value(authored_value):
+        return None
+    if record is not None:
+        explicitness = record.classification
+        provenance = record.provenance
+        governing_scope = f"#{field_pointer}"
+        delegated = False
+    else:
+        resolution = resolve_realization_designation(
+            scenario.instantiation_provenance.realization_designations,
+            field_pointer=field_pointer,
+            owner_namespace=QualifiedName.parse(declaration_name).parts[:-1],
+        )
+        closed = resolution.closure is not None and resolution.closure.value == "closed-world"
+        if resolution.source == "legacy-default" or (closed and not resolution.delegated):
+            return None
+        explicitness = (
+            ExplicitnessClass.OPEN
+            if resolution.closure is not None and resolution.closure.value == "open-world"
+            else None
+        )
+        provenance = ExplicitnessProvenance.AUTHOR_DECLARED
+        governing_scope = resolution.governing_scope
+        delegated = resolution.delegated
+    return CompiledRealizationRequirement(
+        field_path=registered.field_path,
+        address=_realization_requirement_address(
+            scenario,
+            section_name=section_name,
+            declaration_name=declaration_name,
+        ),
+        domain=REALIZATION_DOMAIN,
+        requirement_kind=descriptor.concern_kind,
+        explicitness=explicitness,
+        provenance=provenance,
+        governing_scope=governing_scope,
+        delegated=delegated,
+    )
+
+
 def _compile_realization_requirements(
     scenario: InstantiatedScenario,
     domain_analysis: DomainTopologyAnalysis,
@@ -279,67 +335,12 @@ def _compile_realization_requirements(
     """
 
     requirements: list[CompiledRealizationRequirement] = []
-    explicitness = scenario.explicitness
     for registered in registered_realization_concern_descriptors(
         declaration_names={"nodes": scenario.nodes, "content": scenario.content}
     ):
-        descriptor = registered.descriptor
-        section_name = descriptor.section
-        declaration_name = registered.declaration_name
-        field_path = registered.field_path
-        encoded_name = declaration_name.replace("~", "~0").replace("/", "~1")
-        pointer_suffix = "/".join(descriptor.authored_path)
-        field_pointer = f"/{section_name}/{encoded_name}/{pointer_suffix}"
-        owner_namespace = QualifiedName.parse(declaration_name).parts[:-1]
-        record = explicitness.get(field_path)
-        declarations = getattr(scenario, section_name)
-        authored_value = _nested_authored_value(
-            declarations[declaration_name],
-            descriptor.authored_path,
-        )
-        if record is not None and not descriptor.includes_authored_value(authored_value):
-            continue
-        if record is None:
-            resolution = resolve_realization_designation(
-                scenario.instantiation_provenance.realization_designations,
-                field_pointer=field_pointer,
-                owner_namespace=owner_namespace,
-            )
-            if resolution.source == "legacy-default" or (
-                resolution.closure is not None
-                and resolution.closure.value == "closed-world"
-                and not resolution.delegated
-            ):
-                continue
-            requirement_explicitness = (
-                ExplicitnessClass.OPEN
-                if resolution.closure is not None and resolution.closure.value == "open-world"
-                else None
-            )
-            provenance = ExplicitnessProvenance.AUTHOR_DECLARED
-            governing_scope = resolution.governing_scope
-            delegated = resolution.delegated
-        else:
-            requirement_explicitness = record.classification
-            provenance = record.provenance
-            governing_scope = f"#{field_pointer}"
-            delegated = False
-        requirements.append(
-            CompiledRealizationRequirement(
-                field_path=field_path,
-                address=_realization_requirement_address(
-                    scenario,
-                    section_name=section_name,
-                    declaration_name=declaration_name,
-                ),
-                domain=REALIZATION_DOMAIN,
-                requirement_kind=descriptor.concern_kind,
-                explicitness=requirement_explicitness,
-                provenance=provenance,
-                governing_scope=governing_scope,
-                delegated=delegated,
-            )
-        )
+        requirement = _compiled_registered_requirement(scenario, registered)
+        if requirement is not None:
+            requirements.append(requirement)
     _append_domain_topology_requirements(requirements, domain_analysis)
     _append_stateful_resource_requirements(requirements, scenario)
     _append_service_materialization_requirements(requirements, scenario)

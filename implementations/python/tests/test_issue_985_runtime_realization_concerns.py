@@ -213,8 +213,9 @@ def test_stateful_resource_destination_cannot_also_be_a_runtime_mount() -> None:
           - {node: worker, mount_destination: /data, access_mode: read_write}
     """
 
+    source = textwrap.dedent(scenario)
     with pytest.raises(SDLValidationError, match="runtime mount target '/data'.*already consumed"):
-        compile_runtime_model(parse_sdl(textwrap.dedent(scenario)))
+        parse_sdl(source)
 
 
 def _safe_runtime_snapshot() -> tuple[RuntimeModel, RuntimeSnapshot]:

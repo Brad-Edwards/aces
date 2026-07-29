@@ -26,6 +26,11 @@ def _sequence(value: object, *, label: str) -> Sequence[object]:
     return value
 
 
+def _require_observation_mode(observed: bool) -> None:
+    if not isinstance(observed, bool):
+        raise TypeError("observed must be boolean")
+
+
 def _commitment(*, concern_kind: str, identity: str, value: object) -> str:
     digest = canonical_json_digest(
         {
@@ -77,6 +82,7 @@ def _committed_value(
 
 
 def project_environment(value: object, observed: bool = False) -> object:
+    _require_observation_mode(observed)
     projected: list[dict[str, object]] = []
     for item in _sequence(value, label="runtime environment"):
         record = _mapping(item, label="runtime environment entry")
@@ -107,55 +113,75 @@ def _project_mounts(
     *,
     include_stateful: bool,
 ) -> list[dict[str, object]]:
-    projected: list[dict[str, object]] = []
-    for item in _sequence(value, label="runtime mounts"):
-        record = _mapping(item, label="runtime mount")
-        if not include_stateful and record.get("source_kind") not in {"bind", "tmpfs"}:
-            continue
-        target = record.get("target")
-        if not isinstance(target, str) or not target:
-            raise ValueError("runtime mounts require a target")
-        source = record.get("source", "")
-        source_sensitivity = record.get("source_sensitivity", "unknown")
-        options = record.get("options", [])
-        options_sensitivity = record.get("options_sensitivity", "unknown")
-        if source_sensitivity in _PROTECTED and source not in ("", None):
-            raise ValueError("protected runtime mount source must not carry raw material")
-        if options_sensitivity in _PROTECTED and options:
-            raise ValueError("protected runtime mount options must not carry raw material")
-        projected.append(
-            {
-                "target": target,
-                "source": source if source_sensitivity not in _PROTECTED else "",
-                "source_present": bool(source) or source_sensitivity in _PROTECTED,
-                "source_sensitivity": source_sensitivity,
-                "source_kind": record.get("source_kind"),
-                "filesystem_type": record.get("filesystem_type", ""),
-                "read_only": record.get("read_only", False),
-                "options": sorted(options) if options_sensitivity not in _PROTECTED else [],
-                "options_present": bool(options) or options_sensitivity in _PROTECTED,
-                "options_sensitivity": options_sensitivity,
-                "propagation": record.get("propagation", "unknown"),
-                "stability": record.get("stability", "unknown"),
-                "backend_generated": record.get("backend_generated"),
-            }
-        )
+    records = (_mapping(item, label="runtime mount") for item in _sequence(value, label="runtime mounts"))
+    projected = [
+        _project_mount_record(record)
+        for record in records
+        if include_stateful or record.get("source_kind") in {"bind", "tmpfs"}
+    ]
     return sorted(projected, key=lambda item: str(item["target"]))
+
+
+def _project_mount_record(record: Mapping[str, Any]) -> dict[str, object]:
+    target = record.get("target")
+    if not isinstance(target, str) or not target:
+        raise ValueError("runtime mounts require a target")
+    source, source_present = _project_mount_sensitive_value(
+        record.get("source", ""),
+        record.get("source_sensitivity", "unknown"),
+        label="source",
+    )
+    options, options_present = _project_mount_sensitive_value(
+        record.get("options", []),
+        record.get("options_sensitivity", "unknown"),
+        label="options",
+    )
+    return {
+        "target": target,
+        "source": source,
+        "source_present": source_present,
+        "source_sensitivity": record.get("source_sensitivity", "unknown"),
+        "source_kind": record.get("source_kind"),
+        "filesystem_type": record.get("filesystem_type", ""),
+        "read_only": record.get("read_only", False),
+        "options": sorted(options),
+        "options_present": options_present,
+        "options_sensitivity": record.get("options_sensitivity", "unknown"),
+        "propagation": record.get("propagation", "unknown"),
+        "stability": record.get("stability", "unknown"),
+        "backend_generated": record.get("backend_generated"),
+    }
+
+
+def _project_mount_sensitive_value(
+    value: Any,
+    sensitivity: object,
+    *,
+    label: str,
+) -> tuple[Any, bool]:
+    if sensitivity in _PROTECTED:
+        if value:
+            raise ValueError(f"protected runtime mount {label} must not carry raw material")
+        return type(value)(), True
+    return value, bool(value)
 
 
 def project_mounts(value: object, observed: bool = False) -> object:
     """Project the bind/tmpfs realization concern for portable comparison."""
 
+    _require_observation_mode(observed)
     return _project_mounts(value, include_stateful=False)
 
 
 def sanitize_mount_observation(value: object, observed: bool = False) -> object:
     """Return a safe persisted mount inventory, including stateful records."""
 
+    _require_observation_mode(observed)
     return _project_mounts(value, include_stateful=True)
 
 
 def project_capability_policy(value: object, observed: bool = False) -> object:
+    _require_observation_mode(observed)
     record = _mapping(value, label="Linux capability policy")
     overrides: list[dict[str, object]] = []
     for item in _sequence(record.get("process_overrides", []), label="process capability overrides"):
@@ -196,6 +222,7 @@ def project_capability_policy(value: object, observed: bool = False) -> object:
 
 
 def project_published_ports(value: object, observed: bool = False) -> object:
+    _require_observation_mode(observed)
     projected = []
     for item in _sequence(value, label="published ports"):
         record = _mapping(item, label="published port")
@@ -228,6 +255,7 @@ def _sorted_records(value: object, *, label: str, identity: str) -> list[dict[st
 
 
 def project_forwarding_agents(value: object, observed: bool = False) -> object:
+    _require_observation_mode(observed)
     projected: list[dict[str, object]] = []
     for item in _sequence(value, label="forwarding agents"):
         record = _mapping(item, label="forwarding agent")
@@ -276,6 +304,7 @@ def project_forwarding_agents(value: object, observed: bool = False) -> object:
 
 
 def project_service_listeners(value: object, observed: bool = False) -> object:
+    _require_observation_mode(observed)
     projected: list[dict[str, object]] = []
     for item in _sequence(value, label="service listeners"):
         record = _mapping(item, label="service listener")
