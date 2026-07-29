@@ -284,6 +284,69 @@ Contract, adapter, native-daemon, and guest conformance remain distinct
 reportable dimensions. The repository-wide guardrails for this work are recorded in the
 [`issue #716 realization-honesty preflight`](../../decisions/issue-716-asr-519-realization-honesty-conformance-preflight.md).
 
+## Participant-Policy Probes
+
+API-407 lets a backend declare governed participant information-flow features
+with a support strength. A declaration is not a realization, so
+`run_target_conformance` accepts an optional `participant_policy_harness`
+(issue #800).
+
+**The runner owns execution and the verdict.** The harness supplies declarative
+case inputs only — the deployment's validated exact-cut policy resolver, the
+participant, audience, policy, projection and state-cut coordinates, the typed
+carriers, the operation kind, and the expected disposition. It supplies no
+control plane and no outcome. The runner constructs the real
+`RuntimeControlPlane` on the target under evaluation, wraps that target's
+participant runtime in a call counter, invokes the typed boundary itself, and
+derives every reported fact. A harness able to supply the execution object or
+the verdict could certify a backend it never ran. The harness is a typed
+in-process option — never a module path, remote URL, or policy bag — and
+operation kinds, not backend names, are the runner's dispatch key.
+
+Each probe records a runner-derived ledger: whether the crossing was refused,
+whether a participant-visible value was released, how many times the target's
+participant runtime was actually invoked, whether any previously committed
+append-only record moved, whether safe audit evidence appeared, and the declared
+versus effective support strength. Every committed crossing record is
+revalidated against the published API-423 contract, so a malformed record
+cannot pass as a governed decision. Negative obligations assert the side-effect
+boundary as well as the disposition — a refusal that already invoked the target
+or serialized a participant-visible value is a failure.
+
+Expectations are `denied`, `withheld`, or `released`. Denial and withholding
+stay distinct because SEM-230 keeps refusal and intentional non-release as
+separate transition facts; collapsing them would let a runtime that always
+denies egress satisfy a claimed withholding obligation.
+
+**Only an authorized outcome establishes a declared capability.** Failing closed
+is what an absent implementation does too, so refusal-only coverage never marks
+a feature as realized. A declared feature is covered only when a passing
+`released` case resolved an effective backend strength against that target;
+otherwise the feature gets an explicitly `unsupported`, non-passing case. The
+same applies when no harness is supplied at all. Cases are never silently
+skipped, and the fail-closed resolver used by unrelated adapter probes is not
+participant-policy evidence.
+
+Every participant-policy case carries a `policy_binding` whose `claim` is a real
+`BehavioralClaimBindingModel`, so relation identity, carriers, quantifier and
+evidence scope, assurance status, limitations, and nonclaims go through the same
+catalog authority as the report claim. Alongside it the binding carries the
+participant, audience, memory scope, policy id/revision/decision ref/state-cut
+ref, declassification schedule, counterexample ref, and the named order,
+scheduler, environment, nondeterminism, termination/progress, timing,
+probability, and partial-order assumptions — declared fields, so the bindings
+stay machine-reviewable rather than encoded in case names.
+
+Finite probe results do not change what the report claims. The report relation
+stays `bounded-probe-success`; a case may reference the SEM-230
+`policy-noninterference` obligation it attempted to falsify, and that reference
+is not an assertion that the obligation holds. Before any report is serialized
+or persisted, `validate_backend_conformance_report` re-checks the report claim
+and every case binding against the catalog, refuses a universal quantifier
+backed only by finite evidence, refuses a `native_conformance` flag with no
+natively-executed case, and refuses a claim whose cited cases — including
+failed, unsupported, and counterexample cases — are not all present.
+
 ## Non-Goals
 
 This preflight does not implement `ASR-502`, change requirement status, add new

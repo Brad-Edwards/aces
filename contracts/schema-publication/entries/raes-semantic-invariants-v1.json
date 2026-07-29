@@ -2,9 +2,9 @@
   "contract_id": "raes-semantic-invariants-v1",
   "schema_path": "contracts/schemas/profiles/raes-semantic-invariants-v1.json",
   "stability": "draft",
-  "content_hash": "cfe89c457ff1ac21334768ab82b30ce2b1e28eb165bb64a91d1b222e05ece943",
+  "content_hash": "7af5c717c62c9780ea8b6042f0bb5642c04e2b84aee03ce1b3dca5f36823d14b",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "cfe89c457ff1ac21334768ab82b30ce2b1e28eb165bb64a91d1b222e05ece943"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "7af5c717c62c9780ea8b6042f0bb5642c04e2b84aee03ce1b3dca5f36823d14b"
   }
 }

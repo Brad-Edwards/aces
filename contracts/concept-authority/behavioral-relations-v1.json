@@ -1,7 +1,7 @@
 {
   "schema_version": "behavioral-relations/v1",
   "taxonomy_id": "raes-behavioral-relations",
-  "taxonomy_revision": "rev3",
+  "taxonomy_revision": "rev5",
   "bibliography": [
     {
       "source_id": "park-1981",
@@ -244,6 +244,213 @@
       "immutable_locator": {
         "kind": "doi",
         "value": "10.1016/S0039-3681(97)00012-5"
+      }
+    },
+    {
+      "source_id": "halpern-pearl-2005",
+      "title": "Causes and Explanations: A Structural-Model Approach. Part I: Causes",
+      "authors": [
+        "Joseph Y. Halpern",
+        "Judea Pearl"
+      ],
+      "publication_year": 2005,
+      "publication_venue": "The British Journal for the Philosophy of Science 56(4)",
+      "edition_or_version": "version of record",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.1093/bjps/axi147"
+      }
+    },
+    {
+      "source_id": "bryans-koutny-mazare-ryan-2008",
+      "title": "Opacity Generalised to Transition Systems",
+      "authors": [
+        "Jeremy W. Bryans",
+        "Maciej Koutny",
+        "Laurent Mazaré",
+        "Peter Y. A. Ryan"
+      ],
+      "publication_year": 2008,
+      "publication_venue": "International Journal of Information Security 7(6), 421-435",
+      "edition_or_version": "version of record",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.1007/s10207-008-0058-x"
+      }
+    },
+    {
+      "source_id": "schoepe-sabelfeld-2015",
+      "title": "Understanding and Enforcing Opacity",
+      "authors": [
+        "Daniel Schoepe",
+        "Andrei Sabelfeld"
+      ],
+      "publication_year": 2015,
+      "publication_venue": "2015 IEEE Computer Security Foundations Symposium, 539-553",
+      "edition_or_version": "version of record",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.1109/CSF.2015.41"
+      }
+    },
+    {
+      "source_id": "lin-2011",
+      "title": "Opacity of Discrete Event Systems and its Applications",
+      "authors": [
+        "Feng Lin"
+      ],
+      "publication_year": 2011,
+      "publication_venue": "Automatica 47(3), 496-503",
+      "edition_or_version": "version of record",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.1016/j.automatica.2011.01.002"
+      }
+    },
+    {
+      "source_id": "saboori-hadjicostis-2012",
+      "title": "Verification of Infinite-Step Opacity and Complexity Considerations",
+      "authors": [
+        "Anooshiravan Saboori",
+        "Christoforos N. Hadjicostis"
+      ],
+      "publication_year": 2012,
+      "publication_venue": "IEEE Transactions on Automatic Control 57(5), 1265-1269",
+      "edition_or_version": "version of record",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.1109/TAC.2011.2173774"
+      }
+    },
+    {
+      "source_id": "badouel-bednarczyk-borzyszkowski-caillaud-darondeau-2007",
+      "title": "Concurrent Secrets",
+      "authors": [
+        "Éric Badouel",
+        "Marek A. Bednarczyk",
+        "Andrzej M. Borzyszkowski",
+        "Benoît Caillaud",
+        "Philippe Darondeau"
+      ],
+      "publication_year": 2007,
+      "publication_venue": "Discrete Event Dynamic Systems 17(4), 425-446",
+      "edition_or_version": "version of record",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.1007/s10626-007-0020-5"
+      }
+    },
+    {
+      "source_id": "yin-lafortune-2016",
+      "title": "A Uniform Approach for Synthesizing Property-Enforcing Supervisors for Partially-Observed Discrete-Event Systems",
+      "authors": [
+        "Xiang Yin",
+        "Stéphane Lafortune"
+      ],
+      "publication_year": 2016,
+      "publication_venue": "IEEE Transactions on Automatic Control 61(8), 2140-2154",
+      "edition_or_version": "version of record",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.1109/TAC.2015.2484359"
+      }
+    },
+    {
+      "source_id": "xie-yin-li-2022",
+      "title": "Opacity Enforcing Supervisory Control Using Nondeterministic Supervisors",
+      "authors": [
+        "Yifan Xie",
+        "Xiang Yin",
+        "Shaoyuan Li"
+      ],
+      "publication_year": 2022,
+      "publication_venue": "IEEE Transactions on Automatic Control 67(12), 6567-6582",
+      "edition_or_version": "version of record",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.1109/TAC.2021.3131125"
+      }
+    },
+    {
+      "source_id": "cui-ma-giua-yin-2026",
+      "title": "Opacity Enforcing Supervisory Control with a Priori Unknown Supervisors",
+      "authors": [
+        "Juntang Cui",
+        "Ziyue Ma",
+        "Alessandro Giua",
+        "Xiang Yin"
+      ],
+      "publication_year": 2026,
+      "publication_venue": "arXiv preprint arXiv:2604.04070",
+      "edition_or_version": "preprint version 1",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.48550/arXiv.2604.04070"
+      }
+    },
+    {
+      "source_id": "partovi-jung-hai-2020",
+      "title": "Opacity of Discrete Event Systems with Active Intruder",
+      "authors": [
+        "Alireza Partovi",
+        "Taeho Jung",
+        "Lin Hai"
+      ],
+      "publication_year": 2020,
+      "publication_venue": "arXiv preprint arXiv:2007.14960",
+      "edition_or_version": "preprint version 1",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.48550/arXiv.2007.14960"
+      }
+    },
+    {
+      "source_id": "berard-mullins-sassolas-2015",
+      "title": "Quantifying Opacity",
+      "authors": [
+        "Béatrice Bérard",
+        "John Mullins",
+        "Mathieu Sassolas"
+      ],
+      "publication_year": 2015,
+      "publication_venue": "Mathematical Structures in Computer Science 25(2), 361-403",
+      "edition_or_version": "version of record",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.1017/S0960129513000637"
+      }
+    },
+    {
+      "source_id": "andre-lime-marinho-sun-2022",
+      "title": "Guaranteeing Timed Opacity using Parametric Timed Model Checking",
+      "authors": [
+        "Étienne André",
+        "Didier Lime",
+        "Dylan Marinho",
+        "Jun Sun"
+      ],
+      "publication_year": 2022,
+      "publication_venue": "ACM Transactions on Software Engineering and Methodology 31(4), 64:1-64:36",
+      "edition_or_version": "version of record",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.1145/3502851"
+      }
+    },
+    {
+      "source_id": "broberg-van-delft-sands-2015",
+      "title": "The Anatomy and Facets of Dynamic Policies",
+      "authors": [
+        "Niklas Broberg",
+        "Bart van Delft",
+        "David Sands"
+      ],
+      "publication_year": 2015,
+      "publication_venue": "2015 IEEE Computer Security Foundations Symposium, 122-137",
+      "edition_or_version": "version of record",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.1109/CSF.2015.16"
       }
     }
   ],
@@ -671,6 +878,96 @@
       "source_refs": [
         "park-1981",
         "van-glabbeek-1990"
+      ]
+    },
+    "bounded-but-for-necessity": {
+      "relation_id": "bounded-but-for-necessity",
+      "display_name": "Bounded but-for necessity",
+      "relation_class": "empirical",
+      "definition": "Within one declared finite causal boundary, a named candidate is supported as necessary for a named outcome when the admitted baseline outcome is true, a verified intervention removes or disables only that candidate, the matched counterfactual outcome is false, and evidence, reset, and cleanup gates pass.",
+      "left_carrier": "A named condition, weakness, control, or behavior present in the admitted baseline world.",
+      "right_carrier": "A governed outcome proposition evaluated independently in the baseline and intervention worlds.",
+      "initial_states": "The exact admitted baseline lineage and matching policy for the finite world pair.",
+      "transition_signature": {
+        "applicability": "applicable",
+        "labels": "The admitted baseline execution, typed candidate intervention, counterfactual execution, observation, reset, and cleanup actions.",
+        "transition_relation": "Only the two immutable runs and the one declared intervention admitted by the comparison case.",
+        "observable_actions": "Governed outcome truth, intervention evidence, matching checks, and reset or cleanup evidence.",
+        "hidden_actions": "No hidden action may change a held-fixed dimension; any permitted nuisance variation must be declared by the matching policy.",
+        "stuttering_actions": "Stuttering is relevant only when the declared time and observation models admit it."
+      },
+      "observation_projection": {
+        "applicability": "parameterized",
+        "subject": "Bounded necessity comparison audience",
+        "policy_ref": "behavioral-relations/bounded-but-for-necessity-projection",
+        "policy_revision": "rev1",
+        "redaction_scope": "Only governed evidence references and stable redacted diagnostics cross the comparison boundary.",
+        "order_treatment": "World executions are distinct immutable runs; their declared matching policy, not wall-clock order, governs comparison.",
+        "simultaneity_treatment": "Simultaneity is outside the binary criterion unless the matching policy and time model explicitly preserve it."
+      },
+      "projection_required": true,
+      "direction": "left-to-right",
+      "quantification": {
+        "states": "Only the admitted baseline and intervention-world initial states and reached states.",
+        "traces": "Only the two named finite executions.",
+        "schedulers": "Only schedulers admitted and matched by the declared policy.",
+        "strategies": "Only participant strategies represented and matched in the two runs.",
+        "environments": "Only the named apparatus, backend, scenario family, and permitted nuisance variation.",
+        "observations": "Only governed outcome, intervention, comparability, reset, and cleanup evidence for the named case."
+      },
+      "dimensions": {
+        "nondeterminism": {
+          "status": "parameterized",
+          "treatment": "Random streams, seeds, draws, and uncertainty are governed by the matching policy; a shared seed alone is insufficient."
+        },
+        "concurrency": {
+          "status": "parameterized",
+          "treatment": "Scheduling and participant concurrency must be held fixed or declared as permitted nuisance variation."
+        },
+        "probability": {
+          "status": "outside-scope",
+          "treatment": "The binary criterion does not establish probabilistic necessity; statistical criteria require a separate governed relation or adapter."
+        },
+        "time": {
+          "status": "parameterized",
+          "treatment": "Both worlds bind an explicit time model and comparison boundary; wall-clock proximity is not comparability."
+        },
+        "partial_order": {
+          "status": "parameterized",
+          "treatment": "Causal or partial-order differences must be held fixed or explicitly admitted by the matching policy."
+        }
+      },
+      "preservation": {
+        "property": "A finite binary but-for result for the exact candidate, outcome, worlds, intervention, apparatus, and matching policy.",
+        "proof_obligation": "Admit a true baseline outcome, verify the candidate intervention, admit a false counterfactual outcome, prove the declared matching checks for every other semantic dimension, and independently verify reset and cleanup."
+      },
+      "bounded_evidence": [
+        "Immutable experiment-run identities, proposition-truth results, intervention evidence, matching-policy checks, and reset or cleanup evidence for one named comparison case."
+      ],
+      "explicit_non_claims": [
+        "Does not establish universal, actual, sufficient, probabilistic, or model-identified causation.",
+        "Does not treat replay, temporal order, correlation, failed execution, a no-op intervention, or incomparable outcome differences as necessity evidence.",
+        "Does not promote a supported finite comparison to proof or falsification-backed validation strength."
+      ],
+      "incompatible_claim_surfaces": [
+        "Universal causal proof",
+        "Unbounded actual-cause attribution",
+        "Statistical or probabilistic necessity without a separate criterion"
+      ],
+      "assurance": {
+        "definition_status": "defined",
+        "implementation_status": "implemented",
+        "test_status": "tested",
+        "proof_status": "deliberately-unproved",
+        "evidence_refs": [
+          "implementations/python/packages/raes_conformance/necessity_evidence.py",
+          "implementations/python/packages/raes_conformance/necessity_types.py",
+          "implementations/python/packages/raes_conformance/necessity_validation.py",
+          "implementations/python/tests/test_necessity_validation.py"
+        ]
+      },
+      "source_refs": [
+        "halpern-pearl-2005"
       ]
     },
     "canonical-artifact-identity": {
@@ -1506,6 +1803,116 @@
         "van-glabbeek-1990"
       ]
     },
+    "participant-predicate-opacity": {
+      "relation_id": "participant-predicate-opacity",
+      "display_name": "Participant-relative predicate opacity",
+      "relation_class": "epistemic",
+      "definition": "For every actual possible point at which the selected secret predicate is true, the named participant, audience, or coalition information cell induced by equal declared initial information and accumulated observations contains at least one possible point at which the predicate is false. The baseline is one-sided and possibilistic.",
+      "left_carrier": "One declared possible-point system whose points compose model or supervisor realization, run, evaluation cut, observer-local state and retained memory, exact-cut policy realization, and scheduler, environment, and order context.",
+      "right_carrier": "Not applicable; opacity is a unary property of the declared possible-point system and relation-parameter profile. A nonsecret point is a witness inside the same carrier, not a second system.",
+      "initial_states": "The profile fixes observer or coalition initial information, participant and audience identity, retained memory, policy and supervisor visibility, environment and scheduler classes, and the initial cut or horizon.",
+      "transition_signature": {
+        "applicability": "applicable",
+        "labels": "SEM-230 and participant-runtime occurrences, including proposal and control decisions, admission, attempt and result, disclosure and withholding, transformation, delivery and observation, policy or supervisor change, evidence, and audit when retained by the selected observation profile.",
+        "transition_relation": "Valid runs over existing participant world, view, local-history, archival-evidence, controller, authority, marking, exact-cut policy, crossing, delivery, observation, scheduler, environment, and order carriers.",
+        "observable_actions": "Exactly the content, occurrence, omission, decision, failure, delivery, retry, order, timing, policy-change, retrieval, evidence, or audit coordinates retained for the named observer by the revisioned relation-parameter profile.",
+        "hidden_actions": "Only occurrences removed by that observer-, policy-, supervisor-visibility-, cut-, memory-, time-, and order-relative observation function; hidden implementation does not imply hidden behavior.",
+        "stuttering_actions": "The untimed baseline removes finite unobserved stuttering and is progress- and termination-insensitive. Omission is observable only when the profile supplies an opportunity, deadline, acknowledgement, progress, or clock model."
+      },
+      "observation_projection": {
+        "applicability": "required",
+        "subject": "Named participant, audience, or explicit coalition",
+        "policy_ref": "SEM-231 participant-predicate-opacity observation profile",
+        "policy_revision": "The revisioned relation-parameter profile bound by the claim",
+        "redaction_scope": "Projection, redaction, declassification, decision disclosure, concealment, revocation, loss, and prior knowledge remain distinct; the profile states which resulting facts are observations.",
+        "order_treatment": "The profile selects total, participant-local, causal partial, simultaneous, or backend-serialized order. One linearization cannot establish a partial-order claim.",
+        "simultaneity_treatment": "Only declared simultaneity and visible causal frontiers are retained; timestamp equality is not simultaneity."
+      },
+      "projection_required": true,
+      "relation_parameter_profile_required": true,
+      "direction": "unary",
+      "quantification": {
+        "states": "For every actual point in the declared carrier at which the revisioned secret predicate is true, there exists a point in the same observer information cell at which it is false.",
+        "traces": "Over every run and cut admitted by the selected current-, initial-, K-step, infinite-step, language, or other declared horizon profile.",
+        "schedulers": "Over the fixed declared scheduler class and admitted order contexts; scheduler-sensitive variants state their quantifier order.",
+        "strategies": "Passive profiles quantify over observations only. Active profiles quantify universally over the declared allowed adaptive participant strategies, with actual and witness runs possible under the same strategy.",
+        "environments": "Over the fixed declared model and environment class, including only supervisor or policy realizations admitted by the selected visibility posture.",
+        "observations": "Equality of declared initial information and accumulated observer-local observations, including memory across retries, replay, episodes, policy revisions, controller handoffs, and coalition sharing when selected."
+      },
+      "dimensions": {
+        "nondeterminism": {
+          "status": "supported",
+          "treatment": "The baseline is possibilistic over the declared support. Nondeterministic or randomized supervision changes possible points but is not itself opacity evidence."
+        },
+        "concurrency": {
+          "status": "parameterized",
+          "treatment": "The profile fixes interleaving, step, simultaneous, causal, or other declared concurrent semantics and observer-visible order."
+        },
+        "probability": {
+          "status": "outside-scope",
+          "treatment": "The baseline compares possibility support, not probability mass, posterior belief, entropy, leakage probability, or differential privacy. Quantitative opacity requires a separately governed relation."
+        },
+        "time": {
+          "status": "parameterized",
+          "treatment": "The baseline is untimed and progress-insensitive. A timed profile requires a governed clock, duration and progress observation model and separately scoped evidence."
+        },
+        "partial_order": {
+          "status": "parameterized",
+          "treatment": "A partial-order claim compares declared visible causal frontiers and admitted schedules; a witness from one convenient linearization is insufficient."
+        }
+      },
+      "preservation": {
+        "property": "The named observer never knows that the selected one-sided secret predicate is true at a protected cut because every actual secret information cell retains a possible nonsecret point.",
+        "proof_obligation": "For every quantified actual secret point and, for active profiles, every allowed adaptive strategy, exhibit or prove the existence of a nonsecret point with equal declared initial information and accumulated observation under the same profile, strategy, release schedule, supervisor visibility, memory, scheduler, environment, time, and order assumptions."
+      },
+      "bounded_evidence": [
+        "The SEM-231 formal specification gives four finite counterexamples covering an incomplete equal-history witness, supervisor-decision leakage, opacity without noninterference, and declassification-induced knowledge change.",
+        "implementations/python/tests/test_sem_231_participant_predicate_opacity.py validates the catalog and shared claim-binding constraints; it does not decide opacity."
+      ],
+      "explicit_non_claims": [
+        "Relation definition, catalog validation, claim-profile binding, and worked examples do not establish opacity of RAES, RUN-319, or any backend.",
+        "No checker, finite-state model check, mathematical proof, runtime enforcement, supervisor synthesis, backend declaration, backend realization, or backend conformance is delivered by taxonomy revision rev5.",
+        "Opacity of one predicate does not imply SEM-230 policy noninterference, projected-history equivalence, epistemic indistinguishability of two selected worlds, trace inclusion or equivalence, simulation, refinement, or strong or weak bisimulation.",
+        "The possibilistic baseline makes no posterior-risk, entropy, probabilistic, differential-privacy, timed, progress-sensitive, or universal partial-order claim."
+      ],
+      "incompatible_claim_surfaces": [
+        "Unrevisioned or untyped secret, observer, supervisor-visibility, memory, strategy, time, order, or release coordinates",
+        "Single equal-history pairs, finite probes, randomized behavior, runtime filters, or backend declarations promoted to universal opacity",
+        "Claims that erase prior knowledge through concealment, revocation, reset, rollback, or supersession"
+      ],
+      "assurance": {
+        "definition_status": "defined",
+        "implementation_status": "not-implemented",
+        "test_status": "bounded",
+        "proof_status": "deliberately-unproved",
+        "checker_status": "not-implemented",
+        "model_check_status": "not-model-checked",
+        "runtime_enforcement_status": "not-enforced",
+        "backend_declaration_status": "not-declared",
+        "backend_realization_status": "not-realized",
+        "backend_conformance_status": "not-tested",
+        "evidence_refs": [
+          "docs/decisions/adrs/adr-099-participant-relative-predicate-opacity.md",
+          "specs/formal/participant-semantics/participant-predicate-opacity.md",
+          "implementations/python/tests/test_sem_231_participant_predicate_opacity.py"
+        ]
+      },
+      "source_refs": [
+        "andre-lime-marinho-sun-2022",
+        "badouel-bednarczyk-borzyszkowski-caillaud-darondeau-2007",
+        "berard-mullins-sassolas-2015",
+        "broberg-van-delft-sands-2015",
+        "bryans-koutny-mazare-ryan-2008",
+        "cui-ma-giua-yin-2026",
+        "fagin-halpern-moses-vardi-1995",
+        "lin-2011",
+        "partovi-jung-hai-2020",
+        "saboori-hadjicostis-2012",
+        "schoepe-sabelfeld-2015",
+        "xie-yin-li-2022",
+        "yin-lafortune-2016"
+      ]
+    },
     "participant-projected-history-equivalence": {
       "relation_id": "participant-projected-history-equivalence",
       "display_name": "Participant-projected history equivalence",
@@ -1653,12 +2060,14 @@
         "proof_obligation": "Prove support-set equality for every quantified low-equivalent pair and low strategy under the fixed participant, memory scope, exact-cut policy decisions, declassification schedule, model, scheduler, environment, and order assumptions, or report only the bounded counterexamples actually checked."
       },
       "bounded_evidence": [
-        "implementations/python/tests/test_sem_230_information_flow_control.py checks finite unauthorized-high, declassification-order, policy-revision, participant-relative hiding, deny-first, append-only-history, transformation-admission, and support-set counterexamples."
+        "implementations/python/tests/test_sem_230_information_flow_control.py checks finite unauthorized-high, declassification-order, policy-revision, participant-relative hiding, deny-first, append-only-history, transformation-admission, and support-set counterexamples.",
+        "implementations/python/tests/test_asr_535_participant_flow_assurance.py exhausts a declared finite crossing domain for unauthorized-high purge and exact-cut declassification, and drives the shipped RUN-319 boundary for denial, withholding, redaction, governed declassification, transformation, stale or revoked policy, cross-participant leakage, participant-directed inject delivery, backend weakening, unsupported capability, and adversarial overclaim."
       ],
       "explicit_non_claims": [
         "The finite SEM-230 executable cases do not establish universal noninterference.",
         "Projected-history equality does not establish policy noninterference without the stated low-equivalence, adaptive-strategy, memory, exact-cut policy, purge, declassification, scheduler, environment, and quantifier obligations.",
-        "No trace equivalence, simulation, refinement, strong or weak bisimulation, epistemic indistinguishability, timing security, probabilistic security, or backend realization is claimed."
+        "No trace equivalence, simulation, refinement, strong or weak bisimulation, epistemic indistinguishability, timing security, probabilistic security, or backend realization is claimed.",
+        "The ASR-535 finite enumeration, runtime probes, and backend conformance cases are bounded falsification evidence and are not a model check or a proof; issues #810 to #813 own any stronger opacity, bisimulation, adversarial-control, or cross-backend status."
       ],
       "incompatible_claim_surfaces": [
         "Unrevisioned participant projection",
@@ -1668,12 +2077,16 @@
       ],
       "assurance": {
         "definition_status": "defined",
-        "implementation_status": "not-implemented",
+        "implementation_status": "implemented",
         "test_status": "bounded",
         "proof_status": "deliberately-unproved",
         "evidence_refs": [
           "specs/formal/participant-semantics/information-flow-control.md",
-          "implementations/python/tests/test_sem_230_information_flow_control.py"
+          "implementations/python/tests/test_sem_230_information_flow_control.py",
+          "implementations/python/packages/raes_runtime/participant_crossing_policy.py",
+          "implementations/python/packages/raes_conformance/conformance/participant_policy_probes.py",
+          "implementations/python/tests/test_run_319_participant_flow_policy.py",
+          "implementations/python/tests/test_asr_535_participant_flow_assurance.py"
         ]
       },
       "source_refs": [
@@ -1762,11 +2175,11 @@
         "implementation_status": "not-implemented",
         "test_status": "bounded",
         "proof_status": "deliberately-unproved",
-      "evidence_refs": [
-        "docs/decisions/adrs/adr-095-participant-decision-epoch-state-cut-and-delivery-semantics.md",
-        "implementations/python/tests/test_sem_220_participant_decision_surface_v2_runtime.py",
-        "implementations/python/tests/test_behavioral_relations.py"
-      ]
+        "evidence_refs": [
+          "docs/decisions/adrs/adr-095-participant-decision-epoch-state-cut-and-delivery-semantics.md",
+          "implementations/python/tests/test_sem_220_participant_decision_surface_v2_runtime.py",
+          "implementations/python/tests/test_behavioral_relations.py"
+        ]
       },
       "source_refs": [
         "alur-henzinger-kupferman-vardi-1998",
@@ -2343,7 +2756,7 @@
       "intended_relation_ids": [
         "policy-noninterference"
       ],
-      "evidence_boundary": "The SEM-230 relation is defined over named participant, audience, memory scope, exact-cut policy-decision sequence, low-equivalence, adaptive low-strategy class, dynamic purge, permitted declassification schedule, scheduler/environment classes, order model, and support-set semantics. Current executable evidence is limited to finite models.",
+      "evidence_boundary": "The SEM-230 relation is defined over named participant, audience, memory scope, exact-cut policy-decision sequence, low-equivalence, adaptive low-strategy class, dynamic purge, permitted declassification schedule, scheduler/environment classes, order model, and support-set semantics. Current executable evidence is limited to finite models, finite reference-runtime enforcement probes, and finite backend-conformance cases.",
       "prohibited_relation_ids": [
         "participant-projected-history-equivalence",
         "trace-equivalence",
@@ -2356,7 +2769,32 @@
         "probabilistic-bisimulation"
       ],
       "explicit_non_claims": [
-        "Definition, catalog validation, claim-policy checks, and finite counterexamples do not prove universal noninterference or runtime/backend realization."
+        "Definition, catalog validation, claim-policy checks, and finite counterexamples do not prove universal noninterference or runtime/backend realization.",
+        "Reference-runtime enforcement and passing backend-conformance probes establish neither universal noninterference nor native-backend realization."
+      ]
+    },
+    {
+      "surface_id": "participant-opacity",
+      "intended_relation_ids": [
+        "participant-predicate-opacity"
+      ],
+      "evidence_boundary": "Every claim binds a revisioned observer, secret predicate, possible-point carrier, initial-information and observation functions, memory and horizon, supervisor visibility, passive or active strategy domain, release schedule, scheduler and environment classes, time and order, nondeterminism and probability support, assurance axis, and evidence boundary.",
+      "prohibited_relation_ids": [
+        "participant-projected-history-equivalence",
+        "policy-noninterference",
+        "trace-inclusion",
+        "trace-equivalence",
+        "forward-simulation",
+        "backward-simulation",
+        "data-refinement",
+        "strong-bisimulation",
+        "weak-bisimulation",
+        "epistemic-indistinguishability",
+        "probabilistic-bisimulation"
+      ],
+      "explicit_non_claims": [
+        "A profile, finite witness, bounded probe, random choice, model check, runtime decision, or backend declaration establishes only its named assurance axis and evidence scope.",
+        "No current RAES runtime or backend is claimed opaque."
       ]
     },
     {
@@ -2373,6 +2811,23 @@
       ],
       "explicit_non_claims": [
         "Current joint-action, chance, simultaneous-move, and mean-field records do not prove strategic equivalence."
+      ]
+    },
+    {
+      "surface_id": "counterfactual-necessity-validation",
+      "intended_relation_ids": [
+        "bounded-but-for-necessity",
+        "bounded-probe-success"
+      ],
+      "evidence_boundary": "One revisioned claim, one immutable baseline/intervention-world pair, one typed and verified intervention, admitted proposition-truth evidence, a declared matching policy, and independently verified reset and cleanup.",
+      "prohibited_relation_ids": [
+        "trace-equivalence",
+        "strong-bisimulation",
+        "empirical-adequacy",
+        "statistical-equivalence"
+      ],
+      "explicit_non_claims": [
+        "A supported finite but-for comparison is not universal causal proof, actual-cause attribution, sufficiency, determinism, or statistical necessity."
       ]
     },
     {

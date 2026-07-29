@@ -1,13 +1,23 @@
 {
-  "schema_version": "historical-identity-records/v2",
+  "schema_version": "historical-identity-records/v3",
   "hash_algorithm": "sha256",
+  "generated_history_records": [
+    {
+      "path": "CHANGELOG.md",
+      "record_class": "generated-release-history",
+      "rationale": "release-please rewrites this file on every release, inserting each new section above the existing ones, so a whole-file pin cannot hold. The classified tail carries the release notes published before the RAES identity cutover and is pinned exactly; everything release-please writes above it is held to the live-tree rule of zero retired identity occurrences.",
+      "occurrences": 297,
+      "content_sha256": "b3106e6e633e4045124ca19307c57c10efbfc87ccbb4048f415f0c4acbefcb3f",
+      "classified_suffix_bytes": 150639
+    }
+  ],
   "operational_bindings": [
     {
       "path": ".ground-control.yaml",
       "binding_class": "external-service-project-key",
-      "rationale": "Retains the existing service-owned Ground Control project designation without treating it as current RAES product identity.",
-      "occurrences": 1,
-      "content_sha256": "e0596809035a079630de05e4d350ed27fac0675526b247c3b069627ca4abe267"
+      "rationale": "Retains the existing service-owned Ground Control and SonarCloud project designations without treating them as current RAES product identity.",
+      "occurrences": 2,
+      "content_sha256": "c56a0e9194d21c490e797363b5701d2839195329acf70d110a6eb6ae7069a5e2"
     },
     {
       "path": "sonar-project.properties",
@@ -18,13 +28,6 @@
     }
   ],
   "records": [
-    {
-      "path": "CHANGELOG.md",
-      "record_class": "release-history",
-      "rationale": "Preserves immutable release notes and links published before the RAES identity cutover.",
-      "occurrences": 297,
-      "content_sha256": "3a1154626ec846e91556113406701d22e69df203237c072adb2fa626ddc5c8f7"
-    },
     {
       "path": "contracts/provenance/sdl-lineage-ledger-v1.json",
       "record_class": "provenance-record",
@@ -44,7 +47,7 @@
       "record_class": "historical-index",
       "rationale": "Indexes immutable pre-cutover ADR titles, paths, pins, and amendment summaries without making them current identity surf\u0061ces.",
       "occurrences": 4,
-      "content_sha256": "5dbb8fd47e1129ed93a8c39fb55a6a31764be0c415854935cd6cc2b892cc65e6"
+      "content_sha256": "9b5210617c92bc86341e66c81ec063e981e794f11df7d1a621be98b3c57ff5c0"
     },
     {
       "path": "docs/decisions/adrs/adr-000-use-adrs.md",
@@ -285,13 +288,6 @@
       "content_sha256": "db8a9edd3dbb9903e5dcc971b8f34a412d4ae4ea243af25371c4fb8c8fed3f8b"
     },
     {
-      "path": "docs/decisions/adrs/adr-049-platform-application-runtime-inventory.md",
-      "record_class": "accepted-adr",
-      "rationale": "Preserves an accepted architecture decision as written before the RAES identity cutover.",
-      "occurrences": 1,
-      "content_sha256": "efd2bda17b286ff8da753428439df26feabea21ea21aa7fc817916f329ce9bba"
-    },
-    {
       "path": "docs/decisions/adrs/adr-053-sdl-module-composition-for-inventory-backed-scenarios.md",
       "record_class": "accepted-adr",
       "rationale": "Preserves an accepted architecture decision as written before the RAES identity cutover.",
@@ -499,7 +495,7 @@
       "record_class": "historical-index",
       "rationale": "Indexes immutable pre-cutover ADR titles, paths, pins, and amendment summaries without making them current identity surf\u0061ces.",
       "occurrences": 4,
-      "content_sha256": "07647de85678b0bbc9b712a9af0ff61edddaa49955c44536a093f74a0898bba6"
+      "content_sha256": "b5732146c4f06f120c7678de8c34f370856aa2163273d79f6e0364de90d508ec"
     },
     {
       "path": "docs/decisions/cage-2-replication-design.md",
@@ -975,7 +971,7 @@
       "record_class": "dated-design-record",
       "rationale": "Preserves a completed, dated design or architecture-preflight record from before the RAES identity cutover.",
       "occurrences": 13,
-      "content_sha256": "42ccfba102ee5d15ec0f56c29292aa89f22df2f4f2b7dccbc1c40c2ebc842e7e"
+      "content_sha256": "46f1297d7b3db0b598e2d02334b0d413a97d2b0485e14dfe92d3e629bf792669"
     },
     {
       "path": "docs/decisions/issue-653-sce-004-goal-oriented-tool-flexible-steps-preflight.md",
@@ -1538,13 +1534,6 @@
       "content_sha256": "e061530e05ed00a2ae68ce3c5760c1011223e48e7c2e8a1b8e2068718674e2bc"
     },
     {
-      "path": "docs/research/formal-semantic-validation/index.md",
-      "record_class": "research-record",
-      "rationale": "Preserves preregistered, frozen, dated, or lineage-bearing research evidence from before the RAES identity cutover.",
-      "occurrences": 4,
-      "content_sha256": "3bcb125e5fac91f3827edfbf139ae1f53dcf21c686ea0a6ee790241853850369"
-    },
-    {
       "path": "docs/research/formal-semantic-validation/protocol-v1.json",
       "record_class": "research-record",
       "rationale": "Preserves preregistered, frozen, dated, or lineage-bearing research evidence from before the RAES identity cutover.",
@@ -1627,13 +1616,6 @@
       "rationale": "Preserves preregistered, frozen, dated, or lineage-bearing research evidence from before the RAES identity cutover.",
       "occurrences": 10,
       "content_sha256": "53c30870282bd09b493abddf2f96d966137be04f8af880d1965ad90d655a048e"
-    },
-    {
-      "path": "docs/research/participant-io-control/index.md",
-      "record_class": "research-record",
-      "rationale": "Preserves preregistered, frozen, dated, or lineage-bearing research evidence from before the RAES identity cutover.",
-      "occurrences": 1,
-      "content_sha256": "d12d66ff4b97231ac253700baa3e4b8754906e07cc0621e1c96d2e1987069b08"
     },
     {
       "path": "docs/research/participant-io-control/requirement-disposition.md",

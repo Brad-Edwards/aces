@@ -59,7 +59,7 @@ no longer a "references undefined metric/evaluation/TLO/goal" validation error;
 | `verify_runtime_security_monitoring_managers` | Runtime security-monitoring managers and listeners resolve to same-node service bindings. Manager/group/content/detection/setting file refs resolve to observed runtime filesystem entries when the node has file inventory. Agent group member refs, agent group refs, setting component refs, detection content-set refs, and detection correlation refs resolve inside the owning manager. Detection source artifact refs and target refs resolve through the generic named-ref index. |
 | `verify_runtime_app_authorizations` | Runtime application-internal RBAC stores resolve `permission_grants` and `role_mappings` `role_ref` values to roles declared within the same authorization (authorization-local role-permission and user-role assignment integrity). |
 | `verify_runtime_datastore_services` | Runtime datastore services resolve their owning transport `service` to a same-node service binding, and a non-empty, non-variable `authorization_ref` to an `app_authorization` declared on the same node. The model-local `require_profile_for_data_model` guard fails an under-populated `search_index`/`wide_column`/`key_value` instance. |
-| `verify_runtime_platform_applications` | Runtime platform applications resolve their owning transport `service` to a same-node service binding, a non-empty, non-variable `authorization_ref` to a same-node `app_authorization`, content-object `references` to sibling `content_object_id` values, and `marking_refs` to sibling `marking_id` values. The model-local `require_profile_for_platform_kind` guard fails an under-populated `threat_intel`/`soar`/`analyzer_engine`/`case_management`/`analytics_dashboard` instance. |
+| `verify_runtime_platform_applications` | Runtime platform applications resolve their owning transport `service` to a same-node service binding, a non-empty, non-variable `authorization_ref` to a same-node `app_authorization`, legacy content-object `references` to sibling `content_object_id` values, and `marking_refs` to sibling `marking_id` values. Provider-neutral capabilities are independently declared, carry stable application-local ids, and may be targeted by qualified refs; neither the deprecated `platform_kind` nor legacy content presence implies a capability or configuration completeness. |
 | `verify_runtime_forwarding_agents` | Runtime forwarding agents resolve each `ship_target`'s `target_node_ref`, when concrete, to a defined node, and a concrete `target_service_ref` to a service on the referenced node (or, for node-hosted agents only, on the owning node). Scenario-level forwarding agents require `target_node_ref` when `target_service_ref` is concrete, and `forwarding_agent_id` values are unique across node-hosted and scenario-level registries. The model-local `require_profile_for_agent_kind` guard fails an under-populated `log_forwarder` (requires a `buffer_policy` plus an ingestion `ship_target`, rejects `ioc_to_rule` transforms) or `content_sync` (requires an `api_pull` source, an `ioc_to_rule` transform, and a `reload_channel`, rejects a `buffer_policy` and `ship_target` enrollment endpoints) instance. |
 | `verify_runtime_orchestration_authorities` | Runtime orchestration authorities resolve a non-empty, non-variable `control_interface_ref` to a `RuntimeControlInterface` declared in the same node's `runtime.local_control_interfaces` (by `control_interface_id`); for a `host_root_equivalent` privilege class the referenced interface must additionally be a read-write docker socket (access `read_write`, kind `unix_socket`, path ending in `docker.sock`), with `${var}` interface access/kind/path permissive. The model-local `require_profile_for_privilege_class` guard fails a `host_root_equivalent` authority that carries no concrete `control_interface_ref`. |
 | `verify_runtime_mail_services` | Runtime mail services and listeners resolve optional same-node `Node.services` refs. Listener component refs, mailbox domain/store refs, alias target refs, routing source/target refs, and setting component refs resolve inside the owning mail service. Mailbox account refs resolve to top-level accounts, local-user refs resolve to `runtime.local_identity` when present, and setting source paths resolve to observed runtime filesystem entries when the node has file inventory. |
@@ -290,24 +290,19 @@ delegated internal RBAC store).
 
 The optional `runtime.platform_applications` inventory has model-local and
 semantic rules. Platform-application ids are stable concrete symbols and unique
-within a node runtime block; organization, tenant, content-object, marking,
-upstream-binding, connector, and setting ids are unique across the application.
-Platform kinds, content-object kinds, connector kinds, upstream-binding roles,
-and setting provenance/classification are normalized from bounded enums (the
-marking `scheme` is a closed `tlp`/`pap`/`distribution` vocabulary) while
-allowing full-value variables. Content objects are bounded parsed manifests —
-typed kind, bounded attributes, typed references, marking refs, and evidence refs
-— never raw bodies. Explicit redacted/operator-secret setting classifications
-omit raw values, and connector names do not force redaction classifications. The
-`require_profile_for_platform_kind`
-guard makes the discriminator executable: a `${var}` placeholder is exempt and
-`unknown`/`other` are permissive, but each concrete kind requires its defining
-content/binding profile (threat-intel taxonomy/galaxy/warninglist/feed/sharing
-group; SOAR workflow; analyzer-engine analyzer/responder plus execution policy;
-case-management case-template plus custom-field; analytics-dashboard saved object
-with references plus an index-backend/data-source upstream binding). The owning
-transport `service` and a non-empty, non-variable `authorization_ref` resolve on
-the same node, content-object `references` resolve to sibling content objects, and
+within a node runtime block; capability, organization, tenant, content-object,
+marking, upstream-binding, connector, and setting ids share the application's
+local stable-id namespace. Capability kinds are an open provider-neutral
+vocabulary and one application may declare several. A capability asserts a
+functional role only; it does not imply configured content, policy, successful
+execution, or completeness. The legacy `platform_kind` and `content_objects`
+fields remain accepted but are deprecated and do not drive validation.
+Content objects remain bounded parsed manifests—typed kind, bounded attributes,
+typed references, marking refs, and evidence refs—never raw bodies. Explicit
+redacted/operator-secret setting classifications omit raw values, and connector
+names do not force redaction classifications. The owning transport `service`
+and a non-empty, non-variable `authorization_ref` resolve on the same node;
+legacy content-object `references` resolve to sibling content objects and
 `marking_refs` resolve to sibling markings.
 
 The optional `runtime.forwarding_agents` inventory and top-level
@@ -456,8 +451,12 @@ required profile from sibling structured fields. Those discriminators are not
 documentation-only claims: each documented required-profile discriminator must
 have a matching `require_profile_for_<field>` guard invoked by a registered
 Pydantic `mode="after"` model validator. This is the executable "cannot
-silently shallow-encode" guarantee for the current `data_model`,
-`platform_kind`, `agent_kind`, and `privilege_class` spines.
+silently shallow-encode" guarantee for spines that actually make a
+discriminated completeness claim, currently `data_model`, `agent_kind`, and
+`privilege_class`. Platform applications deliberately do not use this
+convention: their deprecated `platform_kind` is classification, composable
+`capabilities` carry functional roles, and completeness is a separate
+requirement concern.
 
 The convention is enforced by
 `test_discriminated_runtime_spines_register_required_profile_guards` in
@@ -580,8 +579,8 @@ from the SDL runtime-family registry. Registered runtime refs include:
 - `nodes.<node>.runtime.datastore_services.<datastore_service_id>` plus nested
   node, partition, and setting refs
 - `nodes.<node>.runtime.platform_applications.<platform_application_id>` plus
-  nested organization, tenant, content-object, marking, upstream-binding,
-  connector, and setting refs
+  nested capability, organization, tenant, content-object, marking,
+  upstream-binding, connector, and setting refs
 
 This means a relationship can reference any node, feature, condition,
 vulnerability, infrastructure entry, entity

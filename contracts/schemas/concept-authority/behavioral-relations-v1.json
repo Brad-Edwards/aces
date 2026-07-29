@@ -201,6 +201,11 @@
           "title": "Relation Id",
           "type": "string"
         },
+        "relation_parameter_profile_required": {
+          "default": false,
+          "title": "Relation Parameter Profile Required",
+          "type": "boolean"
+        },
         "right_carrier": {
           "minLength": 1,
           "title": "Right Carrier",
@@ -459,6 +464,52 @@
     "RelationAssuranceModel": {
       "additionalProperties": false,
       "properties": {
+        "backend_conformance_status": {
+          "default": "not-applicable",
+          "enum": [
+            "conformant",
+            "bounded",
+            "not-tested",
+            "future",
+            "not-applicable"
+          ],
+          "title": "Backend Conformance Status",
+          "type": "string"
+        },
+        "backend_declaration_status": {
+          "default": "not-applicable",
+          "enum": [
+            "declared",
+            "not-declared",
+            "future",
+            "not-applicable"
+          ],
+          "title": "Backend Declaration Status",
+          "type": "string"
+        },
+        "backend_realization_status": {
+          "default": "not-applicable",
+          "enum": [
+            "realized",
+            "partial",
+            "not-realized",
+            "future",
+            "not-applicable"
+          ],
+          "title": "Backend Realization Status",
+          "type": "string"
+        },
+        "checker_status": {
+          "default": "not-applicable",
+          "enum": [
+            "implemented",
+            "partial",
+            "not-implemented",
+            "not-applicable"
+          ],
+          "title": "Checker Status",
+          "type": "string"
+        },
         "definition_status": {
           "enum": [
             "defined",
@@ -485,6 +536,17 @@
           "title": "Implementation Status",
           "type": "string"
         },
+        "model_check_status": {
+          "default": "not-applicable",
+          "enum": [
+            "model-checked",
+            "not-model-checked",
+            "future",
+            "not-applicable"
+          ],
+          "title": "Model Check Status",
+          "type": "string"
+        },
         "proof_status": {
           "enum": [
             "proved",
@@ -494,6 +556,18 @@
             "not-applicable"
           ],
           "title": "Proof Status",
+          "type": "string"
+        },
+        "runtime_enforcement_status": {
+          "default": "not-applicable",
+          "enum": [
+            "enforced",
+            "partial",
+            "not-enforced",
+            "future",
+            "not-applicable"
+          ],
+          "title": "Runtime Enforcement Status",
           "type": "string"
         },
         "test_status": {
@@ -699,7 +773,7 @@
       "type": "object"
     }
   },
-  "$id": "https://raes.dev/schemas/behavioral-relations-v1.json",
+  "$id": "https://raesystem.github.io/rae/schemas/behavioral-relations-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
@@ -787,6 +861,6 @@
     "id": "raes-semantic-invariants-v1",
     "keyword": "x-raes-invariants",
     "required": true,
-    "uri": "https://raes.dev/schemas/semantic-invariants/v1"
+    "uri": "https://raesystem.github.io/rae/schemas/semantic-invariants/v1"
   }
 }

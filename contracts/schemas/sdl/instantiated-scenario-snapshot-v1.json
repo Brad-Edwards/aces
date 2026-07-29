@@ -21406,7 +21406,7 @@
     },
     "RuntimePlatformApplication": {
       "additionalProperties": false,
-      "description": "Node-scoped runtime inventory for a security platform application.\n\n``service`` references the owning same-node ``Node.services[].name``. The\ninventory is observation metadata above transport; it never duplicates the\ninbound HTTP route surface (``runtime.applications``) or mutates\n``Node.services``. ``authorization_ref`` is the ``app_authorization_id`` of\nthe platform's internal RBAC store (resolved by the semantic validator).",
+      "description": "Node-scoped runtime inventory for a security platform application.\n\n``service`` references the owning same-node ``Node.services[].name``. The\ninventory is application state above transport; it never duplicates the\ninbound HTTP route surface (``runtime.applications``) or mutates\n``Node.services``. ``capabilities`` declare composable provider-neutral\nfunctional roles without implying content or configuration completeness.\n``authorization_ref`` is the ``app_authorization_id`` of the platform's\ninternal RBAC store (resolved by the semantic validator).",
       "properties": {
         "authorization_ref": {
           "default": "",
@@ -21416,6 +21416,13 @@
           "title": "Authorization Ref",
           "type": "string"
         },
+        "capabilities": {
+          "items": {
+            "$ref": "#/$defs/RuntimePlatformApplicationCapability"
+          },
+          "title": "Capabilities",
+          "type": "array"
+        },
         "connectors": {
           "items": {
             "$ref": "#/$defs/RuntimePlatformApplicationConnector"
@@ -21424,6 +21431,8 @@
           "type": "array"
         },
         "content_objects": {
+          "deprecated": true,
+          "description": "Legacy bounded platform-content manifests retained for compatibility; content presence does not define application capabilities.",
           "items": {
             "$ref": "#/$defs/RuntimePlatformApplicationContentObject"
           },
@@ -21500,6 +21509,8 @@
             }
           ],
           "default": "unknown",
+          "deprecated": true,
+          "description": "Legacy product-family category retained for compatibility; does not imply capabilities or configuration completeness. Use capabilities for new documents.",
           "title": "Platform Kind"
         },
         "product": {
@@ -21553,6 +21564,81 @@
       ],
       "title": "RuntimePlatformApplication",
       "type": "object"
+    },
+    "RuntimePlatformApplicationCapability": {
+      "additionalProperties": false,
+      "description": "A provider-neutral functional role exposed by the application.\n\nCapability declarations are composable and independent of product\ncategories, configuration completeness, loaded content, policy, and\nexecution guarantees. ``evidence_refs`` may identify the evidence supporting\nthe declared runtime contract without embedding backend payloads.",
+      "properties": {
+        "capability_id": {
+          "allOf": [
+            {
+              "not": {
+                "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+              }
+            }
+          ],
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "not": {
+            "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Description",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "not": {
+              "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+            },
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimePlatformApplicationCapabilityKind"
+            },
+            {
+              "not": {
+                "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+              },
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Kind"
+        }
+      },
+      "required": [
+        "capability_id"
+      ],
+      "title": "RuntimePlatformApplicationCapability",
+      "type": "object"
+    },
+    "RuntimePlatformApplicationCapabilityKind": {
+      "description": "Open taxonomy of provider-neutral application capabilities.\n\nA capability describes a functional role exposed by an application. It\ndoes not imply a product identity, configuration profile, content\ninventory, policy, or execution guarantee. Open taxonomy: carries both\n``unknown`` and ``other``.",
+      "enum": [
+        "threat_intelligence_management",
+        "intelligence_exchange",
+        "case_management",
+        "analysis_execution",
+        "workflow_automation",
+        "analytics_presentation",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimePlatformApplicationCapabilityKind",
+      "type": "string"
     },
     "RuntimePlatformApplicationConnector": {
       "additionalProperties": false,
@@ -21661,7 +21747,7 @@
     },
     "RuntimePlatformApplicationContentObject": {
       "additionalProperties": false,
-      "description": "A typed platform content object as a bounded parsed manifest entry.\n\nThe object carries a typed ``kind``, bounded typed ``attributes``, typed\n``references`` (to other ``content_object_id`` values), ``marking_refs``,\nand ``evidence_refs`` \u2014 structurally **never** a raw object body.",
+      "description": "A legacy typed platform content object as a bounded manifest entry.\n\nThe object carries a typed ``kind``, bounded typed ``attributes``, typed\n``references`` (to other ``content_object_id`` values), ``marking_refs``,\nand ``evidence_refs`` \u2014 structurally **never** a raw object body. Its\npresence does not imply an application capability.",
       "properties": {
         "attributes": {
           "additionalProperties": true,
@@ -21753,7 +21839,7 @@
       "type": "object"
     },
     "RuntimePlatformApplicationContentObjectKind": {
-      "description": "Open taxonomy of typed platform content objects.\n\nA content object is a bounded parsed manifest entry (typed kind + bounded\nattributes + typed references) \u2014 never a raw object body. Open taxonomy:\ncarries both ``unknown`` and ``other``.",
+      "description": "Legacy open taxonomy of typed platform content objects.\n\nA content object is a bounded parsed manifest entry (typed kind + bounded\nattributes + typed references) \u2014 never a raw object body. The collection is\nretained for compatibility and does not define an application's\ncapabilities. Open taxonomy: carries both ``unknown`` and ``other``.",
       "enum": [
         "index_pattern",
         "visualization",
@@ -21844,7 +21930,7 @@
       "type": "object"
     },
     "RuntimePlatformApplicationKind": {
-      "description": "Open discriminator for the platform-application product family.\n\nThe ``require_profile_for_platform_kind`` guard ties each concrete member\nto a required content/binding profile. Open taxonomy: carries both\n``unknown`` and ``other``.",
+      "description": "Legacy open category for a platform-application product family.\n\nThis category is retained for compatibility. It does not assert\nconfiguration completeness or imply application capabilities. New\ndocuments should use composable ``capabilities`` instead. Open taxonomy:\ncarries both ``unknown`` and ``other``.",
       "enum": [
         "analytics_dashboard",
         "threat_intel",
@@ -27251,7 +27337,7 @@
       "type": "string"
     }
   },
-  "$id": "https://raes.dev/schemas/instantiated-scenario-snapshot-v1.json",
+  "$id": "https://raesystem.github.io/rae/schemas/instantiated-scenario-snapshot-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "Sealed canonical envelope for one portable instantiated artifact.",
@@ -27329,6 +27415,6 @@
     "id": "raes-semantic-invariants-v1",
     "keyword": "x-raes-invariants",
     "required": true,
-    "uri": "https://raes.dev/schemas/semantic-invariants/v1"
+    "uri": "https://raesystem.github.io/rae/schemas/semantic-invariants/v1"
   }
 }

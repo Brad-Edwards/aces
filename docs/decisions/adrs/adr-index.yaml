@@ -237,7 +237,11 @@ adrs:
         summary: "Added datastore cardinality fields."
   - id: ADR-049
     path: docs/decisions/adrs/adr-049-platform-application-runtime-inventory.md
-    pin: efd2bda17b286ff8da753428439df26feabea21ea21aa7fc817916f329ce9bba
+    pin: e809d36ab9cb2a475423b0dc1bc9f58999e6c45fbbd4ed9f4c55952ef06f029e
+    amendments:
+      - date: 2026-07-29
+        ref: "#956"
+        summary: "Replaced product-category completeness profiles with composable provider-neutral capabilities and retained legacy product/category content fields as deprecated compatible input."
   - id: ADR-050
     path: docs/decisions/adrs/adr-050-forwarding-agent-runtime-inventory.md
     pin: 8eaecd0c498353822c5fec91f83fa6af6b7a7bb32451025f97661673cc1b832c
@@ -280,11 +284,14 @@ adrs:
         summary: "ADR-074 realizes the explicit draft/authoring surface anticipated in the Risks section as experiment-authoring-input-v1; the archival contracts are unchanged."
   - id: ADR-056
     path: docs/decisions/adrs/adr-056-runtime-observed-values-and-credential-posture.md
-    pin: 3aa602de53f7607cf531b4a9da3f58192eb87ad21ddd92846fd2ae2a7526a4c3
+    pin: c2ff94d295a9b22dc72d8654a3fcd6bf9bb3fb4f5e4ffc411341c3e3ab164617
     amendments:
       - date: 2026-07-13
         ref: "#417"
         summary: "Narrowed observation-only health, generated network identity, and scanner facts out of authored Node.runtime while retaining shared redaction semantics."
+      - date: 2026-07-29
+        ref: "#956"
+        summary: "Removed the obsolete platform-kind profile-guard claim while retaining family-local capability/category/content semantics and shared explicit-redaction handling."
   - id: ADR-057
     path: docs/decisions/adrs/adr-057-runtime-secret-name-classifier-boundaries.md
     pin: 44c638bf47df8545b8af8a3850476fabc46a4ea42b3a8003b4f9ea1e89f72f49
@@ -449,6 +456,15 @@ adrs:
       - date: 2026-07-26
         ref: "#908"
         summary: "Retained the existing SonarCloud project key as an exact, content-bound external-service designation rather than a current RAES product identity."
+      - date: 2026-07-27
+        ref: "#908"
+        summary: "Repointed the canonical published-schema URI root from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root."
+      - date: 2026-07-28
+        ref: "#908"
+        summary: "Added the generated-release-history record class so bot-maintained release notes pin their classified tail exactly while newly generated content is held to zero retired identity occurrences."
   - id: ADR-098
     path: docs/decisions/adrs/adr-098-portable-artifact-requirement-satisfaction.md
     pin: cabc306d07b60b7d1c62cf85750a57025651e69f55946261e315d772644309e3
+  - id: ADR-099
+    path: docs/decisions/adrs/adr-099-participant-relative-predicate-opacity.md
+    pin: 61a5ea9d72a0afa1033d46131913f45b140286b6ddddcb59e0e1f6914b721cb9

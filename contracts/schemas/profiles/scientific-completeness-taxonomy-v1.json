@@ -4,6 +4,29 @@
       "additionalProperties": false,
       "description": "A bounded claim tied to one revisioned behavioral-relation definition.\n\nThis is deliberately a claim *binding*, not another relation registry. The\ncatalog owns relation meaning; consumers supply the subject, carriers,\nquantifier/evidence boundary, assurance state, and explicit limitations.",
       "properties": {
+        "assurance_axis": {
+          "anyOf": [
+            {
+              "enum": [
+                "definition",
+                "checker",
+                "bounded-test",
+                "model-check",
+                "proof",
+                "runtime-enforcement",
+                "backend-declaration",
+                "backend-realization",
+                "backend-conformance"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Assurance Axis"
+        },
         "assurance_status": {
           "enum": [
             "defined",
@@ -12,7 +35,11 @@
             "model-checked",
             "proved",
             "deliberately-unproved",
-            "future"
+            "future",
+            "enforced",
+            "declared",
+            "realized",
+            "conformant"
           ],
           "title": "Assurance Status",
           "type": "string"
@@ -114,6 +141,32 @@
           "pattern": "^[a-z][a-z0-9-]*$",
           "title": "Relation Id",
           "type": "string"
+        },
+        "relation_parameter_profile_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Relation Parameter Profile Ref"
+        },
+        "relation_parameter_profile_revision": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Relation Parameter Profile Revision"
         },
         "right_carrier_ref": {
           "anyOf": [
@@ -276,7 +329,7 @@
       "type": "string"
     }
   },
-  "$id": "https://raes.dev/schemas/scientific-completeness-taxonomy-v1.json",
+  "$id": "https://raesystem.github.io/rae/schemas/scientific-completeness-taxonomy-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
@@ -358,6 +411,6 @@
     "id": "raes-semantic-invariants-v1",
     "keyword": "x-raes-invariants",
     "required": true,
-    "uri": "https://raes.dev/schemas/semantic-invariants/v1"
+    "uri": "https://raesystem.github.io/rae/schemas/semantic-invariants/v1"
   }
 }

@@ -2,9 +2,9 @@
   "contract_id": "associated-artifact-manifest-v1",
   "schema_path": "contracts/schemas/associated-artifacts/associated-artifact-manifest-v1.json",
   "stability": "draft",
-  "content_hash": "6b9db0d57e9163a0554bc456b425924121438640e1bc052c722e6cd1f4f300f3",
+  "content_hash": "a82c0539e307342fad8a494e04571a1e50639615efd349ee8d3f7d96f9e71751",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "6b9db0d57e9163a0554bc456b425924121438640e1bc052c722e6cd1f4f300f3"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "a82c0539e307342fad8a494e04571a1e50639615efd349ee8d3f7d96f9e71751"
   }
 }

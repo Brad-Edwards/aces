@@ -2,9 +2,9 @@
   "contract_id": "scenario-instantiation-request-v1",
   "schema_path": "contracts/schemas/sdl/scenario-instantiation-request-v1.json",
   "stability": "draft",
-  "content_hash": "54a8cdf1108003f61b79b9d9c0f0a7321a4078a55cf81f604c6882dd420b6616",
+  "content_hash": "f008fbdab7624d288c38fe9e142d24eb55c34cc390032cab35cb0c30344d9e04",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "54a8cdf1108003f61b79b9d9c0f0a7321a4078a55cf81f604c6882dd420b6616"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "f008fbdab7624d288c38fe9e142d24eb55c34cc390032cab35cb0c30344d9e04"
   }
 }

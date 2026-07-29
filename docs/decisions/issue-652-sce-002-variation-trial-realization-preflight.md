@@ -102,11 +102,12 @@ admitted run identity and produces a distinct run record.
   version, seed encoding, canonical input encoding, semantic stream-address
   derivation, and distribution/sampling transformations. A seed alone is not a
   replay claim.
-- Stream addresses derive from immutable semantic coordinates such as the
-  experiment/spec identity, logical trial coordinate, variation-point or
-  policy id, and draw purpose. They must never include worker id, process id,
-  thread id, host, wall time, map iteration order, completion order, or retry
-  count.
+- Stream addresses derive from the explicit experiment-owned randomness
+  namespace plus immutable semantic coordinates such as the logical trial
+  coordinate, variation-point or policy id, draw purpose, and stable local
+  draw coordinate. They must never include the aggregate experiment/spec
+  identity or digest, worker id, process id, thread id, host, wall time, map
+  iteration order, completion order, or retry count.
 - Each concern receives an independent derived stream. Adding a draw for one
   variation point must not perturb another point's result. Serial, parallel,
   reversed-worker, and different-batch executions of the same admitted inputs

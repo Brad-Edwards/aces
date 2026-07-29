@@ -2,9 +2,9 @@
   "contract_id": "random-stream-profile-v1",
   "schema_path": "contracts/schemas/profiles/random-stream-profile-v1.json",
   "stability": "draft",
-  "content_hash": "28f4a59b393157c1995a5043029c9b109cc512a7e84d64784835619fdff40a59",
+  "content_hash": "f594185a8db1f8320822089b90649fed6d4175285da232484bc225d2e60775c1",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "28f4a59b393157c1995a5043029c9b109cc512a7e84d64784835619fdff40a59"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "f594185a8db1f8320822089b90649fed6d4175285da232484bc225d2e60775c1"
   }
 }

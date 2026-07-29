@@ -23,8 +23,10 @@ if str(REPO_ROOT) not in sys.path:
 from tools.check_pr_title import (  # noqa: E402
     BRANDED_PREFIXES,
     CONVENTIONAL_TYPES,
+    RETIRED_IDENTITY_PATTERN,
     RULE_AGENT_BRAND,
     RULE_CONVENTIONAL,
+    RULE_RETIRED_IDENTITY,
     RULE_SUBJECT_LOWERCASE,
     main,
     validate_pr_title,
@@ -146,6 +148,124 @@ def test_cli_missing_title_fails_closed(tmp_path: Path) -> None:
     empty = tmp_path / "empty.json"
     empty.write_text(json.dumps({}), encoding="utf-8")
     assert main(["--event-path", str(empty)]) != 0
+
+
+# --- Retired project naming in changelog-bound text (issue #908) ---
+
+_RETIRED_LOWER = "a" + "ces"
+_RETIRED_UPPER = "A" + "CES"
+
+
+@pytest.mark.parametrize(
+    "title",
+    [
+        f"fix: drop the {_RETIRED_UPPER} compatibility shim",
+        f"feat: publish {_RETIRED_LOWER}-invariants v2",
+        f"refactor: rename {_RETIRED_LOWER}_boundaries",
+    ],
+)
+def test_retired_identity_in_title_is_rejected(title: str) -> None:
+    assert RULE_RETIRED_IDENTITY in _rule_ids(title)
+
+
+@pytest.mark.parametrize(
+    "title",
+    [
+        "fix: rework surfaces and interfaces in namespaces",
+        "refactor: replace traces with spans",
+        "feat: repoint schema namespace to raesystem.github.io",
+    ],
+)
+def test_words_containing_the_retired_token_are_not_matched(title: str) -> None:
+    """The rule is word-boundary anchored; 'surfaces' must not trip it."""
+    assert RULE_RETIRED_IDENTITY not in _rule_ids(title)
+
+
+def test_retired_identity_in_breaking_change_footer_is_rejected() -> None:
+    body = f"Some prose.\n\nBREAKING CHANGE: {_RETIRED_LOWER}-invariants is removed.\n"
+    violations = validate_pr_title("fix: tidy identifiers", body)
+
+    assert RULE_RETIRED_IDENTITY in {v.rule_id for v in violations}
+
+
+def test_retired_identity_in_body_prose_is_allowed() -> None:
+    """Explaining the retired name is legitimate; only footers reach the changelog."""
+    body = f"This PR finishes migrating away from {_RETIRED_UPPER}. Historical records keep the name.\n"
+
+    assert validate_pr_title("fix: tidy identifiers", body) == []
+
+
+def test_multiline_breaking_change_footer_is_checked_in_full() -> None:
+    body = f"BREAKING CHANGE: identifiers move.\nConsumers pinning {_RETIRED_LOWER}-invariants must update.\n"
+    violations = validate_pr_title("fix: tidy identifiers", body)
+
+    assert RULE_RETIRED_IDENTITY in {v.rule_id for v in violations}
+
+
+def test_retired_identity_reported_alongside_shape_violations() -> None:
+    """A malformed *and* retired-named title must report both, not just the shape."""
+    rule_ids = _rule_ids(f"not-a-type: drop {_RETIRED_UPPER}")
+
+    assert RULE_RETIRED_IDENTITY in rule_ids
+    assert RULE_CONVENTIONAL in rule_ids
+
+
+def test_retired_identity_pattern_matches_the_identity_cutover_gate() -> None:
+    """The text pattern here must not drift from the bytes pattern in the gate.
+
+    ``check_pr_title`` is stdlib-only and cannot import the gate (which pulls in
+    PyYAML), so equivalence is asserted rather than shared.
+    """
+    from tools.check_identity_cutover import IDENTITY_PATTERN
+
+    samples = [
+        f"{_RETIRED_UPPER}",
+        f"{_RETIRED_LOWER}-invariants",
+        f"{_RETIRED_LOWER}_boundaries",
+        f"{_RETIRED_LOWER}.dev",
+        "surfaces",
+        "interfaces",
+        "namespaces",
+        "raes",
+        f"pl{_RETIRED_LOWER}",
+        f"drop the {_RETIRED_UPPER} shim",
+    ]
+    for sample in samples:
+        text_matches = RETIRED_IDENTITY_PATTERN.findall(sample)
+        byte_matches = [m.decode() for m in IDENTITY_PATTERN.findall(sample.encode())]
+        assert text_matches == byte_matches, sample
+
+
+def test_cli_checks_commit_messages_file(tmp_path: Path) -> None:
+    """Squash uses COMMIT_MESSAGES, so commit footers are the changelog-bound text."""
+    messages = tmp_path / "commits.txt"
+    messages.write_text(
+        f"fix: something\n\nBREAKING CHANGE: {_RETIRED_LOWER}-invariants is removed.\n",
+        encoding="utf-8",
+    )
+
+    assert main(["--title", "fix: a clean title", "--commit-messages-file", str(messages)]) == 1
+
+
+def test_cli_commit_messages_prose_is_allowed(tmp_path: Path) -> None:
+    messages = tmp_path / "commits.txt"
+    messages.write_text(
+        f"fix: something\n\nExplains the move away from {_RETIRED_UPPER} naming.\n",
+        encoding="utf-8",
+    )
+
+    assert main(["--title", "fix: a clean title", "--commit-messages-file", str(messages)]) == 0
+
+
+def test_cli_unreadable_commit_messages_file_fails_closed(tmp_path: Path) -> None:
+    missing = tmp_path / "absent.txt"
+
+    assert main(["--title", "fix: a clean title", "--commit-messages-file", str(missing)]) == 2
+
+
+def test_body_is_optional() -> None:
+    assert validate_pr_title("fix: a clean title") == []
+    assert validate_pr_title("fix: a clean title", None) == []
 
 
 @pytest.mark.integration

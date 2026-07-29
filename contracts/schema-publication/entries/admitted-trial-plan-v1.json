@@ -1,0 +1,10 @@
+{
+  "contract_id": "admitted-trial-plan-v1",
+  "schema_path": "contracts/schemas/plans/admitted-trial-plan-v1.json",
+  "stability": "draft",
+  "content_hash": "79d1f918e8a119124a7d75115bb053b0dd6732ebd954b8d6dd311e582df04a8e",
+  "last_change": {
+    "summary": "Corrected deterministic compiler authorities for SCE-002 issue #789: scenario_family_ref pins the admitted expanded-family identity/profile, unbound experiments omit binding_descriptor_set_ref, and participant implementation manifests are sealed with exact identity/version/content digests.",
+    "content_hash": "79d1f918e8a119124a7d75115bb053b0dd6732ebd954b8d6dd311e582df04a8e"
+  }
+}

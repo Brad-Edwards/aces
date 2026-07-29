@@ -2,9 +2,9 @@
   "contract_id": "realization-envelope-v1",
   "schema_path": "contracts/schemas/realization-envelope/realization-envelope-v1.json",
   "stability": "draft",
-  "content_hash": "124da1052563cc1457232da763919f02c23f935a86e21e49c1e0d7b781606253",
+  "content_hash": "1f54cfaf7288a61890972527dc44415924c8590a1d40795bea13f8cd0cf1e878",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "124da1052563cc1457232da763919f02c23f935a86e21e49c1e0d7b781606253"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "1f54cfaf7288a61890972527dc44415924c8590a1d40795bea13f8cd0cf1e878"
   }
 }

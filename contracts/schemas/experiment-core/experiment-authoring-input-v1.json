@@ -910,6 +910,61 @@
       "title": "ExperimentConditionAssignmentReferenceModel",
       "type": "object"
     },
+    "ExperimentEnumerateSelectionPolicyModel": {
+      "additionalProperties": false,
+      "description": "Deterministic exhaustive enumeration of one finite point domain.",
+      "properties": {
+        "binding_descriptor_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 64,
+          "title": "Binding Descriptor Refs",
+          "type": "array"
+        },
+        "kind": {
+          "const": "enumerate",
+          "title": "Kind",
+          "type": "string"
+        },
+        "output_bound": {
+          "maximum": 1000000,
+          "minimum": 1,
+          "title": "Output Bound",
+          "type": "integer"
+        },
+        "point_ref": {
+          "minLength": 1,
+          "title": "Point Ref",
+          "type": "string"
+        },
+        "policy_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Policy Id",
+          "type": "string"
+        },
+        "purpose": {
+          "const": "nuisance-variation",
+          "title": "Purpose",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "policy_id",
+        "purpose",
+        "point_ref",
+        "output_bound"
+      ],
+      "title": "ExperimentEnumerateSelectionPolicyModel",
+      "type": "object"
+    },
     "ExperimentEpisodeControlModel": {
       "additionalProperties": false,
       "description": "Declarative episode execution controls for a planned experiment.\n\nCaptures the pre-run execution-control facts \u2014 turn order, logical step\ncount, and episode termination \u2014 that ADR-069 requires for CAGE-2\nexecution-control equivalence but that the archival experiment-core\ncontracts only record after a run has executed.",
@@ -1006,6 +1061,95 @@
         "ref_id"
       ],
       "title": "ExperimentEvidenceSatisfactionReferenceModel",
+      "type": "object"
+    },
+    "ExperimentFixedSelectionPolicyModel": {
+      "additionalProperties": false,
+      "description": "Deterministic leaf selecting one admitted outcome.",
+      "properties": {
+        "binding_descriptor_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 64,
+          "title": "Binding Descriptor Refs",
+          "type": "array"
+        },
+        "kind": {
+          "const": "fixed",
+          "title": "Kind",
+          "type": "string"
+        },
+        "outcome": {
+          "discriminator": {
+            "mapping": {
+              "literal": "#/$defs/LiteralBindingValueModel",
+              "member": "#/$defs/ExperimentSelectionMemberOutcomeModel",
+              "order": "#/$defs/ExperimentSelectionOrderOutcomeModel",
+              "reference": "#/$defs/ExperimentSelectionReferenceOutcomeModel",
+              "subset": "#/$defs/ExperimentSelectionSubsetOutcomeModel"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/LiteralBindingValueModel"
+            },
+            {
+              "$ref": "#/$defs/ExperimentSelectionReferenceOutcomeModel"
+            },
+            {
+              "$ref": "#/$defs/ExperimentSelectionMemberOutcomeModel"
+            },
+            {
+              "$ref": "#/$defs/ExperimentSelectionSubsetOutcomeModel"
+            },
+            {
+              "$ref": "#/$defs/ExperimentSelectionOrderOutcomeModel"
+            }
+          ],
+          "title": "Outcome"
+        },
+        "output_bound": {
+          "maximum": 1000000,
+          "minimum": 1,
+          "title": "Output Bound",
+          "type": "integer"
+        },
+        "point_ref": {
+          "minLength": 1,
+          "title": "Point Ref",
+          "type": "string"
+        },
+        "policy_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Policy Id",
+          "type": "string"
+        },
+        "purpose": {
+          "enum": [
+            "nuisance-variation",
+            "fixed-configuration"
+          ],
+          "title": "Purpose",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "policy_id",
+        "purpose",
+        "point_ref",
+        "outcome",
+        "output_bound"
+      ],
+      "title": "ExperimentFixedSelectionPolicyModel",
       "type": "object"
     },
     "ExperimentManifestReferenceModel": {
@@ -1348,6 +1492,65 @@
       "title": "ExperimentProcessorReferenceModel",
       "type": "object"
     },
+    "ExperimentProductSelectionPolicyModel": {
+      "additionalProperties": false,
+      "description": "Deterministic Cartesian product over named policy dimensions.",
+      "properties": {
+        "kind": {
+          "const": "product",
+          "title": "Kind",
+          "type": "string"
+        },
+        "output_bound": {
+          "maximum": 1000000,
+          "minimum": 1,
+          "title": "Output Bound",
+          "type": "integer"
+        },
+        "policy_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Policy Id",
+          "type": "string"
+        },
+        "policy_refs": {
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            },
+            "pattern": "^[a-z0-9]",
+            "type": "string"
+          },
+          "maxItems": 64,
+          "minItems": 2,
+          "title": "Policy Refs",
+          "type": "array"
+        },
+        "purpose": {
+          "enum": [
+            "controlled-factor",
+            "nuisance-variation"
+          ],
+          "title": "Purpose",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "policy_id",
+        "purpose",
+        "policy_refs",
+        "output_bound"
+      ],
+      "title": "ExperimentProductSelectionPolicyModel",
+      "type": "object"
+    },
     "ExperimentRedVariantSelectionModel": {
       "additionalProperties": false,
       "description": "Selection of one red-agent variant bound into a planned experiment.",
@@ -1653,11 +1856,47 @@
           "title": "Red Variant Selections",
           "type": "object"
         },
+        "selection_policies": {
+          "additionalProperties": {
+            "discriminator": {
+              "mapping": {
+                "enumerate": "#/$defs/ExperimentEnumerateSelectionPolicyModel",
+                "fixed": "#/$defs/ExperimentFixedSelectionPolicyModel",
+                "product": "#/$defs/ExperimentProductSelectionPolicyModel",
+                "sample": "#/$defs/ExperimentSampleSelectionPolicyModel",
+                "stratified": "#/$defs/ExperimentStratifiedSelectionPolicyModel"
+              },
+              "propertyName": "kind"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/ExperimentFixedSelectionPolicyModel"
+              },
+              {
+                "$ref": "#/$defs/ExperimentEnumerateSelectionPolicyModel"
+              },
+              {
+                "$ref": "#/$defs/ExperimentProductSelectionPolicyModel"
+              },
+              {
+                "$ref": "#/$defs/ExperimentStratifiedSelectionPolicyModel"
+              },
+              {
+                "$ref": "#/$defs/ExperimentSampleSelectionPolicyModel"
+              }
+            ]
+          },
+          "maxProperties": 128,
+          "propertyNames": {
+            "minLength": 1
+          },
+          "title": "Selection Policies",
+          "type": "object"
+        },
         "stochastic_controls": {
           "items": {
             "$ref": "#/$defs/ExperimentStochasticControlModel"
           },
-          "minItems": 1,
           "title": "Stochastic Controls",
           "type": "array"
         },
@@ -1676,7 +1915,6 @@
         }
       },
       "required": [
-        "stochastic_controls",
         "episode_control"
       ],
       "title": "ExperimentRunPlanModel",
@@ -1695,6 +1933,98 @@
           "validator": "raes_contracts.contracts.ExperimentRunPlanModel._validate_run_plan"
         }
       ]
+    },
+    "ExperimentSampleSelectionPolicyModel": {
+      "additionalProperties": false,
+      "description": "Bounded uniform sampling with replacement using one governed stream.",
+      "properties": {
+        "algorithm_profile": {
+          "const": "uniform-index-v1",
+          "title": "Algorithm Profile",
+          "type": "string"
+        },
+        "binding_descriptor_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 64,
+          "title": "Binding Descriptor Refs",
+          "type": "array"
+        },
+        "distribution": {
+          "const": "uniform",
+          "title": "Distribution",
+          "type": "string"
+        },
+        "kind": {
+          "const": "sample",
+          "title": "Kind",
+          "type": "string"
+        },
+        "logical_coordinate_profile": {
+          "default": "selection-coordinate-v1",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*-v[0-9]+$",
+          "title": "Logical Coordinate Profile",
+          "type": "string"
+        },
+        "output_bound": {
+          "maximum": 1000000,
+          "minimum": 1,
+          "title": "Output Bound",
+          "type": "integer"
+        },
+        "point_ref": {
+          "minLength": 1,
+          "title": "Point Ref",
+          "type": "string"
+        },
+        "policy_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Policy Id",
+          "type": "string"
+        },
+        "purpose": {
+          "const": "nuisance-variation",
+          "title": "Purpose",
+          "type": "string"
+        },
+        "replacement": {
+          "const": "with-replacement",
+          "title": "Replacement",
+          "type": "string"
+        },
+        "sample_count": {
+          "maximum": 1000000,
+          "minimum": 1,
+          "title": "Sample Count",
+          "type": "integer"
+        },
+        "stochastic_control_ref": {
+          "minLength": 1,
+          "title": "Stochastic Control Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "policy_id",
+        "purpose",
+        "point_ref",
+        "algorithm_profile",
+        "distribution",
+        "replacement",
+        "sample_count",
+        "output_bound",
+        "stochastic_control_ref"
+      ],
+      "title": "ExperimentSampleSelectionPolicyModel",
+      "type": "object"
     },
     "ExperimentScenarioReferenceModel": {
       "additionalProperties": false,
@@ -1788,6 +2118,175 @@
       "title": "ExperimentScenarioReferenceModel",
       "type": "object"
     },
+    "ExperimentSelectionMemberOutcomeModel": {
+      "additionalProperties": false,
+      "description": "One named alternative/member outcome.",
+      "properties": {
+        "kind": {
+          "const": "member",
+          "title": "Kind",
+          "type": "string"
+        },
+        "member_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Member Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "member_id"
+      ],
+      "title": "ExperimentSelectionMemberOutcomeModel",
+      "type": "object"
+    },
+    "ExperimentSelectionOrderOutcomeModel": {
+      "additionalProperties": false,
+      "description": "One complete canonical order of declared structural member ids.",
+      "properties": {
+        "kind": {
+          "const": "order",
+          "title": "Kind",
+          "type": "string"
+        },
+        "member_ids": {
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            },
+            "pattern": "^[a-z0-9]",
+            "type": "string"
+          },
+          "maxItems": 1024,
+          "minItems": 1,
+          "title": "Member Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind",
+        "member_ids"
+      ],
+      "title": "ExperimentSelectionOrderOutcomeModel",
+      "type": "object"
+    },
+    "ExperimentSelectionReferenceOutcomeModel": {
+      "additionalProperties": false,
+      "description": "One governed-reference outcome named by its declared reference id.",
+      "properties": {
+        "kind": {
+          "const": "reference",
+          "title": "Kind",
+          "type": "string"
+        },
+        "reference_id": {
+          "minLength": 1,
+          "title": "Reference Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "reference_id"
+      ],
+      "title": "ExperimentSelectionReferenceOutcomeModel",
+      "type": "object"
+    },
+    "ExperimentSelectionStratumModel": {
+      "additionalProperties": false,
+      "description": "One exact allocation stratum joined to an existing condition.",
+      "properties": {
+        "condition_id": {
+          "minLength": 1,
+          "title": "Condition Id",
+          "type": "string"
+        },
+        "factor_id": {
+          "minLength": 1,
+          "title": "Factor Id",
+          "type": "string"
+        },
+        "factor_level_id": {
+          "minLength": 1,
+          "title": "Factor Level Id",
+          "type": "string"
+        },
+        "outcome_ref": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Outcome Ref",
+          "type": "string"
+        },
+        "output_count": {
+          "maximum": 1000000,
+          "minimum": 1,
+          "title": "Output Count",
+          "type": "integer"
+        },
+        "stratum_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Stratum Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "stratum_id",
+        "outcome_ref",
+        "factor_id",
+        "factor_level_id",
+        "condition_id",
+        "output_count"
+      ],
+      "title": "ExperimentSelectionStratumModel",
+      "type": "object"
+    },
+    "ExperimentSelectionSubsetOutcomeModel": {
+      "additionalProperties": false,
+      "description": "One canonical subset of declared structural member ids.",
+      "properties": {
+        "kind": {
+          "const": "subset",
+          "title": "Kind",
+          "type": "string"
+        },
+        "member_ids": {
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            },
+            "pattern": "^[a-z0-9]",
+            "type": "string"
+          },
+          "maxItems": 1024,
+          "title": "Member Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind",
+        "member_ids"
+      ],
+      "title": "ExperimentSelectionSubsetOutcomeModel",
+      "type": "object"
+    },
     "ExperimentStochasticControlModel": {
       "additionalProperties": false,
       "description": "Seed, randomization, sampling, or scheduler control for reproducibility.",
@@ -1854,6 +2353,125 @@
         "role"
       ],
       "title": "ExperimentStochasticControlModel",
+      "type": "object"
+    },
+    "ExperimentStratifiedSelectionPolicyModel": {
+      "additionalProperties": false,
+      "description": "Exact balanced/stratified allocation over declared policy outcomes.",
+      "properties": {
+        "balance": {
+          "const": "equal",
+          "title": "Balance",
+          "type": "string"
+        },
+        "kind": {
+          "const": "stratified",
+          "title": "Kind",
+          "type": "string"
+        },
+        "outcomes": {
+          "maxProperties": 1024,
+          "minProperties": 1,
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "discriminator": {
+                "mapping": {
+                  "literal": "#/$defs/LiteralBindingValueModel",
+                  "member": "#/$defs/ExperimentSelectionMemberOutcomeModel",
+                  "order": "#/$defs/ExperimentSelectionOrderOutcomeModel",
+                  "reference": "#/$defs/ExperimentSelectionReferenceOutcomeModel",
+                  "subset": "#/$defs/ExperimentSelectionSubsetOutcomeModel"
+                },
+                "propertyName": "kind"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/LiteralBindingValueModel"
+                },
+                {
+                  "$ref": "#/$defs/ExperimentSelectionReferenceOutcomeModel"
+                },
+                {
+                  "$ref": "#/$defs/ExperimentSelectionMemberOutcomeModel"
+                },
+                {
+                  "$ref": "#/$defs/ExperimentSelectionSubsetOutcomeModel"
+                },
+                {
+                  "$ref": "#/$defs/ExperimentSelectionOrderOutcomeModel"
+                }
+              ]
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Outcomes",
+          "type": "object"
+        },
+        "output_bound": {
+          "maximum": 1000000,
+          "minimum": 1,
+          "title": "Output Bound",
+          "type": "integer"
+        },
+        "point_ref": {
+          "minLength": 1,
+          "title": "Point Ref",
+          "type": "string"
+        },
+        "policy_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Policy Id",
+          "type": "string"
+        },
+        "purpose": {
+          "enum": [
+            "controlled-factor",
+            "nuisance-variation"
+          ],
+          "title": "Purpose",
+          "type": "string"
+        },
+        "strata": {
+          "maxProperties": 1024,
+          "minProperties": 1,
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/ExperimentSelectionStratumModel"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Strata",
+          "type": "object"
+        }
+      },
+      "required": [
+        "kind",
+        "policy_id",
+        "purpose",
+        "point_ref",
+        "balance",
+        "outcomes",
+        "strata",
+        "output_bound"
+      ],
+      "title": "ExperimentStratifiedSelectionPolicyModel",
       "type": "object"
     },
     "ExperimentStudyFactorModel": {
@@ -2278,7 +2896,7 @@
       "type": "object"
     }
   },
-  "$id": "https://raes.dev/schemas/experiment-authoring-input-v1.json",
+  "$id": "https://raesystem.github.io/rae/schemas/experiment-authoring-input-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "allOf": [
@@ -2470,6 +3088,30 @@
       ],
       "level": "error",
       "validator": "raes_contracts.contracts.ExperimentSpecModel._validate_binding_descriptors"
+    },
+    {
+      "description": "Selection policy ids, bounds, references, stochastic controls, and supported exact profiles must form one finite, acyclic, fail-closed authoring registry.",
+      "id": "experiment-selection-policies-valid",
+      "inputs": [
+        {
+          "contract_id": "experiment-authoring-input-v1",
+          "instance_path": "#/run_plan/selection_policies"
+        }
+      ],
+      "level": "error",
+      "validator": "raes_contracts.contracts.ExperimentRunPlanModel._validate_selection_policies"
+    },
+    {
+      "description": "Selection strata and binding references must resolve declared factors, levels, conditions, variation points, and allocation counts.",
+      "id": "experiment-selection-factor-joins-valid",
+      "inputs": [
+        {
+          "contract_id": "experiment-authoring-input-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "raes_contracts.contracts.ExperimentSpecModel._validate_selection_factor_joins"
     }
   ],
   "x-raes-semantic-profile": {
@@ -2479,6 +3121,6 @@
     "id": "raes-semantic-invariants-v1",
     "keyword": "x-raes-invariants",
     "required": true,
-    "uri": "https://raes.dev/schemas/semantic-invariants/v1"
+    "uri": "https://raesystem.github.io/rae/schemas/semantic-invariants/v1"
   }
 }

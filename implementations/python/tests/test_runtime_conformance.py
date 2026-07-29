@@ -118,14 +118,20 @@ def test_target_conformance_records_evidence_backed_exact_policy_support():
 
     report = run_target_conformance(replace(target, manifest=manifest))
 
-    case = next(case for case in report.cases if case.capability_feature == feature)
-    assert report.passed is True
+    case = next(case for case in report.cases if case.policy_binding is None and case.capability_feature == feature)
     assert case.passed is True
     assert case.declared_support_level == "exact"
     assert case.effective_support_level == "exact"
     assert case.evidence_refs == ("conformance:participant-ingress-admission:case-1",)
     assert case.finite_scope and "no unexecuted participant behavior" in case.finite_scope
     assert case.explicit_non_claims
+    # ASR-535: the manifest declaration is recorded, but declaring exact support
+    # no longer conforms on its own. With no participant-policy probe harness
+    # driving the declared feature, the report is explicitly unsupported.
+    unprobed = next(case for case in report.cases if case.policy_binding is not None)
+    assert unprobed.capability_feature == feature
+    assert unprobed.outcome == "unsupported"
+    assert report.passed is False
 
 
 def test_full_remote_control_plane_profile_requires_api_406_carriers():

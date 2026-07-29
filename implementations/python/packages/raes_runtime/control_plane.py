@@ -9,25 +9,16 @@ async control plane so non-Python runtimes can evolve behind the same API.
 from __future__ import annotations
 
 from collections.abc import Mapping
-from datetime import UTC, datetime
 from threading import RLock
 from uuid import uuid4
 
-from raes_backend_protocols.backend_manifest import BackendManifest
-from raes_backend_protocols.domain_topology import domain_topology_plan_diagnostics
-from raes_backend_protocols.service_materialization import service_materialization_plan_diagnostics
-from raes_contracts.apparatus import (
-    DECLARED_CAPABILITY_MATCH_REQUIREMENT_KIND,
-    RUNTIME_REALIZATION_DOMAIN,
-)
 from raes_contracts.diagnostics import Diagnostic
+from raes_contracts.manifest_authority import PARTICIPANT_RUNTIME_POLICY_FEATURES
 from raes_contracts.planning import (
     EvaluationPlan,
     OrchestrationPlan,
-    PlanOperation,
     ProvisioningPlan,
     RuntimeDomain,
-    require_plan_operation_identity,
 )
 from raes_contracts.runtime_state import (
     OperationReceipt,
@@ -36,21 +27,14 @@ from raes_contracts.runtime_state import (
     RuntimeSnapshot,
     RuntimeSnapshotEnvelope,
 )
-from raes_contracts.workflow import (
-    WorkflowCompensationStatus,
-    WorkflowExecutionState,
-    WorkflowHistoryEvent,
-    WorkflowHistoryEventType,
-    WorkflowStatus,
-)
+from raes_contracts.vocabulary import ParticipantFeatureSupportLevel
 from raes_processor.models import ParticipantBehaviorSpecificationRuntime
 
 from .backend_calls import _call_backend_diagnostics
 from .control_plane_execution import (
     OperationExecutionRequest,
-    SucceededOperationRequest,
+    _utc_now,
     execute_operation,
-    persist_succeeded_operation,
 )
 from .control_plane_store import (
     AuditEvent,
@@ -58,152 +42,37 @@ from .control_plane_store import (
     ControlPlaneStore,
     InMemoryControlPlaneStore,
 )
-from .control_plane_timeouts import workflow_timeout_update
-from .control_plane_workflows import maybe_apply_compensation
+from .control_plane_submission import _submitted_plan_diagnostics
+from .control_plane_workflow_control import WorkflowControlMixin
 from .operational_apparatus import operational_apparatus_summary
 from .participant_control import ParticipantControlMixin
+from .participant_crossing_mediation import (
+    ParticipantCrossingPolicyResolver,
+    validate_persisted_crossing_history,
+)
 from .participant_retrieval import ParticipantRetrievalMixin
 from .registry import RuntimeTarget
 
-_TERMINAL_WORKFLOW_STATUSES = {
-    WorkflowStatus.SUCCEEDED,
-    WorkflowStatus.FAILED,
-    WorkflowStatus.CANCELLED,
-    WorkflowStatus.TIMED_OUT,
-}
-_STATEFUL_ADMISSION_BY_RESOURCE_TYPE = {
-    "generated-artifact": (
-        "supports_generated_artifacts",
-        "provisioner.generated-artifacts-unsupported",
-        "generated artifacts",
-    ),
-    "persistent-volume": (
-        "supports_persistent_volumes",
-        "provisioner.persistent-volumes-unsupported",
-        "persistent volumes",
-    ),
-}
+
+def _require_crossing_policy_configuration(
+    target: RuntimeTarget,
+    resolver: ParticipantCrossingPolicyResolver | None,
+) -> None:
+    capabilities = target.manifest.participant_runtime
+    if capabilities is None:
+        return
+    enabled_policy_features = {
+        declaration.feature
+        for declaration in capabilities.feature_support
+        if declaration.feature in PARTICIPANT_RUNTIME_POLICY_FEATURES
+        and declaration.support_level != ParticipantFeatureSupportLevel.UNSUPPORTED
+    }
+    if enabled_policy_features and resolver is None:
+        features = ", ".join(sorted(enabled_policy_features))
+        raise ValueError(f"participant policy capabilities require a crossing policy resolver: {features}")
 
 
-def _utc_now() -> str:
-    return datetime.now(UTC).isoformat().replace("+00:00", "Z")
-
-
-def _submitted_plan_diagnostics(
-    plan: ProvisioningPlan | OrchestrationPlan | EvaluationPlan,
-    domain: RuntimeDomain,
-    snapshot: RuntimeSnapshot,
-    manifest: BackendManifest | None = None,
-) -> list[Diagnostic]:
-    admitted = set(snapshot.entries) | {operation.address for operation in plan.operations}
-    diagnostics: list[Diagnostic] = []
-    for operation in plan.operations:
-        diagnostic = _submitted_operation_diagnostic(operation, domain, snapshot, admitted)
-        if diagnostic is not None:
-            diagnostics.append(diagnostic)
-            break
-    if not diagnostics and domain is RuntimeDomain.PROVISIONING and isinstance(plan, ProvisioningPlan):
-        if manifest is None:
-            raise ValueError("provisioning submission admission requires a backend manifest")
-        stateful_diagnostic = _stateful_submission_diagnostic(plan, manifest)
-        if stateful_diagnostic is not None:
-            diagnostics.append(stateful_diagnostic)
-        else:
-            service_materialization_diagnostics = service_materialization_plan_diagnostics(
-                plan,
-                manifest.provisioner,
-                manifest.realization_envelope,
-            )
-            if service_materialization_diagnostics:
-                diagnostics.extend(service_materialization_diagnostics[:1])
-                return diagnostics
-            diagnostics.extend(
-                domain_topology_plan_diagnostics(
-                    plan,
-                    snapshot=snapshot,
-                    supported_domain_profiles=manifest.provisioner.supported_domain_profiles,
-                )[:1]
-            )
-    return diagnostics
-
-
-def _stateful_submission_diagnostic(
-    plan: ProvisioningPlan,
-    manifest: BackendManifest,
-) -> Diagnostic | None:
-    for operation in plan.operations:
-        admission = _STATEFUL_ADMISSION_BY_RESOURCE_TYPE.get(operation.resource_type)
-        if admission is None:
-            continue
-        capability_attribute, unsupported_code, resource_label = admission
-        if not getattr(manifest.provisioner, capability_attribute):
-            return Diagnostic(
-                code=unsupported_code,
-                domain="provisioning",
-                address=operation.address,
-                message=f"Provisioner does not support {resource_label}.",
-            )
-        exact_supported = any(
-            declaration.domain == RUNTIME_REALIZATION_DOMAIN
-            and DECLARED_CAPABILITY_MATCH_REQUIREMENT_KIND in declaration.supported_exact_requirement_kinds
-            for declaration in manifest.realization_support
-        )
-        if not exact_supported:
-            return Diagnostic(
-                code="realization.unsupported-exact-requirement",
-                domain="runtime-realization",
-                address=operation.address,
-                message=(
-                    "Backend declares no exact realization support for the submitted "
-                    f"{operation.resource_type} resource."
-                ),
-            )
-    return None
-
-
-def _submitted_operation_diagnostic(
-    operation: PlanOperation,
-    domain: RuntimeDomain,
-    snapshot: RuntimeSnapshot,
-    admitted: set[str],
-) -> Diagnostic | None:
-    diagnostic: Diagnostic | None = None
-    address = f"runtime.control-plane.{domain.value}"
-    try:
-        require_plan_operation_identity(domain, operation.address, operation.resource_type)
-    except ValueError:
-        diagnostic = Diagnostic(
-            code="runtime.plan-resource-incoherent",
-            domain="runtime",
-            address=address,
-            message="Submitted plan operation disagrees with the endpoint resource identity.",
-        )
-
-    dependencies = {*operation.ordering_dependencies, *operation.refresh_dependencies}
-    if diagnostic is None and dependencies - admitted:
-        diagnostic = Diagnostic(
-            code="runtime.plan-dependency-unresolved",
-            domain="runtime",
-            address=address,
-            message="Submitted plan contains a dependency outside its operations and admitted snapshot.",
-        )
-
-    existing = snapshot.entries.get(operation.address)
-    if (
-        diagnostic is None
-        and existing is not None
-        and (existing.domain is not domain or existing.resource_type != operation.resource_type)
-    ):
-        diagnostic = Diagnostic(
-            code="runtime.plan-resource-incoherent",
-            domain="runtime",
-            address=address,
-            message="Submitted plan disagrees with the admitted snapshot resource identity.",
-        )
-    return diagnostic
-
-
-class RuntimeControlPlane(ParticipantControlMixin, ParticipantRetrievalMixin):
+class RuntimeControlPlane(WorkflowControlMixin, ParticipantControlMixin, ParticipantRetrievalMixin):
     """Reference control plane for async runtime submission and observation."""
 
     def __init__(
@@ -213,13 +82,20 @@ class RuntimeControlPlane(ParticipantControlMixin, ParticipantRetrievalMixin):
         initial_snapshot: RuntimeSnapshot | None = None,
         store: ControlPlaneStore | None = None,
         behavior_specifications: Mapping[str, ParticipantBehaviorSpecificationRuntime] | None = None,
+        crossing_policy_resolver: ParticipantCrossingPolicyResolver | None = None,
     ) -> None:
+        _require_crossing_policy_configuration(target, crossing_policy_resolver)
         self._target = target
         self._store = store or InMemoryControlPlaneStore(initial_snapshot)
         self._snapshot = initial_snapshot if initial_snapshot is not None else self._store.load_snapshot()
         self._operations: dict[str, ControlPlaneOperationRecord] = self._store.load_records()
         self._behavior_specifications = dict(behavior_specifications or {})
+        self._crossing_policy_resolver = crossing_policy_resolver
         self._participant_control_lock = RLock()
+        if self._snapshot.participant_crossing_history:
+            if crossing_policy_resolver is None:
+                raise ValueError("persisted participant crossing history requires a policy resolver")
+            validate_persisted_crossing_history(self._snapshot, crossing_policy_resolver)
 
     @property
     def snapshot(self) -> RuntimeSnapshot:
@@ -360,220 +236,6 @@ class RuntimeControlPlane(ParticipantControlMixin, ParticipantRetrievalMixin):
 
     def get_snapshot(self) -> RuntimeSnapshotEnvelope:
         return RuntimeSnapshotEnvelope(snapshot=self._snapshot)
-
-    def cancel_workflow(
-        self,
-        workflow_address: str,
-        *,
-        run_id: str | None = None,
-        reason: str = "cancelled by operator",
-        idempotency_key: str = "",
-        request_fingerprint: str = "",
-    ) -> OperationReceipt:
-        existing = self._idempotent_receipt(
-            idempotency_key=idempotency_key,
-            request_fingerprint=request_fingerprint,
-        )
-        if existing is not None:
-            return existing
-        submitted_at = _utc_now()
-        operation_id = str(uuid4())
-        context = self._cancellable_workflow_state(
-            workflow_address,
-            run_id=run_id,
-            idempotency_key=idempotency_key,
-            request_fingerprint=request_fingerprint,
-        )
-        if isinstance(context, OperationReceipt):
-            return context
-        if context.workflow_status in _TERMINAL_WORKFLOW_STATUSES:
-            receipt = persist_succeeded_operation(
-                self,
-                SucceededOperationRequest(
-                    operation_id=operation_id,
-                    domain=RuntimeDomain.ORCHESTRATION,
-                    submitted_at=submitted_at,
-                    idempotency_key=idempotency_key,
-                    request_fingerprint=request_fingerprint,
-                ),
-            )
-        else:
-            receipt = self._cancel_active_workflow(
-                workflow_address,
-                normalized=context,
-                reason=reason,
-                operation_id=operation_id,
-                submitted_at=submitted_at,
-                idempotency_key=idempotency_key,
-                request_fingerprint=request_fingerprint,
-            )
-        return receipt
-
-    def _cancellable_workflow_state(
-        self,
-        workflow_address: str,
-        *,
-        run_id: str | None,
-        idempotency_key: str,
-        request_fingerprint: str,
-    ) -> WorkflowExecutionState | OperationReceipt:
-        result = dict(self._snapshot.orchestration_results.get(workflow_address, {}))
-        rejection = None
-        normalized: WorkflowExecutionState | None = None
-        if not result:
-            rejection = f"Unknown workflow run: {workflow_address}"
-        else:
-            normalized = WorkflowExecutionState.from_payload(result)
-            if run_id and normalized.run_id != run_id:
-                rejection = f"Workflow run_id mismatch for {workflow_address}: {run_id!r} != {normalized.run_id!r}"
-        if rejection is not None:
-            return self._reject_submission(
-                domain=RuntimeDomain.ORCHESTRATION,
-                message=rejection,
-                idempotency_key=idempotency_key,
-                request_fingerprint=request_fingerprint,
-            )
-        assert normalized is not None
-        return normalized
-
-    def _cancel_active_workflow(
-        self,
-        workflow_address: str,
-        *,
-        normalized: WorkflowExecutionState,
-        reason: str,
-        operation_id: str,
-        submitted_at: str,
-        idempotency_key: str,
-        request_fingerprint: str,
-    ) -> OperationReceipt:
-        cancelled_state = WorkflowExecutionState(
-            state_schema_version=normalized.state_schema_version,
-            workflow_status=WorkflowStatus.CANCELLED,
-            run_id=normalized.run_id,
-            started_at=normalized.started_at,
-            updated_at=submitted_at,
-            terminal_reason=reason,
-            compensation_status=WorkflowCompensationStatus.NOT_REQUIRED,
-            compensation_started_at=None,
-            compensation_updated_at=None,
-            compensation_failures=[],
-            steps=normalized.steps,
-        )
-        history = list(self._snapshot.orchestration_history.get(workflow_address, []))
-        history.append(
-            WorkflowHistoryEvent(
-                event_type=WorkflowHistoryEventType.WORKFLOW_CANCELLED,
-                timestamp=submitted_at,
-                details={"reason": reason},
-            ).to_payload()
-        )
-        cancelled, history = maybe_apply_compensation(
-            self._snapshot,
-            workflow_address=workflow_address,
-            result=cancelled_state,
-            history=history,
-            submitted_at=submitted_at,
-        )
-        self._snapshot = self._snapshot.with_entries(
-            dict(self._snapshot.entries),
-            orchestration_results={
-                **self._snapshot.orchestration_results,
-                workflow_address: cancelled,
-            },
-            orchestration_history={
-                **self._snapshot.orchestration_history,
-                workflow_address: history,
-            },
-        )
-        self._store.save_snapshot(self._snapshot)
-        receipt = OperationReceipt(
-            operation_id=operation_id,
-            domain=RuntimeDomain.ORCHESTRATION,
-            submitted_at=submitted_at,
-            accepted=True,
-        )
-        status = OperationStatus(
-            operation_id=operation_id,
-            domain=RuntimeDomain.ORCHESTRATION,
-            state=OperationState.SUCCEEDED,
-            submitted_at=submitted_at,
-            updated_at=submitted_at,
-            changed_addresses=[workflow_address],
-        )
-        self._persist_record(
-            ControlPlaneOperationRecord(
-                receipt=receipt,
-                status=status,
-                idempotency_key=idempotency_key,
-                request_fingerprint=request_fingerprint,
-            )
-        )
-        return receipt
-
-    def reconcile_workflow_timeouts(
-        self,
-        *,
-        now: str | None = None,
-        idempotency_key: str = "",
-        request_fingerprint: str = "",
-    ) -> OperationReceipt:
-        existing = self._idempotent_receipt(
-            idempotency_key=idempotency_key,
-            request_fingerprint=request_fingerprint,
-        )
-        if existing is not None:
-            return existing
-        submitted_at = now or _utc_now()
-        changed: list[str] = []
-        orchestration_results = dict(self._snapshot.orchestration_results)
-        orchestration_history = {
-            address: list(events) for address, events in self._snapshot.orchestration_history.items()
-        }
-        for workflow_address, entry in self._snapshot.entries.items():
-            timed_out = workflow_timeout_update(
-                self._snapshot,
-                workflow_address,
-                entry,
-                orchestration_results,
-                orchestration_history,
-                submitted_at,
-            )
-            if timed_out is None:
-                continue
-            orchestration_results[workflow_address] = timed_out[0]
-            orchestration_history[workflow_address] = timed_out[1]
-            changed.append(workflow_address)
-        operation_id = str(uuid4())
-        self._snapshot = self._snapshot.with_entries(
-            dict(self._snapshot.entries),
-            orchestration_results=orchestration_results,
-            orchestration_history=orchestration_history,
-        )
-        self._store.save_snapshot(self._snapshot)
-        receipt = OperationReceipt(
-            operation_id=operation_id,
-            domain=RuntimeDomain.ORCHESTRATION,
-            submitted_at=submitted_at,
-            accepted=True,
-        )
-        status = OperationStatus(
-            operation_id=operation_id,
-            domain=RuntimeDomain.ORCHESTRATION,
-            state=OperationState.SUCCEEDED,
-            submitted_at=submitted_at,
-            updated_at=submitted_at,
-            changed_addresses=changed,
-        )
-        self._persist_record(
-            ControlPlaneOperationRecord(
-                receipt=receipt,
-                status=status,
-                idempotency_key=idempotency_key,
-                request_fingerprint=request_fingerprint,
-            )
-        )
-        return receipt
 
     def record_audit(
         self,

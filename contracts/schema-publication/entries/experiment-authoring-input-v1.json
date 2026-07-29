@@ -2,9 +2,9 @@
   "contract_id": "experiment-authoring-input-v1",
   "schema_path": "contracts/schemas/experiment-core/experiment-authoring-input-v1.json",
   "stability": "draft",
-  "content_hash": "2ffe9d8c055458997b3f78159e7b54eb1ea05a3bf52ce3adaa64234220457cce",
+  "content_hash": "ed858991667adaaf817118d0ae985a9c01884eb32673717da1f2e25c8082ea72",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "2ffe9d8c055458997b3f78159e7b54eb1ea05a3bf52ce3adaa64234220457cce"
+    "summary": "Added bounded experiment selection policies, deterministic no-seed authoring, factor/allocation joins, and fail-closed stochastic profile binding for issue #787.",
+    "content_hash": "ed858991667adaaf817118d0ae985a9c01884eb32673717da1f2e25c8082ea72"
   }
 }

@@ -51,10 +51,9 @@ from raes_contracts.scientific_completeness import (
 )
 from raes_contracts.validation_profiles import ValidationProfileCatalogModel
 
-from raes_conformance.conformance.diagnostics import _diagnostic
+from raes_conformance.conformance.diagnostics import _diagnostic, sanitized_failure_message
 
 _SCHEMA_INVALID_DIAGNOSTIC_CODE = "conformance.schema-invalid"
-
 _MODEL_VALIDATORS = {
     "backend-manifest-v2": BackendManifestV2Model.model_validate,
     "participant-implementation-manifest-v1": ParticipantImplementationManifestModel.model_validate,
@@ -148,7 +147,7 @@ def _validate_event_stream(
                 _diagnostic(
                     _SCHEMA_INVALID_DIAGNOSTIC_CODE,
                     f"{contract_name}[{index}]",
-                    f"{event_label} history event is invalid: {exc}",
+                    f"{event_label} history event is invalid: {sanitized_failure_message(exc)}",
                 )
             )
     return diagnostics
@@ -165,7 +164,7 @@ def _validate_payload(contract_name: str, payload: object) -> list[Diagnostic]:
                 _diagnostic(
                     _SCHEMA_INVALID_DIAGNOSTIC_CODE,
                     contract_name,
-                    f"{contract_name} failed contract validation: {exc}",
+                    f"{contract_name} failed contract validation: {sanitized_failure_message(exc)}",
                 )
             )
             return diagnostics

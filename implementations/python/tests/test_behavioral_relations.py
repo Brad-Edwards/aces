@@ -31,6 +31,7 @@ REQUIRED_RELATION_IDS = {
     "capability-declaration",
     "profile-satisfaction",
     "bounded-probe-success",
+    "bounded-but-for-necessity",
     "canonical-artifact-identity",
     "realization-envelope-membership",
     "realization-envelope-subsumption",
@@ -41,6 +42,7 @@ REQUIRED_RELATION_IDS = {
     "data-refinement",
     "strong-bisimulation",
     "weak-bisimulation",
+    "participant-predicate-opacity",
     "participant-projected-history-equivalence",
     "policy-noninterference",
     "io-alternating-refinement",
@@ -56,7 +58,7 @@ REQUIRED_RELATION_IDS = {
 def _bounded_empirical_claim() -> dict[str, object]:
     return {
         "taxonomy_id": "raes-behavioral-relations",
-        "taxonomy_revision": "rev3",
+        "taxonomy_revision": "rev5",
         "relation_id": "empirical-adequacy",
         "subject": "TechVault baseline study",
         "left_carrier_ref": "study-techvault-baseline@1.0.0",
@@ -147,6 +149,7 @@ def test_authoritative_catalog_covers_required_relation_classes_and_dimensions()
 
     assert catalog.schema_version == "behavioral-relations/v1"
     assert catalog.taxonomy_id == "raes-behavioral-relations"
+    assert catalog.taxonomy_revision == "rev5"
     assert set(catalog.relations) >= REQUIRED_RELATION_IDS
     for relation_id, relation in catalog.relations.items():
         assert relation.left_carrier
@@ -185,6 +188,11 @@ def test_catalog_bibliography_claim_surfaces_and_relation_references_resolve():
         "lynch-tuttle-1989",
         "clarkson-schneider-2010",
         "bohannon-pierce-sjoberg-weirich-zdancewic-2009",
+        "halpern-pearl-2005",
+        "bryans-koutny-mazare-ryan-2008",
+        "schoepe-sabelfeld-2015",
+        "cui-ma-giua-yin-2026",
+        "partovi-jung-hai-2020",
     }
     assert all(source.immutable_locator.kind in {"doi", "isbn", "report"} for source in catalog.bibliography)
     assert all(set(relation.source_refs) <= source_ids for relation in catalog.relations.values())
@@ -194,7 +202,9 @@ def test_catalog_bibliography_claim_surfaces_and_relation_references_resolve():
         "backend-comparison",
         "participant-visible-behavior",
         "participant-information-flow-policy",
+        "participant-opacity",
         "multi-agent-interaction",
+        "counterfactual-necessity-validation",
         "independent-adequacy-study",
     }
     assert all(
@@ -336,7 +346,7 @@ def test_claim_binding_rejects_bounded_evidence_promoted_to_universal_claim():
     with pytest.raises(ValidationError, match="universal quantification requires model-check or proof evidence"):
         BehavioralClaimBindingModel(
             taxonomy_id="raes-behavioral-relations",
-            taxonomy_revision="rev3",
+            taxonomy_revision="rev5",
             relation_id="trace-equivalence",
             subject="two finite backend runs",
             left_carrier_ref="backend-run:left",

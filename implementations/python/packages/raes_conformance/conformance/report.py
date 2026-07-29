@@ -13,6 +13,56 @@ from raes_conformance.realization import ExecutionBasis
 
 
 @dataclass(frozen=True)
+class ParticipantPolicyAssumptions:
+    """Named assumption boundary for one participant-policy case.
+
+    ADR-085 and SEM-230 require every information-flow result to fix its model
+    and assumption parameters rather than inherit them silently, so these are
+    separate declared fields instead of prose in a case name.
+    """
+
+    order_model: str
+    scheduler_class: str
+    environment_class: str
+    nondeterminism: str
+    termination_and_progress: str
+    timing: str
+    probability: str
+    partial_order: str
+
+
+@dataclass(frozen=True)
+class ParticipantPolicyBinding:
+    """Machine-reviewable coordinates for one finite participant-policy case.
+
+    The relation identity, carriers, quantifier and evidence scope, assurance
+    status, limitations, and nonclaims live in ``claim`` — a real
+    :class:`BehavioralClaimBindingModel`, so the catalog stays the single claim
+    authority and these coordinates cannot drift into unconstrained strings that
+    name a relation the taxonomy does not define. Only the participant, policy,
+    and assumption coordinates the claim model has no field for are carried
+    alongside it.
+
+    Referencing an obligation is not claiming it: the report's own relation
+    stays ``bounded-probe-success`` and these finite cases never establish
+    ``policy-noninterference``.
+    """
+
+    obligation: str
+    claim: BehavioralClaimBindingModel
+    participant_ref: str
+    audience_ref: str
+    memory_scope: str
+    policy_id: str
+    policy_revision: str
+    policy_decision_ref: str
+    decision_cut_ref: str
+    assumptions: ParticipantPolicyAssumptions
+    declassification_schedule_ref: str | None = None
+    counterexample_ref: str | None = None
+
+
+@dataclass(frozen=True)
 class ConformanceCaseResult:
     """Result for one fixture or probe case."""
 
@@ -44,6 +94,7 @@ class ConformanceCaseResult:
     finite_scope: str | None = None
     limitations: tuple[str, ...] = ()
     explicit_non_claims: tuple[str, ...] = ()
+    policy_binding: ParticipantPolicyBinding | None = None
 
     def __post_init__(self) -> None:
         """Keep the closed outcome vocabulary aligned with the gating boolean."""
@@ -75,9 +126,111 @@ class BackendConformanceReport:
     native_conformance: bool = False
 
 
+_UNIVERSAL_QUANTIFIER_SCOPES = frozenset({"all-admitted-inputs", "all-traces", "all-strategies"})
+_UNIVERSAL_EVIDENCE_SCOPES = frozenset({"model-check", "proof"})
+_NATIVE_EXECUTION_BASES = frozenset({"native-live"})
+
+
+def validate_backend_conformance_report(report: BackendConformanceReport) -> BackendConformanceReport:
+    """Validate a report's cross-field honesty before it is serialized or persisted.
+
+    Individual case and claim models are each valid in isolation while the
+    report as a whole still overstates what it established, so this is the one
+    seam where the claim, the case set, and the execution basis are checked
+    against each other. It refuses a universal quantifier backed only by finite
+    evidence, a native-conformance flag with no natively-executed case, and a
+    claim whose cited cases are not all present — including the failed,
+    unsupported, and counterexample cases, whose absence would turn a partial
+    run into an apparently clean one.
+    """
+
+    _validate_catalog_bindings(report)
+    _validate_claim_strength(report)
+    _validate_case_evidence(report)
+    return report
+
+
+def _validate_catalog_bindings(report: BackendConformanceReport) -> None:
+    """Send the report claim and every case binding through the catalog.
+
+    Publishing a case binding the taxonomy does not define would let a durable
+    report name a relation nobody governs.
+    """
+
+    validate_behavioral_claim_binding(report.claim)
+    for case in report.cases:
+        if case.policy_binding is not None:
+            validate_behavioral_claim_binding(case.policy_binding.claim)
+
+
+def _validate_claim_strength(report: BackendConformanceReport) -> None:
+    """Refuse a claim stronger than the evidence behind it."""
+
+    claim = report.claim
+    universal = claim.quantifier_scope in _UNIVERSAL_QUANTIFIER_SCOPES
+    if universal and claim.evidence_scope not in _UNIVERSAL_EVIDENCE_SCOPES:
+        raise ValueError(
+            "backend conformance report states a universal quantifier "
+            f"({claim.quantifier_scope!r}) with {claim.evidence_scope!r} evidence; "
+            "universal quantification requires model-check or proof evidence"
+        )
+    natively_executed = any(case.execution_basis in _NATIVE_EXECUTION_BASES for case in report.cases)
+    if report.native_conformance and not natively_executed:
+        raise ValueError(
+            "backend conformance report claims native conformance but no case executed "
+            "on a native basis; fixture-only and hermetic evidence do not establish it"
+        )
+
+
+def _validate_case_evidence(report: BackendConformanceReport) -> None:
+    """Require every cited case to be present, and a pass to carry no failure."""
+
+    present = {f"conformance-case:{case.contract_name}:{case.name}" for case in report.cases}
+    missing = sorted(
+        ref for ref in report.claim.evidence_refs if ref.startswith("conformance-case:") and ref not in present
+    )
+    if missing:
+        raise ValueError(f"backend conformance report claimed case evidence that is absent: {missing}")
+    if report.passed and any(not case.passed for case in report.cases):
+        raise ValueError("backend conformance report is marked passed while carrying a non-passing case")
+
+
+def _policy_binding_payload(
+    binding: ParticipantPolicyBinding | None,
+) -> dict[str, object] | None:
+    """Project the participant-policy coordinates into the one report family."""
+
+    if binding is None:
+        return None
+    return {
+        "obligation": binding.obligation,
+        "claim": binding.claim.model_dump(mode="json"),
+        "participant_ref": binding.participant_ref,
+        "audience_ref": binding.audience_ref,
+        "memory_scope": binding.memory_scope,
+        "policy_id": binding.policy_id,
+        "policy_revision": binding.policy_revision,
+        "policy_decision_ref": binding.policy_decision_ref,
+        "decision_cut_ref": binding.decision_cut_ref,
+        "declassification_schedule_ref": binding.declassification_schedule_ref,
+        "counterexample_ref": binding.counterexample_ref,
+        "assumptions": {
+            "order_model": binding.assumptions.order_model,
+            "scheduler_class": binding.assumptions.scheduler_class,
+            "environment_class": binding.assumptions.environment_class,
+            "nondeterminism": binding.assumptions.nondeterminism,
+            "termination_and_progress": binding.assumptions.termination_and_progress,
+            "timing": binding.assumptions.timing,
+            "probability": binding.assumptions.probability,
+            "partial_order": binding.assumptions.partial_order,
+        },
+    }
+
+
 def backend_conformance_report_payload(report: BackendConformanceReport) -> dict[str, object]:
     """Render the single machine-readable backend conformance report projection."""
 
+    validate_backend_conformance_report(report)
     return {
         "profile": report.profile,
         "passed": report.passed,
@@ -116,6 +269,7 @@ def backend_conformance_report_payload(report: BackendConformanceReport) -> dict
                 "finite_scope": case.finite_scope,
                 "limitations": list(case.limitations),
                 "explicit_non_claims": list(case.explicit_non_claims),
+                "policy_binding": _policy_binding_payload(case.policy_binding),
                 "diagnostics": [_diagnostic_payload(diag) for diag in case.diagnostics],
             }
             for case in report.cases
@@ -135,7 +289,7 @@ def _bounded_conformance_claim(
     evidence_refs = [f"conformance-case:{case.contract_name}:{case.name}" for case in cases]
     binding = BehavioralClaimBindingModel(
         taxonomy_id="raes-behavioral-relations",
-        taxonomy_revision="rev3",
+        taxonomy_revision="rev5",
         relation_id="bounded-probe-success",
         subject=f"Backend conformance for profile {profile}",
         left_carrier_ref=left_carrier_ref,

@@ -11,6 +11,7 @@ from raes.scenario import InstantiatedScenario, Scenario
 
 from raes_contracts.artifact_requirements import ArtifactRequirementContractModel
 
+from .admitted_trial_plan import AdmittedTrialPlanModel
 from .associated_artifacts import AssociatedArtifactManifestModel
 from .catalogs import (
     ConceptFamilyCatalogModel,
@@ -165,6 +166,7 @@ def _core_schema_bundle() -> dict[str, dict[str, Any]]:
         "experiment-run-v1": ExperimentRunModel.model_json_schema(),
         "experiment-study-v1": ExperimentStudyModel.model_json_schema(),
         "experiment-task-v1": ExperimentTaskModel.model_json_schema(),
+        "admitted-trial-plan-v1": AdmittedTrialPlanModel.model_json_schema(),
         "trial-cleanup-plan-v1": TrialCleanupPlanModel.model_json_schema(),
         "trial-cleanup-receipt-v1": TrialCleanupReceiptModel.model_json_schema(),
         "scheduler-isolation-proof-v1": SchedulerIsolationProofModel.model_json_schema(),

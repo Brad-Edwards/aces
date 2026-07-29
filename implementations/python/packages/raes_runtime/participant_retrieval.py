@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from raes_contracts.contracts import (
@@ -10,12 +11,74 @@ from raes_contracts.contracts import (
     ParticipantHistoryViewModel,
     ParticipantStatusViewModel,
 )
+from raes_contracts.contracts.participant_crossing import (
+    ParticipantCrossingInteractionKind,
+    ParticipantCrossingSubjectKind,
+)
 from raes_contracts.planning import RuntimeDomain
 from raes_contracts.runtime_state import OperationState, RuntimeSnapshot
 
+from .control_plane_security import ControlPlaneIdentity, ParticipantAudienceSubjectBinding
 from .control_plane_store import ControlPlaneOperationRecord
+from .participant_crossing_egress import ParticipantViewSerialization, serialize_participant_view
+from .participant_crossing_mediation import ParticipantCrossingEvidence
 
 _CURRENT_SNAPSHOT_REF = "runtime.snapshot.current"
+_CROSSING_RESOLVER_REQUIRED = "participant crossing policy resolver is required"
+_VIEW_AUDIENCE_BINDING_UNAVAILABLE = "participant view audience binding is unavailable"
+
+
+@dataclass(frozen=True)
+class _ContextViewOptions:
+    episode_id: str | None = None
+    derivation_basis_ref: str | None = None
+    payload_ref: str | None = None
+    derived_from_refs: tuple[str, ...] = ()
+    identity: object | None = None
+    audience_binding: ParticipantAudienceSubjectBinding | None = None
+    crossing_evidence: ParticipantCrossingEvidence | None = None
+    idempotency_key: str = ""
+
+    @classmethod
+    def from_fields(cls, fields: dict[str, object]) -> _ContextViewOptions:
+        unknown = set(fields) - {
+            "episode_id",
+            "derivation_basis_ref",
+            "payload_ref",
+            "derived_from_refs",
+            "identity",
+            "audience_binding",
+            "crossing_evidence",
+            "idempotency_key",
+        }
+        if unknown:
+            names = ", ".join(sorted(unknown))
+            raise TypeError(f"unexpected participant context options: {names}")
+        episode_id = _optional_string(fields.get("episode_id"), "episode_id")
+        derivation_basis_ref = _optional_string(fields.get("derivation_basis_ref"), "derivation_basis_ref")
+        payload_ref = _optional_string(fields.get("payload_ref"), "payload_ref")
+        derived_from_refs = fields.get("derived_from_refs", ())
+        idempotency_key = fields.get("idempotency_key", "")
+        crossing_evidence = fields.get("crossing_evidence")
+        audience_binding = fields.get("audience_binding")
+        if not isinstance(derived_from_refs, tuple) or not all(isinstance(item, str) for item in derived_from_refs):
+            raise TypeError("derived_from_refs must be a tuple of strings")
+        if not isinstance(idempotency_key, str):
+            raise TypeError("idempotency_key must be a string")
+        if crossing_evidence is not None and not isinstance(crossing_evidence, ParticipantCrossingEvidence):
+            raise TypeError("crossing_evidence must be ParticipantCrossingEvidence")
+        if audience_binding is not None and not isinstance(audience_binding, ParticipantAudienceSubjectBinding):
+            raise TypeError("audience_binding must be ParticipantAudienceSubjectBinding")
+        return cls(
+            episode_id=episode_id,
+            derivation_basis_ref=derivation_basis_ref,
+            payload_ref=payload_ref,
+            derived_from_refs=derived_from_refs,
+            identity=fields.get("identity"),
+            audience_binding=audience_binding,
+            crossing_evidence=crossing_evidence,
+            idempotency_key=idempotency_key,
+        )
 
 
 class ParticipantRetrievalMixin:
@@ -24,12 +87,60 @@ class ParticipantRetrievalMixin:
     _snapshot: RuntimeSnapshot
     _operations: dict[str, ControlPlaneOperationRecord]
 
-    def get_participant_status_view(self, participant_address: str) -> ParticipantStatusViewModel | None:
+    def deliver_participant_directed_view(
+        self,
+        participant_address: str,
+        view: ParticipantStatusViewModel,
+        *,
+        identity: object | None = None,
+        crossing_evidence: ParticipantCrossingEvidence | None = None,
+        idempotency_key: str = "",
+    ) -> ParticipantStatusViewModel:
+        """Deliver an already-projected carrier as a participant-directed crossing.
+
+        ADR-085 governs a participant-directed inject as disclosure/observation
+        *at delivery*, and RUN-319's capability mapping already requires
+        ``participant_directed_inject_delivery`` for that interaction kind — but
+        there was no public way to perform one, so callers had to reach into the
+        egress module directly. Disclosure and delivery stay separate governed
+        transition facts: this records the delivery crossing for a carrier whose
+        projection was already decided, and it proves neither consumption nor
+        participant observation.
+        """
+
+        if getattr(self, "_crossing_policy_resolver", None) is None:
+            raise ValueError(_CROSSING_RESOLVER_REQUIRED)
+        episode_state = self._snapshot.participant_episode_results.get(participant_address)
+        episode_id = _string_value(episode_state, "episode_id") if episode_state is not None else None
+        return serialize_participant_view(
+            self,
+            view,
+            ParticipantViewSerialization(
+                participant_address=participant_address,
+                episode_id=_required_episode_id(episode_id),
+                subject_kind=ParticipantCrossingSubjectKind.PARTICIPANT_STATUS_VIEW,
+                interaction_kind=ParticipantCrossingInteractionKind.PARTICIPANT_INJECT_DELIVERY,
+                projection_ref=view.visibility_projection_ref,
+                identity=identity,
+                crossing_evidence=crossing_evidence,
+                idempotency_key=idempotency_key,
+            ),
+        )
+
+    def get_participant_status_view(
+        self,
+        participant_address: str,
+        *,
+        identity: object | None = None,
+        audience_binding: ParticipantAudienceSubjectBinding | None = None,
+        crossing_evidence: ParticipantCrossingEvidence | None = None,
+        idempotency_key: str = "",
+    ) -> ParticipantStatusViewModel | None:
         if not _participant_exists(self._snapshot, participant_address):
             return None
         episode_state = self._snapshot.participant_episode_results.get(participant_address)
         episode_id = _string_value(episode_state, "episode_id") if episode_state is not None else None
-        return ParticipantStatusViewModel.model_validate(
+        view = ParticipantStatusViewModel.model_validate(
             {
                 "view_id": _view_id("status", participant_address, episode_id),
                 "participant_address": participant_address,
@@ -43,11 +154,40 @@ class ParticipantRetrievalMixin:
                 "redaction_policy_ref": None,
             }
         )
+        if getattr(self, "_crossing_policy_resolver", None) is None:
+            if crossing_evidence is not None:
+                raise ValueError(_CROSSING_RESOLVER_REQUIRED)
+            return view
+        serialization = ParticipantViewSerialization(
+            participant_address=participant_address,
+            episode_id=_required_episode_id(episode_id),
+            subject_kind=ParticipantCrossingSubjectKind.PARTICIPANT_STATUS_VIEW,
+            interaction_kind=ParticipantCrossingInteractionKind.STATUS_PROJECTION,
+            projection_ref=view.visibility_projection_ref,
+            identity=identity,
+            crossing_evidence=crossing_evidence,
+            idempotency_key=idempotency_key,
+        )
+        crossing_evidence = _resolve_trusted_view_evidence(
+            self,
+            serialization=serialization,
+            audience_binding=audience_binding,
+        )
+        return serialize_participant_view(
+            self,
+            view,
+            serialization.with_crossing_evidence(crossing_evidence),
+        )
 
     def get_participant_history_view(
         self,
         participant_address: str,
         episode_id: str,
+        *,
+        identity: object | None = None,
+        audience_binding: ParticipantAudienceSubjectBinding | None = None,
+        crossing_evidence: ParticipantCrossingEvidence | None = None,
+        idempotency_key: str = "",
     ) -> ParticipantHistoryViewModel | None:
         if not _participant_episode_exists(self._snapshot, participant_address, episode_id):
             return None
@@ -61,7 +201,7 @@ class ParticipantRetrievalMixin:
             for event in self._snapshot.participant_behavior_history.get(participant_address, [])
             if event.get("episode_id") == episode_id
         ]
-        return ParticipantHistoryViewModel.model_validate(
+        view = ParticipantHistoryViewModel.model_validate(
             {
                 "view_id": _view_id("history", participant_address, episode_id),
                 "participant_address": participant_address,
@@ -77,32 +217,51 @@ class ParticipantRetrievalMixin:
                 "marking_definition_refs": [],
             }
         )
+        if getattr(self, "_crossing_policy_resolver", None) is None:
+            if crossing_evidence is not None:
+                raise ValueError(_CROSSING_RESOLVER_REQUIRED)
+            return view
+        serialization = ParticipantViewSerialization(
+            participant_address=participant_address,
+            episode_id=episode_id,
+            subject_kind=ParticipantCrossingSubjectKind.PARTICIPANT_HISTORY_VIEW,
+            interaction_kind=ParticipantCrossingInteractionKind.HISTORY_PROJECTION,
+            projection_ref=view.visibility_projection_ref,
+            identity=identity,
+            crossing_evidence=crossing_evidence,
+            idempotency_key=idempotency_key,
+        )
+        crossing_evidence = _resolve_trusted_view_evidence(
+            self,
+            serialization=serialization,
+            audience_binding=audience_binding,
+        )
+        return serialize_participant_view(
+            self,
+            view,
+            serialization.with_crossing_evidence(crossing_evidence),
+        )
 
     def get_participant_context_view(
         self,
         participant_address: str,
         *,
         view_ref: str,
-        episode_id: str | None = None,
-        derivation_basis_ref: str | None = None,
-        payload_ref: str | None = None,
-        derived_from_refs: tuple[str, ...] = (),
+        **context_fields: object,
     ) -> ParticipantContextViewModel | None:
-        if episode_id is not None:
-            if not _participant_episode_exists(self._snapshot, participant_address, episode_id):
-                return None
-        elif not _participant_exists(self._snapshot, participant_address):
+        options = _ContextViewOptions.from_fields(context_fields)
+        if not _context_participant_exists(self._snapshot, participant_address, options.episode_id):
             return None
-        source_refs = tuple(derived_from_refs or (_CURRENT_SNAPSHOT_REF,))
+        source_refs = tuple(options.derived_from_refs or (_CURRENT_SNAPSHOT_REF,))
         source_ref = source_refs[0]
         source_id = "source-snapshot"
-        resolved_observation_point = episode_id or _CURRENT_SNAPSHOT_REF
-        resolved_derivation_basis_ref = derivation_basis_ref or view_ref
-        return ParticipantContextViewModel.model_validate(
+        resolved_observation_point = options.episode_id or _CURRENT_SNAPSHOT_REF
+        resolved_derivation_basis_ref = options.derivation_basis_ref or view_ref
+        view = ParticipantContextViewModel.model_validate(
             {
-                "view_id": _view_id("context", participant_address, episode_id or view_ref),
+                "view_id": _view_id("context", participant_address, options.episode_id or view_ref),
                 "participant_address": participant_address,
-                "episode_id": episode_id,
+                "episode_id": options.episode_id,
                 "generated_at": _utc_now(),
                 "source_snapshot_ref": _CURRENT_SNAPSHOT_REF,
                 "view_ref": view_ref,
@@ -141,13 +300,95 @@ class ParticipantRetrievalMixin:
                 "semantic_limitations": [
                     "Context-view payload remains a referenced derived view, not backend-private state"
                 ],
-                "derivation_basis_ref": derivation_basis_ref,
-                "payload_ref": payload_ref,
+                "derivation_basis_ref": options.derivation_basis_ref,
+                "payload_ref": options.payload_ref,
                 "visibility_projection_ref": _visibility_projection_ref(participant_address, "context"),
                 "marking_definition_refs": [],
                 "redaction_policy_ref": None,
             }
         )
+        if getattr(self, "_crossing_policy_resolver", None) is None:
+            if options.crossing_evidence is not None:
+                raise ValueError(_CROSSING_RESOLVER_REQUIRED)
+            result = view
+        else:
+            resolved_episode_id = options.episode_id or _string_value(
+                self._snapshot.participant_episode_results.get(participant_address),
+                "episode_id",
+            )
+            serialization = ParticipantViewSerialization(
+                participant_address=participant_address,
+                episode_id=_required_episode_id(resolved_episode_id),
+                subject_kind=ParticipantCrossingSubjectKind.PARTICIPANT_CONTEXT_VIEW,
+                interaction_kind=ParticipantCrossingInteractionKind.DECISION_SURFACE_PROJECTION,
+                projection_ref=view.visibility_projection_ref,
+                identity=options.identity,
+                crossing_evidence=options.crossing_evidence,
+                idempotency_key=options.idempotency_key,
+            )
+            crossing_evidence = _resolve_trusted_view_evidence(
+                self,
+                serialization=serialization,
+                audience_binding=options.audience_binding,
+            )
+            result = serialize_participant_view(
+                self,
+                view,
+                serialization.with_crossing_evidence(crossing_evidence),
+            )
+        return result
+
+
+def _resolve_trusted_view_evidence(
+    control_plane: object,
+    *,
+    serialization: ParticipantViewSerialization,
+    audience_binding: ParticipantAudienceSubjectBinding | None,
+) -> ParticipantCrossingEvidence:
+    if serialization.crossing_evidence is not None:
+        return serialization.crossing_evidence
+    resolver = getattr(control_plane, "_crossing_policy_resolver", None)
+    provider = getattr(resolver, "resolve_participant_view_evidence", None)
+    if not callable(provider):
+        raise ValueError("participant view crossing evidence is unavailable")
+    binding = _trusted_audience_binding(
+        serialization.identity,
+        participant_address=serialization.participant_address,
+        supplied=audience_binding,
+    )
+    resolved = provider(
+        snapshot=control_plane._snapshot,
+        participant_address=serialization.participant_address,
+        episode_id=serialization.episode_id,
+        interaction_kind=serialization.interaction_kind,
+        projection_ref=serialization.projection_ref,
+        audience_binding=binding,
+    )
+    if not isinstance(resolved, ParticipantCrossingEvidence):
+        raise ValueError("participant view crossing evidence is unavailable")
+    return resolved
+
+
+def _trusted_audience_binding(
+    identity: object | None,
+    *,
+    participant_address: str,
+    supplied: ParticipantAudienceSubjectBinding | None,
+) -> ParticipantAudienceSubjectBinding:
+    if not isinstance(identity, ControlPlaneIdentity):
+        raise ValueError(_VIEW_AUDIENCE_BINDING_UNAVAILABLE)
+    matches = tuple(
+        binding
+        for binding in identity.participant_audience_subjects
+        if binding.participant_address == participant_address
+    )
+    if supplied is not None:
+        if supplied not in matches:
+            raise ValueError(_VIEW_AUDIENCE_BINDING_UNAVAILABLE)
+        return supplied
+    if len(matches) != 1:
+        raise ValueError(_VIEW_AUDIENCE_BINDING_UNAVAILABLE)
+    return matches[0]
 
 
 def _string_value(payload: dict[str, object] | None, key: str) -> str | None:
@@ -155,6 +396,28 @@ def _string_value(payload: dict[str, object] | None, key: str) -> str | None:
         return None
     value = payload.get(key)
     return value if isinstance(value, str) and value else None
+
+
+def _optional_string(value: object, name: str) -> str | None:
+    if value is not None and not isinstance(value, str):
+        raise TypeError(f"{name} must be a string or None")
+    return value
+
+
+def _context_participant_exists(
+    snapshot: RuntimeSnapshot,
+    participant_address: str,
+    episode_id: str | None,
+) -> bool:
+    if episode_id is not None:
+        return _participant_episode_exists(snapshot, participant_address, episode_id)
+    return _participant_exists(snapshot, participant_address)
+
+
+def _required_episode_id(value: str | None) -> str:
+    if value is None:
+        raise ValueError("participant projection requires an exact episode identity")
+    return value
 
 
 def _utc_now() -> str:

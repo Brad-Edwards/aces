@@ -2,9 +2,9 @@
   "contract_id": "controlled-vocabularies-v1",
   "schema_path": "contracts/schemas/concept-authority/controlled-vocabularies-v1.json",
   "stability": "draft",
-  "content_hash": "d0f03584fef13caf5258ad0eb559782235feaeab27021fd2ecd5f2575d7b6a7e",
+  "content_hash": "5673ba3ec07eecfb0a1aa2715e3bb81cf288d40cff769dd7114a6dc639257a01",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "d0f03584fef13caf5258ad0eb559782235feaeab27021fd2ecd5f2575d7b6a7e"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "5673ba3ec07eecfb0a1aa2715e3bb81cf288d40cff769dd7114a6dc639257a01"
   }
 }

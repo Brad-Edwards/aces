@@ -60,10 +60,10 @@ topology, not OS-bind or host-publication proof) - with an executable
 required-profile guard and internal RBAC delegated via `authorization_ref` -
 [ADR-048](../../decisions/adrs/adr-048-datastore-service-runtime-inventory.md),
 [ADR-058](../../decisions/adrs/adr-058-datastore-node-engine-provenance-and-endpoints.md)),
-security-platform application runtime inventory (threat-intel/SOAR/analyzer/
-case-management/dashboard kinds, bounded parsed content-object manifests,
-releasability markings, upstream bindings, connectors, and settings, with an
-executable required-profile guard -
+security-platform application runtime inventory (composable provider-neutral
+capabilities, product metadata, markings, upstream bindings, connectors, and
+settings; legacy product categories and bounded content-object manifests remain
+accepted but deprecated and do not imply completeness -
 [ADR-049](../../decisions/adrs/adr-049-platform-application-runtime-inventory.md)),
 forwarding / intel-sync agent runtime inventory (sources, transforms, ship
 targets, buffer policy, reload channels, and settings for log forwarders and

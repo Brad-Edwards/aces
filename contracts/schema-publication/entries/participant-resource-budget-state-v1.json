@@ -2,9 +2,9 @@
   "contract_id": "participant-resource-budget-state-v1",
   "schema_path": "contracts/schemas/participant-runtime/participant-resource-budget-state-v1.json",
   "stability": "draft",
-  "content_hash": "6fddd2ea39a2df27846c35e8c88e9985d64e12b78151f4fc23978d0820d49d8d",
+  "content_hash": "a37fc7a7613582db22a7b3ae0c225e6643d6deab40fc22b97f389eeb28d23053",
   "last_change": {
-    "summary": "Published canonical policy-scoped budget state for generation-fenced reservations, measured use, and reconciliation for issue #899.",
-    "content_hash": "6fddd2ea39a2df27846c35e8c88e9985d64e12b78151f4fc23978d0820d49d8d"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "a37fc7a7613582db22a7b3ae0c225e6643d6deab40fc22b97f389eeb28d23053"
   }
 }

@@ -78,7 +78,7 @@
       "type": "object"
     }
   },
-  "$id": "https://raes.dev/schemas/participant-status-view-v1.json",
+  "$id": "https://raesystem.github.io/rae/schemas/participant-status-view-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "API-408 retrieval projection of one participant's episode status.",

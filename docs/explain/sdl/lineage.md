@@ -523,51 +523,67 @@ engine-neutral `role` taxonomy rather than engine-named address fields.
 ## Security-Platform Application Semantics
 
 The `runtime.platform_applications` surface is the SCN-010 (DSL-133) response to
-a gap for the participant-observable runtime state of security platform
-applications — threat-intelligence platforms, SOAR, analyzer engines, case
-management, and analytics dashboards. Its defining addition is the open
-`platform_kind` discriminator paired with a `require_profile_for_platform_kind`
-guard, plus content objects modeled as bounded parsed manifests (typed kind +
-bounded attributes + typed references) rather than raw object bodies.
+a gap for the declared logical state of participant-visible platform
+applications. Issue #956 corrected the original product-category model: an open
+`platform_kind` plus required product-shaped content profile could neither
+represent multi-role applications nor prove configuration completeness. The
+current authority is a provider-neutral, composable `capabilities` collection.
+`platform_kind` and `content_objects` remain deprecated compatible input and
+neither implies the other.
 
 RAES relies on prior work in four ways:
 
-- **Scenario-language precedents:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
-  model topology, deployable services/features, and validation/deployment
-  concerns. None expose a portable first-class security-platform application
-  inventory, so RAES adds a typed node-scoped seam rather than overloading
-  `runtime.applications` (HTTP routes) or `runtime.software_components`
-  (component identity).
-- **Primary content and intelligence-sharing standards:** RDF 1.1
+- **Internal and scenario-language precedents:** ADR-032 is the direct internal
+  precedent: an Active Directory scenario produced a provider-neutral
+  identity-authority core, with vendor identifiers retained as data. Open Cyber
+  Range SDL, CyRIS, KYPO, VSDL, and CRACK model topology, deployable
+  services/features, and validation/deployment concerns but do not define a
+  portable application-capability inventory. TOSCA and CAMP distinguish
+  capabilities, requirements, artifacts, and configuration. RAES applies that
+  separation at its existing node-runtime boundary rather than claiming format
+  compatibility or overloading `runtime.applications` (HTTP routes) and
+  `runtime.software_components` (component identity).
+- **Content and intelligence-sharing boundaries:** RDF 1.1
   ([concepts](https://www.w3.org/TR/rdf11-concepts/)) with Angles and Gutierrez's
   [graph-database survey](https://doi.org/10.1145/1322432.1322433) frame typed
-  references over raw bodies;
+  references over raw bodies.
   [STIX 2.1](https://docs.oasis-open.org/cti/stix/v2.1/stix-v2.1.html) /
   [TAXII 2.1](https://docs.oasis-open.org/cti/taxii/v2.1/taxii-v2.1.html), the
   [MISP data model](https://www.misp-project.org/datamodels/), FIRST
   [TLP 2.0](https://www.first.org/tlp/), MITRE
   [ATT&CK](https://attack.mitre.org/), NIST
   [SP 800-150](https://csrc.nist.gov/publications/detail/sp/800-150/final), and
-  [ISO/IEC 27010](https://www.iso.org/standard/68427.html) anchor the
-  threat-intel content profile and releasability markings; NIST
+  [ISO/IEC 27010](https://www.iso.org/standard/68427.html) distinguish
+  intelligence content, exchange, marking, and sharing concerns; NIST
   [SP 800-61r2](https://csrc.nist.gov/publications/detail/sp/800-61/rev-2/final)
-  / [r3](https://csrc.nist.gov/pubs/sp/800/61/r3/final) anchors
-  the case-management incident-handling profile.
-- **Automation and observability precedents:** OASIS
+  / [r3](https://csrc.nist.gov/pubs/sp/800/61/r3/final) frames incident
+  handling. These sources motivate separate functional roles; none defines a
+  required RAES product profile. Initial authored content stays under top-level
+  `content` and `service_materialization` per ADR-088.
+- **Automation and presentation precedents:** OASIS
   [CACAO v2.0](https://docs.oasis-open.org/cacao/security-playbooks/v2.0/security-playbooks-v2.0.html)
   and [OpenC2](https://docs.oasis-open.org/openc2/oc2ls/v1.0/oc2ls-v1.0.html)
-  frame the SOAR/analyzer execution profile with the boundary stated explicitly:
-  RAES records the workflow/analyzer *inventory* and execution policy, not
-  playbook execution semantics. NIST
+  separate playbooks, commands, agents, and targets. RAES therefore records
+  `workflow_automation` and `analysis_execution` capability roles without
+  importing playbook/action execution semantics. NIST
   [SP 800-92](https://csrc.nist.gov/publications/detail/sp/800-92/final) and
   [ISO/IEC/IEEE 42010](https://www.iso.org/standard/74393.html) frame the
-  dashboard saved-object and upstream-binding posture as architecture/monitoring
-  evidence. These are implementation lineage, not schema authority.
+  presentation and monitoring context. These are design precedents, not schema
+  authority.
 - **Transport and federation discipline:** [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110)
   (HTTP semantics), [RFC 7239](https://www.rfc-editor.org/rfc/rfc7239)
   (forwarded), and [RFC 6749](https://www.rfc-editor.org/rfc/rfc6749) (OAuth 2.0)
-  bound the connector/binding posture; raw bodies, credentials, and key material
-  are never stored — the surface records bounded manifests and classifications.
+  bound connector, binding, and authorization posture. Sharing/distribution
+  policy does not become an application capability, and raw bodies,
+  credentials, and key material remain outside the surface.
+
+The six initial capability kinds are RAES-native semantic categories:
+`threat_intelligence_management`, `intelligence_exchange`, `case_management`,
+`analysis_execution`, `workflow_automation`, and `analytics_presentation`.
+Products such as MISP, OpenCTI, TheHive, Cortex, Shuffle, and Kibana are examples
+and evidence only. The lineage is inspirational rather than a derivation or
+compatibility claim; the normative authority remains the RAES contract and
+ADR-049.
 
 ## Forwarding And Intel-Sync Agent Semantics
 
@@ -794,7 +810,7 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   syntax or wire compatibility. The normative participant-policy model is
   `specs/formal/participant-semantics/information-flow-control.md`; the
   machine-readable relation is `policy-noninterference` in behavioral taxonomy
-  revision `rev3`; and the claim surface is
+  revision `rev5`; and the claim surface is
   `participant-information-flow-policy`. Existing `W`, `V`, qualified `H`,
   `X`, participant action/admission, visibility transition, ordering, marking,
   controller, authority, evidence, and provenance objects remain the mapped
@@ -824,6 +840,34 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   cases do not establish universal noninterference, trace equivalence,
   simulation, refinement, bisimulation, epistemic indistinguishability, timed
   security, or probabilistic security.
+- Issue #810 and SEM-231 adapt the predicate-opacity literature through
+  RAES-native possible-point and relation-profile coordinates. Bryans et al.
+  supply the predicate/observation kernel; Schoepe and Sabelfeld supply its
+  one-sided knowledge characterization, symmetric variant, and exact
+  noninterference boundary; Lin and Saboori-Hadjicostis supply current,
+  historical, and infinite-step scope distinctions; Badouel et al. and Xie et
+  al. expose supervisory visibility and nondeterministic control; Broberg et
+  al. supply dynamic release and replay distinctions. The active-intruder work
+  of Partovi et al. and the unknown-supervisor work of Cui et al. are explicitly
+  preprints used as design criteria, not sole authority.
+- The exact issue #810 mapping is
+  `specs/formal/participant-semantics/participant-predicate-opacity.md`,
+  ADR-099, the `participant-predicate-opacity` relation and
+  `participant-opacity` claim surface in
+  `contracts/concept-authority/behavioral-relations-v1.json`, the shared
+  revisioned relation-parameter profile and assurance-axis binding, the
+  literature/current-state/requirement/program artifacts under
+  `docs/research/participant-opacity/`, and the four bounded structural cases
+  in `test_sem_231_participant_predicate_opacity.py` and
+  `test_issue_810_participant_opacity_design.py`.
+- RAES keeps opacity distinct from SEM-230 policy noninterference,
+  participant-projected-history equality, epistemic indistinguishability,
+  trace equivalence, and bisimulation. Current assurance is definition plus
+  bounded tests only. No checker, model check, proof, runtime enforcement,
+  supervisor synthesis, backend declaration, backend realization, bounded
+  backend conformance, probabilistic security, timed security, or all-schedule
+  result is delivered. Issues #961 through #965 own those independent future
+  lanes.
 - ACT-617 applies the already adopted SEM-230/ADR-085 control and ordering
   lineage to authored mixed-control behavior without introducing another
   external derivation. The exact RAES mapping is
@@ -919,12 +963,14 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   RUN-308 concurrency evidence, existing operation receipts/statuses, and
   existing time-state/provenance. It claims no wire, API, lifecycle-token, or
   behavioral compatibility with those sources.
-- Issues #810 through #813 own the opacity/supervisor-visibility,
-  proof-bearing bisimulation, adversarial threat-model, and
-  simulation/federation extensions. SEM-230 preserves their participant,
-  audience, policy revision, declassification, controller/authority,
-  scheduler/environment, timing/probability, order, and evidence coordinates;
-  that extension seam is not evidence those properties are already delivered.
+- Issues #811 through #813 own proof-bearing bisimulation, adversarial
+  threat-model, and simulation/federation extensions. Issue #810 now defines
+  opacity and supervisor-visibility architecture only; issues #961 through
+  #965 own its checker, model-check, proof, runtime, and backend lanes. SEM-230
+  preserves their participant, audience, policy revision, declassification,
+  controller/authority, scheduler/environment, timing/probability, order, and
+  evidence coordinates; that extension seam is not evidence those properties
+  are already realized.
 - [STRIPS](https://doi.org/10.1016/0004-3702(71)90010-5),
   [PDDL](https://doi.org/10.2200/S00900ED2V01Y201902AIM042),
   [PDDL2.1](https://doi.org/10.1613/jair.1129), and the probabilistic planning
@@ -1134,6 +1180,127 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   participant-internal-reasoning claim. The lineage ledger and source audit
   remain unchanged because RUN-310 adds no normative derivation or
   compatibility claim.
+- RUN-319 composes the existing SEM-230/ADR-085 and ADR-095 information-flow
+  semantics with API-423 crossing facts, API-407 feature-strength resolution,
+  RUN-310 authenticated participant/controller binding and atomic control
+  storage, SEM-211 admission, and SEM-226 exposure decisions. The exact runtime
+  mapping is the closed `ParticipantCrossingIntent`, a trusted exact-cut
+  `ParticipantCrossingPolicyResolver`, separate controller and audience
+  bindings on `ControlPlaneIdentity`, deny-first independent API-423 gates,
+  `RuntimeSnapshot.participant_crossing_history`, and
+  `ControlPlaneStore.commit_participant_transition()`. Configured action and
+  supervisory-control ingress cannot dispatch around the shared crossing
+  mediator; transformed ingress receives a new typed subject and a fresh full
+  admission decision.
+- RUN-319 delivery evidence is the evolved
+  `participant-crossing-occurrence-v1` exact-cut policy reference, the
+  `runtime-snapshot-v1` crossing-history carrier and publication entries, the
+  in-memory and local-store atomic restart/replay implementation, and
+  `implementations/python/tests/test_run_319_participant_flow_policy.py`.
+  The reference backend keeps its six participant-policy features
+  `unsupported`; stronger behavior is exercised only with explicit test
+  manifests and evidence. This does not claim a new policy engine, participant
+  gateway or endpoint family, backend-native enforcement, delivery or
+  observation from a decision alone, multi-process CAS, distributed
+  linearizability, universal noninterference, refinement, simulation,
+  bisimulation, epistemic equivalence, or proof. No normative external
+  derivation or compatibility claim changes, so the lineage ledger and source
+  audit remain unchanged.
+- ASR-535 adopts the falsification-first assurance lineage already cited by the
+  participant information-flow work rather than a new external source:
+  Goguen and Meseguer's noninterference formulation, Sabelfeld and Sands's
+  declassification dimensions and principles, and Clarkson and Schneider's
+  hyperproperty separation between a property of one trace and a property of a
+  set of traces. The adopted reading is that a security obligation quantified
+  over sets of runs cannot be discharged by observing individual runs, so
+  executable participant-policy evidence is organized as attempted refutation
+  within a declared bound. Backend conformance testing practice contributes the
+  separation between a declared capability and an executed probe.
+- The exact RAES artifact mapping is the SEM-230 test-local bounded model and
+  `policy_noninterference_holds()` for the semantic lane; the shipped RUN-319
+  `ParticipantCrossingIntent`, `ParticipantCrossingPolicyResolver`,
+  deny-first API-423 gates, `RuntimeSnapshot.participant_crossing_history`, and
+  `ControlPlaneStore.commit_participant_transition()` for the runtime lane; the
+  existing `run_target_conformance()` runner extended with an injected
+  participant-policy probe harness, `ConformanceCaseResult`, and
+  `BackendConformanceReport` for the backend lane; and the
+  `raes-behavioral-relations` `rev5` catalog with `BehavioralClaimBindingModel`
+  for claim identity. The four lanes stay separately statused; none promotes
+  another.
+- ASR-535 delivery status is bounded-tested and bounded-conformance-implemented.
+  Evidence is
+  `implementations/python/packages/raes_conformance/conformance/participant_policy_probes.py`,
+  the cross-field report validation in
+  `implementations/python/packages/raes_conformance/conformance/report.py`, the
+  shared conformance diagnostic sanitizer, and
+  `implementations/python/tests/test_asr_535_participant_flow_assurance.py`,
+  which exhausts a declared finite crossing domain and drives the shipped
+  runtime boundary for denial, withholding, redaction, governed
+  declassification, transformation, stale or revoked policy, cross-participant
+  leakage, participant-directed inject delivery, backend weakening, unsupported
+  capability, and adversarial overclaim. A declared API-407 participant-policy
+  feature that no harness executed is now recorded as unsupported instead of
+  conforming.
+- ASR-535 explicitly makes no model-check and no proof claim. The relation
+  `policy-noninterference` keeps its deliberately unproved status, and its
+  evidence boundary is the finite enumerated domain, the named probe cases, and
+  the named target, profile, and execution environment. Exhausting a declared
+  bound is not model checking; a passing probe set does not establish universal
+  noninterference, trace inclusion or equivalence, simulation, refinement,
+  strong or weak bisimulation, epistemic indistinguishability, timed or
+  probabilistic security, opacity, or native-backend realization. Issues #810,
+  #811, #812, and #813 own opacity, a proof-bearing bisimulation target,
+  adversarial-control evaluation, and cross-backend demonstration respectively.
+  ASR-535 adds evidence rather than a normative derivation or compatibility
+  claim, so the lineage ledger and source audit remain unchanged.
+- Issue #802 applies the already adopted SEM-230/API-423/RUN-319 lineage to
+  migration without importing another external model. The exact RAES mapping
+  is the legacy/current distinction retained before
+  `RuntimeSnapshot.participant_crossing_history` defaults apply; API-407
+  feature strength plus backend-profile and trusted-resolver selection for
+  opt-in/required adoption; the authenticated API-408 identity and trusted
+  `resolve_participant_view_evidence()` adapter path; and append-only API-423
+  history, operation, idempotency, and audit persistence.
+- Issue #802 delivery evidence is
+  `docs/migration/participant-information-flow-control.md`, the paired SDL,
+  snapshot, backend-manifest, participant-manifest, and backend-profile
+  fixtures, and
+  `implementations/python/tests/test_issue_802_participant_control_migration.py`.
+  Legacy absence remains unknown or unsupported; v1 decision surfaces require
+  authoritative reprojection; participant implementations do not receive the
+  API-423 assurance plane; and rollback after governed persistence retains all
+  crossing facts. These migration results establish neither native-backend
+  realization nor universal noninterference, equivalence, simulation,
+  refinement, bisimulation, epistemic, timed, or probabilistic security.
+  Because the work adds compatibility evidence without changing normative
+  external derivation, the lineage ledger and source audit remain unchanged.
+- Issue #803 re-expresses the already adopted SEM-230/API-423/RUN-319 and
+  ASR-535 lineage for scenario authors, participant-implementation authors,
+  runtime operators, backend implementors, and researchers. It adds no
+  external source, semantic rule, contract meaning, runtime behavior,
+  compatibility claim, or behavioral-relation definition.
+- The exact issue #803 artifact mapping is the hosted
+  `docs/public/participant-control.md` role routes and bounded examples,
+  `docs/public/index.md` navigation,
+  `docs/research/participant-io-control/index.md` adoption status,
+  `docs/explain/sdl/scientific-scenario-completeness.md` delivery explanation,
+  the issue #803 architecture preflight, and the executable public-guide
+  `BehavioralClaimBindingModel` example in
+  `implementations/python/tests/test_public_docs_policy.py`. The example
+  resolves `bounded-probe-success` against
+  `raes-behavioral-relations@rev5`; it does not define a documentation claim
+  schema or a second relation catalog.
+- Issue #803 delivery status is published explanatory guidance over shipped
+  bounded evidence. The reference backend still declares the six
+  participant-policy features unsupported. The current runtime does not emit
+  a distinct API-423 `withhold` decision, the finite declassification case
+  drives projection, and inject delivery does not bind the compiled
+  DSL-142/DSL-111 identity end to end. No native-backend realization,
+  universal noninterference, projected-history equality, trace inclusion or
+  equivalence, simulation, refinement, strong or weak bisimulation,
+  model-check, or proof is claimed. The lineage ledger and source audit remain
+  unchanged because the documentation adds neither a normative derivation nor
+  a compatibility claim.
 - CALDERA adversary-emulation research informs the action semantics: cyber
   actions can change foothold, knowledge, observations, detection surface, and
   downstream outcomes under uncertainty.

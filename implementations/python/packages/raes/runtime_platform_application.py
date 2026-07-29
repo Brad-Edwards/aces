@@ -1,22 +1,23 @@
 """Platform-application runtime inventory family (RuntimePlatformApplication).
 
-A single discriminated spine for the SCN-010 platform-application cluster
-(analytics dashboard, threat-intelligence platform, case management, analyzer
-engine, SOAR). The ``platform_kind`` discriminator selects the family member;
-the ``require_profile_for_platform_kind`` after-validator makes each member's
-defining content/binding profile executable so an under-populated instance
-fails validation rather than silently shallow-encoding a defining fact.
+The provider-neutral spine identifies an application and declares its
+composable functional capabilities. A single application can expose threat
+intelligence, exchange, case-management, analysis, workflow, and presentation
+roles without being forced into one product category. The legacy
+``platform_kind`` and ``content_objects`` fields remain accepted for compatible
+document loading, but neither determines validity or implies the other.
 
 The app's internal RBAC store is delegated to ``app_authorization`` via the
 string ``authorization_ref`` (resolved by the semantic validator) and is never
-re-typed here. Content objects are bounded parsed manifests — typed kind +
-bounded attributes + typed references — never raw object bodies.
+re-typed here. Legacy content objects remain bounded parsed manifests — typed
+kind + bounded attributes + typed references — never raw object bodies.
 """
 
 from pydantic import Field, field_validator, model_validator
 
-from ._base import SDLModel, is_variable_ref
+from ._base import SDLModel
 from .runtime_platform_application_content import (
+    RuntimePlatformApplicationCapability,
     RuntimePlatformApplicationConnector,
     RuntimePlatformApplicationContentObject,
     RuntimePlatformApplicationExecutionPolicy,
@@ -29,6 +30,7 @@ from .runtime_platform_application_content import (
 from .runtime_platform_application_vocab import (
     RelationshipServiceIntegrationDirection,
     RelationshipServiceIntegrationKind,
+    RuntimePlatformApplicationCapabilityKind,
     RuntimePlatformApplicationConnectorKind,
     RuntimePlatformApplicationContentObjectKind,
     RuntimePlatformApplicationKind,
@@ -44,6 +46,8 @@ __all__ = [
     "RelationshipServiceIntegrationDirection",
     "RelationshipServiceIntegrationKind",
     "RuntimePlatformApplication",
+    "RuntimePlatformApplicationCapability",
+    "RuntimePlatformApplicationCapabilityKind",
     "RuntimePlatformApplicationConnector",
     "RuntimePlatformApplicationConnectorKind",
     "RuntimePlatformApplicationContentObject",
@@ -61,45 +65,43 @@ __all__ = [
     "RuntimePlatformApplicationUpstreamBindingRole",
 ]
 
-_Kind = RuntimePlatformApplicationKind
-_ContentKind = RuntimePlatformApplicationContentObjectKind
-_BindingRole = RuntimePlatformApplicationUpstreamBindingRole
-
-# Saved-object kinds that satisfy the analytics_dashboard content requirement.
-_DASHBOARD_SAVED_OBJECT_KINDS: frozenset[RuntimePlatformApplicationContentObjectKind] = frozenset(
-    {
-        _ContentKind.INDEX_PATTERN,
-        _ContentKind.VISUALIZATION,
-        _ContentKind.DASHBOARD,
-        _ContentKind.SEARCH,
-    }
-)
-
-# Upstream-binding roles that satisfy the analytics_dashboard backing requirement.
-_DASHBOARD_BACKING_ROLES: frozenset[RuntimePlatformApplicationUpstreamBindingRole] = frozenset(
-    {_BindingRole.INDEX_BACKEND, _BindingRole.DATA_SOURCE}
-)
-
 
 class RuntimePlatformApplication(SDLModel):
     """Node-scoped runtime inventory for a security platform application.
 
     ``service`` references the owning same-node ``Node.services[].name``. The
-    inventory is observation metadata above transport; it never duplicates the
+    inventory is application state above transport; it never duplicates the
     inbound HTTP route surface (``runtime.applications``) or mutates
-    ``Node.services``. ``authorization_ref`` is the ``app_authorization_id`` of
-    the platform's internal RBAC store (resolved by the semantic validator).
+    ``Node.services``. ``capabilities`` declare composable provider-neutral
+    functional roles without implying content or configuration completeness.
+    ``authorization_ref`` is the ``app_authorization_id`` of the platform's
+    internal RBAC store (resolved by the semantic validator).
     """
 
     platform_application_id: str
     service: str = ""
-    platform_kind: RuntimePlatformApplicationKind | str = RuntimePlatformApplicationKind.UNKNOWN
+    platform_kind: RuntimePlatformApplicationKind | str = Field(
+        default=RuntimePlatformApplicationKind.UNKNOWN,
+        description=(
+            "Legacy product-family category retained for compatibility; does not imply capabilities "
+            "or configuration completeness. Use capabilities for new documents."
+        ),
+        json_schema_extra={"deprecated": True},
+    )
     product: str = ""
     version: str = ""
     name: str = ""
+    capabilities: list[RuntimePlatformApplicationCapability] = Field(default_factory=list)
     organizations: list[RuntimePlatformApplicationOrganization] = Field(default_factory=list)
     tenants: list[RuntimePlatformApplicationTenant] = Field(default_factory=list)
-    content_objects: list[RuntimePlatformApplicationContentObject] = Field(default_factory=list)
+    content_objects: list[RuntimePlatformApplicationContentObject] = Field(
+        default_factory=list,
+        description=(
+            "Legacy bounded platform-content manifests retained for compatibility; content presence "
+            "does not define application capabilities."
+        ),
+        json_schema_extra={"deprecated": True},
+    )
     markings: list[RuntimePlatformApplicationMarking] = Field(default_factory=list)
     upstream_bindings: list[RuntimePlatformApplicationUpstreamBinding] = Field(default_factory=list)
     connectors: list[RuntimePlatformApplicationConnector] = Field(default_factory=list)
@@ -121,7 +123,6 @@ class RuntimePlatformApplication(SDLModel):
     @model_validator(mode="after")
     def validate_platform_application(self) -> "RuntimePlatformApplication":
         self._reject_duplicate_local_ref_ids()
-        self.require_profile_for_platform_kind()
         return self
 
     # ------------------------------------------------------------------ #
@@ -131,6 +132,7 @@ class RuntimePlatformApplication(SDLModel):
     def _reject_duplicate_local_ref_ids(self) -> None:
         entries: list[tuple[str, str]] = [("platform_application_id", self.platform_application_id)]
         for label, collection_name in (
+            ("capability_id", "capabilities"),
             ("organization_id", "organizations"),
             ("tenant_id", "tenants"),
             ("content_object_id", "content_objects"),
@@ -150,88 +152,6 @@ class RuntimePlatformApplication(SDLModel):
                     f"'{self.platform_application_id}' across {prior} and {label}"
                 )
             seen[value] = label
-
-    # ------------------------------------------------------------------ #
-    # Required-profile guard
-    # ------------------------------------------------------------------ #
-
-    def require_profile_for_platform_kind(self) -> None:
-        """Fail validation when a concrete platform_kind lacks its profile.
-
-        A ``${var}`` placeholder discriminator is exempt (nothing concrete is
-        asserted); ``unknown`` / ``other`` are permissive. Each concrete member
-        requires the defining content/binding profile so the abstraction cannot
-        silently shallow-encode a defining fact.
-        """
-        kind = self.platform_kind
-        if is_variable_ref(kind) or not isinstance(kind, RuntimePlatformApplicationKind):
-            return
-        profile = _PROFILE_DISPATCH.get(kind)
-        if profile is None:
-            return
-        profile(self)
-
-    def _content_kinds(self) -> set[object]:
-        return {obj.kind for obj in self.content_objects}
-
-    def _has_content_kind(self, kind: RuntimePlatformApplicationContentObjectKind) -> bool:
-        return any(obj.kind == kind for obj in self.content_objects)
-
-    def _require_content_kind(self, kind: RuntimePlatformApplicationContentObjectKind) -> None:
-        if not self._has_content_kind(kind):
-            raise self._profile_error(f">=1 content_object with kind '{kind.value}'")
-
-    def _profile_error(self, requirement: str) -> ValueError:
-        return ValueError(
-            f"platform application '{self.platform_application_id}' platform_kind "
-            f"'{self.platform_kind.value}' requires {requirement}"
-        )
-
-    def _require_threat_intel_profile(self) -> None:
-        for kind in (
-            _ContentKind.TAXONOMY,
-            _ContentKind.GALAXY_CLUSTER,
-            _ContentKind.WARNINGLIST,
-            _ContentKind.FEED,
-            _ContentKind.SHARING_GROUP,
-        ):
-            self._require_content_kind(kind)
-
-    def _require_soar_profile(self) -> None:
-        self._require_content_kind(_ContentKind.WORKFLOW)
-
-    def _require_analyzer_engine_profile(self) -> None:
-        if not (self._has_content_kind(_ContentKind.ANALYZER) or self._has_content_kind(_ContentKind.RESPONDER)):
-            raise self._profile_error(">=1 analyzer or responder content_object")
-        if self.execution_policy is None:
-            raise self._profile_error("an execution_policy")
-
-    def _require_case_management_profile(self) -> None:
-        self._require_content_kind(_ContentKind.CASE_TEMPLATE)
-        self._require_content_kind(_ContentKind.CUSTOM_FIELD)
-
-    def _require_analytics_dashboard_profile(self) -> None:
-        saved_objects = [obj for obj in self.content_objects if obj.kind in _DASHBOARD_SAVED_OBJECT_KINDS]
-        if not saved_objects:
-            kinds = ", ".join(sorted(k.value for k in _DASHBOARD_SAVED_OBJECT_KINDS))
-            raise self._profile_error(f">=1 saved-object content_object (one of: {kinds})")
-        if not any(obj.references for obj in saved_objects):
-            raise self._profile_error(">=1 saved-object content_object that carries references")
-        if not any(
-            isinstance(b.role, RuntimePlatformApplicationUpstreamBindingRole) and b.role in _DASHBOARD_BACKING_ROLES
-            for b in self.upstream_bindings
-        ):
-            roles = ", ".join(sorted(r.value for r in _DASHBOARD_BACKING_ROLES))
-            raise self._profile_error(f">=1 upstream_binding with role one of: {roles}")
-
-
-_PROFILE_DISPATCH = {
-    _Kind.THREAT_INTEL: RuntimePlatformApplication._require_threat_intel_profile,
-    _Kind.SOAR: RuntimePlatformApplication._require_soar_profile,
-    _Kind.ANALYZER_ENGINE: RuntimePlatformApplication._require_analyzer_engine_profile,
-    _Kind.CASE_MANAGEMENT: RuntimePlatformApplication._require_case_management_profile,
-    _Kind.ANALYTICS_DASHBOARD: RuntimePlatformApplication._require_analytics_dashboard_profile,
-}
 
 
 class RelationshipServiceIntegration(SDLModel):

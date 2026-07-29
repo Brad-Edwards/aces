@@ -13,7 +13,11 @@ from raes_contracts.participant_episode import (
 from raes_contracts.workflow import WorkflowExecutionState
 from raes_processor.models import ParticipantBehaviorHistoryEvent
 
-from raes_conformance.conformance.diagnostics import _SEMANTIC_INVALID_DIAGNOSTIC_CODE, _diagnostic
+from raes_conformance.conformance.diagnostics import (
+    _SEMANTIC_INVALID_DIAGNOSTIC_CODE,
+    _diagnostic,
+    sanitized_failure_message,
+)
 from raes_conformance.conformance.observability import observability_evidence_conformance_diagnostics
 from raes_conformance.conformance.snapshot_semantics import (
     _participant_behavior_history_diagnostics,
@@ -35,7 +39,7 @@ def _state_semantic_diagnostics(
             _diagnostic(
                 _SEMANTIC_INVALID_DIAGNOSTIC_CODE,
                 contract_name,
-                f"{invalid_message}: {exc}",
+                f"{invalid_message}: {sanitized_failure_message(exc)}",
             )
         ]
     return []
@@ -66,7 +70,7 @@ def _event_stream_semantic_diagnostics(
                 _diagnostic(
                     _SEMANTIC_INVALID_DIAGNOSTIC_CODE,
                     f"{contract_name}[{index}]",
-                    f"{invalid_message}: {exc}",
+                    f"{invalid_message}: {sanitized_failure_message(exc)}",
                 )
             )
     return diagnostics
@@ -83,7 +87,7 @@ def _participant_behavior_stream_diagnostics(contract_name: str, payload: object
                     _diagnostic(
                         _SEMANTIC_INVALID_DIAGNOSTIC_CODE,
                         f"{contract_name}[{index}]",
-                        f"participant behavior history event semantics are invalid: {exc}",
+                        f"participant behavior history event semantics are invalid: {sanitized_failure_message(exc)}",
                     )
                 )
     diagnostics.extend(_participant_behavior_history_diagnostics(contract_name, payload))

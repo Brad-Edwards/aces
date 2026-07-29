@@ -551,7 +551,7 @@
       "type": "object"
     }
   },
-  "$id": "https://raes.dev/schemas/participant-shared-state-record-v1.json",
+  "$id": "https://raesystem.github.io/rae/schemas/participant-shared-state-record-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "anyOf": [

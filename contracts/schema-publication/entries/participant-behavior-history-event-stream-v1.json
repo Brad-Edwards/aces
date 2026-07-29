@@ -2,9 +2,9 @@
   "contract_id": "participant-behavior-history-event-stream-v1",
   "schema_path": "contracts/schemas/control-plane/participant-behavior-history-event-stream-v1.json",
   "stability": "draft",
-  "content_hash": "46756a33b20550c709ecaacd41bb5621f291be9582c05b313b5076da0a9065f5",
+  "content_hash": "419b76bd47a8dc23c7d695247f74800bf5ce42d8697f2175a028e1c6cafd18b3",
   "last_change": {
-    "summary": "Extended v3 activity history with native resource measurements and policy-scoped budget identity for issue #899.",
-    "content_hash": "46756a33b20550c709ecaacd41bb5621f291be9582c05b313b5076da0a9065f5"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "419b76bd47a8dc23c7d695247f74800bf5ce42d8697f2175a028e1c6cafd18b3"
   }
 }

@@ -2,9 +2,9 @@
   "contract_id": "experiment-study-v1",
   "schema_path": "contracts/schemas/experiment-core/experiment-study-v1.json",
   "stability": "draft",
-  "content_hash": "e3968289f399d09a974dfb7ac04266d5e37f9ad68abaa73e49c3862c87f69a03",
+  "content_hash": "fba8bea1241539394a052b8df1c1216ff12c6499078759cfd1bb67844c23828d",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "e3968289f399d09a974dfb7ac04266d5e37f9ad68abaa73e49c3862c87f69a03"
+    "summary": "Published the shared relation-parameter profile and assurance-axis claim-binding coordinates for issue #810.",
+    "content_hash": "fba8bea1241539394a052b8df1c1216ff12c6499078759cfd1bb67844c23828d"
   }
 }

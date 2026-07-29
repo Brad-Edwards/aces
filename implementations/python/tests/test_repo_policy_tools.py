@@ -35,6 +35,18 @@ from tools.policy.conftest_tool import run_conftest_policy
 from tools.policy.repo_policy import evaluate_repo_policy
 
 
+def test_sonar_project_binding_matches_scanner_configuration() -> None:
+    ground_control = yaml.safe_load((REPO_ROOT / ".ground-control.yaml").read_text(encoding="utf-8"))
+    sonar_properties = dict(
+        line.split("=", maxsplit=1)
+        for line in (REPO_ROOT / "sonar-project.properties").read_text(encoding="utf-8").splitlines()
+        if line and not line.startswith("#") and "=" in line
+    )
+
+    assert ground_control["sonarcloud"]["project_key"] == sonar_properties["sonar.projectKey"]
+    assert ground_control["sonarcloud"]["organization"] == sonar_properties["sonar.organization"]
+
+
 def load_noxfile_with_fake_nox(monkeypatch: pytest.MonkeyPatch) -> types.ModuleType:
     class FakeOptions:
         default_venv_backend = ""

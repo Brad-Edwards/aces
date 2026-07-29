@@ -13,6 +13,7 @@ This document is the issue #71 formal design artifact for:
 - `SEM-220` - Participant Decision-Surface Semantics
 - `SEM-226` - Participant Exposure And Visibility-Boundary Semantics
 - `SEM-230` - Participant Information-Flow And Control Semantics
+- `SEM-231` - Participant-Relative Predicate Opacity Semantics
 - `DSL-437` - Benign Participant Autonomous Execution
 
 It is a design artifact, not an implementation artifact. It establishes the
@@ -29,6 +30,13 @@ normative model is the focused sibling specification
 [`information-flow-control.md`](information-flow-control.md); this README's
 world, view, history, action, visibility, and ordering objects remain the
 incumbent carriers that model composes.
+
+Issue #810 and ADR-099 add the focused SEM-231 composition boundary. Its
+normative model is
+[`participant-predicate-opacity.md`](participant-predicate-opacity.md). It
+reuses SEM-230 policy, release, memory, strategy, supervisor, exact-cut,
+scheduler, and order coordinates while keeping selected-predicate opacity
+distinct from policy noninterference and projected-history equality.
 
 Issue #861 and ADR-092 add deterministic autonomous execution for ordinary
 participants. The focused normative composition is
@@ -1673,10 +1681,26 @@ and order-relative label projection, independent control and information-flow
 operations, dynamic purge and declassification semantics, and the exact
 baseline `policy-noninterference` obligation.
 
-The relation is bound through taxonomy revision `rev3` rather than a local
+The relation is bound through taxonomy revision `rev5` rather than a local
 registry. Its current assurance is definition-complete and bounded-tested but
 deliberately unproved. The test-local model can falsify finite cases; it is not
 runtime mediation, backend realization, or a universal information-flow proof.
+
+## SEM-231 - Participant-Relative Predicate Opacity Semantics
+
+SEM-231 is defined in
+[`participant-predicate-opacity.md`](participant-predicate-opacity.md). The
+focused authority defines a one-sided possibilistic predicate-opacity kernel
+over participant information cells, mandatory revisioned opacity profiles,
+active-strategy quantification, supervisor visibility, release and retained
+memory, explicit time/order/probability boundaries, and exact distinctions
+from SEM-230 noninterference, projected-history equality, epistemic
+indistinguishability, trace equivalence, and bisimulation.
+
+Taxonomy revision `rev5` records only definition and bounded-test assurance.
+No opacity checker, model check, mathematical proof, runtime enforcement,
+backend declaration, backend realization, or backend conformance is claimed.
+Issues #961 through #965 own those independent future lanes.
 
 ## Required Future Verification
 

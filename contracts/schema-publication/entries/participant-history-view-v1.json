@@ -2,9 +2,9 @@
   "contract_id": "participant-history-view-v1",
   "schema_path": "contracts/schemas/control-plane/participant-history-view-v1.json",
   "stability": "draft",
-  "content_hash": "483731937b2dbee8c5bc081f4348398a280a6ef28044c17395dcf635ba99c7c4",
+  "content_hash": "2eb0de43e8e48b3f6f3eeb008c8f5d3be8b3cd585f4d28b1d7974c82c66a8bc9",
   "last_change": {
-    "summary": "Projected v3 native resource measurements and policy-scoped budget identity through history views for issue #899.",
-    "content_hash": "483731937b2dbee8c5bc081f4348398a280a6ef28044c17395dcf635ba99c7c4"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "2eb0de43e8e48b3f6f3eeb008c8f5d3be8b3cd585f4d28b1d7974c82c66a8bc9"
   }
 }

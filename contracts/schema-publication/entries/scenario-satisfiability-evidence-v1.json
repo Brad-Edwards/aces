@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "3ebaa6f78e03ebbdf06052cfc85abc4f1f40746ce0ea7a8eccc96637e1fcdace",
+  "content_hash": "ae00cca1cd31a30b8f0cb7e6b74b4092526f0e688039b3ac73dbef804f853f10",
   "last_change": {
-    "summary": "Carried portable artifact requirements and scoped participant resource budgets through satisfiability evidence for issues #920 and #899.",
-    "content_hash": "3ebaa6f78e03ebbdf06052cfc85abc4f1f40746ce0ea7a8eccc96637e1fcdace"
+    "summary": "Added composable provider-neutral platform capabilities and marked legacy platform categories and content manifests deprecated for issue #956.",
+    "content_hash": "ae00cca1cd31a30b8f0cb7e6b74b4092526f0e688039b3ac73dbef804f853f10"
   }
 }

@@ -2,9 +2,9 @@
   "contract_id": "sdl-authoring-input-v1",
   "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
   "stability": "draft",
-  "content_hash": "d8e490195ae4fb192e559686d8089c8b13ac69d19fb1b8682192275f75f5623e",
+  "content_hash": "d4594b2c04283d95378faec2f64343870e8756f09a5a04a8746c6d8ccd56a270",
   "last_change": {
-    "summary": "Published portable Source artifact authoring and scoped participant resource-budget policy for issues #920 and #899.",
-    "content_hash": "d8e490195ae4fb192e559686d8089c8b13ac69d19fb1b8682192275f75f5623e"
+    "summary": "Added composable provider-neutral platform capabilities and marked legacy platform categories and content manifests deprecated for issue #956.",
+    "content_hash": "d4594b2c04283d95378faec2f64343870e8756f09a5a04a8746c6d8ccd56a270"
   }
 }

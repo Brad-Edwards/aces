@@ -2,9 +2,9 @@
   "contract_id": "attack-enterprise-tactics-source-v1",
   "schema_path": "contracts/schemas/concept-authority/attack-enterprise-tactics-source-v1.json",
   "stability": "draft",
-  "content_hash": "20ee7e7ce46c59d46702bfb359dc924f19f0cbdd09ff6dc8b57aa9aaaf8be304",
+  "content_hash": "7c7dd670f04d92fd1c5f412087ce50c5aed0f4c66abbcf997d926688f46b0cae",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "20ee7e7ce46c59d46702bfb359dc924f19f0cbdd09ff6dc8b57aa9aaaf8be304"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "7c7dd670f04d92fd1c5f412087ce50c5aed0f4c66abbcf997d926688f46b0cae"
   }
 }

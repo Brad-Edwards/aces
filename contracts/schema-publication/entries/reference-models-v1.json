@@ -2,9 +2,9 @@
   "contract_id": "reference-models-v1",
   "schema_path": "contracts/schemas/concept-authority/reference-models-v1.json",
   "stability": "draft",
-  "content_hash": "e028dfbb74c458399eb3012b4abcb09bef09e047fc1dd74dd0f4dc1f20fa64f0",
+  "content_hash": "6b379f9203be74259f1905e3ff13c25bb3125a04eba9dcc6bafedea40d50e416",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "e028dfbb74c458399eb3012b4abcb09bef09e047fc1dd74dd0f4dc1f20fa64f0"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "6b379f9203be74259f1905e3ff13c25bb3125a04eba9dcc6bafedea40d50e416"
   }
 }

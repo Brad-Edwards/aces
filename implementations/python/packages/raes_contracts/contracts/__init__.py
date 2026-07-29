@@ -59,6 +59,22 @@ from ..vocabulary import (
     WorkflowStatePredicateFeature,
 )
 from ._exports import PUBLIC_EXPORTS as __all__
+from .admitted_trial_plan import AdmittedApparatusBindingModel as AdmittedApparatusBindingModel
+from .admitted_trial_plan import AdmittedBindingModel as AdmittedBindingModel
+from .admitted_trial_plan import AdmittedExecutionControlModel as AdmittedExecutionControlModel
+from .admitted_trial_plan import AdmittedInstantiationProvenanceModel as AdmittedInstantiationProvenanceModel
+from .admitted_trial_plan import (
+    AdmittedParticipantManifestReferenceModel as AdmittedParticipantManifestReferenceModel,
+)
+from .admitted_trial_plan import AdmittedSelectionRecordModel as AdmittedSelectionRecordModel
+from .admitted_trial_plan import AdmittedTrialEntryModel as AdmittedTrialEntryModel
+from .admitted_trial_plan import AdmittedTrialPlanAdmissionModel as AdmittedTrialPlanAdmissionModel
+from .admitted_trial_plan import AdmittedTrialPlanInputRefsModel as AdmittedTrialPlanInputRefsModel
+from .admitted_trial_plan import AdmittedTrialPlanModel as AdmittedTrialPlanModel
+from .admitted_trial_plan import AdmittedTrialPlanProfilesModel as AdmittedTrialPlanProfilesModel
+from .admitted_trial_plan import ExperimentScenarioFamilyReferenceModel as ExperimentScenarioFamilyReferenceModel
+from .admitted_trial_plan import seal_admitted_trial_entry as seal_admitted_trial_entry
+from .admitted_trial_plan import seal_admitted_trial_plan as seal_admitted_trial_plan
 from .associated_artifacts import AssociatedArtifactManifestModel, AssociatedArtifactSetDigestString
 from .base import (
     BehavioralClaimBindingModel,
@@ -163,6 +179,7 @@ from .experiment_run import (
     validate_experiment_run_against_task,
     validate_experiment_run_time_model,
 )
+from .experiment_selection import *
 from .experiment_spec import (
     ExperimentEpisodeControlModel,
     ExperimentRedVariantSelectionModel,
@@ -354,6 +371,9 @@ from .trial_cleanup import SchedulerIsolationProofModel as SchedulerIsolationPro
 from .trial_cleanup import TrialCleanupPlanModel as TrialCleanupPlanModel
 from .trial_cleanup import TrialCleanupReceiptModel as TrialCleanupReceiptModel
 from .trial_cleanup import validate_trial_cleanup_receipt as validate_trial_cleanup_receipt
+from .trial_compilation import TrialCleanupTemplateModel as TrialCleanupTemplateModel
+from .trial_compilation import TrialCompilationLimitsModel as TrialCompilationLimitsModel
+from .trial_compilation import TrialExecutionAuthorityModel as TrialExecutionAuthorityModel
 from .validation_disclosure import ValidationBasisDisclosureDocumentModel
 from .validators import _collapse_nullable_optional_schema as _collapse_nullable_optional_schema
 from .validators import _resolve_instance_path_schema as _resolve_instance_path_schema

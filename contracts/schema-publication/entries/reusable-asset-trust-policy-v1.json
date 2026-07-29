@@ -2,9 +2,9 @@
   "contract_id": "reusable-asset-trust-policy-v1",
   "schema_path": "contracts/schemas/asset-trust/reusable-asset-trust-policy-v1.json",
   "stability": "draft",
-  "content_hash": "855845de67295da833b426797dfbd60e13bafeaebc2b92e2a1c195748ccebeab",
+  "content_hash": "8283ffb71a4739e30c9a88ebb8ab90efa8854aa40b58e95e123bc83f54c858b5",
   "last_change": {
-    "summary": "Completed the RAES identity hard cut for published schema URIs, extension keywords, and identity-bearing contract values under #908; validation semantics are unchanged apart from the intentional breaking name migration.",
-    "content_hash": "855845de67295da833b426797dfbd60e13bafeaebc2b92e2a1c195748ccebeab"
+    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
+    "content_hash": "8283ffb71a4739e30c9a88ebb8ab90efa8854aa40b58e95e123bc83f54c858b5"
   }
 }

@@ -11,6 +11,7 @@ from enum import Enum
 __all__ = [
     "RelationshipServiceIntegrationDirection",
     "RelationshipServiceIntegrationKind",
+    "RuntimePlatformApplicationCapabilityKind",
     "RuntimePlatformApplicationConnectorKind",
     "RuntimePlatformApplicationContentObjectKind",
     "RuntimePlatformApplicationKind",
@@ -48,11 +49,12 @@ class RelationshipServiceIntegrationDirection(str, Enum):
 
 
 class RuntimePlatformApplicationKind(str, Enum):
-    """Open discriminator for the platform-application product family.
+    """Legacy open category for a platform-application product family.
 
-    The ``require_profile_for_platform_kind`` guard ties each concrete member
-    to a required content/binding profile. Open taxonomy: carries both
-    ``unknown`` and ``other``.
+    This category is retained for compatibility. It does not assert
+    configuration completeness or imply application capabilities. New
+    documents should use composable ``capabilities`` instead. Open taxonomy:
+    carries both ``unknown`` and ``other``.
     """
 
     ANALYTICS_DASHBOARD = "analytics_dashboard"
@@ -64,12 +66,32 @@ class RuntimePlatformApplicationKind(str, Enum):
     OTHER = "other"
 
 
+class RuntimePlatformApplicationCapabilityKind(str, Enum):
+    """Open taxonomy of provider-neutral application capabilities.
+
+    A capability describes a functional role exposed by an application. It
+    does not imply a product identity, configuration profile, content
+    inventory, policy, or execution guarantee. Open taxonomy: carries both
+    ``unknown`` and ``other``.
+    """
+
+    THREAT_INTELLIGENCE_MANAGEMENT = "threat_intelligence_management"
+    INTELLIGENCE_EXCHANGE = "intelligence_exchange"
+    CASE_MANAGEMENT = "case_management"
+    ANALYSIS_EXECUTION = "analysis_execution"
+    WORKFLOW_AUTOMATION = "workflow_automation"
+    ANALYTICS_PRESENTATION = "analytics_presentation"
+    UNKNOWN = "unknown"
+    OTHER = "other"
+
+
 class RuntimePlatformApplicationContentObjectKind(str, Enum):
-    """Open taxonomy of typed platform content objects.
+    """Legacy open taxonomy of typed platform content objects.
 
     A content object is a bounded parsed manifest entry (typed kind + bounded
-    attributes + typed references) — never a raw object body. Open taxonomy:
-    carries both ``unknown`` and ``other``.
+    attributes + typed references) — never a raw object body. The collection is
+    retained for compatibility and does not define an application's
+    capabilities. Open taxonomy: carries both ``unknown`` and ``other``.
     """
 
     INDEX_PATTERN = "index_pattern"
