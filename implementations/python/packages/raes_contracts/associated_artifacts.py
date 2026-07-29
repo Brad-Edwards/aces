@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import hashlib
-import json
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import BinaryIO, cast
@@ -23,10 +22,12 @@ from .contracts import (
     ExperimentTaskModel,
 )
 from .diagnostics import Diagnostic, Severity
+from .json_ingress import parse_bounded_json_object
 
 _DOMAIN = "associated-artifact"
 _CHUNK_SIZE = 64 * 1024
 _ARTIFACTS_ADDRESS = "#/artifacts"
+_MAX_MANIFEST_BYTES = 16 * 1024 * 1024
 
 JSONValue = None | bool | int | float | str | list["JSONValue"] | dict[str, "JSONValue"]
 
@@ -83,19 +84,10 @@ def associated_artifact_set_digest(manifest: AssociatedArtifactManifestModel) ->
     return f"sha256:{digest}"
 
 
-def _reject_duplicate_members(pairs: list[tuple[str, JSONValue]]) -> dict[str, JSONValue]:
-    result: dict[str, JSONValue] = {}
-    for key, value in pairs:
-        if key in result:
-            raise ValueError(f"duplicate JSON member {key!r}")
-        result[key] = value
-    return result
-
-
 def load_associated_artifact_manifest_json(source: str | bytes | bytearray) -> AssociatedArtifactManifestModel:
     """Parse one manifest while rejecting duplicate JSON members before construction."""
 
-    payload = json.loads(source, object_pairs_hook=_reject_duplicate_members)
+    payload = parse_bounded_json_object(source, max_bytes=_MAX_MANIFEST_BYTES)
     return AssociatedArtifactManifestModel.model_validate(payload)
 
 

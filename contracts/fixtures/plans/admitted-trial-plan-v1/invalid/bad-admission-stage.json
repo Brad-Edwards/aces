@@ -204,6 +204,7 @@
       "ref_version": "expanded-scenario-family/v1"
     },
     "study_ref": null,
+    "task_digest": "sha256:bcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbc",
     "task_ref": {
       "ref_id": "task-a",
       "ref_kind": "task",

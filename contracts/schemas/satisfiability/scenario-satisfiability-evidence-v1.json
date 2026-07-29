@@ -172,6 +172,66 @@
       "title": "Account",
       "type": "object"
     },
+    "AdmittedBindingProvenance": {
+      "additionalProperties": false,
+      "description": "Canonical admitted binding record carried into snapshot identity.",
+      "properties": {
+        "binding_id": {
+          "minLength": 1,
+          "title": "Binding Id",
+          "type": "string"
+        },
+        "record": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Record",
+          "type": "object"
+        },
+        "record_digest": {
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "title": "Record Digest",
+          "type": "string"
+        }
+      },
+      "required": [
+        "binding_id",
+        "record_digest",
+        "record"
+      ],
+      "title": "AdmittedBindingProvenance",
+      "type": "object"
+    },
+    "AdmittedSelectionProvenance": {
+      "additionalProperties": false,
+      "description": "Canonical admitted selection record carried into snapshot identity.",
+      "properties": {
+        "record": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Record",
+          "type": "object"
+        },
+        "record_digest": {
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "title": "Record Digest",
+          "type": "string"
+        },
+        "variation_point_id": {
+          "minLength": 1,
+          "title": "Variation Point Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "variation_point_id",
+        "record_digest",
+        "record"
+      ],
+      "title": "AdmittedSelectionProvenance",
+      "type": "object"
+    },
     "Agent": {
       "additionalProperties": false,
       "description": "A role-neutral participant in the scenario.\n\nAgents reference existing scenario elements:\n\n- ``entity`` links to the entities section (team/role) and supplies\n  identity and role per ADR-020\n- ``starting_accounts`` links to the accounts section\n- ``allowed_subnets`` links to infrastructure entries\n- ``initial_knowledge`` references nodes and infrastructure\n- ``starting_assertions`` links to precondition assertions, giving the\n  authoring surface a declarative hook for participant-relevant starting\n  state without equating a probe implementation with truth (ACT-601)\n- ``authority_anchors`` links to declared SDL elements (entities,\n  relationships, content, etc.) that anchor what the participant is\n  allowed or expected to do in scenario meaning (ACT-601, ADR-020)\n- ``operating_scope`` links to targetable named scenario elements\n  (subnets, hosts, services, content) defining where the participant\n  may act or observe (ACT-601, ADR-020)\n- ``observation_boundaries`` links to declared participant observation\n  boundaries that define participant-specific projections of world and\n  evidence state (SEM-208)\n- ``interactive_access`` declares the VM/channel pairs that may be offered\n  to this participant, without inferring a listener, locator, credential,\n  operating scope, action authority, or successful realization (DSL-117)\n\nPer ADR-073 the CybORG-inherited ``reward_calculator`` label was removed;\nit was an unbound, unvalidated string and graded reward lives in the\nexperiment/evaluator plane (ADR-055/064/069).",
@@ -4811,6 +4871,17 @@
           ],
           "default": null,
           "title": "Selected Profile"
+        },
+        "trial": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TrialInstantiationProvenance"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -4819,6 +4890,7 @@
       "title": "InstantiationProvenance",
       "type": "object"
     },
+    "JsonValue": {},
     "KernelBoundary": {
       "description": "Kernel/trust boundary requested between logical node and carrier.",
       "enum": [
@@ -21694,6 +21766,122 @@
       ],
       "title": "TimeSynchronizationMode",
       "type": "string"
+    },
+    "TrialCoordinateProvenance": {
+      "additionalProperties": false,
+      "description": "Logical coordinate copied from one admitted plan entry.",
+      "properties": {
+        "block_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Block Id"
+        },
+        "condition_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Condition Id"
+        },
+        "replicate_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Replicate Id"
+        }
+      },
+      "title": "TrialCoordinateProvenance",
+      "type": "object"
+    },
+    "TrialInstantiationProvenance": {
+      "additionalProperties": false,
+      "description": "Exact sealed plan/entry lineage for one admitted trial instantiation.",
+      "properties": {
+        "bindings": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/AdmittedBindingProvenance"
+          },
+          "title": "Bindings",
+          "type": "array"
+        },
+        "coordinate": {
+          "$ref": "#/$defs/TrialCoordinateProvenance"
+        },
+        "entry_digest": {
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "title": "Entry Digest",
+          "type": "string"
+        },
+        "plan_digest": {
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "title": "Plan Digest",
+          "type": "string"
+        },
+        "plan_entry_id": {
+          "minLength": 1,
+          "title": "Plan Entry Id",
+          "type": "string"
+        },
+        "plan_id": {
+          "minLength": 1,
+          "title": "Plan Id",
+          "type": "string"
+        },
+        "run_id": {
+          "minLength": 1,
+          "title": "Run Id",
+          "type": "string"
+        },
+        "scenario_family_digest": {
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "title": "Scenario Family Digest",
+          "type": "string"
+        },
+        "scenario_family_id": {
+          "minLength": 1,
+          "title": "Scenario Family Id",
+          "type": "string"
+        },
+        "selections": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/AdmittedSelectionProvenance"
+          },
+          "title": "Selections",
+          "type": "array"
+        }
+      },
+      "required": [
+        "scenario_family_id",
+        "scenario_family_digest",
+        "plan_id",
+        "plan_digest",
+        "plan_entry_id",
+        "entry_digest",
+        "run_id",
+        "coordinate"
+      ],
+      "title": "TrialInstantiationProvenance",
+      "type": "object"
     },
     "TruthCompositionMode": {
       "description": "Portable composition over assertion outcomes.",

@@ -735,6 +735,32 @@ fact_binding_event:
   value: <present only on the protected run-local carrier; never duplicated>
 ```
 
+### Trial realization and archival reconciliation
+
+`raes_processor.trial_realization.realize_admitted_trial_entry` is the
+schedule-independent bridge from one sealed plan entry to the existing
+single-scenario path. It revalidates the complete admitted plan, joins the
+entry to its exact task, processor/backend manifests, and realization
+envelope, then calls the ordinary SDL selector and runtime compiler/planner.
+Its public processor-plan projections are digest-bound as provisioning,
+orchestration, and evaluation references; the internal execution plan is not
+a portable authority.
+
+The instantiated scenario carries the plan, entry, coordinate, selected
+members, and parameter-binding lineage without copying protected runtime fact
+values. An `experiment-run-v1` may add `trial_provenance` to bind its
+preallocated run id to that entry, the canonical instantiated-scenario digest,
+the three processor-plan projections, and one or more distinct execution
+attempts. Cleanup receipts remain the authority for attempt outcome and
+clean-state evidence.
+
+`validate_admitted_trial_run`, `reconcile_admitted_trial_plan`, and
+`validate_admitted_trial_study` perform the cross-contract joins. Plan-wide
+reconciliation permits unattempted entries and retries, rejects duplicate
+attempt or receipt identities, and permits at most one archival run for an
+entry. Scheduling, runtime fact evaluation, and analysis/scoring remain
+outside this seam.
+
 ## Compatibility And Migration
 
 ### SDL documents
@@ -772,9 +798,10 @@ fact_binding_event:
 - `experiment-run-v1` remains the only archival record for one execution.
 - `experiment-study-v1` remains the authority for factors, compared
   conditions, allocation, replication, stopping, and analysis.
-- Existing run/study records need no migration merely because a future producer
-  uses an admitted plan. New records may add plan/selection lineage through
-  version-governed optional or new-version fields under ADR-061.
+- Existing run/study records need no migration merely because a producer uses
+  an admitted plan. Plan-aware run records use the optional typed
+  `trial_provenance` field; the cross-contract validators reconcile those runs
+  with admitted entries, attempts, cleanup receipts, and study allocation.
 - Live operation state, runtime snapshots, scheduler jobs, and plan entries
   never masquerade as archival runs.
 

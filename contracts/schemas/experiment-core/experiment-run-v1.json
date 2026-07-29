@@ -3975,6 +3975,139 @@
       "title": "TrialCoordinateModel",
       "type": "object"
     },
+    "TrialExecutionAttemptReferenceModel": {
+      "additionalProperties": false,
+      "description": "Identity-only archival reference to one effect-capable execution attempt.",
+      "properties": {
+        "cleanup_receipt_ref": {
+          "minLength": 1,
+          "title": "Cleanup Receipt Ref",
+          "type": "string"
+        },
+        "execution_attempt_id": {
+          "minLength": 1,
+          "title": "Execution Attempt Id",
+          "type": "string"
+        },
+        "operation_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Operation Refs",
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "execution_attempt_id",
+        "cleanup_receipt_ref"
+      ],
+      "title": "TrialExecutionAttemptReferenceModel",
+      "type": "object"
+    },
+    "TrialProcessorPlanReferenceModel": {
+      "additionalProperties": false,
+      "description": "Digest-bound reference to one published processor plan projection.",
+      "properties": {
+        "artifact_ref": {
+          "$ref": "#/$defs/ExperimentReferenceModel"
+        },
+        "plan_kind": {
+          "enum": [
+            "provisioning",
+            "orchestration",
+            "evaluation"
+          ],
+          "title": "Plan Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "plan_kind",
+        "artifact_ref"
+      ],
+      "title": "TrialProcessorPlanReferenceModel",
+      "type": "object"
+    },
+    "TrialRunProvenanceModel": {
+      "additionalProperties": false,
+      "description": "Typed admitted-entry, snapshot, processor-plan, and attempt linkage on a run.",
+      "properties": {
+        "admitted_run_id": {
+          "minLength": 1,
+          "title": "Admitted Run Id",
+          "type": "string"
+        },
+        "coordinate": {
+          "$ref": "#/$defs/TrialCoordinateModel"
+        },
+        "entry_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Entry Digest",
+          "type": "string"
+        },
+        "execution_attempts": {
+          "items": {
+            "$ref": "#/$defs/TrialExecutionAttemptReferenceModel"
+          },
+          "minItems": 1,
+          "title": "Execution Attempts",
+          "type": "array"
+        },
+        "instantiated_scenario_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Instantiated Scenario Digest",
+          "type": "string"
+        },
+        "plan_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Plan Digest",
+          "type": "string"
+        },
+        "plan_entry_id": {
+          "minLength": 1,
+          "title": "Plan Entry Id",
+          "type": "string"
+        },
+        "plan_id": {
+          "minLength": 1,
+          "title": "Plan Id",
+          "type": "string"
+        },
+        "processor_plan_refs": {
+          "items": {
+            "$ref": "#/$defs/TrialProcessorPlanReferenceModel"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "title": "Processor Plan Refs",
+          "type": "array"
+        },
+        "terminal_attempt_id": {
+          "minLength": 1,
+          "title": "Terminal Attempt Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "plan_id",
+        "plan_digest",
+        "plan_entry_id",
+        "entry_digest",
+        "admitted_run_id",
+        "coordinate",
+        "instantiated_scenario_digest",
+        "processor_plan_refs",
+        "execution_attempts",
+        "terminal_attempt_id"
+      ],
+      "title": "TrialRunProvenanceModel",
+      "type": "object"
+    },
     "ValidationBasisDisclosureModel": {
       "additionalProperties": false,
       "description": "Governed disclosure of the validation/admission basis for one subject (ASR-515).\n\nEmbeddable core for task/run/study carriers; scenario/scenario-snapshot\nsubjects publish standalone via :class:`ValidationBasisDisclosureDocumentModel`.",
@@ -4706,6 +4839,17 @@
     "traceability": {
       "$ref": "#/$defs/ExperimentRunTraceabilityModel"
     },
+    "trial_provenance": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TrialRunProvenanceModel"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
     "used_refs": {
       "items": {
         "$ref": "#/$defs/ExperimentReferenceModel"
@@ -4742,6 +4886,26 @@
   "title": "ExperimentRunModel",
   "type": "object",
   "x-raes-invariants": [
+    {
+      "description": "When present, trial provenance binds the archival run id to one admitted plan entry, the canonical instantiated snapshot, all three published processor-plan projections, and distinct execution attempts.",
+      "id": "experiment-run-admitted-trial-provenance",
+      "inputs": [
+        {
+          "contract_id": "admitted-trial-plan-v1",
+          "instance_path": "#"
+        },
+        {
+          "contract_id": "experiment-run-v1",
+          "instance_path": "#/trial_provenance"
+        },
+        {
+          "contract_id": "trial-cleanup-receipt-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "raes_contracts.contracts.validate_admitted_trial_run"
+    },
     {
       "description": "ended_at must be greater than or equal to started_at.",
       "id": "ended-at-not-before-started-at",

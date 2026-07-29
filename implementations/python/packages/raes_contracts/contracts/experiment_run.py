@@ -33,10 +33,7 @@ from .experiment_artifacts import (
 )
 from .experiment_bindings import RealizedBindingProvenanceModel, _validate_realized_bindings
 from .experiment_disclosure import ExperimentAugmentationDisclosureModel
-from .experiment_evidence import (
-    ExperimentRealizedFormDisclosureModel,
-    ExperimentRunTraceabilityModel,
-)
+from .experiment_evidence import ExperimentRealizedFormDisclosureModel, ExperimentRunTraceabilityModel
 from .experiment_manifest_references import (
     ExperimentEvidenceReferenceModel,
     ExperimentRunEvidenceArtifactReferenceModel,
@@ -60,6 +57,11 @@ from .time_model import (
     RealizedTimeModelProvenanceModel,
     TimeModelDeclarationModel,
     validate_realized_time_model,
+)
+from .trial_provenance import (
+    TrialRunProvenanceModel,
+    add_trial_run_provenance_invariant,
+    validate_trial_run_provenance_binding,
 )
 from .validation_disclosure import ValidationBasisDisclosureModel, validate_carrier_validation_basis_disclosures
 from .validators import _validate_unique_string_values
@@ -120,6 +122,7 @@ class ExperimentRunModel(ContractModel):
     run_version: NonEmptyString
     task_ref: ExperimentTaskReferenceModel
     scenario_snapshot_ref: ExperimentScenarioSnapshotReferenceModel
+    trial_provenance: TrialRunProvenanceModel | None = None
     apparatus_context: ExperimentApparatusContextModel
     participant_implementation_provenance: ParticipantImplementationProvenanceModel | None = None
     parameter_set: list[ExperimentParameterModel] = Field(min_length=1)
@@ -155,6 +158,9 @@ class ExperimentRunModel(ContractModel):
         _validate_run_realized_form_disclosures(self)
         _validate_run_augmentation_disclosures(self)
         _validate_realized_bindings(self.realized_bindings)
+        validate_trial_run_provenance_binding(
+            self.trial_provenance, run_id=self.run_id, scenario_digest=self.scenario_snapshot_ref.ref_digest
+        )
         validate_carrier_validation_basis_disclosures(self, subject_kind="experiment_run")
         if self.realized_time_model is not None:
             validate_realized_time_model(
@@ -184,6 +190,7 @@ class ExperimentRunModel(ContractModel):
                 },
             }
         )
+        add_trial_run_provenance_invariant(json_schema)
         _add_raes_invariant(
             json_schema,
             "ended-at-not-before-started-at",

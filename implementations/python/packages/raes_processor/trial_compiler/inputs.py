@@ -20,6 +20,7 @@ def _validate_primary_input_refs(request: TrialCompilationRequest) -> None:
     refs = request.input_refs
     family_digest = canonical_sdl_digest(request.family).value
     authoring_digest = canonical_json_digest(request.experiment.model_dump(mode="json"))
+    task_digest = canonical_json_digest(request.task.model_dump(mode="json"))
     if refs.scenario_family_ref.ref_id != request.family.name or refs.scenario_family_ref.ref_digest != family_digest:
         raise _fail(
             "scenario-family-ref-mismatch",
@@ -36,11 +37,16 @@ def _validate_primary_input_refs(request: TrialCompilationRequest) -> None:
             "/input_refs/authoring_input_ref",
             "authoring input reference does not match the admitted experiment",
         )
-    if refs.task_ref != request.experiment.task_ref:
+    if (
+        refs.task_ref != request.experiment.task_ref
+        or refs.task_ref.ref_id != request.task.task_id
+        or refs.task_ref.ref_version != request.task.task_version
+        or refs.task_digest != task_digest
+    ):
         raise _fail(
             "task-ref-mismatch",
             "/input_refs/task_ref",
-            "task reference does not match the admitted experiment",
+            "task reference or digest does not match the admitted task",
         )
 
 

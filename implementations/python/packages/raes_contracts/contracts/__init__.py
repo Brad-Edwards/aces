@@ -360,6 +360,12 @@ from .semantic_profiles import (
     SemanticProfileModel,
     SemanticProfilePhaseModel,
 )
+from .trial_analysis import (
+    AdmittedTrialPlanReconciliation,
+    reconcile_admitted_trial_plan,
+    validate_admitted_trial_run,
+    validate_admitted_trial_study,
+)
 from .trial_cleanup import CleanStateClaimModel as CleanStateClaimModel
 from .trial_cleanup import CleanStateRequirementModel as CleanStateRequirementModel
 from .trial_cleanup import CleanupObligationModel as CleanupObligationModel
@@ -374,6 +380,10 @@ from .trial_cleanup import validate_trial_cleanup_receipt as validate_trial_clea
 from .trial_compilation import TrialCleanupTemplateModel as TrialCleanupTemplateModel
 from .trial_compilation import TrialCompilationLimitsModel as TrialCompilationLimitsModel
 from .trial_compilation import TrialExecutionAuthorityModel as TrialExecutionAuthorityModel
+from .trial_provenance import ProcessorPlanKind as ProcessorPlanKind
+from .trial_provenance import TrialExecutionAttemptReferenceModel as TrialExecutionAttemptReferenceModel
+from .trial_provenance import TrialProcessorPlanReferenceModel as TrialProcessorPlanReferenceModel
+from .trial_provenance import TrialRunProvenanceModel as TrialRunProvenanceModel
 from .validation_disclosure import ValidationBasisDisclosureDocumentModel
 from .validators import _collapse_nullable_optional_schema as _collapse_nullable_optional_schema
 from .validators import _resolve_instance_path_schema as _resolve_instance_path_schema
