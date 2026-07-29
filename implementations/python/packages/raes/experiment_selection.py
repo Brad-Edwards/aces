@@ -74,14 +74,14 @@ def _validate_policy_against_family(policy: object, family: ExpandedScenario) ->
         return
     point = _resolve_point(family, policy.point_ref)
     if isinstance(policy, ExperimentFixedSelectionPolicyModel):
-        _validate_outcome(point, policy.outcome)
+        validate_selection_outcome(point, policy.outcome)
     elif isinstance(policy, ExperimentEnumerateSelectionPolicyModel):
         _validate_enumeration_bound(point, policy.output_bound)
     elif isinstance(policy, ExperimentSampleSelectionPolicyModel):
         _finite_policy_population(point)
     elif isinstance(policy, ExperimentStratifiedSelectionPolicyModel):
         for outcome in policy.outcomes.values():
-            _validate_outcome(point, outcome)
+            validate_selection_outcome(point, outcome)
 
 
 def _validate_enumeration_bound(point: VariationPoint, output_bound: int) -> None:
@@ -147,7 +147,9 @@ def _integer_interval_cardinality(domain: object) -> int:
     return cardinality
 
 
-def _validate_outcome(point: VariationPoint, outcome: object) -> None:
+def validate_selection_outcome(point: VariationPoint, outcome: object) -> None:
+    """Validate one resolved outcome against its owning SDL variation point."""
+
     if isinstance(point, (ParameterVariationPoint, LogicalTimingVariationPoint)):
         _validate_literal_outcome(point, outcome)
     elif isinstance(point, GovernedReferenceVariationPoint):
@@ -206,4 +208,4 @@ def _validate_order_outcome(point: OrderVariationPoint, outcome: object) -> None
         raise ValueError("order selection violates declared fixed positions")
 
 
-__all__ = ["validate_experiment_selection_against_family"]
+__all__ = ["validate_experiment_selection_against_family", "validate_selection_outcome"]

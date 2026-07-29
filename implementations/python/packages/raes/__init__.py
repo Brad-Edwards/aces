@@ -22,6 +22,7 @@ __all__ = [
     "canonical_instantiated_sdl_digest",
     "canonical_sdl_bytes",
     "canonical_sdl_digest",
+    "ExpandedScenarioBindingTargetResolver",
     "build_declaration_index",
     "INSTANTIATED_SNAPSHOT_PROFILE",
     "instantiate_scenario",
@@ -34,6 +35,7 @@ __all__ = [
     "load_sdl_fragment",
     "parse_sdl",
     "parse_sdl_file",
+    "select_scenario_family",
     "Scenario",
     "SDLError",
     "SDLInstantiationError",
@@ -88,6 +90,8 @@ def __getattr__(name: str):
         module = import_module("raes.instantiate")
     elif name == "validate_experiment_selection_against_family":
         module = import_module("raes.experiment_selection")
+    elif name in {"ExpandedScenarioBindingTargetResolver", "select_scenario_family"}:
+        module = import_module("raes.selected_scenario")
     elif name in {"load_sdl_fragment", "parse_sdl", "parse_sdl_file"}:
         module = import_module("raes.parser")
     elif name in {"InstantiatedScenario", "Scenario"}:

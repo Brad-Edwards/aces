@@ -12,16 +12,15 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import Field, model_validator
+from pydantic import Field, SerializerFunctionWrapHandler, model_serializer, model_validator
 from raes.identifiers import PortableIdentifier
 
 from ..diagnostics import DiagnosticModel
-from .base import ContractModel, NonEmptyString, PositiveInteger
+from .base import ContractModel, NonEmptyString, PositiveInteger, PrefixedDigestString
 from .experiment_bindings import ExperimentBindingDescriptorModel
 from .experiment_manifest_references import ExperimentManifestReferenceModel
 from .experiment_references import (
     ExperimentReferenceModel,
-    ExperimentScenarioSnapshotReferenceModel,
     ExperimentTaskReferenceModel,
 )
 from .experiment_selection import ExperimentSelectionOutcomeModel
@@ -62,6 +61,15 @@ class AdmittedTrialPlanProfilesModel(ContractModel):
     isolation_profile: Literal["scheduler-isolation-v1"]
 
 
+class ExperimentScenarioFamilyReferenceModel(ContractModel):
+    """Digest-pinned identity of one semantically admitted expanded SDL family."""
+
+    ref_kind: Literal["scenario-family"]
+    ref_id: NonEmptyString
+    ref_version: Literal["expanded-scenario-family/v1"]
+    ref_digest: PrefixedDigestString
+
+
 def _require_ref(ref: ExperimentReferenceModel, kind: str, *, digest: bool, field: str) -> None:
     if ref.ref_kind != kind:
         raise ValueError(f"{field} must have ref_kind {kind!r}")
@@ -74,17 +82,16 @@ class AdmittedTrialPlanInputRefsModel(ContractModel):
 
     authoring_input_ref: ExperimentReferenceModel
     task_ref: ExperimentTaskReferenceModel
-    scenario_family_ref: ExperimentScenarioSnapshotReferenceModel
-    binding_descriptor_set_ref: ExperimentReferenceModel
+    scenario_family_ref: ExperimentScenarioFamilyReferenceModel
+    binding_descriptor_set_ref: ExperimentReferenceModel | None = None
     study_ref: ExperimentReferenceModel | None = None
     associated_artifact_set_ref: ExperimentReferenceModel | None = None
 
     @model_validator(mode="after")
     def _validate_input_refs(self) -> AdmittedTrialPlanInputRefsModel:
         _require_ref(self.authoring_input_ref, "authoring-input", digest=True, field="authoring_input_ref")
-        _require_ref(self.binding_descriptor_set_ref, "other", digest=True, field="binding_descriptor_set_ref")
-        if self.scenario_family_ref.ref_digest is None:
-            raise ValueError("scenario_family_ref must pin a scenario-snapshot ref_digest")
+        if self.binding_descriptor_set_ref is not None:
+            _require_ref(self.binding_descriptor_set_ref, "other", digest=True, field="binding_descriptor_set_ref")
         if self.study_ref is not None:
             _require_ref(self.study_ref, "study", digest=False, field="study_ref")
         if self.associated_artifact_set_ref is not None:
@@ -112,6 +119,16 @@ class AdmittedBindingModel(ContractModel):
     origin: BindingOrigin
 
 
+class AdmittedParticipantManifestReferenceModel(ContractModel):
+    """Digest-pinned participant implementation manifest authority."""
+
+    participant_address: NonEmptyString
+    implementation_name: NonEmptyString
+    implementation_version: NonEmptyString
+    manifest_version: NonEmptyString
+    manifest_digest: PrefixedDigestString
+
+
 class AdmittedApparatusBindingModel(ContractModel):
     """Pre-run apparatus selection intent pinned by manifest and realization envelope.
 
@@ -121,6 +138,7 @@ class AdmittedApparatusBindingModel(ContractModel):
     """
 
     manifest_refs: list[ExperimentManifestReferenceModel] = Field(min_length=1)
+    participant_manifest_refs: list[AdmittedParticipantManifestReferenceModel] = Field(default_factory=list)
     realization_envelope: RealizationEnvelopeIdentityModel
     capability_refs: list[NonEmptyString] = Field(default_factory=list, json_schema_extra={"uniqueItems": True})
 
@@ -134,7 +152,28 @@ class AdmittedApparatusBindingModel(ContractModel):
                     "admitted apparatus manifest references must be digest-pinned to a concrete "
                     "processor/backend manifest payload; id/version-only references are not sealable"
                 )
+        participant_keys = [
+            (
+                reference.participant_address,
+                reference.implementation_name,
+                reference.implementation_version,
+                reference.manifest_version,
+            )
+            for reference in self.participant_manifest_refs
+        ]
+        if len(participant_keys) != len(set(participant_keys)):
+            raise ValueError("apparatus participant_manifest_refs must identify unique participant manifests")
         return self
+
+    @model_serializer(mode="wrap")
+    def _serialize_optional_participant_manifest_refs(
+        self,
+        handler: SerializerFunctionWrapHandler,
+    ) -> dict[str, object]:
+        payload = handler(self)
+        if not self.participant_manifest_refs:
+            payload.pop("participant_manifest_refs", None)
+        return payload
 
 
 class AdmittedExecutionControlModel(ContractModel):
@@ -189,5 +228,6 @@ __all__ = [
     "AdmittedTrialPlanInputRefsModel",
     "AdmittedTrialPlanProfilesModel",
     "BindingOrigin",
+    "ExperimentScenarioFamilyReferenceModel",
     "SelectionPolicyKind",
 ]

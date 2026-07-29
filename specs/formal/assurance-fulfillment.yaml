@@ -182,9 +182,9 @@ entries:
           yet; tracked for delivery.
 
   - subsystem: scenario-variation-trial-realization
-    # Partial executable coverage (SCE-002): issues #786 and #787 deliver the
-    # bounded SDL family and experiment-selection surfaces; compiler, runtime,
-    # and schedule-permutation evidence remains with the native dependency chain.
+    # Executable SCE-002 coverage: #786/#787 deliver family/selection authoring,
+    # #788 the sealed plan, and #789 selected-scenario admission plus deterministic
+    # compilation. Runtime provenance/fact-binding remains sequenced.
     delivered_artifacts:
       - kind: invariant_list
         path: specs/formal/scenario-variation-trial-realization/README.md
@@ -192,22 +192,31 @@ entries:
         path: implementations/python/tests/test_sdl_variation_points.py
       - kind: unit_tests
         path: implementations/python/tests/test_experiment_selection.py
+      - kind: unit_tests
+        path: implementations/python/tests/test_sce_002_selected_scenario.py
+      - kind: unit_tests
+        path: implementations/python/tests/test_sce_002_trial_compiler.py
+      - kind: property_based_or_differential_tests
+        path: implementations/python/tests/test_sce_002_trial_compiler.py
       - kind: typed_ir_or_contract_coverage
         path: contracts/schemas/sdl/sdl-authoring-input-v1.json
       - kind: typed_ir_or_contract_coverage
         path: contracts/schemas/experiment-core/experiment-authoring-input-v1.json
+      - kind: typed_ir_or_contract_coverage
+        path: contracts/schemas/plans/admitted-trial-plan-v1.json
+      - kind: typed_ir_or_contract_coverage
+        path: contracts/fixtures/plans/trial-compiler-v1/identity-vectors.json
     waived_artifacts:
       - kind: unit_tests
         date: 2026-07-15
         tracking:
-          - "#789"
           - "#790"
           - "#791"
         rationale: >-
-          Family declaration and selection-policy validation are delivered by
-          #786 and #787. Compilation/admission, instantiation/provenance, and
-          fact-binding unit tests remain owned by the sequenced implementation
-          issues.
+          Family declaration, selection-policy validation, deterministic
+          compilation/admission, and transient selected-scenario construction
+          are delivered by #786, #787, and #789. Durable snapshot/run provenance
+          and fact-binding tests remain owned by the sequenced issues.
       - kind: typed_ir_or_contract_coverage
         date: 2026-07-15
         tracking:
@@ -223,13 +232,13 @@ entries:
         date: 2026-07-15
         tracking:
           - "#274"
-          - "#789"
           - "#790"
           - "#791"
         rationale: >-
-          Schedule-permutation, stream non-interference, serialized
-          instantiation-equivalence, backend refusal, and fact
-          non-retroactivity properties require the follow-on implementations.
+          Schedule/thread/process permutation and stream non-interference are
+          covered by #789. Serialized durable instantiation equivalence,
+          backend refusal after admission, and fact non-retroactivity require
+          the follow-on implementations.
 
   - subsystem: scenario-satisfiability
     delivered_artifacts:

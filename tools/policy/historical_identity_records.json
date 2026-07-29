@@ -978,7 +978,7 @@
       "record_class": "dated-design-record",
       "rationale": "Preserves a completed, dated design or architecture-preflight record from before the RAES identity cutover.",
       "occurrences": 13,
-      "content_sha256": "42ccfba102ee5d15ec0f56c29292aa89f22df2f4f2b7dccbc1c40c2ebc842e7e"
+      "content_sha256": "46f1297d7b3db0b598e2d02334b0d413a97d2b0485e14dfe92d3e629bf792669"
     },
     {
       "path": "docs/decisions/issue-653-sce-004-goal-oriented-tool-flexible-steps-preflight.md",

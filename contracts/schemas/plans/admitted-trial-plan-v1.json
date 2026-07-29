@@ -21,6 +21,13 @@
           "title": "Manifest Refs",
           "type": "array"
         },
+        "participant_manifest_refs": {
+          "items": {
+            "$ref": "#/$defs/AdmittedParticipantManifestReferenceModel"
+          },
+          "title": "Participant Manifest Refs",
+          "type": "array"
+        },
         "realization_envelope": {
           "$ref": "#/$defs/RealizationEnvelopeIdentityModel"
         }
@@ -128,6 +135,47 @@
         "scenario_family_id"
       ],
       "title": "AdmittedInstantiationProvenanceModel",
+      "type": "object"
+    },
+    "AdmittedParticipantManifestReferenceModel": {
+      "additionalProperties": false,
+      "description": "Digest-pinned participant implementation manifest authority.",
+      "properties": {
+        "implementation_name": {
+          "minLength": 1,
+          "title": "Implementation Name",
+          "type": "string"
+        },
+        "implementation_version": {
+          "minLength": 1,
+          "title": "Implementation Version",
+          "type": "string"
+        },
+        "manifest_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Manifest Digest",
+          "type": "string"
+        },
+        "manifest_version": {
+          "minLength": 1,
+          "title": "Manifest Version",
+          "type": "string"
+        },
+        "participant_address": {
+          "minLength": 1,
+          "title": "Participant Address",
+          "type": "string"
+        }
+      },
+      "required": [
+        "participant_address",
+        "implementation_name",
+        "implementation_version",
+        "manifest_version",
+        "manifest_digest"
+      ],
+      "title": "AdmittedParticipantManifestReferenceModel",
       "type": "object"
     },
     "AdmittedSelectionRecordModel": {
@@ -341,10 +389,18 @@
           "$ref": "#/$defs/ExperimentReferenceModel"
         },
         "binding_descriptor_set_ref": {
-          "$ref": "#/$defs/ExperimentReferenceModel"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExperimentReferenceModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "scenario_family_ref": {
-          "$ref": "#/$defs/ExperimentScenarioSnapshotReferenceModel"
+          "$ref": "#/$defs/ExperimentScenarioFamilyReferenceModel"
         },
         "study_ref": {
           "anyOf": [
@@ -364,8 +420,7 @@
       "required": [
         "authoring_input_ref",
         "task_ref",
-        "scenario_family_ref",
-        "binding_descriptor_set_ref"
+        "scenario_family_ref"
       ],
       "title": "AdmittedTrialPlanInputRefsModel",
       "type": "object"
@@ -1239,23 +1294,15 @@
       "title": "ExperimentReferenceModel",
       "type": "object"
     },
-    "ExperimentScenarioSnapshotReferenceModel": {
+    "ExperimentScenarioFamilyReferenceModel": {
       "additionalProperties": false,
-      "description": "Reference constrained to a sealed scenario snapshot.",
+      "description": "Digest-pinned identity of one semantically admitted expanded SDL family.",
       "properties": {
         "ref_digest": {
-          "anyOf": [
-            {
-              "minLength": 1,
-              "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Ref Digest"
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Ref Digest",
+          "type": "string"
         },
         "ref_id": {
           "minLength": 1,
@@ -1263,42 +1310,23 @@
           "type": "string"
         },
         "ref_kind": {
-          "const": "scenario-snapshot",
+          "const": "scenario-family",
           "title": "Ref Kind",
           "type": "string"
         },
-        "ref_path": {
-          "anyOf": [
-            {
-              "minLength": 1,
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Ref Path"
-        },
         "ref_version": {
-          "anyOf": [
-            {
-              "minLength": 1,
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Ref Version"
+          "const": "expanded-scenario-family/v1",
+          "title": "Ref Version",
+          "type": "string"
         }
       },
       "required": [
         "ref_kind",
-        "ref_id"
+        "ref_id",
+        "ref_version",
+        "ref_digest"
       ],
-      "title": "ExperimentScenarioSnapshotReferenceModel",
+      "title": "ExperimentScenarioFamilyReferenceModel",
       "type": "object"
     },
     "ExperimentSelectionMemberOutcomeModel": {

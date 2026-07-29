@@ -200,9 +200,8 @@
     "scenario_family_ref": {
       "ref_digest": "sha256:cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
       "ref_id": "family-a",
-      "ref_kind": "scenario-snapshot",
-      "ref_path": null,
-      "ref_version": "1"
+      "ref_kind": "scenario-family",
+      "ref_version": "expanded-scenario-family/v1"
     },
     "study_ref": null,
     "task_ref": {
@@ -212,7 +211,7 @@
     }
   },
   "isolation_proof": null,
-  "plan_digest": "sha256:5e9dbb69edd677ffc118237f65f8fe511c0ca8f721423a81085cea6d4a316445",
+  "plan_digest": "sha256:c4bd0a87748270bfd11bd2870c8e9604056a30558f2bd0bcc78cd23c5195674c",
   "plan_id": "plan-a",
   "profiles": {
     "canonicalization_profile": "jcs-sha256-v1",
