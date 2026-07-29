@@ -635,16 +635,18 @@ def test_assembler_runs_the_canonical_task_run_validator() -> None:
 
 
 def test_assembler_rejects_validator_outside_the_case_authority_pin() -> None:
+    untrusted = replace(_binding(), validator_digest=_DIGEST_A)
     with pytest.raises(ValueError, match="validator binding does not match"):
-        _evidence(validator_binding=replace(_binding(), validator_digest=_DIGEST_A))
+        _evidence(validator_binding=untrusted)
 
 
 def test_assembler_rejects_projection_evidence_from_the_other_run() -> None:
     baseline_run = _run_and_evidence(0)[0]
     foreign_ref = _run_and_evidence(1)[1].evidence_record_id
+    override = {_run_ref(baseline_run): foreign_ref}
 
     with pytest.raises(ValueError, match="baseline projection evidence must resolve"):
-        _evidence(projection_evidence_override={_run_ref(baseline_run): foreign_ref})
+        _evidence(projection_evidence_override=override)
 
 
 def test_run_pair_ids_must_match_the_case() -> None:
@@ -700,9 +702,11 @@ def test_cleanup_verification_must_match_the_admitted_subject() -> None:
 def test_evidence_records_must_use_unique_ids() -> None:
     case = _case()
     b_ev = _run_and_evidence(0)[1]
+    r_ev = _run_and_evidence(1)[1]
+    records = (b_ev, r_ev, b_ev)
 
     with pytest.raises(ValueError, match="evidence_records must use unique evidence_record_id"):
-        _evidence(case=case, evidence_records=(b_ev, _run_and_evidence(1)[1], b_ev))
+        _evidence(case=case, evidence_records=records)
 
 
 def test_verification_records_must_use_unique_record_ids() -> None:
@@ -759,13 +763,15 @@ def _assemble_with_validator(validator: object) -> RepeatabilityConsistencyEvide
 
 
 def test_assembler_requires_typed_projection_values() -> None:
+    validator = _BadProjectionValidator(return_non_projection=True)
     with pytest.raises(ValueError, match="must derive typed RepetitionProjection values"):
-        _assemble_with_validator(_BadProjectionValidator(return_non_projection=True))
+        _assemble_with_validator(validator)
 
 
 def test_assembler_requires_the_projection_to_identify_its_run() -> None:
+    validator = _BadProjectionValidator(run_ref_override="experiment-run:other@1")
     with pytest.raises(ValueError, match="projection does not identify its admitted run"):
-        _assemble_with_validator(_BadProjectionValidator(run_ref_override="experiment-run:other@1"))
+        _assemble_with_validator(validator)
 
 
 def test_assembler_requires_typed_disposition_values() -> None:
@@ -773,19 +779,26 @@ def test_assembler_requires_typed_disposition_values() -> None:
         def verify_reset(self, **_kwargs):  # type: ignore[no-untyped-def]
             return "verified"
 
+    validator = _BadDispositionValidator()
     with pytest.raises(ValueError, match="must return VerificationDisposition values"):
-        _assemble_with_validator(_BadDispositionValidator())
+        _assemble_with_validator(validator)
 
 
 def test_case_requires_a_distinct_lineage_preserving_pair() -> None:
+    baseline = _repetition_ref(0)
+    repetition = _repetition_ref(1)
+    reused_run = replace(repetition, run_ref=baseline.run_ref)
     with pytest.raises(ValueError, match="distinct run_ref"):
-        _case(repetition=replace(_repetition_ref(1), run_ref=_repetition_ref(0).run_ref))
+        _case(repetition=reused_run)
+    reused_artifact = replace(repetition, projected_artifact_ref=baseline.projected_artifact_ref)
     with pytest.raises(ValueError, match="distinct projected_artifact_ref"):
-        _case(repetition=replace(_repetition_ref(1), projected_artifact_ref=_artifact_ref(0)))
+        _case(repetition=reused_artifact)
+    drifted_subject = replace(repetition, subject_ref="scenario-snapshot:other@1")
     with pytest.raises(ValueError, match="repeat the case subject_ref"):
-        _case(repetition=replace(_repetition_ref(1), subject_ref="scenario-snapshot:other@1"))
+        _case(repetition=drifted_subject)
+    drifted_digest = replace(repetition, subject_digest=_DIGEST_C)
     with pytest.raises(ValueError, match="hold the subject fixed by digest"):
-        _case(repetition=replace(_repetition_ref(1), subject_digest=_DIGEST_C))
+        _case(repetition=drifted_digest)
 
 
 @pytest.mark.parametrize(
@@ -841,10 +854,11 @@ def test_case_rejects_malformed_field_types() -> None:
 
 
 def test_case_requires_at_least_one_capability() -> None:
+    case = _case()
     with pytest.raises(ValueError, match="required_capability_refs must not be empty"):
-        replace(_case(), required_capability_refs=())
+        replace(case, required_capability_refs=())
     with pytest.raises(ValueError, match="required_capability_refs entries must be non-empty"):
-        replace(_case(), required_capability_refs=("",))
+        replace(case, required_capability_refs=("",))
 
 
 def test_variation_policy_requires_and_dedupes_dimensions() -> None:
@@ -867,8 +881,9 @@ def test_variation_policy_requires_and_dedupes_dimensions() -> None:
     ],
 )
 def test_verification_binding_shape_is_enforced(field_name: str, bad_value: str, message: str) -> None:
+    binding = _binding()
     with pytest.raises(ValueError, match=message):
-        replace(_binding(), **{field_name: bad_value})
+        replace(binding, **{field_name: bad_value})
 
 
 @pytest.mark.parametrize(
@@ -879,8 +894,9 @@ def test_verification_binding_shape_is_enforced(field_name: str, bad_value: str,
     ],
 )
 def test_repetition_ref_shape_is_enforced(field_name: str, bad_value: str, message: str) -> None:
+    rep = _repetition_ref(0)
     with pytest.raises(ValueError, match=message):
-        replace(_repetition_ref(0), **{field_name: bad_value})
+        replace(rep, **{field_name: bad_value})
 
 
 def test_verification_record_header_is_enforced() -> None:
