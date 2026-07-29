@@ -2,9 +2,10 @@
 
 These are the bounded, typed sub-collections held by
 :class:`~raes.runtime_platform_application.RuntimePlatformApplication`:
-content objects (bounded parsed manifests — never raw bodies), releasability
-markings, organizations, tenants, outbound upstream bindings, connectors, the
-optional execution policy, and provenance-bearing settings.
+provider-neutral capabilities, legacy content objects (bounded parsed
+manifests — never raw bodies), releasability markings, organizations, tenants,
+outbound upstream bindings, connectors, the optional execution policy, and
+provenance-bearing settings.
 """
 
 from typing import Any
@@ -13,6 +14,7 @@ from pydantic import Field, field_validator, model_validator
 
 from ._base import SDLModel, parse_int_or_var
 from .runtime_platform_application_vocab import (
+    RuntimePlatformApplicationCapabilityKind,
     RuntimePlatformApplicationConnectorKind,
     RuntimePlatformApplicationContentObjectKind,
     RuntimePlatformApplicationMarkingScheme,
@@ -29,6 +31,7 @@ from .runtime_values import (
 )
 
 __all__ = [
+    "RuntimePlatformApplicationCapability",
     "RuntimePlatformApplicationConnector",
     "RuntimePlatformApplicationContentObject",
     "RuntimePlatformApplicationExecutionPolicy",
@@ -79,12 +82,48 @@ class RuntimePlatformApplicationTenant(SDLModel):
         return require_symbol(v, field_name="tenant_id")
 
 
+class RuntimePlatformApplicationCapability(SDLModel):
+    """A provider-neutral functional role exposed by the application.
+
+    Capability declarations are composable and independent of product
+    categories, configuration completeness, loaded content, policy, and
+    execution guarantees. ``evidence_refs`` may identify the evidence supporting
+    the declared runtime contract without embedding backend payloads.
+    """
+
+    capability_id: str
+    kind: RuntimePlatformApplicationCapabilityKind | str = RuntimePlatformApplicationCapabilityKind.UNKNOWN
+    evidence_refs: list[str] = Field(default_factory=list)
+    description: str = ""
+
+    @field_validator("capability_id")
+    @classmethod
+    def validate_capability_id(cls, v: str) -> str:
+        return require_symbol(v, field_name="capability_id")
+
+    @field_validator("kind", mode="before")
+    @classmethod
+    def normalize_kind(cls, v: RuntimePlatformApplicationCapabilityKind | str) -> object:
+        return parse_runtime_enum_or_var(v, RuntimePlatformApplicationCapabilityKind, field_name="kind")
+
+    @field_validator("evidence_refs", mode="before")
+    @classmethod
+    def coerce_evidence_refs(cls, v: object) -> object:
+        return coerce_string_list(v)
+
+    @model_validator(mode="after")
+    def validate_capability(self) -> "RuntimePlatformApplicationCapability":
+        _reject_duplicate_values(self.evidence_refs, field_name="evidence_refs", owner=self.capability_id)
+        return self
+
+
 class RuntimePlatformApplicationContentObject(SDLModel):
-    """A typed platform content object as a bounded parsed manifest entry.
+    """A legacy typed platform content object as a bounded manifest entry.
 
     The object carries a typed ``kind``, bounded typed ``attributes``, typed
     ``references`` (to other ``content_object_id`` values), ``marking_refs``,
-    and ``evidence_refs`` — structurally **never** a raw object body.
+    and ``evidence_refs`` — structurally **never** a raw object body. Its
+    presence does not imply an application capability.
     """
 
     content_object_id: str

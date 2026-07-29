@@ -256,31 +256,56 @@ class BehavioralRelationCatalogModel(ContractModel):
 
     @model_validator(mode="after")
     def _validate_catalog_references(self) -> BehavioralRelationCatalogModel:
-        source_ids = [source.source_id for source in self.bibliography]
-        if len(source_ids) != len(set(source_ids)):
-            raise ValueError("behavioral-relation bibliography source ids must be unique")
+        source_ids = _bibliography_source_ids(self.bibliography)
         relation_ids = set(self.relations)
-        for key, relation in self.relations.items():
-            if key != relation.relation_id:
-                raise ValueError("behavioral-relation map keys must match embedded relation ids")
-            missing_sources = sorted(set(relation.source_refs) - set(source_ids))
-            if missing_sources:
-                raise ValueError(f"relation {key!r} references unknown bibliography sources: {missing_sources}")
-        surface_ids = [surface.surface_id for surface in self.claim_surfaces]
-        if len(surface_ids) != len(set(surface_ids)):
-            raise ValueError("behavioral claim-surface ids must be unique")
-        for surface in self.claim_surfaces:
-            missing_relations = sorted(
-                (set(surface.intended_relation_ids) | set(surface.prohibited_relation_ids)) - relation_ids
-            )
-            if missing_relations:
-                raise ValueError(
-                    f"claim surface {surface.surface_id!r} references unknown relations: {missing_relations}"
-                )
-        for key, example in self.worked_examples.items():
-            if key != example.example_id:
-                raise ValueError("worked-example map keys must match embedded example ids")
+        _validate_relation_references(self.relations, source_ids)
+        _validate_claim_surface_references(self.claim_surfaces, relation_ids)
+        _validate_worked_example_references(self.worked_examples)
         return self
+
+
+def _bibliography_source_ids(
+    bibliography: list[BehavioralBibliographySourceModel],
+) -> set[str]:
+    source_ids = [source.source_id for source in bibliography]
+    if len(source_ids) != len(set(source_ids)):
+        raise ValueError("behavioral-relation bibliography source ids must be unique")
+    return set(source_ids)
+
+
+def _validate_relation_references(
+    relations: dict[BehavioralRelationId, BehavioralRelationDefinitionModel],
+    source_ids: set[str],
+) -> None:
+    for key, relation in relations.items():
+        if key != relation.relation_id:
+            raise ValueError("behavioral-relation map keys must match embedded relation ids")
+        missing_sources = sorted(set(relation.source_refs) - source_ids)
+        if missing_sources:
+            raise ValueError(f"relation {key!r} references unknown bibliography sources: {missing_sources}")
+
+
+def _validate_claim_surface_references(
+    claim_surfaces: list[BehavioralClaimSurfaceModel],
+    relation_ids: set[BehavioralRelationId],
+) -> None:
+    surface_ids = [surface.surface_id for surface in claim_surfaces]
+    if len(surface_ids) != len(set(surface_ids)):
+        raise ValueError("behavioral claim-surface ids must be unique")
+    for surface in claim_surfaces:
+        missing_relations = sorted(
+            (set(surface.intended_relation_ids) | set(surface.prohibited_relation_ids)) - relation_ids
+        )
+        if missing_relations:
+            raise ValueError(f"claim surface {surface.surface_id!r} references unknown relations: {missing_relations}")
+
+
+def _validate_worked_example_references(
+    worked_examples: dict[BehavioralRelationId, BehavioralWorkedExampleModel],
+) -> None:
+    for key, example in worked_examples.items():
+        if key != example.example_id:
+            raise ValueError("worked-example map keys must match embedded example ids")
 
 
 def behavioral_relation_catalog_path() -> Path:

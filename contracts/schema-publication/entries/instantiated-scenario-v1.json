@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
   "stability": "draft",
-  "content_hash": "b6bafa7c5ea4ddff518f6295bf625fae769be85344f27785ca0c99f93f26f5a3",
+  "content_hash": "3eb72628cb9e8c69a2228cdc36b61a455d2ee567adfce33444deb5f1f1d4056b",
   "last_change": {
-    "summary": "Added sealed admitted trial selection and binding lineage to instantiation provenance for issue #790.",
-    "content_hash": "b6bafa7c5ea4ddff518f6295bf625fae769be85344f27785ca0c99f93f26f5a3"
+    "summary": "Integrated admitted trial provenance with composable platform capability schema updates for issues #790 and #956.",
+    "content_hash": "3eb72628cb9e8c69a2228cdc36b61a455d2ee567adfce33444deb5f1f1d4056b"
   }
 }

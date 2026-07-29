@@ -2,9 +2,9 @@
   "contract_id": "sdl-authoring-input-v1",
   "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
   "stability": "draft",
-  "content_hash": "5009bed0bb0cbb633ad9fd5adf4af890a645df6e48f5ca1e2f8750a6db2a6c95",
+  "content_hash": "d4594b2c04283d95378faec2f64343870e8756f09a5a04a8746c6d8ccd56a270",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "5009bed0bb0cbb633ad9fd5adf4af890a645df6e48f5ca1e2f8750a6db2a6c95"
+    "summary": "Added composable provider-neutral platform capabilities and marked legacy platform categories and content manifests deprecated for issue #956.",
+    "content_hash": "d4594b2c04283d95378faec2f64343870e8756f09a5a04a8746c6d8ccd56a270"
   }
 }

@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-snapshot-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "813e2912f647d9cd2b232f9e718ed5a2d4c80f05e356186c1a20f8624f95be1b",
+  "content_hash": "99432f259e709993ffc5b180f82457cb71560630a079eb5a34b5923e06d7c8cd",
   "last_change": {
-    "summary": "Bound canonical instantiated snapshots to sealed admitted trial provenance for issue #790.",
-    "content_hash": "813e2912f647d9cd2b232f9e718ed5a2d4c80f05e356186c1a20f8624f95be1b"
+    "summary": "Integrated admitted trial provenance with composable platform capability schema updates for issues #790 and #956.",
+    "content_hash": "99432f259e709993ffc5b180f82457cb71560630a079eb5a34b5923e06d7c8cd"
   }
 }

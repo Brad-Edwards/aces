@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "2516ffb812146f3fc97e178d57dc292ffcaf8fa9b3cd145c4b34b3d50c54f355",
+  "content_hash": "2d0299274877012fc2c3a3e65d3d22a2e7d2992454697248a2b2e48759676973",
   "last_change": {
-    "summary": "Propagated admitted trial instantiation provenance through embedded instantiated scenarios for issue #790.",
-    "content_hash": "2516ffb812146f3fc97e178d57dc292ffcaf8fa9b3cd145c4b34b3d50c54f355"
+    "summary": "Integrated admitted trial provenance with composable platform capability schema updates for issues #790 and #956.",
+    "content_hash": "2d0299274877012fc2c3a3e65d3d22a2e7d2992454697248a2b2e48759676973"
   }
 }
