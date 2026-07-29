@@ -12,9 +12,11 @@ from raes_contracts.contracts import (
     ExperimentProductSelectionPolicyModel,
     ExperimentSampleSelectionPolicyModel,
     ExperimentSpecModel,
+    ExperimentStochasticControlModel,
     ExperimentStratifiedSelectionPolicyModel,
     PublicRandomOutcomeModel,
     PublicSeedModel,
+    RandomStreamControlBindingModel,
     RandomStreamDrawRecordModel,
     StreamAddressModel,
     TrialCompilationLimitsModel,
@@ -34,6 +36,8 @@ from .domains import canonical_domain_outcomes
 from .models import CompilationFailure
 from .profiles import RANDOM_STREAM_PROFILE_ID, RANDOM_STREAM_PROFILE_VERSION
 
+_SELECTION_POLICIES_ADDRESS = "/run_plan/selection_policies"
+
 
 @dataclass(frozen=True)
 class ResolvedSelection:
@@ -49,13 +53,16 @@ class CoordinateSelections:
     draws: tuple[RandomStreamDrawRecordModel, ...] = ()
 
 
-def _merge_rows(rows: tuple[ResolvedSelection, ...], additions: tuple[ResolvedSelection, ...]) -> tuple:
+def _merge_rows(
+    rows: tuple[ResolvedSelection, ...],
+    additions: tuple[ResolvedSelection, ...],
+) -> tuple[ResolvedSelection, ...]:
     merged = {selection.point_id: selection for selection in rows}
     for selection in additions:
         if selection.point_id in merged:
             raise CompilationFailure(
                 "point-selected-multiple-times",
-                "/run_plan/selection_policies",
+                _SELECTION_POLICIES_ADDRESS,
                 "multiple selection policies resolve the same variation point",
             )
         merged[selection.point_id] = selection
@@ -146,14 +153,10 @@ def _stratified_rows(
     return output
 
 
-def _sample_rows(
+def _resolve_sample_control(
     policy: ExperimentSampleSelectionPolicyModel,
-    *,
-    family: ExpandedScenario,
     spec: ExperimentSpecModel,
-    coordinates: list[TrialCoordinateModel],
-    limits: TrialCompilationLimitsModel,
-) -> list[CoordinateSelections]:
+) -> tuple[ExperimentStochasticControlModel, RandomStreamControlBindingModel]:
     control = next(
         (item for item in spec.run_plan.stochastic_controls if item.control_id == policy.stochastic_control_ref),
         None,
@@ -161,7 +164,7 @@ def _sample_rows(
     if control is None or control.executable_binding is None:
         raise CompilationFailure(
             "sample-control-unresolved",
-            f"/run_plan/selection_policies/{policy.policy_id}",
+            f"{_SELECTION_POLICIES_ADDRESS}/{policy.policy_id}",
             "sample policy control is not executable",
         )
     binding = control.executable_binding
@@ -180,6 +183,18 @@ def _sample_rows(
             f"/run_plan/stochastic_controls/{control.control_id}",
             "governed entropy requires an authorized in-process resolver",
         )
+    return control, binding
+
+
+def _sample_rows(
+    policy: ExperimentSampleSelectionPolicyModel,
+    *,
+    family: ExpandedScenario,
+    spec: ExperimentSpecModel,
+    coordinates: list[TrialCoordinateModel],
+    limits: TrialCompilationLimitsModel,
+) -> list[CoordinateSelections]:
+    control, binding = _resolve_sample_control(policy, spec)
     profile_id = binding.profile_ref.ref_id
     profile = load_random_stream_profile(profile_id)
     transform = profile.transforms[BOUNDED_INTEGER_TRANSFORM_ID]
@@ -215,7 +230,7 @@ def _sample_rows(
     if batch.diagnostic is not None or batch.draws is None:
         raise CompilationFailure(
             "sample-address-collision",
-            f"/run_plan/selection_policies/{policy.policy_id}",
+            f"{_SELECTION_POLICIES_ADDRESS}/{policy.policy_id}",
             "sample policy draw addresses are not unique",
         )
     rows: list[CoordinateSelections] = []
@@ -223,7 +238,7 @@ def _sample_rows(
         if draw.rejection_exhausted or draw.value is None:
             raise CompilationFailure(
                 "sample-rejection-exhausted",
-                f"/run_plan/selection_policies/{policy.policy_id}",
+                f"{_SELECTION_POLICIES_ADDRESS}/{policy.policy_id}",
                 "sample policy exhausted its bounded transform",
             )
         rows.append(
@@ -274,7 +289,7 @@ def compile_coordinate_selections(
     if len(non_fixed_roots) > 1:
         raise CompilationFailure(
             "policy-roots-ambiguous",
-            "/run_plan/selection_policies",
+            _SELECTION_POLICIES_ADDRESS,
             "multiple non-fixed selection policy roots are ambiguous",
         )
     if not policies:
@@ -312,7 +327,7 @@ def compile_coordinate_selections(
     if any({selection.point_id for selection in row.selections} != expected_points for row in completed):
         raise CompilationFailure(
             "variation-points-uncovered",
-            "/run_plan/selection_policies",
+            _SELECTION_POLICIES_ADDRESS,
             "every family variation point must be selected exactly once",
         )
     return completed

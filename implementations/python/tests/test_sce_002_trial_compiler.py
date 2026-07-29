@@ -770,7 +770,7 @@ def test_ambiguous_policy_roots_fail_atomically_with_bounded_safe_diagnostic() -
 
 def test_coordinate_limit_failure_is_atomic_and_precedes_materialization(monkeypatch) -> None:
     monkeypatch.setattr(
-        "raes_processor.trial_compiler.compiler.replicate_id",
+        "raes_processor.trial_compiler.inputs.replicate_id",
         lambda _ordinal: pytest.fail("coordinates were materialized before their cardinality was admitted"),
     )
     request = replace(

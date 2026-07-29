@@ -211,11 +211,11 @@ def test_complete_selection_constructs_and_semantically_admits_concrete_scenario
 
 
 def test_incomplete_selection_fails_closed_without_disclosing_values() -> None:
+    family = _family()
+    outcomes = {"payload-path": LiteralBindingValueModel(kind="literal", value="/opt/b")}
+
     with pytest.raises(ValueError) as raised:
-        select_scenario_family(
-            _family(),
-            {"payload-path": LiteralBindingValueModel(kind="literal", value="/opt/b")},
-        )
+        select_scenario_family(family, outcomes)
 
     assert "payload-host" in str(raised.value)
     assert "/opt/b" not in str(raised.value)
@@ -249,9 +249,10 @@ def test_conflicting_writers_to_one_canonical_target_fail_before_application() -
         kind="reference",
         reference_id="primary",
     )
+    family = _all_kinds_family()
 
     with pytest.raises(ValueError, match="conflicting values"):
-        select_scenario_family(_all_kinds_family(), outcomes)
+        select_scenario_family(family, outcomes)
 
 
 def test_cross_point_requires_constraint_is_enforced_before_application() -> None:
@@ -273,8 +274,9 @@ def test_cross_point_requires_constraint_is_enforced_before_application() -> Non
 def test_post_selection_whole_scenario_semantics_reject_invalid_timing() -> None:
     outcomes = _all_kinds_outcomes()
     outcomes["start-offset"] = LiteralBindingValueModel(kind="literal", value=5)
+    family = _all_kinds_family()
 
     with pytest.raises(ValueError, match="whole-scenario semantic admission") as raised:
-        select_scenario_family(_all_kinds_family(), outcomes)
+        select_scenario_family(family, outcomes)
 
     assert "input_value" not in str(raised.value)

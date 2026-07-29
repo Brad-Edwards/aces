@@ -64,20 +64,22 @@ def _canonical_owner_address(family: ExpandedScenario, reference: str, section: 
 def _canonical_target_id(family: ExpandedScenario, point: VariationPoint) -> str:
     target = point.target
     if isinstance(target, VariableTarget):
-        return f"variables.{target.variable}"
-    if isinstance(target, ReferenceTarget):
+        target_id = f"variables.{target.variable}"
+    elif isinstance(target, ReferenceTarget):
         owner_section, _ = REFERENCE_TARGET_SPECS[target.slot]
         owner = _canonical_owner_address(family, target.owner, owner_section)
-        return f"{owner}.{target.slot.value.split('.', 1)[1]}"
-    if isinstance(target, CollectionTarget):
+        target_id = f"{owner}.{target.slot.value.split('.', 1)[1]}"
+    elif isinstance(target, CollectionTarget):
         owner_section, _ = COLLECTION_TARGET_SPECS[target.slot]
         owner = _canonical_owner_address(family, target.owner, owner_section)
-        return f"{owner}.{target.slot.value.split('.', 1)[1]}"
-    if isinstance(target, LogicalTimingTarget):
+        target_id = f"{owner}.{target.slot.value.split('.', 1)[1]}"
+    elif isinstance(target, LogicalTimingTarget):
         owner_section, _, _ = TIMING_TARGET_SPECS[target.slot]
         owner = _canonical_owner_address(family, target.owner, owner_section)
-        return f"{owner}.{target.slot.value.split('.', 1)[1]}"
-    raise ValueError("unsupported variation target")
+        target_id = f"{owner}.{target.slot.value.split('.', 1)[1]}"
+    else:
+        raise ValueError("unsupported variation target")
+    return target_id
 
 
 def _point_value_type(family: ExpandedScenario, point: VariationPoint) -> str:
@@ -249,6 +251,43 @@ def _apply_structural_outcome(
         owner[target.slot.value.split(".", 1)[1]] = outcome.value
 
 
+def _resolved_reference_value(
+    point: VariationPoint,
+    outcome: object,
+) -> str:
+    if isinstance(outcome, ExperimentSelectionReferenceOutcomeModel):
+        value = outcome.reference_id
+    elif isinstance(point, AlternativeVariationPoint) and isinstance(
+        outcome,
+        ExperimentSelectionMemberOutcomeModel,
+    ):
+        value = point.alternatives[outcome.member_id].reference
+    else:
+        raise ValueError("variation outcome does not resolve to a canonical reference value")
+    return value
+
+
+def _resolved_collection_value(
+    payload: dict[str, object],
+    family: ExpandedScenario,
+    point: VariationPoint,
+    outcome: object,
+) -> object:
+    if not isinstance(point.target, CollectionTarget) or not isinstance(
+        outcome,
+        (ExperimentSelectionSubsetOutcomeModel, ExperimentSelectionOrderOutcomeModel),
+    ):
+        raise ValueError("variation outcome does not resolve to a canonical collection value")
+    references = [point.members[member_id].reference for member_id in outcome.member_ids]
+    owner_section, _ = COLLECTION_TARGET_SPECS[point.target.slot]
+    current = _owner_payload(payload, family, point.target.owner, owner_section).get(
+        point.target.slot.value.split(".", 1)[1]
+    )
+    return (
+        {reference: current.get(reference, "") for reference in references} if isinstance(current, dict) else references
+    )
+
+
 def _resolved_target_value(
     payload: dict[str, object],
     family: ExpandedScenario,
@@ -257,28 +296,16 @@ def _resolved_target_value(
 ) -> object:
     target = point.target
     if isinstance(target, VariableTarget) and isinstance(outcome, LiteralBindingValueModel):
-        return outcome.value
-    if isinstance(target, ReferenceTarget):
-        if isinstance(outcome, ExperimentSelectionReferenceOutcomeModel):
-            return outcome.reference_id
-        if isinstance(point, AlternativeVariationPoint) and isinstance(
-            outcome,
-            ExperimentSelectionMemberOutcomeModel,
-        ):
-            return point.alternatives[outcome.member_id].reference
-    if isinstance(target, CollectionTarget) and isinstance(
-        outcome,
-        (ExperimentSelectionSubsetOutcomeModel, ExperimentSelectionOrderOutcomeModel),
-    ):
-        references = [point.members[member_id].reference for member_id in outcome.member_ids]
-        owner_section, _ = COLLECTION_TARGET_SPECS[target.slot]
-        current = _owner_payload(payload, family, target.owner, owner_section).get(target.slot.value.split(".", 1)[1])
-        if isinstance(current, dict):
-            return {reference: current.get(reference, "") for reference in references}
-        return references
-    if isinstance(target, LogicalTimingTarget) and isinstance(outcome, LiteralBindingValueModel):
-        return outcome.value
-    raise ValueError("variation outcome does not resolve to a canonical target value")
+        value: object = outcome.value
+    elif isinstance(target, ReferenceTarget):
+        value = _resolved_reference_value(point, outcome)
+    elif isinstance(target, CollectionTarget):
+        value = _resolved_collection_value(payload, family, point, outcome)
+    elif isinstance(target, LogicalTimingTarget) and isinstance(outcome, LiteralBindingValueModel):
+        value = outcome.value
+    else:
+        raise ValueError("variation outcome does not resolve to a canonical target value")
+    return value
 
 
 def _validate_target_writes(

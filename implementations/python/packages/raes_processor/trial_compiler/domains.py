@@ -21,6 +21,9 @@ from raes_contracts.contracts import (
 
 from .models import CompilationFailure
 
+_DOMAIN_ADDRESS = "/family/variation_points"
+_FINITE_DOMAIN_MESSAGE = "trial-compiler-v1 admits only finite scalar domains"
+
 
 def _canonical_scalar_key(value: object) -> bytes:
     if value is None:
@@ -40,8 +43,8 @@ def _integer_interval_bounds(domain: NumericIntervalDomain) -> tuple[int, int]:
     if domain.numeric_type is not NumericType.INTEGER:
         raise CompilationFailure(
             "domain-not-finite",
-            "/family/variation_points",
-            "trial-compiler-v1 admits only finite scalar domains",
+            _DOMAIN_ADDRESS,
+            _FINITE_DOMAIN_MESSAGE,
         )
     lower = math.ceil(domain.lower)
     upper = math.floor(domain.upper)
@@ -57,49 +60,54 @@ def _integer_interval_values(domain: NumericIntervalDomain) -> list[int]:
     return list(range(lower, upper + 1))
 
 
+def _scalar_domain_cardinality(
+    point: ParameterVariationPoint | LogicalTimingVariationPoint,
+) -> int:
+    domain = point.domain
+    if isinstance(domain, ExactDomain):
+        cardinality = 1
+    elif isinstance(domain, EnumDomain):
+        cardinality = len(domain.values)
+    elif isinstance(domain, BooleanDomain):
+        cardinality = 1 if domain.value is not None else 2
+    elif isinstance(domain, NumericIntervalDomain):
+        lower, upper = _integer_interval_bounds(domain)
+        cardinality = max(0, upper - lower + 1)
+    else:
+        raise CompilationFailure("domain-not-finite", _DOMAIN_ADDRESS, _FINITE_DOMAIN_MESSAGE)
+    return cardinality
+
+
 def _domain_cardinality(point: VariationPoint) -> int:
     if isinstance(point, (ParameterVariationPoint, LogicalTimingVariationPoint)):
-        domain = point.domain
-        if isinstance(domain, ExactDomain):
-            return 1
-        if isinstance(domain, EnumDomain):
-            return len(domain.values)
-        if isinstance(domain, BooleanDomain):
-            return 1 if domain.value is not None else 2
-        if isinstance(domain, NumericIntervalDomain):
-            lower, upper = _integer_interval_bounds(domain)
-            return max(0, upper - lower + 1)
+        cardinality = _scalar_domain_cardinality(point)
+    elif isinstance(point, GovernedReferenceVariationPoint):
+        cardinality = len(point.domain.allowed_refs)
+    elif isinstance(point, AlternativeVariationPoint):
+        cardinality = len(point.alternatives)
+    else:
         raise CompilationFailure(
-            "domain-not-finite",
-            "/family/variation_points",
-            "trial-compiler-v1 admits only finite scalar domains",
+            "domain-kind-unsupported",
+            _DOMAIN_ADDRESS,
+            "the selected policy does not support this variation-point kind",
         )
-    if isinstance(point, GovernedReferenceVariationPoint):
-        return len(point.domain.allowed_refs)
-    if isinstance(point, AlternativeVariationPoint):
-        return len(point.alternatives)
-    raise CompilationFailure(
-        "domain-kind-unsupported",
-        "/family/variation_points",
-        "the selected policy does not support this variation-point kind",
-    )
+    return cardinality
 
 
 def _scalar_values(point: ParameterVariationPoint | LogicalTimingVariationPoint) -> list[object]:
     domain = point.domain
+    values: list[object]
     if isinstance(domain, ExactDomain):
-        return [domain.value]
-    if isinstance(domain, EnumDomain):
-        return sorted(domain.values, key=_canonical_scalar_key)
-    if isinstance(domain, BooleanDomain):
-        return [domain.value] if domain.value is not None else [False, True]
-    if isinstance(domain, NumericIntervalDomain):
-        return _integer_interval_values(domain)
-    raise CompilationFailure(
-        "domain-not-finite",
-        "/family/variation_points",
-        "trial-compiler-v1 admits only finite scalar domains",
-    )
+        values = [domain.value]
+    elif isinstance(domain, EnumDomain):
+        values = sorted(domain.values, key=_canonical_scalar_key)
+    elif isinstance(domain, BooleanDomain):
+        values = [domain.value] if domain.value is not None else [False, True]
+    elif isinstance(domain, NumericIntervalDomain):
+        values = _integer_interval_values(domain)
+    else:
+        raise CompilationFailure("domain-not-finite", _DOMAIN_ADDRESS, _FINITE_DOMAIN_MESSAGE)
+    return values
 
 
 def canonical_domain_outcomes(point: VariationPoint, *, maximum: int) -> list[object]:
@@ -109,13 +117,13 @@ def canonical_domain_outcomes(point: VariationPoint, *, maximum: int) -> list[ob
     if cardinality == 0:
         raise CompilationFailure(
             "domain-empty",
-            "/family/variation_points",
+            _DOMAIN_ADDRESS,
             "a selected variation-point domain is empty",
         )
     if cardinality > maximum:
         raise CompilationFailure(
             "domain-limit-exceeded",
-            "/family/variation_points",
+            _DOMAIN_ADDRESS,
             "a variation-point domain exceeds the compilation limit",
         )
     if isinstance(point, (ParameterVariationPoint, LogicalTimingVariationPoint)):
@@ -135,7 +143,7 @@ def canonical_domain_outcomes(point: VariationPoint, *, maximum: int) -> list[ob
     else:
         raise CompilationFailure(
             "domain-kind-unsupported",
-            "/family/variation_points",
+            _DOMAIN_ADDRESS,
             "the selected policy does not support this variation-point kind",
         )
     return outcomes

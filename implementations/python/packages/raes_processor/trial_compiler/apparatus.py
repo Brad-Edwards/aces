@@ -7,6 +7,7 @@ from collections.abc import Iterable
 from raes_contracts.canonical import canonical_json_digest
 from raes_contracts.contracts import (
     BackendManifestV2Model,
+    ExperimentApparatusConstraintModel,
     ExperimentManifestReferenceModel,
     ParticipantImplementationManifestModel,
     ProcessorManifestV2Model,
@@ -23,6 +24,8 @@ _CAPABILITY_CONTRACT_ALIASES = {
     "evaluation-results": "evaluation-result-envelope-v1",
     "workflow-results": "workflow-result-envelope-v1",
 }
+_MANIFEST_REFS_ADDRESS = "/apparatus/manifest_refs"
+_PARTICIPANT_MANIFEST_REFS_ADDRESS = "/apparatus/participant_manifest_refs"
 
 
 def _fail(code: str, address: str, message: str) -> CompilationFailure:
@@ -39,7 +42,7 @@ def _reference_key(reference: ExperimentManifestReferenceModel) -> ApparatusMani
     ):
         raise _fail(
             "apparatus-manifest-reference-invalid",
-            "/apparatus/manifest_refs",
+            _MANIFEST_REFS_ADDRESS,
             "selected apparatus manifest references require an exact processor or backend subject identity",
         )
     return (
@@ -70,14 +73,14 @@ def _validate_reference_payload(
     ):
         raise _fail(
             "apparatus-manifest-identity-mismatch",
-            "/apparatus/manifest_refs",
+            _MANIFEST_REFS_ADDRESS,
             "selected apparatus manifest identity does not match its concrete payload",
         )
     digest = canonical_json_digest(manifest.model_dump(mode="json"))
     if reference.ref_digest != digest:
         raise _fail(
             "apparatus-manifest-digest-mismatch",
-            "/apparatus/manifest_refs",
+            _MANIFEST_REFS_ADDRESS,
             "selected apparatus manifest digest does not match its concrete payload",
         )
 
@@ -117,28 +120,33 @@ def _reference_satisfies_requirement(
     selected: ExperimentManifestReferenceModel,
     required: ExperimentManifestReferenceModel,
 ) -> bool:
+    reference_matches = True
     for field_name in ("ref_kind", "ref_id", "ref_version", "ref_digest"):
         required_value = getattr(required, field_name)
         if required_value is not None and getattr(selected, field_name) != required_value:
-            return False
+            reference_matches = False
+            break
     required_subject = required.subject_ref
     selected_subject = selected.subject_ref
-    if required_subject is None:
-        return True
-    if selected_subject is None:
-        return False
-    return all(
-        getattr(required_subject, field_name) is None
-        or getattr(selected_subject, field_name) == getattr(required_subject, field_name)
-        for field_name in ("ref_kind", "ref_id", "ref_version")
-    )
+    if not reference_matches or required_subject is None:
+        subject_matches = reference_matches
+    elif selected_subject is None:
+        subject_matches = False
+    else:
+        subject_matches = all(
+            getattr(required_subject, field_name) is None
+            or getattr(selected_subject, field_name) == getattr(required_subject, field_name)
+            for field_name in ("ref_kind", "ref_id", "ref_version")
+        )
+    return subject_matches
 
 
-def validate_selected_apparatus(
+def _load_apparatus_manifests(
     request: TrialCompilationRequest,
-) -> dict[ApparatusManifestKey, ApparatusManifest]:
-    """Resolve and validate every sealed apparatus reference against concrete content."""
-
+) -> tuple[
+    dict[ApparatusManifestKey, ApparatusManifest],
+    dict[ApparatusManifestKey, ExperimentManifestReferenceModel],
+]:
     selected: dict[ApparatusManifestKey, ApparatusManifest] = {}
     references_by_key: dict[ApparatusManifestKey, ExperimentManifestReferenceModel] = {}
     for reference in request.apparatus.manifest_refs:
@@ -146,20 +154,26 @@ def validate_selected_apparatus(
         if key in selected:
             raise _fail(
                 "apparatus-manifest-duplicate",
-                "/apparatus/manifest_refs",
+                _MANIFEST_REFS_ADDRESS,
                 "selected apparatus contains duplicate concrete manifest identities",
             )
         manifest = request.apparatus_manifests.get(key)
         if manifest is None:
             raise _fail(
                 "apparatus-manifest-payload-missing",
-                "/apparatus/manifest_refs",
+                _MANIFEST_REFS_ADDRESS,
                 "selected apparatus manifest reference has no exact concrete payload",
             )
         _validate_reference_payload(reference, manifest)
         selected[key] = manifest
         references_by_key[key] = reference
+    return selected, references_by_key
 
+
+def _validate_apparatus_envelope_and_capabilities(
+    request: TrialCompilationRequest,
+    selected: dict[ApparatusManifestKey, ApparatusManifest],
+) -> set[str]:
     backends = [manifest for manifest in selected.values() if isinstance(manifest, BackendManifestV2Model)]
     if not backends or any(
         manifest.realization_envelope != request.realization_envelope.identity for manifest in backends
@@ -169,7 +183,6 @@ def validate_selected_apparatus(
             "/apparatus/realization_envelope",
             "selected backend manifests do not bind the admitted realization envelope",
         )
-
     available_capabilities = set().union(*(_manifest_capability_ids(manifest) for manifest in selected.values()))
     declared_capabilities = set(request.apparatus.capability_refs)
     if not declared_capabilities.issubset(available_capabilities):
@@ -178,17 +191,13 @@ def validate_selected_apparatus(
             "/apparatus/capability_refs",
             "selected apparatus capability claims are not proven by concrete manifests",
         )
+    return declared_capabilities
 
-    intent = request.experiment.apparatus_intent
-    if intent is None:
-        return selected
-    if not set(intent.required_capabilities).issubset(declared_capabilities):
-        raise _fail(
-            "apparatus-capability-missing",
-            "/apparatus/capability_refs",
-            "selected apparatus does not satisfy every required capability",
-        )
 
+def _validate_apparatus_allowlists(
+    selected: dict[ApparatusManifestKey, ApparatusManifest],
+    intent: ExperimentApparatusConstraintModel,
+) -> None:
     for manifest_kind, allowed_refs in (
         ("processor", intent.allowed_processor_refs),
         ("backend", intent.allowed_backend_refs),
@@ -199,10 +208,27 @@ def validate_selected_apparatus(
         ):
             raise _fail(
                 "apparatus-identity-not-allowed",
-                "/apparatus/manifest_refs",
+                _MANIFEST_REFS_ADDRESS,
                 "selected apparatus identity is outside its admitted kind-specific allowlist",
             )
 
+
+def _validate_apparatus_intent(
+    request: TrialCompilationRequest,
+    selected: dict[ApparatusManifestKey, ApparatusManifest],
+    references_by_key: dict[ApparatusManifestKey, ExperimentManifestReferenceModel],
+    declared_capabilities: set[str],
+) -> None:
+    intent = request.experiment.apparatus_intent
+    if intent is None:
+        return
+    if not set(intent.required_capabilities).issubset(declared_capabilities):
+        raise _fail(
+            "apparatus-capability-missing",
+            "/apparatus/capability_refs",
+            "selected apparatus does not satisfy every required capability",
+        )
+    _validate_apparatus_allowlists(selected, intent)
     selected_references = tuple(references_by_key.values())
     if any(
         not any(_reference_satisfies_requirement(selected_ref, required) for selected_ref in selected_references)
@@ -210,9 +236,19 @@ def validate_selected_apparatus(
     ):
         raise _fail(
             "apparatus-manifest-missing",
-            "/apparatus/manifest_refs",
+            _MANIFEST_REFS_ADDRESS,
             "selected apparatus does not include every exact required manifest",
         )
+
+
+def validate_selected_apparatus(
+    request: TrialCompilationRequest,
+) -> dict[ApparatusManifestKey, ApparatusManifest]:
+    """Resolve and validate every sealed apparatus reference against concrete content."""
+
+    selected, references_by_key = _load_apparatus_manifests(request)
+    declared_capabilities = _validate_apparatus_envelope_and_capabilities(request, selected)
+    _validate_apparatus_intent(request, selected, references_by_key, declared_capabilities)
     return selected
 
 
@@ -233,7 +269,7 @@ def validate_selected_participant_manifests(
         if manifest is None:
             raise _fail(
                 "participant-manifest-payload-missing",
-                "/apparatus/participant_manifest_refs",
+                _PARTICIPANT_MANIFEST_REFS_ADDRESS,
                 "selected participant manifest reference has no exact concrete payload",
             )
         if (
@@ -243,13 +279,13 @@ def validate_selected_participant_manifests(
         ):
             raise _fail(
                 "participant-manifest-identity-mismatch",
-                "/apparatus/participant_manifest_refs",
+                _PARTICIPANT_MANIFEST_REFS_ADDRESS,
                 "selected participant manifest identity does not match its concrete payload",
             )
         if canonical_json_digest(manifest.model_dump(mode="json")) != reference.manifest_digest:
             raise _fail(
                 "participant-manifest-digest-mismatch",
-                "/apparatus/participant_manifest_refs",
+                _PARTICIPANT_MANIFEST_REFS_ADDRESS,
                 "selected participant manifest digest does not match its concrete payload",
             )
         selected[key] = manifest

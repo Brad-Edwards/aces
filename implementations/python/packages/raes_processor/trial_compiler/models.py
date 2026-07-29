@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 
 from raes.canonical import canonical_sdl_digest
 from raes.scenario import ExpandedScenario
@@ -53,7 +53,17 @@ class TrialCompilationRequest:
             }
         )
         input_refs = self.input_refs.model_copy(update={"authoring_input_ref": authoring_ref})
-        return replace(self, experiment=experiment, input_refs=input_refs)
+        return TrialCompilationRequest(
+            family=self.family,
+            experiment=experiment,
+            input_refs=input_refs,
+            apparatus=self.apparatus,
+            realization_envelope=self.realization_envelope,
+            execution_authority=self.execution_authority,
+            apparatus_manifests=self.apparatus_manifests,
+            participant_manifests=self.participant_manifests,
+            limits=self.limits,
+        )
 
     def with_family(self, family: ExpandedScenario) -> TrialCompilationRequest:
         """Return a request with its expanded-family identity updated atomically."""
@@ -65,7 +75,17 @@ class TrialCompilationRequest:
             }
         )
         input_refs = self.input_refs.model_copy(update={"scenario_family_ref": family_ref})
-        return replace(self, family=family, input_refs=input_refs)
+        return TrialCompilationRequest(
+            family=family,
+            experiment=self.experiment,
+            input_refs=input_refs,
+            apparatus=self.apparatus,
+            realization_envelope=self.realization_envelope,
+            execution_authority=self.execution_authority,
+            apparatus_manifests=self.apparatus_manifests,
+            participant_manifests=self.participant_manifests,
+            limits=self.limits,
+        )
 
 
 @dataclass(frozen=True)
