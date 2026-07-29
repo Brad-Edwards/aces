@@ -319,6 +319,46 @@ def load_behavioral_relation_catalog() -> BehavioralRelationCatalogModel:
     )
 
 
+def _resolve_binding_relation(
+    binding: BehavioralClaimBindingModel,
+    catalog: BehavioralRelationCatalogModel,
+) -> BehavioralRelationDefinitionModel:
+    if binding.taxonomy_id != catalog.taxonomy_id:
+        raise ValueError("behavioral claim binding taxonomy coordinates do not match the canonical catalog")
+    if binding.taxonomy_revision != catalog.taxonomy_revision:
+        raise ValueError("behavioral claim binding taxonomy coordinates do not match the canonical catalog")
+    relation = catalog.relations.get(binding.relation_id)
+    if relation is None:
+        raise ValueError(f"behavioral claim binding references unknown relation {binding.relation_id!r}")
+    return relation
+
+
+def _validate_binding_requirements(
+    binding: BehavioralClaimBindingModel,
+    relation: BehavioralRelationDefinitionModel,
+) -> None:
+    required_bindings = (
+        (
+            relation.projection_required,
+            binding.observation_projection_ref,
+            "an observation projection binding",
+        ),
+        (
+            relation.relation_parameter_profile_required,
+            binding.relation_parameter_profile_ref,
+            "a relation parameter profile binding",
+        ),
+        (
+            relation.relation_parameter_profile_required,
+            binding.assurance_axis,
+            "an assurance axis",
+        ),
+    )
+    for required, value, description in required_bindings:
+        if required and value is None:
+            raise ValueError(f"relation {binding.relation_id!r} requires {description}")
+
+
 def validate_behavioral_claim_binding(
     binding: BehavioralClaimBindingModel,
     catalog: BehavioralRelationCatalogModel | None = None,
@@ -326,17 +366,8 @@ def validate_behavioral_claim_binding(
     """Resolve a consumer binding against the canonical catalog."""
 
     catalog = load_behavioral_relation_catalog() if catalog is None else catalog
-    if binding.taxonomy_id != catalog.taxonomy_id or binding.taxonomy_revision != catalog.taxonomy_revision:
-        raise ValueError("behavioral claim binding taxonomy coordinates do not match the canonical catalog")
-    relation = catalog.relations.get(binding.relation_id)
-    if relation is None:
-        raise ValueError(f"behavioral claim binding references unknown relation {binding.relation_id!r}")
-    if relation.projection_required and binding.observation_projection_ref is None:
-        raise ValueError(f"relation {binding.relation_id!r} requires an observation projection binding")
-    if relation.relation_parameter_profile_required and binding.relation_parameter_profile_ref is None:
-        raise ValueError(f"relation {binding.relation_id!r} requires a relation parameter profile binding")
-    if relation.relation_parameter_profile_required and binding.assurance_axis is None:
-        raise ValueError(f"relation {binding.relation_id!r} requires an assurance axis")
+    relation = _resolve_binding_relation(binding, catalog)
+    _validate_binding_requirements(binding, relation)
     return binding
 
 
