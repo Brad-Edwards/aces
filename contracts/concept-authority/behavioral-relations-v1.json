@@ -1,7 +1,7 @@
 {
   "schema_version": "behavioral-relations/v1",
   "taxonomy_id": "raes-behavioral-relations",
-  "taxonomy_revision": "rev5",
+  "taxonomy_revision": "rev6",
   "bibliography": [
     {
       "source_id": "park-1981",
@@ -43,6 +43,37 @@
       "immutable_locator": {
         "kind": "doi",
         "value": "10.1007/BFb0039066"
+      }
+    },
+    {
+      "source_id": "van-glabbeek-weijland-1996",
+      "title": "Branching Time and Abstraction in Bisimulation Semantics",
+      "authors": [
+        "Rob J. van Glabbeek",
+        "W. Peter Weijland"
+      ],
+      "publication_year": 1996,
+      "publication_venue": "Journal of the ACM 43(3), 555-600",
+      "edition_or_version": "version of record",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.1145/233551.233556"
+      }
+    },
+    {
+      "source_id": "van-glabbeek-luttik-trcka-2009",
+      "title": "Branching Bisimilarity with Explicit Divergence",
+      "authors": [
+        "Rob J. van Glabbeek",
+        "Bas Luttik",
+        "Nikola Trčka"
+      ],
+      "publication_year": 2009,
+      "publication_venue": "Fundamenta Informaticae 93(4), 371-392",
+      "edition_or_version": "version of record",
+      "immutable_locator": {
+        "kind": "doi",
+        "value": "10.3233/FI-2009-109"
       }
     },
     {
@@ -1803,6 +1834,104 @@
         "van-glabbeek-1990"
       ]
     },
+    "divergence-preserving-branching-bisimulation": {
+      "relation_id": "divergence-preserving-branching-bisimulation",
+      "display_name": "Divergence-preserving branching bisimulation",
+      "relation_class": "behavioral",
+      "definition": "A symmetric branching bisimulation matches visible transitions through finite closure over an explicitly governed tau set while preserving each related branching point and explicit infinite tau behavior in both directions.",
+      "left_carrier": "One labelled transition system with a closed visible/tau partition and explicit deadlock, termination, and divergence semantics.",
+      "right_carrier": "Another labelled transition system over the same projected visible alphabet and governed tau treatment.",
+      "initial_states": "The revisioned relation-parameter profile names both initial states and requires them to belong to the greatest fixed-point relation.",
+      "transition_signature": {
+        "applicability": "applicable",
+        "labels": "A common projected visible alphabet plus only the tau labels enumerated by the revisioned relation-parameter profile.",
+        "transition_relation": "Both complete labelled transition relations over the profile's quantified carriers.",
+        "observable_actions": "Every projected visible action is matched in both directions after finite tau closure while the pre-action branching state remains related.",
+        "hidden_actions": "Only profile-enumerated tau actions are hidden; redacted occurrences, refusals, unsupported outcomes, errors, deadlock, termination, and divergence are not hidden by default.",
+        "stuttering_actions": "Finite tau stuttering is admitted at a related branching point; explicit infinite tau paths must be preserved in both directions."
+      },
+      "observation_projection": {
+        "applicability": "required",
+        "subject": "The participant, audience, auditor, or other observer named by the closed relation-parameter profile.",
+        "policy_ref": "Revisioned divergence-preserving branching-bisimulation projection from the claim profile.",
+        "policy_revision": "The exact projection revision bound by the claim.",
+        "redaction_scope": "The profile enumerates every visible, redacted-occurrence, and tau label; implementation-internal or content-redacted does not imply hidden.",
+        "order_treatment": "The profile fixes sequence, interleaving, step, causal, or other order semantics; one linearization cannot establish a partial-order claim.",
+        "simultaneity_treatment": "Only simultaneity represented in the selected LTS and visible projection is preserved."
+      },
+      "projection_required": true,
+      "relation_parameter_profile_required": true,
+      "direction": "symmetric",
+      "quantification": {
+        "states": "greatest-fixed-point relation",
+        "traces": "All visible and tau continuations from every related state pair, including infinite tau continuations.",
+        "schedulers": "Every nondeterministic branch and scheduler admitted by the closed profile.",
+        "strategies": "Outside scope unless the carriers explicitly encode game or adaptive-strategy state.",
+        "environments": "Every environment state and input admitted by the closed profile.",
+        "observations": "Exactly the visible alphabet after the revisioned closed projection; the tau partition remains explicit."
+      },
+      "dimensions": {
+        "nondeterminism": {
+          "status": "supported",
+          "treatment": "Every admitted branch is matched; finite samples or selected schedules are insufficient."
+        },
+        "concurrency": {
+          "status": "parameterized",
+          "treatment": "The profile declares interleaving, step, true-concurrent, or other semantics and the preserved visible order."
+        },
+        "probability": {
+          "status": "outside-scope",
+          "treatment": "Probability measures are excluded; a probabilistic relation must be named separately."
+        },
+        "time": {
+          "status": "parameterized",
+          "treatment": "Untimed profiles erase no visible time label; timed claims require a clock and timed relation."
+        },
+        "partial_order": {
+          "status": "parameterized",
+          "treatment": "A partial-order claim requires a carrier and relation that preserve the declared causal structure."
+        }
+      },
+      "preservation": {
+        "property": "Visible branching structure, finite governed tau stuttering, explicit termination and structural deadlock, and explicit divergence under the named projection and model dimensions.",
+        "proof_obligation": "Exhibit or decide the greatest symmetric relation satisfying both branching transfer clauses and both explicit-divergence clauses for the complete quantified carriers and initial states."
+      },
+      "bounded_evidence": [
+        "Issue #811 supplies an exact complete-finite theorem profile, witness family, mutation design, and pinned checker contract; it does not run the equivalence decision.",
+        "A finite model-check result is final only when the supplied finite carrier is the complete quantified domain and the evidence binds exact inputs, counts, tool provenance, result, and independent reproduction."
+      ],
+      "explicit_non_claims": [
+        "Taxonomy revision rev6 defines this relation and the participant-crossing claim surface but does not establish a model-check or proof result.",
+        "The participant-crossing design does not establish live-runtime realization, backend conformance, whole-runtime equivalence, policy noninterference, or predicate opacity.",
+        "Depth limits, sampled traces, probes, matching digests, schema equality, and ordinary weak bisimulation are not this relation."
+      ],
+      "incompatible_claim_surfaces": [
+        "Undeclared tau hiding or divergence treatment",
+        "Incomplete, sampled, depth-limited, or timeout-truncated carriers promoted to a complete result",
+        "Formal equivalence promoted to live-runtime, backend, noninterference, opacity, timed, probabilistic, strategic, concurrent, or partial-order assurance"
+      ],
+      "assurance": {
+        "definition_status": "defined",
+        "implementation_status": "not-implemented",
+        "test_status": "not-tested",
+        "proof_status": "deliberately-unproved",
+        "checker_status": "not-implemented",
+        "model_check_status": "not-model-checked",
+        "runtime_enforcement_status": "not-enforced",
+        "backend_declaration_status": "not-declared",
+        "backend_realization_status": "not-realized",
+        "backend_conformance_status": "not-tested",
+        "evidence_refs": [
+          "docs/decisions/adrs/adr-100-participant-crossing-bisimulation.md",
+          "specs/formal/participant-semantics/participant-crossing-bisimulation.md",
+          "docs/research/participant-bisimulation/implementation-program.json"
+        ]
+      },
+      "source_refs": [
+        "van-glabbeek-weijland-1996",
+        "van-glabbeek-luttik-trcka-2009"
+      ]
+    },
     "participant-predicate-opacity": {
       "relation_id": "participant-predicate-opacity",
       "display_name": "Participant-relative predicate opacity",
@@ -2795,6 +2924,25 @@
       "explicit_non_claims": [
         "A profile, finite witness, bounded probe, random choice, model check, runtime decision, or backend declaration establishes only its named assurance axis and evidence scope.",
         "No current RAES runtime or backend is claimed opaque."
+      ]
+    },
+    {
+      "surface_id": "participant-crossing-bisimulation",
+      "intended_relation_ids": [
+        "divergence-preserving-branching-bisimulation"
+      ],
+      "evidence_boundary": "Claims bind the exact independently derived abstract and concrete model revisions and digests, initial states, complete quantified carrier and counts, closed participant/audience projection and tau partition, relation profile, source and mapping revisions, assurance axis, pinned tool provenance, result or safe counterexample, mutations, limitations, and independent reproduction.",
+      "prohibited_relation_ids": [
+        "strong-bisimulation",
+        "weak-bisimulation",
+        "trace-equivalence",
+        "policy-noninterference",
+        "participant-predicate-opacity",
+        "probabilistic-bisimulation"
+      ],
+      "explicit_non_claims": [
+        "Issue #811 defines the theorem and proof program but does not establish the formal equivalence result.",
+        "A formal model-check does not establish live-runtime realization, backend conformance, whole-runtime equivalence, noninterference, opacity, or a stronger timed, probabilistic, strategic, concurrent, or partial-order relation."
       ]
     },
     {

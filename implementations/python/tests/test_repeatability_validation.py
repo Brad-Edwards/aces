@@ -134,7 +134,7 @@ def _repetition_ref(index: int) -> RepetitionRef:
 def _claim(
     relation_id: str = "canonical-artifact-identity",
     *,
-    taxonomy_revision: str = "rev5",
+    taxonomy_revision: str = "rev6",
     left_index: int = 0,
     right_index: int = 1,
 ) -> BehavioralClaimBindingModel:

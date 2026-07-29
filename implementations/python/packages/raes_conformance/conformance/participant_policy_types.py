@@ -140,7 +140,7 @@ def _unprobed_binding(feature: str) -> ParticipantPolicyBinding:
         obligation="unsupported-capability",
         claim=BehavioralClaimBindingModel(
             taxonomy_id="raes-behavioral-relations",
-            taxonomy_revision="rev5",
+            taxonomy_revision="rev6",
             relation_id="capability-declaration",
             subject=f"Unestablished participant-policy declaration for feature {feature}",
             quantifier_scope="single-artifact",

@@ -143,6 +143,7 @@ adr-096-identity-cutover-and-historical-record-boundary
 adr-097-scoped-participant-resource-budgets-and-shared-service-fairness
 adr-098-portable-artifact-requirement-satisfaction
 adr-099-participant-relative-predicate-opacity
+adr-100-participant-crossing-bisimulation
 ```
 
 | ADR | Title | Status | Date |
@@ -246,3 +247,4 @@ adr-099-participant-relative-predicate-opacity
 | [097](adr-097-scoped-participant-resource-budgets-and-shared-service-fairness.md) | Scoped Participant Resource Budgets And Shared-Service Fairness | proposed | 2026-07-27 |
 | [098](adr-098-portable-artifact-requirement-satisfaction.md) | Portable Artifact Requirement Satisfaction | accepted | 2026-07-27 |
 | [099](adr-099-participant-relative-predicate-opacity.md) | Participant-Relative Predicate Opacity | accepted | 2026-07-29 |
+| [100](adr-100-participant-crossing-bisimulation.md) | Proof-Bearing Participant-Crossing Bisimulation | accepted | 2026-07-29 |
