@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import json
-from typing import TypeAlias
 
-JSONValue: TypeAlias = None | bool | int | float | str | list["JSONValue"] | dict[str, "JSONValue"]
+JSONValue = None | bool | int | float | str | list["JSONValue"] | dict[str, "JSONValue"]
 
 
 class StrictJsonIngressError(ValueError):

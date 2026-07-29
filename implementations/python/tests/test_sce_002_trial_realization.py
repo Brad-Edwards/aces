@@ -30,6 +30,7 @@ from raes_contracts.contracts import (
 )
 from raes_processor.trial_compiler import TrialCompilationRequest, compile_admitted_trial_plan
 from raes_processor.trial_realization import (
+    TrialRealizationInputs,
     instantiate_admitted_trial_entry,
     realize_admitted_trial_entry,
 )
@@ -47,6 +48,7 @@ _RUN_FIXTURE = (
 _STUDY_FIXTURE = (
     REPO_ROOT / "contracts" / "fixtures" / "experiment-core" / "experiment-study-v1" / "valid" / "reference.json"
 )
+_BACKEND_KEY = ("backend", "backend-a", "1", "backend-manifest/v2")
 
 
 def _plan_and_entry():
@@ -89,6 +91,24 @@ def _request_with_processor() -> TrialCompilationRequest:
     return replace(request, apparatus=apparatus, apparatus_manifests=manifests)
 
 
+def _realization_inputs(
+    request: TrialCompilationRequest,
+    plan,
+    task: ExperimentTaskModel,
+    *,
+    apparatus_manifests=None,
+) -> TrialRealizationInputs:
+    return TrialRealizationInputs(
+        plan=plan,
+        family=request.family,
+        experiment=request.experiment,
+        task=task,
+        apparatus_manifests=request.apparatus_manifests if apparatus_manifests is None else apparatus_manifests,
+        realization_envelope=request.realization_envelope,
+        backend_key=_BACKEND_KEY,
+    )
+
+
 def test_admitted_entry_uses_public_instantiation_and_binds_complete_lineage() -> None:
     request, plan, entry = _plan_and_entry()
 
@@ -120,12 +140,13 @@ def test_admitted_entry_uses_public_instantiation_and_binds_complete_lineage() -
 
 def test_admitted_entry_rejects_family_substitution_before_selection() -> None:
     _, plan, entry = _plan_and_entry()
+    substituted_family = _product_family()
 
     with pytest.raises(ValueError, match="family identity"):
         instantiate_admitted_trial_entry(
             plan=plan,
             plan_entry_id=entry.plan_entry_id,
-            family=_product_family(),
+            family=substituted_family,
         )
 
 
@@ -170,14 +191,8 @@ def test_trial_realization_emits_three_digest_bound_public_processor_plans() -> 
     task = ExperimentTaskModel.model_validate_json(_TASK_FIXTURE.read_text(encoding="utf-8"))
 
     realized = realize_admitted_trial_entry(
-        plan=plan,
+        inputs=_realization_inputs(request, plan, task),
         plan_entry_id=entry.plan_entry_id,
-        family=request.family,
-        experiment=request.experiment,
-        task=task,
-        apparatus_manifests=request.apparatus_manifests,
-        realization_envelope=request.realization_envelope,
-        backend_key=("backend", "backend-a", "1", "backend-manifest/v2"),
     )
 
     assert realized.instantiated.instantiation_provenance.trial.plan_entry_id == entry.plan_entry_id
@@ -206,27 +221,15 @@ def test_trial_realization_rejects_task_or_manifest_substitution() -> None:
 
     with pytest.raises(ValueError, match="task identity"):
         realize_admitted_trial_entry(
-            plan=plan,
+            inputs=_realization_inputs(request, plan, wrong_task),
             plan_entry_id=entry.plan_entry_id,
-            family=request.family,
-            experiment=request.experiment,
-            task=wrong_task,
-            apparatus_manifests=request.apparatus_manifests,
-            realization_envelope=request.realization_envelope,
-            backend_key=("backend", "backend-a", "1", "backend-manifest/v2"),
         )
 
     substituted_task = task.model_copy(update={"title": "Substituted task content"})
     with pytest.raises(ValueError, match="task identity"):
         realize_admitted_trial_entry(
-            plan=plan,
+            inputs=_realization_inputs(request, plan, substituted_task),
             plan_entry_id=entry.plan_entry_id,
-            family=request.family,
-            experiment=request.experiment,
-            task=substituted_task,
-            apparatus_manifests=request.apparatus_manifests,
-            realization_envelope=request.realization_envelope,
-            backend_key=("backend", "backend-a", "1", "backend-manifest/v2"),
         )
 
     manifests = dict(request.apparatus_manifests)
@@ -235,14 +238,8 @@ def test_trial_realization_rejects_task_or_manifest_substitution() -> None:
     ].model_copy(update={"constraints": {"substituted": "true"}})
     with pytest.raises(ValueError, match="manifest"):
         realize_admitted_trial_entry(
-            plan=plan,
+            inputs=_realization_inputs(request, plan, task, apparatus_manifests=manifests),
             plan_entry_id=entry.plan_entry_id,
-            family=request.family,
-            experiment=request.experiment,
-            task=task,
-            apparatus_manifests=manifests,
-            realization_envelope=request.realization_envelope,
-            backend_key=("backend", "backend-a", "1", "backend-manifest/v2"),
         )
 
 
@@ -250,14 +247,8 @@ def _archival_run_and_receipt():
     request, plan, entry = _plan_and_entry()
     task = ExperimentTaskModel.model_validate_json(_TASK_FIXTURE.read_text(encoding="utf-8"))
     realized = realize_admitted_trial_entry(
-        plan=plan,
+        inputs=_realization_inputs(request, plan, task),
         plan_entry_id=entry.plan_entry_id,
-        family=request.family,
-        experiment=request.experiment,
-        task=task,
-        apparatus_manifests=request.apparatus_manifests,
-        realization_envelope=request.realization_envelope,
-        backend_key=("backend", "backend-a", "1", "backend-manifest/v2"),
     )
     cleanup_plan = plan.cleanup_plans[entry.execution_controls.cleanup_plan_ref]
     results = {

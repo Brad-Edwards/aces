@@ -28,6 +28,7 @@ _CAPABILITY_CONTRACT_ALIASES = {
 }
 _MANIFEST_REFS_ADDRESS = "/apparatus/manifest_refs"
 _PARTICIPANT_MANIFEST_REFS_ADDRESS = "/apparatus/participant_manifest_refs"
+_CAPABILITY_REFS_ADDRESS = "/apparatus/capability_refs"
 
 
 def _fail(code: str, address: str, message: str) -> CompilationFailure:
@@ -198,7 +199,7 @@ def _validate_apparatus_envelope_and_capabilities(
     if not declared_capabilities.issubset(available_capabilities):
         raise _fail(
             "apparatus-capability-unproven",
-            "/apparatus/capability_refs",
+            _CAPABILITY_REFS_ADDRESS,
             "selected apparatus capability claims are not proven by concrete manifests",
         )
     return declared_capabilities
@@ -235,7 +236,7 @@ def _validate_apparatus_intent(
     if not set(intent.required_capabilities).issubset(declared_capabilities):
         raise _fail(
             "apparatus-capability-missing",
-            "/apparatus/capability_refs",
+            _CAPABILITY_REFS_ADDRESS,
             "selected apparatus does not satisfy every required capability",
         )
     _validate_apparatus_allowlists(selected, intent)
@@ -285,7 +286,7 @@ def validate_admitted_apparatus(
         if not set(intent.required_capabilities).issubset(declared_capabilities):
             raise _fail(
                 "apparatus-capability-missing",
-                "/apparatus/capability_refs",
+                _CAPABILITY_REFS_ADDRESS,
                 "selected apparatus does not satisfy every required capability",
             )
         _validate_apparatus_allowlists(selected, intent)

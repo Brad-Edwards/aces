@@ -68,6 +68,19 @@ class TrialRealization:
     processor_plan_refs: tuple[TrialProcessorPlanReferenceModel, ...]
 
 
+@dataclass(frozen=True)
+class TrialRealizationInputs:
+    """Exact portable and apparatus inputs required to realize an admitted entry."""
+
+    plan: AdmittedTrialPlanModel
+    family: ExpandedScenario
+    experiment: ExperimentSpecModel
+    task: ExperimentTaskModel
+    apparatus_manifests: Mapping[ApparatusManifestKey, ApparatusManifest]
+    realization_envelope: BackendRealizationEnvelopeModel
+    backend_key: ApparatusManifestKey
+
+
 def instantiate_admitted_trial_entry(
     *,
     plan: AdmittedTrialPlanModel,
@@ -186,38 +199,32 @@ def _processor_plan_reference(
 
 def realize_admitted_trial_entry(
     *,
-    plan: AdmittedTrialPlanModel,
+    inputs: TrialRealizationInputs,
     plan_entry_id: str,
-    family: ExpandedScenario,
-    experiment: ExperimentSpecModel,
-    task: ExperimentTaskModel,
-    apparatus_manifests: Mapping[ApparatusManifestKey, ApparatusManifest],
-    realization_envelope: BackendRealizationEnvelopeModel,
-    backend_key: ApparatusManifestKey,
     artifact_availability: ArtifactAvailabilityContext | None = None,
     target_name: str | None = None,
 ) -> TrialRealization:
     """Realize one exact admitted entry into existing typed processor plans."""
 
-    admitted_plan = revalidate_admitted_trial_plan(plan)
+    admitted_plan = revalidate_admitted_trial_plan(inputs.plan)
     entry = admitted_plan.entries.get(plan_entry_id)
     if entry is None:
         raise ValueError("plan_entry_id does not resolve inside the admitted plan")
-    _validate_experiment_and_task(admitted_plan, experiment, task)
+    _validate_experiment_and_task(admitted_plan, inputs.experiment, inputs.task)
     try:
         selected = validate_admitted_apparatus(
             entry.apparatus,
-            apparatus_manifests,
-            realization_envelope,
-            intent=experiment.apparatus_intent,
+            inputs.apparatus_manifests,
+            inputs.realization_envelope,
+            intent=inputs.experiment.apparatus_intent,
         )
     except CompilationFailure as exc:
         raise ValueError(f"admitted apparatus manifest validation failed: {exc.code}") from exc
-    runtime_backend = _runtime_backend(selected, backend_key, realization_envelope)
+    runtime_backend = _runtime_backend(selected, inputs.backend_key, inputs.realization_envelope)
     instantiated = instantiate_admitted_trial_entry(
         plan=admitted_plan,
         plan_entry_id=plan_entry_id,
-        family=family,
+        family=inputs.family,
     )
     runtime_model = compile_scenario_runtime_model(instantiated)
     execution_plan = build_execution_plan(
@@ -261,6 +268,7 @@ def realize_admitted_trial_entry(
 
 __all__ = [
     "TrialRealization",
+    "TrialRealizationInputs",
     "instantiate_admitted_trial_entry",
     "realize_admitted_trial_entry",
 ]

@@ -5,12 +5,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .._canonical import canonical_json_digest
-from .admitted_trial_plan import AdmittedTrialPlanModel
+from .admitted_trial_plan import AdmittedTrialEntryModel, AdmittedTrialPlanModel
 from .experiment_analysis import validate_experiment_study_against_tasks_and_runs
 from .experiment_apparatus import ExperimentTaskModel
 from .experiment_run import ExperimentRunModel
 from .experiment_spec import ExperimentStudyModel
 from .trial_cleanup import TrialCleanupReceiptModel, validate_trial_cleanup_receipt
+from .trial_provenance import TrialRunProvenanceModel
 
 
 @dataclass(frozen=True)
@@ -42,13 +43,10 @@ def _validate_trial_terminal_outcome(
         raise ValueError("successful terminal attempt cannot produce a failed archival outcome")
 
 
-def validate_admitted_trial_run(
+def _validate_run_plan_linkage(
     plan: AdmittedTrialPlanModel,
     run: ExperimentRunModel,
-    cleanup_receipts: list[TrialCleanupReceiptModel],
-) -> None:
-    """Join one archival run to its exact admitted entry and attempt evidence."""
-
+) -> tuple[AdmittedTrialEntryModel, TrialRunProvenanceModel]:
     linkage = run.trial_provenance
     if linkage is None:
         raise ValueError("plan-aware archival run requires trial_provenance")
@@ -66,7 +64,14 @@ def validate_admitted_trial_run(
         raise ValueError("archival run identity or coordinate does not match the admitted entry")
     if run.scenario_snapshot_ref.ref_digest != linkage.instantiated_scenario_digest:
         raise ValueError("archival run scenario snapshot does not match trial provenance")
+    return entry, linkage
 
+
+def _validate_run_stochastic_provenance(
+    plan: AdmittedTrialPlanModel,
+    entry: AdmittedTrialEntryModel,
+    run: ExperimentRunModel,
+) -> None:
     run_controls = {control.control_id: control for control in run.stochastic_controls}
     required_control_ids = {draw.control_id for draw in entry.stochastic_draws}
     for control_id in sorted(required_control_ids):
@@ -77,6 +82,13 @@ def validate_admitted_trial_run(
     if not admitted_draws.issubset(run_draws):
         raise ValueError("archival run stochastic draws do not preserve the admitted entry")
 
+
+def _validate_run_attempt_evidence(
+    plan: AdmittedTrialPlanModel,
+    entry: AdmittedTrialEntryModel,
+    linkage: TrialRunProvenanceModel,
+    cleanup_receipts: list[TrialCleanupReceiptModel],
+) -> TrialCleanupReceiptModel:
     receipts_by_id = {receipt.receipt_id: receipt for receipt in cleanup_receipts}
     if len(receipts_by_id) != len(cleanup_receipts):
         raise ValueError("cleanup receipt identities must be unique")
@@ -88,17 +100,26 @@ def validate_admitted_trial_run(
         cleanup_plan = plan.cleanup_plans[entry.execution_controls.cleanup_plan_ref]
         validate_trial_cleanup_receipt(cleanup_plan, receipt)
     terminal_attempt = attempt_refs[linkage.terminal_attempt_id]
-    terminal_receipt = receipts_by_id[terminal_attempt.cleanup_receipt_ref]
+    return receipts_by_id[terminal_attempt.cleanup_receipt_ref]
+
+
+def validate_admitted_trial_run(
+    plan: AdmittedTrialPlanModel,
+    run: ExperimentRunModel,
+    cleanup_receipts: list[TrialCleanupReceiptModel],
+) -> None:
+    """Join one archival run to its exact admitted entry and attempt evidence."""
+
+    entry, linkage = _validate_run_plan_linkage(plan, run)
+    _validate_run_stochastic_provenance(plan, entry, run)
+    terminal_receipt = _validate_run_attempt_evidence(plan, entry, linkage, cleanup_receipts)
     _validate_trial_terminal_outcome(run, terminal_receipt)
 
 
-def reconcile_admitted_trial_plan(
+def _index_cleanup_receipts(
     plan: AdmittedTrialPlanModel,
-    runs: list[ExperimentRunModel],
     cleanup_receipts: list[TrialCleanupReceiptModel],
-) -> AdmittedTrialPlanReconciliation:
-    """Account for every entry with zero or more attempts and at most one run."""
-
+) -> dict[str, list[TrialCleanupReceiptModel]]:
     receipts_by_entry: dict[str, list[TrialCleanupReceiptModel]] = {}
     seen_attempt_ids: set[str] = set()
     seen_receipt_ids: set[str] = set()
@@ -115,7 +136,14 @@ def reconcile_admitted_trial_plan(
         receipts_by_entry.setdefault(entry.plan_entry_id, []).append(receipt)
         if len(receipts_by_entry[entry.plan_entry_id]) > cleanup_plan.retry_policy.max_attempts:
             raise ValueError("execution attempts exceed the admitted retry policy")
+    return receipts_by_entry
 
+
+def _index_archival_runs(
+    plan: AdmittedTrialPlanModel,
+    runs: list[ExperimentRunModel],
+    receipts_by_entry: dict[str, list[TrialCleanupReceiptModel]],
+) -> dict[str, ExperimentRunModel]:
     runs_by_entry: dict[str, ExperimentRunModel] = {}
     for run in runs:
         if run.trial_provenance is None:
@@ -129,6 +157,18 @@ def reconcile_admitted_trial_plan(
         if referenced_receipts != {receipt.receipt_id for receipt in entry_receipts}:
             raise ValueError("archival run must account for every execution attempt on its admitted entry")
         runs_by_entry[entry_id] = run
+    return runs_by_entry
+
+
+def reconcile_admitted_trial_plan(
+    plan: AdmittedTrialPlanModel,
+    runs: list[ExperimentRunModel],
+    cleanup_receipts: list[TrialCleanupReceiptModel],
+) -> AdmittedTrialPlanReconciliation:
+    """Account for every entry with zero or more attempts and at most one run."""
+
+    receipts_by_entry = _index_cleanup_receipts(plan, cleanup_receipts)
+    runs_by_entry = _index_archival_runs(plan, runs, receipts_by_entry)
 
     attempted = tuple(sorted(receipts_by_entry))
     archived = tuple(sorted(runs_by_entry))
@@ -140,21 +180,22 @@ def reconcile_admitted_trial_plan(
     )
 
 
-def validate_admitted_trial_study(
+def _validate_study_identity(
     plan: AdmittedTrialPlanModel,
     study: ExperimentStudyModel,
-    tasks: list[ExperimentTaskModel],
-    runs: list[ExperimentRunModel],
 ) -> None:
-    """Join admitted coordinates and archival runs to the existing study authority."""
-
-    validate_experiment_study_against_tasks_and_runs(study, tasks, runs)
     study_ref = plan.input_refs.study_ref
     if study_ref is not None and (
         study_ref.ref_id != study.study_id
         or (study_ref.ref_version is not None and study_ref.ref_version != study.study_version)
     ):
         raise ValueError("study identity does not match the admitted plan")
+
+
+def _validate_study_run_membership(
+    study: ExperimentStudyModel,
+    runs: list[ExperimentRunModel],
+) -> None:
     run_member_ids = {
         member.target_ref.ref_id
         for member in study.membership.values()
@@ -164,6 +205,12 @@ def validate_admitted_trial_study(
     missing_members = sorted(run.run_id for run in linked_runs if run.run_id not in run_member_ids)
     if missing_members:
         raise ValueError("admitted archival runs must resolve to study run membership")
+
+
+def _validate_study_allocation(
+    plan: AdmittedTrialPlanModel,
+    study: ExperimentStudyModel,
+) -> None:
     allocation = study.run_allocation
     if allocation is None:
         return
@@ -180,3 +227,17 @@ def validate_admitted_trial_study(
     )
     if over_allocated:
         raise ValueError("admitted trial coordinates exceed the study allocation")
+
+
+def validate_admitted_trial_study(
+    plan: AdmittedTrialPlanModel,
+    study: ExperimentStudyModel,
+    tasks: list[ExperimentTaskModel],
+    runs: list[ExperimentRunModel],
+) -> None:
+    """Join admitted coordinates and archival runs to the existing study authority."""
+
+    validate_experiment_study_against_tasks_and_runs(study, tasks, runs)
+    _validate_study_identity(plan, study)
+    _validate_study_run_membership(study, runs)
+    _validate_study_allocation(plan, study)
