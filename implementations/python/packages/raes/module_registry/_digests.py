@@ -8,6 +8,10 @@ import json
 from packaging.specifiers import SpecifierSet
 from packaging.version import InvalidVersion, Version
 
+# Canonical prefix for the SHA-256 digests used throughout module resolution and
+# publishing (manifest / config / bundle / content digests).
+_SHA256_PREFIX = "sha256:"
+
 
 def _sha256_digest(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()

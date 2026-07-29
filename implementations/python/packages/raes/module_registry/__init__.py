@@ -27,7 +27,7 @@ import tarfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
-from urllib.error import HTTPError, URLError
+from urllib.error import URLError
 from urllib.request import Request, urlopen
 
 # The submodule imports below are this package's public re-export surface, plus
@@ -147,7 +147,7 @@ def _json_request(url: str, *, headers: dict[str, str] | None = None, max_bytes:
     try:
         with urlopen(request, timeout=_HTTP_TIMEOUT_SECONDS) as response:
             return json.loads(_read_capped(response, url=url, max_bytes=limit).decode("utf-8"))
-    except (HTTPError, URLError, json.JSONDecodeError) as exc:
+    except (URLError, json.JSONDecodeError) as exc:
         raise SDLParseError(f"Failed to fetch OCI metadata from {url}: {exc}") from exc
 
 
@@ -157,7 +157,7 @@ def _bytes_request(url: str, *, headers: dict[str, str] | None = None, max_bytes
     try:
         with urlopen(request, timeout=_HTTP_TIMEOUT_SECONDS) as response:
             return _read_capped(response, url=url, max_bytes=limit)
-    except (HTTPError, URLError) as exc:
+    except URLError as exc:
         raise SDLParseError(f"Failed to fetch OCI blob from {url}: {exc}") from exc
 
 

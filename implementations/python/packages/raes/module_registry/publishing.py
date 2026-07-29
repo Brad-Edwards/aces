@@ -13,15 +13,20 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from .._errors import SDLParseError
-from ..scenario import ImportDecl
+from ..scenario import ImportDecl, ModuleDescriptor
 from ._constants import (
     OCI_BUNDLE_MEDIA_TYPE,
     OCI_CONFIG_MEDIA_TYPE,
     OCI_LAYOUT_MEDIA_TYPE,
     OCI_LAYOUT_SCHEMA_VERSION,
 )
-from ._digests import _descriptor_digest
+from ._digests import _SHA256_PREFIX, _descriptor_digest
 from .models import _scenario_module_descriptor
+
+# ``_sha256_digest`` / ``_signable_payload`` are resolved through the package
+# facade with function-local ``from . import`` so a test that patches
+# ``raes.module_registry.<seam>`` replaces the binding these production calls use,
+# exactly as the pre-split single-file module did.
 
 
 def _collect_local_bundle_files(
@@ -54,26 +59,7 @@ def _collect_local_bundle_files(
     return files
 
 
-def publish_module_to_oci_layout(
-    root_path: Path,
-    *,
-    output_dir: Path,
-    signer_id: str = "",
-    private_key_path: Path | None = None,
-) -> dict[str, Any]:
-    from ..parser import parse_sdl_file
-
-    # Resolve the private digest/signature seams through the package facade so a
-    # test that patches raes.module_registry._sha256_digest / _signable_payload
-    # replaces the binding these production calls use, exactly as the pre-split
-    # single-file module did.
-    from . import _sha256_digest, _signable_payload
-
-    scenario = parse_sdl_file(root_path, skip_semantic_validation=True)
-    descriptor = _scenario_module_descriptor(
-        scenario,
-        source_id=str(root_path.name),
-    )
+def _build_module_bundle(root_path: Path) -> bytes:
     files = _collect_local_bundle_files(root_path)
     relative_files = {path.relative_to(root_path.parent).as_posix(): content for path, content in files.items()}
     bundle_buffer = io.BytesIO()
@@ -82,62 +68,54 @@ def publish_module_to_oci_layout(
             info = tarfile.TarInfo(name=relative_name)
             info.size = len(content)
             tar.addfile(info, io.BytesIO(content))
-    bundle_bytes = bundle_buffer.getvalue()
-    content_digest = f"sha256:{_sha256_digest(bundle_bytes)}"
-    signatures: list[dict[str, str]] = []
-    if signer_id and private_key_path is not None:
-        private_key = serialization.load_pem_private_key(
-            private_key_path.read_bytes(),
-            password=None,
-        )
-        if not isinstance(private_key, Ed25519PrivateKey):
-            raise SDLParseError("Publishing key must be an Ed25519 private key")
-        signature = private_key.sign(
-            _signable_payload(descriptor, content_digest=content_digest, root_file=root_path.name)
-        )
-        signatures.append(
-            {
-                "signer_id": signer_id,
-                "signature": base64.b64encode(signature).decode("utf-8"),
-            }
-        )
-    config_payload = {
-        "schema_version": OCI_LAYOUT_SCHEMA_VERSION,
-        "root_file": root_path.name,
-        "module": descriptor.model_dump(mode="python", by_alias=True),
-        "signatures": signatures,
-    }
-    config_bytes = json.dumps(config_payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
-    config_digest = f"sha256:{_sha256_digest(config_bytes)}"
-    manifest_payload = {
-        "schemaVersion": 2,
-        "mediaType": OCI_LAYOUT_MEDIA_TYPE,
-        "config": {
-            "mediaType": OCI_CONFIG_MEDIA_TYPE,
-            "digest": config_digest,
-            "size": len(config_bytes),
-        },
-        "layers": [
-            {
-                "mediaType": OCI_BUNDLE_MEDIA_TYPE,
-                "digest": content_digest,
-                "size": len(bundle_bytes),
-            }
-        ],
-        "annotations": {
-            "org.opencontainers.image.ref.name": descriptor.version,
-            "io.raes.module.id": descriptor.id,
-        },
-    }
-    manifest_bytes = json.dumps(manifest_payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
-    manifest_digest = f"sha256:{_sha256_digest(manifest_bytes)}"
+    return bundle_buffer.getvalue()
+
+
+def _build_signatures(
+    descriptor: ModuleDescriptor,
+    *,
+    content_digest: str,
+    root_file: str,
+    signer_id: str,
+    private_key_path: Path | None,
+) -> list[dict[str, str]]:
+    from . import _signable_payload
+
+    if not (signer_id and private_key_path is not None):
+        return []
+    private_key = serialization.load_pem_private_key(
+        private_key_path.read_bytes(),
+        password=None,
+    )
+    if not isinstance(private_key, Ed25519PrivateKey):
+        raise SDLParseError("Publishing key must be an Ed25519 private key")
+    signature = private_key.sign(_signable_payload(descriptor, content_digest=content_digest, root_file=root_file))
+    return [
+        {
+            "signer_id": signer_id,
+            "signature": base64.b64encode(signature).decode("utf-8"),
+        }
+    ]
+
+
+def _write_oci_layout(
+    *,
+    output_dir: Path,
+    descriptor: ModuleDescriptor,
+    config_bytes: bytes,
+    config_digest: str,
+    bundle_bytes: bytes,
+    content_digest: str,
+    manifest_bytes: bytes,
+    manifest_digest: str,
+) -> Path:
     layout_dir = output_dir / f"{descriptor.id.replace('/', '_')}-{descriptor.version}.oci"
     blobs_dir = layout_dir / "blobs" / "sha256"
     blobs_dir.mkdir(parents=True, exist_ok=True)
     (layout_dir / "oci-layout").write_text('{"imageLayoutVersion":"1.0.0"}\n', encoding="utf-8")
-    (blobs_dir / config_digest.removeprefix("sha256:")).write_bytes(config_bytes)
-    (blobs_dir / content_digest.removeprefix("sha256:")).write_bytes(bundle_bytes)
-    (blobs_dir / manifest_digest.removeprefix("sha256:")).write_bytes(manifest_bytes)
+    (blobs_dir / config_digest.removeprefix(_SHA256_PREFIX)).write_bytes(config_bytes)
+    (blobs_dir / content_digest.removeprefix(_SHA256_PREFIX)).write_bytes(bundle_bytes)
+    (blobs_dir / manifest_digest.removeprefix(_SHA256_PREFIX)).write_bytes(manifest_bytes)
     (layout_dir / "index.json").write_text(
         json.dumps(
             {
@@ -159,6 +137,73 @@ def publish_module_to_oci_layout(
         )
         + "\n",
         encoding="utf-8",
+    )
+    return layout_dir
+
+
+def publish_module_to_oci_layout(
+    root_path: Path,
+    *,
+    output_dir: Path,
+    signer_id: str = "",
+    private_key_path: Path | None = None,
+) -> dict[str, Any]:
+    from ..parser import parse_sdl_file
+    from . import _sha256_digest
+
+    scenario = parse_sdl_file(root_path, skip_semantic_validation=True)
+    descriptor = _scenario_module_descriptor(
+        scenario,
+        source_id=str(root_path.name),
+    )
+    bundle_bytes = _build_module_bundle(root_path)
+    content_digest = f"{_SHA256_PREFIX}{_sha256_digest(bundle_bytes)}"
+    signatures = _build_signatures(
+        descriptor,
+        content_digest=content_digest,
+        root_file=root_path.name,
+        signer_id=signer_id,
+        private_key_path=private_key_path,
+    )
+    config_payload = {
+        "schema_version": OCI_LAYOUT_SCHEMA_VERSION,
+        "root_file": root_path.name,
+        "module": descriptor.model_dump(mode="python", by_alias=True),
+        "signatures": signatures,
+    }
+    config_bytes = json.dumps(config_payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    config_digest = f"{_SHA256_PREFIX}{_sha256_digest(config_bytes)}"
+    manifest_payload = {
+        "schemaVersion": 2,
+        "mediaType": OCI_LAYOUT_MEDIA_TYPE,
+        "config": {
+            "mediaType": OCI_CONFIG_MEDIA_TYPE,
+            "digest": config_digest,
+            "size": len(config_bytes),
+        },
+        "layers": [
+            {
+                "mediaType": OCI_BUNDLE_MEDIA_TYPE,
+                "digest": content_digest,
+                "size": len(bundle_bytes),
+            }
+        ],
+        "annotations": {
+            "org.opencontainers.image.ref.name": descriptor.version,
+            "io.raes.module.id": descriptor.id,
+        },
+    }
+    manifest_bytes = json.dumps(manifest_payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    manifest_digest = f"{_SHA256_PREFIX}{_sha256_digest(manifest_bytes)}"
+    layout_dir = _write_oci_layout(
+        output_dir=output_dir,
+        descriptor=descriptor,
+        config_bytes=config_bytes,
+        config_digest=config_digest,
+        bundle_bytes=bundle_bytes,
+        content_digest=content_digest,
+        manifest_bytes=manifest_bytes,
+        manifest_digest=manifest_digest,
     )
     return {
         "layout_dir": str(layout_dir),

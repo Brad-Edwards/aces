@@ -16,7 +16,7 @@ from .models import RegistryTrustPolicy
 def _public_key_bytes(encoded_key: str) -> bytes:
     try:
         return base64.b64decode(encoded_key.encode("utf-8"))
-    except Exception as exc:  # pragma: no cover - defensive
+    except (ValueError, TypeError) as exc:
         raise SDLParseError(f"Invalid trusted signer public key: {exc}") from exc
 
 
