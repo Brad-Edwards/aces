@@ -1207,6 +1207,27 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   adversarial-control evaluation, and cross-backend demonstration respectively.
   ASR-535 adds evidence rather than a normative derivation or compatibility
   claim, so the lineage ledger and source audit remain unchanged.
+- Issue #802 applies the already adopted SEM-230/API-423/RUN-319 lineage to
+  migration without importing another external model. The exact RAES mapping
+  is the legacy/current distinction retained before
+  `RuntimeSnapshot.participant_crossing_history` defaults apply; API-407
+  feature strength plus backend-profile and trusted-resolver selection for
+  opt-in/required adoption; the authenticated API-408 identity and trusted
+  `resolve_participant_view_evidence()` adapter path; and append-only API-423
+  history, operation, idempotency, and audit persistence.
+- Issue #802 delivery evidence is
+  `docs/migration/participant-information-flow-control.md`, the paired SDL,
+  snapshot, backend-manifest, participant-manifest, and backend-profile
+  fixtures, and
+  `implementations/python/tests/test_issue_802_participant_control_migration.py`.
+  Legacy absence remains unknown or unsupported; v1 decision surfaces require
+  authoritative reprojection; participant implementations do not receive the
+  API-423 assurance plane; and rollback after governed persistence retains all
+  crossing facts. These migration results establish neither native-backend
+  realization nor universal noninterference, equivalence, simulation,
+  refinement, bisimulation, epistemic, timed, or probabilistic security.
+  Because the work adds compatibility evidence without changing normative
+  external derivation, the lineage ledger and source audit remain unchanged.
 - CALDERA adversary-emulation research informs the action semantics: cyber
   actions can change foothold, knowledge, observations, detection surface, and
   downstream outcomes under uncertainty.
