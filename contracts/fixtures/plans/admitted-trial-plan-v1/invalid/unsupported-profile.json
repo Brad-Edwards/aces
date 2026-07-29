@@ -200,9 +200,8 @@
     "scenario_family_ref": {
       "ref_digest": "sha256:cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
       "ref_id": "family-a",
-      "ref_kind": "scenario-snapshot",
-      "ref_path": null,
-      "ref_version": "1"
+      "ref_kind": "scenario-family",
+      "ref_version": "expanded-scenario-family/v1"
     },
     "study_ref": null,
     "task_ref": {

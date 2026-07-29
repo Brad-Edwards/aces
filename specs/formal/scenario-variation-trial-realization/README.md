@@ -281,6 +281,114 @@ compiler/identity/RNG/canonicalization profiles, logical coordinates,
 selections, factor assignments, non-secret bindings, selected apparatus
 claims, and bounded admission evidence.
 
+## Executable SCE-002 v1 profiles
+
+This section is the normative algorithm authority for the exact profile names
+carried by `admitted-trial-plan-v1`. Changing any output-affecting rule below
+requires a new profile name and new conformance vectors.
+
+### `trial-coordinate-v1`
+
+The profile admits only the three published coordinate fields and issue #789
+populates only `condition_id` and `replicate_id`. For a simple
+`target_run_count = n`, the coordinates are:
+
+```text
+{replicate_id: "replicate-" + six-digit-one-based-ordinal}
+```
+
+For a structured allocation, `compared_conditions` are ordered by portable
+identifier code point and each condition emits the same one-based replicate
+sequence through `target_runs_per_condition`. The coordinate order is
+`(condition_id, numeric replicate ordinal)`. The first profile admits ordinals
+1 through 999999 and never derives a block, cohort, worker, attempt, or other
+dimension from descriptive allocation strings. Unsupported dimensions or an
+empty/exceeded coordinate set fail before selection.
+
+### Canonical domain and policy order in `trial-compiler-v1`
+
+Finite scalar enumeration uses these rules:
+
+- exact domains emit their sole value;
+- booleans emit `false`, then `true`, unless fixed to one value;
+- integer intervals emit every admitted integer in ascending numeric order;
+- scalar enums sort the RFC 8785 bytes of
+  `{"type": semantic-json-scalar-type, "value": value}`, where the type is one
+  of `null`, `boolean`, `integer`, `number`, or `string`;
+- governed references and structural alternative member ids sort by portable
+  identifier code point; and
+- a selected order outcome preserves its declared member sequence.
+
+A fixed root broadcasts its one outcome to every coordinate. There may be at
+most one non-fixed policy root. An enumerate or product root must emit exactly
+the coordinate count. Product child ids sort by portable identifier and use
+ordinary left-to-right Cartesian order; fixed, enumerate, and nested product
+children are supported. Equal strata join by exact `condition_id` and must
+match the declared per-condition counts. Sample-with-replacement uses only the
+exact pair `blake3-xof-v1` and `random-stream-profile/v1`,
+`sampling-selection`, local coordinate zero, the exact trial coordinate, and
+the profile's `bounded-integer` transform. Multiple non-fixed roots, an
+overlapping point writer, an uncovered point, orphan/ambiguous
+meaning, a cardinality disagreement, unsupported product child, collision, or
+bounded-draw exhaustion fails atomically. There is no implicit zip, cycle,
+padding, truncation, permutation, resampling, or backend-selected value.
+
+### Identity profiles
+
+Every identity hashes RFC 8785 bytes of:
+
+```json
+{
+  "domain": "raes-trial-compiler-identity-v1",
+  "kind": "<identity kind>",
+  "projection": "<profile projection>"
+}
+```
+
+using SHA-256 and renders `<kind>-<64 lowercase hex digits>`.
+
+`trial-plan` projects, in this exact field set, the complete admitted plan
+profile object, input references, admitted apparatus binding, typed execution
+authority, and the ordered coordinate projections. The apparatus binding
+includes the accepted realization-envelope content/configuration digests,
+processor/backend manifest digests, and every participant implementation
+manifest identity/version/content digest used for binding admission. The
+authoring-input digest inside the references binds all selection policies and
+stochastic controls.
+`trial-entry` and `archival-run` each project
+`{"plan_id": plan_id, "coordinate": coordinate}` and are separated by their
+distinct kind. `trial-cleanup` projects `plan_entry_id`, `run_id`, and the
+complete typed cleanup template. Existing entry and plan seal helpers then
+compute `entry_digest` and `plan_digest`; neither digest is an identity input
+to itself, and `plan_id` is not `plan_digest`.
+
+The canonical coordinate projection omits absent optional fields. Map
+serialization uses JCS key order. Plan entry maps are keyed by derived entry
+id, not emission position. Adding a coordinate changes plan/entry/run
+identities because admitted plan-wide intent changed, but it does not change
+an existing stochastic address or draw under an unchanged namespace, seed,
+policy, point, and coordinate.
+
+### Failure and resource profile
+
+The compiler consumes explicit positive limits for coordinates, materialized
+domain values, product outputs, per-entry bindings/draws, diagnostic count,
+and canonical plan bytes. Coordinate, finite-domain, and Cartesian-product
+cardinalities are computed and rejected against those limits before their
+collections are materialized. The compiler returns either one sealed plan
+with no error-severity diagnostics or one canonically ordered error set with
+no plan. Issue #789 emits at most one error record, which is therefore within
+every admitted positive diagnostic limit. Error records use the fixed
+`trial-compiler` domain, a safe JSON-pointer address, a governed code, and
+fixed text containing ids/count classes only. Raw values, complete domains,
+secret or entropy references, validator payloads, host paths, environments,
+and tracebacks are never rendered. Caller-supplied partition traversal drives
+coordinate-local admission and entry construction. The compiler visits every
+bounded coordinate and reduces coordinate-local failures by address, code,
+then fixed text before returning its one diagnostic; successful keyed maps are
+JCS-normalized. Therefore partition order changes execution order without
+changing plan bytes or failure diagnostics.
+
 ## Instantiation, Fact, And Secret Invariants
 
 ### SVR-024 — Public SDL instantiation only
@@ -321,10 +429,14 @@ redacted.
 
 ### SVR-029 — Envelope-governed realization
 
-Every plan entry pins selected apparatus claims and passes manifest capability
-and accepted ADR-070 realization-envelope membership/subsumption checks. A
-backend may choose only a realized form permitted by that envelope and must
-disclose the choice.
+Every plan entry pins selected apparatus claims. Every manifest reference
+resolves to exact identity/version/digest-matched concrete processor, backend,
+or participant implementation content before sealing. Capability claims
+derive only from those validated manifests, each selected identity passes its
+kind-specific allowlist, and each selected backend binds the accepted ADR-070
+realization-envelope content and configuration digests before scenario
+membership/subsumption checks. A backend may choose only a realized form
+permitted by that envelope and must disclose the choice.
 
 ### SVR-030 — Backend refusal is observable failure
 
@@ -431,12 +543,15 @@ family declaration contract and tests. Issue #787 supplies the closed
 experiment selection-policy registry, exact allocation/factor joins,
 family-context admission validator, canonical parser hardening, published
 schema, positive/negative fixtures, and unit tests. It deliberately does not
-compile logical trial coordinates or instantiate selected scenarios. Remaining
-evidence is allocated as follows:
+compile logical trial coordinates or instantiate selected scenarios. Issue
+#789 supplies the exact v1 profiles above, SDL-owned selected-scenario
+construction/admission, deterministic plan compilation, and unit/property/
+thread/process determinism evidence. Remaining evidence is allocated as
+follows:
 
-- unit-test evidence is waived to #789, #790, and #791;
+- unit-test evidence is waived to #790 and #791;
 - typed IR/contract evidence is waived to #274, #788, and #791; and
-- property/differential evidence is waived to #274, #789, #790, and #791.
+- property/differential evidence is waived to #274, #790, and #791.
 
 The dated waivers and paths are registered in
 `specs/formal/assurance-fulfillment.yaml`. SCE-002 remains DRAFT until those
