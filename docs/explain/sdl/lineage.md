@@ -523,51 +523,67 @@ engine-neutral `role` taxonomy rather than engine-named address fields.
 ## Security-Platform Application Semantics
 
 The `runtime.platform_applications` surface is the SCN-010 (DSL-133) response to
-a gap for the participant-observable runtime state of security platform
-applications — threat-intelligence platforms, SOAR, analyzer engines, case
-management, and analytics dashboards. Its defining addition is the open
-`platform_kind` discriminator paired with a `require_profile_for_platform_kind`
-guard, plus content objects modeled as bounded parsed manifests (typed kind +
-bounded attributes + typed references) rather than raw object bodies.
+a gap for the declared logical state of participant-visible platform
+applications. Issue #956 corrected the original product-category model: an open
+`platform_kind` plus required product-shaped content profile could neither
+represent multi-role applications nor prove configuration completeness. The
+current authority is a provider-neutral, composable `capabilities` collection.
+`platform_kind` and `content_objects` remain deprecated compatible input and
+neither implies the other.
 
 RAES relies on prior work in four ways:
 
-- **Scenario-language precedents:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
-  model topology, deployable services/features, and validation/deployment
-  concerns. None expose a portable first-class security-platform application
-  inventory, so RAES adds a typed node-scoped seam rather than overloading
-  `runtime.applications` (HTTP routes) or `runtime.software_components`
-  (component identity).
-- **Primary content and intelligence-sharing standards:** RDF 1.1
+- **Internal and scenario-language precedents:** ADR-032 is the direct internal
+  precedent: an Active Directory scenario produced a provider-neutral
+  identity-authority core, with vendor identifiers retained as data. Open Cyber
+  Range SDL, CyRIS, KYPO, VSDL, and CRACK model topology, deployable
+  services/features, and validation/deployment concerns but do not define a
+  portable application-capability inventory. TOSCA and CAMP distinguish
+  capabilities, requirements, artifacts, and configuration. RAES applies that
+  separation at its existing node-runtime boundary rather than claiming format
+  compatibility or overloading `runtime.applications` (HTTP routes) and
+  `runtime.software_components` (component identity).
+- **Content and intelligence-sharing boundaries:** RDF 1.1
   ([concepts](https://www.w3.org/TR/rdf11-concepts/)) with Angles and Gutierrez's
   [graph-database survey](https://doi.org/10.1145/1322432.1322433) frame typed
-  references over raw bodies;
+  references over raw bodies.
   [STIX 2.1](https://docs.oasis-open.org/cti/stix/v2.1/stix-v2.1.html) /
   [TAXII 2.1](https://docs.oasis-open.org/cti/taxii/v2.1/taxii-v2.1.html), the
   [MISP data model](https://www.misp-project.org/datamodels/), FIRST
   [TLP 2.0](https://www.first.org/tlp/), MITRE
   [ATT&CK](https://attack.mitre.org/), NIST
   [SP 800-150](https://csrc.nist.gov/publications/detail/sp/800-150/final), and
-  [ISO/IEC 27010](https://www.iso.org/standard/68427.html) anchor the
-  threat-intel content profile and releasability markings; NIST
+  [ISO/IEC 27010](https://www.iso.org/standard/68427.html) distinguish
+  intelligence content, exchange, marking, and sharing concerns; NIST
   [SP 800-61r2](https://csrc.nist.gov/publications/detail/sp/800-61/rev-2/final)
-  / [r3](https://csrc.nist.gov/pubs/sp/800/61/r3/final) anchors
-  the case-management incident-handling profile.
-- **Automation and observability precedents:** OASIS
+  / [r3](https://csrc.nist.gov/pubs/sp/800/61/r3/final) frames incident
+  handling. These sources motivate separate functional roles; none defines a
+  required RAES product profile. Initial authored content stays under top-level
+  `content` and `service_materialization` per ADR-088.
+- **Automation and presentation precedents:** OASIS
   [CACAO v2.0](https://docs.oasis-open.org/cacao/security-playbooks/v2.0/security-playbooks-v2.0.html)
   and [OpenC2](https://docs.oasis-open.org/openc2/oc2ls/v1.0/oc2ls-v1.0.html)
-  frame the SOAR/analyzer execution profile with the boundary stated explicitly:
-  RAES records the workflow/analyzer *inventory* and execution policy, not
-  playbook execution semantics. NIST
+  separate playbooks, commands, agents, and targets. RAES therefore records
+  `workflow_automation` and `analysis_execution` capability roles without
+  importing playbook/action execution semantics. NIST
   [SP 800-92](https://csrc.nist.gov/publications/detail/sp/800-92/final) and
   [ISO/IEC/IEEE 42010](https://www.iso.org/standard/74393.html) frame the
-  dashboard saved-object and upstream-binding posture as architecture/monitoring
-  evidence. These are implementation lineage, not schema authority.
+  presentation and monitoring context. These are design precedents, not schema
+  authority.
 - **Transport and federation discipline:** [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110)
   (HTTP semantics), [RFC 7239](https://www.rfc-editor.org/rfc/rfc7239)
   (forwarded), and [RFC 6749](https://www.rfc-editor.org/rfc/rfc6749) (OAuth 2.0)
-  bound the connector/binding posture; raw bodies, credentials, and key material
-  are never stored — the surface records bounded manifests and classifications.
+  bound connector, binding, and authorization posture. Sharing/distribution
+  policy does not become an application capability, and raw bodies,
+  credentials, and key material remain outside the surface.
+
+The six initial capability kinds are RAES-native semantic categories:
+`threat_intelligence_management`, `intelligence_exchange`, `case_management`,
+`analysis_execution`, `workflow_automation`, and `analytics_presentation`.
+Products such as MISP, OpenCTI, TheHive, Cortex, Shuffle, and Kibana are examples
+and evidence only. The lineage is inspirational rather than a derivation or
+compatibility claim; the normative authority remains the RAES contract and
+ADR-049.
 
 ## Forwarding And Intel-Sync Agent Semantics
 

@@ -1,6 +1,16 @@
 # SCN-010 Expressivity Gap Analysis — Final Architect-Review Report
 ## RAES SDL runtime surface coverage for the 16 remaining APTL containers
 
+> **Correction (2026-07-29, #956):** This report is preserved as the historical
+> SCN-010 architecture review, but its platform-application framing is
+> superseded by the ADR-049 amendment. `platform_kind` no longer selects any
+> required profile. Applications declare zero or more composable,
+> provider-neutral capabilities, while product identity, configured content,
+> bindings, distribution policy, execution, and evidence remain separate
+> concerns. The report's MISP-shaped corpus requirements, its per-product
+> completeness claims, and its claim that one guarded product discriminator
+> prevents shallow encoding are not current SDL design.
+
 ## 1. Executive summary
 
 The 16 remaining SCN-010 containers fall into seven functional groups — a search/index cluster tier (`wazuh.indexer`, `thehive-es`, `shuffle-opensearch`), an analytics dashboard (`wazuh.dashboard`), log-shipping/intel-sync sidecars (`wazuh-sidecar-db`, `wazuh-sidecar-suricata`, `misp-suricata-sync`) plus the standalone Suricata they govern, a threat-intelligence platform (`misp`), a Redis/MariaDB data-store-and-sync tier (`misp-redis`, `misp-db`), an IR/case-management platform over a wide-column store (`thehive`, `thehive-cassandra`), a SOAR tier (`shuffle-frontend`, `shuffle-orborus`, `shuffle-backend`), and an analyzer/responder engine (`cortex`). Holding each container to the **wazuh.manager parity bar** — wazuh.manager (a SIEM) earned a fully domain-typed `security_monitoring_managers` family rather than being folded into generic `filesystem`/`listeners`/`software` surfaces — surfaces a consistent failure mode: every one of these containers has *defining logical state* that RAES can only shallow-encode today (a Redis cache as a relational `RuntimeDatabaseService`, a search cluster as a relational engine, a MISP as content counts, a SOAR as a data volume, an embedded RBAC store as OS `/etc` identity). The cohesive response is **extension-first at the least structural cost that still clears parity**: collapse the recurring *shapes* into two discriminator-guarded spines plus three orthogonal shared primitives and one forwarder family, each spine **guarded by a `require_profile_for_<discriminator>` after-validator** so the abstraction provably cannot silently shallow-encode a defining fact, with inter-node access detail expressed as typed relationship subtypes, and a single executable cross-family invariant lint making "#439 one small invariant set" testable rather than aspirational.

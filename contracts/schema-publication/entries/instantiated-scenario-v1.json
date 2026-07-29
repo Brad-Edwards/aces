@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
   "stability": "draft",
-  "content_hash": "e48a8fae49b47e70ad14eb750f865d2211d03fccbf91e824a562cc62772cc3da",
+  "content_hash": "63650ec001251366de8300a52824cfec4d91b586327707d042e2949087e1ba08",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "e48a8fae49b47e70ad14eb750f865d2211d03fccbf91e824a562cc62772cc3da"
+    "summary": "Added composable provider-neutral platform capabilities and marked legacy platform categories and content manifests deprecated for issue #956.",
+    "content_hash": "63650ec001251366de8300a52824cfec4d91b586327707d042e2949087e1ba08"
   }
 }

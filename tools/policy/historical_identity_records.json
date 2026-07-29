@@ -288,13 +288,6 @@
       "content_sha256": "db8a9edd3dbb9903e5dcc971b8f34a412d4ae4ea243af25371c4fb8c8fed3f8b"
     },
     {
-      "path": "docs/decisions/adrs/adr-049-platform-application-runtime-inventory.md",
-      "record_class": "accepted-adr",
-      "rationale": "Preserves an accepted architecture decision as written before the RAES identity cutover.",
-      "occurrences": 1,
-      "content_sha256": "efd2bda17b286ff8da753428439df26feabea21ea21aa7fc817916f329ce9bba"
-    },
-    {
       "path": "docs/decisions/adrs/adr-053-sdl-module-composition-for-inventory-backed-scenarios.md",
       "record_class": "accepted-adr",
       "rationale": "Preserves an accepted architecture decision as written before the RAES identity cutover.",
@@ -502,7 +495,7 @@
       "record_class": "historical-index",
       "rationale": "Indexes immutable pre-cutover ADR titles, paths, pins, and amendment summaries without making them current identity surf\u0061ces.",
       "occurrences": 4,
-      "content_sha256": "bf67dc26ef70cd1ff977cc75caad187e76ec894267595d347c374abc0bb0647d"
+      "content_sha256": "ef3e2abbbaf00574fccb82b9d22233ac4c777ae9ae8984431f668f343b252855"
     },
     {
       "path": "docs/decisions/cage-2-replication-design.md",
