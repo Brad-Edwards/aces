@@ -4,7 +4,12 @@ from __future__ import annotations
 
 import json
 
-from .contracts import AttackEnterpriseTacticsSourceModel, NistCsfDefensiveCategorySourceModel
+from .contracts import (
+    ActivityStreamsActivityTypesSourceModel,
+    AttackEnterpriseTacticsSourceModel,
+    FipaCommunicativeActsSourceModel,
+    NistCsfDefensiveCategorySourceModel,
+)
 from .corpus import CONCEPT_AUTHORITY, corpus_family_root
 
 
@@ -18,7 +23,19 @@ def load_nist_csf_defensive_categories_source() -> NistCsfDefensiveCategorySourc
     return NistCsfDefensiveCategorySourceModel.model_validate(json.loads(path.read_text(encoding="utf-8")))
 
 
+def load_activitystreams_activity_types_source() -> ActivityStreamsActivityTypesSourceModel:
+    path = corpus_family_root(CONCEPT_AUTHORITY) / "w3c-activitystreams-activity-types-source-v1.json"
+    return ActivityStreamsActivityTypesSourceModel.model_validate(json.loads(path.read_text(encoding="utf-8")))
+
+
+def load_fipa_communicative_acts_source() -> FipaCommunicativeActsSourceModel:
+    path = corpus_family_root(CONCEPT_AUTHORITY) / "fipa-communicative-acts-source-v1.json"
+    return FipaCommunicativeActsSourceModel.model_validate(json.loads(path.read_text(encoding="utf-8")))
+
+
 __all__ = [
+    "load_activitystreams_activity_types_source",
     "load_attack_enterprise_tactics_source",
+    "load_fipa_communicative_acts_source",
     "load_nist_csf_defensive_categories_source",
 ]

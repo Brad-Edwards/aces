@@ -208,7 +208,10 @@ The standalone `external-concept-bindings/v1` contract covers the different
 case where an author or reviewer relates one exact, digest-pinned RAES subject
 to a concept in an arbitrary versioned external scheme. ATT&CK Enterprise and
 NIST CSF fixtures demonstrate the same scheme-neutral shape and offline
-resolver.
+resolver. ACT-611 extends that proof with W3C ActivityStreams Activity types
+and FIPA communicative acts bound to exact
+`behavior_specifications.<name>` declarations; it does not add an
+`autonomous_behavior_refs` field or a native agent ontology.
 
 This assertion surface keeps relationship, motivation, effect, perspective,
 provenance, evidence references, confidence, approximation or loss,
@@ -222,6 +225,8 @@ The binding remains descriptive and reviewable. It is not a native manifest
 evidence record, participant disclosure, or delivery receipt. The normative
 model and resolution table are specified in
 [`specs/concept-authority/external-concept-bindings.md`](../../../specs/concept-authority/external-concept-bindings.md).
+The autonomous behavior source decisions and examples are specified in
+[`specs/concept-authority/autonomous-behavior-vocabularies.md`](../../../specs/concept-authority/autonomous-behavior-vocabularies.md).
 
 ## RAES Extension Discipline (GOV-919)
 
