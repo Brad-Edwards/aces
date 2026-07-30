@@ -32,6 +32,18 @@ _SECRET_QUERY_FRAGMENTS = (
 )
 
 
+def _is_absolute_uri(scheme: str, netloc: str) -> bool:
+    return bool(scheme) and (scheme not in {"http", "https"} or bool(netloc))
+
+
+def _has_secret_query_field(query: str) -> bool:
+    query_names = {name.casefold() for name, _value in parse_qsl(query, keep_blank_values=True)}
+    return any(
+        name in _SECRET_QUERY_NAMES or any(fragment in name for fragment in _SECRET_QUERY_FRAGMENTS)
+        for name in query_names
+    )
+
+
 def validate_safe_absolute_uri(
     uri: str,
     *,
@@ -43,7 +55,7 @@ def validate_safe_absolute_uri(
 
     parsed = urlsplit(uri)
     scheme = parsed.scheme.casefold()
-    if not scheme or (scheme in {"http", "https"} and not parsed.netloc):
+    if not _is_absolute_uri(scheme, parsed.netloc):
         raise ValueError(f"{field_name} must be an absolute URI")
     if scheme in {value.casefold() for value in forbidden_schemes}:
         raise ValueError(f"{field_name} uses a forbidden URI scheme")
@@ -51,11 +63,7 @@ def validate_safe_absolute_uri(
         raise ValueError(f"{field_name} must not contain credential userinfo")
     if forbid_fragment and parsed.fragment:
         raise ValueError(f"{field_name} must not contain a fragment")
-    query_names = {name.casefold() for name, _value in parse_qsl(parsed.query, keep_blank_values=True)}
-    if any(
-        name in _SECRET_QUERY_NAMES or any(fragment in name for fragment in _SECRET_QUERY_FRAGMENTS)
-        for name in query_names
-    ):
+    if _has_secret_query_field(parsed.query):
         raise ValueError(f"{field_name} must not contain secret-bearing query fields")
 
 

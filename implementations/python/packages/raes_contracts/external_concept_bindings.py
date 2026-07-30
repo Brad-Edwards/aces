@@ -126,38 +126,42 @@ def _subject_resolution(
     address: str,
 ) -> ExternalConceptBindingResolution | None:
     exact = [candidate for candidate in candidates if candidate == subject]
+    resolution: ExternalConceptBindingResolution | None
     if len(exact) > 1:
-        return _result(
+        resolution = _result(
             binding_id=binding_id,
             outcome=ExternalConceptResolutionOutcome.AMBIGUOUS,
             address=address,
             message="the exact RAES subject coordinate resolves to multiple supplied candidates",
         )
-    if len(exact) == 1:
-        return None
-    same_coordinate = [
-        candidate
-        for candidate in candidates
-        if (
-            candidate.subject_kind == subject.subject_kind
-            and candidate.owning_contract_id == subject.owning_contract_id
-            and candidate.lifecycle_phase == subject.lifecycle_phase
-            and candidate.canonical_ref == subject.canonical_ref
-        )
-    ]
-    if same_coordinate:
-        return _result(
-            binding_id=binding_id,
-            outcome=ExternalConceptResolutionOutcome.STALE,
-            address=address,
-            message="the supplied RAES subject digest does not match the asserted artifact digest",
-        )
-    return _result(
-        binding_id=binding_id,
-        outcome=ExternalConceptResolutionOutcome.SUBJECT_NOT_FOUND,
-        address=address,
-        message="the exact RAES subject coordinate is unavailable in the supplied local subject index",
-    )
+    elif len(exact) == 1:
+        resolution = None
+    else:
+        same_coordinate = [
+            candidate
+            for candidate in candidates
+            if (
+                candidate.subject_kind == subject.subject_kind
+                and candidate.owning_contract_id == subject.owning_contract_id
+                and candidate.lifecycle_phase == subject.lifecycle_phase
+                and candidate.canonical_ref == subject.canonical_ref
+            )
+        ]
+        if same_coordinate:
+            resolution = _result(
+                binding_id=binding_id,
+                outcome=ExternalConceptResolutionOutcome.STALE,
+                address=address,
+                message="the supplied RAES subject digest does not match the asserted artifact digest",
+            )
+        else:
+            resolution = _result(
+                binding_id=binding_id,
+                outcome=ExternalConceptResolutionOutcome.SUBJECT_NOT_FOUND,
+                address=address,
+                message="the exact RAES subject coordinate is unavailable in the supplied local subject index",
+            )
+    return resolution
 
 
 def _snapshot_matches_coordinate(
@@ -171,6 +175,92 @@ def _snapshot_matches_coordinate(
     )
 
 
+def _matching_scheme_snapshot(
+    scheme: ExternalConceptSchemeCoordinateModel,
+    snapshots: tuple[ExternalConceptSchemeSnapshotModel, ...],
+    *,
+    binding_id: str,
+    address: str,
+) -> tuple[ExternalConceptSchemeSnapshotModel | None, ExternalConceptBindingResolution | None]:
+    identity_matches = [
+        snapshot
+        for snapshot in snapshots
+        if snapshot.scheme_id == scheme.scheme_id and snapshot.authority == scheme.authority
+    ]
+    snapshot: ExternalConceptSchemeSnapshotModel | None = None
+    resolution: ExternalConceptBindingResolution | None = None
+    if not identity_matches:
+        resolution = _result(
+            binding_id=binding_id,
+            outcome=ExternalConceptResolutionOutcome.UNAVAILABLE,
+            address=address,
+            message="no matching local scheme snapshot was supplied; the assertion remains inactive",
+            severity=Severity.WARNING,
+        )
+    else:
+        exact = [candidate for candidate in identity_matches if _snapshot_matches_coordinate(candidate, scheme)]
+        if not exact:
+            resolution = _result(
+                binding_id=binding_id,
+                outcome=ExternalConceptResolutionOutcome.STALE,
+                address=address,
+                message="the supplied scheme snapshot conflicts with the asserted revision or digest",
+            )
+        elif len(exact) > 1:
+            resolution = _result(
+                binding_id=binding_id,
+                outcome=ExternalConceptResolutionOutcome.AMBIGUOUS,
+                address=address,
+                message="the exact scheme coordinate resolves to multiple supplied snapshots",
+            )
+        else:
+            snapshot = exact[0]
+    return snapshot, resolution
+
+
+def _concept_resolution(
+    scheme: ExternalConceptSchemeCoordinateModel,
+    snapshot: ExternalConceptSchemeSnapshotModel,
+    *,
+    binding_id: str,
+    address: str,
+) -> ExternalConceptBindingResolution:
+    concept_candidates = [term for term in snapshot.concepts if term.concept_id == scheme.concept_id]
+    if not concept_candidates:
+        resolution = _result(
+            binding_id=binding_id,
+            outcome=ExternalConceptResolutionOutcome.UNKNOWN_CONCEPT,
+            address=address,
+            message="the asserted concept is absent from the exact supplied scheme revision",
+        )
+    elif len(concept_candidates) > 1:
+        resolution = _result(
+            binding_id=binding_id,
+            outcome=ExternalConceptResolutionOutcome.AMBIGUOUS,
+            address=address,
+            message="the asserted concept resolves to multiple candidates in the exact supplied scheme revision",
+        )
+    else:
+        term = concept_candidates[0]
+        if term.status == "superseded":
+            resolution = _result(
+                binding_id=binding_id,
+                outcome=ExternalConceptResolutionOutcome.SUPERSEDED,
+                address=address,
+                message="the original concept is superseded; automatic successor rewriting is forbidden",
+                resolved_concept_id=scheme.concept_id,
+            )
+        else:
+            resolution = _result(
+                binding_id=binding_id,
+                outcome=ExternalConceptResolutionOutcome.RESOLVED_CURRENT,
+                address=address,
+                message="resolved",
+                resolved_concept_id=scheme.concept_id,
+            )
+    return resolution
+
+
 def _scheme_resolution(
     scheme: ExternalConceptSchemeCoordinateModel,
     snapshots: tuple[ExternalConceptSchemeSnapshotModel, ...],
@@ -178,65 +268,21 @@ def _scheme_resolution(
     binding_id: str,
     address: str,
 ) -> ExternalConceptBindingResolution:
-    identity_matches = [
-        snapshot
-        for snapshot in snapshots
-        if snapshot.scheme_id == scheme.scheme_id and snapshot.authority == scheme.authority
-    ]
-    if not identity_matches:
-        return _result(
-            binding_id=binding_id,
-            outcome=ExternalConceptResolutionOutcome.UNAVAILABLE,
-            address=address,
-            message="no matching local scheme snapshot was supplied; the assertion remains inactive",
-            severity=Severity.WARNING,
-        )
-    exact = [snapshot for snapshot in identity_matches if _snapshot_matches_coordinate(snapshot, scheme)]
-    if not exact:
-        return _result(
-            binding_id=binding_id,
-            outcome=ExternalConceptResolutionOutcome.STALE,
-            address=address,
-            message="the supplied scheme snapshot conflicts with the asserted revision or digest",
-        )
-    if len(exact) > 1:
-        return _result(
-            binding_id=binding_id,
-            outcome=ExternalConceptResolutionOutcome.AMBIGUOUS,
-            address=address,
-            message="the exact scheme coordinate resolves to multiple supplied snapshots",
-        )
-    concept_candidates = [term for term in exact[0].concepts if term.concept_id == scheme.concept_id]
-    if not concept_candidates:
-        return _result(
-            binding_id=binding_id,
-            outcome=ExternalConceptResolutionOutcome.UNKNOWN_CONCEPT,
-            address=address,
-            message="the asserted concept is absent from the exact supplied scheme revision",
-        )
-    if len(concept_candidates) > 1:
-        return _result(
-            binding_id=binding_id,
-            outcome=ExternalConceptResolutionOutcome.AMBIGUOUS,
-            address=address,
-            message="the asserted concept resolves to multiple candidates in the exact supplied scheme revision",
-        )
-    term = concept_candidates[0]
-    if term.status == "superseded":
-        return _result(
-            binding_id=binding_id,
-            outcome=ExternalConceptResolutionOutcome.SUPERSEDED,
-            address=address,
-            message="the original concept is superseded; automatic successor rewriting is forbidden",
-            resolved_concept_id=scheme.concept_id,
-        )
-    return _result(
+    snapshot, resolution = _matching_scheme_snapshot(
+        scheme,
+        snapshots,
         binding_id=binding_id,
-        outcome=ExternalConceptResolutionOutcome.RESOLVED_CURRENT,
         address=address,
-        message="resolved",
-        resolved_concept_id=scheme.concept_id,
     )
+    if resolution is None:
+        assert snapshot is not None
+        resolution = _concept_resolution(
+            scheme,
+            snapshot,
+            binding_id=binding_id,
+            address=address,
+        )
+    return resolution
 
 
 def admit_external_concept_bindings(
