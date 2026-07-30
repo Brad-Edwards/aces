@@ -2,9 +2,9 @@
   "contract_id": "experiment-authoring-input-v1",
   "schema_path": "contracts/schemas/experiment-core/experiment-authoring-input-v1.json",
   "stability": "draft",
-  "content_hash": "ed858991667adaaf817118d0ae985a9c01884eb32673717da1f2e25c8082ea72",
+  "content_hash": "7a26f479a37755dc7d7989d467049a49eabef8a7d5d363d25837b58622a6e9a3",
   "last_change": {
-    "summary": "Added bounded experiment selection policies, deterministic no-seed authoring, factor/allocation joins, and fail-closed stochastic profile binding for issue #787.",
-    "content_hash": "ed858991667adaaf817118d0ae985a9c01884eb32673717da1f2e25c8082ea72"
+    "summary": "Bound adaptive-difficulty observation roles to exact versioned or digest-bound source definitions for issue #784.",
+    "content_hash": "7a26f479a37755dc7d7989d467049a49eabef8a7d5d363d25837b58622a6e9a3"
   }
 }

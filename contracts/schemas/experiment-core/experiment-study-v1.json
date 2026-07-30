@@ -503,6 +503,34 @@
     },
     "ExperimentConditionAssignmentModel": {
       "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "difficulty_condition": {
+                "enum": [
+                  "adaptive",
+                  "scaffolded"
+                ]
+              }
+            },
+            "required": [
+              "difficulty_condition"
+            ]
+          },
+          "then": {
+            "properties": {
+              "difficulty_policy_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "difficulty_policy_id"
+            ]
+          }
+        }
+      ],
       "anyOf": [
         {
           "properties": {
@@ -544,6 +572,29 @@
           ],
           "default": null,
           "title": "Description"
+        },
+        "difficulty_condition": {
+          "default": "fixed",
+          "enum": [
+            "fixed",
+            "adaptive",
+            "scaffolded"
+          ],
+          "title": "Difficulty Condition",
+          "type": "string"
+        },
+        "difficulty_policy_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Difficulty Policy Id"
         },
         "factor_levels": {
           "additionalProperties": {
@@ -2279,6 +2330,18 @@
       ],
       "level": "error",
       "validator": "raes_contracts.contracts.validate_experiment_study_against_tasks_and_runs"
+    },
+    {
+      "description": "Any adaptive or scaffolded allocation condition requires an analysis plan and explicit validity notes.",
+      "id": "adaptive-difficulty-study-validity-treatment-required",
+      "inputs": [
+        {
+          "contract_id": "experiment-study-v1",
+          "instance_path": "#/run_allocation"
+        }
+      ],
+      "level": "error",
+      "validator": "raes_contracts.contracts.ExperimentStudyModel._validate_claim_bearing_study"
     },
     {
       "description": "Every validation_basis_disclosures entry must declare subject_kind='experiment_study' and a subject_ref matching this study's study_id/study_version.",

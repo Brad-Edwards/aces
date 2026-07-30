@@ -2,9 +2,9 @@
   "contract_id": "experiment-study-v1",
   "schema_path": "contracts/schemas/experiment-core/experiment-study-v1.json",
   "stability": "draft",
-  "content_hash": "fba8bea1241539394a052b8df1c1216ff12c6499078759cfd1bb67844c23828d",
+  "content_hash": "d6ae5d441175cd494a93dfd3f9e39456af600689e72948e73291d99db9c83a06",
   "last_change": {
-    "summary": "Published the shared relation-parameter profile and assurance-axis claim-binding coordinates for issue #810.",
-    "content_hash": "fba8bea1241539394a052b8df1c1216ff12c6499078759cfd1bb67844c23828d"
+    "summary": "Added explicit difficulty condition and policy allocation with adaptive-study validity treatment for issue #784.",
+    "content_hash": "d6ae5d441175cd494a93dfd3f9e39456af600689e72948e73291d99db9c83a06"
   }
 }

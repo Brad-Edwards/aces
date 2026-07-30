@@ -1357,6 +1357,48 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   records. RAES records these as provenance and information-boundary concerns
   so downstream studies can audit what a participant actually could observe.
 
+### Adaptive difficulty, sequential intervention, and simulation experiments
+
+SCE-003 combines the benchmark lineage above with four primary adjacent
+sources. Hunicke and Chapman's
+[AI for Dynamic Difficulty Adjustment in Games](https://www.cs.northwestern.edu/~hunicke/pubs/Hamlet.pdf)
+supplies the inspectable controller shape: observations, policy, trigger,
+intervention, and outcome remain separate. Murphy's
+[Optimal Dynamic Treatment Regimes (2003)](https://doi.org/10.1111/1467-9868.00389)
+supplies the sequential treatment-regime precedent: a history-dependent
+decision rule makes the realized path part of treatment. Weiss's
+[adaptive-testing work (1982)](https://doi.org/10.1177/014662168200600408)
+warns that adaptive selection is not a measurement theory; item/measurement
+model, selection, and stopping assumptions determine what can be inferred.
+Bengio et al.'s
+[Curriculum Learning (2009)](https://doi.org/10.1145/1553374.1553380)
+shows that ordering and selection can change learning dynamics, so scaffolding
+or difficulty changes cannot be treated as presentation-neutral.
+
+The simulation-experiment lineage supplies the engineering boundary.
+MIASE/SED-ML and experimental frames keep the scenario model separate from the
+procedure that exercises and observes it. L'Ecuyer's stream/substream work and
+Heikes, Montgomery, and Rardin's
+[common-random-numbers analysis (1976)](https://doi.org/10.1177/003754977602700301)
+make cross-alternative random-stream reuse an explicit design choice rather
+than an accidental continuation. Sargent's V&V discipline keeps intended use,
+implementation verification, and model/measurement validation distinct.
+
+RAES adopts those lessons as a versioned and digest-bound source definition
+plus exact evidence instance; a sealed policy and decision history;
+forward-only interventions; distinct fixed/adaptive/scaffolded allocations;
+new identity for a changed-scenario follow-up; explicit random-stream
+relationships; and analysis/validity disclosures. RAES does not adopt an
+item-response model, dynamic-treatment estimator, curriculum optimizer, DDA
+controller, or simulation algorithm, and it claims no universal difficulty
+scale, competence estimate, causal policy effect, pedagogical benefit, or
+policy optimality.
+The issue-specific transfer audit is recorded in
+[`adaptive-difficulty-lineage-and-validity.md`](../../research/scenario-variation-trial-realization/adaptive-difficulty-lineage-and-validity.md).
+These are semantic design precedents, not source-code, schema, or wire-format
+derivations, so the normative SDL subject ledger and third-party notice
+disposition do not change.
+
 ## DSL Evaluation Lineage
 
 - [Do Software Languages Engineers Evaluate their Languages?](https://arxiv.org/abs/1109.6794),

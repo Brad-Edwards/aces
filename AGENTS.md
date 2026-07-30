@@ -17,3 +17,19 @@ The required repo-policy checks and hard rules are enforced by the
 `/implement` skill through the plan rules file referenced in
 `.ground-control.yaml` — see `.gc/plan-rules.md` for the authoritative
 list.
+
+## Repo skills
+
+- Use `.codex-skills/raes-asset-inventory-capture/SKILL.md` from Codex. This
+  server also links it at
+  `~/.codex/skills/raes-asset-inventory-capture`.
+- Use `.claude/skills/raes-asset-inventory-capture/SKILL.md` from Claude Code.
+  This server also links it at
+  `~/.claude/skills/raes-asset-inventory-capture`.
+- Use `.codex-skills/raes-gap-remediation-implement/SKILL.md` from Codex when
+  remediating RAES/APTL gaps found by the asset-inventory methodology. This
+  server also links it at
+  `~/.codex/skills/raes-gap-remediation-implement`.
+- Use `.claude/skills/raes-gap-remediation-implement/SKILL.md` from Claude
+  Code for the same overlay. This server also links it at
+  `~/.claude/skills/raes-gap-remediation-implement`.

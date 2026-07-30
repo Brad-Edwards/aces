@@ -112,6 +112,9 @@ from .catalogs import (
     UcoAlignmentTypeModel,
     UcoFamilyAlignmentModel,
 )
+from .difficulty_adaptation import *
+from .difficulty_provenance import *
+from .difficulty_resolution import *
 from .execution_state import (
     EvaluationHistoryEventModel,
     EvaluationResultStateModel,
