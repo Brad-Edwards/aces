@@ -258,7 +258,8 @@ def test_child_program_is_bounded_requirement_backed_and_acyclic() -> None:
     assert set(issues) == REQUIRED_CHILDREN
     issue_numbers: set[int] = set()
     for key, entry in issues.items():
-        assert isinstance(entry["issue_number"], int) and entry["issue_number"] > 0, key
+        assert isinstance(entry["issue_number"], int), key
+        assert entry["issue_number"] > 0, key
         assert entry["issue_number"] not in issue_numbers
         issue_numbers.add(entry["issue_number"])
         assert entry["milestone"] == MILESTONE
