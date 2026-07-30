@@ -15,6 +15,7 @@ PARTICIPANT_OPACITY_ANALYSIS_EVIDENCE_SCHEMA_VERSION = "participant-opacity-anal
 REFERENCE_MODELS_SCHEMA_VERSION = "reference-models/v1"
 UCO_ALIGNMENT_SCHEMA_VERSION = "uco-alignment/v1"
 CONTROLLED_VOCABULARIES_SCHEMA_VERSION = "controlled-vocabularies/v1"
+EXTERNAL_CONCEPT_BINDINGS_SCHEMA_VERSION = "external-concept-bindings/v1"
 ATTACK_ENTERPRISE_TACTICS_SOURCE_SCHEMA_VERSION = "attack-enterprise-tactics-source/v1"
 ATLAS_TACTICS_SOURCE_SCHEMA_VERSION = "atlas-tactics-source/v1"
 NIST_CSF_DEFENSIVE_CATEGORIES_SOURCE_SCHEMA_VERSION = "nist-csf-defensive-categories-source/v1"

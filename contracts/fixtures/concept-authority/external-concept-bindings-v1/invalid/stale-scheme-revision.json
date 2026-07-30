@@ -1,0 +1,46 @@
+{
+  "schema_version": "external-concept-bindings/v1",
+  "binding_set_id": "invalid-stale-scheme",
+  "binding_set_version": "1.0.0",
+  "bindings": {
+    "stale-attack": {
+      "binding_id": "stale-attack",
+      "subject": {
+        "subject_kind": "node",
+        "owning_contract_id": "sdl-authoring-input-v1",
+        "lifecycle_phase": "normalized-authoring",
+        "canonical_ref": "nodes.web",
+        "artifact_digest": "sha256:afa997b3314b5f2a69c31b494ba9f39a207213ba1c65c51786fe84040c605455"
+      },
+      "scheme": {
+        "scheme_id": "mitre-attack-enterprise-tactics",
+        "authority": "MITRE ATT&CK",
+        "revision": "v18.0",
+        "source_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        "concept_id": "TA0002"
+      },
+      "assertion": {
+        "relationship_kind": "related-to",
+        "motivation": "Stale revision fixture.",
+        "motivation_basis_refs": [{"ref_kind": "other", "ref_id": "basis"}],
+        "semantic_effect": "annotates",
+        "semantic_effect_basis_refs": [{"ref_kind": "profile", "ref_id": "sem-217"}]
+      },
+      "perspective": {
+        "asserting_party_kind": "author",
+        "asserting_party_ref": "authors.fixture",
+        "perspective": "scenario-author",
+        "authority_basis_refs": [{"ref_kind": "other", "ref_id": "charter"}]
+      },
+      "provenance": {
+        "asserted_at": "2026-07-30T12:00:00Z",
+        "source_refs": [{"ref_kind": "other", "ref_id": "source"}]
+      },
+      "supporting_evidence_refs": [],
+      "confidence": {"posture": "unknown", "basis": "Stale fixture."},
+      "approximation": {"posture": "exact", "loss_details": []},
+      "limitations": ["Stale fixture."],
+      "review": {"status": "unreviewed", "review_refs": []}
+    }
+  }
+}

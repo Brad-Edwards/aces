@@ -1,0 +1,97 @@
+{
+  "schema_version": "external-concept-bindings/v1",
+  "binding_set_id": "portable-scheme-examples",
+  "binding_set_version": "1.0.0",
+  "bindings": {
+    "attack-execution": {
+      "binding_id": "attack-execution",
+      "subject": {
+        "subject_kind": "node",
+        "owning_contract_id": "sdl-authoring-input-v1",
+        "lifecycle_phase": "normalized-authoring",
+        "canonical_ref": "nodes.web",
+        "artifact_digest": "sha256:afa997b3314b5f2a69c31b494ba9f39a207213ba1c65c51786fe84040c605455"
+      },
+      "scheme": {
+        "scheme_id": "mitre-attack-enterprise-tactics",
+        "authority": "MITRE ATT&CK",
+        "revision": "v19.1",
+        "source_locator": "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/v19.1/enterprise-attack/enterprise-attack-19.1.json",
+        "source_digest": "sha256:bdf1ce86a4e604214c5076d37ae4dcb322678afc528df8492e6fdc1b554f5da3",
+        "concept_id": "TA0002"
+      },
+      "assertion": {
+        "relationship_kind": "related-to",
+        "motivation": "Record a reviewed relationship between the authored execution node and the ATT&CK Execution tactic.",
+        "motivation_basis_refs": [
+          {
+            "ref_kind": "other",
+            "ref_id": "author-analysis",
+            "ref_version": "v1"
+          }
+        ],
+        "semantic_effect": "annotates",
+        "semantic_effect_basis_refs": [
+          {
+            "ref_kind": "profile",
+            "ref_id": "sem-217",
+            "ref_version": "v1"
+          }
+        ]
+      },
+      "perspective": {
+        "asserting_party_kind": "author",
+        "asserting_party_ref": "authors.fixture",
+        "perspective": "scenario-author",
+        "authority_basis_refs": [
+          {
+            "ref_kind": "other",
+            "ref_id": "fixture-review-charter",
+            "ref_version": "v1"
+          }
+        ]
+      },
+      "provenance": {
+        "asserted_at": "2026-07-30T12:00:00Z",
+        "source_refs": [
+          {
+            "ref_kind": "other",
+            "ref_id": "attack-enterprise-v19.1",
+            "ref_version": "v19.1",
+            "ref_digest": "sha256:bdf1ce86a4e604214c5076d37ae4dcb322678afc528df8492e6fdc1b554f5da3"
+          }
+        ]
+      },
+      "supporting_evidence_refs": [
+        {
+          "ref_kind": "evidence-record",
+          "ref_id": "fixture-review-attack",
+          "ref_version": "v1"
+        }
+      ],
+      "confidence": {
+        "posture": "high",
+        "basis": "The canonical subject and pinned source revision were reviewed together."
+      },
+      "approximation": {
+        "posture": "approximate",
+        "loss_details": [
+          "A RAES node is not itself an ATT&CK tactic; the binding records contextual relevance only."
+        ]
+      },
+      "limitations": [
+        "The assertion does not claim that the node executes every technique associated with the tactic."
+      ],
+      "review": {
+        "status": "accepted",
+        "review_refs": [
+          {
+            "ref_kind": "other",
+            "ref_id": "fixture-review-attack",
+            "ref_version": "v1"
+          }
+        ]
+      }
+    }
+  }
+}

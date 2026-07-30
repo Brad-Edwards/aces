@@ -1548,6 +1548,160 @@
         }
       }
     },
+    "external-concept-relationship-kinds": {
+      "title": "External Concept Relationship Kinds",
+      "description": "Closed, directionally RAES-subject-to-external-concept relationship kinds.",
+      "kind": "enumeration",
+      "governed_scopes": [
+        "external_concept_bindings.bindings.*.assertion.relationship_kind"
+      ],
+      "extension_policy": "closed",
+      "terms": {
+        "equivalent-to": {
+          "title": "Equivalent To",
+          "description": "The asserting perspective claims equivalent meaning, subject to explicit review and loss posture."
+        },
+        "broader-than": {
+          "title": "Broader Than",
+          "description": "The RAES subject is asserted to have broader meaning than the external concept."
+        },
+        "narrower-than": {
+          "title": "Narrower Than",
+          "description": "The RAES subject is asserted to have narrower meaning than the external concept."
+        },
+        "related-to": {
+          "title": "Related To",
+          "description": "The RAES subject is contextually related without an equivalence or ordering claim."
+        },
+        "instance-of": {
+          "title": "Instance Of",
+          "description": "The RAES subject is asserted to instantiate the external concept."
+        }
+      }
+    },
+    "external-knowledge-binding-effects": {
+      "title": "External Knowledge Binding Effects",
+      "description": "Closed SEM-217 effects that an external concept assertion may claim without acquiring authority by itself.",
+      "kind": "enumeration",
+      "governed_scopes": [
+        "external_concept_bindings.bindings.*.assertion.semantic_effect"
+      ],
+      "extension_policy": "closed",
+      "terms": {
+        "annotates": {
+          "title": "Annotates",
+          "description": "Adds reviewable context without changing native validation or runtime meaning."
+        },
+        "constrains": {
+          "title": "Constrains",
+          "description": "Claims a constraint that has effect only through an independently governed RAES validator or profile."
+        },
+        "refines": {
+          "title": "Refines",
+          "description": "Claims a reviewed narrowing or divergence from external meaning."
+        },
+        "aligns": {
+          "title": "Aligns",
+          "description": "Claims reviewed equivalent meaning with an external authority."
+        }
+      }
+    },
+    "external-concept-confidence-postures": {
+      "title": "External Concept Confidence Postures",
+      "description": "Closed qualitative confidence postures for authored external concept assertions.",
+      "kind": "enumeration",
+      "governed_scopes": [
+        "external_concept_bindings.bindings.*.confidence.posture"
+      ],
+      "extension_policy": "closed",
+      "terms": {
+        "unknown": {
+          "title": "Unknown",
+          "description": "No portable confidence strength is claimed."
+        },
+        "low": {
+          "title": "Low",
+          "description": "The assertion has limited supporting basis."
+        },
+        "medium": {
+          "title": "Medium",
+          "description": "The assertion has a bounded but incomplete supporting basis."
+        },
+        "high": {
+          "title": "High",
+          "description": "The assertion has a strong explicitly stated supporting basis."
+        }
+      }
+    },
+    "external-concept-approximation-postures": {
+      "title": "External Concept Approximation Postures",
+      "description": "Closed disclosure of exactness, approximation, or semantic loss.",
+      "kind": "enumeration",
+      "governed_scopes": [
+        "external_concept_bindings.bindings.*.approximation.posture"
+      ],
+      "extension_policy": "closed",
+      "terms": {
+        "exact": {
+          "title": "Exact",
+          "description": "No approximation or loss is asserted."
+        },
+        "approximate": {
+          "title": "Approximate",
+          "description": "The correspondence is approximate and carries explicit loss details."
+        },
+        "lossy": {
+          "title": "Lossy",
+          "description": "The correspondence omits or changes material meaning disclosed in loss details."
+        }
+      }
+    },
+    "external-concept-review-statuses": {
+      "title": "External Concept Review Statuses",
+      "description": "Closed lifecycle states for review of an authored external concept assertion.",
+      "kind": "enumeration",
+      "governed_scopes": [
+        "external_concept_bindings.bindings.*.review.status"
+      ],
+      "extension_policy": "closed",
+      "terms": {
+        "unreviewed": {
+          "title": "Unreviewed",
+          "description": "No completed review is claimed."
+        },
+        "in-review": {
+          "title": "In Review",
+          "description": "Review is active but has no completed disposition."
+        },
+        "accepted": {
+          "title": "Accepted",
+          "description": "The assertion was accepted by the referenced review."
+        },
+        "rejected": {
+          "title": "Rejected",
+          "description": "The assertion was rejected by the referenced review."
+        },
+        "superseded": {
+          "title": "Superseded",
+          "description": "The assertion was superseded without rewriting its historical identity."
+        }
+      }
+    },
+    "external-concept-participant-availability-kinds": {
+      "title": "External Concept Participant Availability Kinds",
+      "description": "Closed participant-scope posture that records eligibility without claiming exposure or delivery.",
+      "kind": "enumeration",
+      "governed_scopes": [
+        "external_concept_bindings.bindings.*.perspective.participant_availability.kind"
+      ],
+      "extension_policy": "closed",
+      "terms": {
+        "eligibility-only": {
+          "title": "Eligibility Only",
+          "description": "Participants are intended eligibility targets; existing information-flow authority still governs actual availability and delivery."
+        }
+      }
+    },
     "random-stream-draw-purposes": {
       "title": "Random Stream Draw Purposes",
       "description": "Closed EXP-718 governed concern identifiers for a random-stream draw address.",

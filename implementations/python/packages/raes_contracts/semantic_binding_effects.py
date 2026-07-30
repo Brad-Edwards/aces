@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
 from typing import Literal
 
 from .contracts import (
@@ -11,19 +10,10 @@ from .contracts import (
     SemanticProfileModel,
     UcoAlignmentCatalogModel,
 )
-from .vocabulary import ConceptProvenanceCategory
+from .vocabulary import ConceptProvenanceCategory, ExternalKnowledgeBindingEffect
 
 SemanticProfilePhase = Literal["authoring", "exchange", "processing", "execution"]
 _SEMANTIC_PROFILE_PHASES = frozenset(("authoring", "exchange", "processing", "execution"))
-
-
-class ExternalKnowledgeBindingEffect(str, Enum):
-    """Portable SEM-217 effects a binding may have on native RAES meaning."""
-
-    ANNOTATES = "annotates"
-    CONSTRAINS = "constrains"
-    REFINES = "refines"
-    ALIGNS = "aligns"
 
 
 @dataclass(frozen=True, slots=True)
