@@ -350,4 +350,4 @@ uncertainty, and limitations explicit.
 This is design authority, not a delivered robustness claim. Runtime and
 backend enforcement, attack evaluations, monitor honesty, model alignment,
 private reasoning, and undeclared covert channels remain unclaimed. See the
-[issue #812 design record](https://github.com/RAESystem/rae/issues/812).
+[issue #812 design record](https://github.com/OpenRAE/rae/issues/812).
