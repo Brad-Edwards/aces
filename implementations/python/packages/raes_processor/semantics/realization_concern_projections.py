@@ -126,12 +126,12 @@ def _project_mount_record(record: Mapping[str, Any]) -> dict[str, object]:
     target = record.get("target")
     if not isinstance(target, str) or not target:
         raise ValueError("runtime mounts require a target")
-    source, source_present = _project_mount_sensitive_value(
+    source, source_present = _project_mount_sensitive_text(
         record.get("source", ""),
         record.get("source_sensitivity", "unknown"),
         label="source",
     )
-    options, options_present = _project_mount_sensitive_value(
+    options, options_present = _project_mount_sensitive_options(
         record.get("options", []),
         record.get("options_sensitivity", "unknown"),
         label="options",
@@ -153,17 +153,33 @@ def _project_mount_record(record: Mapping[str, Any]) -> dict[str, object]:
     }
 
 
-def _project_mount_sensitive_value(
-    value: Any,
+def _project_mount_sensitive_text(
+    value: object,
     sensitivity: object,
     *,
     label: str,
-) -> tuple[Any, bool]:
+) -> tuple[str, bool]:
+    if not isinstance(value, str):
+        raise ValueError(f"runtime mount {label} must be a string")
     if sensitivity in _PROTECTED:
         if value:
             raise ValueError(f"protected runtime mount {label} must not carry raw material")
-        return type(value)(), True
+        return "", True
     return value, bool(value)
+
+
+def _project_mount_sensitive_options(
+    value: object,
+    sensitivity: object,
+    *,
+    label: str,
+) -> tuple[list[object], bool]:
+    options = list(_sequence(value, label=f"runtime mount {label}"))
+    if sensitivity in _PROTECTED:
+        if options:
+            raise ValueError(f"protected runtime mount {label} must not carry raw material")
+        return [], True
+    return options, bool(options)
 
 
 def project_mounts(value: object, observed: bool = False) -> object:
