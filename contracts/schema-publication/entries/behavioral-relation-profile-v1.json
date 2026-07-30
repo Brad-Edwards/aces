@@ -1,0 +1,10 @@
+{
+  "contract_id": "behavioral-relation-profile-v1",
+  "schema_path": "contracts/schemas/profiles/behavioral-relation-profile-v1.json",
+  "stability": "draft",
+  "content_hash": "e01769ee74c94e44e7ae876878f4da5ccd5df72fa5efdbef9767ccae5385bbc5",
+  "last_change": {
+    "summary": "Published the closed participant-opacity relation profile contract for issue #961.",
+    "content_hash": "e01769ee74c94e44e7ae876878f4da5ccd5df72fa5efdbef9767ccae5385bbc5"
+  }
+}

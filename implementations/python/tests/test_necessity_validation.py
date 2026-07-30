@@ -109,7 +109,7 @@ def _snapshot_ref(run: ExperimentRunModel) -> str:
 def _claim(
     relation_id: str = BOUNDED_BUT_FOR_RELATION_ID,
     *,
-    taxonomy_revision: str = "rev6",
+    taxonomy_revision: str = "rev7",
 ) -> BehavioralClaimBindingModel:
     return BehavioralClaimBindingModel(
         taxonomy_id="raes-behavioral-relations",

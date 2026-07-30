@@ -810,7 +810,7 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   syntax or wire compatibility. The normative participant-policy model is
   `specs/formal/participant-semantics/information-flow-control.md`; the
   machine-readable relation is `policy-noninterference` in behavioral taxonomy
-  revision `rev6`; and the claim surface is
+  revision `rev7`; and the claim surface is
   `participant-information-flow-policy`. Existing `W`, `V`, qualified `H`,
   `X`, participant action/admission, visibility transition, ordering, marking,
   controller, authority, evidence, and provenance objects remain the mapped
@@ -875,7 +875,7 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   `specs/formal/participant-semantics/participant-crossing-bisimulation.md`,
   `divergence-preserving-branching-bisimulation` and the
   `participant-crossing-bisimulation` claim surface in behavioral taxonomy
-  revision `rev6`, and the theorem/tool/evidence/program records under
+  revision `rev7`, and the theorem/tool/evidence/program records under
   `docs/research/participant-bisimulation/`.
 - The selected theorem compares a complete finite abstract SEM-230 crossing
   LTS with an independently derived formal API-423/RUN-319 crossing-kernel
@@ -1246,7 +1246,7 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   existing `run_target_conformance()` runner extended with an injected
   participant-policy probe harness, `ConformanceCaseResult`, and
   `BackendConformanceReport` for the backend lane; and the
-  `raes-behavioral-relations` `rev6` catalog with `BehavioralClaimBindingModel`
+  `raes-behavioral-relations` `rev7` catalog with `BehavioralClaimBindingModel`
   for claim identity. The four lanes stay separately statused; none promotes
   another.
 - ASR-535 delivery status is bounded-tested and bounded-conformance-implemented.
@@ -1310,7 +1310,7 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   `BehavioralClaimBindingModel` example in
   `implementations/python/tests/test_public_docs_policy.py`. The example
   resolves `bounded-probe-success` against
-  `raes-behavioral-relations@rev6`; it does not define a documentation claim
+  `raes-behavioral-relations@rev7`; it does not define a documentation claim
   schema or a second relation catalog.
 - Issue #803 delivery status is published explanatory guidance over shipped
   bounded evidence. The reference backend still declares the six

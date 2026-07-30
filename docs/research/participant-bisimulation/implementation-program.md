@@ -12,7 +12,7 @@ The machine-readable authority is
 ## Definition Delivered By #811
 
 Issue #811 delivers ADR-100, the selected theorem/profile, taxonomy revision
-`rev6`, the finite carrier and projection design, the proof-tool and evidence
+`rev7`, the finite carrier and projection design, the proof-tool and evidence
 contract, design-scale witness/mutations, SEM-232 ownership (canonical Ground
 Control requirement id `860b0b1e-55cc-42e6-9da8-b7eeeab7172c`), and the
 dependency-ordered program.

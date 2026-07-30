@@ -1,0 +1,10 @@
+{
+  "contract_id": "participant-opacity-analysis-evidence-v1",
+  "schema_path": "contracts/schemas/formal-analysis/participant-opacity-analysis-evidence-v1.json",
+  "stability": "draft",
+  "content_hash": "855d63d66ed6f8b6961217ec56d3ea4558ba77dcf64cd75a8da8bfcb1d3068ef",
+  "last_change": {
+    "summary": "Published digest-bound bounded participant-opacity evidence and safe counterexamples for issue #961.",
+    "content_hash": "855d63d66ed6f8b6961217ec56d3ea4558ba77dcf64cd75a8da8bfcb1d3068ef"
+  }
+}
