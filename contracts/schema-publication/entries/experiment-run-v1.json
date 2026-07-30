@@ -2,9 +2,9 @@
   "contract_id": "experiment-run-v1",
   "schema_path": "contracts/schemas/experiment-core/experiment-run-v1.json",
   "stability": "draft",
-  "content_hash": "c998b0253d760ec9714d8895f20b79c7786e10cfbed35441dabfffb0b988ac83",
+  "content_hash": "59d8056c05cbf86cafee784619255fcf2b3e199ff63fa7e96a118ca57e3d49a4",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "c998b0253d760ec9714d8895f20b79c7786e10cfbed35441dabfffb0b988ac83"
+    "summary": "Archived and validated exact adaptive-difficulty source definitions separately from evidence instances for issue #784.",
+    "content_hash": "59d8056c05cbf86cafee784619255fcf2b3e199ff63fa7e96a118ca57e3d49a4"
   }
 }

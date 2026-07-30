@@ -16,18 +16,24 @@ from ..models import (
     SnapshotEntry,
 )
 from ..semantics.planner import reconcile_resource_actions
+from ..semantics.realization import CompiledRealizationRequirement
 from .ordering import _delete_order, _entry_matches_resource, _topological_order
 
 
 def _build_operations(
     resources: dict[str, PlannedResource],
     snapshot: RuntimeSnapshot,
+    realization_requirements: tuple[CompiledRealizationRequirement, ...] = (),
 ) -> tuple[dict[str, ChangeAction], dict[str, SnapshotEntry]]:
     semantic_actions, deleted_entries = reconcile_resource_actions(
         resources,
         snapshot.entries,
         resource_dependencies=lambda resource: resource,
-        matches=_entry_matches_resource,
+        matches=lambda entry, resource: _entry_matches_resource(
+            entry,
+            resource,
+            realization_requirements,
+        ),
     )
     actions = {address: ChangeAction(action.value) for address, action in semantic_actions.items()}
     return actions, deleted_entries

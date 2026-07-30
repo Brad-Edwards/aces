@@ -15,8 +15,10 @@ The current assessment is deliberately conservative. Only
 blocking concerns directly, including authored/observed-state binding,
 specificity, teardown, credentials, time and clocks, participant budgets,
 verifiers, hidden assets, and trajectories. Behavioral-relation semantics are
-now implemented as `raes-behavioral-relations@rev5`, while the stronger formal
-relations it defines retain their honest unproved or future assurance states.
+now implemented as `raes-behavioral-relations@rev8`. Each stronger formal
+relation retains its explicit assurance-axis status; the participant-opacity
+entry records one exact finite-model result without promoting it to a
+mathematical proof or runtime/backend result.
 
 These profiles are scope contracts, not validators that silently strengthen
 ordinary SDL parsing. They also do not certify a backend, an experiment result,

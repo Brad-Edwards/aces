@@ -16,14 +16,14 @@ from raes_contracts.contracts import BehavioralClaimBindingModel
 def _opacity_binding(**overrides: object) -> BehavioralClaimBindingModel:
     payload: dict[str, object] = {
         "taxonomy_id": "raes-behavioral-relations",
-        "taxonomy_revision": "rev5",
+        "taxonomy_revision": "rev8",
         "relation_id": "participant-predicate-opacity",
         "subject": "Participant p at the declared exact cut",
-        "left_carrier_ref": "possible-point-system:finite-example",
-        "observation_projection_ref": "participant-opacity-observation:baseline",
+        "left_carrier_ref": "possible-point-carrier:participant-opacity-fixture-v1",
+        "observation_projection_ref": "participant-opacity-observation:complete-v1",
         "observation_projection_revision": "rev1",
-        "relation_parameter_profile_ref": "participant-opacity-profile:baseline",
-        "relation_parameter_profile_revision": "sem-231/rev1",
+        "relation_parameter_profile_ref": "participant-opacity-baseline-v1",
+        "relation_parameter_profile_revision": "sem-231/rev2",
         "quantifier_scope": "finite-cases",
         "evidence_scope": "finite",
         "assurance_axis": "bounded-test",
@@ -41,7 +41,7 @@ def test_catalog_defines_one_sided_participant_predicate_opacity() -> None:
     catalog = load_behavioral_relation_catalog()
     relation = catalog.relations["participant-predicate-opacity"]
 
-    assert catalog.taxonomy_revision == "rev5"
+    assert catalog.taxonomy_revision == "rev8"
     assert relation.relation_class == "epistemic"
     assert relation.direction == "unary"
     assert relation.relation_parameter_profile_required is True
@@ -50,15 +50,24 @@ def test_catalog_defines_one_sided_participant_predicate_opacity() -> None:
     assert relation.dimensions.time.status == "parameterized"
     assert relation.dimensions.partial_order.status == "parameterized"
     assert relation.assurance.definition_status == "defined"
-    assert relation.assurance.implementation_status == "not-implemented"
-    assert relation.assurance.checker_status == "not-implemented"
+    assert relation.assurance.implementation_status == "implemented"
+    assert relation.assurance.checker_status == "implemented"
     assert relation.assurance.test_status == "bounded"
-    assert relation.assurance.model_check_status == "not-model-checked"
+    assert relation.assurance.model_check_status == "model-checked"
     assert relation.assurance.proof_status == "deliberately-unproved"
     assert relation.assurance.runtime_enforcement_status == "not-enforced"
     assert relation.assurance.backend_declaration_status == "not-declared"
     assert relation.assurance.backend_realization_status == "not-realized"
     assert relation.assurance.backend_conformance_status == "not-tested"
+    assert {
+        "contracts/profiles/behavioral-relation/participant-opacity-baseline-v1.json",
+        "contracts/schemas/formal-analysis/participant-opacity-model-check-input-v1.json",
+        "contracts/schemas/formal-analysis/participant-opacity-model-check-evidence-v1.json",
+        "implementations/python/packages/raes_processor/participant_opacity/_service.py",
+        "implementations/python/packages/raes_processor/participant_opacity/_model_check.py",
+        "implementations/python/tests/test_issue_961_participant_opacity.py",
+        "implementations/python/tests/test_issue_962_participant_opacity_model_check.py",
+    } <= set(relation.assurance.evidence_refs)
 
 
 def test_opacity_binding_requires_a_revisioned_parameter_profile_and_assurance_axis() -> None:
@@ -108,6 +117,27 @@ def test_universal_opacity_claim_still_requires_model_check_or_proof_evidence() 
             evidence_scope="finite",
             assurance_axis="bounded-test",
             assurance_status="tested",
+        )
+
+
+def test_universal_opacity_claim_accepts_model_check_evidence() -> None:
+    binding = _opacity_binding(
+        quantifier_scope="all-strategies",
+        evidence_scope="model-check",
+        assurance_axis="model-check",
+        assurance_status="model-checked",
+    )
+
+    assert binding.quantifier_scope == "all-strategies"
+    assert binding.evidence_scope == "model-check"
+
+
+def test_deliberately_unproved_proof_binding_requires_structural_evidence() -> None:
+    with pytest.raises(ValueError, match="assurance axis"):
+        _opacity_binding(
+            evidence_scope="finite",
+            assurance_axis="proof",
+            assurance_status="deliberately-unproved",
         )
 
 
@@ -200,10 +230,6 @@ def _relation_assurance(**overrides: str) -> RelationAssuranceModel:
             "model_check_status": "not-model-checked",
         },
         {
-            "proof_status": "deliberately-unproved",
-            "model_check_status": "model-checked",
-        },
-        {
             "implementation_status": "partial",
         },
         {
@@ -226,10 +252,20 @@ def test_relation_assurance_rejects_cross_axis_contradictions(overrides: dict[st
         _relation_assurance(**overrides)
 
 
-def test_relation_assurance_accepts_model_check_with_matching_legacy_aggregate() -> None:
+def test_relation_assurance_keeps_model_check_independent_from_proof() -> None:
+    assurance = _relation_assurance(
+        proof_status="deliberately-unproved",
+        model_check_status="model-checked",
+    )
+
+    assert assurance.model_check_status == "model-checked"
+    assert assurance.proof_status == "deliberately-unproved"
+
+
+def test_relation_assurance_accepts_matching_legacy_model_check_aggregate() -> None:
     assurance = _relation_assurance(
         proof_status="model-checked",
         model_check_status="model-checked",
     )
 
-    assert assurance.model_check_status == "model-checked"
+    assert assurance.proof_status == "model-checked"

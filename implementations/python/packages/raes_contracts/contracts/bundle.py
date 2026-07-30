@@ -13,6 +13,7 @@ from raes_contracts.artifact_requirements import ArtifactRequirementContractMode
 
 from .admitted_trial_plan import AdmittedTrialPlanModel
 from .associated_artifacts import AssociatedArtifactManifestModel
+from .batch_execution import BatchExecutionReceiptModel
 from .catalogs import (
     ConceptFamilyCatalogModel,
     ReferenceModelCatalogModel,
@@ -36,6 +37,7 @@ from .experiment_capture import ExperimentCaptureSpecModel
 from .experiment_evidence import ExperimentDerivedMeasureModel, ExperimentEvidenceRecordModel
 from .experiment_run import ExperimentRunModel
 from .experiment_spec import ExperimentSpecModel, ExperimentStudyModel
+from .external_concept_bindings import ExternalConceptBindingDocumentModel
 from .manifests import ProcessorManifestV2Model
 from .participant_context import ParticipantContextViewModel
 from .participant_control import ParticipantControlOccurrenceModel
@@ -121,8 +123,15 @@ from .vocabulary_sources import (
 def _core_schema_bundle() -> dict[str, dict[str, Any]]:
     from raes_contracts.realization_envelope import BackendRealizationEnvelopeModel
 
+    from ..behavioral_relation_profiles import BehavioralRelationProfileModel
     from ..behavioral_relations import BehavioralRelationCatalogModel
     from ..exploit_path import ExploitPathAnalysisEvidenceModel
+    from ..participant_opacity import (
+        ParticipantOpacityAnalysisEvidenceModel,
+        ParticipantOpacityAnalysisInputModel,
+        ParticipantOpacityModelCheckEvidenceModel,
+        ParticipantOpacityModelCheckInputModel,
+    )
     from ..provenance import SDLLineageLedgerModel
     from ..satisfiability import ScenarioSatisfiabilityEvidenceModel
     from ..scientific_completeness import (
@@ -147,9 +156,15 @@ def _core_schema_bundle() -> dict[str, dict[str, Any]]:
         "participant-implementation-provenance-v1": ParticipantImplementationProvenanceModel.model_json_schema(),
         "concept-families-v1": ConceptFamilyCatalogModel.model_json_schema(),
         "behavioral-relations-v1": BehavioralRelationCatalogModel.model_json_schema(),
+        "behavioral-relation-profile-v1": BehavioralRelationProfileModel.model_json_schema(),
+        "participant-opacity-analysis-input-v1": ParticipantOpacityAnalysisInputModel.model_json_schema(),
+        "participant-opacity-analysis-evidence-v1": ParticipantOpacityAnalysisEvidenceModel.model_json_schema(),
+        "participant-opacity-model-check-input-v1": ParticipantOpacityModelCheckInputModel.model_json_schema(),
+        "participant-opacity-model-check-evidence-v1": ParticipantOpacityModelCheckEvidenceModel.model_json_schema(),
         "reference-models-v1": ReferenceModelCatalogModel.model_json_schema(),
         "uco-alignment-v1": UcoAlignmentCatalogModel.model_json_schema(),
         "controlled-vocabularies-v1": ControlledVocabularyCatalogModel.model_json_schema(),
+        "external-concept-bindings-v1": ExternalConceptBindingDocumentModel.model_json_schema(),
         "attack-enterprise-tactics-source-v1": AttackEnterpriseTacticsSourceModel.model_json_schema(),
         "atlas-tactics-source-v1": AtlasTacticsSourceModel.model_json_schema(),
         "nist-csf-defensive-categories-source-v1": NistCsfDefensiveCategorySourceModel.model_json_schema(),
@@ -170,6 +185,7 @@ def _core_schema_bundle() -> dict[str, dict[str, Any]]:
         "trial-cleanup-plan-v1": TrialCleanupPlanModel.model_json_schema(),
         "trial-cleanup-receipt-v1": TrialCleanupReceiptModel.model_json_schema(),
         "scheduler-isolation-proof-v1": SchedulerIsolationProofModel.model_json_schema(),
+        "batch-execution-receipt-v1": BatchExecutionReceiptModel.model_json_schema(),
         "time-model-v1": TimeModelDeclarationModel.model_json_schema(),
         "time-runtime-state-v1": TimeRuntimeStateModel.model_json_schema(),
         "realized-time-model-v1": RealizedTimeModelProvenanceModel.model_json_schema(),
@@ -242,7 +258,7 @@ def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
 
 
 @cache
-def _schema_bundle_template() -> dict[str, dict[str, Any]]:
+def _schema_bundle_template() -> dict[str, dict[str, Any]]:  # NOSONAR
     """Build the immutable-in-practice template used by :func:`schema_bundle`."""
 
     bundle = _raw_schema_bundle()
@@ -253,6 +269,107 @@ def _schema_bundle_template() -> dict[str, dict[str, Any]]:
         "must resolve exactly inside one taxonomy revision.",
         validator="raes_contracts.behavioral_relations.BehavioralRelationCatalogModel",
         inputs=[{"contract_id": "behavioral-relations-v1", "instance_path": "#"}],
+    )
+    _add_raes_invariant(
+        bundle["behavioral-relation-profile-v1"],
+        "behavioral-relation-profile-local-join",
+        "The closed relation-specific parameter variant must match the profile relation, carrier, projection, "
+        "finite domains, local refs, limitations, and explicit nonclaims.",
+        validator="raes_contracts.behavioral_relation_profiles.BehavioralRelationProfileModel",
+        inputs=[
+            {
+                "contract_id": "behavioral-relation-profile-v1",
+                "instance_path": "#",
+            }
+        ],
+    )
+    _add_raes_invariant(
+        bundle["behavioral-relation-profile-v1"],
+        "behavioral-relation-profile-claim-resolution",
+        "Catalog, profile, carrier, observation projection, and claim coordinates must resolve exactly through "
+        "the shared behavioral claim validator.",
+        validator="raes_contracts.behavioral_relations.validate_behavioral_claim_binding",
+        inputs=[
+            {
+                "contract_id": "behavioral-relation-profile-v1",
+                "instance_path": "#",
+            },
+            {"contract_id": "behavioral-relations-v1", "instance_path": "#"},
+        ],
+    )
+    _add_raes_invariant(
+        bundle["participant-opacity-analysis-input-v1"],
+        "participant-opacity-finite-carrier-counts",
+        "Point ordinals and refs must be unique, and every declared finite count must exactly match the "
+        "normalized possible-point carrier.",
+        validator="raes_contracts.participant_opacity.ParticipantOpacityAnalysisInputModel",
+        inputs=[
+            {
+                "contract_id": "participant-opacity-analysis-input-v1",
+                "instance_path": "#",
+            }
+        ],
+    )
+    _add_raes_invariant(
+        bundle["participant-opacity-analysis-evidence-v1"],
+        "participant-opacity-evidence-joins",
+        "Profile, normalized model, checker, claim, outcome payload, diagnostics, normalized-input-only "
+        "provenance scope, and bounded assurance coordinates must remain digest-bound and mutually consistent.",
+        validator="raes_contracts.participant_opacity.ParticipantOpacityAnalysisEvidenceModel",
+        inputs=[
+            {
+                "contract_id": "participant-opacity-analysis-evidence-v1",
+                "instance_path": "#",
+            },
+            {
+                "contract_id": "participant-opacity-analysis-input-v1",
+                "instance_path": "#",
+            },
+            {
+                "contract_id": "behavioral-relation-profile-v1",
+                "instance_path": "#",
+            },
+        ],
+    )
+    _add_raes_invariant(
+        bundle["participant-opacity-model-check-input-v1"],
+        "participant-opacity-model-check-graph-joins",
+        "State and transition ordinals, refs, endpoints, fixed domains, exact declared counts, assumptions, "
+        "and model-check claim coordinates must form one closed canonical transition model.",
+        validator="raes_contracts.participant_opacity.ParticipantOpacityModelCheckInputModel",
+        inputs=[
+            {
+                "contract_id": "participant-opacity-model-check-input-v1",
+                "instance_path": "#",
+            },
+            {
+                "contract_id": "behavioral-relation-profile-v1",
+                "instance_path": "#",
+            },
+            {"contract_id": "behavioral-relations-v1", "instance_path": "#"},
+        ],
+    )
+    _add_raes_invariant(
+        bundle["participant-opacity-model-check-evidence-v1"],
+        "participant-opacity-model-check-evidence-joins",
+        "Exact catalog, profile, model, assumptions, checker, derived carrier, complete coverage, claim, outcome, "
+        "diagnostics, and safe counterexample joins must remain digest-bound and mutually consistent.",
+        validator="raes_contracts.participant_opacity.ParticipantOpacityModelCheckEvidenceModel",
+        inputs=[
+            {
+                "contract_id": "participant-opacity-model-check-evidence-v1",
+                "instance_path": "#",
+            },
+            {
+                "contract_id": "participant-opacity-model-check-input-v1",
+                "instance_path": "#",
+            },
+            {
+                "contract_id": "behavioral-relation-profile-v1",
+                "instance_path": "#",
+            },
+            {"contract_id": "behavioral-relations-v1", "instance_path": "#"},
+        ],
     )
     _add_raes_invariant(
         bundle["experiment-study-v1"],

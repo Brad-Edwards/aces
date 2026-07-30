@@ -19,7 +19,7 @@
       "behavioral_claims": [
         {
           "taxonomy_id": "raes-behavioral-relations",
-          "taxonomy_revision": "rev5",
+          "taxonomy_revision": "rev8",
           "relation_id": "semantic-validity",
           "subject": "One SDL source",
           "left_carrier_ref": "fixture:source",

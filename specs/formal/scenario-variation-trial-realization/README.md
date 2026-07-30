@@ -452,9 +452,17 @@ may control placement, isolation, bounded parallelism, timeouts, cancellation,
 and cleanup only.
 
 Portable cleanup intent, receipts, clean-state claims, retry safety, backend
-capability, and bounded-parallelism proof are defined in
-[cleanup-contracts.md](cleanup-contracts.md). Scheduler policy and worker
-management remain outside these contract semantics.
+capability, and bounded-parallelism proof (including the governed secret-scope
+isolation dimension) are defined in [cleanup-contracts.md](cleanup-contracts.md).
+The `batch-execution-receipt-v1` contract is the immutable per-attempt evidence
+that composes those authorities: it binds the sealed plan/entry/run identities,
+a distinct execution-attempt identity, the canonical dispatch ordinal and
+scheduling policy, the effective concurrency, isolation-proof and live-lease
+evidence refs, the primary trial disposition, control-plane operation refs, and
+the cleanup-receipt ref. Serial is the effective default; bounded parallelism is
+authorized only by an isolation proof joined to the exact sealed plan plus live
+lease evidence. Scheduler policy, worker management, live leasing, and range
+allocation remain outside these contract semantics.
 
 ### SVR-032 — Archival separation
 
@@ -474,6 +482,84 @@ trial has a new admitted coordinate and run id linked to its source.
 ATT&CK layers, STIX, playbooks, PDDL/planners, CTI reports, and AI generators
 may produce candidates only. Candidates pass ordinary authoring, trust,
 composition, semantic validation, experiment binding, and trial admission.
+
+## Executable SCE-003 v1 Profile
+
+Adaptive difficulty is declared in the experiment run plan as a bounded
+`DifficultyPolicyRegistryModel`. The registry contains named variants that
+reference existing selection/scaffold/action carriers, policy-local ordered
+dimensions, immutable fixed/adaptive/scaffolded policies, and one default
+policy that is always fixed.
+
+Every allocation condition has a `difficulty_condition` with fixed as its wire
+default. Adaptive and scaffolded conditions also name an exact
+`difficulty_policy_id`; the id resolves the registry and its condition must
+match. Variant selection references resolve only existing fixed experiment
+selection policies. A difficulty variant is therefore an admitted experiment
+coordinate, not an unvalidated patch or runtime preset.
+
+The supported reference evaluator is the digest-bound
+`adaptive-threshold-v1@1.0.0` profile. Resolution is pure over the policy,
+exact state cut, versioned and digest-bound observation-source definitions,
+evidence-bearing observation-instance references, expected decision history
+head, intervention count, and idempotency identity. It enforces
+freshness, run/episode/order scope, threshold priority, cadence, cooldown, and
+maximum interventions, then returns one sealed decision or bounded
+diagnostics. Another digest-bound evaluator remains a valid declaration but
+returns `unsupported`; it never falls back to the reference profile.
+`ADAPTIVE_THRESHOLD_PROFILE_DIGEST` publishes the exact supported profile
+digest, and resolver support matches the complete id/version/digest tuple.
+
+Decision history is append-only. Each `DifficultyDecisionRecordModel` binds
+the policy id/version/digest, request fingerprint, prior and resulting history
+heads, exact cut, source-definition and evidence-instance references, trigger,
+selected action, typed affected references, disposition, time, and validity
+effect. The source-definition reference must exactly match the admitted
+policy; a different measure cannot be submitted under the same local
+`source_id`. Observation values are transient resolver inputs and are not
+copied into the archival decision.
+
+Selected effects are separate `DifficultyInterventionRecordModel` records.
+The closed affected-reference kinds are scaffold, participant inject,
+participant control, workflow action, and scenario variant, and each must
+match its action carrier. Effect-capable records require occurrence, evidence,
+or follow-up-run provenance. A scenario-variant action is only a follow-up
+trial proposal: its run reference differs from the source, and ordinary
+selection, plan admission, instantiation, and realization still allocate its
+coordinate and identity.
+
+`ExperimentRunModel.difficulty_provenance` archives the exact policy snapshot,
+ordered decisions, intervention outcomes, and comparison disposition. Its
+records belong to the archival run and fall inside its time window. Absence of
+this optional field preserves legacy fixed semantics. Study condition matching
+treats fixed, adaptive, and scaffolded as distinct treatments; every non-fixed
+study condition requires an analysis plan and explicit validity notes.
+`validate_experiment_difficulty_against_spec()` additionally binds a run to the
+canonical authoring-input digest, task, allocated condition, and exact admitted
+policy snapshot.
+
+### SCE-003 validity boundary
+
+The reference resolver establishes deterministic policy conformance, not
+scientific validity. In particular:
+
+- a policy-local variant ordering is not a universal difficulty scale;
+- an exact measurement definition and evidence instance do not prove
+  construct validity, calibration, or competence;
+- an adaptive or scaffolded path is received treatment, not a fixed baseline;
+- repeated looks, stopping/cooldown rules, missing interventions, and
+  path-dependent follow-ups belong in the estimand and analysis;
+- retaining random-stream coordinates across alternatives creates an
+  intentional correlated/common-random-number design, while changing them
+  requests independent randomization; neither is inferred from run lineage;
+  and
+- deterministic replay proves the declared resolver result only, not policy
+  optimality, causal identification, pedagogical benefit, or backend/model
+  validity.
+
+These limits apply the primary adaptive-treatment, adaptive-testing,
+curriculum-learning, and simulation-experiment sources mapped in
+[`lineage.md`](../../../docs/explain/sdl/lineage.md#adaptive-difficulty-sequential-intervention-and-simulation-experiments).
 
 ## Compatibility Invariants
 

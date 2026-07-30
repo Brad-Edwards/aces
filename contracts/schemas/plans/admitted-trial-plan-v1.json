@@ -413,6 +413,12 @@
           ],
           "default": null
         },
+        "task_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Task Digest",
+          "type": "string"
+        },
         "task_ref": {
           "$ref": "#/$defs/ExperimentTaskReferenceModel"
         }
@@ -420,6 +426,7 @@
       "required": [
         "authoring_input_ref",
         "task_ref",
+        "task_digest",
         "scenario_family_ref"
       ],
       "title": "AdmittedTrialPlanInputRefsModel",
@@ -1611,6 +1618,7 @@
             "ports",
             "storage",
             "control-plane-locks",
+            "secret-scope",
             "cleanup"
           ],
           "title": "Dimension",
@@ -2181,6 +2189,27 @@
                     "contains": {
                       "properties": {
                         "dimension": {
+                          "const": "secret-scope"
+                        },
+                        "evidence_refs": {
+                          "minItems": 1
+                        },
+                        "independent": {
+                          "const": true
+                        }
+                      },
+                      "required": [
+                        "dimension",
+                        "independent",
+                        "evidence_refs"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  {
+                    "contains": {
+                      "properties": {
+                        "dimension": {
                           "const": "storage"
                         },
                         "evidence_refs": {
@@ -2199,7 +2228,7 @@
                     }
                   }
                 ],
-                "minItems": 6
+                "minItems": 7
               }
             }
           }
@@ -2250,7 +2279,7 @@
       "type": "object",
       "x-raes-invariants": [
         {
-          "description": "Scheduling defaults to serial; bounded parallelism requires independent evidence for range, capacity, ports, storage, control-plane locks, and cleanup.",
+          "description": "Scheduling defaults to serial; bounded parallelism requires independent evidence for range, capacity, ports, storage, control-plane locks, secret scope, and cleanup.",
           "id": "scheduler-isolation-serial-default-and-complete-parallel-proof",
           "inputs": [
             {

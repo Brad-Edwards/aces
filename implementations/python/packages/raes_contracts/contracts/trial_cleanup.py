@@ -30,6 +30,7 @@ IsolationDimension = Literal[
     "ports",
     "storage",
     "control-plane-locks",
+    "secret-scope",
     "cleanup",
 ]
 
@@ -40,6 +41,7 @@ REQUIRED_PARALLEL_ISOLATION_DIMENSIONS = frozenset(
         "ports",
         "storage",
         "control-plane-locks",
+        "secret-scope",
         "cleanup",
     }
 )
@@ -454,7 +456,7 @@ class SchedulerIsolationProofModel(ContractModel):
             json_schema,
             "scheduler-isolation-serial-default-and-complete-parallel-proof",
             "Scheduling defaults to serial; bounded parallelism requires independent evidence for range, capacity, "
-            "ports, storage, control-plane locks, and cleanup.",
+            "ports, storage, control-plane locks, secret scope, and cleanup.",
             validator="raes_contracts.contracts.SchedulerIsolationProofModel._validate_isolation",
             inputs=[{"contract_id": "scheduler-isolation-proof-v1", "instance_path": "#"}],
         )

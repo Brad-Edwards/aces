@@ -1,0 +1,10 @@
+{
+  "contract_id": "batch-execution-receipt-v1",
+  "schema_path": "contracts/schemas/control-plane/batch-execution-receipt-v1.json",
+  "stability": "draft",
+  "content_hash": "4ee2a2104963499be5a9cb24f22e3e98835b51a67d99dc6e8a93011200ba4ebe",
+  "last_change": {
+    "summary": "Published the SCE-006 batch execution receipt: one immutable attempt receipt binding the sealed plan/entry/run identities, canonical dispatch ordinal under the closed canonical order policy, effective concurrency, isolation-proof and lease evidence refs, trial disposition, operation refs, and a required cleanup-receipt ref; bounded parallelism requires an isolation proof and live lease evidence, and the recorded parallelism is authorized only by the sealed plan's embedded proof (issue #785).",
+    "content_hash": "4ee2a2104963499be5a9cb24f22e3e98835b51a67d99dc6e8a93011200ba4ebe"
+  }
+}

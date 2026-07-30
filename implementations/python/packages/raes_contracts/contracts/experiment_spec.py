@@ -10,14 +10,24 @@ from pydantic_core import CoreSchema
 
 from ..versions import EXPERIMENT_AUTHORING_INPUT_SCHEMA_VERSION, EXPERIMENT_STUDY_SCHEMA_VERSION
 from .base import BehavioralClaimBindingModel, ContractModel, NonEmptyString, PositiveInteger
+from .difficulty_adaptation import DifficultyPolicyRegistryModel
 from .experiment_apparatus import ExperimentClockContextModel, ExperimentStochasticControlModel
 from .experiment_artifacts import ExperimentArtifactRefModel
 from .experiment_bindings import ExperimentBindingDescriptorModel, ExperimentBindingDescriptorSetModel
 from .experiment_capture import ExperimentValidityNoteModel
+from .experiment_difficulty import (
+    add_adaptive_study_invariant,
+    add_difficulty_registry_invariant,
+    validate_adaptive_difficulty_treatment,
+    validate_difficulty_policy_registry,
+)
 from .experiment_disclosure import ExperimentApparatusConstraintModel
 from .experiment_manifest_references import ExperimentCaptureSpecReferenceModel
+from .experiment_plan_controls import (
+    ExperimentEpisodeControlModel,
+    ExperimentRedVariantSelectionModel,
+)
 from .experiment_references import (
-    ExperimentParameterModel,
     ExperimentScenarioReferenceModel,
     ExperimentTaskReferenceModel,
 )
@@ -75,6 +85,7 @@ class ExperimentStudyModel(ContractModel):
         if self.run_allocation is not None:
             self._validate_run_allocation_blocking_factors(self.run_allocation)
             self._validate_run_allocation_condition_assignments(self.run_allocation)
+            validate_adaptive_difficulty_treatment(self, self.run_allocation)
         if self.study_kind in {"study", "benchmark"}:
             self._validate_claim_bearing_study_requirements()
         validate_carrier_validation_basis_disclosures(self, subject_kind="experiment_study")
@@ -219,6 +230,7 @@ class ExperimentStudyModel(ContractModel):
                 {"contract_id": "experiment-run-v1", "instance_path": "#"},
             ],
         )
+        add_adaptive_study_invariant(json_schema)
         _add_carrier_validation_basis_disclosure_invariant(
             json_schema, contract_id="experiment-study-v1", subject_kind="experiment_study"
         )
@@ -238,33 +250,6 @@ class ExperimentStudyModel(ContractModel):
         return json_schema
 
 
-class ExperimentEpisodeControlModel(ContractModel):
-    """Declarative episode execution controls for a planned experiment.
-
-    Captures the pre-run execution-control facts — turn order, logical step
-    count, and episode termination — that ADR-069 requires for CAGE-2
-    execution-control equivalence but that the archival experiment-core
-    contracts only record after a run has executed.
-    """
-
-    turn_order: Literal["sequential", "simultaneous", "round-robin", "scenario-defined", "other"]
-    termination_rule: NonEmptyString
-    max_steps: PositiveInteger | None = None
-    termination_condition_refs: list[NonEmptyString] = Field(
-        default_factory=list, json_schema_extra={"uniqueItems": True}
-    )
-    description: NonEmptyString | None = None
-
-
-class ExperimentRedVariantSelectionModel(ContractModel):
-    """Selection of one red-agent variant bound into a planned experiment."""
-
-    variant_id: NonEmptyString
-    agent_ref: NonEmptyString
-    parameters: list[ExperimentParameterModel] = Field(default_factory=list)
-    description: NonEmptyString | None = None
-
-
 class ExperimentRunPlanModel(ContractModel):
     """Pre-run replication, stochastic, episode, and red-variant plan.
 
@@ -282,6 +267,7 @@ class ExperimentRunPlanModel(ContractModel):
         default_factory=dict,
         max_length=MAX_SELECTION_POLICIES,
     )
+    difficulty_policy_registry: DifficultyPolicyRegistryModel | None = None
     red_variant_selections: dict[NonEmptyString, ExperimentRedVariantSelectionModel] = Field(default_factory=dict)
     clock_intent: ExperimentClockContextModel | None = None
 
@@ -296,10 +282,14 @@ class ExperimentRunPlanModel(ContractModel):
                     f"'{selection.variant_id}'"
                 )
         self._validate_selection_policies()
+        self._validate_difficulty_policy_registry()
         return self
 
     def _validate_selection_policies(self) -> None:
         _validate_selection_policy_registry(self)
+
+    def _validate_difficulty_policy_registry(self) -> None:
+        validate_difficulty_policy_registry(self)
 
     @classmethod
     def __get_pydantic_json_schema__(
@@ -329,6 +319,7 @@ class ExperimentRunPlanModel(ContractModel):
             validator="raes_contracts.contracts.ExperimentRunPlanModel._validate_run_plan",
             inputs=[{"contract_id": "experiment-authoring-input-v1", "instance_path": "#/run_plan"}],
         )
+        add_difficulty_registry_invariant(json_schema)
         return json_schema
 
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from raes_contracts.behavioral_relation_profiles import BehavioralRelationProfileModel
 from raes_contracts.behavioral_relations import BehavioralRelationCatalogModel
 from raes_contracts.contracts import (
     AssociatedArtifactManifestModel,
@@ -17,6 +18,7 @@ from raes_contracts.contracts import (
     ExperimentRunModel,
     ExperimentSpecModel,
     ExperimentStudyModel,
+    ExternalConceptBindingDocumentModel,
     OperationReceiptModel,
     OperationStatusModel,
     OrchestrationPlanModel,
@@ -44,6 +46,12 @@ from raes_contracts.contracts.participant_execution import (
     ParticipantExecutionServiceStateModel,
 )
 from raes_contracts.diagnostics import Diagnostic
+from raes_contracts.participant_opacity import (
+    ParticipantOpacityAnalysisEvidenceModel,
+    ParticipantOpacityAnalysisInputModel,
+    ParticipantOpacityModelCheckEvidenceModel,
+    ParticipantOpacityModelCheckInputModel,
+)
 from raes_contracts.realization_envelope import BackendRealizationEnvelopeModel
 from raes_contracts.scientific_completeness import (
     ScientificCompletenessAssessmentModel,
@@ -87,7 +95,9 @@ _MODEL_VALIDATORS = {
 
 _STRUCTURAL_ONLY_VALIDATORS = {
     "associated-artifact-manifest-v1": AssociatedArtifactManifestModel.model_validate,
+    "behavioral-relation-profile-v1": BehavioralRelationProfileModel.model_validate,
     "behavioral-relations-v1": BehavioralRelationCatalogModel.model_validate,
+    "external-concept-bindings-v1": ExternalConceptBindingDocumentModel.model_validate,
     "experiment-apparatus-context-v1": ExperimentApparatusContextModel.model_validate,
     "experiment-authoring-input-v1": ExperimentSpecModel.model_validate,
     "experiment-study-v1": ExperimentStudyModel.model_validate,
@@ -96,10 +106,19 @@ _STRUCTURAL_ONLY_VALIDATORS = {
     "scientific-completeness-taxonomy-v1": ScientificCompletenessTaxonomyModel.model_validate,
     "validation-profile-catalog-v1": ValidationProfileCatalogModel.model_validate,
     "validation-basis-disclosure-v1": ValidationBasisDisclosureDocumentModel.model_validate,
+    "participant-opacity-analysis-input-v1": ParticipantOpacityAnalysisInputModel.model_validate,
+    "participant-opacity-analysis-evidence-v1": ParticipantOpacityAnalysisEvidenceModel.model_validate,
+    "participant-opacity-model-check-input-v1": ParticipantOpacityModelCheckInputModel.model_validate,
+    "participant-opacity-model-check-evidence-v1": ParticipantOpacityModelCheckEvidenceModel.model_validate,
 }
 
 
-_SEMANTIC_CONTEXT_REQUIRED_CONTRACTS = frozenset({"associated-artifact-manifest-v1"})
+_SEMANTIC_CONTEXT_REQUIRED_CONTRACTS = frozenset(
+    {
+        "associated-artifact-manifest-v1",
+        "external-concept-bindings-v1",
+    }
+)
 
 
 _EVENT_STREAM_VALIDATORS: dict[str, tuple[type, str]] = {

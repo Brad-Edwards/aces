@@ -20,6 +20,7 @@ from ..versions import (
     ATLAS_TACTICS_SOURCE_SCHEMA_VERSION,
     ATTACK_ENTERPRISE_TACTICS_SOURCE_SCHEMA_VERSION,
     BACKEND_MANIFEST_V2_SCHEMA_VERSION,
+    BEHAVIORAL_RELATION_PROFILE_SCHEMA_VERSION,
     CONCEPT_FAMILIES_SCHEMA_VERSION,
     CONTROLLED_VOCABULARIES_SCHEMA_VERSION,
     EVALUATION_STATE_SCHEMA_VERSION,
@@ -31,11 +32,14 @@ from ..versions import (
     EXPERIMENT_RUN_SCHEMA_VERSION,
     EXPERIMENT_STUDY_SCHEMA_VERSION,
     EXPERIMENT_TASK_SCHEMA_VERSION,
+    EXTERNAL_CONCEPT_BINDINGS_SCHEMA_VERSION,
     NIST_CSF_DEFENSIVE_CATEGORIES_SOURCE_SCHEMA_VERSION,
     OPERATION_SCHEMA_VERSION,
     PARTICIPANT_EPISODE_STATE_SCHEMA_VERSION,
     PARTICIPANT_IMPLEMENTATION_MANIFEST_V1_SCHEMA_VERSION,
     PARTICIPANT_IMPLEMENTATION_PROVENANCE_V1_SCHEMA_VERSION,
+    PARTICIPANT_OPACITY_ANALYSIS_EVIDENCE_SCHEMA_VERSION,
+    PARTICIPANT_OPACITY_ANALYSIS_INPUT_SCHEMA_VERSION,
     PROCESSOR_MANIFEST_V2_SCHEMA_VERSION,
     RANDOM_STREAM_PROFILE_SCHEMA_VERSION,
     RANDOM_STREAM_VECTOR_SCHEMA_VERSION,
@@ -52,6 +56,7 @@ from ..versions import (
 from ..vocabulary import (
     ConceptFamilyId,
     ConceptProvenanceCategory,
+    ExternalKnowledgeBindingEffect,
     ParticipantFeatureSupportLevel,
     ProcessorFeature,
     RealizationSupportMode,
@@ -84,6 +89,9 @@ from .base import (
     ControlledVocabularyTermId,
 )
 from .base import NonEmptyString as NonEmptyString
+from .batch_execution import BatchExecutionReceiptModel as BatchExecutionReceiptModel
+from .batch_execution import validate_batch_execution_receipt as validate_batch_execution_receipt
+from .batch_execution import validate_scheduler_isolation_proof as validate_scheduler_isolation_proof
 from .bundle import schema_bundle
 from .capabilities import (
     ApparatusIdentityModel,
@@ -104,6 +112,9 @@ from .catalogs import (
     UcoAlignmentTypeModel,
     UcoFamilyAlignmentModel,
 )
+from .difficulty_adaptation import *
+from .difficulty_provenance import *
+from .difficulty_resolution import *
 from .execution_state import (
     EvaluationHistoryEventModel,
     EvaluationResultStateModel,
@@ -196,6 +207,25 @@ from .experiment_study import (
     ExperimentStudyFactorModel,
     ExperimentStudyMembershipModel,
     ExperimentUncertaintyMethodModel,
+)
+from .external_concept_bindings import (
+    ExternalConceptApproximationModel,
+    ExternalConceptApproximationPosture,
+    ExternalConceptAssertionModel,
+    ExternalConceptBindingAssertionModel,
+    ExternalConceptBindingDocumentModel,
+    ExternalConceptConfidenceModel,
+    ExternalConceptConfidencePosture,
+    ExternalConceptLifecyclePhase,
+    ExternalConceptParticipantAvailabilityKind,
+    ExternalConceptParticipantAvailabilityModel,
+    ExternalConceptPerspectiveModel,
+    ExternalConceptProvenanceModel,
+    ExternalConceptRelationshipKind,
+    ExternalConceptReviewModel,
+    ExternalConceptReviewStatus,
+    ExternalConceptSchemeCoordinateModel,
+    ExternalConceptSubjectModel,
 )
 from .manifests import (
     BackendCapabilitiesV2Model,
@@ -360,6 +390,12 @@ from .semantic_profiles import (
     SemanticProfileModel,
     SemanticProfilePhaseModel,
 )
+from .trial_analysis import (
+    AdmittedTrialPlanReconciliation,
+    reconcile_admitted_trial_plan,
+    validate_admitted_trial_run,
+    validate_admitted_trial_study,
+)
 from .trial_cleanup import CleanStateClaimModel as CleanStateClaimModel
 from .trial_cleanup import CleanStateRequirementModel as CleanStateRequirementModel
 from .trial_cleanup import CleanupObligationModel as CleanupObligationModel
@@ -374,6 +410,10 @@ from .trial_cleanup import validate_trial_cleanup_receipt as validate_trial_clea
 from .trial_compilation import TrialCleanupTemplateModel as TrialCleanupTemplateModel
 from .trial_compilation import TrialCompilationLimitsModel as TrialCompilationLimitsModel
 from .trial_compilation import TrialExecutionAuthorityModel as TrialExecutionAuthorityModel
+from .trial_provenance import ProcessorPlanKind as ProcessorPlanKind
+from .trial_provenance import TrialExecutionAttemptReferenceModel as TrialExecutionAttemptReferenceModel
+from .trial_provenance import TrialProcessorPlanReferenceModel as TrialProcessorPlanReferenceModel
+from .trial_provenance import TrialRunProvenanceModel as TrialRunProvenanceModel
 from .validation_disclosure import ValidationBasisDisclosureDocumentModel
 from .validators import _collapse_nullable_optional_schema as _collapse_nullable_optional_schema
 from .validators import _resolve_instance_path_schema as _resolve_instance_path_schema

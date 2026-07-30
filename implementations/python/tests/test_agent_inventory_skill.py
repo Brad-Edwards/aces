@@ -19,23 +19,23 @@ GAP_SKILL_PATHS = (
     GAP_CLAUDE_SKILL_DIR / "SKILL.md",
     GAP_CODEX_SKILL_DIR / "SKILL.md",
 )
-CODEX_RULES_PATH = REPO_ROOT / ".codex"
+AGENT_RULES_PATH = REPO_ROOT / "AGENTS.md"
 
 
 def test_asset_inventory_skill_is_cross_agent_and_discoverable_by_codex() -> None:
     claude_skill = (CLAUDE_SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
     codex_skill = (CODEX_SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
-    codex_rules = CODEX_RULES_PATH.read_text(encoding="utf-8")
+    agent_rules = AGENT_RULES_PATH.read_text(encoding="utf-8")
 
     assert "TODO" not in claude_skill
     assert "TODO" not in codex_skill
     assert claude_skill == codex_skill
     assert "from either Claude Code or Codex" in claude_skill
-    assert "raes-asset-inventory-capture" in codex_rules
-    assert ".codex-skills/raes-asset-inventory-capture/SKILL.md" in codex_rules
-    assert ".claude/skills/raes-asset-inventory-capture/SKILL.md" in codex_rules
-    assert "~/.codex/skills/raes-asset-inventory-capture" in codex_rules
-    assert "~/.claude/skills/raes-asset-inventory-capture" in codex_rules
+    assert "raes-asset-inventory-capture" in agent_rules
+    assert ".codex-skills/raes-asset-inventory-capture/SKILL.md" in agent_rules
+    assert ".claude/skills/raes-asset-inventory-capture/SKILL.md" in agent_rules
+    assert "~/.codex/skills/raes-asset-inventory-capture" in agent_rules
+    assert "~/.claude/skills/raes-asset-inventory-capture" in agent_rules
 
 
 def test_asset_inventory_skill_metadata_is_agent_runnable() -> None:
@@ -171,16 +171,16 @@ def test_asset_inventory_container_template_preserves_target_values_by_default()
 def test_gap_remediation_skill_is_cross_agent_and_discoverable_by_codex() -> None:
     claude_skill = (GAP_CLAUDE_SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
     codex_skill = (GAP_CODEX_SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
-    codex_rules = CODEX_RULES_PATH.read_text(encoding="utf-8")
+    agent_rules = AGENT_RULES_PATH.read_text(encoding="utf-8")
 
     assert "TODO" not in claude_skill
     assert "TODO" not in codex_skill
     assert claude_skill == codex_skill
-    assert "raes-gap-remediation-implement" in codex_rules
-    assert ".codex-skills/raes-gap-remediation-implement/SKILL.md" in codex_rules
-    assert ".claude/skills/raes-gap-remediation-implement/SKILL.md" in codex_rules
-    assert "~/.codex/skills/raes-gap-remediation-implement" in codex_rules
-    assert "~/.claude/skills/raes-gap-remediation-implement" in codex_rules
+    assert "raes-gap-remediation-implement" in agent_rules
+    assert ".codex-skills/raes-gap-remediation-implement/SKILL.md" in agent_rules
+    assert ".claude/skills/raes-gap-remediation-implement/SKILL.md" in agent_rules
+    assert "~/.codex/skills/raes-gap-remediation-implement" in agent_rules
+    assert "~/.claude/skills/raes-gap-remediation-implement" in agent_rules
 
 
 def test_gap_remediation_skill_metadata_is_agent_runnable() -> None:

@@ -1,0 +1,10 @@
+{
+  "contract_id": "participant-opacity-model-check-evidence-v1",
+  "schema_path": "contracts/schemas/formal-analysis/participant-opacity-model-check-evidence-v1.json",
+  "stability": "draft",
+  "content_hash": "ba4e3fcea965357cf8ae603d7ec018a7aee2f33b9acbb643a870275b94b8c7a0",
+  "last_change": {
+    "summary": "Published digest-bound complete finite participant-opacity model-check evidence for issue #962.",
+    "content_hash": "ba4e3fcea965357cf8ae603d7ec018a7aee2f33b9acbb643a870275b94b8c7a0"
+  }
+}

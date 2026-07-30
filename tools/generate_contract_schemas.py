@@ -44,6 +44,8 @@ def _schema_output_path(schemas_dir: Path, name: str) -> Path:
         return schemas_dir / "concept-authority" / f"{name}.json"
     if name == "controlled-vocabularies-v1":
         return schemas_dir / "concept-authority" / f"{name}.json"
+    if name == "external-concept-bindings-v1":
+        return schemas_dir / "concept-authority" / f"{name}.json"
     if name in {
         "attack-enterprise-tactics-source-v1",
         "atlas-tactics-source-v1",
@@ -64,6 +66,10 @@ def _schema_output_path(schemas_dir: Path, name: str) -> Path:
         return schemas_dir / "profiles" / f"{name}.json"
     if name.startswith("random-stream-vector-v"):
         return schemas_dir / "profiles" / f"{name}.json"
+    if name.startswith("behavioral-relation-profile-v"):
+        return schemas_dir / "profiles" / f"{name}.json"
+    if name.startswith("participant-opacity-"):
+        return schemas_dir / "formal-analysis" / f"{name}.json"
     if name.startswith("scientific-completeness-"):
         return schemas_dir / "profiles" / f"{name}.json"
     if name.startswith("validation-profile-") or name.startswith("validation-basis-disclosure-"):

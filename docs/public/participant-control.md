@@ -251,6 +251,7 @@ instead of defining relation meaning in a report.
 | Did named finite fixtures or probes produce their expected results? | `bounded-probe-success` | Exact target, profile, cases, assumptions, failures, and finite bound |
 | Are two histories equal for one participant under one projection revision? | `participant-projected-history-equivalence` | Both carriers, participant, projection, order, and compared bound |
 | Are unauthorized high variations invisible under the full participant policy? | `policy-noninterference` | Adaptive strategies, memory, exact policy cuts, purge and declassification schedule, scheduler, environment, order, and support-set quantifiers |
+| Does every actual secret point retain a nonsecret alternative in the same observer information cell? | `participant-predicate-opacity` | Exact revisioned opacity profile; a model-check claim additionally binds the complete finite transition model, assumptions, tool, explored coverage, and result |
 | Does every projected implementation trace belong to an abstract trace set? | `trace-inclusion` | Left-to-right direction, labels, hiding, projection, assumptions, and the universal obligation |
 | Can implementation and abstract steps be matched in one direction? | `forward-simulation` or `backward-simulation` | State relation, initiality, direction, and step obligations |
 | Do concrete states and operations preserve an abstract data model? | `data-refinement` | Retrieve relation plus initialization and operation obligations |
@@ -259,7 +260,10 @@ instead of defining relation meaning in a report.
 Two equal sampled histories support a bounded comparison. They do not show
 participant-policy noninterference. A successful trace sample does not show
 trace inclusion. A matching finite example does not show simulation or
-refinement. It also does not show strong or weak bisimulation.
+refinement. It also does not show strong or weak bisimulation. The finite
+participant-opacity model check covers only its exact digest-bound model and
+profile; it does not establish runtime enforcement, backend realization, or an
+unbounded theorem.
 
 The following existing claim-binding contract reports only the seven named
 examples in this guide:
@@ -268,7 +272,7 @@ examples in this guide:
 ```json
 {
   "taxonomy_id": "raes-behavioral-relations",
-  "taxonomy_revision": "rev5",
+  "taxonomy_revision": "rev8",
   "relation_id": "bounded-probe-success",
   "subject": "Seven named participant-policy examples for one declared target and profile",
   "left_carrier_ref": "backend-conformance-report:participant-policy-example",

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import jsonschema
 import pytest
-from hypothesis import given
+from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 from pydantic import ValidationError
 from raes._declarations import build_declaration_index
@@ -123,6 +123,7 @@ def test_python_and_json_schema_identifier_grammars_are_differentially_equivalen
     assert schema_accepts is is_portable_identifier(value)
 
 
+@settings(suppress_health_check=(HealthCheck.too_slow,))
 @given(
     st.lists(_portable_identifier_strategy, min_size=1, max_size=6),
     st.lists(_portable_identifier_strategy, min_size=1, max_size=6),

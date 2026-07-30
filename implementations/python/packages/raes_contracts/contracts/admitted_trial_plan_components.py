@@ -82,6 +82,7 @@ class AdmittedTrialPlanInputRefsModel(ContractModel):
 
     authoring_input_ref: ExperimentReferenceModel
     task_ref: ExperimentTaskReferenceModel
+    task_digest: PrefixedDigestString
     scenario_family_ref: ExperimentScenarioFamilyReferenceModel
     binding_descriptor_set_ref: ExperimentReferenceModel | None = None
     study_ref: ExperimentReferenceModel | None = None

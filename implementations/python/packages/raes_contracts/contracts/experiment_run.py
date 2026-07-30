@@ -16,6 +16,7 @@ from .base import (
     _canonical_digest,
     _parse_rfc3339_datetime,
 )
+from .difficulty_provenance import DifficultyRunProvenanceModel
 from .experiment_apparatus import (
     ExperimentApparatusComponentModel,
     ExperimentApparatusContextModel,
@@ -33,10 +34,7 @@ from .experiment_artifacts import (
 )
 from .experiment_bindings import RealizedBindingProvenanceModel, _validate_realized_bindings
 from .experiment_disclosure import ExperimentAugmentationDisclosureModel
-from .experiment_evidence import (
-    ExperimentRealizedFormDisclosureModel,
-    ExperimentRunTraceabilityModel,
-)
+from .experiment_evidence import ExperimentRealizedFormDisclosureModel, ExperimentRunTraceabilityModel
 from .experiment_manifest_references import (
     ExperimentEvidenceReferenceModel,
     ExperimentRunEvidenceArtifactReferenceModel,
@@ -47,7 +45,12 @@ from .experiment_references import (
     ExperimentScenarioSnapshotReferenceModel,
     ExperimentTaskReferenceModel,
 )
+from .experiment_run_difficulty import (
+    add_run_difficulty_invariants,
+    validate_run_difficulty_provenance,
+)
 from .experiment_run_stochastic import _validate_run_stochastic_draw_control_refs
+from .experiment_run_timing import validate_run_invalidation_status, validate_run_timing
 from .participant_manifests import ParticipantImplementationProvenanceModel
 from .random_stream import RandomStreamDrawRecordModel
 from .schema_invariants import (
@@ -60,6 +63,11 @@ from .time_model import (
     RealizedTimeModelProvenanceModel,
     TimeModelDeclarationModel,
     validate_realized_time_model,
+)
+from .trial_provenance import (
+    TrialRunProvenanceModel,
+    add_trial_run_provenance_invariant,
+    validate_trial_run_provenance_binding,
 )
 from .validation_disclosure import ValidationBasisDisclosureModel, validate_carrier_validation_basis_disclosures
 from .validators import _validate_unique_string_values
@@ -120,6 +128,8 @@ class ExperimentRunModel(ContractModel):
     run_version: NonEmptyString
     task_ref: ExperimentTaskReferenceModel
     scenario_snapshot_ref: ExperimentScenarioSnapshotReferenceModel
+    trial_provenance: TrialRunProvenanceModel | None = None
+    difficulty_provenance: DifficultyRunProvenanceModel | None = None
     apparatus_context: ExperimentApparatusContextModel
     participant_implementation_provenance: ParticipantImplementationProvenanceModel | None = None
     parameter_set: list[ExperimentParameterModel] = Field(min_length=1)
@@ -146,8 +156,9 @@ class ExperimentRunModel(ContractModel):
 
     @model_validator(mode="after")
     def _validate_archival_run(self) -> ExperimentRunModel:
-        _validate_run_timing(self)
-        _validate_run_invalidation_status(self)
+        validate_run_timing(self)
+        validate_run_difficulty_provenance(self)
+        validate_run_invalidation_status(self)
         _validate_run_outcome_evidence(self)
         _validate_run_participant_provenance_required(self)
         _validate_run_participant_implementation_selections(self)
@@ -155,6 +166,9 @@ class ExperimentRunModel(ContractModel):
         _validate_run_realized_form_disclosures(self)
         _validate_run_augmentation_disclosures(self)
         _validate_realized_bindings(self.realized_bindings)
+        validate_trial_run_provenance_binding(
+            self.trial_provenance, run_id=self.run_id, scenario_digest=self.scenario_snapshot_ref.ref_digest
+        )
         validate_carrier_validation_basis_disclosures(self, subject_kind="experiment_run")
         if self.realized_time_model is not None:
             validate_realized_time_model(
@@ -184,6 +198,8 @@ class ExperimentRunModel(ContractModel):
                 },
             }
         )
+        add_trial_run_provenance_invariant(json_schema)
+        add_run_difficulty_invariants(json_schema)
         _add_raes_invariant(
             json_schema,
             "ended-at-not-before-started-at",
@@ -251,18 +267,6 @@ class ExperimentRunModel(ContractModel):
             ],
         )
         return json_schema
-
-
-def _validate_run_timing(run: ExperimentRunModel) -> None:
-    started_at = _parse_rfc3339_datetime("started_at", run.started_at)
-    ended_at = _parse_rfc3339_datetime("ended_at", run.ended_at)
-    if ended_at < started_at:
-        raise ValueError("ended_at must be greater than or equal to started_at")
-
-
-def _validate_run_invalidation_status(run: ExperimentRunModel) -> None:
-    if run.run_status == "invalidated" and run.invalidation is None:
-        raise ValueError("invalidated experiment runs must include invalidation details")
 
 
 def _validate_run_outcome_evidence(run: ExperimentRunModel) -> None:

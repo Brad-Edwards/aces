@@ -376,6 +376,7 @@
       "ref_version": "expanded-scenario-family/v1"
     },
     "study_ref": null,
+    "task_digest": "sha256:bcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbc",
     "task_ref": {
       "ref_id": "task-a",
       "ref_kind": "task",
@@ -420,6 +421,13 @@
         "independent": true
       },
       {
+        "dimension": "secret-scope",
+        "evidence_refs": [
+          "evidence:secret-scope"
+        ],
+        "independent": true
+      },
+      {
         "dimension": "cleanup",
         "evidence_refs": [
           "evidence:cleanup"
@@ -435,7 +443,7 @@
     "requested_parallelism": 2,
     "schema_version": "scheduler-isolation-proof/v1"
   },
-  "plan_digest": "sha256:d2abefdd8f704063f7558f8feee5a20d7cf9ba75c8bac29664b3e7156bbc23ee",
+  "plan_digest": "sha256:4c28353979fd97569b22b28960060190ebf9ab7efcd04ebbb71c91945daf7704",
   "plan_id": "plan-a",
   "profiles": {
     "canonicalization_profile": "jcs-sha256-v1",

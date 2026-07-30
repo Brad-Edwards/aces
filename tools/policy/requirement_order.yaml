@@ -237,7 +237,7 @@ ownership:
     - implementations/python/pyproject.toml
     - implementations/python/packages/raes_cli
     - implementations/python/packages/raes_mcp
-    - implementations/python/packages/raes_runtime/control_plane_api.py
+    - implementations/python/packages/raes_runtime/control_plane_api
     - implementations/python/tests/test_mcp_server.py
     - implementations/python/tests/test_version_classification.py
     - implementations/python/tests/test_project_positioning.py

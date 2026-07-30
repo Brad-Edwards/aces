@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from functools import cache
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from pydantic import Field, model_validator
 
@@ -17,6 +17,9 @@ from .contracts import (
 )
 from .corpus import CONCEPT_AUTHORITY, corpus_family_root
 from .versions import BEHAVIORAL_RELATIONS_SCHEMA_VERSION
+
+if TYPE_CHECKING:
+    from .behavioral_relation_profiles import BehavioralRelationProfileModel
 
 
 class ImmutablePublicationLocatorModel(ContractModel):
@@ -136,14 +139,10 @@ class RelationAssuranceModel(ContractModel):
                     "checker, runtime, and backend-realization axis is negative"
                 )
 
-    def _validate_model_check_aggregate(self) -> None:
+    def _validate_legacy_model_check_aggregate(self) -> None:
         if self.proof_status == "model-checked" and self.model_check_status != "model-checked":
             raise ValueError(
                 "relation assurance proof aggregate reports model checking but the model-check axis does not"
-            )
-        if self.model_check_status == "model-checked" and self.proof_status not in {"model-checked", "proved"}:
-            raise ValueError(
-                "relation assurance model-check axis is positive but the legacy proof aggregate does not record it"
             )
 
     def _validate_backend_conformance(self) -> None:
@@ -170,7 +169,7 @@ class RelationAssuranceModel(ContractModel):
     @model_validator(mode="after")
     def _validate_axis_consistency(self) -> RelationAssuranceModel:
         self._validate_implementation_aggregate()
-        self._validate_model_check_aggregate()
+        self._validate_legacy_model_check_aggregate()
         self._validate_backend_conformance()
         if self.definition_status == "future" and self._has_positive_axis():
             raise ValueError("relation assurance cannot report positive axes for a future definition")
@@ -359,15 +358,75 @@ def _validate_binding_requirements(
             raise ValueError(f"relation {binding.relation_id!r} requires {description}")
 
 
+def _validate_binding_profile(
+    binding: BehavioralClaimBindingModel,
+    catalog: BehavioralRelationCatalogModel,
+    profile: BehavioralRelationProfileModel,
+) -> None:
+    """Join a required profile to the exact catalog and claim coordinates."""
+
+    expected = (
+        (
+            profile.profile_id,
+            binding.relation_parameter_profile_ref,
+            "profile identity",
+        ),
+        (
+            profile.profile_revision,
+            binding.relation_parameter_profile_revision,
+            "profile revision",
+        ),
+        (profile.taxonomy_id, binding.taxonomy_id, "profile taxonomy id"),
+        (
+            profile.taxonomy_revision,
+            binding.taxonomy_revision,
+            "profile taxonomy revision",
+        ),
+        (profile.taxonomy_id, catalog.taxonomy_id, "profile catalog taxonomy id"),
+        (
+            profile.taxonomy_revision,
+            catalog.taxonomy_revision,
+            "profile catalog taxonomy revision",
+        ),
+        (profile.relation_id, binding.relation_id, "profile relation"),
+        (profile.left_carrier_ref, binding.left_carrier_ref, "profile carrier"),
+        (
+            profile.observation_projection_ref,
+            binding.observation_projection_ref,
+            "profile observation projection",
+        ),
+        (
+            profile.observation_projection_revision,
+            binding.observation_projection_revision,
+            "profile observation projection revision",
+        ),
+    )
+    for profile_value, binding_value, label in expected:
+        if profile_value != binding_value:
+            raise ValueError(f"behavioral claim binding {label} does not match the resolved profile")
+
+
 def validate_behavioral_claim_binding(
     binding: BehavioralClaimBindingModel,
     catalog: BehavioralRelationCatalogModel | None = None,
+    profile: BehavioralRelationProfileModel | None = None,
 ) -> BehavioralClaimBindingModel:
     """Resolve a consumer binding against the canonical catalog."""
 
     catalog = load_behavioral_relation_catalog() if catalog is None else catalog
     relation = _resolve_binding_relation(binding, catalog)
     _validate_binding_requirements(binding, relation)
+    if relation.relation_parameter_profile_required:
+        if profile is None:
+            from .behavioral_relation_profiles import (
+                load_behavioral_relation_profile,
+            )
+
+            assert binding.relation_parameter_profile_ref is not None
+            profile = load_behavioral_relation_profile(binding.relation_parameter_profile_ref)
+        _validate_binding_profile(binding, catalog, profile)
+    elif profile is not None:
+        raise ValueError("behavioral claim binding supplied a profile for a relation that does not require one")
     return binding
 
 

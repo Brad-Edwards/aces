@@ -114,6 +114,17 @@ def stateful_resource_reference_errors(
                     persistent_volumes=persistent_volumes,
                 )
             )
+    for node_name, node in nodes.items():
+        runtime = node.runtime
+        if runtime is None:
+            continue
+        for mount in runtime.mounts:
+            destination = (node_name, mount.target)
+            previous = occupied_destinations.get(destination)
+            if previous is not None:
+                errors.append(
+                    f"runtime mount target {mount.target!r} on node {node_name!r} is already consumed by {previous}"
+                )
     return errors
 
 

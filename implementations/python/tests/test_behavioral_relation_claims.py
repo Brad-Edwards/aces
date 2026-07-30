@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from copy import deepcopy
 
+import pytest
 from raes_contracts.behavioral_relations import load_behavioral_relation_catalog
 from tools.check_behavioral_relation_claims import (
+    _should_validate_structured_bindings,
     _validate_claim_text,
     _validate_structured_bindings,
 )
@@ -14,7 +16,7 @@ from tools.check_behavioral_relation_claims import (
 def _valid_binding() -> dict[str, object]:
     return {
         "taxonomy_id": "raes-behavioral-relations",
-        "taxonomy_revision": "rev5",
+        "taxonomy_revision": "rev8",
         "relation_id": "bounded-probe-success",
         "subject": "Named backend fixture cases",
         "left_carrier_ref": "backend-target:stub",
@@ -40,6 +42,27 @@ def test_unbound_positive_behavioral_equivalence_claim_fails():
     assert {failure.rule_id for failure in failures} == {"behavioral-relation-unbound-positive-claim"}
 
 
+@pytest.mark.parametrize(
+    "claim_text",
+    (
+        "The two systems are trace equivalent.",
+        "The two systems are strong bisimilar.",
+        "The two systems are weak bisimilar.",
+        "The two systems are probabilistically bisimilar.",
+        "The two systems are bisimilar.",
+        "The two systems are strategically equivalent.",
+        "The two systems are epistemically indistinguishable.",
+        "The two systems are statistically equivalent.",
+        "The implementation refines the specification.",
+    ),
+)
+def test_each_positive_behavioral_claim_pattern_requires_a_binding(claim_text: str) -> None:
+    failures = _validate_claim_text(claim_text, "docs/conformance/example.md")
+
+    assert failures
+    assert {failure.rule_id for failure in failures} == {"behavioral-relation-unbound-positive-claim"}
+
+
 def test_explicit_weaker_nonclaim_is_permitted():
     assert not _validate_claim_text(
         "The finite probe passes, but it does not establish behavioral equivalence or bisimulation.",
@@ -52,6 +75,15 @@ def test_relation_identity_and_evidence_boundary_permit_a_scoped_claim():
         "Relation: `participant-projected-history-equivalence`. The two histories are equivalent only under "
         "observation projection `participant-observation-boundary/v1`; the evidence boundary is the named "
         "terminal observations in run-7.",
+        "docs/conformance/example.md",
+    )
+
+
+def test_divergence_preserving_branching_claim_requires_and_accepts_exact_binding():
+    assert not _validate_claim_text(
+        "Relation id: `divergence-preserving-branching-bisimulation`. The two systems are "
+        "divergence-preserving branching bisimilar only under profile "
+        "`participant-crossing-dpbb-finite-v1@rev1`; the evidence boundary is its complete finite carrier.",
         "docs/conformance/example.md",
     )
 
@@ -82,6 +114,40 @@ def test_structured_claims_resolve_against_the_canonical_catalog():
         "contracts/example.json",
     )
     assert {failure.rule_id for failure in failures} == {"behavioral-relation-binding-invalid"}
+
+
+def test_governed_envelopes_validate_nested_claims_without_becoming_claims():
+    catalog = load_behavioral_relation_catalog()
+    for schema_version in (
+        "participant-opacity-analysis-evidence/v1",
+        "participant-opacity-model-check-evidence/v1",
+    ):
+        envelope = {
+            "schema_version": schema_version,
+            "taxonomy_id": "raes-behavioral-relations",
+            "taxonomy_revision": "rev8",
+            "relation_id": "participant-predicate-opacity",
+            "claim": _valid_binding(),
+        }
+
+        assert not _validate_structured_bindings(
+            envelope,
+            catalog,
+            "contracts/example.json",
+        )
+
+        envelope["claim"]["relation_id"] = "unknown-relation"
+        failures = _validate_structured_bindings(
+            envelope,
+            catalog,
+            "contracts/example.json",
+        )
+        assert len(failures) == 1
+
+
+def test_invalid_contract_fixtures_are_not_interpreted_as_positive_claims():
+    assert not _should_validate_structured_bindings("contracts/fixtures/formal-analysis/example/invalid/negative.json")
+    assert _should_validate_structured_bindings("contracts/fixtures/formal-analysis/example/valid/reference.json")
 
 
 def test_bounded_binding_cannot_be_promoted_to_universal_scope():

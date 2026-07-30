@@ -7,7 +7,8 @@ from collections.abc import Hashable, Iterable
 from enum import Enum
 from typing import Annotated, Literal
 
-from pydantic import ConfigDict, Field, model_validator
+from pydantic import ConfigDict, Field, JsonValue, SerializerFunctionWrapHandler, model_serializer, model_validator
+from raes_contracts.canonical import canonical_json_digest
 
 from ._base import SDLModel
 from ._identifiers import PortableIdentifier, QualifiedName, require_module_identifier
@@ -31,6 +32,72 @@ class SemanticDigest(FrozenPhaseModel):
     profile: Literal["raes-sdl-semantic/v1"]
     algorithm: Literal["sha256"]
     value: Annotated[str, Field(pattern=_DIGEST_PATTERN)]
+
+
+class TrialCoordinateProvenance(FrozenPhaseModel):
+    """Logical coordinate copied from one admitted plan entry."""
+
+    condition_id: str | None = None
+    block_id: str | None = None
+    replicate_id: str | None = None
+
+
+class AdmittedSelectionProvenance(FrozenPhaseModel):
+    """Canonical admitted selection record carried into snapshot identity."""
+
+    variation_point_id: str = Field(min_length=1)
+    record_digest: Annotated[str, Field(pattern=_DIGEST_PATTERN)]
+    record: dict[str, JsonValue]
+
+    @model_validator(mode="after")
+    def _validate_record(self) -> AdmittedSelectionProvenance:
+        if self.record.get("variation_point_id") != self.variation_point_id:
+            raise ValueError("admitted selection record identity must match variation_point_id")
+        if canonical_json_digest(self.record) != self.record_digest:
+            raise ValueError("admitted selection record digest must match its canonical payload")
+        return self
+
+
+class AdmittedBindingProvenance(FrozenPhaseModel):
+    """Canonical admitted binding record carried into snapshot identity."""
+
+    binding_id: str = Field(min_length=1)
+    record_digest: Annotated[str, Field(pattern=_DIGEST_PATTERN)]
+    record: dict[str, JsonValue]
+
+    @model_validator(mode="after")
+    def _validate_record(self) -> AdmittedBindingProvenance:
+        descriptor = self.record.get("descriptor")
+        if not isinstance(descriptor, dict) or descriptor.get("binding_id") != self.binding_id:
+            raise ValueError("admitted binding record identity must match binding_id")
+        if canonical_json_digest(self.record) != self.record_digest:
+            raise ValueError("admitted binding record digest must match its canonical payload")
+        return self
+
+
+class TrialInstantiationProvenance(FrozenPhaseModel):
+    """Exact sealed plan/entry lineage for one admitted trial instantiation."""
+
+    scenario_family_id: str = Field(min_length=1)
+    scenario_family_digest: Annotated[str, Field(pattern=_DIGEST_PATTERN)]
+    plan_id: str = Field(min_length=1)
+    plan_digest: Annotated[str, Field(pattern=_DIGEST_PATTERN)]
+    plan_entry_id: str = Field(min_length=1)
+    entry_digest: Annotated[str, Field(pattern=_DIGEST_PATTERN)]
+    run_id: str = Field(min_length=1)
+    coordinate: TrialCoordinateProvenance
+    selections: tuple[AdmittedSelectionProvenance, ...] = ()
+    bindings: tuple[AdmittedBindingProvenance, ...] = ()
+
+    @model_validator(mode="after")
+    def _validate_record_identities(self) -> TrialInstantiationProvenance:
+        selection_ids = [selection.variation_point_id for selection in self.selections]
+        if len(selection_ids) != len(set(selection_ids)):
+            raise ValueError("trial instantiation selections must have unique variation_point_id values")
+        binding_ids = [binding.binding_id for binding in self.bindings]
+        if len(binding_ids) != len(set(binding_ids)):
+            raise ValueError("trial instantiation bindings must have unique binding_id values")
+        return self
 
 
 class BindingOrigin(str, Enum):
@@ -160,6 +227,14 @@ class InstantiationProvenance(FrozenPhaseModel):
     capability_constraints: tuple[CapabilityConstraint, ...] = ()
     explicitness: tuple[ExplicitnessProvenanceRecord, ...] = ()
     realization_designations: tuple[RealizationDesignationRecord, ...] = ()
+    trial: TrialInstantiationProvenance | None = Field(default=None, repr=False)
+
+    @model_serializer(mode="wrap")
+    def _serialize_optional_trial(self, handler: SerializerFunctionWrapHandler) -> object:
+        payload = handler(self)
+        if self.trial is None and isinstance(payload, dict):
+            payload.pop("trial", None)
+        return payload
 
     @model_validator(mode="after")
     def _validate_unique_identities(self) -> InstantiationProvenance:

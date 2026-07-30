@@ -121,6 +121,8 @@ class ExperimentConditionAssignmentModel(ContractModel):
 
     condition_id: NonEmptyString
     factor_levels: dict[NonEmptyString, NonEmptyString] = Field(min_length=1)
+    difficulty_condition: Literal["fixed", "adaptive", "scaffolded"] = "fixed"
+    difficulty_policy_id: NonEmptyString | None = None
     required_refs: list[ExperimentConditionAssignmentReferenceModel] = Field(default_factory=list)
     required_parameters: list[ExperimentConditionAssignmentParameterModel] = Field(default_factory=list)
     description: NonEmptyString | None = None
@@ -129,6 +131,8 @@ class ExperimentConditionAssignmentModel(ContractModel):
     def _validate_run_level_criteria(self) -> ExperimentConditionAssignmentModel:
         if not self.required_refs and not self.required_parameters:
             raise ValueError("condition assignments must include required_refs or required_parameters")
+        if self.difficulty_condition != "fixed" and self.difficulty_policy_id is None:
+            raise ValueError("adaptive and scaffolded conditions require difficulty_policy_id")
         return self
 
     @classmethod
@@ -144,6 +148,18 @@ class ExperimentConditionAssignmentModel(ContractModel):
                 {"required": ["required_refs"], "properties": {"required_refs": {"minItems": 1}}},
                 {"required": ["required_parameters"], "properties": {"required_parameters": {"minItems": 1}}},
             ]
+        )
+        json_schema.setdefault("allOf", []).append(
+            {
+                "if": {
+                    "properties": {"difficulty_condition": {"enum": ["adaptive", "scaffolded"]}},
+                    "required": ["difficulty_condition"],
+                },
+                "then": {
+                    "required": ["difficulty_policy_id"],
+                    "properties": {"difficulty_policy_id": {"type": "string", "minLength": 1}},
+                },
+            }
         )
         return json_schema
 
@@ -191,6 +207,8 @@ class ExperimentRunAllocationPlanModel(ContractModel):
             tuple[
                 tuple[tuple[str, str, str | None, str | None, str | None], ...],
                 tuple[tuple[str, str, str, str], ...],
+                str,
+                str | None,
             ],
             list[str],
         ] = {}

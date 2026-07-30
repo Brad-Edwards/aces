@@ -1,0 +1,760 @@
+{
+  "$defs": {
+    "BehavioralClaimBindingModel": {
+      "additionalProperties": false,
+      "description": "A bounded claim tied to one revisioned behavioral-relation definition.\n\nThis is deliberately a claim *binding*, not another relation registry. The\ncatalog owns relation meaning; consumers supply the subject, carriers,\nquantifier/evidence boundary, assurance state, and explicit limitations.",
+      "properties": {
+        "assurance_axis": {
+          "anyOf": [
+            {
+              "enum": [
+                "definition",
+                "checker",
+                "bounded-test",
+                "model-check",
+                "proof",
+                "runtime-enforcement",
+                "backend-declaration",
+                "backend-realization",
+                "backend-conformance"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Assurance Axis"
+        },
+        "assurance_status": {
+          "enum": [
+            "defined",
+            "implemented",
+            "tested",
+            "model-checked",
+            "proved",
+            "deliberately-unproved",
+            "future",
+            "enforced",
+            "declared",
+            "realized",
+            "conformant"
+          ],
+          "title": "Assurance Status",
+          "type": "string"
+        },
+        "evidence_boundary": {
+          "minLength": 1,
+          "title": "Evidence Boundary",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "evidence_scope": {
+          "enum": [
+            "structural",
+            "finite",
+            "statistical",
+            "model-check",
+            "proof"
+          ],
+          "title": "Evidence Scope",
+          "type": "string"
+        },
+        "explicit_non_claims": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Explicit Non Claims",
+          "type": "array"
+        },
+        "left_carrier_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Left Carrier Ref"
+        },
+        "limitations": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Limitations",
+          "type": "array"
+        },
+        "observation_projection_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Observation Projection Ref"
+        },
+        "observation_projection_revision": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Observation Projection Revision"
+        },
+        "quantifier_scope": {
+          "enum": [
+            "single-artifact",
+            "finite-cases",
+            "sampled-population",
+            "all-admitted-inputs",
+            "all-traces",
+            "all-strategies"
+          ],
+          "title": "Quantifier Scope",
+          "type": "string"
+        },
+        "relation_id": {
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "title": "Relation Id",
+          "type": "string"
+        },
+        "relation_parameter_profile_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Relation Parameter Profile Ref"
+        },
+        "relation_parameter_profile_revision": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Relation Parameter Profile Revision"
+        },
+        "right_carrier_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Right Carrier Ref"
+        },
+        "subject": {
+          "minLength": 1,
+          "title": "Subject",
+          "type": "string"
+        },
+        "taxonomy_id": {
+          "minLength": 1,
+          "title": "Taxonomy Id",
+          "type": "string"
+        },
+        "taxonomy_revision": {
+          "pattern": "^[a-z0-9][a-z0-9.-]*$",
+          "title": "Taxonomy Revision",
+          "type": "string"
+        }
+      },
+      "required": [
+        "taxonomy_id",
+        "taxonomy_revision",
+        "relation_id",
+        "subject",
+        "quantifier_scope",
+        "evidence_scope",
+        "evidence_boundary",
+        "assurance_status",
+        "limitations",
+        "explicit_non_claims"
+      ],
+      "title": "BehavioralClaimBindingModel",
+      "type": "object"
+    },
+    "ParticipantOpacityModelAssumptionsModel": {
+      "additionalProperties": false,
+      "description": "Exact profile-derived domains and non-strengthening assumptions.",
+      "properties": {
+        "cut_ref": {
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9._:/-]*$",
+          "title": "Cut Ref",
+          "type": "string"
+        },
+        "environment_refs": {
+          "items": {
+            "maxLength": 256,
+            "pattern": "^[a-z][a-z0-9._:/-]*$",
+            "type": "string"
+          },
+          "maxItems": 64,
+          "minItems": 1,
+          "title": "Environment Refs",
+          "type": "array"
+        },
+        "nondeterminism": {
+          "const": "possibilistic-support",
+          "title": "Nondeterminism",
+          "type": "string"
+        },
+        "order_refs": {
+          "items": {
+            "maxLength": 256,
+            "pattern": "^[a-z][a-z0-9._:/-]*$",
+            "type": "string"
+          },
+          "maxItems": 64,
+          "minItems": 1,
+          "title": "Order Refs",
+          "type": "array"
+        },
+        "order_treatment": {
+          "enum": [
+            "total-order",
+            "named-linearization",
+            "all-linearizations",
+            "partial-order",
+            "causal-frontier"
+          ],
+          "title": "Order Treatment",
+          "type": "string"
+        },
+        "probability": {
+          "const": "outside-baseline",
+          "title": "Probability",
+          "type": "string"
+        },
+        "progress": {
+          "const": "progress-insensitive",
+          "title": "Progress",
+          "type": "string"
+        },
+        "scheduler_refs": {
+          "items": {
+            "maxLength": 256,
+            "pattern": "^[a-z][a-z0-9._:/-]*$",
+            "type": "string"
+          },
+          "maxItems": 64,
+          "minItems": 1,
+          "title": "Scheduler Refs",
+          "type": "array"
+        },
+        "strategy_kind": {
+          "enum": [
+            "passive",
+            "active"
+          ],
+          "title": "Strategy Kind",
+          "type": "string"
+        },
+        "strategy_refs": {
+          "items": {
+            "maxLength": 256,
+            "pattern": "^[a-z][a-z0-9._:/-]*$",
+            "type": "string"
+          },
+          "maxItems": 64,
+          "minItems": 1,
+          "title": "Strategy Refs",
+          "type": "array"
+        },
+        "time_model": {
+          "const": "untimed",
+          "title": "Time Model",
+          "type": "string"
+        }
+      },
+      "required": [
+        "strategy_kind",
+        "strategy_refs",
+        "scheduler_refs",
+        "environment_refs",
+        "order_treatment",
+        "order_refs",
+        "cut_ref",
+        "nondeterminism",
+        "time_model",
+        "progress",
+        "probability"
+      ],
+      "title": "ParticipantOpacityModelAssumptionsModel",
+      "type": "object"
+    },
+    "ParticipantOpacityModelCheckDeclaredCountsModel": {
+      "additionalProperties": false,
+      "description": "Exact realized cardinalities of the finite transition artifact.",
+      "properties": {
+        "cuts": {
+          "maximum": 100000,
+          "minimum": 1,
+          "title": "Cuts",
+          "type": "integer"
+        },
+        "evaluation_points": {
+          "maximum": 100000,
+          "minimum": 1,
+          "title": "Evaluation Points",
+          "type": "integer"
+        },
+        "initial_states": {
+          "maximum": 100000,
+          "minimum": 1,
+          "title": "Initial States",
+          "type": "integer"
+        },
+        "order_variants": {
+          "maximum": 1000,
+          "minimum": 1,
+          "title": "Order Variants",
+          "type": "integer"
+        },
+        "runs": {
+          "maximum": 100000,
+          "minimum": 1,
+          "title": "Runs",
+          "type": "integer"
+        },
+        "scheduler_environment_pairs": {
+          "maximum": 10000,
+          "minimum": 1,
+          "title": "Scheduler Environment Pairs",
+          "type": "integer"
+        },
+        "states": {
+          "maximum": 100000,
+          "minimum": 1,
+          "title": "States",
+          "type": "integer"
+        },
+        "strategies": {
+          "maximum": 1000,
+          "minimum": 1,
+          "title": "Strategies",
+          "type": "integer"
+        },
+        "transitions": {
+          "maximum": 200000,
+          "minimum": 0,
+          "title": "Transitions",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "states",
+        "transitions",
+        "initial_states",
+        "evaluation_points",
+        "runs",
+        "cuts",
+        "strategies",
+        "scheduler_environment_pairs",
+        "order_variants"
+      ],
+      "title": "ParticipantOpacityModelCheckDeclaredCountsModel",
+      "type": "object"
+    },
+    "ParticipantOpacityModelStateModel": {
+      "additionalProperties": false,
+      "description": "One state in the complete finite transition model.\n\nReachability is deliberately absent: the model checker derives it from the\ninitial-state set and transition relation.",
+      "properties": {
+        "coalition_fusion_key": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "pattern": "^[a-z][a-z0-9._:/|-]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Coalition Fusion Key"
+        },
+        "cut_ref": {
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9._:/-]*$",
+          "title": "Cut Ref",
+          "type": "string"
+        },
+        "environment_ref": {
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9._:/-]*$",
+          "title": "Environment Ref",
+          "type": "string"
+        },
+        "evaluation_point": {
+          "title": "Evaluation Point",
+          "type": "boolean"
+        },
+        "initial_information_key": {
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9._:/|-]*$",
+          "title": "Initial Information Key",
+          "type": "string"
+        },
+        "memory_key": {
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9._:/|-]*$",
+          "title": "Memory Key",
+          "type": "string"
+        },
+        "observation_key": {
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9._:/|-]*$",
+          "title": "Observation Key",
+          "type": "string"
+        },
+        "order_ref": {
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9._:/-]*$",
+          "title": "Order Ref",
+          "type": "string"
+        },
+        "ordinal": {
+          "maximum": 99999,
+          "minimum": 0,
+          "title": "Ordinal",
+          "type": "integer"
+        },
+        "release_state_key": {
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9._:/|-]*$",
+          "title": "Release State Key",
+          "type": "string"
+        },
+        "run_ref": {
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9._:/-]*$",
+          "title": "Run Ref",
+          "type": "string"
+        },
+        "scheduler_ref": {
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9._:/-]*$",
+          "title": "Scheduler Ref",
+          "type": "string"
+        },
+        "secret_holds": {
+          "title": "Secret Holds",
+          "type": "boolean"
+        },
+        "state_ref": {
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9._:/-]*$",
+          "title": "State Ref",
+          "type": "string"
+        },
+        "strategy_ref": {
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9._:/-]*$",
+          "title": "Strategy Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "ordinal",
+        "state_ref",
+        "run_ref",
+        "cut_ref",
+        "strategy_ref",
+        "scheduler_ref",
+        "environment_ref",
+        "order_ref",
+        "evaluation_point",
+        "secret_holds",
+        "initial_information_key",
+        "observation_key",
+        "memory_key",
+        "release_state_key"
+      ],
+      "title": "ParticipantOpacityModelStateModel",
+      "type": "object"
+    },
+    "ParticipantOpacityModelTransitionModel": {
+      "additionalProperties": false,
+      "description": "One safe labelled edge in the complete finite transition relation.",
+      "properties": {
+        "action_ref": {
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9._:/-]*$",
+          "title": "Action Ref",
+          "type": "string"
+        },
+        "observation_event_key": {
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9._:/|-]*$",
+          "title": "Observation Event Key",
+          "type": "string"
+        },
+        "ordinal": {
+          "maximum": 199999,
+          "minimum": 0,
+          "title": "Ordinal",
+          "type": "integer"
+        },
+        "source_state_ordinal": {
+          "maximum": 99999,
+          "minimum": 0,
+          "title": "Source State Ordinal",
+          "type": "integer"
+        },
+        "target_state_ordinal": {
+          "maximum": 99999,
+          "minimum": 0,
+          "title": "Target State Ordinal",
+          "type": "integer"
+        },
+        "transition_ref": {
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9._:/-]*$",
+          "title": "Transition Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "ordinal",
+        "transition_ref",
+        "source_state_ordinal",
+        "target_state_ordinal",
+        "action_ref",
+        "observation_event_key"
+      ],
+      "title": "ParticipantOpacityModelTransitionModel",
+      "type": "object"
+    },
+    "SourceArtifactIdentityModel": {
+      "additionalProperties": false,
+      "description": "Portable identity and exact-byte digest for the root SDL source.",
+      "properties": {
+        "byte_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Byte Digest",
+          "type": "string"
+        },
+        "source_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[^\\r\\n]+$",
+          "title": "Source Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_id",
+        "byte_digest"
+      ],
+      "title": "SourceArtifactIdentityModel",
+      "type": "object"
+    }
+  },
+  "$id": "https://raesystem.github.io/rae/schemas/participant-opacity-model-check-input-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Closed finite transition model admitted for model checking.",
+  "properties": {
+    "analysis_profile": {
+      "const": "raes-participant-opacity-model-check/v1",
+      "title": "Analysis Profile",
+      "type": "string"
+    },
+    "assumptions": {
+      "$ref": "#/$defs/ParticipantOpacityModelAssumptionsModel"
+    },
+    "catalog_digest": {
+      "minLength": 1,
+      "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+      "title": "Catalog Digest",
+      "type": "string"
+    },
+    "claim": {
+      "$ref": "#/$defs/BehavioralClaimBindingModel"
+    },
+    "complete_model": {
+      "title": "Complete Model",
+      "type": "boolean"
+    },
+    "declared_counts": {
+      "$ref": "#/$defs/ParticipantOpacityModelCheckDeclaredCountsModel"
+    },
+    "initial_state_ordinals": {
+      "items": {
+        "type": "integer"
+      },
+      "maxItems": 100000,
+      "minItems": 1,
+      "title": "Initial State Ordinals",
+      "type": "array"
+    },
+    "materializer_digest": {
+      "minLength": 1,
+      "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+      "title": "Materializer Digest",
+      "type": "string"
+    },
+    "materializer_id": {
+      "maxLength": 256,
+      "pattern": "^[a-z][a-z0-9._:/-]*$",
+      "title": "Materializer Id",
+      "type": "string"
+    },
+    "materializer_version": {
+      "maxLength": 128,
+      "pattern": "^[a-z0-9][a-z0-9._/-]*$",
+      "title": "Materializer Version",
+      "type": "string"
+    },
+    "model_ref": {
+      "maxLength": 256,
+      "pattern": "^[a-z][a-z0-9._:/-]*$",
+      "title": "Model Ref",
+      "type": "string"
+    },
+    "model_revision": {
+      "maxLength": 128,
+      "pattern": "^[a-z0-9][a-z0-9._/-]*$",
+      "title": "Model Revision",
+      "type": "string"
+    },
+    "profile_digest": {
+      "minLength": 1,
+      "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+      "title": "Profile Digest",
+      "type": "string"
+    },
+    "profile_id": {
+      "maxLength": 256,
+      "pattern": "^[a-z][a-z0-9._:/-]*$",
+      "title": "Profile Id",
+      "type": "string"
+    },
+    "profile_revision": {
+      "maxLength": 128,
+      "pattern": "^[a-z0-9][a-z0-9._/-]*$",
+      "title": "Profile Revision",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "participant-opacity-model-check-input/v1",
+      "default": "participant-opacity-model-check-input/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source": {
+      "$ref": "#/$defs/SourceArtifactIdentityModel"
+    },
+    "states": {
+      "items": {
+        "$ref": "#/$defs/ParticipantOpacityModelStateModel"
+      },
+      "maxItems": 100000,
+      "minItems": 1,
+      "title": "States",
+      "type": "array"
+    },
+    "transitions": {
+      "items": {
+        "$ref": "#/$defs/ParticipantOpacityModelTransitionModel"
+      },
+      "maxItems": 200000,
+      "title": "Transitions",
+      "type": "array"
+    }
+  },
+  "required": [
+    "analysis_profile",
+    "source",
+    "catalog_digest",
+    "profile_id",
+    "profile_revision",
+    "profile_digest",
+    "model_ref",
+    "model_revision",
+    "materializer_id",
+    "materializer_version",
+    "materializer_digest",
+    "complete_model",
+    "assumptions",
+    "declared_counts",
+    "initial_state_ordinals",
+    "states",
+    "transitions",
+    "claim"
+  ],
+  "title": "ParticipantOpacityModelCheckInputModel",
+  "type": "object",
+  "x-raes-invariants": [
+    {
+      "description": "State and transition ordinals, refs, endpoints, fixed domains, exact declared counts, assumptions, and model-check claim coordinates must form one closed canonical transition model.",
+      "id": "participant-opacity-model-check-graph-joins",
+      "inputs": [
+        {
+          "contract_id": "participant-opacity-model-check-input-v1",
+          "instance_path": "#"
+        },
+        {
+          "contract_id": "behavioral-relation-profile-v1",
+          "instance_path": "#"
+        },
+        {
+          "contract_id": "behavioral-relations-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "raes_contracts.participant_opacity.ParticipantOpacityModelCheckInputModel"
+    }
+  ],
+  "x-raes-semantic-profile": {
+    "contract_id": "participant-opacity-model-check-input-v1",
+    "entry_schema_contract_id": "raes-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/RaesSemanticInvariantEntryModel",
+    "id": "raes-semantic-invariants-v1",
+    "keyword": "x-raes-invariants",
+    "required": true,
+    "uri": "https://raesystem.github.io/rae/schemas/semantic-invariants/v1"
+  }
+}

@@ -810,7 +810,7 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   syntax or wire compatibility. The normative participant-policy model is
   `specs/formal/participant-semantics/information-flow-control.md`; the
   machine-readable relation is `policy-noninterference` in behavioral taxonomy
-  revision `rev5`; and the claim surface is
+  revision `rev8`; and the claim surface is
   `participant-information-flow-policy`. Existing `W`, `V`, qualified `H`,
   `X`, participant action/admission, visibility transition, ordering, marking,
   controller, authority, evidence, and provenance objects remain the mapped
@@ -862,12 +862,36 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   `test_issue_810_participant_opacity_design.py`.
 - RAES keeps opacity distinct from SEM-230 policy noninterference,
   participant-projected-history equality, epistemic indistinguishability,
-  trace equivalence, and bisimulation. Current assurance is definition plus
-  bounded tests only. No checker, model check, proof, runtime enforcement,
-  supervisor synthesis, backend declaration, backend realization, bounded
-  backend conformance, probabilistic security, timed security, or all-schedule
-  result is delivered. Issues #961 through #965 own those independent future
-  lanes.
+  trace equivalence, and bisimulation. Issue #961 delivers the closed baseline
+  profile and bounded checker. Issue #962 delivers a distinct explicit-state
+  checker and a model-check result for one exact complete finite fixture model.
+  No mathematical proof, runtime enforcement, supervisor synthesis, backend
+  declaration, backend realization, bounded backend conformance,
+  probabilistic security, timed security, partial-order security, or
+  all-schedule result is delivered. Issues #963 through #965 own those
+  remaining independent lanes.
+- Issue #811 and SEM-232 adapt van Glabbeek and Weijland's branching
+  bisimulation and van Glabbeek, Luttik, and Trčka's explicit-divergence
+  treatment to the bounded RAES participant-crossing kernel. The exact mapping
+  is ADR-100,
+  `specs/formal/participant-semantics/participant-crossing-bisimulation.md`,
+  `divergence-preserving-branching-bisimulation` and the
+  `participant-crossing-bisimulation` claim surface in behavioral taxonomy
+  revision `rev8`, and the theorem/tool/evidence/program records under
+  `docs/research/participant-bisimulation/`.
+- The selected theorem compares a complete finite abstract SEM-230 crossing
+  LTS with an independently derived formal API-423/RUN-319 crossing-kernel
+  LTS. It hides only finite validation, cut-resolution, effective-capability,
+  record-preparation, and atomic-commit classes under a closed
+  participant/audience projection and preserves explicit divergence. Issue
+  #811 defines the target but does not run it. Issues #971 through #976 own
+  model construction, live-runtime mapping, counterexamples, finite mCRL2
+  checking, independent reproduction, and reproduction-gated scientific
+  documentation.
+- RAES does not derive whole-runtime or backend equivalence, policy
+  noninterference, or opacity from this design. Runtime realization and
+  backend conformance remain separate axes; noninterference and opacity
+  require their own profile-matching preservation theorem.
 - ACT-617 applies the already adopted SEM-230/ADR-085 control and ordering
   lineage to authored mixed-control behavior without introducing another
   external derivation. The exact RAES mapping is
@@ -965,9 +989,10 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   behavioral compatibility with those sources.
 - Issues #811 through #813 own proof-bearing bisimulation, adversarial
   threat-model, and simulation/federation extensions. Issue #810 now defines
-  opacity and supervisor-visibility architecture only; issues #961 through
-  #965 own its checker, model-check, proof, runtime, and backend lanes. SEM-230
-  preserves their participant, audience, policy revision, declassification,
+  opacity and supervisor-visibility architecture only; #961 delivers its
+  bounded checker, #962 delivers its exact finite-model checker, and #963
+  through #965 own the proof, runtime, and backend lanes. SEM-230 preserves
+  their participant, audience, policy revision, declassification,
   controller/authority, scheduler/environment, timing/probability, order, and
   evidence coordinates; that extension seam is not evidence those properties
   are already realized.
@@ -1224,7 +1249,7 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   existing `run_target_conformance()` runner extended with an injected
   participant-policy probe harness, `ConformanceCaseResult`, and
   `BackendConformanceReport` for the backend lane; and the
-  `raes-behavioral-relations` `rev5` catalog with `BehavioralClaimBindingModel`
+  `raes-behavioral-relations` `rev8` catalog with `BehavioralClaimBindingModel`
   for claim identity. The four lanes stay separately statused; none promotes
   another.
 - ASR-535 delivery status is bounded-tested and bounded-conformance-implemented.
@@ -1288,7 +1313,7 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   `BehavioralClaimBindingModel` example in
   `implementations/python/tests/test_public_docs_policy.py`. The example
   resolves `bounded-probe-success` against
-  `raes-behavioral-relations@rev5`; it does not define a documentation claim
+  `raes-behavioral-relations@rev8`; it does not define a documentation claim
   schema or a second relation catalog.
 - Issue #803 delivery status is published explanatory guidance over shipped
   bounded evidence. The reference backend still declares the six
@@ -1334,6 +1359,48 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   disclosure, baseline disclosure, cost/resource traces, and standardized run
   records. RAES records these as provenance and information-boundary concerns
   so downstream studies can audit what a participant actually could observe.
+
+### Adaptive difficulty, sequential intervention, and simulation experiments
+
+SCE-003 combines the benchmark lineage above with four primary adjacent
+sources. Hunicke and Chapman's
+[AI for Dynamic Difficulty Adjustment in Games](https://www.cs.northwestern.edu/~hunicke/pubs/Hamlet.pdf)
+supplies the inspectable controller shape: observations, policy, trigger,
+intervention, and outcome remain separate. Murphy's
+[Optimal Dynamic Treatment Regimes (2003)](https://doi.org/10.1111/1467-9868.00389)
+supplies the sequential treatment-regime precedent: a history-dependent
+decision rule makes the realized path part of treatment. Weiss's
+[adaptive-testing work (1982)](https://doi.org/10.1177/014662168200600408)
+warns that adaptive selection is not a measurement theory; item/measurement
+model, selection, and stopping assumptions determine what can be inferred.
+Bengio et al.'s
+[Curriculum Learning (2009)](https://doi.org/10.1145/1553374.1553380)
+shows that ordering and selection can change learning dynamics, so scaffolding
+or difficulty changes cannot be treated as presentation-neutral.
+
+The simulation-experiment lineage supplies the engineering boundary.
+MIASE/SED-ML and experimental frames keep the scenario model separate from the
+procedure that exercises and observes it. L'Ecuyer's stream/substream work and
+Heikes, Montgomery, and Rardin's
+[common-random-numbers analysis (1976)](https://doi.org/10.1177/003754977602700301)
+make cross-alternative random-stream reuse an explicit design choice rather
+than an accidental continuation. Sargent's V&V discipline keeps intended use,
+implementation verification, and model/measurement validation distinct.
+
+RAES adopts those lessons as a versioned and digest-bound source definition
+plus exact evidence instance; a sealed policy and decision history;
+forward-only interventions; distinct fixed/adaptive/scaffolded allocations;
+new identity for a changed-scenario follow-up; explicit random-stream
+relationships; and analysis/validity disclosures. RAES does not adopt an
+item-response model, dynamic-treatment estimator, curriculum optimizer, DDA
+controller, or simulation algorithm, and it claims no universal difficulty
+scale, competence estimate, causal policy effect, pedagogical benefit, or
+policy optimality.
+The issue-specific transfer audit is recorded in
+[`adaptive-difficulty-lineage-and-validity.md`](../../research/scenario-variation-trial-realization/adaptive-difficulty-lineage-and-validity.md).
+These are semantic design precedents, not source-code, schema, or wire-format
+derivations, so the normative SDL subject ledger and third-party notice
+disposition do not change.
 
 ## DSL Evaluation Lineage
 

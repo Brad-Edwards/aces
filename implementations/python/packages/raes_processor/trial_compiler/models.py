@@ -13,6 +13,7 @@ from raes_contracts.contracts import (
     AdmittedTrialPlanInputRefsModel,
     AdmittedTrialPlanModel,
     ExperimentSpecModel,
+    ExperimentTaskModel,
     ParticipantImplementationManifestModel,
     TrialCompilationLimitsModel,
     TrialExecutionAuthorityModel,
@@ -32,6 +33,7 @@ class TrialCompilationRequest:
 
     family: ExpandedScenario
     experiment: ExperimentSpecModel
+    task: ExperimentTaskModel
     input_refs: AdmittedTrialPlanInputRefsModel
     apparatus: AdmittedApparatusBindingModel
     realization_envelope: BackendRealizationEnvelopeModel
@@ -56,6 +58,7 @@ class TrialCompilationRequest:
         return TrialCompilationRequest(
             family=self.family,
             experiment=experiment,
+            task=self.task,
             input_refs=input_refs,
             apparatus=self.apparatus,
             realization_envelope=self.realization_envelope,
@@ -78,6 +81,7 @@ class TrialCompilationRequest:
         return TrialCompilationRequest(
             family=family,
             experiment=self.experiment,
+            task=self.task,
             input_refs=input_refs,
             apparatus=self.apparatus,
             realization_envelope=self.realization_envelope,

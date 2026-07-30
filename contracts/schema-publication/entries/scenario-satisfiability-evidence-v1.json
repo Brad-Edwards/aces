@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "ae00cca1cd31a30b8f0cb7e6b74b4092526f0e688039b3ac73dbef804f853f10",
+  "content_hash": "2d0299274877012fc2c3a3e65d3d22a2e7d2992454697248a2b2e48759676973",
   "last_change": {
-    "summary": "Added composable provider-neutral platform capabilities and marked legacy platform categories and content manifests deprecated for issue #956.",
-    "content_hash": "ae00cca1cd31a30b8f0cb7e6b74b4092526f0e688039b3ac73dbef804f853f10"
+    "summary": "Integrated admitted trial provenance with composable platform capability schema updates for issues #790 and #956.",
+    "content_hash": "2d0299274877012fc2c3a3e65d3d22a2e7d2992454697248a2b2e48759676973"
   }
 }

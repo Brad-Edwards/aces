@@ -59,6 +59,13 @@ Required evidence includes valid and invalid fixtures, full domain/strategy
 bounds, tool and profile digests, negative cases, and a `bounded-test` claim
 binding. It establishes no model check, proof, runtime, or backend result.
 
+Delivered by #961: the governed
+`participant-opacity-baseline-v1@sem-231/rev2` profile, exact finite
+analysis-input and digest-bound evidence contracts, canonical claim/profile
+resolution, deterministic processor analysis and replay, and safe
+counterexample fixtures. The delivered result vocabulary remains strictly
+finite and bounded.
+
 ### #962: Finite-state model checking
 
 Explore a pinned closed finite model across the declared state, strategy,
@@ -67,6 +74,14 @@ either a result or safe counterexample.
 
 It establishes only the exact finite model. It is not an unbounded theorem and
 says nothing about runtime or backend realization.
+
+Delivered by #962: explicit input and evidence schemas, strict catalog/profile
+and assumption joins, canonical breadth-first reachable-fixed-point
+exploration, the shared SEM-231 information-cell kernel, complete aggregate
+and per-strategy coverage, safe canonical counterexample paths, replay, and
+valid/invalid exact-model fixtures. The baseline positive evidence binds only
+the committed complete finite model under
+`participant-opacity-baseline-v1@sem-231/rev2`.
 
 ### #963: Mathematical proof
 
@@ -100,8 +115,9 @@ is not proof, cross-backend equivalence, or support outside the named profile.
 
 ## Program Invariants
 
-- All claims use `raes-behavioral-relations@rev5` and one explicit assurance
-  axis.
+- All claims use the exact current behavioral-taxonomy revision (currently
+  `raes-behavioral-relations@rev8`) and one explicit assurance axis. `rev5`
+  introduced opacity; it is not a permanent implementation pin.
 - Universal opacity requires model-check or proof evidence whose scope matches
   the claim.
 - Actual and alternative active points use the same participant strategy.

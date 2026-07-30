@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
   "stability": "draft",
-  "content_hash": "63650ec001251366de8300a52824cfec4d91b586327707d042e2949087e1ba08",
+  "content_hash": "3eb72628cb9e8c69a2228cdc36b61a455d2ee567adfce33444deb5f1f1d4056b",
   "last_change": {
-    "summary": "Added composable provider-neutral platform capabilities and marked legacy platform categories and content manifests deprecated for issue #956.",
-    "content_hash": "63650ec001251366de8300a52824cfec4d91b586327707d042e2949087e1ba08"
+    "summary": "Integrated admitted trial provenance with composable platform capability schema updates for issues #790 and #956.",
+    "content_hash": "3eb72628cb9e8c69a2228cdc36b61a455d2ee567adfce33444deb5f1f1d4056b"
   }
 }
