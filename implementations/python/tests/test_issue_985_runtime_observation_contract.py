@@ -1,0 +1,233 @@
+"""Issue #985: backend observation contracts and safe persistence."""
+
+from __future__ import annotations
+
+import pytest
+from raes.explicitness import ExplicitnessClass, ExplicitnessProvenance
+from raes_contracts.planning import ChangeAction, ProvisioningPlan, ProvisionOp, RuntimeDomain
+from raes_contracts.runtime_state import ApplyResult, RuntimeSnapshot, SnapshotEntry
+from raes_processor.semantics.realization import (
+    CompiledRealizationRequirement,
+    project_realization_concern,
+    realization_disclosure,
+)
+from raes_processor.semantics.realization_concerns import realization_concern_descriptor
+from raes_runtime.backend_calls import _call_backend_apply, _RealizationApplyContext
+
+_ADDRESS = "provision.node.worker"
+_FIELD_PATH = "nodes.worker.runtime.environment"
+
+
+def _payload(value: object) -> dict[str, object]:
+    return {"spec": {"node": {"runtime": {"environment": value}}}}
+
+
+def _requirement(explicitness: ExplicitnessClass) -> CompiledRealizationRequirement:
+    return CompiledRealizationRequirement(
+        field_path=_FIELD_PATH,
+        address=_ADDRESS,
+        domain="runtime-realization",
+        requirement_kind="runtime-environment",
+        explicitness=explicitness,
+        provenance=ExplicitnessProvenance.AUTHOR_DECLARED,
+    )
+
+
+def _plan(value: object) -> ProvisioningPlan:
+    return ProvisioningPlan(
+        operations=[
+            ProvisionOp(
+                action=ChangeAction.CREATE,
+                address=_ADDRESS,
+                resource_type="node",
+                payload=_payload(value),
+            )
+        ]
+    )
+
+
+def _snapshot(value: object) -> RuntimeSnapshot:
+    return RuntimeSnapshot(
+        entries={
+            _ADDRESS: SnapshotEntry(
+                address=_ADDRESS,
+                domain=RuntimeDomain.PROVISIONING,
+                resource_type="node",
+                payload=_payload(value),
+            )
+        }
+    )
+
+
+def test_open_observation_must_satisfy_the_registered_closed_contract() -> None:
+    requirement = _requirement(ExplicitnessClass.OPEN)
+
+    diagnostics, provenance = realization_disclosure(
+        (requirement,),
+        _plan([]),
+        _snapshot([{"value": "missing-name", "unknown": "must-not-be-ignored"}]),
+    )
+
+    assert [diagnostic.code for diagnostic in diagnostics] == ["runtime.backend-contract-invalid"]
+    assert provenance == ()
+    assert "missing-name" not in diagnostics[0].message
+
+
+@pytest.mark.parametrize(
+    ("kind", "observation"),
+    [
+        (
+            "runtime-environment",
+            [{"name": "MODE", "value": "production", "unknown": "rejected"}],
+        ),
+        (
+            "runtime-mounts",
+            [{"target": "/data", "source_kind": "unknown"}],
+        ),
+        (
+            "linux-capabilities",
+            {"required": [], "unknown": "rejected"},
+        ),
+        (
+            "published-ports",
+            [{}],
+        ),
+        (
+            "forwarding-agents",
+            [
+                {
+                    "forwarding_agent_id": "agent",
+                    "implementation": "other",
+                    "agent_kind": "other",
+                    "unknown": "rejected",
+                }
+            ],
+        ),
+        (
+            "service-listeners",
+            [{"service_listener_id": "http", "protocol": "tcp"}],
+        ),
+    ],
+)
+def test_each_runtime_concern_has_a_closed_observation_contract(
+    kind: str,
+    observation: object,
+) -> None:
+    with pytest.raises(ValueError):
+        project_realization_concern(kind, observation, observed=True)
+
+
+def test_runtime_gate_rejects_a_malformed_commitment_wire_value() -> None:
+    declared = [
+        {
+            "name": "TOKEN",
+            "value": "fixture-secret",
+            "value_classification": "secret_fixture",
+            "provenance": "operator",
+            "source": "fixture",
+        }
+    ]
+    malformed_observation = [
+        {
+            "name": "TOKEN",
+            "value_classification": "secret_fixture",
+            "provenance": "operator",
+            "source": "fixture",
+            "value_present": True,
+            "value_commitment": "raes-runtime-value-jcs-sha256-v1:not-a-digest",
+        }
+    ]
+
+    diagnostics, provenance = realization_disclosure(
+        (_requirement(ExplicitnessClass.EXACT),),
+        _plan(declared),
+        _snapshot(malformed_observation),
+    )
+
+    assert [diagnostic.code for diagnostic in diagnostics] == ["runtime.backend-contract-invalid"]
+    assert provenance == ()
+
+
+def test_mount_persistence_keeps_valid_stateful_records_outside_the_concern() -> None:
+    observation = [
+        {"target": "/host", "source_kind": "bind", "source": "/srv/host"},
+        {"target": "/state", "source_kind": "volume", "source": "state"},
+    ]
+    descriptor = realization_concern_descriptor("runtime-mounts")
+    assert descriptor is not None
+
+    comparison = descriptor.project(observation, observed=True)
+    persisted = descriptor.sanitize_observation(observation)
+
+    assert [mount["source_kind"] for mount in comparison] == ["bind"]
+    assert [mount["source_kind"] for mount in persisted] == ["bind", "volume"]
+
+
+def test_backend_boundary_persists_only_the_safe_projection() -> None:
+    observed = [
+        {
+            "name": "MODE",
+            "value": "production",
+            "value_classification": "plain",
+            "provenance": "runtime",
+            "source": "",
+            "description": "backend annotation must not persist",
+        }
+    ]
+    requirement = _requirement(ExplicitnessClass.EXACT)
+    plan = _plan(observed)
+
+    def backend() -> ApplyResult:
+        return ApplyResult(
+            success=True,
+            snapshot=_snapshot(observed),
+            changed_addresses=[_ADDRESS],
+        )
+
+    result = _call_backend_apply(
+        backend,
+        address="runtime.provision.node.worker",
+        snapshot=RuntimeSnapshot(),
+        realization=_RealizationApplyContext(requirements=(requirement,), plan=plan),
+    )
+
+    assert result.success is True
+    persisted = result.snapshot.entries[_ADDRESS].payload["spec"]["node"]["runtime"]["environment"]
+    assert persisted[0]["value_present"] is True
+    assert persisted[0]["value_commitment"].startswith("raes-runtime-value-jcs-sha256-v1:")
+    assert "production" not in repr(persisted)
+    assert "description" not in repr(persisted)
+
+
+def test_backend_boundary_rejects_unknown_observation_fields() -> None:
+    declared = [
+        {
+            "name": "MODE",
+            "value": "production",
+            "value_classification": "plain",
+            "provenance": "runtime",
+            "source": "",
+        }
+    ]
+    observed = [{**declared[0], "backend_extra": "do-not-persist"}]
+    requirement = _requirement(ExplicitnessClass.CONSTRAINED)
+
+    def backend() -> ApplyResult:
+        return ApplyResult(
+            success=True,
+            snapshot=_snapshot(observed),
+            changed_addresses=[_ADDRESS],
+        )
+
+    baseline = RuntimeSnapshot()
+    result = _call_backend_apply(
+        backend,
+        address="runtime.provision.node.worker",
+        snapshot=baseline,
+        realization=_RealizationApplyContext(requirements=(requirement,), plan=_plan(declared)),
+    )
+
+    assert result.success is False
+    assert result.snapshot == baseline
+    assert [diagnostic.code for diagnostic in result.diagnostics] == ["runtime.backend-contract-invalid"]
+    assert "do-not-persist" not in result.diagnostics[0].message

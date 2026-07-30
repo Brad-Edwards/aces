@@ -8,6 +8,8 @@ from ..semantics.planner import (
     resource_dependency_cycles,
     resource_topological_order,
 )
+from ..semantics.realization import CompiledRealizationRequirement
+from ..semantics.realization_snapshot_sanitization import realization_payloads_match
 
 
 def _ordering_graph(resources: dict[str, PlannedResource]) -> dict[str, tuple[str, ...]]:
@@ -46,11 +48,20 @@ def _topological_order(resources: dict[str, PlannedResource]) -> list[str]:
     return resource_topological_order(resources)
 
 
-def _entry_matches_resource(entry: SnapshotEntry, resource: PlannedResource) -> bool:
+def _entry_matches_resource(
+    entry: SnapshotEntry,
+    resource: PlannedResource,
+    realization_requirements: tuple[CompiledRealizationRequirement, ...] = (),
+) -> bool:
     return (
         entry.domain == resource.domain
         and entry.resource_type == resource.resource_type
-        and entry.payload == resource.payload
+        and realization_payloads_match(
+            entry.address,
+            resource.payload,
+            entry.payload,
+            realization_requirements,
+        )
         and entry.ordering_dependencies == resource.ordering_dependencies
         and entry.refresh_dependencies == resource.refresh_dependencies
     )

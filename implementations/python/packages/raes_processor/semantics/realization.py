@@ -20,7 +20,7 @@ from raes_contracts.apparatus import (
 )
 from raes_contracts.artifact_requirements import ArtifactAvailabilityContext
 from raes_contracts.diagnostics import Diagnostic, Severity
-from raes_contracts.planning import ChangeAction, ProvisioningPlan, ProvisionOp
+from raes_contracts.planning import ProvisioningPlan
 from raes_contracts.realization_envelope import (
     ClosureOverlay,
     EnvelopeBinding,
@@ -37,8 +37,14 @@ from .artifact_realization import (
 )
 from .realization_concerns import (
     CONCERN_PAYLOAD_PATH,
+    project_realization_concern,
+    registered_realization_concern_descriptors,
     registered_realization_concerns,
     resolve_realization_concern,
+)
+from .realization_runtime_evaluation import evaluate_registered_realization
+from .realization_snapshot_sanitization import (
+    sanitize_realization_snapshot,
 )
 
 __all__ = [
@@ -49,15 +55,17 @@ __all__ = [
     "CompiledRealizationRequirement",
     "artifact_requirement_diagnostics",
     "materialize_realization_requirements",
+    "project_realization_concern",
     "realization_disclosure",
     "realization_envelope_diagnostics",
     "realization_support_diagnostics",
+    "registered_realization_concern_descriptors",
     "registered_realization_concerns",
     "resolve_realization_concern",
+    "sanitize_realization_snapshot",
 ]
 
 _BACKEND_CONTRACT_INVALID = "runtime.backend-contract-invalid"
-_MISSING_CONCERN_VALUE = object()
 
 # The single coarse realization domain string already published by backend
 # manifests (see ``raes_backend_stubs.stubs``). Kept opaque per the SEM-218
@@ -375,90 +383,13 @@ def realization_disclosure(
                 availability=artifact_availability,
             )
         else:
-            diagnostic, entry = _evaluate_realization(requirement, declared_ops, returned_snapshot)
+            diagnostic, entry = evaluate_registered_realization(
+                requirement,
+                declared_ops,
+                returned_snapshot,
+            )
         if diagnostic is not None:
             diagnostics.append(diagnostic)
         if entry is not None:
             provenance.append(entry)
     return diagnostics, tuple(provenance)
-
-
-def _evaluate_realization(
-    requirement: CompiledRealizationRequirement,
-    declared_ops: dict[str, ProvisionOp],
-    returned_snapshot: RuntimeSnapshot,
-) -> tuple[Diagnostic | None, RealizationProvenanceEntry | None]:
-    """Gate one compiled requirement against its realized value.
-
-    Returns ``(diagnostic, entry)`` where at most one is non-None: a diagnostic
-    for an exact requirement the backend realized dishonestly, or a provenance
-    entry for a located realized concern. Both are None when there is no author
-    baseline to enforce (no plan op / a ``DELETE`` op / no declared value) or
-    when a non-exact concern was left unrealized.
-    """
-
-    diagnostic: Diagnostic | None = None
-    entry: RealizationProvenanceEntry | None = None
-    path = CONCERN_PAYLOAD_PATH.get(requirement.requirement_kind)
-    op = declared_ops.get(requirement.address)
-    if requirement.explicitness is None or path is None or op is None or op.action is ChangeAction.DELETE:
-        return diagnostic, entry
-    snapshot_entry = returned_snapshot.entries.get(requirement.address)
-    realized_value = (
-        _concern_value(snapshot_entry.payload, path) if snapshot_entry is not None else _MISSING_CONCERN_VALUE
-    )
-    if requirement.explicitness is ExplicitnessClass.OPEN:
-        if realized_value is not _MISSING_CONCERN_VALUE:
-            entry = _realization_provenance_entry(requirement, False)
-        return diagnostic, entry
-    declared_value = _concern_value(op.payload, path)
-    if declared_value is not _MISSING_CONCERN_VALUE:
-        honoured = realized_value == declared_value
-        if requirement.explicitness is ExplicitnessClass.EXACT and not honoured:
-            # The backend realized the exact concern with a different value or omitted
-            # it entirely; both are forbidden silent approximation (I2).
-            diagnostic = _silent_approximation_diagnostic(requirement)
-        elif realized_value is not _MISSING_CONCERN_VALUE:
-            # A located realized concern: disclose its provenance. (A non-exact concern
-            # the backend left unrealized falls through with nothing to disclose.)
-            entry = _realization_provenance_entry(requirement, honoured)
-    return diagnostic, entry
-
-
-def _realization_provenance_entry(
-    requirement: CompiledRealizationRequirement,
-    honoured: bool,
-) -> RealizationProvenanceEntry:
-    return RealizationProvenanceEntry(
-        address=requirement.address,
-        field_path=requirement.field_path,
-        domain=requirement.domain,
-        requirement_kind=requirement.requirement_kind,
-        explicitness=requirement.explicitness,
-        provenance=(requirement.provenance if honoured else ExplicitnessProvenance.BACKEND_REALIZED),
-        governing_scope=requirement.governing_scope,
-    )
-
-
-def _silent_approximation_diagnostic(requirement: CompiledRealizationRequirement) -> Diagnostic:
-    return Diagnostic(
-        code=_BACKEND_CONTRACT_INVALID,
-        domain=requirement.domain,
-        address=requirement.address,
-        message=(
-            f"Backend did not realize the exact '{requirement.requirement_kind}' requirement at "
-            f"'{requirement.field_path}' as the author declared it (the realized value is absent "
-            f"or differs); silent approximation or omission of an exact declaration is forbidden "
-            f"(SEM-218 I2)."
-        ),
-        severity=Severity.ERROR,
-    )
-
-
-def _concern_value(payload: dict[str, object], path: tuple[str, ...]) -> object:
-    current: object = payload
-    for key in path:
-        if not isinstance(current, dict) or key not in current:
-            return _MISSING_CONCERN_VALUE
-        current = current[key]
-    return current
