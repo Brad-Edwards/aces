@@ -16,6 +16,7 @@ work.
 ## Contents
 
 - [Architecture preflight](../../decisions/issue-810-participant-opacity-preflight.md)
+- [Issue #961 bounded-falsification preflight](../../decisions/issue-961-participant-opacity-bounded-falsification-preflight.md)
 - [ADR-099](../../decisions/adrs/adr-099-participant-relative-predicate-opacity.md)
 - [Prior art and design criteria](prior-art-and-design-criteria.md) — search
   method, primary and adjacent source findings, relation selection, formal

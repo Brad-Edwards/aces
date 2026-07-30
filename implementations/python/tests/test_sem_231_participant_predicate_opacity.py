@@ -16,13 +16,13 @@ from raes_contracts.contracts import BehavioralClaimBindingModel
 def _opacity_binding(**overrides: object) -> BehavioralClaimBindingModel:
     payload: dict[str, object] = {
         "taxonomy_id": "raes-behavioral-relations",
-        "taxonomy_revision": "rev6",
+        "taxonomy_revision": "rev7",
         "relation_id": "participant-predicate-opacity",
         "subject": "Participant p at the declared exact cut",
-        "left_carrier_ref": "possible-point-system:finite-example",
-        "observation_projection_ref": "participant-opacity-observation:baseline",
+        "left_carrier_ref": "possible-point-carrier:participant-opacity-fixture-v1",
+        "observation_projection_ref": "participant-opacity-observation:complete-v1",
         "observation_projection_revision": "rev1",
-        "relation_parameter_profile_ref": "participant-opacity-profile:baseline",
+        "relation_parameter_profile_ref": "participant-opacity-baseline-v1",
         "relation_parameter_profile_revision": "sem-231/rev1",
         "quantifier_scope": "finite-cases",
         "evidence_scope": "finite",
@@ -41,7 +41,7 @@ def test_catalog_defines_one_sided_participant_predicate_opacity() -> None:
     catalog = load_behavioral_relation_catalog()
     relation = catalog.relations["participant-predicate-opacity"]
 
-    assert catalog.taxonomy_revision == "rev6"
+    assert catalog.taxonomy_revision == "rev7"
     assert relation.relation_class == "epistemic"
     assert relation.direction == "unary"
     assert relation.relation_parameter_profile_required is True
@@ -50,8 +50,8 @@ def test_catalog_defines_one_sided_participant_predicate_opacity() -> None:
     assert relation.dimensions.time.status == "parameterized"
     assert relation.dimensions.partial_order.status == "parameterized"
     assert relation.assurance.definition_status == "defined"
-    assert relation.assurance.implementation_status == "not-implemented"
-    assert relation.assurance.checker_status == "not-implemented"
+    assert relation.assurance.implementation_status == "implemented"
+    assert relation.assurance.checker_status == "implemented"
     assert relation.assurance.test_status == "bounded"
     assert relation.assurance.model_check_status == "not-model-checked"
     assert relation.assurance.proof_status == "deliberately-unproved"
@@ -59,6 +59,11 @@ def test_catalog_defines_one_sided_participant_predicate_opacity() -> None:
     assert relation.assurance.backend_declaration_status == "not-declared"
     assert relation.assurance.backend_realization_status == "not-realized"
     assert relation.assurance.backend_conformance_status == "not-tested"
+    assert {
+        "contracts/profiles/behavioral-relation/participant-opacity-baseline-v1.json",
+        "implementations/python/packages/raes_processor/participant_opacity/_service.py",
+        "implementations/python/tests/test_issue_961_participant_opacity.py",
+    } <= set(relation.assurance.evidence_refs)
 
 
 def test_opacity_binding_requires_a_revisioned_parameter_profile_and_assurance_axis() -> None:

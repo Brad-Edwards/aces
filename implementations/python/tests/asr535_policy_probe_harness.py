@@ -126,7 +126,7 @@ def _binding(
         obligation=obligation,
         claim=BehavioralClaimBindingModel(
             taxonomy_id="raes-behavioral-relations",
-            taxonomy_revision="rev6",
+            taxonomy_revision="rev7",
             relation_id="policy-noninterference",
             subject=f"ASR-535 {obligation} refutation attempt for participant {PARTICIPANT}",
             left_carrier_ref=left_carrier_ref,

@@ -1691,7 +1691,7 @@ and order-relative label projection, independent control and information-flow
 operations, dynamic purge and declassification semantics, and the exact
 baseline `policy-noninterference` obligation.
 
-The relation is bound through current taxonomy revision `rev6` rather than a local
+The relation is bound through current taxonomy revision `rev7` rather than a local
 registry. Its current assurance is definition-complete and bounded-tested but
 deliberately unproved. The test-local model can falsify finite cases; it is not
 runtime mediation, backend realization, or a universal information-flow proof.
@@ -1707,11 +1707,11 @@ memory, explicit time/order/probability boundaries, and exact distinctions
 from SEM-230 noninterference, projected-history equality, epistemic
 indistinguishability, trace equivalence, and bisimulation.
 
-Taxonomy revision `rev5` introduced the relation and bounded-test assurance;
-current revision `rev6` leaves those assurance states unchanged. No opacity
-checker, model check, mathematical proof, runtime enforcement, backend
-declaration, backend realization, or backend conformance is claimed. Issues
-#961 through #965 own those independent future lanes.
+Taxonomy revision `rev5` introduced the relation and bounded-test assurance.
+Current revision `rev7` adds the closed baseline profile and deterministic
+bounded checker. It claims no model check, proof, runtime enforcement, backend
+declaration, backend realization, or backend conformance. Issues #962 through
+#965 own those remaining independent lanes.
 
 ## SEM-232 - Proof-Bearing Participant-Crossing Bisimulation
 
