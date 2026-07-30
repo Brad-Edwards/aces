@@ -13,6 +13,7 @@ from raes_contracts.artifact_requirements import ArtifactRequirementContractMode
 
 from .admitted_trial_plan import AdmittedTrialPlanModel
 from .associated_artifacts import AssociatedArtifactManifestModel
+from .batch_execution import BatchExecutionReceiptModel
 from .catalogs import (
     ConceptFamilyCatalogModel,
     ReferenceModelCatalogModel,
@@ -180,6 +181,7 @@ def _core_schema_bundle() -> dict[str, dict[str, Any]]:
         "trial-cleanup-plan-v1": TrialCleanupPlanModel.model_json_schema(),
         "trial-cleanup-receipt-v1": TrialCleanupReceiptModel.model_json_schema(),
         "scheduler-isolation-proof-v1": SchedulerIsolationProofModel.model_json_schema(),
+        "batch-execution-receipt-v1": BatchExecutionReceiptModel.model_json_schema(),
         "time-model-v1": TimeModelDeclarationModel.model_json_schema(),
         "time-runtime-state-v1": TimeRuntimeStateModel.model_json_schema(),
         "realized-time-model-v1": RealizedTimeModelProvenanceModel.model_json_schema(),

@@ -452,9 +452,17 @@ may control placement, isolation, bounded parallelism, timeouts, cancellation,
 and cleanup only.
 
 Portable cleanup intent, receipts, clean-state claims, retry safety, backend
-capability, and bounded-parallelism proof are defined in
-[cleanup-contracts.md](cleanup-contracts.md). Scheduler policy and worker
-management remain outside these contract semantics.
+capability, and bounded-parallelism proof (including the governed secret-scope
+isolation dimension) are defined in [cleanup-contracts.md](cleanup-contracts.md).
+The `batch-execution-receipt-v1` contract is the immutable per-attempt evidence
+that composes those authorities: it binds the sealed plan/entry/run identities,
+a distinct execution-attempt identity, the canonical dispatch ordinal and
+scheduling policy, the effective concurrency, isolation-proof and live-lease
+evidence refs, the primary trial disposition, control-plane operation refs, and
+the cleanup-receipt ref. Serial is the effective default; bounded parallelism is
+authorized only by an isolation proof joined to the exact sealed plan plus live
+lease evidence. Scheduler policy, worker management, live leasing, and range
+allocation remain outside these contract semantics.
 
 ### SVR-032 — Archival separation
 
