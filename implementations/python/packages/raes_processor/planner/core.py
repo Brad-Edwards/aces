@@ -128,7 +128,11 @@ def plan(
         *envelope_diagnostics,
         *_ordering_cycle_diagnostics(resources),
     ]
-    actions, deleted_entries = _build_operations(resources, snapshot)
+    actions, deleted_entries = _build_operations(
+        resources,
+        snapshot,
+        effective_requirements,
+    )
 
     provisioning = _build_provisioning_plan(resources, actions, deleted_entries, manifest)
     materialization_diagnostics = service_materialization_plan_diagnostics(

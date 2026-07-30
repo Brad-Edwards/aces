@@ -1,0 +1,201 @@
+"""Request guards and operation submission/read routes for the control-plane app."""
+
+from __future__ import annotations
+
+from collections.abc import Awaitable, Callable
+
+from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi.responses import JSONResponse
+from raes_contracts.contracts import (
+    EvaluationPlanModel,
+    OperationReceiptModel,
+    OperationStatusModel,
+    OrchestrationPlanModel,
+    ProvisioningPlanModel,
+    RuntimeSnapshotEnvelopeModel,
+)
+
+from ..control_plane import RuntimeControlPlane
+from ..control_plane_api_guards import request_size_guard_response
+from ..control_plane_api_models import (
+    _evaluation_plan,
+    _operation_status_model,
+    _orchestration_plan,
+    _provisioning_plan,
+    _request_fingerprint,
+    _snapshot_model,
+)
+from ..control_plane_security import ControlPlaneSecurityConfig
+from ._auth import _MutatingIdentity, _ReadIdentity
+from ._responses import _CONFLICT_RESPONSES, _NOT_FOUND_RESPONSES, _receipt_response
+
+
+def _install_request_guards(
+    app: FastAPI,
+    control_plane: RuntimeControlPlane,
+    security: ControlPlaneSecurityConfig,
+) -> None:
+    @app.middleware("http")
+    async def _limit_request_size(
+        request: Request,
+        call_next: Callable[[Request], Awaitable[Response]],
+    ) -> Response:
+        guard_response = await request_size_guard_response(
+            control_plane,
+            request,
+            max_request_bytes=security.max_request_bytes,
+        )
+        if guard_response is not None:
+            return guard_response
+        return await call_next(request)
+
+    @app.exception_handler(Exception)
+    async def _redacted_errors(request: Request, exc: Exception) -> JSONResponse:
+        control_plane.record_audit(
+            action=request.method,
+            identity="anonymous",
+            allowed=False,
+            target=str(request.url.path),
+            reason=f"internal-error:{type(exc).__name__}",
+        )
+        return JSONResponse(status_code=500, content={"detail": "internal server error"})
+
+
+def _register_operation_routes(
+    app: FastAPI,
+    control_plane: RuntimeControlPlane,
+) -> None:
+    _register_operation_submission_routes(app, control_plane)
+    _register_operation_read_routes(app, control_plane)
+
+
+def _register_operation_submission_routes(
+    app: FastAPI,
+    control_plane: RuntimeControlPlane,
+) -> None:
+    @app.post("/operations/provisioning", responses=_CONFLICT_RESPONSES)
+    async def submit_provisioning(
+        request: Request,
+        plan: ProvisioningPlanModel,
+        identity: _MutatingIdentity,
+    ) -> OperationReceiptModel:
+        try:
+            receipt = control_plane.submit_provisioning(
+                _provisioning_plan(plan),
+                idempotency_key=request.headers.get("idempotency-key", ""),
+                request_fingerprint=_request_fingerprint(
+                    request,
+                    getattr(request.state, "raw_body", b""),
+                ),
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        control_plane.record_audit(
+            action="submit_provisioning",
+            identity=identity.identity,
+            allowed=True,
+            target=str(request.url.path),
+            operation_id=receipt.operation_id,
+        )
+        return _receipt_response(receipt)
+
+    @app.post("/operations/orchestration", responses=_CONFLICT_RESPONSES)
+    async def submit_orchestration(
+        request: Request,
+        plan: OrchestrationPlanModel,
+        identity: _MutatingIdentity,
+    ) -> OperationReceiptModel:
+        try:
+            receipt = control_plane.submit_orchestration(
+                _orchestration_plan(plan),
+                idempotency_key=request.headers.get("idempotency-key", ""),
+                request_fingerprint=_request_fingerprint(
+                    request,
+                    getattr(request.state, "raw_body", b""),
+                ),
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        control_plane.record_audit(
+            action="submit_orchestration",
+            identity=identity.identity,
+            allowed=True,
+            target=str(request.url.path),
+            operation_id=receipt.operation_id,
+        )
+        return _receipt_response(receipt)
+
+    @app.post("/operations/evaluation", responses=_CONFLICT_RESPONSES)
+    async def submit_evaluation(
+        request: Request,
+        plan: EvaluationPlanModel,
+        identity: _MutatingIdentity,
+    ) -> OperationReceiptModel:
+        try:
+            receipt = control_plane.submit_evaluation(
+                _evaluation_plan(plan),
+                idempotency_key=request.headers.get("idempotency-key", ""),
+                request_fingerprint=_request_fingerprint(
+                    request,
+                    getattr(request.state, "raw_body", b""),
+                ),
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        control_plane.record_audit(
+            action="submit_evaluation",
+            identity=identity.identity,
+            allowed=True,
+            target=str(request.url.path),
+            operation_id=receipt.operation_id,
+        )
+        return _receipt_response(receipt)
+
+
+def _register_operation_read_routes(
+    app: FastAPI,
+    control_plane: RuntimeControlPlane,
+) -> None:
+    @app.get("/operations/{operation_id}", responses=_NOT_FOUND_RESPONSES)
+    async def get_operation(
+        operation_id: str,
+        request: Request,
+        identity: _ReadIdentity,
+    ) -> OperationStatusModel:
+        status = control_plane.get_operation(operation_id)
+        if status is None:
+            raise HTTPException(status_code=404, detail=f"Unknown operation: {operation_id}")
+        control_plane.record_audit(
+            action="get_operation",
+            identity=identity.identity,
+            allowed=True,
+            target=str(request.url.path),
+            operation_id=operation_id,
+        )
+        return _operation_status_model(status)
+
+    @app.get("/snapshot")
+    async def get_snapshot(
+        request: Request,
+        identity: _ReadIdentity,
+    ) -> RuntimeSnapshotEnvelopeModel:
+        control_plane.record_audit(
+            action="get_snapshot",
+            identity=identity.identity,
+            allowed=True,
+            target=str(request.url.path),
+        )
+        return _snapshot_model(control_plane.get_snapshot())
+
+    @app.get("/apparatus/operational-summary")
+    async def get_operational_apparatus_summary(
+        request: Request,
+        identity: _ReadIdentity,
+    ) -> dict[str, object]:
+        control_plane.record_audit(
+            action="get_operational_apparatus_summary",
+            identity=identity.identity,
+            allowed=True,
+            target=str(request.url.path),
+        )
+        return control_plane.operational_apparatus_summary()

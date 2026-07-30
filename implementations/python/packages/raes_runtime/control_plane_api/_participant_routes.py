@@ -1,0 +1,282 @@
+"""Participant execution, control, and episode-lifecycle routes for the control-plane app."""
+
+from __future__ import annotations
+
+from fastapi import FastAPI, HTTPException, Request
+from raes_contracts.contracts import OperationReceiptModel
+from raes_contracts.contracts.participant_execution import (
+    ParticipantExecutionControlRequestModel,
+    ParticipantExecutionServiceStateModel,
+)
+from raes_contracts.participant_episode import ParticipantEpisodeTerminalReason
+
+from ..control_plane import RuntimeControlPlane
+from ..control_plane_api_models import (
+    _ParticipantExecutionControlBody,
+    _ParticipantInitializeBody,
+    _ParticipantResetBody,
+    _ParticipantRestartBody,
+    _ParticipantTerminateBody,
+    _request_fingerprint,
+)
+from ..participant_control_intents import ParticipantControlIntent
+from ._auth import _MutatingIdentity, _ReadIdentity
+from ._responses import (
+    _BAD_REQUEST_CONFLICT_RESPONSES,
+    _CONFLICT_RESPONSES,
+    _NOT_FOUND_RESPONSES,
+    _receipt_response,
+)
+
+
+def _register_participant_execution_routes(
+    app: FastAPI,
+    control_plane: RuntimeControlPlane,
+) -> None:
+    @app.post(
+        "/participant-executions/{execution_scope_ref}/control",
+        responses=_CONFLICT_RESPONSES,
+    )
+    async def control_participant_execution(
+        execution_scope_ref: str,
+        request: Request,
+        identity: _MutatingIdentity,
+        body: _ParticipantExecutionControlBody,
+    ) -> OperationReceiptModel:
+        try:
+            control_request = ParticipantExecutionControlRequestModel(
+                execution_scope_ref=execution_scope_ref,
+                action=body.action,
+                expected_generation=body.expected_generation,
+                timeout_seconds=body.timeout_seconds,
+            )
+            receipt = control_plane.control_participant_execution(
+                control_request,
+                idempotency_key=request.headers.get("idempotency-key", ""),
+                request_fingerprint=_request_fingerprint(
+                    request,
+                    getattr(request.state, "raw_body", b""),
+                ),
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        control_plane.record_audit(
+            action=f"participant_execution_{body.action}",
+            identity=identity.identity,
+            allowed=True,
+            target=str(request.url.path),
+            operation_id=receipt.operation_id,
+        )
+        return _receipt_response(receipt)
+
+    @app.get(
+        "/participant-executions/{execution_scope_ref}",
+        responses=_NOT_FOUND_RESPONSES,
+    )
+    async def get_participant_execution_state(
+        execution_scope_ref: str,
+        request: Request,
+        identity: _ReadIdentity,
+    ) -> ParticipantExecutionServiceStateModel:
+        try:
+            state = control_plane.participant_execution_state(execution_scope_ref)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        control_plane.record_audit(
+            action="get_participant_execution_state",
+            identity=identity.identity,
+            allowed=True,
+            target=str(request.url.path),
+        )
+        return state
+
+
+def _register_participant_episode_routes(
+    app: FastAPI,
+    control_plane: RuntimeControlPlane,
+) -> None:
+    _register_participant_episode_start_routes(app, control_plane)
+    _register_participant_episode_end_routes(app, control_plane)
+
+
+def _register_participant_control_routes(
+    app: FastAPI,
+    control_plane: RuntimeControlPlane,
+) -> None:
+    @app.post(
+        "/participants/{participant_address}/control-occurrences",
+        responses=_BAD_REQUEST_CONFLICT_RESPONSES,
+    )
+    async def record_participant_control(
+        participant_address: str,
+        request: Request,
+        body: ParticipantControlIntent,
+        identity: _MutatingIdentity,
+    ) -> OperationReceiptModel:
+        try:
+            receipt = control_plane.record_participant_control(
+                participant_address,
+                body,
+                identity=identity,
+                idempotency_key=request.headers.get("idempotency-key", ""),
+            )
+        except PermissionError as exc:
+            control_plane.record_audit(
+                action="record_participant_control",
+                identity=identity.identity,
+                allowed=False,
+                target=participant_address,
+                reason="forbidden-subject",
+            )
+            raise HTTPException(status_code=403, detail="forbidden") from exc
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=409,
+                detail="control intent conflicts with runtime state",
+            ) from exc
+        return _receipt_response(receipt)
+
+
+def _register_participant_episode_start_routes(
+    app: FastAPI,
+    control_plane: RuntimeControlPlane,
+) -> None:
+    @app.post(
+        "/participants/{participant_address}/episodes/initialize",
+        responses=_CONFLICT_RESPONSES,
+    )
+    async def initialize_participant_episode(
+        participant_address: str,
+        request: Request,
+        identity: _MutatingIdentity,
+        body: _ParticipantInitializeBody | None = None,
+    ) -> OperationReceiptModel:
+        payload = body or _ParticipantInitializeBody()
+        try:
+            receipt = control_plane.initialize_participant_episode(
+                participant_address,
+                episode_id=payload.episode_id,
+                idempotency_key=request.headers.get("idempotency-key", ""),
+                request_fingerprint=_request_fingerprint(
+                    request,
+                    getattr(request.state, "raw_body", b""),
+                ),
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        control_plane.record_audit(
+            action="initialize_participant_episode",
+            identity=identity.identity,
+            allowed=True,
+            target=str(request.url.path),
+            operation_id=receipt.operation_id,
+        )
+        return _receipt_response(receipt)
+
+    @app.post(
+        "/participants/{participant_address}/episodes/reset",
+        responses=_CONFLICT_RESPONSES,
+    )
+    async def reset_participant_episode(
+        participant_address: str,
+        request: Request,
+        identity: _MutatingIdentity,
+        body: _ParticipantResetBody | None = None,
+    ) -> OperationReceiptModel:
+        payload = body or _ParticipantResetBody()
+        try:
+            receipt = control_plane.reset_participant_episode(
+                participant_address,
+                episode_id=payload.episode_id,
+                reason=payload.reason,
+                idempotency_key=request.headers.get("idempotency-key", ""),
+                request_fingerprint=_request_fingerprint(
+                    request,
+                    getattr(request.state, "raw_body", b""),
+                ),
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        control_plane.record_audit(
+            action="reset_participant_episode",
+            identity=identity.identity,
+            allowed=True,
+            target=str(request.url.path),
+            operation_id=receipt.operation_id,
+        )
+        return _receipt_response(receipt)
+
+
+def _register_participant_episode_end_routes(
+    app: FastAPI,
+    control_plane: RuntimeControlPlane,
+) -> None:
+    @app.post(
+        "/participants/{participant_address}/episodes/restart",
+        responses=_CONFLICT_RESPONSES,
+    )
+    async def restart_participant_episode(
+        participant_address: str,
+        request: Request,
+        identity: _MutatingIdentity,
+        body: _ParticipantRestartBody | None = None,
+    ) -> OperationReceiptModel:
+        payload = body or _ParticipantRestartBody()
+        try:
+            receipt = control_plane.restart_participant_episode(
+                participant_address,
+                episode_id=payload.episode_id,
+                reason=payload.reason,
+                idempotency_key=request.headers.get("idempotency-key", ""),
+                request_fingerprint=_request_fingerprint(
+                    request,
+                    getattr(request.state, "raw_body", b""),
+                ),
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        control_plane.record_audit(
+            action="restart_participant_episode",
+            identity=identity.identity,
+            allowed=True,
+            target=str(request.url.path),
+            operation_id=receipt.operation_id,
+        )
+        return _receipt_response(receipt)
+
+    @app.post(
+        "/participants/{participant_address}/episodes/terminate",
+        responses=_BAD_REQUEST_CONFLICT_RESPONSES,
+    )
+    async def terminate_participant_episode(
+        participant_address: str,
+        request: Request,
+        identity: _MutatingIdentity,
+        body: _ParticipantTerminateBody | None = None,
+    ) -> OperationReceiptModel:
+        payload = body or _ParticipantTerminateBody()
+        try:
+            terminal_reason = ParticipantEpisodeTerminalReason(payload.terminal_reason)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=f"invalid terminal_reason: {exc}") from exc
+        try:
+            receipt = control_plane.terminate_participant_episode(
+                participant_address,
+                terminal_reason=terminal_reason,
+                detail=payload.detail,
+                idempotency_key=request.headers.get("idempotency-key", ""),
+                request_fingerprint=_request_fingerprint(
+                    request,
+                    getattr(request.state, "raw_body", b""),
+                ),
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        control_plane.record_audit(
+            action="terminate_participant_episode",
+            identity=identity.identity,
+            allowed=True,
+            target=str(request.url.path),
+            operation_id=receipt.operation_id,
+        )
+        return _receipt_response(receipt)
