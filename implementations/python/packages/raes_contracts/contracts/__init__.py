@@ -32,6 +32,7 @@ from ..versions import (
     EXPERIMENT_RUN_SCHEMA_VERSION,
     EXPERIMENT_STUDY_SCHEMA_VERSION,
     EXPERIMENT_TASK_SCHEMA_VERSION,
+    EXTERNAL_CONCEPT_BINDINGS_SCHEMA_VERSION,
     NIST_CSF_DEFENSIVE_CATEGORIES_SOURCE_SCHEMA_VERSION,
     OPERATION_SCHEMA_VERSION,
     PARTICIPANT_EPISODE_STATE_SCHEMA_VERSION,
@@ -55,6 +56,7 @@ from ..versions import (
 from ..vocabulary import (
     ConceptFamilyId,
     ConceptProvenanceCategory,
+    ExternalKnowledgeBindingEffect,
     ParticipantFeatureSupportLevel,
     ProcessorFeature,
     RealizationSupportMode,
@@ -202,6 +204,25 @@ from .experiment_study import (
     ExperimentStudyFactorModel,
     ExperimentStudyMembershipModel,
     ExperimentUncertaintyMethodModel,
+)
+from .external_concept_bindings import (
+    ExternalConceptApproximationModel,
+    ExternalConceptApproximationPosture,
+    ExternalConceptAssertionModel,
+    ExternalConceptBindingAssertionModel,
+    ExternalConceptBindingDocumentModel,
+    ExternalConceptConfidenceModel,
+    ExternalConceptConfidencePosture,
+    ExternalConceptLifecyclePhase,
+    ExternalConceptParticipantAvailabilityKind,
+    ExternalConceptParticipantAvailabilityModel,
+    ExternalConceptPerspectiveModel,
+    ExternalConceptProvenanceModel,
+    ExternalConceptRelationshipKind,
+    ExternalConceptReviewModel,
+    ExternalConceptReviewStatus,
+    ExternalConceptSchemeCoordinateModel,
+    ExternalConceptSubjectModel,
 )
 from .manifests import (
     BackendCapabilitiesV2Model,

@@ -74,6 +74,15 @@ class ConceptProvenanceCategory(str, Enum):
     NATIVE = "native"
 
 
+class ExternalKnowledgeBindingEffect(str, Enum):
+    """Portable SEM-217 effects a binding may claim about native RAES meaning."""
+
+    ANNOTATES = "annotates"
+    CONSTRAINS = "constrains"
+    REFINES = "refines"
+    ALIGNS = "aligns"
+
+
 ConceptFamilyId = Annotated[
     str,
     Field(min_length=1, pattern=r"^[a-z][a-z0-9]*(-[a-z0-9]+)*$"),

@@ -280,6 +280,12 @@ _CONTROLLED_VOCABULARY_GOVERNED_SCOPES = frozenset(
         "participant-crossing-occurrence.backend_posture",
         "participant-crossing-occurrence.losses.kind",
         "participant-crossing-occurrence.stage",
+        "external_concept_bindings.bindings.*.assertion.relationship_kind",
+        "external_concept_bindings.bindings.*.assertion.semantic_effect",
+        "external_concept_bindings.bindings.*.confidence.posture",
+        "external_concept_bindings.bindings.*.approximation.posture",
+        "external_concept_bindings.bindings.*.review.status",
+        "external_concept_bindings.bindings.*.perspective.participant_availability.kind",
         *_BACKEND_CONCEPT_BINDING_SCOPES,
         *_PARTICIPANT_IMPLEMENTATION_CONCEPT_BINDING_SCOPES,
     }

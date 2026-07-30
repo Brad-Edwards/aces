@@ -36,6 +36,7 @@ from .experiment_capture import ExperimentCaptureSpecModel
 from .experiment_evidence import ExperimentDerivedMeasureModel, ExperimentEvidenceRecordModel
 from .experiment_run import ExperimentRunModel
 from .experiment_spec import ExperimentSpecModel, ExperimentStudyModel
+from .external_concept_bindings import ExternalConceptBindingDocumentModel
 from .manifests import ProcessorManifestV2Model
 from .participant_context import ParticipantContextViewModel
 from .participant_control import ParticipantControlOccurrenceModel
@@ -158,6 +159,7 @@ def _core_schema_bundle() -> dict[str, dict[str, Any]]:
         "reference-models-v1": ReferenceModelCatalogModel.model_json_schema(),
         "uco-alignment-v1": UcoAlignmentCatalogModel.model_json_schema(),
         "controlled-vocabularies-v1": ControlledVocabularyCatalogModel.model_json_schema(),
+        "external-concept-bindings-v1": ExternalConceptBindingDocumentModel.model_json_schema(),
         "attack-enterprise-tactics-source-v1": AttackEnterpriseTacticsSourceModel.model_json_schema(),
         "atlas-tactics-source-v1": AtlasTacticsSourceModel.model_json_schema(),
         "nist-csf-defensive-categories-source-v1": NistCsfDefensiveCategorySourceModel.model_json_schema(),
