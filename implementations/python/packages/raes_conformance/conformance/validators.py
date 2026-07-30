@@ -48,6 +48,8 @@ from raes_contracts.diagnostics import Diagnostic
 from raes_contracts.participant_opacity import (
     ParticipantOpacityAnalysisEvidenceModel,
     ParticipantOpacityAnalysisInputModel,
+    ParticipantOpacityModelCheckEvidenceModel,
+    ParticipantOpacityModelCheckInputModel,
 )
 from raes_contracts.realization_envelope import BackendRealizationEnvelopeModel
 from raes_contracts.scientific_completeness import (
@@ -104,6 +106,8 @@ _STRUCTURAL_ONLY_VALIDATORS = {
     "validation-basis-disclosure-v1": ValidationBasisDisclosureDocumentModel.model_validate,
     "participant-opacity-analysis-input-v1": ParticipantOpacityAnalysisInputModel.model_validate,
     "participant-opacity-analysis-evidence-v1": ParticipantOpacityAnalysisEvidenceModel.model_validate,
+    "participant-opacity-model-check-input-v1": ParticipantOpacityModelCheckInputModel.model_validate,
+    "participant-opacity-model-check-evidence-v1": ParticipantOpacityModelCheckEvidenceModel.model_validate,
 }
 
 

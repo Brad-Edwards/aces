@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 
+import pytest
 from raes_contracts.behavioral_relations import load_behavioral_relation_catalog
 from tools.check_behavioral_relation_claims import (
     _should_validate_structured_bindings,
@@ -15,7 +16,7 @@ from tools.check_behavioral_relation_claims import (
 def _valid_binding() -> dict[str, object]:
     return {
         "taxonomy_id": "raes-behavioral-relations",
-        "taxonomy_revision": "rev7",
+        "taxonomy_revision": "rev8",
         "relation_id": "bounded-probe-success",
         "subject": "Named backend fixture cases",
         "left_carrier_ref": "backend-target:stub",
@@ -38,6 +39,27 @@ def test_unbound_positive_behavioral_equivalence_claim_fails():
         "docs/conformance/example.md",
     )
 
+    assert {failure.rule_id for failure in failures} == {"behavioral-relation-unbound-positive-claim"}
+
+
+@pytest.mark.parametrize(
+    "claim_text",
+    (
+        "The two systems are trace equivalent.",
+        "The two systems are strong bisimilar.",
+        "The two systems are weak bisimilar.",
+        "The two systems are probabilistically bisimilar.",
+        "The two systems are bisimilar.",
+        "The two systems are strategically equivalent.",
+        "The two systems are epistemically indistinguishable.",
+        "The two systems are statistically equivalent.",
+        "The implementation refines the specification.",
+    ),
+)
+def test_each_positive_behavioral_claim_pattern_requires_a_binding(claim_text: str) -> None:
+    failures = _validate_claim_text(claim_text, "docs/conformance/example.md")
+
+    assert failures
     assert {failure.rule_id for failure in failures} == {"behavioral-relation-unbound-positive-claim"}
 
 
@@ -96,27 +118,31 @@ def test_structured_claims_resolve_against_the_canonical_catalog():
 
 def test_governed_envelopes_validate_nested_claims_without_becoming_claims():
     catalog = load_behavioral_relation_catalog()
-    envelope = {
-        "schema_version": "participant-opacity-analysis-evidence/v1",
-        "taxonomy_id": "raes-behavioral-relations",
-        "taxonomy_revision": "rev7",
-        "relation_id": "participant-predicate-opacity",
-        "claim": _valid_binding(),
-    }
+    for schema_version in (
+        "participant-opacity-analysis-evidence/v1",
+        "participant-opacity-model-check-evidence/v1",
+    ):
+        envelope = {
+            "schema_version": schema_version,
+            "taxonomy_id": "raes-behavioral-relations",
+            "taxonomy_revision": "rev8",
+            "relation_id": "participant-predicate-opacity",
+            "claim": _valid_binding(),
+        }
 
-    assert not _validate_structured_bindings(
-        envelope,
-        catalog,
-        "contracts/example.json",
-    )
+        assert not _validate_structured_bindings(
+            envelope,
+            catalog,
+            "contracts/example.json",
+        )
 
-    envelope["claim"]["relation_id"] = "unknown-relation"
-    failures = _validate_structured_bindings(
-        envelope,
-        catalog,
-        "contracts/example.json",
-    )
-    assert len(failures) == 1
+        envelope["claim"]["relation_id"] = "unknown-relation"
+        failures = _validate_structured_bindings(
+            envelope,
+            catalog,
+            "contracts/example.json",
+        )
+        assert len(failures) == 1
 
 
 def test_invalid_contract_fixtures_are_not_interpreted_as_positive_claims():

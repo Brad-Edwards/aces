@@ -134,7 +134,7 @@ def _repetition_ref(index: int) -> RepetitionRef:
 def _claim(
     relation_id: str = "canonical-artifact-identity",
     *,
-    taxonomy_revision: str = "rev7",
+    taxonomy_revision: str = "rev8",
     left_index: int = 0,
     right_index: int = 1,
 ) -> BehavioralClaimBindingModel:
@@ -620,18 +620,24 @@ def test_diagnostics_use_a_stable_json_pointer_address_and_hide_untrusted_values
 # --- Assembler fail-closed join, identity, and content-integrity guards -----
 
 
-def test_assembler_rejects_a_side_that_does_not_match_the_typed_run() -> None:
-    case = _case(baseline=replace(_repetition_ref(0), run_ref="experiment-run:other@1"))
+@pytest.mark.parametrize(("role", "index"), (("baseline", 0), ("repetition", 1)))
+def test_assembler_rejects_a_side_that_does_not_match_the_typed_run(role: str, index: int) -> None:
+    mismatched = replace(_repetition_ref(index), run_ref="experiment-run:other@1")
+    case = _case(
+        baseline=mismatched if role == "baseline" else None,
+        repetition=mismatched if role == "repetition" else None,
+    )
 
-    with pytest.raises(ValueError, match="baseline does not match the validated task, run"):
+    with pytest.raises(ValueError, match=rf"{role} does not match the validated task, run"):
         _evidence(case=case)
 
 
-def test_assembler_runs_the_canonical_task_run_validator() -> None:
+@pytest.mark.parametrize(("role", "index"), (("baseline", 0), ("repetition", 1)))
+def test_assembler_runs_the_canonical_task_run_validator(role: str, index: int) -> None:
     wrong_task = _task().model_copy(update={"task_id": "task:other"})
 
-    with pytest.raises(ValueError, match="baseline task/run validation failed"):
-        _evidence(task_override={0: wrong_task})
+    with pytest.raises(ValueError, match=rf"{role} task/run validation failed"):
+        _evidence(task_override={index: wrong_task})
 
 
 def test_assembler_rejects_validator_outside_the_case_authority_pin() -> None:

@@ -1,0 +1,10 @@
+{
+  "contract_id": "participant-opacity-model-check-input-v1",
+  "schema_path": "contracts/schemas/formal-analysis/participant-opacity-model-check-input-v1.json",
+  "stability": "draft",
+  "content_hash": "f1e426f063fbb44a5cb5fccdd84e4f40bf4d7178e4a579fca44f63646ce851e7",
+  "last_change": {
+    "summary": "Published the exact complete finite participant-opacity transition-model contract for issue #962.",
+    "content_hash": "f1e426f063fbb44a5cb5fccdd84e4f40bf4d7178e4a579fca44f63646ce851e7"
+  }
+}

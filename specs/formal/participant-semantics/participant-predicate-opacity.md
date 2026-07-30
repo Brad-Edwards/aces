@@ -9,7 +9,7 @@ Decision: [ADR-099](../../../docs/decisions/adrs/adr-099-participant-relative-pr
 Machine-readable relation authority:
 `contracts/concept-authority/behavioral-relations-v1.json`,
 `participant-predicate-opacity`, introduced in taxonomy revision `rev5` and
-carried by current revision `rev7`.
+carried by current revision `rev8`.
 
 ## Scope
 
@@ -264,7 +264,7 @@ Assurance states are independent:
 | definition | accepted ADR, formal authority, catalog entry, sources, binding validation | defined |
 | checker | closed profile resolution, exact finite carrier admission, deterministic exhaustive scan, replay | implemented |
 | bounded testing | named finite profiles/cases, full bounds, digests, safe counterexamples | bounded |
-| model checking | closed finite model, explored bounds, pinned tool/version, result or counterexample | not model checked |
+| model checking | closed finite model, explored bounds, pinned tool/version, result or counterexample | model checked for the exact baseline fixture model |
 | mathematical proof | theorem, assumptions, independently checkable proof, tool/digest when mechanized | deliberately unproved |
 | runtime enforcement | complete supported-channel inventory, fail-closed mediation, durable decisions, security tests | not enforced |
 | backend declaration | API-407 feature strength, required contracts, limitations, evidence refs | not declared |
@@ -287,9 +287,10 @@ axis, and a deliberately unproved proof axis, has structural evidence only.
 Legacy aggregates cannot contradict the explicit axes.
 `implementation_status` summarizes checker, runtime-enforcement, and backend
 realization; a model-checked legacy proof aggregate requires a positive
-model-check axis; and positive backend conformance requires a realized or
-partially realized backend. A future definition cannot carry a positive
-assurance axis.
+model-check axis but a positive model-check axis does not promote the
+mathematical-proof status; and positive backend conformance requires a
+realized or partially realized backend. A future definition cannot carry a
+positive assurance axis.
 
 ## Requirement And Delivery Mapping
 
@@ -306,13 +307,14 @@ assurance axis.
   realization, and evidence disclosure.
 
 Issue #810 defines this architecture. Issue #961 delivers the closed baseline
-profile and bounded finite falsifier. Issues #962 through #965 separately own
-finite-state model checking, mathematical proof, runtime enforcement, and
-backend realization/conformance.
+profile and bounded finite falsifier. Issue #962 delivers exact finite-state
+model checking for the baseline fixture profile. Issues #963 through #965
+separately own mathematical proof, runtime enforcement, and backend
+realization/conformance.
 
 ## Bounded Checker Contract
 
-`participant-opacity-baseline-v1@sem-231/rev1` closes the observer, secret,
+`participant-opacity-baseline-v1@sem-231/rev2` closes the observer, secret,
 carrier, projection, cut, memory, strategy, supervisor, release, scheduler,
 environment, order, time, and finite-bound coordinates. The canonical loader
 resolves that profile from the governed corpus and the shared behavioral-claim
@@ -340,14 +342,42 @@ the exact admitted artifact; it is not named or represented as opacity,
 verification, model checking, proof, runtime enforcement, or backend
 conformance.
 
+## Finite-State Model-Check Contract
+
+`participant-opacity-baseline-v1@sem-231/rev2` also admits a distinct
+transition-model artifact. The artifact binds the exact catalog and profile
+digests; complete state, transition, initial-state, evaluation-point, run,
+cut, strategy, scheduler/environment, and order counts; the full initial set;
+and a canonical labelled transition relation. Reachability is not an input
+assertion. The checker derives the complete reachable fixed point from the
+initial set and transition relation.
+
+The v1 checker is deterministic, in-process, untimed, possibilistic, and
+total-order. It supports the baseline singleton scheduler/environment posture.
+It checks every reachable evaluation point and every reachable actual secret
+point. An active profile quantifies over every allowed strategy and requires
+the actual and alternative points to use the same strategy. The checker does
+not stop exploration when it finds a counterexample.
+
+Evidence binds the source assertion, catalog, profile, normalized transition
+model, assumptions, checker and package versions, derived reachable carrier,
+declared and explored coverage, per-strategy coverage, result, and safe
+counterexample path when present. The positive result is
+`holds-on-exact-complete-finite-model`. It applies only to the exact
+digest-bound model and profile revision. Incomplete artifacts, checker-bound
+overflow, non-total-order profiles, and unsupported scheduler/environment
+postures cannot produce positive evidence. A model with no reachable secret
+evaluation point is reported as vacuous.
+
 ## Explicit Nonclaims
 
 This revision does not claim that RAES, the reference runtime, or any backend
 satisfies or enforces participant predicate opacity. The bounded checker
-provides no universal opacity result, model-check result, mathematical proof,
-supervisor synthesis, runtime mediation, backend declaration, backend
-realization, or backend conformance result. It makes no probabilistic,
-quantitative-leakage, timed, progress-sensitive, all-schedule, anonymity,
-noninterference, trace-equivalence, simulation, refinement, or bisimulation
-claim. Coalition handling is limited to the exact declared finite profile and
-fused observations; it is not a general coalition-opacity claim.
+provides no universal or model-check result. The finite-state checker provides
+no unbounded or mathematical proof, supervisor synthesis, runtime mediation,
+backend declaration, backend realization, or backend conformance result. It
+makes no probabilistic, quantitative-leakage, timed, progress-sensitive,
+all-schedule, anonymity, noninterference, trace-equivalence, simulation,
+refinement, or bisimulation claim. Coalition handling is limited to the exact
+declared finite profile and fused observations; it is not a general
+coalition-opacity claim.

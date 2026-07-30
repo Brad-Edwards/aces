@@ -2,16 +2,23 @@ from __future__ import annotations
 
 import shutil
 import sys
+from io import BytesIO
 from pathlib import Path
+from urllib.error import HTTPError, URLError
+
+import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from tools.check_requirement_governance import governed_requirement_paths, is_dev_to_main_promotion
+from tools.policy import requirement_governance
 from tools.policy.requirement_governance import (
+    GroundControlHttpClient,
     detect_requirement_uid,
     evaluate_requirement_governance,
+    requirement_uid_from_context,
 )
 
 
@@ -96,6 +103,64 @@ def test_detect_requirement_uid_from_branch_name() -> None:
     assert detect_requirement_uid("feature/no-uid-here") is None
 
 
+def test_ground_control_http_client_bounds_external_requests(monkeypatch) -> None:
+    observed: dict[str, float] = {}
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def read(self) -> bytes:
+            return b'{"status":"ACTIVE"}'
+
+    def fake_urlopen(request, *, timeout: float):
+        observed["timeout"] = timeout
+        return Response()
+
+    monkeypatch.setattr(requirement_governance, "urlopen", fake_urlopen)
+
+    client = GroundControlHttpClient("http://ground-control.invalid")
+
+    assert client.get_requirement("project", "ASR-535") == {"status": "ACTIVE"}
+    assert observed["timeout"] == 5.0
+
+
+@pytest.mark.parametrize(
+    ("error", "message"),
+    (
+        (HTTPError("http://ground-control.invalid", 503, "unavailable", None, BytesIO(b"offline")), "503: offline"),
+        (URLError("connection refused"), "connection refused"),
+        (TimeoutError(), "request timed out"),
+    ),
+)
+def test_ground_control_http_client_maps_transport_failures_to_runtime_error(
+    monkeypatch,
+    error: Exception,
+    message: str,
+) -> None:
+    def failing_urlopen(_request, *, timeout: float):
+        assert timeout == 5.0
+        raise error
+
+    monkeypatch.setattr(requirement_governance, "urlopen", failing_urlopen)
+
+    with pytest.raises(RuntimeError, match=message):
+        GroundControlHttpClient("http://ground-control.invalid").get_requirement("project", "ASR-535")
+
+
+def test_requirement_uid_context_precedence(monkeypatch) -> None:
+    monkeypatch.setenv("RAES_REQUIREMENT_UID", "API-412")
+
+    assert requirement_uid_from_context("feature/GOV-918-work", "ASR-535") == "ASR-535"
+    assert requirement_uid_from_context("feature/GOV-918-work", None) == "API-412"
+
+    monkeypatch.delenv("RAES_REQUIREMENT_UID")
+    assert requirement_uid_from_context("feature/GOV-918-work", None) == "GOV-918"
+
+
 def test_governed_requirement_paths_excludes_exempt_tooling_files() -> None:
     assert governed_requirement_paths(
         [
@@ -151,6 +216,54 @@ def test_blocked_phase_requires_previous_phase_completion(tmp_path: Path) -> Non
     )
 
     assert [failure.rule_id for failure in failures] == ["requirement-order-blocked"]
+
+
+def test_manual_release_phase_blocks_without_status_lookup(tmp_path: Path, monkeypatch) -> None:
+    repo_root = setup_policy_repo(tmp_path)
+    client = make_client()
+    canonical_project = requirement_governance.load_policy(repo_root)["project"]
+    policy = {
+        "project": canonical_project,
+        "phases": [
+            {"id": "manual-gate", "manual_release": True},
+            {
+                "id": "governed",
+                "requirements": ["GOV-918"],
+                "blocked_until": ["manual-gate"],
+            },
+        ],
+        "ownership": {},
+        "traceability": {
+            "required_code_roots": [],
+            "required_test_roots": [],
+        },
+    }
+    monkeypatch.setattr(requirement_governance, "load_policy", lambda _repo_root: policy)
+
+    failures = evaluate_requirement_governance(
+        repo_root,
+        [],
+        client=client,
+        requirement_uid="GOV-918",
+    )
+
+    assert [failure.rule_id for failure in failures] == ["requirement-order-blocked"]
+    assert "explicitly released" in failures[0].message
+
+
+def test_unmapped_requirement_is_rejected(tmp_path: Path) -> None:
+    repo_root = setup_policy_repo(tmp_path)
+    client = make_client()
+    client.requirements["ASR-999"] = {"id": "req-asr-999", "uid": "ASR-999", "status": "ACTIVE"}
+
+    failures = evaluate_requirement_governance(
+        repo_root,
+        [],
+        client=client,
+        requirement_uid="ASR-999",
+    )
+
+    assert [failure.rule_id for failure in failures] == ["requirement-policy-missing"]
 
 
 def test_ownership_mismatch_is_reported(tmp_path: Path) -> None:

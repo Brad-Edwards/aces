@@ -1,0 +1,992 @@
+{
+  "$defs": {
+    "BehavioralClaimBindingModel": {
+      "additionalProperties": false,
+      "description": "A bounded claim tied to one revisioned behavioral-relation definition.\n\nThis is deliberately a claim *binding*, not another relation registry. The\ncatalog owns relation meaning; consumers supply the subject, carriers,\nquantifier/evidence boundary, assurance state, and explicit limitations.",
+      "properties": {
+        "assurance_axis": {
+          "anyOf": [
+            {
+              "enum": [
+                "definition",
+                "checker",
+                "bounded-test",
+                "model-check",
+                "proof",
+                "runtime-enforcement",
+                "backend-declaration",
+                "backend-realization",
+                "backend-conformance"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Assurance Axis"
+        },
+        "assurance_status": {
+          "enum": [
+            "defined",
+            "implemented",
+            "tested",
+            "model-checked",
+            "proved",
+            "deliberately-unproved",
+            "future",
+            "enforced",
+            "declared",
+            "realized",
+            "conformant"
+          ],
+          "title": "Assurance Status",
+          "type": "string"
+        },
+        "evidence_boundary": {
+          "minLength": 1,
+          "title": "Evidence Boundary",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "evidence_scope": {
+          "enum": [
+            "structural",
+            "finite",
+            "statistical",
+            "model-check",
+            "proof"
+          ],
+          "title": "Evidence Scope",
+          "type": "string"
+        },
+        "explicit_non_claims": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Explicit Non Claims",
+          "type": "array"
+        },
+        "left_carrier_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Left Carrier Ref"
+        },
+        "limitations": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Limitations",
+          "type": "array"
+        },
+        "observation_projection_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Observation Projection Ref"
+        },
+        "observation_projection_revision": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Observation Projection Revision"
+        },
+        "quantifier_scope": {
+          "enum": [
+            "single-artifact",
+            "finite-cases",
+            "sampled-population",
+            "all-admitted-inputs",
+            "all-traces",
+            "all-strategies"
+          ],
+          "title": "Quantifier Scope",
+          "type": "string"
+        },
+        "relation_id": {
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "title": "Relation Id",
+          "type": "string"
+        },
+        "relation_parameter_profile_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Relation Parameter Profile Ref"
+        },
+        "relation_parameter_profile_revision": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Relation Parameter Profile Revision"
+        },
+        "right_carrier_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Right Carrier Ref"
+        },
+        "subject": {
+          "minLength": 1,
+          "title": "Subject",
+          "type": "string"
+        },
+        "taxonomy_id": {
+          "minLength": 1,
+          "title": "Taxonomy Id",
+          "type": "string"
+        },
+        "taxonomy_revision": {
+          "pattern": "^[a-z0-9][a-z0-9.-]*$",
+          "title": "Taxonomy Revision",
+          "type": "string"
+        }
+      },
+      "required": [
+        "taxonomy_id",
+        "taxonomy_revision",
+        "relation_id",
+        "subject",
+        "quantifier_scope",
+        "evidence_scope",
+        "evidence_boundary",
+        "assurance_status",
+        "limitations",
+        "explicit_non_claims"
+      ],
+      "title": "BehavioralClaimBindingModel",
+      "type": "object"
+    },
+    "DiagnosticModel": {
+      "additionalProperties": false,
+      "description": "Closed portable diagnostic shape for published contracts.",
+      "properties": {
+        "address": {
+          "maxLength": 4096,
+          "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+          "title": "Address",
+          "type": "string"
+        },
+        "code": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$",
+          "title": "Code",
+          "type": "string"
+        },
+        "domain": {
+          "maxLength": 64,
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Domain",
+          "type": "string"
+        },
+        "message": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "severity": {
+          "$ref": "#/$defs/Severity",
+          "default": "error"
+        }
+      },
+      "required": [
+        "code",
+        "domain",
+        "address",
+        "message"
+      ],
+      "title": "DiagnosticModel",
+      "type": "object"
+    },
+    "ParticipantOpacityModelAssumptionsModel": {
+      "additionalProperties": false,
+      "description": "Exact profile-derived domains and non-strengthening assumptions.",
+      "properties": {
+        "cut_ref": {
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9._:/-]*$",
+          "title": "Cut Ref",
+          "type": "string"
+        },
+        "environment_refs": {
+          "items": {
+            "maxLength": 256,
+            "pattern": "^[a-z][a-z0-9._:/-]*$",
+            "type": "string"
+          },
+          "maxItems": 64,
+          "minItems": 1,
+          "title": "Environment Refs",
+          "type": "array"
+        },
+        "nondeterminism": {
+          "const": "possibilistic-support",
+          "title": "Nondeterminism",
+          "type": "string"
+        },
+        "order_refs": {
+          "items": {
+            "maxLength": 256,
+            "pattern": "^[a-z][a-z0-9._:/-]*$",
+            "type": "string"
+          },
+          "maxItems": 64,
+          "minItems": 1,
+          "title": "Order Refs",
+          "type": "array"
+        },
+        "order_treatment": {
+          "enum": [
+            "total-order",
+            "named-linearization",
+            "all-linearizations",
+            "partial-order",
+            "causal-frontier"
+          ],
+          "title": "Order Treatment",
+          "type": "string"
+        },
+        "probability": {
+          "const": "outside-baseline",
+          "title": "Probability",
+          "type": "string"
+        },
+        "progress": {
+          "const": "progress-insensitive",
+          "title": "Progress",
+          "type": "string"
+        },
+        "scheduler_refs": {
+          "items": {
+            "maxLength": 256,
+            "pattern": "^[a-z][a-z0-9._:/-]*$",
+            "type": "string"
+          },
+          "maxItems": 64,
+          "minItems": 1,
+          "title": "Scheduler Refs",
+          "type": "array"
+        },
+        "strategy_kind": {
+          "enum": [
+            "passive",
+            "active"
+          ],
+          "title": "Strategy Kind",
+          "type": "string"
+        },
+        "strategy_refs": {
+          "items": {
+            "maxLength": 256,
+            "pattern": "^[a-z][a-z0-9._:/-]*$",
+            "type": "string"
+          },
+          "maxItems": 64,
+          "minItems": 1,
+          "title": "Strategy Refs",
+          "type": "array"
+        },
+        "time_model": {
+          "const": "untimed",
+          "title": "Time Model",
+          "type": "string"
+        }
+      },
+      "required": [
+        "strategy_kind",
+        "strategy_refs",
+        "scheduler_refs",
+        "environment_refs",
+        "order_treatment",
+        "order_refs",
+        "cut_ref",
+        "nondeterminism",
+        "time_model",
+        "progress",
+        "probability"
+      ],
+      "title": "ParticipantOpacityModelAssumptionsModel",
+      "type": "object"
+    },
+    "ParticipantOpacityModelCheckConfigurationModel": {
+      "additionalProperties": false,
+      "description": "Complete output-affecting identity of the explicit-state checker.",
+      "properties": {
+        "algorithm": {
+          "const": "complete-finite-transition-fixed-point/v1",
+          "title": "Algorithm",
+          "type": "string"
+        },
+        "counterexample_selection": {
+          "const": "lowest-state-ordinal-canonical-shortest-path/v1",
+          "title": "Counterexample Selection",
+          "type": "string"
+        },
+        "information_cell_key": {
+          "const": "initial-observation-memory-release-coalition-strategy-order/v1",
+          "title": "Information Cell Key",
+          "type": "string"
+        },
+        "max_states": {
+          "const": 4096,
+          "title": "Max States",
+          "type": "integer"
+        },
+        "max_transitions": {
+          "const": 65536,
+          "title": "Max Transitions",
+          "type": "integer"
+        },
+        "opacity_kernel": {
+          "const": "participant-opacity-information-cell-kernel/v1",
+          "title": "Opacity Kernel",
+          "type": "string"
+        },
+        "package": {
+          "const": "raes",
+          "title": "Package",
+          "type": "string"
+        },
+        "package_version": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9][a-z0-9._/-]*$",
+          "title": "Package Version",
+          "type": "string"
+        },
+        "profile": {
+          "const": "raes-participant-opacity-explicit-state/v1",
+          "title": "Profile",
+          "type": "string"
+        },
+        "tool_id": {
+          "const": "raes-processor-participant-opacity-model-check",
+          "title": "Tool Id",
+          "type": "string"
+        },
+        "tool_version": {
+          "const": "1.0.0",
+          "title": "Tool Version",
+          "type": "string"
+        },
+        "traversal": {
+          "const": "breadth-first-canonical/v1",
+          "title": "Traversal",
+          "type": "string"
+        }
+      },
+      "required": [
+        "profile",
+        "tool_id",
+        "tool_version",
+        "package",
+        "package_version",
+        "algorithm",
+        "traversal",
+        "opacity_kernel",
+        "information_cell_key",
+        "counterexample_selection",
+        "max_states",
+        "max_transitions"
+      ],
+      "title": "ParticipantOpacityModelCheckConfigurationModel",
+      "type": "object"
+    },
+    "ParticipantOpacityModelCheckCounterexampleModel": {
+      "additionalProperties": false,
+      "description": "Sanitized canonical path to one reachable secret-only information cell.",
+      "properties": {
+        "actual_path_transition_ordinals": {
+          "items": {
+            "type": "integer"
+          },
+          "maxItems": 100000,
+          "title": "Actual Path Transition Ordinals",
+          "type": "array"
+        },
+        "actual_state_ordinal": {
+          "maximum": 99999,
+          "minimum": 0,
+          "title": "Actual State Ordinal",
+          "type": "integer"
+        },
+        "counterexample_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Counterexample Digest",
+          "type": "string"
+        },
+        "examined_cell_size": {
+          "maximum": 100000,
+          "minimum": 1,
+          "title": "Examined Cell Size",
+          "type": "integer"
+        },
+        "safe_ref": {
+          "pattern": "^participant-opacity-model-check-counterexample:[0-9]{6}$",
+          "title": "Safe Ref",
+          "type": "string"
+        },
+        "strategy_ref": {
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9._:/-]*$",
+          "title": "Strategy Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "safe_ref",
+        "counterexample_digest",
+        "actual_state_ordinal",
+        "actual_path_transition_ordinals",
+        "strategy_ref",
+        "examined_cell_size"
+      ],
+      "title": "ParticipantOpacityModelCheckCounterexampleModel",
+      "type": "object"
+    },
+    "ParticipantOpacityModelCheckCoverageModel": {
+      "additionalProperties": false,
+      "description": "Declared and explored fixed-point coverage with no hidden partial pass.",
+      "properties": {
+        "complete_fixed_point": {
+          "title": "Complete Fixed Point",
+          "type": "boolean"
+        },
+        "declared": {
+          "$ref": "#/$defs/ParticipantOpacityModelCheckDeclaredCountsModel"
+        },
+        "explored_order_variants": {
+          "maximum": 1000,
+          "minimum": 0,
+          "title": "Explored Order Variants",
+          "type": "integer"
+        },
+        "explored_scheduler_environment_pairs": {
+          "maximum": 10000,
+          "minimum": 0,
+          "title": "Explored Scheduler Environment Pairs",
+          "type": "integer"
+        },
+        "explored_states": {
+          "maximum": 100000,
+          "minimum": 0,
+          "title": "Explored States",
+          "type": "integer"
+        },
+        "explored_transitions": {
+          "maximum": 200000,
+          "minimum": 0,
+          "title": "Explored Transitions",
+          "type": "integer"
+        },
+        "reachable_evaluation_points": {
+          "maximum": 100000,
+          "minimum": 0,
+          "title": "Reachable Evaluation Points",
+          "type": "integer"
+        },
+        "reachable_secret_points": {
+          "maximum": 100000,
+          "minimum": 0,
+          "title": "Reachable Secret Points",
+          "type": "integer"
+        },
+        "strategy_coverage": {
+          "items": {
+            "$ref": "#/$defs/ParticipantOpacityStrategyCoverageModel"
+          },
+          "maxItems": 1000,
+          "title": "Strategy Coverage",
+          "type": "array"
+        }
+      },
+      "required": [
+        "declared",
+        "explored_states",
+        "explored_transitions",
+        "reachable_evaluation_points",
+        "reachable_secret_points",
+        "strategy_coverage",
+        "explored_scheduler_environment_pairs",
+        "explored_order_variants",
+        "complete_fixed_point"
+      ],
+      "title": "ParticipantOpacityModelCheckCoverageModel",
+      "type": "object"
+    },
+    "ParticipantOpacityModelCheckDeclaredCountsModel": {
+      "additionalProperties": false,
+      "description": "Exact realized cardinalities of the finite transition artifact.",
+      "properties": {
+        "cuts": {
+          "maximum": 100000,
+          "minimum": 1,
+          "title": "Cuts",
+          "type": "integer"
+        },
+        "evaluation_points": {
+          "maximum": 100000,
+          "minimum": 1,
+          "title": "Evaluation Points",
+          "type": "integer"
+        },
+        "initial_states": {
+          "maximum": 100000,
+          "minimum": 1,
+          "title": "Initial States",
+          "type": "integer"
+        },
+        "order_variants": {
+          "maximum": 1000,
+          "minimum": 1,
+          "title": "Order Variants",
+          "type": "integer"
+        },
+        "runs": {
+          "maximum": 100000,
+          "minimum": 1,
+          "title": "Runs",
+          "type": "integer"
+        },
+        "scheduler_environment_pairs": {
+          "maximum": 10000,
+          "minimum": 1,
+          "title": "Scheduler Environment Pairs",
+          "type": "integer"
+        },
+        "states": {
+          "maximum": 100000,
+          "minimum": 1,
+          "title": "States",
+          "type": "integer"
+        },
+        "strategies": {
+          "maximum": 1000,
+          "minimum": 1,
+          "title": "Strategies",
+          "type": "integer"
+        },
+        "transitions": {
+          "maximum": 200000,
+          "minimum": 0,
+          "title": "Transitions",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "states",
+        "transitions",
+        "initial_states",
+        "evaluation_points",
+        "runs",
+        "cuts",
+        "strategies",
+        "scheduler_environment_pairs",
+        "order_variants"
+      ],
+      "title": "ParticipantOpacityModelCheckDeclaredCountsModel",
+      "type": "object"
+    },
+    "ParticipantOpacityModelCheckOutcome": {
+      "description": "Closed finite-state model-check outcomes.",
+      "enum": [
+        "holds-on-exact-complete-finite-model",
+        "counterexample-found",
+        "vacuous-secret-domain",
+        "unsupported"
+      ],
+      "title": "ParticipantOpacityModelCheckOutcome",
+      "type": "string"
+    },
+    "ParticipantOpacityStrategyCoverageModel": {
+      "additionalProperties": false,
+      "description": "Complete reached coverage for one declared participant strategy.",
+      "properties": {
+        "explored_states": {
+          "maximum": 100000,
+          "minimum": 1,
+          "title": "Explored States",
+          "type": "integer"
+        },
+        "explored_transitions": {
+          "maximum": 200000,
+          "minimum": 0,
+          "title": "Explored Transitions",
+          "type": "integer"
+        },
+        "reachable_evaluation_points": {
+          "maximum": 100000,
+          "minimum": 0,
+          "title": "Reachable Evaluation Points",
+          "type": "integer"
+        },
+        "reachable_secret_points": {
+          "maximum": 100000,
+          "minimum": 0,
+          "title": "Reachable Secret Points",
+          "type": "integer"
+        },
+        "strategy_ref": {
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9._:/-]*$",
+          "title": "Strategy Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "strategy_ref",
+        "explored_states",
+        "explored_transitions",
+        "reachable_evaluation_points",
+        "reachable_secret_points"
+      ],
+      "title": "ParticipantOpacityStrategyCoverageModel",
+      "type": "object"
+    },
+    "Severity": {
+      "description": "Diagnostic severity level.",
+      "enum": [
+        "error",
+        "warning",
+        "info"
+      ],
+      "title": "Severity",
+      "type": "string"
+    },
+    "SourceArtifactIdentityModel": {
+      "additionalProperties": false,
+      "description": "Portable identity and exact-byte digest for the root SDL source.",
+      "properties": {
+        "byte_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Byte Digest",
+          "type": "string"
+        },
+        "source_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[^\\r\\n]+$",
+          "title": "Source Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_id",
+        "byte_digest"
+      ],
+      "title": "SourceArtifactIdentityModel",
+      "type": "object"
+    },
+    "UnsupportedParticipantOpacityModelCheckModel": {
+      "additionalProperties": false,
+      "description": "Stable non-positive reason set for a valid model-check request.",
+      "properties": {
+        "profile": {
+          "const": "raes-participant-opacity-model-check-unsupported/v1",
+          "title": "Profile",
+          "type": "string"
+        },
+        "reason_codes": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 64,
+          "minItems": 1,
+          "title": "Reason Codes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "profile",
+        "reason_codes"
+      ],
+      "title": "UnsupportedParticipantOpacityModelCheckModel",
+      "type": "object"
+    }
+  },
+  "$id": "https://raesystem.github.io/rae/schemas/participant-opacity-model-check-evidence-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Replayable evidence for one exact complete finite transition model.",
+  "properties": {
+    "analysis_profile": {
+      "const": "raes-participant-opacity-model-check/v1",
+      "title": "Analysis Profile",
+      "type": "string"
+    },
+    "assumptions": {
+      "$ref": "#/$defs/ParticipantOpacityModelAssumptionsModel"
+    },
+    "assumptions_digest": {
+      "minLength": 1,
+      "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+      "title": "Assumptions Digest",
+      "type": "string"
+    },
+    "catalog_digest": {
+      "minLength": 1,
+      "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+      "title": "Catalog Digest",
+      "type": "string"
+    },
+    "checker_configuration": {
+      "$ref": "#/$defs/ParticipantOpacityModelCheckConfigurationModel"
+    },
+    "checker_configuration_digest": {
+      "minLength": 1,
+      "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+      "title": "Checker Configuration Digest",
+      "type": "string"
+    },
+    "claim": {
+      "$ref": "#/$defs/BehavioralClaimBindingModel"
+    },
+    "counterexample": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ParticipantOpacityModelCheckCounterexampleModel"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "coverage": {
+      "$ref": "#/$defs/ParticipantOpacityModelCheckCoverageModel"
+    },
+    "derived_carrier_digest": {
+      "minLength": 1,
+      "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+      "title": "Derived Carrier Digest",
+      "type": "string"
+    },
+    "diagnostics": {
+      "items": {
+        "$ref": "#/$defs/DiagnosticModel"
+      },
+      "maxItems": 64,
+      "title": "Diagnostics",
+      "type": "array"
+    },
+    "materializer_digest": {
+      "minLength": 1,
+      "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+      "title": "Materializer Digest",
+      "type": "string"
+    },
+    "materializer_id": {
+      "maxLength": 256,
+      "pattern": "^[a-z][a-z0-9._:/-]*$",
+      "title": "Materializer Id",
+      "type": "string"
+    },
+    "materializer_version": {
+      "maxLength": 128,
+      "pattern": "^[a-z0-9][a-z0-9._/-]*$",
+      "title": "Materializer Version",
+      "type": "string"
+    },
+    "model_digest": {
+      "minLength": 1,
+      "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+      "title": "Model Digest",
+      "type": "string"
+    },
+    "model_ref": {
+      "maxLength": 256,
+      "pattern": "^[a-z][a-z0-9._:/-]*$",
+      "title": "Model Ref",
+      "type": "string"
+    },
+    "model_revision": {
+      "maxLength": 128,
+      "pattern": "^[a-z0-9][a-z0-9._/-]*$",
+      "title": "Model Revision",
+      "type": "string"
+    },
+    "outcome": {
+      "$ref": "#/$defs/ParticipantOpacityModelCheckOutcome"
+    },
+    "profile_digest": {
+      "minLength": 1,
+      "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+      "title": "Profile Digest",
+      "type": "string"
+    },
+    "profile_id": {
+      "maxLength": 256,
+      "pattern": "^[a-z][a-z0-9._:/-]*$",
+      "title": "Profile Id",
+      "type": "string"
+    },
+    "profile_revision": {
+      "maxLength": 128,
+      "pattern": "^[a-z0-9][a-z0-9._/-]*$",
+      "title": "Profile Revision",
+      "type": "string"
+    },
+    "provenance_scope": {
+      "const": "normalized-model-only",
+      "title": "Provenance Scope",
+      "type": "string"
+    },
+    "relation_id": {
+      "const": "participant-predicate-opacity",
+      "title": "Relation Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "participant-opacity-model-check-evidence/v1",
+      "default": "participant-opacity-model-check-evidence/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source": {
+      "$ref": "#/$defs/SourceArtifactIdentityModel"
+    },
+    "taxonomy_id": {
+      "const": "raes-behavioral-relations",
+      "title": "Taxonomy Id",
+      "type": "string"
+    },
+    "taxonomy_revision": {
+      "maxLength": 128,
+      "pattern": "^[a-z0-9][a-z0-9._/-]*$",
+      "title": "Taxonomy Revision",
+      "type": "string"
+    },
+    "unsupported": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/UnsupportedParticipantOpacityModelCheckModel"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "analysis_profile",
+    "provenance_scope",
+    "taxonomy_id",
+    "taxonomy_revision",
+    "catalog_digest",
+    "relation_id",
+    "profile_id",
+    "profile_revision",
+    "profile_digest",
+    "source",
+    "model_ref",
+    "model_revision",
+    "model_digest",
+    "materializer_id",
+    "materializer_version",
+    "materializer_digest",
+    "assumptions",
+    "assumptions_digest",
+    "checker_configuration",
+    "checker_configuration_digest",
+    "derived_carrier_digest",
+    "claim",
+    "coverage",
+    "outcome",
+    "diagnostics"
+  ],
+  "title": "ParticipantOpacityModelCheckEvidenceModel",
+  "type": "object",
+  "x-raes-invariants": [
+    {
+      "description": "Exact catalog, profile, model, assumptions, checker, derived carrier, complete coverage, claim, outcome, diagnostics, and safe counterexample joins must remain digest-bound and mutually consistent.",
+      "id": "participant-opacity-model-check-evidence-joins",
+      "inputs": [
+        {
+          "contract_id": "participant-opacity-model-check-evidence-v1",
+          "instance_path": "#"
+        },
+        {
+          "contract_id": "participant-opacity-model-check-input-v1",
+          "instance_path": "#"
+        },
+        {
+          "contract_id": "behavioral-relation-profile-v1",
+          "instance_path": "#"
+        },
+        {
+          "contract_id": "behavioral-relations-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "raes_contracts.participant_opacity.ParticipantOpacityModelCheckEvidenceModel"
+    }
+  ],
+  "x-raes-semantic-profile": {
+    "contract_id": "participant-opacity-model-check-evidence-v1",
+    "entry_schema_contract_id": "raes-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/RaesSemanticInvariantEntryModel",
+    "id": "raes-semantic-invariants-v1",
+    "keyword": "x-raes-invariants",
+    "required": true,
+    "uri": "https://raesystem.github.io/rae/schemas/semantic-invariants/v1"
+  }
+}

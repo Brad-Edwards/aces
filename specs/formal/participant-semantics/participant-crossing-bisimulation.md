@@ -7,7 +7,7 @@ Decision:
 
 Profile: `participant-crossing-dpbb-finite-v1@rev1`.
 
-Relation catalog: `raes-behavioral-relations@rev7`,
+Relation catalog: `raes-behavioral-relations@rev8`,
 `divergence-preserving-branching-bisimulation`.
 
 Status: normative design. No model, model-check, proof, runtime-realization, or

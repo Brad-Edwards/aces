@@ -60,7 +60,7 @@ bounds, tool and profile digests, negative cases, and a `bounded-test` claim
 binding. It establishes no model check, proof, runtime, or backend result.
 
 Delivered by #961: the governed
-`participant-opacity-baseline-v1@sem-231/rev1` profile, exact finite
+`participant-opacity-baseline-v1@sem-231/rev2` profile, exact finite
 analysis-input and digest-bound evidence contracts, canonical claim/profile
 resolution, deterministic processor analysis and replay, and safe
 counterexample fixtures. The delivered result vocabulary remains strictly
@@ -74,6 +74,14 @@ either a result or safe counterexample.
 
 It establishes only the exact finite model. It is not an unbounded theorem and
 says nothing about runtime or backend realization.
+
+Delivered by #962: explicit input and evidence schemas, strict catalog/profile
+and assumption joins, canonical breadth-first reachable-fixed-point
+exploration, the shared SEM-231 information-cell kernel, complete aggregate
+and per-strategy coverage, safe canonical counterexample paths, replay, and
+valid/invalid exact-model fixtures. The baseline positive evidence binds only
+the committed complete finite model under
+`participant-opacity-baseline-v1@sem-231/rev2`.
 
 ### #963: Mathematical proof
 
@@ -108,7 +116,7 @@ is not proof, cross-backend equivalence, or support outside the named profile.
 ## Program Invariants
 
 - All claims use the exact current behavioral-taxonomy revision (currently
-  `raes-behavioral-relations@rev7`) and one explicit assurance axis. `rev5`
+  `raes-behavioral-relations@rev8`) and one explicit assurance axis. `rev5`
   introduced opacity; it is not a permanent implementation pin.
 - Universal opacity requires model-check or proof evidence whose scope matches
   the claim.

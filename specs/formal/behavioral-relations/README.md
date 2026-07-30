@@ -12,7 +12,7 @@ weaker observation from being reported as a stronger behavioral result.
 The machine-readable authority is
 `contracts/concept-authority/behavioral-relations-v1.json`, contract
 `behavioral-relations/v1`, taxonomy `raes-behavioral-relations`, revision
-`rev7`. Relation identifiers, formal dimensions, claim-surface defaults,
+`rev8`. Relation identifiers, formal dimensions, claim-surface defaults,
 bibliography coordinates, assurance status, and worked transition systems are
 normative there. ADR-081, ADR-095, ADR-099, and ADR-100 govern the
 architecture. This document is the normative reader-facing formalization of
@@ -30,8 +30,10 @@ intervention-backed counterfactual comparison. Revision `rev3` made SEM-230
 exact state cuts, and added `io-alternating-refinement` for actionable backend
 participant semantics. The JSON contract remains `behavioral-relations/v1`
 because the revisioned catalog identity governs the additive vocabulary.
-Revisions `rev1` through `rev6` are historical taxonomy identities; current
-in-repository producers bind `rev7`.
+Revision `rev7` added the closed participant-opacity profile and bounded
+checker. Revision `rev8` adds exact finite-state participant-opacity
+model-check evidence. Revisions `rev1` through `rev7` are historical taxonomy
+identities; current in-repository producers bind `rev8`.
 
 The taxonomy defines claim vocabulary and proof obligations. It does not add a
 model checker, theorem prover, stochastic simulator, game solver, scheduler,
@@ -279,9 +281,10 @@ eligible predicate. Opacity of one predicate does not imply noninterference.
 One equal projected-history pair may witness one alternative but does not
 discharge the opacity quantifier. Revision `rev5` introduced and bounded-tests
 this relation. Revision `rev7` adds a closed baseline profile and a
-deterministic in-process checker for exact declared finite carriers. It remains
-deliberately unproved and supplies no model check, runtime enforcement, backend
-declaration, realization, or conformance.
+deterministic in-process checker for exact declared finite carriers. Revision
+`rev8` adds a distinct explicit-state checker and one exact finite-model
+result. The relation remains mathematically unproved and supplies no runtime
+enforcement, backend declaration, realization, or conformance.
 
 ### Participant-crossing bisimulation
 

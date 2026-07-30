@@ -18,6 +18,7 @@ from raes_conformance.necessity_evidence import (
     VerificationDisposition,
     assemble_bounded_but_for_evidence,
 )
+from raes_conformance.necessity_types import _ASSEMBLY_TOKEN
 from raes_conformance.necessity_validation import (
     BOUNDED_BUT_FOR_RELATION_ID,
     BoundedButForCase,
@@ -109,7 +110,7 @@ def _snapshot_ref(run: ExperimentRunModel) -> str:
 def _claim(
     relation_id: str = BOUNDED_BUT_FOR_RELATION_ID,
     *,
-    taxonomy_revision: str = "rev7",
+    taxonomy_revision: str = "rev8",
 ) -> BehavioralClaimBindingModel:
     return BehavioralClaimBindingModel(
         taxonomy_id="raes-behavioral-relations",
@@ -238,6 +239,7 @@ class _FixtureEvidenceValidator:
 def _case(
     *,
     claim: BehavioralClaimBindingModel | None = None,
+    baseline_world: NecessityWorldRef | None = None,
     counterfactual_world: NecessityWorldRef | None = None,
 ) -> BoundedButForCase:
     return BoundedButForCase(
@@ -246,7 +248,7 @@ def _case(
         candidate_ref="scenario.techvault.weakness.cve-2025-0001",
         outcome_proposition_address=_PROPOSITION,
         outcome_assertion_address=_ASSERTION,
-        baseline_world=_world("baseline"),
+        baseline_world=baseline_world or _world("baseline"),
         counterfactual_world=counterfactual_world or _world("counterfactual"),
         intervention_kind=InterventionKind.REMOVE,
         intervention_ref="intervention:remove-cve-2025-0001",
@@ -284,6 +286,8 @@ def _evidence(
     intervention_run_ref: str | None = None,
     baseline_task_override: ExperimentTaskModel | None = None,
     baseline_run_override: ExperimentRunModel | None = None,
+    counterfactual_task_override: ExperimentTaskModel | None = None,
+    counterfactual_run_override: ExperimentRunModel | None = None,
     baseline_truth_override: PropositionTruthResultModel | None = None,
     counterfactual_truth_override: PropositionTruthResultModel | None = None,
     intervention_disposition: VerificationDisposition | None = None,
@@ -297,6 +301,8 @@ def _evidence(
     baseline_task = baseline_task_override or baseline_task
     baseline_run = baseline_run_override or baseline_run
     counterfactual_task, counterfactual_run, counterfactual_record = _artifacts("counterfactual")
+    counterfactual_task = counterfactual_task_override or counterfactual_task
+    counterfactual_run = counterfactual_run_override or counterfactual_run
     verification_ref = verification_evidence_ref or counterfactual_record.evidence_record_id
     intervention = InterventionVerificationRecord(
         record_id="verification:intervention",
@@ -431,6 +437,31 @@ def test_comparator_rejects_an_unsealed_copy_of_assembled_evidence() -> None:
 
     assert result.outcome is NecessityComparisonOutcome.UNSUPPORTED
     assert _codes(result) == {"conformance.necessity-evidence-unauthenticated"}
+
+
+def _tampered_evidence(**overrides: object) -> BoundedButForEvidence:
+    assembled = _evidence()
+    tampered = object.__new__(BoundedButForEvidence)
+    for field_name in BoundedButForEvidence.__dataclass_fields__:
+        if field_name == "_assembly_token":
+            value: object = _ASSEMBLY_TOKEN
+        elif field_name in overrides:
+            value = overrides[field_name]
+        else:
+            value = getattr(assembled, field_name)
+        object.__setattr__(tampered, field_name, value)
+    return tampered
+
+
+def test_comparator_rejects_authority_mismatch_in_sealed_evidence() -> None:
+    tampered = _tampered_evidence(
+        verification_binding=replace(_binding(), validator_digest=_DIGEST_A),
+    )
+
+    result = compare_bounded_but_for(_case(), tampered, available_capability_refs=_CAPABILITIES)
+
+    assert result.outcome is NecessityComparisonOutcome.UNSUPPORTED
+    assert _codes(result) == {"conformance.necessity-verification-authority-mismatch"}
 
 
 def test_case_digest_changes_for_every_causal_join_identity() -> None:
@@ -630,24 +661,31 @@ def test_claim_candidate_and_outcome_identities_must_match_the_case() -> None:
         assert _codes(result) == {"conformance.necessity-claim-case-mismatch"}
 
 
-def test_assembler_rejects_case_world_that_does_not_match_the_typed_run() -> None:
+@pytest.mark.parametrize("role", ("baseline", "counterfactual"))
+def test_assembler_rejects_case_world_that_does_not_match_the_typed_run(role: str) -> None:
+    mismatched_world = replace(
+        _world(role),
+        run_ref="experiment-run:other@1",
+    )
     case = _case(
-        counterfactual_world=replace(
-            _world("counterfactual"),
-            run_ref="experiment-run:other@1",
-        )
+        baseline_world=mismatched_world if role == "baseline" else None,
+        counterfactual_world=mismatched_world if role == "counterfactual" else None,
     )
 
-    with pytest.raises(ValueError, match="counterfactual world does not match"):
+    with pytest.raises(ValueError, match=rf"{role} world does not match"):
         _evidence(case=case)
 
 
-def test_assembler_runs_the_canonical_task_run_validator() -> None:
-    baseline_task, _, _ = _artifacts("baseline")
-    wrong_task = baseline_task.model_copy(update={"task_id": "task:other"})
+@pytest.mark.parametrize("role", ("baseline", "counterfactual"))
+def test_assembler_runs_the_canonical_task_run_validator(role: str) -> None:
+    task, _, _ = _artifacts(role)
+    wrong_task = task.model_copy(update={"task_id": "task:other"})
+    overrides = (
+        {"baseline_task_override": wrong_task} if role == "baseline" else {"counterfactual_task_override": wrong_task}
+    )
 
-    with pytest.raises(ValueError, match="baseline task/run validation failed"):
-        _evidence(baseline_task_override=wrong_task)
+    with pytest.raises(ValueError, match=rf"{role} task/run validation failed"):
+        _evidence(**overrides)
 
 
 def test_assembler_rejects_validator_outside_the_case_authority_pin() -> None:
@@ -749,13 +787,122 @@ def test_missing_comparator_capability_fails_before_evidence_interpretation() ->
 
 def test_case_rejects_reused_run_identity_and_unrelated_world_lineage() -> None:
     baseline = _world("baseline")
-    reused_run = replace(_world("counterfactual"), run_ref=baseline.run_ref)
-    unrelated = replace(_world("counterfactual"), family_ref="scenario-family:other@1")
+    counterfactual = _world("counterfactual")
+    reused_world_id = replace(counterfactual, world_id=baseline.world_id)
+    reused_run = replace(counterfactual, run_ref=baseline.run_ref)
+    unrelated = replace(counterfactual, family_ref="scenario-family:other@1")
+    unrelated_lineage = replace(counterfactual, baseline_lineage_ref="scenario-snapshot:other-source@1")
 
+    with pytest.raises(ValueError, match="distinct world_id"):
+        _case(counterfactual_world=reused_world_id)
     with pytest.raises(ValueError, match="distinct run_ref"):
         _case(counterfactual_world=reused_run)
     with pytest.raises(ValueError, match="same family_ref"):
         _case(counterfactual_world=unrelated)
+    with pytest.raises(ValueError, match="same baseline_lineage_ref"):
+        _case(counterfactual_world=unrelated_lineage)
+
+
+@pytest.mark.parametrize(
+    ("field_name", "bad_value", "message"),
+    [
+        ("world_id", "", "world_id must be non-empty"),
+        ("run_digest", "not-a-digest", "run_digest must be a sha256 digest"),
+    ],
+)
+def test_necessity_world_ref_shape_is_enforced(field_name: str, bad_value: str, message: str) -> None:
+    with pytest.raises(ValueError, match=message):
+        replace(_world("baseline"), **{field_name: bad_value})
+
+
+def test_matching_policy_requires_unique_nonempty_dimensions_and_differences() -> None:
+    with pytest.raises(ValueError, match="held_fixed_dimensions must not be empty"):
+        NecessityMatchingPolicy(
+            policy_id="p",
+            policy_version="1",
+            held_fixed_dimensions=(),
+            permitted_difference_refs=("candidate",),
+        )
+    with pytest.raises(ValueError, match="held_fixed_dimensions entries must be unique"):
+        NecessityMatchingPolicy(
+            policy_id="p",
+            policy_version="1",
+            held_fixed_dimensions=("subject", "subject"),
+            permitted_difference_refs=("candidate",),
+        )
+    with pytest.raises(ValueError, match="permitted_difference_refs must not be empty"):
+        NecessityMatchingPolicy(
+            policy_id="p",
+            policy_version="1",
+            held_fixed_dimensions=("subject",),
+            permitted_difference_refs=(),
+        )
+    with pytest.raises(ValueError, match="permitted_difference_refs entries must be unique"):
+        NecessityMatchingPolicy(
+            policy_id="p",
+            policy_version="1",
+            held_fixed_dimensions=("subject",),
+            permitted_difference_refs=("candidate", "candidate"),
+        )
+
+
+def test_case_rejects_malformed_field_types() -> None:
+    with pytest.raises(ValueError, match="claim must be a BehavioralClaimBindingModel"):
+        _case(claim="not-a-claim")  # type: ignore[arg-type]
+    valid = _case()
+    with pytest.raises(ValueError, match="baseline_world must be a NecessityWorldRef"):
+        replace(valid, baseline_world="not-a-world")  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="counterfactual_world must be a NecessityWorldRef"):
+        replace(valid, counterfactual_world="not-a-world")  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="intervention_kind must be an InterventionKind"):
+        replace(valid, intervention_kind="remove")  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="matching_policy must be a NecessityMatchingPolicy"):
+        replace(valid, matching_policy="not-a-policy")  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="verification_authority must be"):
+        replace(valid, verification_authority="not-an-authority")  # type: ignore[arg-type]
+
+
+def test_case_requires_unique_nonempty_capabilities() -> None:
+    case = _case()
+    with pytest.raises(ValueError, match="required_capability_refs must not be empty"):
+        replace(case, required_capability_refs=())
+    with pytest.raises(ValueError, match="required_capability_refs entries must be non-empty"):
+        replace(case, required_capability_refs=("",))
+    with pytest.raises(ValueError, match="required_capability_refs entries must be unique"):
+        replace(case, required_capability_refs=("observation.outcome", "observation.outcome"))
+
+
+def test_verification_record_header_is_enforced() -> None:
+    with pytest.raises(ValueError, match="record_id must be non-empty"):
+        InterventionVerificationRecord(
+            record_id="",
+            record_version="1",
+            world_id="world",
+            run_ref="run",
+            intervention_ref="intervention",
+            intervention_version="1",
+            evidence_record_refs=("e",),
+        )
+    with pytest.raises(ValueError, match="evidence_record_refs must not be empty"):
+        InterventionVerificationRecord(
+            record_id="record",
+            record_version="1",
+            world_id="world",
+            run_ref="run",
+            intervention_ref="intervention",
+            intervention_version="1",
+            evidence_record_refs=(),
+        )
+    with pytest.raises(ValueError, match="evidence_record_refs entries must be unique"):
+        InterventionVerificationRecord(
+            record_id="record",
+            record_version="1",
+            world_id="world",
+            run_ref="run",
+            intervention_ref="intervention",
+            intervention_version="1",
+            evidence_record_refs=("e", "e"),
+        )
 
 
 def test_diagnostics_are_stable_and_do_not_echo_untrusted_values() -> None:

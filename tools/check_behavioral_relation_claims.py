@@ -47,6 +47,7 @@ _CLAIM_CONTAINER_SCHEMA_VERSIONS = frozenset(
     {
         "behavioral-relation-profile/v1",
         "participant-opacity-analysis-evidence/v1",
+        "participant-opacity-model-check-evidence/v1",
     }
 )
 _TEXT_SUFFIXES = frozenset({".json", ".md", ".py", ".toml", ".yaml", ".yml"})
