@@ -59,7 +59,7 @@ REQUIRED_RELATION_IDS = {
 def _bounded_empirical_claim() -> dict[str, object]:
     return {
         "taxonomy_id": "raes-behavioral-relations",
-        "taxonomy_revision": "rev6",
+        "taxonomy_revision": "rev7",
         "relation_id": "empirical-adequacy",
         "subject": "TechVault baseline study",
         "left_carrier_ref": "study-techvault-baseline@1.0.0",
@@ -150,7 +150,7 @@ def test_authoritative_catalog_covers_required_relation_classes_and_dimensions()
 
     assert catalog.schema_version == "behavioral-relations/v1"
     assert catalog.taxonomy_id == "raes-behavioral-relations"
-    assert catalog.taxonomy_revision == "rev6"
+    assert catalog.taxonomy_revision == "rev7"
     assert set(catalog.relations) >= REQUIRED_RELATION_IDS
     for relation_id, relation in catalog.relations.items():
         assert relation.left_carrier
@@ -350,7 +350,7 @@ def test_claim_binding_rejects_bounded_evidence_promoted_to_universal_claim():
     with pytest.raises(ValidationError, match="universal quantification requires model-check or proof evidence"):
         BehavioralClaimBindingModel(
             taxonomy_id="raes-behavioral-relations",
-            taxonomy_revision="rev6",
+            taxonomy_revision="rev7",
             relation_id="trace-equivalence",
             subject="two finite backend runs",
             left_carrier_ref="backend-run:left",
