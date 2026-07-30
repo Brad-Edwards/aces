@@ -1,0 +1,10 @@
+{
+  "contract_id": "external-concept-bindings-v1",
+  "schema_path": "contracts/schemas/concept-authority/external-concept-bindings-v1.json",
+  "stability": "draft",
+  "content_hash": "d0bb5f16d315f7efb21d3da932c62350db84ae476b7cba90034ea51bffc0456c",
+  "last_change": {
+    "summary": "Published the portable, scheme-neutral external concept-binding assertion contract and its governed structural invariants for issue #986.",
+    "content_hash": "d0bb5f16d315f7efb21d3da932c62350db84ae476b7cba90034ea51bffc0456c"
+  }
+}

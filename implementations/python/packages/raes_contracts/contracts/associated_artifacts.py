@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 from typing import Annotated, Any, Literal
-from urllib.parse import parse_qsl, urlsplit
 
 from pydantic import Field, GetJsonSchemaHandler, model_validator
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema
 
+from ..uri_safety import validate_safe_absolute_uri
 from ..versions import ASSOCIATED_ARTIFACT_MANIFEST_SCHEMA_VERSION
 from .base import ContractModel, NonEmptyString
 from .experiment_artifacts import ExperimentArtifactRefModel
@@ -18,50 +18,8 @@ from .schema_invariants import _add_raes_invariant
 AssociatedArtifactSetDigestString = Annotated[str, Field(pattern=r"^sha256:[a-f0-9]{64}$")]
 
 
-_ASSOCIATED_ARTIFACT_SECRET_QUERY_NAMES = frozenset(
-    {
-        "access_token",
-        "api_key",
-        "apikey",
-        "auth",
-        "credential",
-        "key",
-        "password",
-        "secret",
-        "sig",
-        "signature",
-        "token",
-    }
-)
-
-
-_ASSOCIATED_ARTIFACT_SECRET_QUERY_FRAGMENTS = (
-    "api-key",
-    "api_key",
-    "apikey",
-    "credential",
-    "password",
-    "secret",
-    "signature",
-    "token",
-)
-
-
 def _validate_associated_artifact_uri(artifact_id: str, uri: str) -> None:
-    parsed = urlsplit(uri)
-    if not parsed.scheme or (parsed.scheme in {"http", "https"} and not parsed.netloc):
-        raise ValueError(f"associated artifact {artifact_id!r} uri must be an absolute URI")
-    if parsed.username is not None or parsed.password is not None:
-        raise ValueError(f"associated artifact {artifact_id!r} uri must not contain credential userinfo")
-    query_names = {name.casefold() for name, _value in parse_qsl(parsed.query, keep_blank_values=True)}
-    secret_names = {
-        name
-        for name in query_names
-        if name in _ASSOCIATED_ARTIFACT_SECRET_QUERY_NAMES
-        or any(fragment in name for fragment in _ASSOCIATED_ARTIFACT_SECRET_QUERY_FRAGMENTS)
-    }
-    if secret_names:
-        raise ValueError(f"associated artifact {artifact_id!r} uri must not contain secret-bearing query fields")
+    validate_safe_absolute_uri(uri, field_name=f"associated artifact {artifact_id!r} uri")
 
 
 class AssociatedArtifactManifestModel(ContractModel):

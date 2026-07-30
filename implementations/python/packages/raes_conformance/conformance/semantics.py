@@ -25,6 +25,17 @@ from raes_conformance.conformance.snapshot_semantics import (
 )
 from raes_conformance.conformance.validators import _SEMANTIC_CONTEXT_REQUIRED_CONTRACTS, _validate_payload
 
+_SEMANTIC_CONTEXT_REQUIRED_MESSAGES = {
+    "associated-artifact-manifest-v1": (
+        "full associated-artifact conformance requires a concrete parent and bounded byte readers; "
+        "the generic fixture runner establishes structural validity only"
+    ),
+    "external-concept-bindings-v1": (
+        "full external-concept binding conformance requires explicit exact RAES subjects and pinned local "
+        "scheme snapshots; the generic fixture runner establishes structural validity only"
+    ),
+}
+
 
 def _state_semantic_diagnostics(
     contract_name: str,
@@ -142,10 +153,7 @@ def _fixture_case_diagnostics(contract_name: str, payload: object) -> list[Diagn
                 code="conformance.semantic-context-required",
                 domain="conformance",
                 address="#",
-                message=(
-                    "full associated-artifact conformance requires a concrete parent and bounded byte readers; "
-                    "the generic fixture runner establishes structural validity only"
-                ),
+                message=_SEMANTIC_CONTEXT_REQUIRED_MESSAGES[contract_name],
                 severity=Severity.ERROR,
             )
         ]

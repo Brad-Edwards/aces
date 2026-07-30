@@ -17,6 +17,7 @@ from raes_contracts.contracts import (
     ExperimentRunModel,
     ExperimentSpecModel,
     ExperimentStudyModel,
+    ExternalConceptBindingDocumentModel,
     OperationReceiptModel,
     OperationStatusModel,
     OrchestrationPlanModel,
@@ -88,6 +89,7 @@ _MODEL_VALIDATORS = {
 _STRUCTURAL_ONLY_VALIDATORS = {
     "associated-artifact-manifest-v1": AssociatedArtifactManifestModel.model_validate,
     "behavioral-relations-v1": BehavioralRelationCatalogModel.model_validate,
+    "external-concept-bindings-v1": ExternalConceptBindingDocumentModel.model_validate,
     "experiment-apparatus-context-v1": ExperimentApparatusContextModel.model_validate,
     "experiment-authoring-input-v1": ExperimentSpecModel.model_validate,
     "experiment-study-v1": ExperimentStudyModel.model_validate,
@@ -99,7 +101,12 @@ _STRUCTURAL_ONLY_VALIDATORS = {
 }
 
 
-_SEMANTIC_CONTEXT_REQUIRED_CONTRACTS = frozenset({"associated-artifact-manifest-v1"})
+_SEMANTIC_CONTEXT_REQUIRED_CONTRACTS = frozenset(
+    {
+        "associated-artifact-manifest-v1",
+        "external-concept-bindings-v1",
+    }
+)
 
 
 _EVENT_STREAM_VALIDATORS: dict[str, tuple[type, str]] = {

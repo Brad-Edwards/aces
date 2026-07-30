@@ -202,6 +202,27 @@ Implementation guidance:
 - do not overload `ConceptBinding` into a general external term-mapping model;
   it remains the manifest vocabulary-to-family binding surface.
 
+### Portable External Concept Assertions
+
+The standalone `external-concept-bindings/v1` contract covers the different
+case where an author or reviewer relates one exact, digest-pinned RAES subject
+to a concept in an arbitrary versioned external scheme. ATT&CK Enterprise and
+NIST CSF fixtures demonstrate the same scheme-neutral shape and offline
+resolver.
+
+This assertion surface keeps relationship, motivation, effect, perspective,
+provenance, evidence references, confidence, approximation or loss,
+limitations, participant eligibility, and review status independently typed.
+Its locator is inert and its semantic admission consumes only explicit local
+subjects and pinned snapshots; absence, staleness, ambiguity, supersession, and
+unknown concepts never trigger a live lookup or latest-version fallback.
+
+The binding remains descriptive and reviewable. It is not a native manifest
+`ConceptBinding`, proposition or outcome, realization instruction, capability,
+evidence record, participant disclosure, or delivery receipt. The normative
+model and resolution table are specified in
+[`specs/concept-authority/external-concept-bindings.md`](../../../specs/concept-authority/external-concept-bindings.md).
+
 ## RAES Extension Discipline (GOV-919)
 
 `GOV-919` implements the RAES concept layer by making native extension metadata
