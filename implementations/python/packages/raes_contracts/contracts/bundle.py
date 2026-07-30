@@ -13,6 +13,7 @@ from raes_contracts.artifact_requirements import ArtifactRequirementContractMode
 
 from .admitted_trial_plan import AdmittedTrialPlanModel
 from .associated_artifacts import AssociatedArtifactManifestModel
+from .batch_execution import BatchExecutionReceiptModel
 from .catalogs import (
     ConceptFamilyCatalogModel,
     ReferenceModelCatalogModel,
@@ -36,6 +37,7 @@ from .experiment_capture import ExperimentCaptureSpecModel
 from .experiment_evidence import ExperimentDerivedMeasureModel, ExperimentEvidenceRecordModel
 from .experiment_run import ExperimentRunModel
 from .experiment_spec import ExperimentSpecModel, ExperimentStudyModel
+from .external_concept_bindings import ExternalConceptBindingDocumentModel
 from .manifests import ProcessorManifestV2Model
 from .participant_context import ParticipantContextViewModel
 from .participant_control import ParticipantControlOccurrenceModel
@@ -162,6 +164,7 @@ def _core_schema_bundle() -> dict[str, dict[str, Any]]:
         "reference-models-v1": ReferenceModelCatalogModel.model_json_schema(),
         "uco-alignment-v1": UcoAlignmentCatalogModel.model_json_schema(),
         "controlled-vocabularies-v1": ControlledVocabularyCatalogModel.model_json_schema(),
+        "external-concept-bindings-v1": ExternalConceptBindingDocumentModel.model_json_schema(),
         "attack-enterprise-tactics-source-v1": AttackEnterpriseTacticsSourceModel.model_json_schema(),
         "atlas-tactics-source-v1": AtlasTacticsSourceModel.model_json_schema(),
         "nist-csf-defensive-categories-source-v1": NistCsfDefensiveCategorySourceModel.model_json_schema(),
@@ -182,6 +185,7 @@ def _core_schema_bundle() -> dict[str, dict[str, Any]]:
         "trial-cleanup-plan-v1": TrialCleanupPlanModel.model_json_schema(),
         "trial-cleanup-receipt-v1": TrialCleanupReceiptModel.model_json_schema(),
         "scheduler-isolation-proof-v1": SchedulerIsolationProofModel.model_json_schema(),
+        "batch-execution-receipt-v1": BatchExecutionReceiptModel.model_json_schema(),
         "time-model-v1": TimeModelDeclarationModel.model_json_schema(),
         "time-runtime-state-v1": TimeRuntimeStateModel.model_json_schema(),
         "realized-time-model-v1": RealizedTimeModelProvenanceModel.model_json_schema(),

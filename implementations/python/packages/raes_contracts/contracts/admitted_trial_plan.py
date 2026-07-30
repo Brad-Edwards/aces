@@ -98,6 +98,41 @@ def _require_unique(field_name: str, values: list[str]) -> None:
         raise ValueError(f"{field_name} must not contain duplicates")
 
 
+def entry_owned_resource_refs(plan: AdmittedTrialPlanModel, plan_entry_id: str) -> set[str]:
+    """Return the resource identities one entry owns via its referenced cleanup plan.
+
+    Resource ownership is the union of the ``resource_refs`` declared by every
+    boundary of the entry's referenced cleanup plan. Bounded parallelism must
+    never authorize two entries that share any owned resource (one trial, or its
+    cleanup, could otherwise read, mutate, or destroy another's state). This is
+    the single owning definition reused by both the plan's embedded
+    isolation check and the standalone plan-to-schedule join validator so the two
+    surfaces cannot drift.
+    """
+
+    entry = plan.entries.get(plan_entry_id)
+    if entry is None:
+        raise ValueError(f"plan_entry_id {plan_entry_id!r} does not resolve inside the admitted plan")
+    cleanup_plan = plan.cleanup_plans.get(entry.execution_controls.cleanup_plan_ref)
+    refs: set[str] = set()
+    if cleanup_plan is not None:
+        for boundary in cleanup_plan.resource_boundaries.values():
+            refs.update(boundary.resource_refs)
+    return refs
+
+
+def isolation_resource_overlaps(plan: AdmittedTrialPlanModel, plan_entry_ids: list[str]) -> list[str]:
+    """Return the resource identities shared by any pair of the given entries."""
+
+    owned = {entry_id: entry_owned_resource_refs(plan, entry_id) for entry_id in plan_entry_ids}
+    covered = list(owned)
+    shared: set[str] = set()
+    for first_index in range(len(covered)):
+        for second_index in range(first_index + 1, len(covered)):
+            shared.update(owned[covered[first_index]] & owned[covered[second_index]])
+    return sorted(shared)
+
+
 class AdmittedTrialEntryModel(ContractModel):
     """One immutable admitted trial entry at a unique logical coordinate."""
 
@@ -273,25 +308,10 @@ class AdmittedTrialPlanModel(ContractModel):
         # Bounded parallelism must not authorize entries that own the same
         # resource: a proof cannot claim independence for trials whose cleanup
         # boundaries overlap, or one trial (or its cleanup) could read, mutate,
-        # or destroy another's state. Resource ownership is the union of the
-        # resource_refs declared by each entry's referenced cleanup plan.
-        owned: dict[str, set[str]] = {}
-        for entry_id in proof.plan_entry_ids:
-            entry = self.entries[entry_id]
-            cleanup_plan = self.cleanup_plans.get(entry.execution_controls.cleanup_plan_ref)
-            refs: set[str] = set()
-            if cleanup_plan is not None:
-                for boundary in cleanup_plan.resource_boundaries.values():
-                    refs.update(boundary.resource_refs)
-            owned[entry_id] = refs
-        covered = list(owned)
-        for first_index in range(len(covered)):
-            for second_index in range(first_index + 1, len(covered)):
-                overlap = sorted(owned[covered[first_index]] & owned[covered[second_index]])
-                if overlap:
-                    raise ValueError(
-                        "isolation proof authorizes parallel entries that share resources: " + ", ".join(overlap)
-                    )
+        # or destroy another's state.
+        overlap = isolation_resource_overlaps(self, list(proof.plan_entry_ids))
+        if overlap:
+            raise ValueError("isolation proof authorizes parallel entries that share resources: " + ", ".join(overlap))
 
     @classmethod
     def __get_pydantic_json_schema__(cls, core_schema: CoreSchema, handler: GetJsonSchemaHandler) -> JsonSchemaValue:
@@ -350,6 +370,8 @@ __all__ = [
     "BindingOrigin",
     "ExperimentScenarioFamilyReferenceModel",
     "SelectionPolicyKind",
+    "entry_owned_resource_refs",
+    "isolation_resource_overlaps",
     "seal_admitted_trial_entry",
     "seal_admitted_trial_plan",
 ]

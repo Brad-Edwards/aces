@@ -1,0 +1,1006 @@
+{
+  "$defs": {
+    "ExperimentEvidenceRecordReferenceModel": {
+      "additionalProperties": false,
+      "description": "Reference constrained to a raw captured evidence record.",
+      "properties": {
+        "ref_id": {
+          "minLength": 1,
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "ref_kind": {
+          "const": "evidence-record",
+          "title": "Ref Kind",
+          "type": "string"
+        },
+        "ref_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Version"
+        }
+      },
+      "required": [
+        "ref_kind",
+        "ref_id"
+      ],
+      "title": "ExperimentEvidenceRecordReferenceModel",
+      "type": "object"
+    },
+    "ExperimentEvidenceReferenceModel": {
+      "additionalProperties": false,
+      "description": "Reference constrained to evidence artifacts.",
+      "properties": {
+        "ref_digest": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Digest"
+        },
+        "ref_id": {
+          "minLength": 1,
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "ref_kind": {
+          "const": "evidence",
+          "title": "Ref Kind",
+          "type": "string"
+        },
+        "ref_path": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Path"
+        },
+        "ref_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Version"
+        }
+      },
+      "required": [
+        "ref_kind",
+        "ref_id"
+      ],
+      "title": "ExperimentEvidenceReferenceModel",
+      "type": "object"
+    },
+    "ExperimentReferenceModel": {
+      "additionalProperties": false,
+      "description": "Typed reference to an experiment-core or adjacent RAES artifact.",
+      "properties": {
+        "ref_digest": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Digest"
+        },
+        "ref_id": {
+          "minLength": 1,
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "ref_kind": {
+          "enum": [
+            "processor",
+            "backend",
+            "participant-implementation",
+            "scenario",
+            "scenario-snapshot",
+            "task",
+            "authoring-input",
+            "protocol",
+            "apparatus-context",
+            "run",
+            "metric-definition",
+            "result",
+            "study",
+            "manifest",
+            "profile",
+            "capability",
+            "capture-spec",
+            "evidence",
+            "evidence-record",
+            "derived-measure",
+            "measurement-channel",
+            "analysis-artifact",
+            "other"
+          ],
+          "title": "Ref Kind",
+          "type": "string"
+        },
+        "ref_path": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Path"
+        },
+        "ref_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Version"
+        }
+      },
+      "required": [
+        "ref_kind",
+        "ref_id"
+      ],
+      "title": "ExperimentReferenceModel",
+      "type": "object"
+    },
+    "ExternalConceptApproximationModel": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "else": {
+            "properties": {
+              "loss_details": {
+                "minItems": 1
+              }
+            },
+            "required": [
+              "loss_details"
+            ]
+          },
+          "if": {
+            "properties": {
+              "posture": {
+                "const": "exact"
+              }
+            },
+            "required": [
+              "posture"
+            ]
+          },
+          "then": {
+            "properties": {
+              "loss_details": {
+                "maxItems": 0
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "loss_details": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Loss Details",
+          "type": "array"
+        },
+        "posture": {
+          "$ref": "#/$defs/ExternalConceptApproximationPosture"
+        }
+      },
+      "required": [
+        "posture"
+      ],
+      "title": "ExternalConceptApproximationModel",
+      "type": "object"
+    },
+    "ExternalConceptApproximationPosture": {
+      "enum": [
+        "exact",
+        "approximate",
+        "lossy"
+      ],
+      "title": "ExternalConceptApproximationPosture",
+      "type": "string"
+    },
+    "ExternalConceptAssertionModel": {
+      "additionalProperties": false,
+      "properties": {
+        "motivation": {
+          "minLength": 1,
+          "title": "Motivation",
+          "type": "string"
+        },
+        "motivation_basis_refs": {
+          "items": {
+            "$ref": "#/$defs/ExperimentReferenceModel"
+          },
+          "minItems": 1,
+          "title": "Motivation Basis Refs",
+          "type": "array"
+        },
+        "relationship_kind": {
+          "$ref": "#/$defs/ExternalConceptRelationshipKind"
+        },
+        "semantic_effect": {
+          "$ref": "#/$defs/ExternalKnowledgeBindingEffect"
+        },
+        "semantic_effect_basis_refs": {
+          "items": {
+            "$ref": "#/$defs/ExperimentReferenceModel"
+          },
+          "minItems": 1,
+          "title": "Semantic Effect Basis Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "relationship_kind",
+        "motivation",
+        "motivation_basis_refs",
+        "semantic_effect",
+        "semantic_effect_basis_refs"
+      ],
+      "title": "ExternalConceptAssertionModel",
+      "type": "object"
+    },
+    "ExternalConceptBindingAssertionModel": {
+      "additionalProperties": false,
+      "properties": {
+        "approximation": {
+          "$ref": "#/$defs/ExternalConceptApproximationModel"
+        },
+        "assertion": {
+          "$ref": "#/$defs/ExternalConceptAssertionModel"
+        },
+        "binding_id": {
+          "minLength": 1,
+          "title": "Binding Id",
+          "type": "string"
+        },
+        "confidence": {
+          "$ref": "#/$defs/ExternalConceptConfidenceModel"
+        },
+        "limitations": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Limitations",
+          "type": "array"
+        },
+        "perspective": {
+          "$ref": "#/$defs/ExternalConceptPerspectiveModel"
+        },
+        "provenance": {
+          "$ref": "#/$defs/ExternalConceptProvenanceModel"
+        },
+        "review": {
+          "$ref": "#/$defs/ExternalConceptReviewModel"
+        },
+        "scheme": {
+          "$ref": "#/$defs/ExternalConceptSchemeCoordinateModel"
+        },
+        "subject": {
+          "$ref": "#/$defs/ExternalConceptSubjectModel"
+        },
+        "supporting_evidence_refs": {
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ExperimentEvidenceReferenceModel"
+              },
+              {
+                "$ref": "#/$defs/ExperimentEvidenceRecordReferenceModel"
+              }
+            ]
+          },
+          "title": "Supporting Evidence Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "binding_id",
+        "subject",
+        "scheme",
+        "assertion",
+        "perspective",
+        "provenance",
+        "confidence",
+        "approximation",
+        "limitations",
+        "review"
+      ],
+      "title": "ExternalConceptBindingAssertionModel",
+      "type": "object"
+    },
+    "ExternalConceptConfidenceModel": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "score": {
+                "not": {
+                  "type": "null"
+                }
+              }
+            },
+            "required": [
+              "score"
+            ]
+          },
+          "then": {
+            "properties": {
+              "calibration_profile_ref": {
+                "not": {
+                  "type": "null"
+                }
+              }
+            },
+            "required": [
+              "calibration_profile_ref"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "calibration_profile_ref": {
+                "not": {
+                  "type": "null"
+                }
+              }
+            },
+            "required": [
+              "calibration_profile_ref"
+            ]
+          },
+          "then": {
+            "properties": {
+              "score": {
+                "not": {
+                  "type": "null"
+                }
+              }
+            },
+            "required": [
+              "score"
+            ]
+          }
+        }
+      ],
+      "properties": {
+        "basis": {
+          "minLength": 1,
+          "title": "Basis",
+          "type": "string"
+        },
+        "calibration_profile_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExperimentReferenceModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "posture": {
+          "$ref": "#/$defs/ExternalConceptConfidencePosture"
+        },
+        "score": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Score"
+        }
+      },
+      "required": [
+        "posture",
+        "basis"
+      ],
+      "title": "ExternalConceptConfidenceModel",
+      "type": "object"
+    },
+    "ExternalConceptConfidencePosture": {
+      "enum": [
+        "unknown",
+        "low",
+        "medium",
+        "high"
+      ],
+      "title": "ExternalConceptConfidencePosture",
+      "type": "string"
+    },
+    "ExternalConceptLifecyclePhase": {
+      "enum": [
+        "normalized-authoring",
+        "expanded-authoring",
+        "instantiated",
+        "canonical-snapshot",
+        "compiled",
+        "realized",
+        "observed",
+        "reported"
+      ],
+      "title": "ExternalConceptLifecyclePhase",
+      "type": "string"
+    },
+    "ExternalConceptParticipantAvailabilityKind": {
+      "description": "Eligibility declaration; never an exposure or delivery record.",
+      "enum": [
+        "eligibility-only"
+      ],
+      "title": "ExternalConceptParticipantAvailabilityKind",
+      "type": "string"
+    },
+    "ExternalConceptParticipantAvailabilityModel": {
+      "additionalProperties": false,
+      "properties": {
+        "basis_refs": {
+          "items": {
+            "$ref": "#/$defs/ExperimentReferenceModel"
+          },
+          "minItems": 1,
+          "title": "Basis Refs",
+          "type": "array"
+        },
+        "kind": {
+          "$ref": "#/$defs/ExternalConceptParticipantAvailabilityKind"
+        },
+        "participant_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Participant Refs",
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "kind",
+        "participant_refs",
+        "basis_refs"
+      ],
+      "title": "ExternalConceptParticipantAvailabilityModel",
+      "type": "object"
+    },
+    "ExternalConceptPerspectiveModel": {
+      "additionalProperties": false,
+      "properties": {
+        "asserting_party_kind": {
+          "enum": [
+            "author",
+            "reviewer",
+            "publisher",
+            "scheme-authority",
+            "raes-governance"
+          ],
+          "title": "Asserting Party Kind",
+          "type": "string"
+        },
+        "asserting_party_ref": {
+          "minLength": 1,
+          "title": "Asserting Party Ref",
+          "type": "string"
+        },
+        "authority_basis_refs": {
+          "items": {
+            "$ref": "#/$defs/ExperimentReferenceModel"
+          },
+          "minItems": 1,
+          "title": "Authority Basis Refs",
+          "type": "array"
+        },
+        "participant_availability": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExternalConceptParticipantAvailabilityModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "perspective": {
+          "minLength": 1,
+          "title": "Perspective",
+          "type": "string"
+        }
+      },
+      "required": [
+        "asserting_party_kind",
+        "asserting_party_ref",
+        "perspective",
+        "authority_basis_refs"
+      ],
+      "title": "ExternalConceptPerspectiveModel",
+      "type": "object"
+    },
+    "ExternalConceptProvenanceModel": {
+      "additionalProperties": false,
+      "properties": {
+        "asserted_at": {
+          "format": "date-time",
+          "minLength": 1,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+          "title": "Asserted At",
+          "type": "string"
+        },
+        "source_refs": {
+          "items": {
+            "$ref": "#/$defs/ExperimentReferenceModel"
+          },
+          "minItems": 1,
+          "title": "Source Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "asserted_at",
+        "source_refs"
+      ],
+      "title": "ExternalConceptProvenanceModel",
+      "type": "object"
+    },
+    "ExternalConceptRelationshipKind": {
+      "enum": [
+        "equivalent-to",
+        "broader-than",
+        "narrower-than",
+        "related-to",
+        "instance-of"
+      ],
+      "title": "ExternalConceptRelationshipKind",
+      "type": "string"
+    },
+    "ExternalConceptReviewModel": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "accepted",
+                  "rejected",
+                  "superseded"
+                ]
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "review_refs": {
+                "minItems": 1
+              }
+            },
+            "required": [
+              "review_refs"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "unreviewed"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "review_refs": {
+                "maxItems": 0
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "review_refs": {
+          "items": {
+            "$ref": "#/$defs/ExperimentReferenceModel"
+          },
+          "title": "Review Refs",
+          "type": "array"
+        },
+        "status": {
+          "$ref": "#/$defs/ExternalConceptReviewStatus"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "ExternalConceptReviewModel",
+      "type": "object"
+    },
+    "ExternalConceptReviewStatus": {
+      "enum": [
+        "unreviewed",
+        "in-review",
+        "accepted",
+        "rejected",
+        "superseded"
+      ],
+      "title": "ExternalConceptReviewStatus",
+      "type": "string"
+    },
+    "ExternalConceptSchemeCoordinateModel": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "anyOf": [
+            {
+              "properties": {
+                "source_locator": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "source_locator"
+              ]
+            },
+            {
+              "properties": {
+                "source_digest": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "source_digest"
+              ]
+            }
+          ]
+        }
+      ],
+      "description": "Versioned and inert coordinate for one concept in an external scheme.",
+      "properties": {
+        "authority": {
+          "minLength": 1,
+          "title": "Authority",
+          "type": "string"
+        },
+        "concept_id": {
+          "minLength": 1,
+          "title": "Concept Id",
+          "type": "string"
+        },
+        "revision": {
+          "minLength": 1,
+          "title": "Revision",
+          "type": "string"
+        },
+        "scheme_id": {
+          "minLength": 1,
+          "title": "Scheme Id",
+          "type": "string"
+        },
+        "source_digest": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Digest"
+        },
+        "source_locator": {
+          "anyOf": [
+            {
+              "allOf": [
+                {
+                  "pattern": "^[A-Za-z][A-Za-z0-9+.-]*:"
+                },
+                {
+                  "not": {
+                    "pattern": "^[Ff][Ii][Ll][Ee]:"
+                  }
+                },
+                {
+                  "not": {
+                    "pattern": "^[Dd][Aa][Tt][Aa]:"
+                  }
+                },
+                {
+                  "not": {
+                    "pattern": "^[A-Za-z][A-Za-z0-9+.-]*://[^/?#]*@"
+                  }
+                },
+                {
+                  "not": {
+                    "pattern": "#"
+                  }
+                },
+                {
+                  "not": {
+                    "pattern": "[?&][^#&=]*(?:[Aa][Pp][Ii][-_]?[Kk][Ee][Yy]|[Cc][Rr][Ee][Dd][Ee][Nn][Tt][Ii][Aa][Ll]|[Pp][Aa][Ss][Ss][Ww][Oo][Rr][Dd]|[Ss][Ee][Cc][Rr][Ee][Tt]|[Ss][Ii][Gg][Nn][Aa][Tt][Uu][Rr][Ee]|[Tt][Oo][Kk][Ee][Nn])[^#&=]*="
+                  }
+                },
+                {
+                  "not": {
+                    "pattern": "[?&](?:[Aa][Uu][Tt][Hh]|[Kk][Ee][Yy]|[Ss][Ii][Gg])="
+                  }
+                },
+                {
+                  "if": {
+                    "pattern": "^[Hh][Tt][Tt][Pp][Ss]?:"
+                  },
+                  "then": {
+                    "pattern": "^[Hh][Tt][Tt][Pp][Ss]?://[^/?#]+"
+                  }
+                }
+              ],
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Locator"
+        }
+      },
+      "required": [
+        "scheme_id",
+        "authority",
+        "revision",
+        "concept_id"
+      ],
+      "title": "ExternalConceptSchemeCoordinateModel",
+      "type": "object"
+    },
+    "ExternalConceptSubjectModel": {
+      "additionalProperties": false,
+      "description": "Exact, digest-pinned coordinate for one RAES subject.",
+      "properties": {
+        "artifact_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Artifact Digest",
+          "type": "string"
+        },
+        "canonical_ref": {
+          "minLength": 1,
+          "title": "Canonical Ref",
+          "type": "string"
+        },
+        "lifecycle_phase": {
+          "$ref": "#/$defs/ExternalConceptLifecyclePhase"
+        },
+        "owning_contract_id": {
+          "minLength": 1,
+          "title": "Owning Contract Id",
+          "type": "string"
+        },
+        "subject_kind": {
+          "minLength": 1,
+          "title": "Subject Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "subject_kind",
+        "owning_contract_id",
+        "lifecycle_phase",
+        "canonical_ref",
+        "artifact_digest"
+      ],
+      "title": "ExternalConceptSubjectModel",
+      "type": "object"
+    },
+    "ExternalKnowledgeBindingEffect": {
+      "description": "Portable SEM-217 effects a binding may claim about native RAES meaning.",
+      "enum": [
+        "annotates",
+        "constrains",
+        "refines",
+        "aligns"
+      ],
+      "title": "ExternalKnowledgeBindingEffect",
+      "type": "string"
+    }
+  },
+  "$id": "https://raesystem.github.io/rae/schemas/external-concept-bindings-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "One stable authored set of independently identified binding assertions.",
+  "properties": {
+    "binding_set_id": {
+      "minLength": 1,
+      "title": "Binding Set Id",
+      "type": "string"
+    },
+    "binding_set_version": {
+      "minLength": 1,
+      "title": "Binding Set Version",
+      "type": "string"
+    },
+    "bindings": {
+      "additionalProperties": {
+        "$ref": "#/$defs/ExternalConceptBindingAssertionModel"
+      },
+      "minProperties": 1,
+      "propertyNames": {
+        "minLength": 1
+      },
+      "title": "Bindings",
+      "type": "object"
+    },
+    "schema_version": {
+      "const": "external-concept-bindings/v1",
+      "default": "external-concept-bindings/v1",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "binding_set_id",
+    "binding_set_version",
+    "bindings"
+  ],
+  "title": "ExternalConceptBindingDocumentModel",
+  "type": "object",
+  "x-raes-invariants": [
+    {
+      "description": "External scheme source locators must be absolute, inert, credential-free, fragment-free URIs.",
+      "id": "external-concept-source-locator-safe",
+      "inputs": [
+        {
+          "contract_id": "external-concept-bindings-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "raes_contracts.contracts.ExternalConceptBindingDocumentModel.model_validate"
+    },
+    {
+      "description": "Every external scheme coordinate must declare a source locator, a content digest, or both.",
+      "id": "external-concept-source-pinned",
+      "inputs": [
+        {
+          "contract_id": "external-concept-bindings-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "raes_contracts.contracts.ExternalConceptBindingDocumentModel.model_validate"
+    },
+    {
+      "description": "Participant eligibility references must be unique within one availability assertion.",
+      "id": "external-concept-participants-unique",
+      "inputs": [
+        {
+          "contract_id": "external-concept-bindings-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "raes_contracts.contracts.ExternalConceptBindingDocumentModel.model_validate"
+    },
+    {
+      "description": "Numeric confidence scores and calibration profile references must be supplied together.",
+      "id": "external-concept-confidence-calibrated",
+      "inputs": [
+        {
+          "contract_id": "external-concept-bindings-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "raes_contracts.contracts.ExternalConceptBindingDocumentModel.model_validate"
+    },
+    {
+      "description": "Exact assertions must declare no loss; approximate and lossy assertions must describe loss.",
+      "id": "external-concept-approximation-loss-consistent",
+      "inputs": [
+        {
+          "contract_id": "external-concept-bindings-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "raes_contracts.contracts.ExternalConceptBindingDocumentModel.model_validate"
+    },
+    {
+      "description": "Completed review statuses require review references, while unreviewed assertions forbid them.",
+      "id": "external-concept-review-evidence-consistent",
+      "inputs": [
+        {
+          "contract_id": "external-concept-bindings-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "raes_contracts.contracts.ExternalConceptBindingDocumentModel.model_validate"
+    },
+    {
+      "description": "Binding map keys must equal binding ids and semantic assertion identities must be unique.",
+      "id": "external-concept-binding-identities",
+      "inputs": [
+        {
+          "contract_id": "external-concept-bindings-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "raes_contracts.contracts.ExternalConceptBindingDocumentModel.model_validate"
+    }
+  ],
+  "x-raes-semantic-profile": {
+    "contract_id": "external-concept-bindings-v1",
+    "entry_schema_contract_id": "raes-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/RaesSemanticInvariantEntryModel",
+    "id": "raes-semantic-invariants-v1",
+    "keyword": "x-raes-invariants",
+    "required": true,
+    "uri": "https://raesystem.github.io/rae/schemas/semantic-invariants/v1"
+  }
+}

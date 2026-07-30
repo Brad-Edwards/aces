@@ -1,0 +1,188 @@
+{
+  "$id": "https://raesystem.github.io/rae/schemas/batch-execution-receipt-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "effective_parallelism": {
+            "minimum": 2
+          }
+        },
+        "required": [
+          "effective_parallelism"
+        ]
+      },
+      "then": {
+        "properties": {
+          "isolation_proof_ref": {
+            "type": "string"
+          },
+          "lease_evidence_refs": {
+            "minItems": 1
+          }
+        },
+        "required": [
+          "isolation_proof_ref",
+          "lease_evidence_refs"
+        ]
+      }
+    }
+  ],
+  "description": "Immutable receipt for one admitted-trial execution attempt (SCE-006).\n\nIt composes the scheduling decision and the incumbent operation/cleanup\nevidence for a single attempt without becoming queue state or a second run.\n``effective_parallelism``, ``isolation_proof_ref``, and ``lease_evidence_refs``\nrecord a prior allocator decision; they do not authorize execution.",
+  "properties": {
+    "attempt_deadline": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "minLength": 1,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Attempt Deadline"
+    },
+    "cleanup_receipt_ref": {
+      "minLength": 1,
+      "title": "Cleanup Receipt Ref",
+      "type": "string"
+    },
+    "dispatch_ordinal": {
+      "minimum": 0,
+      "title": "Dispatch Ordinal",
+      "type": "integer"
+    },
+    "effective_parallelism": {
+      "default": 1,
+      "minimum": 1,
+      "title": "Effective Parallelism",
+      "type": "integer"
+    },
+    "execution_attempt_id": {
+      "minLength": 1,
+      "title": "Execution Attempt Id",
+      "type": "string"
+    },
+    "isolation_proof_ref": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Isolation Proof Ref"
+    },
+    "lease_evidence_refs": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Lease Evidence Refs",
+      "type": "array",
+      "uniqueItems": true
+    },
+    "operation_refs": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Operation Refs",
+      "type": "array",
+      "uniqueItems": true
+    },
+    "plan_digest": {
+      "minLength": 1,
+      "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+      "title": "Plan Digest",
+      "type": "string"
+    },
+    "plan_entry_id": {
+      "minLength": 1,
+      "title": "Plan Entry Id",
+      "type": "string"
+    },
+    "plan_id": {
+      "minLength": 1,
+      "title": "Plan Id",
+      "type": "string"
+    },
+    "receipt_id": {
+      "minLength": 1,
+      "title": "Receipt Id",
+      "type": "string"
+    },
+    "run_id": {
+      "minLength": 1,
+      "title": "Run Id",
+      "type": "string"
+    },
+    "scheduling_policy_id": {
+      "const": "trial-coordinate-canonical-v1",
+      "default": "trial-coordinate-canonical-v1",
+      "title": "Scheduling Policy Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "batch-execution-receipt/v1",
+      "default": "batch-execution-receipt/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "trial_outcome": {
+      "enum": [
+        "succeeded",
+        "failed",
+        "cancelled",
+        "timed-out",
+        "aborted"
+      ],
+      "title": "Trial Outcome",
+      "type": "string"
+    }
+  },
+  "required": [
+    "receipt_id",
+    "plan_id",
+    "plan_digest",
+    "plan_entry_id",
+    "run_id",
+    "execution_attempt_id",
+    "dispatch_ordinal",
+    "trial_outcome",
+    "cleanup_receipt_ref"
+  ],
+  "title": "BatchExecutionReceiptModel",
+  "type": "object",
+  "x-raes-invariants": [
+    {
+      "description": "A batch execution receipt keeps attempt identity distinct from plan, entry, and run identities, records the canonical dispatch ordinal under the closed canonical order policy, cites an isolation proof plus live lease evidence only for bounded parallelism (serial default cites neither), and references the cleanup receipt that proves its terminal cleanup.",
+      "id": "batch-execution-receipt-binds-plan-schedule-and-attempt",
+      "inputs": [
+        {
+          "contract_id": "batch-execution-receipt-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "raes_contracts.contracts.batch_execution.BatchExecutionReceiptModel._validate_receipt"
+    }
+  ],
+  "x-raes-semantic-profile": {
+    "contract_id": "batch-execution-receipt-v1",
+    "entry_schema_contract_id": "raes-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/RaesSemanticInvariantEntryModel",
+    "id": "raes-semantic-invariants-v1",
+    "keyword": "x-raes-invariants",
+    "required": true,
+    "uri": "https://raesystem.github.io/rae/schemas/semantic-invariants/v1"
+  }
+}

@@ -9,6 +9,7 @@
     {"dimension": "ports", "independent": true, "evidence_refs": ["evidence:ports"]},
     {"dimension": "storage", "independent": true, "evidence_refs": ["evidence:storage"]},
     {"dimension": "control-plane-locks", "independent": true, "evidence_refs": ["evidence:locks"]},
+    {"dimension": "secret-scope", "independent": true, "evidence_refs": ["evidence:secrets"]},
     {"dimension": "cleanup", "independent": true, "evidence_refs": ["evidence:cleanup"]}
   ]
 }

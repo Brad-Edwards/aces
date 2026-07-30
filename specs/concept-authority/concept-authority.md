@@ -45,6 +45,13 @@ Where SDL, manifests, contracts, provenance, and reports bind their declared
 meaning to canonical concepts. This layer prevents artifact-local strings
 from becoming de facto semantics.
 
+Native apparatus vocabulary-to-family bindings and authored external concept
+assertions are distinct surfaces. Portable assertions relating an exact RAES
+subject to a concept in an arbitrary versioned scheme are governed by
+[Portable External Concept Bindings](./external-concept-bindings.md). They
+complement native manifest `ConceptBinding` entries without changing their
+scope or authority.
+
 ## Surface
 
 A **surface** is a named, bounded, contract-bearing scope of an RAES artifact
@@ -250,7 +257,8 @@ and where their meaning comes from.
 ## Relationship to Other Requirements
 
 - GOV-917: This specification (concept authority definition).
-- GOV-918: Cross-artifact concept binding (how artifacts reference concepts).
+- GOV-918: Cross-artifact concept binding, including
+  [portable external concept assertions](./external-concept-bindings.md).
 - GOV-919: Extension discipline (rules for adding new concepts).
 - GOV-920: Shared semantic profiles ([semantic-profiles.md](./semantic-profiles.md)).
 - GOV-921: Shared reference models ([reference-models.md](./reference-models.md)).
