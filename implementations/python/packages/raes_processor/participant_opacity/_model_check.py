@@ -16,6 +16,7 @@ from raes_contracts.diagnostics import DiagnosticModel
 from raes_contracts.json_ingress import parse_bounded_json_object
 from raes_contracts.participant_opacity import (
     ParticipantOpacityModelCheckConfigurationModel,
+    ParticipantOpacityModelCheckCounterexampleDigestInput,
     ParticipantOpacityModelCheckCounterexampleModel,
     ParticipantOpacityModelCheckCoverageModel,
     ParticipantOpacityModelCheckEvidenceModel,
@@ -129,9 +130,7 @@ def _reachable_fixed_point(
         source = transition.source_state_ordinal
         adjacency[source] = (*adjacency.get(source, ()), transition)
     visited = set(request.initial_state_ordinals)
-    parents: dict[int, ParticipantOpacityModelTransitionModel | None] = {
-        ordinal: None for ordinal in request.initial_state_ordinals
-    }
+    parents: dict[int, ParticipantOpacityModelTransitionModel | None] = dict.fromkeys(request.initial_state_ordinals)
     queue = deque(request.initial_state_ordinals)
     explored_transitions: list[ParticipantOpacityModelTransitionModel] = []
     while queue:
@@ -212,7 +211,13 @@ def model_check_participant_opacity_input(
     diagnostics = unsupported_diagnostics(request, checker)
     if diagnostics:
         return _unsupported_evidence(request, checker, diagnostics)
+    return _reachable_evidence(request, checker)
 
+
+def _reachable_evidence(
+    request: ParticipantOpacityModelCheckInputModel,
+    checker: ParticipantOpacityModelCheckConfigurationModel,
+) -> ParticipantOpacityModelCheckEvidenceModel:
     reachable_states, explored_transitions, parents = _reachable_fixed_point(request)
     evaluation_states = tuple(state for state in reachable_states if state.evaluation_point)
     coverage = _coverage(request, reachable_states, explored_transitions)
@@ -249,14 +254,16 @@ def model_check_participant_opacity_input(
         counterexample = ParticipantOpacityModelCheckCounterexampleModel(
             safe_ref=safe_ref,
             counterexample_digest=participant_opacity_model_check_counterexample_digest(
-                safe_ref=safe_ref,
-                actual_state_ordinal=actual_ordinal,
-                actual_path_transition_ordinals=path,
-                strategy_ref=actual_state.strategy_ref,
-                examined_cell_size=kernel_result.counterexample_cell_size,
-                model_digest=request.canonical_digest,
-                profile_digest=request.profile_digest,
-                derived_carrier_digest=derived_carrier_digest,
+                ParticipantOpacityModelCheckCounterexampleDigestInput(
+                    safe_ref=safe_ref,
+                    actual_state_ordinal=actual_ordinal,
+                    actual_path_transition_ordinals=path,
+                    strategy_ref=actual_state.strategy_ref,
+                    examined_cell_size=kernel_result.counterexample_cell_size,
+                    model_digest=request.canonical_digest,
+                    profile_digest=request.profile_digest,
+                    derived_carrier_digest=derived_carrier_digest,
+                )
             ),
             actual_state_ordinal=actual_ordinal,
             actual_path_transition_ordinals=path,

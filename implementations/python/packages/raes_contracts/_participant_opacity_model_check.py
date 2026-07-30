@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from enum import Enum
 from typing import Annotated, Literal
 
@@ -37,6 +38,20 @@ class ParticipantOpacityModelCheckOutcome(str, Enum):
     COUNTEREXAMPLE = "counterexample-found"
     VACUOUS = "vacuous-secret-domain"
     UNSUPPORTED = "unsupported"
+
+
+@dataclass(frozen=True)
+class ParticipantOpacityModelCheckCounterexampleDigestInput:
+    """Exact safe counterexample coordinates and artifact joins to digest."""
+
+    safe_ref: str
+    actual_state_ordinal: int
+    actual_path_transition_ordinals: tuple[int, ...]
+    strategy_ref: str
+    examined_cell_size: int
+    model_digest: str
+    profile_digest: str
+    derived_carrier_digest: str
 
 
 class ParticipantOpacityModelCheckConfigurationModel(ContractModel):
@@ -221,6 +236,16 @@ def _validate_model_check_coverage_join(
 def _validate_model_check_outcome(
     evidence: ParticipantOpacityModelCheckEvidenceModel,
 ) -> None:
+    _validate_model_check_payload_presence(evidence)
+    _validate_decided_model_check_outcome(evidence)
+    _validate_nonpositive_model_check_outcome(evidence)
+    if evidence.counterexample is not None:
+        _validate_counterexample_join(evidence)
+
+
+def _validate_model_check_payload_presence(
+    evidence: ParticipantOpacityModelCheckEvidenceModel,
+) -> None:
     counterexample_expected = evidence.outcome is ParticipantOpacityModelCheckOutcome.COUNTEREXAMPLE
     unsupported_expected = evidence.outcome in {
         ParticipantOpacityModelCheckOutcome.VACUOUS,
@@ -230,6 +255,11 @@ def _validate_model_check_outcome(
         raise ValueError("model-check counterexample payload must exactly match the outcome")
     if (evidence.unsupported is not None) != unsupported_expected:
         raise ValueError("model-check unsupported payload must exactly match a non-positive outcome")
+
+
+def _validate_decided_model_check_outcome(
+    evidence: ParticipantOpacityModelCheckEvidenceModel,
+) -> None:
     decided = evidence.outcome in {
         ParticipantOpacityModelCheckOutcome.HOLDS,
         ParticipantOpacityModelCheckOutcome.COUNTEREXAMPLE,
@@ -242,6 +272,11 @@ def _validate_model_check_outcome(
         evidence.coverage.reachable_evaluation_points == 0 or evidence.coverage.reachable_secret_points == 0
     ):
         raise ValueError("decided model-check outcomes require reachable secret evaluation points")
+
+
+def _validate_nonpositive_model_check_outcome(
+    evidence: ParticipantOpacityModelCheckEvidenceModel,
+) -> None:
     if (
         evidence.outcome is ParticipantOpacityModelCheckOutcome.VACUOUS
         and evidence.coverage.reachable_secret_points != 0
@@ -251,8 +286,6 @@ def _validate_model_check_outcome(
         diagnostic_codes = tuple(sorted({item.code for item in evidence.diagnostics}))
         if evidence.unsupported.reason_codes != diagnostic_codes:
             raise ValueError("model-check unsupported reason codes must match diagnostics")
-    if evidence.counterexample is not None:
-        _validate_counterexample_join(evidence)
 
 
 def _validate_counterexample_join(
@@ -267,42 +300,36 @@ def _validate_counterexample_join(
     ):
         raise ValueError("model-check counterexample path must reference declared transitions")
     expected_digest = participant_opacity_model_check_counterexample_digest(
-        safe_ref=counterexample.safe_ref,
-        actual_state_ordinal=counterexample.actual_state_ordinal,
-        actual_path_transition_ordinals=counterexample.actual_path_transition_ordinals,
-        strategy_ref=counterexample.strategy_ref,
-        examined_cell_size=counterexample.examined_cell_size,
-        model_digest=evidence.model_digest,
-        profile_digest=evidence.profile_digest,
-        derived_carrier_digest=evidence.derived_carrier_digest,
+        ParticipantOpacityModelCheckCounterexampleDigestInput(
+            safe_ref=counterexample.safe_ref,
+            actual_state_ordinal=counterexample.actual_state_ordinal,
+            actual_path_transition_ordinals=counterexample.actual_path_transition_ordinals,
+            strategy_ref=counterexample.strategy_ref,
+            examined_cell_size=counterexample.examined_cell_size,
+            model_digest=evidence.model_digest,
+            profile_digest=evidence.profile_digest,
+            derived_carrier_digest=evidence.derived_carrier_digest,
+        )
     )
     if counterexample.counterexample_digest != expected_digest:
         raise ValueError("model-check counterexample digest must bind the safe counterexample")
 
 
 def participant_opacity_model_check_counterexample_digest(
-    *,
-    safe_ref: str,
-    actual_state_ordinal: int,
-    actual_path_transition_ordinals: tuple[int, ...],
-    strategy_ref: str,
-    examined_cell_size: int,
-    model_digest: str,
-    profile_digest: str,
-    derived_carrier_digest: str,
+    digest_input: ParticipantOpacityModelCheckCounterexampleDigestInput,
 ) -> str:
     """Digest the safe path identity and exact model/profile/carrier joins."""
 
     return canonical_json_digest(
         {
-            "safe_ref": safe_ref,
-            "actual_state_ordinal": actual_state_ordinal,
-            "actual_path_transition_ordinals": actual_path_transition_ordinals,
-            "strategy_ref": strategy_ref,
-            "examined_cell_size": examined_cell_size,
-            "model_digest": model_digest,
-            "profile_digest": profile_digest,
-            "derived_carrier_digest": derived_carrier_digest,
+            "safe_ref": digest_input.safe_ref,
+            "actual_state_ordinal": digest_input.actual_state_ordinal,
+            "actual_path_transition_ordinals": digest_input.actual_path_transition_ordinals,
+            "strategy_ref": digest_input.strategy_ref,
+            "examined_cell_size": digest_input.examined_cell_size,
+            "model_digest": digest_input.model_digest,
+            "profile_digest": digest_input.profile_digest,
+            "derived_carrier_digest": digest_input.derived_carrier_digest,
         }
     )
 
@@ -310,6 +337,7 @@ def participant_opacity_model_check_counterexample_digest(
 __all__ = (
     "ParticipantOpacityModelCheckConfigurationModel",
     "ParticipantOpacityModelCheckCounterexampleModel",
+    "ParticipantOpacityModelCheckCounterexampleDigestInput",
     "ParticipantOpacityModelCheckCoverageModel",
     "ParticipantOpacityModelCheckEvidenceModel",
     "ParticipantOpacityModelCheckOutcome",

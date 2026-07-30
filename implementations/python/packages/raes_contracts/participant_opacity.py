@@ -27,6 +27,7 @@ from ._participant_opacity_model import (
 )
 from ._participant_opacity_model_check import (
     ParticipantOpacityModelCheckConfigurationModel,
+    ParticipantOpacityModelCheckCounterexampleDigestInput,
     ParticipantOpacityModelCheckCounterexampleModel,
     ParticipantOpacityModelCheckCoverageModel,
     ParticipantOpacityModelCheckEvidenceModel,
@@ -350,6 +351,7 @@ __all__ = [
     "ParticipantOpacityOutcome",
     "ParticipantOpacityModelAssumptionsModel",
     "ParticipantOpacityModelCheckConfigurationModel",
+    "ParticipantOpacityModelCheckCounterexampleDigestInput",
     "ParticipantOpacityModelCheckCounterexampleModel",
     "ParticipantOpacityModelCheckCoverageModel",
     "ParticipantOpacityModelCheckDeclaredCountsModel",

@@ -146,9 +146,10 @@ def test_ground_control_http_client_maps_transport_failures_to_runtime_error(
         raise error
 
     monkeypatch.setattr(requirement_governance, "urlopen", failing_urlopen)
+    client = GroundControlHttpClient("http://ground-control.invalid")
 
     with pytest.raises(RuntimeError, match=message):
-        GroundControlHttpClient("http://ground-control.invalid").get_requirement("project", "ASR-535")
+        client.get_requirement("project", "ASR-535")
 
 
 def test_requirement_uid_context_precedence(monkeypatch) -> None:

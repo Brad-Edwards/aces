@@ -811,8 +811,10 @@ def test_case_rejects_reused_run_identity_and_unrelated_world_lineage() -> None:
     ],
 )
 def test_necessity_world_ref_shape_is_enforced(field_name: str, bad_value: str, message: str) -> None:
+    world = _world("baseline")
+
     with pytest.raises(ValueError, match=message):
-        replace(_world("baseline"), **{field_name: bad_value})
+        replace(world, **{field_name: bad_value})
 
 
 def test_matching_policy_requires_unique_nonempty_dimensions_and_differences() -> None:
