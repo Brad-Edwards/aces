@@ -66,6 +66,10 @@ def _schema_output_path(schemas_dir: Path, name: str) -> Path:
         return schemas_dir / "profiles" / f"{name}.json"
     if name.startswith("random-stream-vector-v"):
         return schemas_dir / "profiles" / f"{name}.json"
+    if name.startswith("behavioral-relation-profile-v"):
+        return schemas_dir / "profiles" / f"{name}.json"
+    if name.startswith("participant-opacity-analysis-"):
+        return schemas_dir / "formal-analysis" / f"{name}.json"
     if name.startswith("scientific-completeness-"):
         return schemas_dir / "profiles" / f"{name}.json"
     if name.startswith("validation-profile-") or name.startswith("validation-basis-disclosure-"):

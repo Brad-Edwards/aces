@@ -214,6 +214,7 @@ marimo/_lsp/
 __marimo__/
 .codex
 /.codex copy/
+/.codex\ /
 
 # Ground Control transient tool output (sonar analysis cache, step telemetry).
 # .gc/plan-rules.md and other authored .gc files stay tracked.

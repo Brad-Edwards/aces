@@ -268,7 +268,7 @@ examples in this guide:
 ```json
 {
   "taxonomy_id": "raes-behavioral-relations",
-  "taxonomy_revision": "rev6",
+  "taxonomy_revision": "rev7",
   "relation_id": "bounded-probe-success",
   "subject": "Seven named participant-policy examples for one declared target and profile",
   "left_carrier_ref": "backend-conformance-report:participant-policy-example",

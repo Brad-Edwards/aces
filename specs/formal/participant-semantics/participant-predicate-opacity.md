@@ -9,7 +9,7 @@ Decision: [ADR-099](../../../docs/decisions/adrs/adr-099-participant-relative-pr
 Machine-readable relation authority:
 `contracts/concept-authority/behavioral-relations-v1.json`,
 `participant-predicate-opacity`, introduced in taxonomy revision `rev5` and
-carried by current revision `rev6`.
+carried by current revision `rev7`.
 
 ## Scope
 
@@ -262,6 +262,7 @@ Assurance states are independent:
 | Lane | Evidence needed | This specification's status |
 | --- | --- | --- |
 | definition | accepted ADR, formal authority, catalog entry, sources, binding validation | defined |
+| checker | closed profile resolution, exact finite carrier admission, deterministic exhaustive scan, replay | implemented |
 | bounded testing | named finite profiles/cases, full bounds, digests, safe counterexamples | bounded |
 | model checking | closed finite model, explored bounds, pinned tool/version, result or counterexample | not model checked |
 | mathematical proof | theorem, assumptions, independently checkable proof, tool/digest when mechanized | deliberately unproved |
@@ -304,16 +305,49 @@ assurance axis.
 - `API-407` owns backend feature strength, required contracts, limitations,
   realization, and evidence disclosure.
 
-Issue #810 defines this architecture. Issues #961 through #965 separately own
-bounded profiles and falsification, finite-state model checking, mathematical
-proof, runtime enforcement, and backend realization/conformance.
+Issue #810 defines this architecture. Issue #961 delivers the closed baseline
+profile and bounded finite falsifier. Issues #962 through #965 separately own
+finite-state model checking, mathematical proof, runtime enforcement, and
+backend realization/conformance.
+
+## Bounded Checker Contract
+
+`participant-opacity-baseline-v1@sem-231/rev1` closes the observer, secret,
+carrier, projection, cut, memory, strategy, supervisor, release, scheduler,
+environment, order, time, and finite-bound coordinates. The canonical loader
+resolves that profile from the governed corpus and the shared behavioral-claim
+validator requires exact agreement among the claim, catalog, profile, and
+observation projection.
+
+The normalized analysis input declares the complete finite possible-point
+carrier and exact realized counts. The processor derives each information cell
+from initial information, observation, retained memory, release state,
+coalition fusion, and strategy. It checks every reachable secret point and, for
+active profiles, requires a nonsecret alternative under the same strategy.
+Empty secret domains are reported as vacuous, incomplete carriers are rejected
+or unsupported, and deterministic counterexamples contain only a safe ordinal
+reference and digest.
+
+The evidence envelope binds the profile, exact normalized-input digest,
+checker configuration, bounds, result, and bounded-test claim. Source and
+materializer identities remain assertions inside that digest-bound normalized
+input; they are not copied into the evidence envelope or authenticated by the
+checker. The evidence therefore declares `normalized-input-only` provenance
+and explicitly disclaims source or materializer authenticity. Its positive
+outcome is
+`no-counterexample-within-declared-finite-bounds`. That result applies only to
+the exact admitted artifact; it is not named or represented as opacity,
+verification, model checking, proof, runtime enforcement, or backend
+conformance.
 
 ## Explicit Nonclaims
 
 This revision does not claim that RAES, the reference runtime, or any backend
-satisfies or enforces participant predicate opacity. It provides no universal
-opacity result, model-check result, mathematical proof, supervisor synthesis,
-runtime mediation, backend declaration, backend realization, or backend
-conformance result. It makes no probabilistic, quantitative-leakage, timed,
-progress-sensitive, all-schedule, coalition, anonymity, noninterference,
-trace-equivalence, simulation, refinement, or bisimulation claim.
+satisfies or enforces participant predicate opacity. The bounded checker
+provides no universal opacity result, model-check result, mathematical proof,
+supervisor synthesis, runtime mediation, backend declaration, backend
+realization, or backend conformance result. It makes no probabilistic,
+quantitative-leakage, timed, progress-sensitive, all-schedule, anonymity,
+noninterference, trace-equivalence, simulation, refinement, or bisimulation
+claim. Coalition handling is limited to the exact declared finite profile and
+fused observations; it is not a general coalition-opacity claim.

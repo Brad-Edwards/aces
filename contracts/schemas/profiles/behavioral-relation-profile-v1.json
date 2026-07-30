@@ -1,0 +1,847 @@
+{
+  "$defs": {
+    "ActiveOpacityStrategyModel": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "active",
+          "title": "Kind",
+          "type": "string"
+        },
+        "strategy_refs": {
+          "items": {
+            "maxLength": 256,
+            "pattern": "^[a-z][a-z0-9._:/-]*$",
+            "type": "string"
+          },
+          "maxItems": 64,
+          "minItems": 1,
+          "title": "Strategy Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind",
+        "strategy_refs"
+      ],
+      "title": "ActiveOpacityStrategyModel",
+      "type": "object"
+    },
+    "BehavioralProfileSourceModel": {
+      "additionalProperties": false,
+      "description": "Immutable source identity used to reproduce one profile revision.",
+      "properties": {
+        "source_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Source Digest",
+          "type": "string"
+        },
+        "source_ref": {
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9._:/-]*$",
+          "title": "Source Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_ref",
+        "source_digest"
+      ],
+      "title": "BehavioralProfileSourceModel",
+      "type": "object"
+    },
+    "CoalitionOpacityObserverModel": {
+      "additionalProperties": false,
+      "description": "A declared coalition observes one explicitly fused information cell.",
+      "properties": {
+        "audience_ref": {
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9._:/-]*$",
+          "title": "Audience Ref",
+          "type": "string"
+        },
+        "fusion_rule_ref": {
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9._:/-]*$",
+          "title": "Fusion Rule Ref",
+          "type": "string"
+        },
+        "fusion_rule_revision": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9][a-z0-9._/-]*$",
+          "title": "Fusion Rule Revision",
+          "type": "string"
+        },
+        "kind": {
+          "const": "coalition",
+          "title": "Kind",
+          "type": "string"
+        },
+        "member_refs": {
+          "items": {
+            "maxLength": 256,
+            "pattern": "^[a-z][a-z0-9._:/-]*$",
+            "type": "string"
+          },
+          "maxItems": 32,
+          "minItems": 2,
+          "title": "Member Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind",
+        "member_refs",
+        "audience_ref",
+        "fusion_rule_ref",
+        "fusion_rule_revision"
+      ],
+      "title": "CoalitionOpacityObserverModel",
+      "type": "object"
+    },
+    "IndividualOpacityObserverModel": {
+      "additionalProperties": false,
+      "description": "One participant or audience observes the selected information cell.",
+      "properties": {
+        "audience_ref": {
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9._:/-]*$",
+          "title": "Audience Ref",
+          "type": "string"
+        },
+        "kind": {
+          "const": "individual",
+          "title": "Kind",
+          "type": "string"
+        },
+        "participant_ref": {
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9._:/-]*$",
+          "title": "Participant Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "participant_ref",
+        "audience_ref"
+      ],
+      "title": "IndividualOpacityObserverModel",
+      "type": "object"
+    },
+    "OpacityCarrierModel": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "finite-possible-points",
+          "title": "Kind",
+          "type": "string"
+        },
+        "reachability_ref": {
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9._:/-]*$",
+          "title": "Reachability Ref",
+          "type": "string"
+        },
+        "reachability_revision": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9][a-z0-9._/-]*$",
+          "title": "Reachability Revision",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "reachability_ref",
+        "reachability_revision"
+      ],
+      "title": "OpacityCarrierModel",
+      "type": "object"
+    },
+    "OpacityFiniteBoundsModel": {
+      "additionalProperties": false,
+      "properties": {
+        "max_cuts": {
+          "maximum": 10000,
+          "minimum": 1,
+          "title": "Max Cuts",
+          "type": "integer"
+        },
+        "max_order_variants": {
+          "maximum": 1000,
+          "minimum": 1,
+          "title": "Max Order Variants",
+          "type": "integer"
+        },
+        "max_points": {
+          "maximum": 100000,
+          "minimum": 1,
+          "title": "Max Points",
+          "type": "integer"
+        },
+        "max_runs": {
+          "maximum": 10000,
+          "minimum": 1,
+          "title": "Max Runs",
+          "type": "integer"
+        },
+        "max_scheduler_environment_pairs": {
+          "maximum": 10000,
+          "minimum": 1,
+          "title": "Max Scheduler Environment Pairs",
+          "type": "integer"
+        },
+        "max_strategies": {
+          "maximum": 1000,
+          "minimum": 1,
+          "title": "Max Strategies",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "max_points",
+        "max_runs",
+        "max_cuts",
+        "max_strategies",
+        "max_scheduler_environment_pairs",
+        "max_order_variants"
+      ],
+      "title": "OpacityFiniteBoundsModel",
+      "type": "object"
+    },
+    "OpacityHorizonModel": {
+      "additionalProperties": false,
+      "properties": {
+        "cut_ref": {
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9._:/-]*$",
+          "title": "Cut Ref",
+          "type": "string"
+        },
+        "cut_revision": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9][a-z0-9._/-]*$",
+          "title": "Cut Revision",
+          "type": "string"
+        },
+        "scope": {
+          "enum": [
+            "current",
+            "initial",
+            "historical-k",
+            "language"
+          ],
+          "title": "Scope",
+          "type": "string"
+        },
+        "steps": {
+          "anyOf": [
+            {
+              "maximum": 1024,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Steps"
+        }
+      },
+      "required": [
+        "scope",
+        "cut_ref",
+        "cut_revision"
+      ],
+      "title": "OpacityHorizonModel",
+      "type": "object"
+    },
+    "OpacityInitialInformationModel": {
+      "additionalProperties": false,
+      "properties": {
+        "projection_ref": {
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9._:/-]*$",
+          "title": "Projection Ref",
+          "type": "string"
+        },
+        "projection_revision": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9][a-z0-9._/-]*$",
+          "title": "Projection Revision",
+          "type": "string"
+        }
+      },
+      "required": [
+        "projection_ref",
+        "projection_revision"
+      ],
+      "title": "OpacityInitialInformationModel",
+      "type": "object"
+    },
+    "OpacityMemoryModel": {
+      "additionalProperties": false,
+      "properties": {
+        "memory_ref": {
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9._:/-]*$",
+          "title": "Memory Ref",
+          "type": "string"
+        },
+        "memory_revision": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9][a-z0-9._/-]*$",
+          "title": "Memory Revision",
+          "type": "string"
+        },
+        "reset_rule_ref": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "pattern": "^[a-z][a-z0-9._:/-]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reset Rule Ref"
+        },
+        "reset_rule_revision": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "pattern": "^[a-z0-9][a-z0-9._/-]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reset Rule Revision"
+        },
+        "retention": {
+          "enum": [
+            "perfect",
+            "cross-episode",
+            "episode-local",
+            "cut-local"
+          ],
+          "title": "Retention",
+          "type": "string"
+        }
+      },
+      "required": [
+        "retention",
+        "memory_ref",
+        "memory_revision"
+      ],
+      "title": "OpacityMemoryModel",
+      "type": "object"
+    },
+    "OpacityObservationModel": {
+      "additionalProperties": false,
+      "properties": {
+        "observable_channels": {
+          "items": {
+            "enum": [
+              "participant-state",
+              "payload",
+              "decision",
+              "action-availability",
+              "delivery",
+              "retry",
+              "latency",
+              "order",
+              "policy-release"
+            ],
+            "type": "string"
+          },
+          "maxItems": 16,
+          "minItems": 1,
+          "title": "Observable Channels",
+          "type": "array"
+        },
+        "projection_ref": {
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9._:/-]*$",
+          "title": "Projection Ref",
+          "type": "string"
+        },
+        "projection_revision": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9][a-z0-9._/-]*$",
+          "title": "Projection Revision",
+          "type": "string"
+        },
+        "supervisor_decisions": {
+          "enum": [
+            "fully-known",
+            "public-contract-hidden-realization",
+            "online-learned",
+            "selectively-disclosed"
+          ],
+          "title": "Supervisor Decisions",
+          "type": "string"
+        }
+      },
+      "required": [
+        "projection_ref",
+        "projection_revision",
+        "observable_channels",
+        "supervisor_decisions"
+      ],
+      "title": "OpacityObservationModel",
+      "type": "object"
+    },
+    "OpacityOrderModel": {
+      "additionalProperties": false,
+      "properties": {
+        "order_refs": {
+          "items": {
+            "maxLength": 256,
+            "pattern": "^[a-z][a-z0-9._:/-]*$",
+            "type": "string"
+          },
+          "maxItems": 64,
+          "minItems": 1,
+          "title": "Order Refs",
+          "type": "array"
+        },
+        "treatment": {
+          "enum": [
+            "total-order",
+            "named-linearization",
+            "all-linearizations",
+            "partial-order",
+            "causal-frontier"
+          ],
+          "title": "Treatment",
+          "type": "string"
+        }
+      },
+      "required": [
+        "treatment",
+        "order_refs"
+      ],
+      "title": "OpacityOrderModel",
+      "type": "object"
+    },
+    "OpacityReleaseModel": {
+      "additionalProperties": false,
+      "properties": {
+        "concealment_erases_retained_knowledge": {
+          "const": false,
+          "title": "Concealment Erases Retained Knowledge",
+          "type": "boolean"
+        },
+        "exact_cut": {
+          "title": "Exact Cut",
+          "type": "boolean"
+        },
+        "schedule_ref": {
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9._:/-]*$",
+          "title": "Schedule Ref",
+          "type": "string"
+        },
+        "schedule_revision": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9][a-z0-9._/-]*$",
+          "title": "Schedule Revision",
+          "type": "string"
+        }
+      },
+      "required": [
+        "schedule_ref",
+        "schedule_revision",
+        "exact_cut",
+        "concealment_erases_retained_knowledge"
+      ],
+      "title": "OpacityReleaseModel",
+      "type": "object"
+    },
+    "OpacitySecretPredicateModel": {
+      "additionalProperties": false,
+      "properties": {
+        "predicate_ref": {
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9._:/-]*$",
+          "title": "Predicate Ref",
+          "type": "string"
+        },
+        "predicate_revision": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9][a-z0-9._/-]*$",
+          "title": "Predicate Revision",
+          "type": "string"
+        },
+        "truth_polarity": {
+          "const": "one-sided-true",
+          "title": "Truth Polarity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "predicate_ref",
+        "predicate_revision",
+        "truth_polarity"
+      ],
+      "title": "OpacitySecretPredicateModel",
+      "type": "object"
+    },
+    "OpacityTimeModel": {
+      "additionalProperties": false,
+      "properties": {
+        "absence_observable": {
+          "title": "Absence Observable",
+          "type": "boolean"
+        },
+        "model": {
+          "const": "untimed",
+          "title": "Model",
+          "type": "string"
+        },
+        "opportunity_basis_ref": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "pattern": "^[a-z][a-z0-9._:/-]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Opportunity Basis Ref"
+        },
+        "opportunity_basis_revision": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "pattern": "^[a-z0-9][a-z0-9._/-]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Opportunity Basis Revision"
+        },
+        "progress": {
+          "const": "progress-insensitive",
+          "title": "Progress",
+          "type": "string"
+        }
+      },
+      "required": [
+        "model",
+        "progress",
+        "absence_observable"
+      ],
+      "title": "OpacityTimeModel",
+      "type": "object"
+    },
+    "ParticipantPredicateOpacityParametersModel": {
+      "additionalProperties": false,
+      "description": "Closed parameters for the SEM-231 one-sided possibilistic kernel.",
+      "properties": {
+        "bounds": {
+          "$ref": "#/$defs/OpacityFiniteBoundsModel"
+        },
+        "carrier": {
+          "$ref": "#/$defs/OpacityCarrierModel"
+        },
+        "environment_refs": {
+          "items": {
+            "maxLength": 256,
+            "pattern": "^[a-z][a-z0-9._:/-]*$",
+            "type": "string"
+          },
+          "maxItems": 64,
+          "minItems": 1,
+          "title": "Environment Refs",
+          "type": "array"
+        },
+        "horizon": {
+          "$ref": "#/$defs/OpacityHorizonModel"
+        },
+        "initial_information": {
+          "$ref": "#/$defs/OpacityInitialInformationModel"
+        },
+        "kind": {
+          "const": "participant-predicate-opacity/v1",
+          "title": "Kind",
+          "type": "string"
+        },
+        "memory": {
+          "$ref": "#/$defs/OpacityMemoryModel"
+        },
+        "nondeterminism": {
+          "const": "possibilistic-support",
+          "title": "Nondeterminism",
+          "type": "string"
+        },
+        "observation": {
+          "$ref": "#/$defs/OpacityObservationModel"
+        },
+        "observer": {
+          "discriminator": {
+            "mapping": {
+              "coalition": "#/$defs/CoalitionOpacityObserverModel",
+              "individual": "#/$defs/IndividualOpacityObserverModel"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/IndividualOpacityObserverModel"
+            },
+            {
+              "$ref": "#/$defs/CoalitionOpacityObserverModel"
+            }
+          ],
+          "title": "Observer"
+        },
+        "order": {
+          "$ref": "#/$defs/OpacityOrderModel"
+        },
+        "probability": {
+          "const": "outside-baseline",
+          "title": "Probability",
+          "type": "string"
+        },
+        "release": {
+          "$ref": "#/$defs/OpacityReleaseModel"
+        },
+        "scheduler_refs": {
+          "items": {
+            "maxLength": 256,
+            "pattern": "^[a-z][a-z0-9._:/-]*$",
+            "type": "string"
+          },
+          "maxItems": 64,
+          "minItems": 1,
+          "title": "Scheduler Refs",
+          "type": "array"
+        },
+        "secret": {
+          "$ref": "#/$defs/OpacitySecretPredicateModel"
+        },
+        "strategy": {
+          "discriminator": {
+            "mapping": {
+              "active": "#/$defs/ActiveOpacityStrategyModel",
+              "passive": "#/$defs/PassiveOpacityStrategyModel"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/PassiveOpacityStrategyModel"
+            },
+            {
+              "$ref": "#/$defs/ActiveOpacityStrategyModel"
+            }
+          ],
+          "title": "Strategy"
+        },
+        "time": {
+          "$ref": "#/$defs/OpacityTimeModel"
+        }
+      },
+      "required": [
+        "kind",
+        "observer",
+        "secret",
+        "carrier",
+        "initial_information",
+        "observation",
+        "horizon",
+        "memory",
+        "strategy",
+        "release",
+        "scheduler_refs",
+        "environment_refs",
+        "nondeterminism",
+        "order",
+        "time",
+        "probability",
+        "bounds"
+      ],
+      "title": "ParticipantPredicateOpacityParametersModel",
+      "type": "object"
+    },
+    "PassiveOpacityStrategyModel": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "passive",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "PassiveOpacityStrategyModel",
+      "type": "object"
+    }
+  },
+  "$id": "https://raesystem.github.io/rae/schemas/behavioral-relation-profile-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "One resolved relation profile with a closed parameter variant.",
+  "properties": {
+    "explicit_non_claims": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "maxItems": 32,
+      "minItems": 1,
+      "title": "Explicit Non Claims",
+      "type": "array"
+    },
+    "finite_analysis_scope": {
+      "const": "declared-complete-finite-carrier",
+      "title": "Finite Analysis Scope",
+      "type": "string"
+    },
+    "left_carrier_ref": {
+      "maxLength": 256,
+      "pattern": "^[a-z][a-z0-9._:/-]*$",
+      "title": "Left Carrier Ref",
+      "type": "string"
+    },
+    "limitations": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "maxItems": 32,
+      "minItems": 1,
+      "title": "Limitations",
+      "type": "array"
+    },
+    "observation_projection_ref": {
+      "maxLength": 256,
+      "pattern": "^[a-z][a-z0-9._:/-]*$",
+      "title": "Observation Projection Ref",
+      "type": "string"
+    },
+    "observation_projection_revision": {
+      "maxLength": 128,
+      "pattern": "^[a-z0-9][a-z0-9._/-]*$",
+      "title": "Observation Projection Revision",
+      "type": "string"
+    },
+    "parameters": {
+      "$ref": "#/$defs/ParticipantPredicateOpacityParametersModel"
+    },
+    "profile_id": {
+      "maxLength": 64,
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "title": "Profile Id",
+      "type": "string"
+    },
+    "profile_revision": {
+      "maxLength": 128,
+      "pattern": "^[a-z0-9][a-z0-9._/-]*$",
+      "title": "Profile Revision",
+      "type": "string"
+    },
+    "relation_id": {
+      "const": "participant-predicate-opacity",
+      "title": "Relation Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "behavioral-relation-profile/v1",
+      "default": "behavioral-relation-profile/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source_refs": {
+      "items": {
+        "$ref": "#/$defs/BehavioralProfileSourceModel"
+      },
+      "maxItems": 16,
+      "minItems": 1,
+      "title": "Source Refs",
+      "type": "array"
+    },
+    "taxonomy_id": {
+      "const": "raes-behavioral-relations",
+      "title": "Taxonomy Id",
+      "type": "string"
+    },
+    "taxonomy_revision": {
+      "pattern": "^[a-z0-9][a-z0-9.-]*$",
+      "title": "Taxonomy Revision",
+      "type": "string"
+    }
+  },
+  "required": [
+    "profile_id",
+    "profile_revision",
+    "taxonomy_id",
+    "taxonomy_revision",
+    "relation_id",
+    "left_carrier_ref",
+    "observation_projection_ref",
+    "observation_projection_revision",
+    "finite_analysis_scope",
+    "parameters",
+    "source_refs",
+    "limitations",
+    "explicit_non_claims"
+  ],
+  "title": "BehavioralRelationProfileModel",
+  "type": "object",
+  "x-raes-invariants": [
+    {
+      "description": "The closed relation-specific parameter variant must match the profile relation, carrier, projection, finite domains, local refs, limitations, and explicit nonclaims.",
+      "id": "behavioral-relation-profile-local-join",
+      "inputs": [
+        {
+          "contract_id": "behavioral-relation-profile-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "raes_contracts.behavioral_relation_profiles.BehavioralRelationProfileModel"
+    },
+    {
+      "description": "Catalog, profile, carrier, observation projection, and claim coordinates must resolve exactly through the shared behavioral claim validator.",
+      "id": "behavioral-relation-profile-claim-resolution",
+      "inputs": [
+        {
+          "contract_id": "behavioral-relation-profile-v1",
+          "instance_path": "#"
+        },
+        {
+          "contract_id": "behavioral-relations-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "raes_contracts.behavioral_relations.validate_behavioral_claim_binding"
+    }
+  ],
+  "x-raes-semantic-profile": {
+    "contract_id": "behavioral-relation-profile-v1",
+    "entry_schema_contract_id": "raes-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/RaesSemanticInvariantEntryModel",
+    "id": "raes-semantic-invariants-v1",
+    "keyword": "x-raes-invariants",
+    "required": true,
+    "uri": "https://raesystem.github.io/rae/schemas/semantic-invariants/v1"
+  }
+}

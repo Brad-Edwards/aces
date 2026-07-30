@@ -1,0 +1,10 @@
+{
+  "contract_id": "participant-opacity-analysis-input-v1",
+  "schema_path": "contracts/schemas/formal-analysis/participant-opacity-analysis-input-v1.json",
+  "stability": "draft",
+  "content_hash": "80fdff8cf1bdfa185ab67d0e8710baf727b6752279a9b3a1724f50a9f31cf368",
+  "last_change": {
+    "summary": "Published the exact finite participant-opacity analysis input contract for issue #961.",
+    "content_hash": "80fdff8cf1bdfa185ab67d0e8710baf727b6752279a9b3a1724f50a9f31cf368"
+  }
+}

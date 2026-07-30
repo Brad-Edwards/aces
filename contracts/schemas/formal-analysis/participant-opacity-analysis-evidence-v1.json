@@ -1,0 +1,571 @@
+{
+  "$defs": {
+    "BehavioralClaimBindingModel": {
+      "additionalProperties": false,
+      "description": "A bounded claim tied to one revisioned behavioral-relation definition.\n\nThis is deliberately a claim *binding*, not another relation registry. The\ncatalog owns relation meaning; consumers supply the subject, carriers,\nquantifier/evidence boundary, assurance state, and explicit limitations.",
+      "properties": {
+        "assurance_axis": {
+          "anyOf": [
+            {
+              "enum": [
+                "definition",
+                "checker",
+                "bounded-test",
+                "model-check",
+                "proof",
+                "runtime-enforcement",
+                "backend-declaration",
+                "backend-realization",
+                "backend-conformance"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Assurance Axis"
+        },
+        "assurance_status": {
+          "enum": [
+            "defined",
+            "implemented",
+            "tested",
+            "model-checked",
+            "proved",
+            "deliberately-unproved",
+            "future",
+            "enforced",
+            "declared",
+            "realized",
+            "conformant"
+          ],
+          "title": "Assurance Status",
+          "type": "string"
+        },
+        "evidence_boundary": {
+          "minLength": 1,
+          "title": "Evidence Boundary",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "evidence_scope": {
+          "enum": [
+            "structural",
+            "finite",
+            "statistical",
+            "model-check",
+            "proof"
+          ],
+          "title": "Evidence Scope",
+          "type": "string"
+        },
+        "explicit_non_claims": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Explicit Non Claims",
+          "type": "array"
+        },
+        "left_carrier_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Left Carrier Ref"
+        },
+        "limitations": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Limitations",
+          "type": "array"
+        },
+        "observation_projection_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Observation Projection Ref"
+        },
+        "observation_projection_revision": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Observation Projection Revision"
+        },
+        "quantifier_scope": {
+          "enum": [
+            "single-artifact",
+            "finite-cases",
+            "sampled-population",
+            "all-admitted-inputs",
+            "all-traces",
+            "all-strategies"
+          ],
+          "title": "Quantifier Scope",
+          "type": "string"
+        },
+        "relation_id": {
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "title": "Relation Id",
+          "type": "string"
+        },
+        "relation_parameter_profile_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Relation Parameter Profile Ref"
+        },
+        "relation_parameter_profile_revision": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Relation Parameter Profile Revision"
+        },
+        "right_carrier_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Right Carrier Ref"
+        },
+        "subject": {
+          "minLength": 1,
+          "title": "Subject",
+          "type": "string"
+        },
+        "taxonomy_id": {
+          "minLength": 1,
+          "title": "Taxonomy Id",
+          "type": "string"
+        },
+        "taxonomy_revision": {
+          "pattern": "^[a-z0-9][a-z0-9.-]*$",
+          "title": "Taxonomy Revision",
+          "type": "string"
+        }
+      },
+      "required": [
+        "taxonomy_id",
+        "taxonomy_revision",
+        "relation_id",
+        "subject",
+        "quantifier_scope",
+        "evidence_scope",
+        "evidence_boundary",
+        "assurance_status",
+        "limitations",
+        "explicit_non_claims"
+      ],
+      "title": "BehavioralClaimBindingModel",
+      "type": "object"
+    },
+    "DiagnosticModel": {
+      "additionalProperties": false,
+      "description": "Closed portable diagnostic shape for published contracts.",
+      "properties": {
+        "address": {
+          "maxLength": 4096,
+          "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+          "title": "Address",
+          "type": "string"
+        },
+        "code": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$",
+          "title": "Code",
+          "type": "string"
+        },
+        "domain": {
+          "maxLength": 64,
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Domain",
+          "type": "string"
+        },
+        "message": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "severity": {
+          "$ref": "#/$defs/Severity",
+          "default": "error"
+        }
+      },
+      "required": [
+        "code",
+        "domain",
+        "address",
+        "message"
+      ],
+      "title": "DiagnosticModel",
+      "type": "object"
+    },
+    "ParticipantOpacityCheckerConfigurationModel": {
+      "additionalProperties": false,
+      "description": "Complete output-affecting identity of the bounded checker.",
+      "properties": {
+        "algorithm": {
+          "const": "exhaustive-information-cell-scan/v1",
+          "title": "Algorithm",
+          "type": "string"
+        },
+        "counterexample_selection": {
+          "const": "lowest-canonical-ordinal/v1",
+          "title": "Counterexample Selection",
+          "type": "string"
+        },
+        "information_cell_key": {
+          "const": "initial-observation-memory-release-coalition-strategy-order/v1",
+          "title": "Information Cell Key",
+          "type": "string"
+        },
+        "max_points": {
+          "const": 4096,
+          "title": "Max Points",
+          "type": "integer"
+        },
+        "profile": {
+          "const": "raes-participant-opacity-checker/v1",
+          "title": "Profile",
+          "type": "string"
+        },
+        "tool_id": {
+          "const": "raes-processor-participant-opacity",
+          "title": "Tool Id",
+          "type": "string"
+        },
+        "tool_version": {
+          "const": "1.0.0",
+          "title": "Tool Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "profile",
+        "tool_id",
+        "tool_version",
+        "algorithm",
+        "information_cell_key",
+        "counterexample_selection",
+        "max_points"
+      ],
+      "title": "ParticipantOpacityCheckerConfigurationModel",
+      "type": "object"
+    },
+    "ParticipantOpacityCounterexampleModel": {
+      "additionalProperties": false,
+      "description": "Sanitized reference to one canonical secret-only information cell.",
+      "properties": {
+        "actual_point_ordinal": {
+          "maximum": 99999,
+          "minimum": 0,
+          "title": "Actual Point Ordinal",
+          "type": "integer"
+        },
+        "counterexample_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Counterexample Digest",
+          "type": "string"
+        },
+        "examined_cell_size": {
+          "maximum": 100000,
+          "minimum": 1,
+          "title": "Examined Cell Size",
+          "type": "integer"
+        },
+        "safe_ref": {
+          "pattern": "^participant-opacity-counterexample:[0-9]{6}$",
+          "title": "Safe Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "safe_ref",
+        "counterexample_digest",
+        "actual_point_ordinal",
+        "examined_cell_size"
+      ],
+      "title": "ParticipantOpacityCounterexampleModel",
+      "type": "object"
+    },
+    "ParticipantOpacityOutcome": {
+      "description": "Closed bounded-analysis outcomes.",
+      "enum": [
+        "no-counterexample-within-declared-finite-bounds",
+        "counterexample-found",
+        "vacuous-secret-domain",
+        "unsupported"
+      ],
+      "title": "ParticipantOpacityOutcome",
+      "type": "string"
+    },
+    "Severity": {
+      "description": "Diagnostic severity level.",
+      "enum": [
+        "error",
+        "warning",
+        "info"
+      ],
+      "title": "Severity",
+      "type": "string"
+    },
+    "UnsupportedParticipantOpacityAnalysisModel": {
+      "additionalProperties": false,
+      "description": "Stable fail-closed reason set for a valid but non-positive analysis.",
+      "properties": {
+        "profile": {
+          "const": "raes-participant-opacity-unsupported/v1",
+          "title": "Profile",
+          "type": "string"
+        },
+        "reason_codes": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 64,
+          "minItems": 1,
+          "title": "Reason Codes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "profile",
+        "reason_codes"
+      ],
+      "title": "UnsupportedParticipantOpacityAnalysisModel",
+      "type": "object"
+    }
+  },
+  "$id": "https://raesystem.github.io/rae/schemas/participant-opacity-analysis-evidence-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Digest-bound bounded result with no raw possible-point contents.",
+  "properties": {
+    "analysis_profile": {
+      "const": "raes-participant-opacity-bounded-test/v1",
+      "title": "Analysis Profile",
+      "type": "string"
+    },
+    "checked_points": {
+      "maximum": 100000,
+      "minimum": 0,
+      "title": "Checked Points",
+      "type": "integer"
+    },
+    "checked_secret_points": {
+      "maximum": 100000,
+      "minimum": 0,
+      "title": "Checked Secret Points",
+      "type": "integer"
+    },
+    "checker_configuration": {
+      "$ref": "#/$defs/ParticipantOpacityCheckerConfigurationModel"
+    },
+    "checker_configuration_digest": {
+      "minLength": 1,
+      "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+      "title": "Checker Configuration Digest",
+      "type": "string"
+    },
+    "claim": {
+      "$ref": "#/$defs/BehavioralClaimBindingModel"
+    },
+    "counterexample": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ParticipantOpacityCounterexampleModel"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "diagnostics": {
+      "items": {
+        "$ref": "#/$defs/DiagnosticModel"
+      },
+      "maxItems": 64,
+      "title": "Diagnostics",
+      "type": "array"
+    },
+    "normalized_model_digest": {
+      "minLength": 1,
+      "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+      "title": "Normalized Model Digest",
+      "type": "string"
+    },
+    "normalized_model_ref": {
+      "maxLength": 256,
+      "pattern": "^[a-z][a-z0-9._:/-]*$",
+      "title": "Normalized Model Ref",
+      "type": "string"
+    },
+    "outcome": {
+      "$ref": "#/$defs/ParticipantOpacityOutcome"
+    },
+    "profile_digest": {
+      "minLength": 1,
+      "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+      "title": "Profile Digest",
+      "type": "string"
+    },
+    "profile_id": {
+      "maxLength": 256,
+      "pattern": "^[a-z][a-z0-9._:/-]*$",
+      "title": "Profile Id",
+      "type": "string"
+    },
+    "profile_revision": {
+      "maxLength": 128,
+      "pattern": "^[a-z0-9][a-z0-9._/-]*$",
+      "title": "Profile Revision",
+      "type": "string"
+    },
+    "provenance_scope": {
+      "const": "normalized-input-only",
+      "title": "Provenance Scope",
+      "type": "string"
+    },
+    "relation_id": {
+      "const": "participant-predicate-opacity",
+      "title": "Relation Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "participant-opacity-analysis-evidence/v1",
+      "default": "participant-opacity-analysis-evidence/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "taxonomy_id": {
+      "const": "raes-behavioral-relations",
+      "title": "Taxonomy Id",
+      "type": "string"
+    },
+    "taxonomy_revision": {
+      "maxLength": 128,
+      "pattern": "^[a-z0-9][a-z0-9._/-]*$",
+      "title": "Taxonomy Revision",
+      "type": "string"
+    },
+    "unsupported": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/UnsupportedParticipantOpacityAnalysisModel"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "analysis_profile",
+    "provenance_scope",
+    "taxonomy_id",
+    "taxonomy_revision",
+    "relation_id",
+    "profile_id",
+    "profile_revision",
+    "profile_digest",
+    "normalized_model_ref",
+    "normalized_model_digest",
+    "checker_configuration",
+    "checker_configuration_digest",
+    "claim",
+    "outcome",
+    "checked_points",
+    "checked_secret_points",
+    "diagnostics"
+  ],
+  "title": "ParticipantOpacityAnalysisEvidenceModel",
+  "type": "object",
+  "x-raes-invariants": [
+    {
+      "description": "Profile, normalized model, checker, claim, outcome payload, diagnostics, normalized-input-only provenance scope, and bounded assurance coordinates must remain digest-bound and mutually consistent.",
+      "id": "participant-opacity-evidence-joins",
+      "inputs": [
+        {
+          "contract_id": "participant-opacity-analysis-evidence-v1",
+          "instance_path": "#"
+        },
+        {
+          "contract_id": "participant-opacity-analysis-input-v1",
+          "instance_path": "#"
+        },
+        {
+          "contract_id": "behavioral-relation-profile-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "raes_contracts.participant_opacity.ParticipantOpacityAnalysisEvidenceModel"
+    }
+  ],
+  "x-raes-semantic-profile": {
+    "contract_id": "participant-opacity-analysis-evidence-v1",
+    "entry_schema_contract_id": "raes-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/RaesSemanticInvariantEntryModel",
+    "id": "raes-semantic-invariants-v1",
+    "keyword": "x-raes-invariants",
+    "required": true,
+    "uri": "https://raesystem.github.io/rae/schemas/semantic-invariants/v1"
+  }
+}
