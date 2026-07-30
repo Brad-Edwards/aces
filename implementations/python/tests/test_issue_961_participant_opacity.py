@@ -46,14 +46,14 @@ PROFILE_PATH = REPO_ROOT / "contracts/profiles/behavioral-relation" / f"{PROFILE
 def _claim(**overrides: object) -> BehavioralClaimBindingModel:
     payload: dict[str, object] = {
         "taxonomy_id": "raes-behavioral-relations",
-        "taxonomy_revision": "rev7",
+        "taxonomy_revision": "rev8",
         "relation_id": "participant-predicate-opacity",
         "subject": "The exact declared finite possible-point carrier.",
         "left_carrier_ref": "possible-point-carrier:participant-opacity-fixture-v1",
         "observation_projection_ref": "participant-opacity-observation:complete-v1",
         "observation_projection_revision": "rev1",
         "relation_parameter_profile_ref": PROFILE_ID,
-        "relation_parameter_profile_revision": "sem-231/rev1",
+        "relation_parameter_profile_revision": "sem-231/rev2",
         "quantifier_scope": "finite-cases",
         "evidence_scope": "finite",
         "assurance_axis": "bounded-test",
@@ -79,9 +79,9 @@ def test_published_profile_closes_every_sem_231_coordinate() -> None:
 
     assert profile.schema_version == "behavioral-relation-profile/v1"
     assert profile.profile_id == PROFILE_ID
-    assert profile.profile_revision == "sem-231/rev1"
+    assert profile.profile_revision == "sem-231/rev2"
     assert profile.taxonomy_id == "raes-behavioral-relations"
-    assert profile.taxonomy_revision == "rev7"
+    assert profile.taxonomy_revision == "rev8"
     assert profile.relation_id == "participant-predicate-opacity"
     assert profile.left_carrier_ref == _claim().left_carrier_ref
     assert profile.parameters.kind == "participant-predicate-opacity/v1"
@@ -106,7 +106,7 @@ def test_claim_resolution_joins_catalog_profile_carrier_and_projection() -> None
         _claim(taxonomy_revision="rev6"),
         _claim(left_carrier_ref="possible-point-carrier:other"),
         _claim(observation_projection_ref="participant-opacity-observation:payload-only"),
-        _claim(relation_parameter_profile_revision="sem-231/rev2"),
+        _claim(relation_parameter_profile_revision="sem-231/rev3"),
     )
     for binding in mismatches:
         with pytest.raises(ValueError, match="profile|catalog|carrier|projection"):

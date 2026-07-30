@@ -13,6 +13,7 @@ from urllib.request import Request, urlopen
 from .common import PolicyFailure, load_yaml, path_matches_any
 
 UID_RE = re.compile(r"\b([A-Z]{3}-\d{3})\b", re.IGNORECASE)
+DEFAULT_HTTP_TIMEOUT_SECONDS = 5.0
 
 
 def load_policy(repo_root: Path) -> dict:
@@ -26,8 +27,14 @@ class RequirementClient(Protocol):
 
 
 class GroundControlHttpClient:
-    def __init__(self, base_url: str) -> None:
+    def __init__(
+        self,
+        base_url: str,
+        *,
+        timeout_seconds: float = DEFAULT_HTTP_TIMEOUT_SECONDS,
+    ) -> None:
         self.base_url = base_url.rstrip("/")
+        self.timeout_seconds = timeout_seconds
 
     def _request(self, path: str, *, params: dict[str, str] | None = None) -> dict | list:
         url = f"{self.base_url}{path}"
@@ -35,13 +42,18 @@ class GroundControlHttpClient:
             url = f"{url}?{urlencode(params)}"
         request = Request(url, headers={"X-Actor": "repo-policy"})  # noqa: S310 - explicit GC HTTP endpoint
         try:
-            with urlopen(request) as response:  # noqa: S310 - explicit GC HTTP endpoint
+            with urlopen(  # noqa: S310 - explicit GC HTTP endpoint
+                request,
+                timeout=self.timeout_seconds,
+            ) as response:
                 return json.loads(response.read().decode("utf-8"))
         except HTTPError as exc:
             body = exc.read().decode("utf-8", errors="replace")
             raise RuntimeError(f"{exc.code}: {body}") from exc
         except URLError as exc:
             raise RuntimeError(str(exc.reason)) from exc
+        except TimeoutError as exc:
+            raise RuntimeError("request timed out") from exc
 
     def get_requirement(self, project: str, uid: str) -> dict:
         return self._request(f"/api/v1/requirements/uid/{uid}", params={"project": project})

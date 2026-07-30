@@ -7,6 +7,35 @@ from typing import Annotated, Literal
 
 from pydantic import Field, model_validator
 
+from ._participant_opacity_common import (
+    MAX_OPACITY_DIAGNOSTICS,
+    MAX_OPACITY_MODEL_STATES,
+    MAX_OPACITY_MODEL_TRANSITIONS,
+    MAX_OPACITY_POINTS,
+    MODEL_CHECK_PROVENANCE_NONCLAIM,
+    NORMALIZED_INPUT_PROVENANCE_NONCLAIM,
+    Revision,
+    SafeKey,
+    SafeRef,
+)
+from ._participant_opacity_model import (
+    ParticipantOpacityModelAssumptionsModel,
+    ParticipantOpacityModelCheckDeclaredCountsModel,
+    ParticipantOpacityModelCheckInputModel,
+    ParticipantOpacityModelStateModel,
+    ParticipantOpacityModelTransitionModel,
+)
+from ._participant_opacity_model_check import (
+    ParticipantOpacityModelCheckConfigurationModel,
+    ParticipantOpacityModelCheckCounterexampleDigestInput,
+    ParticipantOpacityModelCheckCounterexampleModel,
+    ParticipantOpacityModelCheckCoverageModel,
+    ParticipantOpacityModelCheckEvidenceModel,
+    ParticipantOpacityModelCheckOutcome,
+    ParticipantOpacityStrategyCoverageModel,
+    UnsupportedParticipantOpacityModelCheckModel,
+    participant_opacity_model_check_counterexample_digest,
+)
 from .canonical import canonical_json_digest
 from .contracts.base import (
     BehavioralClaimBindingModel,
@@ -18,24 +47,6 @@ from .satisfiability import SourceArtifactIdentityModel
 from .versions import (
     PARTICIPANT_OPACITY_ANALYSIS_EVIDENCE_SCHEMA_VERSION,
     PARTICIPANT_OPACITY_ANALYSIS_INPUT_SCHEMA_VERSION,
-)
-
-SafeRef = Annotated[
-    str,
-    Field(pattern=r"^[a-z][a-z0-9._:/-]*$", max_length=256),
-]
-SafeKey = Annotated[
-    str,
-    Field(pattern=r"^[a-z][a-z0-9._:/|-]*$", max_length=256),
-]
-Revision = Annotated[
-    str,
-    Field(pattern=r"^[a-z0-9][a-z0-9._/-]*$", max_length=128),
-]
-MAX_OPACITY_POINTS = 100_000
-MAX_OPACITY_DIAGNOSTICS = 64
-NORMALIZED_INPUT_PROVENANCE_NONCLAIM = (
-    "No source or materializer authenticity is established by this normalized-input evidence."
 )
 
 
@@ -327,6 +338,9 @@ def participant_opacity_counterexample_digest(
 
 __all__ = [
     "MAX_OPACITY_POINTS",
+    "MAX_OPACITY_MODEL_STATES",
+    "MAX_OPACITY_MODEL_TRANSITIONS",
+    "MODEL_CHECK_PROVENANCE_NONCLAIM",
     "NORMALIZED_INPUT_PROVENANCE_NONCLAIM",
     "OpacityPossiblePointModel",
     "ParticipantOpacityAnalysisEvidenceModel",
@@ -335,6 +349,20 @@ __all__ = [
     "ParticipantOpacityCounterexampleModel",
     "ParticipantOpacityDeclaredCountsModel",
     "ParticipantOpacityOutcome",
+    "ParticipantOpacityModelAssumptionsModel",
+    "ParticipantOpacityModelCheckConfigurationModel",
+    "ParticipantOpacityModelCheckCounterexampleDigestInput",
+    "ParticipantOpacityModelCheckCounterexampleModel",
+    "ParticipantOpacityModelCheckCoverageModel",
+    "ParticipantOpacityModelCheckDeclaredCountsModel",
+    "ParticipantOpacityModelCheckEvidenceModel",
+    "ParticipantOpacityModelCheckInputModel",
+    "ParticipantOpacityModelCheckOutcome",
+    "ParticipantOpacityModelStateModel",
+    "ParticipantOpacityModelTransitionModel",
+    "ParticipantOpacityStrategyCoverageModel",
     "UnsupportedParticipantOpacityAnalysisModel",
+    "UnsupportedParticipantOpacityModelCheckModel",
     "participant_opacity_counterexample_digest",
+    "participant_opacity_model_check_counterexample_digest",
 ]

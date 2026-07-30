@@ -139,14 +139,10 @@ class RelationAssuranceModel(ContractModel):
                     "checker, runtime, and backend-realization axis is negative"
                 )
 
-    def _validate_model_check_aggregate(self) -> None:
+    def _validate_legacy_model_check_aggregate(self) -> None:
         if self.proof_status == "model-checked" and self.model_check_status != "model-checked":
             raise ValueError(
                 "relation assurance proof aggregate reports model checking but the model-check axis does not"
-            )
-        if self.model_check_status == "model-checked" and self.proof_status not in {"model-checked", "proved"}:
-            raise ValueError(
-                "relation assurance model-check axis is positive but the legacy proof aggregate does not record it"
             )
 
     def _validate_backend_conformance(self) -> None:
@@ -173,7 +169,7 @@ class RelationAssuranceModel(ContractModel):
     @model_validator(mode="after")
     def _validate_axis_consistency(self) -> RelationAssuranceModel:
         self._validate_implementation_aggregate()
-        self._validate_model_check_aggregate()
+        self._validate_legacy_model_check_aggregate()
         self._validate_backend_conformance()
         if self.definition_status == "future" and self._has_positive_axis():
             raise ValueError("relation assurance cannot report positive axes for a future definition")

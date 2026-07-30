@@ -31,19 +31,17 @@ from raes_contracts.participant_opacity import (
     participant_opacity_counterexample_digest,
 )
 
+from ._errors import (
+    ParticipantOpacityEvidenceError,
+    ParticipantOpacityOperationalError,
+)
+from ._kernel import evaluate_opacity_kernel, information_cell_key
+
 ANALYSIS_PROFILE = "raes-participant-opacity-bounded-test/v1"
 _MAX_INPUT_BYTES = 8 * 1024 * 1024
 _INCOMPLETE_CODE = "participant-opacity.incomplete-enumeration"
 _VACUOUS_CODE = "participant-opacity.vacuous-secret-domain"
 _BOUND_CODE = "participant-opacity.analysis-bound-exceeded"
-
-
-class ParticipantOpacityEvidenceError(ValueError):
-    """Stored evidence does not replay against its governed finite input."""
-
-
-class ParticipantOpacityOperationalError(RuntimeError):
-    """The analyzer failed outside the typed bounded outcome domain."""
 
 
 def _diagnostic(code: str, address: str, message: str) -> DiagnosticModel:
@@ -221,15 +219,7 @@ def _information_cell_key(
 ) -> tuple[str, str, str, str, str | None, str, str]:
     """Derive the complete admitted observer cell; callers provide no cell id."""
 
-    return (
-        point.initial_information_key,
-        point.observation_key,
-        point.memory_key,
-        point.release_state_key,
-        point.coalition_fusion_key,
-        point.strategy_ref,
-        point.order_ref,
-    )
+    return information_cell_key(point)
 
 
 def analyze_participant_opacity_input(
@@ -272,7 +262,6 @@ def analyze_participant_opacity_input(
         profile,
         checker,
         reachable=reachable,
-        secret_points=secret_points,
     )
 
 
@@ -314,42 +303,31 @@ def _analyze_nonvacuous_carrier(
     checker: ParticipantOpacityCheckerConfigurationModel,
     *,
     reachable: tuple[OpacityPossiblePointModel, ...],
-    secret_points: tuple[OpacityPossiblePointModel, ...],
 ) -> ParticipantOpacityAnalysisEvidenceModel:
-    cells: dict[
-        tuple[str, str, str, str, str | None, str, str],
-        tuple[OpacityPossiblePointModel, ...],
-    ] = {}
-    for point in reachable:
-        key = _information_cell_key(point)
-        cells[key] = (*cells.get(key, ()), point)
-
+    result = evaluate_opacity_kernel(reachable, cell_key=_information_cell_key)
     normalized_model_digest = request.canonical_digest
     counterexample: ParticipantOpacityCounterexampleModel | None = None
-    for actual in secret_points:
-        cell = cells[_information_cell_key(actual)]
-        if any(not candidate.secret_holds for candidate in cell):
-            continue
-        if counterexample is None:
-            safe_ref = f"participant-opacity-counterexample:{actual.ordinal:06d}"
-            counterexample = ParticipantOpacityCounterexampleModel(
+    if result.counterexample_actual_ordinal is not None:
+        assert result.counterexample_cell_size is not None
+        safe_ref = f"participant-opacity-counterexample:{result.counterexample_actual_ordinal:06d}"
+        counterexample = ParticipantOpacityCounterexampleModel(
+            safe_ref=safe_ref,
+            counterexample_digest=participant_opacity_counterexample_digest(
                 safe_ref=safe_ref,
-                counterexample_digest=participant_opacity_counterexample_digest(
-                    safe_ref=safe_ref,
-                    actual_point_ordinal=actual.ordinal,
-                    examined_cell_size=len(cell),
-                    normalized_model_digest=normalized_model_digest,
-                ),
-                actual_point_ordinal=actual.ordinal,
-                examined_cell_size=len(cell),
-            )
+                actual_point_ordinal=result.counterexample_actual_ordinal,
+                examined_cell_size=result.counterexample_cell_size,
+                normalized_model_digest=normalized_model_digest,
+            ),
+            actual_point_ordinal=result.counterexample_actual_ordinal,
+            examined_cell_size=result.counterexample_cell_size,
+        )
 
     if counterexample is not None:
         return ParticipantOpacityAnalysisEvidenceModel(
             **_common_evidence(request, profile, checker),
             outcome=ParticipantOpacityOutcome.COUNTEREXAMPLE,
-            checked_points=len(reachable),
-            checked_secret_points=len(secret_points),
+            checked_points=result.checked_points,
+            checked_secret_points=result.checked_secret_points,
             diagnostics=(),
             counterexample=counterexample,
         )
@@ -357,8 +335,8 @@ def _analyze_nonvacuous_carrier(
     return ParticipantOpacityAnalysisEvidenceModel(
         **_common_evidence(request, profile, checker),
         outcome=ParticipantOpacityOutcome.NO_COUNTEREXAMPLE,
-        checked_points=len(reachable),
-        checked_secret_points=len(secret_points),
+        checked_points=result.checked_points,
+        checked_secret_points=result.checked_secret_points,
         diagnostics=(),
     )
 

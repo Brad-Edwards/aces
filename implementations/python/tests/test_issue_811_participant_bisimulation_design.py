@@ -258,7 +258,7 @@ def test_governance_program_is_requirement_backed_acyclic_and_reproduction_gated
 def test_catalog_has_exact_relation_and_bounded_claim_surface() -> None:
     catalog = _load_json(CATALOG_PATH)
 
-    assert catalog["taxonomy_revision"] == "rev7"
+    assert catalog["taxonomy_revision"] == "rev8"
     relation = catalog["relations"]["divergence-preserving-branching-bisimulation"]
     assert relation["direction"] == "symmetric"
     assert relation["quantification"]["states"] == "greatest-fixed-point relation"

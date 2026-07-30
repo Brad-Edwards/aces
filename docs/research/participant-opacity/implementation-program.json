@@ -251,8 +251,15 @@
         "counterexample or result",
         "model-check claim binding"
       ],
+      "delivered_artifacts": [
+        "contracts/schemas/formal-analysis/participant-opacity-model-check-input-v1.json",
+        "contracts/schemas/formal-analysis/participant-opacity-model-check-evidence-v1.json",
+        "implementations/python/packages/raes_processor/participant_opacity/_kernel.py",
+        "implementations/python/packages/raes_processor/participant_opacity/_model_check.py",
+        "implementations/python/tests/test_issue_962_participant_opacity_model_check.py"
+      ],
       "explicit_nonclaims": [
-        "No unbounded proof, runtime enforcement, or backend realization."
+        "No unbounded or mathematical proof, runtime enforcement, supervisor synthesis, backend realization, probabilistic result, timed result, or partial-order result."
       ]
     },
     {

@@ -128,6 +128,8 @@ def test_unsupported_declarations_claim_nothing_and_add_no_policy_case() -> None
         if entry.support_level.value == "unsupported"
     }
     policy_cases = [case for case in report.cases if case.policy_binding is not None]
+    assert unsupported_features == set(ALL_POLICY_FEATURES) - {"participant_ingress_admission"}
+    assert {case.capability_feature for case in policy_cases} == {"participant_ingress_admission"}
     assert not [case for case in policy_cases if case.capability_feature in unsupported_features]
 
 
@@ -166,9 +168,11 @@ def test_policy_cases_bind_exact_coordinates_rather_than_prose_in_a_case_name() 
 
     report = run_target_conformance(target, participant_policy_harness=ParticipantPolicyConformanceHarness())
 
-    for case in (case for case in report.cases if case.policy_binding is not None):
+    policy_cases = [case for case in report.cases if case.policy_binding is not None]
+    assert policy_cases, "the probe harness must emit bound participant-policy cases"
+    for case in policy_cases:
         binding = case.policy_binding
-        assert binding.claim.taxonomy_revision == "rev7"
+        assert binding.claim.taxonomy_revision == "rev8"
         assert binding.claim.relation_id == "policy-noninterference"
         assert binding.claim.quantifier_scope == "finite-cases"
         assert binding.claim.evidence_scope == "finite"

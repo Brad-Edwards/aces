@@ -810,7 +810,7 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   syntax or wire compatibility. The normative participant-policy model is
   `specs/formal/participant-semantics/information-flow-control.md`; the
   machine-readable relation is `policy-noninterference` in behavioral taxonomy
-  revision `rev7`; and the claim surface is
+  revision `rev8`; and the claim surface is
   `participant-information-flow-policy`. Existing `W`, `V`, qualified `H`,
   `X`, participant action/admission, visibility transition, ordering, marking,
   controller, authority, evidence, and provenance objects remain the mapped
@@ -862,12 +862,14 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   `test_issue_810_participant_opacity_design.py`.
 - RAES keeps opacity distinct from SEM-230 policy noninterference,
   participant-projected-history equality, epistemic indistinguishability,
-  trace equivalence, and bisimulation. Current assurance is definition plus
-  bounded tests only. No checker, model check, proof, runtime enforcement,
-  supervisor synthesis, backend declaration, backend realization, bounded
-  backend conformance, probabilistic security, timed security, or all-schedule
-  result is delivered. Issues #961 through #965 own those independent future
-  lanes.
+  trace equivalence, and bisimulation. Issue #961 delivers the closed baseline
+  profile and bounded checker. Issue #962 delivers a distinct explicit-state
+  checker and a model-check result for one exact complete finite fixture model.
+  No mathematical proof, runtime enforcement, supervisor synthesis, backend
+  declaration, backend realization, bounded backend conformance,
+  probabilistic security, timed security, partial-order security, or
+  all-schedule result is delivered. Issues #963 through #965 own those
+  remaining independent lanes.
 - Issue #811 and SEM-232 adapt van Glabbeek and Weijland's branching
   bisimulation and van Glabbeek, Luttik, and Trčka's explicit-divergence
   treatment to the bounded RAES participant-crossing kernel. The exact mapping
@@ -875,7 +877,7 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   `specs/formal/participant-semantics/participant-crossing-bisimulation.md`,
   `divergence-preserving-branching-bisimulation` and the
   `participant-crossing-bisimulation` claim surface in behavioral taxonomy
-  revision `rev7`, and the theorem/tool/evidence/program records under
+  revision `rev8`, and the theorem/tool/evidence/program records under
   `docs/research/participant-bisimulation/`.
 - The selected theorem compares a complete finite abstract SEM-230 crossing
   LTS with an independently derived formal API-423/RUN-319 crossing-kernel
@@ -987,9 +989,10 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   behavioral compatibility with those sources.
 - Issues #811 through #813 own proof-bearing bisimulation, adversarial
   threat-model, and simulation/federation extensions. Issue #810 now defines
-  opacity and supervisor-visibility architecture only; issues #961 through
-  #965 own its checker, model-check, proof, runtime, and backend lanes. SEM-230
-  preserves their participant, audience, policy revision, declassification,
+  opacity and supervisor-visibility architecture only; #961 delivers its
+  bounded checker, #962 delivers its exact finite-model checker, and #963
+  through #965 own the proof, runtime, and backend lanes. SEM-230 preserves
+  their participant, audience, policy revision, declassification,
   controller/authority, scheduler/environment, timing/probability, order, and
   evidence coordinates; that extension seam is not evidence those properties
   are already realized.
@@ -1246,7 +1249,7 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   existing `run_target_conformance()` runner extended with an injected
   participant-policy probe harness, `ConformanceCaseResult`, and
   `BackendConformanceReport` for the backend lane; and the
-  `raes-behavioral-relations` `rev7` catalog with `BehavioralClaimBindingModel`
+  `raes-behavioral-relations` `rev8` catalog with `BehavioralClaimBindingModel`
   for claim identity. The four lanes stay separately statused; none promotes
   another.
 - ASR-535 delivery status is bounded-tested and bounded-conformance-implemented.
@@ -1310,7 +1313,7 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   `BehavioralClaimBindingModel` example in
   `implementations/python/tests/test_public_docs_policy.py`. The example
   resolves `bounded-probe-success` against
-  `raes-behavioral-relations@rev7`; it does not define a documentation claim
+  `raes-behavioral-relations@rev8`; it does not define a documentation claim
   schema or a second relation catalog.
 - Issue #803 delivery status is published explanatory guidance over shipped
   bounded evidence. The reference backend still declares the six
