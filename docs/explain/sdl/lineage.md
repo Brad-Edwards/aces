@@ -1520,3 +1520,34 @@ RAES adds backend-neutral authored declarations, exact rational mappings,
 ordinary SDL subject references, canonical compilation, and segment-preserving
 runtime control. It does not claim ROS, FMI, HLA, TENA, or OpenSCENARIO
 conformance through those generic declarations.
+
+### Adversarial Participant Flow And Control
+
+- [FIDES](https://arxiv.org/abs/2505.23643) supplies the immediate precedent
+  for independent confidentiality/integrity labels, conservative propagation,
+  and deterministic action policy.
+- [CaMeL](https://arxiv.org/abs/2503.18813) supplies the trusted-control and
+  untrusted-data separation, quarantine, and capability precedent. RAES keeps
+  model topology and prompt separation apparatus-specific.
+- [SAMOS](https://research.ibm.com/publications/securing-mcp-based-agent-workflows)
+  supplies the session-flow and complete tool-call interception precedent.
+  RAES does not require MCP and places portable authority at the final
+  external-action or disclosure sink.
+- [AgentDojo](https://proceedings.neurips.cc/paper_files/paper/2024/hash/97091a5177d8dc64b1da8bf3e1f6fb54-Abstract-Datasets_and_Benchmarks_Track.html),
+  [AI Control](https://arxiv.org/abs/2312.06942), and
+  [ControlArena](https://control-arena.aisi.org.uk/) supply dynamic injection,
+  intentional subversion, honest/attack modes, main/side objectives,
+  monitoring, audit, editing, deferral, shutdown, safety, usefulness, and
+  adaptive evaluation precedents.
+- [runtime shielding](https://arxiv.org/abs/1501.02573) supplies the
+  property-bound last-moment runtime mediation precedent, while
+  [capability-based authority control](https://doi.org/10.4230/LIPIcs.ECOOP.2017.20)
+  supplies the least-authority precedent.
+- ADR-101 adapts those lessons through SEM-233 and ASR-536 over the existing
+  SEM-230, ACT-617, API-409/API-423, RUN-310/RUN-319, API-407, experiment, and
+  ASR-535 carriers. It does not import an LLM framework, prompt format, model
+  role, MCP gateway, monitor, scorer, or trajectory hierarchy.
+- Issue #812 is design authority. Its DRAFT requirements and program do not
+  establish runtime enforcement, backend realization, intentional-subversion
+  robustness, model alignment, monitor honesty, private-reasoning safety, or
+  control of undeclared covert channels.
