@@ -331,6 +331,7 @@ def test_parallel_scheduler_accepts_complete_independent_evidence() -> None:
         "ports",
         "storage",
         "control-plane-locks",
+        "secret-scope",
         "cleanup",
     )
     proof = SchedulerIsolationProofModel(
@@ -342,6 +343,27 @@ def test_parallel_scheduler_accepts_complete_independent_evidence() -> None:
     )
 
     assert proof.requested_parallelism == 2
+
+
+def test_parallel_scheduler_requires_secret_scope_isolation() -> None:
+    # SCE-006 governs secret scope as a required parallel isolation dimension; a
+    # proof carrying every other dimension but omitting secret-scope must fail.
+    without_secret_scope = (
+        "range-instance",
+        "host-capacity",
+        "ports",
+        "storage",
+        "control-plane-locks",
+        "cleanup",
+    )
+    with pytest.raises(ValidationError, match="secret-scope"):
+        SchedulerIsolationProofModel(
+            schema_version="scheduler-isolation-proof/v1",
+            proof_id="proof-parallel",
+            plan_entry_ids=["trial-entry-a", "trial-entry-b"],
+            requested_parallelism=2,
+            dimensions=[_dimension(dimension) for dimension in without_secret_scope],
+        )
 
 
 def test_contracts_forbid_unbounded_metadata_and_secret_payload_fields() -> None:

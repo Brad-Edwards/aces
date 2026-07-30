@@ -11,8 +11,12 @@ from raes_contracts.contracts import (
     AdmittedTrialPlanProfilesModel,
     TrialCoordinateModel,
 )
+from raes_contracts.contracts.trial_coordinate_order import (
+    REPLICATE_ID_WIDTH,
+    canonical_coordinate_sort_key,
+    replicate_ordinal,
+)
 
-REPLICATE_ID_WIDTH: Final = 6
 IDENTITY_DOMAIN: Final = "raes-trial-compiler-identity-v1"
 RANDOM_STREAM_PROFILE_ID: Final = "blake3-xof-v1"
 RANDOM_STREAM_PROFILE_VERSION: Final = RANDOM_STREAM_PROFILE_SCHEMA_VERSION
@@ -64,9 +68,11 @@ def derive_identity(kind: str, projection: object) -> str:
 
 __all__ = [
     "admitted_profiles",
+    "canonical_coordinate_sort_key",
     "coordinate_projection",
     "derive_identity",
     "RANDOM_STREAM_PROFILE_ID",
     "RANDOM_STREAM_PROFILE_VERSION",
     "replicate_id",
+    "replicate_ordinal",
 ]

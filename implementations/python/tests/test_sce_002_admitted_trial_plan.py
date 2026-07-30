@@ -76,6 +76,7 @@ _REQUIRED_ISOLATION_DIMENSIONS = (
     "ports",
     "storage",
     "control-plane-locks",
+    "secret-scope",
     "cleanup",
 )
 

@@ -212,7 +212,12 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Codex CLI local config/state (personal, never committed): the `.codex` config
+# file plus the trailing-space ".codex " working directory the codex tooling
+# creates alongside it during agent runs.
 .codex
+.codex\ /
 
 # Ground Control transient tool output (sonar analysis cache, step telemetry).
 # .gc/plan-rules.md and other authored .gc files stay tracked.

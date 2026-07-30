@@ -142,8 +142,14 @@ requires independent evidence for all of:
 - host capacity;
 - ports;
 - storage;
-- control-plane locks; and
+- control-plane locks;
+- secret-resolution scope; and
 - cleanup ownership and probe independence.
+
+Secret-resolution scope is a governed isolation dimension for SCE-006: bounded
+parallelism must prove that concurrent trials resolve governed secret references
+through independent per-attempt scopes, never a shared broad worker credential
+or resolver cache.
 
 The requested bound cannot exceed the number of admitted entries named in the
 proof. Missing or non-independent evidence rejects bounded parallelism; it does
