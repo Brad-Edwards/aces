@@ -2,84 +2,106 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from ._common import _MAX_RECURSION_DEPTH, _SECTION_FIELDS, _SECTION_FIELDS_SET
 
+if TYPE_CHECKING:
+    from raes import Scenario
 
-def _list_elements(scenario, section_filter: str) -> str:
+
+def _list_elements(scenario: Scenario, section_filter: str) -> str:
     """List named elements, optionally filtered by section."""
-    from raes.entities import flatten_entities
-
     lines: list[str] = []
     for field in _SECTION_FIELDS:
         if section_filter not in ("all", "") and field != section_filter:
             continue
         data = getattr(scenario, field, None)
-        if not data:
-            continue
-        lines.append(f"\n{field}:")
-        for name in data:
-            lines.append(f"  - {name}")
-        # Special: show nested entities
-        if field == "entities":
-            flat = flatten_entities(data)
-            nested = [n for n in flat if "." in n]
-            if nested:
-                lines.append("  (nested entities):")
-                for n in nested:
-                    lines.append(f"    - {n}")
+        if data:
+            lines.extend(_section_element_lines(field, data))
 
-    if not lines:
-        if section_filter not in ("all", ""):
-            return f"Section '{section_filter}' is empty or does not exist."
-        return "Scenario has no named elements."
-
-    return "\n".join(lines)
+    if lines:
+        return "\n".join(lines)
+    if section_filter not in ("all", ""):
+        return f"Section '{section_filter}' is empty or does not exist."
+    return "Scenario has no named elements."
 
 
-def _get_element_detail(scenario, name: str) -> str:
+def _section_element_lines(field: str, data: dict[str, object]) -> list[str]:
+    lines = [f"\n{field}:"]
+    lines.extend(f"  - {name}" for name in data)
+    # Special: show nested entities
+    if field == "entities":
+        lines.extend(_nested_entity_lines(data))
+    return lines
+
+
+def _nested_entity_lines(data: dict[str, object]) -> list[str]:
+    from raes.entities import flatten_entities
+
+    flat = flatten_entities(data)
+    nested = [n for n in flat if "." in n]
+    if not nested:
+        return []
+    return ["  (nested entities):", *(f"    - {n}" for n in nested)]
+
+
+def _get_element_detail(scenario: Scenario, name: str) -> str:
     """Get detailed info about a named element."""
-    # Try qualified ref first (e.g. "nodes.web-server")
-    if "." in name:
-        parts = name.split(".", 1)
-        section_name, element_name = parts[0], parts[1]
-        # Only access known SDL section attributes — never arbitrary attrs.
-        if section_name in _SECTION_FIELDS_SET:
-            data = getattr(scenario, section_name, None)
-            if isinstance(data, dict) and element_name in data:
-                return _format_element(section_name, element_name, data[element_name])
+    qualified = _qualified_ref_detail(scenario, name)
+    if qualified is not None:
+        return qualified
+    matches = _bare_name_matches(scenario, name)
+    if not matches:
+        return _no_match_detail(scenario, name)
+    return _matches_detail(name, matches)
 
-    # Search all sections for bare name
+
+def _qualified_ref_detail(scenario: Scenario, name: str) -> str | None:
+    """Resolve a qualified ref like 'nodes.web-server', or None if it does not resolve."""
+    if "." not in name:
+        return None
+    section_name, element_name = name.split(".", 1)
+    # Only access known SDL section attributes — never arbitrary attrs.
+    if section_name in _SECTION_FIELDS_SET:
+        data = getattr(scenario, section_name, None)
+        if isinstance(data, dict) and element_name in data:
+            return _format_element(section_name, element_name, data[element_name])
+    return None
+
+
+def _bare_name_matches(scenario: Scenario, name: str) -> list[tuple[str, str, object]]:
     matches: list[tuple[str, str, object]] = []
     for field in _SECTION_FIELDS:
         data = getattr(scenario, field, None)
-        if not data:
-            continue
-        if name in data:
+        if data and name in data:
             matches.append((field, name, data[name]))
+    return matches
 
-    if not matches:
-        # Try nested entity names
-        from raes.entities import flatten_entities
 
-        if scenario.entities:
-            flat = flatten_entities(scenario.entities)
-            if name in flat:
-                return _format_element("entities", name, flat[name])
+def _no_match_detail(scenario: Scenario, name: str) -> str:
+    # Try nested entity names
+    from raes.entities import flatten_entities
 
-        return (
-            f"Element '{name}' not found. "
-            "Use `sdl_list_elements` to see all available elements, "
-            "or try a qualified ref like 'nodes.my-node'."
-        )
+    if scenario.entities:
+        flat = flatten_entities(scenario.entities)
+        if name in flat:
+            return _format_element("entities", name, flat[name])
 
+    return (
+        f"Element '{name}' not found. "
+        "Use `sdl_list_elements` to see all available elements, "
+        "or try a qualified ref like 'nodes.my-node'."
+    )
+
+
+def _matches_detail(name: str, matches: list[tuple[str, str, object]]) -> str:
     if len(matches) == 1:
         section, ename, obj = matches[0]
         return _format_element(section, ename, obj)
-
     # Ambiguous
     lines = [f"Ambiguous name '{name}' found in multiple sections:"]
-    for section, ename, _ in matches:
-        lines.append(f"  - {section}.{ename}")
+    lines.extend(f"  - {section}.{ename}" for section, ename, _ in matches)
     lines.append("Use a qualified ref to disambiguate.")
     return "\n".join(lines)
 
@@ -107,23 +129,33 @@ def _format_value(value: object, indent: int = 4, depth: int = 0) -> str:
     if depth > _MAX_RECURSION_DEPTH:
         return "(...)"
     if isinstance(value, dict):
-        if not value:
-            return "{}"
-        parts = []
-        prefix = " " * indent
-        for k, v in value.items():
-            parts.append(f"{prefix}{k}: {_format_value(v, indent + 2, depth + 1)}")
-        return "\n" + "\n".join(parts)
-    if isinstance(value, list):
-        if not value:
-            return "[]"
-        if all(isinstance(v, str) for v in value):
-            return f"[{', '.join(str(v) for v in value)}]"
-        parts = []
-        prefix = " " * indent
-        for v in value:
-            parts.append(f"{prefix}- {_format_value(v, indent + 2, depth + 1)}")
-        return "\n" + "\n".join(parts)
+        result = _format_dict_value(value, indent, depth)
+    elif isinstance(value, list):
+        result = _format_list_value(value, indent, depth)
+    else:
+        result = _format_scalar_value(value)
+    return result
+
+
+def _format_dict_value(value: dict[object, object], indent: int, depth: int) -> str:
+    if not value:
+        return "{}"
+    prefix = " " * indent
+    parts = [f"{prefix}{k}: {_format_value(v, indent + 2, depth + 1)}" for k, v in value.items()]
+    return "\n" + "\n".join(parts)
+
+
+def _format_list_value(value: list[object], indent: int, depth: int) -> str:
+    if not value:
+        return "[]"
+    if all(isinstance(v, str) for v in value):
+        return f"[{', '.join(str(v) for v in value)}]"
+    prefix = " " * indent
+    parts = [f"{prefix}- {_format_value(v, indent + 2, depth + 1)}" for v in value]
+    return "\n" + "\n".join(parts)
+
+
+def _format_scalar_value(value: object) -> str:
     if hasattr(value, "value"):
         return str(value.value)
     return str(value)

@@ -2,77 +2,100 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from ._common import _MAX_RECURSION_DEPTH, _SECTION_FIELDS
 
+if TYPE_CHECKING:
+    from raes import Scenario
+    from raes.entities import Entity
 
-def _build_summary(scenario) -> str:
+
+def _build_summary(scenario: Scenario) -> str:
     """Build a human-readable summary of a scenario."""
-    from raes.nodes import NodeType
+    lines: list[str] = [f"Scenario: {scenario.name}"]
+    lines.extend(_header_lines(scenario))
+    lines.extend(_section_count_lines(scenario))
+    lines.extend(_topology_lines(scenario))
+    lines.extend(_variable_lines(scenario))
+    lines.extend(_entity_lines(scenario))
+    lines.extend(_objective_lines(scenario))
+    lines.extend(_workflow_lines(scenario))
+    return "\n".join(lines)
 
-    lines = [
-        f"Scenario: {scenario.name}",
-    ]
+
+def _header_lines(scenario: Scenario) -> list[str]:
+    lines: list[str] = []
     if scenario.description:
         lines.append(f"Description: {scenario.description.strip()}")
     if scenario.version != "*":
         lines.append(f"Version: {scenario.version}")
+    return lines
 
-    # Section counts
-    lines.append("\n--- Sections ---")
+
+def _section_count_lines(scenario: Scenario) -> list[str]:
+    lines = ["\n--- Sections ---"]
     total_elements = 0
     for field in _SECTION_FIELDS:
         data = getattr(scenario, field, None)
         if data:
-            count = len(data)
-            total_elements += count
-            lines.append(f"  {field}: {count}")
+            total_elements += len(data)
+            lines.append(f"  {field}: {len(data)}")
     lines.append(f"  (total named elements: {total_elements})")
-
-    # Topology stats
-    vm_count = 0
-    switch_count = 0
-    for node in scenario.nodes.values():
-        if node.type == NodeType.VM:
-            vm_count += 1
-        elif node.type == NodeType.SWITCH:
-            switch_count += 1
-    if scenario.nodes:
-        lines.append("\n--- Topology ---")
-        lines.append(f"  VMs: {vm_count}")
-        lines.append(f"  Switches: {switch_count}")
-
-    # Variables
-    if scenario.variables:
-        lines.append("\n--- Variables ---")
-        for var_name, var in scenario.variables.items():
-            default_str = f" (default: {var.default})" if var.default is not None else ""
-            req = " [required]" if var.required else ""
-            lines.append(f"  ${{{var_name}}}: {var.type.value}{default_str}{req}")
-
-    # Entities hierarchy
-    if scenario.entities:
-        lines.append("\n--- Entities ---")
-        _format_entities(scenario.entities, lines, indent=2)
-
-    # Objectives summary
-    if scenario.objectives:
-        lines.append("\n--- Objectives ---")
-        for obj_name, obj in scenario.objectives.items():
-            actor = obj.agent or obj.entity
-            deps = f" (depends: {', '.join(obj.depends_on)})" if obj.depends_on else ""
-            lines.append(f"  {obj_name}: actor={actor}{deps}")
-
-    # Workflows summary
-    if scenario.workflows:
-        lines.append("\n--- Workflows ---")
-        for wf_name, wf in scenario.workflows.items():
-            step_count = len(wf.steps) if wf.steps else 0
-            lines.append(f"  {wf_name}: {step_count} steps, start={wf.start}")
-
-    return "\n".join(lines)
+    return lines
 
 
-def _format_entities(entities: dict, lines: list[str], indent: int, depth: int = 0) -> None:
+def _topology_lines(scenario: Scenario) -> list[str]:
+    from raes.nodes import NodeType
+
+    if not scenario.nodes:
+        return []
+    vm_count = sum(1 for node in scenario.nodes.values() if node.type == NodeType.VM)
+    switch_count = sum(1 for node in scenario.nodes.values() if node.type == NodeType.SWITCH)
+    return ["\n--- Topology ---", f"  VMs: {vm_count}", f"  Switches: {switch_count}"]
+
+
+def _variable_lines(scenario: Scenario) -> list[str]:
+    if not scenario.variables:
+        return []
+    lines = ["\n--- Variables ---"]
+    for var_name, var in scenario.variables.items():
+        default_str = f" (default: {var.default})" if var.default is not None else ""
+        req = " [required]" if var.required else ""
+        lines.append(f"  ${{{var_name}}}: {var.type.value}{default_str}{req}")
+    return lines
+
+
+def _entity_lines(scenario: Scenario) -> list[str]:
+    if not scenario.entities:
+        return []
+    lines = ["\n--- Entities ---"]
+    _format_entities(scenario.entities, lines, indent=2)
+    return lines
+
+
+def _objective_lines(scenario: Scenario) -> list[str]:
+    if not scenario.objectives:
+        return []
+    lines = ["\n--- Objectives ---"]
+    for obj_name, obj in scenario.objectives.items():
+        actor = obj.agent or obj.entity
+        deps = f" (depends: {', '.join(obj.depends_on)})" if obj.depends_on else ""
+        lines.append(f"  {obj_name}: actor={actor}{deps}")
+    return lines
+
+
+def _workflow_lines(scenario: Scenario) -> list[str]:
+    if not scenario.workflows:
+        return []
+    lines = ["\n--- Workflows ---"]
+    for wf_name, wf in scenario.workflows.items():
+        step_count = len(wf.steps) if wf.steps else 0
+        lines.append(f"  {wf_name}: {step_count} steps, start={wf.start}")
+    return lines
+
+
+def _format_entities(entities: dict[str, Entity], lines: list[str], indent: int, depth: int = 0) -> None:
     """Recursively format entity hierarchy."""
     if depth > _MAX_RECURSION_DEPTH:
         lines.append(" " * indent + "(truncated — max depth reached)")
