@@ -18,7 +18,6 @@ from raes_contracts.behavioral_relations import (
 from raes_contracts.canonical import canonical_json_digest
 from raes_contracts.diagnostics import DiagnosticModel
 from raes_contracts.json_ingress import (
-    StrictJsonIngressError,
     parse_bounded_json_object,
 )
 from raes_contracts.participant_opacity import (
@@ -91,9 +90,19 @@ def _validate_profile_domains(
     request: ParticipantOpacityAnalysisInputModel,
     profile: BehavioralRelationProfileModel,
 ) -> None:
-    parameters = profile.parameters
+    _validate_declared_bounds(request, profile)
+    _validate_scheduler_environment_domain(request, profile)
+    _validate_order_and_cut_domains(request, profile)
+    _validate_strategy_domain(request, profile)
+    _validate_coalition_domain(request, profile)
+
+
+def _validate_declared_bounds(
+    request: ParticipantOpacityAnalysisInputModel,
+    profile: BehavioralRelationProfileModel,
+) -> None:
     counts = request.declared_counts
-    bounds = parameters.bounds
+    bounds = profile.parameters.bounds
     if (
         counts.points > bounds.max_points
         or counts.runs > bounds.max_runs
@@ -103,12 +112,17 @@ def _validate_profile_domains(
         or counts.order_variants > bounds.max_order_variants
     ):
         raise ParticipantOpacityOperationalError("normalized input exceeds the governed profile bounds")
+
+
+def _validate_scheduler_environment_domain(
+    request: ParticipantOpacityAnalysisInputModel,
+    profile: BehavioralRelationProfileModel,
+) -> None:
+    parameters = profile.parameters
     scheduler_refs = {point.scheduler_ref for point in request.points}
     environment_refs = {point.environment_ref for point in request.points}
     scheduler_environment_pairs = {(point.scheduler_ref, point.environment_ref) for point in request.points}
     expected_scheduler_environment_pairs = set(product(parameters.scheduler_refs, parameters.environment_refs))
-    order_refs = {point.order_ref for point in request.points}
-    cut_refs = {point.cut_ref for point in request.points}
     if scheduler_refs != set(parameters.scheduler_refs):
         raise ParticipantOpacityOperationalError("normalized input scheduler domain does not match the profile")
     if environment_refs != set(parameters.environment_refs):
@@ -117,16 +131,39 @@ def _validate_profile_domains(
         raise ParticipantOpacityOperationalError(
             "normalized input scheduler/environment pair domain does not match the profile Cartesian product"
         )
+
+
+def _validate_order_and_cut_domains(
+    request: ParticipantOpacityAnalysisInputModel,
+    profile: BehavioralRelationProfileModel,
+) -> None:
+    parameters = profile.parameters
+    order_refs = {point.order_ref for point in request.points}
+    cut_refs = {point.cut_ref for point in request.points}
     if order_refs != set(parameters.order.order_refs):
         raise ParticipantOpacityOperationalError("normalized input order domain does not match the profile")
     if cut_refs != {parameters.horizon.cut_ref}:
         raise ParticipantOpacityOperationalError("normalized input cut domain does not match the profile")
+
+
+def _validate_strategy_domain(
+    request: ParticipantOpacityAnalysisInputModel,
+    profile: BehavioralRelationProfileModel,
+) -> None:
+    parameters = profile.parameters
     strategy_refs = {point.strategy_ref for point in request.points}
     if isinstance(parameters.strategy, ActiveOpacityStrategyModel):
         if strategy_refs != set(parameters.strategy.strategy_refs):
             raise ParticipantOpacityOperationalError("normalized input strategy domain does not match the profile")
     elif len(strategy_refs) != 1:
         raise ParticipantOpacityOperationalError("a passive opacity profile requires one fixed strategy")
+
+
+def _validate_coalition_domain(
+    request: ParticipantOpacityAnalysisInputModel,
+    profile: BehavioralRelationProfileModel,
+) -> None:
+    parameters = profile.parameters
     coalition = isinstance(parameters.observer, CoalitionOpacityObserverModel)
     if any((point.coalition_fusion_key is not None) != coalition for point in request.points):
         raise ParticipantOpacityOperationalError("normalized coalition fusion coordinates do not match the profile")
@@ -205,6 +242,45 @@ def analyze_participant_opacity_input(
     _validate_profile_admission(request, profile)
     _validate_profile_domains(request, profile)
     checker = _checker_configuration()
+    precondition_evidence = _analysis_precondition_evidence(request, profile, checker)
+    if precondition_evidence is not None:
+        return precondition_evidence
+
+    reachable = tuple(
+        sorted(
+            (point for point in request.points if point.reachable),
+            key=lambda point: point.ordinal,
+        )
+    )
+    secret_points = tuple(point for point in reachable if point.secret_holds)
+    if not secret_points:
+        return _unsupported_evidence(
+            request,
+            profile,
+            checker,
+            outcome=ParticipantOpacityOutcome.VACUOUS,
+            diagnostic=_diagnostic(
+                _VACUOUS_CODE,
+                "/points",
+                "The reachable carrier contains no protected secret point.",
+            ),
+            checked_points=len(reachable),
+        )
+
+    return _analyze_nonvacuous_carrier(
+        request,
+        profile,
+        checker,
+        reachable=reachable,
+        secret_points=secret_points,
+    )
+
+
+def _analysis_precondition_evidence(
+    request: ParticipantOpacityAnalysisInputModel,
+    profile: BehavioralRelationProfileModel,
+    checker: ParticipantOpacityCheckerConfigurationModel,
+) -> ParticipantOpacityAnalysisEvidenceModel | None:
     if not request.complete_enumeration:
         return _unsupported_evidence(
             request,
@@ -229,28 +305,17 @@ def analyze_participant_opacity_input(
                 "The declared finite carrier exceeds the deterministic checker bound.",
             ),
         )
+    return None
 
-    reachable = tuple(
-        sorted(
-            (point for point in request.points if point.reachable),
-            key=lambda point: point.ordinal,
-        )
-    )
-    secret_points = tuple(point for point in reachable if point.secret_holds)
-    if not secret_points:
-        return _unsupported_evidence(
-            request,
-            profile,
-            checker,
-            outcome=ParticipantOpacityOutcome.VACUOUS,
-            diagnostic=_diagnostic(
-                _VACUOUS_CODE,
-                "/points",
-                "The reachable carrier contains no protected secret point.",
-            ),
-            checked_points=len(reachable),
-        )
 
+def _analyze_nonvacuous_carrier(
+    request: ParticipantOpacityAnalysisInputModel,
+    profile: BehavioralRelationProfileModel,
+    checker: ParticipantOpacityCheckerConfigurationModel,
+    *,
+    reachable: tuple[OpacityPossiblePointModel, ...],
+    secret_points: tuple[OpacityPossiblePointModel, ...],
+) -> ParticipantOpacityAnalysisEvidenceModel:
     cells: dict[
         tuple[str, str, str, str, str | None, str, str],
         tuple[OpacityPossiblePointModel, ...],
@@ -310,7 +375,7 @@ def analyze_participant_opacity_file(
         )
         request = ParticipantOpacityAnalysisInputModel.model_validate(payload)
         profile = load_behavioral_relation_profile(request.profile_id)
-    except (OSError, StrictJsonIngressError, ValidationError, ValueError):
+    except (OSError, ValidationError, ValueError):
         raise ParticipantOpacityOperationalError(
             "opacity analysis input failed bounded closed-world admission"
         ) from None

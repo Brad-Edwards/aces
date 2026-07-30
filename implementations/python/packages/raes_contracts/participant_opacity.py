@@ -213,62 +213,97 @@ class ParticipantOpacityAnalysisEvidenceModel(ContractModel):
     def _validate_evidence_join(
         self,
     ) -> ParticipantOpacityAnalysisEvidenceModel:
-        if self.checked_secret_points > self.checked_points:
-            raise ValueError("checked secret points cannot exceed checked points")
-        if self.checker_configuration_digest != self.checker_configuration.canonical_digest:
-            raise ValueError("checker_configuration_digest must bind the checker configuration")
-        expected_counterexample = self.outcome is ParticipantOpacityOutcome.COUNTEREXAMPLE
-        expected_unsupported = self.outcome in {
-            ParticipantOpacityOutcome.VACUOUS,
-            ParticipantOpacityOutcome.UNSUPPORTED,
-        }
-        if (self.counterexample is not None) != expected_counterexample:
-            raise ValueError("counterexample payload must exactly match the counterexample outcome")
-        if self.counterexample is not None:
-            expected_digest = participant_opacity_counterexample_digest(
-                safe_ref=self.counterexample.safe_ref,
-                actual_point_ordinal=self.counterexample.actual_point_ordinal,
-                examined_cell_size=self.counterexample.examined_cell_size,
-                normalized_model_digest=self.normalized_model_digest,
-            )
-            if self.counterexample.counterexample_digest != expected_digest:
-                raise ValueError("counterexample_digest must bind the sanitized counterexample identity")
-        if (self.unsupported is not None) != expected_unsupported:
-            raise ValueError("unsupported payload must exactly match a non-positive unsupported outcome")
-        if self.unsupported is not None:
-            diagnostic_codes = tuple(sorted({diagnostic.code for diagnostic in self.diagnostics}))
-            if self.unsupported.reason_codes != diagnostic_codes:
-                raise ValueError("unsupported reason codes must match evidence diagnostics")
-        decided = self.outcome in {
-            ParticipantOpacityOutcome.NO_COUNTEREXAMPLE,
-            ParticipantOpacityOutcome.COUNTEREXAMPLE,
-        }
-        if decided and (self.checked_points == 0 or self.checked_secret_points == 0):
-            raise ValueError("decided outcomes require nonzero checked and secret point counts")
-        if decided and self.diagnostics:
-            raise ValueError("decided outcomes cannot carry error diagnostics")
-        if self.outcome is ParticipantOpacityOutcome.VACUOUS and self.checked_secret_points != 0:
-            raise ValueError("a vacuous secret domain requires zero checked secret points")
-        if self.claim.taxonomy_id != self.taxonomy_id:
-            raise ValueError("evidence claim taxonomy id must match the evidence")
-        if self.claim.taxonomy_revision != self.taxonomy_revision:
-            raise ValueError("evidence claim taxonomy revision must match the evidence")
-        if self.claim.relation_id != self.relation_id:
-            raise ValueError("evidence claim relation must match the evidence")
-        if self.claim.relation_parameter_profile_ref != self.profile_id:
-            raise ValueError("evidence claim profile id must match the evidence")
-        if self.claim.relation_parameter_profile_revision != self.profile_revision:
-            raise ValueError("evidence claim profile revision must match the evidence")
-        if (
-            self.claim.assurance_axis,
-            self.claim.assurance_status,
-            self.claim.evidence_scope,
-            self.claim.quantifier_scope,
-        ) != ("bounded-test", "tested", "finite", "finite-cases"):
-            raise ValueError("opacity evidence claim must remain bounded-test/tested/finite/finite-cases")
-        if NORMALIZED_INPUT_PROVENANCE_NONCLAIM not in self.claim.explicit_non_claims:
-            raise ValueError("normalized-input evidence must disclaim source and materializer authenticity")
+        _validate_evidence_counts(self)
+        _validate_checker_configuration_join(self)
+        _validate_outcome_payloads(self)
+        _validate_claim_join(self)
         return self
+
+
+def _validate_evidence_counts(evidence: ParticipantOpacityAnalysisEvidenceModel) -> None:
+    if evidence.checked_secret_points > evidence.checked_points:
+        raise ValueError("checked secret points cannot exceed checked points")
+    decided = evidence.outcome in {
+        ParticipantOpacityOutcome.NO_COUNTEREXAMPLE,
+        ParticipantOpacityOutcome.COUNTEREXAMPLE,
+    }
+    if decided and (evidence.checked_points == 0 or evidence.checked_secret_points == 0):
+        raise ValueError("decided outcomes require nonzero checked and secret point counts")
+    if decided and evidence.diagnostics:
+        raise ValueError("decided outcomes cannot carry error diagnostics")
+    if evidence.outcome is ParticipantOpacityOutcome.VACUOUS and evidence.checked_secret_points != 0:
+        raise ValueError("a vacuous secret domain requires zero checked secret points")
+
+
+def _validate_checker_configuration_join(evidence: ParticipantOpacityAnalysisEvidenceModel) -> None:
+    if evidence.checker_configuration_digest != evidence.checker_configuration.canonical_digest:
+        raise ValueError("checker_configuration_digest must bind the checker configuration")
+
+
+def _validate_outcome_payloads(evidence: ParticipantOpacityAnalysisEvidenceModel) -> None:
+    expected_counterexample = evidence.outcome is ParticipantOpacityOutcome.COUNTEREXAMPLE
+    expected_unsupported = evidence.outcome in {
+        ParticipantOpacityOutcome.VACUOUS,
+        ParticipantOpacityOutcome.UNSUPPORTED,
+    }
+    if (evidence.counterexample is not None) != expected_counterexample:
+        raise ValueError("counterexample payload must exactly match the counterexample outcome")
+    if evidence.counterexample is not None:
+        _validate_counterexample_join(evidence)
+    if (evidence.unsupported is not None) != expected_unsupported:
+        raise ValueError("unsupported payload must exactly match a non-positive unsupported outcome")
+    if evidence.unsupported is not None:
+        _validate_unsupported_join(evidence)
+
+
+def _validate_counterexample_join(evidence: ParticipantOpacityAnalysisEvidenceModel) -> None:
+    counterexample = evidence.counterexample
+    if counterexample is None:
+        raise ValueError("counterexample outcome requires a counterexample payload")
+    expected_digest = participant_opacity_counterexample_digest(
+        safe_ref=counterexample.safe_ref,
+        actual_point_ordinal=counterexample.actual_point_ordinal,
+        examined_cell_size=counterexample.examined_cell_size,
+        normalized_model_digest=evidence.normalized_model_digest,
+    )
+    if counterexample.counterexample_digest != expected_digest:
+        raise ValueError("counterexample_digest must bind the sanitized counterexample identity")
+
+
+def _validate_unsupported_join(evidence: ParticipantOpacityAnalysisEvidenceModel) -> None:
+    unsupported = evidence.unsupported
+    if unsupported is None:
+        raise ValueError("unsupported outcome requires an unsupported payload")
+    diagnostic_codes = tuple(sorted({diagnostic.code for diagnostic in evidence.diagnostics}))
+    if unsupported.reason_codes != diagnostic_codes:
+        raise ValueError("unsupported reason codes must match evidence diagnostics")
+
+
+def _validate_claim_join(evidence: ParticipantOpacityAnalysisEvidenceModel) -> None:
+    claim = evidence.claim
+    if claim.taxonomy_id != evidence.taxonomy_id:
+        raise ValueError("evidence claim taxonomy id must match the evidence")
+    if claim.taxonomy_revision != evidence.taxonomy_revision:
+        raise ValueError("evidence claim taxonomy revision must match the evidence")
+    if claim.relation_id != evidence.relation_id:
+        raise ValueError("evidence claim relation must match the evidence")
+    if claim.relation_parameter_profile_ref != evidence.profile_id:
+        raise ValueError("evidence claim profile id must match the evidence")
+    if claim.relation_parameter_profile_revision != evidence.profile_revision:
+        raise ValueError("evidence claim profile revision must match the evidence")
+    _validate_claim_scope(claim)
+
+
+def _validate_claim_scope(claim: BehavioralClaimBindingModel) -> None:
+    if (
+        claim.assurance_axis,
+        claim.assurance_status,
+        claim.evidence_scope,
+        claim.quantifier_scope,
+    ) != ("bounded-test", "tested", "finite", "finite-cases"):
+        raise ValueError("opacity evidence claim must remain bounded-test/tested/finite/finite-cases")
+    if NORMALIZED_INPUT_PROVENANCE_NONCLAIM not in claim.explicit_non_claims:
+        raise ValueError("normalized-input evidence must disclaim source and materializer authenticity")
 
 
 def participant_opacity_counterexample_digest(
