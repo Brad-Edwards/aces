@@ -6,6 +6,7 @@ import json
 from copy import deepcopy
 
 import pytest
+from jsonschema import Draft202012Validator
 from paths import REPO_ROOT
 from pydantic import ValidationError
 from raes_contracts.canonical import canonical_json_digest
@@ -23,6 +24,7 @@ from raes_contracts.contracts import (
     DifficultyPolicyModel,
     DifficultyPolicyRegistryModel,
     DifficultyRunProvenanceModel,
+    DifficultySourceDefinitionReferenceModel,
     DifficultyStateCutModel,
     DifficultyThresholdRuleModel,
     DifficultyVariantModel,
@@ -33,6 +35,7 @@ from raes_contracts.contracts import (
     difficulty_decision_history_head,
     difficulty_policy_digest,
     resolve_difficulty_policy,
+    schema_bundle,
     validate_experiment_difficulty_against_spec,
     validate_experiment_study_against_tasks_and_runs,
 )
@@ -51,6 +54,15 @@ def _profile_ref(profile_id: str = "adaptive-threshold-v1") -> ExperimentReferen
     )
 
 
+def _source_ref() -> DifficultySourceDefinitionReferenceModel:
+    return DifficultySourceDefinitionReferenceModel(
+        ref_kind="metric-definition",
+        ref_id="objective-progress",
+        ref_version="1.0.0",
+        ref_digest=_DIGEST_B,
+    )
+
+
 def _adaptive_policy(*, condition: str = "adaptive") -> DifficultyPolicyModel:
     rule_id = "stalled" if condition == "scaffolded" else "objectives-met-quickly"
     action_id = "show-hint" if condition == "scaffolded" else "harder-follow-up"
@@ -64,7 +76,7 @@ def _adaptive_policy(*, condition: str = "adaptive") -> DifficultyPolicyModel:
             "progress": DifficultyObservationSourceModel(
                 source_id="progress",
                 source_kind="derived-measure",
-                source_ref="measure:objective-progress",
+                source_ref=_source_ref(),
                 visibility="participant-visible",
                 maximum_age=1,
             ).model_dump(mode="json")
@@ -187,6 +199,7 @@ def _request(
         observation_inputs=[
             DifficultyObservationInputModel(
                 source_id="progress",
+                source_ref=_source_ref(),
                 run_id=run_id,
                 evidence_ref=ExperimentReferenceModel(
                     ref_kind="derived-measure",
@@ -368,6 +381,35 @@ def test_policy_authority_uses_portable_governed_identifiers() -> None:
     with pytest.raises(ValidationError, match="stable governed profile id"):
         DifficultyPolicyModel.model_validate(payload)
 
+    for missing_identity_field in ("ref_version", "ref_digest"):
+        payload = _adaptive_policy().model_dump(mode="json")
+        payload["observation_sources"]["progress"]["source_ref"][missing_identity_field] = None
+        with pytest.raises(ValidationError, match="source definition references must be versioned and digest-bound"):
+            DifficultyPolicyModel.model_validate(payload)
+
+    payload = _adaptive_policy().model_dump(mode="json")
+    payload["observation_sources"]["progress"]["source_ref"]["ref_path"] = "mutable/measure.json"
+    with pytest.raises(ValidationError, match="source definition references must not depend on mutable paths"):
+        DifficultyPolicyModel.model_validate(payload)
+
+
+def test_published_schema_requires_exact_source_definition_identity() -> None:
+    validator = Draft202012Validator(schema_bundle()["experiment-authoring-input-v1"])
+    payload = _adaptive_spec_payload()
+    assert validator.is_valid(payload)
+
+    for invalid_field, invalid_value in (
+        ("ref_version", None),
+        ("ref_digest", None),
+        ("ref_path", "mutable/measure.json"),
+    ):
+        invalid = deepcopy(payload)
+        source_ref = invalid["run_plan"]["difficulty_policy_registry"]["policies"]["adaptive-standard"][
+            "observation_sources"
+        ]["progress"]["source_ref"]
+        source_ref[invalid_field] = invalid_value
+        assert not validator.is_valid(invalid)
+
 
 def test_difficulty_actions_enforce_closed_carriers_and_follow_up_authority() -> None:
     scaffold_ref = DifficultyAffectedReferenceModel(
@@ -488,6 +530,21 @@ def test_positive_boundary_unsupported_and_policy_violation_fixtures() -> None:
     )
     assert unsupported.decision is not None
     assert unsupported.decision.disposition == "unsupported"
+
+    substituted_source = unsupported_request.model_copy(deep=True)
+    substituted_source.observation_inputs[0].__dict__["source_ref"] = DifficultySourceDefinitionReferenceModel(
+        ref_kind="metric-definition",
+        ref_id="different-progress-measure",
+        ref_version="1.0.0",
+        ref_digest=_DIGEST_B,
+    )
+    rejected = resolve_difficulty_policy(
+        unsupported_policy,
+        substituted_source,
+        prior_decisions=[],
+    )
+    assert rejected.decision is None
+    assert rejected.diagnostics[0].code == "difficulty.observation-source-mismatch"
 
     policy_violation = _adaptive_fixture("policy-violation.json")
     with pytest.raises(ValidationError, match="threshold rules must reference declared actions"):
@@ -685,6 +742,17 @@ def test_resolver_rejects_cross_run_future_and_stale_observation_inputs() -> Non
     assert result.decision is None
     assert result.diagnostics[0].code == "difficulty.observation-cut-invalid"
 
+    substituted_source = _request().model_copy(deep=True)
+    substituted_source.observation_inputs[0].__dict__["source_ref"] = DifficultySourceDefinitionReferenceModel(
+        ref_kind="metric-definition",
+        ref_id="different-progress-measure",
+        ref_version="1.0.0",
+        ref_digest=_DIGEST_B,
+    )
+    result = resolve_difficulty_policy(policy, substituted_source, prior_decisions=[])
+    assert result.decision is None
+    assert result.diagnostics[0].code == "difficulty.observation-source-mismatch"
+
 
 def test_cooldown_denies_early_repeat_and_allows_the_exact_boundary() -> None:
     policy_payload = _adaptive_policy().model_dump(mode="json")
@@ -759,6 +827,14 @@ def test_adaptive_run_provenance_is_append_only_and_fixed_runs_have_no_intervent
     substituted["decisions"][0]["history_head"] = difficulty_decision_history_head(substituted["decisions"][0])
     with pytest.raises(ValidationError, match="declared policy action"):
         DifficultyRunProvenanceModel.model_validate(substituted)
+
+    substituted_source = deepcopy(provenance.model_dump(mode="json"))
+    substituted_source["decisions"][0]["observation_refs"][0]["source_ref"]["ref_id"] = "different-progress-measure"
+    substituted_source["decisions"][0]["history_head"] = difficulty_decision_history_head(
+        substituted_source["decisions"][0]
+    )
+    with pytest.raises(ValidationError, match="exact policy source definitions"):
+        DifficultyRunProvenanceModel.model_validate(substituted_source)
 
     undeclared_action = deepcopy(provenance.model_dump(mode="json"))
     undeclared_action["decisions"][0]["selected_action_id"] = "undeclared-action"

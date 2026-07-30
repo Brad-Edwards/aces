@@ -165,6 +165,12 @@ def _validate_observations(
         )
     for source_id, item in inputs.items():
         source = policy.observation_sources[source_id]
+        if item.source_ref != source.source_ref:
+            return _diagnostic(
+                "difficulty.observation-source-mismatch",
+                _OBSERVATION_INPUTS_ADDRESS,
+                "An observation input does not match the policy's exact source definition.",
+            )
         same_scope = (
             item.run_id == request.run_id
             and item.observed_cut.episode_id == request.state_cut.episode_id
@@ -323,11 +329,9 @@ def _resolve_adaptive_policy(
     prior_head: str | None,
     fingerprint: str,
 ) -> DifficultyResolutionResultModel:
-    result = None
-    if not _evaluator_supported(policy):
+    result = _validate_observations(policy, request)
+    if result is None and not _evaluator_supported(policy):
         result = _decision_result(policy, request, prior_head, fingerprint, "unsupported")
-    if result is None:
-        result = _validate_observations(policy, request)
     if result is None:
         bounded = _bounded_disposition(policy, request, prior_decisions)
         if bounded is not None:

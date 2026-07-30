@@ -76,6 +76,7 @@ PUBLIC_EXPORTS = [
     "DifficultyObservationInputModel",
     "DifficultyObservationReferenceModel",
     "DifficultyObservationSourceModel",
+    "DifficultySourceDefinitionReferenceModel",
     "DifficultyPolicyBoundsModel",
     "DifficultyPolicyModel",
     "DifficultyPolicyRegistryModel",

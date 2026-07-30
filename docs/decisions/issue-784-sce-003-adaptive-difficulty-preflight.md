@@ -6,10 +6,11 @@ Issue: #784.
 
 Requirement: SCE-003.
 
-This note fixes the architecture boundary for observable, bounded adaptive
-difficulty over declared scenario variants. It is guidance only: it does not
-add SDL syntax, contracts, schemas, policy algorithms, runtime behavior,
-persistence, fixtures, tests, APIs, or an implementation plan.
+This note records the architecture boundary for observable, bounded adaptive
+difficulty over declared scenario variants. The executable SCE-003 v1 profile
+is now published in the experiment contracts and formal specification; this
+note remains design rationale and does not itself create a second authority,
+runtime controller, or analysis method.
 
 ADR-084 remains authoritative. Adaptation is a governed consumer of an
 immutable admitted baseline; it cannot become a second scenario-selection,
@@ -66,6 +67,36 @@ reference. The implementation must not add another variation domain, scenario
 binder, workflow language, observation model, participant delivery model,
 run/study record, repository, exception hierarchy, or policy engine.
 
+## Literature And Validity Basis
+
+The detailed source transfer is recorded in
+[`adaptive-difficulty-lineage-and-validity.md`](../research/scenario-variation-trial-realization/adaptive-difficulty-lineage-and-validity.md)
+and the SDL
+[`lineage.md`](../explain/sdl/lineage.md#adaptive-difficulty-sequential-intervention-and-simulation-experiments).
+The design uses five complementary precedents:
+
+- Hunicke and Chapman's dynamic-difficulty work supplies the inspectable
+  observation/policy/trigger/intervention/outcome decomposition.
+- Murphy's dynamic-treatment-regime work makes the history-dependent path part
+  of treatment and requires the estimand and identification assumptions to be
+  explicit.
+- Weiss's adaptive-testing work prevents an adaptive selector from being
+  mistaken for a validated difficulty or competence measurement model.
+- Bengio et al.'s curriculum-learning work shows that ordering and scaffolding
+  can change learning dynamics, so adaptive paths are not presentation-neutral.
+- MIASE/SED-ML, experimental frames, simulation V&V, L'Ecuyer stream
+  organization, and common-random-numbers analysis separate model from
+  experiment procedure and make correlated random streams an explicit design
+  choice.
+
+Those sources support the contract shape, not its scientific conclusions. The
+v1 profile must bind the exact versioned and digest-bound measurement-source
+definition separately from the exact evidence instance, predeclare rules and
+stopping bounds, archive the realized treatment path, preserve the baseline,
+and disclose the random-stream relationship and analysis limitations. It
+cannot prove construct validity, causal identifiability, policy optimality,
+competence, or pedagogical benefit.
+
 ## Architecture Decisions And Guardrails
 
 ### One declared policy, one exact decision, and separately evidenced effects
@@ -116,8 +147,12 @@ mutable preset, or partial patch.
 
 Each decision binds the exact current state cut and only the observation
 records, evidence records, or derived measures admitted by the policy.
-Observation ids, source roles, capture/evidence refs, timestamps/order
-coordinates, sensitivity, redaction, and derivation profile must resolve.
+Observation ids, source roles, a versioned and digest-bound source-definition
+ref, capture/evidence refs, timestamps/order coordinates, sensitivity,
+redaction, and derivation profile must resolve. The decision archives the
+exact source-definition ref as well as the evidence-instance ref so
+substituting a different measure under the same local observation id fails
+closed.
 
 Raw logs, mutable counters, wall-clock time, host load, backend-private state,
 environment variables, final outcomes from the future, hidden answer material,
@@ -197,6 +232,16 @@ having faced the same fixed treatment. Per-run difficulty paths and guidance
 exposure are post-allocation treatment facts, not baseline factors to rewrite.
 Missing, denied, unsupported, or evidence-lost interventions remain explicit
 and feed the existing missing-data/invalidation rules.
+
+The analysis plan must also state whether follow-up alternatives use
+independent randomization or an intentionally paired/common-random-number
+design. A preserved seed or namespace is not enough by itself: the governed
+stream profile and unchanged semantic addresses establish the relationship,
+and the analysis must account for any induced correlation. Repeated looks,
+stopping, cooldown, path-dependent eligibility, and missing interventions can
+make naive fixed-treatment or independent-sample analyses invalid; the
+portable contract records the necessary design facts but does not select or
+certify an estimator.
 
 ## Required Incumbents And Cross-Cutting Reuse
 

@@ -771,13 +771,16 @@ condition explicitly records the condition and, for a non-fixed condition, the
 policy id.
 
 An adaptive policy names a digest-bound evaluator profile, admitted observation
-roles, ordered threshold rules, a closed action allowlist, cadence/cooldown/
-intervention limits, guardrails, and the validity effect. The reference
-resolver supports `adaptive-threshold-v1@1.0.0`; it consumes one exact state
-cut and evidence-bearing observation references and returns a sealed decision
-without dispatching the action. Support matches the complete profile id,
-version, and published `ADAPTIVE_THRESHOLD_PROFILE_DIGEST`; substituted
-digests and other profiles remain visible unsupported outcomes.
+roles with versioned and digest-bound source definitions, ordered threshold
+rules, a closed action allowlist, cadence/cooldown/intervention limits,
+guardrails, and the validity effect. The reference resolver supports
+`adaptive-threshold-v1@1.0.0`; it consumes one exact state cut, the exact source
+definition admitted by the policy, and an independently version/digest-bound
+evidence instance. It returns a sealed decision without dispatching the
+action. Support matches the complete profile id, version, and published
+`ADAPTIVE_THRESHOLD_PROFILE_DIGEST`; substituted evaluator digests, source
+definitions, and other profiles fail closed or remain visible unsupported
+outcomes.
 
 The run archives policy decisions separately from intervention outcomes:
 
@@ -806,6 +809,15 @@ participants as if they received the same fixed treatment.
 Before admission, `validate_experiment_difficulty_against_spec()` checks the
 run against the canonical authoring-input digest, task, allocated condition,
 and exact policy snapshot.
+
+For a defensible study, the analysis plan should additionally name the
+estimand; measurement/calibration basis; assigned policy and realized path;
+stopping, cooldown, and missing-intervention handling; and whether follow-up
+runs use independent or intentionally common random streams. These records
+make the analysis auditable, but they do not prove a universal difficulty
+scale, competence, causal identification, policy optimality, or training
+benefit. The literature and simulation transfer is documented in
+[`lineage.md`](../sdl/lineage.md#adaptive-difficulty-sequential-intervention-and-simulation-experiments).
 
 ## Compatibility And Migration
 

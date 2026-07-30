@@ -24,6 +24,7 @@ from .difficulty_governance import (
 from .difficulty_observations import (
     DifficultyObservationInputModel,
     DifficultyObservationReferenceModel,
+    DifficultySourceDefinitionReferenceModel,
     DifficultyStateCutModel,
     DifficultyThresholdValue,
     _validate_difficulty_evidence_reference,
@@ -77,7 +78,7 @@ class DifficultyObservationSourceModel(ContractModel):
         "run-event",
         "result-summary",
     ]
-    source_ref: NonEmptyString
+    source_ref: DifficultySourceDefinitionReferenceModel
     visibility: Literal["participant-visible", "operator-only", "assurance-only"]
     maximum_age: NonNegativeInteger
 
@@ -473,6 +474,7 @@ __all__ = [
     "DifficultyObservationInputModel",
     "DifficultyObservationReferenceModel",
     "DifficultyObservationSourceModel",
+    "DifficultySourceDefinitionReferenceModel",
     "DifficultyPolicyBoundsModel",
     "DifficultyPolicyModel",
     "DifficultyPolicyRegistryModel",

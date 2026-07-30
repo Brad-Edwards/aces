@@ -2,9 +2,9 @@
   "contract_id": "experiment-authoring-input-v1",
   "schema_path": "contracts/schemas/experiment-core/experiment-authoring-input-v1.json",
   "stability": "draft",
-  "content_hash": "1ae39066715e902bd17abfa81c417642142d24ed24ac8cc5407550e5c8c6f18d",
+  "content_hash": "7a26f479a37755dc7d7989d467049a49eabef8a7d5d363d25837b58622a6e9a3",
   "last_change": {
-    "summary": "Added the bounded fixed, adaptive, and scaffolded difficulty policy registry and condition joins for issue #784.",
-    "content_hash": "1ae39066715e902bd17abfa81c417642142d24ed24ac8cc5407550e5c8c6f18d"
+    "summary": "Bound adaptive-difficulty observation roles to exact versioned or digest-bound source definitions for issue #784.",
+    "content_hash": "7a26f479a37755dc7d7989d467049a49eabef8a7d5d363d25837b58622a6e9a3"
   }
 }

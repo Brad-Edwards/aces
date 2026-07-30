@@ -4,6 +4,9 @@ These fixtures exercise the SCE-003 policy and resolver models nested in
 `experiment-authoring-input-v1` and `experiment-run-v1`. They are fragment
 fixtures rather than an additional top-level contract.
 
+- Policy inputs bind a versioned and digest-bound measurement-source definition
+  separately from the exact evidence or derived-measure instance used at a
+  decision cut.
 - `positive.json` selects the declared harder follow-up at the exact threshold.
 - `boundary.json` reaches the declared intervention-count terminal boundary.
 - `unsupported.json` names a digest-bound evaluator profile the reference

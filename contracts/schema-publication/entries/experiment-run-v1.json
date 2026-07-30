@@ -2,9 +2,9 @@
   "contract_id": "experiment-run-v1",
   "schema_path": "contracts/schemas/experiment-core/experiment-run-v1.json",
   "stability": "draft",
-  "content_hash": "f8bfca886613b3856e80ee7c4ba815ea37e68c89e06462d423960f76f5b53f13",
+  "content_hash": "59d8056c05cbf86cafee784619255fcf2b3e199ff63fa7e96a118ca57e3d49a4",
   "last_change": {
-    "summary": "Added append-only adaptive-difficulty policy, decision, intervention, and validity provenance for issue #784.",
-    "content_hash": "f8bfca886613b3856e80ee7c4ba815ea37e68c89e06462d423960f76f5b53f13"
+    "summary": "Archived and validated exact adaptive-difficulty source definitions separately from evidence instances for issue #784.",
+    "content_hash": "59d8056c05cbf86cafee784619255fcf2b3e199ff63fa7e96a118ca57e3d49a4"
   }
 }

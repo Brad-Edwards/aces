@@ -582,10 +582,14 @@
           "pattern": "^[a-z0-9]",
           "title": "Source Id",
           "type": "string"
+        },
+        "source_ref": {
+          "$ref": "#/$defs/DifficultySourceDefinitionReferenceModel"
         }
       },
       "required": [
         "source_id",
+        "source_ref",
         "run_id",
         "evidence_ref",
         "observed_cut"
@@ -624,9 +628,7 @@
           "type": "string"
         },
         "source_ref": {
-          "minLength": 1,
-          "title": "Source Ref",
-          "type": "string"
+          "$ref": "#/$defs/DifficultySourceDefinitionReferenceModel"
         },
         "visibility": {
           "enum": [
@@ -880,6 +882,115 @@
         "validity_disclosure"
       ],
       "title": "DifficultyRunProvenanceModel",
+      "type": "object"
+    },
+    "DifficultySourceDefinitionReferenceModel": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "properties": {
+            "ref_digest": {
+              "not": {
+                "type": "null"
+              }
+            },
+            "ref_path": {
+              "type": "null"
+            },
+            "ref_version": {
+              "not": {
+                "type": "null"
+              }
+            }
+          },
+          "required": [
+            "ref_version",
+            "ref_digest"
+          ]
+        }
+      ],
+      "description": "Immutable identity of the measurement or evidence role admitted by a policy.",
+      "properties": {
+        "ref_digest": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Digest"
+        },
+        "ref_id": {
+          "minLength": 1,
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "ref_kind": {
+          "enum": [
+            "processor",
+            "backend",
+            "participant-implementation",
+            "scenario",
+            "scenario-snapshot",
+            "task",
+            "authoring-input",
+            "protocol",
+            "apparatus-context",
+            "run",
+            "metric-definition",
+            "result",
+            "study",
+            "manifest",
+            "profile",
+            "capability",
+            "capture-spec",
+            "evidence",
+            "evidence-record",
+            "derived-measure",
+            "measurement-channel",
+            "analysis-artifact",
+            "other"
+          ],
+          "title": "Ref Kind",
+          "type": "string"
+        },
+        "ref_path": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Path"
+        },
+        "ref_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Version"
+        }
+      },
+      "required": [
+        "ref_kind",
+        "ref_id"
+      ],
+      "title": "DifficultySourceDefinitionReferenceModel",
       "type": "object"
     },
     "DifficultyStateCutModel": {

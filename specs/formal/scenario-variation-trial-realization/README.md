@@ -492,8 +492,9 @@ coordinate, not an unvalidated patch or runtime preset.
 
 The supported reference evaluator is the digest-bound
 `adaptive-threshold-v1@1.0.0` profile. Resolution is pure over the policy,
-exact state cut, evidence-bearing observation references, expected decision
-history head, intervention count, and idempotency identity. It enforces
+exact state cut, versioned and digest-bound observation-source definitions,
+evidence-bearing observation-instance references, expected decision history
+head, intervention count, and idempotency identity. It enforces
 freshness, run/episode/order scope, threshold priority, cadence, cooldown, and
 maximum interventions, then returns one sealed decision or bounded
 diagnostics. Another digest-bound evaluator remains a valid declaration but
@@ -503,9 +504,12 @@ digest, and resolver support matches the complete id/version/digest tuple.
 
 Decision history is append-only. Each `DifficultyDecisionRecordModel` binds
 the policy id/version/digest, request fingerprint, prior and resulting history
-heads, exact cut, evidence references, trigger, selected action, typed affected
-references, disposition, time, and validity effect. Observation values are
-transient resolver inputs and are not copied into the archival decision.
+heads, exact cut, source-definition and evidence-instance references, trigger,
+selected action, typed affected references, disposition, time, and validity
+effect. The source-definition reference must exactly match the admitted
+policy; a different measure cannot be submitted under the same local
+`source_id`. Observation values are transient resolver inputs and are not
+copied into the archival decision.
 
 Selected effects are separate `DifficultyInterventionRecordModel` records.
 The closed affected-reference kinds are scaffold, participant inject,
@@ -525,6 +529,29 @@ study condition requires an analysis plan and explicit validity notes.
 `validate_experiment_difficulty_against_spec()` additionally binds a run to the
 canonical authoring-input digest, task, allocated condition, and exact admitted
 policy snapshot.
+
+### SCE-003 validity boundary
+
+The reference resolver establishes deterministic policy conformance, not
+scientific validity. In particular:
+
+- a policy-local variant ordering is not a universal difficulty scale;
+- an exact measurement definition and evidence instance do not prove
+  construct validity, calibration, or competence;
+- an adaptive or scaffolded path is received treatment, not a fixed baseline;
+- repeated looks, stopping/cooldown rules, missing interventions, and
+  path-dependent follow-ups belong in the estimand and analysis;
+- retaining random-stream coordinates across alternatives creates an
+  intentional correlated/common-random-number design, while changing them
+  requests independent randomization; neither is inferred from run lineage;
+  and
+- deterministic replay proves the declared resolver result only, not policy
+  optimality, causal identification, pedagogical benefit, or backend/model
+  validity.
+
+These limits apply the primary adaptive-treatment, adaptive-testing,
+curriculum-learning, and simulation-experiment sources mapped in
+[`lineage.md`](../../../docs/explain/sdl/lineage.md#adaptive-difficulty-sequential-intervention-and-simulation-experiments).
 
 ## Compatibility Invariants
 

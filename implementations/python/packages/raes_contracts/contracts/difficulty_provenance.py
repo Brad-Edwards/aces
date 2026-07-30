@@ -102,11 +102,15 @@ class DifficultyRunProvenanceModel(ContractModel):
             raise ValueError("difficulty decisions must match the archived policy identity")
 
     def _validate_decision_observations(self, decision: DifficultyDecisionRecordModel) -> None:
-        if decision.disposition == "unsupported":
-            return
         observations = {observation.source_id: observation for observation in decision.observation_refs}
         if set(observations) != set(self.policy.observation_sources):
             raise ValueError("difficulty decisions must archive every declared observation source")
+        substituted_source = any(
+            observation.source_ref != self.policy.observation_sources[source_id].source_ref
+            for source_id, observation in observations.items()
+        )
+        if substituted_source:
+            raise ValueError("difficulty decision observations must match the exact policy source definitions")
         stale_observation = any(
             decision.state_cut.coordinate - observation.observed_cut.coordinate
             > self.policy.observation_sources[source_id].maximum_age

@@ -14,7 +14,12 @@
     "progress": {
       "source_id": "progress",
       "source_kind": "derived-measure",
-      "source_ref": "measure:objective-progress",
+      "source_ref": {
+        "ref_kind": "metric-definition",
+        "ref_id": "objective-progress",
+        "ref_version": "1.0.0",
+        "ref_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+      },
       "visibility": "participant-visible",
       "maximum_age": 1
     }
