@@ -32,6 +32,20 @@ from raes_processor.planner import plan
 from raes_processor.semantics.realization import realization_disclosure
 from raes_runtime.control_plane_api_models import _snapshot_model
 
+_OPEN_NODE_REALIZATION_SUFFIXES = {
+    "os",
+    "runtime.environment",
+    "runtime.mounts",
+    "runtime.linux_capabilities",
+    "runtime.network.published_ports",
+    "runtime.forwarding_agents",
+    "runtime.service_listeners",
+}
+
+
+def _open_node_realization_fields(node_name: str) -> set[str]:
+    return {f"nodes.{node_name}.{suffix}" for suffix in _OPEN_NODE_REALIZATION_SUFFIXES}
+
 
 def _scenario(realization: str = "", *, web_os: str = ""):
     realization_block = textwrap.dedent(realization).strip()
@@ -132,7 +146,7 @@ def test_most_specific_scopes_override_in_both_directions_and_ignore_order():
         requirement.field_path
         for requirement in first.realization_requirements
         if requirement.explicitness is ExplicitnessClass.OPEN
-    } == {"nodes.worker.os"}
+    } == _open_node_realization_fields("worker")
     assert first.realization_requirements == second.realization_requirements
 
     closed_then_open = """realization:
@@ -148,7 +162,7 @@ def test_most_specific_scopes_override_in_both_directions_and_ignore_order():
         requirement.field_path
         for requirement in model.realization_requirements
         if requirement.explicitness is ExplicitnessClass.OPEN
-    } == {"nodes.worker.os"}
+    } == _open_node_realization_fields("worker")
 
 
 def test_explicit_leaf_wins_over_inherited_open_posture():
@@ -283,7 +297,7 @@ def test_imported_scope_is_qualified_and_does_not_leak_to_host_or_sibling(tmp_pa
         requirement.field_path
         for requirement in model.realization_requirements
         if requirement.explicitness is ExplicitnessClass.OPEN
-    } == {"nodes.openmod.vm.os"}
+    } == _open_node_realization_fields("openmod.vm")
 
 
 def test_open_demand_is_rejected_without_open_realization_support():
