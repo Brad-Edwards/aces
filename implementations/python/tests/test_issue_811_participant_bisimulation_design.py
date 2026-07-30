@@ -113,8 +113,10 @@ def test_selected_profile_is_closed_independently_derived_and_divergence_preserv
     assert left["transition_source"] != right["transition_source"]
     assert left["independent_construction"] is True
     assert right["independent_construction"] is True
-    assert left["state_coordinates"] and right["state_coordinates"]
-    assert left["initial_state"] and right["initial_state"]
+    assert left["state_coordinates"]
+    assert right["state_coordinates"]
+    assert left["initial_state"]
+    assert right["initial_state"]
 
     mapping = profile["state_runtime_mapping"]
     assert mapping["claim_axis"] == "runtime-realization"
@@ -213,7 +215,8 @@ def test_governance_program_is_requirement_backed_acyclic_and_reproduction_gated
     assert set(issues) == REQUIRED_CHILDREN
     issue_numbers: set[int] = set()
     for key, entry in issues.items():
-        assert isinstance(entry["issue_number"], int) and entry["issue_number"] > 0, key
+        assert isinstance(entry["issue_number"], int), key
+        assert entry["issue_number"] > 0, key
         assert entry["issue_number"] not in issue_numbers
         issue_numbers.add(entry["issue_number"])
         assert entry["milestone"] == MILESTONE
