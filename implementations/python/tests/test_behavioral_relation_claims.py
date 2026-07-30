@@ -6,6 +6,7 @@ from copy import deepcopy
 
 from raes_contracts.behavioral_relations import load_behavioral_relation_catalog
 from tools.check_behavioral_relation_claims import (
+    _should_validate_structured_bindings,
     _validate_claim_text,
     _validate_structured_bindings,
 )
@@ -14,7 +15,7 @@ from tools.check_behavioral_relation_claims import (
 def _valid_binding() -> dict[str, object]:
     return {
         "taxonomy_id": "raes-behavioral-relations",
-        "taxonomy_revision": "rev6",
+        "taxonomy_revision": "rev7",
         "relation_id": "bounded-probe-success",
         "subject": "Named backend fixture cases",
         "left_carrier_ref": "backend-target:stub",
@@ -91,6 +92,36 @@ def test_structured_claims_resolve_against_the_canonical_catalog():
         "contracts/example.json",
     )
     assert {failure.rule_id for failure in failures} == {"behavioral-relation-binding-invalid"}
+
+
+def test_governed_envelopes_validate_nested_claims_without_becoming_claims():
+    catalog = load_behavioral_relation_catalog()
+    envelope = {
+        "schema_version": "participant-opacity-analysis-evidence/v1",
+        "taxonomy_id": "raes-behavioral-relations",
+        "taxonomy_revision": "rev7",
+        "relation_id": "participant-predicate-opacity",
+        "claim": _valid_binding(),
+    }
+
+    assert not _validate_structured_bindings(
+        envelope,
+        catalog,
+        "contracts/example.json",
+    )
+
+    envelope["claim"]["relation_id"] = "unknown-relation"
+    failures = _validate_structured_bindings(
+        envelope,
+        catalog,
+        "contracts/example.json",
+    )
+    assert len(failures) == 1
+
+
+def test_invalid_contract_fixtures_are_not_interpreted_as_positive_claims():
+    assert not _should_validate_structured_bindings("contracts/fixtures/formal-analysis/example/invalid/negative.json")
+    assert _should_validate_structured_bindings("contracts/fixtures/formal-analysis/example/valid/reference.json")
 
 
 def test_bounded_binding_cannot_be_promoted_to_universal_scope():

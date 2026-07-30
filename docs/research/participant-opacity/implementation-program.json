@@ -147,7 +147,7 @@
   "assurance_lanes": [
     {
       "id": "definition",
-      "evidence_required": "Accepted ADR, SEM-231 formal authority, rev5 catalog, primary sources, and shared binding validation.",
+      "evidence_required": "Accepted ADR, SEM-231 formal authority, exact current behavioral-relation catalog revision, primary sources, and shared binding validation.",
       "does_not_establish": "Any system satisfies or enforces opacity."
     },
     {
@@ -211,6 +211,13 @@
         "tool/version and digests",
         "safe counterexamples",
         "bounded-test claim binding"
+      ],
+      "delivered_artifacts": [
+        "contracts/profiles/behavioral-relation/participant-opacity-baseline-v1.json",
+        "contracts/schemas/formal-analysis/participant-opacity-analysis-input-v1.json",
+        "contracts/schemas/formal-analysis/participant-opacity-analysis-evidence-v1.json",
+        "implementations/python/packages/raes_processor/participant_opacity/_service.py",
+        "implementations/python/tests/test_issue_961_participant_opacity.py"
       ],
       "explicit_nonclaims": [
         "No model check, proof, runtime enforcement, or backend realization."

@@ -43,6 +43,12 @@ RULE_BINDING_INVALID = "behavioral-relation-binding-invalid"
 RULE_UNBOUND_CLAIM = "behavioral-relation-unbound-positive-claim"
 
 _CLAIM_BINDING_KEYS = frozenset({"taxonomy_id", "taxonomy_revision", "relation_id"})
+_CLAIM_CONTAINER_SCHEMA_VERSIONS = frozenset(
+    {
+        "behavioral-relation-profile/v1",
+        "participant-opacity-analysis-evidence/v1",
+    }
+)
 _TEXT_SUFFIXES = frozenset({".json", ".md", ".py", ".toml", ".yaml", ".yml"})
 _SCAN_ROOTS = (
     "docs",
@@ -163,8 +169,18 @@ _CLAIM_PATTERNS: tuple[tuple[re.Pattern[str], frozenset[str]], ...] = (
         frozenset({"statistical-equivalence"}),
     ),
     (
-        re.compile(r"\bimplementation refines? (?:this|the) (?:design|model|specification)\b", re.IGNORECASE),
-        frozenset({"trace-inclusion", "forward-simulation", "backward-simulation", "data-refinement"}),
+        re.compile(
+            r"\bimplementation refines? (?:this|the) (?:design|model|specification)\b",
+            re.IGNORECASE,
+        ),
+        frozenset(
+            {
+                "trace-inclusion",
+                "forward-simulation",
+                "backward-simulation",
+                "data-refinement",
+            }
+        ),
     ),
 )
 
@@ -202,6 +218,8 @@ def _validate_structured_bindings(
     for candidate in _iter_objects(payload):
         if not _CLAIM_BINDING_KEYS.issubset(candidate):
             continue
+        if candidate.get("schema_version") in _CLAIM_CONTAINER_SCHEMA_VERSIONS:
+            continue
         try:
             binding = BehavioralClaimBindingModel.model_validate(candidate)
             validate_behavioral_claim_binding(binding, catalog)
@@ -214,6 +232,12 @@ def _validate_structured_bindings(
                 )
             )
     return failures
+
+
+def _should_validate_structured_bindings(path: str) -> bool:
+    """Invalid contract fixtures are negative validator inputs, not claims."""
+
+    return not (path.startswith("contracts/fixtures/") and "/invalid/" in path)
 
 
 def _sentence_around(text: str, start: int, end: int) -> str:
@@ -229,7 +253,11 @@ def _window_around(text: str, start: int, end: int) -> str:
 
 def _relation_id_present(window: str, relation_ids: frozenset[str]) -> bool:
     return any(
-        re.search(rf"(?<![a-z0-9-]){re.escape(relation_id)}(?![a-z0-9-])", window, re.IGNORECASE)
+        re.search(
+            rf"(?<![a-z0-9-]){re.escape(relation_id)}(?![a-z0-9-])",
+            window,
+            re.IGNORECASE,
+        )
         for relation_id in relation_ids
     )
 
@@ -288,7 +316,13 @@ def evaluate(repo_root: Path) -> list[PolicyFailure]:
     try:
         catalog = BehavioralRelationCatalogModel.model_validate_json(catalog_path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, ValidationError, ValueError) as exc:
-        return [PolicyFailure(RULE_CATALOG_INVALID, f"cannot load governed catalog: {exc}", CATALOG_RELATIVE_PATH)]
+        return [
+            PolicyFailure(
+                RULE_CATALOG_INVALID,
+                f"cannot load governed catalog: {exc}",
+                CATALOG_RELATIVE_PATH,
+            )
+        ]
 
     failures: list[PolicyFailure] = []
     for path in _iter_scan_paths(repo_root):
@@ -303,7 +337,7 @@ def evaluate(repo_root: Path) -> list[PolicyFailure]:
                 payload = json.loads(text)
             except json.JSONDecodeError:
                 payload = None
-            if payload is not None:
+            if payload is not None and _should_validate_structured_bindings(relative):
                 failures.extend(_validate_structured_bindings(payload, catalog, relative))
         failures.extend(_validate_claim_text(text, relative))
     return failures

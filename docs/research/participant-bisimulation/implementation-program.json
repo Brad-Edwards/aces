@@ -96,7 +96,7 @@
     "profile_id": "participant-crossing-dpbb-finite-v1",
     "profile_revision": "rev1",
     "relation_id": "divergence-preserving-branching-bisimulation",
-    "taxonomy_ref": "raes-behavioral-relations@rev6",
+    "taxonomy_ref": "raes-behavioral-relations@rev7",
     "projection_ref": "participant-crossing-projection@rev1",
     "quantifier_scope": "complete-finite-carrier",
     "finite_carrier_is_complete": true,
