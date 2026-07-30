@@ -97,6 +97,607 @@
       "title": "BindingScalarType",
       "type": "string"
     },
+    "DifficultyActionModel": {
+      "additionalProperties": false,
+      "description": "One closed action request; the policy never performs the effect.",
+      "properties": {
+        "action_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Action Id",
+          "type": "string"
+        },
+        "action_kind": {
+          "enum": [
+            "scaffold",
+            "participant-inject",
+            "participant-control",
+            "workflow-action",
+            "follow-up-trial"
+          ],
+          "title": "Action Kind",
+          "type": "string"
+        },
+        "affected_refs": {
+          "items": {
+            "$ref": "#/$defs/DifficultyAffectedReferenceModel"
+          },
+          "maxItems": 64,
+          "minItems": 1,
+          "title": "Affected Refs",
+          "type": "array"
+        },
+        "carrier_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Carrier Ref"
+        },
+        "target_variant_id": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "minLength": 1,
+              "not": {
+                "pattern": "[^a-z0-9_-]"
+              },
+              "pattern": "^[a-z0-9]",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Variant Id"
+        }
+      },
+      "required": [
+        "action_id",
+        "action_kind",
+        "affected_refs"
+      ],
+      "title": "DifficultyActionModel",
+      "type": "object"
+    },
+    "DifficultyAffectedReferenceModel": {
+      "additionalProperties": false,
+      "description": "Semantic reference kind an adaptive action is permitted to affect.",
+      "properties": {
+        "ref_id": {
+          "minLength": 1,
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "ref_kind": {
+          "enum": [
+            "scaffold",
+            "participant-inject",
+            "participant-control",
+            "workflow-action",
+            "scenario-variant"
+          ],
+          "title": "Ref Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "ref_kind",
+        "ref_id"
+      ],
+      "title": "DifficultyAffectedReferenceModel",
+      "type": "object"
+    },
+    "DifficultyDimensionModel": {
+      "additionalProperties": false,
+      "description": "One policy-local ordering over named, already declared variants.",
+      "properties": {
+        "dimension_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Dimension Id",
+          "type": "string"
+        },
+        "ordered_variant_ids": {
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            },
+            "pattern": "^[a-z0-9]",
+            "type": "string"
+          },
+          "maxItems": 128,
+          "minItems": 2,
+          "title": "Ordered Variant Ids",
+          "type": "array"
+        },
+        "ordering_rationale": {
+          "minLength": 1,
+          "title": "Ordering Rationale",
+          "type": "string"
+        }
+      },
+      "required": [
+        "dimension_id",
+        "ordered_variant_ids",
+        "ordering_rationale"
+      ],
+      "title": "DifficultyDimensionModel",
+      "type": "object"
+    },
+    "DifficultyObservationSourceModel": {
+      "additionalProperties": false,
+      "description": "One evidence-bearing source role admitted as policy input.",
+      "properties": {
+        "maximum_age": {
+          "minimum": 0,
+          "title": "Maximum Age",
+          "type": "integer"
+        },
+        "source_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Source Id",
+          "type": "string"
+        },
+        "source_kind": {
+          "enum": [
+            "evidence-record",
+            "derived-measure",
+            "participant-observation",
+            "run-event",
+            "result-summary"
+          ],
+          "title": "Source Kind",
+          "type": "string"
+        },
+        "source_ref": {
+          "minLength": 1,
+          "title": "Source Ref",
+          "type": "string"
+        },
+        "visibility": {
+          "enum": [
+            "participant-visible",
+            "operator-only",
+            "assurance-only"
+          ],
+          "title": "Visibility",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_id",
+        "source_kind",
+        "source_ref",
+        "visibility",
+        "maximum_age"
+      ],
+      "title": "DifficultyObservationSourceModel",
+      "type": "object"
+    },
+    "DifficultyPolicyBoundsModel": {
+      "additionalProperties": false,
+      "description": "Finite intervention and cadence bounds.",
+      "properties": {
+        "cooldown": {
+          "minimum": 0,
+          "title": "Cooldown",
+          "type": "integer"
+        },
+        "maximum_interventions": {
+          "minimum": 0,
+          "title": "Maximum Interventions",
+          "type": "integer"
+        },
+        "minimum_decision_interval": {
+          "minimum": 0,
+          "title": "Minimum Decision Interval",
+          "type": "integer"
+        },
+        "terminal_disposition": {
+          "enum": [
+            "fixed",
+            "no-change",
+            "deny",
+            "unsupported"
+          ],
+          "title": "Terminal Disposition",
+          "type": "string"
+        }
+      },
+      "required": [
+        "maximum_interventions",
+        "minimum_decision_interval",
+        "cooldown",
+        "terminal_disposition"
+      ],
+      "title": "DifficultyPolicyBoundsModel",
+      "type": "object"
+    },
+    "DifficultyPolicyModel": {
+      "additionalProperties": false,
+      "description": "One immutable fixed, adaptive, or scaffolded policy declaration.",
+      "properties": {
+        "actions": {
+          "maxProperties": 64,
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/DifficultyActionModel"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Actions",
+          "type": "object"
+        },
+        "baseline_variant_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Baseline Variant Id",
+          "type": "string"
+        },
+        "bounds": {
+          "$ref": "#/$defs/DifficultyPolicyBoundsModel"
+        },
+        "condition": {
+          "enum": [
+            "fixed",
+            "adaptive",
+            "scaffolded"
+          ],
+          "title": "Condition",
+          "type": "string"
+        },
+        "evaluator_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExperimentReferenceModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "guardrails": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 64,
+          "minItems": 1,
+          "title": "Guardrails",
+          "type": "array"
+        },
+        "observation_sources": {
+          "maxProperties": 64,
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/DifficultyObservationSourceModel"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Observation Sources",
+          "type": "object"
+        },
+        "policy_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Policy Digest",
+          "type": "string"
+        },
+        "policy_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Policy Id",
+          "type": "string"
+        },
+        "policy_version": {
+          "minLength": 1,
+          "title": "Policy Version",
+          "type": "string"
+        },
+        "threshold_rules": {
+          "maxProperties": 128,
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/DifficultyThresholdRuleModel"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Threshold Rules",
+          "type": "object"
+        },
+        "validity_effect": {
+          "minLength": 1,
+          "title": "Validity Effect",
+          "type": "string"
+        }
+      },
+      "required": [
+        "policy_id",
+        "policy_version",
+        "policy_digest",
+        "condition",
+        "baseline_variant_id",
+        "bounds",
+        "guardrails",
+        "validity_effect"
+      ],
+      "title": "DifficultyPolicyModel",
+      "type": "object"
+    },
+    "DifficultyPolicyRegistryModel": {
+      "additionalProperties": false,
+      "description": "Bounded named variants, dimensions, and policies for one experiment.",
+      "properties": {
+        "default_policy_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Default Policy Id",
+          "type": "string"
+        },
+        "dimensions": {
+          "maxProperties": 32,
+          "minProperties": 1,
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/DifficultyDimensionModel"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Dimensions",
+          "type": "object"
+        },
+        "policies": {
+          "maxProperties": 64,
+          "minProperties": 1,
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/DifficultyPolicyModel"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Policies",
+          "type": "object"
+        },
+        "variants": {
+          "maxProperties": 128,
+          "minProperties": 1,
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/DifficultyVariantModel"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Variants",
+          "type": "object"
+        }
+      },
+      "required": [
+        "dimensions",
+        "variants",
+        "policies",
+        "default_policy_id"
+      ],
+      "title": "DifficultyPolicyRegistryModel",
+      "type": "object"
+    },
+    "DifficultyThresholdRuleModel": {
+      "additionalProperties": false,
+      "description": "One ordered typed-threshold rule in the reference evaluator profile.",
+      "properties": {
+        "action_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Action Id",
+          "type": "string"
+        },
+        "observation_source_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Observation Source Id",
+          "type": "string"
+        },
+        "operator": {
+          "enum": [
+            "lt",
+            "lte",
+            "eq",
+            "ne",
+            "gte",
+            "gt"
+          ],
+          "title": "Operator",
+          "type": "string"
+        },
+        "priority": {
+          "minimum": 1,
+          "title": "Priority",
+          "type": "integer"
+        },
+        "rule_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Rule Id",
+          "type": "string"
+        },
+        "threshold": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            }
+          ],
+          "title": "Threshold"
+        }
+      },
+      "required": [
+        "rule_id",
+        "observation_source_id",
+        "operator",
+        "threshold",
+        "action_id",
+        "priority"
+      ],
+      "title": "DifficultyThresholdRuleModel",
+      "type": "object"
+    },
+    "DifficultyVariantModel": {
+      "additionalProperties": false,
+      "description": "Named references to incumbent selection, scaffold, and action carriers.",
+      "properties": {
+        "action_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 64,
+          "title": "Action Refs",
+          "type": "array"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "scaffold_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 64,
+          "title": "Scaffold Refs",
+          "type": "array"
+        },
+        "selection_policy_refs": {
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            },
+            "pattern": "^[a-z0-9]",
+            "type": "string"
+          },
+          "maxItems": 64,
+          "title": "Selection Policy Refs",
+          "type": "array"
+        },
+        "variant_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Variant Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "variant_id"
+      ],
+      "title": "DifficultyVariantModel",
+      "type": "object"
+    },
     "ExperimentApparatusConstraintModel": {
       "additionalProperties": false,
       "anyOf": [
@@ -671,6 +1272,34 @@
     },
     "ExperimentConditionAssignmentModel": {
       "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "difficulty_condition": {
+                "enum": [
+                  "adaptive",
+                  "scaffolded"
+                ]
+              }
+            },
+            "required": [
+              "difficulty_condition"
+            ]
+          },
+          "then": {
+            "properties": {
+              "difficulty_policy_id": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "difficulty_policy_id"
+            ]
+          }
+        }
+      ],
       "anyOf": [
         {
           "properties": {
@@ -712,6 +1341,29 @@
           ],
           "default": null,
           "title": "Description"
+        },
+        "difficulty_condition": {
+          "default": "fixed",
+          "enum": [
+            "fixed",
+            "adaptive",
+            "scaffolded"
+          ],
+          "title": "Difficulty Condition",
+          "type": "string"
+        },
+        "difficulty_policy_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Difficulty Policy Id"
         },
         "factor_levels": {
           "additionalProperties": {
@@ -1843,6 +2495,17 @@
           ],
           "default": null
         },
+        "difficulty_policy_registry": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DifficultyPolicyRegistryModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "episode_control": {
           "$ref": "#/$defs/ExperimentEpisodeControlModel"
         },
@@ -1931,6 +2594,18 @@
           ],
           "level": "error",
           "validator": "raes_contracts.contracts.ExperimentRunPlanModel._validate_run_plan"
+        },
+        {
+          "description": "Difficulty variants resolve fixed admitted selection policies; condition policy ids resolve the bounded registry and match explicit fixed, adaptive, or scaffolded allocation conditions.",
+          "id": "difficulty-policy-registry-valid",
+          "inputs": [
+            {
+              "contract_id": "experiment-authoring-input-v1",
+              "instance_path": "#/run_plan/difficulty_policy_registry"
+            }
+          ],
+          "level": "error",
+          "validator": "raes_contracts.contracts.ExperimentRunPlanModel._validate_difficulty_policy_registry"
         }
       ]
     },

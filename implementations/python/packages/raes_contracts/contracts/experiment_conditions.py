@@ -181,6 +181,8 @@ def _condition_assignment_run_criteria_signature(
 ) -> tuple[
     tuple[tuple[str, str, str | None, str | None, str | None], ...],
     tuple[tuple[str, str, str, str], ...],
+    str,
+    str | None,
 ]:
     reference_signature = tuple(
         sorted(
@@ -205,7 +207,12 @@ def _condition_assignment_run_criteria_signature(
             for parameter in assignment.required_parameters
         )
     )
-    return reference_signature, parameter_signature
+    return (
+        reference_signature,
+        parameter_signature,
+        assignment.difficulty_condition,
+        assignment.difficulty_policy_id,
+    )
 
 
 def _run_satisfies_condition_assignment(
@@ -224,4 +231,10 @@ def _run_satisfies_condition_assignment(
         for parameter in assignment.required_parameters
         if not any(_parameter_satisfies_requirement(candidate, parameter) for candidate in run_parameters)
     )
+    run_condition = run.difficulty_provenance.policy.condition if run.difficulty_provenance is not None else "fixed"
+    run_policy_id = run.difficulty_provenance.policy.policy_id if run.difficulty_provenance is not None else None
+    if run_condition != assignment.difficulty_condition:
+        missing.append(f"difficulty-condition:{assignment.difficulty_condition}")
+    if assignment.difficulty_policy_id is not None and run_policy_id != assignment.difficulty_policy_id:
+        missing.append(f"difficulty-policy:{assignment.difficulty_policy_id}")
     return missing

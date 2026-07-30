@@ -1,0 +1,32 @@
+{
+  "policy_id": "adaptive-standard",
+  "policy_version": "1.0.0",
+  "policy_digest": "sha256:901d4fa4f47f4b7bc7fc5da453142f936c11160a811242bcf1779e0d8b56a87f",
+  "run_id": "run-positive",
+  "state_cut": {
+    "order_domain": "logical-step",
+    "coordinate": 4,
+    "episode_id": "episode-1"
+  },
+  "observation_inputs": [
+    {
+      "source_id": "progress",
+      "run_id": "run-positive",
+      "evidence_ref": {
+        "ref_kind": "derived-measure",
+        "ref_id": "progress-at-4",
+        "ref_version": "1.0.0",
+        "ref_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "observed_cut": {
+        "order_domain": "logical-step",
+        "coordinate": 4,
+        "episode_id": "episode-1"
+      },
+      "value": 0.75
+    }
+  ],
+  "intervention_count": 0,
+  "idempotency_key": "positive-1",
+  "requested_at": "2026-07-30T10:00:00Z"
+}

@@ -761,6 +761,52 @@ attempt or receipt identities, and permits at most one archival run for an
 entry. Scheduling, runtime fact evaluation, and analysis/scoring remain
 outside this seam.
 
+### Adaptive-difficulty policy and intervention provenance
+
+Declare adaptive difficulty in the experiment run plan, not in mutable SDL or
+backend configuration. A difficulty registry names complete variants by
+reference, supplies policy-local ordering, and defines fixed, adaptive, and
+scaffolded policies. Its default policy must be fixed. Each study allocation
+condition explicitly records the condition and, for a non-fixed condition, the
+policy id.
+
+An adaptive policy names a digest-bound evaluator profile, admitted observation
+roles, ordered threshold rules, a closed action allowlist, cadence/cooldown/
+intervention limits, guardrails, and the validity effect. The reference
+resolver supports `adaptive-threshold-v1@1.0.0`; it consumes one exact state
+cut and evidence-bearing observation references and returns a sealed decision
+without dispatching the action. Support matches the complete profile id,
+version, and published `ADAPTIVE_THRESHOLD_PROFILE_DIGEST`; substituted
+digests and other profiles remain visible unsupported outcomes.
+
+The run archives policy decisions separately from intervention outcomes:
+
+1. A decision records the exact cut, policy identity, evidence references,
+   observation source roles and cuts, trigger, selected action, affected
+   semantic references, history heads, disposition, and declared validity
+   effect.
+2. An intervention records whether an owning scaffold, inject, participant
+   control, workflow action, or follow-up admission was attempted, realized,
+   denied, unsupported, or failed, plus its occurrence/evidence references.
+3. Participant delivery, participant observation, and measured downstream
+   effect remain in their existing carriers; selection alone proves none of
+   them.
+
+Use an in-run scaffold or action only when that carrier was already admitted
+for the run. If difficulty changes the scenario-family variant, create a
+follow-up trial through normal selection and admission. The follow-up has a new
+coordinate and run id and links to the source; the source snapshot, history,
+factors, random streams, and identity never change.
+
+For analysis, fixed, adaptive, and scaffolded runs are different treatments.
+The run records its comparison disposition and validity disclosure, and a
+study containing a non-fixed condition includes an analysis plan and validity
+notes. This permits policy-effect comparisons without presenting adaptive
+participants as if they received the same fixed treatment.
+Before admission, `validate_experiment_difficulty_against_spec()` checks the
+run against the canonical authoring-input digest, task, allocated condition,
+and exact policy snapshot.
+
 ## Compatibility And Migration
 
 ### SDL documents

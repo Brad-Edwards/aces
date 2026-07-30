@@ -2,9 +2,9 @@
   "contract_id": "experiment-run-v1",
   "schema_path": "contracts/schemas/experiment-core/experiment-run-v1.json",
   "stability": "draft",
-  "content_hash": "d66700022126033443d97d0381814748e880b369688703a3b0e860a61d3b9897",
+  "content_hash": "f8bfca886613b3856e80ee7c4ba815ea37e68c89e06462d423960f76f5b53f13",
   "last_change": {
-    "summary": "Added typed admitted-entry, processor-plan, and execution-attempt provenance for issue #790.",
-    "content_hash": "d66700022126033443d97d0381814748e880b369688703a3b0e860a61d3b9897"
+    "summary": "Added append-only adaptive-difficulty policy, decision, intervention, and validity provenance for issue #784.",
+    "content_hash": "f8bfca886613b3856e80ee7c4ba815ea37e68c89e06462d423960f76f5b53f13"
   }
 }
