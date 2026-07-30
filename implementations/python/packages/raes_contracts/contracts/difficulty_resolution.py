@@ -163,27 +163,31 @@ def _validate_observations(
             _OBSERVATION_INPUTS_ADDRESS,
             "The decision request must supply exactly the policy's declared observation sources.",
         )
+    result: DifficultyResolutionResultModel | None = None
     for source_id, item in inputs.items():
         source = policy.observation_sources[source_id]
         if item.source_ref != source.source_ref:
-            return _diagnostic(
+            result = _diagnostic(
                 "difficulty.observation-source-mismatch",
                 _OBSERVATION_INPUTS_ADDRESS,
                 "An observation input does not match the policy's exact source definition.",
             )
-        same_scope = (
-            item.run_id == request.run_id
-            and item.observed_cut.episode_id == request.state_cut.episode_id
-            and item.observed_cut.order_domain == request.state_cut.order_domain
-        )
-        age = request.state_cut.coordinate - item.observed_cut.coordinate
-        if not same_scope or age < 0 or age > source.maximum_age:
-            return _diagnostic(
-                "difficulty.observation-cut-invalid",
-                _OBSERVATION_INPUTS_ADDRESS,
-                "An observation input is outside the declared run, episode, order, or freshness boundary.",
+        else:
+            same_scope = (
+                item.run_id == request.run_id
+                and item.observed_cut.episode_id == request.state_cut.episode_id
+                and item.observed_cut.order_domain == request.state_cut.order_domain
             )
-    return None
+            age = request.state_cut.coordinate - item.observed_cut.coordinate
+            if not same_scope or age < 0 or age > source.maximum_age:
+                result = _diagnostic(
+                    "difficulty.observation-cut-invalid",
+                    _OBSERVATION_INPUTS_ADDRESS,
+                    "An observation input is outside the declared run, episode, order, or freshness boundary.",
+                )
+        if result is not None:
+            break
+    return result
 
 
 def _compare(rule: DifficultyThresholdRuleModel, observation: DifficultyObservationInputModel) -> bool:
