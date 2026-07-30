@@ -72,7 +72,6 @@ def _evaluator_capability_payload(manifest: BackendManifest) -> dict[str, Any] |
 
 def backend_manifest_v2_model(manifest: BackendManifest) -> BackendManifestV2Model:
     """Render a backend manifest as the authoritative v2 contract model."""
-
     return BackendManifestV2Model(
         identity=ApparatusIdentityModel(
             name=manifest.identity.name,

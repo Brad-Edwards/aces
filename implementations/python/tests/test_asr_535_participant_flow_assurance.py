@@ -178,10 +178,13 @@ def test_policy_cases_bind_exact_coordinates_rather_than_prose_in_a_case_name() 
         assert binding.claim.evidence_scope == "finite"
         assert binding.claim.assurance_status == "tested"
         assert binding.claim.observation_projection_revision == "rev1"
-        assert binding.policy_revision and binding.decision_cut_ref
-        assert binding.assumptions.order_model and binding.assumptions.scheduler_class
+        assert binding.policy_revision
+        assert binding.decision_cut_ref
+        assert binding.assumptions.order_model
+        assert binding.assumptions.scheduler_class
         assert binding.assumptions.probability.startswith("outside scope")
-        assert case.finite_scope and case.probe_set_digest
+        assert case.finite_scope
+        assert case.probe_set_digest
         assert any("noninterference" in claim for claim in case.explicit_non_claims)
 
 

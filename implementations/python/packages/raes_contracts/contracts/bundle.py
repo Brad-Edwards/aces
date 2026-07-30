@@ -258,7 +258,7 @@ def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
 
 
 @cache
-def _schema_bundle_template() -> dict[str, dict[str, Any]]:
+def _schema_bundle_template() -> dict[str, dict[str, Any]]:  # NOSONAR
     """Build the immutable-in-practice template used by :func:`schema_bundle`."""
 
     bundle = _raw_schema_bundle()

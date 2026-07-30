@@ -228,7 +228,8 @@ def test_rfc6901_scope_resolution_preserves_escaped_key_identity():
         "/nodes/slash~1key/os",
     )
 
-    assert found and value == "linux"
+    assert found
+    assert value == "linux"
     assert not resolve_json_pointer_surface(
         {"nodes": {"slash/key": {"os": "linux"}}},
         "/nodes/slash/key/os",
