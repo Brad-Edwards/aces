@@ -31,6 +31,7 @@ _SUPPORTED_EVALUATOR = (
     ADAPTIVE_THRESHOLD_PROFILE_DIGEST,
 )
 _OPERATORS = {"lt": lt, "lte": le, "eq": eq, "ne": ne, "gte": ge, "gt": gt}
+_OBSERVATION_INPUTS_ADDRESS = "/observation_inputs"
 
 
 def _diagnostic(code: str, address: str, message: str) -> DifficultyResolutionResultModel:
@@ -104,22 +105,7 @@ def _validate_prior_history(
     prior_head: str | None = None
     prior_cut = None
     for decision in prior_decisions:
-        same_policy = (
-            decision.policy_id == policy.policy_id
-            and decision.policy_version == policy.policy_version
-            and decision.policy_digest == policy.policy_digest
-        )
-        same_scope = (
-            decision.run_id == request.run_id
-            and decision.state_cut.order_domain == request.state_cut.order_domain
-            and decision.state_cut.episode_id == request.state_cut.episode_id
-        )
-        if (
-            decision.prior_history_head != prior_head
-            or not same_policy
-            or not same_scope
-            or (prior_cut is not None and decision.state_cut.coordinate <= prior_cut)
-        ):
+        if not _decision_matches_history_scope(decision, policy, request, prior_head, prior_cut):
             return _diagnostic(
                 "difficulty.history-conflict",
                 "/expected_history_head",
@@ -128,6 +114,25 @@ def _validate_prior_history(
         prior_head = decision.history_head
         prior_cut = decision.state_cut.coordinate
     return None
+
+
+def _decision_matches_history_scope(
+    decision: DifficultyDecisionRecordModel,
+    policy: DifficultyPolicyModel,
+    request: DifficultyDecisionRequestModel,
+    prior_head: str | None,
+    prior_cut: int | None,
+) -> bool:
+    return (
+        decision.prior_history_head == prior_head
+        and decision.policy_id == policy.policy_id
+        and decision.policy_version == policy.policy_version
+        and decision.policy_digest == policy.policy_digest
+        and decision.run_id == request.run_id
+        and decision.state_cut.order_domain == request.state_cut.order_domain
+        and decision.state_cut.episode_id == request.state_cut.episode_id
+        and (prior_cut is None or decision.state_cut.coordinate > prior_cut)
+    )
 
 
 def _validate_policy_identity(
@@ -155,7 +160,7 @@ def _validate_observations(
     if set(inputs) != set(policy.observation_sources):
         return _diagnostic(
             "difficulty.observation-set-mismatch",
-            "/observation_inputs",
+            _OBSERVATION_INPUTS_ADDRESS,
             "The decision request must supply exactly the policy's declared observation sources.",
         )
     for source_id, item in inputs.items():
@@ -169,7 +174,7 @@ def _validate_observations(
         if not same_scope or age < 0 or age > source.maximum_age:
             return _diagnostic(
                 "difficulty.observation-cut-invalid",
-                "/observation_inputs",
+                _OBSERVATION_INPUTS_ADDRESS,
                 "An observation input is outside the declared run, episode, order, or freshness boundary.",
             )
     return None
@@ -177,15 +182,20 @@ def _validate_observations(
 
 def _compare(rule: DifficultyThresholdRuleModel, observation: DifficultyObservationInputModel) -> bool:
     comparator = _OPERATORS[rule.operator]
-    if rule.operator in {"lt", "lte", "gte", "gt"}:
-        if isinstance(observation.value, bool) or isinstance(rule.threshold, bool):
-            return False
-        if not isinstance(observation.value, (int, float)) or not isinstance(rule.threshold, (int, float)):
-            return False
-    try:
-        return bool(comparator(observation.value, rule.threshold))
-    except TypeError:
-        return False
+    ordered_comparison = rule.operator in {"lt", "lte", "gte", "gt"}
+    ordered_operands_valid = (
+        not isinstance(observation.value, bool)
+        and not isinstance(rule.threshold, bool)
+        and isinstance(observation.value, (int, float))
+        and isinstance(rule.threshold, (int, float))
+    )
+    result = False
+    if not ordered_comparison or ordered_operands_valid:
+        try:
+            result = bool(comparator(observation.value, rule.threshold))
+        except TypeError:
+            result = False
+    return result
 
 
 def _selected_rule(
@@ -241,22 +251,106 @@ def _bounded_disposition(
     request: DifficultyDecisionRequestModel,
     prior_decisions: list[DifficultyDecisionRecordModel],
 ) -> str | None:
+    disposition = None
     if request.intervention_count >= policy.bounds.maximum_interventions:
-        return "terminal"
-    if prior_decisions:
+        disposition = "terminal"
+    elif prior_decisions:
         distance = request.state_cut.coordinate - prior_decisions[-1].state_cut.coordinate
         if distance < policy.bounds.minimum_decision_interval:
-            return "denied"
-        last_selected = next(
-            (decision for decision in reversed(prior_decisions) if decision.disposition == "selected"),
-            None,
+            disposition = "denied"
+        else:
+            last_selected = next(
+                (decision for decision in reversed(prior_decisions) if decision.disposition == "selected"),
+                None,
+            )
+            in_cooldown = (
+                last_selected is not None
+                and request.state_cut.coordinate - last_selected.state_cut.coordinate < policy.bounds.cooldown
+            )
+            if in_cooldown:
+                disposition = "denied"
+    return disposition
+
+
+def _decision_result(
+    policy: DifficultyPolicyModel,
+    request: DifficultyDecisionRequestModel,
+    prior_head: str | None,
+    fingerprint: str,
+    disposition: str,
+    selected_rule: DifficultyThresholdRuleModel | None = None,
+) -> DifficultyResolutionResultModel:
+    payload = _decision_payload(
+        policy,
+        request,
+        prior_head,
+        fingerprint,
+        disposition,
+        selected_rule,
+    )
+    return DifficultyResolutionResultModel(decision=_seal_decision(payload))
+
+
+def _resolve_fixed_policy(
+    policy: DifficultyPolicyModel,
+    request: DifficultyDecisionRequestModel,
+    prior_head: str | None,
+    fingerprint: str,
+) -> DifficultyResolutionResultModel:
+    if request.observation_inputs or request.intervention_count:
+        return _diagnostic(
+            "difficulty.fixed-authority-invalid",
+            _OBSERVATION_INPUTS_ADDRESS,
+            "Fixed difficulty requests must not supply adaptive observations or intervention state.",
         )
-        if (
-            last_selected is not None
-            and request.state_cut.coordinate - last_selected.state_cut.coordinate < policy.bounds.cooldown
-        ):
-            return "denied"
-    return None
+    return _decision_result(policy, request, prior_head, fingerprint, "fixed")
+
+
+def _evaluator_supported(policy: DifficultyPolicyModel) -> bool:
+    assert policy.evaluator_ref is not None
+    evaluator_identity = (
+        policy.evaluator_ref.ref_id,
+        policy.evaluator_ref.ref_version,
+        policy.evaluator_ref.ref_digest,
+    )
+    return evaluator_identity == _SUPPORTED_EVALUATOR
+
+
+def _resolve_adaptive_policy(
+    policy: DifficultyPolicyModel,
+    request: DifficultyDecisionRequestModel,
+    prior_decisions: list[DifficultyDecisionRecordModel],
+    prior_head: str | None,
+    fingerprint: str,
+) -> DifficultyResolutionResultModel:
+    result = None
+    if not _evaluator_supported(policy):
+        result = _decision_result(policy, request, prior_head, fingerprint, "unsupported")
+    if result is None:
+        result = _validate_observations(policy, request)
+    if result is None:
+        bounded = _bounded_disposition(policy, request, prior_decisions)
+        if bounded is not None:
+            result = _decision_result(policy, request, prior_head, fingerprint, bounded)
+        else:
+            selected = _selected_rule(policy, request)
+            disposition = "selected" if selected is not None else "no-change"
+            result = _decision_result(policy, request, prior_head, fingerprint, disposition, selected)
+    return result
+
+
+def _resolve_new_decision(
+    policy: DifficultyPolicyModel,
+    request: DifficultyDecisionRequestModel,
+    prior_decisions: list[DifficultyDecisionRecordModel],
+    fingerprint: str,
+) -> DifficultyResolutionResultModel:
+    prior_head = prior_decisions[-1].history_head if prior_decisions else None
+    if policy.condition == "fixed":
+        result = _resolve_fixed_policy(policy, request, prior_head, fingerprint)
+    else:
+        result = _resolve_adaptive_policy(policy, request, prior_decisions, prior_head, fingerprint)
+    return result
 
 
 def resolve_difficulty_policy(
@@ -268,48 +362,16 @@ def resolve_difficulty_policy(
     """Resolve one exact-cut decision without performing or dispatching the effect."""
 
     fingerprint = _request_fingerprint(request)
-    for validation in (
-        _validate_policy_identity(policy, request),
-        _validate_prior_history(policy, request, prior_decisions),
-    ):
-        if validation is not None:
-            return validation
-    replay_result = _replay_or_conflict(request, prior_decisions, fingerprint)
-    if replay_result is not None:
-        return replay_result
-    history_validation = _validate_history(request, prior_decisions)
-    if history_validation is not None:
-        return history_validation
-    prior_head = prior_decisions[-1].history_head if prior_decisions else None
-    if policy.condition == "fixed":
-        if request.observation_inputs or request.intervention_count:
-            return _diagnostic(
-                "difficulty.fixed-authority-invalid",
-                "/observation_inputs",
-                "Fixed difficulty requests must not supply adaptive observations or intervention state.",
-            )
-        payload = _decision_payload(policy, request, prior_head, fingerprint, "fixed", None)
-        return DifficultyResolutionResultModel(decision=_seal_decision(payload))
-    assert policy.evaluator_ref is not None
-    evaluator_identity = (
-        policy.evaluator_ref.ref_id,
-        policy.evaluator_ref.ref_version,
-        policy.evaluator_ref.ref_digest,
-    )
-    if evaluator_identity != _SUPPORTED_EVALUATOR:
-        payload = _decision_payload(policy, request, prior_head, fingerprint, "unsupported", None)
-        return DifficultyResolutionResultModel(decision=_seal_decision(payload))
-    observation_error = _validate_observations(policy, request)
-    if observation_error is not None:
-        return observation_error
-    bounded = _bounded_disposition(policy, request, prior_decisions)
-    if bounded is not None:
-        payload = _decision_payload(policy, request, prior_head, fingerprint, bounded, None)
-        return DifficultyResolutionResultModel(decision=_seal_decision(payload))
-    selected = _selected_rule(policy, request)
-    disposition = "selected" if selected is not None else "no-change"
-    payload = _decision_payload(policy, request, prior_head, fingerprint, disposition, selected)
-    return DifficultyResolutionResultModel(decision=_seal_decision(payload))
+    result = _validate_policy_identity(policy, request)
+    if result is None:
+        result = _validate_prior_history(policy, request, prior_decisions)
+    if result is None:
+        result = _replay_or_conflict(request, prior_decisions, fingerprint)
+    if result is None:
+        result = _validate_history(request, prior_decisions)
+    if result is None:
+        result = _resolve_new_decision(policy, request, prior_decisions, fingerprint)
+    return result
 
 
 __all__ = ["ADAPTIVE_THRESHOLD_PROFILE_DIGEST", "resolve_difficulty_policy"]

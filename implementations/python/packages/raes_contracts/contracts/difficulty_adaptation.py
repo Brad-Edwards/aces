@@ -190,19 +190,28 @@ class DifficultyPolicyModel(ContractModel):
     def _validate_policy(self) -> DifficultyPolicyModel:
         self._validate_keyed_children()
         if self.condition == "fixed":
-            if self.evaluator_ref is not None or self.observation_sources or self.threshold_rules or self.actions:
-                raise ValueError("fixed difficulty policies must not declare evaluator or intervention authority")
-            if self.bounds.maximum_interventions != 0:
-                raise ValueError("fixed difficulty policies must set maximum_interventions to zero")
-            self._validate_policy_digest()
-            return self
-        if (
+            self._validate_fixed_authority()
+        else:
+            self._validate_adaptive_authority()
+        self._validate_policy_digest()
+        return self
+
+    def _validate_fixed_authority(self) -> None:
+        authority = (self.evaluator_ref, self.observation_sources, self.threshold_rules, self.actions)
+        if any(authority):
+            raise ValueError("fixed difficulty policies must not declare evaluator or intervention authority")
+        if self.bounds.maximum_interventions != 0:
+            raise ValueError("fixed difficulty policies must set maximum_interventions to zero")
+
+    def _validate_adaptive_authority(self) -> None:
+        missing_authority = (
             self.evaluator_ref is None
             or not self.observation_sources
             or not self.threshold_rules
             or not self.actions
             or self.bounds.maximum_interventions == 0
-        ):
+        )
+        if missing_authority:
             raise ValueError(
                 "adaptive and scaffolded difficulty policies require evaluator, observations, rules, actions, "
                 "and a positive intervention bound"
@@ -212,8 +221,6 @@ class DifficultyPolicyModel(ContractModel):
             action.action_kind == "scaffold" for action in self.actions.values()
         ):
             raise ValueError("scaffolded difficulty policies require a scaffold action")
-        self._validate_policy_digest()
-        return self
 
     def _validate_policy_digest(self) -> None:
         expected_digest = difficulty_policy_digest(self)
@@ -344,33 +351,41 @@ class DifficultyDecisionRecordModel(ContractModel):
 
     @model_validator(mode="after")
     def _validate_history_head(self) -> DifficultyDecisionRecordModel:
+        self._validate_observation_refs()
+        self._validate_selection_shape()
+        if self.history_head != difficulty_decision_history_head(self):
+            raise ValueError("difficulty decision history_head must match the canonical decision content")
+        return self
+
+    def _validate_observation_refs(self) -> None:
         source_ids = [observation.source_id for observation in self.observation_refs]
         if len(source_ids) != len(set(source_ids)):
             raise ValueError("difficulty decision observation source ids must be unique")
-        for observation in self.observation_refs:
-            same_scope = (
-                observation.run_id == self.run_id
-                and observation.observed_cut.order_domain == self.state_cut.order_domain
-                and observation.observed_cut.episode_id == self.state_cut.episode_id
-                and observation.observed_cut.coordinate <= self.state_cut.coordinate
-            )
-            if not same_scope:
-                raise ValueError("difficulty decision observations must precede the decision in one run scope")
+        if not all(self._observation_precedes_decision(observation) for observation in self.observation_refs):
+            raise ValueError("difficulty decision observations must precede the decision in one run scope")
+
+    def _observation_precedes_decision(self, observation: DifficultyObservationReferenceModel) -> bool:
+        return (
+            observation.run_id == self.run_id
+            and observation.observed_cut.order_domain == self.state_cut.order_domain
+            and observation.observed_cut.episode_id == self.state_cut.episode_id
+            and observation.observed_cut.coordinate <= self.state_cut.coordinate
+        )
+
+    def _validate_selection_shape(self) -> None:
         has_selected_action = (
             self.trigger_rule_id is not None or self.selected_action_id is not None or bool(self.affected_refs)
         )
-        if self.disposition == "selected" and (
+        selected_shape_incomplete = self.disposition == "selected" and (
             self.trigger_rule_id is None
             or self.selected_action_id is None
             or not self.affected_refs
             or not self.observation_refs
-        ):
+        )
+        if selected_shape_incomplete:
             raise ValueError("selected difficulty decisions require trigger, action, affected, and observation refs")
         if self.disposition != "selected" and has_selected_action:
             raise ValueError("selected actions require selected disposition")
-        if self.history_head != difficulty_decision_history_head(self):
-            raise ValueError("difficulty decision history_head must match the canonical decision content")
-        return self
 
 
 class DifficultyInterventionRecordModel(ContractModel):

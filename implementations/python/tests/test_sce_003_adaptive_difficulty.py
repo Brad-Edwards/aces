@@ -382,17 +382,16 @@ def test_difficulty_actions_enforce_closed_carriers_and_follow_up_authority() ->
             affected_refs=[scaffold_ref, scaffold_ref],
         )
 
+    mismatched_ref = DifficultyAffectedReferenceModel(
+        ref_kind="workflow-action",
+        ref_id="workflow.restore.scaffold",
+    )
     with pytest.raises(ValidationError, match="must match the closed action carrier kind"):
         DifficultyActionModel(
             action_id="mismatched-carrier",
             action_kind="scaffold",
             carrier_ref="participant-context.restore-hints",
-            affected_refs=[
-                DifficultyAffectedReferenceModel(
-                    ref_kind="workflow-action",
-                    ref_id="workflow.restore.scaffold",
-                )
-            ],
+            affected_refs=[mismatched_ref],
         )
 
     follow_up_ref = DifficultyAffectedReferenceModel(
@@ -490,8 +489,9 @@ def test_positive_boundary_unsupported_and_policy_violation_fixtures() -> None:
     assert unsupported.decision is not None
     assert unsupported.decision.disposition == "unsupported"
 
+    policy_violation = _adaptive_fixture("policy-violation.json")
     with pytest.raises(ValidationError, match="threshold rules must reference declared actions"):
-        DifficultyPolicyModel.model_validate(_adaptive_fixture("policy-violation.json"))
+        DifficultyPolicyModel.model_validate(policy_violation)
 
 
 def test_exact_threshold_selects_one_declared_action_without_performing_it() -> None:
