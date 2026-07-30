@@ -8,6 +8,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 PRs do **not** edit this file directly. release-please maintains it from the
 Conventional Commit history on `main` (#684).
 
+## [3.1.0](https://github.com/RAESystem/rae/compare/v3.0.0...v3.1.0) (2026-07-30)
+
+
+### Features
+
+* add governed adaptive difficulty policies ([7b00b56](https://github.com/RAESystem/rae/commit/7b00b569a70742547740788f22328061df0c3e53))
+* add governed adaptive difficulty policies ([cbe741a](https://github.com/RAESystem/rae/commit/cbe741ad754f6377974310ac90aec371fb3da6b3))
+* add portable external concept bindings ([f2ca0b5](https://github.com/RAESystem/rae/commit/f2ca0b576fab9493f622a1ccb944bf4b6883c72c))
+* **formal:** define participant crossing bisimulation ([876243d](https://github.com/RAESystem/rae/commit/876243d855e79caaa52df075e8afa36c0243271f))
+* implement participant opacity conformance profile ([b124151](https://github.com/RAESystem/rae/commit/b124151016778dcaf758053b2a011ee482e6e7d8))
+* integrate admitted trial realization provenance ([2f9fd03](https://github.com/RAESystem/rae/commit/2f9fd037df2bfc32d0de93ffc299d832b6a070eb))
+* lower runtime configuration realization concerns ([6b47d7c](https://github.com/RAESystem/rae/commit/6b47d7c2b540f142646d8975376f20d889ece5bf))
+* model-check finite participant opacity profiles ([72f0e51](https://github.com/RAESystem/rae/commit/72f0e51237cd50b73535c4f2ecb7be2bcd94c866))
+* publish SCE-006 isolated batch trial scheduling handoff ([6ff5314](https://github.com/RAESystem/rae/commit/6ff531451f773c198b5ba0b604746517ca26aaa4))
+* publish SCE-006 isolated batch trial scheduling handoff ([98c9e44](https://github.com/RAESystem/rae/commit/98c9e44933cb50ad66567abf99f1ec1286f833a9))
+
+
+### Bug Fixes
+
+* bind adaptive observations to source definitions ([9c16601](https://github.com/RAESystem/rae/commit/9c1660174a465052866037e1927e25bfee6876fd))
+* keep the tracked .codex rules file, drop its erroneous gitignore entry ([590c7c9](https://github.com/RAESystem/rae/commit/590c7c9d0c33d14f4e39203a944df86d3b44b648))
+* preserve tracked skill discovery ([ffa27a8](https://github.com/RAESystem/rae/commit/ffa27a89080bef503c6aaca384dff2c0d861a54a))
+* resolve SonarCloud quality gate findings ([725da3e](https://github.com/RAESystem/rae/commit/725da3e01f032277628a34c3a5293906f257450e))
+* resolve SonarCloud quality gate findings ([418af1d](https://github.com/RAESystem/rae/commit/418af1da9788224b358b47156a981885f762a8d5))
+* stop ignoring a tracked agent-rules file that tests read ([4368161](https://github.com/RAESystem/rae/commit/4368161012bf46c5ebd9f51c302048846d6a55a5))
+
 ## [3.0.0](https://github.com/RAESystem/rae/compare/v2.0.0...v3.0.0) (2026-07-29)
 
 
