@@ -356,13 +356,14 @@ def test_parallel_scheduler_requires_secret_scope_isolation() -> None:
         "control-plane-locks",
         "cleanup",
     )
+    dimensions = [_dimension(dimension) for dimension in without_secret_scope]
     with pytest.raises(ValidationError, match="secret-scope"):
         SchedulerIsolationProofModel(
             schema_version="scheduler-isolation-proof/v1",
             proof_id="proof-parallel",
             plan_entry_ids=["trial-entry-a", "trial-entry-b"],
             requested_parallelism=2,
-            dimensions=[_dimension(dimension) for dimension in without_secret_scope],
+            dimensions=dimensions,
         )
 
 

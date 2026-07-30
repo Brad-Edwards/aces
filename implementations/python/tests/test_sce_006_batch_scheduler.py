@@ -207,8 +207,9 @@ def test_isolation_join_accepts_a_serial_proof() -> None:
 
 def test_isolation_join_rejects_entries_outside_the_plan() -> None:
     plan = _plan("parallel-isolated")
+    proof = _proof(["entry-a", "entry-absent"])
     with pytest.raises(ValueError, match="outside the admitted plan"):
-        validate_scheduler_isolation_proof(plan, _proof(["entry-a", "entry-absent"]))
+        validate_scheduler_isolation_proof(plan, proof)
 
 
 def test_isolation_join_rejects_resource_sharing_parallel_entries() -> None:
@@ -216,9 +217,10 @@ def test_isolation_join_rejects_resource_sharing_parallel_entries() -> None:
     payload["isolation_proof"] = None  # drop the embedded proof so the plan validates as serial
     payload["cleanup_plans"]["cleanup-b"]["resource_boundaries"]["range-b"]["resource_refs"] = ["node.vm-a"]
     plan = _resealed_plan(payload)
+    proof = _proof(["entry-a", "entry-b"])
 
     with pytest.raises(ValueError, match="share resources"):
-        validate_scheduler_isolation_proof(plan, _proof(["entry-a", "entry-b"]))
+        validate_scheduler_isolation_proof(plan, proof)
 
 
 # --- immutable execution receipt: model-level field validation ---------------
@@ -260,8 +262,9 @@ def test_receipt_requires_a_cleanup_receipt_ref() -> None:
     ],
 )
 def test_receipt_model_rejects_invalid_fields(overrides: dict, match: str) -> None:
+    plan = _plan("minimal")
     with pytest.raises(ValidationError, match=match):
-        _receipt(_plan("minimal"), **overrides)
+        _receipt(plan, **overrides)
 
 
 # --- immutable execution receipt: cross-artifact validation ------------------
@@ -330,8 +333,9 @@ def test_failed_cleanup_cannot_be_reported_as_a_clean_successful_trial() -> None
             )
         },
     )
+    receipt = _receipt(plan)
     with pytest.raises(ValueError, match="required cleanup obligation 'destroy-range' must succeed"):
-        validate_batch_execution_receipt(plan, _receipt(plan), cleanup_receipt=failed_cleanup)
+        validate_batch_execution_receipt(plan, receipt, cleanup_receipt=failed_cleanup)
 
 
 # --- receipt builder ---------------------------------------------------------
@@ -339,29 +343,21 @@ def test_failed_cleanup_cannot_be_reported_as_a_clean_successful_trial() -> None
 
 def test_build_receipt_rejects_entry_outside_schedule() -> None:
     schedule = plan_batch_schedule(_plan("minimal"))
+    outcome = AttemptOutcome(
+        execution_attempt_id="attempt-1", trial_outcome="succeeded", cleanup_receipt_ref="cleanup-receipt-1"
+    )
     with pytest.raises(ValueError, match="not part of the batch schedule"):
-        build_batch_execution_receipt(
-            schedule,
-            "entry-absent",
-            receipt_id="receipt-1",
-            outcome=AttemptOutcome(
-                execution_attempt_id="attempt-1", trial_outcome="succeeded", cleanup_receipt_ref="cleanup-receipt-1"
-            ),
-        )
+        build_batch_execution_receipt(schedule, "entry-absent", receipt_id="receipt-1", outcome=outcome)
 
 
 def test_build_receipt_rejects_effective_above_ceiling() -> None:
     schedule = plan_batch_schedule(_plan("minimal"))  # ceiling 1
+    outcome = AttemptOutcome(
+        execution_attempt_id="attempt-1", trial_outcome="succeeded", cleanup_receipt_ref="cleanup-receipt-1"
+    )
+    grant = AllocatorGrant(effective_parallelism=2, lease_evidence_refs=["lease:a"])
     with pytest.raises(ValueError, match="cannot exceed the schedule's admitted parallelism ceiling"):
-        build_batch_execution_receipt(
-            schedule,
-            "entry-a",
-            receipt_id="receipt-1",
-            outcome=AttemptOutcome(
-                execution_attempt_id="attempt-1", trial_outcome="succeeded", cleanup_receipt_ref="cleanup-receipt-1"
-            ),
-            grant=AllocatorGrant(effective_parallelism=2, lease_evidence_refs=["lease:a"]),
-        )
+        build_batch_execution_receipt(schedule, "entry-a", receipt_id="receipt-1", outcome=outcome, grant=grant)
 
 
 def test_built_serial_receipt_validates() -> None:
