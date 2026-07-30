@@ -67,6 +67,36 @@ class BatchSchedule:
     entries: tuple[ScheduledEntry, ...]
 
 
+@dataclass(frozen=True)
+class AttemptOutcome:
+    """The realized disposition and portable evidence of one execution attempt.
+
+    ``cleanup_receipt_ref`` names the cleanup receipt proving the attempt's
+    terminal cleanup; ``operation_refs`` are control-plane operation ids and
+    ``attempt_deadline`` is an optional RFC 3339 deadline.
+    """
+
+    execution_attempt_id: str
+    trial_outcome: TrialOutcome
+    cleanup_receipt_ref: str
+    operation_refs: Sequence[str] = ()
+    attempt_deadline: str | None = None
+
+
+@dataclass(frozen=True)
+class AllocatorGrant:
+    """The downstream allocator's live-lease parallelism decision for one attempt.
+
+    ``effective_parallelism`` (serial by default) and ``lease_evidence_refs`` are
+    the allocator's decision and its live lease evidence; ``isolation_proof_ref``
+    defaults to the schedule's admitted proof for a bounded-parallel attempt.
+    """
+
+    effective_parallelism: int = 1
+    lease_evidence_refs: Sequence[str] = ()
+    isolation_proof_ref: str | None = None
+
+
 def plan_batch_schedule(plan: AdmittedTrialPlanModel) -> BatchSchedule:
     """Compute the canonical dispatch order and admitted parallelism ceiling.
 
@@ -120,51 +150,49 @@ def build_batch_execution_receipt(
     plan_entry_id: str,
     *,
     receipt_id: str,
-    execution_attempt_id: str,
-    trial_outcome: TrialOutcome,
-    cleanup_receipt_ref: str,
-    effective_parallelism: int = 1,
-    lease_evidence_refs: Sequence[str] = (),
-    isolation_proof_ref: str | None = None,
-    operation_refs: Sequence[str] = (),
-    attempt_deadline: str | None = None,
+    outcome: AttemptOutcome,
+    grant: AllocatorGrant | None = None,
 ) -> BatchExecutionReceiptModel:
     """Record one attempt's evidence, binding it to this schedule's decision.
 
-    ``effective_parallelism`` and ``lease_evidence_refs`` are the downstream
-    allocator's decision and its live lease evidence; the effective bound cannot
-    exceed the schedule's admitted ceiling. For a bounded-parallel attempt the
-    isolation proof reference defaults to the schedule's admitted proof.
+    ``grant`` is the downstream allocator's live-lease parallelism decision
+    (serial by default); its effective bound cannot exceed the schedule's
+    admitted ceiling, and for a bounded-parallel attempt its isolation proof
+    reference defaults to the schedule's admitted proof.
     """
 
+    grant = grant if grant is not None else AllocatorGrant()
     scheduled = next((entry for entry in schedule.entries if entry.plan_entry_id == plan_entry_id), None)
     if scheduled is None:
         raise ValueError("plan_entry_id is not part of the batch schedule")
-    if effective_parallelism > schedule.admitted_parallelism_ceiling:
+    if grant.effective_parallelism > schedule.admitted_parallelism_ceiling:
         raise ValueError("effective_parallelism cannot exceed the schedule's admitted parallelism ceiling")
-    parallel = effective_parallelism > 1
-    if parallel and isolation_proof_ref is None:
-        isolation_proof_ref = schedule.isolation_proof_ref
+    parallel = grant.effective_parallelism > 1
+    proof_ref = grant.isolation_proof_ref
+    if parallel and proof_ref is None:
+        proof_ref = schedule.isolation_proof_ref
     return BatchExecutionReceiptModel(
         receipt_id=receipt_id,
         plan_id=schedule.plan_id,
         plan_digest=schedule.plan_digest,
         plan_entry_id=plan_entry_id,
         run_id=scheduled.run_id,
-        execution_attempt_id=execution_attempt_id,
+        execution_attempt_id=outcome.execution_attempt_id,
         dispatch_ordinal=scheduled.dispatch_ordinal,
         scheduling_policy_id=schedule.scheduling_policy_id,
-        effective_parallelism=effective_parallelism,
-        isolation_proof_ref=isolation_proof_ref if parallel else None,
-        lease_evidence_refs=list(lease_evidence_refs) if parallel else [],
-        attempt_deadline=attempt_deadline,
-        trial_outcome=trial_outcome,
-        operation_refs=list(operation_refs),
-        cleanup_receipt_ref=cleanup_receipt_ref,
+        effective_parallelism=grant.effective_parallelism,
+        isolation_proof_ref=proof_ref if parallel else None,
+        lease_evidence_refs=list(grant.lease_evidence_refs) if parallel else [],
+        attempt_deadline=outcome.attempt_deadline,
+        trial_outcome=outcome.trial_outcome,
+        operation_refs=list(outcome.operation_refs),
+        cleanup_receipt_ref=outcome.cleanup_receipt_ref,
     )
 
 
 __all__ = [
+    "AllocatorGrant",
+    "AttemptOutcome",
     "BatchSchedule",
     "CANONICAL_ORDER_POLICY_ID",
     "ScheduledEntry",

@@ -23,6 +23,8 @@ from raes_contracts.contracts.trial_cleanup import (
 )
 from raes_processor.trial_scheduler import (
     CANONICAL_ORDER_POLICY_ID,
+    AllocatorGrant,
+    AttemptOutcome,
     build_batch_execution_receipt,
     dispatch_batch_schedule,
     plan_batch_schedule,
@@ -342,9 +344,9 @@ def test_build_receipt_rejects_entry_outside_schedule() -> None:
             schedule,
             "entry-absent",
             receipt_id="receipt-1",
-            execution_attempt_id="attempt-1",
-            trial_outcome="succeeded",
-            cleanup_receipt_ref="cleanup-receipt-1",
+            outcome=AttemptOutcome(
+                execution_attempt_id="attempt-1", trial_outcome="succeeded", cleanup_receipt_ref="cleanup-receipt-1"
+            ),
         )
 
 
@@ -355,11 +357,10 @@ def test_build_receipt_rejects_effective_above_ceiling() -> None:
             schedule,
             "entry-a",
             receipt_id="receipt-1",
-            execution_attempt_id="attempt-1",
-            trial_outcome="succeeded",
-            cleanup_receipt_ref="cleanup-receipt-1",
-            effective_parallelism=2,
-            lease_evidence_refs=["lease:a"],
+            outcome=AttemptOutcome(
+                execution_attempt_id="attempt-1", trial_outcome="succeeded", cleanup_receipt_ref="cleanup-receipt-1"
+            ),
+            grant=AllocatorGrant(effective_parallelism=2, lease_evidence_refs=["lease:a"]),
         )
 
 
@@ -370,9 +371,9 @@ def test_built_serial_receipt_validates() -> None:
         schedule,
         "entry-a",
         receipt_id="receipt-1",
-        execution_attempt_id="attempt-1",
-        trial_outcome="succeeded",
-        cleanup_receipt_ref="cleanup-receipt-1",
+        outcome=AttemptOutcome(
+            execution_attempt_id="attempt-1", trial_outcome="succeeded", cleanup_receipt_ref="cleanup-receipt-1"
+        ),
     )
     assert receipt.effective_parallelism == 1
     assert receipt.isolation_proof_ref is None
@@ -386,11 +387,10 @@ def test_built_parallel_receipt_records_allocator_decision_and_validates() -> No
         schedule,
         "entry-a",
         receipt_id="receipt-1",
-        execution_attempt_id="attempt-1",
-        trial_outcome="succeeded",
-        cleanup_receipt_ref="cleanup-receipt-1",
-        effective_parallelism=2,
-        lease_evidence_refs=["lease:a", "lease:b"],
+        outcome=AttemptOutcome(
+            execution_attempt_id="attempt-1", trial_outcome="succeeded", cleanup_receipt_ref="cleanup-receipt-1"
+        ),
+        grant=AllocatorGrant(effective_parallelism=2, lease_evidence_refs=["lease:a", "lease:b"]),
     )
     assert receipt.effective_parallelism == 2
     assert receipt.isolation_proof_ref == "proof-parallel"  # defaulted from the schedule's admitted proof
