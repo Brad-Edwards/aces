@@ -61,7 +61,7 @@ html_title = "RAES Documentation"
 html_static_path = ["_static"]
 
 html_theme_options = {
-    "source_repository": "https://github.com/RAESystem/rae",
+    "source_repository": "https://github.com/OpenRAE/rae",
     "source_branch": "main",
     "source_directory": "docs/public/",
     "navigation_with_keys": True,

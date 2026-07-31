@@ -4,6 +4,7 @@ from raes_backend_protocols.capabilities import BackendManifest, OrchestratorCap
 
 from ..models import Diagnostic, RuntimeModel
 from .capability_domains import _account_features, _resource_count_upper_bound, _validate_node_os_family
+from .stateful_admission import generated_artifact_payload_diagnostic
 
 _ORCHESTRATION_WORKFLOWS_ADDRESS = "orchestration.workflows"
 
@@ -144,6 +145,15 @@ def _validate_artifact_and_volume_support(
                 message="Provisioner does not support generated artifacts.",
             )
         )
+    elif model.generated_artifacts:
+        for artifact in model.generated_artifacts.values():
+            diagnostic = generated_artifact_payload_diagnostic(
+                address=artifact.address,
+                spec=artifact.spec,
+                provisioner=provisioner,
+            )
+            if diagnostic is not None:
+                diagnostics.append(diagnostic)
     if model.persistent_volumes and not provisioner.supports_persistent_volumes:
         diagnostics.append(
             Diagnostic(

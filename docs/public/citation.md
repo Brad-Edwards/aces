@@ -8,7 +8,7 @@ Use this software citation when RAES contributes to your work:
   title   = {RAES: Reproducible Agentic Environments System},
   year    = {2026},
   license = {MIT},
-  url     = {https://github.com/RAESystem/rae}
+  url     = {https://github.com/OpenRAE/rae}
 }
 ```
 

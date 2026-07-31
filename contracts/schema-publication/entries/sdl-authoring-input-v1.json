@@ -2,9 +2,9 @@
   "contract_id": "sdl-authoring-input-v1",
   "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
   "stability": "draft",
-  "content_hash": "4a8cf47b7c54b1b9f704dc6e8e5dd17df6a11a7ab126f92a5a91449d38025719",
+  "content_hash": "da0c48ed70f414db35c020c788d3fd3e79dd97663fce74df5cb88eb15a5edc5e",
   "last_change": {
     "summary": "Added the provider-neutral service search-index field-schema materialization profile for issue #1011.",
-    "content_hash": "4a8cf47b7c54b1b9f704dc6e8e5dd17df6a11a7ab126f92a5a91449d38025719"
+    "content_hash": "da0c48ed70f414db35c020c788d3fd3e79dd97663fce74df5cb88eb15a5edc5e"
   }
 }

@@ -16,7 +16,9 @@ This document is the issue #71 formal design artifact for:
 - `SEM-231` - Participant-Relative Predicate Opacity Semantics
 - `SEM-232` - Proof-Bearing Participant-Crossing Bisimulation
 - `SEM-233` - Adversarial Participant Boundary Information-Flow Control
+- `SEM-234` - Mixed Cross-Backend Participant-Control Composition
 - `ASR-536` - Intentional-Subversion Participant Control Evaluation
+- `ASR-537` - Cross-Backend Participant-Control Realization And Transfer Evidence
 - `DSL-437` - Benign Participant Autonomous Execution
 
 It is a design artifact, not an implementation artifact. It establishes the
@@ -59,6 +61,16 @@ coordinates, conservative derivation, final-sink mediation, and explicit
 attack-protocol variables. It does not report runtime enforcement, backend
 realization, monitor honesty, covert-channel control, or adversarial
 robustness.
+
+Issue #813 and ADR-102 add the SEM-234 mixed-composition and ASR-537
+realization/transfer-evidence design. Their normative profiles are in
+[`cross-backend-participant-control.md`](cross-backend-participant-control.md).
+The design supports both alternative simulation/emulation realization and
+simultaneous mixed realization, plus linked inter-trial and finite
+pre-admitted within-run changes. It keeps portable SDL backend-neutral and
+preserves one acting controller in revision 1. It does not report runtime or
+backend realization, multi-controller support, interoperability, transfer,
+IFC/noninterference, or cross-backend equivalence.
 
 Issue #861 and ADR-092 add deterministic autonomous execution for ordinary
 participants. The focused normative composition is

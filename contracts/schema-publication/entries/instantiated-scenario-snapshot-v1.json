@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-snapshot-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "92e6d0fcccdad09cd56a0f344fb8a1aacaf74ea0ab47633713b30fa8679acef5",
+  "content_hash": "558b52abf5103e49f9003c4c175c79310816e698b11ff5ae70e07fa4229bfe63",
   "last_change": {
     "summary": "Added the provider-neutral service search-index field-schema materialization profile for issue #1011.",
-    "content_hash": "92e6d0fcccdad09cd56a0f344fb8a1aacaf74ea0ab47633713b30fa8679acef5"
+    "content_hash": "558b52abf5103e49f9003c4c175c79310816e698b11ff5ae70e07fa4229bfe63"
   }
 }

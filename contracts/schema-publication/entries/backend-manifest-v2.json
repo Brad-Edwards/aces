@@ -2,9 +2,9 @@
   "contract_id": "backend-manifest-v2",
   "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
   "stability": "draft",
-  "content_hash": "5408003b0a05176661342b87b9f17116b4f1a4fd687153a3813dce33f8dec064",
+  "content_hash": "c4746c610e0d9cc8e03bd8db07a79e2cd24b463e06ba9cf7d254db1e586aadae",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "5408003b0a05176661342b87b9f17116b4f1a4fd687153a3813dce33f8dec064"
+    "summary": "Aligned supported-value implications with default-false capability flags for issue #1010.",
+    "content_hash": "c4746c610e0d9cc8e03bd8db07a79e2cd24b463e06ba9cf7d254db1e586aadae"
   }
 }

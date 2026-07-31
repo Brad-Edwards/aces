@@ -47,7 +47,7 @@
       "record_class": "historical-index",
       "rationale": "Indexes immutable pre-cutover ADR titles, paths, pins, and amendment summaries without making them current identity surf\u0061ces.",
       "occurrences": 4,
-      "content_sha256": "e3cc2d9b68f9109dff72b90c99a6ca991c2874f3426c3f066e2202885047ba6a"
+      "content_sha256": "1112779f7f33a932c90fd5e1bde641199bdf02a9910d89b0207e5ba92ab7562f"
     },
     {
       "path": "docs/decisions/adrs/adr-000-use-adrs.md",
@@ -495,7 +495,7 @@
       "record_class": "historical-index",
       "rationale": "Indexes immutable pre-cutover ADR titles, paths, pins, and amendment summaries without making them current identity surf\u0061ces.",
       "occurrences": 4,
-      "content_sha256": "3b467593084bf2c80ea6876c7ff170df1de1ac7d2e9633360e5a5dda7c209b55"
+      "content_sha256": "e05a3a7bf0a064843a9803097943374be78d907a8fa0ebbd42ece21eb7c3c10e"
     },
     {
       "path": "docs/decisions/cage-2-replication-design.md",
