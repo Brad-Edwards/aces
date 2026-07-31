@@ -714,26 +714,83 @@ def _rewrite_content_sections(
             _rewrite_service_materialization(materialization, symbols)
 
 
+def _rewrite_resource_consumers(
+    resource: dict[str, Any],
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
+    for consumer in resource.get("consumers", []):
+        if isinstance(consumer, dict) and consumer.get("node"):
+            consumer["node"] = _maybe_rename(str(consumer["node"]), symbols["nodes"])
+
+
+def _rewrite_resource_dependencies(
+    resource: dict[str, Any],
+    symbols: dict[str, dict[str, str] | set[str]],
+    *,
+    owner: str,
+) -> None:
+    for dependency_field in ("ordering_dependencies", "refresh_dependencies"):
+        resource[dependency_field] = [
+            _rewrite_stateful_dependency_ref(reference, symbols, owner=owner)
+            for reference in resource.get(dependency_field, [])
+        ]
+
+
+def _rewrite_stateful_resource(
+    resource: Any,
+    symbols: dict[str, dict[str, str] | set[str]],
+    *,
+    owner: str,
+) -> None:
+    if isinstance(resource, dict):
+        _rewrite_resource_consumers(resource, symbols)
+        _rewrite_resource_dependencies(resource, symbols, owner=owner)
+
+
 def _rewrite_stateful_resources(
     payload: dict[str, Any],
     symbols: dict[str, dict[str, str] | set[str]],
 ) -> None:
     for section_name in ("generated_artifacts", "persistent_volumes"):
         for resource_name, resource in payload.get(section_name, {}).items():
-            if not isinstance(resource, dict):
-                continue
-            for consumer in resource.get("consumers", []):
-                if isinstance(consumer, dict) and consumer.get("node"):
-                    consumer["node"] = _maybe_rename(str(consumer["node"]), symbols["nodes"])
-            for dependency_field in ("ordering_dependencies", "refresh_dependencies"):
-                resource[dependency_field] = [
-                    _rewrite_stateful_dependency_ref(
-                        reference,
-                        symbols,
-                        owner=f"{section_name}.{resource_name}",
-                    )
-                    for reference in resource.get(dependency_field, [])
-                ]
+            _rewrite_stateful_resource(resource, symbols, owner=f"{section_name}.{resource_name}")
+
+
+def _rewrite_account(
+    account: Any,
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
+    if not isinstance(account, dict):
+        return
+    if account.get("node"):
+        account["node"] = _maybe_rename(str(account["node"]), symbols["nodes"])
+    if account.get("domain_ref"):
+        account["domain_ref"] = _maybe_rename(str(account["domain_ref"]), symbols["identity_domains"])
+
+
+def _rewrite_identity_domain(
+    domain: Any,
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
+    if isinstance(domain, dict) and domain.get("authority_account_ref"):
+        domain["authority_account_ref"] = _maybe_rename(
+            str(domain["authority_account_ref"]),
+            symbols["accounts"],
+        )
+
+
+def _rewrite_identity_forest(
+    forest: Any,
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
+    if not isinstance(forest, dict):
+        return
+    if forest.get("root_domain_ref"):
+        forest["root_domain_ref"] = _maybe_rename(
+            str(forest["root_domain_ref"]),
+            symbols["identity_domains"],
+        )
+    forest["domain_refs"] = [_maybe_rename(name, symbols["identity_domains"]) for name in forest.get("domain_refs", [])]
 
 
 def _rewrite_account_and_domain_sections(
@@ -741,28 +798,11 @@ def _rewrite_account_and_domain_sections(
     symbols: dict[str, dict[str, str] | set[str]],
 ) -> None:
     for account in payload.get("accounts", {}).values():
-        if isinstance(account, dict):
-            if account.get("node"):
-                account["node"] = _maybe_rename(str(account["node"]), symbols["nodes"])
-            if account.get("domain_ref"):
-                account["domain_ref"] = _maybe_rename(str(account["domain_ref"]), symbols["identity_domains"])
+        _rewrite_account(account, symbols)
     for domain in payload.get("identity_domains", {}).values():
-        if isinstance(domain, dict) and domain.get("authority_account_ref"):
-            domain["authority_account_ref"] = _maybe_rename(
-                str(domain["authority_account_ref"]),
-                symbols["accounts"],
-            )
+        _rewrite_identity_domain(domain, symbols)
     for forest in payload.get("identity_forests", {}).values():
-        if not isinstance(forest, dict):
-            continue
-        if forest.get("root_domain_ref"):
-            forest["root_domain_ref"] = _maybe_rename(
-                str(forest["root_domain_ref"]),
-                symbols["identity_domains"],
-            )
-        forest["domain_refs"] = [
-            _maybe_rename(name, symbols["identity_domains"]) for name in forest.get("domain_refs", [])
-        ]
+        _rewrite_identity_forest(forest, symbols)
 
 
 def _rewrite_deployment_sections(
