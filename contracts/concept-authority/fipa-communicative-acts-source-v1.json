@@ -1,0 +1,107 @@
+{
+  "schema_version": "fipa-communicative-acts-source/v1",
+  "source_authority": "Foundation for Intelligent Physical Agents",
+  "source_version": "SC00037J-2002-12-03",
+  "source_status": "Standard",
+  "source_url": "https://www.fipa.org/specs/fipa00037/SC00037J.html",
+  "source_artifact_url": "https://www.fipa.org/specs/fipa00037/SC00037J.pdf",
+  "source_digest": "sha256:90b3277247ef7e7f614ba4c0d58fb2b86aa53ff69036d27a731c09a26c605227",
+  "citation_urls": [
+    "https://www.fipa.org/specs/fipa00037/SC00037J.html",
+    "https://www.fipa.org/specs/fipa00037/SC00037J.pdf",
+    "https://www.fipa.org/repository/aclspecs.html"
+  ],
+  "retrieved_at": "2026-07-30",
+  "license_url": "https://www.fipa.org/specs/fipa00037/SC00037J.html",
+  "license_notice": "Copyright © 1996-2002 Foundation for Intelligent Physical Agents. The specification notice grants no permission to use third-party intellectual property.",
+  "communicative_acts": [
+    {
+      "position": 1,
+      "concept_id": "accept-proposal"
+    },
+    {
+      "position": 2,
+      "concept_id": "agree"
+    },
+    {
+      "position": 3,
+      "concept_id": "cancel"
+    },
+    {
+      "position": 4,
+      "concept_id": "cfp"
+    },
+    {
+      "position": 5,
+      "concept_id": "confirm"
+    },
+    {
+      "position": 6,
+      "concept_id": "disconfirm"
+    },
+    {
+      "position": 7,
+      "concept_id": "failure"
+    },
+    {
+      "position": 8,
+      "concept_id": "inform"
+    },
+    {
+      "position": 9,
+      "concept_id": "inform-if"
+    },
+    {
+      "position": 10,
+      "concept_id": "inform-ref"
+    },
+    {
+      "position": 11,
+      "concept_id": "not-understood"
+    },
+    {
+      "position": 12,
+      "concept_id": "propagate"
+    },
+    {
+      "position": 13,
+      "concept_id": "propose"
+    },
+    {
+      "position": 14,
+      "concept_id": "proxy"
+    },
+    {
+      "position": 15,
+      "concept_id": "query-if"
+    },
+    {
+      "position": 16,
+      "concept_id": "query-ref"
+    },
+    {
+      "position": 17,
+      "concept_id": "refuse"
+    },
+    {
+      "position": 18,
+      "concept_id": "reject-proposal"
+    },
+    {
+      "position": 19,
+      "concept_id": "request"
+    },
+    {
+      "position": 20,
+      "concept_id": "request-when"
+    },
+    {
+      "position": 21,
+      "concept_id": "request-whenever"
+    },
+    {
+      "position": 22,
+      "concept_id": "subscribe"
+    }
+  ]
+}

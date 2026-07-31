@@ -548,6 +548,33 @@ Implementation issue #210 owns the executable SDL field, governed validation,
 source-integrity checker, generated schemas, documentation, and compiler
 carry-through for defensive behavior refs.
 
+## ACT-611 - Autonomous Service And Agent Behavior Vocabularies
+
+Autonomous-service and autonomous-agent vocabulary relationships are portable
+external assertions about an exact behavior specification, not another field
+inside that specification. ACT-611 uses
+`external-concept-bindings/v1` to bind the canonical
+`behavior_specifications.<name>` declaration and artifact digest to pinned
+ActivityStreams Activity type IRIs or FIPA communicative-act identifiers.
+
+Rules:
+
+- the native behavior specification retains participant, action, observation,
+  outcome, authority/scope, mode, realization, and evidence meaning;
+- `behavior_mode: autonomous` remains the governed decision-surface mode and
+  is not inferred from an external actor, agent, service, or behavior term;
+- both schemes use the same neutral snapshot, exact subject adapter, resolver,
+  conformance registration, and offline outcomes;
+- relationship, effect, provenance, confidence, approximation/loss,
+  limitations, review, and participant eligibility retain the portable
+  binding contract semantics;
+- external terms remain descriptive and never become executable actions,
+  capabilities, authorization, runtime evidence, outcomes, or proof of
+  autonomy.
+
+The source and conformance contract is specified in
+[`specs/concept-authority/autonomous-behavior-vocabularies.md`](../../concept-authority/autonomous-behavior-vocabularies.md).
+
 ## ACT-617 - Mixed-Control Participant Operation
 
 A behavior specification in `mixed-control` mode carries one explicit
@@ -622,6 +649,7 @@ portable occurrence contracts and runtime mediation/persistence respectively.
 | PBM-09 | Offensive behavior refs are governed vocabulary classifications, not raw action names, roles, goals, tasks, commands, or external technique labels. | ACT-609 |
 | PBM-10 | Defensive behavior refs classify intent or outcome domains and do not prove incident existence, effectiveness, recovery, or CSF conformance. | ACT-610 |
 | PBM-11 | Mixed-control authority and ordered control facts are explicit, fail closed, and remain distinct from admission, execution, and observation. | ACT-617 |
+| PBM-12 | Autonomous behavior vocabulary terms are external assertions about exact behavior specifications and do not create native or executable behavior meaning. | ACT-611 |
 
 ## Child-Issue Mapping
 
@@ -634,6 +662,7 @@ portable occurrence contracts and runtime mediation/persistence respectively.
 | #208 | ACT-608 | Behavior-mode declaration, selection, controlled-vocabulary validation, and conformance. |
 | #209 | ACT-609 | Offensive behavior vocabulary declaration, validation, and compiler carry-through. |
 | #210 | ACT-610 | Defensive behavior vocabulary declaration, validation, source integrity, and compiler carry-through. |
+| #211 | ACT-611 | Pinned autonomous behavior schemes, exact behavior-specification assertions, offline resolution, and conformance. |
 | #251 | ACT-617 | Authored controller/authority state, ordered fail-closed control transitions, composition, and typed compiler projection. |
 
 ## Verification Expectations

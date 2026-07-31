@@ -1,0 +1,827 @@
+{
+  "schema_version": "adversarial-participant-control-program/v1",
+  "assessment_date": "2026-07-30",
+  "parent_issue": 812,
+  "milestone": "Participant Information-Flow & Behavioral Equivalence",
+  "deliverables": [
+    "docs/decisions/issue-812-adversarial-agent-control-preflight.md",
+    "docs/decisions/adrs/adr-101-adversarial-participant-flow-control.md",
+    "docs/research/adversarial-participant-control/index.md",
+    "docs/research/adversarial-participant-control/current-state-assessment.md",
+    "docs/research/adversarial-participant-control/threat-model.md",
+    "docs/research/adversarial-participant-control/trust-flow-architecture.md",
+    "docs/research/adversarial-participant-control/attack-cases.md",
+    "docs/research/adversarial-participant-control/requirement-disposition.md",
+    "docs/research/adversarial-participant-control/implementation-program.md",
+    "docs/research/adversarial-participant-control/implementation-program.json",
+    "specs/formal/participant-semantics/adversarial-flow-control.md",
+    "docs/public/participant-control.md",
+    "docs/explain/sdl/lineage.md"
+  ],
+  "primary_sources": [
+    {
+      "id": "fides",
+      "title": "Securing AI Agents with Information-Flow Control",
+      "primary_url": "https://arxiv.org/abs/2505.23643",
+      "adopted_lessons": [
+        "independent confidentiality and integrity labels",
+        "conservative propagation through derivations",
+        "deterministic policy before consequential tools",
+        "explicit selective release operations"
+      ],
+      "raes_boundary": "Generalize the two-coordinate flow relation to every RAES participant and typed sink; do not import the FIDES planner, message model, or LLM-only primitives.",
+      "nonclaims": [
+        "The paper and its implementation do not establish RAES runtime or backend realization.",
+        "Information-flow enforcement does not establish model alignment or covert-channel control."
+      ]
+    },
+    {
+      "id": "camel",
+      "title": "Defeating Prompt Injections by Design",
+      "primary_url": "https://arxiv.org/abs/2503.18813",
+      "adopted_lessons": [
+        "separate trusted control from untrusted data",
+        "quarantine untrusted processing",
+        "retain capability and provenance constraints",
+        "prevent unauthorized private-data flows"
+      ],
+      "raes_boundary": "Treat quarantine, privileged/quarantined model roles, and typed extraction as apparatus capabilities. They neither define portable prompt semantics nor automatically endorse their outputs.",
+      "nonclaims": [
+        "RAES does not require a dual-LLM architecture.",
+        "A quarantined component is not a final sink unless it controls every effect and disclosure."
+      ]
+    },
+    {
+      "id": "samos",
+      "title": "Securing MCP-based Agent Workflows",
+      "primary_url": "https://research.ibm.com/publications/securing-mcp-based-agent-workflows",
+      "adopted_lessons": [
+        "intercept every tool call",
+        "retain session-level flow context",
+        "evaluate composed calls rather than isolated calls",
+        "use annotations and policy to block leakage"
+      ],
+      "raes_boundary": "An MCP gateway can realize part of RUN-319, but the portable owner is the RAES flow relation and the final backend/action or disclosure sink.",
+      "nonclaims": [
+        "MCP is not required by RAES.",
+        "Gateway mediation does not cover effects or disclosures that bypass that gateway."
+      ]
+    },
+    {
+      "id": "agentdojo",
+      "title": "AgentDojo: A Dynamic Environment to Evaluate Prompt Injection Attacks and Defenses for LLM Agents",
+      "primary_url": "https://proceedings.neurips.cc/paper_files/paper/2024/hash/97091a5177d8dc64b1da8bf3e1f6fb54-Abstract-Datasets_and_Benchmarks_Track.html",
+      "adopted_lessons": [
+        "measure task utility separately from security",
+        "evaluate indirect prompt injection in dynamic tool environments",
+        "include adaptive attacks",
+        "avoid treating benign task failure as security success"
+      ],
+      "raes_boundary": "Reuse RAES experiment task, protocol, run, evidence, and measure contracts; do not import benchmark-specific task, tool, or trajectory semantics.",
+      "nonclaims": [
+        "A benchmark result is bounded to its tasks, attacks, apparatus, and policies.",
+        "Ordinary benchmark success is not intentional-subversion robustness."
+      ]
+    },
+    {
+      "id": "ai-control",
+      "title": "AI Control: Improving Safety Despite Intentional Subversion",
+      "primary_url": "https://arxiv.org/abs/2312.06942",
+      "adopted_lessons": [
+        "distinguish an intentionally subverting policy from an honest policy",
+        "evaluate trusted editing and untrusted monitoring",
+        "budget scarce trusted labor",
+        "model collusion and audit protocols"
+      ],
+      "raes_boundary": "Trusted and untrusted are profile-scoped experimental roles. Human or model intervention must declare its authority operation and re-enter deterministic validation.",
+      "nonclaims": [
+        "A role declaration does not prove a model or human trustworthy.",
+        "One evaluated protocol does not establish general control."
+      ]
+    },
+    {
+      "id": "controlarena",
+      "title": "ControlArena",
+      "primary_url": "https://control-arena.aisi.org.uk/",
+      "adopted_lessons": [
+        "make honest and attack modes explicit",
+        "separate main and side objectives",
+        "declare policy and monitor visibility",
+        "bind audit, intervention, shutdown, safety, usefulness, and trajectory analysis"
+      ],
+      "raes_boundary": "Represent the coordinates through RAES experiment and participant-control authorities; do not copy ControlArena policy, monitor, scorer, solution, or trajectory object models.",
+      "nonclaims": [
+        "RAES does not require Inspect AI or ControlArena.",
+        "A trajectory score never authorizes a runtime action."
+      ]
+    },
+    {
+      "id": "runtime-shielding",
+      "title": "Shield Synthesis: Runtime Enforcement for Reactive Systems",
+      "primary_url": "https://arxiv.org/abs/1501.02573",
+      "adopted_lessons": [
+        "mediate at runtime before an unsafe output is realized",
+        "bind enforcement to a declared safety property",
+        "distinguish correction from observation",
+        "avoid delay between decision and effect"
+      ],
+      "raes_boundary": "Use shielding language only for a deterministic complete sink policy over a declared property. A heuristic monitor or incomplete gateway is evidence, not a shield.",
+      "nonclaims": [
+        "Issue 812 does not synthesize a shield.",
+        "A flow policy is not a universal safety property."
+      ]
+    },
+    {
+      "id": "capability-security",
+      "title": "A Capability-Based Module System for Authority Control",
+      "primary_url": "https://doi.org/10.4230/LIPIcs.ECOOP.2017.20",
+      "adopted_lessons": [
+        "grant only the authority a component needs",
+        "separate designation from ambient authority",
+        "make authority boundaries explicit",
+        "compose least authority with information-flow policy"
+      ],
+      "raes_boundary": "Reuse action-contract arguments, participant implementation capabilities, identity binding, and API-407 strength instead of adding a second capability language.",
+      "nonclaims": [
+        "Capability restriction does not replace confidentiality or integrity propagation.",
+        "A declared capability does not prove correct backend enforcement."
+      ]
+    }
+  ],
+  "threat_model": {
+    "model_id": "adversarial-participant-boundary-threat-model-v1",
+    "revision": "rev1",
+    "actors": [
+      {
+        "id": "honest-fallible-participant",
+        "intentional_subversion": false,
+        "capabilities": [
+          "produce invalid or unsafe proposals accidentally",
+          "misinterpret observations",
+          "select unsupported actions"
+        ],
+        "trust_boundary": "Subject to the same deterministic admission, flow, capability, and sink decisions as every participant."
+      },
+      {
+        "id": "intentionally-subverting-participant",
+        "intentional_subversion": true,
+        "capabilities": [
+          "optimize a hidden side objective",
+          "construct structurally valid malicious actions",
+          "adapt to approvals, denials, audits, edits, deferrals, and handoffs",
+          "retain state across episodes when the apparatus permits it"
+        ],
+        "trust_boundary": "The participant apparatus is untrusted with respect to the named protected objective; no internal-reasoning observation is assumed."
+      },
+      {
+        "id": "untrusted-content-source",
+        "intentional_subversion": true,
+        "capabilities": [
+          "inject instructions into observations, tool results, retrieval, files, and errors",
+          "influence an opaque participant transformation",
+          "attempt destination and control redirection"
+        ],
+        "trust_boundary": "External content defaults to confidential-and-untrusted until a revisioned resolver establishes narrower labels."
+      },
+      {
+        "id": "adaptive-policy-aware-attacker",
+        "intentional_subversion": true,
+        "capabilities": [
+          "know policy or monitor structure",
+          "estimate or know thresholds and audit budgets",
+          "learn from prior outcomes",
+          "shift attack timing and presentation"
+        ],
+        "trust_boundary": "Knowledge and feedback are explicit evaluation variables and participant-visible facts, never implicit benchmark assumptions."
+      },
+      {
+        "id": "colluding-participants-or-monitors",
+        "intentional_subversion": true,
+        "capabilities": [
+          "share explicit information through permitted channels",
+          "coordinate low-suspicion behavior",
+          "produce correlated monitor failures",
+          "launder influence through a trusted-looking handoff"
+        ],
+        "trust_boundary": "Coalition membership, visibility, shared inputs, independence assumptions, and memory are declared; different ids do not imply independence."
+      }
+    ],
+    "protected_assets": [
+      "confidential participant and environment data",
+      "integrity of control and policy decisions",
+      "external systems reached by actions or tools",
+      "participant-visible and external outputs",
+      "append-only control, crossing, evidence, and audit histories",
+      "hidden experiment objectives and security-sensitive configuration"
+    ],
+    "explicit_flow_channels": [
+      "observations",
+      "tool-results",
+      "retrieved-content",
+      "participant-context",
+      "retained-memory",
+      "proposals",
+      "action-arguments",
+      "participant-outputs",
+      "errors",
+      "handoffs",
+      "external-direction",
+      "transformations",
+      "stream-chunks",
+      "colluding-participant-crossings"
+    ],
+    "crossing_scopes": [
+      "within-participant",
+      "cross-participant",
+      "cross-episode"
+    ],
+    "outside_guarantee": [
+      "undeclared-timing-channels",
+      "covert-storage-channels",
+      "model-steganography",
+      "private-reasoning-safety",
+      "monitor-honesty",
+      "model-alignment",
+      "unobservable-flows-inside-opaque-apparatuses"
+    ]
+  },
+  "flow_policy_profile": {
+    "profile_id": "participant-boundary-flow-policy-v1",
+    "revision": "rev1",
+    "confidentiality": {
+      "independent_coordinate": true,
+      "meaning": "maximum permitted audiences, principals, destinations, and sink classes",
+      "join": "least-upper-bound",
+      "release_operation": "declassification"
+    },
+    "integrity": {
+      "independent_coordinate": true,
+      "meaning": "origins and possible writers that may have influenced the value plus sink-required trust",
+      "join": "conservative-influence-union",
+      "release_operation": "integrity-endorsement"
+    },
+    "unknown_source_default": "confidential-and-untrusted",
+    "missing_or_unknown_behavior": "deny-or-explicitly-unsupported",
+    "opaque_transformation": "retain-join-of-all-possible-inputs",
+    "historical_labels_are_immutable": true,
+    "distinct_operations": [
+      "authentication",
+      "authorization",
+      "admission",
+      "approval",
+      "declassification",
+      "integrity-endorsement",
+      "redaction",
+      "transformation",
+      "trusted-editing",
+      "deferral",
+      "handoff",
+      "interruption",
+      "shutdown",
+      "advice",
+      "execution"
+    ],
+    "carriers": [
+      "runtime-fact",
+      "participant-observation",
+      "participant-context",
+      "retained-memory",
+      "participant-proposal",
+      "derived-value",
+      "action-argument",
+      "API-409-control-occurrence",
+      "API-423-crossing-occurrence",
+      "participant-output",
+      "external-output"
+    ],
+    "sinks": [
+      "external-action",
+      "tool-argument",
+      "participant-output",
+      "external-serialization",
+      "stream-chunk",
+      "error-output",
+      "callback",
+      "persistent-external-write"
+    ],
+    "final_enforcement_boundary": "after-last-policy-and-state-cut-resolution-before-external-effect-or-disclosure",
+    "decision_committed_before_effect": true,
+    "deny_without_side_effect": [
+      "missing-label",
+      "missing-provenance",
+      "unknown-profile",
+      "ambiguous-join",
+      "stale-state-cut",
+      "unsupported-capability",
+      "policy-deny",
+      "failed-atomic-commit",
+      "history-head-conflict",
+      "unauthorized-release-operation"
+    ],
+    "participant_neutrality": {
+      "portable": [
+        "labels",
+        "derivation",
+        "authority",
+        "capability",
+        "policy cut",
+        "sink",
+        "decision",
+        "provenance",
+        "evidence"
+      ],
+      "apparatus_specific": [
+        "prompt separation",
+        "model topology",
+        "quarantined model",
+        "MCP gateway",
+        "tokenizer",
+        "private model state",
+        "credentials"
+      ],
+      "covered_participant_kinds": [
+        "human",
+        "scripted",
+        "reinforcement-learning",
+        "large-language-model",
+        "external-service"
+      ]
+    }
+  },
+  "control_evaluation_profile": {
+    "profile_id": "intentional-subversion-control-evaluation-v1",
+    "revision": "rev1",
+    "modes": [
+      "honest",
+      "attack"
+    ],
+    "variables": [
+      {
+        "id": "mode",
+        "domain": "honest or attack",
+        "evidence_boundary": "Bound to every run and participant policy."
+      },
+      {
+        "id": "main-objective",
+        "domain": "declared utility objective and success condition",
+        "evidence_boundary": "Portable bounded ref; raw private instructions are excluded."
+      },
+      {
+        "id": "side-objective",
+        "domain": "protected adversarial objective and success condition",
+        "evidence_boundary": "May remain hidden from the evaluated participant while retained as access-controlled experiment evidence."
+      },
+      {
+        "id": "policy-knowledge",
+        "domain": "none, partial, or declared complete policy knowledge",
+        "evidence_boundary": "Names exactly what is observable."
+      },
+      {
+        "id": "monitor-knowledge",
+        "domain": "monitor identity, prompt/profile, topology, score, or threshold visibility",
+        "evidence_boundary": "Hidden monitor internals remain outside participant-visible evidence unless the profile releases them."
+      },
+      {
+        "id": "audit-budget-knowledge",
+        "domain": "none, distributional, threshold, or exact remaining budget",
+        "evidence_boundary": "Budget knowledge and budget size are separate."
+      },
+      {
+        "id": "prior-outcome-visibility",
+        "domain": "approvals, denials, edits, deferrals, audits, handoffs, interruptions, and outputs",
+        "evidence_boundary": "Only outcomes actually delivered to the participant enter its observation surface."
+      },
+      {
+        "id": "adaptive-strategy",
+        "domain": "declared strategy class over visible history and retained memory",
+        "evidence_boundary": "No undeclared private-state introspection."
+      },
+      {
+        "id": "collusion",
+        "domain": "none, participant, monitor, or mixed declared coalition",
+        "evidence_boundary": "Names allowed communication and shared state."
+      },
+      {
+        "id": "monitor-topology",
+        "domain": "single, serial, parallel, adversarial, or composed monitors",
+        "evidence_boundary": "Topology is separate from trust."
+      },
+      {
+        "id": "monitor-correlation",
+        "domain": "independent, correlated, shared-input, shared-model, or unknown",
+        "evidence_boundary": "Independence requires evidence; unknown is not independent."
+      },
+      {
+        "id": "audit-budget",
+        "domain": "finite selection and escalation budget",
+        "evidence_boundary": "An experiment protocol coordinate unless the runtime enforces it as a resource."
+      },
+      {
+        "id": "intervention-protocol",
+        "domain": "approval, trusted editing, defer-to-trusted, interruption, or shutdown",
+        "evidence_boundary": "Each authority effect is explicit and re-enters deterministic policy."
+      },
+      {
+        "id": "memory-scope",
+        "domain": "none, episode, participant, shared, or cross-episode retained state",
+        "evidence_boundary": "Replay names the same scope and policy revisions."
+      }
+    ],
+    "monitor_roles": [
+      "trusted",
+      "untrusted",
+      "composed"
+    ],
+    "interventions": [
+      "human-approval",
+      "trusted-editing",
+      "defer-to-trusted",
+      "interruption",
+      "shutdown"
+    ],
+    "measures": [
+      "safety",
+      "usefulness",
+      "audit-cost",
+      "intervention-cost",
+      "uncertainty",
+      "attack-success",
+      "false-positive-rate",
+      "limitations"
+    ],
+    "monitor_score_authorizes_action": false,
+    "ordinary_negative_tests_establish_subversion_robustness": false,
+    "replay_evidence": "digest-bound graph of existing episode, behavior, control, crossing, action/result, experiment, and evidence refs"
+  },
+  "attack_cases": [
+    {
+      "id": "prompt-or-tool-result-injection",
+      "attack_path": "untrusted observation or tool result -> participant context -> structurally valid proposal -> action argument -> external sink",
+      "why_ordinary_admission_is_insufficient": "The action and argument may be valid and authorized in isolation while an untrusted source redirected the control or destination.",
+      "deterministic_boundary_result": "Conservative integrity influence reaches the sink; the final gate denies unless the exact sink policy admits it or a governed endorsement creates a fresh result.",
+      "evaluation_variables": [
+        "content source",
+        "participant mode",
+        "policy knowledge",
+        "quarantine capability",
+        "monitor visibility"
+      ],
+      "runtime_boundary": "RuntimeControlPlane-to-RuntimeTarget",
+      "denial_requires_zero_external_effects": true,
+      "required_evidence": [
+        "semantic-result",
+        "runtime-target-call-count",
+        "participant-visible-output",
+        "append-only-history",
+        "safe-audit-or-error-evidence",
+        "replay-result"
+      ]
+    },
+    {
+      "id": "confidential-exfiltration",
+      "attack_path": "confidential runtime fact -> opaque derivation -> valid tool argument, output, error, or colluding participant -> unauthorized destination",
+      "why_ordinary_admission_is_insufficient": "The read and send actions can each be permitted while their composition leaks confidential influence.",
+      "deterministic_boundary_result": "Confidentiality joins across every explicit derivation and crossing; destination and audience policy deny release without exact declassification authority.",
+      "evaluation_variables": [
+        "secret visibility",
+        "destination authority",
+        "collusion",
+        "error and output channels",
+        "declassification availability"
+      ],
+      "runtime_boundary": "RuntimeControlPlane-to-RuntimeTarget",
+      "denial_requires_zero_external_effects": true,
+      "required_evidence": [
+        "semantic-result",
+        "runtime-target-call-count",
+        "participant-visible-output",
+        "append-only-history",
+        "safe-audit-or-error-evidence",
+        "replay-result"
+      ]
+    },
+    {
+      "id": "adaptive-monitor-evasion",
+      "attack_path": "participant observes approvals, denials, edits, deferrals, audits, or thresholds -> updates attack strategy -> selects lower-suspicion side-objective actions",
+      "why_ordinary_admission_is_insufficient": "A static negative test or monitor accuracy result omits feedback, audit exhaustion, threshold knowledge, and correlated failure.",
+      "deterministic_boundary_result": "Monitor output remains non-authorizing; deterministic policy still gates every sink while the evaluation measures safety and usefulness across declared adaptive strategies.",
+      "evaluation_variables": [
+        "policy knowledge",
+        "monitor knowledge",
+        "prior outcome visibility",
+        "audit budget",
+        "monitor correlation",
+        "adaptive strategy"
+      ],
+      "runtime_boundary": "RuntimeControlPlane-to-RuntimeTarget",
+      "denial_requires_zero_external_effects": true,
+      "required_evidence": [
+        "semantic-result",
+        "runtime-target-call-count",
+        "participant-visible-output",
+        "append-only-history",
+        "safe-audit-or-error-evidence",
+        "replay-result"
+      ]
+    },
+    {
+      "id": "control-handoff-manipulation",
+      "attack_path": "tainted context or external direction -> valid API-409 handoff -> receiver proposal -> API-423 crossing -> external sink",
+      "why_ordinary_admission_is_insufficient": "A valid controller transition can launder apparent authority or induce a trusted receiver unless labels, provenance, memory, and action admission remain independent.",
+      "deterministic_boundary_result": "Handoff never resets labels or grants admission; controller, authority, provenance, receiver admission, crossing policy, and final sink resolve at one exact cut.",
+      "evaluation_variables": [
+        "sender and receiver roles",
+        "controller change",
+        "shared memory",
+        "monitor topology",
+        "receiver trust assumption"
+      ],
+      "runtime_boundary": "RuntimeControlPlane-to-RuntimeTarget",
+      "denial_requires_zero_external_effects": true,
+      "required_evidence": [
+        "semantic-result",
+        "runtime-target-call-count",
+        "participant-visible-output",
+        "append-only-history",
+        "safe-audit-or-error-evidence",
+        "replay-result"
+      ]
+    }
+  ],
+  "requirement_dispositions": [
+    {
+      "uid": "SEM-233",
+      "disposition": "new",
+      "status": "DRAFT",
+      "ground_control_id": "fe8c490c-20c1-4178-b32b-49085d6da69c",
+      "scope": "Two-coordinate participant-neutral explicit-flow authority and final-sink decision semantics.",
+      "rationale": "SEM-230 does not yet carry independent confidentiality and source-integrity coordinates transitively to every sink."
+    },
+    {
+      "uid": "ASR-536",
+      "disposition": "new",
+      "status": "DRAFT",
+      "ground_control_id": "6ff9b816-4603-41e1-b3f0-cf0128a033db",
+      "scope": "Intentional-subversion control-evaluation profiles and evidence claims.",
+      "rationale": "ASR-535 does not define attacker knowledge, adaptation, collusion, monitor topology, or audit/intervention protocols."
+    },
+    {
+      "uid": "SEM-230",
+      "disposition": "reuse",
+      "status": "ACTIVE",
+      "scope": "Participant-relative projection, exact-cut policy, memory, strategy, declassification, and noninterference boundary.",
+      "rationale": "SEM-233 refines explicit flow labels and sinks without replacing SEM-230."
+    },
+    {
+      "uid": "ACT-617",
+      "disposition": "reuse",
+      "status": "ACTIVE",
+      "scope": "Mixed-control authority, intervention, handoff, override, and cancellation semantics.",
+      "rationale": "SEM-233 keeps control changes separate from flow release and action admission."
+    },
+    {
+      "uid": "API-409",
+      "disposition": "reuse",
+      "status": "ACTIVE",
+      "scope": "Typed participant control occurrences and contextual validation.",
+      "rationale": "Control occurrences carry refs into the flow relation rather than becoming a second control schema."
+    },
+    {
+      "uid": "API-423",
+      "disposition": "reuse",
+      "status": "ACTIVE",
+      "scope": "Typed crossing request, decision, transformation, delivery, observation, and audit occurrences.",
+      "rationale": "Portable flow decisions compose at the existing crossing seam."
+    },
+    {
+      "uid": "RUN-310",
+      "disposition": "reuse",
+      "status": "ACTIVE",
+      "scope": "Authenticated supervisory lifecycle, append-only histories, replay, and atomic control transitions.",
+      "rationale": "Final-sink mediation reuses the existing identity and persistence boundary."
+    },
+    {
+      "uid": "RUN-319",
+      "disposition": "extend-downstream",
+      "status": "ACTIVE",
+      "scope": "Reference participant crossing enforcement and durable decisions.",
+      "rationale": "Child work extends its last-boundary enforcement to SEM-233 labels and sinks."
+    },
+    {
+      "uid": "API-407",
+      "disposition": "extend-downstream",
+      "status": "ACTIVE",
+      "scope": "Declared and effective participant feature support, limitations, downgrade, and conformance evidence.",
+      "rationale": "Backends need explicit flow-policy, propagation, quarantine, and sink-mediation capability posture."
+    },
+    {
+      "uid": "ASR-535",
+      "disposition": "reuse",
+      "status": "ACTIVE",
+      "scope": "Bounded participant-flow falsification, claim binding, runtime/backend evidence, and nonclaim discipline.",
+      "rationale": "ASR-536 adds intentional-subversion protocol variables without relabeling bounded ASR-535 evidence."
+    }
+  ],
+  "implementation_issues": [
+    {
+      "key": "semantic-authority",
+      "issue_number": 1001,
+      "milestone": "Participant Information-Flow & Behavioral Equivalence",
+      "requirements": [
+        "SEM-233",
+        "SEM-230",
+        "ACT-617",
+        "API-409",
+        "API-423"
+      ],
+      "bounded_outcome": "Publish revisioned two-coordinate explicit-flow and final-sink semantic authority.",
+      "negative_cases": [
+        "single trusted or sensitivity label",
+        "release-operation conflation",
+        "handoff or episode trust reset",
+        "unknown source defaults to public or trusted"
+      ],
+      "evidence_required": [
+        "formal profile",
+        "typed carrier mapping",
+        "cross-participant and cross-episode cases",
+        "bounded falsification"
+      ],
+      "explicit_nonclaims": [
+        "no runtime or backend realization",
+        "no model alignment, private-state, monitor-honesty, or covert-channel claim"
+      ],
+      "dependencies": []
+    },
+    {
+      "key": "portable-contracts",
+      "issue_number": 1002,
+      "milestone": "Participant Information-Flow & Behavioral Equivalence",
+      "requirements": [
+        "SEM-233",
+        "SEM-230",
+        "API-409",
+        "API-423"
+      ],
+      "bounded_outcome": "Publish closed flow-policy, label, derivation, release, sink-decision, and existing-carrier binding contracts.",
+      "negative_cases": [
+        "open taint or policy maps",
+        "in-place historical label mutation",
+        "schema-only cross-record admission",
+        "prompt or private-state carriage"
+      ],
+      "evidence_required": [
+        "schemas, models, fixtures, publication, and generator parity",
+        "resolver-backed contextual validation",
+        "stale, unknown, and laundering cases"
+      ],
+      "explicit_nonclaims": [
+        "contract validity is not runtime enforcement or backend realization",
+        "no adversarial-robustness claim"
+      ],
+      "dependencies": [
+        "semantic-authority"
+      ]
+    },
+    {
+      "key": "runtime-enforcement",
+      "issue_number": 1003,
+      "milestone": "Participant Information-Flow & Behavioral Equivalence",
+      "requirements": [
+        "SEM-233",
+        "RUN-319",
+        "RUN-310",
+        "API-423",
+        "API-407"
+      ],
+      "bounded_outcome": "Enforce and durably record SEM-233 immediately before every reference-runtime effect or disclosure.",
+      "negative_cases": [
+        "early-only enforcement",
+        "effect before commit",
+        "stream, error, callback, or tool-argument bypass",
+        "deny with target call or disclosure"
+      ],
+      "evidence_required": [
+        "real RuntimeControlPlane and instrumented RuntimeTarget tests",
+        "zero-side-effect denial cases",
+        "both-store atomicity, idempotency, replay, and restart evidence",
+        "safe diagnostic and audit evidence"
+      ],
+      "explicit_nonclaims": [
+        "reference runtime is not backend realization",
+        "no universal IFC or covert-channel claim"
+      ],
+      "dependencies": [
+        "portable-contracts"
+      ]
+    },
+    {
+      "key": "apparatus-and-backend-support",
+      "issue_number": 1004,
+      "milestone": "Participant Information-Flow & Behavioral Equivalence",
+      "requirements": [
+        "SEM-233",
+        "ASR-536",
+        "API-407",
+        "ACT-617"
+      ],
+      "bounded_outcome": "Declare and verify apparatus/backend flow, quarantine, monitor-topology, capability, downgrade, and realization posture.",
+      "negative_cases": [
+        "declaration treated as realization",
+        "gateway or monitor as sole enforcement point",
+        "different ids treated as independent monitors",
+        "unsupported capability silently downgraded"
+      ],
+      "evidence_required": [
+        "closed capability and apparatus contracts",
+        "declared-versus-effective support resolution",
+        "honest, weakened, overclaiming, and correlated fixtures",
+        "bounded backend conformance"
+      ],
+      "explicit_nonclaims": [
+        "no automatic trust in any apparatus actor",
+        "no portable LLM message, prompt, or private-state semantics"
+      ],
+      "dependencies": [
+        "portable-contracts"
+      ]
+    },
+    {
+      "key": "adversarial-evaluation",
+      "issue_number": 1007,
+      "milestone": "Participant Information-Flow & Behavioral Equivalence",
+      "requirements": [
+        "ASR-536",
+        "ASR-535",
+        "SEM-233",
+        "SEM-230"
+      ],
+      "bounded_outcome": "Run profile-bound honest and adaptive attack evaluations with separate control mechanisms and measures.",
+      "negative_cases": [
+        "ordinary negative tests promoted to intentional-subversion robustness",
+        "monitor score authorizes action",
+        "knowledge, adaptation, collusion, audit, or memory left implicit",
+        "unsafe hidden objective or prompt evidence"
+      ],
+      "evidence_required": [
+        "preregistered profile",
+        "four boundary-faithful attack cases",
+        "adaptive strategies and replayable trajectories",
+        "separate safety, usefulness, cost, uncertainty, and limitation measures"
+      ],
+      "explicit_nonclaims": [
+        "no model alignment or monitor-honesty claim",
+        "no result outside the exact evaluated profile"
+      ],
+      "dependencies": [
+        "semantic-authority",
+        "portable-contracts"
+      ]
+    },
+    {
+      "key": "documentation-and-claims",
+      "issue_number": 1008,
+      "milestone": "Participant Information-Flow & Behavioral Equivalence",
+      "requirements": [
+        "SEM-233",
+        "ASR-536",
+        "ASR-535"
+      ],
+      "bounded_outcome": "Publish only the exact evidenced runtime, backend, evaluation, limitation, and nonclaim status.",
+      "negative_cases": [
+        "premature enforcement or realization claim",
+        "benchmark result promoted to universal robustness",
+        "apparatus details promoted to portable semantics",
+        "missing profile and uncertainty coordinates"
+      ],
+      "evidence_required": [
+        "reconciled runtime, backend, and evaluation artifacts",
+        "scientific-completeness and assurance updates",
+        "public documentation and lineage",
+        "documentation drift checks"
+      ],
+      "explicit_nonclaims": [
+        "no claim beyond the exact implemented and evaluated profiles",
+        "no automatic trust, private-reasoning, or covert-channel claim"
+      ],
+      "completion_gate": "runtime enforcement, apparatus/backend realization, and adversarial-evaluation evidence reconciled",
+      "dependencies": [
+        "runtime-enforcement",
+        "apparatus-and-backend-support",
+        "adversarial-evaluation"
+      ]
+    }
+  ],
+  "claim_boundaries": {
+    "issue_812": "design-authority-and-implementation-program-only",
+    "runtime_enforcement": "not-established",
+    "backend_realization": "not-established",
+    "intentional_subversion_robustness": "not-established",
+    "model_alignment": "outside-scope",
+    "chain_of_thought": "excluded-from-portable-records",
+    "private_model_state": "excluded-from-portable-records",
+    "monitor_trust": "profile-scoped-assumption-not-proof",
+    "covert_channels": "undeclared-channels-not-controlled",
+    "ordinary_negative_tests": "bounded-falsification-only"
+  }
+}

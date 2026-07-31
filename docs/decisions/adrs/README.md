@@ -144,6 +144,7 @@ adr-097-scoped-participant-resource-budgets-and-shared-service-fairness
 adr-098-portable-artifact-requirement-satisfaction
 adr-099-participant-relative-predicate-opacity
 adr-100-participant-crossing-bisimulation
+adr-101-adversarial-participant-flow-control
 ```
 
 | ADR | Title | Status | Date |
@@ -248,3 +249,4 @@ adr-100-participant-crossing-bisimulation
 | [098](adr-098-portable-artifact-requirement-satisfaction.md) | Portable Artifact Requirement Satisfaction | accepted | 2026-07-27 |
 | [099](adr-099-participant-relative-predicate-opacity.md) | Participant-Relative Predicate Opacity | accepted | 2026-07-29 |
 | [100](adr-100-participant-crossing-bisimulation.md) | Proof-Bearing Participant-Crossing Bisimulation | accepted | 2026-07-29 |
+| [101](adr-101-adversarial-participant-flow-control.md) | Adversarial Participant Boundary Flow Control | accepted | 2026-07-30 |
