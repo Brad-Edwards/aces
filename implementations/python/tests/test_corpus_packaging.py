@@ -138,6 +138,8 @@ def test_corpus_discoverable_via_importlib_resources_from_installed_wheel(instal
         "  'backend_profile': (corpus_family_root('profiles')/'backend'/'provisioning-only.json').exists(),\n"
         "  'scientific_completeness': (corpus_family_root('profiles')/'scientific-completeness'/'scientific-scenario-completeness-rev1.json').exists(),\n"
         "  'controlled_vocab': (corpus_family_root('concept-authority')/'controlled-vocabularies-v1.json').exists(),\n"
+        "  'activitystreams_source': (corpus_family_root('concept-authority')/'w3c-activitystreams-activity-types-source-v1.json').exists(),\n"
+        "  'fipa_source': (corpus_family_root('concept-authority')/'fipa-communicative-acts-source-v1.json').exists(),\n"
         "  'fixtures_dir': corpus_family_root('fixtures').is_dir(),\n"
         "  'schemas_dir': corpus_family_root('schemas').is_dir(),\n"
         "}))\n"
@@ -155,6 +157,8 @@ def test_corpus_discoverable_via_importlib_resources_from_installed_wheel(instal
     assert payload["backend_profile"] is True
     assert payload["scientific_completeness"] is True
     assert payload["controlled_vocab"] is True
+    assert payload["activitystreams_source"] is True
+    assert payload["fipa_source"] is True
     assert payload["fixtures_dir"] is True
     assert payload["schemas_dir"] is True
 

@@ -15,6 +15,7 @@ from ..artifact_requirements import (
     validate_artifact_requirement_invariants,
 )
 from ..versions import (
+    ACTIVITYSTREAMS_ACTIVITY_TYPES_SOURCE_SCHEMA_VERSION,
     ARTIFACT_REQUIREMENT_SCHEMA_VERSION,
     ASSOCIATED_ARTIFACT_MANIFEST_SCHEMA_VERSION,
     ATLAS_TACTICS_SOURCE_SCHEMA_VERSION,
@@ -33,6 +34,7 @@ from ..versions import (
     EXPERIMENT_STUDY_SCHEMA_VERSION,
     EXPERIMENT_TASK_SCHEMA_VERSION,
     EXTERNAL_CONCEPT_BINDINGS_SCHEMA_VERSION,
+    FIPA_COMMUNICATIVE_ACTS_SOURCE_SCHEMA_VERSION,
     NIST_CSF_DEFENSIVE_CATEGORIES_SOURCE_SCHEMA_VERSION,
     OPERATION_SCHEMA_VERSION,
     PARTICIPANT_EPISODE_STATE_SCHEMA_VERSION,
@@ -421,6 +423,8 @@ from .validators import _resolve_ref_schema as _resolve_ref_schema
 from .validators import _resolve_schema_pointer as _resolve_schema_pointer
 from .validators import _validate_reference_model_schema_binding as _validate_reference_model_schema_binding
 from .vocabulary_sources import (
+    ActivityStreamsActivityTypeSourceTermModel,
+    ActivityStreamsActivityTypesSourceModel,
     AtlasTacticSourceTermModel,
     AtlasTacticsSourceModel,
     AttackEnterpriseTacticSourceTermModel,
@@ -429,6 +433,8 @@ from .vocabulary_sources import (
     ControlledVocabularyDefinitionModel,
     ControlledVocabularySourceModel,
     ControlledVocabularyTermModel,
+    FipaCommunicativeActSourceTermModel,
+    FipaCommunicativeActsSourceModel,
     NistCsfDefensiveCategorySourceModel,
     NistCsfDefensiveCategorySourceTermModel,
 )
