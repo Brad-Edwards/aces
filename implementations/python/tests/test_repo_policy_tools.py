@@ -748,6 +748,17 @@ def test_module_boundaries_allow_runtime_using_processor_public_api(tmp_path: Pa
     assert failures == []
 
 
+def test_module_boundaries_allow_cli_using_processor_compiler_public_api(tmp_path: Path) -> None:
+    repo_root = setup_policy_repo(tmp_path)
+    install_module_boundary_policy(repo_root)
+    rel = "implementations/python/packages/raes_cli/semantic.py"
+    write_text(repo_root / rel, "from raes_processor.compiler import compile_scenario_runtime_model\n")
+
+    failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
+
+    assert failures == []
+
+
 def test_module_boundaries_reject_runtime_using_non_public_processor_module(tmp_path: Path) -> None:
     repo_root = setup_policy_repo(tmp_path)
     install_module_boundary_policy(repo_root)

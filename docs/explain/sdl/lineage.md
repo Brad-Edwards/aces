@@ -558,8 +558,10 @@ RAES relies on prior work in four ways:
   [SP 800-61r2](https://csrc.nist.gov/publications/detail/sp/800-61/rev-2/final)
   / [r3](https://csrc.nist.gov/pubs/sp/800/61/r3/final) frames incident
   handling. These sources motivate separate functional roles; none defines a
-  required RAES product profile. Initial authored content stays under top-level
-  `content` and `service_materialization` per ADR-088.
+  required RAES product profile. Initial authored content and portable
+  search-index field-schema state stay under top-level `content` and the closed
+  `service_materialization` profiles per ADR-088. Native field types and mapping
+  bodies do not cross that boundary.
 - **Automation and presentation precedents:** OASIS
   [CACAO v2.0](https://docs.oasis-open.org/cacao/security-playbooks/v2.0/security-playbooks-v2.0.html)
   and [OpenC2](https://docs.oasis-open.org/openc2/oc2ls/v1.0/oc2ls-v1.0.html)

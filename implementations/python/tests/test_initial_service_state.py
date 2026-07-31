@@ -8,9 +8,12 @@ from pathlib import Path
 
 import pytest
 import yaml
-from raes import SDLValidationError, parse_sdl, parse_sdl_file
+from jsonschema import Draft202012Validator
+from raes import SDLParseError, SDLValidationError, parse_sdl, parse_sdl_file
 from raes_backend_protocols.backend_manifest import BackendManifest
 from raes_backend_stubs.stubs import create_stub_manifest, create_stub_target
+from raes_contracts.canonical import canonical_json_digest
+from raes_contracts.contracts import schema_bundle
 from raes_contracts.planning import ChangeAction, ProvisioningPlan, ProvisionOp, RuntimeDomain
 from raes_contracts.runtime_state import RuntimeSnapshot, SnapshotEntry
 from raes_processor.compiler import compile_scenario_runtime_model
@@ -19,6 +22,8 @@ from raes_processor.planner import plan
 from raes_processor.semantics.realization import realization_disclosure
 from raes_runtime.control_plane import RuntimeControlPlane
 from raes_runtime.registry import RuntimeTarget
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
 def _scenario(*replacements: tuple[str, str]):
@@ -108,22 +113,351 @@ evidence_requirements:
     return parse_sdl(textwrap.dedent(source))
 
 
-def _manifest_with_profile() -> BackendManifest:
+def _search_index_schema_scenario(*replacements: tuple[str, str]):
+    profile_replacements = (
+        ("    items:\n      - name: welcome\n", ""),
+        ("interface_profile: service-content", "interface_profile: service-search-index-schema"),
+        ("operation: ensure-owned-items", "operation: ensure-search-index-field-schema"),
+        ("readback: canonical-content-digest", "readback: canonical-portable-field-schema-digest"),
+        (
+            "        readback: canonical-portable-field-schema-digest",
+            "        readback: canonical-portable-field-schema-digest\n"
+            "        field_semantics:\n"
+            "          key: exact-token\n"
+            "          status: exact-token\n"
+            "          relations: exact-token",
+        ),
+    )
+    return _scenario(*profile_replacements, *replacements)
+
+
+def _manifest_with_profile(
+    profile: str = "service-content-v1",
+    requirement_kind: str | None = "service-content-materialization",
+) -> BackendManifest:
     manifest = create_stub_manifest()
     provisioner = replace(
         manifest.provisioner,
-        supported_service_materialization_profiles=frozenset({"service-content-v1"}),
+        supported_service_materialization_profiles=frozenset({profile}),
+    )
+    realization_support = (
+        tuple(
+            replace(
+                declaration,
+                supported_exact_requirement_kinds=(
+                    declaration.supported_exact_requirement_kinds | frozenset({requirement_kind})
+                ),
+            )
+            for declaration in manifest.realization_support
+        )
+        if requirement_kind is not None
+        else manifest.realization_support
     )
     return BackendManifest(
         identity=manifest.identity,
         supported_contract_versions=manifest.supported_contract_versions,
         compatibility=manifest.compatibility,
-        realization_support=manifest.realization_support,
+        realization_support=realization_support,
         concept_bindings=manifest.concept_bindings,
         constraints=manifest.constraints,
         capabilities=replace(manifest.capabilities, provisioner=provisioner),
         realization_envelope=manifest.realization_envelope,
     )
+
+
+def test_search_index_schema_profile_is_typed_schema_only_desired_state() -> None:
+    scenario = _search_index_schema_scenario()
+
+    content = scenario.content["messages"]
+    assert content.items == []
+    assert content.source is None
+    binding = content.service_materialization
+    assert binding is not None
+    assert binding.interface_profile == "service-search-index-schema"
+    assert binding.requirements.field_semantics == {
+        "key": "exact-token",
+        "status": "exact-token",
+        "relations": "exact-token",
+    }
+
+
+@pytest.mark.parametrize(
+    ("replacement", "message"),
+    [
+        (
+            ("          key: exact-token", "          key: keyword"),
+            "Input should be",
+        ),
+        (
+            (
+                "        field_semantics:\n"
+                "          key: exact-token\n"
+                "          status: exact-token\n"
+                "          relations: exact-token",
+                "        field_semantics: {}",
+            ),
+            "at least 1 item",
+        ),
+        (
+            ("          relations: exact-token", "          relations: exact-token\n        native_mapping: {}"),
+            "Extra inputs are not permitted",
+        ),
+        (
+            ("    service_materialization:", "    items:\n      - name: forbidden\n    service_materialization:"),
+            "must not carry source or items",
+        ),
+    ],
+)
+def test_search_index_schema_profile_rejects_non_portable_or_payload_shapes(
+    replacement: tuple[str, str],
+    message: str,
+) -> None:
+    with pytest.raises(SDLParseError, match=message):
+        _search_index_schema_scenario(replacement)
+
+
+def test_search_index_schema_compiles_portable_map_digest_and_exact_requirement() -> None:
+    model = compile_scenario_runtime_model(_search_index_schema_scenario())
+
+    placement = model.content_placements["provision.content.messages"]
+    binding = placement.service_materialization
+    assert binding is not None
+    assert binding.interface_profile == "service-search-index-schema"
+    assert binding.profile_version == "1"
+    assert binding.operation == "ensure-search-index-field-schema"
+    assert binding.conflict_policy == "reject-unowned-collision"
+    assert binding.readback == "canonical-portable-field-schema-digest"
+    assert binding.field_semantics == {
+        "key": "exact-token",
+        "status": "exact-token",
+        "relations": "exact-token",
+    }
+    assert binding.canonical_field_schema_digest == canonical_json_digest(
+        {
+            "interface_profile": "service-search-index-schema",
+            "profile_version": "1",
+            "projection_scope": "declared-fields",
+            "field_semantics": {
+                "key": "exact-token",
+                "status": "exact-token",
+                "relations": "exact-token",
+            },
+        }
+    )
+    assert any(
+        requirement.requirement_kind == "service-search-index-schema-materialization"
+        and requirement.address == placement.address
+        for requirement in model.realization_requirements
+    )
+
+
+def test_search_index_schema_digest_is_order_independent_and_semantic_sensitive() -> None:
+    original = compile_scenario_runtime_model(_search_index_schema_scenario())
+    reordered = compile_scenario_runtime_model(
+        _search_index_schema_scenario(
+            (
+                "          key: exact-token\n          status: exact-token\n          relations: exact-token",
+                "          relations: exact-token\n          key: exact-token\n          status: exact-token",
+            )
+        )
+    )
+    changed = compile_scenario_runtime_model(
+        _search_index_schema_scenario(("          status: exact-token", "          status: full-text"))
+    )
+
+    original_binding = original.content_placements["provision.content.messages"].service_materialization
+    reordered_binding = reordered.content_placements["provision.content.messages"].service_materialization
+    changed_binding = changed.content_placements["provision.content.messages"].service_materialization
+    assert original_binding is not None
+    assert reordered_binding is not None
+    assert changed_binding is not None
+    assert original_binding.canonical_field_schema_digest == reordered_binding.canonical_field_schema_digest
+    assert original_binding.canonical_field_schema_digest != changed_binding.canonical_field_schema_digest
+
+
+def test_search_index_schema_profile_requires_separate_capability() -> None:
+    model = compile_scenario_runtime_model(_search_index_schema_scenario())
+
+    unsupported = plan(model, _manifest_with_profile())
+    assert "provisioner.unsupported-service-materialization-profile" in {
+        diagnostic.code for diagnostic in unsupported.diagnostics
+    }
+    supported = plan(
+        model,
+        _manifest_with_profile(
+            "service-search-index-schema-v1",
+            "service-search-index-schema-materialization",
+        ),
+    )
+    assert "provisioner.unsupported-service-materialization-profile" not in {
+        diagnostic.code for diagnostic in supported.diagnostics
+    }
+
+
+def test_search_index_schema_profile_is_published_in_every_scenario_contract() -> None:
+    bundle = schema_bundle()
+
+    for contract_id in (
+        "sdl-authoring-input-v1",
+        "instantiated-scenario-v1",
+        "instantiated-scenario-snapshot-v1",
+        "scenario-satisfiability-evidence-v1",
+    ):
+        assert "service-search-index-schema" in str(bundle[contract_id])
+
+
+def test_initial_service_state_example_covers_search_index_schema_profile() -> None:
+    scenario = parse_sdl_file(REPO_ROOT / "examples" / "scenarios" / "initial-service-state.sdl.yaml")
+
+    binding = scenario.content["job-index-schema"].service_materialization
+    assert binding is not None
+    assert binding.interface_profile == "service-search-index-schema"
+
+
+def test_search_index_schema_profile_requires_separate_exact_realization_support() -> None:
+    model = compile_scenario_runtime_model(_search_index_schema_scenario())
+
+    unsupported = plan(
+        model,
+        _manifest_with_profile("service-search-index-schema-v1", None),
+    )
+
+    assert "realization.unsupported-exact-requirement" in {diagnostic.code for diagnostic in unsupported.diagnostics}
+
+
+def test_direct_plan_submission_rejects_tampered_search_index_schema_digest() -> None:
+    model = compile_scenario_runtime_model(_search_index_schema_scenario())
+    placement = model.content_placements["provision.content.messages"]
+    payload = resource_payload(placement)
+    changed_payload = dict(payload)
+    changed_binding = dict(changed_payload["service_materialization"])
+    changed_binding["canonical_field_schema_digest"] = "sha256:" + "f" * 64
+    changed_payload["service_materialization"] = changed_binding
+    operation = ProvisionOp(
+        action=ChangeAction.CREATE,
+        address=placement.address,
+        resource_type="content-placement",
+        payload=changed_payload,
+    )
+    base_target = create_stub_target()
+    manifest = _manifest_with_profile(
+        "service-search-index-schema-v1",
+        "service-search-index-schema-materialization",
+    )
+    target = RuntimeTarget(
+        name=base_target.name,
+        manifest=manifest,
+        provisioner=base_target.provisioner,
+        orchestrator=base_target.orchestrator,
+        evaluator=base_target.evaluator,
+        participant_runtime=base_target.participant_runtime,
+    )
+
+    result = RuntimeControlPlane(target).submit_provisioning(ProvisioningPlan(operations=[operation]))
+
+    assert [diagnostic.code for diagnostic in result.diagnostics] == [
+        "provisioner.service-materialization-contract-invalid"
+    ]
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("source", ""),
+        ("source", False),
+        ("items", ""),
+        ("items", {}),
+    ],
+)
+def test_direct_plan_submission_rejects_falsey_malformed_search_index_content(
+    field: str,
+    value: object,
+) -> None:
+    model = compile_scenario_runtime_model(_search_index_schema_scenario())
+    placement = model.content_placements["provision.content.messages"]
+    payload = resource_payload(placement)
+    changed_payload = dict(payload)
+    changed_spec = dict(changed_payload["spec"])
+    changed_spec[field] = value
+    changed_payload["spec"] = changed_spec
+    operation = ProvisionOp(
+        action=ChangeAction.CREATE,
+        address=placement.address,
+        resource_type="content-placement",
+        payload=changed_payload,
+    )
+
+    result = RuntimeControlPlane(create_stub_target()).submit_provisioning(ProvisioningPlan(operations=[operation]))
+
+    assert [diagnostic.code for diagnostic in result.diagnostics] == [
+        "provisioner.service-materialization-contract-invalid"
+    ]
+
+
+def test_direct_plan_submission_requires_search_index_schema_readback() -> None:
+    model = compile_scenario_runtime_model(_search_index_schema_scenario())
+    placement = model.content_placements["provision.content.messages"]
+    operation = ProvisionOp(
+        action=ChangeAction.CREATE,
+        address=placement.address,
+        resource_type="content-placement",
+        payload=resource_payload(placement),
+    )
+    base_target = create_stub_target()
+    manifest = _manifest_with_profile(
+        "service-search-index-schema-v1",
+        "service-search-index-schema-materialization",
+    )
+    target = RuntimeTarget(
+        name=base_target.name,
+        manifest=manifest,
+        provisioner=base_target.provisioner,
+        orchestrator=base_target.orchestrator,
+        evaluator=base_target.evaluator,
+        participant_runtime=base_target.participant_runtime,
+    )
+
+    result = RuntimeControlPlane(target).submit_provisioning(ProvisioningPlan(operations=[operation]))
+
+    assert [diagnostic.code for diagnostic in result.diagnostics] == [
+        "provisioner.service-materialization-readback-unsupported"
+    ]
+
+
+def test_direct_plan_submission_requires_search_index_schema_exact_support() -> None:
+    model = compile_scenario_runtime_model(_search_index_schema_scenario())
+    placement = model.content_placements["provision.content.messages"]
+    operation = ProvisionOp(
+        action=ChangeAction.CREATE,
+        address=placement.address,
+        resource_type="content-placement",
+        payload=resource_payload(placement),
+    )
+    base_target = create_stub_target()
+    manifest = _manifest_with_profile("service-search-index-schema-v1", None)
+    target = RuntimeTarget(
+        name=base_target.name,
+        manifest=manifest,
+        provisioner=base_target.provisioner,
+        orchestrator=base_target.orchestrator,
+        evaluator=base_target.evaluator,
+        participant_runtime=base_target.participant_runtime,
+    )
+
+    result = RuntimeControlPlane(target).submit_provisioning(ProvisioningPlan(operations=[operation]))
+
+    assert [diagnostic.code for diagnostic in result.diagnostics] == ["realization.unsupported-exact-requirement"]
+
+
+def test_service_content_profile_default_remains_backward_compatible() -> None:
+    scenario = _scenario(("      interface_profile: service-content\n", ""))
+
+    binding = scenario.content["messages"].service_materialization
+    assert binding is not None
+    assert binding.interface_profile == "service-content"
+    payload = scenario.model_dump(mode="json", exclude_none=True)
+    del payload["content"]["messages"]["service_materialization"]["interface_profile"]
+    assert Draft202012Validator(schema_bundle()["sdl-authoring-input-v1"]).is_valid(payload)
 
 
 def test_service_materialization_compiles_through_content_placement() -> None:
@@ -337,3 +671,50 @@ def test_module_composition_rewrites_service_materialization_refs(tmp_path: Path
     assert binding.readback_assertion_refs == ["shared.messages-visible"]
     assert binding.evidence_requirement_refs == ["shared.service-readback"]
     assert binding.observation_boundary_refs == ["shared.participant-view"]
+
+
+def test_module_composition_preserves_search_index_field_semantics(tmp_path: Path) -> None:
+    payload = _search_index_schema_scenario().model_dump(mode="json", exclude_none=True)
+    payload["module"] = {
+        "id": "raes/search-index-schema",
+        "version": "1.0.0",
+        "exports": {
+            section: list(payload[section])
+            for section in (
+                "nodes",
+                "content",
+                "propositions",
+                "assertions",
+                "observation_boundaries",
+                "evidence_requirements",
+                "deployment_tenants",
+                "deployment_cells",
+            )
+        },
+    }
+    imported = tmp_path / "search-index-schema.yaml"
+    imported.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+    root = tmp_path / "root.yaml"
+    root.write_text(
+        textwrap.dedent(
+            """
+            name: root
+            imports:
+              - path: search-index-schema.yaml
+                namespace: shared
+                version: 1.0.0
+            """
+        ),
+        encoding="utf-8",
+    )
+
+    scenario = parse_sdl_file(root)
+    binding = scenario.content["shared.messages"].service_materialization
+
+    assert binding is not None
+    assert binding.target_service_ref == "nodes.shared.app.services.mail"
+    assert binding.requirements.field_semantics == {
+        "key": "exact-token",
+        "status": "exact-token",
+        "relations": "exact-token",
+    }

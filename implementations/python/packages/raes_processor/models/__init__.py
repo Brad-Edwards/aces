@@ -187,6 +187,7 @@ from .resources import (
     ResolvedResource,
     RuntimeTemplate,
     ServiceContentMaterializationBinding,
+    ServiceSearchIndexSchemaMaterializationBinding,
     map_backend_diagnostic_to_participant_failure,
     validate_participant_action_result_contract,
 )
@@ -227,6 +228,7 @@ __all__ = [
     "ConditionBinding",
     "ContentPlacement",
     "ServiceContentMaterializationBinding",
+    "ServiceSearchIndexSchemaMaterializationBinding",
     "DomainControllerPlacement",
     "GeneratedArtifactRuntime",
     "Diagnostic",

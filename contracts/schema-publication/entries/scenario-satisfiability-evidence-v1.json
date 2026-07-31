@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "977cf8fd8ffc88774b570fab03a62cb4e061e2ec16e5e92964ac1d9eea3b9f84",
+  "content_hash": "6e0c1ee6fb1752832a07c220d6762dfbdfd71d39effe38bc2e44ea0c0d3b8e7c",
   "last_change": {
-    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
-    "content_hash": "977cf8fd8ffc88774b570fab03a62cb4e061e2ec16e5e92964ac1d9eea3b9f84"
+    "summary": "Added the service search-index field-schema profile and rebound the namespace to OpenRAE for issues #1011 and #963.",
+    "content_hash": "6e0c1ee6fb1752832a07c220d6762dfbdfd71d39effe38bc2e44ea0c0d3b8e7c"
   }
 }

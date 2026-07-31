@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-snapshot-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "675c4fa16126d8851aa8d84afef447d9ee92bc5c58843ad89e7ae45cb80818f9",
+  "content_hash": "ebbb182be917c3d2b473f25df2374ab633bd2a73dc13af786e3c06f38d5f0ab6",
   "last_change": {
-    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
-    "content_hash": "675c4fa16126d8851aa8d84afef447d9ee92bc5c58843ad89e7ae45cb80818f9"
+    "summary": "Added the service search-index field-schema profile and rebound the namespace to OpenRAE for issues #1011 and #963.",
+    "content_hash": "ebbb182be917c3d2b473f25df2374ab633bd2a73dc13af786e3c06f38d5f0ab6"
   }
 }

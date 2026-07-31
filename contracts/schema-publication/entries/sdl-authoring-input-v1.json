@@ -2,9 +2,9 @@
   "contract_id": "sdl-authoring-input-v1",
   "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
   "stability": "draft",
-  "content_hash": "6bb53b9368544e74b654cef6f6babd87c00b06c188fc5bc7f280b84893cbc5d6",
+  "content_hash": "74b3e5310b2368e0463bae298b153fc5d7311b0a421df9559259374411540e28",
   "last_change": {
-    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
-    "content_hash": "6bb53b9368544e74b654cef6f6babd87c00b06c188fc5bc7f280b84893cbc5d6"
+    "summary": "Added the service search-index field-schema profile and rebound the namespace to OpenRAE for issues #1011 and #963.",
+    "content_hash": "74b3e5310b2368e0463bae298b153fc5d7311b0a421df9559259374411540e28"
   }
 }

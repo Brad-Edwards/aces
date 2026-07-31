@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import runpy
 import sys
 from pathlib import Path
 
@@ -155,6 +156,14 @@ def test_checked_in_quickstart_scenario_parses() -> None:
     parsed = parse_sdl_file(scenario_path)
 
     assert parsed.name == "first-scenario"
+
+
+def test_public_docs_linkcheck_is_bounded_serialized_and_skips_own_repository() -> None:
+    config = runpy.run_path(str(REPO_ROOT / "docs" / "public" / "conf.py"))
+
+    assert config["linkcheck_timeout"] == 15
+    assert config["linkcheck_workers"] == 1
+    assert config["linkcheck_ignore"] == [r"^https://github\.com/(?:RAESystem|OpenRAE)/rae(?:/|$)"]
 
 
 def test_readme_quickstart_matches_checked_in_scenario() -> None:

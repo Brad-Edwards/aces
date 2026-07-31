@@ -156,13 +156,45 @@ class ServiceContentMaterializationBinding:
 
 
 @dataclass(frozen=True)
+class ServiceSearchIndexSchemaMaterializationBinding:
+    """Closed compiled requirements for one service-owned search-index schema."""
+
+    target_service_address: str
+    interface_profile: str
+    profile_version: str
+    content_type: str
+    operation: str
+    conflict_policy: str
+    readback: str
+    field_semantics: dict[str, str]
+    canonical_content_digest: str
+    canonical_field_schema_digest: str
+    shared_service_relationship_ref: str = ""
+    consumer_tenant_ref: str = ""
+    mutable_state_owner: str = ""
+    reset_generation_owner: str = ""
+    readback_assertion_addresses: tuple[str, ...] = ()
+    evidence_requirement_refs: tuple[str, ...] = ()
+    observation_boundary_addresses: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        require_compiled_address(
+            self.target_service_address,
+            field_name="ServiceSearchIndexSchemaMaterializationBinding.target_service_address",
+        )
+
+
+ServiceMaterializationBinding = ServiceContentMaterializationBinding | ServiceSearchIndexSchemaMaterializationBinding
+
+
+@dataclass(frozen=True)
 class ContentPlacement(ResolvedResource):
     """Content entry resolved to a concrete node or named service."""
 
     content_name: str = ""
     target_node: str = ""
     target_address: str = ""
-    service_materialization: ServiceContentMaterializationBinding | None = None
+    service_materialization: ServiceMaterializationBinding | None = None
 
 
 @dataclass(frozen=True)
