@@ -250,3 +250,4 @@ adr-101-adversarial-participant-flow-control
 | [099](adr-099-participant-relative-predicate-opacity.md) | Participant-Relative Predicate Opacity | accepted | 2026-07-29 |
 | [100](adr-100-participant-crossing-bisimulation.md) | Proof-Bearing Participant-Crossing Bisimulation | accepted | 2026-07-29 |
 | [101](adr-101-adversarial-participant-flow-control.md) | Adversarial Participant Boundary Flow Control | accepted | 2026-07-30 |
+| [102](adr-102-mixed-cross-backend-participant-control.md) | Mixed Cross-Backend Participant Control | accepted | 2026-07-31 |
