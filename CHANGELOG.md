@@ -8,6 +8,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 PRs do **not** edit this file directly. release-please maintains it from the
 Conventional Commit history on `main` (#684).
 
+## [3.2.0](https://github.com/OpenRAE/rae/compare/v3.1.0...v3.2.0) (2026-07-31)
+
+
+### Features
+
+* add autonomous behavior vocabulary bindings ([b611e34](https://github.com/OpenRAE/rae/commit/b611e34e19be453cdd90959e41cf024780416e05))
+* add portable search-index schema materialization ([08d03a6](https://github.com/OpenRAE/rae/commit/08d03a66f7b8db7e59d02c7da9f64cbbf0eb2f66))
+* add portable search-index schema materialization ([54654ab](https://github.com/OpenRAE/rae/commit/54654ab81141801806fc2201b362f78449167a30))
+* **cli:** add human semantic operations ([020db55](https://github.com/OpenRAE/rae/commit/020db559007a3a97577483b3e56771e2c4de8a52))
+* **cli:** add human semantic operations ([853a847](https://github.com/OpenRAE/rae/commit/853a8470ed1a508b483fae93b7c3b32fb58a8d78))
+* **formal:** prove participant opacity and accelerate verification ([58342ec](https://github.com/OpenRAE/rae/commit/58342ece6aa67aa5632314b3936ee400e6bc8792))
+* **sdl:** add isolated SSH generated artifacts ([7a39cfc](https://github.com/OpenRAE/rae/commit/7a39cfc6a113e93c32e98196d78d3f3c6885749c))
+* **sdl:** add isolated SSH generated artifacts ([6d1c8d1](https://github.com/OpenRAE/rae/commit/6d1c8d12bc8886507f54c29091498c20d86218b2))
+
+
+### Bug Fixes
+
+* address SonarCloud findings ([a673fa0](https://github.com/OpenRAE/rae/commit/a673fa0d2a13111988f1769a200412a1eba465da))
+* **contracts:** align capability schema defaults ([d91cf62](https://github.com/OpenRAE/rae/commit/d91cf62c669c62fefd79827475629b781fbe5cd3))
+* **contracts:** remove trailing coverage pragma ([1e1ae0e](https://github.com/OpenRAE/rae/commit/1e1ae0eb648c686bbe401529b51e0fe70c62bd02))
+* **sdl:** address SSH artifact quality findings ([38d9e8f](https://github.com/OpenRAE/rae/commit/38d9e8f16fbf2c024a7639b23ee1dc905cd5c2e2))
+* **sdl:** preserve omitted output selections ([e3cfb6d](https://github.com/OpenRAE/rae/commit/e3cfb6d3dc364b12c2f5c14030f0f4efc0f5f7b3))
+* **sdl:** reduce content validator complexity ([b1368cd](https://github.com/OpenRAE/rae/commit/b1368cd4d00306314e8c99fbbb8fa01824d4cb9f))
+* **sdl:** reduce content validator complexity ([f65e339](https://github.com/OpenRAE/rae/commit/f65e339e83b9724643ce5359ed7abc67ba3fe902))
+
+
+### Documentation
+
+* define adversarial participant control program ([675b61f](https://github.com/OpenRAE/rae/commit/675b61f4ae9e0ff5648f75e142e91e546e1dbbb7))
+* define mixed cross-backend participant control ([a9914f3](https://github.com/OpenRAE/rae/commit/a9914f3755e55bd14b8c21c720c5ea28e6c438a0))
+
 ## [3.1.0](https://github.com/RAESystem/rae/compare/v3.0.0...v3.1.0) (2026-07-30)
 
 
