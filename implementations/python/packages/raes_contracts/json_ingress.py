@@ -70,7 +70,8 @@ def parse_bounded_json_object(
     """Parse one bounded JSON object without duplicate members or non-finite numbers."""
 
     payload = parse_bounded_json(source, max_bytes=max_bytes, root="object")
-    if not isinstance(payload, dict):  # pragma: no cover - established by the shared parser
+    # The shared parser establishes the selected root type.
+    if not isinstance(payload, dict):  # pragma: no cover
         raise AssertionError("object-root parser returned a non-object")
     return payload
 

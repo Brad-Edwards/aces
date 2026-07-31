@@ -333,7 +333,7 @@ def test_unexpected_failure_is_sanitized_and_uses_exit_seventy(
         del args, kwargs
         raise RuntimeError("SECRET-MARKER")
 
-    monkeypatch.setattr("raes_cli.semantic.parse_sdl", _unexpected)
+    monkeypatch.setattr("raes_cli._semantic_sdl.parse_sdl", _unexpected)
     result = CliRunner().invoke(
         app,
         [

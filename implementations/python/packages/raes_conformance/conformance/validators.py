@@ -237,9 +237,11 @@ def contract_validation_strength(contract_name: str) -> str | None:
     """Return the strongest context-free validation claim for a contract."""
 
     if contract_name in _SEMANTIC_CONTEXT_REQUIRED_CONTRACTS:
-        return "structural-context-required"
-    if contract_name in _STRUCTURAL_ONLY_VALIDATORS:
-        return "structural"
-    if contract_name in _MODEL_VALIDATORS or contract_name in _EVENT_STREAM_VALIDATORS:
-        return "semantic"
-    return None
+        strength = "structural-context-required"
+    elif contract_name in _STRUCTURAL_ONLY_VALIDATORS:
+        strength = "structural"
+    elif contract_name in _MODEL_VALIDATORS or contract_name in _EVENT_STREAM_VALIDATORS:
+        strength = "semantic"
+    else:
+        strength = None
+    return strength

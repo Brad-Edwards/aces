@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
@@ -74,6 +75,16 @@ class SemanticCommandResult(BaseModel):
     diagnostics: tuple[CommandDiagnostic, ...] = ()
 
 
+@dataclass(frozen=True)
+class ResultMetadata:
+    """Optional profile metadata attached to one command result."""
+
+    migration_policy: SDLMigrationPolicy = SDLMigrationPolicy.REJECT
+    validation_strength: str | None = None
+    processor_profile: str | None = None
+    transform_profile: str | None = None
+
+
 def command_result(
     operation: str,
     *,
@@ -81,24 +92,22 @@ def command_result(
     contract_id: str | None,
     payload: dict[str, Any] | None = None,
     diagnostics: tuple[CommandDiagnostic, ...] = (),
-    migration_policy: SDLMigrationPolicy = SDLMigrationPolicy.REJECT,
-    validation_strength: str | None = None,
-    processor_profile: str | None = None,
-    transform_profile: str | None = None,
+    metadata: ResultMetadata | None = None,
 ) -> SemanticCommandResult:
     """Build the one result shape shared by all semantic presentations."""
 
+    effective_metadata = metadata or ResultMetadata()
     is_sdl = contract_id == SDL_SOURCE_FORMAT
     return SemanticCommandResult(
         operation=operation,
         status=status,
         contract_id=contract_id,
         source_format=SDL_SOURCE_FORMAT if is_sdl else None,
-        migration_policy=migration_policy.value if is_sdl else None,
+        migration_policy=(effective_metadata.migration_policy.value if is_sdl else None),
         normalization_profile=SDL_CANONICAL_PROFILE if is_sdl else None,
-        validation_strength=validation_strength,
-        processor_profile=processor_profile,
-        transform_profile=transform_profile,
+        validation_strength=effective_metadata.validation_strength,
+        processor_profile=effective_metadata.processor_profile,
+        transform_profile=effective_metadata.transform_profile,
         provenance={
             "network": "disabled",
             "filesystem": "read-only",

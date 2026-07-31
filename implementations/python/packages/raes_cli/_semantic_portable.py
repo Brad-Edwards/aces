@@ -15,6 +15,7 @@ from raes_contracts.json_ingress import StrictJsonIngressError, parse_bounded_js
 from ._semantic_result import (
     CommandDiagnostic,
     CommandStatus,
+    ResultMetadata,
     SemanticCommandResult,
     command_diagnostic,
     command_result,
@@ -32,7 +33,7 @@ def execute_portable(
 
     root = contract_payload_root(contract_id)
     if root is None:
-        return command_result(
+        result = command_result(
             operation,
             status=CommandStatus.USAGE,
             contract_id=None,
@@ -44,12 +45,12 @@ def execute_portable(
                 ),
             ),
         )
-    if operation == "parse" or operation not in {
+    elif operation == "parse" or operation not in {
         "validate",
         "inspect",
         "conformance",
     }:
-        return command_result(
+        result = command_result(
             operation,
             status=CommandStatus.UNSUPPORTED,
             contract_id=contract_id,
@@ -61,10 +62,26 @@ def execute_portable(
                 ),
             ),
         )
+    else:
+        result = _execute_registered_portable(
+            operation,
+            contract_id,
+            raw,
+            root,
+        )
+    return result
+
+
+def _execute_registered_portable(
+    operation: str,
+    contract_id: str,
+    raw: bytes,
+    root: str,
+) -> SemanticCommandResult:
     try:
         payload = parse_bounded_json(raw, max_bytes=PORTABLE_MAX_BYTES, root=root)
     except StrictJsonIngressError as exc:
-        return command_result(
+        result = command_result(
             operation,
             status=CommandStatus.INVALID,
             contract_id=contract_id,
@@ -76,18 +93,21 @@ def execute_portable(
                 ),
             ),
         )
-    owning_diagnostics = validate_contract_payload(contract_id, payload)
-    diagnostics = tuple(CommandDiagnostic(**diagnostic_payload(item)) for item in owning_diagnostics)
-    status = CommandStatus.INVALID if any(item.is_error for item in owning_diagnostics) else CommandStatus.SUCCESS
-    summary = _phase_summary(operation, root, payload, status)
-    return command_result(
-        operation,
-        status=status,
-        contract_id=contract_id,
-        payload=summary,
-        diagnostics=diagnostics,
-        validation_strength=contract_validation_strength(contract_id),
-    )
+    else:
+        owning_diagnostics = validate_contract_payload(contract_id, payload)
+        diagnostics = tuple(CommandDiagnostic(**diagnostic_payload(item)) for item in owning_diagnostics)
+        status = CommandStatus.INVALID if any(item.is_error for item in owning_diagnostics) else CommandStatus.SUCCESS
+        result = command_result(
+            operation,
+            status=status,
+            contract_id=contract_id,
+            payload=_phase_summary(operation, root, payload, status),
+            diagnostics=diagnostics,
+            metadata=ResultMetadata(
+                validation_strength=contract_validation_strength(contract_id),
+            ),
+        )
+    return result
 
 
 def _phase_summary(
