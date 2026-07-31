@@ -22,7 +22,14 @@ named service is materially different from node placement.
 
 ## 2. Service Materialization Binding
 
-`service_materialization` is a closed object with these fields:
+`service_materialization` is a closed discriminated profile. Every profile
+shares the target, ownership, ordering, assertion, evidence, and observation
+references below.
+
+### 2.1 Owned Content Profile
+
+The `service-content` version `"1"` profile is a closed object with these
+fields:
 
 | Field | Shape | Requirement |
 |---|---|---|
@@ -37,6 +44,36 @@ named service is materially different from node placement.
 | `readback_assertion_refs` | non-empty unique assertion references | REQUIRED |
 | `evidence_requirement_refs` | non-empty unique evidence-requirement references | REQUIRED |
 | `observation_boundary_refs` | non-empty unique participant-observation-boundary references | REQUIRED |
+
+### 2.2 Search-Index Field-Schema Profile
+
+The `service-search-index-schema` version `"1"` profile expresses schema-only
+desired state for a service-owned search index:
+
+| Field | Shape | Requirement |
+|---|---|---|
+| `interface_profile` | literal `service-search-index-schema` | REQUIRED discriminator |
+| `profile_version` | literal `"1"` | OPTIONAL; defaults to the literal |
+| `requirements.operation` | literal `ensure-search-index-field-schema` | REQUIRED |
+| `requirements.conflict_policy` | literal `reject-unowned-collision` | REQUIRED |
+| `requirements.readback` | literal `canonical-portable-field-schema-digest` | REQUIRED |
+| `requirements.field_semantics` | non-empty portable field-name map | REQUIRED |
+
+Every map value is one of:
+
+- `exact-token`: equality or term matching without analysis or tokenization;
+- `full-text`: analyzed or tokenized text search;
+- `integer`: integral numeric comparison;
+- `temporal`: date/time comparison through the backend's portable projection;
+  or
+- `boolean`: two-valued boolean comparison.
+
+This profile uses `type: dataset` without `source` or `items`. It establishes
+the exact portable semantic of every declared top-level field. Undeclared
+native fields are outside the version 1 claim. A missing, ambiguous, or weaker
+declared field fails reconciliation. Vendor literals, raw mappings, analyzers,
+native index names, endpoints, queries, credentials, and arbitrary options are
+not valid SDL.
 
 `content.target` remains the owning VM node. `target_service_ref` MUST resolve
 to an exact `nodes.<node>.services.<service>` declaration on that same VM.
@@ -66,6 +103,8 @@ MUST retain:
 - exact service and owning-node addresses;
 - interface profile, profile version, and exact operation requirements;
 - canonical content digest;
+- for the search-index profile, the portable field map and its separate RFC
+  8785/JCS canonical field-schema digest;
 - derived tenant ownership and the shared-service relationship reference;
 - content ordering;
 - readback assertion addresses; and
@@ -76,11 +115,14 @@ The owning node and ordered content placements are provisioning dependencies.
 No separate plan, lifecycle engine, scheduler, result store, or reset authority
 is created.
 
-The provisioner manifest capability term `service-content-v1` in
-`supported_service_materialization_profiles` is independent of
-`supported_content_types`. Admission requires the content type, exact
-interface/profile version, and exact requirements. A claimed profile also
-requires a realization-envelope
+The provisioner manifest capability terms `service-content-v1` and
+`service-search-index-schema-v1` in
+`supported_service_materialization_profiles` are independent of
+`supported_content_types`. The latter claims the complete closed version 1
+field-semantic set; partial support cannot advertise it. Admission requires the
+content type, exact interface/profile version, exact requirements, a
+recomputed digest, and profile-specific SEM-218 exact-requirement support. A
+claimed profile also requires a realization-envelope
 `content-placement` concern with `realized` disposition and at least
 `daemon-observed` independent readback. Missing support is fatal before backend
 I/O. Direct plan submission MUST repeat these checks.
@@ -88,10 +130,13 @@ I/O. Direct plan submission MUST repeat these checks.
 ## 4. Backend Conformance And Equivalence
 
 RAES standardizes the portable profile without selecting a product or backend.
-A backend MAY claim `service-content-v1` only when its own conformance evidence
-demonstrates native materialization through the RAES control path, fresh
-independent readback, reset ownership, and the declared participant projection.
-A manifest claim is not execution evidence.
+A backend MAY claim either standardized profile only when its own conformance
+evidence demonstrates native materialization through the RAES control path,
+fresh independent readback, reset ownership, and the declared participant
+projection. For the search-index profile, native readback projects exactly the
+declared field names back to the portable semantic set before digest comparison.
+A mutation acknowledgement, returned desired-state snapshot, cached mapping, or
+manifest claim is not execution evidence.
 
 Two realizations are equivalent only with respect to the admitted portable
 contract and declared participant-visible assertions/evidence. They need not

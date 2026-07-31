@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "6f7c80339858c5fa8776261451c1692e3e0ff714eebbf4c40ce0b3efc12e6109",
+  "content_hash": "aa7a46c46ac0be602c4bb5d2e31ed4541a265bf61a113afa9ad3c158456aeca3",
   "last_change": {
-    "summary": "Propagated SSH generated-artifact output selection semantics into satisfiability evidence for issue #1010.",
-    "content_hash": "6f7c80339858c5fa8776261451c1692e3e0ff714eebbf4c40ce0b3efc12e6109"
+    "summary": "Added the provider-neutral service search-index field-schema materialization profile for issue #1011.",
+    "content_hash": "aa7a46c46ac0be602c4bb5d2e31ed4541a265bf61a113afa9ad3c158456aeca3"
   }
 }

@@ -1550,6 +1550,37 @@ content:
       observation_boundary_refs: [participant-mail-view]
 ```
 
+Search-index schema is a separate closed profile because field-schema
+reconciliation has different desired state and readback from inserting owned
+items:
+
+```yaml
+content:
+  job-index-schema:
+    type: dataset
+    target: analysis
+    service_materialization:
+      target_service_ref: nodes.analysis.services.search
+      interface_profile: service-search-index-schema
+      profile_version: "1"
+      requirements:
+        operation: ensure-search-index-field-schema
+        conflict_policy: reject-unowned-collision
+        readback: canonical-portable-field-schema-digest
+        field_semantics:
+          key: exact-token
+          status: exact-token
+          relations: exact-token
+      readback_assertion_refs: [job-index-schema-visible]
+      evidence_requirement_refs: [job-index-schema-readback]
+      observation_boundary_refs: [participant-search-view]
+```
+
+The portable semantic set also includes `full-text`, `integer`, `temporal`, and
+`boolean`. Native mapping types, index names, endpoints, and queries remain in
+backend-private configuration. A profile claim admits the operation; only fresh
+native readback projected to the declared portable fields proves it.
+
 The interface profile does not describe product APIs. It requires the backend
 to reconcile the ordinary content through the named service, reject
 unowned-item collisions, preserve declared tenant/reset ownership, and return
@@ -1558,8 +1589,9 @@ and participant projection. Backend profile support is separate from ordinary
 `file`/`dataset`/`directory` support. The normative contract is
 `specs/sdl/initial-service-state.md`.
 
-`file` content requires `path`; `dataset` content requires either `source` or
-non-empty `items`; `directory` content requires `destination`.
+`file` content requires `path`; ordinary `dataset` content requires either
+`source` or non-empty `items`; the schema-only profile permits neither;
+`directory` content requires `destination`.
 
 ---
 

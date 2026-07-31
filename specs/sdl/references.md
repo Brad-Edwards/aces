@@ -141,6 +141,7 @@ probe implementations; propositions and assertions carry portable truth.
 | `content` | `service_materialization.readback_assertion_refs[]` | `assertions` |
 | `content` | `service_materialization.evidence_requirement_refs[]` | `evidence_requirements` |
 | `content` | `service_materialization.observation_boundary_refs[]` | `observation_boundaries` |
+| `content` | `service_materialization.requirements.field_semantics` keys and values | concrete portable values, not references |
 | `generated_artifacts` | consumers[].node | `nodes` |
 | `generated_artifacts` | ordering/refresh dependencies | `generated_artifacts` / `persistent_volumes` (acyclic ordering) |
 | `persistent_volumes` | consumers[].node | `nodes` |

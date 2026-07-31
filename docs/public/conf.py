@@ -34,6 +34,16 @@ templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 redirects = json.loads((Path(__file__).parent / "redirects.json").read_text(encoding="utf-8"))
 
+# Bound remote I/O and avoid connection-pool stalls during the required
+# repository-wide link check. Links back into this repository are covered by
+# local policy and schema checks, so do not spend unauthenticated GitHub quota
+# rechecking them over the network.
+linkcheck_timeout = 15
+linkcheck_workers = 1
+linkcheck_ignore = [
+    r"^https://github\.com/(?:RAESystem|OpenRAE)/rae(?:/|$)",
+]
+
 # -- MyST (Markdown) settings --------------------------------------------------
 
 myst_enable_extensions = [

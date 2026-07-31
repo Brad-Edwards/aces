@@ -1552,13 +1552,28 @@
         "service_materialization": {
           "anyOf": [
             {
-              "$ref": "#/$defs/ServiceMaterialization"
+              "discriminator": {
+                "mapping": {
+                  "service-content": "#/$defs/ServiceMaterialization",
+                  "service-search-index-schema": "#/$defs/ServiceSearchIndexSchemaMaterialization"
+                },
+                "propertyName": "interface_profile"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/ServiceMaterialization"
+                },
+                {
+                  "$ref": "#/$defs/ServiceSearchIndexSchemaMaterialization"
+                }
+              ]
             },
             {
               "type": "null"
             }
           ],
-          "default": null
+          "default": null,
+          "title": "Service Materialization"
         },
         "source": {
           "anyOf": [
@@ -20412,6 +20427,18 @@
       "title": "Script",
       "type": "object"
     },
+    "SearchIndexFieldSemantic": {
+      "description": "Portable top-level search-index field behavior.",
+      "enum": [
+        "exact-token",
+        "full-text",
+        "integer",
+        "temporal",
+        "boolean"
+      ],
+      "title": "SearchIndexFieldSemantic",
+      "type": "string"
+    },
     "SemanticDigest": {
       "additionalProperties": false,
       "description": "Profile-labelled digest of one expanded authoring scenario.",
@@ -20671,10 +20698,10 @@
       },
       "required": [
         "target_service_ref",
-        "requirements",
         "readback_assertion_refs",
         "evidence_requirement_refs",
-        "observation_boundary_refs"
+        "observation_boundary_refs",
+        "requirements"
       ],
       "title": "ServiceMaterialization",
       "type": "object"
@@ -20753,6 +20780,123 @@
         "port"
       ],
       "title": "ServicePort",
+      "type": "object"
+    },
+    "ServiceSearchIndexSchemaMaterialization": {
+      "additionalProperties": false,
+      "description": "Portable desired field schema for a named service-owned search index.",
+      "properties": {
+        "evidence_requirement_refs": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Requirement Refs",
+          "type": "array"
+        },
+        "interface_profile": {
+          "const": "service-search-index-schema",
+          "title": "Interface Profile",
+          "type": "string"
+        },
+        "observation_boundary_refs": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Observation Boundary Refs",
+          "type": "array"
+        },
+        "ordering_content_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Ordering Content Refs",
+          "type": "array"
+        },
+        "profile_version": {
+          "const": "1",
+          "default": "1",
+          "title": "Profile Version",
+          "type": "string"
+        },
+        "readback_assertion_refs": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Readback Assertion Refs",
+          "type": "array"
+        },
+        "requirements": {
+          "$ref": "#/$defs/ServiceSearchIndexSchemaRequirements"
+        },
+        "shared_service_relationship_ref": {
+          "default": "",
+          "title": "Shared Service Relationship Ref",
+          "type": "string"
+        },
+        "target_service_ref": {
+          "minLength": 1,
+          "title": "Target Service Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "target_service_ref",
+        "readback_assertion_refs",
+        "evidence_requirement_refs",
+        "observation_boundary_refs",
+        "interface_profile",
+        "requirements"
+      ],
+      "title": "ServiceSearchIndexSchemaMaterialization",
+      "type": "object"
+    },
+    "ServiceSearchIndexSchemaRequirements": {
+      "additionalProperties": false,
+      "description": "Exact portable search-index schema operation and readback.",
+      "properties": {
+        "conflict_policy": {
+          "const": "reject-unowned-collision",
+          "default": "reject-unowned-collision",
+          "title": "Conflict Policy",
+          "type": "string"
+        },
+        "field_semantics": {
+          "minProperties": 1,
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/SearchIndexFieldSemantic"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Field Semantics",
+          "type": "object"
+        },
+        "operation": {
+          "const": "ensure-search-index-field-schema",
+          "default": "ensure-search-index-field-schema",
+          "title": "Operation",
+          "type": "string"
+        },
+        "readback": {
+          "const": "canonical-portable-field-schema-digest",
+          "default": "canonical-portable-field-schema-digest",
+          "title": "Readback",
+          "type": "string"
+        }
+      },
+      "required": [
+        "field_semantics"
+      ],
+      "title": "ServiceSearchIndexSchemaRequirements",
       "type": "object"
     },
     "ServiceUnitActiveState": {
