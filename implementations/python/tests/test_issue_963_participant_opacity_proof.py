@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import hashlib
+import io
 import json
 from copy import deepcopy
 from pathlib import Path
+from urllib.error import URLError
 
 import pytest
 import tools.isabelle_tool as isabelle_tool
@@ -128,6 +131,40 @@ def test_proof_process_limit_enforces_per_process_address_space(monkeypatch: pyt
 
     address_space_bytes = ISABELLE_PROCESS_ADDRESS_SPACE_LIMIT_MIB * 1024 * 1024
     assert (isabelle_tool.resource.RLIMIT_AS, (address_space_bytes, address_space_bytes)) in calls
+
+
+def test_isabelle_download_falls_back_between_integrity_checked_official_mirrors(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    payload = b"pinned-isabelle-archive"
+    attempted_urls: list[str] = []
+
+    class DownloadResponse(io.BytesIO):
+        def __enter__(self) -> DownloadResponse:
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            self.close()
+
+    def fake_urlopen(url: str, *, timeout: int) -> DownloadResponse:
+        attempted_urls.append(url)
+        assert timeout == 60
+        if len(attempted_urls) == 1:
+            raise URLError("simulated primary mirror outage")
+        return DownloadResponse(payload)
+
+    monkeypatch.setattr(isabelle_tool, "ISABELLE_ARCHIVE_URLS", ("https://primary.invalid", "https://fallback.invalid"))
+    monkeypatch.setattr(isabelle_tool, "ISABELLE_ARCHIVE_BYTES", len(payload))
+    monkeypatch.setattr(isabelle_tool, "ISABELLE_ARCHIVE_SHA256", hashlib.sha256(payload).hexdigest())
+    monkeypatch.setattr(isabelle_tool, "urlopen", fake_urlopen)
+    archive_path = tmp_path / "Isabelle.tar.gz"
+
+    isabelle_tool._download_archive(archive_path)
+
+    assert attempted_urls == ["https://primary.invalid", "https://fallback.invalid"]
+    assert archive_path.read_bytes() == payload
+    assert not archive_path.with_suffix(".gz.download").exists()
 
 
 def test_current_and_historical_authority_resolve_by_exact_revision() -> None:

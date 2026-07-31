@@ -7,7 +7,7 @@ workflow:
   lint_command: uv tool run --from 'nox[uv]==2026.4.10' nox -f noxfile.py -s lint
   format_command: uv tool run --from 'nox[uv]==2026.4.10' nox -f noxfile.py -s hygiene
   policy_command: RAES_REQUIREMENT_UID="${RAES_REQUIREMENT_UID:-$(printenv A""CES_REQUIREMENT_UID)}" make policy
-  precommit_command: RAES_REQUIREMENT_UID="${RAES_REQUIREMENT_UID:-$(printenv A""CES_REQUIREMENT_UID)}" pre-commit run --all-files
+  precommit_command: RAES_REQUIREMENT_UID="${RAES_REQUIREMENT_UID:-$(printenv A""CES_REQUIREMENT_UID)}" pre-commit run
   codex_review:
     pre_push_cap: 1
   test_quality_review:

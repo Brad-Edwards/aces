@@ -46,6 +46,7 @@ _SAFE_PROSE_FILES = {
     "SECURITY.md",
 }
 _EVIDENCE_PREFIXES = ("docs/research", "specs")
+_PYTHON_TEST_PREFIX = "implementations/python/tests/"
 
 
 def _under(path: str, prefix: str) -> bool:
@@ -87,6 +88,24 @@ def plan_for_changes(changes: list[ChangeRecord]) -> VerificationPlan:
         )
 
     return FULL_PLAN
+
+
+def select_changed_python_tests(paths: list[str]) -> list[str]:
+    """Return directly changed pytest modules in stable first-seen order."""
+
+    selected: list[str] = []
+    seen: set[str] = set()
+    for path in paths:
+        candidate = Path(path)
+        if (
+            path.startswith(_PYTHON_TEST_PREFIX)
+            and candidate.name.startswith("test_")
+            and candidate.suffix == ".py"
+            and path not in seen
+        ):
+            selected.append(path)
+            seen.add(path)
+    return selected
 
 
 def _run_git(repo_root: Path, *args: str) -> bytes:

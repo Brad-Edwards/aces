@@ -30,6 +30,7 @@ from tools.verification_plan import (
     collect_git_changes,
     plan_for_changes,
     resolve_upstream,
+    select_changed_python_tests,
 )
 
 PROJECT_ROOT = REPO_ROOT / "implementations" / "python"
@@ -1190,6 +1191,7 @@ def osv_scan(session: nox.Session) -> None:
 def hook_pre_commit(session: nox.Session) -> None:
     reporter = SessionReporter(session, "hook-pre-commit")
     changed = [Path(arg).as_posix() for arg in session.posargs if not arg.startswith("-")]
+    changed_tests = select_changed_python_tests(changed)
     try:
         _run_hygiene(session, reporter, posargs=changed, default_all_files=False)
         _run_policy(session, reporter, "--staged")
@@ -1199,7 +1201,13 @@ def hook_pre_commit(session: nox.Session) -> None:
         else:
             reporter.skip("contracts / generated schema drift", "no contract-bearing changes")
             reporter.skip("contracts / json artifact validation", "no contract-bearing changes")
-        if _paths_trigger(changed, FULL_TEST_TRIGGER_PREFIXES):
+        if changed_tests:
+            reporter.run(
+                "tests / directly changed pytest modules",
+                lambda: _run_pytest(session, *changed_tests, "-q"),
+                detail=" ".join(changed_tests),
+            )
+        elif _paths_trigger(changed, FULL_TEST_TRIGGER_PREFIXES):
             reporter.run(
                 "tests / pytest",
                 lambda: _run_pytest(session, "-q"),

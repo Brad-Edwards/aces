@@ -23,6 +23,10 @@ from tools.tool_versions import ISABELLE_VERSION  # noqa: E402
 
 ISABELLE_ARCHIVE_NAME = f"Isabelle{ISABELLE_VERSION}_linux.tar.gz"
 ISABELLE_ARCHIVE_URL = f"https://www.cl.cam.ac.uk/research/hvg/Isabelle/dist/{ISABELLE_ARCHIVE_NAME}"
+ISABELLE_ARCHIVE_URLS = (
+    f"https://isabelle.in.tum.de/website-Isabelle{ISABELLE_VERSION}/dist/{ISABELLE_ARCHIVE_NAME}",
+    ISABELLE_ARCHIVE_URL,
+)
 ISABELLE_ARCHIVE_SHA256 = "a20a507bc7c1270d8be96a9f3fbec06345387789d2dc2c4d3df6260d47bfb33c"
 ISABELLE_ARCHIVE_BYTES = 1_228_480_874
 ISABELLE_SESSION = "Participant_Opacity"
@@ -89,27 +93,36 @@ def _verify_archive(path: Path) -> None:
         raise IsabelleToolError("pinned Isabelle archive checksum or size mismatch")
 
 
+def _download_archive_from_url(url: str, temporary_path: Path) -> None:
+    digest = hashlib.sha256()
+    total = 0
+    response = urlopen(url, timeout=60)  # noqa: S310 - allowlisted official Isabelle release URLs
+    with response, temporary_path.open("wb") as output:
+        for chunk in iter(lambda: response.read(_DOWNLOAD_CHUNK_BYTES), b""):
+            total += len(chunk)
+            if total > ISABELLE_ARCHIVE_BYTES:
+                raise IsabelleToolError("download exceeded its declared size")
+            digest.update(chunk)
+            output.write(chunk)
+    if total != ISABELLE_ARCHIVE_BYTES or digest.hexdigest() != ISABELLE_ARCHIVE_SHA256:
+        raise IsabelleToolError("download checksum or size mismatch")
+
+
 def _download_archive(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary_path = path.with_suffix(path.suffix + ".download")
-    digest = hashlib.sha256()
-    total = 0
-    try:
-        response = urlopen(ISABELLE_ARCHIVE_URL, timeout=60)  # noqa: S310 - fixed pinned HTTPS release asset
-        with response, temporary_path.open("wb") as output:
-            for chunk in iter(lambda: response.read(_DOWNLOAD_CHUNK_BYTES), b""):
-                total += len(chunk)
-                if total > ISABELLE_ARCHIVE_BYTES:
-                    raise IsabelleToolError("pinned Isabelle download exceeded its declared size")
-                digest.update(chunk)
-                output.write(chunk)
-    except (HTTPError, URLError, TimeoutError, OSError) as exc:
+    failures: list[str] = []
+    for url in ISABELLE_ARCHIVE_URLS:
         temporary_path.unlink(missing_ok=True)
-        raise IsabelleToolError("pinned Isabelle download failed") from exc
-    if total != ISABELLE_ARCHIVE_BYTES or digest.hexdigest() != ISABELLE_ARCHIVE_SHA256:
-        temporary_path.unlink(missing_ok=True)
-        raise IsabelleToolError("pinned Isabelle download checksum or size mismatch")
-    temporary_path.replace(path)
+        try:
+            _download_archive_from_url(url, temporary_path)
+        except (HTTPError, URLError, TimeoutError, OSError, IsabelleToolError) as exc:
+            failures.append(f"{url}: {type(exc).__name__}")
+            continue
+        temporary_path.replace(path)
+        return
+    temporary_path.unlink(missing_ok=True)
+    raise IsabelleToolError(f"pinned Isabelle download failed from all official mirrors ({'; '.join(failures)})")
 
 
 def _extract_archive(archive_path: Path, destination: Path) -> None:
