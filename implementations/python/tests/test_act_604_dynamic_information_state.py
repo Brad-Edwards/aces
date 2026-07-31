@@ -304,10 +304,9 @@ def test_information_state_record_and_reconstruction_profile_are_closed_contract
     assert record.information_state_ref == "information-state.blue.ep002.cut43"
     assert profile.profile_id == "occurrence-prefix-evidence-v1"
 
+    invalid_record = _information_state(untrusted_fact_bag={"hidden_truth": True})
     with pytest.raises(ValidationError):
-        ParticipantInformationStateRecordModel.model_validate(
-            _information_state(untrusted_fact_bag={"hidden_truth": True})
-        )
+        ParticipantInformationStateRecordModel.model_validate(invalid_record)
 
 
 def test_strong_information_state_requires_reconstruction_refs_and_matching_digest() -> None:
@@ -318,17 +317,15 @@ def test_strong_information_state_requires_reconstruction_refs_and_matching_dige
         Draft202012Validator(schema_bundle()["participant-information-state-record-v1"]).iter_errors(missing_profile)
     )
 
+    mismatched_digest = _information_state(reconstructed_state_digest="sha256:" + "b" * 64)
     with pytest.raises(ValidationError, match="reconstructed_state_digest must equal"):
-        ParticipantInformationStateRecordModel.model_validate(
-            _information_state(reconstructed_state_digest="sha256:" + "b" * 64)
-        )
+        ParticipantInformationStateRecordModel.model_validate(mismatched_digest)
 
 
 def test_perfect_recall_information_state_requires_occurrence_order_witness() -> None:
+    payload = _information_state(information_guarantee="perfect_recall")
     with pytest.raises(ValidationError, match="perfect_recall requires occurrence_order_witness_ref"):
-        ParticipantInformationStateRecordModel.model_validate(
-            _information_state(information_guarantee="perfect_recall")
-        )
+        ParticipantInformationStateRecordModel.model_validate(payload)
 
 
 def test_contextual_information_state_validation_resolves_profile_history_sources_and_proof() -> None:
@@ -413,6 +410,7 @@ def test_every_typed_source_must_resolve_inside_the_exact_cut_and_policy_coordin
     )
     after_cut = ParticipantObservationEnvelopeModel.model_validate(_observation(sequence_number=44))
     source_key = ("participant-observation-envelope-v1", after_cut.observation_ref)
+    source_coordinate = _source_coordinate(record)
 
     with pytest.raises(ValueError, match="exact sequence cut"):
         validate_participant_information_state_context(
@@ -420,22 +418,20 @@ def test_every_typed_source_must_resolve_inside_the_exact_cut_and_policy_coordin
             reconstruction_profiles={},
             occurrence_histories={},
             resolved_sources={source_key: after_cut},
-            source_coordinates={source_key: _source_coordinate(record)},
+            source_coordinates={source_key: source_coordinate},
             proof_digests={},
         )
 
+    cut_observation = after_cut.model_copy(update={"sequence_number": 43})
+    earlier_cut = record.state_cut.model_copy(update={"anchor_order": 42, "history_prefix_length": 43})
+    cut_coordinate = _source_coordinate(record, state_cut=earlier_cut)
     with pytest.raises(ValueError, match="cut membership"):
         validate_participant_information_state_context(
             record,
             reconstruction_profiles={},
             occurrence_histories={},
-            resolved_sources={source_key: after_cut.model_copy(update={"sequence_number": 43})},
-            source_coordinates={
-                source_key: _source_coordinate(
-                    record,
-                    state_cut=record.state_cut.model_copy(update={"anchor_order": 42, "history_prefix_length": 43}),
-                )
-            },
+            resolved_sources={source_key: cut_observation},
+            source_coordinates={source_key: cut_coordinate},
             proof_digests={},
         )
 
@@ -451,7 +447,7 @@ def test_every_typed_source_must_resolve_inside_the_exact_cut_and_policy_coordin
             reconstruction_profiles={},
             occurrence_histories={},
             resolved_sources={source_key: wrong_policy},
-            source_coordinates={source_key: _source_coordinate(record)},
+            source_coordinates={source_key: source_coordinate},
             proof_digests={},
         )
 
@@ -486,6 +482,7 @@ def test_source_governed_coordinate_rejects_each_identity_and_policy_mismatch(
     )
     observation = ParticipantObservationEnvelopeModel.model_validate(_observation(sequence_number=43))
     source_key = ("participant-observation-envelope-v1", observation.observation_ref)
+    mismatched_coordinate = _source_coordinate(record, **{coordinate_field: wrong_value})
 
     with pytest.raises(ValueError, match=error):
         validate_participant_information_state_context(
@@ -493,7 +490,7 @@ def test_source_governed_coordinate_rejects_each_identity_and_policy_mismatch(
             reconstruction_profiles={},
             occurrence_histories={},
             resolved_sources={source_key: observation},
-            source_coordinates={source_key: _source_coordinate(record, **{coordinate_field: wrong_value})},
+            source_coordinates={source_key: mismatched_coordinate},
             proof_digests={},
         )
 
@@ -551,6 +548,7 @@ def test_each_typed_source_validator_rejects_cross_participant_resolution(
     else:
         resolved["participant_address"] = "participants.other"
     source_key = (contract_id, source_ref)
+    source_coordinate = _source_coordinate(record)
 
     with pytest.raises(ValueError, match=error):
         validate_participant_information_state_context(
@@ -558,7 +556,7 @@ def test_each_typed_source_validator_rejects_cross_participant_resolution(
             reconstruction_profiles={},
             occurrence_histories={},
             resolved_sources={source_key: resolved},
-            source_coordinates={source_key: _source_coordinate(record)},
+            source_coordinates={source_key: source_coordinate},
             proof_digests={},
         )
 
@@ -843,8 +841,9 @@ def test_information_state_contract_fixture_corpora(
     for path in valid_paths:
         model_type.model_validate_json(path.read_text(encoding="utf-8"))
     for path in invalid_paths:
+        invalid_payload = path.read_text(encoding="utf-8")
         with pytest.raises(ValidationError):
-            model_type.model_validate_json(path.read_text(encoding="utf-8"))
+            model_type.model_validate_json(invalid_payload)
 
 
 def test_runtime_snapshot_conformance_preserves_information_state_semantics() -> None:

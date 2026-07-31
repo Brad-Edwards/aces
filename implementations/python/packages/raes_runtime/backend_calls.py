@@ -83,10 +83,7 @@ def _call_backend_apply(
         result,
         address=address,
         baseline_snapshot=baseline_snapshot,
-        realization_requirements=realization_context.requirements,
-        realization_plan=realization_context.plan,
-        backend_manifest=realization_context.manifest,
-        artifact_availability=realization_context.artifact_availability,
+        realization=realization_context,
         information_state_context_resolver=information_state_context_resolver,
     )
 
@@ -96,10 +93,7 @@ def _finalize_backend_apply(
     *,
     address: str,
     baseline_snapshot: RuntimeSnapshot,
-    realization_requirements: tuple[CompiledRealizationRequirement, ...],
-    realization_plan: ProvisioningPlan | None,
-    backend_manifest: BackendManifest | None,
-    artifact_availability: ArtifactAvailabilityContext | None,
+    realization: _RealizationApplyContext,
     information_state_context_resolver: ParticipantInformationStateContextResolver | None,
 ) -> ApplyResult:
     """Validate a backend's apply result and gate its realized snapshot.
@@ -124,14 +118,14 @@ def _finalize_backend_apply(
             information_state_context_resolver=information_state_context_resolver,
         )
         realization_provenance: tuple[RealizationProvenanceEntry, ...] = ()
-        if not contract_diagnostics and realization_requirements and realization_plan is not None:
+        if not contract_diagnostics and realization.requirements and realization.plan is not None:
             # SEM-218 I2 non-approximation gate + I5 provenance disclosure.
             contract_diagnostics, realization_provenance = realization_disclosure(
-                realization_requirements,
-                realization_plan,
+                realization.requirements,
+                realization.plan,
                 result.snapshot,
-                manifest=backend_manifest,
-                artifact_availability=artifact_availability,
+                manifest=realization.manifest,
+                artifact_availability=realization.artifact_availability,
             )
         if contract_diagnostics:
             finalized = ApplyResult(
@@ -144,8 +138,8 @@ def _finalize_backend_apply(
                 result,
                 address=address,
                 baseline_snapshot=baseline_snapshot,
-                realization_requirements=realization_requirements,
-                realization_plan=realization_plan,
+                realization_requirements=realization.requirements,
+                realization_plan=realization.plan,
             )
             if realization_provenance and finalized.success:
                 finalized = _with_realization_provenance(finalized, realization_provenance)

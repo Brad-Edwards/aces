@@ -154,8 +154,7 @@ class ParticipantInformationStateRecordModel(ParticipantRuntimeBaseEnvelopeModel
     predecessor_information_state_refs: list[NonEmptyString] = Field(default_factory=list)
     supersedes_information_state_ref: NonEmptyString | None = None
 
-    @model_validator(mode="after")
-    def _validate_information_state(self) -> ParticipantInformationStateRecordModel:
+    def _validate_identity_refs(self) -> None:
         source_keys = [(source.contract_id, source.ref) for source in self.source_refs]
         if len(source_keys) != len(set(source_keys)):
             raise ValueError("information state source refs must be unique")
@@ -166,12 +165,14 @@ class ParticipantInformationStateRecordModel(ParticipantRuntimeBaseEnvelopeModel
         if self.supersedes_information_state_ref == self.information_state_ref:
             raise ValueError("information state cannot supersede itself")
 
+    def _validate_memory_scope(self) -> None:
         if self.participant_memory_scope == "episode_local_reset":
             if self.memory_reset_authority_ref is None:
                 raise ValueError("episode_local_reset requires memory_reset_authority_ref")
         elif self.memory_reset_authority_ref is not None:
             raise ValueError("persistent_across_episodes must not claim a reset authority")
 
+    def _validate_information_guarantee(self) -> None:
         if self.information_guarantee in {"history_consistent", "perfect_recall"}:
             required = {
                 "occurrence_history_ref": self.occurrence_history_ref,
@@ -190,6 +191,12 @@ class ParticipantInformationStateRecordModel(ParticipantRuntimeBaseEnvelopeModel
             raise ValueError("perfect_recall requires occurrence_order_witness_ref")
         if self.information_guarantee == "lossy_projection" and not self.loss_disclosures:
             raise ValueError("lossy_projection requires loss_disclosures")
+
+    @model_validator(mode="after")
+    def _validate_information_state(self) -> ParticipantInformationStateRecordModel:
+        self._validate_identity_refs()
+        self._validate_memory_scope()
+        self._validate_information_guarantee()
         return self
 
     @classmethod
@@ -252,6 +259,160 @@ class ParticipantInformationStateRecordModel(ParticipantRuntimeBaseEnvelopeModel
         return json_schema
 
 
+def _resolve_information_state_profile(
+    record: ParticipantInformationStateRecordModel,
+    reconstruction_profiles: Mapping[str, ParticipantInformationReconstructionProfileModel],
+) -> ParticipantInformationReconstructionProfileModel | None:
+    if record.information_guarantee not in {"history_consistent", "perfect_recall"}:
+        return None
+    profile_ref = record.reconstruction_profile_ref
+    if profile_ref is None or profile_ref not in reconstruction_profiles:
+        raise ValueError("information state reconstruction profile does not resolve")
+    profile = reconstruction_profiles[profile_ref]
+    if profile.profile_id != profile_ref:
+        raise ValueError("information state reconstruction profile identity does not match")
+    if profile.information_state_schema_version != record.schema_version:
+        raise ValueError("information state schema version does not match reconstruction profile")
+    if profile.projection_version != record.projection_version:
+        raise ValueError("information state projection version does not match reconstruction profile")
+    if (
+        profile.algorithm_id != record.reconstruction_algorithm_id
+        or profile.algorithm_version != record.reconstruction_algorithm_version
+    ):
+        raise ValueError("information state reconstruction algorithm does not match profile")
+    if record.state_cut.cut_kind not in profile.accepted_order_semantics:
+        raise ValueError("information state cut order is not admitted by reconstruction profile")
+    return profile
+
+
+def _validate_information_state_occurrence(
+    record: ParticipantInformationStateRecordModel,
+    observation: ParticipantObservationEnvelopeModel,
+    *,
+    history_ref: str,
+    declared_source_keys: set[ParticipantInformationSourceKey],
+) -> None:
+    if ("participant-observation-envelope-v1", observation.observation_ref) not in declared_source_keys:
+        raise ValueError("strong information state must preserve every occurrence as a typed source ref")
+    if observation.participant_address != record.participant_address:
+        raise ValueError("information state occurrence participant does not match")
+    if observation.episode_id != record.episode_id:
+        raise ValueError("information state occurrence episode does not match")
+    if observation.action_observation_history_ref != history_ref:
+        raise ValueError("information state occurrence history ref does not match")
+    if observation.visibility_projection_ref != record.visibility_projection_ref:
+        raise ValueError("information state occurrence visibility projection does not match")
+    if isinstance(record.state_cut, ParticipantDecisionSurfaceSequenceCutModel) and (
+        observation.sequence_number is None or observation.sequence_number > record.state_cut.anchor_order
+    ):
+        raise ValueError("information state occurrence lies after the exact sequence cut")
+
+
+def _validate_information_state_history(
+    record: ParticipantInformationStateRecordModel,
+    occurrence_histories: Mapping[str, Sequence[ParticipantObservationEnvelopeModel]],
+    declared_source_keys: set[ParticipantInformationSourceKey],
+) -> None:
+    history_ref = record.occurrence_history_ref
+    if history_ref is None or history_ref not in occurrence_histories:
+        raise ValueError("information state occurrence history does not resolve")
+    history = occurrence_histories[history_ref]
+    if not history:
+        raise ValueError("strong information state requires a non-empty occurrence history")
+    for observation in history:
+        _validate_information_state_occurrence(
+            record,
+            observation,
+            history_ref=history_ref,
+            declared_source_keys=declared_source_keys,
+        )
+
+
+def _validate_information_state_sources(
+    record: ParticipantInformationStateRecordModel,
+    profile: ParticipantInformationReconstructionProfileModel | None,
+    resolved_sources: Mapping[ParticipantInformationSourceKey, object],
+    source_coordinates: Mapping[
+        ParticipantInformationSourceKey,
+        ParticipantInformationStateSourceCoordinate,
+    ],
+) -> None:
+    for source in record.source_refs:
+        key = (source.contract_id, source.ref)
+        if profile is not None and source.contract_id not in profile.accepted_input_contracts:
+            raise ValueError("information state source contract is not admitted by profile")
+        if key not in resolved_sources:
+            raise ValueError("information state source ref does not resolve")
+        require_source_coordinate(record, key, source_coordinates)
+        validate_resolved_source(record, source, resolved_sources[key])
+
+
+def _validate_information_state_proof(
+    record: ParticipantInformationStateRecordModel,
+    proof_digests: Mapping[str, str],
+) -> None:
+    proof_ref = record.reconstruction_proof_ref
+    if proof_ref is None or proof_ref not in proof_digests:
+        raise ValueError("information state reconstruction proof does not resolve")
+    if proof_digests[proof_ref] != record.information_state_digest:
+        raise ValueError("information state proof digest does not match claimed digest")
+
+
+def _validate_decision_surface_information_state_join(
+    record: ParticipantInformationStateRecordModel,
+    surface: ParticipantDecisionSurfaceV2Model,
+) -> None:
+    assurance = surface.assurance
+    view = surface.participant_view
+    coordinate_checks = (
+        (
+            view.participant_address == record.participant_address and view.episode_id == record.episode_id,
+            "decision surface information-state identity does not match",
+        ),
+        (
+            assurance.audience_scope_ref == record.audience_scope_ref,
+            "decision surface information-state audience scope does not match",
+        ),
+        (
+            assurance.derivation_anchor.state_cut == record.state_cut,
+            "decision surface information-state cut does not match",
+        ),
+        (
+            assurance.projection_policy_revision == record.projection_policy_revision,
+            "decision surface information-state projection revision does not match",
+        ),
+        (
+            assurance.visibility_projection_ref == record.visibility_projection_ref,
+            "decision surface information-state visibility projection does not match",
+        ),
+        (
+            assurance.participant_memory_scope == record.participant_memory_scope,
+            "decision surface information-state memory scope does not match",
+        ),
+        (
+            assurance.memory_reset_authority_ref == record.memory_reset_authority_ref,
+            "decision surface information-state reset authority does not match",
+        ),
+        (
+            view.redaction_policy_ref == record.redaction_policy_ref,
+            "decision surface information-state redaction policy does not match",
+        ),
+    )
+    for coordinate_matches, message in coordinate_checks:
+        if not coordinate_matches:
+            raise ValueError(message)
+
+
+def _validate_matching_decision_surfaces(
+    record: ParticipantInformationStateRecordModel,
+    decision_surfaces: Sequence[ParticipantDecisionSurfaceV2Model],
+) -> None:
+    for surface in decision_surfaces:
+        if surface.participant_view.information_state_ref != record.information_state_ref:
+            continue
+        _validate_decision_surface_information_state_join(record, surface)
+
+
 def validate_participant_information_state_context(
     record: ParticipantInformationStateRecordModel,
     *,
@@ -269,86 +430,13 @@ def validate_participant_information_state_context(
     """Resolve ACT-604's cross-contract exact-cut and strong-claim conditions."""
 
     declared_source_keys = {(source.contract_id, source.ref) for source in record.source_refs}
-    profile: ParticipantInformationReconstructionProfileModel | None = None
-    if record.information_guarantee in {"history_consistent", "perfect_recall"}:
-        profile_ref = record.reconstruction_profile_ref
-        if profile_ref is None or profile_ref not in reconstruction_profiles:
-            raise ValueError("information state reconstruction profile does not resolve")
-        profile = reconstruction_profiles[profile_ref]
-        if profile.profile_id != profile_ref:
-            raise ValueError("information state reconstruction profile identity does not match")
-        if profile.information_state_schema_version != record.schema_version:
-            raise ValueError("information state schema version does not match reconstruction profile")
-        if profile.projection_version != record.projection_version:
-            raise ValueError("information state projection version does not match reconstruction profile")
-        if (
-            profile.algorithm_id != record.reconstruction_algorithm_id
-            or profile.algorithm_version != record.reconstruction_algorithm_version
-        ):
-            raise ValueError("information state reconstruction algorithm does not match profile")
-        if record.state_cut.cut_kind not in profile.accepted_order_semantics:
-            raise ValueError("information state cut order is not admitted by reconstruction profile")
-
-        history_ref = record.occurrence_history_ref
-        if history_ref is None or history_ref not in occurrence_histories:
-            raise ValueError("information state occurrence history does not resolve")
-        history = occurrence_histories[history_ref]
-        if not history:
-            raise ValueError("strong information state requires a non-empty occurrence history")
-        for observation in history:
-            if ("participant-observation-envelope-v1", observation.observation_ref) not in declared_source_keys:
-                raise ValueError("strong information state must preserve every occurrence as a typed source ref")
-            if observation.participant_address != record.participant_address:
-                raise ValueError("information state occurrence participant does not match")
-            if observation.episode_id != record.episode_id:
-                raise ValueError("information state occurrence episode does not match")
-            if observation.action_observation_history_ref != history_ref:
-                raise ValueError("information state occurrence history ref does not match")
-            if observation.visibility_projection_ref != record.visibility_projection_ref:
-                raise ValueError("information state occurrence visibility projection does not match")
-            if isinstance(record.state_cut, ParticipantDecisionSurfaceSequenceCutModel) and (
-                observation.sequence_number is None or observation.sequence_number > record.state_cut.anchor_order
-            ):
-                raise ValueError("information state occurrence lies after the exact sequence cut")
-
-    governed_source_coordinates = source_coordinates or {}
-    for source in record.source_refs:
-        key = (source.contract_id, source.ref)
-        if profile is not None and source.contract_id not in profile.accepted_input_contracts:
-            raise ValueError("information state source contract is not admitted by profile")
-        if key not in resolved_sources:
-            raise ValueError("information state source ref does not resolve")
-        require_source_coordinate(record, key, governed_source_coordinates)
-        validate_resolved_source(record, source, resolved_sources[key])
-
+    profile = _resolve_information_state_profile(record, reconstruction_profiles)
     if profile is not None:
-        proof_ref = record.reconstruction_proof_ref
-        if proof_ref is None or proof_ref not in proof_digests:
-            raise ValueError("information state reconstruction proof does not resolve")
-        if proof_digests[proof_ref] != record.information_state_digest:
-            raise ValueError("information state proof digest does not match claimed digest")
-
-    for surface in decision_surfaces:
-        if surface.participant_view.information_state_ref != record.information_state_ref:
-            continue
-        assurance = surface.assurance
-        view = surface.participant_view
-        if view.participant_address != record.participant_address or view.episode_id != record.episode_id:
-            raise ValueError("decision surface information-state identity does not match")
-        if assurance.audience_scope_ref != record.audience_scope_ref:
-            raise ValueError("decision surface information-state audience scope does not match")
-        if assurance.derivation_anchor.state_cut != record.state_cut:
-            raise ValueError("decision surface information-state cut does not match")
-        if assurance.projection_policy_revision != record.projection_policy_revision:
-            raise ValueError("decision surface information-state projection revision does not match")
-        if assurance.visibility_projection_ref != record.visibility_projection_ref:
-            raise ValueError("decision surface information-state visibility projection does not match")
-        if assurance.participant_memory_scope != record.participant_memory_scope:
-            raise ValueError("decision surface information-state memory scope does not match")
-        if assurance.memory_reset_authority_ref != record.memory_reset_authority_ref:
-            raise ValueError("decision surface information-state reset authority does not match")
-        if view.redaction_policy_ref != record.redaction_policy_ref:
-            raise ValueError("decision surface information-state redaction policy does not match")
+        _validate_information_state_history(record, occurrence_histories, declared_source_keys)
+    _validate_information_state_sources(record, profile, resolved_sources, source_coordinates or {})
+    if profile is not None:
+        _validate_information_state_proof(record, proof_digests)
+    _validate_matching_decision_surfaces(record, decision_surfaces)
 
 
 def validate_participant_information_state_resolved_context(

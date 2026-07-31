@@ -220,6 +220,39 @@ def _validate_payload(contract_name: str, payload: object) -> list[Diagnostic]:
     return diagnostics
 
 
+def _information_state_context_diagnostics(
+    payload: object,
+    information_state_context_resolver: ParticipantInformationStateContextResolver | None = None,
+) -> list[Diagnostic]:
+    contract_name = "participant-information-state-record-v1"
+    diagnostics: list[Diagnostic] = []
+    if information_state_context_resolver is None:
+        diagnostics.append(
+            _diagnostic(
+                "conformance.semantic-context-required",
+                contract_name,
+                "participant information-state context resolver is required",
+            )
+        )
+    else:
+        try:
+            record = ParticipantInformationStateRecordModel.model_validate(payload)
+            validate_participant_information_state_resolved_context(
+                record,
+                information_state_context_resolver,
+                payload,
+            )
+        except (TypeError, ValueError) as exc:
+            diagnostics.append(
+                _diagnostic(
+                    "conformance.semantic-invalid",
+                    contract_name,
+                    "participant information-state context is invalid: " + sanitized_failure_message(exc),
+                )
+            )
+    return diagnostics
+
+
 def validate_contract_payload(
     contract_name: str,
     payload: object,
@@ -229,32 +262,9 @@ def validate_contract_payload(
     """Validate one payload through its structural and available contextual boundary."""
 
     diagnostics = _validate_payload(contract_name, payload)
-    if diagnostics or contract_name != "participant-information-state-record-v1":
-        return tuple(diagnostics)
-    if information_state_context_resolver is None:
-        return (
-            _diagnostic(
-                "conformance.semantic-context-required",
-                contract_name,
-                "participant information-state context resolver is required",
-            ),
-        )
-    try:
-        record = ParticipantInformationStateRecordModel.model_validate(payload)
-        validate_participant_information_state_resolved_context(
-            record,
-            information_state_context_resolver,
-            payload,
-        )
-    except (TypeError, ValueError) as exc:
-        return (
-            _diagnostic(
-                "conformance.semantic-invalid",
-                contract_name,
-                "participant information-state context is invalid: " + sanitized_failure_message(exc),
-            ),
-        )
-    return ()
+    if not diagnostics and contract_name == "participant-information-state-record-v1":
+        diagnostics.extend(_information_state_context_diagnostics(payload, information_state_context_resolver))
+    return tuple(diagnostics)
 
 
 def supported_contract_ids() -> tuple[str, ...]:

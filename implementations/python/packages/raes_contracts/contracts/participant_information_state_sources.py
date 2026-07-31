@@ -3,15 +3,48 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import Any
+from typing import Protocol
 
 from .participant_context import ParticipantContextViewModel
-from .participant_decision_state_cut import ParticipantDecisionSurfaceSequenceCutModel
+from .participant_decision_state_cut import (
+    ParticipantDecisionSurfaceSequenceCutModel,
+    ParticipantDecisionSurfaceStateCutModel,
+)
 from .participant_envelopes import ParticipantSharedStateRecordModel
 from .participant_observation import ParticipantObservationEnvelopeModel
 from .participant_runtime import ParticipantBehaviorHistoryEventModel, ParticipantEpisodeStateModel
 
 SourceKey = tuple[str, str]
+
+
+class _InformationStateRecord(Protocol):
+    participant_address: str
+    episode_id: str
+    information_state_ref: str
+    state_cut: ParticipantDecisionSurfaceStateCutModel
+    audience_scope_ref: str
+    visibility_projection_ref: str
+    projection_policy_revision: str
+    redaction_policy_ref: str
+    redaction_policy_revision: str
+
+
+class _InformationStateSourceCoordinate(Protocol):
+    participant_address: str
+    episode_id: str
+    state_cut: ParticipantDecisionSurfaceStateCutModel
+    audience_scope_ref: str
+    visibility_projection_ref: str
+    projection_policy_revision: str
+    redaction_policy_ref: str
+    redaction_policy_revision: str
+
+
+class _InformationStateSourceRef(Protocol):
+    contract_id: str
+    ref: str
+    relation: str
+
 
 _SOURCE_RELATIONS_BY_CONTRACT: Mapping[str, frozenset[str]] = {
     "participant-observation-envelope-v1": frozenset({"observed", "disclosed"}),
@@ -23,9 +56,9 @@ _SOURCE_RELATIONS_BY_CONTRACT: Mapping[str, frozenset[str]] = {
 
 
 def require_source_coordinate(
-    record: Any,
+    record: _InformationStateRecord,
     key: SourceKey,
-    source_coordinates: Mapping[SourceKey, Any],
+    source_coordinates: Mapping[SourceKey, _InformationStateSourceCoordinate],
 ) -> None:
     """Require one trusted source coordinate to equal every governed record coordinate."""
 
@@ -48,14 +81,14 @@ def require_source_coordinate(
             raise ValueError(f"information state source {label} coordinate does not match")
 
 
-def _validate_source_sequence_cut(record: Any, sequence_number: int | None) -> None:
+def _validate_source_sequence_cut(record: _InformationStateRecord, sequence_number: int | None) -> None:
     if isinstance(record.state_cut, ParticipantDecisionSurfaceSequenceCutModel) and (
         sequence_number is None or sequence_number > record.state_cut.anchor_order
     ):
         raise ValueError("information state source lies after the exact sequence cut")
 
 
-def _validate_observation_source(record: Any, source_ref: str, resolved: object) -> None:
+def _validate_observation_source(record: _InformationStateRecord, source_ref: str, resolved: object) -> None:
     observation = ParticipantObservationEnvelopeModel.model_validate(resolved)
     if observation.observation_ref != source_ref:
         raise ValueError("information state observation source identity does not match")
@@ -70,7 +103,7 @@ def _validate_observation_source(record: Any, source_ref: str, resolved: object)
         raise ValueError("information state observation back-reference does not match")
 
 
-def _validate_context_view_source(record: Any, source_ref: str, resolved: object) -> None:
+def _validate_context_view_source(record: _InformationStateRecord, source_ref: str, resolved: object) -> None:
     context_view = ParticipantContextViewModel.model_validate(resolved)
     if source_ref not in {context_view.view_id, context_view.view_ref}:
         raise ValueError("information state context-view source identity does not match")
@@ -82,7 +115,7 @@ def _validate_context_view_source(record: Any, source_ref: str, resolved: object
         raise ValueError("information state context-view redaction policy does not match")
 
 
-def _validate_shared_state_source(record: Any, source_ref: str, resolved: object) -> None:
+def _validate_shared_state_source(record: _InformationStateRecord, source_ref: str, resolved: object) -> None:
     shared_state = ParticipantSharedStateRecordModel.model_validate(resolved)
     if source_ref not in {shared_state.event_id, shared_state.state_address}:
         raise ValueError("information state shared-state source identity does not match")
@@ -95,7 +128,7 @@ def _validate_shared_state_source(record: Any, source_ref: str, resolved: object
         raise ValueError("information state shared-state redaction policy does not match")
 
 
-def _validate_behavior_history_source(record: Any, resolved: object) -> None:
+def _validate_behavior_history_source(record: _InformationStateRecord, resolved: object) -> None:
     if not isinstance(resolved, Sequence) or isinstance(resolved, (str, bytes, bytearray)) or not resolved:
         raise ValueError("information state behavior-history source must resolve to a non-empty event stream")
     for item in resolved:
@@ -106,7 +139,7 @@ def _validate_behavior_history_source(record: Any, resolved: object) -> None:
             _validate_source_sequence_cut(record, event.realized_order)
 
 
-def _validate_episode_state_source(record: Any, source_ref: str, resolved: object) -> None:
+def _validate_episode_state_source(record: _InformationStateRecord, source_ref: str, resolved: object) -> None:
     episode_state = ParticipantEpisodeStateModel.model_validate(resolved)
     if source_ref != episode_state.episode_id:
         raise ValueError("information state episode-state source identity does not match")
@@ -119,7 +152,11 @@ def _validate_episode_state_source(record: Any, source_ref: str, resolved: objec
         _validate_source_sequence_cut(record, episode_state.sequence_number)
 
 
-def validate_resolved_source(record: Any, source: Any, resolved: object) -> None:
+def validate_resolved_source(
+    record: _InformationStateRecord,
+    source: _InformationStateSourceRef,
+    resolved: object,
+) -> None:
     """Apply contract- and relation-specific source invariants."""
 
     allowed_relations = _SOURCE_RELATIONS_BY_CONTRACT[source.contract_id]
