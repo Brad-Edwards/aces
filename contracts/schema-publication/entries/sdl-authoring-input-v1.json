@@ -2,9 +2,9 @@
   "contract_id": "sdl-authoring-input-v1",
   "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
   "stability": "draft",
-  "content_hash": "d4594b2c04283d95378faec2f64343870e8756f09a5a04a8746c6d8ccd56a270",
+  "content_hash": "4a8cf47b7c54b1b9f704dc6e8e5dd17df6a11a7ab126f92a5a91449d38025719",
   "last_change": {
-    "summary": "Added composable provider-neutral platform capabilities and marked legacy platform categories and content manifests deprecated for issue #956.",
-    "content_hash": "d4594b2c04283d95378faec2f64343870e8756f09a5a04a8746c6d8ccd56a270"
+    "summary": "Added the provider-neutral service search-index field-schema materialization profile for issue #1011.",
+    "content_hash": "4a8cf47b7c54b1b9f704dc6e8e5dd17df6a11a7ab126f92a5a91449d38025719"
   }
 }

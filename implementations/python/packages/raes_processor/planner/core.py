@@ -139,6 +139,7 @@ def plan(
         provisioning,
         manifest.provisioner,
         manifest.realization_envelope,
+        manifest.realization_support,
     )
     diagnostics.extend(materialization_diagnostics)
     provisioning.diagnostics.extend(materialization_diagnostics)

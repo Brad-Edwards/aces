@@ -11,7 +11,7 @@ directories, CTF flag files.
 """
 
 from enum import Enum
-from typing import Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import Field, ValidationInfo, field_validator, model_validator
 
@@ -46,13 +46,10 @@ class ServiceMaterializationRequirements(SDLModel):
     readback: Literal["canonical-content-digest"] = "canonical-content-digest"
 
 
-class ServiceMaterialization(SDLModel):
-    """Portable control contract for placing content through a named service."""
+class _ServiceMaterializationBase(SDLModel):
+    """References and ownership shared by every closed service profile."""
 
     target_service_ref: str = Field(min_length=1)
-    interface_profile: Literal["service-content"] = "service-content"
-    profile_version: Literal["1"] = "1"
-    requirements: ServiceMaterializationRequirements
     shared_service_relationship_ref: str = ""
     ordering_content_refs: list[str] = Field(default_factory=list)
     readback_assertion_refs: list[str] = Field(min_length=1)
@@ -78,6 +75,47 @@ class ServiceMaterialization(SDLModel):
         return values
 
 
+class ServiceMaterialization(_ServiceMaterializationBase):
+    """Portable control contract for placing content through a named service."""
+
+    interface_profile: Literal["service-content"] = "service-content"
+    profile_version: Literal["1"] = "1"
+    requirements: ServiceMaterializationRequirements
+
+
+class SearchIndexFieldSemantic(str, Enum):
+    """Portable top-level search-index field behavior."""
+
+    EXACT_TOKEN = "exact-token"  # noqa: S105 - portable field semantic, not a credential
+    FULL_TEXT = "full-text"
+    INTEGER = "integer"
+    TEMPORAL = "temporal"
+    BOOLEAN = "boolean"
+
+
+class ServiceSearchIndexSchemaRequirements(SDLModel):
+    """Exact portable search-index schema operation and readback."""
+
+    operation: Literal["ensure-search-index-field-schema"] = "ensure-search-index-field-schema"
+    conflict_policy: Literal["reject-unowned-collision"] = "reject-unowned-collision"
+    readback: Literal["canonical-portable-field-schema-digest"] = "canonical-portable-field-schema-digest"
+    field_semantics: dict[PortableIdentifier, SearchIndexFieldSemantic] = Field(min_length=1)
+
+
+class ServiceSearchIndexSchemaMaterialization(_ServiceMaterializationBase):
+    """Portable desired field schema for a named service-owned search index."""
+
+    interface_profile: Literal["service-search-index-schema"]
+    profile_version: Literal["1"] = "1"
+    requirements: ServiceSearchIndexSchemaRequirements
+
+
+ServiceMaterializationProfile = Annotated[
+    ServiceMaterialization | ServiceSearchIndexSchemaMaterialization,
+    Field(discriminator="interface_profile"),
+]
+
+
 class Content(SDLModel):
     """Data or files placed into a scenario node.
 
@@ -100,7 +138,23 @@ class Content(SDLModel):
     items: list[ContentItem] = Field(default_factory=list)
     sensitive: bool | str = False
     tags: list[str] = Field(default_factory=list)
-    service_materialization: ServiceMaterialization | None = None
+    service_materialization: ServiceMaterializationProfile | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def default_service_materialization_profile(cls, value: Any) -> Any:
+        """Preserve the original service-content default across discrimination."""
+        if not isinstance(value, dict):
+            return value
+        binding = value.get("service_materialization")
+        if not isinstance(binding, dict) or "interface_profile" in binding:
+            return value
+        normalized = dict(value)
+        normalized["service_materialization"] = {
+            "interface_profile": "service-content",
+            **binding,
+        }
+        return normalized
 
     @field_validator("type", mode="before")
     @classmethod
@@ -121,7 +175,15 @@ class Content(SDLModel):
         if self.type == ContentType.FILE and not self.path:
             raise ValueError("File content requires 'path'")
 
-        if self.type == ContentType.DATASET and not (self.source or self.items):
+        is_search_index_schema = isinstance(
+            self.service_materialization,
+            ServiceSearchIndexSchemaMaterialization,
+        )
+        if is_search_index_schema and self.type != ContentType.DATASET:
+            raise ValueError("Search-index schema materialization requires dataset content")
+        if is_search_index_schema and (self.source is not None or self.items):
+            raise ValueError("Search-index schema materialization must not carry source or items")
+        if self.type == ContentType.DATASET and not is_search_index_schema and not (self.source or self.items):
             raise ValueError("Dataset content requires either 'source' or non-empty 'items'")
 
         if self.type == ContentType.DIRECTORY and not self.destination:

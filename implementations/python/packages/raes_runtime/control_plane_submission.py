@@ -63,6 +63,7 @@ def _submitted_plan_diagnostics(
                 plan,
                 manifest.provisioner,
                 manifest.realization_envelope,
+                manifest.realization_support,
             )
             if service_materialization_diagnostics:
                 diagnostics.extend(service_materialization_diagnostics[:1])

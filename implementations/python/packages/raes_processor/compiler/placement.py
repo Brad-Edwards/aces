@@ -1,15 +1,13 @@
 """Content and account placement compilation."""
 
-import hashlib
-import json
-
-from raes.content import Content
+from raes.content import Content, ServiceSearchIndexSchemaMaterialization
 from raes.nodes import NodeType
 from raes.scenario import InstantiatedScenario
 from raes.semantics.domain_topology import (
     DomainNodeRole,
     DomainTopologyAnalysis,
 )
+from raes_contracts.canonical import canonical_json_digest
 
 from ..models import (
     AccountPlacement,
@@ -17,6 +15,7 @@ from ..models import (
     Diagnostic,
     DomainControllerPlacement,
     ServiceContentMaterializationBinding,
+    ServiceSearchIndexSchemaMaterializationBinding,
 )
 from .addresses import (
     _account_address,
@@ -78,7 +77,13 @@ def _compile_service_materialization(
     content: Content,
     address: str,
     diagnostics: list[Diagnostic],
-) -> tuple[ServiceContentMaterializationBinding | None, list[str]] | None:
+) -> (
+    tuple[
+        ServiceContentMaterializationBinding | ServiceSearchIndexSchemaMaterializationBinding | None,
+        list[str],
+    ]
+    | None
+):
     binding = content.service_materialization
     if binding is None:
         return None, []
@@ -96,25 +101,40 @@ def _compile_service_materialization(
     node_name, service_name = split
     consumer_tenant_ref, mutable_state_owner, reset_generation_owner = _service_state_ownership(scenario, binding)
     requirements = binding.requirements
-    compiled = ServiceContentMaterializationBinding(
-        target_service_address=_service_address(node_name, service_name),
-        interface_profile=binding.interface_profile,
-        profile_version=binding.profile_version,
-        content_type=content.type.value,
-        operation=requirements.operation,
-        conflict_policy=requirements.conflict_policy,
-        readback=requirements.readback,
-        canonical_content_digest=_canonical_content_digest(content),
-        shared_service_relationship_ref=binding.shared_service_relationship_ref,
-        consumer_tenant_ref=consumer_tenant_ref,
-        mutable_state_owner=mutable_state_owner,
-        reset_generation_owner=reset_generation_owner,
-        readback_assertion_addresses=tuple(_assertion_address(ref) for ref in binding.readback_assertion_refs),
-        evidence_requirement_refs=tuple(binding.evidence_requirement_refs),
-        observation_boundary_addresses=tuple(
+    common = {
+        "target_service_address": _service_address(node_name, service_name),
+        "interface_profile": binding.interface_profile,
+        "profile_version": binding.profile_version,
+        "content_type": content.type.value,
+        "operation": requirements.operation,
+        "conflict_policy": requirements.conflict_policy,
+        "readback": requirements.readback,
+        "canonical_content_digest": _canonical_content_digest(content),
+        "shared_service_relationship_ref": binding.shared_service_relationship_ref,
+        "consumer_tenant_ref": consumer_tenant_ref,
+        "mutable_state_owner": mutable_state_owner,
+        "reset_generation_owner": reset_generation_owner,
+        "readback_assertion_addresses": tuple(_assertion_address(ref) for ref in binding.readback_assertion_refs),
+        "evidence_requirement_refs": tuple(binding.evidence_requirement_refs),
+        "observation_boundary_addresses": tuple(
             _observation_boundary_address(ref) for ref in binding.observation_boundary_refs
         ),
-    )
+    }
+    if isinstance(binding, ServiceSearchIndexSchemaMaterialization):
+        field_semantics = {
+            str(field_name): semantic.value for field_name, semantic in requirements.field_semantics.items()
+        }
+        compiled = ServiceSearchIndexSchemaMaterializationBinding(
+            **common,
+            field_semantics=field_semantics,
+            canonical_field_schema_digest=_canonical_field_schema_digest(
+                binding.interface_profile,
+                binding.profile_version,
+                field_semantics,
+            ),
+        )
+    else:
+        compiled = ServiceContentMaterializationBinding(**common)
     dependencies = [_content_address(ref) for ref in binding.ordering_content_refs]
     return compiled, dependencies
 
@@ -140,8 +160,22 @@ def _service_state_ownership(scenario: InstantiatedScenario, binding: object) ->
 def _canonical_content_digest(content: object) -> str:
     payload = _dump(content)
     payload.pop("service_materialization", None)
-    encoded = json.dumps(payload, ensure_ascii=True, separators=(",", ":"), sort_keys=True).encode("utf-8")
-    return "sha256:" + hashlib.sha256(encoded).hexdigest()
+    return canonical_json_digest(payload)
+
+
+def _canonical_field_schema_digest(
+    interface_profile: str,
+    profile_version: str,
+    field_semantics: dict[str, str],
+) -> str:
+    return canonical_json_digest(
+        {
+            "interface_profile": interface_profile,
+            "profile_version": profile_version,
+            "projection_scope": "declared-fields",
+            "field_semantics": field_semantics,
+        }
+    )
 
 
 def _compile_account_placements(

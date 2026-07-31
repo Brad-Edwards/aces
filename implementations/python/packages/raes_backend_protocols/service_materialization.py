@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import re
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 
 from raes_contracts.addressing import require_compiled_address
+from raes_contracts.apparatus import RUNTIME_REALIZATION_DOMAIN, RealizationSupportDeclaration
+from raes_contracts.canonical import canonical_json_digest
 from raes_contracts.diagnostics import Diagnostic
 from raes_contracts.planning import ChangeAction, ProvisioningPlan
 from raes_contracts.realization_envelope import (
@@ -18,15 +21,9 @@ from raes_contracts.realization_envelope import (
 from .capabilities import ProvisionerCapabilities
 
 _DIGEST_RE = re.compile(r"^sha256:[a-f0-9]{64}$")
-_PROFILE = "service-content"
-_VERSION = "1"
-_PROFILE_TERM = "service-content-v1"
-_REQUIREMENTS = {
-    "operation": "ensure-owned-items",
-    "conflict_policy": "reject-unowned-collision",
-    "readback": "canonical-content-digest",
-}
-_BINDING_FIELDS = {
+_FIELD_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$", re.ASCII)
+_FIELD_SEMANTICS = frozenset({"exact-token", "full-text", "integer", "temporal", "boolean"})
+_COMMON_BINDING_FIELDS = {
     "target_service_address",
     "interface_profile",
     "profile_version",
@@ -45,10 +42,57 @@ _BINDING_FIELDS = {
 }
 
 
+@dataclass(frozen=True)
+class _ProfileContract:
+    profile: str
+    version: str
+    capability_term: str
+    requirement_kind: str
+    requirements: Mapping[str, str]
+    binding_fields: frozenset[str]
+    schema_profile: bool = False
+
+
+_PROFILE_CONTRACTS = {
+    "service-content": _ProfileContract(
+        profile="service-content",
+        version="1",
+        capability_term="service-content-v1",
+        requirement_kind="service-content-materialization",
+        requirements={
+            "operation": "ensure-owned-items",
+            "conflict_policy": "reject-unowned-collision",
+            "readback": "canonical-content-digest",
+        },
+        binding_fields=frozenset(_COMMON_BINDING_FIELDS),
+    ),
+    "service-search-index-schema": _ProfileContract(
+        profile="service-search-index-schema",
+        version="1",
+        capability_term="service-search-index-schema-v1",
+        requirement_kind="service-search-index-schema-materialization",
+        requirements={
+            "operation": "ensure-search-index-field-schema",
+            "conflict_policy": "reject-unowned-collision",
+            "readback": "canonical-portable-field-schema-digest",
+        },
+        binding_fields=frozenset(
+            {
+                *_COMMON_BINDING_FIELDS,
+                "field_semantics",
+                "canonical_field_schema_digest",
+            }
+        ),
+        schema_profile=True,
+    ),
+}
+
+
 def service_materialization_plan_diagnostics(
     plan: ProvisioningPlan,
     capabilities: ProvisionerCapabilities,
     envelope: BackendRealizationEnvelopeModel | None,
+    realization_support: Sequence[RealizationSupportDeclaration] = (),
 ) -> list[Diagnostic]:
     """Validate exact profile, ownership, target, and readback before backend I/O."""
 
@@ -65,12 +109,24 @@ def service_materialization_plan_diagnostics(
                 _diagnostic("provisioner.service-materialization-contract-invalid", operation.address, message)
             )
             continue
-        if _PROFILE_TERM not in capabilities.supported_service_materialization_profiles:
+        contract = _profile_contract(binding)
+        assert contract is not None
+        if contract.capability_term not in capabilities.supported_service_materialization_profiles:
             diagnostics.append(
                 _diagnostic(
                     "provisioner.unsupported-service-materialization-profile",
                     operation.address,
-                    f"Provisioner does not support service materialization profile '{_PROFILE_TERM}'.",
+                    f"Provisioner does not support service materialization profile '{contract.capability_term}'.",
+                )
+            )
+            continue
+        if not _exact_requirement_supported(realization_support, contract.requirement_kind):
+            diagnostics.append(
+                _diagnostic(
+                    "realization.unsupported-exact-requirement",
+                    operation.address,
+                    "Backend does not declare exact realization support for service "
+                    f"materialization requirement '{contract.requirement_kind}'.",
                 )
             )
             continue
@@ -87,34 +143,53 @@ def service_materialization_plan_diagnostics(
 
 
 def _binding_violation(payload: Mapping[str, object], binding: object) -> str | None:
-    if not isinstance(binding, Mapping) or set(binding) != _BINDING_FIELDS:
+    if not isinstance(binding, Mapping):
+        return "Service materialization binding is missing required closed contract fields."
+    contract = _profile_contract(binding)
+    if contract is None:
+        return "Service materialization profile identity is unsupported or incomplete."
+    if set(binding) != contract.binding_fields:
         return "Service materialization binding is missing required closed contract fields."
     violations = (
-        _profile_violation(binding),
-        _requirements_violation(binding),
-        _content_type_violation(payload, binding),
+        _requirements_violation(binding, contract),
+        _content_type_violation(payload, binding, contract),
         _target_violation(payload, binding),
         _digest_violation(binding),
+        _field_schema_violation(binding, contract),
         _readback_violation(binding),
         _ownership_violation(binding),
     )
     return next((message for message in violations if message is not None), None)
 
 
-def _profile_violation(binding: Mapping[str, object]) -> str | None:
-    valid = binding.get("interface_profile") == _PROFILE and binding.get("profile_version") == _VERSION
-    return None if valid else "Service materialization profile identity is unsupported or incomplete."
+def _profile_contract(binding: Mapping[str, object]) -> _ProfileContract | None:
+    profile = binding.get("interface_profile")
+    contract = _PROFILE_CONTRACTS.get(profile) if isinstance(profile, str) else None
+    if contract is None or binding.get("profile_version") != contract.version:
+        return None
+    return contract
 
 
-def _requirements_violation(binding: Mapping[str, object]) -> str | None:
-    valid = all(binding.get(field) == expected for field, expected in _REQUIREMENTS.items())
+def _requirements_violation(
+    binding: Mapping[str, object],
+    contract: _ProfileContract,
+) -> str | None:
+    valid = all(binding.get(field) == expected for field, expected in contract.requirements.items())
     return None if valid else "Service materialization exact operation requirements are unsupported or incomplete."
 
 
-def _content_type_violation(payload: Mapping[str, object], binding: Mapping[str, object]) -> str | None:
+def _content_type_violation(
+    payload: Mapping[str, object],
+    binding: Mapping[str, object],
+    contract: _ProfileContract,
+) -> str | None:
     content_type = binding.get("content_type")
     spec = payload.get("spec")
     valid = isinstance(spec, Mapping) and content_type == spec.get("type")
+    if contract.schema_profile:
+        source_is_absent = isinstance(spec, Mapping) and ("source" not in spec or spec.get("source") is None)
+        items_are_empty_sequence = isinstance(spec, Mapping) and spec.get("items") == []
+        valid = valid and content_type == "dataset" and source_is_absent and items_are_empty_sequence
     return None if valid else "Service materialization content type does not match the content placement."
 
 
@@ -127,6 +202,47 @@ def _digest_violation(binding: Mapping[str, object]) -> str | None:
     digest = binding.get("canonical_content_digest")
     valid = isinstance(digest, str) and _DIGEST_RE.fullmatch(digest) is not None
     return None if valid else "Service materialization canonical content digest is invalid."
+
+
+def _field_schema_violation(
+    binding: Mapping[str, object],
+    contract: _ProfileContract,
+) -> str | None:
+    if not contract.schema_profile:
+        return None
+    field_semantics = binding.get("field_semantics")
+    if (
+        not isinstance(field_semantics, Mapping)
+        or not field_semantics
+        or any(
+            not isinstance(name, str) or _FIELD_NAME_RE.fullmatch(name) is None or semantic not in _FIELD_SEMANTICS
+            for name, semantic in field_semantics.items()
+        )
+    ):
+        return "Search-index schema field semantics are empty, non-portable, or unsupported."
+    digest = binding.get("canonical_field_schema_digest")
+    expected = canonical_json_digest(
+        {
+            "interface_profile": contract.profile,
+            "profile_version": contract.version,
+            "projection_scope": "declared-fields",
+            "field_semantics": dict(field_semantics),
+        }
+    )
+    if digest != expected:
+        return "Search-index schema canonical portable field-schema digest is invalid."
+    return None
+
+
+def _exact_requirement_supported(
+    realization_support: Sequence[RealizationSupportDeclaration],
+    requirement_kind: str,
+) -> bool:
+    return any(
+        declaration.domain == RUNTIME_REALIZATION_DOMAIN
+        and requirement_kind in declaration.supported_exact_requirement_kinds
+        for declaration in realization_support
+    )
 
 
 def _readback_violation(binding: Mapping[str, object]) -> str | None:

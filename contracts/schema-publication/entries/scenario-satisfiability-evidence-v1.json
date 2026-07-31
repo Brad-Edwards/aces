@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "2d0299274877012fc2c3a3e65d3d22a2e7d2992454697248a2b2e48759676973",
+  "content_hash": "21a7d235f9cd1b2f923173cdbf7ae06c7b09a911a7efeb976cc5a2f2b62c5a35",
   "last_change": {
-    "summary": "Integrated admitted trial provenance with composable platform capability schema updates for issues #790 and #956.",
-    "content_hash": "2d0299274877012fc2c3a3e65d3d22a2e7d2992454697248a2b2e48759676973"
+    "summary": "Added the provider-neutral service search-index field-schema materialization profile for issue #1011.",
+    "content_hash": "21a7d235f9cd1b2f923173cdbf7ae06c7b09a911a7efeb976cc5a2f2b62c5a35"
   }
 }

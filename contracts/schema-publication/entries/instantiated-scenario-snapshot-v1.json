@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-snapshot-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "99432f259e709993ffc5b180f82457cb71560630a079eb5a34b5923e06d7c8cd",
+  "content_hash": "92e6d0fcccdad09cd56a0f344fb8a1aacaf74ea0ab47633713b30fa8679acef5",
   "last_change": {
-    "summary": "Integrated admitted trial provenance with composable platform capability schema updates for issues #790 and #956.",
-    "content_hash": "99432f259e709993ffc5b180f82457cb71560630a079eb5a34b5923e06d7c8cd"
+    "summary": "Added the provider-neutral service search-index field-schema materialization profile for issue #1011.",
+    "content_hash": "92e6d0fcccdad09cd56a0f344fb8a1aacaf74ea0ab47633713b30fa8679acef5"
   }
 }
