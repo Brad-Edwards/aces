@@ -318,3 +318,36 @@ responses, logs, fixtures, screenshots, or docs.
 For current delivery status, evidence, and known limits, use the
 [participant-control adoption index](https://github.com/RAESystem/rae/tree/main/docs/research/participant-io-control)
 and [current project limitations](limitations.md).
+
+## Treat adversarial participants as a boundary problem
+
+Issue #812 and ADR-101
+define a DRAFT participant-neutral design for intentionally subverting
+participants and untrusted content.
+
+The design keeps two coordinates separate:
+
+- confidentiality restricts audiences, destinations, and sink classes; and
+- integrity records the origins that may have influenced a value and the trust
+  a sink requires.
+
+Labels and provenance follow observations, tool results, retained memory,
+proposals, action arguments, handoffs, crossings, outputs, and errors.
+Authentication, approval, action admission, authorization, declassification,
+integrity endorsement, editing, and execution remain distinct.
+
+The reference enforcement point is immediately before `RuntimeTarget` performs
+an external effect or before participant-facing or external data is
+serialized or delivered. A monitor score is evidence or advice, never
+authorization. Missing labels, provenance, profile support, or a stable state
+cut fail closed.
+
+The companion DRAFT evaluation profile distinguishes honest and attack modes
+and makes objectives, policy/monitor knowledge, adaptation, collusion, audit
+budgets, monitor correlation, interventions, memory, safety, usefulness, cost,
+uncertainty, and limitations explicit.
+
+This is design authority, not a delivered robustness claim. Runtime and
+backend enforcement, attack evaluations, monitor honesty, model alignment,
+private reasoning, and undeclared covert channels remain unclaimed. See the
+[issue #812 design record](https://github.com/OpenRAE/rae/issues/812).
