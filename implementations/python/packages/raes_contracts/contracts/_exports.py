@@ -1,6 +1,9 @@
 """Canonical public export manifest for the contracts facade."""
 
 PUBLIC_EXPORTS = [
+    "ACTIVITYSTREAMS_ACTIVITY_TYPES_SOURCE_SCHEMA_VERSION",
+    "ActivityStreamsActivityTypeSourceTermModel",
+    "ActivityStreamsActivityTypesSourceModel",
     "RaesSemanticInvariantEntryModel",
     "RaesSemanticInvariantInputModel",
     "RaesSemanticInvariantProfileModel",
@@ -59,6 +62,9 @@ PUBLIC_EXPORTS = [
     "ExternalConceptSchemeCoordinateModel",
     "ExternalConceptSubjectModel",
     "ExternalKnowledgeBindingEffect",
+    "FIPA_COMMUNICATIVE_ACTS_SOURCE_SCHEMA_VERSION",
+    "FipaCommunicativeActSourceTermModel",
+    "FipaCommunicativeActsSourceModel",
     "CONTROLLED_VOCABULARIES_SCHEMA_VERSION",
     "ControlledVocabularyCatalogModel",
     "ControlledVocabularyDefinitionModel",

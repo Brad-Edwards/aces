@@ -113,9 +113,11 @@ from .time_model import RealizedTimeModelProvenanceModel, TimeModelDeclarationMo
 from .trial_cleanup import SchedulerIsolationProofModel, TrialCleanupPlanModel, TrialCleanupReceiptModel
 from .validation_disclosure import ValidationBasisDisclosureDocumentModel
 from .vocabulary_sources import (
+    ActivityStreamsActivityTypesSourceModel,
     AtlasTacticsSourceModel,
     AttackEnterpriseTacticsSourceModel,
     ControlledVocabularyCatalogModel,
+    FipaCommunicativeActsSourceModel,
     NistCsfDefensiveCategorySourceModel,
 )
 
@@ -168,6 +170,8 @@ def _core_schema_bundle() -> dict[str, dict[str, Any]]:
         "attack-enterprise-tactics-source-v1": AttackEnterpriseTacticsSourceModel.model_json_schema(),
         "atlas-tactics-source-v1": AtlasTacticsSourceModel.model_json_schema(),
         "nist-csf-defensive-categories-source-v1": NistCsfDefensiveCategorySourceModel.model_json_schema(),
+        "w3c-activitystreams-activity-types-source-v1": ActivityStreamsActivityTypesSourceModel.model_json_schema(),
+        "fipa-communicative-acts-source-v1": FipaCommunicativeActsSourceModel.model_json_schema(),
         "semantic-profile-v1": SemanticProfileModel.model_json_schema(),
         "backend-profile-v1": _backend_profile_schema_for_bundle(),
         "random-stream-profile-v1": RandomStreamProfileModel.model_json_schema(),
