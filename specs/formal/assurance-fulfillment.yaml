@@ -85,6 +85,9 @@ subsystems:
   - id: behavioral-relations
     path: specs/formal/behavioral-relations
     fm_level: FM2
+  - id: artifact-transformations
+    path: specs/formal/artifact-transformations
+    fm_level: FM2
   - id: time-model
     path: specs/formal/time-model
     fm_level: FM3
@@ -94,6 +97,18 @@ subsystems:
 # a known gap with an ISO date and the tracking issue(s) under which it will be
 # closed.
 entries:
+  - subsystem: artifact-transformations
+    delivered_artifacts:
+      - kind: invariant_list
+        path: specs/formal/artifact-transformations/README.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_artifact_transformations.py
+      - kind: typed_ir_or_contract_coverage
+        path: contracts/schemas/artifact-transformations/artifact-transformation-report-v1.json
+      - kind: property_based_or_differential_tests
+        path: implementations/python/tests/test_artifact_transformations.py
+    waived_artifacts: []
+
   - subsystem: time-model
     delivered_artifacts:
       - kind: invariant_list

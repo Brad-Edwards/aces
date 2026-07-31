@@ -1,6 +1,7 @@
 """Version identifiers for published external contracts."""
 
 SCENARIO_INSTANTIATION_REQUEST_SCHEMA_VERSION = "scenario-instantiation/v1"
+ARTIFACT_TRANSFORMATION_REPORT_SCHEMA_VERSION = "artifact-transformation-report/v1"
 ARTIFACT_REQUIREMENT_SCHEMA_VERSION = "artifact-requirement/v1"
 BACKEND_MANIFEST_V2_SCHEMA_VERSION = "backend-manifest/v2"
 REALIZATION_ENVELOPE_SCHEMA_VERSION = "realization-envelope/v1"

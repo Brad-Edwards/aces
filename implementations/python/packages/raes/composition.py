@@ -558,20 +558,22 @@ def _rewrite_variable_tokens(value: object, variables: Mapping[str, str]) -> obj
     return rewritten
 
 
-def _namespace_payload(
+def _rewrite_payload_with_symbols(
     payload: dict[str, Any],
-    imported: ScenarioContent,
-    namespace: str,
-    descriptor: ModuleDescriptor,
+    *,
+    symbols: dict[str, dict[str, str] | set[str]],
+    namespace: str = "",
+    strip_composition_fields: bool = False,
 ) -> dict[str, Any]:
+    """Rewrite declarations and references through one canonical symbol map.
+
+    Module composition and semantic transformations share this implementation
+    so new reference-bearing SDL fields cannot drift between the two surfaces.
+    The caller supplies an isolated ``model_dump`` payload; this function never
+    receives or mutates a caller-owned scenario model.
+    """
+
     namespaced = dict(payload)
-    _validate_descriptor_exports(imported, descriptor)
-    symbols = _symbol_index(
-        imported,
-        namespace=namespace,
-        descriptor=descriptor,
-        restrict_to_descriptor=True,
-    )
     tool_affordance_ref_map: dict[str, str] = {}
     participant_inject_delivery_ref_map: dict[str, str] = {}
     for spec_name, behavior_spec in namespaced.get("behavior_specifications", {}).items():
@@ -920,11 +922,33 @@ def _namespace_payload(
                     identifier,
                     _private_prefix(namespace, identifier),
                 )
-    namespaced.pop("module", None)
-    namespaced.pop("imports", None)
-    namespaced.pop("expansion_provenance", None)
-    namespaced.pop("instantiation_provenance", None)
+    if strip_composition_fields:
+        namespaced.pop("module", None)
+        namespaced.pop("imports", None)
+        namespaced.pop("expansion_provenance", None)
+        namespaced.pop("instantiation_provenance", None)
     return namespaced
+
+
+def _namespace_payload(
+    payload: dict[str, Any],
+    imported: ScenarioContent,
+    namespace: str,
+    descriptor: ModuleDescriptor,
+) -> dict[str, Any]:
+    _validate_descriptor_exports(imported, descriptor)
+    symbols = _symbol_index(
+        imported,
+        namespace=namespace,
+        descriptor=descriptor,
+        restrict_to_descriptor=True,
+    )
+    return _rewrite_payload_with_symbols(
+        payload,
+        symbols=symbols,
+        namespace=namespace,
+        strip_composition_fields=True,
+    )
 
 
 def _merge_sections(
