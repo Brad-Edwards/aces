@@ -24,6 +24,7 @@ from raes_contracts.planning import (
     require_plan_operation_identity,
 )
 from raes_contracts.runtime_state import RuntimeSnapshot
+from raes_processor.planner import generated_artifact_payload_diagnostic
 
 _STATEFUL_ADMISSION_BY_RESOURCE_TYPE = {
     "generated-artifact": (
@@ -93,6 +94,14 @@ def _stateful_submission_diagnostic(
                 address=operation.address,
                 message=f"Provisioner does not support {resource_label}.",
             )
+        if operation.resource_type == "generated-artifact":
+            artifact_diagnostic = generated_artifact_payload_diagnostic(
+                address=operation.address,
+                spec=operation.payload.get("spec"),
+                provisioner=manifest.provisioner,
+            )
+            if artifact_diagnostic is not None:
+                return artifact_diagnostic
         exact_supported = any(
             declaration.domain == RUNTIME_REALIZATION_DOMAIN
             and DECLARED_CAPABILITY_MATCH_REQUIREMENT_KIND in declaration.supported_exact_requirement_kinds

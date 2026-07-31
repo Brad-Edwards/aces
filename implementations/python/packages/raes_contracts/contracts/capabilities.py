@@ -7,7 +7,12 @@ from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema
 
 from ..artifact_requirements import ArtifactMechanismCapability
-from ..vocabulary import RealizationSupportMode, WorkflowFeature, WorkflowStatePredicateFeature
+from ..vocabulary import (
+    GeneratedArtifactKind,
+    RealizationSupportMode,
+    WorkflowFeature,
+    WorkflowStatePredicateFeature,
+)
 from .base import ContractModel, NonEmptyString
 from .validators import _validate_controlled_vocabulary_terms
 
@@ -24,6 +29,10 @@ class ProvisionerCapabilitiesModel(ContractModel):
     supports_acls: bool = False
     supports_accounts: bool = False
     supports_generated_artifacts: bool = False
+    supported_generated_artifact_kinds: list[GeneratedArtifactKind] = Field(
+        default_factory=list,
+        json_schema_extra={"uniqueItems": True},
+    )
     supports_persistent_volumes: bool = False
     constraints: dict[str, str] = Field(default_factory=dict)
 
@@ -57,6 +66,14 @@ class ProvisionerCapabilitiesModel(ContractModel):
             raise ValueError("provisioners that support accounts must declare supported_account_features")
         if not self.supports_accounts and self.supported_account_features:
             raise ValueError("supported_account_features require supports_accounts=true")
+        if len(self.supported_generated_artifact_kinds) != len(set(self.supported_generated_artifact_kinds)):
+            raise ValueError("supported_generated_artifact_kinds must not contain duplicates")
+        if self.supports_generated_artifacts and not self.supported_generated_artifact_kinds:
+            raise ValueError(
+                "provisioners that support generated artifacts must declare supported_generated_artifact_kinds"
+            )
+        if not self.supports_generated_artifacts and self.supported_generated_artifact_kinds:
+            raise ValueError("supported_generated_artifact_kinds require supports_generated_artifacts=true")
         return self
 
     @classmethod
@@ -86,6 +103,25 @@ class ProvisionerCapabilitiesModel(ContractModel):
                     },
                     "then": {
                         "properties": {"supported_account_features": {"maxItems": 0}},
+                    },
+                },
+                {
+                    "if": {
+                        "properties": {"supports_generated_artifacts": {"const": True}},
+                        "required": ["supports_generated_artifacts"],
+                    },
+                    "then": {
+                        "required": ["supported_generated_artifact_kinds"],
+                        "properties": {"supported_generated_artifact_kinds": {"minItems": 1}},
+                    },
+                },
+                {
+                    "if": {
+                        "properties": {"supports_generated_artifacts": {"const": False}},
+                        "required": ["supports_generated_artifacts"],
+                    },
+                    "then": {
+                        "properties": {"supported_generated_artifact_kinds": {"maxItems": 0}},
                     },
                 },
             ]

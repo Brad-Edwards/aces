@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import textwrap
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -61,6 +62,26 @@ def _scenario(extra: str = ""):
     )
 
 
+def _ssh_scenario(*, outputs: str, consumers: str):
+    output_block = textwrap.indent(textwrap.dedent(outputs).strip(), "      ")
+    consumer_block = textwrap.indent(textwrap.dedent(consumers).strip(), "      ")
+    return parse_sdl(
+        "name: ssh-access\n"
+        "nodes:\n"
+        "  producer: {type: vm, os: linux}\n"
+        "  client: {type: vm, os: linux}\n"
+        "generated_artifacts:\n"
+        "  access:\n"
+        "    generator: ssh_key_bundle\n"
+        "    lifecycle: regenerate_on_change\n"
+        "    provenance: access/ssh.yml\n"
+        "    outputs:\n"
+        f"{output_block}\n"
+        "    consumers:\n"
+        f"{consumer_block}\n"
+    )
+
+
 def test_stateful_resources_parse_compile_and_plan_in_dependency_order():
     manifest = create_stub_manifest()
     assert manifest.provisioner.supports_generated_artifacts
@@ -95,6 +116,138 @@ def test_stateful_resources_parse_compile_and_plan_in_dependency_order():
         "generated_artifacts.indexer-certs"
     )
     assert requirements["provision.persistent-volume.indexer-data"].explicitness.value == "exact"
+
+
+def test_ssh_artifact_output_selection_survives_compile_and_plan():
+    scenario = _ssh_scenario(
+        outputs="""
+        - {name: private-key, path: id_ed25519, sensitivity: secret, disposition: producer_private}
+        - {name: public-key, path: id_ed25519.pub, sensitivity: public, disposition: consumer_selected}
+        - {name: authorized-keys, path: authorized_keys, sensitivity: restricted, disposition: consumer_selected}
+        """,
+        consumers="""
+        - node: producer
+          mount_destination: /run/raes/ssh
+          access_mode: read_only
+          selected_outputs: [public-key]
+        - node: client
+          mount_destination: /home/operator/.ssh
+          access_mode: read_only
+          selected_outputs: [authorized-keys]
+        """,
+    )
+
+    artifact = scenario.generated_artifacts["access"]
+    assert artifact.generator.value == "ssh_key_bundle"
+    assert artifact.outputs[0].disposition.value == "producer_private"
+    assert artifact.consumers[1].selected_outputs == ["authorized-keys"]
+
+    execution = plan(compile_runtime_model(scenario), create_stub_manifest())
+    payload = execution.provisioning.resources["provision.generated-artifact.access"].payload["spec"]
+    assert payload["outputs"][0]["disposition"] == "producer_private"
+    assert payload["consumers"][0]["selected_outputs"] == ["public-key"]
+    assert payload["consumers"][1]["selected_outputs"] == ["authorized-keys"]
+
+
+@pytest.mark.parametrize(
+    ("outputs", "consumers", "message"),
+    [
+        (
+            "- {name: public-key, path: id.pub, sensitivity: public, disposition: consumer_selected}",
+            """
+            - node: client
+              mount_destination: /home/operator/.ssh
+              access_mode: read_only
+            """,
+            "SSH generated artifact consumers must select at least one output",
+        ),
+        (
+            "- {name: public-key, path: id.pub, sensitivity: public, disposition: consumer_selected}",
+            """
+            - node: client
+              mount_destination: /home/operator/.ssh
+              access_mode: read_only
+              selected_outputs: [public-key, public-key]
+            """,
+            "selected_outputs must be unique",
+        ),
+        (
+            "- {name: public-key, path: id.pub, sensitivity: public, disposition: consumer_selected}",
+            """
+            - node: client
+              mount_destination: /home/operator/.ssh
+              access_mode: read_only
+              selected_outputs: [missing]
+            """,
+            "unknown generated artifact output",
+        ),
+        (
+            "- {name: private-key, path: id, sensitivity: secret, disposition: producer_private}",
+            """
+            - node: client
+              mount_destination: /home/operator/.ssh
+              access_mode: read_only
+              selected_outputs: [private-key]
+            """,
+            "producer-private generated artifact output",
+        ),
+        (
+            """
+            - {name: public-key, path: id.pub, sensitivity: public, disposition: consumer_selected}
+            - {name: authorized-keys, path: authorized_keys, sensitivity: restricted, disposition: consumer_selected}
+            """,
+            """
+            - node: client
+              mount_destination: /home/operator/.ssh
+              access_mode: read_only
+              selected_outputs: [public-key]
+            """,
+            "each consumer-selected SSH output must be selected",
+        ),
+    ],
+)
+def test_ssh_artifact_rejects_invalid_output_selection(
+    outputs: str,
+    consumers: str,
+    message: str,
+):
+    with pytest.raises(SDLParseError, match=message):
+        _ssh_scenario(outputs=outputs, consumers=consumers)
+
+
+def test_legacy_generated_artifacts_keep_implicit_all_non_private_outputs():
+    artifact = _scenario().generated_artifacts["indexer-certs"]
+
+    assert artifact.consumers[0].selected_outputs == []
+
+
+def test_planner_rejects_ssh_artifact_when_backend_does_not_claim_kind_support():
+    scenario = _ssh_scenario(
+        outputs="- {name: public-key, path: id.pub, sensitivity: public, disposition: consumer_selected}",
+        consumers="""
+        - node: client
+          mount_destination: /home/operator/.ssh
+          access_mode: read_only
+          selected_outputs: [public-key]
+        """,
+    )
+    manifest = create_stub_manifest()
+    limited = replace(
+        manifest,
+        capabilities=replace(
+            manifest.capabilities,
+            provisioner=replace(
+                manifest.provisioner,
+                supported_generated_artifact_kinds=frozenset({"certificate_bundle", "rendered_config"}),
+            ),
+        ),
+    )
+
+    execution = plan(compile_runtime_model(scenario), limited)
+
+    assert "provisioner.unsupported-generated-artifact-kind" in {
+        diagnostic.code for diagnostic in execution.diagnostics
+    }
 
 
 @pytest.mark.parametrize(

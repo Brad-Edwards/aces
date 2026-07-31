@@ -2,9 +2,9 @@
   "contract_id": "sdl-authoring-input-v1",
   "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
   "stability": "draft",
-  "content_hash": "d4594b2c04283d95378faec2f64343870e8756f09a5a04a8746c6d8ccd56a270",
+  "content_hash": "25bfc6002b12b44a3ed943309c18aa15f8968937021ced7f165051fa1fe82b26",
   "last_change": {
-    "summary": "Added composable provider-neutral platform capabilities and marked legacy platform categories and content manifests deprecated for issue #956.",
-    "content_hash": "d4594b2c04283d95378faec2f64343870e8756f09a5a04a8746c6d8ccd56a270"
+    "summary": "Added SSH generated artifacts with per-output consumer selection and producer-private output declarations for issue #1010.",
+    "content_hash": "25bfc6002b12b44a3ed943309c18aa15f8968937021ced7f165051fa1fe82b26"
   }
 }

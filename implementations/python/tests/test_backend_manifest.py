@@ -105,6 +105,11 @@ def test_backend_manifest_v2_roundtrip_from_stub_manifest():
     assert model.compatibility.model_dump(mode="json") == {"processors": ["raes-reference-processor"]}
     assert model.supported_contract_versions == EXPECTED_SUPPORTED_CONTRACT_VERSIONS_V2
     assert model.capabilities.orchestrator is not None
+    assert model.capabilities.provisioner.supported_generated_artifact_kinds == [
+        "certificate_bundle",
+        "rendered_config",
+        "ssh_key_bundle",
+    ]
     assert model.capabilities.orchestrator.supported_workflow_features == [
         WorkflowFeature.CALL,
         WorkflowFeature.CANCELLATION,
@@ -120,6 +125,35 @@ def test_backend_manifest_v2_roundtrip_from_stub_manifest():
     roundtrip = model.model_dump(mode="json")
     roundtrip.pop("realization_envelope", None)
     assert roundtrip == payload
+
+
+def test_generated_artifact_capability_requires_explicit_kind_support():
+    manifest = create_stub_manifest()
+    provisioner = manifest.provisioner
+
+    with pytest.raises(ValueError, match="must declare supported_generated_artifact_kinds"):
+        replace(provisioner, supported_generated_artifact_kinds=frozenset())
+
+    with pytest.raises(ValueError, match="require supports_generated_artifacts=True"):
+        replace(
+            provisioner,
+            supports_generated_artifacts=False,
+            supported_generated_artifact_kinds=frozenset({"rendered_config"}),
+        )
+
+
+def test_backend_manifest_v2_rejects_contradictory_generated_artifact_capabilities():
+    payload = backend_manifest_payload(create_stub_manifest())
+    provisioner = payload["capabilities"]["provisioner"]
+
+    provisioner["supported_generated_artifact_kinds"] = []
+    with pytest.raises(ValidationError, match="must declare supported_generated_artifact_kinds"):
+        BackendManifestV2Model.model_validate(payload)
+
+    provisioner["supports_generated_artifacts"] = False
+    provisioner["supported_generated_artifact_kinds"] = ["rendered_config"]
+    with pytest.raises(ValidationError, match="require supports_generated_artifacts=true"):
+        BackendManifestV2Model.model_validate(payload)
 
 
 def test_coordinated_reset_manifest_claim_requires_participant_runtime_capabilities():

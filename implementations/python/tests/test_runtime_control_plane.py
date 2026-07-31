@@ -347,14 +347,43 @@ class _CountingProvisioner:
         return self._delegate.apply(provisioning_plan, snapshot)
 
 
-def _stateful_plan(resource_type: str = "generated-artifact") -> ProvisioningPlan:
+def _generated_artifact_spec(generator: str = "rendered_config") -> dict[str, Any]:
+    selected_outputs = ["config"] if generator == "ssh_key_bundle" else []
+    return {
+        "generator": generator,
+        "lifecycle": "regenerate_on_change",
+        "provenance": "config.yml",
+        "outputs": [
+            {
+                "name": "config",
+                "path": "config.yml",
+                "sensitivity": "restricted",
+                "disposition": "consumer_selected",
+            }
+        ],
+        "consumers": [
+            {
+                "node": "vm",
+                "mount_destination": "/etc/config.yml",
+                "access_mode": "read_only",
+                "selected_outputs": selected_outputs,
+            }
+        ],
+    }
+
+
+def _stateful_plan(
+    resource_type: str = "generated-artifact",
+    *,
+    spec: dict[str, Any] | None = None,
+) -> ProvisioningPlan:
     return ProvisioningPlan(
         operations=[
             ProvisionOp(
                 action=ChangeAction.CREATE,
                 address=f"provision.{resource_type}.config",
                 resource_type=resource_type,
-                payload={"spec": {"provenance": "config.yml"}},
+                payload={"spec": spec if spec is not None else _generated_artifact_spec()},
             )
         ]
     )
@@ -397,11 +426,14 @@ def test_control_plane_rejects_stateful_kind_before_backend_calls(
     expected_code: str,
 ) -> None:
     manifest = create_stub_manifest()
+    capability_changes: dict[str, Any] = {capability_attribute: False}
+    if capability_attribute == "supports_generated_artifacts":
+        capability_changes["supported_generated_artifact_kinds"] = frozenset()
     unsupported = replace(
         manifest,
         capabilities=replace(
             manifest.capabilities,
-            provisioner=replace(manifest.provisioner, **{capability_attribute: False}),
+            provisioner=replace(manifest.provisioner, **capability_changes),
         ),
     )
     target, provisioner = _target_with_manifest(unsupported)
@@ -426,6 +458,56 @@ def test_control_plane_rejects_stateful_plan_without_exact_realization_support()
 
     assert receipt.accepted is False
     assert [diagnostic.code for diagnostic in receipt.diagnostics] == ["realization.unsupported-exact-requirement"]
+    assert provisioner.validate_calls == 0
+    assert provisioner.apply_calls == 0
+
+
+def test_control_plane_rejects_malformed_generated_artifact_before_backend_calls() -> None:
+    target, provisioner = _target_with_manifest(create_stub_manifest())
+
+    receipt = RuntimeControlPlane(target).submit_provisioning(_stateful_plan(spec={"provenance": "config.yml"}))
+
+    assert receipt.accepted is False
+    assert [diagnostic.code for diagnostic in receipt.diagnostics] == ["provisioner.generated-artifact-invalid"]
+    assert provisioner.validate_calls == 0
+    assert provisioner.apply_calls == 0
+
+
+def test_control_plane_rejects_mismatched_generated_artifact_consumer_target() -> None:
+    target, provisioner = _target_with_manifest(create_stub_manifest())
+    spec = _generated_artifact_spec()
+    spec["consumers"][0]["target_address"] = "provision.node.somewhere-else"
+
+    receipt = RuntimeControlPlane(target).submit_provisioning(_stateful_plan(spec=spec))
+
+    assert receipt.accepted is False
+    assert [diagnostic.code for diagnostic in receipt.diagnostics] == ["provisioner.generated-artifact-invalid"]
+    assert provisioner.validate_calls == 0
+    assert provisioner.apply_calls == 0
+
+
+def test_control_plane_rejects_unclaimed_generated_artifact_kind_before_backend_calls() -> None:
+    manifest = create_stub_manifest()
+    unsupported = replace(
+        manifest,
+        capabilities=replace(
+            manifest.capabilities,
+            provisioner=replace(
+                manifest.provisioner,
+                supported_generated_artifact_kinds=frozenset({"certificate_bundle", "rendered_config"}),
+            ),
+        ),
+    )
+    target, provisioner = _target_with_manifest(unsupported)
+
+    receipt = RuntimeControlPlane(target).submit_provisioning(
+        _stateful_plan(spec=_generated_artifact_spec("ssh_key_bundle"))
+    )
+
+    assert receipt.accepted is False
+    assert [diagnostic.code for diagnostic in receipt.diagnostics] == [
+        "provisioner.unsupported-generated-artifact-kind"
+    ]
     assert provisioner.validate_calls == 0
     assert provisioner.apply_calls == 0
 

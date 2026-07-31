@@ -578,6 +578,16 @@
       "title": "EvaluatorCapabilitiesModel",
       "type": "object"
     },
+    "GeneratedArtifactKind": {
+      "description": "Portable kinds of material a provisioner may generate.",
+      "enum": [
+        "certificate_bundle",
+        "rendered_config",
+        "ssh_key_bundle"
+      ],
+      "title": "GeneratedArtifactKind",
+      "type": "string"
+    },
     "LiteralBindingValueModel": {
       "additionalProperties": false,
       "description": "Portable literal value; strict type validation occurs at its descriptor.",
@@ -1745,6 +1755,47 @@
               }
             }
           }
+        },
+        {
+          "if": {
+            "properties": {
+              "supports_generated_artifacts": {
+                "const": true
+              }
+            },
+            "required": [
+              "supports_generated_artifacts"
+            ]
+          },
+          "then": {
+            "properties": {
+              "supported_generated_artifact_kinds": {
+                "minItems": 1
+              }
+            },
+            "required": [
+              "supported_generated_artifact_kinds"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "supports_generated_artifacts": {
+                "const": false
+              }
+            },
+            "required": [
+              "supports_generated_artifacts"
+            ]
+          },
+          "then": {
+            "properties": {
+              "supported_generated_artifact_kinds": {
+                "maxItems": 0
+              }
+            }
+          }
         }
       ],
       "properties": {
@@ -1796,6 +1847,14 @@
           },
           "title": "Supported Domain Profiles",
           "type": "array"
+        },
+        "supported_generated_artifact_kinds": {
+          "items": {
+            "$ref": "#/$defs/GeneratedArtifactKind"
+          },
+          "title": "Supported Generated Artifact Kinds",
+          "type": "array",
+          "uniqueItems": true
         },
         "supported_node_types": {
           "items": {

@@ -2,9 +2,9 @@
   "contract_id": "backend-manifest-v2",
   "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
   "stability": "draft",
-  "content_hash": "5408003b0a05176661342b87b9f17116b4f1a4fd687153a3813dce33f8dec064",
+  "content_hash": "7e06ba616016427041748dc998ba53ce214e35e400501fb883316a797b6d9426",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "5408003b0a05176661342b87b9f17116b4f1a4fd687153a3813dce33f8dec064"
+    "summary": "Added explicit per-kind generated-artifact capability declarations for issue #1010.",
+    "content_hash": "7e06ba616016427041748dc998ba53ce214e35e400501fb883316a797b6d9426"
   }
 }
