@@ -79,7 +79,7 @@ def test_participant_backend_contracts_are_published_closed_world():
         assert contract_id in generated
         schema = generated[contract_id]
         assert schema["$schema"] == "https://json-schema.org/draft/2020-12/schema"
-        assert schema["$id"] == f"https://raesystem.github.io/rae/schemas/{contract_id}.json"
+        assert schema["$id"] == f"https://openrae.github.io/rae/schemas/{contract_id}.json"
         assert schema["additionalProperties"] is False
 
 

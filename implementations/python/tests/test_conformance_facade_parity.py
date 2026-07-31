@@ -26,6 +26,8 @@ _PUBLIC_EXPORTS = {
     "BackendProfileSelector",
     "ConformanceCaseResult",
     "backend_conformance_report_payload",
+    "contract_payload_root",
+    "contract_validation_strength",
     "fixtures_root",
     "observability_evidence_conformance_diagnostics",
     "profile_for_manifest",
@@ -33,6 +35,7 @@ _PUBLIC_EXPORTS = {
     "required_contracts",
     "run_fixture_suite",
     "run_target_conformance",
+    "supported_contract_ids",
     "validate_contract_payload",
 }
 
@@ -50,6 +53,9 @@ _PUBLIC_ORIGINS = {
     "run_fixture_suite": fixture_suite,
     "profile_for_manifest": target,
     "run_target_conformance": target,
+    "contract_payload_root": validators,
+    "contract_validation_strength": validators,
+    "supported_contract_ids": validators,
     "validate_contract_payload": validators,
 }
 

@@ -2,9 +2,9 @@
   "contract_id": "experiment-study-v1",
   "schema_path": "contracts/schemas/experiment-core/experiment-study-v1.json",
   "stability": "draft",
-  "content_hash": "d6ae5d441175cd494a93dfd3f9e39456af600689e72948e73291d99db9c83a06",
+  "content_hash": "4f636c963fa250a9eddc2cc8747d8b2ed30f88f992dccdf4eb6a93da894b879b",
   "last_change": {
-    "summary": "Added explicit difficulty condition and policy allocation with adaptive-study validity treatment for issue #784.",
-    "content_hash": "d6ae5d441175cd494a93dfd3f9e39456af600689e72948e73291d99db9c83a06"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "4f636c963fa250a9eddc2cc8747d8b2ed30f88f992dccdf4eb6a93da894b879b"
   }
 }

@@ -1,6 +1,6 @@
 # Participant-Crossing Bisimulation Design
 
-Issue [#811](https://github.com/RAESystem/rae/issues/811) selects one bounded,
+Issue [#811](https://github.com/OpenRAE/rae/issues/811) selects one bounded,
 genuine bisimulation target and makes its machine-checkable result mandatory
 downstream.
 

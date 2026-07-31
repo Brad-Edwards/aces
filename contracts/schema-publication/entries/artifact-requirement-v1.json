@@ -2,9 +2,9 @@
   "contract_id": "artifact-requirement-v1",
   "schema_path": "contracts/schemas/artifact-requirements/artifact-requirement-v1.json",
   "stability": "draft",
-  "content_hash": "bb4850500da9d100689a9a4e486f5922234cf3032e16788f9d2e7be755edb8ea",
+  "content_hash": "4da2377a47f875b510e855389ece3664d6c6802d7dbabef74a998225df61c9a4",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "bb4850500da9d100689a9a4e486f5922234cf3032e16788f9d2e7be755edb8ea"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "4da2377a47f875b510e855389ece3664d6c6802d7dbabef74a998225df61c9a4"
   }
 }

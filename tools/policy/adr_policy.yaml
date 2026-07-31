@@ -218,6 +218,7 @@ module_boundaries:
           - raes_operations.cross_backend_corpus
           - raes_operations.techvault_live
         raes_processor:
+          - raes_processor.compiler
           - raes_processor.exploit_path
           - raes_processor.manifest
           - raes_processor.models

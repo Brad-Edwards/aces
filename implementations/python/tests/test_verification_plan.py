@@ -18,6 +18,7 @@ from tools.verification_plan import (  # noqa: E402
     ChangeRecord,
     collect_git_changes,
     plan_for_changes,
+    select_changed_python_tests,
 )
 
 
@@ -98,6 +99,20 @@ def test_mixed_prose_and_source_changes_take_the_highest_risk_plan() -> None:
 
     assert plan.contracts
     assert plan.regression
+
+
+def test_precommit_selects_only_directly_changed_pytest_modules() -> None:
+    selected = select_changed_python_tests(
+        [
+            "tools/isabelle_tool.py",
+            "implementations/python/tests/helpers.py",
+            "implementations/python/tests/test_issue_963_participant_opacity_proof.py",
+            "implementations/python/tests/test_issue_963_participant_opacity_proof.py",
+            "implementations/python/tests/test_contract.json",
+        ]
+    )
+
+    assert selected == ["implementations/python/tests/test_issue_963_participant_opacity_proof.py"]
 
 
 def test_evidence_prefix_matching_respects_directory_boundaries() -> None:

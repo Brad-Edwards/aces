@@ -74,14 +74,13 @@ class ExperimentStudyModel(ContractModel):
 
     @model_validator(mode="after")
     def _validate_claim_bearing_study(self) -> ExperimentStudyModel:
-        from ..behavioral_relations import load_behavioral_relation_catalog, validate_behavioral_claim_binding
+        from ..behavioral_relations import validate_behavioral_claim_binding
 
-        catalog = load_behavioral_relation_catalog()
         relation_ids = [claim.relation_id for claim in self.behavioral_claims]
         if len(relation_ids) != len(set(relation_ids)):
             raise ValueError("study behavioral claim relation ids must be unique")
         for claim in self.behavioral_claims:
-            validate_behavioral_claim_binding(claim, catalog)
+            validate_behavioral_claim_binding(claim)
         if self.run_allocation is not None:
             self._validate_run_allocation_blocking_factors(self.run_allocation)
             self._validate_run_allocation_condition_assignments(self.run_allocation)

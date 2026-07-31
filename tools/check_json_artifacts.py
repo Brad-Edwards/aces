@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import argparse
+from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 import json
+import os
 import subprocess
 import sys
 
@@ -28,11 +31,19 @@ SCHEMA_DRIVER_PATHS = (
     "implementations/python/packages/raes/",
     "tools/generate_contract_schemas.py",
 )
+JSON_SCHEMA_WORKERS_ENV = "RAES_JSON_SCHEMA_WORKERS"
 
 
 @dataclass(frozen=True)
 class ValidationTarget:
     path: str
+    schema_path: str | None
+    mode: str
+
+
+@dataclass(frozen=True)
+class ValidationBatch:
+    paths: tuple[str, ...]
     schema_path: str | None
     mode: str
 
@@ -286,18 +297,52 @@ def _run_check_jsonschema(*args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
-def validate_targets(targets: list[ValidationTarget]) -> list[str]:
-    failures: list[str] = []
+def _validation_batches(targets: list[ValidationTarget]) -> list[ValidationBatch]:
+    metaschema_paths = sorted(target.path for target in targets if target.mode == "metaschema")
+    schema_groups: dict[str, list[str]] = defaultdict(list)
     for target in targets:
-        if target.mode == "metaschema":
-            proc = _run_check_jsonschema("--check-metaschema", target.path)
-        else:
-            assert target.schema_path is not None
-            proc = _run_check_jsonschema("--schemafile", target.schema_path, target.path)
+        if target.mode != "schema":
+            continue
+        assert target.schema_path is not None
+        schema_groups[target.schema_path].append(target.path)
+
+    batches: list[ValidationBatch] = []
+    if metaschema_paths:
+        batches.append(ValidationBatch(tuple(metaschema_paths), None, "metaschema"))
+    batches.extend(
+        ValidationBatch(tuple(sorted(paths)), schema_path, "schema")
+        for schema_path, paths in sorted(schema_groups.items())
+    )
+    return batches
+
+
+def _validate_batch(batch: ValidationBatch) -> subprocess.CompletedProcess[str]:
+    if batch.mode == "metaschema":
+        return _run_check_jsonschema("--check-metaschema", *batch.paths)
+    assert batch.schema_path is not None
+    return _run_check_jsonschema("--schemafile", batch.schema_path, *batch.paths)
+
+
+def validate_targets(targets: list[ValidationTarget]) -> list[str]:
+    batches = _validation_batches(targets)
+    if not batches:
+        return []
+    worker_value = os.environ.get(JSON_SCHEMA_WORKERS_ENV, "4")
+    try:
+        worker_count = int(worker_value)
+    except ValueError as exc:
+        raise ValueError(f"{JSON_SCHEMA_WORKERS_ENV} must be an integer") from exc
+    if worker_count < 1:
+        raise ValueError(f"{JSON_SCHEMA_WORKERS_ENV} must be at least one")
+    with ThreadPoolExecutor(max_workers=min(worker_count, len(batches)), thread_name_prefix="json-schema") as executor:
+        results = list(executor.map(_validate_batch, batches))
+
+    failures: list[str] = []
+    for batch, proc in zip(batches, results, strict=True):
         if proc.returncode == 0:
             continue
         details = proc.stderr.strip() or proc.stdout.strip() or "schema validation failed"
-        failures.append(f"{target.path}: {details}")
+        failures.append(f"{', '.join(batch.paths)}: {details}")
     return failures
 
 

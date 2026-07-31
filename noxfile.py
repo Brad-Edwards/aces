@@ -5,6 +5,7 @@ from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from time import perf_counter
+import os
 import shutil
 import subprocess
 import sys
@@ -24,10 +25,12 @@ from tools.osv_scanner_tool import (
 )
 from tools.tool_versions import PRE_COMMIT_HOOKS_TOOL_SPEC, RUFF_TOOL_SPEC
 from tools.vale_tool import ensure_vale
+from tools.parallel_verification import VerificationLane, run_verification_lanes
 from tools.verification_plan import (
     collect_git_changes,
     plan_for_changes,
     resolve_upstream,
+    select_changed_python_tests,
 )
 
 PROJECT_ROOT = REPO_ROOT / "implementations" / "python"
@@ -82,6 +85,9 @@ TOOLING_TEST_TRIGGER_PREFIXES = (
 EXCLUDED_PREFIXES = ("research/",)
 PRIVATE_KEY_EXCLUDE_PREFIXES = ("implementations/python/tests/",)
 MAX_LARGE_FILE_KB = "500"
+VERIFY_PROJECT_SYNCED_ENV = "RAES_VERIFY_PROJECT_SYNCED"
+VERIFY_COVERAGE_FILE_ENV = "RAES_VERIFY_COVERAGE_FILE"
+JSON_SCHEMA_WORKERS_ENV = "RAES_JSON_SCHEMA_WORKERS"
 
 nox.options.default_venv_backend = "none"
 nox.options.reuse_existing_virtualenvs = True
@@ -171,6 +177,8 @@ def _changed_paths(*, staged: bool = False, base_rev: str | None = None) -> list
 
 
 def _sync_project(session: nox.Session) -> None:
+    if os.environ.get(VERIFY_PROJECT_SYNCED_ENV) == str(os.getppid()):
+        return
     _run(
         session,
         "uv",
@@ -268,6 +276,7 @@ def _run_pytest(
                 "coverage",
                 "report",
                 "--fail-under=50",
+                "--format=total",
                 env=coverage_env,
             )
 
@@ -727,6 +736,14 @@ def _run_contracts(session: nox.Session, reporter: SessionReporter, *args: str) 
     )
 
 
+def _run_participant_opacity_proof(session: nox.Session, reporter: SessionReporter) -> None:
+    reporter.run(
+        "formal proof / participant opacity",
+        lambda: _run_project_python(session, "tools/check_participant_opacity_proof.py"),
+        detail="Isabelle2025-2 :: offline kernel replay",
+    )
+
+
 def _run_lint(session: nox.Session, reporter: SessionReporter) -> None:
     reporter.run(
         "lint / ruff format (project)",
@@ -851,6 +868,35 @@ def _run_integration_tests(
     )
 
 
+def _finalize_parallel_coverage(session: nox.Session, coverage_dir: Path) -> None:
+    coverage_file = coverage_dir / ".coverage"
+    coverage_env = {"COVERAGE_FILE": str(coverage_file)}
+    with session.chdir(PROJECT_ROOT):
+        _run(
+            session,
+            "uv",
+            "run",
+            "--frozen",
+            "coverage",
+            "combine",
+            "--keep",
+            str(coverage_dir),
+            env=coverage_env,
+        )
+        _run(session, "uv", "run", "--frozen", "coverage", "xml", env=coverage_env)
+        _run(
+            session,
+            "uv",
+            "run",
+            "--frozen",
+            "coverage",
+            "report",
+            "--fail-under=50",
+            "--format=total",
+            env=coverage_env,
+        )
+
+
 def _run_docker_integration_tests(session: nox.Session, reporter: SessionReporter) -> None:
     reporter.run(
         "tests / pytest docker integration",
@@ -881,7 +927,12 @@ def _run_osv_scan(session: nox.Session, reporter: SessionReporter, *, gating: bo
     )
 
 
-def _run_docs(session: nox.Session, reporter: SessionReporter) -> None:
+def _run_docs(
+    session: nox.Session,
+    reporter: SessionReporter,
+    *,
+    include_external_links: bool = True,
+) -> None:
     _sync_project(session)
     html_dir = DOCS_BUILD_ROOT / "html"
     linkcheck_dir = DOCS_BUILD_ROOT / "linkcheck"
@@ -951,9 +1002,34 @@ def _run_docs(session: nox.Session, reporter: SessionReporter) -> None:
             str(html_dir),
         ),
     )
+    if include_external_links:
+        reporter.run(
+            "docs / Sphinx link check",
+            lambda: _build("linkcheck", linkcheck_dir),
+            detail=str(PUBLIC_DOCS_ROOT.relative_to(REPO_ROOT)),
+        )
+
+
+def _run_docs_linkcheck(session: nox.Session, reporter: SessionReporter) -> None:
+    _sync_project(session)
+    linkcheck_dir = DOCS_BUILD_ROOT / "linkcheck"
     reporter.run(
-        "docs / Sphinx link check",
-        lambda: _build("linkcheck", linkcheck_dir),
+        "docs / Sphinx external link check",
+        lambda: _run(
+            session,
+            "uv",
+            "run",
+            "--project",
+            str(PROJECT_ROOT),
+            "--frozen",
+            "sphinx-build",
+            "-W",
+            "--keep-going",
+            "-b",
+            "linkcheck",
+            str(PUBLIC_DOCS_ROOT),
+            str(linkcheck_dir),
+        ),
         detail=str(PUBLIC_DOCS_ROOT.relative_to(REPO_ROOT)),
     )
 
@@ -990,6 +1066,17 @@ def contracts(session: nox.Session) -> None:
     reporter = SessionReporter(session, "contracts")
     try:
         _run_contracts(session, reporter, *session.posargs)
+    finally:
+        reporter.summary()
+
+
+@nox.session(name="participant-opacity-proof")
+def participant_opacity_proof(session: nox.Session) -> None:
+    """Replay the pinned, network-isolated SEM-231 mathematical proof."""
+
+    reporter = SessionReporter(session, "participant-opacity-proof")
+    try:
+        _run_participant_opacity_proof(session, reporter)
     finally:
         reporter.summary()
 
@@ -1059,6 +1146,28 @@ def docs(session: nox.Session) -> None:
         reporter.summary()
 
 
+@nox.session(name="docs-local")
+def docs_local(session: nox.Session) -> None:
+    """Run deterministic documentation checks without external HTTP requests."""
+
+    reporter = SessionReporter(session, "docs-local")
+    try:
+        _run_docs(session, reporter, include_external_links=False)
+    finally:
+        reporter.summary()
+
+
+@nox.session(name="docs-links")
+def docs_links(session: nox.Session) -> None:
+    """Check external documentation links; intended for the dedicated CI job."""
+
+    reporter = SessionReporter(session, "docs-links")
+    try:
+        _run_docs_linkcheck(session, reporter)
+    finally:
+        reporter.summary()
+
+
 @nox.session(name="osv_scan")
 def osv_scan(session: nox.Session) -> None:
     """Advisory OSV-Scanner sweep over the Python dependency lockfile (issue #34).
@@ -1082,6 +1191,7 @@ def osv_scan(session: nox.Session) -> None:
 def hook_pre_commit(session: nox.Session) -> None:
     reporter = SessionReporter(session, "hook-pre-commit")
     changed = [Path(arg).as_posix() for arg in session.posargs if not arg.startswith("-")]
+    changed_tests = select_changed_python_tests(changed)
     try:
         _run_hygiene(session, reporter, posargs=changed, default_all_files=False)
         _run_policy(session, reporter, "--staged")
@@ -1091,11 +1201,16 @@ def hook_pre_commit(session: nox.Session) -> None:
         else:
             reporter.skip("contracts / generated schema drift", "no contract-bearing changes")
             reporter.skip("contracts / json artifact validation", "no contract-bearing changes")
-        if _paths_trigger(changed, FULL_TEST_TRIGGER_PREFIXES):
+        if changed_tests:
             reporter.run(
+                "tests / directly changed pytest modules",
+                lambda: _run_pytest(session, *changed_tests, "-q"),
+                detail=" ".join(changed_tests),
+            )
+        elif _paths_trigger(changed, FULL_TEST_TRIGGER_PREFIXES):
+            reporter.skip(
                 "tests / pytest",
-                lambda: _run_pytest(session, "-q"),
-                detail="full implementation test sweep",
+                "no directly changed test module; full regression runs at pre-push and completion",
             )
         elif _paths_trigger(changed, TOOLING_TEST_TRIGGER_PREFIXES):
             reporter.run(
@@ -1179,29 +1294,226 @@ def verify_changed(session: nox.Session) -> None:
         reporter.summary()
 
 
-@nox.session
-def verify(session: nox.Session) -> None:
-    reporter = SessionReporter(session, "verify")
+def _required_coverage_file() -> Path:
+    value = os.environ.get(VERIFY_COVERAGE_FILE_ENV)
+    if not value:
+        raise RuntimeError(f"{VERIFY_COVERAGE_FILE_ENV} is required for an orchestrated coverage lane")
+    return Path(value)
+
+
+@nox.session(name="verify-static-lane")
+def verify_static_lane(session: nox.Session) -> None:
+    """Internal lane for full-tree hygiene, policy, and lint checks."""
+
+    reporter = SessionReporter(session, "verify-static-lane")
+    posargs = list(session.posargs)
+    include_policy = "--include-policy" in posargs
+    if include_policy:
+        posargs.remove("--include-policy")
     try:
         _run_hygiene(
             session,
             reporter,
-            posargs=session.posargs or ["--all-files"],
+            posargs=posargs or ["--all-files"],
             default_all_files=True,
         )
-        _run_policy(session, reporter, *session.posargs)
+        if include_policy:
+            _run_policy(session, reporter, *posargs)
         _run_lint(session, reporter)
-        _run_contracts(session, reporter, *session.posargs)
-        with tempfile.TemporaryDirectory(prefix="raes-coverage-") as coverage_dir:
-            coverage_file = Path(coverage_dir) / ".coverage"
-            _run_tests(session, reporter, coverage_file, finalize_coverage=False)
-            _run_integration_tests(
-                session,
-                reporter,
-                coverage_file=coverage_file,
-                append_coverage=True,
-                finalize_coverage=True,
+    finally:
+        reporter.summary()
+
+
+@nox.session(name="verify-tests-lane")
+def verify_tests_lane(session: nox.Session) -> None:
+    """Internal unit-test lane that emits an independently combinable data file."""
+
+    reporter = SessionReporter(session, "verify-tests-lane")
+    try:
+        _run_tests(
+            session,
+            reporter,
+            _required_coverage_file(),
+            finalize_coverage=False,
+        )
+    finally:
+        reporter.summary()
+
+
+@nox.session(name="verify-integration-lane")
+def verify_integration_lane(session: nox.Session) -> None:
+    """Internal integration lane with coverage isolated from the unit workers."""
+
+    reporter = SessionReporter(session, "verify-integration-lane")
+    try:
+        _run_integration_tests(
+            session,
+            reporter,
+            coverage_file=_required_coverage_file(),
+            append_coverage=False,
+            finalize_coverage=False,
+        )
+    finally:
+        reporter.summary()
+
+
+def _verification_lanes(
+    *,
+    posargs: Sequence[str],
+    coverage_dir: Path,
+    include_policy: bool,
+    cpu_count: int | None = None,
+) -> tuple[VerificationLane, ...]:
+    available_cpus = cpu_count if cpu_count is not None else _available_cpu_count()
+    shared_posargs = tuple(posargs)
+    static_posargs = (("--include-policy",) if include_policy else ()) + shared_posargs
+    return (
+        VerificationLane(
+            name="unit-tests",
+            nox_session="verify-tests-lane",
+            env={
+                VERIFY_COVERAGE_FILE_ENV: str(coverage_dir / ".coverage.unit"),
+                "PYTEST_ADDOPTS": f"-o cache_dir={coverage_dir / 'pytest-unit'}",
+                "PYTEST_XDIST_AUTO_NUM_WORKERS": str(max(1, min(8, available_cpus // 2))),
+            },
+        ),
+        VerificationLane(
+            name="integration-tests",
+            nox_session="verify-integration-lane",
+            env={
+                VERIFY_COVERAGE_FILE_ENV: str(coverage_dir / ".coverage.integration"),
+                "PYTEST_ADDOPTS": f"-o cache_dir={coverage_dir / 'pytest-integration'}",
+            },
+        ),
+        VerificationLane(
+            name="contracts",
+            nox_session="contracts",
+            posargs=shared_posargs,
+            env={JSON_SCHEMA_WORKERS_ENV: str(max(1, min(4, available_cpus // 4)))},
+        ),
+        VerificationLane(
+            name="static",
+            nox_session="verify-static-lane",
+            posargs=static_posargs,
+        ),
+        VerificationLane(
+            name="participant-opacity-proof",
+            nox_session="participant-opacity-proof",
+        ),
+        VerificationLane(
+            name="docs-local",
+            nox_session="docs-local",
+            env={
+                "PYTEST_ADDOPTS": f"-o cache_dir={coverage_dir / 'pytest-docs'}",
+            },
+        ),
+    )
+
+
+def _available_cpu_count() -> int:
+    if hasattr(os, "sched_getaffinity"):
+        try:
+            return max(1, len(os.sched_getaffinity(0)))
+        except OSError:
+            pass
+    return max(1, os.cpu_count() or 1)
+
+
+def _verification_lane_workers(*, cpu_count: int, lane_count: int) -> int:
+    return min(lane_count, 4, max(1, cpu_count // 2))
+
+
+def _run_parallel_verification(
+    session: nox.Session,
+    reporter: SessionReporter,
+    *,
+    include_policy: bool,
+) -> None:
+    reporter.run(
+        "verify / locked project environment",
+        lambda: _sync_project(session),
+        detail="one synchronization shared by all isolated lanes",
+    )
+    reporter.run(
+        "verify / shared policy toolchain",
+        lambda: _run_project_python(
+            session,
+            "-c",
+            "from tools.policy.conftest_tool import ensure_conftest; ensure_conftest()",
+        ),
+        detail="prime checksum-verified Conftest before parallel policy tests",
+    )
+    with tempfile.TemporaryDirectory(prefix="raes-coverage-") as coverage_root:
+        coverage_dir = Path(coverage_root)
+        available_cpus = _available_cpu_count()
+        lanes = _verification_lanes(
+            posargs=session.posargs,
+            coverage_dir=coverage_dir,
+            include_policy=include_policy,
+            cpu_count=available_cpus,
+        )
+        lane_workers = _verification_lane_workers(
+            cpu_count=available_cpus,
+            lane_count=len(lanes),
+        )
+        results = []
+
+        def _execute_lanes() -> None:
+            results.extend(
+                run_verification_lanes(
+                    lanes,
+                    nox_python=Path(sys.executable),
+                    noxfile=Path(__file__).resolve(),
+                    repo_root=REPO_ROOT,
+                    base_env={
+                        VERIFY_PROJECT_SYNCED_ENV: str(os.getpid()),
+                        "PYTHONUNBUFFERED": "1",
+                    },
+                    max_workers=lane_workers,
+                )
             )
-        _run_docs(session, reporter)
+            for result in results:
+                session.log(
+                    f"[verify] lane {result.name}: "
+                    f"{'PASS' if result.returncode == 0 else 'FAIL'} ({result.duration_s:.2f}s)"
+                )
+                if result.output:
+                    print(result.output, end="" if result.output.endswith("\n") else "\n")
+            failures = [result for result in results if result.returncode != 0]
+            if failures:
+                failed = ", ".join(f"{result.name} (exit {result.returncode})" for result in failures)
+                raise RuntimeError(f"parallel verification lanes failed: {failed}")
+
+        reporter.run(
+            "verify / isolated deterministic lanes",
+            _execute_lanes,
+            detail=(
+                "unit, integration, contracts, static, proof, docs-local :: "
+                f"{lane_workers} lane workers on {available_cpus} CPUs"
+            ),
+        )
+        reporter.run(
+            "verify / combined coverage",
+            lambda: _finalize_parallel_coverage(session, coverage_dir),
+            detail="unit + integration data files",
+        )
+
+
+@nox.session
+def verify(session: nox.Session) -> None:
+    reporter = SessionReporter(session, "verify")
+    try:
+        _run_parallel_verification(session, reporter, include_policy=True)
+    finally:
+        reporter.summary()
+
+
+@nox.session(name="verify-completion")
+def verify_completion(session: nox.Session) -> None:
+    """Run the completion graph whose Ground Control pair runs policy next."""
+
+    reporter = SessionReporter(session, "verify-completion")
+    try:
+        _run_parallel_verification(session, reporter, include_policy=False)
     finally:
         reporter.summary()

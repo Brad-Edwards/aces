@@ -18,7 +18,10 @@ permissions:
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    # Ubuntu 24.04 restricts unprivileged user namespaces through AppArmor.
+    # Keep the proof-bearing job on 22.04 so Bubblewrap enforces the sandbox
+    # without disabling a host security control on the runner.
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -28,6 +31,19 @@ jobs:
           python-version: "3.12"
       - name: Install uv
         uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v8
+      - name: Restore pinned Isabelle archive
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: .cache/raes-sdl/tooling/archives/Isabelle2025-2_linux.tar.gz
+          key: isabelle-linux-x86-64-2025-2-a20a507bc7c1270d
+      - name: Install proof sandbox
+        run: |
+          if ! command -v bwrap >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install --no-install-recommends -y bubblewrap
+          fi
+      - name: Acquire pinned Isabelle distribution
+        run: uv run --project implementations/python --frozen python -m tools.isabelle_tool acquire
       - name: Resolve policy base revision
         id: base
         run: |

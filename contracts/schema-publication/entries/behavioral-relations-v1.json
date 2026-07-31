@@ -2,9 +2,9 @@
   "contract_id": "behavioral-relations-v1",
   "schema_path": "contracts/schemas/concept-authority/behavioral-relations-v1.json",
   "stability": "draft",
-  "content_hash": "1385035093e46ffdcca1bd30ce26895e38777493793ee2c7615085c25783be27",
+  "content_hash": "6cbd7886d1acd7158ad5a71b3d8e53d099484db8fc885b0ab90a613fca5de788",
   "last_change": {
-    "summary": "Added revisioned relation-parameter profiles, assurance-axis binding, and independent opacity assurance states for issue #810.",
-    "content_hash": "1385035093e46ffdcca1bd30ce26895e38777493793ee2c7615085c25783be27"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "6cbd7886d1acd7158ad5a71b3d8e53d099484db8fc885b0ab90a613fca5de788"
   }
 }

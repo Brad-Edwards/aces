@@ -2,9 +2,9 @@
   "contract_id": "atlas-tactics-source-v1",
   "schema_path": "contracts/schemas/concept-authority/atlas-tactics-source-v1.json",
   "stability": "draft",
-  "content_hash": "e1aec25898402152581fe442453858dbe0e9398bb6ddb157273c4ce298f9ebee",
+  "content_hash": "23af15f43d41442a62f4f637f4b8a57d76458e6364e65750ba9c2b93d23bbdce",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "e1aec25898402152581fe442453858dbe0e9398bb6ddb157273c4ce298f9ebee"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "23af15f43d41442a62f4f637f4b8a57d76458e6364e65750ba9c2b93d23bbdce"
   }
 }

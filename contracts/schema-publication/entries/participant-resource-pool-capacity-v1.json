@@ -2,9 +2,9 @@
   "contract_id": "participant-resource-pool-capacity-v1",
   "schema_path": "contracts/schemas/participant-runtime/participant-resource-pool-capacity-v1.json",
   "stability": "draft",
-  "content_hash": "7509b853a84876116e1261d134e83c0747321f9bc598b4dc9168790780f57e3f",
+  "content_hash": "b69b63eabb1e3d5cc00b70f132ec7bc2f95fec0f815012733b82420aabe99649",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "7509b853a84876116e1261d134e83c0747321f9bc598b4dc9168790780f57e3f"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "b69b63eabb1e3d5cc00b70f132ec7bc2f95fec0f815012733b82420aabe99649"
   }
 }

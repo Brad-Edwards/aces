@@ -2,9 +2,9 @@
   "contract_id": "realized-time-model-v1",
   "schema_path": "contracts/schemas/time/realized-time-model-v1.json",
   "stability": "draft",
-  "content_hash": "3ce01b4927e0975c48d7398c013ab5624bf6d74dbc04b259d8a9529fd44cca48",
+  "content_hash": "d5822fd84769f2e0596881b8a01eb0bb6ba38461ca24557e68412c382c8015c5",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "3ce01b4927e0975c48d7398c013ab5624bf6d74dbc04b259d8a9529fd44cca48"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "d5822fd84769f2e0596881b8a01eb0bb6ba38461ca24557e68412c382c8015c5"
   }
 }

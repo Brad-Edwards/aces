@@ -2,9 +2,9 @@
   "contract_id": "runtime-snapshot-v1",
   "schema_path": "contracts/schemas/snapshots/runtime-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "90118c15ba4b1cf490b53fa995e16c937d923a45818d859c4cfc8f7485ba833d",
+  "content_hash": "c1accde8189150102e0dff0db79769cc235b52991bb6e496aab3cd6ab4cd41d7",
   "last_change": {
     "summary": "Added first-class append-only participant information-state history for ACT-604 exact-cut records.",
-    "content_hash": "90118c15ba4b1cf490b53fa995e16c937d923a45818d859c4cfc8f7485ba833d"
+    "content_hash": "c1accde8189150102e0dff0db79769cc235b52991bb6e496aab3cd6ab4cd41d7"
   }
 }

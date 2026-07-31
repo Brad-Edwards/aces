@@ -2,9 +2,9 @@
   "contract_id": "behavioral-relation-profile-v1",
   "schema_path": "contracts/schemas/profiles/behavioral-relation-profile-v1.json",
   "stability": "draft",
-  "content_hash": "e01769ee74c94e44e7ae876878f4da5ccd5df72fa5efdbef9767ccae5385bbc5",
+  "content_hash": "b718945e218c75749b7377902e67854ea01c23d4e52e89e504b4c3d4b2d1e4d1",
   "last_change": {
-    "summary": "Published the closed participant-opacity relation profile contract for issue #961.",
-    "content_hash": "e01769ee74c94e44e7ae876878f4da5ccd5df72fa5efdbef9767ccae5385bbc5"
+    "summary": "Added the abstract theorem-carrier variant, encoded carrier joins, and rebound the schema namespace to OpenRAE for issue #963.",
+    "content_hash": "b718945e218c75749b7377902e67854ea01c23d4e52e89e504b4c3d4b2d1e4d1"
   }
 }

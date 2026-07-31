@@ -60,7 +60,8 @@ a session with explicit substages, run sequentially through a
 - `docs` — sphinx-build (added by AUT-805)
 - `verify` — composes hygiene + policy + lint + contracts + tests + docs
 - `hook-pre-commit` — staged-file hygiene + policy + scoped lint +
-  conditional contracts + scoped tests
+  conditional contracts + directly changed test modules (the full regression
+  sweep remains mandatory at pre-push and completion)
 - `hook-pre-push` — full hygiene + policy + lint + contracts + tests +
   fuzz
 
@@ -70,6 +71,11 @@ pre-commit hook invokes `nox -s hook-pre-commit`. All three resolve
 their work through the same per-gate helpers (`_run_hygiene`,
 `_run_policy`, `_run_lint`, `_run_contracts`, `_run_tests`,
 `_run_fuzz`, `_run_docs`).
+
+Ground Control invokes pre-commit against the staged set. It does not add
+`--all-files`: that flag expands the hook input to every repository path,
+defeats staged change classification, and duplicates the full regression work
+that the pre-push and completion boundaries already run.
 
 ### 2. `.pre-commit-config.yaml` is a thin trigger layer, not a parallel definition
 
@@ -204,3 +210,9 @@ absence). nox is the right answer for this repository specifically
 because the verification surface is broad, polyglot at the gate level
 (Python + OPA + gitleaks + Sphinx), and consumed identically from
 local hooks, CI, and ground-control automation.
+
+## Amendments
+
+| Date | Commit/PR | Summary |
+|---|---|---|
+| 2026-07-31 | #963 | Replaced the serial `verify` composition with six isolated, CPU-budgeted concurrent nox lanes, primed shared policy tooling before cold-cache lanes, batched JSON artifacts by shared schema with bounded concurrency, combined unit and integration coverage deterministically, scoped pre-commit to staged changes and directly changed tests without duplicating the mandatory full pre-push/completion regression, and separated network-dependent external-link validation into dedicated docs CI. Ground Control's completion half omits policy because its mechanically enforced policy half runs immediately afterward; direct `verify` and CI retain policy. |

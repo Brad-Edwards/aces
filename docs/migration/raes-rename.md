@@ -13,7 +13,7 @@ does not retain public aliases or dual-name compatibility.
 | Python distribution and imports | `raes` and the owning `raes_*` packages | installed wheel and source-boundary tests |
 | CLI and MCP commands | `raes`, `raes-mcp` | CLI and MCP construction tests |
 | MCP server and tools | RAES server metadata and `raes_*` tool identifiers | advertised-tool and guidance tests |
-| Published schema namespace | `https://raesystem.github.io/rae/schemas/` | generated parity and schema-publication checks |
+| Published schema namespace | `https://openrae.github.io/rae/schemas/` | generated parity and schema-publication checks |
 | Contract/profile identities | RAES contract, profile, annotation, and wire identifiers | contract models, fixtures, JSON Schema validation |
 | Module artifacts | `raes.lock.json`, `raes-trust.yaml`, `.raes/module-cache`, RAES OCI media types and labels | registry, digest, signature, archive, and CLI tests |
 | Runtime and evidence artifacts | RAES schema names, event/status values, evidence ids, and resource names | DTO, fixture, persistence, and backend tests |
@@ -64,6 +64,19 @@ cutover, targeted as 2.0.0.
 Consumers must not guess replacement spellings, mix identities from the two
 release lines, or introduce aliases and fallback reads. The release's schemas,
 fixtures, and migration evidence are the source of truth for the new values.
+
+## GitHub Organization Rename
+
+The GitHub organization was renamed from RAESystem to OpenRAE. Live repository
+configuration, clone URLs, issue links, evidence references, and documentation
+now use `OpenRAE/rae`.
+
+The published schema namespace moved with the organization from
+`https://raesystem.github.io/rae/schemas/` to
+`https://openrae.github.io/rae/schemas/`. Contract ids and schema paths are
+unchanged, but consumers that pin or cache schema `$id` values must update them
+atomically. The repository does not retain a second accepted namespace or a
+fallback reader for the former URI root.
 
 ## Scenario And Environment-Pack Vocabulary
 

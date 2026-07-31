@@ -1,6 +1,6 @@
 # Adversarial Participant Control and Boundary Flow
 
-Issue [#812](https://github.com/RAESystem/rae/issues/812) adopts the
+Issue [#812](https://github.com/OpenRAE/rae/issues/812) adopts the
 participant-neutral lessons from information-flow security and AI-control
 research without adding an LLM-agent framework.
 

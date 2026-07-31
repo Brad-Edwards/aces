@@ -1,0 +1,369 @@
+{
+  "schema_version": "participant-opacity-proof-evidence/repo-v1",
+  "evidence_id": "participant-opacity-proof:sem-231/rev1",
+  "requirements": [
+    "ASR-535",
+    "SEM-231"
+  ],
+  "taxonomy": {
+    "taxonomy_id": "raes-behavioral-relations",
+    "taxonomy_revision": "rev9",
+    "path": "contracts/concept-authority/behavioral-relations-v1.json",
+    "digest": "sha256:ec893a8464f6ddba89e5848c40dccc864ae555f95996d736dbc8f12d56afb971"
+  },
+  "profiles": [
+    {
+      "profile_id": "participant-opacity-theorem-v1",
+      "profile_revision": "sem-231-proof/rev1",
+      "path": "contracts/profiles/behavioral-relation/participant-opacity-theorem-v1.json",
+      "digest": "sha256:646a227f3cda814c666a1463c01e9a52c9dc1a89ec811f728da010ee938113bb"
+    }
+  ],
+  "semantic_sources": [
+    {
+      "requirement": "SEM-230",
+      "revision": "policy-noninterference/current",
+      "path": "specs/formal/participant-semantics/information-flow-control.md",
+      "digest": "sha256:22e56877a1e439acdbe4e7c587e186f2420e06f366a4ab5875daa2bc5d63efb9"
+    },
+    {
+      "requirement": "SEM-231",
+      "revision": "participant-predicate-opacity/rev8-baseline",
+      "path": "specs/formal/participant-semantics/participant-predicate-opacity.md",
+      "digest": "sha256:6916cdadb618df6149d3e8a3ea84f1c422890b50de005686bf15a32e20220c6e"
+    }
+  ],
+  "dependencies": [
+    {
+      "issue": 810,
+      "artifact_revision": "adr-081/accepted",
+      "path": "docs/decisions/adrs/adr-081-behavioral-relation-taxonomy-and-claim-discipline.md",
+      "digest": "sha256:c8e096b85edb7ca97217a8bb0ac74b8817f966b9cf42b66f114dc3a45ed83a90",
+      "evidence_boundary": "The taxonomy and independent assurance axes are authority inputs, not proof premises."
+    },
+    {
+      "issue": 961,
+      "artifact_revision": "participant-opacity-baseline-v1@sem-231/rev2",
+      "path": "contracts/profiles/behavioral-relation/history/participant-opacity-baseline-v1-sem-231-rev2.json",
+      "digest": "sha256:4b6a38cee8d8a80742f03db0e8ef808f505782e18efe315a1439a549faaceace",
+      "evidence_boundary": "The historical finite profile is a regression oracle and is not imported as a theorem premise."
+    },
+    {
+      "issue": 962,
+      "artifact_revision": "participant-opacity-model-check-evidence-v1/rev8",
+      "path": "contracts/fixtures/formal-analysis/participant-opacity-model-check-evidence-v1/valid/opaque-transition-model.json",
+      "digest": "sha256:074a5a57b445426a37209bcc928a0dd1ba72a6b6709f3524aaef0e7b1bb692f7",
+      "evidence_boundary": "The exact finite model-check result is agreement evidence and is not imported as an axiom or proof certificate."
+    }
+  ],
+  "assumptions": [
+    {
+      "assumption_id": "active-same-strategy",
+      "statement": "The active-strategy quantifier is outside each actual-point obligation, and actual, seed, and selected alternative points use the same admitted strategy."
+    },
+    {
+      "assumption_id": "complete-low-history-support",
+      "statement": "SEM-230 policy noninterference supplies a complete equal-initial-information and equal-observation support alternative for every admitted actual point and eligible high variation."
+    },
+    {
+      "assumption_id": "eligible-label-preservation",
+      "statement": "Every alternative selected through the declared High_Match correspondence preserves the seed point's nonsecret predicate label."
+    },
+    {
+      "assumption_id": "eligible-nonsecret-public-class-variation",
+      "statement": "Every protected actual point has a reachable nonsecret high variation in the same public initial-information class and admitted active strategy."
+    },
+    {
+      "assumption_id": "exact-information-cell",
+      "statement": "Knowledge and opacity use exactly the admitted carrier points with the same active strategy, initial public information, and complete accumulated observation."
+    },
+    {
+      "assumption_id": "matching-profile-coordinates",
+      "statement": "The SEM-230 and SEM-231 instances have the same model and carrier, observer and audience, initial information, complete observation, memory, exact cut and horizon, active-strategy domain, supervisor visibility, policy and release schedule, scheduler and environment, nondeterminism support, time and progress, concurrency and order, and probability posture."
+    },
+    {
+      "assumption_id": "reachable-alternative",
+      "statement": "Every nonsecret seed and noninterference-selected witness remains inside the declared reachable carrier."
+    },
+    {
+      "assumption_id": "retained-memory-no-erasure",
+      "statement": "Concealment or revocation does not erase a retained observation; any memory reset would require a separately declared semantic profile."
+    }
+  ],
+  "positive_theorems": [
+    {
+      "theorem_id": "matching_policy_noninterference_implies_participant_opacity",
+      "statement": "For an eligible predicate and exactly matching SEM-230 and SEM-231 profiles, policy noninterference implies participant predicate opacity.",
+      "claim": {
+        "taxonomy_id": "raes-behavioral-relations",
+        "taxonomy_revision": "rev9",
+        "relation_id": "participant-predicate-opacity",
+        "subject": "The conditional implication from a matching SEM-230 policy-noninterference instance to SEM-231 participant-predicate opacity for an eligible predicate.",
+        "left_carrier_ref": "possible-point-carrier:sem-231-abstract-v1",
+        "right_carrier_ref": null,
+        "observation_projection_ref": "participant-opacity-observation:sem-230-complete-support-v1",
+        "observation_projection_revision": "rev1",
+        "relation_parameter_profile_ref": "participant-opacity-theorem-v1",
+        "relation_parameter_profile_revision": "sem-231-proof/rev1",
+        "quantifier_scope": "all-strategies",
+        "evidence_scope": "proof",
+        "assurance_axis": "proof",
+        "evidence_boundary": "Only the abstract theorem profile under every declared matching-profile, eligible-predicate, reachability, support, strategy, release, memory, scheduler, environment, time, order, and probability-posture assumption.",
+        "assurance_status": "proved",
+        "evidence_refs": [
+          "specs/formal/participant-semantics/participant-opacity-proof-evidence.json",
+          "specs/formal/participant-semantics/isabelle/Participant_Opacity.thy",
+          "isabelle-theorem:matching_policy_noninterference_implies_participant_opacity"
+        ],
+        "limitations": [
+          "The implication is conditional on exact profile matching and the eligible-predicate premises.",
+          "No concrete RAES system, runtime, deployment, or backend is instantiated."
+        ],
+        "explicit_non_claims": [
+          "No reverse implication from predicate opacity to policy noninterference.",
+          "No timed, probabilistic, quantitative, coalition, all-linearization, partial-order, progress-sensitive, runtime-enforcement, supervisor-synthesis, backend-realization, or backend-conformance result."
+        ]
+      }
+    },
+    {
+      "theorem_id": "participant_opacity_kernel",
+      "statement": "SEM-231 one-sided active participant opacity holds exactly when every admitted actual secret point has a nonsecret point in its exact information cell under the same strategy.",
+      "claim": {
+        "taxonomy_id": "raes-behavioral-relations",
+        "taxonomy_revision": "rev9",
+        "relation_id": "participant-predicate-opacity",
+        "subject": "The SEM-231 one-sided active-strategy participant-predicate-opacity kernel over the abstract declared possible-point carrier.",
+        "left_carrier_ref": "possible-point-carrier:sem-231-abstract-v1",
+        "right_carrier_ref": null,
+        "observation_projection_ref": "participant-opacity-observation:sem-230-complete-support-v1",
+        "observation_projection_revision": "rev1",
+        "relation_parameter_profile_ref": "participant-opacity-theorem-v1",
+        "relation_parameter_profile_revision": "sem-231-proof/rev1",
+        "quantifier_scope": "all-strategies",
+        "evidence_scope": "proof",
+        "assurance_axis": "proof",
+        "evidence_boundary": "Only the abstract one-sided possibilistic, untimed, progress-insensitive, individual-observer, total-order theorem profile and its exact information-cell definition.",
+        "assurance_status": "proved",
+        "evidence_refs": [
+          "specs/formal/participant-semantics/participant-opacity-proof-evidence.json",
+          "specs/formal/participant-semantics/isabelle/Participant_Opacity.thy",
+          "isabelle-theorem:participant_opacity_kernel"
+        ],
+        "limitations": [
+          "The carrier and semantic functions are abstract and parameterized.",
+          "No concrete RAES system, runtime, deployment, or backend is instantiated."
+        ],
+        "explicit_non_claims": [
+          "No symmetric opacity or guarantee for learning that the predicate is false.",
+          "No timed, probabilistic, quantitative, coalition, all-linearization, partial-order, progress-sensitive, runtime-enforcement, supervisor-synthesis, backend-realization, or backend-conformance result."
+        ]
+      }
+    },
+    {
+      "theorem_id": "participant_opacity_knowledge_characterization",
+      "statement": "SEM-231 participant opacity is equivalent to the absence of knowledge that the protected one-sided predicate is true at every admitted actual secret point.",
+      "claim": {
+        "taxonomy_id": "raes-behavioral-relations",
+        "taxonomy_revision": "rev9",
+        "relation_id": "participant-predicate-opacity",
+        "subject": "The knowledge characterization of SEM-231 one-sided participant-predicate opacity over the exact information cell.",
+        "left_carrier_ref": "possible-point-carrier:sem-231-abstract-v1",
+        "right_carrier_ref": null,
+        "observation_projection_ref": "participant-opacity-observation:sem-230-complete-support-v1",
+        "observation_projection_revision": "rev1",
+        "relation_parameter_profile_ref": "participant-opacity-theorem-v1",
+        "relation_parameter_profile_revision": "sem-231-proof/rev1",
+        "quantifier_scope": "all-strategies",
+        "evidence_scope": "proof",
+        "assurance_axis": "proof",
+        "evidence_boundary": "Only knowledge defined by subset containment over the exact same-strategy information cell, whose reflexivity and factivity are separately kernel-checked.",
+        "assurance_status": "proved",
+        "evidence_refs": [
+          "specs/formal/participant-semantics/participant-opacity-proof-evidence.json",
+          "specs/formal/participant-semantics/isabelle/Participant_Opacity.thy",
+          "isabelle-theorem:participant_opacity_knowledge_characterization"
+        ],
+        "limitations": [
+          "The characterization is one-sided and permits knowledge that the predicate is false.",
+          "No arbitrary accessibility relation is assumed to be an information cell."
+        ],
+        "explicit_non_claims": [
+          "Epistemic indistinguishability is information-cell membership and is not itself opacity.",
+          "No timed, probabilistic, quantitative, coalition, all-linearization, partial-order, progress-sensitive, runtime-enforcement, supervisor-synthesis, backend-realization, or backend-conformance result."
+        ]
+      }
+    }
+  ],
+  "supporting_theorems": [
+    {
+      "theorem_id": "information_cell_reflexive",
+      "statement": "Every admitted point using the selected strategy belongs to its own exact information cell."
+    },
+    {
+      "theorem_id": "participant_knowledge_is_factive",
+      "statement": "Knowledge defined over the exact reflexive information cell is factive at every admitted actual point."
+    }
+  ],
+  "negative_theorems": [
+    {
+      "theorem_id": "behavioral_relations_without_preservation_do_not_imply_opacity",
+      "statement": "Equivalence, simulation, and strong bisimulation can hold on a transition carrier while participant opacity fails when no secret- and observation-preservation premise supplies a nonsecret alternative.",
+      "mutation_id": "SEM231-MUT-RELATION-SUBSTITUTION"
+    },
+    {
+      "theorem_id": "declassification_can_change_information_and_knowledge",
+      "statement": "A release observation can split a formerly opaque information cell, establish knowledge, and falsify post-release opacity.",
+      "mutation_id": "SEM231-MUT-DECLASSIFICATION"
+    },
+    {
+      "theorem_id": "one_equal_history_pair_is_insufficient",
+      "statement": "One secret/nonsecret equal-observation pair leaves another secret point uncovered and does not satisfy universal participant opacity.",
+      "mutation_id": "SEM231-MUT-ONE-PAIR"
+    },
+    {
+      "theorem_id": "opacity_does_not_imply_policy_noninterference",
+      "statement": "One selected predicate can be opaque while complete policy noninterference fails for another high variation.",
+      "mutation_id": "SEM231-MUT-OPACITY-TO-NONINTERFERENCE"
+    },
+    {
+      "theorem_id": "possibilistic_opacity_does_not_imply_a_probability_bound",
+      "statement": "A possibilistically opaque carrier can assign greater weight to its secret point and therefore supplies no quantitative probability bound.",
+      "mutation_id": "SEM231-MUT-PROBABILITY-PROMOTION"
+    },
+    {
+      "theorem_id": "revocation_does_not_erase_retained_observation",
+      "statement": "A post-revocation profile with retained memory has the same revealing information cell and knowledge as the post-release profile.",
+      "mutation_id": "SEM231-MUT-REVOCATION-MEMORY"
+    },
+    {
+      "theorem_id": "untimed_individual_observation_does_not_imply_stronger_observation_opacity",
+      "statement": "Opacity under a coarse untimed individual observation does not imply opacity under a stronger observation such as timing, fused coalition, progress, or order information.",
+      "mutation_id": "SEM231-MUT-STRONGER-OBSERVATION"
+    }
+  ],
+  "toolchain": {
+    "prover": "Isabelle/HOL",
+    "version": "Isabelle2025-2",
+    "archive_url": "https://www.cl.cam.ac.uk/research/hvg/Isabelle/dist/Isabelle2025-2_linux.tar.gz",
+    "archive_sha256": "sha256:a20a507bc7c1270d8be96a9f3fbec06345387789d2dc2c4d3df6260d47bfb33c",
+    "archive_bytes": 1228480874,
+    "acquire_command": [
+      "uv",
+      "run",
+      "--project",
+      "implementations/python",
+      "--frozen",
+      "python",
+      "-m",
+      "tools.isabelle_tool",
+      "acquire"
+    ],
+    "replay_command": [
+      "uv",
+      "run",
+      "--project",
+      "implementations/python",
+      "--frozen",
+      "python",
+      "-m",
+      "tools.check_participant_opacity_proof"
+    ],
+    "working_directory": ".",
+    "locale": "C.UTF-8",
+    "platform_boundary": "linux-x86_64",
+    "network": "explicit-acquire-only; replay-blocked-by-bubblewrap-network-namespace",
+    "filesystem": "allowlisted-runtime-session-and-private-state-only",
+    "limits": {
+      "wall_seconds": 600,
+      "cpu_seconds": 600,
+      "threads": 2,
+      "max_output_bytes": 65536,
+      "max_file_bytes": 4294967296,
+      "max_address_space_mib_per_process": 32768,
+      "java_max_heap_mib": 2048,
+      "ml_max_heap_mib": 2048,
+      "memory_scope": "per-process-address-space-and-per-runtime-heaps-not-aggregate-tree",
+      "generated_artifact_retention": "none"
+    },
+    "tool_sources": [
+      {
+        "path": "tools/check_participant_opacity_proof.py",
+        "digest": "sha256:21cb9b25a921bb02616d74ee19a9c150e4ddb857a01eccab60fe3d2de30c0554"
+      },
+      {
+        "path": "tools/isabelle_tool.py",
+        "digest": "sha256:5100ea993e91b07bb3ac764642fd6ca110e477882b35aba5c49403f314133c85"
+      }
+    ]
+  },
+  "session": {
+    "session_id": "Participant_Opacity",
+    "root_path": "specs/formal/participant-semantics/isabelle/ROOT",
+    "root_digest": "sha256:9b1646b56177b1129fffe9a72d44ebf257b0695e446b215ac3eab06fbebcd87e",
+    "theory_path": "specs/formal/participant-semantics/isabelle/Participant_Opacity.thy",
+    "theory_digest": "sha256:0d7d268ebabb41ce7f13d167b47e54285ccd10d53f93f0357e4d23f552ee414d",
+    "imports": [
+      "Main"
+    ],
+    "forbidden_features": [
+      "axiomatization",
+      "axioms",
+      "nitpick",
+      "oops",
+      "oracle",
+      "quick_and_dirty",
+      "skip_proofs",
+      "sorry"
+    ],
+    "generated_artifacts": []
+  },
+  "kernel_result": {
+    "prover": "Isabelle/HOL",
+    "prover_version": "Isabelle2025-2",
+    "session": "Participant_Opacity",
+    "result": "kernel-checked",
+    "network": "blocked-by-bubblewrap-network-namespace",
+    "filesystem": "allowlisted-runtime-session-and-private-state-only",
+    "locale": "C.UTF-8",
+    "platform_boundary": "linux-x86_64",
+    "result_digest": "sha256:6ad5778c78667a992cca5b958ebc0764f8880115de4ac2f99f22ec6883400325"
+  },
+  "independent_reproduction": {
+    "command": [
+      "uv",
+      "run",
+      "--project",
+      "implementations/python",
+      "--frozen",
+      "python",
+      "-m",
+      "tools.check_participant_opacity_proof"
+    ],
+    "working_directory": ".",
+    "result": {
+      "prover": "Isabelle/HOL",
+      "prover_version": "Isabelle2025-2",
+      "session": "Participant_Opacity",
+      "result": "kernel-checked",
+      "network": "blocked-by-bubblewrap-network-namespace",
+      "filesystem": "allowlisted-runtime-session-and-private-state-only",
+      "locale": "C.UTF-8",
+      "platform_boundary": "linux-x86_64",
+      "result_digest": "sha256:6ad5778c78667a992cca5b958ebc0764f8880115de4ac2f99f22ec6883400325"
+    },
+    "reproduced_on": "2026-07-31"
+  },
+  "limitations": [
+    "The proof is parameterized over abstract possible points and semantic functions and is conditional on the declared matching-profile and eligible-predicate assumptions.",
+    "The proof does not establish correspondence between the Isabelle definitions and the Python bounded or finite-state model-checking implementation.",
+    "Memory limits are per-process virtual address space and per-runtime Java and ML heaps; they are not aggregate process-tree or cgroup accounting.",
+    "The proof profile is one-sided, possibilistic, untimed, progress-insensitive, active-strategy, individual-observer, and total-order."
+  ],
+  "explicit_non_claims": [
+    "No opacity claim for RAES as a whole, RUN-319, a concrete runtime, deployment, participant, supervisor, policy instance, or backend.",
+    "No reverse implication from predicate opacity to policy noninterference, and no universal result from one equal-history pair.",
+    "No erasure of retained knowledge through concealment, revocation, reset, rollback, or supersession.",
+    "No automatic implication from epistemic indistinguishability, trace equivalence, simulation, refinement, or bisimulation without separately proved secret, reachability, and observation preservation.",
+    "No symmetric, timed, probabilistic, quantitative, coalition, all-linearization, partial-order, progress-sensitive, runtime-enforcement, supervisor-synthesis, backend-declaration, backend-realization, or backend-conformance result."
+  ]
+}

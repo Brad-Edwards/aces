@@ -61,10 +61,10 @@ _NON_CLAIMS: tuple[str, ...] = (
 )
 
 _LINKS: dict[str, str] = {
-    "issue": "RAESystem/rae#600",
-    "authored_scenario_issue": "RAESystem/rae#598",
-    "libvirt_participant_runtime": "RAESystem/rae#614",
-    "libvirt_evidence": "RAESystem/rae#615",
+    "issue": "OpenRAE/rae#600",
+    "authored_scenario_issue": "OpenRAE/rae#598",
+    "libvirt_participant_runtime": "OpenRAE/rae#614",
+    "libvirt_evidence": "OpenRAE/rae#615",
     "aptl_evidence": "Brad-Edwards/aptl#558",
 }
 

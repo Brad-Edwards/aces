@@ -1,5 +1,63 @@
 {
   "$defs": {
+    "AbstractOpacityCarrierModel": {
+      "additionalProperties": false,
+      "description": "An abstract carrier whose proof obligations are discharged by a theorem session.",
+      "properties": {
+        "correspondence_ref": {
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9._:/-]*$",
+          "title": "Correspondence Ref",
+          "type": "string"
+        },
+        "correspondence_revision": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9][a-z0-9._/-]*$",
+          "title": "Correspondence Revision",
+          "type": "string"
+        },
+        "eligibility_ref": {
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9._:/-]*$",
+          "title": "Eligibility Ref",
+          "type": "string"
+        },
+        "eligibility_revision": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9][a-z0-9._/-]*$",
+          "title": "Eligibility Revision",
+          "type": "string"
+        },
+        "kind": {
+          "const": "abstract-possible-points",
+          "title": "Kind",
+          "type": "string"
+        },
+        "reachability_ref": {
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9._:/-]*$",
+          "title": "Reachability Ref",
+          "type": "string"
+        },
+        "reachability_revision": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9][a-z0-9._/-]*$",
+          "title": "Reachability Revision",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "reachability_ref",
+        "reachability_revision",
+        "eligibility_ref",
+        "eligibility_revision",
+        "correspondence_ref",
+        "correspondence_revision"
+      ],
+      "title": "AbstractOpacityCarrierModel",
+      "type": "object"
+    },
     "ActiveOpacityStrategyModel": {
       "additionalProperties": false,
       "properties": {
@@ -100,6 +158,35 @@
       "title": "CoalitionOpacityObserverModel",
       "type": "object"
     },
+    "FiniteOpacityCarrierModel": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "finite-possible-points",
+          "title": "Kind",
+          "type": "string"
+        },
+        "reachability_ref": {
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9._:/-]*$",
+          "title": "Reachability Ref",
+          "type": "string"
+        },
+        "reachability_revision": {
+          "maxLength": 128,
+          "pattern": "^[a-z0-9][a-z0-9._/-]*$",
+          "title": "Reachability Revision",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "reachability_ref",
+        "reachability_revision"
+      ],
+      "title": "FiniteOpacityCarrierModel",
+      "type": "object"
+    },
     "IndividualOpacityObserverModel": {
       "additionalProperties": false,
       "description": "One participant or audience observes the selected information cell.",
@@ -128,35 +215,6 @@
         "audience_ref"
       ],
       "title": "IndividualOpacityObserverModel",
-      "type": "object"
-    },
-    "OpacityCarrierModel": {
-      "additionalProperties": false,
-      "properties": {
-        "kind": {
-          "const": "finite-possible-points",
-          "title": "Kind",
-          "type": "string"
-        },
-        "reachability_ref": {
-          "maxLength": 256,
-          "pattern": "^[a-z][a-z0-9._:/-]*$",
-          "title": "Reachability Ref",
-          "type": "string"
-        },
-        "reachability_revision": {
-          "maxLength": 128,
-          "pattern": "^[a-z0-9][a-z0-9._/-]*$",
-          "title": "Reachability Revision",
-          "type": "string"
-        }
-      },
-      "required": [
-        "kind",
-        "reachability_ref",
-        "reachability_revision"
-      ],
-      "title": "OpacityCarrierModel",
       "type": "object"
     },
     "OpacityFiniteBoundsModel": {
@@ -550,13 +608,93 @@
     },
     "ParticipantPredicateOpacityParametersModel": {
       "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "carrier": {
+                "properties": {
+                  "kind": {
+                    "const": "finite-possible-points"
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              }
+            },
+            "required": [
+              "carrier"
+            ]
+          },
+          "then": {
+            "properties": {
+              "bounds": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "bounds"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "carrier": {
+                "properties": {
+                  "kind": {
+                    "const": "abstract-possible-points"
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              }
+            },
+            "required": [
+              "carrier"
+            ]
+          },
+          "then": {
+            "properties": {
+              "bounds": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ],
       "description": "Closed parameters for the SEM-231 one-sided possibilistic kernel.",
       "properties": {
         "bounds": {
-          "$ref": "#/$defs/OpacityFiniteBoundsModel"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OpacityFiniteBoundsModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "carrier": {
-          "$ref": "#/$defs/OpacityCarrierModel"
+          "discriminator": {
+            "mapping": {
+              "abstract-possible-points": "#/$defs/AbstractOpacityCarrierModel",
+              "finite-possible-points": "#/$defs/FiniteOpacityCarrierModel"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/FiniteOpacityCarrierModel"
+            },
+            {
+              "$ref": "#/$defs/AbstractOpacityCarrierModel"
+            }
+          ],
+          "title": "Carrier"
         },
         "environment_refs": {
           "items": {
@@ -672,8 +810,7 @@
         "nondeterminism",
         "order",
         "time",
-        "probability",
-        "bounds"
+        "probability"
       ],
       "title": "ParticipantPredicateOpacityParametersModel",
       "type": "object"
@@ -694,9 +831,77 @@
       "type": "object"
     }
   },
-  "$id": "https://raesystem.github.io/rae/schemas/behavioral-relation-profile-v1.json",
+  "$id": "https://openrae.github.io/rae/schemas/behavioral-relation-profile-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "parameters": {
+            "properties": {
+              "carrier": {
+                "properties": {
+                  "kind": {
+                    "const": "finite-possible-points"
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              }
+            },
+            "required": [
+              "carrier"
+            ]
+          }
+        },
+        "required": [
+          "parameters"
+        ]
+      },
+      "then": {
+        "properties": {
+          "finite_analysis_scope": {
+            "const": "declared-complete-finite-carrier"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "parameters": {
+            "properties": {
+              "carrier": {
+                "properties": {
+                  "kind": {
+                    "const": "abstract-possible-points"
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              }
+            },
+            "required": [
+              "carrier"
+            ]
+          }
+        },
+        "required": [
+          "parameters"
+        ]
+      },
+      "then": {
+        "properties": {
+          "finite_analysis_scope": {
+            "const": "abstract-parameterized-theorem-carrier"
+          }
+        }
+      }
+    }
+  ],
   "description": "One resolved relation profile with a closed parameter variant.",
   "properties": {
     "explicit_non_claims": {
@@ -710,7 +915,10 @@
       "type": "array"
     },
     "finite_analysis_scope": {
-      "const": "declared-complete-finite-carrier",
+      "enum": [
+        "declared-complete-finite-carrier",
+        "abstract-parameterized-theorem-carrier"
+      ],
       "title": "Finite Analysis Scope",
       "type": "string"
     },
@@ -842,6 +1050,6 @@
     "id": "raes-semantic-invariants-v1",
     "keyword": "x-raes-invariants",
     "required": true,
-    "uri": "https://raesystem.github.io/rae/schemas/semantic-invariants/v1"
+    "uri": "https://openrae.github.io/rae/schemas/semantic-invariants/v1"
   }
 }
