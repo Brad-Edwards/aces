@@ -217,7 +217,8 @@ def test_source_contracts_use_canonical_structural_conformance(
 
 def _load_source_checker():
     spec = importlib.util.spec_from_file_location("check_autonomous_behavior_vocabularies", CHECKER_PATH)
-    assert spec is not None and spec.loader is not None
+    assert spec is not None
+    assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
