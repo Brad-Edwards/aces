@@ -1208,10 +1208,9 @@ def hook_pre_commit(session: nox.Session) -> None:
                 detail=" ".join(changed_tests),
             )
         elif _paths_trigger(changed, FULL_TEST_TRIGGER_PREFIXES):
-            reporter.run(
+            reporter.skip(
                 "tests / pytest",
-                lambda: _run_pytest(session, "-q"),
-                detail="full implementation test sweep",
+                "no directly changed test module; full regression runs at pre-push and completion",
             )
         elif _paths_trigger(changed, TOOLING_TEST_TRIGGER_PREFIXES):
             reporter.run(

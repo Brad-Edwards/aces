@@ -60,8 +60,8 @@ a session with explicit substages, run sequentially through a
 - `docs` — sphinx-build (added by AUT-805)
 - `verify` — composes hygiene + policy + lint + contracts + tests + docs
 - `hook-pre-commit` — staged-file hygiene + policy + scoped lint +
-  conditional contracts + directly changed test modules (falling back to the
-  full regression sweep for implementation changes without a focused test)
+  conditional contracts + directly changed test modules (the full regression
+  sweep remains mandatory at pre-push and completion)
 - `hook-pre-push` — full hygiene + policy + lint + contracts + tests +
   fuzz
 
@@ -215,4 +215,4 @@ local hooks, CI, and ground-control automation.
 
 | Date | Commit/PR | Summary |
 |---|---|---|
-| 2026-07-31 | #963 | Replaced the serial `verify` composition with six isolated, CPU-budgeted concurrent nox lanes, primed shared policy tooling before cold-cache lanes, batched JSON artifacts by shared schema with bounded concurrency, combined unit and integration coverage deterministically, scoped pre-commit to staged changes and directly changed tests, and separated network-dependent external-link validation into dedicated docs CI. Ground Control's completion half omits policy because its mechanically enforced policy half runs immediately afterward; direct `verify` and CI retain policy. |
+| 2026-07-31 | #963 | Replaced the serial `verify` composition with six isolated, CPU-budgeted concurrent nox lanes, primed shared policy tooling before cold-cache lanes, batched JSON artifacts by shared schema with bounded concurrency, combined unit and integration coverage deterministically, scoped pre-commit to staged changes and directly changed tests without duplicating the mandatory full pre-push/completion regression, and separated network-dependent external-link validation into dedicated docs CI. Ground Control's completion half omits policy because its mechanically enforced policy half runs immediately afterward; direct `verify` and CI retain policy. |
