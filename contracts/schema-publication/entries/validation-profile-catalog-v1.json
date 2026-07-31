@@ -2,9 +2,9 @@
   "contract_id": "validation-profile-catalog-v1",
   "schema_path": "contracts/schemas/profiles/validation-profile-catalog-v1.json",
   "stability": "draft",
-  "content_hash": "235bd271397f4a8ab51422bfe8cb570610e0f82177a0197bb10e1f743c03349b",
+  "content_hash": "c50f1016add26f899a29b7ba822c7f21b2be7514c949d8736bfc7e33a6464bd5",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "235bd271397f4a8ab51422bfe8cb570610e0f82177a0197bb10e1f743c03349b"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "c50f1016add26f899a29b7ba822c7f21b2be7514c949d8736bfc7e33a6464bd5"
   }
 }

@@ -2,9 +2,9 @@
   "contract_id": "backend-manifest-v2",
   "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
   "stability": "draft",
-  "content_hash": "c4746c610e0d9cc8e03bd8db07a79e2cd24b463e06ba9cf7d254db1e586aadae",
+  "content_hash": "4e9f3694ba9be9dff9236ad94b895591f28863f295724d013c243b6d290ae37f",
   "last_change": {
-    "summary": "Aligned supported-value implications with default-false capability flags for issue #1010.",
-    "content_hash": "c4746c610e0d9cc8e03bd8db07a79e2cd24b463e06ba9cf7d254db1e586aadae"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "4e9f3694ba9be9dff9236ad94b895591f28863f295724d013c243b6d290ae37f"
   }
 }

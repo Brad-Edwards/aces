@@ -64,6 +64,10 @@ adrs:
   - id: ADR-014
     path: docs/decisions/adrs/adr-014-nox-as-canonical-verification-graph.md
     pin: 940ce80b1f1d94e3efb4a9f56cb9147d09c9a9dc1453a4977c7a5e194238d708
+    amendments:
+      - date: 2026-07-31
+        ref: "#963"
+        summary: Parallelized deterministic verification and contract batches, and moved external links to dedicated docs CI.
   - id: ADR-015
     path: docs/decisions/adrs/adr-015-sdl-processor-layering-and-source-file-size-cap.md
     pin: bc5038164e535c4d506962e27cee07e720f5c8a77cb17d018dedb3dba927936f
@@ -462,6 +466,9 @@ adrs:
       - date: 2026-07-28
         ref: "#908"
         summary: "Added the generated-release-history record class so bot-maintained release notes pin their classified tail exactly while newly generated content is held to zero retired identity occurrences."
+      - date: 2026-07-31
+        ref: "#963"
+        summary: "Rebound the canonical published-schema URI root to https://openrae.github.io/rae/schemas/ after the GitHub organization was renamed from RAESystem to OpenRAE."
   - id: ADR-098
     path: docs/decisions/adrs/adr-098-portable-artifact-requirement-satisfaction.md
     pin: cabc306d07b60b7d1c62cf85750a57025651e69f55946261e315d772644309e3

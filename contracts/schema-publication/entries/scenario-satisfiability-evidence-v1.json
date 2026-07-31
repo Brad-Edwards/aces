@@ -2,9 +2,9 @@
   "contract_id": "scenario-satisfiability-evidence-v1",
   "schema_path": "contracts/schemas/satisfiability/scenario-satisfiability-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "6f7c80339858c5fa8776261451c1692e3e0ff714eebbf4c40ce0b3efc12e6109",
+  "content_hash": "977cf8fd8ffc88774b570fab03a62cb4e061e2ec16e5e92964ac1d9eea3b9f84",
   "last_change": {
-    "summary": "Propagated SSH generated-artifact output selection semantics into satisfiability evidence for issue #1010.",
-    "content_hash": "6f7c80339858c5fa8776261451c1692e3e0ff714eebbf4c40ce0b3efc12e6109"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "977cf8fd8ffc88774b570fab03a62cb4e061e2ec16e5e92964ac1d9eea3b9f84"
   }
 }

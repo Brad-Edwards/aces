@@ -2,9 +2,9 @@
   "contract_id": "workflow-cancellation-request-v1",
   "schema_path": "contracts/schemas/control-plane/workflow-cancellation-request-v1.json",
   "stability": "draft",
-  "content_hash": "83d992309d63b159214f8580d58366ccd408b5720163771269a810cff40f955d",
+  "content_hash": "50f63d3e9f24a674b7ecc2d8f3a8847e1465d790762319cd47a9ee9477d6295f",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "83d992309d63b159214f8580d58366ccd408b5720163771269a810cff40f955d"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "50f63d3e9f24a674b7ecc2d8f3a8847e1465d790762319cd47a9ee9477d6295f"
   }
 }

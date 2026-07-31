@@ -371,7 +371,7 @@
       "type": "object"
     }
   },
-  "$id": "https://raesystem.github.io/rae/schemas/random-stream-vector-v1.json",
+  "$id": "https://openrae.github.io/rae/schemas/random-stream-vector-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "One canonical cross-language conformance vector case.\n\nComputed independently of the reference engine (a throwaway script that\ncalls the ``blake3`` library directly), so the vector tests do not just\ntest the engine against itself.",
@@ -458,6 +458,6 @@
     "id": "raes-semantic-invariants-v1",
     "keyword": "x-raes-invariants",
     "required": true,
-    "uri": "https://raesystem.github.io/rae/schemas/semantic-invariants/v1"
+    "uri": "https://openrae.github.io/rae/schemas/semantic-invariants/v1"
   }
 }

@@ -152,12 +152,12 @@ semantic equivalence.
 
 ## Downstream Links
 
-- RAES issue: RAESystem/rae#598
-- Participant implementation binding: RAESystem/rae#599
-- RAES n=2 backend proof: RAESystem/rae#600
+- RAES issue: OpenRAE/rae#598
+- Participant implementation binding: OpenRAE/rae#599
+- RAES n=2 backend proof: OpenRAE/rae#600
   (corpus: `examples/corpus/reference-demonstration/`)
-- Libvirt participant runtime: RAESystem/rae#614
-- Libvirt evaluator/Wazuh evidence readback: RAESystem/rae#615
+- Libvirt participant runtime: OpenRAE/rae#614
+- Libvirt evaluator/Wazuh evidence readback: OpenRAE/rae#615
 - APTL realization and proof: Brad-Edwards/aptl#556,
   Brad-Edwards/aptl#557, Brad-Edwards/aptl#558
 

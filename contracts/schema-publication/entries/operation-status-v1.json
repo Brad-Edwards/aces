@@ -2,9 +2,9 @@
   "contract_id": "operation-status-v1",
   "schema_path": "contracts/schemas/control-plane/operation-status-v1.json",
   "stability": "draft",
-  "content_hash": "af7ebde21bd81f5f9c1fffecb77b2a88d609a6215d6bc2e0bedc4c4c722821b3",
+  "content_hash": "179badc2f0bd77a0dd6d81bd17c36075bd5f1a183aa918d8252b79d1ea9c0315",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "af7ebde21bd81f5f9c1fffecb77b2a88d609a6215d6bc2e0bedc4c4c722821b3"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "179badc2f0bd77a0dd6d81bd17c36075bd5f1a183aa918d8252b79d1ea9c0315"
   }
 }

@@ -1,6 +1,6 @@
 # Participant Information-Flow And Control Implementation Program
 
-Parent: [#794](https://github.com/RAESystem/rae/issues/794)
+Parent: [#794](https://github.com/OpenRAE/rae/issues/794)
 Milestone: `Participant Information-Flow & Behavioral Equivalence`
 Machine-readable gate: [`adoption-program.json`](adoption-program.json)
 
@@ -51,8 +51,8 @@ in parallel when every listed dependency has merged.
 
 | Issue | UID | Bounded outcome |
 | --- | --- | --- |
-| [#796](https://github.com/RAESystem/rae/issues/796) | SEM-230 | Revisioned policy, labels, projections, IFC relation dimensions, and explicit nonclaims. |
-| [#251](https://github.com/RAESystem/rae/issues/251) | ACT-617 | Authored controller/authority state and mixed-control transitions. |
+| [#796](https://github.com/OpenRAE/rae/issues/796) | SEM-230 | Revisioned policy, labels, projections, IFC relation dimensions, and explicit nonclaims. |
+| [#251](https://github.com/OpenRAE/rae/issues/251) | ACT-617 | Authored controller/authority state and mixed-control transitions. |
 
 Wave 0 does not implement runtime mediation or claim proof. It fixes the
 meaning that later artifacts implement.
@@ -61,10 +61,10 @@ meaning that later artifacts implement.
 
 | Issue | UID | Bounded outcome |
 | --- | --- | --- |
-| [#294](https://github.com/RAESystem/rae/issues/294) | SEM-219 | Governed tool/affordance bindings distinct from apparatus support. |
-| [#295](https://github.com/RAESystem/rae/issues/295) | SEM-220 | Participant-local decision-surface projection and selection meaning. |
-| [#296](https://github.com/RAESystem/rae/issues/296) | SEM-226 | Time-indexed exposure, withholding, declassification/redaction, transformation, and realized evidence. |
-| [#797](https://github.com/RAESystem/rae/issues/797) | DSL-142 | Participant-directed inject addressee/delivery semantics while preserving DSL-111 identity. |
+| [#294](https://github.com/OpenRAE/rae/issues/294) | SEM-219 | Governed tool/affordance bindings distinct from apparatus support. |
+| [#295](https://github.com/OpenRAE/rae/issues/295) | SEM-220 | Participant-local decision-surface projection and selection meaning. |
+| [#296](https://github.com/OpenRAE/rae/issues/296) | SEM-226 | Time-indexed exposure, withholding, declassification/redaction, transformation, and realized evidence. |
+| [#797](https://github.com/OpenRAE/rae/issues/797) | DSL-142 | Participant-directed inject addressee/delivery semantics while preserving DSL-111 identity. |
 
 Every issue reuses safe parsing, closed models, semantic validation,
 instantiation, compiler addresses, concept authority, and schema publication.
@@ -74,8 +74,8 @@ Environment injects remain outside participant ingress.
 
 | Issue | UID | Bounded outcome |
 | --- | --- | --- |
-| [#252](https://github.com/RAESystem/rae/issues/252) | API-409 | External proposal, approval/denial, direction, intervention, handoff, override, and cancellation records. |
-| [#798](https://github.com/RAESystem/rae/issues/798) | API-423 | Common crossing policy-decision, transformation, disposition, evidence, and provenance refs. |
+| [#252](https://github.com/OpenRAE/rae/issues/252) | API-409 | External proposal, approval/denial, direction, intervention, handoff, override, and cancellation records. |
+| [#798](https://github.com/OpenRAE/rae/issues/798) | API-423 | Common crossing policy-decision, transformation, disposition, evidence, and provenance refs. |
 
 These issues compose API-406/ADR-054 carriers; they do not add a transport or
 generic payload. Each published schema requires valid/invalid fixtures,
@@ -86,9 +86,9 @@ parity, and consumer tests.
 
 | Issue | UID | Bounded outcome |
 | --- | --- | --- |
-| [#801](https://github.com/RAESystem/rae/issues/801) | API-407 | Governed backend feature support, strength, limitation, disclosure, and evidence. |
-| [#255](https://github.com/RAESystem/rae/issues/255) | RUN-310 | Secure, ordered, idempotent, append-only supervisory lifecycle. |
-| [#799](https://github.com/RAESystem/rae/issues/799) | RUN-319 | Deny-first reference-runtime crossing enforcement, persistence, audit, and evidence. |
+| [#801](https://github.com/OpenRAE/rae/issues/801) | API-407 | Governed backend feature support, strength, limitation, disclosure, and evidence. |
+| [#255](https://github.com/OpenRAE/rae/issues/255) | RUN-310 | Secure, ordered, idempotent, append-only supervisory lifecycle. |
+| [#799](https://github.com/OpenRAE/rae/issues/799) | RUN-319 | Deny-first reference-runtime crossing enforcement, persistence, audit, and evidence. |
 
 Runtime work reuses `ParticipantControlMixin`, SEM-211 admission,
 observation/projection incumbents, `RuntimeSnapshot`, `ControlPlaneStore`,
@@ -103,7 +103,7 @@ stronger claim.
 
 | Issue | UID | Bounded outcome |
 | --- | --- | --- |
-| [#800](https://github.com/RAESystem/rae/issues/800) | ASR-535 | Negative leakage/declassification cases, exact relation bindings, bounded formal evidence, and adversarial backend conformance. |
+| [#800](https://github.com/OpenRAE/rae/issues/800) | ASR-535 | Negative leakage/declassification cases, exact relation bindings, bounded formal evidence, and adversarial backend conformance. |
 
 This wave reuses `BackendConformanceReport`, existing fixture/target runners,
 the behavioral-relation catalog, and `BehavioralClaimBindingModel`. Every
@@ -115,8 +115,8 @@ Finite evidence retains finite scope.
 
 | Issue | UIDs | Bounded outcome |
 | --- | --- | --- |
-| [#802](https://github.com/RAESystem/rae/issues/802) | SEM-230, API-423, RUN-319 | ADR-061 compatibility classification, staged adoption/rollback, and legacy fixtures without silent strengthening. |
-| [#803](https://github.com/RAESystem/rae/issues/803) | SEM-230, API-423, RUN-319 | Author, operator, backend, participant-implementation, and research guidance grounded in shipped authority/evidence. |
+| [#802](https://github.com/OpenRAE/rae/issues/802) | SEM-230, API-423, RUN-319 | ADR-061 compatibility classification, staged adoption/rollback, and legacy fixtures without silent strengthening. |
+| [#803](https://github.com/OpenRAE/rae/issues/803) | SEM-230, API-423, RUN-319 | Author, operator, backend, participant-implementation, and research guidance grounded in shipped authority/evidence. |
 
 Legacy absence is legacy/unknown/unsupported according to the migration
 profile; it is never evidence of exact policy enforcement or noninterference.
@@ -127,20 +127,20 @@ evidence.
 
 | Order | Issue | Requirement authority | Work class | Direct prerequisites |
 | ---: | --- | --- | --- | --- |
-| 1 | [#796](https://github.com/RAESystem/rae/issues/796) | SEM-230 | semantic authority | #794 merged |
-| 2 | [#251](https://github.com/RAESystem/rae/issues/251) | ACT-617 | semantic authority | #796 |
-| 3 | [#294](https://github.com/RAESystem/rae/issues/294) | SEM-219 | SDL/semantic binding | #796 |
-| 4 | [#295](https://github.com/RAESystem/rae/issues/295) | SEM-220 | decision-surface contract/projection | #796, #294 |
-| 5 | [#296](https://github.com/RAESystem/rae/issues/296) | SEM-226 | exposure enforcement | #796, #295 |
-| 6 | [#797](https://github.com/RAESystem/rae/issues/797) | DSL-142 | participant-directed injects | #796 |
-| 7 | [#252](https://github.com/RAESystem/rae/issues/252) | API-409 | external-input/intervention contracts | #796, #251 |
-| 8 | [#798](https://github.com/RAESystem/rae/issues/798) | API-423 | crossing decision/evidence contracts | #796, #296, #252, #797 |
-| 9 | [#255](https://github.com/RAESystem/rae/issues/255) | RUN-310 | supervisory runtime | #251, #252 |
-| 10 | [#801](https://github.com/RAESystem/rae/issues/801) | API-407 | backend capability | #798 |
-| 11 | [#799](https://github.com/RAESystem/rae/issues/799) | RUN-319 | runtime enforcement/evidence | #798, #801, #255, #296 |
-| 12 | [#800](https://github.com/RAESystem/rae/issues/800) | ASR-535 | assurance/conformance | #796, #799, #801 |
-| 13 | [#802](https://github.com/RAESystem/rae/issues/802) | SEM-230, API-423, RUN-319 | migration | #799, #800 |
-| 14 | [#803](https://github.com/RAESystem/rae/issues/803) | SEM-230, API-423, RUN-319 | documentation | #802, #800 |
+| 1 | [#796](https://github.com/OpenRAE/rae/issues/796) | SEM-230 | semantic authority | #794 merged |
+| 2 | [#251](https://github.com/OpenRAE/rae/issues/251) | ACT-617 | semantic authority | #796 |
+| 3 | [#294](https://github.com/OpenRAE/rae/issues/294) | SEM-219 | SDL/semantic binding | #796 |
+| 4 | [#295](https://github.com/OpenRAE/rae/issues/295) | SEM-220 | decision-surface contract/projection | #796, #294 |
+| 5 | [#296](https://github.com/OpenRAE/rae/issues/296) | SEM-226 | exposure enforcement | #796, #295 |
+| 6 | [#797](https://github.com/OpenRAE/rae/issues/797) | DSL-142 | participant-directed injects | #796 |
+| 7 | [#252](https://github.com/OpenRAE/rae/issues/252) | API-409 | external-input/intervention contracts | #796, #251 |
+| 8 | [#798](https://github.com/OpenRAE/rae/issues/798) | API-423 | crossing decision/evidence contracts | #796, #296, #252, #797 |
+| 9 | [#255](https://github.com/OpenRAE/rae/issues/255) | RUN-310 | supervisory runtime | #251, #252 |
+| 10 | [#801](https://github.com/OpenRAE/rae/issues/801) | API-407 | backend capability | #798 |
+| 11 | [#799](https://github.com/OpenRAE/rae/issues/799) | RUN-319 | runtime enforcement/evidence | #798, #801, #255, #296 |
+| 12 | [#800](https://github.com/OpenRAE/rae/issues/800) | ASR-535 | assurance/conformance | #796, #799, #801 |
+| 13 | [#802](https://github.com/OpenRAE/rae/issues/802) | SEM-230, API-423, RUN-319 | migration | #799, #800 |
+| 14 | [#803](https://github.com/OpenRAE/rae/issues/803) | SEM-230, API-423, RUN-319 | documentation | #802, #800 |
 
 ## Program-wide acceptance and evidence rules
 

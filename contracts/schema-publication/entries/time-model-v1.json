@@ -2,9 +2,9 @@
   "contract_id": "time-model-v1",
   "schema_path": "contracts/schemas/time/time-model-v1.json",
   "stability": "draft",
-  "content_hash": "09d8427a8ec52e44c9d078ba3de889b0fed8812ef0a509ab8a462668d3d6d8cd",
+  "content_hash": "8f841395f73353187ce02675013f845f21ece360ee68cba22ce9b07968e635a5",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "09d8427a8ec52e44c9d078ba3de889b0fed8812ef0a509ab8a462668d3d6d8cd"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "8f841395f73353187ce02675013f845f21ece360ee68cba22ce9b07968e635a5"
   }
 }

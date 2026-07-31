@@ -2,9 +2,9 @@
   "contract_id": "time-runtime-state-v1",
   "schema_path": "contracts/schemas/time/time-runtime-state-v1.json",
   "stability": "draft",
-  "content_hash": "a5806e28394dc8722100f3cc6277e8f3ccbcc943724824f204fcfed1f2413bd3",
+  "content_hash": "87649655830e48eadd8151b2da4fa7e8f20a46261a141ab626fc77cb5f4172db",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "a5806e28394dc8722100f3cc6277e8f3ccbcc943724824f204fcfed1f2413bd3"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "87649655830e48eadd8151b2da4fa7e8f20a46261a141ab626fc77cb5f4172db"
   }
 }

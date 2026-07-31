@@ -204,3 +204,9 @@ absence). nox is the right answer for this repository specifically
 because the verification surface is broad, polyglot at the gate level
 (Python + OPA + gitleaks + Sphinx), and consumed identically from
 local hooks, CI, and ground-control automation.
+
+## Amendments
+
+| Date | Commit/PR | Summary |
+|---|---|---|
+| 2026-07-31 | #963 | Replaced the serial `verify` composition with six isolated, CPU-budgeted concurrent nox lanes, batched JSON artifacts by shared schema with bounded concurrency, combined unit and integration coverage deterministically after both lanes pass, and separated network-dependent external-link validation into the dedicated docs CI graph. Ground Control's completion half omits policy because its mechanically enforced policy half runs immediately afterward; direct `verify` and CI retain policy. |

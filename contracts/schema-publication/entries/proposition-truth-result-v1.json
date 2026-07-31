@@ -2,9 +2,9 @@
   "contract_id": "proposition-truth-result-v1",
   "schema_path": "contracts/schemas/control-plane/proposition-truth-result-v1.json",
   "stability": "draft",
-  "content_hash": "25f6100c931dcd7e7eeace7f3900763cd9f283987be542f81d8b11beb601cae4",
+  "content_hash": "92d5321097fe05fda818bc16fceb6f1c7971baebd9dc5b71366f577204654c8a",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "25f6100c931dcd7e7eeace7f3900763cd9f283987be542f81d8b11beb601cae4"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "92d5321097fe05fda818bc16fceb6f1c7971baebd9dc5b71366f577204654c8a"
   }
 }

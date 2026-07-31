@@ -2,9 +2,9 @@
   "contract_id": "trial-cleanup-plan-v1",
   "schema_path": "contracts/schemas/plans/trial-cleanup-plan-v1.json",
   "stability": "draft",
-  "content_hash": "79f389e54ad2ba55824d5311db65b59ea9cf33e92271dafcdc89ccefac0f9cd3",
+  "content_hash": "4425b10f5acf68c364bc35d94d06739ad7ad168419ec0c19d97f603bd5870ab6",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "79f389e54ad2ba55824d5311db65b59ea9cf33e92271dafcdc89ccefac0f9cd3"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "4425b10f5acf68c364bc35d94d06739ad7ad168419ec0c19d97f603bd5870ab6"
   }
 }

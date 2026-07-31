@@ -2,7 +2,7 @@
 
 Date: 2026-07-30
 
-Parent issue: [#812](https://github.com/RAESystem/rae/issues/812)
+Parent issue: [#812](https://github.com/OpenRAE/rae/issues/812)
 
 Milestone: `Participant Information-Flow & Behavioral Equivalence`
 

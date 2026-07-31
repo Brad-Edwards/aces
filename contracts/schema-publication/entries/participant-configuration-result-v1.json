@@ -2,9 +2,9 @@
   "contract_id": "participant-configuration-result-v1",
   "schema_path": "contracts/schemas/participant-implementation-configuration/participant-configuration-result-v1.json",
   "stability": "draft",
-  "content_hash": "efb77c0b57d4c27518ffcb3af618d048cf829cb66f36a68a65a958b8033a5adb",
+  "content_hash": "744f485aa40a45574b8a0a4e5c1141d0edaaeb4bf97b16e4ef8bab8872e5b7d3",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "efb77c0b57d4c27518ffcb3af618d048cf829cb66f36a68a65a958b8033a5adb"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "744f485aa40a45574b8a0a4e5c1141d0edaaeb4bf97b16e4ef8bab8872e5b7d3"
   }
 }

@@ -223,7 +223,7 @@ def _validate_structured_bindings(
             continue
         try:
             binding = BehavioralClaimBindingModel.model_validate(candidate)
-            validate_behavioral_claim_binding(binding, catalog)
+            validate_behavioral_claim_binding(binding)
         except (ValidationError, ValueError) as exc:
             failures.append(
                 PolicyFailure(

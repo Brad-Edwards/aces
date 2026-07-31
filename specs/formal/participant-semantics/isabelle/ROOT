@@ -1,0 +1,4 @@
+session Participant_Opacity = HOL +
+  options [document = false]
+  theories
+    Participant_Opacity

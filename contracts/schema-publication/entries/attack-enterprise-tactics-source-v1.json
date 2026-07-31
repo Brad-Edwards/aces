@@ -2,9 +2,9 @@
   "contract_id": "attack-enterprise-tactics-source-v1",
   "schema_path": "contracts/schemas/concept-authority/attack-enterprise-tactics-source-v1.json",
   "stability": "draft",
-  "content_hash": "7c7dd670f04d92fd1c5f412087ce50c5aed0f4c66abbcf997d926688f46b0cae",
+  "content_hash": "538f1603bb979b0a8bdf7c2f83f47b1a46b86306f925540560ffaacf0e6064d6",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "7c7dd670f04d92fd1c5f412087ce50c5aed0f4c66abbcf997d926688f46b0cae"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "538f1603bb979b0a8bdf7c2f83f47b1a46b86306f925540560ffaacf0e6064d6"
   }
 }

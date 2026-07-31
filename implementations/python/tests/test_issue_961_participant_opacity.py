@@ -12,11 +12,11 @@ from raes_conformance.conformance import _fixture_case_diagnostics
 from raes_contracts.behavioral_relation_profiles import (
     ActiveOpacityStrategyModel,
     BehavioralRelationProfileModel,
-    load_behavioral_relation_profile,
     load_behavioral_relation_profile_from_path,
+    load_behavioral_relation_profile_revision,
 )
 from raes_contracts.behavioral_relations import (
-    load_behavioral_relation_catalog,
+    load_behavioral_relation_catalog_revision,
     validate_behavioral_claim_binding,
 )
 from raes_contracts.contracts import BehavioralClaimBindingModel, schema_bundle
@@ -40,6 +40,7 @@ from raes_processor.participant_opacity import _service as opacity_service
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PROFILE_ID = "participant-opacity-baseline-v1"
+PROFILE_REVISION = "sem-231/rev2"
 PROFILE_PATH = REPO_ROOT / "contracts/profiles/behavioral-relation" / f"{PROFILE_ID}.json"
 
 
@@ -71,11 +72,11 @@ def _claim(**overrides: object) -> BehavioralClaimBindingModel:
 
 
 def _profile_payload() -> dict[str, object]:
-    return load_behavioral_relation_profile(PROFILE_ID).model_dump(mode="json")
+    return load_behavioral_relation_profile_revision(PROFILE_ID, PROFILE_REVISION).model_dump(mode="json")
 
 
 def test_published_profile_closes_every_sem_231_coordinate() -> None:
-    profile = load_behavioral_relation_profile(PROFILE_ID)
+    profile = load_behavioral_relation_profile_revision(PROFILE_ID, PROFILE_REVISION)
 
     assert profile.schema_version == "behavioral-relation-profile/v1"
     assert profile.profile_id == PROFILE_ID
@@ -97,8 +98,8 @@ def test_published_profile_closes_every_sem_231_coordinate() -> None:
 
 
 def test_claim_resolution_joins_catalog_profile_carrier_and_projection() -> None:
-    catalog = load_behavioral_relation_catalog()
-    profile = load_behavioral_relation_profile(PROFILE_ID)
+    catalog = load_behavioral_relation_catalog_revision("rev8")
+    profile = load_behavioral_relation_profile_revision(PROFILE_ID, PROFILE_REVISION)
 
     assert validate_behavioral_claim_binding(_claim(), catalog, profile) == _claim()
 
@@ -222,7 +223,7 @@ def _request(
     profile: BehavioralRelationProfileModel | None = None,
     complete_enumeration: bool = True,
 ) -> tuple[ParticipantOpacityAnalysisInputModel, BehavioralRelationProfileModel]:
-    profile = profile or load_behavioral_relation_profile(PROFILE_ID)
+    profile = profile or load_behavioral_relation_profile_revision(PROFILE_ID, PROFILE_REVISION)
     strategy_refs = {point.strategy_ref for point in points}
     run_refs = {point.run_ref for point in points}
     cut_refs = {point.cut_ref for point in points}

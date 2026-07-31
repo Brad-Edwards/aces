@@ -2,9 +2,9 @@
   "contract_id": "scheduler-isolation-proof-v1",
   "schema_path": "contracts/schemas/control-plane/scheduler-isolation-proof-v1.json",
   "stability": "draft",
-  "content_hash": "f572f0747a2e47026c9d0fa74425235d26b684a10d098482657071866dd496d8",
+  "content_hash": "0534bb270b55f618d3a8272d0356fa79a6e25adfd68eab7107cafb865f406f1b",
   "last_change": {
-    "summary": "Added the governed secret-scope isolation dimension so a bounded-parallelism proof can carry secret-resolution isolation evidence required by SCE-006 (issue #785).",
-    "content_hash": "f572f0747a2e47026c9d0fa74425235d26b684a10d098482657071866dd496d8"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "0534bb270b55f618d3a8272d0356fa79a6e25adfd68eab7107cafb865f406f1b"
   }
 }

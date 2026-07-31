@@ -2,9 +2,9 @@
   "contract_id": "runtime-snapshot-v1",
   "schema_path": "contracts/schemas/snapshots/runtime-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "e6b06f8859f4343fd77803f5c92ffdae2c7d163137ee5348fa4ab914f1e927c2",
+  "content_hash": "81ad3650fab82ddcecc17f9905319243605d3b64168f12cff75e4890c0180018",
   "last_change": {
-    "summary": "Added first-class append-only participant crossing history for RUN-319 enforcement evidence under #799, retaining the repository-owned schema namespace.",
-    "content_hash": "e6b06f8859f4343fd77803f5c92ffdae2c7d163137ee5348fa4ab914f1e927c2"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "81ad3650fab82ddcecc17f9905319243605d3b64168f12cff75e4890c0180018"
   }
 }

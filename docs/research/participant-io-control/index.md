@@ -1,6 +1,6 @@
 # Participant Information-Flow And Control Adoption
 
-Issue [#794](https://github.com/RAESystem/rae/issues/794) assesses and
+Issue [#794](https://github.com/OpenRAE/rae/issues/794) assesses and
 designs the participant-control model. The ordered child work now delivers the
 SEM-230 semantics, API-423 crossing contract, RUN-319 reference-runtime
 boundary, API-407 capability declarations, ASR-535 bounded assurance, and

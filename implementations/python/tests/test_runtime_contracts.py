@@ -127,7 +127,7 @@ def test_closed_world_contract_models_for_runtime_envelopes():
 
     for contract_id, schema in generated.items():
         assert schema["$schema"] == "https://json-schema.org/draft/2020-12/schema"
-        assert schema["$id"].startswith("https://raesystem.github.io/rae/schemas/")
+        assert schema["$id"].startswith("https://openrae.github.io/rae/schemas/")
         validate_raes_semantic_invariant_annotations(contract_id, schema)
 
     assert generated["raes-semantic-invariants-v1"]["additionalProperties"] is False
@@ -176,8 +176,7 @@ def test_experiment_core_schemas_publish_closed_world_contracts():
     study_schema = generated["experiment-study-v1"]
 
     assert (
-        task_schema["x-raes-semantic-profile"]["uri"]
-        == "https://raesystem.github.io/rae/schemas/semantic-invariants/v1"
+        task_schema["x-raes-semantic-profile"]["uri"] == "https://openrae.github.io/rae/schemas/semantic-invariants/v1"
     )
     assert "apparatus-archival-times-rfc3339-valid" in _invariant_ids(apparatus_context_schema)
     assert run_schema["x-raes-semantic-profile"]["required"] is True

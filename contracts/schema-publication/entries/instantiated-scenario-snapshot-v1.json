@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-snapshot-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
   "stability": "draft",
-  "content_hash": "b8881d251f9889bc4ecc07b8bce78ca5d0e5ed72a2af573618c81e235a84004f",
+  "content_hash": "675c4fa16126d8851aa8d84afef447d9ee92bc5c58843ad89e7ae45cb80818f9",
   "last_change": {
-    "summary": "Added SSH generated artifacts with per-output consumer selection and producer-private output declarations for issue #1010.",
-    "content_hash": "b8881d251f9889bc4ecc07b8bce78ca5d0e5ed72a2af573618c81e235a84004f"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "675c4fa16126d8851aa8d84afef447d9ee92bc5c58843ad89e7ae45cb80818f9"
   }
 }
