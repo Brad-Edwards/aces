@@ -4369,7 +4369,7 @@
       "properties": {
         "consumers": {
           "items": {
-            "$ref": "#/$defs/StatefulResourceConsumer"
+            "$ref": "#/$defs/GeneratedArtifactConsumer"
           },
           "minItems": 1,
           "title": "Consumers",
@@ -4432,10 +4432,64 @@
       "title": "GeneratedArtifact",
       "type": "object"
     },
+    "GeneratedArtifactConsumer": {
+      "additionalProperties": false,
+      "description": "A read-only artifact projection selected by output name.",
+      "properties": {
+        "access_mode": {
+          "$ref": "#/$defs/ConsumerAccessMode"
+        },
+        "mount_destination": {
+          "not": {
+            "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Mount Destination",
+          "type": "string"
+        },
+        "node": {
+          "not": {
+            "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Node",
+          "type": "string"
+        },
+        "selected_outputs": {
+          "items": {
+            "allOf": [
+              {
+                "not": {
+                  "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+                }
+              }
+            ],
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            },
+            "pattern": "^[a-z0-9]",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Selected Outputs",
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "node",
+        "mount_destination",
+        "access_mode"
+      ],
+      "title": "GeneratedArtifactConsumer",
+      "type": "object"
+    },
     "GeneratedArtifactKind": {
+      "description": "Portable kinds of material a provisioner may generate.",
       "enum": [
         "certificate_bundle",
-        "rendered_config"
+        "rendered_config",
+        "ssh_key_bundle"
       ],
       "title": "GeneratedArtifactKind",
       "type": "string"
@@ -4452,6 +4506,10 @@
       "additionalProperties": false,
       "description": "One complete output declared by an artifact generator.",
       "properties": {
+        "disposition": {
+          "$ref": "#/$defs/GeneratedArtifactOutputDisposition",
+          "default": "consumer_selected"
+        },
         "name": {
           "allOf": [
             {
@@ -4487,6 +4545,14 @@
       ],
       "title": "GeneratedArtifactOutput",
       "type": "object"
+    },
+    "GeneratedArtifactOutputDisposition": {
+      "enum": [
+        "consumer_selected",
+        "producer_private"
+      ],
+      "title": "GeneratedArtifactOutputDisposition",
+      "type": "string"
     },
     "IdentityDomain": {
       "additionalProperties": false,
@@ -27569,7 +27635,7 @@
   "x-raes-document-phase": "instantiated-scenario",
   "x-raes-invariants": [
     {
-      "description": "Generated artifact output names and paths, consumers, and dependency entries must be unique, and generated artifact consumers must be read-only.",
+      "description": "Generated artifact output names and paths, consumers, and dependency entries must be unique, and generated artifact consumers must be read-only. Explicit selections must name declared consumer-selectable outputs; SSH artifact consumers must select outputs and every consumer-selectable SSH output must be selected.",
       "id": "stateful-generated-artifact-semantics",
       "inputs": [
         {

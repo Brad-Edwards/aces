@@ -3,6 +3,7 @@
 from dataclasses import dataclass, field
 
 from raes_contracts.controlled_vocabularies import validate_controlled_vocabulary_scope_values
+from raes_contracts.vocabulary import GeneratedArtifactKind
 
 PROVISIONER_DOMAIN_PROFILE_SCOPE = "capabilities.provisioner.supported_domain_profiles"
 PROVISIONER_SERVICE_MATERIALIZATION_PROFILE_SCOPE = (
@@ -37,6 +38,7 @@ class ProvisionerCapabilities:
     supports_acls: bool = False
     supports_accounts: bool = False
     supports_generated_artifacts: bool = False
+    supported_generated_artifact_kinds: frozenset[GeneratedArtifactKind] = frozenset()
     supports_persistent_volumes: bool = False
     constraints: dict[str, str] = field(default_factory=dict)
 
@@ -79,6 +81,22 @@ class ProvisionerCapabilities:
         if self.max_total_nodes is not None and self.max_total_nodes < 1:
             raise ValueError("ProvisionerCapabilities.max_total_nodes must be positive when provided")
         _validate_account_support(self)
+        try:
+            normalized_artifact_kinds = frozenset(
+                GeneratedArtifactKind(kind) for kind in self.supported_generated_artifact_kinds
+            )
+        except ValueError as exc:
+            raise ValueError("ProvisionerCapabilities contains an unknown generated artifact kind") from exc
+        object.__setattr__(self, "supported_generated_artifact_kinds", normalized_artifact_kinds)
+        if self.supports_generated_artifacts and not normalized_artifact_kinds:
+            raise ValueError(
+                "ProvisionerCapabilities that support generated artifacts must declare "
+                "supported_generated_artifact_kinds"
+            )
+        if not self.supports_generated_artifacts and normalized_artifact_kinds:
+            raise ValueError(
+                "ProvisionerCapabilities supported_generated_artifact_kinds require supports_generated_artifacts=True"
+            )
 
 
 __all__ = [

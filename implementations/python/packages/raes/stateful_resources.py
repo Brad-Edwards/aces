@@ -6,14 +6,10 @@ from enum import Enum
 from pathlib import PurePosixPath
 
 from pydantic import Field, field_validator, model_validator
+from raes_contracts.vocabulary import GeneratedArtifactKind
 
 from ._base import SDLModel
 from ._identifiers import PortableIdentifier
-
-
-class GeneratedArtifactKind(str, Enum):
-    CERTIFICATE_BUNDLE = "certificate_bundle"
-    RENDERED_CONFIG = "rendered_config"
 
 
 class GeneratedArtifactLifecycle(str, Enum):
@@ -27,6 +23,11 @@ class ResourceSensitivity(str, Enum):
     # Constructed to avoid credential detectors treating this vocabulary value
     # as a hard-coded credential.
     SECRET = "".join(("sec", "ret"))
+
+
+class GeneratedArtifactOutputDisposition(str, Enum):
+    CONSUMER_SELECTED = "consumer_selected"
+    PRODUCER_PRIVATE = "producer_private"
 
 
 class ConsumerAccessMode(str, Enum):
@@ -82,6 +83,7 @@ class GeneratedArtifactOutput(SDLModel):
     name: PortableIdentifier
     path: str
     sensitivity: ResourceSensitivity
+    disposition: GeneratedArtifactOutputDisposition = GeneratedArtifactOutputDisposition.CONSUMER_SELECTED
 
     _contained_path = field_validator("path")(_validate_relative_path)
 
@@ -96,6 +98,66 @@ class StatefulResourceConsumer(SDLModel):
     _contained_mount_destination = field_validator("mount_destination")(_validate_mount_destination)
 
 
+class GeneratedArtifactConsumer(StatefulResourceConsumer):
+    """A read-only artifact projection selected by output name."""
+
+    selected_outputs: list[PortableIdentifier] = Field(
+        default_factory=list,
+        exclude_if=lambda value: not value,
+        min_length=1,
+        json_schema_extra={"uniqueItems": True},
+    )
+
+    @model_validator(mode="after")
+    def _unique_selected_outputs(self) -> GeneratedArtifactConsumer:
+        if len(self.selected_outputs) != len(set(self.selected_outputs)):
+            raise ValueError("generated artifact consumer selected_outputs must be unique")
+        return self
+
+
+def _validate_generated_artifact_identity(artifact: GeneratedArtifact) -> None:
+    names = [output.name for output in artifact.outputs]
+    paths = [output.path for output in artifact.outputs]
+    consumers = [(consumer.node, consumer.mount_destination) for consumer in artifact.consumers]
+    if len(names) != len(set(names)):
+        raise ValueError("generated artifact output names must be unique")
+    if len(paths) != len(set(paths)):
+        raise ValueError("generated artifact output paths must be unique")
+    if len(consumers) != len(set(consumers)):
+        raise ValueError("generated artifact consumers must be unique")
+    if any(consumer.access_mode is ConsumerAccessMode.READ_WRITE for consumer in artifact.consumers):
+        raise ValueError("generated artifact consumers must be read_only")
+
+
+def _selected_generated_artifact_outputs(artifact: GeneratedArtifact) -> set[str]:
+    outputs_by_name = {output.name: output for output in artifact.outputs}
+    selected_output_names: set[str] = set()
+    for consumer in artifact.consumers:
+        if artifact.generator is GeneratedArtifactKind.SSH_KEY_BUNDLE and not consumer.selected_outputs:
+            raise ValueError("SSH generated artifact consumers must select at least one output")
+        for selected_output in consumer.selected_outputs:
+            output = outputs_by_name.get(selected_output)
+            if output is None:
+                raise ValueError("generated artifact consumer selects an unknown generated artifact output")
+            if output.disposition is GeneratedArtifactOutputDisposition.PRODUCER_PRIVATE:
+                raise ValueError(
+                    "generated artifact consumer cannot select a producer-private generated artifact output"
+                )
+            selected_output_names.add(selected_output)
+    return selected_output_names
+
+
+def _validate_ssh_output_selection(artifact: GeneratedArtifact, selected_output_names: set[str]) -> None:
+    if artifact.generator is not GeneratedArtifactKind.SSH_KEY_BUNDLE:
+        return
+    for output in artifact.outputs:
+        if (
+            output.disposition is GeneratedArtifactOutputDisposition.CONSUMER_SELECTED
+            and output.name not in selected_output_names
+        ):
+            raise ValueError("each consumer-selected SSH output must be selected by at least one consumer")
+
+
 class GeneratedArtifact(SDLModel):
     """Desired generated configuration or certificate/key material."""
 
@@ -103,23 +165,15 @@ class GeneratedArtifact(SDLModel):
     lifecycle: GeneratedArtifactLifecycle
     provenance: str = Field(min_length=1)
     outputs: list[GeneratedArtifactOutput] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
-    consumers: list[StatefulResourceConsumer] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
+    consumers: list[GeneratedArtifactConsumer] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
     ordering_dependencies: list[str] = Field(default_factory=list, json_schema_extra={"uniqueItems": True})
     refresh_dependencies: list[str] = Field(default_factory=list, json_schema_extra={"uniqueItems": True})
 
     @model_validator(mode="after")
     def _unique_outputs_and_consumers(self) -> GeneratedArtifact:
-        names = [output.name for output in self.outputs]
-        paths = [output.path for output in self.outputs]
-        consumers = [(consumer.node, consumer.mount_destination) for consumer in self.consumers]
-        if len(names) != len(set(names)):
-            raise ValueError("generated artifact output names must be unique")
-        if len(paths) != len(set(paths)):
-            raise ValueError("generated artifact output paths must be unique")
-        if len(consumers) != len(set(consumers)):
-            raise ValueError("generated artifact consumers must be unique")
-        if any(consumer.access_mode is ConsumerAccessMode.READ_WRITE for consumer in self.consumers):
-            raise ValueError("generated artifact consumers must be read_only")
+        _validate_generated_artifact_identity(self)
+        selected_output_names = _selected_generated_artifact_outputs(self)
+        _validate_ssh_output_selection(self, selected_output_names)
         if len(self.ordering_dependencies) != len(set(self.ordering_dependencies)):
             raise ValueError("generated artifact ordering_dependencies must be unique")
         if len(self.refresh_dependencies) != len(set(self.refresh_dependencies)):
@@ -160,9 +214,11 @@ class PersistentVolume(SDLModel):
 __all__ = (
     "ConsumerAccessMode",
     "GeneratedArtifact",
+    "GeneratedArtifactConsumer",
     "GeneratedArtifactKind",
     "GeneratedArtifactLifecycle",
     "GeneratedArtifactOutput",
+    "GeneratedArtifactOutputDisposition",
     "PersistentVolume",
     "ResourceSensitivity",
     "StatefulResourceConsumer",
