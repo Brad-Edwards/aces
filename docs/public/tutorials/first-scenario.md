@@ -7,7 +7,7 @@ Build on the quickstart file and use the CLI to inspect its current structure.
 Clone the repository when you want the CLI and complete example library:
 
 ```console
-git clone https://github.com/RAESystem/rae.git
+git clone https://github.com/OpenRAE/rae.git
 cd rae
 uv sync --project implementations/python --all-extras --frozen
 ```
@@ -28,7 +28,7 @@ The command does not provision the scenario.
 
 ## Explore a larger scenario
 
-The [scenario collection](https://github.com/RAESystem/rae/tree/main/examples/scenarios)
+The [scenario collection](https://github.com/OpenRAE/rae/tree/main/examples/scenarios)
 contains authored examples with participants, behaviors, objectives, and
 evidence requirements. Check each example's notes before treating it as a
 backend-ready deployment.

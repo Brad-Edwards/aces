@@ -17,9 +17,9 @@ variation, and evidence requirements.
 The published schemas and normative specifications remain the authority for
 accepted fields and meaning:
 
-- [SDL schema](https://github.com/RAESystem/rae/tree/main/contracts/schemas/sdl)
-- [Normative SDL specification](https://github.com/RAESystem/rae/tree/main/specs)
-- [Worked examples](https://github.com/RAESystem/rae/tree/main/examples/scenarios)
+- [SDL schema](https://github.com/OpenRAE/rae/tree/main/contracts/schemas/sdl)
+- [Normative SDL specification](https://github.com/OpenRAE/rae/tree/main/specs)
+- [Worked examples](https://github.com/OpenRAE/rae/tree/main/examples/scenarios)
 
 Read [current limits](../limitations.md) before assuming that a backend can
 realize every valid authored section.
