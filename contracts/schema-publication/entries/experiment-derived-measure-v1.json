@@ -2,9 +2,9 @@
   "contract_id": "experiment-derived-measure-v1",
   "schema_path": "contracts/schemas/experiment-core/experiment-derived-measure-v1.json",
   "stability": "draft",
-  "content_hash": "3ff95c83a82d4cb6c9a9200dcb51331dc7dc553c3914b7800c05ecf3ba9d4fa3",
+  "content_hash": "73d7bfbf2832e37573b29d6aa3420a92386df19efda0596a841e15d65addf24c",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "3ff95c83a82d4cb6c9a9200dcb51331dc7dc553c3914b7800c05ecf3ba9d4fa3"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "73d7bfbf2832e37573b29d6aa3420a92386df19efda0596a841e15d65addf24c"
   }
 }

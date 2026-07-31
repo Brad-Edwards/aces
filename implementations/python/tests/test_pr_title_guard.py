@@ -173,7 +173,7 @@ def test_retired_identity_in_title_is_rejected(title: str) -> None:
     [
         "fix: rework surfaces and interfaces in namespaces",
         "refactor: replace traces with spans",
-        "feat: repoint schema namespace to raesystem.github.io",
+        "feat: repoint schema namespace to openrae.github.io",
     ],
 )
 def test_words_containing_the_retired_token_are_not_matched(title: str) -> None:

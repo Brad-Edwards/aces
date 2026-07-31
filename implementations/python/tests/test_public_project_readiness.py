@@ -42,12 +42,31 @@ def test_scorecard_workflow_is_pinned_least_privilege_and_publishes_sarif() -> N
 def test_best_practices_proposal_is_factual_about_single_maintainer_limits() -> None:
     proposal = json.loads((REPO_ROOT / ".bestpractices.json").read_text(encoding="utf-8"))
 
-    assert proposal["repo_url"] == "https://github.com/RAESystem/rae"
+    assert proposal["repo_url"] == "https://github.com/OpenRAE/rae"
     assert proposal["license"] == "MIT"
     assert proposal["bus_factor_status"] == "Unmet"
     assert proposal["two_person_review_status"] == "Unmet"
     assert "one maintainer" in proposal["bus_factor_justification"].casefold()
     assert "badge" not in proposal
+
+
+def test_live_repository_identity_uses_openrae_owner() -> None:
+    ground_control = yaml.safe_load((REPO_ROOT / ".ground-control.yaml").read_text(encoding="utf-8"))
+    mcp = json.loads((REPO_ROOT / ".mcp.json").read_text(encoding="utf-8"))
+    previous_owner = "RAE" + "System"
+
+    assert ground_control["github_repo"] == "OpenRAE/rae"
+    assert mcp["mcpServers"]["ground-control"]["env"]["GH_REPO"] == "OpenRAE/rae"
+
+    for relative_path in (
+        ".bestpractices.json",
+        ".github/ISSUE_TEMPLATE/config.yml",
+        "CONTRIBUTING.md",
+        "README.md",
+    ):
+        source = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
+        assert f"github.com/{previous_owner}" not in source, relative_path
+        assert f"{previous_owner}/rae" not in source, relative_path
 
 
 def test_publishers_build_only_the_curated_public_source() -> None:

@@ -1,6 +1,6 @@
 # Participant-Relative Opacity And Supervisor Observation Research
 
-Issue: [#810](https://github.com/RAESystem/rae/issues/810)
+Issue: [#810](https://github.com/OpenRAE/rae/issues/810)
 
 Purpose: establish the external primary-literature basis for participant-
 relative opacity before architecture preflight, relation selection, formal
@@ -9,15 +9,19 @@ what must RAES define so that an opacity claim has a precise observer,
 information set, secret, supervisor-visibility model, time/order model, and
 assurance scope?
 
-The result is not a proof that RAES is opaque and not a runtime-enforcement
-claim. It is a design input for a revisioned relation and for bounded child
-work.
+This research record is not a proof that RAES is opaque and is not a runtime-
+enforcement claim. The linked issue #963 artifacts separately prove the
+abstract conditional theorem profile; they instantiate no RAES runtime,
+deployment, participant, or backend.
 
 ## Contents
 
 - [Architecture preflight](../../decisions/issue-810-participant-opacity-preflight.md)
 - [Issue #961 bounded-falsification preflight](../../decisions/issue-961-participant-opacity-bounded-falsification-preflight.md)
 - [Issue #962 finite-state model-check preflight](../../decisions/issue-962-participant-opacity-model-check-preflight.md)
+- [Issue #963 mathematical-proof preflight](../../decisions/issue-963-participant-opacity-proof-preflight.md)
+- [Isabelle/HOL theorem source](../../../specs/formal/participant-semantics/isabelle/Participant_Opacity.thy)
+- [Checked proof evidence](../../../specs/formal/participant-semantics/participant-opacity-proof-evidence.json)
 - [ADR-099](../../decisions/adrs/adr-099-participant-relative-predicate-opacity.md)
 - [Prior art and design criteria](prior-art-and-design-criteria.md) — search
   method, primary and adjacent source findings, relation selection, formal

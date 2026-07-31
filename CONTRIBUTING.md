@@ -26,7 +26,7 @@ Prerequisites:
 Install the locked Python environment:
 
 ```shell
-git clone https://github.com/RAESystem/rae.git
+git clone https://github.com/OpenRAE/rae.git
 cd rae
 uv sync --project implementations/python --all-extras --frozen
 ```

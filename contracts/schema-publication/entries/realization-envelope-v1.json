@@ -2,9 +2,9 @@
   "contract_id": "realization-envelope-v1",
   "schema_path": "contracts/schemas/realization-envelope/realization-envelope-v1.json",
   "stability": "draft",
-  "content_hash": "1f54cfaf7288a61890972527dc44415924c8590a1d40795bea13f8cd0cf1e878",
+  "content_hash": "dbce12f46023384e10b86b62a6d6b5238ccf1b38dbf0be70704cb6d688cca31d",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "1f54cfaf7288a61890972527dc44415924c8590a1d40795bea13f8cd0cf1e878"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "dbce12f46023384e10b86b62a6d6b5238ccf1b38dbf0be70704cb6d688cca31d"
   }
 }

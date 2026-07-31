@@ -11,11 +11,11 @@ from pydantic import ValidationError
 from raes_conformance.conformance import _fixture_case_diagnostics
 from raes_contracts.behavioral_relation_profiles import (
     BehavioralRelationProfileModel,
-    load_behavioral_relation_profile,
+    load_behavioral_relation_profile_revision,
 )
 from raes_contracts.behavioral_relations import (
     BehavioralRelationCatalogModel,
-    load_behavioral_relation_catalog,
+    load_behavioral_relation_catalog_revision,
 )
 from raes_contracts.canonical import canonical_json_digest
 from raes_contracts.contracts.base import BehavioralClaimBindingModel
@@ -46,6 +46,15 @@ from raes_processor.participant_opacity import (
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PROFILE_ID = "participant-opacity-baseline-v1"
+PROFILE_REVISION = "sem-231/rev2"
+
+
+def _historical_profile() -> BehavioralRelationProfileModel:
+    return load_behavioral_relation_profile_revision(PROFILE_ID, PROFILE_REVISION)
+
+
+def _historical_catalog() -> BehavioralRelationCatalogModel:
+    return load_behavioral_relation_catalog_revision("rev8")
 
 
 def _claim(
@@ -165,8 +174,8 @@ def _request(
     BehavioralRelationProfileModel,
     BehavioralRelationCatalogModel,
 ]:
-    profile = profile or load_behavioral_relation_profile(PROFILE_ID)
-    catalog = catalog or load_behavioral_relation_catalog()
+    profile = profile or _historical_profile()
+    catalog = catalog or _historical_catalog()
     counts = ParticipantOpacityModelCheckDeclaredCountsModel(
         states=len(states),
         transitions=len(transitions),
@@ -500,7 +509,7 @@ def test_model_check_evidence_replay_rejects_model_drift() -> None:
 
 
 def test_active_model_checks_every_strategy_and_keeps_witnesses_same_strategy() -> None:
-    profile_payload = load_behavioral_relation_profile(PROFILE_ID).model_dump(mode="json")
+    profile_payload = _historical_profile().model_dump(mode="json")
     profile_payload["parameters"]["strategy"] = {
         "kind": "active",
         "strategy_refs": ["strategy:passive", "strategy:probe"],
@@ -596,7 +605,7 @@ def test_observable_control_memory_and_policy_changes_split_model_cells(
 
 
 def test_coalition_model_uses_fused_observation_instead_of_individual_projection() -> None:
-    profile_payload = load_behavioral_relation_profile(PROFILE_ID).model_dump(mode="json")
+    profile_payload = _historical_profile().model_dump(mode="json")
     profile_payload["parameters"]["observer"] = {
         "kind": "coalition",
         "member_refs": ["participant:a", "participant:b"],
@@ -634,7 +643,7 @@ def test_coalition_model_uses_fused_observation_instead_of_individual_projection
 
 
 def test_non_total_order_and_probability_promotions_fail_closed() -> None:
-    profile_payload = load_behavioral_relation_profile(PROFILE_ID).model_dump(mode="json")
+    profile_payload = _historical_profile().model_dump(mode="json")
     profile_payload["parameters"]["order"]["treatment"] = "partial-order"
     profile = BehavioralRelationProfileModel.model_validate(profile_payload)
     request, _, catalog = _request(
@@ -701,7 +710,7 @@ def test_incomplete_and_vacuous_models_never_produce_positive_evidence() -> None
 
 
 def test_model_check_enforces_profile_bounds() -> None:
-    profile_payload = load_behavioral_relation_profile(PROFILE_ID).model_dump(mode="json")
+    profile_payload = _historical_profile().model_dump(mode="json")
     profile_payload["parameters"]["bounds"]["max_runs"] = 1
     profile = BehavioralRelationProfileModel.model_validate(profile_payload)
     request, _, catalog = _request(
@@ -795,9 +804,9 @@ def test_model_check_contracts_are_published_with_semantic_invariants() -> None:
     }
 
 
-def test_catalog_and_profile_advance_only_the_model_check_assurance_axis() -> None:
-    catalog = load_behavioral_relation_catalog()
-    profile = load_behavioral_relation_profile(PROFILE_ID)
+def test_historical_catalog_and_profile_preserve_the_model_check_assurance_axis() -> None:
+    catalog = _historical_catalog()
+    profile = _historical_profile()
     assurance = catalog.relations["participant-predicate-opacity"].assurance
 
     assert catalog.taxonomy_revision == "rev8"

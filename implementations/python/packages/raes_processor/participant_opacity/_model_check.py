@@ -6,10 +6,13 @@ from collections import deque
 from pathlib import Path
 
 from pydantic import ValidationError
-from raes_contracts.behavioral_relation_profiles import BehavioralRelationProfileModel, load_behavioral_relation_profile
+from raes_contracts.behavioral_relation_profiles import (
+    BehavioralRelationProfileModel,
+    load_behavioral_relation_profile_revision,
+)
 from raes_contracts.behavioral_relations import (
     BehavioralRelationCatalogModel,
-    load_behavioral_relation_catalog,
+    load_behavioral_relation_catalog_revision,
 )
 from raes_contracts.canonical import canonical_json_digest
 from raes_contracts.diagnostics import DiagnosticModel
@@ -292,8 +295,11 @@ def model_check_participant_opacity_file(
     try:
         payload = parse_bounded_json_object(path.read_bytes(), max_bytes=_MAX_INPUT_BYTES)
         request = ParticipantOpacityModelCheckInputModel.model_validate(payload)
-        profile = load_behavioral_relation_profile(request.profile_id)
-        catalog = load_behavioral_relation_catalog()
+        profile = load_behavioral_relation_profile_revision(
+            request.profile_id,
+            request.profile_revision,
+        )
+        catalog = load_behavioral_relation_catalog_revision(request.taxonomy_revision)
     except (OSError, ValidationError, ValueError):
         raise ParticipantOpacityOperationalError(
             "participant-opacity model-check input failed bounded closed-world admission"

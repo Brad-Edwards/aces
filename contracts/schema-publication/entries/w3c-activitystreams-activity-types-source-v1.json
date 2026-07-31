@@ -2,9 +2,9 @@
   "contract_id": "w3c-activitystreams-activity-types-source-v1",
   "schema_path": "contracts/schemas/concept-authority/w3c-activitystreams-activity-types-source-v1.json",
   "stability": "draft",
-  "content_hash": "1a0aea53ae33ce50e3017cb43d3333f5012285e8ee32b14ab0c4c18621a9f534",
+  "content_hash": "d64e6dd6779bcac5da79bb95a9342bfb9c1bb51f1a8a20d10cdd9abf1e5d9f64",
   "last_change": {
-    "summary": "Published the pinned W3C ActivityStreams activity-type source contract for ACT-611.",
-    "content_hash": "1a0aea53ae33ce50e3017cb43d3333f5012285e8ee32b14ab0c4c18621a9f534"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "d64e6dd6779bcac5da79bb95a9342bfb9c1bb51f1a8a20d10cdd9abf1e5d9f64"
   }
 }

@@ -55,7 +55,7 @@ _NON_CLAIMS = (
     "No Wazuh detection-quality claim.",
     "No model-defense robustness claim.",
     "No byte-equivalence or application-internals equivalence claim between libvirt appliances and APTL containers.",
-    "No full semantic-equivalence claim beyond the invariant ledger in RAESystem/rae#600.",
+    "No full semantic-equivalence claim beyond the invariant ledger in OpenRAE/rae#600.",
 )
 
 
@@ -586,7 +586,7 @@ def _invariant_ledger_refs(model: CompiledModel, scenario_section: Mapping[str, 
             "evaluator_outcome",
         ],
         "note": (
-            "Stable RAES addresses and evidence refs for the RAESystem/rae#600 cross-backend invariant ledger; "
+            "Stable RAES addresses and evidence refs for the OpenRAE/rae#600 cross-backend invariant ledger; "
             "no libvirt domain UUIDs, host paths, or APTL-private identifiers."
         ),
     }

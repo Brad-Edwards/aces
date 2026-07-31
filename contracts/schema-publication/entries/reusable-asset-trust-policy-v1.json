@@ -2,9 +2,9 @@
   "contract_id": "reusable-asset-trust-policy-v1",
   "schema_path": "contracts/schemas/asset-trust/reusable-asset-trust-policy-v1.json",
   "stability": "draft",
-  "content_hash": "8283ffb71a4739e30c9a88ebb8ab90efa8854aa40b58e95e123bc83f54c858b5",
+  "content_hash": "a86a72892a1a15711bf48fad7da3e46feea71dc13775d61df0c74d84c26d140a",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "8283ffb71a4739e30c9a88ebb8ab90efa8854aa40b58e95e123bc83f54c858b5"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "a86a72892a1a15711bf48fad7da3e46feea71dc13775d61df0c74d84c26d140a"
   }
 }

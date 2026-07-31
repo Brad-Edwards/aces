@@ -9,7 +9,7 @@ Decision: [ADR-099](../../../docs/decisions/adrs/adr-099-participant-relative-pr
 Machine-readable relation authority:
 `contracts/concept-authority/behavioral-relations-v1.json`,
 `participant-predicate-opacity`, introduced in taxonomy revision `rev5` and
-carried by current revision `rev8`.
+carried by current revision `rev9`.
 
 ## Scope
 
@@ -255,6 +255,38 @@ unless the new policy stops protecting it or another nonsecret alternative
 remains. Later concealment does not erase what a remembering participant
 learned.
 
+## Mathematical Proof Profile
+
+The `Participant_Opacity` Isabelle/HOL session under
+[`isabelle/`](isabelle/) kernel-checks three positive theorem scopes for
+`participant-opacity-theorem-v1@sem-231-proof/rev1`:
+
+1. the one-sided active-strategy SEM-231 opacity kernel;
+2. the equivalence between opacity and absence of knowledge that the selected
+   predicate is true, using the exact reflexive and factive information cell;
+   and
+3. the conditional implication from SEM-230 policy noninterference to SEM-231
+   opacity for an eligible predicate under exactly matching profiles.
+
+The implication assumes the same model and reachable carrier, observer and
+audience, initial information, complete observation, memory, exact cut and
+horizon, active strategy, supervisor visibility, policy and release schedule,
+scheduler and environment, nondeterminism support, time and progress,
+concurrency and order, and probability posture. Eligibility supplies a
+reachable nonsecret variation in every protected public class and preserves
+that nonsecret label through the noninterference-selected correspondence.
+
+The same session checks countermodels for the reverse implication, one-pair
+promotion, declassification, retained memory after revocation, relation
+substitution without preservation, stronger observations, and probabilistic
+promotion. The closed
+[`participant-opacity-proof-evidence.json`](participant-opacity-proof-evidence.json)
+binds theorem ids, assumptions, proof-axis claims, source and dependency
+digests, the pinned Isabelle distribution, offline replay, resource limits,
+and the independently reproduced kernel result. It does not instantiate RAES,
+a runtime, a deployment, or a backend, and it establishes no correspondence
+theorem for the Python finite-analysis implementation.
+
 ## Independent Assurance Lanes
 
 Assurance states are independent:
@@ -265,7 +297,7 @@ Assurance states are independent:
 | checker | closed profile resolution, exact finite carrier admission, deterministic exhaustive scan, replay | implemented |
 | bounded testing | named finite profiles/cases, full bounds, digests, safe counterexamples | bounded |
 | model checking | closed finite model, explored bounds, pinned tool/version, result or counterexample | model checked for the exact baseline fixture model |
-| mathematical proof | theorem, assumptions, independently checkable proof, tool/digest when mechanized | deliberately unproved |
+| mathematical proof | theorem, assumptions, independently checkable proof, tool/digest when mechanized | proved for the abstract conditional theorem profile; no concrete RAES instance |
 | runtime enforcement | complete supported-channel inventory, fail-closed mediation, durable decisions, security tests | not enforced |
 | backend declaration | API-407 feature strength, required contracts, limitations, evidence refs | not declared |
 | backend realization | native implementation, profile mapping, environment and provenance evidence | not realized |
@@ -308,9 +340,9 @@ positive assurance axis.
 
 Issue #810 defines this architecture. Issue #961 delivers the closed baseline
 profile and bounded finite falsifier. Issue #962 delivers exact finite-state
-model checking for the baseline fixture profile. Issues #963 through #965
-separately own mathematical proof, runtime enforcement, and backend
-realization/conformance.
+model checking for the historical baseline fixture profile. Issue #963
+delivers the abstract conditional mathematical proof. Issues #964 and #965
+separately own runtime enforcement and backend realization/conformance.
 
 ## Bounded Checker Contract
 

@@ -2,9 +2,9 @@
   "contract_id": "sdl-authoring-input-v1",
   "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
   "stability": "draft",
-  "content_hash": "da0c48ed70f414db35c020c788d3fd3e79dd97663fce74df5cb88eb15a5edc5e",
+  "content_hash": "74b3e5310b2368e0463bae298b153fc5d7311b0a421df9559259374411540e28",
   "last_change": {
-    "summary": "Added the provider-neutral service search-index field-schema materialization profile for issue #1011.",
-    "content_hash": "da0c48ed70f414db35c020c788d3fd3e79dd97663fce74df5cb88eb15a5edc5e"
+    "summary": "Added the service search-index field-schema profile and rebound the namespace to OpenRAE for issues #1011 and #963.",
+    "content_hash": "74b3e5310b2368e0463bae298b153fc5d7311b0a421df9559259374411540e28"
   }
 }

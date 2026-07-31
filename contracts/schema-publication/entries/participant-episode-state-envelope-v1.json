@@ -2,9 +2,9 @@
   "contract_id": "participant-episode-state-envelope-v1",
   "schema_path": "contracts/schemas/control-plane/participant-episode-state-envelope-v1.json",
   "stability": "draft",
-  "content_hash": "63de32ef14bd0309cec32c3794e3a7c98ac926710e05e457e8f11f6612d89813",
+  "content_hash": "36ccb0fd9c2c67dcf620d6ecd9aef959dbd836b5aa54385908786ab63f7e8c38",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "63de32ef14bd0309cec32c3794e3a7c98ac926710e05e457e8f11f6612d89813"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "36ccb0fd9c2c67dcf620d6ecd9aef959dbd836b5aa54385908786ab63f7e8c38"
   }
 }

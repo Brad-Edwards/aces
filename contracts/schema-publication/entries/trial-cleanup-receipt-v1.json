@@ -2,9 +2,9 @@
   "contract_id": "trial-cleanup-receipt-v1",
   "schema_path": "contracts/schemas/control-plane/trial-cleanup-receipt-v1.json",
   "stability": "draft",
-  "content_hash": "40bc6caaf772ef401160a6c61cee0da6b44a076eefd1d7e84af54736e1302e95",
+  "content_hash": "02522db170307754b01a96fac73808a23acacbf56aae3b93c441fa211075c227",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "40bc6caaf772ef401160a6c61cee0da6b44a076eefd1d7e84af54736e1302e95"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "02522db170307754b01a96fac73808a23acacbf56aae3b93c441fa211075c227"
   }
 }

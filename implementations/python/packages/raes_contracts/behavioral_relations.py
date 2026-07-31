@@ -311,11 +311,37 @@ def behavioral_relation_catalog_path() -> Path:
     return corpus_family_root(CONCEPT_AUTHORITY) / "behavioral-relations-v1.json"
 
 
+_HISTORICAL_CATALOG_PATHS = {
+    "rev8": corpus_family_root(CONCEPT_AUTHORITY) / "history" / "behavioral-relations-v1-rev8.json",
+}
+
+
 @cache
 def load_behavioral_relation_catalog() -> BehavioralRelationCatalogModel:
     return BehavioralRelationCatalogModel.model_validate_json(
         behavioral_relation_catalog_path().read_text(encoding="utf-8")
     )
+
+
+@cache
+def load_behavioral_relation_catalog_revision(
+    taxonomy_revision: str,
+) -> BehavioralRelationCatalogModel:
+    """Resolve the exact catalog revision named by stored evidence."""
+
+    path = _HISTORICAL_CATALOG_PATHS.get(taxonomy_revision)
+    if path is not None:
+        try:
+            catalog = BehavioralRelationCatalogModel.model_validate_json(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            raise ValueError("historical behavioral relation catalog is invalid") from None
+        if catalog.taxonomy_revision != taxonomy_revision:
+            raise ValueError("historical behavioral relation catalog revision does not match its registry entry")
+        return catalog
+    current = load_behavioral_relation_catalog()
+    if current.taxonomy_revision == taxonomy_revision:
+        return current
+    raise ValueError("requested behavioral relation catalog revision is unsupported")
 
 
 def _resolve_binding_relation(
@@ -411,19 +437,23 @@ def validate_behavioral_claim_binding(
     catalog: BehavioralRelationCatalogModel | None = None,
     profile: BehavioralRelationProfileModel | None = None,
 ) -> BehavioralClaimBindingModel:
-    """Resolve a consumer binding against the canonical catalog."""
+    """Resolve a consumer binding against its exact catalog and profile revisions."""
 
-    catalog = load_behavioral_relation_catalog() if catalog is None else catalog
+    catalog = load_behavioral_relation_catalog_revision(binding.taxonomy_revision) if catalog is None else catalog
     relation = _resolve_binding_relation(binding, catalog)
     _validate_binding_requirements(binding, relation)
     if relation.relation_parameter_profile_required:
         if profile is None:
             from .behavioral_relation_profiles import (
-                load_behavioral_relation_profile,
+                load_behavioral_relation_profile_revision,
             )
 
             assert binding.relation_parameter_profile_ref is not None
-            profile = load_behavioral_relation_profile(binding.relation_parameter_profile_ref)
+            assert binding.relation_parameter_profile_revision is not None
+            profile = load_behavioral_relation_profile_revision(
+                binding.relation_parameter_profile_ref,
+                binding.relation_parameter_profile_revision,
+            )
         _validate_binding_profile(binding, catalog, profile)
     elif profile is not None:
         raise ValueError("behavioral claim binding supplied a profile for a relation that does not require one")
@@ -440,5 +470,6 @@ __all__ = [
     "ExampleTransitionSystemModel",
     "behavioral_relation_catalog_path",
     "load_behavioral_relation_catalog",
+    "load_behavioral_relation_catalog_revision",
     "validate_behavioral_claim_binding",
 ]

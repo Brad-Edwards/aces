@@ -2,9 +2,9 @@
   "contract_id": "backend-profile-v1",
   "schema_path": "contracts/schemas/profiles/backend-profile-v1.json",
   "stability": "draft",
-  "content_hash": "3e878fa2f248992bcc9f404408979e2c1d39e4305ca7e39ea93d880354b2c789",
+  "content_hash": "9b55db6c28c375845132097920e730af375e66bf13dc12f9122aed9ab5b82a97",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "3e878fa2f248992bcc9f404408979e2c1d39e4305ca7e39ea93d880354b2c789"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "9b55db6c28c375845132097920e730af375e66bf13dc12f9122aed9ab5b82a97"
   }
 }

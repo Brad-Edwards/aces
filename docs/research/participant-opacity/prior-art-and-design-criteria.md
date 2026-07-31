@@ -2,7 +2,7 @@
 
 Date: 2026-07-29
 
-Issue: [#810](https://github.com/RAESystem/rae/issues/810)
+Issue: [#810](https://github.com/OpenRAE/rae/issues/810)
 
 ## 1. Research Question And Method
 

@@ -2,9 +2,9 @@
   "contract_id": "fipa-communicative-acts-source-v1",
   "schema_path": "contracts/schemas/concept-authority/fipa-communicative-acts-source-v1.json",
   "stability": "draft",
-  "content_hash": "ba162e97f3ed2260f15e329950bd8ef9b5b6fecc430bebf5d95837771263fe7b",
+  "content_hash": "039ff84031987efa22f659de7fb4391d7bf0299a8f11b33ce1d738c79df26b50",
   "last_change": {
-    "summary": "Published the pinned FIPA communicative-act source contract for ACT-611.",
-    "content_hash": "ba162e97f3ed2260f15e329950bd8ef9b5b6fecc430bebf5d95837771263fe7b"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "039ff84031987efa22f659de7fb4391d7bf0299a8f11b33ce1d738c79df26b50"
   }
 }

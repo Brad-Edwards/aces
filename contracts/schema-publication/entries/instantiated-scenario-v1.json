@@ -2,9 +2,9 @@
   "contract_id": "instantiated-scenario-v1",
   "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
   "stability": "draft",
-  "content_hash": "3320d0e86123c4e8c7e58dca1cd3224b0c6caad25bb2f42b9ccda7805670b405",
+  "content_hash": "7560409fe1e4fcaa3a9f957a997ca1b019c6b13b78b5210778763bc41b4a5a88",
   "last_change": {
-    "summary": "Added the provider-neutral service search-index field-schema materialization profile for issue #1011.",
-    "content_hash": "3320d0e86123c4e8c7e58dca1cd3224b0c6caad25bb2f42b9ccda7805670b405"
+    "summary": "Added the service search-index field-schema profile and rebound the namespace to OpenRAE for issues #1011 and #963.",
+    "content_hash": "7560409fe1e4fcaa3a9f957a997ca1b019c6b13b78b5210778763bc41b4a5a88"
   }
 }

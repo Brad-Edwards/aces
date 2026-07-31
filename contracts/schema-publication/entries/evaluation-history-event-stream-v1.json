@@ -2,9 +2,9 @@
   "contract_id": "evaluation-history-event-stream-v1",
   "schema_path": "contracts/schemas/control-plane/evaluation-history-event-stream-v1.json",
   "stability": "draft",
-  "content_hash": "800ebef43a7d79d1c76e959bb2563cd1fac8845199eea012bc8816522a0bed0c",
+  "content_hash": "684167d87bc9b3eaa2945b386b7b0fc4d9e0008097aabbd42853c0245fc44571",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "800ebef43a7d79d1c76e959bb2563cd1fac8845199eea012bc8816522a0bed0c"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "684167d87bc9b3eaa2945b386b7b0fc4d9e0008097aabbd42853c0245fc44571"
   }
 }

@@ -2,9 +2,9 @@
   "contract_id": "participant-execution-binding-v1",
   "schema_path": "contracts/schemas/participant-runtime/participant-execution-binding-v1.json",
   "stability": "draft",
-  "content_hash": "94e19bb76d962427c4b1a5d86ee3c1eac2a732b1a4e78435a412331e51322bb6",
+  "content_hash": "19ce843b0a2dd666954abc2cad2b23ef76ad800bce4bc95d156c49b6f7424671",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "94e19bb76d962427c4b1a5d86ee3c1eac2a732b1a4e78435a412331e51322bb6"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "19ce843b0a2dd666954abc2cad2b23ef76ad800bce4bc95d156c49b6f7424671"
   }
 }

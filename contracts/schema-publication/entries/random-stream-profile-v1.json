@@ -2,9 +2,9 @@
   "contract_id": "random-stream-profile-v1",
   "schema_path": "contracts/schemas/profiles/random-stream-profile-v1.json",
   "stability": "draft",
-  "content_hash": "f594185a8db1f8320822089b90649fed6d4175285da232484bc225d2e60775c1",
+  "content_hash": "7eddad732d06e27ae7b6d874002cf544a3ac7206affbacf5c7ce30e8861e02de",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "f594185a8db1f8320822089b90649fed6d4175285da232484bc225d2e60775c1"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "7eddad732d06e27ae7b6d874002cf544a3ac7206affbacf5c7ce30e8861e02de"
   }
 }

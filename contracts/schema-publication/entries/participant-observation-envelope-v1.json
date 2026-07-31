@@ -2,9 +2,9 @@
   "contract_id": "participant-observation-envelope-v1",
   "schema_path": "contracts/schemas/participant-runtime/participant-observation-envelope-v1.json",
   "stability": "draft",
-  "content_hash": "735f292ec936892c59e164d477aae3be1117f3e09805dddc73feb6a021699f7f",
+  "content_hash": "2abcc6fb611f25dd99b453b0086387ec286b75748a5e56cc97bf67b69a039542",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "735f292ec936892c59e164d477aae3be1117f3e09805dddc73feb6a021699f7f"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "2abcc6fb611f25dd99b453b0086387ec286b75748a5e56cc97bf67b69a039542"
   }
 }

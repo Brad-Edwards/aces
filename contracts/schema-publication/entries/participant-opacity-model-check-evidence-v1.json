@@ -2,9 +2,9 @@
   "contract_id": "participant-opacity-model-check-evidence-v1",
   "schema_path": "contracts/schemas/formal-analysis/participant-opacity-model-check-evidence-v1.json",
   "stability": "draft",
-  "content_hash": "ba4e3fcea965357cf8ae603d7ec018a7aee2f33b9acbb643a870275b94b8c7a0",
+  "content_hash": "c9e40846cd8951cbebbf733dce14ef5da1b7ffe3bcb7d0775370b07532bfb29f",
   "last_change": {
-    "summary": "Published digest-bound complete finite participant-opacity model-check evidence for issue #962.",
-    "content_hash": "ba4e3fcea965357cf8ae603d7ec018a7aee2f33b9acbb643a870275b94b8c7a0"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "c9e40846cd8951cbebbf733dce14ef5da1b7ffe3bcb7d0775370b07532bfb29f"
   }
 }
