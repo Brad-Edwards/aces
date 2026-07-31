@@ -30,6 +30,21 @@ warning-strict Sphinx HTML, generated route and search inventories, and links:
 uv tool run --from 'nox[uv]==2026.4.10' nox -f noxfile.py -s docs
 ```
 
+## Respect package boundaries
+
+`tools/policy/adr_policy.yaml` defines the public import facades allowed across
+RAES packages. Adapters import owning domain APIs only through those listed
+facades and never through private modules. For example, the semantic CLI calls
+SDL compilation through `raes_processor.compiler`; adding another CLI/compiler
+interaction extends that public facade instead of importing compiler internals
+or duplicating compiler behavior in `raes_cli`.
+
+Run the repository policy session after changing a cross-package import:
+
+```shell
+uv tool run --from 'nox[uv]==2026.4.10' nox -f noxfile.py -s policy
+```
+
 ## Release model
 
 Release Please owns `CHANGELOG.md`, package versions, GitHub releases, and the
