@@ -141,7 +141,8 @@ def _attach_stateful_resource_invariants(contract_id: str, json_schema: dict[str
         "stateful-generated-artifact-semantics",
         "Generated artifact output names and paths, consumers, and dependency entries must be unique, and "
         "generated artifact consumers must be read-only. Explicit selections must name declared consumer-selectable "
-        "outputs; SSH artifact consumers must select outputs and every consumer-selectable SSH output must be selected.",
+        "outputs; SSH artifact consumers must select outputs and every consumer-selectable SSH output must be "
+        "selected.",
         validator="raes.stateful_resources.GeneratedArtifact._unique_outputs_and_consumers",
         inputs=input_contract,
     )

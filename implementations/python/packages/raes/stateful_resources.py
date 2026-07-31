@@ -113,6 +113,49 @@ class GeneratedArtifactConsumer(StatefulResourceConsumer):
         return self
 
 
+def _validate_generated_artifact_identity(artifact: GeneratedArtifact) -> None:
+    names = [output.name for output in artifact.outputs]
+    paths = [output.path for output in artifact.outputs]
+    consumers = [(consumer.node, consumer.mount_destination) for consumer in artifact.consumers]
+    if len(names) != len(set(names)):
+        raise ValueError("generated artifact output names must be unique")
+    if len(paths) != len(set(paths)):
+        raise ValueError("generated artifact output paths must be unique")
+    if len(consumers) != len(set(consumers)):
+        raise ValueError("generated artifact consumers must be unique")
+    if any(consumer.access_mode is ConsumerAccessMode.READ_WRITE for consumer in artifact.consumers):
+        raise ValueError("generated artifact consumers must be read_only")
+
+
+def _selected_generated_artifact_outputs(artifact: GeneratedArtifact) -> set[str]:
+    outputs_by_name = {output.name: output for output in artifact.outputs}
+    selected_output_names: set[str] = set()
+    for consumer in artifact.consumers:
+        if artifact.generator is GeneratedArtifactKind.SSH_KEY_BUNDLE and not consumer.selected_outputs:
+            raise ValueError("SSH generated artifact consumers must select at least one output")
+        for selected_output in consumer.selected_outputs:
+            output = outputs_by_name.get(selected_output)
+            if output is None:
+                raise ValueError("generated artifact consumer selects an unknown generated artifact output")
+            if output.disposition is GeneratedArtifactOutputDisposition.PRODUCER_PRIVATE:
+                raise ValueError(
+                    "generated artifact consumer cannot select a producer-private generated artifact output"
+                )
+            selected_output_names.add(selected_output)
+    return selected_output_names
+
+
+def _validate_ssh_output_selection(artifact: GeneratedArtifact, selected_output_names: set[str]) -> None:
+    if artifact.generator is not GeneratedArtifactKind.SSH_KEY_BUNDLE:
+        return
+    for output in artifact.outputs:
+        if (
+            output.disposition is GeneratedArtifactOutputDisposition.CONSUMER_SELECTED
+            and output.name not in selected_output_names
+        ):
+            raise ValueError("each consumer-selected SSH output must be selected by at least one consumer")
+
+
 class GeneratedArtifact(SDLModel):
     """Desired generated configuration or certificate/key material."""
 
@@ -126,38 +169,9 @@ class GeneratedArtifact(SDLModel):
 
     @model_validator(mode="after")
     def _unique_outputs_and_consumers(self) -> GeneratedArtifact:
-        names = [output.name for output in self.outputs]
-        paths = [output.path for output in self.outputs]
-        consumers = [(consumer.node, consumer.mount_destination) for consumer in self.consumers]
-        if len(names) != len(set(names)):
-            raise ValueError("generated artifact output names must be unique")
-        if len(paths) != len(set(paths)):
-            raise ValueError("generated artifact output paths must be unique")
-        if len(consumers) != len(set(consumers)):
-            raise ValueError("generated artifact consumers must be unique")
-        if any(consumer.access_mode is ConsumerAccessMode.READ_WRITE for consumer in self.consumers):
-            raise ValueError("generated artifact consumers must be read_only")
-        outputs_by_name = {output.name: output for output in self.outputs}
-        selected_output_names: set[str] = set()
-        for consumer in self.consumers:
-            if self.generator is GeneratedArtifactKind.SSH_KEY_BUNDLE and not consumer.selected_outputs:
-                raise ValueError("SSH generated artifact consumers must select at least one output")
-            for selected_output in consumer.selected_outputs:
-                output = outputs_by_name.get(selected_output)
-                if output is None:
-                    raise ValueError("generated artifact consumer selects an unknown generated artifact output")
-                if output.disposition is GeneratedArtifactOutputDisposition.PRODUCER_PRIVATE:
-                    raise ValueError(
-                        "generated artifact consumer cannot select a producer-private generated artifact output"
-                    )
-                selected_output_names.add(selected_output)
-        if self.generator is GeneratedArtifactKind.SSH_KEY_BUNDLE:
-            for output in self.outputs:
-                if (
-                    output.disposition is GeneratedArtifactOutputDisposition.CONSUMER_SELECTED
-                    and output.name not in selected_output_names
-                ):
-                    raise ValueError("each consumer-selected SSH output must be selected by at least one consumer")
+        _validate_generated_artifact_identity(self)
+        selected_output_names = _selected_generated_artifact_outputs(self)
+        _validate_ssh_output_selection(self, selected_output_names)
         if len(self.ordering_dependencies) != len(set(self.ordering_dependencies)):
             raise ValueError("generated artifact ordering_dependencies must be unique")
         if len(self.refresh_dependencies) != len(set(self.refresh_dependencies)):

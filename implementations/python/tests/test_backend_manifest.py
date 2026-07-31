@@ -130,15 +130,17 @@ def test_backend_manifest_v2_roundtrip_from_stub_manifest():
 def test_generated_artifact_capability_requires_explicit_kind_support():
     manifest = create_stub_manifest()
     provisioner = manifest.provisioner
+    empty_kinds: frozenset[str] = frozenset()
+    rendered_config_kinds = frozenset({"rendered_config"})
 
     with pytest.raises(ValueError, match="must declare supported_generated_artifact_kinds"):
-        replace(provisioner, supported_generated_artifact_kinds=frozenset())
+        replace(provisioner, supported_generated_artifact_kinds=empty_kinds)
 
     with pytest.raises(ValueError, match="require supports_generated_artifacts=True"):
         replace(
             provisioner,
             supports_generated_artifacts=False,
-            supported_generated_artifact_kinds=frozenset({"rendered_config"}),
+            supported_generated_artifact_kinds=rendered_config_kinds,
         )
 
 
