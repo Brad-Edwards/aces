@@ -9,10 +9,12 @@ from typing import Literal
 from pydantic import Field, model_validator
 
 from .contracts import (
+    ActivityStreamsActivityTypesSourceModel,
     AttackEnterpriseTacticsSourceModel,
     ExternalConceptBindingDocumentModel,
     ExternalConceptSchemeCoordinateModel,
     ExternalConceptSubjectModel,
+    FipaCommunicativeActsSourceModel,
     NistCsfDefensiveCategorySourceModel,
 )
 from .contracts.base import ContractModel, NonEmptyString, PrefixedDigestString
@@ -343,13 +345,41 @@ def adapt_nist_csf_defensive_categories_snapshot(
     )
 
 
+def adapt_activitystreams_activity_types_snapshot(
+    source: ActivityStreamsActivityTypesSourceModel,
+) -> ExternalConceptSchemeSnapshotModel:
+    return ExternalConceptSchemeSnapshotModel(
+        scheme_id="w3c-activitystreams-activity-types",
+        authority=source.source_authority,
+        revision=source.source_version,
+        source_locator=source.source_url,
+        source_digest=source.source_digest,
+        concepts=[ExternalConceptSnapshotTermModel(concept_id=term.concept_id) for term in source.activity_types],
+    )
+
+
+def adapt_fipa_communicative_acts_snapshot(
+    source: FipaCommunicativeActsSourceModel,
+) -> ExternalConceptSchemeSnapshotModel:
+    return ExternalConceptSchemeSnapshotModel(
+        scheme_id="fipa-communicative-act-library",
+        authority=source.source_authority,
+        revision=source.source_version,
+        source_locator=source.source_url,
+        source_digest=source.source_digest,
+        concepts=[ExternalConceptSnapshotTermModel(concept_id=act.concept_id) for act in source.communicative_acts],
+    )
+
+
 __all__ = [
     "ExternalConceptBindingAdmissionReport",
     "ExternalConceptBindingResolution",
     "ExternalConceptResolutionOutcome",
     "ExternalConceptSchemeSnapshotModel",
     "ExternalConceptSnapshotTermModel",
+    "adapt_activitystreams_activity_types_snapshot",
     "adapt_attack_enterprise_tactics_snapshot",
+    "adapt_fipa_communicative_acts_snapshot",
     "adapt_nist_csf_defensive_categories_snapshot",
     "admit_external_concept_bindings",
 ]

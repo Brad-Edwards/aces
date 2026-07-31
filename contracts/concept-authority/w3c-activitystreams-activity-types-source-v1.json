@@ -1,0 +1,159 @@
+{
+  "schema_version": "w3c-activitystreams-activity-types-source/v1",
+  "source_authority": "World Wide Web Consortium",
+  "source_version": "REC-activitystreams-vocabulary-20170523",
+  "source_status": "W3C Recommendation",
+  "source_url": "https://www.w3.org/TR/2017/REC-activitystreams-vocabulary-20170523/",
+  "source_digest": "sha256:1418443392160f4bb23dffb5727f5216d1f56d3430377dc67d364016521401db",
+  "citation_urls": [
+    "https://www.w3.org/TR/2017/REC-activitystreams-vocabulary-20170523/",
+    "https://www.w3.org/TR/activitystreams-vocabulary/",
+    "https://www.w3.org/TR/2017/REC-activitystreams-core-20170523/",
+    "https://www.w3.org/Consortium/Legal/2015/copyright-software-and-document"
+  ],
+  "retrieved_at": "2026-07-30",
+  "license_url": "https://www.w3.org/Consortium/Legal/2015/copyright-software-and-document",
+  "license_notice": "Copyright © 2017 Activity Streams Working Group, IBM & SAP SE; W3C permissive document license applies.",
+  "activity_types": [
+    {
+      "position": 1,
+      "type_name": "Accept",
+      "concept_id": "https://www.w3.org/ns/activitystreams#Accept"
+    },
+    {
+      "position": 2,
+      "type_name": "Add",
+      "concept_id": "https://www.w3.org/ns/activitystreams#Add"
+    },
+    {
+      "position": 3,
+      "type_name": "Announce",
+      "concept_id": "https://www.w3.org/ns/activitystreams#Announce"
+    },
+    {
+      "position": 4,
+      "type_name": "Arrive",
+      "concept_id": "https://www.w3.org/ns/activitystreams#Arrive"
+    },
+    {
+      "position": 5,
+      "type_name": "Block",
+      "concept_id": "https://www.w3.org/ns/activitystreams#Block"
+    },
+    {
+      "position": 6,
+      "type_name": "Create",
+      "concept_id": "https://www.w3.org/ns/activitystreams#Create"
+    },
+    {
+      "position": 7,
+      "type_name": "Delete",
+      "concept_id": "https://www.w3.org/ns/activitystreams#Delete"
+    },
+    {
+      "position": 8,
+      "type_name": "Dislike",
+      "concept_id": "https://www.w3.org/ns/activitystreams#Dislike"
+    },
+    {
+      "position": 9,
+      "type_name": "Flag",
+      "concept_id": "https://www.w3.org/ns/activitystreams#Flag"
+    },
+    {
+      "position": 10,
+      "type_name": "Follow",
+      "concept_id": "https://www.w3.org/ns/activitystreams#Follow"
+    },
+    {
+      "position": 11,
+      "type_name": "Ignore",
+      "concept_id": "https://www.w3.org/ns/activitystreams#Ignore"
+    },
+    {
+      "position": 12,
+      "type_name": "Invite",
+      "concept_id": "https://www.w3.org/ns/activitystreams#Invite"
+    },
+    {
+      "position": 13,
+      "type_name": "Join",
+      "concept_id": "https://www.w3.org/ns/activitystreams#Join"
+    },
+    {
+      "position": 14,
+      "type_name": "Leave",
+      "concept_id": "https://www.w3.org/ns/activitystreams#Leave"
+    },
+    {
+      "position": 15,
+      "type_name": "Like",
+      "concept_id": "https://www.w3.org/ns/activitystreams#Like"
+    },
+    {
+      "position": 16,
+      "type_name": "Listen",
+      "concept_id": "https://www.w3.org/ns/activitystreams#Listen"
+    },
+    {
+      "position": 17,
+      "type_name": "Move",
+      "concept_id": "https://www.w3.org/ns/activitystreams#Move"
+    },
+    {
+      "position": 18,
+      "type_name": "Offer",
+      "concept_id": "https://www.w3.org/ns/activitystreams#Offer"
+    },
+    {
+      "position": 19,
+      "type_name": "Question",
+      "concept_id": "https://www.w3.org/ns/activitystreams#Question"
+    },
+    {
+      "position": 20,
+      "type_name": "Reject",
+      "concept_id": "https://www.w3.org/ns/activitystreams#Reject"
+    },
+    {
+      "position": 21,
+      "type_name": "Read",
+      "concept_id": "https://www.w3.org/ns/activitystreams#Read"
+    },
+    {
+      "position": 22,
+      "type_name": "Remove",
+      "concept_id": "https://www.w3.org/ns/activitystreams#Remove"
+    },
+    {
+      "position": 23,
+      "type_name": "TentativeReject",
+      "concept_id": "https://www.w3.org/ns/activitystreams#TentativeReject"
+    },
+    {
+      "position": 24,
+      "type_name": "TentativeAccept",
+      "concept_id": "https://www.w3.org/ns/activitystreams#TentativeAccept"
+    },
+    {
+      "position": 25,
+      "type_name": "Travel",
+      "concept_id": "https://www.w3.org/ns/activitystreams#Travel"
+    },
+    {
+      "position": 26,
+      "type_name": "Undo",
+      "concept_id": "https://www.w3.org/ns/activitystreams#Undo"
+    },
+    {
+      "position": 27,
+      "type_name": "Update",
+      "concept_id": "https://www.w3.org/ns/activitystreams#Update"
+    },
+    {
+      "position": 28,
+      "type_name": "View",
+      "concept_id": "https://www.w3.org/ns/activitystreams#View"
+    }
+  ]
+}

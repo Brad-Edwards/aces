@@ -1,0 +1,114 @@
+{
+  "$defs": {
+    "ActivityStreamsActivityTypeSourceTermModel": {
+      "additionalProperties": false,
+      "properties": {
+        "concept_id": {
+          "minLength": 1,
+          "title": "Concept Id",
+          "type": "string"
+        },
+        "position": {
+          "minimum": 1,
+          "title": "Position",
+          "type": "integer"
+        },
+        "type_name": {
+          "pattern": "^[A-Z][A-Za-z]+$",
+          "title": "Type Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "position",
+        "type_name",
+        "concept_id"
+      ],
+      "title": "ActivityStreamsActivityTypeSourceTermModel",
+      "type": "object"
+    }
+  },
+  "$id": "https://raesystem.github.io/rae/schemas/w3c-activitystreams-activity-types-source-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "activity_types": {
+      "items": {
+        "$ref": "#/$defs/ActivityStreamsActivityTypeSourceTermModel"
+      },
+      "minItems": 1,
+      "title": "Activity Types",
+      "type": "array"
+    },
+    "citation_urls": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Citation Urls",
+      "type": "array"
+    },
+    "license_notice": {
+      "minLength": 1,
+      "title": "License Notice",
+      "type": "string"
+    },
+    "license_url": {
+      "minLength": 1,
+      "title": "License Url",
+      "type": "string"
+    },
+    "retrieved_at": {
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "title": "Retrieved At",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "w3c-activitystreams-activity-types-source/v1",
+      "default": "w3c-activitystreams-activity-types-source/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source_authority": {
+      "const": "World Wide Web Consortium",
+      "title": "Source Authority",
+      "type": "string"
+    },
+    "source_digest": {
+      "minLength": 1,
+      "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+      "title": "Source Digest",
+      "type": "string"
+    },
+    "source_status": {
+      "const": "W3C Recommendation",
+      "title": "Source Status",
+      "type": "string"
+    },
+    "source_url": {
+      "minLength": 1,
+      "title": "Source Url",
+      "type": "string"
+    },
+    "source_version": {
+      "const": "REC-activitystreams-vocabulary-20170523",
+      "title": "Source Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "source_authority",
+    "source_version",
+    "source_status",
+    "source_url",
+    "source_digest",
+    "citation_urls",
+    "retrieved_at",
+    "license_url",
+    "license_notice",
+    "activity_types"
+  ],
+  "title": "ActivityStreamsActivityTypesSourceModel",
+  "type": "object"
+}

@@ -721,6 +721,10 @@ def _run_contracts(session: nox.Session, reporter: SessionReporter, *args: str) 
         "contracts / NIST CSF defensive vocabulary conformance",
         lambda: _run_project_python(session, "tools/check_nist_csf_defensive_vocabulary.py"),
     )
+    reporter.run(
+        "contracts / autonomous behavior vocabulary conformance",
+        lambda: _run_project_python(session, "tools/check_autonomous_behavior_vocabularies.py"),
+    )
 
 
 def _run_lint(session: nox.Session, reporter: SessionReporter) -> None:
