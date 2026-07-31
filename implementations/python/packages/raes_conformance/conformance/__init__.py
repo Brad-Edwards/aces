@@ -37,6 +37,9 @@ from raes_conformance.conformance.validators import (
     _validate_payload as _validate_payload,
 )
 from raes_conformance.conformance.validators import (
+    contract_payload_root,
+    contract_validation_strength,
+    supported_contract_ids,
     validate_contract_payload,
 )
 
@@ -46,6 +49,8 @@ __all__ = [
     "BackendProfileSelector",
     "ConformanceCaseResult",
     "backend_conformance_report_payload",
+    "contract_payload_root",
+    "contract_validation_strength",
     "fixtures_root",
     "observability_evidence_conformance_diagnostics",
     "profile_for_manifest",
@@ -53,5 +58,6 @@ __all__ = [
     "required_contracts",
     "run_fixture_suite",
     "run_target_conformance",
+    "supported_contract_ids",
     "validate_contract_payload",
 ]

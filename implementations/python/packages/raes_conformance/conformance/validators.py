@@ -211,3 +211,31 @@ def validate_contract_payload(contract_name: str, payload: object) -> tuple[Diag
     """Validate one payload through the registered structural contract boundary."""
 
     return tuple(_validate_payload(contract_name, payload))
+
+
+def supported_contract_ids() -> tuple[str, ...]:
+    """Return the contract ids owned by the conformance validator registry."""
+
+    return tuple(sorted((*_MODEL_VALIDATORS, *_STRUCTURAL_ONLY_VALIDATORS, *_EVENT_STREAM_VALIDATORS)))
+
+
+def contract_payload_root(contract_name: str) -> str | None:
+    """Return the required JSON root shape for a registered contract."""
+
+    if contract_name in _EVENT_STREAM_VALIDATORS:
+        return "array"
+    if contract_name in _MODEL_VALIDATORS or contract_name in _STRUCTURAL_ONLY_VALIDATORS:
+        return "object"
+    return None
+
+
+def contract_validation_strength(contract_name: str) -> str | None:
+    """Return the strongest context-free validation claim for a contract."""
+
+    if contract_name in _SEMANTIC_CONTEXT_REQUIRED_CONTRACTS:
+        return "structural-context-required"
+    if contract_name in _STRUCTURAL_ONLY_VALIDATORS:
+        return "structural"
+    if contract_name in _MODEL_VALIDATORS or contract_name in _EVENT_STREAM_VALIDATORS:
+        return "semantic"
+    return None

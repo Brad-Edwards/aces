@@ -12,8 +12,23 @@ Main CLI
 .. automodule:: raes_cli.main
    :members:
 
+Semantic Commands
+-----------------
+
+``raes semantic`` is the offline, read-only human and automation surface.
+Every command accepts a file path or ``-`` for stdin, requires an explicit
+versioned contract selection (defaulting to ``sdl-yaml/v1`` for SDL), and
+derives human and deterministic JSON presentation from one typed result.
+
+.. automodule:: raes_cli.semantic
+   :members:
+
 SDL Commands
 ------------
+
+The ``raes sdl`` group contains source-format and legacy module-registry
+compatibility commands. Module acquisition, lock generation, and publication
+are not part of the stable semantic command contract.
 
 .. automodule:: raes_cli.sdl
    :members:
@@ -22,4 +37,10 @@ Processor Commands
 ------------------
 
 .. automodule:: raes_cli.processor
+   :members:
+
+Conformance Commands
+--------------------
+
+.. automodule:: raes_cli.conformance
    :members:
