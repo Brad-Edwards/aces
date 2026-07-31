@@ -354,7 +354,9 @@ def run_isabelle_build(repo_root: Path = REPO_ROOT) -> dict[str, object]:
             raise IsabelleToolError("Isabelle proof replay exceeded its wall-time bound") from exc
         output = _read_bounded_output(output_path)
         if completed.returncode != 0:
-            raise IsabelleToolError("Isabelle kernel rejected the fixed proof session")
+            failure_tail = output.strip()[-4096:]
+            detail = f":\n{failure_tail}" if failure_tail else ""
+            raise IsabelleToolError(f"Isabelle kernel rejected the fixed proof session{detail}")
         if "Unfinished session(s)" in output or f"Finished {ISABELLE_SESSION}" not in output:
             raise IsabelleToolError("Isabelle build did not report a finished proof session")
 

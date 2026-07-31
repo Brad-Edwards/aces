@@ -1435,6 +1435,15 @@ def _run_parallel_verification(
         lambda: _sync_project(session),
         detail="one synchronization shared by all isolated lanes",
     )
+    reporter.run(
+        "verify / shared policy toolchain",
+        lambda: _run_project_python(
+            session,
+            "-c",
+            "from tools.policy.conftest_tool import ensure_conftest; ensure_conftest()",
+        ),
+        detail="prime checksum-verified Conftest before parallel policy tests",
+    )
     with tempfile.TemporaryDirectory(prefix="raes-coverage-") as coverage_root:
         coverage_dir = Path(coverage_root)
         available_cpus = _available_cpu_count()

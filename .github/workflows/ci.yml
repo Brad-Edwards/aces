@@ -18,7 +18,10 @@ permissions:
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    # Ubuntu 24.04 restricts unprivileged user namespaces through AppArmor.
+    # Keep the proof-bearing job on 22.04 so Bubblewrap enforces the sandbox
+    # without disabling a host security control on the runner.
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
