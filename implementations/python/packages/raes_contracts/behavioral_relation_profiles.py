@@ -6,7 +6,9 @@ from functools import cache
 from pathlib import Path
 from typing import Annotated, Literal
 
-from pydantic import Field, model_validator
+from pydantic import Field, GetJsonSchemaHandler, model_validator
+from pydantic.json_schema import JsonSchemaValue
+from pydantic_core import CoreSchema
 from raes.identifiers import is_portable_identifier
 
 from .canonical import canonical_json_digest
@@ -21,7 +23,12 @@ from .json_ingress import parse_bounded_json_object
 from .versions import BEHAVIORAL_RELATION_PROFILE_SCHEMA_VERSION
 
 _MAX_PROFILE_BYTES = 256 * 1024
-SUPPORTED_BEHAVIORAL_RELATION_PROFILE_IDS = frozenset({"participant-opacity-baseline-v1"})
+SUPPORTED_BEHAVIORAL_RELATION_PROFILE_IDS = frozenset(
+    {
+        "participant-opacity-baseline-v1",
+        "participant-opacity-theorem-v1",
+    }
+)
 
 ProfileId = Annotated[
     str,
@@ -40,6 +47,17 @@ Revision = Annotated[
 def _require_sorted_unique(values: tuple[str, ...], label: str) -> None:
     if values != tuple(sorted(set(values))):
         raise ValueError(f"{label} must be unique and use canonical sorted order")
+
+
+def _carrier_kind_condition(kind: str, *, nested: bool = False) -> dict[str, object]:
+    carrier: dict[str, object] = {
+        "properties": {"kind": {"const": kind}},
+        "required": ["kind"],
+    }
+    if not nested:
+        return {"properties": {"carrier": carrier}, "required": ["carrier"]}
+    parameters = {"properties": {"carrier": carrier}, "required": ["carrier"]}
+    return {"properties": {"parameters": parameters}, "required": ["parameters"]}
 
 
 class BehavioralProfileSourceModel(ContractModel):
@@ -84,10 +102,28 @@ class OpacitySecretPredicateModel(ContractModel):
     truth_polarity: Literal["one-sided-true"]
 
 
-class OpacityCarrierModel(ContractModel):
+class FiniteOpacityCarrierModel(ContractModel):
     kind: Literal["finite-possible-points"]
     reachability_ref: SafeRef
     reachability_revision: Revision
+
+
+class AbstractOpacityCarrierModel(ContractModel):
+    """An abstract carrier whose proof obligations are discharged by a theorem session."""
+
+    kind: Literal["abstract-possible-points"]
+    reachability_ref: SafeRef
+    reachability_revision: Revision
+    eligibility_ref: SafeRef
+    eligibility_revision: Revision
+    correspondence_ref: SafeRef
+    correspondence_revision: Revision
+
+
+OpacityCarrierModel = Annotated[
+    FiniteOpacityCarrierModel | AbstractOpacityCarrierModel,
+    Field(discriminator="kind"),
+]
 
 
 class OpacityInitialInformationModel(ContractModel):
@@ -242,7 +278,7 @@ class ParticipantPredicateOpacityParametersModel(ContractModel):
     order: OpacityOrderModel
     time: OpacityTimeModel
     probability: Literal["outside-baseline"]
-    bounds: OpacityFiniteBoundsModel
+    bounds: OpacityFiniteBoundsModel | None = None
 
     @model_validator(mode="after")
     def _validate_domains(
@@ -250,9 +286,15 @@ class ParticipantPredicateOpacityParametersModel(ContractModel):
     ) -> ParticipantPredicateOpacityParametersModel:
         _require_sorted_unique(self.scheduler_refs, "scheduler refs")
         _require_sorted_unique(self.environment_refs, "environment refs")
+        if isinstance(self.carrier, FiniteOpacityCarrierModel) and self.bounds is None:
+            raise ValueError("finite opacity carriers require declared finite bounds")
+        if isinstance(self.carrier, AbstractOpacityCarrierModel) and self.bounds is not None:
+            raise ValueError("abstract theorem carriers must not declare finite bounds")
         strategy_count = (
             len(self.strategy.strategy_refs) if isinstance(self.strategy, ActiveOpacityStrategyModel) else 1
         )
+        if self.bounds is None:
+            return self
         if strategy_count > self.bounds.max_strategies:
             raise ValueError("declared strategies exceed the finite profile bound")
         if len(self.order.order_refs) > self.bounds.max_order_variants:
@@ -260,6 +302,30 @@ class ParticipantPredicateOpacityParametersModel(ContractModel):
         if len(self.scheduler_refs) * len(self.environment_refs) > self.bounds.max_scheduler_environment_pairs:
             raise ValueError("declared scheduler/environment pairs exceed the finite profile bound")
         return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler.resolve_ref_schema(handler(core_schema))
+        json_schema.setdefault("allOf", []).extend(
+            [
+                {
+                    "if": _carrier_kind_condition("finite-possible-points"),
+                    "then": {
+                        "properties": {"bounds": {"type": "object"}},
+                        "required": ["bounds"],
+                    },
+                },
+                {
+                    "if": _carrier_kind_condition("abstract-possible-points"),
+                    "then": {"properties": {"bounds": {"type": "null"}}},
+                },
+            ]
+        )
+        return json_schema
 
 
 class BehavioralRelationProfileModel(ContractModel):
@@ -274,7 +340,10 @@ class BehavioralRelationProfileModel(ContractModel):
     left_carrier_ref: SafeRef
     observation_projection_ref: SafeRef
     observation_projection_revision: Revision
-    finite_analysis_scope: Literal["declared-complete-finite-carrier"]
+    finite_analysis_scope: Literal[
+        "declared-complete-finite-carrier",
+        "abstract-parameterized-theorem-carrier",
+    ]
     parameters: ParticipantPredicateOpacityParametersModel
     source_refs: tuple[BehavioralProfileSourceModel, ...] = Field(
         min_length=1,
@@ -295,7 +364,34 @@ class BehavioralRelationProfileModel(ContractModel):
             raise ValueError("profile observation projection must match the parameter projection")
         source_ids = tuple(item.source_ref for item in self.source_refs)
         _require_sorted_unique(source_ids, "profile source refs")
+        finite_variant = isinstance(self.parameters.carrier, FiniteOpacityCarrierModel)
+        if finite_variant != (self.finite_analysis_scope == "declared-complete-finite-carrier"):
+            raise ValueError("profile assurance scope must match its carrier variant")
         return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler.resolve_ref_schema(handler(core_schema))
+
+        json_schema.setdefault("allOf", []).extend(
+            [
+                {
+                    "if": _carrier_kind_condition("finite-possible-points", nested=True),
+                    "then": {"properties": {"finite_analysis_scope": {"const": "declared-complete-finite-carrier"}}},
+                },
+                {
+                    "if": _carrier_kind_condition("abstract-possible-points", nested=True),
+                    "then": {
+                        "properties": {"finite_analysis_scope": {"const": "abstract-parameterized-theorem-carrier"}}
+                    },
+                },
+            ]
+        )
+        return json_schema
 
     @property
     def canonical_digest(self) -> str:
@@ -350,14 +446,46 @@ def load_behavioral_relation_profile(
     )
 
 
+_HISTORICAL_PROFILE_PATHS = {
+    (
+        "participant-opacity-baseline-v1",
+        "sem-231/rev2",
+    ): behavioral_relation_profiles_root() / "history" / "participant-opacity-baseline-v1-sem-231-rev2.json",
+}
+
+
+@cache
+def load_behavioral_relation_profile_revision(
+    profile_id: str,
+    profile_revision: str,
+) -> BehavioralRelationProfileModel:
+    """Resolve an exact immutable profile revision for evidence replay."""
+
+    _validate_profile_id(profile_id)
+    historical_path = _HISTORICAL_PROFILE_PATHS.get((profile_id, profile_revision))
+    if historical_path is not None:
+        profile = load_behavioral_relation_profile_from_path(profile_id, historical_path)
+        if profile.profile_revision != profile_revision:
+            raise ValueError("historical behavioral relation profile revision does not match its registry entry")
+        return profile
+    current = load_behavioral_relation_profile(profile_id)
+    if current.profile_revision == profile_revision:
+        return current
+    raise ValueError("requested behavioral relation profile revision is unsupported")
+
+
 __all__ = [
     "ActiveOpacityStrategyModel",
+    "AbstractOpacityCarrierModel",
     "BehavioralRelationProfileModel",
     "CoalitionOpacityObserverModel",
+    "FiniteOpacityCarrierModel",
+    "OpacityFiniteBoundsModel",
     "ParticipantPredicateOpacityParametersModel",
     "SUPPORTED_BEHAVIORAL_RELATION_PROFILE_IDS",
     "behavioral_relation_profile_path",
     "behavioral_relation_profiles_root",
     "load_behavioral_relation_profile",
     "load_behavioral_relation_profile_from_path",
+    "load_behavioral_relation_profile_revision",
 ]

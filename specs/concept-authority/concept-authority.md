@@ -52,6 +52,12 @@ subject to a concept in an arbitrary versioned scheme are governed by
 complement native manifest `ConceptBinding` entries without changing their
 scope or authority.
 
+[Autonomous Behavior Vocabulary Bindings](./autonomous-behavior-vocabularies.md)
+apply that portable surface to exact participant behavior specifications using
+pinned ActivityStreams and FIPA sources. The external identifiers remain
+descriptive assertions; they are not new native concept families or SDL
+vocabularies.
+
 ## Surface
 
 A **surface** is a named, bounded, contract-bearing scope of an RAES artifact
@@ -204,7 +210,7 @@ steps from this section and the machine-readable catalog alone:
    family must satisfy the single structural invariant set enforced by
    `implementations/python/tests/test_runtime_family_invariants.py` (the runtime
    SDL cross-family consistency epic
-   [#439](https://github.com/RAESystem/rae/issues/439) and children
+   [#439](https://github.com/OpenRAE/rae/issues/439) and children
    #442 / #443 / #444): a `Runtime<Noun>` model class, a
    `singular(collection_name) + "_id"` primary identifier, and a plural
    typed-child container registered in the registry. A new family that violates
@@ -263,3 +269,5 @@ and where their meaning comes from.
 - GOV-920: Shared semantic profiles ([semantic-profiles.md](./semantic-profiles.md)).
 - GOV-921: Shared reference models ([reference-models.md](./reference-models.md)).
 - GOV-922: Controlled vocabularies and enumerations ([controlled-vocabularies.md](./controlled-vocabularies.md)).
+- ACT-611: Autonomous service and agent vocabulary assertions
+  ([autonomous-behavior-vocabularies.md](./autonomous-behavior-vocabularies.md)).

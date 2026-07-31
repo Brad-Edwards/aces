@@ -1,0 +1,1179 @@
+{
+  "schema_version": "cross-backend-participant-control-program/v1",
+  "assessment_date": "2026-07-31",
+  "parent_issue": 813,
+  "participant_milestone": "Participant Information-Flow & Behavioral Equivalence",
+  "backend_coordination_milestone": "Backend Contract & Conformance",
+  "deliverables": [
+    "docs/decisions/issue-813-cross-backend-participant-control-preflight.md",
+    "docs/decisions/adrs/adr-102-mixed-cross-backend-participant-control.md",
+    "docs/research/cross-backend-participant-control/index.md",
+    "docs/research/cross-backend-participant-control/prior-art-and-design-criteria.md",
+    "docs/research/cross-backend-participant-control/current-state-assessment.md",
+    "docs/research/cross-backend-participant-control/composition-architecture.md",
+    "docs/research/cross-backend-participant-control/demonstration-protocol.md",
+    "docs/research/cross-backend-participant-control/requirement-disposition.md",
+    "docs/research/cross-backend-participant-control/implementation-program.md",
+    "docs/research/cross-backend-participant-control/implementation-program.json",
+    "specs/formal/participant-semantics/cross-backend-participant-control.md",
+    "docs/public/participant-control.md",
+    "docs/explain/sdl/lineage.md",
+    "implementations/python/tests/test_issue_813_cross_backend_participant_control_design.py"
+  ],
+  "primary_sources": [
+    {
+      "id": "hla-1516-2025",
+      "title": "IEEE 1516-2025 High Level Architecture family",
+      "kind": "standard",
+      "edition_or_version": "IEEE 1516-2025, 1516.1-2025, and 1516.2-2025",
+      "primary_url": "https://standards.ieee.org/ieee/1516/6687/",
+      "stronger_dimension": "Standardized federation ownership-transfer, declaration, data-distribution, directed-interaction, and logical-time service machinery is more mature than RAES mixed-runtime composition.",
+      "adopted_lessons": [
+        "service-specific capability declarations",
+        "scoped ownership-transfer states and failure outcomes",
+        "time-regulating and time-constrained roles",
+        "lookahead, time advancement, grants, and delivery-order evidence",
+        "edition-pinned framework, interface, and object-model responsibilities"
+      ],
+      "rejected_inferences": [
+        "object or attribute ownership is participant controller authority",
+        "publish-subscribe or data distribution is authorization or IFC",
+        "object-model syntax establishes shared behavioral meaning",
+        "RAES is HLA wire-compatible by default"
+      ],
+      "raes_consequence": "Use HLA as a service and failure-state precedent. Keep HLA realization behind API-407 and adapter evidence and preserve RAES control, crossing, policy, and trial authorities.",
+      "nonclaims": [
+        "No HLA RTI, FOM, or wire compatibility is delivered.",
+        "No HLA conformance establishes RAES semantic equivalence."
+      ],
+      "empirical_result_boundary": "not-applicable"
+    },
+    {
+      "id": "nist-integrated-hla",
+      "title": "Integrating Multiple HLA Federations for CPS Evaluations",
+      "kind": "government research",
+      "edition_or_version": "NIST publication 934446",
+      "primary_url": "https://www.nist.gov/publications/integrating-multiple-hla-federations-effective-simulation-based-evaluations-cps",
+      "stronger_dimension": "The work makes federation topology, information hiding, independent time scales, shared resources, and bridge translation explicit.",
+      "adopted_lessons": [
+        "flat federation topology can be insufficient",
+        "bridges and shared federates are explicit trust and translation boundaries",
+        "independent logical times can lack a valid mapping",
+        "routing metadata and bridge behavior need evaluation"
+      ],
+      "rejected_inferences": [
+        "a federation boundary proves selective disclosure",
+        "bridge filtering does not establish noninterference",
+        "two independent logical clocks are comparable by default"
+      ],
+      "raes_consequence": "Represent every composition edge and its policy, time, translation, failure, and evidence obligations. Apply RAES authorization before bridge filtering.",
+      "nonclaims": [
+        "Federation topology is not participant visibility policy.",
+        "A bridge is not a semantic authority."
+      ],
+      "empirical_result_boundary": "The NIST case-study performance result remains bound to its topology and workload."
+    },
+    {
+      "id": "nist-ucef",
+      "title": "NIST Universal CPS Environment for Federation",
+      "kind": "government platform specification",
+      "edition_or_version": "NIST UCEF official architecture pages, accessed 2026-07-31",
+      "primary_url": "https://www.nist.gov/ctl/smart-connected-systems-division/iot-devices-and-infrastructures-group/how-does-ucef-work",
+      "stronger_dimension": "UCEF explicitly composes simulators, emulators, equipment, and combinations of them in one federation.",
+      "adopted_lessons": [
+        "one federation can contain simulation, emulation, and hardware",
+        "equipment, a model, or their combination may be a federate",
+        "experiment orchestration is separate from component implementation"
+      ],
+      "rejected_inferences": [
+        "mixed membership makes all components semantically compatible",
+        "HLA membership supplies participant policy or controller authority"
+      ],
+      "raes_consequence": "Require simultaneous mixed composition as a first-class admitted mode rather than only paired backend runs.",
+      "nonclaims": [
+        "RAES does not adopt UCEF's generator or federation runtime.",
+        "Mixed membership alone is not evidence of correct composition."
+      ],
+      "empirical_result_boundary": "not-applicable"
+    },
+    {
+      "id": "acting-edl-fg",
+      "title": "EDL-FG for federated cyber-range exercises",
+      "kind": "research preprint",
+      "edition_or_version": "arXiv:2605.12170, May 2026",
+      "primary_url": "https://arxiv.org/abs/2605.12170",
+      "stronger_dimension": "EDL-FG explicitly separates infrastructure, screenplay, injects, interactions, assessment, federation, and hybrid simulated/emulated IT and OT components.",
+      "adopted_lessons": [
+        "separate scenario logic from infrastructure realization",
+        "represent hybrid simulated and emulated components",
+        "keep injects, participant interactions, telemetry, and assessment distinct",
+        "distinguish capacity and brokering from scenario meaning"
+      ],
+      "rejected_inferences": [
+        "a recent preprint is a ratified interoperability standard",
+        "an EDL schema proves scenario intent survives every range",
+        "RAES should import a parallel exercise language"
+      ],
+      "raes_consequence": "Reuse SDL, DSL-142, API-423, experiment, and apparatus authorities and adopt only the separation and mixed-component lessons.",
+      "nonclaims": [
+        "No EDL-FG compatibility is delivered.",
+        "The paper does not establish a formal cross-range semantic relation."
+      ],
+      "empirical_result_boundary": "The paper identifies systematic quantitative validation as future work."
+    },
+    {
+      "id": "cyborg",
+      "title": "CybORG: A Gym for the Development of Autonomous Cyber Agents",
+      "kind": "research paper and official implementation",
+      "edition_or_version": "arXiv:2108.09118 and official CAGE repository",
+      "primary_url": "https://arxiv.org/abs/2108.09118",
+      "stronger_dimension": "CybORG demonstrates one agent interface with backend-specific simulation and emulation actions and reports concrete transfer failures.",
+      "adopted_lessons": [
+        "share an action and observation seam across realizations",
+        "implement each action separately per backend",
+        "treat simulation-only observations as transfer hazards",
+        "retain mismatch evidence instead of normalizing parity"
+      ],
+      "rejected_inferences": [
+        "a common interface is semantic equivalence",
+        "the 2021 either-or run mode demonstrates simultaneous mixed composition",
+        "successful simulated training implies emulation success"
+      ],
+      "raes_consequence": "Use pure simulation and pure emulation lanes plus explicit mapping loss; add a separate simultaneous mixed case.",
+      "nonclaims": [
+        "RAES does not adopt the CybORG API.",
+        "Interface parity is not behavioral equivalence."
+      ],
+      "empirical_result_boundary": "The reported simulation-to-emulation evaluation succeeded in 139 of 210 trials; failures included agents using simulation-only observation artifacts."
+    },
+    {
+      "id": "cygil",
+      "title": "CyGIL simulation and emulation transfer",
+      "kind": "research paper",
+      "edition_or_version": "arXiv:2304.01244",
+      "primary_url": "https://arxiv.org/abs/2304.01244",
+      "stronger_dimension": "CyGIL makes iterative emulation-to-simulation model generation and simulation-to-emulation evaluation part of the experimental loop.",
+      "adopted_lessons": [
+        "bind simulators to the data and traces used to generate them",
+        "record unknown transitions",
+        "support alternating training, calibration, and evaluation stages",
+        "treat operational tools and abstract actions as distinct"
+      ],
+      "rejected_inferences": [
+        "one bounded successful transfer establishes universal transferability",
+        "a data-derived simulator has complete transition coverage",
+        "trial-stage switching is backend equivalence"
+      ],
+      "raes_consequence": "Represent inter-trial realization changes and provenance and report empirical transfer separately from conformance or formal relations.",
+      "nonclaims": [
+        "No general sim-to-em transfer is established.",
+        "No simultaneous mixed world is inferred from alternating environments."
+      ],
+      "empirical_result_boundary": "The paper reports a 50-of-50 emulation evaluation for one optimized policy and scenario while also recording unknown transitions, heuristic switching, and a need for broader studies."
+    },
+    {
+      "id": "cyberbattlesim",
+      "title": "Microsoft CyberBattleSim",
+      "kind": "official open-source environment",
+      "edition_or_version": "official repository documentation, accessed 2026-07-31",
+      "primary_url": "https://github.com/microsoft/CyberBattleSim",
+      "stronger_dimension": "",
+      "adopted_lessons": [
+        "use a closed abstract action and observation vocabulary",
+        "make attacker and defender roles explicit",
+        "state fidelity and safety limits"
+      ],
+      "rejected_inferences": [
+        "simulated compromise ownership is HLA ownership",
+        "abstract simulation actions are operational commands",
+        "the environment is suitable for direct real-system application"
+      ],
+      "raes_consequence": "Use as an abstract simulated lane and require explicit mapping loss at operational boundaries.",
+      "nonclaims": [
+        "No operational fidelity or transfer follows from CyberBattleSim support.",
+        "No real network traffic is inferred."
+      ],
+      "empirical_result_boundary": "The official project describes the environment as deliberately abstract and unsuitable for direct real-world application."
+    },
+    {
+      "id": "fmi-3.0.2",
+      "title": "Functional Mock-up Interface",
+      "kind": "industry standard",
+      "edition_or_version": "FMI 3.0.2",
+      "primary_url": "https://fmi-standard.org/docs/3.0.2/",
+      "stronger_dimension": "FMI distinguishes model exchange, co-simulation, and scheduled execution and exposes component capabilities at a mature interoperability seam.",
+      "adopted_lessons": [
+        "distinguish exchange, co-simulation, and scheduled execution",
+        "make communication points and importer scheduling explicit",
+        "derive global order outside component-local priorities"
+      ],
+      "rejected_inferences": [
+        "a common package supplies a global co-simulation algorithm",
+        "local priorities define cross-component order",
+        "interface compatibility supplies participant policy"
+      ],
+      "raes_consequence": "Make the coordinator, time mapping, global order, and failure behavior explicit on every mixed boundary.",
+      "nonclaims": [
+        "No FMI compatibility is delivered.",
+        "A component interface is not a participant-control semantic relation."
+      ],
+      "empirical_result_boundary": "not-applicable"
+    },
+    {
+      "id": "helics",
+      "title": "HELICS co-simulation timing and dynamic federations",
+      "kind": "official implementation documentation",
+      "edition_or_version": "HELICS documentation, accessed 2026-07-31",
+      "primary_url": "https://docs.helics.org/en/latest/user-guide/fundamental_topics/timing_configuration.html",
+      "stronger_dimension": "HELICS supplies explicit time request/grant coordination and dynamic federation support, including real-time and hardware-in-the-loop membership.",
+      "adopted_lessons": [
+        "separate message topology from broker topology",
+        "request and grant simulated time",
+        "represent late join and partial-run membership",
+        "treat hardware-in-the-loop as a bounded component realization"
+      ],
+      "rejected_inferences": [
+        "dynamic federation membership may be unadmitted",
+        "broker synchronization supplies action authority",
+        "time grants do not establish cross-backend semantic equivalence"
+      ],
+      "raes_consequence": "Allow only finite pre-admitted within-run membership schedules with pinned apparatus and explicit time/order evidence.",
+      "nonclaims": [
+        "No HELICS broker or protocol is required.",
+        "Late join is not permission to alter sealed experiment intent."
+      ],
+      "empirical_result_boundary": "not-applicable"
+    },
+    {
+      "id": "iso-23247-6",
+      "title": "Digital twin framework for manufacturing — digital twin composition",
+      "kind": "international standard",
+      "edition_or_version": "ISO 23247-6:2026",
+      "primary_url": "https://www.iso.org/standard/87426.html",
+      "stronger_dimension": "The standard distinguishes integrated, unified, and federated digital-twin composition across parties.",
+      "adopted_lessons": [
+        "name composition topology",
+        "treat cross-party federation as a boundary",
+        "separate component twins from their composition"
+      ],
+      "rejected_inferences": [
+        "manufacturing composition categories determine RAES authority",
+        "a simulation, model, shadow, and synchronized twin are interchangeable",
+        "composition alone proves synchronization or fidelity"
+      ],
+      "raes_consequence": "Use topology as an explicit profile coordinate without importing manufacturing semantics.",
+      "nonclaims": [
+        "RAES does not claim ISO 23247 conformance.",
+        "A mixed cyber range is not automatically a digital twin."
+      ],
+      "empirical_result_boundary": "not-applicable"
+    },
+    {
+      "id": "digital-twin-consortium",
+      "title": "Digital Twin Consortium definition",
+      "kind": "industry definition",
+      "edition_or_version": "official definition, accessed 2026-07-31",
+      "primary_url": "https://www.digitaltwinconsortium.org/initiatives/the-definition-of-a-digital-twin/",
+      "stronger_dimension": "",
+      "adopted_lessons": [
+        "state synchronization frequency and fidelity",
+        "distinguish a synchronized twin from a prototype or model",
+        "bind interaction with real entities"
+      ],
+      "rejected_inferences": [
+        "any simulation is a digital twin",
+        "closed-loop interaction is implicit",
+        "synchronization frequency proves semantic validity"
+      ],
+      "raes_consequence": "Treat loop posture, synchronization, fidelity, and evidence as independent declared coordinates.",
+      "nonclaims": [
+        "Issue 813 does not create a digital-twin product claim.",
+        "A digital-twin label is not realization evidence."
+      ],
+      "empirical_result_boundary": "not-applicable"
+    },
+    {
+      "id": "ieee-1730.1",
+      "title": "DSEEP multi-architecture overlay",
+      "kind": "recommended practice",
+      "edition_or_version": "IEEE 1730.1-2023",
+      "primary_url": "https://standards.ieee.org/ieee/1730.1/11140/",
+      "stronger_dimension": "The recommended practice treats multi-architecture integration as a separate engineering process with architecture-specific inputs and outcomes.",
+      "adopted_lessons": [
+        "make multi-architecture issues explicit",
+        "separate engineering process from runtime protocol",
+        "record architecture-specific risks and outcomes"
+      ],
+      "rejected_inferences": [
+        "following a process establishes interoperability",
+        "DIS, HLA, and TENA semantics are interchangeable"
+      ],
+      "raes_consequence": "Create dependency-ordered semantic, contract, trial, runtime, backend, evaluation, and documentation packages.",
+      "nonclaims": [
+        "Issue 813 does not claim DSEEP compliance.",
+        "Process conformance is not mixed-runtime evidence."
+      ],
+      "empirical_result_boundary": "not-applicable"
+    },
+    {
+      "id": "siso-sirl",
+      "title": "Simulation Interoperability Readiness Levels",
+      "kind": "consensus standard and guide",
+      "edition_or_version": "SISO-STD-024-2024 and SISO-GUIDE-011-2024",
+      "primary_url": "https://www.sisostandards.org/page/StandardsProducts",
+      "stronger_dimension": "SIRL supplies an evidence-based readiness-risk assessment discipline before integration.",
+      "adopted_lessons": [
+        "assess evidence availability before integration",
+        "separate readiness risk from actual interoperability",
+        "require documentation and engineering evidence"
+      ],
+      "rejected_inferences": [
+        "a readiness level declares systems interoperable",
+        "documentation replaces actual integration evidence"
+      ],
+      "raes_consequence": "Report interoperability readiness as a separate bounded relation and retain actual demonstration evidence.",
+      "nonclaims": [
+        "No SIRL score is assigned by issue 813.",
+        "Readiness is not conformance or equivalence."
+      ],
+      "empirical_result_boundary": "not-applicable"
+    },
+    {
+      "id": "w3c-prov",
+      "title": "W3C PROV overview",
+      "kind": "web standard",
+      "edition_or_version": "W3C Recommendation family",
+      "primary_url": "https://www.w3.org/TR/prov-overview/",
+      "stronger_dimension": "",
+      "adopted_lessons": [
+        "separate entities, activities, and agents",
+        "record derivation and responsibility",
+        "retain version and generation relationships"
+      ],
+      "rejected_inferences": [
+        "RAES needs a second provenance object model",
+        "a provenance graph proves reproducibility"
+      ],
+      "raes_consequence": "Reuse experiment, associated-artifact, realization, and evidence contracts with explicit derivation links.",
+      "nonclaims": [
+        "No PROV interchange schema is added.",
+        "Provenance completeness is profile-bound."
+      ],
+      "empirical_result_boundary": "not-applicable"
+    },
+    {
+      "id": "ro-crate",
+      "title": "RO-Crate specification",
+      "kind": "research data packaging specification",
+      "edition_or_version": "RO-Crate 1.2",
+      "primary_url": "https://www.researchobject.org/ro-crate/specification/1.2/",
+      "stronger_dimension": "",
+      "adopted_lessons": [
+        "package research artifacts with contextual metadata",
+        "bind files, software, people, and actions",
+        "support portable reproduction bundles"
+      ],
+      "rejected_inferences": [
+        "a package proves the experiment was reproduced",
+        "RAES needs an RO-Crate schema without an interchange requirement"
+      ],
+      "raes_consequence": "Use existing bundle, run, evidence, and associated-artifact patterns and leave external packaging to a later explicit requirement.",
+      "nonclaims": [
+        "No RO-Crate compatibility is delivered.",
+        "Packaging is not independent reproduction."
+      ],
+      "empirical_result_boundary": "not-applicable"
+    }
+  ],
+  "composition_profile": {
+    "profile_id": "mixed-cross-backend-participant-control-v1",
+    "revision": "rev1",
+    "composition_modes": [
+      "alternative-realization",
+      "simultaneous-mixed-realization"
+    ],
+    "realization_forms": [
+      "simulation",
+      "emulation-or-operational",
+      "hardware-or-native",
+      "federated-composition"
+    ],
+    "allocation_units": [
+      "participant-runtime",
+      "controlled-scope",
+      "action-family",
+      "observation-source",
+      "crossing-boundary"
+    ],
+    "portable_sdl_backend_neutral": true,
+    "allocation_authority": "admitted-experiment-and-trial-intent",
+    "runtime_fallback_outside_allocation": "reject",
+    "topology_classes": [
+      "single-component",
+      "integrated",
+      "unified",
+      "federated-or-bridged",
+      "nested"
+    ],
+    "boundary_required_fields": [
+      "source-component-ref",
+      "destination-component-ref",
+      "adapter-ref",
+      "authority-ref",
+      "action-or-observation-mapping-ref",
+      "participant-audience-policy-ref",
+      "release-or-declassification-basis-ref",
+      "time-mapping-ref",
+      "required-support-strength",
+      "mapping-loss",
+      "failure-behavior",
+      "evidence-refs"
+    ],
+    "unknown_or_missing_boundary_behavior": "reject-or-explicitly-unsupported",
+    "authority_model": {
+      "acting_controller_cardinality": "exactly-one-per-participant-episode-rev1",
+      "hla_ownership_is_controller_authority": false,
+      "backend_responsibility_is_action_admission": false,
+      "routing_is_disclosure_authority": false,
+      "multi_controller_status": "not-supported-in-rev1",
+      "lease_status": "not-supported-in-rev1",
+      "joint_or_fused_control_status": "not-supported-in-rev1",
+      "future_profile_requirements": [
+        "controller-and-scope-identities",
+        "arbitration-quorum-priority-or-unanimity",
+        "lease-renewal-expiry-and-fencing",
+        "atomic-transition-and-stale-state-semantics",
+        "clock-and-order-authority",
+        "failure-livelock-and-oscillation-semantics",
+        "evidence-and-conformance"
+      ],
+      "distinct_relations": [
+        "participant-identity",
+        "acting-controller",
+        "authority-basis-and-scope",
+        "action-admission",
+        "backend-realization-responsibility",
+        "hla-object-or-attribute-ownership",
+        "delivery-addressing",
+        "participant-disclosure-authority"
+      ]
+    }
+  },
+  "trial_realization_profile": {
+    "profile_id": "mixed-realization-trial-schedule-v1",
+    "revision": "rev1",
+    "inter_trial_change": "linked-new-plan-entry-and-run",
+    "within_run_change": "finite-pre-admitted-phase-schedule",
+    "all_phase_apparatus_pinned_before_execution": true,
+    "all_phase_boundaries_and_mappings_pinned_before_execution": true,
+    "late_unadmitted_join": "reject",
+    "runtime_fact_changes_allocation": false,
+    "scheduler_changes_allocation": false,
+    "history_and_participant_knowledge": "append-only",
+    "trial_identity_rewritten_by_phase_change": false,
+    "phase_change_evidence": [
+      "prior-and-next-phase",
+      "governed-order",
+      "active-membership",
+      "controller-and-authority-cut",
+      "clock-mapping",
+      "policy-cut",
+      "mapping-loss",
+      "commit-and-failure"
+    ]
+  },
+  "open_closed_axes": [
+    {
+      "id": "control-loop",
+      "values": [
+        "open-loop",
+        "closed-loop"
+      ],
+      "authority_owner": "experiment-protocol-plus-participant-control-policy",
+      "adoption": "adopt as an explicit profile coordinate; closed-loop actuation still requires ordinary action authority and admission"
+    },
+    {
+      "id": "world-assumption",
+      "values": [
+        "closed-world",
+        "bounded-open-world"
+      ],
+      "authority_owner": "semantic-profile-and-experiment-assumptions",
+      "adoption": "adopt only as a declared assumption about unknown entities, actions, observations, and mappings; it never widens a closed vocabulary"
+    },
+    {
+      "id": "federation-membership",
+      "values": [
+        "fixed",
+        "pre-admitted-dynamic"
+      ],
+      "authority_owner": "admitted-trial-phase-schedule",
+      "adoption": "adopt finite pre-admitted joins and leaves; reject unadmitted dynamic membership"
+    }
+  ],
+  "time_and_order_profile": {
+    "profile_id": "mixed-composition-time-and-order-v1",
+    "revision": "rev1",
+    "cross_clock_mapping_required": true,
+    "timestamp_only_strength": "disclosed-weak",
+    "unmapped_clock_relation": "partial-or-unknown",
+    "backend_serialized_requires_readback": true,
+    "rollback_or_retraction_erases_delivery": false,
+    "required_service_evidence": [
+      "clock-identity-and-authority",
+      "time-domain",
+      "regulating-or-constrained-role",
+      "lookahead",
+      "advance-request-and-grant",
+      "delivery-order",
+      "serialization-service",
+      "runtime-readback",
+      "conformance-result"
+    ],
+    "staleness_coordinates": [
+      "controller",
+      "authority",
+      "capability",
+      "policy-revision",
+      "state-revision",
+      "history-head",
+      "governed-order"
+    ]
+  },
+  "distribution_and_security_profile": {
+    "profile_id": "mixed-composition-distribution-security-v1",
+    "revision": "rev1",
+    "publish_subscribe_authorizes_disclosure": false,
+    "ddm_establishes_ifc": false,
+    "directed_delivery_is_participant_observation": false,
+    "filtering_occurs_after_raes_authorization": true,
+    "audit_audience_is_participant_audience": false,
+    "metadata_leakage_surface": [
+      "membership",
+      "subscription",
+      "object-or-interaction-class",
+      "region-or-destination",
+      "message-size",
+      "timing",
+      "synchronization",
+      "ownership-change",
+      "retraction",
+      "delivery-failure"
+    ],
+    "final_effect_boundary": "commit-exact-authority-policy-time-and-allocation-cut-before-backend-call-or-disclosure",
+    "failed_commit_effect": "zero-prohibited-effects"
+  },
+  "demonstration_protocol": {
+    "protocol_id": "cross-backend-participant-control-demonstration-v1",
+    "revision": "rev1",
+    "same_authored_policy_digest_required": true,
+    "reporting_relations_are_distinct": [
+      "bounded-conformance",
+      "interoperability-readiness",
+      "empirical-sim-to-em-transfer",
+      "trace-inclusion",
+      "bisimulation",
+      "ifc-or-noninterference",
+      "backend-equivalence"
+    ],
+    "cases": [
+      {
+        "id": "pure-simulation",
+        "composition": "one simulated cyber-agent environment",
+        "boundary": "authored policy through simulated adapter",
+        "expected_disposition": "bounded-realization-or-explicit-weakening",
+        "required_evidence": [
+          "scenario-and-policy-digests",
+          "trial-and-run-identity",
+          "apparatus-and-adapter-identities",
+          "capability-and-conformance",
+          "allocation-and-topology",
+          "time-and-order",
+          "mapping-loss-and-limitations"
+        ],
+        "denial_requires_zero_prohibited_effects": false,
+        "nonclaims": [
+          "No emulation transfer or backend equivalence."
+        ]
+      },
+      {
+        "id": "pure-emulation-or-operational",
+        "composition": "one emulation or operational RuntimeTarget",
+        "boundary": "authored policy through operational adapter",
+        "expected_disposition": "bounded-realization-or-explicit-weakening",
+        "required_evidence": [
+          "scenario-and-policy-digests",
+          "trial-and-run-identity",
+          "apparatus-and-adapter-identities",
+          "capability-and-conformance",
+          "allocation-and-topology",
+          "time-and-order",
+          "mapping-loss-and-limitations"
+        ],
+        "denial_requires_zero_prohibited_effects": false,
+        "nonclaims": [
+          "No native realization beyond the observed operations."
+        ]
+      },
+      {
+        "id": "simultaneous-mixed",
+        "composition": "simulated and emulated or operational components in one run",
+        "boundary": "explicit mixed topology edge",
+        "expected_disposition": "admit-only-with-complete-edge-mappings",
+        "required_evidence": [
+          "scenario-and-policy-digests",
+          "trial-and-run-identity",
+          "apparatus-and-adapter-identities",
+          "capability-and-conformance",
+          "allocation-and-topology",
+          "time-and-order",
+          "mapping-loss-and-limitations"
+        ],
+        "denial_requires_zero_prohibited_effects": true,
+        "nonclaims": [
+          "Mixed membership is not semantic equivalence."
+        ]
+      },
+      {
+        "id": "inter-trial-transition",
+        "composition": "linked simulation then emulation or operational runs",
+        "boundary": "new admitted plan entry and run identity",
+        "expected_disposition": "new-run-with-source-lineage",
+        "required_evidence": [
+          "scenario-and-policy-digests",
+          "trial-and-run-identity",
+          "apparatus-and-adapter-identities",
+          "capability-and-conformance",
+          "allocation-and-topology",
+          "time-and-order",
+          "mapping-loss-and-limitations"
+        ],
+        "denial_requires_zero_prohibited_effects": false,
+        "nonclaims": [
+          "Linked trials are not one continuous world."
+        ]
+      },
+      {
+        "id": "pre-admitted-phase-transition",
+        "composition": "finite within-run membership change",
+        "boundary": "phase transition with all components pinned",
+        "expected_disposition": "append-transition-or-fail-before-effect",
+        "required_evidence": [
+          "scenario-and-policy-digests",
+          "trial-and-run-identity",
+          "apparatus-and-adapter-identities",
+          "capability-and-conformance",
+          "allocation-and-topology",
+          "time-and-order",
+          "mapping-loss-and-limitations"
+        ],
+        "denial_requires_zero_prohibited_effects": true,
+        "nonclaims": [
+          "Pre-admitted phase change does not permit arbitrary late join."
+        ]
+      },
+      {
+        "id": "open-loop",
+        "composition": "observation or replay without external actuation",
+        "boundary": "participant observation and evidence boundary",
+        "expected_disposition": "observe-without-action-authority",
+        "required_evidence": [
+          "scenario-and-policy-digests",
+          "trial-and-run-identity",
+          "apparatus-and-adapter-identities",
+          "capability-and-conformance",
+          "allocation-and-topology",
+          "time-and-order",
+          "mapping-loss-and-limitations"
+        ],
+        "denial_requires_zero_prohibited_effects": true,
+        "nonclaims": [
+          "Open-loop observation grants no actuation authority."
+        ]
+      },
+      {
+        "id": "closed-loop",
+        "composition": "observation followed by governed external intervention",
+        "boundary": "final admitted action and external effect",
+        "expected_disposition": "commit-before-authorized-effect",
+        "required_evidence": [
+          "scenario-and-policy-digests",
+          "trial-and-run-identity",
+          "apparatus-and-adapter-identities",
+          "capability-and-conformance",
+          "allocation-and-topology",
+          "time-and-order",
+          "mapping-loss-and-limitations"
+        ],
+        "denial_requires_zero_prohibited_effects": true,
+        "nonclaims": [
+          "Closed-loop posture does not bypass action admission."
+        ]
+      },
+      {
+        "id": "stale-handoff",
+        "composition": "approval resolved before controller transition",
+        "boundary": "revision-fenced control and action admission",
+        "expected_disposition": "deny-stale",
+        "required_evidence": [
+          "scenario-and-policy-digests",
+          "trial-and-run-identity",
+          "apparatus-and-adapter-identities",
+          "capability-and-conformance",
+          "allocation-and-topology",
+          "time-and-order",
+          "mapping-loss-and-limitations"
+        ],
+        "denial_requires_zero_prohibited_effects": true,
+        "nonclaims": [
+          "A prior approval is not current authority."
+        ]
+      },
+      {
+        "id": "concurrent-intervention",
+        "composition": "two interventions race at one participant cut",
+        "boundary": "state revision and history-head compare-and-swap",
+        "expected_disposition": "one-commit-or-both-denied-never-two-authorities",
+        "required_evidence": [
+          "scenario-and-policy-digests",
+          "trial-and-run-identity",
+          "apparatus-and-adapter-identities",
+          "capability-and-conformance",
+          "allocation-and-topology",
+          "time-and-order",
+          "mapping-loss-and-limitations"
+        ],
+        "denial_requires_zero_prohibited_effects": true,
+        "nonclaims": [
+          "Interleaving is not joint control."
+        ]
+      },
+      {
+        "id": "unsupported-or-false-capability",
+        "composition": "adapter lacks or falsely declares a required service",
+        "boundary": "API-407 effective support and conformance",
+        "expected_disposition": "deny-unsupported-or-fail-conformance",
+        "required_evidence": [
+          "scenario-and-policy-digests",
+          "trial-and-run-identity",
+          "apparatus-and-adapter-identities",
+          "capability-and-conformance",
+          "allocation-and-topology",
+          "time-and-order",
+          "mapping-loss-and-limitations"
+        ],
+        "denial_requires_zero_prohibited_effects": true,
+        "nonclaims": [
+          "Declaration is not realization."
+        ]
+      },
+      {
+        "id": "timestamp-only-or-unmapped-order",
+        "composition": "components expose timestamps without governed order",
+        "boundary": "cross-clock mapping and order admission",
+        "expected_disposition": "disclosed-weak-or-reject-exact-order",
+        "required_evidence": [
+          "scenario-and-policy-digests",
+          "trial-and-run-identity",
+          "apparatus-and-adapter-identities",
+          "capability-and-conformance",
+          "allocation-and-topology",
+          "time-and-order",
+          "mapping-loss-and-limitations"
+        ],
+        "denial_requires_zero_prohibited_effects": false,
+        "nonclaims": [
+          "Timestamp order is not causal or governed order."
+        ]
+      },
+      {
+        "id": "simulation-only-observation",
+        "composition": "simulation exposes a field absent from emulation",
+        "boundary": "participant observation mapping",
+        "expected_disposition": "record-mismatch-and-block-parity-claim",
+        "required_evidence": [
+          "scenario-and-policy-digests",
+          "trial-and-run-identity",
+          "apparatus-and-adapter-identities",
+          "capability-and-conformance",
+          "allocation-and-topology",
+          "time-and-order",
+          "mapping-loss-and-limitations"
+        ],
+        "denial_requires_zero_prohibited_effects": false,
+        "nonclaims": [
+          "Common field names do not establish equivalent observations."
+        ]
+      },
+      {
+        "id": "unrealizable-action",
+        "composition": "abstract action lacks an operational mapping",
+        "boundary": "transformed proposal revalidation and admission",
+        "expected_disposition": "deny-unrealizable",
+        "required_evidence": [
+          "scenario-and-policy-digests",
+          "trial-and-run-identity",
+          "apparatus-and-adapter-identities",
+          "capability-and-conformance",
+          "allocation-and-topology",
+          "time-and-order",
+          "mapping-loss-and-limitations"
+        ],
+        "denial_requires_zero_prohibited_effects": true,
+        "nonclaims": [
+          "Simulation admission cannot be reused after adapter transformation."
+        ]
+      },
+      {
+        "id": "directed-delivery-failure",
+        "composition": "directed inject is misaddressed or undeliverable",
+        "boundary": "DSL-142 identity through API-423 delivery and observation",
+        "expected_disposition": "record-failed-delivery-without-observation",
+        "required_evidence": [
+          "scenario-and-policy-digests",
+          "trial-and-run-identity",
+          "apparatus-and-adapter-identities",
+          "capability-and-conformance",
+          "allocation-and-topology",
+          "time-and-order",
+          "mapping-loss-and-limitations"
+        ],
+        "denial_requires_zero_prohibited_effects": true,
+        "nonclaims": [
+          "Addressed or attempted delivery is not observation."
+        ]
+      },
+      {
+        "id": "prior-delivery-retraction",
+        "composition": "policy conceals or retracts after prior delivery",
+        "boundary": "append-only participant and crossing histories",
+        "expected_disposition": "append-retraction-without-erasing-knowledge",
+        "required_evidence": [
+          "scenario-and-policy-digests",
+          "trial-and-run-identity",
+          "apparatus-and-adapter-identities",
+          "capability-and-conformance",
+          "allocation-and-topology",
+          "time-and-order",
+          "mapping-loss-and-limitations"
+        ],
+        "denial_requires_zero_prohibited_effects": false,
+        "nonclaims": [
+          "Retraction cannot undo participant knowledge."
+        ]
+      },
+      {
+        "id": "bridge-metadata-leakage",
+        "composition": "payload is filtered but bridge metadata varies",
+        "boundary": "participant and auditor projection over bridge facts",
+        "expected_disposition": "record-leakage-or-prove-bounded-projection",
+        "required_evidence": [
+          "scenario-and-policy-digests",
+          "trial-and-run-identity",
+          "apparatus-and-adapter-identities",
+          "capability-and-conformance",
+          "allocation-and-topology",
+          "time-and-order",
+          "mapping-loss-and-limitations"
+        ],
+        "denial_requires_zero_prohibited_effects": false,
+        "nonclaims": [
+          "Payload filtering is not metadata noninterference."
+        ]
+      }
+    ]
+  },
+  "requirement_dispositions": [
+    {
+      "uid": "SEM-234",
+      "title": "Mixed Cross-Backend Participant-Control Composition",
+      "disposition": "new",
+      "status": "DRAFT",
+      "ground_control_id": "38d807a4-ff50-4f9f-99a0-09e3ee3cdaa2",
+      "scope": "alternative and simultaneous mixed realization, allocation, topology, authority separation, temporal coupling, trial phases, open/closed axes, loss, and fail-closed admission",
+      "rationale": "No incumbent defines one admitted trial containing multiple participant realization providers and explicit composition boundaries."
+    },
+    {
+      "uid": "ASR-537",
+      "title": "Cross-Backend Participant-Control Realization and Transfer Evidence",
+      "disposition": "new",
+      "status": "DRAFT",
+      "ground_control_id": "b425b452-a796-4997-a29f-3432baa6496a",
+      "scope": "pure and mixed demonstration, staged transfer, apparatus/provenance binding, mismatch, zero-effect, uncertainty, and claim separation",
+      "rationale": "Paired runs, interfaces, and capability declarations do not establish simultaneous mixed realization or transfer."
+    },
+    {
+      "uid": "SEM-230",
+      "disposition": "reuse",
+      "scope": "participant and audience projection, exact-cut policy, memory, release, strategies, and noninterference boundary",
+      "rationale": "Mixed composition routes an authorized projection; it does not define a second participant world."
+    },
+    {
+      "uid": "SCE-002",
+      "disposition": "extend-downstream",
+      "scope": "scenario-family selection, deterministic trial admission, apparatus pinning, immutable plan and run identity",
+      "rationale": "Downstream work must add mixed allocation and finite phase schedules without creating a second trial lifecycle."
+    },
+    {
+      "uid": "API-407",
+      "disposition": "extend-downstream",
+      "scope": "declared and effective backend feature strength, constraints, downgrade, realization, and conformance",
+      "rationale": "Mixed services need governed capability terms and evidence, not a parallel manifest block."
+    },
+    {
+      "uid": "API-423",
+      "disposition": "reuse",
+      "scope": "typed request, decision, transformation, delivery, observation, audit, context, and order crossings",
+      "rationale": "Composition edges use existing crossing carriers and add no generic federation event."
+    },
+    {
+      "uid": "RUN-310",
+      "disposition": "reuse-and-extend-downstream",
+      "scope": "authenticated control operations, revision-fenced handoff, idempotency, persistence, and replay",
+      "rationale": "Mixed providers do not change the initial single acting-controller authority."
+    },
+    {
+      "uid": "RUN-319",
+      "disposition": "extend-downstream",
+      "scope": "reference crossing mediation and atomic decision-before-effect boundary",
+      "rationale": "Mixed dispatch must reuse the existing final mediation seam."
+    },
+    {
+      "uid": "ASR-535",
+      "disposition": "reuse",
+      "scope": "bounded participant-flow assurance, relation claim binding, finite falsification, and overclaim prevention",
+      "rationale": "ASR-537 adds mixed realization and transfer variables without merging assurance axes."
+    }
+  ],
+  "implementation_issues": [
+    {
+      "key": "semantic-authority",
+      "issue_number": 1013,
+      "title": "Define mixed cross-backend participant-control semantics",
+      "milestone": "Participant Information-Flow & Behavioral Equivalence",
+      "requirements": [
+        "SEM-234",
+        "SEM-230",
+        "SCE-002",
+        "API-423",
+        "RUN-310"
+      ],
+      "dependencies": [],
+      "bounded_outcome": "Publish the revisioned profile and invariants.",
+      "negative_cases": [
+        "authority conflation",
+        "unadmitted membership",
+        "identity rewriting"
+      ],
+      "evidence_required": [
+        "formal profile",
+        "worked examples",
+        "counterexamples"
+      ],
+      "explicit_nonclaims": [
+        "no contracts",
+        "no runtime",
+        "no multi-controller revision-1 support"
+      ]
+    },
+    {
+      "key": "portable-composition-contracts",
+      "issue_number": 1014,
+      "title": "Publish portable mixed-composition contracts",
+      "milestone": "Participant Information-Flow & Behavioral Equivalence",
+      "requirements": [
+        "SEM-234",
+        "SCE-002",
+        "API-407",
+        "API-423"
+      ],
+      "dependencies": [
+        "semantic-authority"
+      ],
+      "bounded_outcome": "Publish closed composition, allocation, phase, time-mapping, loss, and evidence contracts.",
+      "negative_cases": [
+        "open metadata authority",
+        "duplicate trial identity",
+        "unresolved references"
+      ],
+      "evidence_required": [
+        "schemas and fixtures",
+        "context validation",
+        "generator parity"
+      ],
+      "explicit_nonclaims": [
+        "schema presence is not realization",
+        "contract validity is not equivalence"
+      ]
+    },
+    {
+      "key": "trial-admission",
+      "issue_number": 1015,
+      "title": "Admit mixed and staged participant trial realizations",
+      "milestone": "Participant Information-Flow & Behavioral Equivalence",
+      "requirements": [
+        "SEM-234",
+        "SCE-002",
+        "API-407"
+      ],
+      "dependencies": [
+        "portable-composition-contracts"
+      ],
+      "bounded_outcome": "Compile immutable schedule-independent mixed allocations and finite phase schedules.",
+      "negative_cases": [
+        "runtime fallback",
+        "partial plan",
+        "unadmitted phase",
+        "apparatus drift"
+      ],
+      "evidence_required": [
+        "deterministic compiler tests",
+        "admission failures",
+        "lineage and cleanup"
+      ],
+      "explicit_nonclaims": [
+        "no live mixed execution",
+        "no scheduler semantic authority"
+      ]
+    },
+    {
+      "key": "runtime-coordination",
+      "issue_number": 1016,
+      "title": "Coordinate mixed participant runtimes fail-closed",
+      "milestone": "Participant Information-Flow & Behavioral Equivalence",
+      "requirements": [
+        "SEM-234",
+        "RUN-310",
+        "RUN-319",
+        "API-423"
+      ],
+      "dependencies": [
+        "portable-composition-contracts",
+        "trial-admission"
+      ],
+      "bounded_outcome": "Resolve and commit the exact mixed boundary cut before backend effect or disclosure.",
+      "negative_cases": [
+        "adapter bypass",
+        "stale authority",
+        "failed commit effect",
+        "history erasure"
+      ],
+      "evidence_required": [
+        "real-boundary tests",
+        "zero-effect assertions",
+        "append-only histories"
+      ],
+      "explicit_nonclaims": [
+        "reference coordination is not backend-native realization",
+        "no multi-controller claim"
+      ]
+    },
+    {
+      "key": "backend-capability-and-conformance",
+      "issue_number": 1017,
+      "title": "Conform mixed-composition backend capabilities",
+      "milestone": "Backend Contract & Conformance",
+      "requirements": [
+        "SEM-234",
+        "ASR-537",
+        "API-407",
+        "API-423",
+        "ASR-535"
+      ],
+      "dependencies": [
+        "portable-composition-contracts",
+        "runtime-coordination"
+      ],
+      "bounded_outcome": "Declare, resolve, probe, and report mixed backend services at exact support strengths.",
+      "negative_cases": [
+        "method presence claim",
+        "timestamp-only exact order",
+        "DDM as IFC",
+        "false capability"
+      ],
+      "evidence_required": [
+        "support-strength tests",
+        "runtime readback",
+        "false-declaration probes"
+      ],
+      "explicit_nonclaims": [
+        "conformance is not transfer or equivalence",
+        "no default external wire compatibility"
+      ]
+    },
+    {
+      "key": "demonstration-and-evaluation",
+      "issue_number": 1018,
+      "title": "Demonstrate mixed cross-backend participant control",
+      "milestone": "Participant Information-Flow & Behavioral Equivalence",
+      "requirements": [
+        "ASR-537",
+        "SEM-234",
+        "ASR-535"
+      ],
+      "dependencies": [
+        "trial-admission",
+        "runtime-coordination",
+        "backend-capability-and-conformance"
+      ],
+      "bounded_outcome": "Run the pure, mixed, staged, open/closed, and adversarial protocol with reproducible evidence.",
+      "negative_cases": [
+        "sim-only observation",
+        "unrealizable action",
+        "ordering mismatch",
+        "metadata leak",
+        "prohibited denial effect"
+      ],
+      "evidence_required": [
+        "apparatus and provenance",
+        "raw and derived results",
+        "zero-effect and reproduction records"
+      ],
+      "explicit_nonclaims": [
+        "bounded transfer is not universal transfer",
+        "passing cases are not equivalence"
+      ]
+    },
+    {
+      "key": "documentation-and-claims",
+      "issue_number": 1019,
+      "title": "Reconcile mixed participant-control claims",
+      "milestone": "Participant Information-Flow & Behavioral Equivalence",
+      "requirements": [
+        "SEM-234",
+        "ASR-537",
+        "ASR-535"
+      ],
+      "dependencies": [
+        "runtime-coordination",
+        "backend-capability-and-conformance",
+        "demonstration-and-evaluation"
+      ],
+      "bounded_outcome": "Publish only the exact implemented and evidenced profiles, results, limits, and residual gaps.",
+      "negative_cases": [
+        "DRAFT reported as implemented",
+        "two separate runs reported as mixed",
+        "assurance-axis promotion"
+      ],
+      "evidence_required": [
+        "reconciled traceability",
+        "runtime, backend, evaluation, and reproduction records",
+        "claim-policy validation"
+      ],
+      "explicit_nonclaims": [
+        "no claim beyond exact profiles",
+        "no universal equivalence, IFC, or transfer"
+      ]
+    }
+  ],
+  "claim_boundaries": {
+    "issue_813": "design-authority-and-implementation-program-only",
+    "mixed_runtime_implementation": "not-established",
+    "backend_realization": "not-established",
+    "cross_backend_equivalence": "not-established",
+    "ifc_or_noninterference": "not-established",
+    "universal_sim_to_em_transfer": "not-established",
+    "multi_controller_or_lease_support": "not-supported-in-rev1",
+    "default_external_wire_compatibility": "not-established"
+  }
+}

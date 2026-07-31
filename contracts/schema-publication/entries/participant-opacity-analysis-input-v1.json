@@ -2,9 +2,9 @@
   "contract_id": "participant-opacity-analysis-input-v1",
   "schema_path": "contracts/schemas/formal-analysis/participant-opacity-analysis-input-v1.json",
   "stability": "draft",
-  "content_hash": "80fdff8cf1bdfa185ab67d0e8710baf727b6752279a9b3a1724f50a9f31cf368",
+  "content_hash": "c14950ba335a7afa0cb6087b1c10589936b7665269e7ace8664e76f5ef775d76",
   "last_change": {
-    "summary": "Published the exact finite participant-opacity analysis input contract for issue #961.",
-    "content_hash": "80fdff8cf1bdfa185ab67d0e8710baf727b6752279a9b3a1724f50a9f31cf368"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "c14950ba335a7afa0cb6087b1c10589936b7665269e7ace8664e76f5ef775d76"
   }
 }

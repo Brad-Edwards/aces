@@ -1,10 +1,10 @@
 # Reproducible Agentic Environments System
 
-[![CI](https://github.com/RAESystem/rae/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/RAESystem/rae/actions/workflows/ci.yml)
-[![Docs](https://github.com/RAESystem/rae/actions/workflows/docs.yml/badge.svg?branch=main)](https://raesystem.github.io/rae/)
+[![CI](https://github.com/OpenRAE/rae/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/OpenRAE/rae/actions/workflows/ci.yml)
+[![Docs](https://github.com/OpenRAE/rae/actions/workflows/docs.yml/badge.svg?branch=main)](https://openrae.github.io/rae/)
 [![PyPI](https://img.shields.io/pypi/v/raes.svg)](https://pypi.org/project/raes/)
 [![Python](https://img.shields.io/pypi/pyversions/raes.svg)](https://pypi.org/project/raes/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/RAESystem/rae/blob/main/LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/OpenRAE/rae/blob/main/LICENSE)
 
 RAES, the Reproducible Agentic Environments System, helps you describe and
 check an agentic environment. RAES SDL is its YAML language for authored
@@ -74,29 +74,29 @@ Validated first-scenario with 2 nodes.
 
 RAES has checked the file shape and current semantic rules. It has not created
 infrastructure. Continue with the
-[quickstart](https://raesystem.github.io/rae/quickstart.html) to learn what
+[quickstart](https://openrae.github.io/rae/quickstart.html) to learn what
 each part means.
 
 ## Choose your route
 
 - **Scenario authors:** Start with the
-  [SDL guide](https://raesystem.github.io/rae/sdl/) and
-  [worked examples](https://github.com/RAESystem/rae/tree/main/examples/scenarios).
+  [SDL guide](https://openrae.github.io/rae/sdl/) and
+  [worked examples](https://github.com/OpenRAE/rae/tree/main/examples/scenarios).
 - **Python users:** Use the
-  [Python guide](https://raesystem.github.io/rae/guides/python.html) and
-  [API reference](https://raesystem.github.io/rae/api/).
+  [Python guide](https://openrae.github.io/rae/guides/python.html) and
+  [API reference](https://openrae.github.io/rae/api/).
 - **CLI users:** See the
-  [command-line guide](https://raesystem.github.io/rae/guides/cli.html).
+  [command-line guide](https://openrae.github.io/rae/guides/cli.html).
 - **Backend implementers:** Read the
-  [backend and conformance guide](https://raesystem.github.io/rae/backends.html).
+  [backend and conformance guide](https://openrae.github.io/rae/backends.html).
 - **Researchers:** Review the
-  [research context](https://raesystem.github.io/rae/research.html),
-  [current limits](https://raesystem.github.io/rae/limitations.html), and
-  [citation guide](https://raesystem.github.io/rae/citation.html).
+  [research context](https://openrae.github.io/rae/research.html),
+  [current limits](https://openrae.github.io/rae/limitations.html), and
+  [citation guide](https://openrae.github.io/rae/citation.html).
 - **Contributors:** Follow
-  [CONTRIBUTING.md](https://github.com/RAESystem/rae/blob/main/CONTRIBUTING.md)
+  [CONTRIBUTING.md](https://github.com/OpenRAE/rae/blob/main/CONTRIBUTING.md)
   and the
-  [developer documentation index](https://github.com/RAESystem/rae/blob/main/docs/README.md).
+  [developer documentation index](https://github.com/OpenRAE/rae/blob/main/docs/README.md).
 
 ## Understand what RAES promises
 
@@ -111,7 +111,7 @@ validity, or reproducibility.
 The repository does not include a production deployment backend or a managed
 environment service. It includes contracts, stubs, examples, conformance
 checks, and reference code. Read the
-[current limits](https://raesystem.github.io/rae/limitations.html) before
+[current limits](https://openrae.github.io/rae/limitations.html) before
 choosing it for a study or integration.
 
 ## See where RAES fits
@@ -136,7 +136,7 @@ The core model is not limited to those areas.
 Install the locked development environment:
 
 ```console
-git clone https://github.com/RAESystem/rae.git
+git clone https://github.com/OpenRAE/rae.git
 cd rae
 uv sync --project implementations/python --all-extras --frozen
 uv run --project implementations/python raes --help
@@ -165,8 +165,8 @@ reviewer for every change.
 
 Release Please owns package versions, GitHub releases, and `CHANGELOG.md`.
 Published schemas carry separate stability labels. See
-[GOVERNANCE.md](https://github.com/RAESystem/rae/blob/main/GOVERNANCE.md) and
-[MAINTAINERS.md](https://github.com/RAESystem/rae/blob/main/MAINTAINERS.md) for
+[GOVERNANCE.md](https://github.com/OpenRAE/rae/blob/main/GOVERNANCE.md) and
+[MAINTAINERS.md](https://github.com/OpenRAE/rae/blob/main/MAINTAINERS.md) for
 the current decision and maintenance model.
 
 ## Cite RAES
@@ -177,11 +177,11 @@ the current decision and maintenance model.
   title   = {RAES: Reproducible Agentic Environments System},
   year    = {2026},
   license = {MIT},
-  url     = {https://github.com/RAESystem/rae}
+  url     = {https://github.com/OpenRAE/rae}
 }
 ```
 
 RAES is released under the
-[MIT License](https://github.com/RAESystem/rae/blob/main/LICENSE). Third-party
+[MIT License](https://github.com/OpenRAE/rae/blob/main/LICENSE). Third-party
 notices are in
-[THIRD_PARTY_NOTICES.md](https://github.com/RAESystem/rae/blob/main/THIRD_PARTY_NOTICES.md).
+[THIRD_PARTY_NOTICES.md](https://github.com/OpenRAE/rae/blob/main/THIRD_PARTY_NOTICES.md).

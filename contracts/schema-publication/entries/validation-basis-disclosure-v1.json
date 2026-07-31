@@ -2,9 +2,9 @@
   "contract_id": "validation-basis-disclosure-v1",
   "schema_path": "contracts/schemas/profiles/validation-basis-disclosure-v1.json",
   "stability": "draft",
-  "content_hash": "cbd474c289d9519baf339ce22eea1613b41e9166ad3ac350f40e1955b434edd3",
+  "content_hash": "9e0770a9444b5312d60d599bee916906e04de8c24fed612d59ea437297d5a4f5",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "cbd474c289d9519baf339ce22eea1613b41e9166ad3ac350f40e1955b434edd3"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "9e0770a9444b5312d60d599bee916906e04de8c24fed612d59ea437297d5a4f5"
   }
 }

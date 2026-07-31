@@ -1843,7 +1843,7 @@
       "type": "object"
     }
   },
-  "$id": "https://raesystem.github.io/rae/schemas/experiment-task-v1.json",
+  "$id": "https://openrae.github.io/rae/schemas/experiment-task-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "Experiment task contract that separates scenario material from protocol intent.",
@@ -1977,6 +1977,6 @@
     "id": "raes-semantic-invariants-v1",
     "keyword": "x-raes-invariants",
     "required": true,
-    "uri": "https://raesystem.github.io/rae/schemas/semantic-invariants/v1"
+    "uri": "https://openrae.github.io/rae/schemas/semantic-invariants/v1"
   }
 }

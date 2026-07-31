@@ -19,6 +19,14 @@ class ProcessorFeature(str, Enum):
     RUNTIME_CONTROL_PLANE = "runtime-control-plane"
 
 
+class GeneratedArtifactKind(str, Enum):
+    """Portable kinds of material a provisioner may generate."""
+
+    CERTIFICATE_BUNDLE = "certificate_bundle"
+    RENDERED_CONFIG = "rendered_config"
+    SSH_KEY_BUNDLE = "ssh_key_bundle"
+
+
 class WorkflowFeature(str, Enum):
     """Portable workflow control features that an orchestrator may support."""
 

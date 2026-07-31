@@ -2,9 +2,9 @@
   "contract_id": "sdl-authoring-input-v1",
   "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
   "stability": "draft",
-  "content_hash": "d4594b2c04283d95378faec2f64343870e8756f09a5a04a8746c6d8ccd56a270",
+  "content_hash": "74b3e5310b2368e0463bae298b153fc5d7311b0a421df9559259374411540e28",
   "last_change": {
-    "summary": "Added composable provider-neutral platform capabilities and marked legacy platform categories and content manifests deprecated for issue #956.",
-    "content_hash": "d4594b2c04283d95378faec2f64343870e8756f09a5a04a8746c6d8ccd56a270"
+    "summary": "Added the service search-index field-schema profile and rebound the namespace to OpenRAE for issues #1011 and #963.",
+    "content_hash": "74b3e5310b2368e0463bae298b153fc5d7311b0a421df9559259374411540e28"
   }
 }

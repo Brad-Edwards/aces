@@ -279,6 +279,11 @@
         "other",
         "windows"
       ],
+      "supported_generated_artifact_kinds": [
+        "certificate_bundle",
+        "rendered_config",
+        "ssh_key_bundle"
+      ],
       "supports_accounts": true,
       "supports_acls": true,
       "supports_generated_artifacts": true,

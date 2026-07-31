@@ -49,7 +49,9 @@ def _schema_output_path(schemas_dir: Path, name: str) -> Path:
     if name in {
         "attack-enterprise-tactics-source-v1",
         "atlas-tactics-source-v1",
+        "fipa-communicative-acts-source-v1",
         "nist-csf-defensive-categories-source-v1",
+        "w3c-activitystreams-activity-types-source-v1",
     }:
         return schemas_dir / "concept-authority" / f"{name}.json"
     if name == "reusable-asset-trust-policy-v1":

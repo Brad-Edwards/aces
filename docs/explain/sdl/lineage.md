@@ -59,7 +59,7 @@ semantics, examples, or code from that source.
   the SDL schema.
 
 The authored/defaulted/planned/realized/observed/derived distinction tested by
-[issue #160](https://github.com/RAESystem/rae/issues/160) is a carrier
+[issue #160](https://github.com/OpenRAE/rae/issues/160) is a carrier
 boundary, not a vocabulary tag. SDL and `model_fields_set` carry authored and
 defaulted meaning; compiler plans carry planned operations; realization
 provenance and realized-form disclosures carry admitted choices; evidence
@@ -558,8 +558,10 @@ RAES relies on prior work in four ways:
   [SP 800-61r2](https://csrc.nist.gov/publications/detail/sp/800-61/rev-2/final)
   / [r3](https://csrc.nist.gov/pubs/sp/800/61/r3/final) frames incident
   handling. These sources motivate separate functional roles; none defines a
-  required RAES product profile. Initial authored content stays under top-level
-  `content` and `service_materialization` per ADR-088.
+  required RAES product profile. Initial authored content and portable
+  search-index field-schema state stay under top-level `content` and the closed
+  `service_materialization` profiles per ADR-088. Native field types and mapping
+  bodies do not cross that boundary.
 - **Automation and presentation precedents:** OASIS
   [CACAO v2.0](https://docs.oasis-open.org/cacao/security-playbooks/v2.0/security-playbooks-v2.0.html)
   and [OpenC2](https://docs.oasis-open.org/openc2/oc2ls/v1.0/oc2ls-v1.0.html)
@@ -987,15 +989,22 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   RUN-308 concurrency evidence, existing operation receipts/statuses, and
   existing time-state/provenance. It claims no wire, API, lifecycle-token, or
   behavioral compatibility with those sources.
-- Issues #811 through #813 own proof-bearing bisimulation, adversarial
-  threat-model, and simulation/federation extensions. Issue #810 now defines
-  opacity and supervisor-visibility architecture only; #961 delivers its
-  bounded checker, #962 delivers its exact finite-model checker, and #963
-  through #965 own the proof, runtime, and backend lanes. SEM-230 preserves
-  their participant, audience, policy revision, declassification,
+- Issues #811 and #812 define proof-bearing bisimulation and adversarial
+  threat-model extensions. Issue #813 and ADR-102 now define the mixed
+  cross-backend composition extension. It supports both alternative
+  simulation/emulation realization and simultaneous mixed realization, plus
+  linked inter-trial and finite pre-admitted within-run changes. SEM-234 and
+  ASR-537 remain DRAFT; #1013 through #1019 own semantic, contract, trial,
+  runtime, backend, demonstration, and claims work. Revision 1 keeps one
+  acting controller and rejects lease, simultaneous scoped-owner, and
+  joint/fused-control claims. Issue #810 defines opacity and
+  supervisor-visibility architecture only; #961 delivers its bounded checker,
+  #962 delivers its exact finite-model checker, and #963 through #965 own the
+  proof, runtime, and backend lanes. SEM-230 preserves every extension's
+  participant, audience, policy revision, declassification,
   controller/authority, scheduler/environment, timing/probability, order, and
-  evidence coordinates; that extension seam is not evidence those properties
-  are already realized.
+  evidence coordinates; none of these extension seams is evidence of runtime
+  or backend realization.
 - [STRIPS](https://doi.org/10.1016/0004-3702(71)90010-5),
   [PDDL](https://doi.org/10.2200/S00900ED2V01Y201902AIM042),
   [PDDL2.1](https://doi.org/10.1613/jair.1129), and the probabilistic planning
@@ -1274,10 +1283,12 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   noninterference, trace inclusion or equivalence, simulation, refinement,
   strong or weak bisimulation, epistemic indistinguishability, timed or
   probabilistic security, opacity, or native-backend realization. Issues #810,
-  #811, #812, and #813 own opacity, a proof-bearing bisimulation target,
-  adversarial-control evaluation, and cross-backend demonstration respectively.
-  ASR-535 adds evidence rather than a normative derivation or compatibility
-  claim, so the lineage ledger and source audit remain unchanged.
+  #811, and #812 own opacity, a proof-bearing bisimulation target, and
+  adversarial-control evaluation. Issue #813 now defines mixed composition and
+  cross-backend realization/transfer evidence; its positive demonstration is
+  still owned by #1018. ASR-535 adds evidence rather than a normative
+  derivation or compatibility claim, so the lineage ledger and source audit
+  remain unchanged.
 - Issue #802 applies the already adopted SEM-230/API-423/RUN-319 lineage to
   migration without importing another external model. The exact RAES mapping
   is the legacy/current distinction retained before
@@ -1418,10 +1429,13 @@ disposition do not change.
 
 ## Runtime, Time, And Causality
 
-- [TENA](https://www.trmc.osd.mil/tena-about.html) and the
-  [IEEE High Level Architecture (IEEE Std 1516-2010)](https://standards.ieee.org/ieee/1516/3744/)
+- [TENA](https://www.trmc.osd.mil/tena-about.html) and the current
+  [IEEE High Level Architecture framework (IEEE Std 1516-2025)](https://standards.ieee.org/ieee/1516/6687/)
   are the main runtime/federation precedents for distributed exercise services,
-  time management, and object publication.
+  time management, object publication, ownership, and data distribution. The
+  2025 family supersedes the 2010 edition cited by the earlier time-model
+  survey; claims now pin the exact framework, federate-interface, or OMT part
+  and edition.
 - [SISO Cyber DEM](https://cdn.ymaws.com/www.sisostandards.org/resource/resmgr/standards_products/siso-std-025-2023_cyberdem.pdf)
   and Cyber FOM are cyber-specific simulation-interoperability precedents.
 - Lamport logical clocks, HLA time management, Time Warp, DEVS, SimPy, ROS 2
@@ -1477,6 +1491,57 @@ federation object model derived from it.
   surface is partial and explicitly incomplete. This is detailed in the
   [Related-Work Comparison](related-work-comparison.md).
 
+### Mixed Simulation, Emulation, And Operational Composition
+
+Issue #813 adds an edition-pinned composition lineage:
+
+- [NIST integrated HLA federations](https://www.nist.gov/publications/integrating-multiple-hla-federations-effective-simulation-based-evaluations-cps)
+  show why a flat federation can be insufficient for information hiding,
+  independent time scales, resource sharing, and organizational boundaries.
+  Bridges need explicit message and time translation.
+- [NIST UCEF](https://www.nist.gov/ctl/smart-connected-systems-division/iot-devices-and-infrastructures-group/how-does-ucef-work)
+  explicitly composes simulators, emulators, equipment, and combinations in
+  one HLA federation.
+- [ACTING EDL-FG](https://arxiv.org/abs/2605.12170) separates infrastructure,
+  screenplay, injects, participant interaction, federation, telemetry, and
+  assessment and names hybrid simulated/emulated components. RAES adopts the
+  separation, not the recent preprint's schema.
+- [FMI 3.0.2](https://fmi-standard.org/docs/3.0.2/) leaves the
+  co-simulation algorithm outside the standard, while
+  [HELICS](https://docs.helics.org/en/latest/user-guide/fundamental_topics/timing_configuration.html)
+  makes time request/grant and dynamic membership explicit. These support
+  explicit coordinator, clock/order mapping, and finite pre-admitted phase
+  semantics.
+- [ISO 23247-6:2026](https://www.iso.org/standard/87426.html) distinguishes
+  integrated, unified, and federated digital-twin composition. The topology
+  distinction is adopted without treating a simulator, emulator, model,
+  shadow, and synchronized twin as synonyms.
+- [IEEE 1730.1-2023](https://standards.ieee.org/ieee/1730.1/11140/) and
+  [SISO SIRL](https://www.sisostandards.org/page/StandardsProducts) keep
+  multi-architecture engineering and interoperability-readiness evidence
+  separate from actual interoperability.
+
+The RAES mapping is ADR-102, SEM-234, and ASR-537. Portable SDL remains
+backend-neutral. Admitted trial intent allocates stable participant runtime,
+controlled-scope, action-family, observation-source, and crossing refs to
+apparatus components. Every composition edge binds authority, mapping,
+participant/audience policy, clock/order, support strength, loss, failure, and
+evidence.
+
+CybORG's published simulation-to-emulation experiment reports 139 successful
+evaluations out of 210 and includes simulation-only observation failures.
+CyGIL reports one bounded 50-of-50 emulation evaluation while retaining
+unknown-transition and heuristic-switching limits. These are empirical
+transfer precedents, not equivalence claims. RAES therefore keeps bounded
+conformance, interoperability readiness, empirical transfer, trace inclusion,
+bisimulation, IFC/noninterference, and backend equivalence distinct.
+
+Revision 1 also separates three overloaded open/closed axes: control-loop
+posture, world assumption, and federation membership. Multiple realization
+providers do not become multiple acting controllers. Leases, simultaneous
+scoped owners, and joint/fused control require a later versioned authority
+profile.
+
 ## Adversary Emulation And Security Knowledge
 
 - [MITRE ATT&CK](https://www.mitre.org/news-insights/publication/mitre-attck-design-and-philosophy),
@@ -1520,3 +1585,34 @@ RAES adds backend-neutral authored declarations, exact rational mappings,
 ordinary SDL subject references, canonical compilation, and segment-preserving
 runtime control. It does not claim ROS, FMI, HLA, TENA, or OpenSCENARIO
 conformance through those generic declarations.
+
+### Adversarial Participant Flow And Control
+
+- [FIDES](https://arxiv.org/abs/2505.23643) supplies the immediate precedent
+  for independent confidentiality/integrity labels, conservative propagation,
+  and deterministic action policy.
+- [CaMeL](https://arxiv.org/abs/2503.18813) supplies the trusted-control and
+  untrusted-data separation, quarantine, and capability precedent. RAES keeps
+  model topology and prompt separation apparatus-specific.
+- [SAMOS](https://research.ibm.com/publications/securing-mcp-based-agent-workflows)
+  supplies the session-flow and complete tool-call interception precedent.
+  RAES does not require MCP and places portable authority at the final
+  external-action or disclosure sink.
+- [AgentDojo](https://proceedings.neurips.cc/paper_files/paper/2024/hash/97091a5177d8dc64b1da8bf3e1f6fb54-Abstract-Datasets_and_Benchmarks_Track.html),
+  [AI Control](https://arxiv.org/abs/2312.06942), and
+  [ControlArena](https://control-arena.aisi.org.uk/) supply dynamic injection,
+  intentional subversion, honest/attack modes, main/side objectives,
+  monitoring, audit, editing, deferral, shutdown, safety, usefulness, and
+  adaptive evaluation precedents.
+- [runtime shielding](https://arxiv.org/abs/1501.02573) supplies the
+  property-bound last-moment runtime mediation precedent, while
+  [capability-based authority control](https://doi.org/10.4230/LIPIcs.ECOOP.2017.20)
+  supplies the least-authority precedent.
+- ADR-101 adapts those lessons through SEM-233 and ASR-536 over the existing
+  SEM-230, ACT-617, API-409/API-423, RUN-310/RUN-319, API-407, experiment, and
+  ASR-535 carriers. It does not import an LLM framework, prompt format, model
+  role, MCP gateway, monitor, scorer, or trajectory hierarchy.
+- Issue #812 is design authority. Its DRAFT requirements and program do not
+  establish runtime enforcement, backend realization, intentional-subversion
+  robustness, model alignment, monitor honesty, private-reasoning safety, or
+  control of undeclared covert channels.

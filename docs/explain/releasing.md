@@ -72,7 +72,7 @@ token stored):
 
 - PyPI → *Your projects* → *Publishing* → *Add a pending publisher* → GitHub
 - PyPI Project Name: `raes`
-- Owner: `RAESystem`  ·  Repository: `rae`
+- Owner: `OpenRAE`  ·  Repository: `rae`
 - **Workflow name: `release-please.yml`**  ·  Environment name: `pypi`
 
 > If you previously registered the publisher against `release.yml`, update it to

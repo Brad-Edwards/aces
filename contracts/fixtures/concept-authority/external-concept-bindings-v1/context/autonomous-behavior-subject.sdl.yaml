@@ -1,0 +1,20 @@
+name: autonomous-behavior-binding-subject
+entities:
+  automation-team:
+    role: blue
+agents:
+  autonomous-service:
+    entity: automation-team
+behavior_specifications:
+  service-publication:
+    semantic_version: 1.0.0
+    lifecycle_state: active
+    participant_refs: [autonomous-service]
+    behavior_mode: autonomous
+    extension_policy: closed
+  agent-request:
+    semantic_version: 1.0.0
+    lifecycle_state: active
+    participant_refs: [autonomous-service]
+    behavior_mode: autonomous
+    extension_policy: closed

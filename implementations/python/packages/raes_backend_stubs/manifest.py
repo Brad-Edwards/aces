@@ -184,6 +184,7 @@ def _stub_provisioner() -> ProvisionerCapabilities:
         supports_acls=True,
         supports_accounts=True,
         supports_generated_artifacts=True,
+        supported_generated_artifact_kinds=frozenset({"certificate_bundle", "rendered_config", "ssh_key_bundle"}),
         supports_persistent_volumes=True,
     )
 

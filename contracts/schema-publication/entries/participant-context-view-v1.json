@@ -2,9 +2,9 @@
   "contract_id": "participant-context-view-v1",
   "schema_path": "contracts/schemas/control-plane/participant-context-view-v1.json",
   "stability": "draft",
-  "content_hash": "40dea81dac51eff81d69768f06ec89a82d21031e408ea97167f7631269e51c01",
+  "content_hash": "55dcb760c374a325496d41d3049de13db1974287dd14d3458a6e9d3c8733f962",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "40dea81dac51eff81d69768f06ec89a82d21031e408ea97167f7631269e51c01"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "55dcb760c374a325496d41d3049de13db1974287dd14d3458a6e9d3c8733f962"
   }
 }

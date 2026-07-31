@@ -774,6 +774,10 @@
         "service-content-v1": {
           "title": "Service Content v1",
           "description": "Exact reconciliation of authored content into a named service with controlled reset and participant-equivalent readback."
+        },
+        "service-search-index-schema-v1": {
+          "title": "Service Search Index Schema v1",
+          "description": "Exact reconciliation of a provider-neutral declared-field search-index schema with fresh native readback."
         }
       }
     },

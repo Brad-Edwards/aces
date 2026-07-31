@@ -17,7 +17,6 @@ from raes_contracts.contracts import (
     OrchestratorCapabilitiesModel,
     ParticipantFeatureSupportModel,
     ParticipantRuntimeCapabilitiesModel,
-    ProvisionerCapabilitiesModel,
     RealizationSupportDeclarationModel,
     TimeCapabilitiesModel,
 )
@@ -34,13 +33,13 @@ from .capabilities import (
     OrchestratorCapabilities,
     ParticipantFeatureSupport,
     ParticipantRuntimeCapabilities,
-    ProvisionerCapabilities,
     TimeCapabilities,
 )
 from .participant_execution_manifest import (
     participant_execution_capability_kwargs,
     participant_execution_capability_payload,
 )
+from .provisioner_manifest import provisioner_capability_payload, provisioner_from_model
 
 
 class BackendManifestEnvelopeUnsupportedError(ValueError):
@@ -108,23 +107,7 @@ def backend_manifest_v2_model(manifest: BackendManifest) -> BackendManifestV2Mod
         ],
         constraints=dict(manifest.constraints),
         capabilities={
-            "provisioner": {
-                "name": manifest.provisioner.name,
-                "supported_node_types": sorted(manifest.provisioner.supported_node_types),
-                "supported_os_families": sorted(manifest.provisioner.supported_os_families),
-                "supported_content_types": sorted(manifest.provisioner.supported_content_types),
-                "supported_account_features": sorted(manifest.provisioner.supported_account_features),
-                "supported_domain_profiles": sorted(manifest.provisioner.supported_domain_profiles),
-                "supported_service_materialization_profiles": sorted(
-                    manifest.provisioner.supported_service_materialization_profiles
-                ),
-                "max_total_nodes": manifest.provisioner.max_total_nodes,
-                "supports_acls": manifest.provisioner.supports_acls,
-                "supports_accounts": manifest.provisioner.supports_accounts,
-                "supports_generated_artifacts": manifest.provisioner.supports_generated_artifacts,
-                "supports_persistent_volumes": manifest.provisioner.supports_persistent_volumes,
-                "constraints": dict(manifest.provisioner.constraints),
-            },
+            "provisioner": provisioner_capability_payload(manifest.provisioner),
             "orchestrator": (
                 {
                     "name": manifest.orchestrator.name,
@@ -279,24 +262,6 @@ def _realization_support_from_model(model: RealizationSupportDeclarationModel) -
     )
 
 
-def _provisioner_from_model(model: ProvisionerCapabilitiesModel) -> ProvisionerCapabilities:
-    return ProvisionerCapabilities(
-        name=model.name,
-        supported_node_types=frozenset(model.supported_node_types),
-        supported_os_families=frozenset(model.supported_os_families),
-        supported_content_types=frozenset(model.supported_content_types),
-        supported_account_features=frozenset(model.supported_account_features),
-        supported_domain_profiles=frozenset(model.supported_domain_profiles),
-        supported_service_materialization_profiles=frozenset(model.supported_service_materialization_profiles),
-        max_total_nodes=model.max_total_nodes,
-        supports_acls=model.supports_acls,
-        supports_accounts=model.supports_accounts,
-        supports_generated_artifacts=model.supports_generated_artifacts,
-        supports_persistent_volumes=model.supports_persistent_volumes,
-        constraints=dict(model.constraints),
-    )
-
-
 def _orchestrator_from_model(model: OrchestratorCapabilitiesModel | None) -> OrchestratorCapabilities | None:
     if model is None:
         return None
@@ -429,7 +394,7 @@ def _time_from_model(model: TimeCapabilitiesModel | None) -> TimeCapabilities | 
 
 def _capability_set_from_model(model: BackendCapabilitiesV2Model) -> BackendCapabilitySet:
     return BackendCapabilitySet(
-        provisioner=_provisioner_from_model(model.provisioner),
+        provisioner=provisioner_from_model(model.provisioner),
         orchestrator=_orchestrator_from_model(model.orchestrator),
         evaluator=_evaluator_from_model(model.evaluator),
         participant_runtime=_participant_runtime_from_model(model.participant_runtime),

@@ -5,6 +5,7 @@ from __future__ import annotations
 from raes_contracts.behavioral_relation_profiles import BehavioralRelationProfileModel
 from raes_contracts.behavioral_relations import BehavioralRelationCatalogModel
 from raes_contracts.contracts import (
+    ActivityStreamsActivityTypesSourceModel,
     AssociatedArtifactManifestModel,
     BackendManifestV2Model,
     EvaluationHistoryEventModel,
@@ -19,6 +20,7 @@ from raes_contracts.contracts import (
     ExperimentSpecModel,
     ExperimentStudyModel,
     ExternalConceptBindingDocumentModel,
+    FipaCommunicativeActsSourceModel,
     OperationReceiptModel,
     OperationStatusModel,
     OrchestrationPlanModel,
@@ -98,6 +100,7 @@ _STRUCTURAL_ONLY_VALIDATORS = {
     "behavioral-relation-profile-v1": BehavioralRelationProfileModel.model_validate,
     "behavioral-relations-v1": BehavioralRelationCatalogModel.model_validate,
     "external-concept-bindings-v1": ExternalConceptBindingDocumentModel.model_validate,
+    "fipa-communicative-acts-source-v1": FipaCommunicativeActsSourceModel.model_validate,
     "experiment-apparatus-context-v1": ExperimentApparatusContextModel.model_validate,
     "experiment-authoring-input-v1": ExperimentSpecModel.model_validate,
     "experiment-study-v1": ExperimentStudyModel.model_validate,
@@ -110,6 +113,7 @@ _STRUCTURAL_ONLY_VALIDATORS = {
     "participant-opacity-analysis-evidence-v1": ParticipantOpacityAnalysisEvidenceModel.model_validate,
     "participant-opacity-model-check-input-v1": ParticipantOpacityModelCheckInputModel.model_validate,
     "participant-opacity-model-check-evidence-v1": ParticipantOpacityModelCheckEvidenceModel.model_validate,
+    "w3c-activitystreams-activity-types-source-v1": ActivityStreamsActivityTypesSourceModel.model_validate,
 }
 
 
@@ -211,3 +215,33 @@ def validate_contract_payload(contract_name: str, payload: object) -> tuple[Diag
     """Validate one payload through the registered structural contract boundary."""
 
     return tuple(_validate_payload(contract_name, payload))
+
+
+def supported_contract_ids() -> tuple[str, ...]:
+    """Return the contract ids owned by the conformance validator registry."""
+
+    return tuple(sorted((*_MODEL_VALIDATORS, *_STRUCTURAL_ONLY_VALIDATORS, *_EVENT_STREAM_VALIDATORS)))
+
+
+def contract_payload_root(contract_name: str) -> str | None:
+    """Return the required JSON root shape for a registered contract."""
+
+    if contract_name in _EVENT_STREAM_VALIDATORS:
+        return "array"
+    if contract_name in _MODEL_VALIDATORS or contract_name in _STRUCTURAL_ONLY_VALIDATORS:
+        return "object"
+    return None
+
+
+def contract_validation_strength(contract_name: str) -> str | None:
+    """Return the strongest context-free validation claim for a contract."""
+
+    if contract_name in _SEMANTIC_CONTEXT_REQUIRED_CONTRACTS:
+        strength = "structural-context-required"
+    elif contract_name in _STRUCTURAL_ONLY_VALIDATORS:
+        strength = "structural"
+    elif contract_name in _MODEL_VALIDATORS or contract_name in _EVENT_STREAM_VALIDATORS:
+        strength = "semantic"
+    else:
+        strength = None
+    return strength

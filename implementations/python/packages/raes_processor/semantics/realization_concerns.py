@@ -160,6 +160,7 @@ CONCERN_PAYLOAD_PATH: dict[str, tuple[str, ...]] = {
     "generated-artifact": ("spec",),
     "persistent-volume": ("spec",),
     "service-content-materialization": ("service_materialization",),
+    "service-search-index-schema-materialization": ("service_materialization",),
 }
 
 

@@ -15,6 +15,10 @@ This document is the issue #71 formal design artifact for:
 - `SEM-230` - Participant Information-Flow And Control Semantics
 - `SEM-231` - Participant-Relative Predicate Opacity Semantics
 - `SEM-232` - Proof-Bearing Participant-Crossing Bisimulation
+- `SEM-233` - Adversarial Participant Boundary Information-Flow Control
+- `SEM-234` - Mixed Cross-Backend Participant-Control Composition
+- `ASR-536` - Intentional-Subversion Participant Control Evaluation
+- `ASR-537` - Cross-Backend Participant-Control Realization And Transfer Evidence
 - `DSL-437` - Benign Participant Autonomous Execution
 
 It is a design artifact, not an implementation artifact. It establishes the
@@ -47,6 +51,26 @@ derived formal API-423/RUN-319 crossing-kernel LTS under one closed
 participant/audience projection. It does not report the downstream
 model-check, runtime mapping, backend conformance, noninterference, or opacity
 result.
+
+Issue #812 and ADR-101 add the SEM-233 boundary-flow and ASR-536
+intentional-subversion evaluation design. Their normative profiles are in
+[`adversarial-flow-control.md`](adversarial-flow-control.md). The design
+extends the existing participant, control, crossing, runtime, backend, and
+experiment carriers with independent confidentiality and integrity
+coordinates, conservative derivation, final-sink mediation, and explicit
+attack-protocol variables. It does not report runtime enforcement, backend
+realization, monitor honesty, covert-channel control, or adversarial
+robustness.
+
+Issue #813 and ADR-102 add the SEM-234 mixed-composition and ASR-537
+realization/transfer-evidence design. Their normative profiles are in
+[`cross-backend-participant-control.md`](cross-backend-participant-control.md).
+The design supports both alternative simulation/emulation realization and
+simultaneous mixed realization, plus linked inter-trial and finite
+pre-admitted within-run changes. It keeps portable SDL backend-neutral and
+preserves one acting controller in revision 1. It does not report runtime or
+backend realization, multi-controller support, interoperability, transfer,
+IFC/noninterference, or cross-backend equivalence.
 
 Issue #861 and ADR-092 add deterministic autonomous execution for ordinary
 participants. The focused normative composition is
@@ -1731,6 +1755,29 @@ SEM-232 authority, and child program. It does not run the model check. Issues
 #971 through #976 own independent model construction, live-runtime mapping,
 negative mutations, finite equivalence checking, independent reproduction,
 and reproduction-gated scientific documentation.
+
+## SEM-233 and ASR-536 - Adversarial Participant Flow Control
+
+SEM-233 and ASR-536 are defined in
+[`adversarial-flow-control.md`](adversarial-flow-control.md).
+
+SEM-233 adds a revisioned participant-neutral explicit-flow profile with
+independent confidentiality and integrity coordinates, conservative
+propagation, distinct declassification and integrity endorsement, and
+deny-first final-sink decisions immediately before external action or
+disclosure. Handoff, participant change, and episode reset do not erase labels
+or provenance.
+
+ASR-536 adds a separate control-evaluation profile for honest and attack
+modes, main and side objectives, policy and monitor knowledge, adaptive
+strategies, collusion and correlated failure, audit and intervention
+protocols, memory/replay, and separate safety, usefulness, cost, uncertainty,
+limitation, and nonclaim measures.
+
+Issue #812 supplies the design authority and child program only. SEM-233 and
+ASR-536 remain DRAFT; issues #1001, #1002, #1003, #1004, #1007, and #1008 own
+their semantic, contract, runtime, apparatus/backend, evaluation, and
+documentation work.
 
 ## Required Future Verification
 

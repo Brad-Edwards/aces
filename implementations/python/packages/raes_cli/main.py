@@ -4,7 +4,7 @@ from importlib.metadata import PackageNotFoundError, version
 
 import typer
 
-from raes_cli import conformance, corpus, libvirt, processor, sdl
+from raes_cli import conformance, corpus, libvirt, processor, sdl, semantic
 
 app = typer.Typer(
     name="raes",
@@ -15,6 +15,7 @@ app = typer.Typer(
 app.add_typer(sdl.app, name="sdl")
 app.add_typer(processor.app, name="processor")
 app.add_typer(conformance.app, name="conformance")
+app.add_typer(semantic.app, name="semantic")
 app.add_typer(libvirt.app, name="libvirt")
 app.add_typer(corpus.app, name="corpus")
 

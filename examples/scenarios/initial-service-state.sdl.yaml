@@ -11,6 +11,8 @@ nodes:
     services:
       - name: imap
         port: 143
+      - name: search
+        port: 9200
 
 content:
   company-mail:
@@ -31,6 +33,24 @@ content:
       readback_assertion_refs: [company-mail-visible]
       evidence_requirement_refs: [company-mail-readback]
       observation_boundary_refs: [participant-mail-view]
+  job-index-schema:
+    type: dataset
+    target: mail
+    service_materialization:
+      target_service_ref: nodes.mail.services.search
+      interface_profile: service-search-index-schema
+      profile_version: "1"
+      requirements:
+        operation: ensure-search-index-field-schema
+        conflict_policy: reject-unowned-collision
+        readback: canonical-portable-field-schema-digest
+        field_semantics:
+          key: exact-token
+          status: exact-token
+          relations: exact-token
+      readback_assertion_refs: [job-index-schema-visible]
+      evidence_requirement_refs: [job-index-schema-readback]
+      observation_boundary_refs: [participant-search-view]
 
 propositions:
   company-mail-visible:
@@ -43,10 +63,23 @@ propositions:
       semantic_ref: urn:raes:observable:service-content-visible
       expected: true
     evidence_requirements: [company-mail-readback]
+  job-index-schema-visible:
+    description: The declared search-index fields have exact portable semantics.
+    subjects: [content.job-index-schema]
+    basis: observed_state
+    predicate:
+      kind: boolean
+      property: service-search-index-schema-visible
+      semantic_ref: urn:raes:observable:service-search-index-schema-visible
+      expected: true
+    evidence_requirements: [job-index-schema-readback]
 
 assertions:
   company-mail-visible:
     proposition: company-mail-visible
+    role: postcondition
+  job-index-schema-visible:
+    proposition: job-index-schema-visible
     role: postcondition
 
 observation_boundaries:
@@ -55,11 +88,28 @@ observation_boundaries:
     observable_refs: [content.company-mail]
     redaction_policy: preserve participant-visible message fields
     latency_profile: available before participant admission
+  participant-search-view:
+    projection_basis: ordinary participant access through the named search service
+    observable_refs: [content.job-index-schema]
+    redaction_policy: preserve declared portable field semantics
+    latency_profile: available before participant admission
 
 evidence_requirements:
   company-mail-readback:
     source_refs: [content.company-mail]
     scope: native service readback
+    boundary_kind: participant_equivalent
+    channel: api_response
+    artifact_role: service_materialization_readback
+    media_types: [application/json]
+    sensitivity: plain
+    redaction: redact_secrets
+    integrity: checksum
+    retention: run_lifetime
+    loss_disclosure: required
+  job-index-schema-readback:
+    source_refs: [content.job-index-schema]
+    scope: fresh native schema readback projected to portable field semantics
     boundary_kind: participant_equivalent
     channel: api_response
     artifact_role: service_materialization_readback

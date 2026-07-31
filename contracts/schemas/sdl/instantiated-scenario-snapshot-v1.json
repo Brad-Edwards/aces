@@ -1697,13 +1697,28 @@
         "service_materialization": {
           "anyOf": [
             {
-              "$ref": "#/$defs/ServiceMaterialization"
+              "discriminator": {
+                "mapping": {
+                  "service-content": "#/$defs/ServiceMaterialization",
+                  "service-search-index-schema": "#/$defs/ServiceSearchIndexSchemaMaterialization"
+                },
+                "propertyName": "interface_profile"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/ServiceMaterialization"
+                },
+                {
+                  "$ref": "#/$defs/ServiceSearchIndexSchemaMaterialization"
+                }
+              ]
             },
             {
               "type": "null"
             }
           ],
-          "default": null
+          "default": null,
+          "title": "Service Materialization"
         },
         "source": {
           "anyOf": [
@@ -4369,7 +4384,7 @@
       "properties": {
         "consumers": {
           "items": {
-            "$ref": "#/$defs/StatefulResourceConsumer"
+            "$ref": "#/$defs/GeneratedArtifactConsumer"
           },
           "minItems": 1,
           "title": "Consumers",
@@ -4432,10 +4447,64 @@
       "title": "GeneratedArtifact",
       "type": "object"
     },
+    "GeneratedArtifactConsumer": {
+      "additionalProperties": false,
+      "description": "A read-only artifact projection selected by output name.",
+      "properties": {
+        "access_mode": {
+          "$ref": "#/$defs/ConsumerAccessMode"
+        },
+        "mount_destination": {
+          "not": {
+            "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Mount Destination",
+          "type": "string"
+        },
+        "node": {
+          "not": {
+            "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Node",
+          "type": "string"
+        },
+        "selected_outputs": {
+          "items": {
+            "allOf": [
+              {
+                "not": {
+                  "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+                }
+              }
+            ],
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            },
+            "pattern": "^[a-z0-9]",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Selected Outputs",
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "node",
+        "mount_destination",
+        "access_mode"
+      ],
+      "title": "GeneratedArtifactConsumer",
+      "type": "object"
+    },
     "GeneratedArtifactKind": {
+      "description": "Portable kinds of material a provisioner may generate.",
       "enum": [
         "certificate_bundle",
-        "rendered_config"
+        "rendered_config",
+        "ssh_key_bundle"
       ],
       "title": "GeneratedArtifactKind",
       "type": "string"
@@ -4452,6 +4521,10 @@
       "additionalProperties": false,
       "description": "One complete output declared by an artifact generator.",
       "properties": {
+        "disposition": {
+          "$ref": "#/$defs/GeneratedArtifactOutputDisposition",
+          "default": "consumer_selected"
+        },
         "name": {
           "allOf": [
             {
@@ -4487,6 +4560,14 @@
       ],
       "title": "GeneratedArtifactOutput",
       "type": "object"
+    },
+    "GeneratedArtifactOutputDisposition": {
+      "enum": [
+        "consumer_selected",
+        "producer_private"
+      ],
+      "title": "GeneratedArtifactOutputDisposition",
+      "type": "string"
     },
     "IdentityDomain": {
       "additionalProperties": false,
@@ -25309,6 +25390,18 @@
       "title": "Script",
       "type": "object"
     },
+    "SearchIndexFieldSemantic": {
+      "description": "Portable top-level search-index field behavior.",
+      "enum": [
+        "exact-token",
+        "full-text",
+        "integer",
+        "temporal",
+        "boolean"
+      ],
+      "title": "SearchIndexFieldSemantic",
+      "type": "string"
+    },
     "SemanticDigest": {
       "additionalProperties": false,
       "description": "Profile-labelled digest of one expanded authoring scenario.",
@@ -25634,10 +25727,10 @@
       },
       "required": [
         "target_service_ref",
-        "requirements",
         "readback_assertion_refs",
         "evidence_requirement_refs",
-        "observation_boundary_refs"
+        "observation_boundary_refs",
+        "requirements"
       ],
       "title": "ServiceMaterialization",
       "type": "object"
@@ -25732,6 +25825,141 @@
         "port"
       ],
       "title": "ServicePort",
+      "type": "object"
+    },
+    "ServiceSearchIndexSchemaMaterialization": {
+      "additionalProperties": false,
+      "description": "Portable desired field schema for a named service-owned search index.",
+      "properties": {
+        "evidence_requirement_refs": {
+          "items": {
+            "not": {
+              "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+            },
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Requirement Refs",
+          "type": "array"
+        },
+        "interface_profile": {
+          "const": "service-search-index-schema",
+          "title": "Interface Profile",
+          "type": "string"
+        },
+        "observation_boundary_refs": {
+          "items": {
+            "not": {
+              "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+            },
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Observation Boundary Refs",
+          "type": "array"
+        },
+        "ordering_content_refs": {
+          "items": {
+            "not": {
+              "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+            },
+            "type": "string"
+          },
+          "title": "Ordering Content Refs",
+          "type": "array"
+        },
+        "profile_version": {
+          "const": "1",
+          "default": "1",
+          "title": "Profile Version",
+          "type": "string"
+        },
+        "readback_assertion_refs": {
+          "items": {
+            "not": {
+              "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+            },
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Readback Assertion Refs",
+          "type": "array"
+        },
+        "requirements": {
+          "$ref": "#/$defs/ServiceSearchIndexSchemaRequirements"
+        },
+        "shared_service_relationship_ref": {
+          "default": "",
+          "not": {
+            "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Shared Service Relationship Ref",
+          "type": "string"
+        },
+        "target_service_ref": {
+          "minLength": 1,
+          "not": {
+            "pattern": "\\$\\{((?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Target Service Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "target_service_ref",
+        "readback_assertion_refs",
+        "evidence_requirement_refs",
+        "observation_boundary_refs",
+        "interface_profile",
+        "requirements"
+      ],
+      "title": "ServiceSearchIndexSchemaMaterialization",
+      "type": "object"
+    },
+    "ServiceSearchIndexSchemaRequirements": {
+      "additionalProperties": false,
+      "description": "Exact portable search-index schema operation and readback.",
+      "properties": {
+        "conflict_policy": {
+          "const": "reject-unowned-collision",
+          "default": "reject-unowned-collision",
+          "title": "Conflict Policy",
+          "type": "string"
+        },
+        "field_semantics": {
+          "minProperties": 1,
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/SearchIndexFieldSemantic"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
+          "title": "Field Semantics",
+          "type": "object"
+        },
+        "operation": {
+          "const": "ensure-search-index-field-schema",
+          "default": "ensure-search-index-field-schema",
+          "title": "Operation",
+          "type": "string"
+        },
+        "readback": {
+          "const": "canonical-portable-field-schema-digest",
+          "default": "canonical-portable-field-schema-digest",
+          "title": "Readback",
+          "type": "string"
+        }
+      },
+      "required": [
+        "field_semantics"
+      ],
+      "title": "ServiceSearchIndexSchemaRequirements",
       "type": "object"
     },
     "ServiceUnitActiveState": {
@@ -27567,7 +27795,7 @@
       "type": "string"
     }
   },
-  "$id": "https://raesystem.github.io/rae/schemas/instantiated-scenario-snapshot-v1.json",
+  "$id": "https://openrae.github.io/rae/schemas/instantiated-scenario-snapshot-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "Sealed canonical envelope for one portable instantiated artifact.",
@@ -27590,7 +27818,7 @@
   "x-raes-document-phase": "canonical-instantiated-snapshot",
   "x-raes-invariants": [
     {
-      "description": "Generated artifact output names and paths, consumers, and dependency entries must be unique, and generated artifact consumers must be read-only.",
+      "description": "Generated artifact output names and paths, consumers, and dependency entries must be unique, and generated artifact consumers must be read-only. Explicit selections must name declared consumer-selectable outputs; SSH artifact consumers must select outputs and every consumer-selectable SSH output must be selected.",
       "id": "stateful-generated-artifact-semantics",
       "inputs": [
         {
@@ -27645,6 +27873,6 @@
     "id": "raes-semantic-invariants-v1",
     "keyword": "x-raes-invariants",
     "required": true,
-    "uri": "https://raesystem.github.io/rae/schemas/semantic-invariants/v1"
+    "uri": "https://openrae.github.io/rae/schemas/semantic-invariants/v1"
   }
 }

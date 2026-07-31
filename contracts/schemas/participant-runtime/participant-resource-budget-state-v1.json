@@ -1,5 +1,5 @@
 {
-  "$id": "https://raesystem.github.io/rae/schemas/participant-resource-budget-state-v1.json",
+  "$id": "https://openrae.github.io/rae/schemas/participant-resource-budget-state-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {

@@ -6,6 +6,7 @@ import json
 import shutil
 import subprocess
 import sys
+import threading
 import types
 from contextlib import nullcontext
 from pathlib import Path
@@ -17,6 +18,7 @@ if str(REPO_ROOT) not in sys.path:
 
 import pytest
 import tools.check_generated_schemas as check_generated_schemas
+import tools.check_json_artifacts as check_json_artifacts
 import tools.osv_scanner_tool as osv_scanner_tool
 import tools.policy.conftest_tool as conftest_tool
 import yaml
@@ -27,9 +29,10 @@ from tools.check_adr_immutability import (
     evaluate_adr_immutability,
 )
 from tools.check_generated_schemas import _extra_published_schema_paths
-from tools.check_json_artifacts import collect_validation_targets, should_run_full_validation
+from tools.check_json_artifacts import ValidationTarget, collect_validation_targets, should_run_full_validation
 from tools.check_schema_publication import schema_content_hash, validate_schema_publication_manifest
 from tools.gitleaks_tool import _checksums_asset_name, _release_asset_name, gitleaks_binary_path
+from tools.parallel_verification import VerificationLane, run_verification_lanes
 from tools.policy.common import PolicyFailure
 from tools.policy.conftest_tool import run_conftest_policy
 from tools.policy.repo_policy import evaluate_repo_policy
@@ -137,7 +140,87 @@ def test_parallel_coverage_command_is_capped_and_worker_safe(
         if command[:4] == ("uv", "run", "--frozen", "coverage")
     ]
     assert [command[4] for command, _options in coverage_commands] == ["xml", "report"]
+    assert coverage_commands[-1][0][-2:] == ("--fail-under=50", "--format=total")
     assert all(options["env"] == {"COVERAGE_FILE": str(coverage_file)} for _, options in coverage_commands)
+
+
+def test_verification_lanes_run_concurrently_and_preserve_declared_order(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    barrier = threading.Barrier(2, timeout=2)
+    commands: list[tuple[str, ...]] = []
+    commands_lock = threading.Lock()
+
+    def fake_run(command: list[str], **_kwargs: Any) -> subprocess.CompletedProcess[str]:
+        with commands_lock:
+            commands.append(tuple(command))
+        barrier.wait()
+        return subprocess.CompletedProcess(command, 0, stdout=f"{command[-1]} passed\n")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    lanes = (
+        VerificationLane(name="static", nox_session="verify-static-lane"),
+        VerificationLane(name="contracts", nox_session="contracts", posargs=("--base-rev", "base")),
+    )
+
+    results = run_verification_lanes(
+        lanes,
+        nox_python=Path("/tools/python"),
+        noxfile=tmp_path / "noxfile.py",
+        repo_root=tmp_path,
+        base_env={"RAES_VERIFY_PROJECT_SYNCED": "1"},
+    )
+
+    assert [result.name for result in results] == ["static", "contracts"]
+    assert all(result.returncode == 0 for result in results)
+    assert sorted(commands) == sorted(
+        [
+            (
+                "/tools/python",
+                "-m",
+                "nox",
+                "-f",
+                str(tmp_path / "noxfile.py"),
+                "-s",
+                "verify-static-lane",
+            ),
+            (
+                "/tools/python",
+                "-m",
+                "nox",
+                "-f",
+                str(tmp_path / "noxfile.py"),
+                "-s",
+                "contracts",
+                "--",
+                "--base-rev",
+                "base",
+            ),
+        ]
+    )
+
+
+def test_parallel_verification_reports_every_failed_lane(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    def fake_run(command: list[str], **_kwargs: Any) -> subprocess.CompletedProcess[str]:
+        session_name = command[command.index("-s") + 1]
+        return subprocess.CompletedProcess(command, 3 if session_name != "contracts" else 4, stdout=session_name)
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    results = run_verification_lanes(
+        (
+            VerificationLane(name="static", nox_session="verify-static-lane"),
+            VerificationLane(name="contracts", nox_session="contracts"),
+        ),
+        nox_python=Path("/tools/python"),
+        noxfile=tmp_path / "noxfile.py",
+        repo_root=tmp_path,
+    )
+
+    assert [(result.name, result.returncode) for result in results] == [("static", 3), ("contracts", 4)]
 
 
 def test_canonical_verify_does_not_use_change_aware_selection(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -145,10 +228,86 @@ def test_canonical_verify_does_not_use_change_aware_selection(monkeypatch: pytes
     source = inspect.getsource(noxfile.verify)
 
     assert "_run_changed_verification" not in source
-    assert "_run_contracts" in source
-    assert "_run_tests" in source
-    assert "_run_integration_tests" in source
-    assert "_run_docs" in source
+    assert "_run_parallel_verification" in source
+
+    lanes = noxfile._verification_lanes(
+        posargs=["--base-rev", "base"],
+        coverage_dir=Path("/coverage"),
+        include_policy=True,
+    )
+    assert [(lane.name, lane.nox_session) for lane in lanes] == [
+        ("unit-tests", "verify-tests-lane"),
+        ("integration-tests", "verify-integration-lane"),
+        ("contracts", "contracts"),
+        ("static", "verify-static-lane"),
+        ("participant-opacity-proof", "participant-opacity-proof"),
+        ("docs-local", "docs-local"),
+    ]
+    lanes_by_name = {lane.name: lane for lane in lanes}
+    assert lanes_by_name["static"].posargs == ("--include-policy", "--base-rev", "base")
+    assert lanes_by_name["contracts"].posargs == ("--base-rev", "base")
+    assert lanes_by_name["unit-tests"].env["RAES_VERIFY_COVERAGE_FILE"] == "/coverage/.coverage.unit"
+    assert lanes_by_name["integration-tests"].env["RAES_VERIFY_COVERAGE_FILE"] == "/coverage/.coverage.integration"
+
+
+def test_completion_verification_omits_policy_only_from_static_lane(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    noxfile = load_noxfile_with_fake_nox(monkeypatch)
+
+    lanes = noxfile._verification_lanes(
+        posargs=["--requirement-uid", "ASR-535"],
+        coverage_dir=Path("/coverage"),
+        include_policy=False,
+        cpu_count=4,
+    )
+
+    lanes_by_name = {lane.name: lane for lane in lanes}
+    assert lanes_by_name["static"].posargs == ("--requirement-uid", "ASR-535")
+    assert [lane.name for lane in lanes] == [
+        "unit-tests",
+        "integration-tests",
+        "contracts",
+        "static",
+        "participant-opacity-proof",
+        "docs-local",
+    ]
+    assert lanes_by_name["contracts"].env["RAES_JSON_SCHEMA_WORKERS"] == "1"
+    assert lanes_by_name["unit-tests"].env["PYTEST_XDIST_AUTO_NUM_WORKERS"] == "2"
+    assert noxfile._verification_lane_workers(cpu_count=4, lane_count=len(lanes)) == 2
+    assert noxfile._verification_lane_workers(cpu_count=16, lane_count=len(lanes)) == 4
+
+
+def test_parallel_coverage_is_combined_before_reporting(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    noxfile = load_noxfile_with_fake_nox(monkeypatch)
+
+    class FakeSession:
+        def __init__(self) -> None:
+            self.commands: list[tuple[tuple[str, ...], dict[str, Any]]] = []
+
+        def run(self, *args: str, **kwargs: Any) -> None:
+            self.commands.append((args, kwargs))
+
+        def chdir(self, _path: Path):
+            return nullcontext()
+
+    session = FakeSession()
+    noxfile._finalize_parallel_coverage(session, tmp_path)
+
+    coverage_commands = [
+        (command, options)
+        for command, options in session.commands
+        if command[:4] == ("uv", "run", "--frozen", "coverage")
+    ]
+    assert [command[4] for command, _options in coverage_commands] == ["combine", "xml", "report"]
+    assert coverage_commands[0][0][5:] == ("--keep", str(tmp_path))
+    assert coverage_commands[-1][0][-2:] == ("--fail-under=50", "--format=total")
+    assert all(
+        options["env"] == {"COVERAGE_FILE": str(tmp_path / ".coverage")} for _command, options in coverage_commands
+    )
 
 
 def test_docs_graph_uses_curated_root_and_reader_style_gate(
@@ -202,6 +361,37 @@ def test_docs_graph_uses_curated_root_and_reader_style_gate(
         "implementations/python/tests/test_public_docs_policy.py::test_readme_quickstart_matches_checked_in_scenario"
         in pytest_command
     )
+
+
+def test_local_docs_graph_excludes_external_link_check(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    noxfile = load_noxfile_with_fake_nox(monkeypatch)
+    commands: list[tuple[str, ...]] = []
+
+    class FakeSession:
+        def log(self, _message: str) -> None:
+            pass
+
+        def run(self, *args: str, **_kwargs: Any) -> None:
+            commands.append(args)
+
+    fake_vale = tmp_path / "vale"
+    fake_vale.write_text("", encoding="utf-8")
+    monkeypatch.setattr(noxfile, "ensure_vale", lambda _repo_root: fake_vale)
+    monkeypatch.setattr(noxfile, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(noxfile, "PROJECT_ROOT", tmp_path / "implementations" / "python")
+    monkeypatch.setattr(noxfile, "PUBLIC_DOCS_ROOT", tmp_path / "docs" / "public")
+    monkeypatch.setattr(noxfile, "DOCS_BUILD_ROOT", tmp_path / "docs" / "_build")
+    reporter = noxfile.SessionReporter(FakeSession(), "docs-local")
+
+    noxfile._run_docs(reporter.session, reporter, include_external_links=False)
+
+    assert "docs / Sphinx link check" not in [result.name for result in reporter.results]
+    sphinx_commands = [command for command in commands if "sphinx-build" in command]
+    assert len(sphinx_commands) == 1
+    assert "html" in sphinx_commands[0]
 
 
 def write_text(path: Path, content: str) -> None:
@@ -552,6 +742,17 @@ def test_module_boundaries_allow_runtime_using_processor_public_api(tmp_path: Pa
         "from raes_processor.models import RuntimeSnapshot\n"
         "from raes_processor.planner import plan\n",
     )
+
+    failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
+
+    assert failures == []
+
+
+def test_module_boundaries_allow_cli_using_processor_compiler_public_api(tmp_path: Path) -> None:
+    repo_root = setup_policy_repo(tmp_path)
+    install_module_boundary_policy(repo_root)
+    rel = "implementations/python/packages/raes_cli/semantic.py"
+    write_text(repo_root / rel, "from raes_processor.compiler import compile_scenario_runtime_model\n")
 
     failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
 
@@ -1971,6 +2172,48 @@ def test_collect_validation_targets_runs_full_scan_when_schema_drivers_change(tm
     )
 
     assert any(target.path == "contracts/concept-authority/concept-families-v1.json" for target in targets)
+
+
+def test_json_validation_batches_by_schema_and_runs_batches_concurrently(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("RAES_JSON_SCHEMA_WORKERS", raising=False)
+    barrier = threading.Barrier(3, timeout=2)
+    calls: list[tuple[str, ...]] = []
+    calls_lock = threading.Lock()
+
+    def fake_run(*args: str) -> subprocess.CompletedProcess[str]:
+        with calls_lock:
+            calls.append(args)
+        barrier.wait()
+        return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(check_json_artifacts, "_run_check_jsonschema", fake_run)
+    targets = [
+        ValidationTarget("contracts/schemas/one.json", None, "metaschema"),
+        ValidationTarget("contracts/schemas/two.json", None, "metaschema"),
+        ValidationTarget("contracts/fixtures/one-a.json", "contracts/schemas/one.json", "schema"),
+        ValidationTarget("contracts/fixtures/one-b.json", "contracts/schemas/one.json", "schema"),
+        ValidationTarget("contracts/fixtures/two.json", "contracts/schemas/two.json", "schema"),
+    ]
+
+    assert check_json_artifacts.validate_targets(targets) == []
+    assert sorted(calls) == sorted(
+        [
+            ("--check-metaschema", "contracts/schemas/one.json", "contracts/schemas/two.json"),
+            (
+                "--schemafile",
+                "contracts/schemas/one.json",
+                "contracts/fixtures/one-a.json",
+                "contracts/fixtures/one-b.json",
+            ),
+            (
+                "--schemafile",
+                "contracts/schemas/two.json",
+                "contracts/fixtures/two.json",
+            ),
+        ]
+    )
 
 
 def test_gitleaks_release_asset_names_match_platform_conventions(monkeypatch) -> None:

@@ -2,9 +2,9 @@
   "contract_id": "evaluation-result-envelope-v1",
   "schema_path": "contracts/schemas/control-plane/evaluation-result-envelope-v1.json",
   "stability": "draft",
-  "content_hash": "14badba5fe848dd3ce7a625d84c9ec42fec1f435debd74504414c2b799b4dbec",
+  "content_hash": "61d283c67f54b993b7620c808c4c20149dc301140f8b7d80c0c6438c569f934b",
   "last_change": {
-    "summary": "Repointed the published schema namespace from the uncontrolled raes.dev domain to the repository-owned https://raesystem.github.io/rae/schemas/ root for issue #908.",
-    "content_hash": "14badba5fe848dd3ce7a625d84c9ec42fec1f435debd74504414c2b799b4dbec"
+    "summary": "Rebound the published schema namespace to the renamed OpenRAE GitHub organization for issue #963.",
+    "content_hash": "61d283c67f54b993b7620c808c4c20149dc301140f8b7d80c0c6438c569f934b"
   }
 }

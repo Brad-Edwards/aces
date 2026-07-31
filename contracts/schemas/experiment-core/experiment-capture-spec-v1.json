@@ -704,7 +704,7 @@
       "type": "object"
     }
   },
-  "$id": "https://raesystem.github.io/rae/schemas/experiment-capture-spec-v1.json",
+  "$id": "https://openrae.github.io/rae/schemas/experiment-capture-spec-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "Declarative EXP-707 specification of what experiment evidence to capture.",
@@ -810,6 +810,6 @@
     "id": "raes-semantic-invariants-v1",
     "keyword": "x-raes-invariants",
     "required": true,
-    "uri": "https://raesystem.github.io/rae/schemas/semantic-invariants/v1"
+    "uri": "https://openrae.github.io/rae/schemas/semantic-invariants/v1"
   }
 }

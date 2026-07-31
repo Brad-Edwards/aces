@@ -26,13 +26,17 @@ from raes_contracts.contracts.external_concept_bindings import (
 from raes_contracts.controlled_vocabularies import load_controlled_vocabulary_catalog
 from raes_contracts.external_concept_bindings import (
     ExternalConceptResolutionOutcome,
+    adapt_activitystreams_activity_types_snapshot,
     adapt_attack_enterprise_tactics_snapshot,
+    adapt_fipa_communicative_acts_snapshot,
     adapt_nist_csf_defensive_categories_snapshot,
     admit_external_concept_bindings,
 )
 from raes_contracts.semantic_binding_effects import ExternalKnowledgeBindingEffect
 from raes_contracts.vocabulary_sources import (
+    load_activitystreams_activity_types_source,
     load_attack_enterprise_tactics_source,
+    load_fipa_communicative_acts_source,
     load_nist_csf_defensive_categories_source,
 )
 
@@ -41,6 +45,7 @@ FIXTURE_ROOT = REPO_ROOT / "contracts" / "fixtures" / "concept-authority" / "ext
 VALID_ROOT = FIXTURE_ROOT / "valid"
 INVALID_ROOT = FIXTURE_ROOT / "invalid"
 SUBJECT_PATH = FIXTURE_ROOT / "context" / "subject.sdl.yaml"
+AUTONOMOUS_BEHAVIOR_SUBJECT_PATH = FIXTURE_ROOT / "context" / "autonomous-behavior-subject.sdl.yaml"
 SCHEMA_PATH = REPO_ROOT / "contracts" / "schemas" / "concept-authority" / "external-concept-bindings-v1.json"
 
 
@@ -53,25 +58,35 @@ def _document(path: Path) -> ExternalConceptBindingDocumentModel:
 
 
 def _subjects():
-    return external_concept_subjects(load_scenario(SUBJECT_PATH))
+    return (
+        *external_concept_subjects(load_scenario(SUBJECT_PATH)),
+        *external_concept_subjects(load_scenario(AUTONOMOUS_BEHAVIOR_SUBJECT_PATH)),
+    )
 
 
 def _snapshots():
     return (
         adapt_attack_enterprise_tactics_snapshot(load_attack_enterprise_tactics_source()),
         adapt_nist_csf_defensive_categories_snapshot(load_nist_csf_defensive_categories_source()),
+        adapt_activitystreams_activity_types_snapshot(load_activitystreams_activity_types_source()),
+        adapt_fipa_communicative_acts_snapshot(load_fipa_communicative_acts_source()),
     )
 
 
 @pytest.mark.parametrize("path", sorted(VALID_ROOT.glob("*.json")), ids=lambda path: path.stem)
 def test_unrelated_scheme_fixtures_share_contract_and_schema(path: Path) -> None:
-    document = _document(path)
+    payload = _load_json(path)
+    document = ExternalConceptBindingDocumentModel.model_validate(payload)
     published_schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
 
     Draft202012Validator(published_schema).validate(document.model_dump(mode="json", exclude_none=True))
 
     assert document.schema_version == "external-concept-bindings/v1"
     assert len(document.bindings) == 1
+    assert validate_contract_payload("external-concept-bindings-v1", payload) == ()
+    assert {diagnostic.code for diagnostic in _fixture_case_diagnostics("external-concept-bindings-v1", payload)} == {
+        "conformance.semantic-context-required"
+    }
 
 
 @pytest.mark.parametrize("path", sorted(VALID_ROOT.glob("*.json")), ids=lambda path: path.stem)
@@ -324,6 +339,38 @@ def test_sdl_subject_adapter_uses_canonical_declaration_identity_and_digest() ->
     assert web.lifecycle_phase == "normalized-authoring"
     assert web.artifact_digest.startswith("sha256:")
     assert not any(subject.canonical_ref == "web" for subject in subjects)
+
+
+@pytest.mark.parametrize(
+    ("filename", "canonical_ref"),
+    [
+        ("activitystreams-behavior.json", "behavior_specifications.service-publication"),
+        ("fipa-behavior.json", "behavior_specifications.agent-request"),
+    ],
+)
+def test_autonomous_scheme_fixtures_target_exact_behavior_specifications(
+    filename: str,
+    canonical_ref: str,
+) -> None:
+    document = _document(VALID_ROOT / filename)
+    binding = next(iter(document.bindings.values()))
+    subject = binding.subject
+    available_subjects = _subjects()
+
+    assert subject.subject_kind == "behavior_specifications"
+    assert subject.owning_contract_id == "sdl-authoring-input-v1"
+    assert subject.lifecycle_phase == "normalized-authoring"
+    assert subject.canonical_ref == canonical_ref
+    assert subject.artifact_digest.startswith("sha256:")
+    assert sum(candidate == subject for candidate in available_subjects) == 1
+
+    report = admit_external_concept_bindings(
+        document,
+        subjects=available_subjects,
+        scheme_snapshots=_snapshots(),
+    )
+    assert report.admitted
+    assert report.results[0].outcome == ExternalConceptResolutionOutcome.RESOLVED_CURRENT
 
 
 @pytest.mark.parametrize(

@@ -17,7 +17,7 @@
       "binding_class": "external-service-project-key",
       "rationale": "Retains the existing service-owned Ground Control and SonarCloud project designations without treating them as current RAES product identity.",
       "occurrences": 2,
-      "content_sha256": "c56a0e9194d21c490e797363b5701d2839195329acf70d110a6eb6ae7069a5e2"
+      "content_sha256": "f643ca6a31c5d7f0c7adbd82d47a8be0febc9baa815bde16ac1ab3484b2cae24"
     },
     {
       "path": "sonar-project.properties",
@@ -45,9 +45,9 @@
     {
       "path": "docs/decisions/adrs/README.md",
       "record_class": "historical-index",
-      "rationale": "Indexes immutable pre-cutover ADR titles, paths, pins, and amendment summaries without making them current identity surf\u0061ces.",
+      "rationale": "Indexes immutable pre-cutover ADR titles, paths, pins, and amendment summaries without making them current identity surfaces.",
       "occurrences": 4,
-      "content_sha256": "af5063b943c1058735df9e4975814688c681248f8c55ed468681722eafa8188c"
+      "content_sha256": "1112779f7f33a932c90fd5e1bde641199bdf02a9910d89b0207e5ba92ab7562f"
     },
     {
       "path": "docs/decisions/adrs/adr-000-use-adrs.md",
@@ -493,9 +493,9 @@
     {
       "path": "docs/decisions/adrs/adr-index.yaml",
       "record_class": "historical-index",
-      "rationale": "Indexes immutable pre-cutover ADR titles, paths, pins, and amendment summaries without making them current identity surf\u0061ces.",
+      "rationale": "Indexes immutable pre-cutover ADR titles, paths, pins, and amendment summaries without making them current identity surfaces.",
       "occurrences": 4,
-      "content_sha256": "550cd54eb8e5636ac8e630efe0aa2cf80e0d36a4561a0f5b640d3ee17d940410"
+      "content_sha256": "16f7d3e9f87fc6008c7f4333b14e1c8ae993dd6a7925ba4795e0c2b6ce5370a4"
     },
     {
       "path": "docs/decisions/cage-2-replication-design.md",
@@ -1608,21 +1608,21 @@
       "record_class": "research-record",
       "rationale": "Preserves preregistered, frozen, dated, or lineage-bearing research evidence from before the RAES identity cutover.",
       "occurrences": 1,
-      "content_sha256": "fff200b23d171334e31ce9da00e921be7ad868b74bf5b4ba21c158277b5db56b"
+      "content_sha256": "3f8f0205e502add9603834f46fe1931314678429dc3a5b2083d9314bca7d3a50"
     },
     {
       "path": "docs/research/participant-io-control/current-state-assessment.md",
       "record_class": "research-record",
       "rationale": "Preserves preregistered, frozen, dated, or lineage-bearing research evidence from before the RAES identity cutover.",
       "occurrences": 10,
-      "content_sha256": "53c30870282bd09b493abddf2f96d966137be04f8af880d1965ad90d655a048e"
+      "content_sha256": "21cae879bfbd4f35a45b936e6200aa698248eeeb5a5ec37512dfc1f3708ce338"
     },
     {
       "path": "docs/research/participant-io-control/requirement-disposition.md",
       "record_class": "research-record",
       "rationale": "Preserves preregistered, frozen, dated, or lineage-bearing research evidence from before the RAES identity cutover.",
       "occurrences": 1,
-      "content_sha256": "b6557a24280525c14a55a209e6c530e8272f255fd6c3e4155a4c37f29dd17d76"
+      "content_sha256": "7d19d3be360630bc9f50b171323d0cf824e4e48aeae1ad1351aa0621149aca49"
     },
     {
       "path": "docs/research/primary/index.md",

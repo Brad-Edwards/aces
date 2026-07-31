@@ -205,6 +205,13 @@ snapshot model. ATT&CK Enterprise tactics and NIST CSF defensive categories
 are the initial unrelated examples. Both use the same authored syntax, schema,
 subject resolution, and offline admission path.
 
+ACT-611 adds W3C ActivityStreams Activity types and FIPA communicative acts as
+two further unrelated schemes targeting exact
+`behavior_specifications.<name>` declarations. They use the same authored
+syntax and admission path; their source, semantic, and rights boundaries are
+specified in
+[Autonomous Behavior Vocabulary Bindings](./autonomous-behavior-vocabularies.md).
+
 An adapter projects a pinned source artifact into scheme identity, authority,
 revision, locator, digest, and a multiplicity-preserving concept candidate
 list. Candidate ids are not converted into dictionary keys: zero matches are

@@ -16,5 +16,5 @@ The repository includes contracts, stubs, a reference emulation backend, and
 conformance tests. It does not ship a production deployment backend or managed
 environment service.
 
-Start with the [backend schemas](https://github.com/RAESystem/rae/tree/main/contracts/schemas/backend-manifest)
+Start with the [backend schemas](https://github.com/OpenRAE/rae/tree/main/contracts/schemas/backend-manifest)
 and the [conformance API](api/contracts.rst).

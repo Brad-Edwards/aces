@@ -270,7 +270,7 @@ def _attach_instantiation_invariants(contract_id: str, json_schema: dict[str, An
 def _schema_id_for_contract_id(contract_id: str) -> str:
     if contract_id == "raes-semantic-invariants-v1":
         return _RAES_SEMANTIC_INVARIANT_PROFILE_URI
-    return f"https://raesystem.github.io/rae/schemas/{contract_id}.json"
+    return f"https://openrae.github.io/rae/schemas/{contract_id}.json"
 
 
 def _attach_json_schema_metadata(contract_id: str, json_schema: dict[str, Any]) -> None:
@@ -350,7 +350,7 @@ class RaesSemanticInvariantProfileModel(ContractModel):
 
     schema_version: Literal[_RAES_SEMANTIC_INVARIANTS_SCHEMA_VERSION]
     profile_id: Literal["raes-semantic-invariants-v1"]
-    uri: Literal["https://raesystem.github.io/rae/schemas/semantic-invariants/v1"]
+    uri: Literal["https://openrae.github.io/rae/schemas/semantic-invariants/v1"]
     keyword: Literal["x-raes-invariants"]
     invariant_entry_schema: Literal["#/$defs/RaesSemanticInvariantEntryModel"]
     profile_reference_schema: Literal["#/$defs/RaesSemanticInvariantProfileReferenceModel"]
@@ -361,7 +361,7 @@ class RaesSemanticInvariantProfileReferenceModel(ContractModel):
     """Host-schema reference to the RAES semantic-invariant profile."""
 
     id: Literal["raes-semantic-invariants-v1"]
-    uri: Literal["https://raesystem.github.io/rae/schemas/semantic-invariants/v1"]
+    uri: Literal["https://openrae.github.io/rae/schemas/semantic-invariants/v1"]
     contract_id: NonEmptyString
     keyword: Literal["x-raes-invariants"]
     required: Literal[True]

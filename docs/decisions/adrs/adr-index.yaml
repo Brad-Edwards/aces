@@ -63,7 +63,11 @@ adrs:
     pin: aaf414e1da0eb329432562b16ff9e132522e19e8a35933a1c99329b0be27cae8
   - id: ADR-014
     path: docs/decisions/adrs/adr-014-nox-as-canonical-verification-graph.md
-    pin: 940ce80b1f1d94e3efb4a9f56cb9147d09c9a9dc1453a4977c7a5e194238d708
+    pin: 52b3bf9dfbf128658b0edc88e164114529e3e225db0360ea99e005ebc97f86bf
+    amendments:
+      - date: 2026-07-31
+        ref: "#963"
+        summary: Parallelized deterministic verification and contract batches, scoped pre-commit without duplicating full regression, and moved external links to dedicated docs CI.
   - id: ADR-015
     path: docs/decisions/adrs/adr-015-sdl-processor-layering-and-source-file-size-cap.md
     pin: bc5038164e535c4d506962e27cee07e720f5c8a77cb17d018dedb3dba927936f
@@ -462,6 +466,9 @@ adrs:
       - date: 2026-07-28
         ref: "#908"
         summary: "Added the generated-release-history record class so bot-maintained release notes pin their classified tail exactly while newly generated content is held to zero retired identity occurrences."
+      - date: 2026-07-31
+        ref: "#963"
+        summary: "Rebound the canonical published-schema URI root to https://openrae.github.io/rae/schemas/ after the GitHub organization was renamed from RAESystem to OpenRAE."
   - id: ADR-098
     path: docs/decisions/adrs/adr-098-portable-artifact-requirement-satisfaction.md
     pin: cabc306d07b60b7d1c62cf85750a57025651e69f55946261e315d772644309e3
@@ -471,3 +478,9 @@ adrs:
   - id: ADR-100
     path: docs/decisions/adrs/adr-100-participant-crossing-bisimulation.md
     pin: b7e17e58fc01e8f07a972ee5abc65e6a8470e2a6d51c2480334a3777df079e98
+  - id: ADR-101
+    path: docs/decisions/adrs/adr-101-adversarial-participant-flow-control.md
+    pin: add7e6ba4634965a9aa9c09248bfaafd981f1f16956b731fc913ca416ef92ffd
+  - id: ADR-102
+    path: docs/decisions/adrs/adr-102-mixed-cross-backend-participant-control.md
+    pin: cfcb0f5b7291b47fe6ff6096bb18dd9063b83ee5d4f7f6a9cafbdd06f21bf716
