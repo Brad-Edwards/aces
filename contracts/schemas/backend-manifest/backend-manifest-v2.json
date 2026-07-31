@@ -1740,20 +1740,23 @@
         {
           "if": {
             "properties": {
+              "supported_account_features": {
+                "minItems": 1
+              }
+            },
+            "required": [
+              "supported_account_features"
+            ]
+          },
+          "then": {
+            "properties": {
               "supports_accounts": {
-                "const": false
+                "const": true
               }
             },
             "required": [
               "supports_accounts"
             ]
-          },
-          "then": {
-            "properties": {
-              "supported_account_features": {
-                "maxItems": 0
-              }
-            }
           }
         },
         {
@@ -1781,20 +1784,23 @@
         {
           "if": {
             "properties": {
+              "supported_generated_artifact_kinds": {
+                "minItems": 1
+              }
+            },
+            "required": [
+              "supported_generated_artifact_kinds"
+            ]
+          },
+          "then": {
+            "properties": {
               "supports_generated_artifacts": {
-                "const": false
+                "const": true
               }
             },
             "required": [
               "supports_generated_artifacts"
             ]
-          },
-          "then": {
-            "properties": {
-              "supported_generated_artifact_kinds": {
-                "maxItems": 0
-              }
-            }
           }
         }
       ],

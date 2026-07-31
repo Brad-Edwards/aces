@@ -98,11 +98,12 @@ class ProvisionerCapabilitiesModel(ContractModel):
                 },
                 {
                     "if": {
-                        "properties": {"supports_accounts": {"const": False}},
-                        "required": ["supports_accounts"],
+                        "properties": {"supported_account_features": {"minItems": 1}},
+                        "required": ["supported_account_features"],
                     },
                     "then": {
-                        "properties": {"supported_account_features": {"maxItems": 0}},
+                        "required": ["supports_accounts"],
+                        "properties": {"supports_accounts": {"const": True}},
                     },
                 },
                 {
@@ -117,11 +118,12 @@ class ProvisionerCapabilitiesModel(ContractModel):
                 },
                 {
                     "if": {
-                        "properties": {"supports_generated_artifacts": {"const": False}},
-                        "required": ["supports_generated_artifacts"],
+                        "properties": {"supported_generated_artifact_kinds": {"minItems": 1}},
+                        "required": ["supported_generated_artifact_kinds"],
                     },
                     "then": {
-                        "properties": {"supported_generated_artifact_kinds": {"maxItems": 0}},
+                        "required": ["supports_generated_artifacts"],
+                        "properties": {"supports_generated_artifacts": {"const": True}},
                     },
                 },
             ]

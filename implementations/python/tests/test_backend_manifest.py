@@ -7,6 +7,8 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
+from jsonschema import Draft202012Validator
+from jsonschema import ValidationError as JSONSchemaValidationError
 from pydantic import ValidationError
 from raes_backend_protocols.capabilities import (
     OBSERVATION_CAPABILITY_CAPTURE_KIND_SCOPE,
@@ -156,6 +158,32 @@ def test_backend_manifest_v2_rejects_contradictory_generated_artifact_capabiliti
     provisioner["supported_generated_artifact_kinds"] = ["rendered_config"]
     with pytest.raises(ValidationError, match="require supports_generated_artifacts=true"):
         BackendManifestV2Model.model_validate(payload)
+
+
+@pytest.mark.parametrize(
+    ("support_flag", "supported_values"),
+    [
+        ("supports_accounts", "supported_account_features"),
+        ("supports_generated_artifacts", "supported_generated_artifact_kinds"),
+    ],
+)
+def test_backend_manifest_schema_requires_true_support_flag_for_nonempty_supported_values(
+    support_flag: str,
+    supported_values: str,
+) -> None:
+    schema = BackendManifestV2Model.model_json_schema()
+    payload = backend_manifest_payload(create_stub_manifest())
+    provisioner = payload["capabilities"]["provisioner"]
+    provisioner.pop(support_flag)
+
+    with pytest.raises(JSONSchemaValidationError):
+        Draft202012Validator(schema).validate(payload)
+    with pytest.raises(ValidationError):
+        BackendManifestV2Model.model_validate(payload)
+
+    provisioner[supported_values] = []
+    Draft202012Validator(schema).validate(payload)
+    BackendManifestV2Model.model_validate(payload)
 
 
 def test_coordinated_reset_manifest_claim_requires_participant_runtime_capabilities():

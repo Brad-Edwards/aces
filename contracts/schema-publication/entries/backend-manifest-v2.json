@@ -2,9 +2,9 @@
   "contract_id": "backend-manifest-v2",
   "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
   "stability": "draft",
-  "content_hash": "7e06ba616016427041748dc998ba53ce214e35e400501fb883316a797b6d9426",
+  "content_hash": "c4746c610e0d9cc8e03bd8db07a79e2cd24b463e06ba9cf7d254db1e586aadae",
   "last_change": {
-    "summary": "Added explicit per-kind generated-artifact capability declarations for issue #1010.",
-    "content_hash": "7e06ba616016427041748dc998ba53ce214e35e400501fb883316a797b6d9426"
+    "summary": "Aligned supported-value implications with default-false capability flags for issue #1010.",
+    "content_hash": "c4746c610e0d9cc8e03bd8db07a79e2cd24b463e06ba9cf7d254db1e586aadae"
   }
 }
