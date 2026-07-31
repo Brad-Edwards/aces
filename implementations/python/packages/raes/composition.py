@@ -737,7 +737,7 @@ def _rewrite_resource_dependencies(
 
 
 def _rewrite_stateful_resource(
-    resource: Any,
+    resource: object,
     symbols: dict[str, dict[str, str] | set[str]],
     *,
     owner: str,
@@ -757,7 +757,7 @@ def _rewrite_stateful_resources(
 
 
 def _rewrite_account(
-    account: Any,
+    account: object,
     symbols: dict[str, dict[str, str] | set[str]],
 ) -> None:
     if not isinstance(account, dict):
@@ -769,7 +769,7 @@ def _rewrite_account(
 
 
 def _rewrite_identity_domain(
-    domain: Any,
+    domain: object,
     symbols: dict[str, dict[str, str] | set[str]],
 ) -> None:
     if isinstance(domain, dict) and domain.get("authority_account_ref"):
@@ -780,7 +780,7 @@ def _rewrite_identity_domain(
 
 
 def _rewrite_identity_forest(
-    forest: Any,
+    forest: object,
     symbols: dict[str, dict[str, str] | set[str]],
 ) -> None:
     if not isinstance(forest, dict):
